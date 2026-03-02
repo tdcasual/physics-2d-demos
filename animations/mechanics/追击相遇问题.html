@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>追及相遇演示动画</title>
+<style>
+:root {
+  --bg-body: #020617;
+  --bg-page: radial-gradient(circle at top, #0f172a, #020617 55%);
+  --bg-card: rgba(15,23,42,0.96);
+  --bg-card-soft: rgba(15,23,42,0.9);
+  --border-subtle: rgba(148,163,184,0.45);
+  --text-main: #e5e7eb;
+  --text-muted: #9ca3af;
+  --accent-blue: #38bdf8;
+  --accent-blue-soft: rgba(56,189,248,0.12);
+  --accent-red-soft: rgba(248,113,113,0.12);
+  --info-bg: linear-gradient(90deg, rgba(30,64,175,0.85), rgba(15,23,42,0.95));
+  --info-border: rgba(129,140,248,0.8);
+  color-scheme: dark;
+}
+body[data-theme="light"] {
+  --bg-body: #f3f4f6;
+  --bg-page: radial-gradient(circle at top, #eff6ff, #e5e7eb 55%);
+  --bg-card: #ffffff;
+  --bg-card-soft: #f9fafb;
+  --border-subtle: rgba(148,163,184,0.8);
+  --text-main: #111827;
+  --text-muted: #6b7280;
+  --accent-blue-soft: rgba(59,130,246,0.06);
+  --accent-red-soft: rgba(248,113,113,0.06);
+  --info-bg: linear-gradient(90deg, #dbeafe, #eff6ff);
+  --info-border: rgba(129,140,248,0.7);
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  background: var(--bg-page);
+  color: var(--text-main);
+}
+
+.page {
+  max-width: 1100px;
+  margin: 24px auto 32px;
+  padding: 0 16px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+h1 {
+  margin: 0;
+  font-size: 24px;
+  letter-spacing: 0.02em;
+}
+
+.subtitle {
+  margin: 6px 0 16px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.theme-toggle {
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card-soft);
+  color: var(--text-main);
+  font-size: 12px;
+  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(15,23,42,0.35);
+}
+.theme-toggle:hover {
+  filter: brightness(1.04);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.card {
+  background: var(--bg-card);
+  border-radius: 16px;
+  border: 1px solid var(--border-subtle);
+  box-shadow:
+    0 18px 45px rgba(15,23,42,0.8),
+    0 0 0 1px rgba(15,23,42,0.9);
+  padding: 12px 12px 10px;
+}
+
+.card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.card-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+.card-tag {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(148,163,184,0.5);
+  color: var(--text-muted);
+}
+
+#motionCanvas {
+  width: 100%;
+  display: block;
+  border-radius: 12px;
+}
+
+.plots-wrapper {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.plot-block {
+  flex: 1 1 260px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.plot-title {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.plot-block canvas {
+  width: 100%;
+  height: 200px;
+  border-radius: 10px;
+  display: block;
+}
+
+.info-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: center;
+  margin-top: 8px;
+  padding: 8px 10px 6px;
+  border-radius: 10px;
+  background: var(--info-bg);
+  border: 1px solid var(--info-border);
+  font-size: 12px;
+}
+.info-item {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.info-label {
+  opacity: 0.8;
+}
+.info-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+#infoMeet {
+  font-size: 12px;
+  opacity: 0.95;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.control-group {
+  padding: 10px 10px 8px;
+  border-radius: 12px;
+  background: var(--bg-card-soft);
+  border: 1px solid var(--border-subtle);
+}
+.control-group.global {
+  box-shadow: inset 0 0 0 1px rgba(148,163,184,0.5);
+}
+.control-group.objectA {
+  box-shadow: inset 0 0 0 1px rgba(56,189,248,0.35);
+}
+.control-group.objectB {
+  box-shadow: inset 0 0 0 1px rgba(248,113,113,0.35);
+}
+.control-group h2 {
+  margin: 2px 0 8px;
+  font-size: 14px;
+}
+
+.control-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+.control-row label {
+  flex: 1 1 auto;
+  color: var(--text-main);
+}
+.control-row input[type="number"],
+.control-row input[type="text"] {
+  flex: 0 0 120px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(148,163,184,0.8);
+  background: var(--bg-body);
+  color: var(--text-main);
+  font-size: 13px;
+  outline: none;
+}
+body[data-theme="light"] .control-row input[type="number"],
+body[data-theme="light"] .control-row input[type="text"] {
+  background: #f9fafb;
+}
+.control-row input:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 1px rgba(56,189,248,0.6);
+}
+
+.hint {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+.buttons button {
+  flex: 1;
+  padding: 7px 0;
+  border-radius: 999px;
+  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  background: radial-gradient(circle at top left, #38bdf8, #0ea5e9);
+  color: #0b1120;
+  box-shadow:
+    0 10px 25px rgba(8,47,73,0.9),
+    0 0 0 1px rgba(8,47,73,0.7);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+}
+.buttons button.secondary {
+  background: radial-gradient(circle at top left, #1f2937, #020617);
+  color: #e5e7eb;
+  box-shadow:
+    0 10px 25px rgba(15,23,42,0.95),
+    0 0 0 1px rgba(75,85,99,0.8);
+}
+body[data-theme="light"] .buttons button.secondary {
+  background: linear-gradient(135deg, #e5e7eb, #d1d5db);
+  color: #111827;
+  box-shadow:
+    0 8px 20px rgba(148,163,184,0.7),
+    0 0 0 1px rgba(148,163,184,0.9);
+}
+.buttons button:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+.buttons button:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* 电脑端专门布局：x-t / v-t 并排 + 全局/A/B 三列并排 */
+@media (min-width: 900px) {
+  .plots-wrapper {
+    flex-wrap: nowrap;          /* 强制两张图一排 */
+  }
+
+  .controls {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .controls .control-group {
+    flex: 1 1 calc(33.333% - 8px);  /* 三块设置区域三等分 */
+    min-width: 0;
+  }
+
+  .controls .buttons {
+    flex: 0 0 100%;              /* 按钮一整行在下面 */
+  }
+}
+
+@media (max-width: 720px) {
+  .plot-block canvas {
+    height: 180px;
+  }
+  .info-panel {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+</style>
+</head>
+<body data-theme="dark">
+<div class="page">
+  <div class="page-header">
+    <h1>追及相遇演示动画</h1>
+    <button id="themeToggle" class="theme-toggle">☀️ 白天模式</button>
+  </div>
+  <div class="subtitle">
+    上排：空间位置动画（课堂投影更醒目）&nbsp;&nbsp;|&nbsp;&nbsp;中排：x–t 与 v–t 图像&nbsp;&nbsp;|&nbsp;&nbsp;下排：参数设置。
+  </div>
+
+  <div class="stack">
+    <!-- 第一行：空间位置动画 -->
+    <section class="card">
+      <div class="card-header-row">
+        <div class="card-title">空间位置动画</div>
+        <div class="card-tag">A / B 一维追及</div>
+      </div>
+      <canvas id="motionCanvas"></canvas>
+      <div class="info-panel">
+        <div class="info-item">
+          <span class="info-label">t =</span>
+          <span id="infoTime" class="info-value">0.00</span>
+          <span class="info-label">s</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">距离 |xB − xA| =</span>
+          <span id="infoDistance" class="info-value">0.00</span>
+          <span class="info-label">m</span>
+        </div>
+        <div id="infoMeet"></div>
+      </div>
+    </section>
+
+    <!-- 第二行：v–t 和 x–t 图像 -->
+    <section class="card">
+      <div class="card-header-row">
+        <div class="card-title">x–t 与 v–t 图像</div>
+      </div>
+      <div class="plots-wrapper">
+        <div class="plot-block">
+          <div class="plot-title">位置–时间 图 x(t)</div>
+          <canvas id="xCanvas"></canvas>
+        </div>
+        <div class="plot-block">
+          <div class="plot-title">速度–时间 图 v(t)</div>
+          <canvas id="vCanvas"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- 第三行：参数设置 -->
+    <section class="card controls">
+      <div class="control-group global">
+        <h2>全局设置</h2>
+        <div class="control-row">
+          <label for="totalTime">总时间 T (s)</label>
+          <input id="totalTime" type="number" value="10" step="0.5" min="1">
+        </div>
+        <div class="control-row">
+          <label for="dt">步长 Δt (s)</label>
+          <input id="dt" type="number" value="0.02" step="0.01" min="0.005">
+        </div>
+        <div class="hint">Δt 越小曲线越平滑，但计算量更大；建议 0.01–0.05。</div>
+      </div>
+
+      <div class="control-group objectA">
+        <h2>物体 A</h2>
+        <div class="control-row">
+          <label for="x0A">初始位置 x₀A (m)</label>
+          <input id="x0A" type="number" value="0" step="1">
+        </div>
+        <div class="control-row">
+          <label for="vExprA">速度函数 vA(t) (m/s)</label>
+          <input id="vExprA" type="text" value="2">
+        </div>
+        <div class="hint">示例：<code>2</code>，<code>1+0.5*t</code>，<code>5*Math.sin(t)</code></div>
+      </div>
+
+      <div class="control-group objectB">
+        <h2>物体 B</h2>
+        <div class="control-row">
+          <label for="x0B">初始位置 x₀B (m)</label>
+          <input id="x0B" type="number" value="10" step="1">
+        </div>
+        <div class="control-row">
+          <label for="vExprB">速度函数 vB(t) (m/s)</label>
+          <input id="vExprB" type="text" value="0.5">
+        </div>
+        <div class="hint">例如：<code>0.5</code>，<code>4-0.2*t</code>，<code>3*Math.cos(t)</code> 等。</div>
+      </div>
+
+      <div class="buttons">
+        <button id="btnStart">开始 / 继续</button>
+        <button id="btnPause" class="secondary">暂停</button>
+        <button id="btnReset" class="secondary">重置</button>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+(function () {
+  const dpr = window.devicePixelRatio || 1;
+
+  const motionCanvas = document.getElementById('motionCanvas');
+  const xCanvas = document.getElementById('xCanvas');
+  const vCanvas = document.getElementById('vCanvas');
+
+  let motionCtx, xCtx, vCtx;
+
+  function resizeCanvas(canvas, cssWidth, cssHeight) {
+    canvas.width = cssWidth * dpr;
+    canvas.height = cssHeight * dpr;
+    canvas.style.width = cssWidth + 'px';
+    canvas.style.height = cssHeight + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssWidth, cssHeight);
+    return ctx;
+  }
+
+  function initSize() {
+    const pageEl = document.querySelector('.page');
+    const pageWidth = pageEl ? pageEl.clientWidth : window.innerWidth;
+    const totalWidth = Math.min(pageWidth - 32, 1100);
+
+    const trackHeight = Math.min(320, Math.max(190, window.innerHeight * 0.35));
+    const graphHeight = Math.min(260, Math.max(170, window.innerHeight * 0.28));
+
+    motionCtx = resizeCanvas(motionCanvas, totalWidth, trackHeight);
+    xCtx = resizeCanvas(xCanvas, totalWidth / 2 - 8, graphHeight);
+    vCtx = resizeCanvas(vCanvas, totalWidth / 2 - 8, graphHeight);
+
+    if (samples.length > 0) {
+      drawScene();
+    }
+  }
+
+  window.addEventListener('resize', initSize);
+
+  const totalTimeInput = document.getElementById('totalTime');
+  const dtInput = document.getElementById('dt');
+  const x0AInput = document.getElementById('x0A');
+  const x0BInput = document.getElementById('x0B');
+  const vExprAInput = document.getElementById('vExprA');
+  const vExprBInput = document.getElementById('vExprB');
+
+  const infoTime = document.getElementById('infoTime');
+  const infoDistance = document.getElementById('infoDistance');
+  const infoMeet = document.getElementById('infoMeet');
+
+  let t = 0;
+  let T = 10;
+  let dt = 0.02;
+  let x0A = 0;
+  let x0B = 10;
+  let vA, vB;
+  let running = false;
+  let lastTimestamp = null;
+  let samples = [];
+  let bounds = { minX: 0, maxX: 1, maxSpeed: 1 };
+
+  function createVelocityFunction(expr) {
+    expr = (expr || '').trim();
+    if (expr === '') return function () { return 0; };
+    try {
+      const f = new Function('t', 'return ' + expr + ';');
+      const test = f(0);
+      if (!isFinite(test)) throw new Error('non-finite');
+      return function (t) {
+        const v = f(t);
+        return isFinite(v) ? v : 0;
+      };
+    } catch (e) {
+      alert('速度函数 "' + expr + '" 解析失败，已自动设置为 0');
+      return function () { return 0; };
+    }
+  }
+
+  function readSettings() {
+    const TVal = parseFloat(totalTimeInput.value);
+    T = isNaN(TVal) || TVal <= 0 ? 10 : TVal;
+
+    const dtVal = parseFloat(dtInput.value);
+    dt = isNaN(dtVal) || dtVal <= 0 ? 0.02 : dtVal;
+
+    const x0AVal = parseFloat(x0AInput.value);
+    const x0BVal = parseFloat(x0BInput.value);
+    x0A = isNaN(x0AVal) ? 0 : x0AVal;
+    x0B = isNaN(x0BVal) ? 10 : x0BVal;
+
+    vA = createVelocityFunction(vExprAInput.value);
+    vB = createVelocityFunction(vExprBInput.value);
+  }
+
+  function preSample() {
+    samples = [];
+    let xA = x0A;
+    let xB = x0B;
+    let tLocal = 0;
+
+    samples.push({ t: 0, xA: xA, xB: xB, vA: vA(0), vB: vB(0) });
+
+    while (tLocal < T) {
+      const v1 = vA(tLocal);
+      const v2 = vB(tLocal);
+      xA += v1 * dt;
+      xB += v2 * dt;
+      tLocal += dt;
+      samples.push({ t: tLocal, xA: xA, xB: xB, vA: v1, vB: v2 });
+    }
+  }
+
+  function getBounds() {
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let maxSpeed = 0;
+    for (const s of samples) {
+      if (!isFinite(s.xA) || !isFinite(s.xB)) continue;
+      minX = Math.min(minX, s.xA, s.xB);
+      maxX = Math.max(maxX, s.xA, s.xB);
+      maxSpeed = Math.max(maxSpeed, Math.abs(s.vA), Math.abs(s.vB));
+    }
+    if (!isFinite(minX) || !isFinite(maxX)) {
+      minX = 0;
+      maxX = 1;
+    }
+    if (maxX === minX) {
+      maxX = minX + 1;
+    }
+    if (!isFinite(maxSpeed) || maxSpeed <= 0) {
+      maxSpeed = 1;
+    }
+    return { minX, maxX, maxSpeed };
+  }
+
+  function worldToScreenX(x) {
+    const cssWidth = motionCanvas.width / dpr;
+    const padding = 40;
+    const usable = cssWidth - 2 * padding;
+    return padding + (x - bounds.minX) / (bounds.maxX - bounds.minX) * usable;
+  }
+
+  function drawScene() {
+    const cssW = motionCanvas.width / dpr;
+    const cssH = motionCanvas.height / dpr;
+
+    motionCtx.clearRect(0, 0, cssW, cssH);
+
+    const isLight = document.body.dataset.theme === 'light';
+    const grad = motionCtx.createLinearGradient(0, 0, cssW, cssH);
+    if (isLight) {
+      grad.addColorStop(0, '#e5f0ff');
+      grad.addColorStop(1, '#d1d5db');
+    } else {
+      grad.addColorStop(0, '#020617');
+      grad.addColorStop(1, '#020617');
+    }
+    motionCtx.fillStyle = grad;
+    motionCtx.fillRect(0, 0, cssW, cssH);
+
+    const mid = cssH * 0.55;
+
+    motionCtx.strokeStyle = isLight ? 'rgba(15,23,42,0.35)' : 'rgba(255,255,255,0.22)';
+    motionCtx.lineWidth = 2;
+    motionCtx.beginPath();
+    motionCtx.moveTo(20, mid);
+    motionCtx.lineTo(cssW - 20, mid);
+    motionCtx.stroke();
+
+    motionCtx.font = '12px system-ui';
+    motionCtx.fillStyle = isLight ? 'rgba(30,41,59,0.8)' : 'rgba(226,232,240,0.8)';
+    motionCtx.textAlign = 'center';
+    const steps = 8;
+    for (let i = 0; i <= steps; i++) {
+      const ratio = i / steps;
+      const x = 20 + (cssW - 40) * ratio;
+      const worldX = bounds.minX + ratio * (bounds.maxX - bounds.minX);
+      motionCtx.beginPath();
+      motionCtx.moveTo(x, mid - 6);
+      motionCtx.lineTo(x, mid + 6);
+      motionCtx.stroke();
+      motionCtx.fillText(worldX.toFixed(1), x, mid + 20);
+    }
+
+    let sCurrent = samples[0];
+    for (let i = 1; i < samples.length; i++) {
+      if (Math.abs(samples[i].t - t) < Math.abs(sCurrent.t - t)) {
+        sCurrent = samples[i];
+      }
+    }
+
+    const xA = sCurrent.xA;
+    const xB = sCurrent.xB;
+    const screenXA = worldToScreenX(xA);
+    const screenXB = worldToScreenX(xB);
+
+    function drawObject(x, color, label) {
+      const r = 16;
+      const glowColor = color.replace('1)', '0.23)');
+      motionCtx.beginPath();
+      motionCtx.fillStyle = glowColor;
+      motionCtx.arc(x, mid, r * 1.9, 0, Math.PI * 2);
+      motionCtx.fill();
+
+      motionCtx.beginPath();
+      motionCtx.fillStyle = color;
+      motionCtx.arc(x, mid, r, 0, Math.PI * 2);
+      motionCtx.fill();
+
+      motionCtx.lineWidth = 2;
+      motionCtx.strokeStyle = isLight ? 'rgba(15,23,42,0.9)' : 'rgba(248,250,252,0.95)';
+      motionCtx.stroke();
+
+      motionCtx.fillStyle = isLight ? '#111827' : '#f9fafb';
+      motionCtx.font = 'bold 15px system-ui';
+      motionCtx.textAlign = 'center';
+      motionCtx.fillText(label, x, mid - 22);
+    }
+
+    drawObject(screenXA, 'rgba(96,165,250,1)', 'A');
+    drawObject(screenXB, 'rgba(248,113,113,1)', 'B');
+
+    motionCtx.setLineDash([6, 4]);
+    motionCtx.strokeStyle = isLight ? 'rgba(30,64,175,0.7)' : 'rgba(148,163,184,0.7)';
+    motionCtx.beginPath();
+    motionCtx.moveTo(screenXA, mid);
+    motionCtx.lineTo(screenXB, mid);
+    motionCtx.stroke();
+    motionCtx.setLineDash([]);
+
+    const distance = Math.abs(xB - xA);
+    motionCtx.fillStyle = isLight ? '#111827' : '#f9fafb';
+    motionCtx.font = '13px system-ui';
+    motionCtx.textAlign = 'center';
+    motionCtx.fillText(
+      '距离 = ' + distance.toFixed(2) + ' m',
+      (screenXA + screenXB) / 2,
+      mid - 34
+    );
+
+    infoTime.textContent = t.toFixed(2);
+    infoDistance.textContent = distance.toFixed(2);
+
+    let meetMsg = '';
+    for (let i = 1; i < samples.length; i++) {
+      const s0 = samples[i - 1];
+      const s1 = samples[i];
+      const d0 = s0.xA - s0.xB;
+      const d1 = s1.xA - s1.xB;
+
+      if (d0 === 0) {
+        meetMsg =
+          '首次相遇大约在 t ≈ ' +
+          s0.t.toFixed(2) +
+          ' s, x ≈ ' +
+          s0.xA.toFixed(2) +
+          ' m';
+        break;
+      }
+      if (d0 * d1 < 0) {
+        const alpha = Math.abs(d0) / (Math.abs(d0) + Math.abs(d1));
+        const tMeet = s0.t + alpha * (s1.t - s0.t);
+        const xMeet = s0.xA + alpha * (s1.xA - s0.xA);
+        meetMsg =
+          '首次相遇大约在 t ≈ ' +
+          tMeet.toFixed(2) +
+          ' s, x ≈ ' +
+          xMeet.toFixed(2) +
+          ' m';
+        break;
+      }
+    }
+    infoMeet.textContent = meetMsg;
+
+    drawGraphs();
+  }
+
+function drawGraphs() {
+  const xW = xCanvas.width / dpr;
+  const xH = xCanvas.height / dpr;
+  const vW = vCanvas.width / dpr;
+  const vH = vCanvas.height / dpr;
+
+  xCtx.clearRect(0, 0, xW, xH);
+  vCtx.clearRect(0, 0, vW, vH);
+
+  const paddingLeft = 40;
+  const paddingBottom = 30;
+  const paddingTop = 10;
+  const paddingRight = 10;
+
+  function drawAxis(ctx, w, h, yLabel) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(148,163,184,0.8)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(paddingLeft, paddingTop);
+    ctx.lineTo(paddingLeft, h - paddingBottom);
+    ctx.lineTo(w - paddingRight, h - paddingBottom);
+    ctx.stroke();
+
+    ctx.font = '12px system-ui';
+    ctx.fillStyle = 'rgba(148,163,184,0.9)';
+    ctx.textAlign = 'left';
+    ctx.fillText(yLabel, 6, paddingTop + 12);
+    ctx.textAlign = 'right';
+    ctx.fillText('t / s', w - 6, h - 6);
+    ctx.restore();
+  }
+
+  drawAxis(xCtx, xW, xH, 'x / m');
+  drawAxis(vCtx, vW, vH, 'v / (m·s⁻¹)');
+
+  const minT = 0;
+  const maxT = T;
+  const tRange = maxT - minT || 1;
+
+  const minX = bounds.minX;
+  const maxX = bounds.maxX;
+  const xRange = maxX - minX || 1;
+
+  let maxV = bounds.maxSpeed || 1;
+  maxV *= 1.1;
+  const minV = -maxV;
+  const vRange = maxV - minV || 1;
+
+  const currentTime = t;  // 当前动画时间
+
+  function tToXpix(tVal, w) {
+    return paddingLeft + ((tVal - minT) / tRange) * (w - paddingLeft - paddingRight);
+  }
+  function worldXToYpix(xVal, h) {
+    return paddingTop + ((maxX - xVal) / xRange) * (h - paddingTop - paddingBottom);
+  }
+  function vToYpix(vVal, h) {
+    return paddingTop + ((maxV - vVal) / vRange) * (h - paddingTop - paddingBottom);
+  }
+
+  function drawGrid(ctx, w, h) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(148,163,184,0.25)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.font = '11px system-ui';
+    ctx.fillStyle = 'rgba(148,163,184,0.9)';
+
+    const step = Math.max(1, Math.round(T / 5));
+
+    for (let tv = 0; tv <= T + 1e-6; tv += step) {
+      const x = tToXpix(tv, w);
+      ctx.beginPath();
+      ctx.moveTo(x, paddingTop);
+      ctx.lineTo(x, h - paddingBottom);
+      ctx.stroke();
+      ctx.textAlign = 'center';
+      ctx.fillText(tv.toFixed(0), x, h - 10);
+    }
+
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  drawGrid(xCtx, xW, xH);
+  drawGrid(vCtx, vW, vH);
+
+  // 只画到 currentTime 的折线
+  function drawPolyline(ctx, w, h, type, colorA, colorB, maxTime) {
+    ctx.save();
+    ctx.lineWidth = 2;
+    const grad = ctx.createLinearGradient(
+      paddingLeft,
+      paddingTop,
+      w - paddingRight,
+      h - paddingBottom
+    );
+    grad.addColorStop(0, colorA);
+    grad.addColorStop(1, colorB);
+    ctx.strokeStyle = grad;
+    ctx.beginPath();
+    let first = true;
+    for (const s of samples) {
+      if (s.t > maxTime) break;  // 到当前时间就停
+
+      const xPix = tToXpix(s.t, w);
+      let yPix;
+      if (type === 'xA') yPix = worldXToYpix(s.xA, h);
+      else if (type === 'xB') yPix = worldXToYpix(s.xB, h);
+      else if (type === 'vA') yPix = vToYpix(s.vA, h);
+      else if (type === 'vB') yPix = vToYpix(s.vB, h);
+      else continue;
+
+      if (first) {
+        ctx.moveTo(xPix, yPix);
+        first = false;
+      } else {
+        ctx.lineTo(xPix, yPix);
+      }
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // 用当前时间 t 作为上限，曲线“边运动边长出来”
+  drawPolyline(
+    xCtx,
+    xW,
+    xH,
+    'xA',
+    'rgba(96,165,250,0.95)',
+    'rgba(59,130,246,0.5)',
+    currentTime
+  );
+  drawPolyline(
+    xCtx,
+    xW,
+    xH,
+    'xB',
+    'rgba(248,113,113,0.95)',
+    'rgba(239,68,68,0.5)',
+    currentTime
+  );
+
+  drawPolyline(
+    vCtx,
+    vW,
+    vH,
+    'vA',
+    'rgba(96,165,250,0.95)',
+    'rgba(59,130,246,0.5)',
+    currentTime
+  );
+  drawPolyline(
+    vCtx,
+    vW,
+    vH,
+    'vB',
+    'rgba(248,113,113,0.95)',
+    'rgba(239,68,68,0.5)',
+    currentTime
+  );
+
+  // 当前时刻的竖线指示
+  function drawMarker(ctx, w, h) {
+    const x = tToXpix(currentTime, w);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(248,250,252,0.85)';
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(x, paddingTop);
+    ctx.lineTo(x, h - paddingBottom);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  drawMarker(xCtx, xW, xH);
+  drawMarker(vCtx, vW, vH);
+}
+
+  function reset() {
+    readSettings();
+    preSample();
+    bounds = getBounds();
+    t = 0;
+    lastTimestamp = null;
+    drawScene();
+  }
+
+  function stepAnimation(timestamp) {
+    if (!running) return;
+    if (lastTimestamp === null) {
+      lastTimestamp = timestamp;
+    }
+
+    t += dt;
+    if (t > T) {
+      t = T;
+      drawScene();
+      running = false;
+      return;
+    }
+
+    drawScene();
+    requestAnimationFrame(stepAnimation);
+  }
+
+  document.getElementById('btnStart').addEventListener('click', function () {
+    if (!running) {
+      running = true;
+      lastTimestamp = null;
+      requestAnimationFrame(stepAnimation);
+    }
+  });
+
+  document.getElementById('btnPause').addEventListener('click', function () {
+    running = false;
+  });
+
+  document.getElementById('btnReset').addEventListener('click', function () {
+    running = false;
+    reset();
+  });
+
+  ['change', 'blur'].forEach(function (ev) {
+    totalTimeInput.addEventListener(ev, reset);
+    dtInput.addEventListener(ev, reset);
+    x0AInput.addEventListener(ev, reset);
+    x0BInput.addEventListener(ev, reset);
+    vExprAInput.addEventListener(ev, reset);
+    vExprBInput.addEventListener(ev, reset);
+  });
+
+  const themeToggle = document.getElementById('themeToggle');
+  function updateThemeButton() {
+    const isLight = document.body.dataset.theme === 'light';
+    themeToggle.textContent = isLight ? '🌙 夜间模式' : '☀️ 白天模式';
+  }
+  themeToggle.addEventListener('click', function () {
+    const isLight = document.body.dataset.theme === 'light';
+    document.body.dataset.theme = isLight ? 'dark' : 'light';
+    updateThemeButton();
+    drawScene();
+  });
+  updateThemeButton();
+
+  initSize();
+  reset();
+})();
+</script>
+</body>
+</html>

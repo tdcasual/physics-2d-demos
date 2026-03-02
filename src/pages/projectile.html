@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>抛体运动（2D）</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 20px; }
+    #app { max-width: 900px; margin: 0 auto; }
+    .transport-controls { display: flex; gap: 8px; margin-top: 12px; }
+    .transport-controls button { padding: 8px 12px; cursor: pointer; }
+    #status { margin-top: 12px; color: #444; }
+  </style>
+</head>
+<body>
+  <main id="app">
+    <h1>抛体运动（2D）</h1>
+    <p>示例场景：统一的播放/暂停/重置/单步控制外壳。</p>
+    <div id="controls"></div>
+    <div id="status">就绪</div>
+  </main>
+
+  <script type="module">
+    import { createControlPanel } from '../ui/control-panel.ts';
+    import { createSceneShell } from '../app/scene-shell.ts';
+    import { projectileScene } from '../scenes/projectile/scene.entry.ts';
+
+    const controls = document.getElementById('controls');
+    const status = document.getElementById('status');
+    const shell = createSceneShell();
+
+    projectileScene.init();
+
+    createControlPanel(controls, {
+      onPlay: () => {
+        shell.play();
+        status.textContent = '播放中';
+      },
+      onPause: () => {
+        shell.pause();
+        status.textContent = '已暂停';
+      },
+      onReset: () => {
+        shell.reset();
+        projectileScene.reset();
+        projectileScene.render();
+        status.textContent = '已重置';
+      },
+      onStep: () => {
+        shell.stepOnce(() => {
+          projectileScene.step(1 / 60);
+          projectileScene.render();
+        });
+        status.textContent = '单步执行';
+      }
+    });
+  </script>
+</body>
+</html>

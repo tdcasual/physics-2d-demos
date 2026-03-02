@@ -1,0 +1,1446 @@
+i<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>微元法交互式动画</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        :root {
+            --bg: linear-gradient(135deg, #eef2ff 0%, #f8fbff 100%);
+            --card: #ffffff;
+            --border: #e3e8f0;
+            --shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+            --primary: #4c6fff;
+            --primary-strong: #3355ff;
+            --accent: #23c483;
+            --danger: #ff6b6b;
+            --text-main: #0f172a;
+            --text-sub: #475569;
+            --muted: #94a3b8;
+            --radius: 14px;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: var(--bg);
+            color: var(--text-main);
+        }
+
+        #app-container {
+            width: 92vw;
+            max-width: 1600px;
+            aspect-ratio: 16 / 9;
+            background-color: var(--card);
+            border-radius: 18px;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .controls-bar {
+            padding: 16px 20px;
+            background-color: #f7f9ff;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .controls-bar button {
+            padding: 10px 18px;
+            font-size: 15px;
+            font-weight: 600;
+            border-radius: 10px;
+            border: 1px solid var(--primary);
+            background-color: #fff;
+            color: var(--primary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            letter-spacing: 0.2px;
+        }
+
+        .controls-bar button.active,
+        .controls-bar button:hover {
+            background-color: var(--primary);
+            color: #fff;
+            box-shadow: 0 8px 20px rgba(76, 111, 255, 0.25);
+        }
+
+        .scene {
+            display: flex;
+            flex-grow: 1;
+            width: 100%;
+            height: 100%;
+            gap: 1px;
+            background: #f5f7fb;
+        }
+
+        .demo-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-sizing: border-box;
+            background: var(--card);
+            border-left: 1px solid var(--border);
+        }
+        .demo-panel:first-child {
+            border-left: none;
+        }
+
+        .canvas-container {
+            flex-grow: 1;
+            position: relative;
+            background-color: #f9fbff;
+            border-radius: var(--radius);
+            overflow: hidden;
+            border: 1px solid var(--border);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+        }
+
+        canvas, .three-canvas-container {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .ui-controls {
+            padding-top: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            color: var(--text-sub);
+        }
+        
+        .readout {
+            margin-top: 18px;
+            padding: 14px 16px;
+            background: linear-gradient(135deg, #f7f9ff 0%, #f0f4ff 100%);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+        }
+
+        .metric {
+            background: #fff;
+            border-radius: 12px;
+            padding: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+        }
+        .metric .label {
+            font-size: 13px;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+        .metric .value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-main);
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .metric.accent .value { color: var(--primary-strong); }
+        .metric.success .value { color: var(--accent); }
+        .metric.danger .value { color: var(--danger); }
+
+        label {
+            display: block;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+        label span { color: var(--primary-strong); }
+
+        input[type="range"], select, textarea {
+            width: 100%;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        input[type="range"] {
+            cursor: pointer;
+            accent-color: var(--primary);
+        }
+
+        textarea {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 64px;
+            background: #fdfdff;
+        }
+
+        select {
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: #fff;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <div class="controls-bar">
+        <button id="show-scene1" class="active">场景一：v-t 积分</button>
+        <button id="show-scene2">场景二：圆</button>
+        <button id="show-scene3">场景三：球</button>
+    </div>
+
+    <!-- Scene 1: v-t 积分演示 -->
+    <div id="scene1" class="scene">
+        <div class="demo-panel" style="flex: 3;">
+            <div class="canvas-container">
+                <canvas id="vt-canvas"></canvas>
+            </div>
+        </div>
+        <div class="demo-panel" style="flex: 2;">
+            <div class="ui-controls">
+                <label for="vt-func">速度函数 v(t)：</label>
+                <textarea id="vt-func" rows="2" style="width:100%;box-sizing:border-box;">2 + 3*t</textarea>
+                <small>支持基本运算和 Math 函数，例如 sin, cos, exp, sqrt 等。</small>
+            </div>
+            <div class="ui-controls">
+                <label for="vt-rects">矩形数目 (n)：<span id="vt-rects-value">10</span></label>
+                <input type="range" id="vt-rects" min="2" max="40" value="10">
+            </div>
+            <div class="ui-controls">
+                <label for="vt-time">时间范围 [0, T]：<span id="vt-time-value">5</span></label>
+                <input type="range" id="vt-time" min="1" max="10" step="0.5" value="5">
+            </div>
+            <div class="ui-controls">
+                <label for="vt-method">矩形方法：</label>
+                <select id="vt-method">
+                    <option value="left">左端</option>
+                    <option value="mid" selected>中点</option>
+                    <option value="right">右端</option>
+                    <option value="trap">梯形</option>
+                </select>
+            </div>
+            <div class="readout" id="vt-readout">
+                <div class="metric accent">
+                    <div class="label">矩形总面积</div>
+                    <div class="value" id="vt-rect-area">0.0000</div>
+                </div>
+                <div class="metric success">
+                    <div class="label">准确面积 (积分)</div>
+                    <div class="value" id="vt-true-area">0.0000</div>
+                </div>
+                <div class="metric danger">
+                    <div class="label">绝对误差</div>
+                    <div class="value" id="vt-abs-err">0.0000</div>
+                </div>
+                <div class="metric">
+                    <div class="label">相对误差</div>
+                    <div class="value" id="vt-rel-err">0.00%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scene 2: 2D Canvas -->
+    <div id="scene2" class="scene" style="display: none;">
+        <!-- Part 1: Curve Approximation -->
+        <div class="demo-panel">
+            <div class="canvas-container">
+                <canvas id="curve-canvas"></canvas>
+            </div>
+            <div class="ui-controls">
+                <h4>曲线逼近</h4>
+                <p>拖动曲线上两个点，观察当它们靠近时，曲线长度与直线距离的变化。</p>
+            </div>
+            <div class="readout" id="curve-readout">
+                <div class="metric accent">
+                    <div class="label">曲线长度 L_curve</div>
+                    <div class="value" id="curve-length">0.00</div>
+                </div>
+                <div class="metric">
+                    <div class="label">直线距离 L_line</div>
+                    <div class="value" id="line-distance">0.00</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Part 2: Circle Area -->
+        <div class="demo-panel">
+            <div class="canvas-container">
+                <canvas id="circle-canvas"></canvas>
+            </div>
+            <div class="ui-controls" id="circle-demo-controls">
+                <label for="n-slider">内接三角形数量 n: <span id="n-value">8</span></label>
+                <input type="range" id="n-slider" min="3" max="200" value="8">
+            </div>
+            <div class="readout" id="circle-readout">
+                <div class="metric accent">
+                    <div class="label">圆周长 C = 2πR</div>
+                    <div class="value">常量</div>
+                </div>
+                <div class="metric">
+                    <div class="label">多边形周长 Pn</div>
+                    <div class="value">n · 2R · sin(π/n)</div>
+                </div>
+                <div class="metric danger">
+                    <div class="label">周长差 |C - Pn|</div>
+                    <div class="value" id="circumference-diff">0.00</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scene 3: 3D Three.js -->
+    <div id="scene3" class="scene" style="display: none;">
+        <!-- Part 1: 球棱锥体积（四棱锥逼近） -->
+        <div class="demo-panel">
+            <div class="canvas-container" id="surface-canvas-container"></div>
+            <div class="ui-controls">
+                <label for="side-length-slider">四棱锥数量 n×n: <span id="n-side-value">1×1</span></label>
+                <input type="range" id="side-length-slider" min="1" max="10" step="1" value="1">
+            </div>
+            <div class="readout" id="surface-readout">
+                <div class="metric success">
+                    <div class="label">球棱锥真实体积 V_true</div>
+                    <div class="value" id="surface-true">0.00</div>
+                </div>
+                <div class="metric accent">
+                    <div class="label">四棱锥近似总体积 V_approx</div>
+                    <div class="value" id="square-area">0.00</div>
+                </div>
+                <div class="metric danger">
+                    <div class="label">差值 |V_true - V_approx|</div>
+                    <div class="value" id="surface-diff">0.00</div>
+                </div>
+                <div class="metric">
+                    <div class="label">相对误差</div>
+                    <div class="value" id="surface-rel">0.00%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Part 2: Sphere Volume -->
+        <div class="demo-panel">
+            <div class="canvas-container" id="volume-canvas-container"></div>
+            <div class="ui-controls">
+                <label for="division-slider">球体逼近 (正多面体细分): <span id="division-value">正四面体</span></label>
+                <input type="range" id="division-slider" min="16" max="100" value="16">
+            </div>
+            <div class="readout" id="volume-readout">
+                <div class="metric success">
+                    <div class="label">真实体积 V = (4/3)πR³</div>
+                    <div class="value" id="sphere-volume">0.00</div>
+                </div>
+                <div class="metric accent">
+                    <div class="label">棱锥近似体积 V_approx</div>
+                    <div class="value" id="approx-volume">0.00</div>
+                </div>
+                <div class="metric danger">
+                    <div class="label">差值 |V - V_approx|</div>
+                    <div class="value" id="volume-diff">0.00</div>
+                </div>
+                <div class="metric">
+                    <div class="label">相对误差</div>
+                    <div class="value" id="volume-rel">0.00%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- General Setup & Scene Switching ---
+    const scene1Button = document.getElementById('show-scene1');
+    const scene2Button = document.getElementById('show-scene2');
+    const scene3Button = document.getElementById('show-scene3');
+    const scene1Div = document.getElementById('scene1');
+    const scene2Div = document.getElementById('scene2');
+    const scene3Div = document.getElementById('scene3');
+
+    let activeScene = 1;
+
+    function switchScene(sceneNum) {
+        if (sceneNum === activeScene) return;
+
+        scene1Div.style.display = sceneNum === 1 ? 'flex' : 'none';
+        scene2Div.style.display = sceneNum === 2 ? 'flex' : 'none';
+        scene3Div.style.display = sceneNum === 3 ? 'flex' : 'none';
+
+        scene1Button.classList.toggle('active', sceneNum === 1);
+        scene2Button.classList.toggle('active', sceneNum === 2);
+        scene3Button.classList.toggle('active', sceneNum === 3);
+        
+        activeScene = sceneNum;
+        // When switching, we might need to resize canvases
+        window.dispatchEvent(new Event('resize'));
+    }
+
+    scene1Button.addEventListener('click', () => switchScene(1));
+    scene2Button.addEventListener('click', () => switchScene(2));
+    scene3Button.addEventListener('click', () => switchScene(3));
+
+    // Store reference to scene3 init function
+    let initScene3Apps = null;
+
+    // --- Scene 1: v-t 积分演示 ---
+    (function setupVTScene() {
+        const canvas = document.getElementById('vt-canvas');
+        const ctx = canvas.getContext('2d');
+        const funcInput = document.getElementById('vt-func');
+        const rectSlider = document.getElementById('vt-rects');
+        const rectValueSpan = document.getElementById('vt-rects-value');
+        const timeSlider = document.getElementById('vt-time');
+        const timeValueSpan = document.getElementById('vt-time-value');
+        const methodSelect = document.getElementById('vt-method');
+        const rectAreaSpan = document.getElementById('vt-rect-area');
+        const trueAreaSpan = document.getElementById('vt-true-area');
+        const absErrSpan = document.getElementById('vt-abs-err');
+        const relErrSpan = document.getElementById('vt-rel-err');
+
+        let width = 0, height = 0;
+
+        function resize() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            width = canvas.width;
+            height = canvas.height;
+            draw();
+        }
+
+        function parseFunc() {
+            const expr = funcInput.value.trim();
+            if (!expr) return null;
+            try {
+                return new Function('t', 'with (Math) { return ' + expr + '; }');
+            } catch (e) {
+                console.warn('函数解析失败', e);
+                return null;
+            }
+        }
+
+        function safeEval(fn, t) {
+            const v = fn(t);
+            if (!isFinite(v)) throw new Error('非有限值');
+            return v;
+        }
+
+        function integrate(fn, t0, t1, steps = 1000) {
+            const dt = (t1 - t0) / steps;
+            let area = 0;
+            for (let i = 0; i < steps; i++) {
+                const ta = t0 + i * dt;
+                const tb = ta + dt;
+                const va = safeEval(fn, ta);
+                const vb = safeEval(fn, tb);
+                area += 0.5 * (va + vb) * dt; // 梯形积分近似
+            }
+            return area;
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+
+            const fn = parseFunc();
+            const n = parseInt(rectSlider.value, 10);
+            const T = parseFloat(timeSlider.value);
+            rectValueSpan.textContent = n;
+            timeValueSpan.textContent = T;
+
+            if (!fn || !isFinite(T) || T <= 0) {
+                rectAreaSpan.textContent = '函数错误';
+                return;
+            }
+
+            const margin = { left: 50, right: 20, top: 30, bottom: 40 };
+            const plotW = width - margin.left - margin.right;
+            const plotH = height - margin.top - margin.bottom;
+
+            // 采样曲线获取范围
+            const samples = 200;
+            let minV = Infinity, maxV = -Infinity;
+            const pts = [];
+            for (let i = 0; i <= samples; i++) {
+                const t = (T * i) / samples;
+                const v = safeEval(fn, t);
+                pts.push({ t, v });
+                minV = Math.min(minV, v);
+                maxV = Math.max(maxV, v);
+            }
+            minV = Math.min(minV, 0);
+            maxV = Math.max(maxV, 0.1);
+            const pad = (maxV - minV) * 0.1 + 1e-6;
+            minV -= pad;
+            maxV += pad;
+
+            const xToPx = (t) => margin.left + (t / T) * plotW;
+            const yToPx = (v) => margin.top + (maxV - v) * (plotH / (maxV - minV));
+
+            // 坐标轴
+            ctx.strokeStyle = '#222';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(margin.left, margin.top);
+            ctx.lineTo(margin.left, height - margin.bottom);
+            ctx.lineTo(width - margin.right, height - margin.bottom);
+            ctx.stroke();
+
+            // 零线
+            const zeroY = yToPx(0);
+            ctx.strokeStyle = '#ccc';
+            ctx.setLineDash([6, 6]);
+            ctx.beginPath();
+            ctx.moveTo(margin.left, zeroY);
+            ctx.lineTo(width - margin.right, zeroY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // 曲线
+            ctx.strokeStyle = '#0d6efd';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            pts.forEach((p, idx) => {
+                const x = xToPx(p.t);
+                const y = yToPx(p.v);
+                if (idx === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+
+            // 抽样点
+            ctx.fillStyle = '#ff6b6b';
+            pts.forEach((p, idx) => {
+                if (idx % 20 === 0 || idx === pts.length - 1) {
+                    const x = xToPx(p.t);
+                    const y = yToPx(p.v);
+                    ctx.beginPath();
+                    ctx.arc(x, y, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+
+            // 计算矩形面积
+            const dt = T / n;
+            let rectArea = 0;
+            ctx.fillStyle = 'rgba(40, 167, 69, 0.25)';
+            ctx.strokeStyle = 'rgba(40, 167, 69, 0.65)';
+            for (let i = 0; i < n; i++) {
+                const t0 = i * dt;
+                const t1 = t0 + dt;
+                let vSample = 0;
+                const method = methodSelect.value;
+                if (method === 'left') vSample = safeEval(fn, t0);
+                else if (method === 'right') vSample = safeEval(fn, t1);
+                else if (method === 'mid') vSample = safeEval(fn, t0 + dt / 2);
+                else if (method === 'trap') vSample = 0.5 * (safeEval(fn, t0) + safeEval(fn, t1));
+
+                const area = vSample * dt;
+                rectArea += area;
+
+                const x = xToPx(t0);
+                const w = xToPx(t1) - xToPx(t0);
+                const y = yToPx(Math.max(vSample, 0));
+                const h = yToPx(Math.min(vSample, 0)) - y; // 支持负值
+                ctx.beginPath();
+                ctx.rect(x, y, w, h);
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            const trueArea = integrate(fn, 0, T, 1200);
+            const absErr = Math.abs(trueArea - rectArea);
+            const relErr = trueArea !== 0 ? (absErr / Math.abs(trueArea)) * 100 : 0;
+
+            rectAreaSpan.textContent = rectArea.toFixed(4);
+            trueAreaSpan.textContent = trueArea.toFixed(4);
+            absErrSpan.textContent = absErr.toFixed(4);
+            relErrSpan.textContent = relErr.toFixed(2) + '%';
+        }
+
+        funcInput.addEventListener('input', draw);
+        rectSlider.addEventListener('input', draw);
+        timeSlider.addEventListener('input', draw);
+        methodSelect.addEventListener('change', draw);
+        window.addEventListener('resize', resize);
+        resize();
+    })();
+
+    // --- Scene 2: 2D Canvas ---
+    (function setupScene2() {
+        // --- Part 1: Curve Approximation ---
+        const curveCanvas = document.getElementById('curve-canvas');
+        const curveCtx = curveCanvas.getContext('2d');
+        const curveLengthSpan = document.getElementById('curve-length');
+        const lineDistanceSpan = document.getElementById('line-distance');
+
+        let curveWidth, curveHeight;
+        const curvePoints = [
+            { x: 0.15, y: 0.5 }, // Normalized coordinates
+            { x: 0.85, y: 0.5 }
+        ];
+        let draggingPoint = null;
+
+        // The curve function: y = a * sin(x/b) + c
+        const curveFunc = (x) => 0.25 * Math.sin(x * 10) + 0.5;
+
+        function resizeCurveCanvas() {
+            const rect = curveCanvas.parentElement.getBoundingClientRect();
+            curveCanvas.width = rect.width;
+            curveCanvas.height = rect.height;
+            curveWidth = curveCanvas.width;
+            curveHeight = curveCanvas.height;
+            drawCurveScene();
+        }
+
+        function drawCurveScene() {
+            curveCtx.clearRect(0, 0, curveWidth, curveHeight);
+
+            // Draw the curve
+            curveCtx.beginPath();
+            curveCtx.strokeStyle = '#007bff';
+            curveCtx.lineWidth = 2;
+            for (let i = 0; i <= curveWidth; i++) {
+                const x = i / curveWidth;
+                const y = curveFunc(x);
+                curveCtx.lineTo(i, y * curveHeight);
+            }
+            curveCtx.stroke();
+
+            // Get pixel coordinates for points
+            const p1 = { x: curvePoints[0].x * curveWidth, y: curveFunc(curvePoints[0].x) * curveHeight };
+            const p2 = { x: curvePoints[1].x * curveWidth, y: curveFunc(curvePoints[1].x) * curveHeight };
+
+            // Draw connecting line
+            curveCtx.beginPath();
+            curveCtx.moveTo(p1.x, p1.y);
+            curveCtx.lineTo(p2.x, p2.y);
+            curveCtx.strokeStyle = '#28a745';
+            curveCtx.lineWidth = 1.5;
+            curveCtx.stroke();
+
+            // Draw draggable points
+            [p1, p2].forEach(p => {
+                curveCtx.beginPath();
+                curveCtx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+                curveCtx.fillStyle = '#dc3545';
+                curveCtx.fill();
+                curveCtx.strokeStyle = '#fff';
+                curveCtx.lineWidth = 2;
+                curveCtx.stroke();
+            });
+            
+            updateCurveCalculations();
+        }
+        
+        function updateCurveCalculations() {
+            const p1Norm = curvePoints[0];
+            const p2Norm = { x: curvePoints[1].x, y: curveFunc(curvePoints[1].x) };
+            p1Norm.y = curveFunc(p1Norm.x);
+
+            // Calculate line distance
+            const dxLine = (p2Norm.x - p1Norm.x) * curveWidth;
+            const dyLine = (p2Norm.y - p1Norm.y) * curveHeight;
+            const lineDist = Math.sqrt(dxLine*dxLine + dyLine*dyLine);
+            lineDistanceSpan.textContent = lineDist.toFixed(2);
+
+            // Calculate curve length (numerical integration)
+            let curveLen = 0;
+            const segments = 1000;
+            const startX = Math.min(p1Norm.x, p2Norm.x);
+            const endX = Math.max(p1Norm.x, p2Norm.x);
+            const step = (endX - startX) / segments;
+            
+            let lastX = startX;
+            let lastY = curveFunc(lastX);
+
+            for(let i = 1; i <= segments; i++) {
+                const currentX = startX + i * step;
+                const currentY = curveFunc(currentX);
+                const dxCurve = (currentX - lastX) * curveWidth;
+                const dyCurve = (currentY - lastY) * curveHeight;
+                curveLen += Math.sqrt(dxCurve*dxCurve + dyCurve*dyCurve);
+                lastX = currentX;
+                lastY = currentY;
+            }
+            curveLengthSpan.textContent = curveLen.toFixed(2);
+        }
+
+        curveCanvas.addEventListener('mousedown', (e) => {
+            const rect = curveCanvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            const p1 = { x: curvePoints[0].x * curveWidth, y: curveFunc(curvePoints[0].x) * curveHeight };
+            const p2 = { x: curvePoints[1].x * curveWidth, y: curveFunc(curvePoints[1].x) * curveHeight };
+
+            if (Math.hypot(mouseX - p1.x, mouseY - p1.y) < 10) draggingPoint = curvePoints[0];
+            else if (Math.hypot(mouseX - p2.x, mouseY - p2.y) < 10) draggingPoint = curvePoints[1];
+        });
+        
+        curveCanvas.addEventListener('mousemove', (e) => {
+            if (!draggingPoint) return;
+            const rect = curveCanvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            // Snap to curve by only considering the x-coordinate
+            draggingPoint.x = Math.max(0, Math.min(1, mouseX / curveWidth));
+            drawCurveScene();
+        });
+
+        window.addEventListener('mouseup', () => {
+            draggingPoint = null;
+        });
+
+
+        // --- Part 2: Circle Approximation ---
+        const circleCanvas = document.getElementById('circle-canvas');
+        const circleCtx = circleCanvas.getContext('2d');
+        const nSlider = document.getElementById('n-slider');
+        const nValueSpan = document.getElementById('n-value');
+        const diffSpan = document.getElementById('circumference-diff');
+
+        let circleWidth, circleHeight, radius;
+
+        function resizeCircleCanvas() {
+            const rect = circleCanvas.parentElement.getBoundingClientRect();
+            circleCanvas.width = rect.width;
+            circleCanvas.height = rect.height;
+            circleWidth = circleCanvas.width;
+            circleHeight = circleCanvas.height;
+            radius = Math.min(circleWidth, circleHeight) * 0.4;
+            drawCircleScene();
+        }
+
+        function drawCircleScene() {
+            const n = parseInt(nSlider.value);
+            nValueSpan.textContent = n;
+
+            circleCtx.clearRect(0, 0, circleWidth, circleHeight);
+            const centerX = circleWidth / 2;
+            const centerY = circleHeight / 2;
+
+            // Draw the reference circle (light blue background)
+            circleCtx.beginPath();
+            circleCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            circleCtx.strokeStyle = 'rgba(0, 123, 255, 0.3)';
+            circleCtx.lineWidth = 2;
+            circleCtx.stroke();
+
+            // Draw regular polygon (正多边形) approximating the circle
+            circleCtx.beginPath();
+            const vertices = [];
+            for (let i = 0; i < n; i++) {
+                const angle = (i / n) * Math.PI * 2 - Math.PI / 2; // Start from top
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+                vertices.push({x, y});
+                
+                if (i === 0) {
+                    circleCtx.moveTo(x, y);
+                } else {
+                    circleCtx.lineTo(x, y);
+                }
+            }
+            circleCtx.closePath();
+            circleCtx.strokeStyle = '#dc3545';
+            circleCtx.lineWidth = 2;
+            circleCtx.stroke();
+            circleCtx.fillStyle = 'rgba(220, 53, 69, 0.1)';
+            circleCtx.fill();
+            
+            // Draw radii from center to vertices
+            circleCtx.strokeStyle = 'rgba(220, 53, 69, 0.3)';
+            circleCtx.lineWidth = 1;
+            vertices.forEach(v => {
+                circleCtx.beginPath();
+                circleCtx.moveTo(centerX, centerY);
+                circleCtx.lineTo(v.x, v.y);
+                circleCtx.stroke();
+            });
+            
+            // Draw vertices
+            vertices.forEach(v => {
+                circleCtx.beginPath();
+                circleCtx.arc(v.x, v.y, 3, 0, Math.PI * 2);
+                circleCtx.fillStyle = '#dc3545';
+                circleCtx.fill();
+            });
+            
+            updateCircleCalculations();
+        }
+        
+        function updateCircleCalculations() {
+            const n = parseInt(nSlider.value);
+            const circumference = 2 * Math.PI * radius;
+            const polygonPerimeter = n * 2 * radius * Math.sin(Math.PI / n);
+            const difference = Math.abs(circumference - polygonPerimeter);
+            diffSpan.textContent = difference.toFixed(4);
+        }
+
+        nSlider.addEventListener('input', drawCircleScene);
+        
+           // Initial setup for scene 2
+        resizeCurveCanvas();
+        resizeCircleCanvas();
+        window.addEventListener('resize', () => {
+               if (activeScene === 2) {
+                resizeCurveCanvas();
+                resizeCircleCanvas();
+             }
+        });
+    })();
+
+        // --- Scene 3: 3D Three.js ---
+        (function setupScene3() {
+        if (typeof THREE === 'undefined') {
+            console.error("Three.js is not loaded");
+            return;
+        }
+
+        let surfaceApp, volumeApp;
+
+        function initSurfaceApp() {
+            const container = document.getElementById('surface-canvas-container');
+            if (!container || container.children.length > 0) return;
+
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xfdfdfd);
+            const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(4, 3, 4);
+            camera.lookAt(0, 0, 0);
+
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            container.appendChild(renderer.domElement);
+
+            const controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9);
+            directionalLight.position.set(5, 10, 7.5);
+            scene.add(directionalLight);
+
+            const sphereRadius = 2;
+            const origin = new THREE.Vector3(0, 0, 0);
+
+            // Groups
+            const sphericalPyramidGroup = new THREE.Group(); // 球棱锥（虚线）
+            const approxGroup = new THREE.Group(); // 四棱锥逼近
+            scene.add(sphericalPyramidGroup);
+            scene.add(approxGroup);
+            
+            // 存储球面补片的引用（用于控制可见性）
+            let spherePatchMesh = null;
+
+            // UI refs
+            const nSideValue = document.getElementById('n-side-value');
+            const surfaceTrueSpan = document.getElementById('surface-true');
+            const squareAreaSpan = document.getElementById('square-area');
+            const surfaceDiffSpan = document.getElementById('surface-diff');
+            const surfaceRelSpan = document.getElementById('surface-rel');
+            const sideSlider = document.getElementById('side-length-slider');
+
+            // 定义球棱锥的四个顶点（在球面上形成一个对称的球面正方形）
+            // 以球面上一点为中心，四个角对称分布
+            const center = new THREE.Vector3(1, 1, 1).normalize().multiplyScalar(sphereRadius);
+            const sideAngle = Math.PI / 5; // 36度，控制底面大小
+            
+            // 计算局部坐标系
+            const up = center.clone().normalize();
+            const right = new THREE.Vector3(0, 1, 0).cross(up).normalize();
+            if (right.length() < 0.1) right.set(1, 0, 0).cross(up).normalize();
+            const forward = up.clone().cross(right).normalize();
+            
+            // 四个顶点相对于中心对称分布
+            function spherePoint(theta, phi) {
+                const dir = new THREE.Vector3()
+                    .addScaledVector(up, Math.cos(phi))
+                    .addScaledVector(right, Math.sin(phi) * Math.cos(theta))
+                    .addScaledVector(forward, Math.sin(phi) * Math.sin(theta));
+                return dir.normalize().multiplyScalar(sphereRadius);
+            }
+            
+            const cornerAngles = [Math.PI/4, 3*Math.PI/4, 5*Math.PI/4, 7*Math.PI/4]; // 45°, 135°, 225°, 315°
+            const qq1 = spherePoint(cornerAngles[0], sideAngle);
+            const qq2 = spherePoint(cornerAngles[1], sideAngle);
+            const qq3 = spherePoint(cornerAngles[2], sideAngle);
+            const qq4 = spherePoint(cornerAngles[3], sideAngle);
+
+            // 计算球棱锥真实体积：V = (Ω / 3) * R^3，其中 Ω 为球面四边形的立体角
+            function triSolidAngle(a, b, c) {
+                const na = a.clone().normalize();
+                const nb = b.clone().normalize();
+                const nc = c.clone().normalize();
+                const num = na.dot(nb.clone().cross(nc));
+                const den = 1 + na.dot(nb) + nb.dot(nc) + nc.dot(na);
+                return 2 * Math.atan2(num, den);
+            }
+            const solidAngle = triSolidAngle(qq1, qq2, qq3) + triSolidAngle(qq1, qq3, qq4);
+            const trueSphericalVolume = (solidAngle / 3) * Math.pow(sphereRadius, 3);
+            if (surfaceTrueSpan) surfaceTrueSpan.textContent = trueSphericalVolume.toFixed(4);
+
+            // 计算平面四棱锥体积（底面是平面四边形，顶点在原点）
+            // 分成两个三棱锥计算
+            const vol1 = Math.abs(qq1.clone().dot(qq2.clone().cross(qq3))) / 6;
+            const vol2 = Math.abs(qq1.clone().dot(qq3.clone().cross(qq4))) / 6;
+            const planarVolume = vol1 + vol2;
+
+            // 创建虚线材质
+            function createDashedLineMaterial(color) {
+                return new THREE.LineDashedMaterial({
+                    color: color,
+                    dashSize: 0.15,
+                    gapSize: 0.08,
+                    linewidth: 2
+                });
+            }
+
+            // 绘制球棱锥（虚线轮廓）
+            function drawSphericalPyramidOutline() {
+                const dashedMat = createDashedLineMaterial(0x007bff);
+                
+                // 从原点到四个顶点的棱（虚线）
+                [qq1, qq2, qq3, qq4].forEach(q => {
+                    const points = [origin.clone(), q.clone()];
+                    const geom = new THREE.BufferGeometry().setFromPoints(points);
+                    const line = new THREE.Line(geom, dashedMat);
+                    line.computeLineDistances();
+                    sphericalPyramidGroup.add(line);
+                });
+                
+                // 绘制球面弧线（虚线）
+                const arcSegments = 32;
+                const pairs = [[qq1, qq2], [qq2, qq3], [qq3, qq4], [qq4, qq1]];
+                pairs.forEach(([start, end]) => {
+                    const points = [];
+                    for (let i = 0; i <= arcSegments; i++) {
+                        const t = i / arcSegments;
+                        const pos = new THREE.Vector3().lerpVectors(start, end, t).normalize().multiplyScalar(sphereRadius);
+                        points.push(pos);
+                    }
+                    const geom = new THREE.BufferGeometry().setFromPoints(points);
+                    const line = new THREE.Line(geom, dashedMat);
+                    line.computeLineDistances();
+                    sphericalPyramidGroup.add(line);
+                });
+                
+                // 绘制球面部分（半透明凸起曲面）
+                const gridSize = 16;
+                const spherePatchPositions = [];
+                const spherePatchIndices = [];
+                
+                for (let i = 0; i <= gridSize; i++) {
+                    for (let j = 0; j <= gridSize; j++) {
+                        const u = i / gridSize;
+                        const v = j / gridSize;
+                        // 双线性插值后投影到球面
+                        const p12 = new THREE.Vector3().lerpVectors(qq1, qq2, u);
+                        const p43 = new THREE.Vector3().lerpVectors(qq4, qq3, u);
+                        const pos = new THREE.Vector3().lerpVectors(p12, p43, v).normalize().multiplyScalar(sphereRadius);
+                        spherePatchPositions.push(pos.x, pos.y, pos.z);
+                    }
+                }
+                
+                for (let i = 0; i < gridSize; i++) {
+                    for (let j = 0; j < gridSize; j++) {
+                        const idx = (row, col) => row * (gridSize + 1) + col;
+                        const a = idx(i, j);
+                        const b = idx(i + 1, j);
+                        const c = idx(i + 1, j + 1);
+                        const d = idx(i, j + 1);
+                        spherePatchIndices.push(a, b, c, a, c, d);
+                    }
+                }
+                
+                const spherePatchGeom = new THREE.BufferGeometry();
+                spherePatchGeom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(spherePatchPositions), 3));
+                spherePatchGeom.setIndex(spherePatchIndices);
+                spherePatchGeom.computeVertexNormals();
+                
+                const spherePatchMat = new THREE.MeshStandardMaterial({
+                    color: 0x007bff,
+                    transparent: true,
+                    opacity: 0.2,
+                    side: THREE.DoubleSide
+                });
+                spherePatchMesh = new THREE.Mesh(spherePatchGeom, spherePatchMat);
+                sphericalPyramidGroup.add(spherePatchMesh);
+            }
+
+            // 生成四棱锥逼近网格
+            function createQuadGrid(subdivisions) {
+                const points = [];
+                const n = subdivisions;
+                
+                // 在球面四边形内生成网格点
+                for (let i = 0; i <= n; i++) {
+                    for (let j = 0; j <= n; j++) {
+                        const u = i / n;
+                        const v = j / n;
+                        // 双线性插值
+                        const p12 = new THREE.Vector3().lerpVectors(qq1, qq2, u);
+                        const p43 = new THREE.Vector3().lerpVectors(qq4, qq3, u);
+                        const pos = new THREE.Vector3().lerpVectors(p12, p43, v).normalize().multiplyScalar(sphereRadius);
+                        points.push(pos);
+                    }
+                }
+                return points;
+            }
+
+            function updateApproximation(subdivisions) {
+                // 清除旧的
+                while (approxGroup.children.length) approxGroup.remove(approxGroup.children[0]);
+
+                const n = subdivisions;
+                const points = createQuadGrid(n);
+                const colors = [0xdc3545, 0x28a745, 0xffc107, 0x17a2b8, 0x6f42c1, 0xfd7e14];
+                
+                let totalVolume = 0;
+                let pyramidCount = 0;
+                
+                // 判断是否显示球面底面（n <= 2时显示球面，n > 2时显示平面）
+                const showSphericalBase = (n <= 2);
+                
+                // 控制球棱锥外框中的球面补片可见性
+                if (spherePatchMesh) {
+                    spherePatchMesh.visible = showSphericalBase;
+                }
+                
+                // 遍历每个小四边形，创建四棱锥
+                for (let i = 0; i < n; i++) {
+                    for (let j = 0; j < n; j++) {
+                        const idx = (row, col) => row * (n + 1) + col;
+                        
+                        // 四边形的四个顶点（在球面上）
+                        const a = points[idx(i, j)];
+                        const b = points[idx(i + 1, j)];
+                        const c = points[idx(i + 1, j + 1)];
+                        const d = points[idx(i, j + 1)];
+                        
+                        const colorIdx = pyramidCount % colors.length;
+                        const edgeMat = new THREE.LineBasicMaterial({ color: 0x333333 });
+                        
+                        if (showSphericalBase) {
+                            // 显示球面底面：只画侧面（从原点到边界的三角形）+ 球面底面
+                            // 侧面
+                            const sidePairs = [[a, b], [b, c], [c, d], [d, a]];
+                            sidePairs.forEach(([p1, p2]) => {
+                                const sideGeom = new THREE.BufferGeometry();
+                                sideGeom.setAttribute('position', new THREE.BufferAttribute(new Float32Array([
+                                    origin.x, origin.y, origin.z,
+                                    p1.x, p1.y, p1.z,
+                                    p2.x, p2.y, p2.z
+                                ]), 3));
+                                sideGeom.setIndex([0, 2, 1]);
+                                sideGeom.computeVertexNormals();
+                                
+                                const sideMat = new THREE.MeshStandardMaterial({
+                                    color: colors[colorIdx],
+                                    transparent: true,
+                                    opacity: 0.5,
+                                    side: THREE.DoubleSide
+                                });
+                                approxGroup.add(new THREE.Mesh(sideGeom, sideMat));
+                            });
+                            
+                            // 球面底面（细分后的曲面）
+                            const subDiv = 4;
+                            const basePositions = [];
+                            const baseIndices = [];
+                            for (let si = 0; si <= subDiv; si++) {
+                                for (let sj = 0; sj <= subDiv; sj++) {
+                                    const u = si / subDiv;
+                                    const v = sj / subDiv;
+                                    const pab = new THREE.Vector3().lerpVectors(a, b, u);
+                                    const pdc = new THREE.Vector3().lerpVectors(d, c, u);
+                                    const pos = new THREE.Vector3().lerpVectors(pab, pdc, v).normalize().multiplyScalar(sphereRadius);
+                                    basePositions.push(pos.x, pos.y, pos.z);
+                                }
+                            }
+                            for (let si = 0; si < subDiv; si++) {
+                                for (let sj = 0; sj < subDiv; sj++) {
+                                    const sidx = (r, c) => r * (subDiv + 1) + c;
+                                    baseIndices.push(sidx(si, sj), sidx(si+1, sj), sidx(si+1, sj+1));
+                                    baseIndices.push(sidx(si, sj), sidx(si+1, sj+1), sidx(si, sj+1));
+                                }
+                            }
+                            const baseGeom = new THREE.BufferGeometry();
+                            baseGeom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(basePositions), 3));
+                            baseGeom.setIndex(baseIndices);
+                            baseGeom.computeVertexNormals();
+                            
+                            const baseMat = new THREE.MeshStandardMaterial({
+                                color: colors[colorIdx],
+                                transparent: true,
+                                opacity: 0.6,
+                                side: THREE.DoubleSide
+                            });
+                            approxGroup.add(new THREE.Mesh(baseGeom, baseMat));
+                            
+                        } else {
+                            // 显示平面底面：完整的四棱锥
+                            const pyramidGeom = new THREE.BufferGeometry();
+                            pyramidGeom.setAttribute('position', new THREE.BufferAttribute(new Float32Array([
+                                origin.x, origin.y, origin.z, // 0: origin
+                                a.x, a.y, a.z,                // 1: a
+                                b.x, b.y, b.z,                // 2: b
+                                c.x, c.y, c.z,                // 3: c
+                                d.x, d.y, d.z                 // 4: d
+                            ]), 3));
+                            pyramidGeom.setIndex([
+                                0, 2, 1,  // 侧面 OBA
+                                0, 3, 2,  // 侧面 OCB
+                                0, 4, 3,  // 侧面 ODC
+                                0, 1, 4,  // 侧面 OAD
+                                1, 2, 3, 1, 3, 4  // 底面 ABCD（平面）
+                            ]);
+                            pyramidGeom.computeVertexNormals();
+                            
+                            const pyramidMat = new THREE.MeshStandardMaterial({
+                                color: colors[colorIdx],
+                                transparent: true,
+                                opacity: 0.6,
+                                side: THREE.DoubleSide
+                            });
+                            approxGroup.add(new THREE.Mesh(pyramidGeom, pyramidMat));
+                        }
+                        
+                        // 绘制棱（从原点到顶点，即半径）
+                        [a, b, c, d].forEach(vertex => {
+                            const edgeGeom = new THREE.BufferGeometry().setFromPoints([origin.clone(), vertex.clone()]);
+                            approxGroup.add(new THREE.Line(edgeGeom, edgeMat));
+                        });
+                        
+                        // 计算四棱锥体积（分成两个三棱锥）
+                        // 四棱锥 O-ABCD = 三棱锥 O-ABC + 三棱锥 O-ACD
+                        // V = |a·(b×c)|/6
+                        const vABC = Math.abs(a.dot(b.clone().cross(c))) / 6;
+                        const vACD = Math.abs(a.dot(c.clone().cross(d))) / 6;
+                        totalVolume += vABC + vACD;
+                        pyramidCount++;
+                    }
+                }
+
+                nSideValue.textContent = `${n}×${n} = ${n*n}`;
+                squareAreaSpan.textContent = totalVolume.toFixed(4);
+                if (surfaceDiffSpan && surfaceRelSpan && surfaceTrueSpan) {
+                    const diff = Math.abs(trueSphericalVolume - totalVolume);
+                    surfaceDiffSpan.textContent = diff.toFixed(4);
+                    const rel = trueSphericalVolume !== 0 ? (diff / Math.abs(trueSphericalVolume)) * 100 : 0;
+                    surfaceRelSpan.textContent = rel.toFixed(2) + '%';
+                }
+            }
+
+            // 初始绘制球棱锥轮廓
+            drawSphericalPyramidOutline();
+            updateApproximation(1);
+
+            sideSlider.addEventListener('input', () => {
+                const n = parseInt(sideSlider.value, 10);
+                updateApproximation(n);
+            });
+
+            function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            return { renderer, camera };
+        }
+        
+        // Helper function to create polyhedra geometries
+        function createPolyhedronGeometry(type, radius, subdivisions) {
+            let vertices, indices;
+            
+            if (type === 'tetrahedron') {
+                // Regular tetrahedron (4 faces)
+                const a = 1 / Math.sqrt(3);
+                vertices = [
+                    1,  1,  1,
+                   -1, -1,  1,
+                   -1,  1, -1,
+                    1, -1, -1
+                ];
+                indices = [
+                    2, 1, 0,
+                    0, 3, 2,
+                    1, 3, 0,
+                    2, 3, 1
+                ];
+            } else if (type === 'octahedron') {
+                // Regular octahedron (8 faces)
+                vertices = [
+                    1, 0, 0,
+                   -1, 0, 0,
+                    0, 1, 0,
+                    0,-1, 0,
+                    0, 0, 1,
+                    0, 0,-1
+                ];
+                indices = [
+                    0, 2, 4,
+                    0, 4, 3,
+                    0, 3, 5,
+                    0, 5, 2,
+                    1, 2, 5,
+                    1, 5, 3,
+                    1, 3, 4,
+                    1, 4, 2
+                ];
+            } else if (type === 'icosahedron') {
+                // Regular icosahedron (20 faces)
+                const t = (1 + Math.sqrt(5)) / 2;
+                vertices = [
+                   -1,  t,  0,
+                    1,  t,  0,
+                   -1, -t,  0,
+                    1, -t,  0,
+                    0, -1,  t,
+                    0,  1,  t,
+                    0, -1, -t,
+                    0,  1, -t,
+                    t,  0, -1,
+                    t,  0,  1,
+                   -t,  0, -1,
+                   -t,  0,  1
+                ];
+                indices = [
+                    0, 11, 5,
+                    0, 5, 1,
+                    0, 1, 7,
+                    0, 7, 10,
+                    0, 10, 11,
+                    1, 5, 9,
+                    5, 11, 4,
+                    11, 10, 2,
+                    10, 7, 6,
+                    7, 1, 8,
+                    3, 9, 4,
+                    3, 4, 2,
+                    3, 2, 6,
+                    3, 6, 8,
+                    3, 8, 9,
+                    4, 9, 5,
+                    2, 4, 11,
+                    6, 2, 10,
+                    8, 6, 7,
+                    9, 8, 1
+                ];
+            }
+            
+            return new THREE.PolyhedronGeometry(vertices, indices, radius, subdivisions);
+        }
+
+        function initVolumeApp() {
+            const container = document.getElementById('volume-canvas-container');
+            console.log('initVolumeApp called, container:', container);
+            if (!container || container.children.length > 0) {
+                console.log('Container not found or already initialized');
+                return;
+            }
+
+            console.log('Container size:', container.clientWidth, 'x', container.clientHeight);
+            
+            // Ensure container has valid size
+            if (container.clientWidth < 100 || container.clientHeight < 100) {
+                console.warn('Container too small, waiting...');
+                setTimeout(() => initVolumeApp(), 500);
+                return;
+            }
+
+            console.log('Initializing volume app...');
+
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xfdfdfd);
+            const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.z = 3.5;
+
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            container.appendChild(renderer.domElement);
+
+            const controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 10, 7.5);
+            scene.add(directionalLight);
+            
+            const sphereRadius = 2;
+            
+            // Add reference sphere (transparent)
+            const refSphereGeom = new THREE.SphereGeometry(sphereRadius, 64, 64);
+            const refSphereMat = new THREE.MeshStandardMaterial({ 
+                color: 0x007bff, 
+                transparent: true, 
+                opacity: 0.15,
+                side: THREE.DoubleSide
+            });
+            const refSphere = new THREE.Mesh(refSphereGeom, refSphereMat);
+            scene.add(refSphere);
+            
+            const sphereGroup = new THREE.Group();
+            scene.add(sphereGroup);
+            const sphereVolumeSpan = document.getElementById('sphere-volume');
+            const approxVolumeSpan = document.getElementById('approx-volume');
+            const divisionSlider = document.getElementById('division-slider');
+            const divisionValueSpan = document.getElementById('division-value');
+            
+            const trueVolume = (4/3) * Math.PI * Math.pow(sphereRadius, 3);
+            sphereVolumeSpan.textContent = trueVolume.toFixed(4);
+
+            function updateSphere(value) {
+                // Clear old sphere
+                while(sphereGroup.children.length > 0){ 
+                    sphereGroup.remove(sphereGroup.children[0]); 
+                }
+
+                let geom, polyType, subdivisions;
+                
+                // Map slider value to polyhedron type and subdivision level
+                if (value <= 30) {
+                    polyType = 'tetrahedron';
+                    subdivisions = Math.floor((value - 16) / 2);
+                    divisionValueSpan.textContent = `正四面体 (细分${subdivisions}次)`;
+                } else if (value <= 60) {
+                    polyType = 'octahedron';
+                    subdivisions = Math.floor((value - 30) / 2);
+                    divisionValueSpan.textContent = `正八面体 (细分${subdivisions}次)`;
+                } else {
+                    polyType = 'icosahedron';
+                    subdivisions = Math.floor((value - 60) / 2);
+                    divisionValueSpan.textContent = `正二十面体 (细分${subdivisions}次)`;
+                }
+                
+                console.log('Creating polyhedron:', polyType, 'subdivisions:', subdivisions);
+                
+                try {
+                    geom = createPolyhedronGeometry(polyType, sphereRadius, subdivisions);
+                    
+                    const mat = new THREE.MeshStandardMaterial({ 
+                        color: 0xdc3545, 
+                        wireframe: true,
+                    });
+                    const sphere = new THREE.Mesh(geom, mat);
+                    sphereGroup.add(sphere);
+                    
+                    console.log('Polyhedron created successfully');
+                    
+                    // Calculate approximate volume (works for indexed or non-indexed geometry)
+                    let approxVolume = 0;
+                    const posAttr = geom.attributes.position;
+                    const indices = geom.index ? geom.index.array : null;
+                    const vA = new THREE.Vector3();
+                    const vB = new THREE.Vector3();
+                    const vC = new THREE.Vector3();
+                    
+                    if (indices) {
+                        for (let i = 0; i < indices.length; i += 3) {
+                            const iA = indices[i];
+                            const iB = indices[i + 1];
+                            const iC = indices[i + 2];
+
+                            vA.fromBufferAttribute(posAttr, iA);
+                            vB.fromBufferAttribute(posAttr, iB);
+                            vC.fromBufferAttribute(posAttr, iC);
+                            
+                            // Volume of tetrahedron with one vertex at origin (0,0,0)
+                            // V = | a . (b x c) | / 6
+                            const vol = Math.abs(vA.dot(vB.clone().cross(vC))) / 6.0;
+                            approxVolume += vol;
+                        }
+                    } else {
+                        const positions = posAttr.array;
+                        for (let i = 0; i < positions.length; i += 9) {
+                            vA.set(positions[i], positions[i + 1], positions[i + 2]);
+                            vB.set(positions[i + 3], positions[i + 4], positions[i + 5]);
+                            vC.set(positions[i + 6], positions[i + 7], positions[i + 8]);
+                            const vol = Math.abs(vA.dot(vB.clone().cross(vC))) / 6.0;
+                            approxVolume += vol;
+                        }
+                    }
+                    
+                    approxVolumeSpan.textContent = approxVolume.toFixed(4);
+                    const diff = Math.abs(trueVolume - approxVolume);
+                    const diffSpan = document.getElementById('volume-diff');
+                    const relSpan = document.getElementById('volume-rel');
+                    if (diffSpan) diffSpan.textContent = diff.toFixed(4);
+                    if (relSpan) {
+                        const rel = trueVolume !== 0 ? (diff / Math.abs(trueVolume)) * 100 : 0;
+                        relSpan.textContent = rel.toFixed(2) + '%';
+                    }
+                } catch (error) {
+                    console.error('Error creating polyhedron:', error);
+                }
+            }
+
+            divisionSlider.addEventListener('input', () => {
+                const d = parseInt(divisionSlider.value);
+                updateSphere(d);
+            });
+            divisionSlider.dispatchEvent(new Event('input'));
+
+            function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+                renderer.render(scene, camera);
+            }
+            animate();
+            
+            return { renderer, camera };
+        }
+        
+        function initApps() {
+            surfaceApp = initSurfaceApp();
+            volumeApp = initVolumeApp();
+        }
+
+        // Export init function for external access
+        initScene3Apps = initApps;
+
+        // Initialize when scene3 is shown
+        scene3Button.addEventListener('click', () => {
+            if (!surfaceApp || !volumeApp) {
+                setTimeout(() => {
+                    initApps();
+                }, 100);
+            }
+        });
+        
+        window.addEventListener('resize', () => {
+            if (activeScene !== 3 || !surfaceApp || !volumeApp) return;
+
+            const surfaceContainer = document.getElementById('surface-canvas-container');
+            if (surfaceContainer) {
+                surfaceApp.camera.aspect = surfaceContainer.clientWidth / surfaceContainer.clientHeight;
+                surfaceApp.camera.updateProjectionMatrix();
+                surfaceApp.renderer.setSize(surfaceContainer.clientWidth, surfaceContainer.clientHeight);
+            }
+
+            const volumeContainer = document.getElementById('volume-canvas-container');
+            if (volumeContainer) {
+                volumeApp.camera.aspect = volumeContainer.clientWidth / volumeContainer.clientHeight;
+                volumeApp.camera.updateProjectionMatrix();
+                volumeApp.renderer.setSize(volumeContainer.clientWidth, volumeContainer.clientHeight);
+            }
+        });
+    })();
+</script>
+
+</body>
+</html>

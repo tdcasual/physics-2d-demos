@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>交互式点电荷电势能演示</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #111827; /* 深色背景 */
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            padding: 10px 20px;
+            background-color: rgba(0, 0, 0, 0.6);
+            border-radius: 8px;
+            text-align: center;
+            font-size: 16px;
+            pointer-events: none;
+        }
+        #info p { margin-top: 5px; }
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            backdrop-filter: blur(5px);
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .btn:disabled {
+            background-color: #4b5563;
+            cursor: not-allowed;
+        }
+        .btn-primary { background-color: #3b82f6; }
+        .btn-primary:hover:not(:disabled) { background-color: #2563eb; }
+        .btn-secondary { background-color: #8b5cf6; }
+        .btn-secondary:hover:not(:disabled) { background-color: #7c3aed; }
+        .btn-danger { background-color: #ef4444; }
+        .btn-danger:hover:not(:disabled) { background-color: #dc2626; }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h1>点电荷电势能的构建过程</h1>
+        <p>场景中已有一个点电荷，<strong>点击它可以切换正/负电性。</strong></p>
+    </div>
+
+    <div id="controls">
+        <button id="showSliceBtn" class="btn btn-primary">1. 显示电势切片</button>
+        <button id="startRotationBtn" class="btn btn-secondary" disabled>2. 开始旋转</button>
+        <button id="resetBtn" class="btn btn-danger" disabled>3. 重置</button>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.164.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        let scene, camera, renderer, controls, raycaster;
+        let pointCharge, potentialCurve, potentialSurface;
+        let isRotating = false;
+        let chargeSign = 1; // 1 for positive, -1 for negative
+        let potentialPoints = [];
+        const mouse = new THREE.Vector2();
+
+        const showSliceBtn = document.getElementById('showSliceBtn');
+        const startRotationBtn = document.getElementById('startRotationBtn');
+        const resetBtn = document.getElementById('resetBtn');
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x111827);
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(10, 15, 20);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+            const pointLight = new THREE.PointLight(0xffffff, 1);
+            pointLight.position.set(20, 30, 20);
+            scene.add(pointLight);
+
+            scene.add(new THREE.AxesHelper(15));
+            scene.add(new THREE.GridHelper(40, 40, 0x444444, 0x444444));
+            
+            raycaster = new THREE.Raycaster();
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            camera.lookAt(0, 5, 0);
+            controls.target.set(0, 5, 0);
+
+            // --- 核心改动：初始化时就创建电荷 ---
+            createPointCharge();
+
+            showSliceBtn.addEventListener('click', showSlice);
+            startRotationBtn.addEventListener('click', startRotation);
+            resetBtn.addEventListener('click', resetScene);
+            window.addEventListener('resize', onWindowResize);
+            renderer.domElement.addEventListener('click', onCanvasClick);
+        }
+        
+        function createPointCharge() {
+             const chargeGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+             const chargeMaterial = new THREE.MeshPhongMaterial();
+             pointCharge = new THREE.Mesh(chargeGeometry, chargeMaterial);
+             scene.add(pointCharge);
+             updateChargeVisuals(); // 更新颜色
+        }
+
+        function generatePotentialPoints() {
+            potentialPoints = [];
+            for (let i = 1; i <= 60; i++) {
+                const r = i * 0.3;
+                const U = chargeSign * (12 / r);
+                potentialPoints.push(new THREE.Vector2(r, U));
+            }
+        }
+
+        function showSlice() {
+            if (potentialCurve) return; // 防止重复创建
+            generatePotentialPoints();
+            
+            const curvePoints = potentialPoints.map(p => new THREE.Vector3(p.x, p.y, 0));
+            const curveGeometry = new THREE.BufferGeometry().setFromPoints(curvePoints);
+            const curveMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 3 });
+            potentialCurve = new THREE.Line(curveGeometry, curveMaterial);
+            scene.add(potentialCurve);
+            
+            showSliceBtn.disabled = true;
+            startRotationBtn.disabled = false;
+            resetBtn.disabled = false;
+        }
+
+        function startRotation() {
+            // 如果已有曲面，先移除，以便重新开始动画
+            if (potentialSurface) {
+                scene.remove(potentialSurface);
+                potentialSurface.geometry.dispose();
+                potentialSurface.material.dispose();
+                potentialSurface = null;
+            }
+
+            if (potentialCurve) potentialCurve.visible = false;
+            generatePotentialPoints();
+
+            const geometry = new THREE.LatheGeometry(potentialPoints, 64, 0, 0.01);
+            const material = new THREE.MeshPhongMaterial({
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.6,
+                shininess: 50,
+            });
+            potentialSurface = new THREE.Mesh(geometry, material);
+            // --- 修正开始 ---
+            // 直接设置颜色，而不是调用会重建整个几何体的 updateChargeVisuals()
+            const surfaceColor = (chargeSign > 0) ? 0x0099ff : 0xff6666;
+            potentialSurface.material.color.setHex(surfaceColor);
+            // --- 修正结束 ---
+            scene.add(potentialSurface);
+            
+            isRotating = true;
+            startRotationBtn.disabled = true; // 旋转过程中禁用
+        }
+        
+        function resetScene() {
+            if (potentialCurve) {
+                scene.remove(potentialCurve);
+                potentialCurve.geometry.dispose();
+                potentialCurve = null;
+            }
+            if (potentialSurface) {
+                scene.remove(potentialSurface);
+                potentialSurface.geometry.dispose();
+                potentialSurface = null;
+            }
+
+            isRotating = false;
+
+            // --- 核心改动：重置时不移除电荷 ---
+            // pointCharge 保持不变
+            
+            showSliceBtn.disabled = false;
+            startRotationBtn.disabled = true;
+            resetBtn.disabled = true;
+        }
+        
+        function updateChargeVisuals() {
+            if (!pointCharge) return;
+            
+            generatePotentialPoints();
+
+            const chargeColor = (chargeSign > 0) ? 0xffcc00 : 0x00aaff;
+            pointCharge.material.color.setHex(chargeColor);
+            pointCharge.material.emissive.setHex(chargeColor).multiplyScalar(0.5);
+
+            if (potentialCurve) {
+                const curvePoints = potentialPoints.map(p => new THREE.Vector3(p.x, p.y, 0));
+                potentialCurve.geometry.setFromPoints(curvePoints);
+                potentialCurve.geometry.attributes.position.needsUpdate = true;
+            }
+            if (potentialSurface) {
+                // 如果不是在旋转动画中，则立即更新为完整形态
+                if (!isRotating) {
+                    potentialSurface.geometry.dispose();
+                    potentialSurface.geometry = new THREE.LatheGeometry(potentialPoints, 64, 0, Math.PI * 2);
+                }
+                const surfaceColor = (chargeSign > 0) ? 0x0099ff : 0xff6666;
+                potentialSurface.material.color.setHex(surfaceColor);
+            }
+        }
+        
+        function onCanvasClick(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            if (!pointCharge) return;
+
+            const intersects = raycaster.intersectObject(pointCharge);
+
+            if (intersects.length > 0) {
+                chargeSign *= -1;
+                isRotating = false; // 停止任何正在进行的旋转
+                
+                updateChargeVisuals();
+                
+                // --- 核心改动：切换电荷后，重新启用旋转按钮 ---
+                if (potentialCurve || potentialSurface) {
+                    startRotationBtn.disabled = false;
+                }
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            
+            if (isRotating && potentialSurface) {
+                const params = potentialSurface.geometry.parameters;
+                let currentAngle = params.phiLength;
+                if (currentAngle < Math.PI * 2) {
+                    currentAngle += 0.04;
+                    potentialSurface.geometry.dispose();
+                    potentialSurface.geometry = new THREE.LatheGeometry(potentialPoints, 64, 0, Math.min(currentAngle, Math.PI * 2));
+                } else {
+                    isRotating = false;
+                    startRotationBtn.disabled = false; // 旋转完成后再次启用
+                }
+            }
+            renderer.render(scene, camera);
+        }
+
+        init();
+        animate();
+    </script>
+</body>
+</html>
+

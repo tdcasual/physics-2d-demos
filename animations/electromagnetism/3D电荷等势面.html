@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Charge Equipotential Surfaces - Debug</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --text-color: #f0f0f0;
+            --panel-bg: rgba(20, 20, 20, 0.85);
+            --panel-border: rgba(255, 255, 255, 0.12);
+            --btn-bg: #4a5568;
+            --btn-bg-hover: #2d3748;
+            --btn-danger-bg: #c53030;
+            --btn-danger-bg-hover: #9b2c2c;
+            --charge-item-bg: rgba(255, 255, 255, 0.08);
+            --charge-item-selected-bg: rgba(74, 85, 104, 0.6);
+            --info-box-bg: rgba(20, 20, 20, 0.8);
+            --grid-color-main: #444444;
+            --grid-color-sub: #333333;
+        }
+
+        :root[data-theme="light"] {
+            --bg-color: #f9fafb;
+            --text-color: #111827;
+            --panel-bg: rgba(255, 255, 255, 0.9);
+            --panel-border: rgba(15, 23, 42, 0.1);
+            --btn-bg: #2563eb;
+            --btn-bg-hover: #1d4ed8;
+            --btn-danger-bg: #dc2626;
+            --btn-danger-bg-hover: #b91c1c;
+            --charge-item-bg: rgba(15, 23, 42, 0.04);
+            --charge-item-selected-bg: rgba(59, 130, 246, 0.18);
+            --info-box-bg: rgba(249, 250, 251, 0.9);
+            --grid-color-main: #9ca3af;
+            --grid-color-sub: #d1d5db;
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            transition: background-color 0.35s ease, color 0.35s ease;
+        }
+
+        #container { width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; }
+        .panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: var(--panel-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            width: 320px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.28);
+            border: 1px solid var(--panel-border);
+            z-index: 10;
+        }
+        .btn {
+            background-color: var(--btn-bg);
+            color: white;
+            font-weight: bold;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s, opacity 0.3s, transform 0.1s;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .btn:hover { background-color: var(--btn-bg-hover); transform: translateY(-1px); }
+        .btn:active { transform: translateY(0); }
+        .btn-danger { background-color: var(--btn-danger-bg); }
+        .btn-danger:hover { background-color: var(--btn-danger-bg-hover); }
+        .charge-item {
+            background-color: var(--charge-item-bg);
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+            border: 2px solid transparent;
+        }
+        .charge-item.selected {
+            background-color: var(--charge-item-selected-bg);
+            border-color: #00bfff;
+        }
+        .info-box {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background-color: var(--info-box-bg);
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 10;
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 11;
+        }
+        .theme-toggle button {
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+            border-radius: 999px;
+            padding: 6px 14px;
+            border: 1px solid var(--panel-border);
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            backdrop-filter: blur(10px);
+            transition: background-color 0.25s, color 0.25s, border-color 0.25s, transform 0.1s;
+        }
+        .theme-toggle button:hover {
+            transform: translateY(-1px);
+            border-color: rgba(96, 165, 250, 0.8);
+        }
+        .debug-panel {
+            background-color: rgba(255, 0, 0, 0.1);
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div id="container"></div>
+
+    <div class="theme-toggle">
+        <button id="theme-toggle-btn" aria-label="Toggle dark / light theme">
+            <span id="theme-toggle-icon">🌙</span>
+            <span id="theme-toggle-text">Dark mode</span>
+        </button>
+    </div>
+
+    <div class="panel">
+        <h2 class="text-xl font-bold mb-4 text-center">Charge Controls</h2>
+        
+        <div class="debug-panel" style="display:none;">
+            <div><strong>Debug Info:</strong></div>
+            <div id="debug-info">Initializing...</div>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-2">
+            <button id="add-positive-btn" class="btn">Add + charge</button>
+            <button id="add-negative-btn" class="btn">Add - charge</button>
+        </div>
+        
+        <div class="mt-4">
+            <label class="block text-sm font-medium">Mode: <span id="mode-status">View / drag</span></label>
+            <p class="text-xs opacity-70">
+                Drag charges directly. Click a button to place a new charge in the 3D space.
+            </p>
+        </div>
+
+        <div class="mt-4">
+            <h3 class="font-bold mb-2">Charge list</h3>
+            <div id="charge-list" class="max-h-40 overflow-y-auto pr-2"></div>
+        </div>
+
+        <div id="selected-charge-panel" class="mt-4 hidden">
+            <h3 class="font-bold mb-2">Selected charge</h3>
+            <label for="charge-magnitude" class="block text-sm font-medium">Magnitude (q)</label>
+            <input type="number" id="charge-magnitude" step="0.5" min="-50" max="50" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 mt-1 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <button id="delete-charge-btn" class="btn btn-danger mt-3">Delete selected</button>
+        </div>
+        
+    </div>
+    
+    <div class="info-box">
+        Left drag: rotate | Right drag: pan | Wheel: zoom
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { DragControls } from 'three/addons/controls/DragControls.js';
+        import { MarchingCubes } from 'three/addons/objects/MarchingCubes.js';
+
+        let scene, camera, renderer, controls, dragControls;
+        let charges = [];
+        let draggableObjects = [];
+        let marchingCubes = [];
+        let selectedCharge = null;
+        let addingChargeMode = null; 
+        let isDragging = false;
+        let gridHelper = null;
+
+        const FIELD_CONFIG = {
+            numSurfaces: 6,
+            resolution: 32,
+            bounds: 10,
+            epsFactor: 0.3,
+            minIso: 0.01,
+        };
+
+        const PHYSICS_CONFIG = {
+            k: 1.0,
+            rScale: 1.0,
+            vSoftMax: 50.0,
+        };
+
+        const Theme = {
+            DARK: 'dark',
+            LIGHT: 'light',
+            STORAGE_KEY: 'charge-field-theme',
+        };
+
+        let scalarField = new Float32Array(
+            FIELD_CONFIG.resolution * FIELD_CONFIG.resolution * FIELD_CONFIG.resolution
+        );
+        
+        const domElements = {
+            container: document.getElementById('container'),
+            addPositiveBtn: document.getElementById('add-positive-btn'),
+            addNegativeBtn: document.getElementById('add-negative-btn'),
+            modeStatus: document.getElementById('mode-status'),
+            chargeListContainer: document.getElementById('charge-list'),
+            selectedChargePanel: document.getElementById('selected-charge-panel'),
+            chargeMagnitudeInput: document.getElementById('charge-magnitude'),
+            deleteChargeBtn: document.getElementById('delete-charge-btn'),
+            themeToggleBtn: document.getElementById('theme-toggle-btn'),
+            themeToggleIcon: document.getElementById('theme-toggle-icon'),
+            themeToggleText: document.getElementById('theme-toggle-text'),
+            debugInfo: document.getElementById('debug-info'),
+        };
+
+        function updateDebugInfo(msg) {
+            domElements.debugInfo.innerHTML = msg;
+            console.log('[DEBUG]', msg);
+        }
+
+        function computeIsoLevels(count) {
+            const levels = [];
+            const gamma = 1.4;
+            for (let i = 0; i < count; i++) {
+                const t = (i + 1) / count;
+                levels.push(Math.pow(t, gamma));
+            }
+            return levels;
+        }
+
+        function applyTheme(theme) {
+            const root = document.documentElement;
+            const isDark = theme === Theme.DARK;
+            root.setAttribute('data-theme', isDark ? 'dark' : 'light');
+            domElements.themeToggleIcon.textContent = isDark ? '🌙' : '☀️';
+            domElements.themeToggleText.textContent = isDark ? 'Dark mode' : 'Light mode';
+            if (renderer) {
+                renderer.setClearColor(isDark ? 0x000000 : 0xf9fafb, 1);
+            }
+            if (gridHelper) {
+                const styles = getComputedStyle(document.documentElement);
+                const gridMain = styles.getPropertyValue('--grid-color-main').trim();
+                const gridSub = styles.getPropertyValue('--grid-color-sub').trim();
+                gridHelper.material.color.setStyle(gridMain);
+                if (gridHelper.material.color2) {
+                    gridHelper.material.color2.setStyle(gridSub);
+                }
+            }
+        }
+
+        function initTheme() {
+            const stored = window.localStorage.getItem(Theme.STORAGE_KEY);
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const initial = stored || (prefersDark ? Theme.DARK : Theme.LIGHT);
+            applyTheme(initial);
+            domElements.themeToggleBtn.addEventListener('click', () => {
+                const current = document.documentElement.getAttribute('data-theme') === 'light' ? Theme.LIGHT : Theme.DARK;
+                const next = current === Theme.DARK ? Theme.LIGHT : Theme.DARK;
+                applyTheme(next);
+                window.localStorage.setItem(Theme.STORAGE_KEY, next);
+            });
+        }
+
+        function debounce(fn, delay = 120) {
+            let t = null;
+            return (...args) => {
+                if (t) clearTimeout(t);
+                t = setTimeout(() => fn(...args), delay);
+            };
+        }
+
+        function init() {
+            try {
+                updateDebugInfo('Initializing Three.js...');
+                
+                scene = new THREE.Scene();
+                camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.set(0, 7, 20);
+
+                renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setPixelRatio(window.devicePixelRatio);
+                renderer.setClearColor(0x000000, 1);
+                domElements.container.appendChild(renderer.domElement);
+
+                scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+                const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                dirLight.position.set(5, 10, 7.5);
+                scene.add(dirLight);
+
+                controls = new OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                
+                gridHelper = new THREE.GridHelper(
+                    FIELD_CONFIG.bounds * 2,
+                    20,
+                    0x444444,
+                    0x333333
+                );
+                scene.add(gridHelper);
+
+                updateDebugInfo('Setting up DragControls...');
+                dragControls = new DragControls(draggableObjects, camera, renderer.domElement);
+                dragControls.addEventListener('dragstart', function (event) {
+                    isDragging = true;
+                    controls.enabled = false;
+                    const charge = charges.find(c => c.mesh === event.object);
+                    if (charge) selectCharge(charge);
+                });
+                dragControls.addEventListener('drag', function (event) {
+                    event.object.position.y = 0;
+                    const charge = charges.find(c => c.mesh === event.object);
+                    if(charge) {
+                        charge.position.copy(event.object.position);
+                        charge.light.position.copy(event.object.position);
+                    }
+                });
+                dragControls.addEventListener('dragend', function () {
+                    isDragging = false;
+                    controls.enabled = true;
+                    updateField();
+                });
+
+                updateDebugInfo('Creating MarchingCubes surfaces...');
+                
+                // Create surfaces with different colors
+                const colors = [
+                    { pos: 0x00bfff, neg: 0xff6b6b },
+                    { pos: 0x4a90e2, neg: 0xff8787 },
+                    { pos: 0x6fa3ef, neg: 0xffa3a3 },
+                    { pos: 0x85b5f5, neg: 0xffbebe },
+                    { pos: 0x9bc7fa, neg: 0xffd9d9 },
+                    { pos: 0xb1d9ff, neg: 0xfff0f0 },
+                ];
+
+                for (let i = 0; i < FIELD_CONFIG.numSurfaces; i++) {
+                    const opacity = 0.15 + 0.4 * (1 - i / FIELD_CONFIG.numSurfaces);
+                    
+                    const posMaterial = new THREE.MeshPhongMaterial({ 
+                        color: colors[i].pos,
+                        emissive: colors[i].pos,
+                        emissiveIntensity: 0.2,
+                        transparent: true,
+                        opacity: opacity,
+                        side: THREE.DoubleSide,
+                        depthWrite: false
+                    });
+                    
+                    const negMaterial = new THREE.MeshPhongMaterial({ 
+                        color: colors[i].neg,
+                        emissive: colors[i].neg,
+                        emissiveIntensity: 0.2,
+                        transparent: true,
+                        opacity: opacity,
+                        side: THREE.DoubleSide,
+                        depthWrite: false
+                    });
+
+                    const posSurface = new MarchingCubes(
+                        FIELD_CONFIG.resolution,
+                        posMaterial,
+                        true,
+                        true,
+                        100000
+                    );
+                    posSurface.position.set(0, 0, 0);
+                    posSurface.scale.set(FIELD_CONFIG.bounds, FIELD_CONFIG.bounds, FIELD_CONFIG.bounds);
+                    scene.add(posSurface);
+                    
+                    const negSurface = new MarchingCubes(
+                        FIELD_CONFIG.resolution,
+                        negMaterial,
+                        true,
+                        true,
+                        100000
+                    );
+                    negSurface.position.set(0, 0, 0);
+                    negSurface.scale.set(FIELD_CONFIG.bounds, FIELD_CONFIG.bounds, FIELD_CONFIG.bounds);
+                    scene.add(negSurface);
+                    
+                    marchingCubes.push({ pos: posSurface, neg: negSurface });
+                }
+
+                window.addEventListener('resize', onWindowResize);
+                domElements.container.addEventListener('click', onCanvasClick);
+                domElements.addPositiveBtn.addEventListener('click', () => setAddingMode('positive'));
+                domElements.addNegativeBtn.addEventListener('click', () => setAddingMode('negative'));
+                domElements.chargeMagnitudeInput.addEventListener('input', updateSelectedChargeMagnitude);
+                domElements.deleteChargeBtn.addEventListener('click', deleteSelectedCharge);
+
+                initTheme();
+
+                updateDebugInfo('Adding initial charges...');
+                addCharge(new THREE.Vector3(-3, 0, 0), 15.0);
+                addCharge(new THREE.Vector3(3, 0, 0), -15.0);
+                
+                updateDebugInfo('Ready! Rendering...');
+                animate();
+                
+            } catch (error) {
+                updateDebugInfo('ERROR: ' + error.message);
+                console.error('Initialization error:', error);
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        
+        function mapPotentialNonLinear(V) {
+            const vmax = PHYSICS_CONFIG.vSoftMax;
+            if (!isFinite(V) || vmax <= 0) return 0;
+            return vmax * Math.tanh(V / vmax);
+        }
+
+        function computeScalarField(chargesList, config, outField) {
+            const size = config.resolution;
+            const L = config.bounds * 2;
+            const step = L / (size - 1);
+            const eps2 = (config.epsFactor * step) ** 2;
+
+            let idx = 0;
+            let actualMin = Infinity;
+            let actualMax = -Infinity;
+
+            for (let z = 0; z < size; z++) {
+                const pz = z * step - L * 0.5;
+                for (let y = 0; y < size; y++) {
+                    const py = y * step - L * 0.5;
+                    for (let x = 0; x < size; x++, idx++) {
+                        const px = x * step - L * 0.5;
+
+                        let Vraw = 0;
+                        for (let c of chargesList) {
+                            const dx = px - c.position.x;
+                            const dy = py - c.position.y;
+                            const dz = pz - c.position.z;
+                            const d2 = dx*dx + dy*dy + dz*dz;
+                            Vraw += c.magnitude * PHYSICS_CONFIG.k / Math.sqrt(d2 + eps2);
+                        }
+
+                        const Vdisplay = mapPotentialNonLinear(Vraw);
+                        outField[idx] = Vdisplay;
+
+                        if (Vdisplay < actualMin) actualMin = Vdisplay;
+                        if (Vdisplay > actualMax) actualMax = Vdisplay;
+                    }
+                }
+            }
+
+            return { min: actualMin, max: actualMax };
+        }
+
+        function updateField() {
+            try {
+                if (charges.length === 0) {
+                    marchingCubes.forEach(mc => {
+                        mc.pos.visible = false;
+                        mc.neg.visible = false;
+                    });
+                    updateDebugInfo('No charges - surfaces hidden');
+                    return;
+                }
+
+                updateDebugInfo(`Computing field for ${charges.length} charges...`);
+                const { min, max } = computeScalarField(charges, FIELD_CONFIG, scalarField);
+
+                const vmax = Math.max(FIELD_CONFIG.minIso, max);
+                const vmin = Math.min(-FIELD_CONFIG.minIso, min);
+                const isoLevels = computeIsoLevels(FIELD_CONFIG.numSurfaces);
+
+                updateDebugInfo(`Field range: [${min.toFixed(2)}, ${max.toFixed(2)}]<br>Updating ${FIELD_CONFIG.numSurfaces} surfaces...`);
+
+                for (let i = 0; i < FIELD_CONFIG.numSurfaces; i++) {
+                    const level = isoLevels[i];
+                    const mc = marchingCubes[i];
+
+                    const isoPos = vmax * level;
+                    mc.pos.visible = isoPos > FIELD_CONFIG.minIso;
+                    if (mc.pos.visible) {
+                        mc.pos.reset();
+                        mc.pos.isolation = isoPos;
+                        for (let j = 0; j < scalarField.length; j++) {
+                            mc.pos.addBall(0, 0, 0, 0, 0);
+                        }
+                        mc.pos.field.set(scalarField);
+                        mc.pos.update();
+                    }
+
+                    const isoNeg = vmin * level;
+                    mc.neg.visible = isoNeg < -FIELD_CONFIG.minIso;
+                    if (mc.neg.visible) {
+                        mc.neg.reset();
+                        mc.neg.isolation = isoNeg;
+                        for (let j = 0; j < scalarField.length; j++) {
+                            mc.neg.addBall(0, 0, 0, 0, 0);
+                        }
+                        mc.neg.field.set(scalarField);
+                        mc.neg.update();
+                    }
+                }
+                
+                updateDebugInfo(`✓ Field updated successfully`);
+            } catch (error) {
+                updateDebugInfo('ERROR in updateField: ' + error.message);
+                console.error('Field update error:', error);
+            }
+        }
+        
+        const updateFieldDebounced = debounce(updateField, 150);
+        
+        function addCharge(position, magnitude) {
+            const isPositive = magnitude >= 0;
+            const color = isPositive ? 0xff6666 : 0x6666ff;
+            const geometry = new THREE.SphereGeometry(0.3, 24, 24);
+            const material = new THREE.MeshPhongMaterial({ 
+                color: color,
+                emissive: color,
+                emissiveIntensity: 0.3
+            });
+            const sphere = new THREE.Mesh(geometry, material);
+            sphere.position.copy(position);
+
+            const light = new THREE.PointLight(color, 2.0, 15);
+            light.position.copy(position);
+
+            const charge = {
+                id: THREE.MathUtils.generateUUID(),
+                position,
+                magnitude,
+                mesh: sphere,
+                light
+            };
+            
+            charges.push(charge);
+            draggableObjects.push(sphere);
+            scene.add(sphere);
+            scene.add(light);
+            
+            updateChargeList();
+            updateFieldDebounced();
+        }
+
+        function updateChargeList() {
+            domElements.chargeListContainer.innerHTML = '';
+            charges.forEach(charge => {
+                const item = document.createElement('div');
+                item.className = 'charge-item';
+                item.textContent = `Charge ${charge.id.substring(0, 4)}: ${charge.magnitude.toFixed(2)} q`;
+                if (selectedCharge && charge.id === selectedCharge.id) item.classList.add('selected');
+                item.addEventListener('click', () => selectCharge(charge));
+                domElements.chargeListContainer.appendChild(item);
+            });
+        }
+        
+        function selectCharge(charge) {
+            if (selectedCharge) selectedCharge.mesh.scale.set(1, 1, 1);
+            selectedCharge = charge;
+            selectedCharge.mesh.scale.set(1.5, 1.5, 1.5);
+            domElements.selectedChargePanel.classList.remove('hidden');
+            domElements.chargeMagnitudeInput.value = charge.magnitude;
+            updateChargeList();
+        }
+        
+        function deselectAll() {
+            if (selectedCharge) selectedCharge.mesh.scale.set(1, 1, 1);
+            selectedCharge = null;
+            domElements.selectedChargePanel.classList.add('hidden');
+            updateChargeList();
+        }
+
+        function updateSelectedChargeMagnitude() {
+            if (!selectedCharge) return;
+            const newMagnitude = parseFloat(domElements.chargeMagnitudeInput.value);
+            if (isNaN(newMagnitude)) return;
+            
+            selectedCharge.magnitude = newMagnitude;
+            const isPositive = newMagnitude >= 0;
+            const color = isPositive ? 0xff6666 : 0x6666ff;
+            selectedCharge.mesh.material.color.setHex(color);
+            selectedCharge.mesh.material.emissive.setHex(color);
+            selectedCharge.light.color.setHex(color);
+            
+            updateChargeList();
+            updateFieldDebounced();
+        }
+
+        function deleteSelectedCharge() {
+            if (!selectedCharge) return;
+            scene.remove(selectedCharge.mesh);
+            scene.remove(selectedCharge.light);
+            
+            const dragIndex = draggableObjects.indexOf(selectedCharge.mesh);
+            if (dragIndex > -1) draggableObjects.splice(dragIndex, 1);
+
+            charges = charges.filter(c => c.id !== selectedCharge.id);
+            
+            deselectAll();
+            updateChargeList();
+            updateFieldDebounced();
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        function setAddingMode(mode) {
+            addingChargeMode = mode;
+            domElements.modeStatus.textContent = `Add ${mode === 'positive' ? '+' : '-'} charge (click in 3D space)`;
+        }
+
+        function onCanvasClick(event) {
+            if (isDragging) return;
+
+            const mouse = new THREE.Vector2(
+                (event.clientX / window.innerWidth) * 2 - 1,
+                -(event.clientY / window.innerHeight) * 2 + 1
+            );
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+
+            if (!addingChargeMode) {
+                const intersects = raycaster.intersectObjects(draggableObjects);
+                if (intersects.length === 0) {
+                    deselectAll();
+                }
+                return;
+            }
+
+            const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+            const intersectionPoint = new THREE.Vector3();
+            if (raycaster.ray.intersectPlane(plane, intersectionPoint)) {
+                addCharge(intersectionPoint, addingChargeMode === 'positive' ? 10.0 : -10.0);
+            }
+            
+            addingChargeMode = null;
+            domElements.modeStatus.textContent = "View / drag";
+        }
+        
+        init();
+    </script>
+</body>
+</html>

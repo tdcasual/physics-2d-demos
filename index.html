@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Physics Animations 导航</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700&family=Nunito:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-a: #fff6d6;
+      --bg-b: #ffe3f1;
+      --bg-c: #dff7ff;
+      --ink: #2f2a44;
+      --ink-soft: #655f79;
+      --card: rgba(255, 255, 255, 0.86);
+      --line: rgba(120, 103, 174, 0.18);
+      --chip: #fff0c7;
+      --chip-ink: #7d5f29;
+      --accent: #ff7e93;
+      --accent-2: #6cc9b8;
+      --shadow: 0 14px 34px rgba(62, 48, 95, 0.15);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "Nunito", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background:
+        radial-gradient(circle at 8% 14%, rgba(255, 199, 230, 0.9), transparent 27%),
+        radial-gradient(circle at 90% 12%, rgba(178, 242, 255, 0.95), transparent 25%),
+        radial-gradient(circle at 18% 86%, rgba(193, 236, 188, 0.9), transparent 24%),
+        linear-gradient(140deg, var(--bg-a), var(--bg-b) 44%, var(--bg-c));
+      background-attachment: fixed;
+    }
+
+    .page {
+      width: min(1100px, 92vw);
+      margin: 40px auto 56px;
+    }
+
+    .hero {
+      position: relative;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      padding: 28px 26px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .hero::before,
+    .hero::after {
+      content: "";
+      position: absolute;
+      border-radius: 999px;
+      pointer-events: none;
+      filter: blur(2px);
+      opacity: 0.75;
+    }
+
+    .hero::before {
+      width: 150px;
+      height: 150px;
+      top: -70px;
+      right: -35px;
+      background: linear-gradient(135deg, #ffd3db, #ffc7a1);
+    }
+
+    .hero::after {
+      width: 120px;
+      height: 120px;
+      bottom: -54px;
+      left: -38px;
+      background: linear-gradient(135deg, #cbf4ef, #cde6ff);
+    }
+
+    h1 {
+      margin: 0;
+      font-family: "Baloo 2", "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: clamp(30px, 5.2vw, 46px);
+      line-height: 1.05;
+      letter-spacing: 0.3px;
+    }
+
+    .subtext {
+      margin: 10px 0 0;
+      color: var(--ink-soft);
+      font-size: clamp(15px, 2.6vw, 18px);
+    }
+
+    .search-wrap {
+      margin-top: 20px;
+      display: grid;
+      gap: 10px;
+      position: relative;
+      z-index: 1;
+    }
+
+    #searchInput {
+      width: 100%;
+      border-radius: 16px;
+      border: 2px solid rgba(121, 101, 166, 0.2);
+      background: #fff;
+      padding: 13px 14px;
+      font-size: 16px;
+      outline: none;
+      color: var(--ink);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    #searchInput:focus {
+      border-color: rgba(255, 126, 147, 0.66);
+      box-shadow: 0 0 0 4px rgba(255, 126, 147, 0.17);
+    }
+
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--ink-soft);
+      font-size: 14px;
+    }
+
+    .card-grid {
+      margin-top: 22px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 15px 14px;
+      background: var(--card);
+      box-shadow: 0 8px 22px rgba(62, 48, 95, 0.1);
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transform: translateY(0) scale(1);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-3px) scale(1.008);
+      border-color: rgba(255, 126, 147, 0.45);
+      box-shadow: 0 14px 26px rgba(62, 48, 95, 0.16);
+    }
+
+    .card-title {
+      font-size: 18px;
+      line-height: 1.26;
+      font-weight: 700;
+    }
+
+    .chip {
+      align-self: flex-start;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      background: var(--chip);
+      color: var(--chip-ink);
+    }
+
+    .path {
+      font-size: 12px;
+      color: var(--ink-soft);
+      word-break: break-all;
+      opacity: 0.95;
+    }
+
+    .empty {
+      margin-top: 18px;
+      border: 1px dashed rgba(101, 95, 121, 0.45);
+      border-radius: 16px;
+      padding: 18px;
+      background: rgba(255, 255, 255, 0.65);
+      color: var(--ink-soft);
+      text-align: center;
+      display: none;
+    }
+
+    .dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 99px;
+      margin-right: 6px;
+      vertical-align: -1px;
+      background: linear-gradient(180deg, var(--accent), var(--accent-2));
+    }
+
+    @media (max-width: 640px) {
+      .page {
+        width: min(1100px, 95vw);
+        margin-top: 22px;
+      }
+
+      .hero {
+        border-radius: 22px;
+        padding: 20px 16px;
+      }
+
+      .card-grid {
+        gap: 12px;
+      }
+
+      .card {
+        border-radius: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>Physics Animations</h1>
+      <p class="subtext">一个可爱的静态导航页，直接跳转到每个动画页面。</p>
+      <div class="search-wrap">
+        <input id="searchInput" type="search" placeholder="搜索页面名称，例如：电场 / 追及 / 微元" aria-label="搜索动画页面">
+        <div class="meta">
+          <span><span class="dot"></span>实时过滤</span>
+          <span id="countText"></span>
+        </div>
+      </div>
+    </section>
+
+    <section id="cardGrid" class="card-grid" aria-live="polite"></section>
+    <div id="emptyState" class="empty">没有找到匹配页面，换个关键词试试。</div>
+  </main>
+
+  <script>
+    const fallbackPages = [
+      { id: "legacy-potential-3d", title: "交互式点电荷电势能演示", path: "animations/electromagnetism/3D 生成电势图.html" },
+      { id: "legacy-equipotential-3d", title: "3D Charge Equipotential Surfaces - Debug", path: "animations/electromagnetism/3D电荷等势面.html" },
+      { id: "legacy-field-lines", title: "电场矢量到电场线的演化", path: "animations/electromagnetism/模拟电场线.html" },
+      { id: "legacy-emf-analogy", title: "电路水流类比模型", path: "animations/electromagnetism/电动势类比动画.html" },
+      { id: "legacy-electrification", title: "交互式静电起电演示 (V4 最终修复版)", path: "animations/electromagnetism/起电方式演示.html" },
+      { id: "legacy-vt-integral", title: "微元法交互式动画", path: "animations/mechanics/v-t面积与微元法.html" },
+      { id: "legacy-chase-meet", title: "追及相遇演示动画", path: "animations/mechanics/追击相遇问题.html" }
+    ];
+
+    let pages = [...fallbackPages];
+    let usingFallback = false;
+
+    const searchInput = document.getElementById("searchInput");
+    const cardGrid = document.getElementById("cardGrid");
+    const emptyState = document.getElementById("emptyState");
+    const countText = document.getElementById("countText");
+
+    function setCountText(filteredCount, totalCount) {
+      const suffix = usingFallback ? "（使用内置列表）" : "";
+      countText.textContent = `显示 ${filteredCount} / ${totalCount}${suffix}`;
+    }
+
+    function sortPages(items) {
+      return [...items].sort((a, b) => a.title.localeCompare(b.title, "zh-Hans-CN", { numeric: true, sensitivity: "base" }));
+    }
+
+    function normalizePages(input) {
+      if (!Array.isArray(input)) return [];
+      return input
+        .filter((item) => item && typeof item.title === "string" && typeof item.path === "string")
+        .map((item, index) => ({
+          id: typeof item.id === "string" ? item.id : `scene-${index}`,
+          title: item.title.trim(),
+          path: item.path.trim()
+        }))
+        .filter((item) => item.title.length > 0 && item.path.length > 0);
+    }
+
+    function renderCards(keyword) {
+      const query = keyword.trim().toLowerCase();
+      const filtered = pages.filter((item) => {
+        return item.title.toLowerCase().includes(query) || item.path.toLowerCase().includes(query);
+      });
+
+      cardGrid.innerHTML = "";
+      for (const item of filtered) {
+        const card = document.createElement("a");
+        card.className = "card";
+        card.href = encodeURI(item.path);
+
+        const title = document.createElement("div");
+        title.className = "card-title";
+        title.textContent = item.title;
+
+        const chip = document.createElement("span");
+        chip.className = "chip";
+        chip.textContent = "打开动画";
+
+        const path = document.createElement("div");
+        path.className = "path";
+        path.textContent = item.path;
+
+        card.appendChild(title);
+        card.appendChild(chip);
+        card.appendChild(path);
+        cardGrid.appendChild(card);
+      }
+
+      setCountText(filtered.length, pages.length);
+      emptyState.style.display = filtered.length === 0 ? "block" : "none";
+    }
+
+    async function loadPagesFromIndex() {
+      const response = await fetch("scene-index.json", { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error(`Failed to load scene-index.json: ${response.status}`);
+      }
+      const data = await response.json();
+      return normalizePages(data);
+    }
+
+    async function initPageList() {
+      countText.textContent = "正在加载索引...";
+      try {
+        const loaded = await loadPagesFromIndex();
+        if (loaded.length > 0) {
+          pages = sortPages(loaded);
+          usingFallback = false;
+        } else {
+          pages = sortPages(fallbackPages);
+          usingFallback = true;
+        }
+      } catch (error) {
+        pages = sortPages(fallbackPages);
+        usingFallback = true;
+        console.warn("加载 scene-index.json 失败，已使用内置列表:", error);
+      }
+
+      renderCards(searchInput.value);
+    }
+
+    searchInput.addEventListener("input", (event) => renderCards(event.target.value));
+    initPageList();
+  </script>
+</body>
+</html>

@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>交互式静电起电演示 (V4 最终修复版)</title>
+    <style>
+        /* 谷歌字体 Inter，提供更现代的观感 */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+
+        /* 全局样式和变量 */
+        :root {
+            --bg-color: #1a1f2c; /* 深蓝背景色 */
+            --primary-color: #00aaff; /* 主题色，用于电子和高亮 */
+            --text-color: #e0e0e0; /* 文本颜色 */
+            --positive-color: #ff5555; /* 正电荷颜色 */
+            --neutral-color: #6c757d; /* 中性物体颜色 */
+            --surface-color: #2c344a; /* 控件区域背景色 */
+            --font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        /* 主容器布局 */
+        #container {
+            width: 100%;
+            max-width: 900px;
+            background-color: var(--surface-color);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        h1 {
+            text-align: center;
+            margin: 0 0 10px 0;
+            color: #fff;
+            font-weight: 700;
+        }
+
+        /* 主控制区域样式 */
+        #main-controls {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            border-bottom: 2px solid var(--bg-color);
+            padding-bottom: 15px;
+        }
+
+        .control-button {
+            background-color: transparent;
+            color: var(--text-color);
+            border: 2px solid var(--neutral-color);
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            -webkit-tap-highlight-color: transparent; /* 移除移动端点击高亮 */
+        }
+
+        .control-button:hover, .control-button.active {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            color: #fff;
+            box-shadow: 0 0 15px rgba(0, 170, 255, 0.5);
+        }
+
+        .control-button#reset-btn {
+            border-color: #e74c3c;
+        }
+       .control-button#reset-btn:hover {
+            background-color: #e74c3c;
+            border-color: #e74c3c;
+            box-shadow: 0 0 15px rgba(231, 76, 60, 0.5);
+       }
+
+
+        /* 动画画布区域 */
+        #animation-canvas {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background-color: var(--bg-color);
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #animation-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 场景内动作按钮容器 */
+        #scene-actions {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+        }
+
+        .scene-action-button {
+            padding: 8px 16px;
+            border-radius: 6px;
+            background-color: var(--primary-color);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            opacity: 0;
+            animation: fadeIn 0.5s forwards;
+        }
+        .scene-action-button:hover {
+            filter: brightness(1.1);
+        }
+        .scene-action-button:disabled {
+            background-color: var(--neutral-color);
+            cursor: not-allowed;
+            filter: none;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        /* 解释文本区域 */
+        #explanation-text {
+            min-height: 3.2em; 
+            text-align: center;
+            font-size: 1.1em;
+            line-height: 1.6;
+            color: #b0c4de;
+            padding: 10px;
+            background-color: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            transition: opacity 0.3s ease;
+        }
+
+        /* SVG 元素通用样式 */
+        /* V4.2 统一原子模型: 所有场景的原子核和电子尺寸一致 */
+        .electron {
+            fill: var(--primary-color);
+            transition: transform 1.2s ease-in-out, cx 1.2s ease-in-out, cy 1.2s ease-in-out;
+        }
+        .nucleus {
+            fill: var(--positive-color);
+        }
+        .atom-text {
+            font-family: var(--font-family);
+            font-size: 16px;
+            font-weight: bold;
+            fill: var(--bg-color);
+            user-select: none;
+            pointer-events: none;
+        }
+        .object-body {
+            stroke: var(--neutral-color);
+            stroke-width: 3;
+            fill: rgba(108, 117, 125, 0.2);
+            transition: transform 1s ease-in-out;
+        }
+        .net-charge-indicator {
+            font-size: 150px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 1s ease-in-out, transform 1s ease-in-out;
+            pointer-events: none;
+            transform-origin: center;
+        }
+        .polarization-indicator {
+            font-size: 120px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+            pointer-events: none;
+            fill-opacity: 0.7;
+        }
+        .positive-charge { fill: var(--positive-color); }
+        .negative-charge { fill: var(--primary-color); }
+        
+        @keyframes glow {
+            0%, 100% { filter: drop-shadow(0 0 2px var(--primary-color)); }
+            50% { filter: drop-shadow(0 0 8px var(--primary-color)); }
+        }
+        .glowing {
+            animation: glow 1s infinite;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="container">
+        <h1>交互式静电起电演示</h1>
+        
+        <div id="main-controls">
+            <button id="friction-btn" class="control-button">摩擦起电</button>
+            <button id="induction-btn" class="control-button">感应起电</button>
+            <button id="contact-btn" class="control-button">接触起电</button>
+            <button id="reset-btn" class="control-button">重置场景</button>
+        </div>
+
+        <div id="animation-canvas">
+            <svg id="animation-svg" viewBox="0 0 800 450" preserveAspectRatio="xMidYMid meet"></svg>
+            <div id="scene-actions"></div>
+        </div>
+
+        <p id="explanation-text">请选择一种起电方式来开始演示。</p>
+    </div>
+
+    <script>
+        const svg = document.getElementById('animation-svg');
+        const explanationText = document.getElementById('explanation-text');
+        const sceneActionsContainer = document.getElementById('scene-actions');
+        const mainButtons = {
+            friction: document.getElementById('friction-btn'),
+            induction: document.getElementById('induction-btn'),
+            contact: document.getElementById('contact-btn'),
+            reset: document.getElementById('reset-btn'),
+        };
+        const SVG_NS = "http://www.w3.org/2000/svg";
+        let currentScene = null;
+        
+        // V4.2 全局常量: 统一原子模型
+        const ATOM_CONFIG = {
+            nucleusRadius: 10,
+            electronRadius: 4,
+            animationDuration: 1.2  // 秒
+        };
+
+        function createSVGElement(tag, attrs, textContent) {
+            const el = document.createElementNS(SVG_NS, tag);
+            for (let key in attrs) el.setAttribute(key, attrs[key]);
+            if (textContent) el.textContent = textContent;
+            return el;
+        }
+        
+        // V4.2 辅助函数: 生成随机分布的电子位置
+        function generateRandomElectronPosition(centerX, centerY, radius, existingPositions = []) {
+            let pos;
+            let attempts = 0;
+            const minDistance = ATOM_CONFIG.electronRadius * 4;
+            
+            do {
+                const angle = Math.random() * 2 * Math.PI;
+                const r = Math.random() * (radius - ATOM_CONFIG.electronRadius);
+                pos = { x: centerX + r * Math.cos(angle), y: centerY + r * Math.sin(angle) };
+                
+                // 检查与现有电子的距离
+                const tooClose = existingPositions.some(p => 
+                    Math.hypot(p.x - pos.x, p.y - pos.y) < minDistance
+                );
+                if (!tooClose) break;
+            } while (++attempts < 10);
+            
+            return pos;
+        }
+        
+        // V4.2 辅助函数: 确保坐标在指定范围内
+        function constrainCoordinate(value, min, max) {
+            return Math.max(min, Math.min(max, value));
+        }
+
+        function clearCanvas() {
+            svg.innerHTML = '';
+            sceneActionsContainer.innerHTML = '';
+        }
+
+        function updateActiveButton(sceneName) {
+            for (const key in mainButtons) {
+                mainButtons[key].classList.toggle('active', key === sceneName);
+            }
+        }
+        
+        function setExplanation(text) {
+            explanationText.style.opacity = 0;
+            setTimeout(() => {
+                explanationText.textContent = text;
+                explanationText.style.opacity = 1;
+            }, 300);
+        }
+
+        function createActionButton(text, onClick) {
+            const button = document.createElement('button');
+            button.textContent = text;
+            button.className = 'scene-action-button';
+            button.onclick = () => {
+                sceneActionsContainer.querySelectorAll('button').forEach(b => b.disabled = true);
+                onClick();
+            };
+            sceneActionsContainer.appendChild(button);
+            return button;
+        }
+        
+        // ====================================================================
+        // 场景 1: 摩擦起电 (V4 最终修复版)
+        // ====================================================================
+        function setupFrictionScene() {
+            clearCanvas();
+            currentScene = 'friction';
+            updateActiveButton('friction');
+            setExplanation('初始状态：丝绸和玻璃棒都是电中性的。');
+
+            const rod = createSVGElement('g', { id: 'rod', transform: 'translate(500, 150)' });
+            rod.appendChild(createSVGElement('rect', { x: 0, y: 0, width: 40, height: 200, rx: 20, class: 'object-body' }));
+            
+            let rodElectrons = [];
+            for (let i = 0; i < 3; i++) {
+                const atomY = 40 + i * 60;
+                rod.append(
+                    createSVGElement('circle', { cx: 20, cy: atomY, r: ATOM_CONFIG.nucleusRadius, class: 'nucleus' }),
+                    createSVGElement('text', { x: 20, y: atomY, 'dominant-baseline': 'middle', 'text-anchor': 'middle', class: 'atom-text', 'font-size': '12px' }, '+')
+                );
+                // V4.2 修正: 使用统一的电子半径
+                const electron = createSVGElement('circle', { cx: 5, cy: atomY, r: ATOM_CONFIG.electronRadius, class: 'electron' });
+                rodElectrons.push(electron);
+                rod.appendChild(electron);
+            }
+            
+            const silk = createSVGElement('g', { id: 'silk', transform: 'translate(250, 125)' });
+            silk.appendChild(createSVGElement('rect', { x: 0, y: 0, width: 80, height: 250, rx: 10, class: 'object-body' }));
+            for(let i = 0; i < 4; i++) {
+                for(let j = 0; j < 2; j++) {
+                    const atomX = 25 + j * 30;
+                    const atomY = 40 + i * 60;
+                    silk.append(
+                        createSVGElement('circle', { cx: atomX, cy: atomY, r: ATOM_CONFIG.nucleusRadius, class: 'nucleus' }),
+                        createSVGElement('text', { x: atomX, y: atomY, 'dominant-baseline': 'middle', 'text-anchor': 'middle', class: 'atom-text', 'font-size': '12px' }, '+'),
+                        createSVGElement('circle', { cx: atomX - 15, cy: atomY, r: ATOM_CONFIG.electronRadius, class: 'electron' })
+                    );
+                }
+            }
+            const silkCharge = createSVGElement('text', { id: 'silk-charge', x: 290, y: 400, class: 'net-charge-indicator negative-charge', 'text-anchor': 'middle' }, '−');
+            const rodCharge = createSVGElement('text', { id: 'rod-charge', x: 520, y: 400, class: 'net-charge-indicator positive-charge', 'text-anchor': 'middle' }, '+');
+            svg.append(silk, rod, silkCharge, rodCharge);
+            
+            createActionButton('开始摩擦', () => {
+                setExplanation('摩擦过程：玻璃棒上束缚能力弱的电子即将转移...');
+                rod.style.transition = 'transform 1s ease-in-out';
+                rod.setAttribute('transform', 'translate(310, 150)');
+
+                setTimeout(() => {
+                    rodElectrons.forEach(e => e.classList.add('glowing'));
+                    rod.style.transition = 'transform 0.2s linear';
+                    let rubbingCount = 0;
+                    const rubInterval = setInterval(() => {
+                        // V4.2 增强: 摩擦时显示玻璃棒和丝绸都在振动
+                        rod.setAttribute('transform', `translate(310, ${150 + (rubbingCount % 2 === 0 ? -10 : 10)})`);
+                        // 注意：丝绸x坐标必须保持250，y坐标才能振动
+                        silk.setAttribute('transform', `translate(250, ${125 + (rubbingCount % 2 === 0 ? 10 : -10)})`);
+                        if (++rubbingCount > 5) {
+                            clearInterval(rubInterval);
+                            rod.setAttribute('transform', 'translate(310, 150)');
+                            silk.setAttribute('transform', 'translate(250, 125)');
+                            setExplanation('摩擦过程：电子从玻璃棒转移到了丝绸表面。');
+                            
+                            // V4.2.1 修正: 精确计算坐标系变换，避免电子位置跳跃
+                            // 关键点：玻璃棒和丝绸的相对位置固定
+                            // 玻璃棒: translate(310, 150)
+                            // 丝绸: translate(250, 125)  <- 必须保持这个值！
+                            rodElectrons.forEach((e, i) => {
+                                e.classList.remove('glowing');
+                                
+                                // 阶段1：电子加速离开玻璃棒（在玻璃棒坐标系中向右移动）
+                                e.style.transition = 'transform 0.4s cubic-bezier(0.8, 0, 0.2, 1)';
+                                e.setAttribute('transform', `translate(45, ${(i - 1) * 15})`);
+                                
+                                // 阶段2：转移到丝绸
+                                setTimeout(() => {
+                                    // 当前电子在玻璃棒坐标系中的位置
+                                    const electronCxInRod = 45;  // 经过translate变换后
+                                    const electronCyInRod = (i - 1) * 15;
+                                    
+                                    // 世界坐标系中的位置
+                                    const worldX = 310 + electronCxInRod;
+                                    const worldY = 150 + electronCyInRod;
+                                    
+                                    // 转换到丝绸坐标系（丝绸transform: translate(250, 125)）
+                                    const newCx = worldX - 250;  // 250 是丝绸的x位移
+                                    const newCy = worldY - 125;  // 125 是丝绸的y位移
+                                    
+                                    // 范围约束：丝绸矩形是 x:0-80, y:0-250
+                                    const constrainedCx = Math.max(8, Math.min(72, newCx));
+                                    const constrainedCy = Math.max(8, Math.min(242, newCy));
+                                    
+                                    // 转移到丝绸
+                                    e.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.6, 1)';
+                                    silk.appendChild(e);
+                                    e.removeAttribute('transform');
+                                    e.setAttribute('cx', constrainedCx);
+                                    e.setAttribute('cy', constrainedCy);
+                                }, 400);
+                            });
+
+                            sceneActionsContainer.innerHTML = '';
+                            createActionButton('分离物体', showFinalState);
+                        }
+                    }, 200);
+                }, 1000);
+            });
+        
+        function showFinalState() {
+                setExplanation('结果：丝绸因得到电子而带负电，玻璃棒因失去电子而带正电。');
+                silk.setAttribute('transform', 'translate(250, 125)');  // V4.2修正：保持与摩擦过程中一致
+                rod.setAttribute('transform', 'translate(600, 150)');
+                
+                // V4.2 增强: 动态更新电荷符号位置，跟随物体
+                silkCharge.style.opacity = '1';
+                silkCharge.setAttribute('x', '290');  // 丝绸中心: 250 + 40
+                silkCharge.setAttribute('y', '300');  // 丝绸下方
+                
+                rodCharge.style.opacity = '1';
+                rodCharge.setAttribute('x', '620');   // 玻璃棒中心: 600 + 20
+                rodCharge.setAttribute('y', '300');   // 玻璃棒下方
+            }
+        }
+
+        // ====================================================================
+        // 场景 2: 感应起电
+        // ====================================================================
+        function setupInductionScene() {
+            clearCanvas();
+            currentScene = 'induction';
+            updateActiveButton('induction');
+            setExplanation('初始状态：金属导体呈电中性，自由电子均匀分布。');
+
+            const conductor = createSVGElement('g', { id: 'conductor' });
+            conductor.appendChild(createSVGElement('rect', { x: 200, y: 175, width: 400, height: 100, rx: 10, class: 'object-body' }));
+            
+            const freeElectrons = [];
+            for (let i = 0; i < 4; i++) {
+                for (let j = 0; j < 10; j++) {
+                    const x = 220 + j * 36;
+                    const y = 190 + i * 20;
+                    // V4.2 优化: 添加正电荷符号，明确原子核位置
+                    conductor.appendChild(createSVGElement('circle', { cx: x, cy: y, r: ATOM_CONFIG.nucleusRadius, class: 'nucleus' }));
+                    conductor.appendChild(createSVGElement('text', { x: x, y: y, 'dominant-baseline': 'middle', 'text-anchor': 'middle', 'font-size': '10px', fill: '#1a1f2c', 'font-weight': 'bold', 'pointer-events': 'none' }, '+'));
+
+                    const electron = createSVGElement('circle', { 'data-initial-x': x, 'data-initial-y': y, cx: x, cy: y, r: ATOM_CONFIG.electronRadius, class: 'electron' });
+                    freeElectrons.push(electron);
+                    conductor.appendChild(electron);
+                }
+            }
+
+            // V4.2 修正: 棒子从左侧进入，避免穿过导体 (物理逻辑修正)
+            const chargedRod = createSVGElement('g', { id: 'charged-rod', transform: 'translate(50, 150)'});
+            chargedRod.appendChild(createSVGElement('rect', { x: 0, y: 0, width: 30, height: 150, rx: 15, fill: 'orange'}));
+            for(let i = 0; i < 6; i++) {
+                chargedRod.appendChild(createSVGElement('text', { x: 15, y: 20 + i*22, 'dominant-baseline': 'middle', 'text-anchor': 'middle', 'font-size': '24px', fill: 'white' }, '-'));
+            }
+            
+            const posIndicator = createSVGElement('text', { x: 275, y: 235, class: 'polarization-indicator positive-charge', 'text-anchor': 'middle', 'dominant-baseline': 'middle' }, '+');
+            const negIndicator = createSVGElement('text', { x: 525, y: 235, class: 'polarization-indicator negative-charge', 'text-anchor': 'middle', 'dominant-baseline': 'middle' }, '−');
+
+            svg.append(conductor, chargedRod, posIndicator, negIndicator);
+
+            createActionButton('靠近导体', () => {
+                setExplanation('带电体靠近：导体中的自由电子受到排斥力，向远端移动。');
+                chargedRod.style.transition = 'transform 1.5s ease-out';
+                // V4.2 修正: 棒子充分靠近导体
+                chargedRod.setAttribute('transform', 'translate(120, 150)');
+
+                setTimeout(() => {
+                    // V4.2 添加过渡阶段：阶段1-电子快速响应加速
+                    freeElectrons.forEach(e => {
+                        const initialX = parseFloat(e.dataset.initialX);
+                        const initialY = parseFloat(e.dataset.initialY);
+                        
+                        // 阶段1：电子快速加速离开棒
+                        e.style.transition = 'transform 0.4s cubic-bezier(0.8, 0, 0.2, 1)';
+                        const dx1 = 80;
+                        const dy1 = (Math.random() - 0.5) * 20;
+                        e.setAttribute('transform', `translate(${dx1}, ${dy1})`);
+                    });
+                    
+                    // 阶段2：电子继续漂移到导体远端，并进行范围约束
+                    setTimeout(() => {
+                        freeElectrons.forEach(e => {
+                            const initialX = parseFloat(e.dataset.initialX);
+                            const initialY = parseFloat(e.dataset.initialY);
+                            
+                            // 导体范围: x = 200-600 (宽400), y = 175-275 (高100)
+                            const conductorMinX = 220;
+                            const conductorMaxX = 580;
+                            const conductorMinY = 190;
+                            const conductorMaxY = 270;
+                            
+                            // 电子被排斥向右移动，但需要保持在导体内
+                            const targetX = constrainCoordinate(
+                                450 + Math.random() * 120,
+                                conductorMinX,
+                                conductorMaxX
+                            );
+                            const targetY = constrainCoordinate(
+                                initialY + (Math.random() - 0.5) * 40,
+                                conductorMinY,
+                                conductorMaxY
+                            );
+                            
+                            const dx = targetX - initialX;
+                            const dy = targetY - initialY;
+                            e.style.transition = 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+                            e.setAttribute('transform', `translate(${dx}, ${dy})`);
+                        });
+                        
+                        // 阶段3：显示极化效果
+                        setTimeout(() => {
+                            setExplanation('结果：导体发生静电极化，近端暴露正电荷，远端聚集负电子。但整体净电荷量仍为零。');
+                            posIndicator.style.opacity = '1';
+                            negIndicator.style.opacity = '1';
+                        }, 800);
+                    }, 400);
+                }, 300);
+            });
+        }
+
+        // ====================================================================
+        // 场景 3: 接触起电
+        // ====================================================================
+        function setupContactScene() {
+            clearCanvas();
+            currentScene = 'contact';
+            updateActiveButton('contact');
+            setExplanation('初始状态：金属球 A 带负电，金属球 B 不带电。');
+            const sphereRadius = 60;
+
+            // V4.1 优化: 辅助函数，创建金属球内部的晶格结构（背景），增加物理真实感
+            function createLattice(group, radius) {
+                const spacing = 25;
+                for(let i = -2; i <= 2; i++) {
+                    for(let j = -2; j <= 2; j++) {
+                        const cx = i * spacing;
+                        const cy = j * spacing;
+                        // 简单的圆形裁剪，只在球体内绘制
+                        if (Math.sqrt(cx*cx + cy*cy) < radius - 15) {
+                            group.append(
+                                createSVGElement('circle', { cx: cx, cy: cy, r: 4, class: 'nucleus', 'fill-opacity': '0.3' }),
+                                createSVGElement('circle', { cx: cx + 6, cy: cy, r: 2, class: 'electron', 'fill-opacity': '0.3' })
+                            );
+                        }
+                    }
+                }
+            }
+
+            const sphereA = createSVGElement('g', { id: 'sphereA', transform: `translate(250, 225)` });
+            sphereA.appendChild(createSVGElement('circle', { r: sphereRadius, class: 'object-body', fill: 'rgba(0,170,255,0.2)' }));
+            createLattice(sphereA, sphereRadius); // 添加背景晶格
+            
+            // V4.2 修正: 使用随机分布电子，而不是完美圆周排列
+            const excessElectrons = [];
+            const existingPositions = [];
+            for (let i = 0; i < 12; i++) {
+                const pos = generateRandomElectronPosition(0, 0, sphereRadius, existingPositions);
+                existingPositions.push(pos);
+                const electron = createSVGElement('circle', {
+                    cx: pos.x, cy: pos.y, r: ATOM_CONFIG.electronRadius, class: 'electron',
+                    'data-original-x': pos.x, 'data-original-y': pos.y
+                });
+                excessElectrons.push(electron);
+                sphereA.appendChild(electron);
+            }
+
+            const sphereB = createSVGElement('g', { id: 'sphereB', transform: `translate(550, 225)` });
+            sphereB.appendChild(createSVGElement('circle', { r: sphereRadius, class: 'object-body' }));
+            createLattice(sphereB, sphereRadius); // 添加背景晶格
+
+            svg.append(sphereA, sphereB);
+
+            createActionButton('开始接触', () => {
+                setExplanation('接触瞬间：A 球上多余的电子因排斥力而转移并扩散到 B 球上。');
+                const contactX = 550 - sphereRadius * 2;
+                sphereA.style.transition = 'transform 1s ease-in-out';
+                sphereA.setAttribute('transform', `translate(${contactX}, 225)`);
+                
+                // V4.2 添加接触点指示
+                const contactMarker = createSVGElement('circle', { 
+                    cx: 400, cy: 225, r: 3, fill: '#ffff00', opacity: '0.8'
+                });
+                svg.appendChild(contactMarker);
+                
+                setTimeout(() => {
+                    // V4.2 阶段1：电子在接触点加速集中
+                    const electronsToMove = excessElectrons.slice(6);
+                    electronsToMove.forEach((e, idx) => {
+                        // 先加速到接触点附近
+                        e.style.transition = 'all 0.3s cubic-bezier(0.8, 0, 0.2, 1)';
+                        const angle = (idx / electronsToMove.length) * Math.PI;
+                        const px = 55 * Math.cos(angle);
+                        const py = 55 * Math.sin(angle);
+                        e.setAttribute('cx', px);
+                        e.setAttribute('cy', py);
+                    });
+                    
+                    // V4.2 阶段2：电子跨越接触点，进入B球
+                    setTimeout(() => {
+                        const movedPositions = [];
+                        electronsToMove.forEach(e => {
+                            const originalCx = parseFloat(e.getAttribute('cx'));
+                            const originalCy = parseFloat(e.getAttribute('cy'));
+                            
+                            sphereB.appendChild(e);
+                            
+                            // 在B球中生成随机位置
+                            const newPos = generateRandomElectronPosition(0, 0, sphereRadius, movedPositions);
+                            movedPositions.push(newPos);
+                            
+                            e.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+                            e.setAttribute('cx', newPos.x);
+                            e.setAttribute('cy', newPos.y);
+                        });
+                        
+                        // V4.2 阶段3：两球中的电子重新随机分布，达到平衡
+                        setTimeout(() => {
+                            const remainingElectrons = excessElectrons.slice(0, 6);
+                            const remainingPositions = [];
+                            
+                            remainingElectrons.forEach(e => {
+                                const newPos = generateRandomElectronPosition(0, 0, sphereRadius, remainingPositions);
+                                remainingPositions.push(newPos);
+                                e.style.transition = 'all 0.5s ease-out';
+                                e.setAttribute('cx', newPos.x);
+                                e.setAttribute('cy', newPos.y);
+                            });
+                        }, 400);
+
+                        sceneActionsContainer.innerHTML = '';
+                        createActionButton('分离', showFinalState);
+                    }, 300);
+                }, 1100);
+            });
+            
+            function showFinalState() {
+                setExplanation('结果：两个金属球都带上了同种电荷（负电）。');
+                sphereA.setAttribute('transform', 'translate(250, 225)');
+            }
+        }
+
+        // ====================================================================
+        // 主事件监听器
+        // ====================================================================
+        mainButtons.friction.addEventListener('click', setupFrictionScene);
+        mainButtons.induction.addEventListener('click', setupInductionScene);
+        mainButtons.contact.addEventListener('click', setupContactScene);
+
+        mainButtons.reset.addEventListener('click', () => {
+            if (currentScene) {
+                switch (currentScene) {
+                    case 'friction': setupFrictionScene(); break;
+                    case 'induction': setupInductionScene(); break;
+                    case 'contact': setupContactScene(); break;
+                }
+            }
+        });
+
+        // 初始加载
+        window.onload = () => {
+            setupFrictionScene(); // 默认加载第一个场景
+        };
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电场矢量到电场线的演化</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+            overflow: hidden; /* 防止滚动条出现 */
+        }
+        .control-panel {
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        /* 主题切换 */
+        body[data-theme="dark"] {
+            background-color: #111827; /* bg-gray-900 */
+            color: #ffffff;
+        }
+        body[data-theme="light"] {
+            background-color: #f9fafb; /* bg-gray-50 */
+            color: #111827;
+        }
+        body[data-theme="light"] .control-panel {
+            background-color: rgba(249, 250, 251, 0.92); /* 更亮的面板 */
+            border-color: #e5e7eb;
+        }
+        body[data-theme="light"] .scene-btn {
+            background-color: #e5e7eb;
+            color: #111827;
+        }
+        body[data-theme="light"] .scene-btn.active {
+            background-color: #2563eb;
+            color: #ffffff;
+        }
+        body[data-theme="light"] .theme-toggle {
+            background-color: #e5e7eb;
+        }
+
+        /* 自定义滑块样式 */
+        input[type="range"] {
+            -webkit-appearance: none; appearance: none;
+            width: 100%; height: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px; outline: none;
+            transition: opacity .2s;
+        }
+        body[data-theme="light"] input[type="range"] {
+            background: rgba(148, 163, 184, 0.5); /* slate-400 */
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 20px; height: 20px;
+            background: #4A90E2; cursor: pointer;
+            border-radius: 50%; border: 2px solid white;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px; height: 20px;
+            background: #4A90E2; cursor: pointer;
+            border-radius: 50%; border: 2px solid white;
+        }
+        .scene-btn {
+            transition: all 0.2s ease-in-out;
+        }
+        .scene-btn.active {
+            background-color: #4A90E2;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(74, 144, 226, 0.4);
+        }
+        .theme-toggle {
+            transition: all 0.2s ease-in-out;
+        }
+    </style>
+</head>
+<body data-theme="dark" class="bg-gray-900 text-white flex flex-col items-center justify-center h-screen m-0 p-0">
+
+    <canvas id="electricFieldCanvas"></canvas>
+
+    <div class="control-panel absolute bottom-5 md:bottom-10 left-1/2 -translate-x-1/2 bg-gray-800 bg-opacity-70 rounded-lg p-4 w-11/12 max-w-lg shadow-lg border border-gray-700">
+        <div class="flex items-center justify-between mb-3">
+            <span class="text-sm font-semibold">场景与显示</span>
+            <button id="themeToggle" class="theme-toggle bg-gray-700 hover:bg-gray-600 rounded-md px-2 py-1 text-xs flex items-center space-x-1">
+                <span id="themeIcon">🌙</span>
+                <span id="themeText">夜间</span>
+            </button>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+            <button id="btnSingle" class="scene-btn bg-gray-700 hover:bg-gray-600 rounded-md py-2 text-sm font-semibold">单个电荷</button>
+            <button id="btnLike" class="scene-btn bg-gray-700 hover:bg-gray-600 rounded-md py-2 text-sm font-semibold">同种电荷</button>
+            <button id="btnUnlike" class="scene-btn bg-gray-700 hover:bg-gray-600 rounded-md py-2 text-sm font-semibold">异种电荷</button>
+            <button id="btnCustom" class="scene-btn bg-gray-700 hover:bg-gray-600 rounded-md py-2 text-sm font-semibold">自定义双电荷</button>
+        </div>
+
+        <div class="flex items-center space-x-4">
+            <span class="text-sm text-gray-400">稀疏</span>
+            <input type="range" id="densitySlider" min="1" max="100" value="10" class="flex-grow">
+            <span class="text-sm text-gray-400">密集</span>
+        </div>
+
+        <div id="customControls" class="mt-3 hidden">
+            <div class="flex items-center space-x-2 text-xs">
+                <span class="w-10">电荷1</span>
+                <input type="range" id="q1Slider" min="-5" max="5" step="0.5" value="1" class="flex-grow">
+                <span id="q1Value" class="w-10 text-right">+1.0</span>
+            </div>
+            <div class="flex items-center space-x-2 text-xs mt-2">
+                <span class="w-10">电荷2</span>
+                <input type="range" id="q2Slider" min="-5" max="5" step="0.5" value="-1" class="flex-grow">
+                <span id="q2Value" class="w-10 text-right">-1.0</span>
+            </div>
+            <p class="text-[10px] text-gray-400 mt-1">拖动滑块改变电荷大小，向右为正电，向左为负电。</p>
+        </div>
+
+        <p class="text-xs text-center text-gray-500 mt-3">
+            选择场景，拖动滑块和电荷。在“单个电荷”场景下可点击电荷切换正负；
+            在“自定义双电荷”场景下可调节两个电荷的大小。
+        </p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('electricFieldCanvas');
+        const ctx = canvas.getContext('2d');
+        const slider = document.getElementById('densitySlider');
+        const sceneButtons = {
+            single: document.getElementById('btnSingle'),
+            like: document.getElementById('btnLike'),
+            unlike: document.getElementById('btnUnlike'),
+            custom: document.getElementById('btnCustom'),
+        };
+
+        const themeToggleBtn = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        const themeText = document.getElementById('themeText');
+
+        const customControls = document.getElementById('customControls');
+        const q1Slider = document.getElementById('q1Slider');
+        const q2Slider = document.getElementById('q2Slider');
+        const q1Value = document.getElementById('q1Value');
+        const q2Value = document.getElementById('q2Value');
+
+        let width, height;
+        let charges = [];
+        let draggedChargeIndex = -1;
+        let isDragging = false;
+        let currentScene = 'single';
+        let currentTheme = 'dark';
+
+        const themeConfig = {
+            dark: {
+                canvasBg: 'rgb(17, 24, 39)',
+                fieldLineColor: 'rgba(148, 163, 184, 0.6)',
+                arrowColor: 'rgba(74, 144, 226, 0.9)',
+            },
+            light: {
+                canvasBg: '#f9fafb',
+                fieldLineColor: 'rgba(148, 163, 184, 0.9)',
+                arrowColor: 'rgba(37, 99, 235, 0.9)',
+            }
+        };
+
+        function applyTheme() {
+            document.body.setAttribute('data-theme', currentTheme);
+            if (currentTheme === 'dark') {
+                themeIcon.textContent = '🌙';
+                themeText.textContent = '夜间';
+            } else {
+                themeIcon.textContent = '☀️';
+                themeText.textContent = '白天';
+            }
+            draw();
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            applyTheme();
+        });
+
+        function setScene(scene) {
+            currentScene = scene;
+            charges = [];
+            Object.values(sceneButtons).forEach(btn => btn.classList.remove('active'));
+            sceneButtons[scene].classList.add('active');
+
+            // 自定义场景控件显隐
+            if (scene === 'custom') {
+                customControls.classList.remove('hidden');
+            } else {
+                customControls.classList.add('hidden');
+            }
+
+            switch (scene) {
+                case 'single':
+                    charges.push({ x: width / 2, y: height / 2, q: 1, radius: 15 });
+                    break;
+                case 'like':
+                    charges.push({ x: width / 2 - 150, y: height / 2, q: 1, radius: 15 });
+                    charges.push({ x: width / 2 + 150, y: height / 2, q: 1, radius: 15 });
+                    break;
+                case 'unlike':
+                    charges.push({ x: width / 2 - 150, y: height / 2, q: 1, radius: 15 });
+                    charges.push({ x: width / 2 + 150, y: height / 2, q: -1, radius: 15 });
+                    break;
+                case 'custom':
+                    charges.push({ x: width / 2 - 150, y: height / 2, q: parseFloat(q1Slider.value), radius: 15 });
+                    charges.push({ x: width / 2 + 150, y: height / 2, q: parseFloat(q2Slider.value), radius: 15 });
+                    break;
+            }
+            draw();
+        }
+
+        function setup() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            setScene(currentScene);
+        }
+
+        function getElectricFieldAt(px, py) {
+            let Ex = 0, Ey = 0;
+            for (const charge of charges) {
+                const dx = px - charge.x;
+                const dy = py - charge.y;
+                const rSquared = Math.max(charge.radius * charge.radius, dx * dx + dy * dy);
+                const r = Math.sqrt(rSquared);
+                const magnitude = charge.q / rSquared;
+                Ex += magnitude * (dx / r);
+                Ey += magnitude * (dy / r);
+            }
+            return { Ex, Ey };
+        }
+
+        function drawArrow(x, y, angle, length) {
+            const arrowSize = 5;
+            const colors = themeConfig[currentTheme];
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle);
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(length, 0);
+            ctx.strokeStyle = colors.arrowColor;
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(length, 0);
+            ctx.lineTo(length - arrowSize, -arrowSize / 2);
+            ctx.lineTo(length - arrowSize, arrowSize / 2);
+            ctx.closePath();
+            ctx.fillStyle = colors.arrowColor;
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function drawCharges() {
+            charges.forEach(charge => {
+                ctx.beginPath();
+                ctx.arc(charge.x, charge.y, charge.radius, 0, Math.PI * 2);
+                ctx.fillStyle = charge.q > 0 ? '#F5A623' : '#7ED321';
+                ctx.fill();
+
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 20px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(charge.q > 0 ? '+' : '−', charge.x, charge.y + 1);
+            });
+        }
+
+        // 电荷量越大，发出的线越多
+        function getLineCountForCharge(charge) {
+            const baseLines = 12;
+            const absq = Math.abs(charge.q);
+            const minLines = 8;
+            const maxLines = 40;
+            const lines = Math.round(baseLines * absq);
+            return Math.min(maxLines, Math.max(minLines, lines));
+        }
+
+        // 改进后的 traceLine：先算出连续轨迹，再画曲线和箭头
+        function traceLine(startX, startY, maxSegments, visualStepSize, direction) {
+            const CALCULATION_STEP = 4; // 固定的小步长保证轨迹平滑
+            let px = startX;
+            let py = startY;
+            let distanceSinceLastArrow = 0;
+            const points = [];
+            const arrows = [];
+
+            points.push({ x: px, y: py });
+
+            for (let j = 0; j < maxSegments; j++) {
+                const field = getElectricFieldAt(px, py);
+                const magnitude = Math.hypot(field.Ex, field.Ey);
+                if (magnitude < 0.00001) break;
+
+                const dirX = direction * (field.Ex / magnitude);
+                const dirY = direction * (field.Ey / magnitude);
+
+                px += dirX * CALCULATION_STEP;
+                py += dirY * CALCULATION_STEP;
+                points.push({ x: px, y: py });
+
+                distanceSinceLastArrow += CALCULATION_STEP;
+                if (distanceSinceLastArrow >= visualStepSize) {
+                    const fieldAngle = Math.atan2(dirY, dirX);
+                    const vectorLength = Math.min(visualStepSize * 0.8, 15);
+                    arrows.push({ x: px, y: py, angle: fieldAngle, length: vectorLength });
+                    distanceSinceLastArrow = 0;
+                }
+
+                if (px < -10 || px > width + 10 || py < -10 || py > height + 10) break;
+
+                let nearAnotherCharge = false;
+                for (const otherCharge of charges) {
+                    if (Math.hypot(px - otherCharge.x, py - otherCharge.y) < otherCharge.radius + 5) {
+                        nearAnotherCharge = true;
+                        break;
+                    }
+                }
+                if (nearAnotherCharge) break;
+            }
+
+            if (points.length > 1) {
+                const colors = themeConfig[currentTheme];
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, points[0].y);
+                for (let i = 1; i < points.length; i++) {
+                    ctx.lineTo(points[i].x, points[i].y);
+                }
+                ctx.strokeStyle = colors.fieldLineColor;
+                ctx.lineWidth = 0.8;
+                ctx.stroke();
+            }
+
+            arrows.forEach(a => drawArrow(a.x, a.y, a.angle, a.length));
+        }
+
+        function drawField() {
+            const density = parseInt(slider.value, 10);
+            const visualStepSize = 120 - (density - 1) * (115 / 99);
+            const maxSegments = 900; // 步长变小后适当增加最大段数
+
+            // 从正电荷出发，沿场线方向正向追踪
+            for (const charge of charges.filter(c => c.q > 0)) {
+                const numLines = getLineCountForCharge(charge);
+                for (let i = 0; i < numLines; i++) {
+                    const angle = (i / numLines) * Math.PI * 2;
+                    const startX = charge.x + charge.radius * 1.5 * Math.cos(angle);
+                    const startY = charge.y + charge.radius * 1.5 * Math.sin(angle);
+                    traceLine(startX, startY, maxSegments, visualStepSize, 1);
+                }
+            }
+
+            // 从负电荷出发，沿场线方向反向追踪
+            for (const charge of charges.filter(c => c.q < 0)) {
+                const numLines = getLineCountForCharge(charge);
+                for (let i = 0; i < numLines; i++) {
+                    const angle = (i / numLines) * Math.PI * 2;
+                    const startX = charge.x + charge.radius * 1.5 * Math.cos(angle);
+                    const startY = charge.y + charge.radius * 1.5 * Math.sin(angle);
+                    traceLine(startX, startY, maxSegments, visualStepSize, -1);
+                }
+            }
+        }
+
+        function draw() {
+            const colors = themeConfig[currentTheme];
+            ctx.fillStyle = colors.canvasBg;
+            ctx.fillRect(0, 0, width, height);
+            drawField();
+            drawCharges();
+        }
+
+        slider.addEventListener('input', draw);
+        Object.keys(sceneButtons).forEach(key => {
+            sceneButtons[key].addEventListener('click', () => setScene(key));
+        });
+
+        function formatChargeValue(v) {
+            const n = parseFloat(v);
+            if (n > 0) return '+' + n.toFixed(1);
+            if (n < 0) return n.toFixed(1);
+            return '0.0';
+        }
+
+        function updateCustomChargeValues() {
+            q1Value.textContent = formatChargeValue(q1Slider.value);
+            q2Value.textContent = formatChargeValue(q2Slider.value);
+
+            if (currentScene === 'custom' && charges.length >= 2) {
+                charges[0].q = parseFloat(q1Slider.value);
+                charges[1].q = parseFloat(q2Slider.value);
+                draw();
+            }
+        }
+
+        q1Slider.addEventListener('input', updateCustomChargeValues);
+        q2Slider.addEventListener('input', updateCustomChargeValues);
+
+        function getMousePos(evt) {
+            const rect = canvas.getBoundingClientRect();
+            return { x: evt.clientX - rect.left, y: evt.clientY - rect.top };
+        }
+
+        function handleStart(e) {
+            isDragging = false;
+            const pos = getMousePos(e.touches ? e.touches[0] : e);
+            draggedChargeIndex = -1;
+            for (let i = charges.length - 1; i >= 0; i--) {
+                const dist = Math.hypot(pos.x - charges[i].x, pos.y - charges[i].y);
+                if (dist < charges[i].radius * 1.5) {
+                    draggedChargeIndex = i;
+                    break;
+                }
+            }
+        }
+
+        function handleMove(e) {
+            if (draggedChargeIndex !== -1) {
+                isDragging = true;
+                e.preventDefault();
+                const pos = getMousePos(e.touches ? e.touches[0] : e);
+                charges[draggedChargeIndex].x = pos.x;
+                charges[draggedChargeIndex].y = pos.y;
+                draw();
+            }
+        }
+
+        function handleEnd(e) {
+            if (!isDragging && draggedChargeIndex !== -1) {
+                handleClick(e);
+            }
+            draggedChargeIndex = -1;
+            isDragging = false;
+        }
+
+        function handleClick(e) {
+            if (currentScene === 'single' && charges.length > 0) {
+                const pos = getMousePos(e.changedTouches ? e.changedTouches[0] : e);
+                const dist = Math.hypot(pos.x - charges[0].x, pos.y - charges[0].y);
+                if (dist < charges[0].radius * 1.5) {
+                    charges[0].q *= -1; // 翻转电荷
+                    draw();
+                }
+            }
+        }
+
+        canvas.addEventListener('mousedown', handleStart);
+        canvas.addEventListener('mousemove', handleMove);
+        document.addEventListener('mouseup', handleEnd);
+        canvas.addEventListener('touchstart', handleStart, { passive: false });
+        canvas.addEventListener('touchmove', handleMove, { passive: false });
+        canvas.addEventListener('touchend', handleEnd);
+        window.addEventListener('resize', setup);
+
+        // 初始化
+        updateCustomChargeValues();
+        setup();
+        applyTheme();
+    </script>
+</body>
+</html>
