@@ -1,10 +1,12 @@
 import type { ProjectileState } from './scene.sim';
 import { getTeachingStandards, type TeachingMode } from '../../app/teaching-standards';
 import { applyHiDpiCanvasMetrics, computeHiDpiCanvasMetrics } from '../../core/high-dpi-canvas';
+import type { TeachingTheme } from '../../app/teaching-demo-shell';
 
 export type CreateProjectileViewOptions = {
   canvas?: HTMLCanvasElement;
   mode?: TeachingMode;
+  theme?: TeachingTheme;
 };
 
 export function createProjectileView(options: CreateProjectileViewOptions = {}) {
@@ -13,6 +15,7 @@ export function createProjectileView(options: CreateProjectileViewOptions = {}) 
   let canvas = options.canvas ?? null;
   let ctx = canvas?.getContext('2d') ?? null;
   let mode: TeachingMode = options.mode ?? 'normal';
+  let theme: TeachingTheme = options.theme ?? 'dark';
   let surface = computeHiDpiCanvasMetrics({
     cssWidth: 1280,
     cssHeight: 720,
@@ -40,7 +43,7 @@ export function createProjectileView(options: CreateProjectileViewOptions = {}) 
     const originX = 70;
     const originY = height - 60;
     ctx.lineWidth = strokeWidth;
-    ctx.strokeStyle = '#345b8a';
+    ctx.strokeStyle = theme === 'dark' ? '#6f9fd8' : '#345b8a';
     ctx.beginPath();
     ctx.moveTo(originX, 30);
     ctx.lineTo(originX, originY);
@@ -59,7 +62,7 @@ export function createProjectileView(options: CreateProjectileViewOptions = {}) 
     const scaleY = (height - 100) / maxY;
 
     ctx.lineWidth = strokeWidth;
-    ctx.strokeStyle = '#0f6fc6';
+    ctx.strokeStyle = theme === 'dark' ? '#4db0ff' : '#0f6fc6';
     ctx.beginPath();
     for (let i = 0; i < trail.length; i += 1) {
       const x = originX + trail[i].x * scaleX;
@@ -75,33 +78,56 @@ export function createProjectileView(options: CreateProjectileViewOptions = {}) 
     const tip = trail[trail.length - 1];
     const tipX = originX + tip.x * scaleX;
     const tipY = originY - tip.y * scaleY;
-    ctx.fillStyle = '#f14545';
+    ctx.fillStyle = theme === 'dark' ? '#ff6b6b' : '#f14545';
     ctx.beginPath();
     ctx.arc(tipX, tipY, pointRadius, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  function drawText(state: ProjectileState, width: number, fontSize: number): void {
+  function drawText(
+    state: ProjectileState,
+    width: number,
+    primaryFontSize: number,
+    secondaryFontSize: number
+  ): void {
     if (!ctx) return;
-    ctx.fillStyle = '#243b57';
-    ctx.font = `700 ${fontSize}px "Noto Sans SC", "PingFang SC", sans-serif`;
-    ctx.fillText(`t=${state.t.toFixed(2)}s`, width - 220, 42);
-    ctx.fillText(`x=${state.x.toFixed(2)}m`, width - 220, 42 + fontSize + 8);
-    ctx.fillText(`y=${state.y.toFixed(2)}m`, width - 220, 42 + (fontSize + 8) * 2);
+    const boxWidth = Math.max(280, Math.round(primaryFontSize * 8.2));
+    const lineGap = Math.round(secondaryFontSize * 1.35);
+    const boxHeight = Math.round(primaryFontSize + lineGap * 2 + 28);
+    const boxX = width - boxWidth - 24;
+    const boxY = 16;
+
+    ctx.fillStyle = theme === 'dark' ? 'rgba(3,10,25,0.78)' : 'rgba(255,255,255,0.78)';
+    ctx.strokeStyle = theme === 'dark' ? 'rgba(148,163,184,0.45)' : 'rgba(52,91,138,0.35)';
+    ctx.lineWidth = Math.max(2, Math.round(primaryFontSize * 0.14));
+    ctx.beginPath();
+    ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 12);
+    ctx.fill();
+    ctx.stroke();
+
+    const textColor = theme === 'dark' ? '#e2e8f0' : '#243b57';
+    ctx.fillStyle = textColor;
+    ctx.textAlign = 'left';
+    ctx.font = `700 ${primaryFontSize}px "Noto Sans SC", "PingFang SC", sans-serif`;
+    ctx.fillText(`t=${state.t.toFixed(2)}s`, boxX + 16, boxY + primaryFontSize + 6);
+    ctx.font = `700 ${secondaryFontSize}px "Noto Sans SC", "PingFang SC", sans-serif`;
+    ctx.fillText(`x=${state.x.toFixed(2)}m`, boxX + 16, boxY + primaryFontSize + 10 + lineGap);
+    ctx.fillText(`y=${state.y.toFixed(2)}m`, boxX + 16, boxY + primaryFontSize + 10 + lineGap * 2);
   }
 
   function draw(state: ProjectileState): void {
     if (!ctx || !canvas) return;
     const standards = getTeachingStandards(mode);
+    const visuals = standards.rightStage;
     const width = surface.cssWidth;
     const height = surface.cssHeight;
 
     ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = '#f4f9ff';
+    ctx.fillStyle = theme === 'dark' ? '#0b1220' : '#f4f9ff';
     ctx.fillRect(0, 0, width, height);
-    drawAxes(width, height, standards.strokePx);
-    drawTrail(width, height, standards.strokePx, standards.pointRadiusPx);
-    drawText(state, width, Math.max(14, Math.floor(standards.bodyFontPx * 0.7)));
+    drawAxes(width, height, visuals.majorStrokePx);
+    drawTrail(width, height, visuals.majorStrokePx, visuals.markerRadiusPx);
+    drawText(state, width, visuals.primaryFontPx, visuals.secondaryFontPx);
   }
 
   return {
@@ -135,6 +161,12 @@ export function createProjectileView(options: CreateProjectileViewOptions = {}) 
     },
     setMode(nextMode: TeachingMode): void {
       mode = nextMode;
+      if (lastState) {
+        draw(lastState);
+      }
+    },
+    setTheme(nextTheme: TeachingTheme): void {
+      theme = nextTheme;
       if (lastState) {
         draw(lastState);
       }

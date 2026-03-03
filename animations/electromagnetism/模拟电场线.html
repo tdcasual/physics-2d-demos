@@ -35,9 +35,6 @@
             background-color: #2563eb;
             color: #ffffff;
         }
-        body[data-theme="light"] .theme-toggle {
-            background-color: #e5e7eb;
-        }
 
         /* 自定义滑块样式 */
         input[type="range"] {
@@ -70,9 +67,6 @@
             transform: translateY(-2px);
             box-shadow: 0 4px 10px rgba(74, 144, 226, 0.4);
         }
-        .theme-toggle {
-            transition: all 0.2s ease-in-out;
-        }
         body.embed-mode .control-panel {
             display: none !important;
         }
@@ -85,10 +79,6 @@
     <div class="control-panel absolute bottom-5 md:bottom-10 left-1/2 -translate-x-1/2 bg-gray-800 bg-opacity-70 rounded-lg p-4 w-11/12 max-w-lg shadow-lg border border-gray-700">
         <div class="flex items-center justify-between mb-3">
             <span class="text-sm font-semibold">场景与显示</span>
-            <button id="themeToggle" class="theme-toggle bg-gray-700 hover:bg-gray-600 rounded-md px-2 py-1 text-xs flex items-center space-x-1">
-                <span id="themeIcon">🌙</span>
-                <span id="themeText">夜间</span>
-            </button>
         </div>
 
         <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
@@ -135,10 +125,6 @@
             custom: document.getElementById('btnCustom'),
         };
 
-        const themeToggleBtn = document.getElementById('themeToggle');
-        const themeIcon = document.getElementById('themeIcon');
-        const themeText = document.getElementById('themeText');
-
         const customControls = document.getElementById('customControls');
         const q1Slider = document.getElementById('q1Slider');
         const q2Slider = document.getElementById('q2Slider');
@@ -152,7 +138,7 @@
         let draggedChargeIndex = -1;
         let isDragging = false;
         let currentScene = 'single';
-        let currentTheme = 'dark';
+        let currentTheme = searchParams.get('theme') === 'light' ? 'light' : 'dark';
         let lastReadoutAt = 0;
         let isPresentationMode = false;
 
@@ -180,20 +166,39 @@
             }
         };
 
-        const visualConfig = {
+        const RIGHT_STAGE_STANDARD = {
             normal: {
-                chargeRadius: 15,
-                chargeFontPx: 20,
-                arrowStrokeWidth: 2.8,
-                arrowSize: 8,
-                maxArrowLength: 14
+                primaryFontPx: 36,
+                secondaryFontPx: 30,
+                majorStrokePx: 6,
+                minorStrokePx: 5,
+                markerRadiusPx: 12
             },
             presentation: {
-                chargeRadius: 22,
-                chargeFontPx: 30,
-                arrowStrokeWidth: 4.2,
-                arrowSize: 12,
-                maxArrowLength: 22
+                primaryFontPx: 56,
+                secondaryFontPx: 46,
+                majorStrokePx: 11,
+                minorStrokePx: 9,
+                markerRadiusPx: 20
+            }
+        };
+
+        const visualConfig = {
+            normal: {
+                chargeRadius: 26,
+                chargeFontPx: Math.round(RIGHT_STAGE_STANDARD.normal.primaryFontPx * 1.08),
+                arrowStrokeWidth: RIGHT_STAGE_STANDARD.normal.majorStrokePx,
+                arrowSize: 20,
+                maxArrowLength: 34,
+                minArrowLength: RIGHT_STAGE_STANDARD.normal.secondaryFontPx * 0.85
+            },
+            presentation: {
+                chargeRadius: 40,
+                chargeFontPx: Math.round(RIGHT_STAGE_STANDARD.presentation.primaryFontPx * 1.08),
+                arrowStrokeWidth: RIGHT_STAGE_STANDARD.presentation.majorStrokePx,
+                arrowSize: 30,
+                maxArrowLength: 58,
+                minArrowLength: RIGHT_STAGE_STANDARD.presentation.secondaryFontPx * 0.95
             }
         };
 
@@ -234,22 +239,9 @@
 
         function applyTheme() {
             document.body.setAttribute('data-theme', currentTheme);
-            if (currentTheme === 'dark') {
-                themeIcon.textContent = '🌙';
-                themeText.textContent = '夜间';
-            } else {
-                themeIcon.textContent = '☀️';
-                themeText.textContent = '白天';
-            }
             draw();
             emitReadout(true);
         }
-
-        themeToggleBtn.addEventListener('click', () => {
-            currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            applyTheme();
-            emitStatus(currentTheme === 'dark' ? '已切换到夜间主题' : '已切换到白天主题');
-        });
 
         function setScene(scene) {
             currentScene = scene;
@@ -318,6 +310,8 @@
             ctx.lineTo(length, 0);
             ctx.strokeStyle = colors.arrowColor;
             ctx.lineWidth = visuals.arrowStrokeWidth;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
             ctx.stroke();
             ctx.beginPath();
             ctx.moveTo(length, 0);
@@ -377,7 +371,7 @@
                 distanceSinceLastArrow += CALCULATION_STEP;
                 if (distanceSinceLastArrow >= visualStepSize) {
                     const fieldAngle = Math.atan2(dirY, dirX);
-                    const minLength = isPresentationMode ? 9 : 6;
+                    const minLength = getVisualConfig().minArrowLength;
                     const vectorLength = Math.max(
                         minLength,
                         Math.min(visualStepSize * 0.35, getVisualConfig().maxArrowLength)
@@ -531,7 +525,6 @@
 
         function resetDefaults() {
             isPresentationMode = false;
-            currentTheme = 'dark';
             slider.value = '10';
             q1Slider.value = '1';
             q2Slider.value = '-1';

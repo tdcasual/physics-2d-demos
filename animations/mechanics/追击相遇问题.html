@@ -71,23 +71,6 @@ h1 {
   font-size: 13px;
 }
 
-.theme-toggle {
-  border-radius: 999px;
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-card-soft);
-  color: var(--text-main);
-  font-size: 12px;
-  padding: 4px 10px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
-  box-shadow: 0 6px 16px rgba(15,23,42,0.35);
-}
-.theme-toggle:hover {
-  filter: brightness(1.04);
-}
-
 .stack {
   display: flex;
   flex-direction: column;
@@ -353,7 +336,6 @@ body.embed-mode .stack > .card:nth-child(2) {
 <div class="page">
   <div class="page-header">
     <h1>追及相遇演示动画</h1>
-    <button id="themeToggle" class="theme-toggle">☀️ 白天模式</button>
   </div>
   <div class="subtitle">
     上排：空间位置动画（课堂投影更醒目）&nbsp;&nbsp;|&nbsp;&nbsp;中排：x–t 与 v–t 图像&nbsp;&nbsp;|&nbsp;&nbsp;下排：参数设置。
@@ -453,6 +435,8 @@ body.embed-mode .stack > .card:nth-child(2) {
 (function () {
   const searchParams = new URLSearchParams(window.location.search);
   const isEmbedMode = searchParams.get('embed') === '1';
+  let currentTheme = searchParams.get('theme') === 'light' ? 'light' : 'dark';
+  document.body.dataset.theme = currentTheme;
   if (isEmbedMode) {
     document.body.classList.add('embed-mode');
   }
@@ -535,6 +519,28 @@ body.embed-mode .stack > .card:nth-child(2) {
   let bounds = { minX: 0, maxX: 1, maxSpeed: 1 };
   let lastReadoutAt = 0;
   let isPresentationMode = false;
+  const RIGHT_STAGE_STANDARD = {
+    normal: {
+      primaryFontPx: 36,
+      secondaryFontPx: 30,
+      majorStrokePx: 6,
+      minorStrokePx: 5,
+      markerRadiusPx: 12,
+      scale: 1.45
+    },
+    presentation: {
+      primaryFontPx: 56,
+      secondaryFontPx: 46,
+      majorStrokePx: 11,
+      minorStrokePx: 9,
+      markerRadiusPx: 20,
+      scale: 2.6
+    }
+  };
+
+  function getStageReadability() {
+    return isPresentationMode ? RIGHT_STAGE_STANDARD.presentation : RIGHT_STAGE_STANDARD.normal;
+  }
 
   function buildReadout() {
     return [
@@ -642,11 +648,14 @@ body.embed-mode .stack > .card:nth-child(2) {
   function drawScene() {
     const cssW = motionCanvas.width / dpr;
     const cssH = motionCanvas.height / dpr;
-    const visualScale = isPresentationMode ? 1.35 : 1;
+    const visuals = getStageReadability();
+    const visualScale = visuals.scale;
+    const majorStroke = Math.max(visuals.majorStrokePx, 2 * visualScale);
+    const minorStroke = Math.max(visuals.minorStrokePx, 1.5 * visualScale);
 
     motionCtx.clearRect(0, 0, cssW, cssH);
 
-    const isLight = document.body.dataset.theme === 'light';
+    const isLight = currentTheme === 'light';
     const grad = motionCtx.createLinearGradient(0, 0, cssW, cssH);
     if (isLight) {
       grad.addColorStop(0, '#e5f0ff');
@@ -661,13 +670,13 @@ body.embed-mode .stack > .card:nth-child(2) {
     const mid = cssH * 0.55;
 
     motionCtx.strokeStyle = isLight ? 'rgba(15,23,42,0.35)' : 'rgba(255,255,255,0.22)';
-    motionCtx.lineWidth = 2 * visualScale;
+    motionCtx.lineWidth = Math.max(majorStroke, visuals.majorStrokePx * 1.15);
     motionCtx.beginPath();
     motionCtx.moveTo(20, mid);
     motionCtx.lineTo(cssW - 20, mid);
     motionCtx.stroke();
 
-    motionCtx.font = `${Math.round(12 * visualScale)}px system-ui`;
+    motionCtx.font = `${Math.max(visuals.secondaryFontPx, Math.round(12 * visualScale))}px system-ui`;
     motionCtx.fillStyle = isLight ? 'rgba(30,41,59,0.8)' : 'rgba(226,232,240,0.8)';
     motionCtx.textAlign = 'center';
     const steps = 8;
@@ -695,7 +704,7 @@ body.embed-mode .stack > .card:nth-child(2) {
     const screenXB = worldToScreenX(xB);
 
     function drawObject(x, color, label) {
-      const r = 16 * visualScale;
+      const r = Math.max(16 * visualScale, visuals.markerRadiusPx * 2.6);
       const glowColor = color.replace('1)', '0.23)');
       motionCtx.beginPath();
       motionCtx.fillStyle = glowColor;
@@ -707,12 +716,12 @@ body.embed-mode .stack > .card:nth-child(2) {
       motionCtx.arc(x, mid, r, 0, Math.PI * 2);
       motionCtx.fill();
 
-      motionCtx.lineWidth = 2 * visualScale;
+      motionCtx.lineWidth = Math.max(majorStroke, visuals.majorStrokePx * 1.15);
       motionCtx.strokeStyle = isLight ? 'rgba(15,23,42,0.9)' : 'rgba(248,250,252,0.95)';
       motionCtx.stroke();
 
       motionCtx.fillStyle = isLight ? '#111827' : '#f9fafb';
-      motionCtx.font = `bold ${Math.round(15 * visualScale)}px system-ui`;
+      motionCtx.font = `bold ${Math.max(visuals.primaryFontPx, Math.round(15 * visualScale))}px system-ui`;
       motionCtx.textAlign = 'center';
       motionCtx.fillText(label, x, mid - 22 * visualScale);
     }
@@ -722,7 +731,7 @@ body.embed-mode .stack > .card:nth-child(2) {
 
     motionCtx.setLineDash([6 * visualScale, 4 * visualScale]);
     motionCtx.strokeStyle = isLight ? 'rgba(30,64,175,0.7)' : 'rgba(148,163,184,0.7)';
-    motionCtx.lineWidth = 1.5 * visualScale;
+    motionCtx.lineWidth = Math.max(minorStroke, visuals.minorStrokePx * 1.1);
     motionCtx.beginPath();
     motionCtx.moveTo(screenXA, mid);
     motionCtx.lineTo(screenXB, mid);
@@ -731,7 +740,7 @@ body.embed-mode .stack > .card:nth-child(2) {
 
     const distance = Math.abs(xB - xA);
     motionCtx.fillStyle = isLight ? '#111827' : '#f9fafb';
-    motionCtx.font = `${Math.round(13 * visualScale)}px system-ui`;
+    motionCtx.font = `${Math.max(visuals.secondaryFontPx, Math.round(13 * visualScale))}px system-ui`;
     motionCtx.textAlign = 'center';
     motionCtx.fillText(
       '距离 = ' + distance.toFixed(2) + ' m',
@@ -778,7 +787,8 @@ body.embed-mode .stack > .card:nth-child(2) {
   }
 
 function drawGraphs() {
-  const visualScale = isPresentationMode ? 1.35 : 1;
+  const visuals = getStageReadability();
+  const visualScale = visuals.scale;
   const xW = xCanvas.width / dpr;
   const xH = xCanvas.height / dpr;
   const vW = vCanvas.width / dpr;
@@ -795,14 +805,14 @@ function drawGraphs() {
   function drawAxis(ctx, w, h, yLabel) {
     ctx.save();
     ctx.strokeStyle = 'rgba(148,163,184,0.8)';
-    ctx.lineWidth = 1.2 * visualScale;
+    ctx.lineWidth = Math.max(visuals.minorStrokePx * 1.15, 1.4 * visualScale);
     ctx.beginPath();
     ctx.moveTo(paddingLeft, paddingTop);
     ctx.lineTo(paddingLeft, h - paddingBottom);
     ctx.lineTo(w - paddingRight, h - paddingBottom);
     ctx.stroke();
 
-    ctx.font = `${Math.round(12 * visualScale)}px system-ui`;
+    ctx.font = `${Math.max(visuals.secondaryFontPx, Math.round(12 * visualScale))}px system-ui`;
     ctx.fillStyle = 'rgba(148,163,184,0.9)';
     ctx.textAlign = 'left';
     ctx.fillText(yLabel, 6, paddingTop + 12 * visualScale);
@@ -842,9 +852,9 @@ function drawGraphs() {
   function drawGrid(ctx, w, h) {
     ctx.save();
     ctx.strokeStyle = 'rgba(148,163,184,0.25)';
-    ctx.lineWidth = 1 * visualScale;
+    ctx.lineWidth = Math.max(visuals.minorStrokePx * 1.1, 1.2 * visualScale);
     ctx.setLineDash([4 * visualScale, 4 * visualScale]);
-    ctx.font = `${Math.round(11 * visualScale)}px system-ui`;
+    ctx.font = `${Math.max(visuals.secondaryFontPx - 1, Math.round(11 * visualScale))}px system-ui`;
     ctx.fillStyle = 'rgba(148,163,184,0.9)';
 
     const step = Math.max(1, Math.round(T / 5));
@@ -869,7 +879,7 @@ function drawGraphs() {
   // 只画到 currentTime 的折线
   function drawPolyline(ctx, w, h, type, colorA, colorB, maxTime) {
     ctx.save();
-    ctx.lineWidth = 2.2 * visualScale;
+    ctx.lineWidth = Math.max(visuals.majorStrokePx * 1.2, 2.6 * visualScale);
     const grad = ctx.createLinearGradient(
       paddingLeft,
       paddingTop,
@@ -948,7 +958,7 @@ function drawGraphs() {
     ctx.save();
     ctx.strokeStyle = 'rgba(248,250,252,0.85)';
     ctx.setLineDash([6 * visualScale, 4 * visualScale]);
-    ctx.lineWidth = 1.6 * visualScale;
+    ctx.lineWidth = Math.max(visuals.minorStrokePx * 1.15, 1.9 * visualScale);
     ctx.beginPath();
     ctx.moveTo(x, paddingTop);
     ctx.lineTo(x, h - paddingBottom);
@@ -1019,20 +1029,16 @@ function drawGraphs() {
     vExprBInput.addEventListener(ev, reset);
   });
 
-  const themeToggle = document.getElementById('themeToggle');
-  function updateThemeButton() {
-    const isLight = document.body.dataset.theme === 'light';
-    themeToggle.textContent = isLight ? '🌙 夜间模式' : '☀️ 白天模式';
-  }
-  themeToggle.addEventListener('click', function () {
-    const isLight = document.body.dataset.theme === 'light';
-    document.body.dataset.theme = isLight ? 'dark' : 'light';
-    updateThemeButton();
+  function applyTheme(theme, silent) {
+    const normalized = theme === 'light' ? 'light' : 'dark';
+    currentTheme = normalized;
+    document.body.dataset.theme = normalized;
     drawScene();
-    emitStatus(isLight ? '已切换到夜间主题' : '已切换到白天主题');
+    if (!silent) {
+      emitStatus(normalized === 'dark' ? '已切换到夜间主题' : '已切换到白天主题');
+    }
     emitReadout(true);
-  });
-  updateThemeButton();
+  }
 
   function setPresentationMode(presentation) {
     isPresentationMode = presentation;
@@ -1046,10 +1052,7 @@ function drawGraphs() {
     if (command === 'set-theme') {
       const theme = payload && typeof payload.theme === 'string' ? payload.theme : '';
       if (theme === 'dark' || theme === 'light') {
-        document.body.dataset.theme = theme;
-        updateThemeButton();
-        drawScene();
-        emitReadout(true);
+        applyTheme(theme, true);
       }
       return;
     }

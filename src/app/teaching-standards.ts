@@ -1,5 +1,13 @@
 export type TeachingMode = 'normal' | 'presentation';
 
+export type RightStageReadability = {
+  primaryFontPx: number;
+  secondaryFontPx: number;
+  majorStrokePx: number;
+  minorStrokePx: number;
+  markerRadiusPx: number;
+};
+
 export type TeachingStandards = {
   viewport: {
     width: number;
@@ -10,24 +18,39 @@ export type TeachingStandards = {
   headingFontPx: number;
   strokePx: number;
   pointRadiusPx: number;
+  rightStage: RightStageReadability;
 };
 
 const BASE_VIEWPORT = { width: 1920, height: 1080 } as const;
 
 const TOKENS: Record<TeachingMode, Omit<TeachingStandards, 'viewport'>> = {
   normal: {
-    bodyFontPx: 20,
-    controlFontPx: 20,
-    headingFontPx: 36,
-    strokePx: 2,
-    pointRadiusPx: 6
+    bodyFontPx: 28,
+    controlFontPx: 26,
+    headingFontPx: 46,
+    strokePx: 5,
+    pointRadiusPx: 10,
+    rightStage: {
+      primaryFontPx: 36,
+      secondaryFontPx: 30,
+      majorStrokePx: 6,
+      minorStrokePx: 5,
+      markerRadiusPx: 12
+    }
   },
   presentation: {
-    bodyFontPx: 30,
-    controlFontPx: 28,
-    headingFontPx: 52,
-    strokePx: 4,
-    pointRadiusPx: 10
+    bodyFontPx: 42,
+    controlFontPx: 38,
+    headingFontPx: 64,
+    strokePx: 9,
+    pointRadiusPx: 16,
+    rightStage: {
+      primaryFontPx: 56,
+      secondaryFontPx: 46,
+      majorStrokePx: 11,
+      minorStrokePx: 9,
+      markerRadiusPx: 20
+    }
   }
 };
 

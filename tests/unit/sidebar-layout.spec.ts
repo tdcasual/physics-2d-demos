@@ -9,7 +9,7 @@ describe('sidebar layout helpers', () => {
   });
 
   it('computes a stable default width by viewport ratio', () => {
-    expect(getDefaultSidebarWidth(1200, 280, 600)).toBe(408);
+    expect(getDefaultSidebarWidth(1200, 280, 600)).toBe(324);
     expect(getDefaultSidebarWidth(680, 280, 600)).toBe(280);
     expect(getDefaultSidebarWidth(2600, 280, 600)).toBe(600);
   });

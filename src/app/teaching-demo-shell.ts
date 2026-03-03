@@ -13,22 +13,32 @@ export type TeachingDemoShell = {
   stageSlot: HTMLElement;
   stageCanvas: HTMLCanvasElement;
   modeButton: HTMLButtonElement;
+  themeButton: HTMLButtonElement;
   setStatus: (text: string) => void;
   setReadout: (items: ReadoutItem[]) => void;
   setMode: (mode: TeachingMode) => void;
+  setTheme: (theme: TeachingTheme) => void;
   getMode: () => TeachingMode;
+  getTheme: () => TeachingTheme;
   dispose: () => void;
 };
+
+export type TeachingTheme = 'dark' | 'light';
 
 export type CreateTeachingDemoShellOptions = {
   mount: HTMLElement;
   title: string;
   subtitle: string;
   defaultMode?: TeachingMode;
+  defaultTheme?: TeachingTheme;
 };
 
 function modeToggleLabel(mode: TeachingMode): string {
   return mode === 'presentation' ? '切换到标准模式' : '切换到演示模式';
+}
+
+function themeToggleLabel(theme: TeachingTheme): string {
+  return theme === 'dark' ? '切换到白天主题' : '切换到夜间主题';
 }
 
 function applyModeTokens(root: HTMLElement, mode: TeachingMode): void {
@@ -41,13 +51,20 @@ function applyModeTokens(root: HTMLElement, mode: TeachingMode): void {
   root.style.setProperty('--point-radius-px', `${standards.pointRadiusPx}px`);
 }
 
+function applyThemeTokens(root: HTMLElement, theme: TeachingTheme): void {
+  root.dataset.theme = theme;
+}
+
 export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions): TeachingDemoShell {
   const modeState: { value: TeachingMode } = {
     value: options.defaultMode ?? 'normal'
   };
+  const themeState: { value: TeachingTheme } = {
+    value: options.defaultTheme ?? 'dark'
+  };
 
   options.mount.innerHTML = `
-    <section class="teaching-demo" data-mode="${modeState.value}">
+    <section class="teaching-demo" data-mode="${modeState.value}" data-theme="${themeState.value}">
       <aside class="teaching-sidebar">
         <header class="teaching-header">
           <h1 class="teaching-title">${options.title}</h1>
@@ -57,6 +74,7 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
         <section class="teaching-card">
           <h2 class="teaching-card-title">显示模式</h2>
           <button type="button" class="mode-toggle">${modeToggleLabel(modeState.value)}</button>
+          <button type="button" class="shell-theme-toggle">${themeToggleLabel(themeState.value)}</button>
           <p class="mode-hint">演示模式按 1080P 教室场景放大字体与线条。</p>
         </section>
         <section class="teaching-card">
@@ -91,6 +109,7 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
   const stageSlot = options.mount.querySelector('.stage-slot');
   const stageCanvas = options.mount.querySelector('.stage-canvas');
   const modeButton = options.mount.querySelector('.mode-toggle');
+  const themeButton = options.mount.querySelector('.shell-theme-toggle');
   const sidebar = options.mount.querySelector('.teaching-sidebar');
   const resizer = options.mount.querySelector('.sidebar-resizer');
   const inlineToggle = options.mount.querySelector('.sidebar-toggle-inline');
@@ -104,6 +123,7 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
     !(stageSlot instanceof HTMLElement) ||
     !(stageCanvas instanceof HTMLCanvasElement) ||
     !(modeButton instanceof HTMLButtonElement) ||
+    !(themeButton instanceof HTMLButtonElement) ||
     !(sidebar instanceof HTMLElement) ||
     !(resizer instanceof HTMLElement) ||
     !(inlineToggle instanceof HTMLButtonElement) ||
@@ -112,13 +132,21 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
     throw new Error('Failed to mount teaching demo shell');
   }
 
-  const sidebarMinPx = 300;
-  const sidebarMaxPx = 700;
+  const sidebarMinPx = 260;
+  const sidebarMaxPx = 560;
+  const stageMinPx = 960;
+  const dividerPx = 12;
   let collapsed = false;
   let dragging = false;
 
+  const getSidebarMaxForViewport = (): number => {
+    const hardLimit = window.innerWidth - stageMinPx - dividerPx;
+    return Math.max(sidebarMinPx, Math.min(sidebarMaxPx, hardLimit));
+  };
+
   const setSidebarWidth = (widthPx: number): void => {
-    const clamped = clampSidebarWidth(widthPx, sidebarMinPx, sidebarMaxPx);
+    const dynamicMax = getSidebarMaxForViewport();
+    const clamped = clampSidebarWidth(widthPx, sidebarMinPx, dynamicMax);
     root.style.setProperty('--sidebar-width', `${clamped}px`);
   };
 
@@ -180,8 +208,14 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
       root.style.removeProperty('--sidebar-width');
       return;
     }
-    if (!root.style.getPropertyValue('--sidebar-width')) {
-      setSidebarWidth(getDefaultSidebarWidth(window.innerWidth, sidebarMinPx, sidebarMaxPx));
+    const widthToken = root.style.getPropertyValue('--sidebar-width');
+    if (!widthToken) {
+      setSidebarWidth(getDefaultSidebarWidth(window.innerWidth, sidebarMinPx, getSidebarMaxForViewport()));
+      return;
+    }
+    const current = parseFloat(widthToken);
+    if (Number.isFinite(current)) {
+      setSidebarWidth(current);
     }
   };
 
@@ -192,9 +226,19 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
     modeButton.setAttribute('aria-pressed', String(modeState.value === 'presentation'));
   };
 
+  const setTheme = (theme: TeachingTheme): void => {
+    themeState.value = theme;
+    applyThemeTokens(root, themeState.value);
+    themeButton.textContent = themeToggleLabel(themeState.value);
+    themeButton.setAttribute('aria-pressed', String(themeState.value === 'dark'));
+  };
+
   applyModeTokens(root, modeState.value);
+  applyThemeTokens(root, themeState.value);
   modeButton.setAttribute('aria-pressed', String(modeState.value === 'presentation'));
-  setSidebarWidth(getDefaultSidebarWidth(window.innerWidth, sidebarMinPx, sidebarMaxPx));
+  themeButton.setAttribute('aria-pressed', String(themeState.value === 'dark'));
+  themeButton.textContent = themeToggleLabel(themeState.value);
+  setSidebarWidth(getDefaultSidebarWidth(window.innerWidth, sidebarMinPx, getSidebarMaxForViewport()));
   updateSidebarToggleLabel();
 
   inlineToggle.addEventListener('click', onToggleSidebar);
@@ -209,6 +253,7 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
     stageSlot,
     stageCanvas,
     modeButton,
+    themeButton,
     setStatus(text: string) {
       statusText.textContent = text;
     },
@@ -222,8 +267,12 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
       }
     },
     setMode,
+    setTheme,
     getMode() {
       return modeState.value;
+    },
+    getTheme() {
+      return themeState.value;
     },
     dispose() {
       inlineToggle.removeEventListener('click', onToggleSidebar);

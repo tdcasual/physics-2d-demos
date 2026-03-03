@@ -17,6 +17,7 @@
 
     <style>
         body { margin: 0; font-family: sans-serif; background-color: #f8fafc; }
+        body[data-theme="dark"] { background-color: #020617; color: #e2e8f0; }
     </style>
 </head>
 <body>
@@ -34,6 +35,25 @@
         function clamp01(value) {
             return Math.min(1, Math.max(0, value));
         }
+
+        const RIGHT_STAGE_STANDARD = {
+            normal: {
+                primaryFontPx: 36,
+                secondaryFontPx: 30,
+                majorStrokePx: 6,
+                minorStrokePx: 5,
+                markerRadiusPx: 12,
+                visualScale: 1.3
+            },
+            presentation: {
+                primaryFontPx: 56,
+                secondaryFontPx: 46,
+                majorStrokePx: 11,
+                minorStrokePx: 9,
+                markerRadiusPx: 20,
+                visualScale: 2.4
+            }
+        };
 
         function postToHost(payload) {
             if (window.parent && window.parent !== window) {
@@ -60,6 +80,7 @@
 
         const WaterPumpBattery = () => {
             const canvasRef = useRef(null);
+            const canvasHostRef = useRef(null);
             const particlesRef = useRef([]);
             const animationFrameRef = useRef(null);
             const impellerAngleRef = useRef(0);
@@ -71,6 +92,7 @@
             const [isSystemOn, setIsSystemOn] = useState(false);
             const [tapOpening, setTapOpening] = useState(0.5);
             const [isPresentationMode, setIsPresentationMode] = useState(false);
+            const [theme, setTheme] = useState(searchParams.get('theme') === 'light' ? 'light' : 'dark');
 
             const [currentI, setCurrentI] = useState(0);
             const [internalDrop, setInternalDrop] = useState(0);
@@ -144,6 +166,10 @@
             }, []);
 
             useEffect(() => {
+                document.body.dataset.theme = theme;
+            }, [theme]);
+
+            useEffect(() => {
                 const onMessage = (event) => {
                     if (event.origin !== window.location.origin) {
                         return;
@@ -178,6 +204,14 @@
                     }
 
                     if (data.type === 'legacy:control-ext' && typeof data.command === 'string') {
+                        if (data.command === 'set-theme') {
+                            const nextTheme =
+                                data.payload && typeof data.payload.theme === 'string' ? data.payload.theme : '';
+                            if (nextTheme === 'dark' || nextTheme === 'light') {
+                                setTheme(nextTheme);
+                            }
+                            return;
+                        }
                         if (data.command === 'set-system-on') {
                             const on = !!(data.payload && data.payload.on === true);
                             setIsSystemOn(on);
@@ -215,19 +249,77 @@
             const draw = (ctx, width, height) => {
                 ctx.clearRect(0, 0, width, height);
 
-                const visualScale = isPresentationMode ? 1.35 : 1;
-                const centerY = height / 2;
-                const pipeHeight = 60 * visualScale;
+                const readability = isPresentationMode
+                    ? RIGHT_STAGE_STANDARD.presentation
+                    : RIGHT_STAGE_STANDARD.normal;
+                const visualScale = readability.visualScale;
+                const centerY = isEmbedMode ? height * 0.56 : height / 2;
+                const pipeHeight = isEmbedMode ? Math.max(110 * visualScale, height * 0.24) : 60 * visualScale;
                 const pipeY = centerY - pipeHeight / 2;
+                const geometryScale = isEmbedMode ? visualScale * 1.2 : visualScale;
+                const majorStroke = Math.max(readability.majorStrokePx, 2 * geometryScale);
+                const minorStroke = Math.max(readability.minorStrokePx, 1.2 * geometryScale);
+                const primaryFont = Math.max(readability.primaryFontPx, Math.round(12 * geometryScale));
+                const secondaryFont = Math.max(readability.secondaryFontPx, Math.round(10 * geometryScale));
+                const isLight = theme === 'light';
+                const palette = isLight
+                    ? {
+                          pipeStart: '#dbeafe',
+                          pipeEnd: '#eff6ff',
+                          pipeBorder: '#cbd5e1',
+                          particleMain: '#2563eb',
+                          pumpBody: '#ffffff',
+                          pumpBorder: '#e2e8f0',
+                          pumpBlade: '#94a3b8',
+                          pumpCore: '#475569',
+                          labelMain: '#475569',
+                          resBody: '#fff7ed',
+                          resBorder: '#fdba74',
+                          resMesh: '#9a3412',
+                          resRust: 'rgba(124, 45, 18, 0.4)',
+                          resLabel: '#7c2d12',
+                          tapMain: '#d97706',
+                          tapDark: '#b45309',
+                          gaugeGuide: '#94a3b8',
+                          gaugeFace: '#ffffff',
+                          gaugeBorder: '#cbd5e1',
+                          gaugeNeedle: '#2563eb',
+                          gaugeText: '#334155',
+                          gaugeLabel: '#94a3b8'
+                      }
+                    : {
+                          pipeStart: '#1e3a8a',
+                          pipeEnd: '#0b1e3d',
+                          pipeBorder: '#4c6ea0',
+                          particleMain: '#60a5fa',
+                          pumpBody: '#0f172a',
+                          pumpBorder: '#475569',
+                          pumpBlade: '#64748b',
+                          pumpCore: '#cbd5e1',
+                          labelMain: '#cbd5e1',
+                          resBody: '#2b2117',
+                          resBorder: '#c97a36',
+                          resMesh: '#f59e0b',
+                          resRust: 'rgba(217, 119, 6, 0.45)',
+                          resLabel: '#fdba74',
+                          tapMain: '#f59e0b',
+                          tapDark: '#d97706',
+                          gaugeGuide: '#64748b',
+                          gaugeFace: '#0f172a',
+                          gaugeBorder: '#475569',
+                          gaugeNeedle: '#60a5fa',
+                          gaugeText: '#e2e8f0',
+                          gaugeLabel: '#94a3b8'
+                      };
 
                 const gradient = ctx.createLinearGradient(0, 0, width, 0);
-                gradient.addColorStop(0, '#eff6ff');
-                gradient.addColorStop(1, '#eff6ff');
+                gradient.addColorStop(0, palette.pipeStart);
+                gradient.addColorStop(1, palette.pipeEnd);
                 ctx.fillStyle = gradient;
                 ctx.fillRect(0, pipeY, width, pipeHeight);
 
-                ctx.strokeStyle = '#cbd5e1';
-                ctx.lineWidth = 2 * visualScale;
+                ctx.strokeStyle = palette.pipeBorder;
+                ctx.lineWidth = Math.max(majorStroke, readability.majorStrokePx * 1.15);
                 ctx.beginPath();
                 ctx.moveTo(0, pipeY);
                 ctx.lineTo(width, pipeY);
@@ -253,11 +345,12 @@
                     }
                     if (p.x > width) p.x = -10;
 
-                    let color = '#2563eb';
+                    let color = palette.particleMain;
                     if (p.x > resX) {
                         const dropRatio = internalDrop / 0.5;
                         const opacity = 1.0 - dropRatio * 0.8;
-                        color = `rgba(37, 99, 235, ${Math.max(0.2, opacity)})`;
+                        const base = isLight ? '37, 99, 235' : '96, 165, 250';
+                        color = `rgba(${base}, ${Math.max(0.2, opacity)})`;
                     }
 
                     ctx.fillStyle = color;
@@ -270,133 +363,174 @@
                 ctx.save();
                 ctx.translate(pumpX, centerY);
                 ctx.beginPath();
-                ctx.arc(0, 0, 45 * visualScale, 0, Math.PI * 2);
-                ctx.fillStyle = '#ffffff';
+                ctx.arc(0, 0, 45 * geometryScale, 0, Math.PI * 2);
+                ctx.fillStyle = palette.pumpBody;
                 ctx.fill();
-                ctx.lineWidth = 3 * visualScale;
-                ctx.strokeStyle = '#e2e8f0';
+                ctx.lineWidth = Math.max(majorStroke, readability.majorStrokePx * 1.15);
+                ctx.strokeStyle = palette.pumpBorder;
                 ctx.stroke();
                 ctx.shadowColor = 'rgba(0,0,0,0.1)';
-                ctx.shadowBlur = 10 * visualScale;
+                ctx.shadowBlur = 10 * geometryScale;
                 impellerAngleRef.current += isSystemOn ? 0.15 : 0.02;
                 ctx.rotate(impellerAngleRef.current);
-                ctx.fillStyle = '#94a3b8';
+                ctx.fillStyle = palette.pumpBlade;
                 for (let i = 0; i < 6; i++) {
                     ctx.beginPath();
-                    ctx.ellipse(0, -20 * visualScale, 8 * visualScale, 20 * visualScale, 0, 0, Math.PI * 2);
+                    ctx.ellipse(0, -20 * geometryScale, 8 * geometryScale, 20 * geometryScale, 0, 0, Math.PI * 2);
                     ctx.fill();
                     ctx.rotate(Math.PI / 3);
                 }
                 ctx.beginPath();
-                ctx.arc(0, 0, 10 * visualScale, 0, Math.PI * 2);
-                ctx.fillStyle = '#475569';
+                ctx.arc(0, 0, 10 * geometryScale, 0, Math.PI * 2);
+                ctx.fillStyle = palette.pumpCore;
                 ctx.fill();
                 ctx.restore();
 
-                ctx.fillStyle = '#475569';
-                ctx.font = `bold ${Math.round(12 * visualScale)}px sans-serif`;
+                ctx.fillStyle = palette.labelMain;
+                ctx.font = `bold ${Math.round(primaryFont)}px sans-serif`;
                 ctx.textAlign = 'center';
-                ctx.fillText('泵 (E)', pumpX, centerY + 65 * visualScale);
+                ctx.fillText('泵 (E)', pumpX, centerY + 65 * geometryScale);
 
                 ctx.save();
                 ctx.translate(resX, centerY);
                 ctx.beginPath();
-                ctx.arc(0, 0, 40 * visualScale, 0, Math.PI * 2);
-                ctx.fillStyle = '#fff7ed';
+                ctx.arc(0, 0, 40 * geometryScale, 0, Math.PI * 2);
+                ctx.fillStyle = palette.resBody;
                 ctx.fill();
-                ctx.lineWidth = 3 * visualScale;
-                ctx.strokeStyle = '#fdba74';
+                ctx.lineWidth = Math.max(majorStroke, readability.majorStrokePx * 1.15);
+                ctx.strokeStyle = palette.resBorder;
                 ctx.stroke();
                 ctx.beginPath();
-                ctx.arc(0, 0, 35 * visualScale, 0, Math.PI * 2);
+                ctx.arc(0, 0, 35 * geometryScale, 0, Math.PI * 2);
                 ctx.clip();
-                ctx.strokeStyle = '#9a3412';
-                ctx.lineWidth = 2 * visualScale;
-                const rustyStep = 8 * visualScale;
-                for (let i = -40 * visualScale; i < 40 * visualScale; i += rustyStep) {
-                    ctx.beginPath(); ctx.moveTo(i, -40 * visualScale); ctx.lineTo(i, 40 * visualScale); ctx.stroke();
-                    ctx.beginPath(); ctx.moveTo(-40 * visualScale, i); ctx.lineTo(40 * visualScale, i); ctx.stroke();
+                ctx.strokeStyle = palette.resMesh;
+                ctx.lineWidth = Math.max(minorStroke, readability.minorStrokePx * 1.15);
+                const rustyStep = 8 * geometryScale;
+                for (let i = -40 * geometryScale; i < 40 * geometryScale; i += rustyStep) {
+                    ctx.beginPath(); ctx.moveTo(i, -40 * geometryScale); ctx.lineTo(i, 40 * geometryScale); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(-40 * geometryScale, i); ctx.lineTo(40 * geometryScale, i); ctx.stroke();
                 }
-                ctx.fillStyle = 'rgba(124, 45, 18, 0.4)';
+                ctx.fillStyle = palette.resRust;
                 for (let i = 0; i < 5; i++) {
                     ctx.beginPath();
-                    ctx.arc((Math.random() - 0.5) * 40 * visualScale, (Math.random() - 0.5) * 40 * visualScale, Math.random() * 8 * visualScale, 0, Math.PI * 2);
+                    ctx.arc((Math.random() - 0.5) * 40 * geometryScale, (Math.random() - 0.5) * 40 * geometryScale, Math.random() * 8 * geometryScale, 0, Math.PI * 2);
                     ctx.fill();
                 }
                 ctx.restore();
 
-                ctx.fillStyle = '#7c2d12';
-                ctx.font = `bold ${Math.round(12 * visualScale)}px sans-serif`;
+                ctx.fillStyle = palette.resLabel;
+                ctx.font = `bold ${Math.round(primaryFont)}px sans-serif`;
                 ctx.textAlign = 'center';
-                ctx.fillText('内阻 (r)', resX, centerY + 65 * visualScale);
+                ctx.fillText('内阻 (r)', resX, centerY + 65 * geometryScale);
 
                 ctx.save();
-                ctx.translate(tapX, centerY - 20 * visualScale);
-                ctx.fillStyle = '#d97706';
-                ctx.fillRect(-10 * visualScale, 0, 20 * visualScale, 30 * visualScale);
+                ctx.translate(tapX, centerY - 20 * geometryScale);
+                ctx.fillStyle = palette.tapMain;
+                ctx.fillRect(-10 * geometryScale, 0, 20 * geometryScale, 30 * geometryScale);
                 ctx.beginPath();
-                ctx.moveTo(-10 * visualScale, 0);
-                ctx.quadraticCurveTo(-10 * visualScale, -20 * visualScale, 20 * visualScale, -25 * visualScale);
-                ctx.lineTo(30 * visualScale, -20 * visualScale);
-                ctx.lineTo(30 * visualScale, -10 * visualScale);
-                ctx.lineTo(20 * visualScale, -15 * visualScale);
-                ctx.quadraticCurveTo(10 * visualScale, -10 * visualScale, 10 * visualScale, 0);
+                ctx.moveTo(-10 * geometryScale, 0);
+                ctx.quadraticCurveTo(-10 * geometryScale, -20 * geometryScale, 20 * geometryScale, -25 * geometryScale);
+                ctx.lineTo(30 * geometryScale, -20 * geometryScale);
+                ctx.lineTo(30 * geometryScale, -10 * geometryScale);
+                ctx.lineTo(20 * geometryScale, -15 * geometryScale);
+                ctx.quadraticCurveTo(10 * geometryScale, -10 * geometryScale, 10 * geometryScale, 0);
                 ctx.fill();
-                ctx.fillStyle = '#b45309';
+                ctx.fillStyle = palette.tapDark;
                 ctx.save();
-                ctx.translate(0, -25 * visualScale);
+                ctx.translate(0, -25 * geometryScale);
                 ctx.beginPath();
-                ctx.moveTo(-15 * visualScale, -5 * visualScale);
-                ctx.lineTo(15 * visualScale, -5 * visualScale);
-                ctx.lineTo(15 * visualScale, 5 * visualScale);
-                ctx.lineTo(-15 * visualScale, 5 * visualScale);
+                ctx.moveTo(-15 * geometryScale, -5 * geometryScale);
+                ctx.lineTo(15 * geometryScale, -5 * geometryScale);
+                ctx.lineTo(15 * geometryScale, 5 * geometryScale);
+                ctx.lineTo(-15 * geometryScale, 5 * geometryScale);
                 ctx.fill();
-                ctx.fillRect(-5 * visualScale, 0, 10 * visualScale, 15 * visualScale);
+                ctx.fillRect(-5 * geometryScale, 0, 10 * geometryScale, 15 * geometryScale);
                 ctx.restore();
                 ctx.restore();
 
-                ctx.fillStyle = '#475569';
-                ctx.font = `bold ${Math.round(12 * visualScale)}px sans-serif`;
+                ctx.fillStyle = palette.labelMain;
+                ctx.font = `bold ${Math.round(primaryFont)}px sans-serif`;
                 ctx.textAlign = 'center';
-                ctx.fillText('用户水管', tapX, centerY + 65 * visualScale);
+                ctx.fillText('用户水管', tapX, centerY + 65 * geometryScale);
 
                 const drawGauge = (x, val, label) => {
-                    const gy = centerY - 80 * visualScale;
-                    ctx.strokeStyle = '#94a3b8';
-                    ctx.setLineDash([4 * visualScale, 4 * visualScale]);
-                    ctx.lineWidth = 1 * visualScale;
+                    const gy = isEmbedMode ? Math.max(24 * visualScale, pipeY - 78 * geometryScale) : centerY - 80 * visualScale;
+                    ctx.strokeStyle = palette.gaugeGuide;
+                    ctx.setLineDash([4 * geometryScale, 4 * geometryScale]);
+                    ctx.lineWidth = Math.max(minorStroke, readability.minorStrokePx * 1.15);
                     ctx.beginPath();
-                    ctx.moveTo(x, gy + 20 * visualScale);
-                    ctx.lineTo(x, centerY - 20 * visualScale);
+                    ctx.moveTo(x, gy + 20 * geometryScale);
+                    ctx.lineTo(x, centerY - 20 * geometryScale);
                     ctx.stroke();
                     ctx.setLineDash([]);
                     ctx.beginPath();
-                    ctx.arc(x, gy, 22 * visualScale, 0, Math.PI * 2);
-                    ctx.fillStyle = 'white';
+                    ctx.arc(x, gy, 22 * geometryScale, 0, Math.PI * 2);
+                    ctx.fillStyle = palette.gaugeFace;
                     ctx.fill();
-                    ctx.strokeStyle = '#cbd5e1';
-                    ctx.lineWidth = 2 * visualScale;
+                    ctx.strokeStyle = palette.gaugeBorder;
+                    ctx.lineWidth = Math.max(majorStroke, readability.majorStrokePx * 1.15);
                     ctx.stroke();
                     const angle = Math.PI * (0.8 + val / 2.0);
-                    const nx = x + Math.cos(angle) * 16 * visualScale;
-                    const ny = gy + Math.sin(angle) * 16 * visualScale;
-                    ctx.strokeStyle = '#2563eb';
-                    ctx.lineWidth = 2 * visualScale;
+                    const nx = x + Math.cos(angle) * 16 * geometryScale;
+                    const ny = gy + Math.sin(angle) * 16 * geometryScale;
+                    ctx.strokeStyle = palette.gaugeNeedle;
+                    ctx.lineWidth = Math.max(majorStroke, readability.majorStrokePx * 1.15);
                     ctx.beginPath();
                     ctx.moveTo(x, gy);
                     ctx.lineTo(nx, ny);
                     ctx.stroke();
-                    ctx.fillStyle = '#334155';
-                    ctx.font = `${Math.round(10 * visualScale)}px sans-serif`;
-                    ctx.fillText(val.toFixed(2), x, gy - 28 * visualScale);
-                    ctx.fillStyle = '#94a3b8';
-                    ctx.font = `${Math.round(10 * visualScale)}px sans-serif`;
-                    ctx.fillText(label, x, gy + 35 * visualScale);
+                    ctx.fillStyle = palette.gaugeText;
+                    ctx.font = `${Math.round(secondaryFont)}px sans-serif`;
+                    ctx.fillText(val.toFixed(2), x, gy - 28 * geometryScale);
+                    ctx.fillStyle = palette.gaugeLabel;
+                    ctx.font = `${Math.round(secondaryFont)}px sans-serif`;
+                    ctx.fillText(label, x, gy + 35 * geometryScale);
                 };
 
                 drawGauge(resX - 60 * visualScale, EMF, '内部压力');
                 drawGauge(resX + 60 * visualScale, terminalVoltage, '输出压力');
             };
+
+            const resizeCanvasToHost = () => {
+                const canvas = canvasRef.current;
+                const host = canvasHostRef.current;
+                if (!canvas || !host) return;
+
+                const rect = host.getBoundingClientRect();
+                const cssWidth = Math.max(320, Math.floor(rect.width));
+                const cssHeight = Math.max(220, Math.floor(rect.height));
+                const dpr = Math.min(2, window.devicePixelRatio || 1);
+                const pixelWidth = Math.max(1, Math.floor(cssWidth * dpr));
+                const pixelHeight = Math.max(1, Math.floor(cssHeight * dpr));
+
+                if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+                    canvas.width = pixelWidth;
+                    canvas.height = pixelHeight;
+                }
+                canvas.style.width = `${cssWidth}px`;
+                canvas.style.height = `${cssHeight}px`;
+            };
+
+            useEffect(() => {
+                const host = canvasHostRef.current;
+                if (!host) return undefined;
+
+                const onResize = () => resizeCanvasToHost();
+                window.addEventListener('resize', onResize);
+
+                let observer = null;
+                if (typeof ResizeObserver !== 'undefined') {
+                    observer = new ResizeObserver(() => resizeCanvasToHost());
+                    observer.observe(host);
+                }
+
+                requestAnimationFrame(() => resizeCanvasToHost());
+
+                return () => {
+                    window.removeEventListener('resize', onResize);
+                    if (observer) observer.disconnect();
+                };
+            }, [isEmbedMode, isPresentationMode]);
 
             useEffect(() => {
                 const canvas = canvasRef.current;
@@ -404,7 +538,11 @@
                 const ctx = canvas.getContext('2d');
 
                 const render = () => {
-                    draw(ctx, canvas.width, canvas.height);
+                    const dpr = Math.min(2, window.devicePixelRatio || 1);
+                    const logicalWidth = canvas.width / dpr;
+                    const logicalHeight = canvas.height / dpr;
+                    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                    draw(ctx, logicalWidth, logicalHeight);
                     animationFrameRef.current = requestAnimationFrame(render);
                 };
                 render();
@@ -426,15 +564,53 @@
             };
 
             if (isEmbedMode) {
+                const openingPercent = Math.round(tapOpening * 100);
                 return (
-                    <div className="w-screen h-screen bg-slate-100">
-                        <div className="w-full h-full bg-white">
-                            <canvas
-                                ref={canvasRef}
-                                width={isPresentationMode ? 1600 : 1280}
-                                height={isPresentationMode ? 900 : 720}
-                                className="w-full h-full object-contain"
-                            />
+                    <div className="w-screen h-screen bg-slate-100 p-2">
+                        <div className="w-full h-full bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col">
+                            <div className="shrink-0 px-3 md:px-5 py-3 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-blue-50">
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                                    <div className="rounded-lg border border-slate-200 bg-white px-2 py-1.5">
+                                        <div className="text-xs md:text-sm text-slate-500">系统状态</div>
+                                        <div className={`text-lg md:text-2xl font-bold ${isSystemOn ? 'text-blue-700' : 'text-slate-700'}`}>
+                                            {isSystemOn ? '通路' : '断路'}
+                                        </div>
+                                    </div>
+                                    <div className="rounded-lg border border-slate-200 bg-white px-2 py-1.5">
+                                        <div className="text-xs md:text-sm text-slate-500">开度</div>
+                                        <div className="text-lg md:text-2xl font-bold text-slate-800">{openingPercent}%</div>
+                                    </div>
+                                    <div className="rounded-lg border border-slate-200 bg-white px-2 py-1.5">
+                                        <div className="text-xs md:text-sm text-slate-500">电流 I</div>
+                                        <div className="text-lg md:text-2xl font-bold text-blue-700">{currentI.toFixed(2)} A</div>
+                                    </div>
+                                    <div className="rounded-lg border border-slate-200 bg-white px-2 py-1.5">
+                                        <div className="text-xs md:text-sm text-slate-500">内阻压降 Ir</div>
+                                        <div className="text-lg md:text-2xl font-bold text-red-600">{internalDrop.toFixed(2)} V</div>
+                                    </div>
+                                    <div className="rounded-lg border border-slate-200 bg-slate-900 px-2 py-1.5">
+                                        <div className="text-xs md:text-sm text-slate-400">路端电压 U</div>
+                                        <div className="text-lg md:text-2xl font-bold text-green-400">{terminalVoltage.toFixed(2)} V</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div ref={canvasHostRef} className="relative flex-1 min-h-0 bg-white">
+                                <div className="absolute top-3 left-3 bg-white/90 backdrop-blur px-3 py-2 rounded-lg border border-slate-100 shadow-sm z-10">
+                                    <div className="text-sm text-slate-500 mb-1 font-medium">颜色代表水压 (电势)</div>
+                                    <div className="w-36 h-2 rounded-full bg-gradient-to-r from-blue-600 to-blue-100"></div>
+                                    <div className="flex justify-between text-xs text-slate-400 mt-1">
+                                        <span>高</span>
+                                        <span>低</span>
+                                    </div>
+                                </div>
+
+                                <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+
+                                <div className="absolute left-1/2 -translate-x-1/2 bottom-3 px-3 py-2 rounded-lg bg-slate-900/95 text-white border border-slate-700 text-sm md:text-lg font-mono">
+                                    U = E - Ir = {EMF.toFixed(2)} - {internalDrop.toFixed(2)} = <span className="text-green-400 font-bold">{terminalVoltage.toFixed(2)} V</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 );
@@ -469,12 +645,10 @@
                                     </div>
                                 </div>
 
-                                <div className="flex-1 w-full min-h-0 relative">
+                                <div ref={canvasHostRef} className="flex-1 w-full min-h-0 relative">
                                     <canvas
                                         ref={canvasRef}
-                                        width={isPresentationMode ? 1600 : 1280}
-                                        height={isPresentationMode ? 900 : 720}
-                                        className="w-full h-full object-contain absolute inset-0"
+                                        className="w-full h-full absolute inset-0"
                                     />
                                 </div>
 

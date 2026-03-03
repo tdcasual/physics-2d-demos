@@ -1,5 +1,4 @@
 export type FieldLinesScene = 'single' | 'like' | 'unlike' | 'custom';
-export type FieldLinesTheme = 'dark' | 'light';
 
 export type CreateLegacyFieldLinesControlsOptions = {
   container: HTMLElement;
@@ -9,7 +8,6 @@ export type CreateLegacyFieldLinesControlsOptions = {
 
 type ControlState = {
   scene: FieldLinesScene;
-  theme: FieldLinesTheme;
   density: number;
   q1: number;
   q2: number;
@@ -33,7 +31,6 @@ function formatChargeValue(value: number): string {
 export function createLegacyFieldLinesControls(options: CreateLegacyFieldLinesControlsOptions) {
   const state: ControlState = {
     scene: 'single',
-    theme: 'dark',
     density: 10,
     q1: 1,
     q2: -1
@@ -41,10 +38,6 @@ export function createLegacyFieldLinesControls(options: CreateLegacyFieldLinesCo
 
   options.container.innerHTML = `
     <div class="legacy-field-controls">
-      <div class="legacy-field-row">
-        <span class="legacy-field-label">主题</span>
-        <button type="button" class="legacy-chip-btn" data-role="theme-toggle">夜间</button>
-      </div>
       <div class="legacy-field-scenes" data-role="scene-group">
         <button type="button" class="legacy-scene-btn" data-scene="single">单个电荷</button>
         <button type="button" class="legacy-scene-btn" data-scene="like">同种电荷</button>
@@ -72,7 +65,6 @@ export function createLegacyFieldLinesControls(options: CreateLegacyFieldLinesCo
     </div>
   `;
 
-  const themeToggle = options.container.querySelector('[data-role="theme-toggle"]');
   const sceneGroup = options.container.querySelector('[data-role="scene-group"]');
   const densitySlider = options.container.querySelector('[data-role="density-slider"]');
   const densityValue = options.container.querySelector('[data-role="density-value"]');
@@ -84,7 +76,6 @@ export function createLegacyFieldLinesControls(options: CreateLegacyFieldLinesCo
   const resetButton = options.container.querySelector('[data-role="reset"]');
 
   if (
-    !(themeToggle instanceof HTMLButtonElement) ||
     !(sceneGroup instanceof HTMLElement) ||
     !(densitySlider instanceof HTMLInputElement) ||
     !(densityValue instanceof HTMLElement) ||
@@ -112,11 +103,6 @@ export function createLegacyFieldLinesControls(options: CreateLegacyFieldLinesCo
     customWrap.classList.toggle('is-hidden', scene !== 'custom');
   }
 
-  function syncThemeButton(): void {
-    themeToggle.textContent = state.theme === 'dark' ? '夜间' : '白天';
-    themeToggle.setAttribute('aria-pressed', String(state.theme === 'light'));
-  }
-
   function syncDensityLabel(): void {
     densityValue.textContent = String(state.density);
   }
@@ -130,10 +116,6 @@ export function createLegacyFieldLinesControls(options: CreateLegacyFieldLinesCo
     options.onCommand('set-scene', { scene: state.scene });
   }
 
-  function pushTheme(): void {
-    options.onCommand('set-theme', { theme: state.theme });
-  }
-
   function pushDensity(): void {
     options.onCommand('set-density', { density: state.density });
   }
@@ -141,13 +123,6 @@ export function createLegacyFieldLinesControls(options: CreateLegacyFieldLinesCo
   function pushCustomCharges(): void {
     options.onCommand('set-custom-charges', { q1: state.q1, q2: state.q2 });
   }
-
-  const onThemeClick = () => {
-    state.theme = state.theme === 'dark' ? 'light' : 'dark';
-    syncThemeButton();
-    pushTheme();
-    options.onStatus?.(state.theme === 'dark' ? '已切换到夜间主题' : '已切换到白天主题');
-  };
 
   const onSceneClick = (event: Event) => {
     const target = event.target;
@@ -181,7 +156,6 @@ export function createLegacyFieldLinesControls(options: CreateLegacyFieldLinesCo
 
   const onResetClick = () => {
     state.scene = 'single';
-    state.theme = 'dark';
     state.density = 10;
     state.q1 = 1;
     state.q2 = -1;
@@ -189,14 +163,12 @@ export function createLegacyFieldLinesControls(options: CreateLegacyFieldLinesCo
     q1Slider.value = String(state.q1);
     q2Slider.value = String(state.q2);
     markSceneActive(state.scene);
-    syncThemeButton();
     syncDensityLabel();
     syncChargeLabels();
     options.onCommand('reset');
     options.onStatus?.('已重置场景与参数');
   };
 
-  themeToggle.addEventListener('click', onThemeClick);
   sceneGroup.addEventListener('click', onSceneClick);
   densitySlider.addEventListener('input', onDensityInput);
   q1Slider.addEventListener('input', onChargeInput);
@@ -204,13 +176,11 @@ export function createLegacyFieldLinesControls(options: CreateLegacyFieldLinesCo
   resetButton.addEventListener('click', onResetClick);
 
   markSceneActive(state.scene);
-  syncThemeButton();
   syncDensityLabel();
   syncChargeLabels();
 
   return {
     dispose(): void {
-      themeToggle.removeEventListener('click', onThemeClick);
       sceneGroup.removeEventListener('click', onSceneClick);
       densitySlider.removeEventListener('input', onDensityInput);
       q1Slider.removeEventListener('input', onChargeInput);

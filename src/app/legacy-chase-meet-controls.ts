@@ -8,7 +8,6 @@ export type CreateLegacyChaseMeetControlsOptions = {
 };
 
 type ChaseState = {
-  theme: 'dark' | 'light';
   totalTime: number;
   dt: number;
   x0A: number;
@@ -27,7 +26,6 @@ function clampDt(value: number): number {
 
 export function createLegacyChaseMeetControls(options: CreateLegacyChaseMeetControlsOptions) {
   const state: ChaseState = {
-    theme: 'dark',
     totalTime: 10,
     dt: 0.02,
     x0A: 0,
@@ -38,10 +36,6 @@ export function createLegacyChaseMeetControls(options: CreateLegacyChaseMeetCont
 
   options.container.innerHTML = `
     <div class="legacy-field-controls">
-      <div class="legacy-field-row">
-        <span class="legacy-field-label">主题</span>
-        <button type="button" class="legacy-chip-btn" data-role="theme-toggle">夜间</button>
-      </div>
       <div class="legacy-form-grid">
         <label class="legacy-form-row">
           <span class="legacy-field-label">总时间 T</span>
@@ -78,7 +72,6 @@ export function createLegacyChaseMeetControls(options: CreateLegacyChaseMeetCont
     </div>
   `;
 
-  const themeToggle = options.container.querySelector('[data-role="theme-toggle"]');
   const totalTimeInput = options.container.querySelector('[data-role="total-time"]');
   const dtInput = options.container.querySelector('[data-role="dt"]');
   const x0aInput = options.container.querySelector('[data-role="x0a"]');
@@ -92,7 +85,6 @@ export function createLegacyChaseMeetControls(options: CreateLegacyChaseMeetCont
   const resetButton = options.container.querySelector('[data-role="reset"]');
 
   if (
-    !(themeToggle instanceof HTMLButtonElement) ||
     !(totalTimeInput instanceof HTMLInputElement) ||
     !(dtInput instanceof HTMLInputElement) ||
     !(x0aInput instanceof HTMLInputElement) ||
@@ -106,11 +98,6 @@ export function createLegacyChaseMeetControls(options: CreateLegacyChaseMeetCont
     !(resetButton instanceof HTMLButtonElement)
   ) {
     throw new Error('Failed to mount chase-meet controls');
-  }
-
-  function syncThemeButton(): void {
-    themeToggle.textContent = state.theme === 'dark' ? '夜间' : '白天';
-    themeToggle.setAttribute('aria-pressed', String(state.theme === 'light'));
   }
 
   function readStateFromInputs(): void {
@@ -140,13 +127,6 @@ export function createLegacyChaseMeetControls(options: CreateLegacyChaseMeetCont
     });
   }
 
-  const onThemeClick = () => {
-    state.theme = state.theme === 'dark' ? 'light' : 'dark';
-    syncThemeButton();
-    options.onCommand('set-theme', { theme: state.theme });
-    options.onStatus?.(state.theme === 'dark' ? '已切换到夜间主题' : '已切换到白天主题');
-  };
-
   const onApplySettingsClick = () => {
     readStateFromInputs();
     pushSettings();
@@ -173,18 +153,14 @@ export function createLegacyChaseMeetControls(options: CreateLegacyChaseMeetCont
     options.onStatus?.('动画已重置');
   };
 
-  themeToggle.addEventListener('click', onThemeClick);
   applySettingsButton.addEventListener('click', onApplySettingsClick);
   playButton.addEventListener('click', onPlayClick);
   pauseButton.addEventListener('click', onPauseClick);
   stepButton.addEventListener('click', onStepClick);
   resetButton.addEventListener('click', onResetClick);
 
-  syncThemeButton();
-
   return {
     dispose(): void {
-      themeToggle.removeEventListener('click', onThemeClick);
       applySettingsButton.removeEventListener('click', onApplySettingsClick);
       playButton.removeEventListener('click', onPlayClick);
       pauseButton.removeEventListener('click', onPauseClick);

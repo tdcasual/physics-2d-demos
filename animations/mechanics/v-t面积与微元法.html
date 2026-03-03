@@ -19,7 +19,32 @@
             --text-main: #0f172a;
             --text-sub: #475569;
             --muted: #94a3b8;
+            --panel-bg: #f7f9ff;
+            --scene-bg: #f5f7fb;
+            --canvas-bg: #f9fbff;
+            --readout-bg: linear-gradient(135deg, #f7f9ff 0%, #f0f4ff 100%);
+            --metric-bg: #ffffff;
+            --input-bg: #fdfdff;
             --radius: 14px;
+        }
+        body[data-theme="dark"] {
+            --bg: linear-gradient(135deg, #0b1220 0%, #020617 100%);
+            --card: #0f172a;
+            --border: #334155;
+            --shadow: 0 14px 32px rgba(2, 6, 23, 0.72);
+            --primary: #5ea1ff;
+            --primary-strong: #8ab8ff;
+            --accent: #34d399;
+            --danger: #f87171;
+            --text-main: #e2e8f0;
+            --text-sub: #94a3b8;
+            --muted: #64748b;
+            --panel-bg: #111b2d;
+            --scene-bg: #0b1220;
+            --canvas-bg: #020817;
+            --readout-bg: linear-gradient(135deg, #111b2d 0%, #0b1324 100%);
+            --metric-bg: #0b1220;
+            --input-bg: #111b2d;
         }
 
         body {
@@ -48,7 +73,7 @@
 
         .controls-bar {
             padding: 16px 20px;
-            background-color: #f7f9ff;
+            background-color: var(--panel-bg);
             border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: center;
@@ -62,7 +87,7 @@
             font-weight: 600;
             border-radius: 10px;
             border: 1px solid var(--primary);
-            background-color: #fff;
+            background-color: var(--metric-bg);
             color: var(--primary);
             cursor: pointer;
             transition: all 0.2s ease;
@@ -82,7 +107,7 @@
             width: 100%;
             height: 100%;
             gap: 1px;
-            background: #f5f7fb;
+            background: var(--scene-bg);
         }
 
         .demo-panel {
@@ -101,7 +126,7 @@
         .canvas-container {
             flex-grow: 1;
             position: relative;
-            background-color: #f9fbff;
+            background-color: var(--canvas-bg);
             border-radius: var(--radius);
             overflow: hidden;
             border: 1px solid var(--border);
@@ -125,7 +150,7 @@
         .readout {
             margin-top: 18px;
             padding: 14px 16px;
-            background: linear-gradient(135deg, #f7f9ff 0%, #f0f4ff 100%);
+            background: var(--readout-bg);
             border-radius: var(--radius);
             border: 1px solid var(--border);
             display: grid;
@@ -134,7 +159,7 @@
         }
 
         .metric {
-            background: #fff;
+            background: var(--metric-bg);
             border-radius: 12px;
             padding: 12px;
             border: 1px solid var(--border);
@@ -180,15 +205,17 @@
             font-size: 14px;
             resize: vertical;
             min-height: 64px;
-            background: #fdfdff;
+            background: var(--input-bg);
+            color: var(--text-main);
         }
 
         select {
             padding: 10px 12px;
             border-radius: 10px;
             border: 1px solid var(--border);
-            background: #fff;
+            background: var(--input-bg);
             font-size: 14px;
+            color: var(--text-main);
         }
 
         body.embed-mode {
@@ -410,12 +437,63 @@
 <script>
     const searchParams = new URLSearchParams(window.location.search);
     const isEmbedMode = searchParams.get('embed') === '1';
+    let currentTheme = searchParams.get('theme') === 'light' ? 'light' : 'dark';
+    document.body.dataset.theme = currentTheme;
     if (isEmbedMode) {
         document.body.classList.add('embed-mode');
     }
 
     let isPresentationMode = false;
     let lastReadoutAt = 0;
+    const RIGHT_STAGE_STANDARD = {
+        normal: {
+            primaryFontPx: 36,
+            secondaryFontPx: 30,
+            majorStrokePx: 6,
+            minorStrokePx: 5,
+            markerRadiusPx: 12
+        },
+        presentation: {
+            primaryFontPx: 56,
+            secondaryFontPx: 46,
+            majorStrokePx: 11,
+            minorStrokePx: 9,
+            markerRadiusPx: 20
+        }
+    };
+
+    function getStageReadability() {
+        return isPresentationMode ? RIGHT_STAGE_STANDARD.presentation : RIGHT_STAGE_STANDARD.normal;
+    }
+
+    function getStagePalette() {
+        if (currentTheme === 'light') {
+            return {
+                axis: '#1f2937',
+                zeroLine: 'rgba(100, 116, 139, 0.6)',
+                curve: '#0d6efd',
+                areaStroke: 'rgba(40, 167, 69, 0.8)',
+                curveGuide: '#007bff',
+                connector: '#28a745',
+                markerStroke: '#ffffff',
+                circleRef: 'rgba(0, 123, 255, 0.36)',
+                polygon: '#dc3545',
+                radiusLine: 'rgba(220, 53, 69, 0.45)'
+            };
+        }
+        return {
+            axis: '#cbd5e1',
+            zeroLine: 'rgba(148, 163, 184, 0.7)',
+            curve: '#66a9ff',
+            areaStroke: 'rgba(52, 211, 153, 0.92)',
+            curveGuide: '#4da3ff',
+            connector: '#34d399',
+            markerStroke: '#dbeafe',
+            circleRef: 'rgba(96, 165, 250, 0.5)',
+            polygon: '#fb7185',
+            radiusLine: 'rgba(251, 113, 133, 0.52)'
+        };
+    }
 
     function postToHost(payload) {
         if (window.parent && window.parent !== window) {
@@ -515,6 +593,17 @@
         document.body.classList.toggle('presentation-mode', presentation);
         window.dispatchEvent(new Event('resize'));
         emitStatus(presentation ? '演示模式已应用到微元法场景' : '标准模式已应用到微元法场景');
+        emitReadout(true);
+    }
+
+    function applyTheme(theme, silent = false) {
+        const normalized = theme === 'light' ? 'light' : 'dark';
+        currentTheme = normalized;
+        document.body.dataset.theme = normalized;
+        window.dispatchEvent(new Event('resize'));
+        if (!silent) {
+            emitStatus(normalized === 'dark' ? '夜间主题已应用' : '白天主题已应用');
+        }
         emitReadout(true);
     }
 
@@ -683,6 +772,8 @@
 
         function draw() {
             ctx.clearRect(0, 0, width, height);
+            const visuals = getStageReadability();
+            const palette = getStagePalette();
 
             const fn = parseFunc();
             const n = parseInt(rectSlider.value, 10);
@@ -720,8 +811,8 @@
             const yToPx = (v) => margin.top + (maxV - v) * (plotH / (maxV - minV));
 
             // 坐标轴
-            ctx.strokeStyle = '#222';
-            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = palette.axis;
+            ctx.lineWidth = Math.max(visuals.majorStrokePx * 1.15, visuals.majorStrokePx);
             ctx.beginPath();
             ctx.moveTo(margin.left, margin.top);
             ctx.lineTo(margin.left, height - margin.bottom);
@@ -730,8 +821,9 @@
 
             // 零线
             const zeroY = yToPx(0);
-            ctx.strokeStyle = '#ccc';
+            ctx.strokeStyle = palette.zeroLine;
             ctx.setLineDash([6, 6]);
+            ctx.lineWidth = Math.max(visuals.minorStrokePx * 1.15, visuals.minorStrokePx);
             ctx.beginPath();
             ctx.moveTo(margin.left, zeroY);
             ctx.lineTo(width - margin.right, zeroY);
@@ -739,8 +831,8 @@
             ctx.setLineDash([]);
 
             // 曲线
-            ctx.strokeStyle = '#0d6efd';
-            ctx.lineWidth = 2;
+            ctx.strokeStyle = palette.curve;
+            ctx.lineWidth = Math.max(visuals.majorStrokePx * 1.25, visuals.majorStrokePx);
             ctx.beginPath();
             pts.forEach((p, idx) => {
                 const x = xToPx(p.t);
@@ -756,7 +848,7 @@
                     const x = xToPx(p.t);
                     const y = yToPx(p.v);
                     ctx.beginPath();
-                    ctx.arc(x, y, 4, 0, Math.PI * 2);
+                    ctx.arc(x, y, visuals.markerRadiusPx, 0, Math.PI * 2);
                     ctx.fill();
                 }
             });
@@ -765,7 +857,8 @@
             const dt = T / n;
             let rectArea = 0;
             ctx.fillStyle = 'rgba(40, 167, 69, 0.25)';
-            ctx.strokeStyle = 'rgba(40, 167, 69, 0.65)';
+            ctx.strokeStyle = palette.areaStroke;
+            ctx.lineWidth = Math.max(visuals.minorStrokePx * 1.2, visuals.minorStrokePx);
             for (let i = 0; i < n; i++) {
                 const t0 = i * dt;
                 const t1 = t0 + dt;
@@ -849,11 +942,13 @@
 
         function drawCurveScene() {
             curveCtx.clearRect(0, 0, curveWidth, curveHeight);
+            const visuals = getStageReadability();
+            const palette = getStagePalette();
 
             // Draw the curve
             curveCtx.beginPath();
-            curveCtx.strokeStyle = '#007bff';
-            curveCtx.lineWidth = 2;
+            curveCtx.strokeStyle = palette.curveGuide;
+            curveCtx.lineWidth = Math.max(visuals.majorStrokePx * 1.25, visuals.majorStrokePx);
             for (let i = 0; i <= curveWidth; i++) {
                 const x = i / curveWidth;
                 const y = curveFunc(x);
@@ -869,18 +964,18 @@
             curveCtx.beginPath();
             curveCtx.moveTo(p1.x, p1.y);
             curveCtx.lineTo(p2.x, p2.y);
-            curveCtx.strokeStyle = '#28a745';
-            curveCtx.lineWidth = 1.5;
+            curveCtx.strokeStyle = palette.connector;
+            curveCtx.lineWidth = Math.max(visuals.minorStrokePx * 1.2, visuals.minorStrokePx);
             curveCtx.stroke();
 
             // Draw draggable points
             [p1, p2].forEach(p => {
                 curveCtx.beginPath();
-                curveCtx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+                curveCtx.arc(p.x, p.y, Math.max(8, visuals.markerRadiusPx + 2), 0, Math.PI * 2);
                 curveCtx.fillStyle = '#dc3545';
                 curveCtx.fill();
-                curveCtx.strokeStyle = '#fff';
-                curveCtx.lineWidth = 2;
+                curveCtx.strokeStyle = palette.markerStroke;
+                curveCtx.lineWidth = Math.max(visuals.minorStrokePx * 1.15, visuals.minorStrokePx);
                 curveCtx.stroke();
             });
             
@@ -925,12 +1020,14 @@
             const rect = curveCanvas.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
+            const visuals = getStageReadability();
+            const pickRadius = Math.max(10, visuals.markerRadiusPx + 4);
 
             const p1 = { x: curvePoints[0].x * curveWidth, y: curveFunc(curvePoints[0].x) * curveHeight };
             const p2 = { x: curvePoints[1].x * curveWidth, y: curveFunc(curvePoints[1].x) * curveHeight };
 
-            if (Math.hypot(mouseX - p1.x, mouseY - p1.y) < 10) draggingPoint = curvePoints[0];
-            else if (Math.hypot(mouseX - p2.x, mouseY - p2.y) < 10) draggingPoint = curvePoints[1];
+            if (Math.hypot(mouseX - p1.x, mouseY - p1.y) < pickRadius) draggingPoint = curvePoints[0];
+            else if (Math.hypot(mouseX - p2.x, mouseY - p2.y) < pickRadius) draggingPoint = curvePoints[1];
         });
         
         curveCanvas.addEventListener('mousemove', (e) => {
@@ -980,6 +1077,8 @@
         function drawCircleScene() {
             const n = parseInt(nSlider.value);
             nValueSpan.textContent = n;
+            const visuals = getStageReadability();
+            const palette = getStagePalette();
 
             circleCtx.clearRect(0, 0, circleWidth, circleHeight);
             const centerX = circleWidth / 2;
@@ -988,8 +1087,8 @@
             // Draw the reference circle (light blue background)
             circleCtx.beginPath();
             circleCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-            circleCtx.strokeStyle = 'rgba(0, 123, 255, 0.3)';
-            circleCtx.lineWidth = 2;
+            circleCtx.strokeStyle = palette.circleRef;
+            circleCtx.lineWidth = Math.max(visuals.majorStrokePx * 1.15, visuals.majorStrokePx);
             circleCtx.stroke();
 
             // Draw regular polygon (正多边形) approximating the circle
@@ -1008,15 +1107,15 @@
                 }
             }
             circleCtx.closePath();
-            circleCtx.strokeStyle = '#dc3545';
-            circleCtx.lineWidth = 2;
+            circleCtx.strokeStyle = palette.polygon;
+            circleCtx.lineWidth = Math.max(visuals.majorStrokePx * 1.2, visuals.majorStrokePx);
             circleCtx.stroke();
             circleCtx.fillStyle = 'rgba(220, 53, 69, 0.1)';
             circleCtx.fill();
             
             // Draw radii from center to vertices
-            circleCtx.strokeStyle = 'rgba(220, 53, 69, 0.3)';
-            circleCtx.lineWidth = 1;
+            circleCtx.strokeStyle = palette.radiusLine;
+            circleCtx.lineWidth = Math.max(visuals.minorStrokePx * 1.15, visuals.minorStrokePx);
             vertices.forEach(v => {
                 circleCtx.beginPath();
                 circleCtx.moveTo(centerX, centerY);
@@ -1027,7 +1126,7 @@
             // Draw vertices
             vertices.forEach(v => {
                 circleCtx.beginPath();
-                circleCtx.arc(v.x, v.y, 3, 0, Math.PI * 2);
+                circleCtx.arc(v.x, v.y, Math.max(4, visuals.markerRadiusPx * 0.7), 0, Math.PI * 2);
                 circleCtx.fillStyle = '#dc3545';
                 circleCtx.fill();
             });
@@ -1793,6 +1892,14 @@
             return;
         }
 
+        if (command === 'set-theme') {
+            const theme = payload && typeof payload.theme === 'string' ? payload.theme : '';
+            if (theme === 'dark' || theme === 'light') {
+                applyTheme(theme, true);
+            }
+            return;
+        }
+
         if (command === 'reset') {
             resetDefaults();
         }
@@ -1829,6 +1936,7 @@
         }
     });
 
+    applyTheme(currentTheme, true);
     emitStatus(isEmbedMode ? '2D 动画嵌入模式已就绪' : '场景已就绪');
     emitReadout(true);
 </script>

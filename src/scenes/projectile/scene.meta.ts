@@ -9,6 +9,9 @@ export const projectileMeta: SceneMeta = {
   defaultParams: {
     speed: 18,
     angleDeg: 45,
-    gravity: 9.8
+    gravity: 9.8,
+    initialHeight: 0,
+    windAccel: 0,
+    drag: 0.02
   }
 };

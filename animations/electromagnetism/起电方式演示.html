@@ -19,6 +19,15 @@
             --font-family: 'Inter', sans-serif;
             --stroke-scale: 1;
             --label-scale: 1;
+            --atom-font-px: 20px;
+        }
+        body[data-theme="light"] {
+            --bg-color: #f4f7fb;
+            --primary-color: #0d6efd;
+            --text-color: #1f2937;
+            --positive-color: #d14343;
+            --neutral-color: #6b7280;
+            --surface-color: #ffffff;
         }
 
         body {
@@ -171,7 +180,7 @@
         }
         .atom-text {
             font-family: var(--font-family);
-            font-size: calc(16px * var(--label-scale));
+            font-size: var(--atom-font-px, calc(16px * var(--label-scale)));
             font-weight: bold;
             fill: var(--bg-color);
             user-select: none;
@@ -278,17 +287,56 @@
         const isEmbedMode = searchParams.get('embed') === '1';
         let lastReadoutAt = 0;
         let isPresentationMode = false;
-        
+        let currentTheme = searchParams.get('theme') === 'light' ? 'light' : 'dark';
+
+        const RIGHT_STAGE_STANDARD = {
+            normal: {
+                primaryFontPx: 36,
+                secondaryFontPx: 30,
+                majorStrokePx: 6,
+                minorStrokePx: 5,
+                markerRadiusPx: 12,
+                atomFontPx: 36,
+                rodSignFontPx: 46,
+                labelScale: 1,
+                nucleusRadius: 14,
+                electronRadius: 6,
+                animationDuration: 1.2
+            },
+            presentation: {
+                primaryFontPx: 56,
+                secondaryFontPx: 46,
+                majorStrokePx: 11,
+                minorStrokePx: 9,
+                markerRadiusPx: 20,
+                atomFontPx: 56,
+                rodSignFontPx: 76,
+                labelScale: 1.5,
+                nucleusRadius: 24,
+                electronRadius: 11,
+                animationDuration: 1.6
+            }
+        };
+
+        function getStageReadability() {
+            return isPresentationMode ? RIGHT_STAGE_STANDARD.presentation : RIGHT_STAGE_STANDARD.normal;
+        }
+
+        function px(value) {
+            return `${Math.round(value)}px`;
+        }
+
         // V4.2 全局常量: 统一原子模型
         let ATOM_CONFIG = {
-            nucleusRadius: 10,
-            electronRadius: 4,
-            animationDuration: 1.2  // 秒
+            nucleusRadius: RIGHT_STAGE_STANDARD.normal.nucleusRadius,
+            electronRadius: RIGHT_STAGE_STANDARD.normal.electronRadius,
+            animationDuration: RIGHT_STAGE_STANDARD.normal.animationDuration
         };
 
         if (isEmbedMode) {
             document.body.classList.add('embed-mode');
         }
+        document.body.dataset.theme = currentTheme;
 
         function createSVGElement(tag, attrs, textContent) {
             const el = document.createElementNS(SVG_NS, tag);
@@ -430,13 +478,27 @@
 
         function applyPresentationMode(presentation) {
             isPresentationMode = presentation;
-            ATOM_CONFIG = presentation
-                ? { nucleusRadius: 14, electronRadius: 6, animationDuration: 1.5 }
-                : { nucleusRadius: 10, electronRadius: 4, animationDuration: 1.2 };
-            document.documentElement.style.setProperty('--stroke-scale', presentation ? '1.35' : '1');
-            document.documentElement.style.setProperty('--label-scale', presentation ? '1.2' : '1');
+            const visuals = getStageReadability();
+            ATOM_CONFIG = {
+                nucleusRadius: visuals.nucleusRadius,
+                electronRadius: visuals.electronRadius,
+                animationDuration: visuals.animationDuration
+            };
+            document.documentElement.style.setProperty('--stroke-scale', String(visuals.majorStrokePx / 3));
+            document.documentElement.style.setProperty('--label-scale', String(visuals.labelScale));
+            document.documentElement.style.setProperty('--atom-font-px', px(visuals.atomFontPx));
             resetCurrentScene();
             emitStatus(presentation ? '演示模式已应用到动画' : '标准模式已应用到动画');
+            emitReadout(true);
+        }
+
+        function applyTheme(theme, silent = false) {
+            const normalized = theme === 'light' ? 'light' : 'dark';
+            currentTheme = normalized;
+            document.body.dataset.theme = normalized;
+            if (!silent) {
+                emitStatus(normalized === 'dark' ? '夜间主题已应用' : '白天主题已应用');
+            }
             emitReadout(true);
         }
         
@@ -458,7 +520,7 @@
                 const atomY = 40 + i * 60;
                 rod.append(
                     createSVGElement('circle', { cx: 20, cy: atomY, r: ATOM_CONFIG.nucleusRadius, class: 'nucleus' }),
-                    createSVGElement('text', { x: 20, y: atomY, 'dominant-baseline': 'middle', 'text-anchor': 'middle', class: 'atom-text', 'font-size': '12px' }, '+')
+                    createSVGElement('text', { x: 20, y: atomY, 'dominant-baseline': 'middle', 'text-anchor': 'middle', class: 'atom-text', 'font-size': px(getStageReadability().secondaryFontPx) }, '+')
                 );
                 // V4.2 修正: 使用统一的电子半径
                 const electron = createSVGElement('circle', { cx: 5, cy: atomY, r: ATOM_CONFIG.electronRadius, class: 'electron' });
@@ -474,7 +536,7 @@
                     const atomY = 40 + i * 60;
                     silk.append(
                         createSVGElement('circle', { cx: atomX, cy: atomY, r: ATOM_CONFIG.nucleusRadius, class: 'nucleus' }),
-                        createSVGElement('text', { x: atomX, y: atomY, 'dominant-baseline': 'middle', 'text-anchor': 'middle', class: 'atom-text', 'font-size': '12px' }, '+'),
+                        createSVGElement('text', { x: atomX, y: atomY, 'dominant-baseline': 'middle', 'text-anchor': 'middle', class: 'atom-text', 'font-size': px(getStageReadability().secondaryFontPx) }, '+'),
                         createSVGElement('circle', { cx: atomX - 15, cy: atomY, r: ATOM_CONFIG.electronRadius, class: 'electron' })
                     );
                 }
@@ -586,7 +648,7 @@
                     const y = 190 + i * 20;
                     // V4.2 优化: 添加正电荷符号，明确原子核位置
                     conductor.appendChild(createSVGElement('circle', { cx: x, cy: y, r: ATOM_CONFIG.nucleusRadius, class: 'nucleus' }));
-                    conductor.appendChild(createSVGElement('text', { x: x, y: y, 'dominant-baseline': 'middle', 'text-anchor': 'middle', 'font-size': '10px', fill: '#1a1f2c', 'font-weight': 'bold', 'pointer-events': 'none' }, '+'));
+                    conductor.appendChild(createSVGElement('text', { x: x, y: y, 'dominant-baseline': 'middle', 'text-anchor': 'middle', 'font-size': px(getStageReadability().secondaryFontPx), fill: '#1a1f2c', 'font-weight': 'bold', 'pointer-events': 'none' }, '+'));
 
                     const electron = createSVGElement('circle', { 'data-initial-x': x, 'data-initial-y': y, cx: x, cy: y, r: ATOM_CONFIG.electronRadius, class: 'electron' });
                     freeElectrons.push(electron);
@@ -598,7 +660,7 @@
             const chargedRod = createSVGElement('g', { id: 'charged-rod', transform: 'translate(50, 150)'});
             chargedRod.appendChild(createSVGElement('rect', { x: 0, y: 0, width: 30, height: 150, rx: 15, fill: 'orange'}));
             for(let i = 0; i < 6; i++) {
-                chargedRod.appendChild(createSVGElement('text', { x: 15, y: 20 + i*22, 'dominant-baseline': 'middle', 'text-anchor': 'middle', 'font-size': '24px', fill: 'white' }, '-'));
+                chargedRod.appendChild(createSVGElement('text', { x: 15, y: 20 + i*22, 'dominant-baseline': 'middle', 'text-anchor': 'middle', 'font-size': px(getStageReadability().rodSignFontPx), fill: 'white' }, '-'));
             }
             
             const posIndicator = createSVGElement('text', { x: 275, y: 235, class: 'polarization-indicator positive-charge', 'text-anchor': 'middle', 'dominant-baseline': 'middle' }, '+');
@@ -823,6 +885,14 @@
                 return;
             }
 
+            if (command === 'set-theme') {
+                const theme = payload && typeof payload.theme === 'string' ? payload.theme : '';
+                if (theme === 'dark' || theme === 'light') {
+                    applyTheme(theme, true);
+                }
+                return;
+            }
+
             if (command === 'reset') {
                 resetCurrentScene();
                 emitStatus('已重置当前场景');
@@ -862,6 +932,7 @@
         });
 
         // 初始加载
+        applyTheme(currentTheme, true);
         setupScene('friction');
         emitReadout(true);
         emitStatus(isEmbedMode ? '2D 动画嵌入模式已就绪' : '场景已就绪');

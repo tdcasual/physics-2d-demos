@@ -2,17 +2,20 @@ import '../../ui/teaching-demo.css';
 import { createPageLifecycle } from '../../app/page-lifecycle';
 import { createSceneShell } from '../../app/scene-shell';
 import { createTeachingDemoShell, type ReadoutItem } from '../../app/teaching-demo-shell';
-import { createControlPanel } from '../../ui/control-panel';
 import { createProjectileScene } from './scene.entry';
-import type { ProjectileState } from './scene.sim';
+import { createProjectileControls } from './controls';
+import type { ProjectileParams, ProjectileState, ResolvedProjectileParams } from './scene.sim';
 
-function formatReadout(state: ProjectileState): ReadoutItem[] {
+function formatReadout(state: ProjectileState, params: ResolvedProjectileParams): ReadoutItem[] {
   return [
     { label: '时间 t', value: `${state.t.toFixed(2)} s` },
     { label: '位移 x', value: `${state.x.toFixed(2)} m` },
     { label: '高度 y', value: `${state.y.toFixed(2)} m` },
     { label: '速度 vx', value: `${state.vx.toFixed(2)} m/s` },
-    { label: '速度 vy', value: `${state.vy.toFixed(2)} m/s` }
+    { label: '速度 vy', value: `${state.vy.toFixed(2)} m/s` },
+    { label: '参数 v0/θ', value: `${params.speed.toFixed(1)} / ${params.angleDeg.toFixed(1)}` },
+    { label: '参数 g/h0', value: `${params.gravity.toFixed(2)} / ${params.initialHeight.toFixed(1)}` },
+    { label: '风/阻力', value: `${params.windAccel.toFixed(1)} / ${params.drag.toFixed(3)}` }
   ];
 }
 
@@ -31,11 +34,22 @@ function boot(): void {
   const lifecycle = createPageLifecycle();
   lifecycle.onDispose(() => shell.dispose());
 
+  let currentParams: ResolvedProjectileParams = {
+    speed: 18,
+    angleDeg: 45,
+    gravity: 9.8,
+    initialHeight: 0,
+    windAccel: 0,
+    drag: 0
+  };
+
   const scene = createProjectileScene({
     canvas: shell.stageCanvas,
     mode: shell.getMode(),
-    onReadout: (state) => shell.setReadout(formatReadout(state))
+    theme: shell.getTheme(),
+    onReadout: (state) => shell.setReadout(formatReadout(state, currentParams))
   });
+  currentParams = scene.getParams();
 
   const transport = createSceneShell({
     stepSeconds: 1 / 60,
@@ -46,7 +60,9 @@ function boot(): void {
   lifecycle.onDispose(() => transport.dispose());
   lifecycle.onDispose(() => scene.dispose());
 
-  createControlPanel(shell.controlSlot, {
+  const controls = createProjectileControls({
+    container: shell.controlSlot,
+    initialParams: currentParams,
     onPlay: () => {
       transport.play();
       shell.setStatus('播放中');
@@ -58,6 +74,7 @@ function boot(): void {
     onReset: () => {
       transport.reset();
       scene.reset();
+      scene.render();
       shell.setStatus('已重置');
     },
     onStep: () => {
@@ -65,8 +82,18 @@ function boot(): void {
         scene.step(1 / 60);
       });
       shell.setStatus('单步执行');
+    },
+    onApplyParams: (next: Partial<ProjectileParams>) => {
+      currentParams = scene.setParams(next);
+      transport.reset();
+      scene.reset();
+      scene.render();
+    },
+    onStatus: (text) => {
+      shell.setStatus(text);
     }
   });
+  lifecycle.onDispose(() => controls.dispose());
 
   const onModeToggle = () => {
     const nextMode = shell.getMode() === 'normal' ? 'presentation' : 'normal';
@@ -77,8 +104,18 @@ function boot(): void {
     shell.setStatus(nextMode === 'presentation' ? '演示模式已开启' : '标准模式已开启');
   };
 
+  const onThemeToggle = () => {
+    const nextTheme = shell.getTheme() === 'dark' ? 'light' : 'dark';
+    shell.setTheme(nextTheme);
+    scene.setTheme(nextTheme);
+    scene.render();
+    shell.setStatus(nextTheme === 'dark' ? '夜间主题已开启' : '白天主题已开启');
+  };
+
   shell.modeButton.addEventListener('click', onModeToggle);
+  shell.themeButton.addEventListener('click', onThemeToggle);
   lifecycle.onDispose(() => shell.modeButton.removeEventListener('click', onModeToggle));
+  lifecycle.onDispose(() => shell.themeButton.removeEventListener('click', onThemeToggle));
 
   const onResize = () => {
     scene.resize();

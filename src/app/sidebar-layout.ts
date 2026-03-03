@@ -4,5 +4,5 @@ export function clampSidebarWidth(widthPx: number, minPx: number, maxPx: number)
 }
 
 export function getDefaultSidebarWidth(viewportWidthPx: number, minPx: number, maxPx: number): number {
-  return clampSidebarWidth(viewportWidthPx * 0.34, minPx, maxPx);
+  return clampSidebarWidth(viewportWidthPx * 0.27, minPx, maxPx);
 }

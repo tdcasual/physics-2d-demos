@@ -50,7 +50,7 @@ function boot(): void {
     stageSlot: shell.stageSlot,
     sceneId: scene.id,
     sourcePath: scene.sourcePath,
-    embedQuery: { embed: '1', host: 'teaching-shell' },
+    embedQuery: { embed: '1', host: 'teaching-shell', theme: shell.getTheme() },
     onReadout: (items) => {
       shell.setReadout(items);
     },
@@ -124,6 +124,7 @@ function boot(): void {
   }
 
   adapter.sendControlExt('set-presentation', { presentation: shell.getMode() === 'presentation' });
+  adapter.sendControlExt('set-theme', { theme: shell.getTheme() });
 
   const onModeToggle = () => {
     const nextMode = shell.getMode() === 'normal' ? 'presentation' : 'normal';
@@ -131,8 +132,18 @@ function boot(): void {
     adapter.sendControlExt('set-presentation', { presentation: nextMode === 'presentation' });
     shell.setStatus(nextMode === 'presentation' ? '演示模式已开启' : '标准模式已开启');
   };
+
+  const onThemeToggle = () => {
+    const nextTheme = shell.getTheme() === 'dark' ? 'light' : 'dark';
+    shell.setTheme(nextTheme);
+    adapter.sendControlExt('set-theme', { theme: nextTheme });
+    shell.setStatus(nextTheme === 'dark' ? '夜间主题已开启' : '白天主题已开启');
+  };
+
   shell.modeButton.addEventListener('click', onModeToggle);
+  shell.themeButton.addEventListener('click', onThemeToggle);
   lifecycle.onDispose(() => shell.modeButton.removeEventListener('click', onModeToggle));
+  lifecycle.onDispose(() => shell.themeButton.removeEventListener('click', onThemeToggle));
 
   const onBeforeUnload = () => lifecycle.dispose();
   window.addEventListener('beforeunload', onBeforeUnload);
