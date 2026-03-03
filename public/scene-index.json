@@ -1,15 +1,5 @@
 [
   {
-    "id": "legacy-equipotential-3d",
-    "title": "3D Charge Equipotential Surfaces - Debug",
-    "path": "/animations/electromagnetism/3D电荷等势面.html",
-    "keywords": [
-      "电磁学",
-      "等势面",
-      "3D"
-    ]
-  },
-  {
     "id": "legacy-field-lines",
     "title": "电场矢量到电场线的演化",
     "path": "/src/pages/legacy-2d.html?scene=legacy-field-lines",
@@ -27,16 +17,6 @@
       "电磁学",
       "电路",
       "2D"
-    ]
-  },
-  {
-    "id": "legacy-potential-3d",
-    "title": "交互式点电荷电势能演示",
-    "path": "/animations/electromagnetism/3D 生成电势图.html",
-    "keywords": [
-      "电磁学",
-      "电势能",
-      "3D"
     ]
   },
   {
@@ -62,11 +42,11 @@
   {
     "id": "legacy-vt-integral",
     "title": "微元法交互式动画",
-    "path": "/animations/mechanics/v-t面积与微元法.html",
+    "path": "/src/pages/legacy-2d.html?scene=legacy-vt-integral",
     "keywords": [
       "力学",
       "微元法",
-      "3D"
+      "多场景"
     ]
   },
   {

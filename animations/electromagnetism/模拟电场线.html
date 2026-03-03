@@ -73,6 +73,9 @@
         .theme-toggle {
             transition: all 0.2s ease-in-out;
         }
+        body.embed-mode .control-panel {
+            display: none !important;
+        }
     </style>
 </head>
 <body data-theme="dark" class="bg-gray-900 text-white flex flex-col items-center justify-center h-screen m-0 p-0">
@@ -141,6 +144,8 @@
         const q2Slider = document.getElementById('q2Slider');
         const q1Value = document.getElementById('q1Value');
         const q2Value = document.getElementById('q2Value');
+        const searchParams = new URLSearchParams(window.location.search);
+        const isEmbedMode = searchParams.get('embed') === '1';
 
         let width, height;
         let charges = [];
@@ -148,19 +153,84 @@
         let isDragging = false;
         let currentScene = 'single';
         let currentTheme = 'dark';
+        let lastReadoutAt = 0;
+        let isPresentationMode = false;
+
+        if (isEmbedMode) {
+            document.body.classList.add('embed-mode');
+        }
+
+        const sceneLabels = {
+            single: '单个电荷',
+            like: '同种电荷',
+            unlike: '异种电荷',
+            custom: '自定义双电荷'
+        };
 
         const themeConfig = {
             dark: {
                 canvasBg: 'rgb(17, 24, 39)',
-                fieldLineColor: 'rgba(148, 163, 184, 0.6)',
-                arrowColor: 'rgba(74, 144, 226, 0.9)',
+                fieldLineColor: 'rgba(178, 206, 255, 0.86)',
+                arrowColor: 'rgba(96, 173, 255, 0.98)',
             },
             light: {
                 canvasBg: '#f9fafb',
-                fieldLineColor: 'rgba(148, 163, 184, 0.9)',
-                arrowColor: 'rgba(37, 99, 235, 0.9)',
+                fieldLineColor: 'rgba(95, 121, 168, 0.92)',
+                arrowColor: 'rgba(39, 112, 255, 0.95)',
             }
         };
+
+        const visualConfig = {
+            normal: {
+                chargeRadius: 15,
+                chargeFontPx: 20,
+                arrowStrokeWidth: 2.8,
+                arrowSize: 8,
+                maxArrowLength: 14
+            },
+            presentation: {
+                chargeRadius: 22,
+                chargeFontPx: 30,
+                arrowStrokeWidth: 4.2,
+                arrowSize: 12,
+                maxArrowLength: 22
+            }
+        };
+
+        function getVisualConfig() {
+            return isPresentationMode ? visualConfig.presentation : visualConfig.normal;
+        }
+
+        function postToHost(payload) {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage(payload, '*');
+            }
+        }
+
+        function emitStatus(text) {
+            postToHost({ type: 'legacy:status', text });
+        }
+
+        function buildReadout() {
+            return [
+                { label: '场景', value: sceneLabels[currentScene] },
+                { label: '主题', value: currentTheme === 'dark' ? '夜间' : '白天' },
+                { label: '显示模式', value: isPresentationMode ? '演示模式' : '标准模式' },
+                { label: '矢量密度', value: String(parseInt(slider.value, 10)) },
+                { label: '电荷数量', value: String(charges.length) },
+                { label: '电荷1', value: q1Value.textContent || '+1.0' },
+                { label: '电荷2', value: q2Value.textContent || '-1.0' }
+            ];
+        }
+
+        function emitReadout(force = false) {
+            const now = performance.now();
+            if (!force && now - lastReadoutAt < 80) {
+                return;
+            }
+            lastReadoutAt = now;
+            postToHost({ type: 'legacy:readout', items: buildReadout() });
+        }
 
         function applyTheme() {
             document.body.setAttribute('data-theme', currentTheme);
@@ -172,11 +242,13 @@
                 themeText.textContent = '白天';
             }
             draw();
+            emitReadout(true);
         }
 
         themeToggleBtn.addEventListener('click', () => {
             currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
             applyTheme();
+            emitStatus(currentTheme === 'dark' ? '已切换到夜间主题' : '已切换到白天主题');
         });
 
         function setScene(scene) {
@@ -184,6 +256,7 @@
             charges = [];
             Object.values(sceneButtons).forEach(btn => btn.classList.remove('active'));
             sceneButtons[scene].classList.add('active');
+            const radius = getVisualConfig().chargeRadius;
 
             // 自定义场景控件显隐
             if (scene === 'custom') {
@@ -194,22 +267,23 @@
 
             switch (scene) {
                 case 'single':
-                    charges.push({ x: width / 2, y: height / 2, q: 1, radius: 15 });
+                    charges.push({ x: width / 2, y: height / 2, q: 1, radius });
                     break;
                 case 'like':
-                    charges.push({ x: width / 2 - 150, y: height / 2, q: 1, radius: 15 });
-                    charges.push({ x: width / 2 + 150, y: height / 2, q: 1, radius: 15 });
+                    charges.push({ x: width / 2 - 150, y: height / 2, q: 1, radius });
+                    charges.push({ x: width / 2 + 150, y: height / 2, q: 1, radius });
                     break;
                 case 'unlike':
-                    charges.push({ x: width / 2 - 150, y: height / 2, q: 1, radius: 15 });
-                    charges.push({ x: width / 2 + 150, y: height / 2, q: -1, radius: 15 });
+                    charges.push({ x: width / 2 - 150, y: height / 2, q: 1, radius });
+                    charges.push({ x: width / 2 + 150, y: height / 2, q: -1, radius });
                     break;
                 case 'custom':
-                    charges.push({ x: width / 2 - 150, y: height / 2, q: parseFloat(q1Slider.value), radius: 15 });
-                    charges.push({ x: width / 2 + 150, y: height / 2, q: parseFloat(q2Slider.value), radius: 15 });
+                    charges.push({ x: width / 2 - 150, y: height / 2, q: parseFloat(q1Slider.value), radius });
+                    charges.push({ x: width / 2 + 150, y: height / 2, q: parseFloat(q2Slider.value), radius });
                     break;
             }
             draw();
+            emitReadout(true);
         }
 
         function setup() {
@@ -233,7 +307,8 @@
         }
 
         function drawArrow(x, y, angle, length) {
-            const arrowSize = 5;
+            const visuals = getVisualConfig();
+            const arrowSize = visuals.arrowSize;
             const colors = themeConfig[currentTheme];
             ctx.save();
             ctx.translate(x, y);
@@ -242,7 +317,7 @@
             ctx.moveTo(0, 0);
             ctx.lineTo(length, 0);
             ctx.strokeStyle = colors.arrowColor;
-            ctx.lineWidth = 1.5;
+            ctx.lineWidth = visuals.arrowStrokeWidth;
             ctx.stroke();
             ctx.beginPath();
             ctx.moveTo(length, 0);
@@ -255,6 +330,7 @@
         }
 
         function drawCharges() {
+            const visuals = getVisualConfig();
             charges.forEach(charge => {
                 ctx.beginPath();
                 ctx.arc(charge.x, charge.y, charge.radius, 0, Math.PI * 2);
@@ -262,7 +338,7 @@
                 ctx.fill();
 
                 ctx.fillStyle = 'white';
-                ctx.font = 'bold 20px Arial';
+                ctx.font = `bold ${visuals.chargeFontPx}px Arial`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(charge.q > 0 ? '+' : '−', charge.x, charge.y + 1);
@@ -279,16 +355,13 @@
             return Math.min(maxLines, Math.max(minLines, lines));
         }
 
-        // 改进后的 traceLine：先算出连续轨迹，再画曲线和箭头
+        // 仅绘制矢量箭头：沿场线追踪轨迹，但不绘制连续线段
         function traceLine(startX, startY, maxSegments, visualStepSize, direction) {
             const CALCULATION_STEP = 4; // 固定的小步长保证轨迹平滑
             let px = startX;
             let py = startY;
             let distanceSinceLastArrow = 0;
-            const points = [];
             const arrows = [];
-
-            points.push({ x: px, y: py });
 
             for (let j = 0; j < maxSegments; j++) {
                 const field = getElectricFieldAt(px, py);
@@ -300,12 +373,15 @@
 
                 px += dirX * CALCULATION_STEP;
                 py += dirY * CALCULATION_STEP;
-                points.push({ x: px, y: py });
 
                 distanceSinceLastArrow += CALCULATION_STEP;
                 if (distanceSinceLastArrow >= visualStepSize) {
                     const fieldAngle = Math.atan2(dirY, dirX);
-                    const vectorLength = Math.min(visualStepSize * 0.8, 15);
+                    const minLength = isPresentationMode ? 9 : 6;
+                    const vectorLength = Math.max(
+                        minLength,
+                        Math.min(visualStepSize * 0.35, getVisualConfig().maxArrowLength)
+                    );
                     arrows.push({ x: px, y: py, angle: fieldAngle, length: vectorLength });
                     distanceSinceLastArrow = 0;
                 }
@@ -320,18 +396,6 @@
                     }
                 }
                 if (nearAnotherCharge) break;
-            }
-
-            if (points.length > 1) {
-                const colors = themeConfig[currentTheme];
-                ctx.beginPath();
-                ctx.moveTo(points[0].x, points[0].y);
-                for (let i = 1; i < points.length; i++) {
-                    ctx.lineTo(points[i].x, points[i].y);
-                }
-                ctx.strokeStyle = colors.fieldLineColor;
-                ctx.lineWidth = 0.8;
-                ctx.stroke();
             }
 
             arrows.forEach(a => drawArrow(a.x, a.y, a.angle, a.length));
@@ -373,9 +437,15 @@
             drawCharges();
         }
 
-        slider.addEventListener('input', draw);
+        slider.addEventListener('input', () => {
+            draw();
+            emitReadout(true);
+        });
         Object.keys(sceneButtons).forEach(key => {
-            sceneButtons[key].addEventListener('click', () => setScene(key));
+            sceneButtons[key].addEventListener('click', () => {
+                setScene(key);
+                emitStatus(`已切换场景：${sceneLabels[key]}`);
+            });
         });
 
         function formatChargeValue(v) {
@@ -393,6 +463,7 @@
                 charges[0].q = parseFloat(q1Slider.value);
                 charges[1].q = parseFloat(q2Slider.value);
                 draw();
+                emitReadout(true);
             }
         }
 
@@ -425,6 +496,7 @@
                 charges[draggedChargeIndex].x = pos.x;
                 charges[draggedChargeIndex].y = pos.y;
                 draw();
+                emitReadout();
             }
         }
 
@@ -443,6 +515,8 @@
                 if (dist < charges[0].radius * 1.5) {
                     charges[0].q *= -1; // 翻转电荷
                     draw();
+                    emitReadout(true);
+                    emitStatus('已切换单电荷正负极性');
                 }
             }
         }
@@ -455,10 +529,96 @@
         canvas.addEventListener('touchend', handleEnd);
         window.addEventListener('resize', setup);
 
+        function resetDefaults() {
+            isPresentationMode = false;
+            currentTheme = 'dark';
+            slider.value = '10';
+            q1Slider.value = '1';
+            q2Slider.value = '-1';
+            updateCustomChargeValues();
+            setScene('single');
+            applyTheme();
+        }
+
+        function applyExternalCommand(command, payload) {
+            if (command === 'set-scene') {
+                const scene = payload && typeof payload.scene === 'string' ? payload.scene : '';
+                if (sceneButtons[scene]) {
+                    setScene(scene);
+                }
+                return;
+            }
+            if (command === 'set-theme') {
+                const theme = payload && typeof payload.theme === 'string' ? payload.theme : '';
+                if (theme === 'dark' || theme === 'light') {
+                    currentTheme = theme;
+                    applyTheme();
+                }
+                return;
+            }
+            if (command === 'set-density') {
+                const density = payload && typeof payload.density === 'number' ? payload.density : parseInt(slider.value, 10);
+                slider.value = String(Math.min(100, Math.max(1, Math.round(density))));
+                draw();
+                emitReadout(true);
+                return;
+            }
+            if (command === 'set-custom-charges') {
+                const q1 = payload && typeof payload.q1 === 'number' ? payload.q1 : parseFloat(q1Slider.value);
+                const q2 = payload && typeof payload.q2 === 'number' ? payload.q2 : parseFloat(q2Slider.value);
+                q1Slider.value = String(Math.min(5, Math.max(-5, q1)));
+                q2Slider.value = String(Math.min(5, Math.max(-5, q2)));
+                updateCustomChargeValues();
+                return;
+            }
+            if (command === 'set-presentation') {
+                isPresentationMode = !!(payload && payload.presentation === true);
+                const nextRadius = getVisualConfig().chargeRadius;
+                charges.forEach((charge) => {
+                    charge.radius = nextRadius;
+                });
+                draw();
+                emitReadout(true);
+                emitStatus(isPresentationMode ? '演示模式已应用到动画' : '标准模式已应用到动画');
+                return;
+            }
+            if (command === 'reset') {
+                resetDefaults();
+            }
+        }
+
+        window.addEventListener('message', (event) => {
+            if (event.origin !== window.location.origin) {
+                return;
+            }
+            const data = event.data;
+            if (!data || typeof data !== 'object') {
+                return;
+            }
+
+            if (data.type === 'legacy:control') {
+                if (data.action === 'reset') {
+                    resetDefaults();
+                    emitStatus('已重置场景');
+                    return;
+                }
+                if (data.action === 'play' || data.action === 'pause' || data.action === 'step') {
+                    emitStatus('该场景为交互式场景，直接拖拽或调参即可观察变化');
+                }
+                return;
+            }
+
+            if (data.type === 'legacy:control-ext' && typeof data.command === 'string') {
+                applyExternalCommand(data.command, data.payload);
+            }
+        });
+
         // 初始化
         updateCustomChargeValues();
         setup();
         applyTheme();
+        emitReadout(true);
+        emitStatus(isEmbedMode ? '2D 动画嵌入模式已就绪' : '场景已就绪');
     </script>
 </body>
 </html>

@@ -1,6 +1,6 @@
-# Physics 2D Demos
+# Teaching Demo Hub
 
-面向课堂演示的物理动画静态站点。当前仓库同时包含：
+面向课堂演示的多学科动画静态站点。当前仓库同时包含：
 
 - `legacy` 动画资源：`animations/` 下的历史单文件 HTML（2D/3D 混合）
 - `foundation` 新架构：TypeScript + Vite + 测试门禁，支持批量生产 2D 教学动画
@@ -104,7 +104,7 @@ tests/
 
 为避免后续 2D 场景扩展时引入隐式耦合，当前仓库使用测试 + lint 双重边界约束：
 
-- `src/scenes/**/scene.sim.ts` 只允许关注物理与状态，不允许导入 `src/app` 与 `src/ui`。
+- `src/scenes/**/scene.sim.ts` 只允许关注仿真与状态，不允许导入 `src/app` 与 `src/ui`。
 - `src/core/**` 作为底层通用能力，不允许导入 `src/app/**`，也不允许依赖 `src/scenes/**/page*` 页面入口。
 - 场景导航数据以 `src/catalog/scene-registry.ts` 作为单一源，构建脚本统一生成导航 JSON 与 HTML fallback 脚本。
 

@@ -13,27 +13,24 @@ describe('legacy animation catalog', () => {
       'legacy-field-lines',
       'legacy-emf-analogy',
       'legacy-electrification',
+      'legacy-vt-integral',
       'legacy-chase-meet'
     ]);
 
-    expect(legacy3DAnimationCatalog.map((item) => item.id)).toEqual([
-      'legacy-potential-3d',
-      'legacy-equipotential-3d',
-      'legacy-vt-integral'
-    ]);
+    expect(legacy3DAnimationCatalog.map((item) => item.id)).toEqual([]);
   });
 
   it('maps 2D scenes to shared host page and keeps 3D scene direct', () => {
     const entries = toLegacySceneIndexEntries();
     const fieldLines = entries.find((item) => item.id === 'legacy-field-lines');
-    const potential3D = entries.find((item) => item.id === 'legacy-potential-3d');
+    const vtIntegral = entries.find((item) => item.id === 'legacy-vt-integral');
 
     expect(fieldLines?.path).toBe(buildLegacy2DHostPath('legacy-field-lines'));
-    expect(potential3D?.path).toBe('/animations/electromagnetism/3D 生成电势图.html');
+    expect(vtIntegral?.path).toBe(buildLegacy2DHostPath('legacy-vt-integral'));
   });
 
   it('only resolves 2D scene configs by id', () => {
     expect(getLegacy2DAnimationById('legacy-chase-meet')?.title).toBe('追及相遇演示动画');
-    expect(getLegacy2DAnimationById('legacy-equipotential-3d')).toBeUndefined();
+    expect(getLegacy2DAnimationById('legacy-vt-integral')?.title).toBe('微元法交互式动画');
   });
 });

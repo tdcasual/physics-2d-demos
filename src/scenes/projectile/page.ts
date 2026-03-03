@@ -29,6 +29,7 @@ function boot(): void {
     defaultMode: 'normal'
   });
   const lifecycle = createPageLifecycle();
+  lifecycle.onDispose(() => shell.dispose());
 
   const scene = createProjectileScene({
     canvas: shell.stageCanvas,

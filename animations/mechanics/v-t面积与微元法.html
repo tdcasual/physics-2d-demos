@@ -1,4 +1,4 @@
-i<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -190,6 +190,44 @@ i<!DOCTYPE html>
             background: #fff;
             font-size: 14px;
         }
+
+        body.embed-mode {
+            overflow: hidden;
+        }
+        body.embed-mode #app-container {
+            width: 100vw;
+            max-width: none;
+            height: 100vh;
+            aspect-ratio: auto;
+            border-radius: 0;
+        }
+        body.embed-mode .controls-bar,
+        body.embed-mode .ui-controls,
+        body.embed-mode .readout {
+            display: none !important;
+        }
+        body.embed-mode .scene {
+            height: 100%;
+            gap: 8px;
+            background: transparent;
+        }
+        body.embed-mode .demo-panel {
+            border-left: none;
+            padding: 8px;
+        }
+        body.embed-mode #scene1 .demo-panel:nth-child(2) {
+            display: none;
+        }
+        body.embed-mode #scene1 .demo-panel:first-child {
+            flex: 1 !important;
+        }
+
+        body.presentation-mode {
+            --radius: 16px;
+        }
+        body.presentation-mode .canvas-container {
+            border-width: 2px;
+        }
     </style>
 </head>
 <body>
@@ -197,8 +235,10 @@ i<!DOCTYPE html>
 <div id="app-container">
     <div class="controls-bar">
         <button id="show-scene1" class="active">场景一：v-t 积分</button>
-        <button id="show-scene2">场景二：圆</button>
-        <button id="show-scene3">场景三：球</button>
+        <button id="show-scene2">场景二：曲线逼近</button>
+        <button id="show-scene3">场景三：圆周逼近</button>
+        <button id="show-scene4">场景四：球棱锥体积</button>
+        <button id="show-scene5">场景五：球体积逼近</button>
     </div>
 
     <!-- Scene 1: v-t 积分演示 -->
@@ -252,9 +292,8 @@ i<!DOCTYPE html>
         </div>
     </div>
 
-    <!-- Scene 2: 2D Canvas -->
+    <!-- Scene 2: Curve Approximation -->
     <div id="scene2" class="scene" style="display: none;">
-        <!-- Part 1: Curve Approximation -->
         <div class="demo-panel">
             <div class="canvas-container">
                 <canvas id="curve-canvas"></canvas>
@@ -262,6 +301,8 @@ i<!DOCTYPE html>
             <div class="ui-controls">
                 <h4>曲线逼近</h4>
                 <p>拖动曲线上两个点，观察当它们靠近时，曲线长度与直线距离的变化。</p>
+                <label for="curve-amp-slider">曲线振幅 A：<span id="curve-amp-value">0.25</span></label>
+                <input type="range" id="curve-amp-slider" min="0.05" max="0.45" step="0.01" value="0.25">
             </div>
             <div class="readout" id="curve-readout">
                 <div class="metric accent">
@@ -272,10 +313,16 @@ i<!DOCTYPE html>
                     <div class="label">直线距离 L_line</div>
                     <div class="value" id="line-distance">0.00</div>
                 </div>
+                <div class="metric">
+                    <div class="label">振幅 A</div>
+                    <div class="value" id="curve-amp-metric">0.25</div>
+                </div>
             </div>
         </div>
+    </div>
 
-        <!-- Part 2: Circle Area -->
+    <!-- Scene 3: Circle Approximation -->
+    <div id="scene3" class="scene" style="display: none;">
         <div class="demo-panel">
             <div class="canvas-container">
                 <canvas id="circle-canvas"></canvas>
@@ -301,9 +348,8 @@ i<!DOCTYPE html>
         </div>
     </div>
 
-    <!-- Scene 3: 3D Three.js -->
-    <div id="scene3" class="scene" style="display: none;">
-        <!-- Part 1: 球棱锥体积（四棱锥逼近） -->
+    <!-- Scene 4: 球棱锥体积（四棱锥逼近） -->
+    <div id="scene4" class="scene" style="display: none;">
         <div class="demo-panel">
             <div class="canvas-container" id="surface-canvas-container"></div>
             <div class="ui-controls">
@@ -329,8 +375,10 @@ i<!DOCTYPE html>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Part 2: Sphere Volume -->
+    <!-- Scene 5: Sphere Volume -->
+    <div id="scene5" class="scene" style="display: none;">
         <div class="demo-panel">
             <div class="canvas-container" id="volume-canvas-container"></div>
             <div class="ui-controls">
@@ -360,35 +408,219 @@ i<!DOCTYPE html>
 </div>
 
 <script>
+    const searchParams = new URLSearchParams(window.location.search);
+    const isEmbedMode = searchParams.get('embed') === '1';
+    if (isEmbedMode) {
+        document.body.classList.add('embed-mode');
+    }
+
+    let isPresentationMode = false;
+    let lastReadoutAt = 0;
+
+    function postToHost(payload) {
+        if (window.parent && window.parent !== window) {
+            window.parent.postMessage(payload, '*');
+        }
+    }
+
+    function emitStatus(text) {
+        postToHost({ type: 'legacy:status', text });
+    }
+
+    function sceneLabel(sceneNum) {
+        if (sceneNum === 1) return '场景一：v-t积分';
+        if (sceneNum === 2) return '场景二：曲线逼近';
+        if (sceneNum === 3) return '场景三：圆周逼近';
+        if (sceneNum === 4) return '场景四：球棱锥体积';
+        if (sceneNum === 5) return '场景五：球体积逼近';
+        return '未知场景';
+    }
+
+    function buildReadout() {
+        const metricValue = (id, fallback = '--') => {
+            const node = document.getElementById(id);
+            if (!(node instanceof HTMLElement)) return fallback;
+            const text = (node.textContent ?? '').trim();
+            return text.length > 0 ? text : fallback;
+        };
+
+        const activeLabel = sceneLabel(activeScene);
+        if (activeScene === 1) {
+            return [
+                { label: '场景', value: activeLabel },
+                { label: '显示模式', value: isPresentationMode ? '演示模式' : '标准模式' },
+                { label: '矩形总面积', value: metricValue('vt-rect-area') },
+                { label: '积分面积', value: metricValue('vt-true-area') },
+                { label: '绝对误差', value: metricValue('vt-abs-err') },
+                { label: '相对误差', value: metricValue('vt-rel-err') }
+            ];
+        }
+        if (activeScene === 2) {
+            return [
+                { label: '场景', value: activeLabel },
+                { label: '显示模式', value: isPresentationMode ? '演示模式' : '标准模式' },
+                { label: '曲线振幅', value: metricValue('curve-amp-metric') },
+                { label: '曲线长度', value: metricValue('curve-length') },
+                { label: '直线距离', value: metricValue('line-distance') }
+            ];
+        }
+        if (activeScene === 3) {
+            return [
+                { label: '场景', value: activeLabel },
+                { label: '显示模式', value: isPresentationMode ? '演示模式' : '标准模式' },
+                { label: '多边形周长差', value: metricValue('circumference-diff') }
+            ];
+        }
+        if (activeScene === 4) {
+            return [
+                { label: '场景', value: activeLabel },
+                { label: '显示模式', value: isPresentationMode ? '演示模式' : '标准模式' },
+                { label: '球棱锥真实体积', value: metricValue('surface-true') },
+                { label: '球棱锥近似体积', value: metricValue('square-area') },
+                { label: '相对误差', value: metricValue('surface-rel') }
+            ];
+        }
+        return [
+            { label: '场景', value: activeLabel },
+            { label: '显示模式', value: isPresentationMode ? '演示模式' : '标准模式' },
+            { label: '球体真实体积', value: metricValue('sphere-volume') },
+            { label: '球体近似体积', value: metricValue('approx-volume') },
+            { label: '相对误差', value: metricValue('volume-rel') }
+        ];
+    }
+
+    function emitReadout(force = false) {
+        const now = performance.now();
+        if (!force && now - lastReadoutAt < 120) return;
+        lastReadoutAt = now;
+        postToHost({ type: 'legacy:readout', items: buildReadout() });
+    }
+
+    function setRangeOrInputValue(id, value, eventName = 'input') {
+        const input = document.getElementById(id);
+        if (!(input instanceof HTMLInputElement)) return;
+        input.value = String(value);
+        input.dispatchEvent(new Event(eventName, { bubbles: true }));
+    }
+
+    function setSelectValue(id, value) {
+        const select = document.getElementById(id);
+        if (!(select instanceof HTMLSelectElement)) return;
+        select.value = String(value);
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function applyPresentationMode(presentation) {
+        isPresentationMode = presentation;
+        document.body.classList.toggle('presentation-mode', presentation);
+        window.dispatchEvent(new Event('resize'));
+        emitStatus(presentation ? '演示模式已应用到微元法场景' : '标准模式已应用到微元法场景');
+        emitReadout(true);
+    }
+
+    function resetDefaults() {
+        switchScene(1);
+        setRangeOrInputValue('vt-rects', 10);
+        setRangeOrInputValue('vt-time', 5);
+        setSelectValue('vt-method', 'mid');
+        setRangeOrInputValue('curve-amp-slider', 0.25);
+        setRangeOrInputValue('n-slider', 8);
+        setRangeOrInputValue('side-length-slider', 1);
+        setRangeOrInputValue('division-slider', 16);
+        emitStatus('已重置微元法默认参数');
+        emitReadout(true);
+    }
+
+    function stepScene() {
+        if (activeScene === 1) {
+            const slider = document.getElementById('vt-rects');
+            if (slider instanceof HTMLInputElement) {
+                const next = Math.min(Number(slider.max), Number(slider.value) + 1);
+                setRangeOrInputValue('vt-rects', next);
+            }
+            emitStatus('已对场景一执行单步细化');
+            return;
+        }
+        if (activeScene === 2) {
+            const slider = document.getElementById('curve-amp-slider');
+            if (slider instanceof HTMLInputElement) {
+                const current = Number(slider.value);
+                const max = Number(slider.max);
+                const next = Math.min(max, Math.round((current + 0.01) * 100) / 100);
+                setRangeOrInputValue('curve-amp-slider', next);
+            }
+            emitStatus('已对场景二执行单步细化');
+            return;
+        }
+        if (activeScene === 3) {
+            const slider = document.getElementById('n-slider');
+            if (slider instanceof HTMLInputElement) {
+                const next = Math.min(Number(slider.max), Number(slider.value) + 1);
+                setRangeOrInputValue('n-slider', next);
+            }
+            emitStatus('已对场景三执行单步细化');
+            return;
+        }
+        if (activeScene === 4) {
+            const slider = document.getElementById('side-length-slider');
+            if (slider instanceof HTMLInputElement) {
+                const next = Math.min(Number(slider.max), Number(slider.value) + 1);
+                setRangeOrInputValue('side-length-slider', next);
+            }
+            emitStatus('已对场景四执行单步细化');
+            return;
+        }
+        const slider = document.getElementById('division-slider');
+        if (slider instanceof HTMLInputElement) {
+            const next = Math.min(Number(slider.max), Number(slider.value) + 1);
+            setRangeOrInputValue('division-slider', next);
+        }
+        emitStatus('已对场景五执行单步细化');
+    }
+
     // --- General Setup & Scene Switching ---
     const scene1Button = document.getElementById('show-scene1');
     const scene2Button = document.getElementById('show-scene2');
     const scene3Button = document.getElementById('show-scene3');
+    const scene4Button = document.getElementById('show-scene4');
+    const scene5Button = document.getElementById('show-scene5');
     const scene1Div = document.getElementById('scene1');
     const scene2Div = document.getElementById('scene2');
     const scene3Div = document.getElementById('scene3');
+    const scene4Div = document.getElementById('scene4');
+    const scene5Div = document.getElementById('scene5');
+
+    const sceneButtons = [scene1Button, scene2Button, scene3Button, scene4Button, scene5Button];
+    const sceneDivs = [scene1Div, scene2Div, scene3Div, scene4Div, scene5Div];
 
     let activeScene = 1;
 
     function switchScene(sceneNum) {
-        if (sceneNum === activeScene) return;
+        if (sceneNum === activeScene || sceneNum < 1 || sceneNum > 5) return;
 
-        scene1Div.style.display = sceneNum === 1 ? 'flex' : 'none';
-        scene2Div.style.display = sceneNum === 2 ? 'flex' : 'none';
-        scene3Div.style.display = sceneNum === 3 ? 'flex' : 'none';
+        sceneDivs.forEach((sceneDiv, index) => {
+            sceneDiv.style.display = sceneNum === index + 1 ? 'flex' : 'none';
+        });
 
-        scene1Button.classList.toggle('active', sceneNum === 1);
-        scene2Button.classList.toggle('active', sceneNum === 2);
-        scene3Button.classList.toggle('active', sceneNum === 3);
+        sceneButtons.forEach((button, index) => {
+            button.classList.toggle('active', sceneNum === index + 1);
+        });
         
         activeScene = sceneNum;
+        if ((sceneNum === 4 || sceneNum === 5) && typeof initScene3Apps === 'function') {
+            initScene3Apps(sceneNum);
+        }
         // When switching, we might need to resize canvases
         window.dispatchEvent(new Event('resize'));
+        emitStatus(`已切换到${sceneLabel(sceneNum)}`);
+        emitReadout(true);
     }
 
     scene1Button.addEventListener('click', () => switchScene(1));
     scene2Button.addEventListener('click', () => switchScene(2));
     scene3Button.addEventListener('click', () => switchScene(3));
+    scene4Button.addEventListener('click', () => switchScene(4));
+    scene5Button.addEventListener('click', () => switchScene(5));
 
     // Store reference to scene3 init function
     let initScene3Apps = null;
@@ -565,6 +797,7 @@ i<!DOCTYPE html>
             trueAreaSpan.textContent = trueArea.toFixed(4);
             absErrSpan.textContent = absErr.toFixed(4);
             relErrSpan.textContent = relErr.toFixed(2) + '%';
+            emitReadout();
         }
 
         funcInput.addEventListener('input', draw);
@@ -582,6 +815,9 @@ i<!DOCTYPE html>
         const curveCtx = curveCanvas.getContext('2d');
         const curveLengthSpan = document.getElementById('curve-length');
         const lineDistanceSpan = document.getElementById('line-distance');
+        const curveAmpSlider = document.getElementById('curve-amp-slider');
+        const curveAmpValueSpan = document.getElementById('curve-amp-value');
+        const curveAmpMetric = document.getElementById('curve-amp-metric');
 
         let curveWidth, curveHeight;
         const curvePoints = [
@@ -590,8 +826,17 @@ i<!DOCTYPE html>
         ];
         let draggingPoint = null;
 
-        // The curve function: y = a * sin(x/b) + c
-        const curveFunc = (x) => 0.25 * Math.sin(x * 10) + 0.5;
+        let curveAmplitude = 0.25;
+        const curveFrequency = 10;
+
+        // The curve function: y = A * sin(kx) + c
+        const curveFunc = (x) => curveAmplitude * Math.sin(x * curveFrequency) + 0.5;
+
+        function syncCurveAmplitudeLabel() {
+            const text = curveAmplitude.toFixed(2);
+            if (curveAmpValueSpan) curveAmpValueSpan.textContent = text;
+            if (curveAmpMetric) curveAmpMetric.textContent = text;
+        }
 
         function resizeCurveCanvas() {
             const rect = curveCanvas.parentElement.getBoundingClientRect();
@@ -640,6 +885,7 @@ i<!DOCTYPE html>
             });
             
             updateCurveCalculations();
+            emitReadout();
         }
         
         function updateCurveCalculations() {
@@ -695,6 +941,17 @@ i<!DOCTYPE html>
             draggingPoint.x = Math.max(0, Math.min(1, mouseX / curveWidth));
             drawCurveScene();
         });
+
+        if (curveAmpSlider instanceof HTMLInputElement) {
+            curveAmpSlider.addEventListener('input', () => {
+                const next = Math.min(0.45, Math.max(0.05, Math.round(Number(curveAmpSlider.value) * 100) / 100));
+                curveAmplitude = next;
+                curveAmpSlider.value = String(next);
+                syncCurveAmplitudeLabel();
+                drawCurveScene();
+            });
+            syncCurveAmplitudeLabel();
+        }
 
         window.addEventListener('mouseup', () => {
             draggingPoint = null;
@@ -776,6 +1033,7 @@ i<!DOCTYPE html>
             });
             
             updateCircleCalculations();
+            emitReadout();
         }
         
         function updateCircleCalculations() {
@@ -792,10 +1050,10 @@ i<!DOCTYPE html>
         resizeCurveCanvas();
         resizeCircleCanvas();
         window.addEventListener('resize', () => {
-               if (activeScene === 2) {
+            if (activeScene === 2 || activeScene === 3) {
                 resizeCurveCanvas();
                 resizeCircleCanvas();
-             }
+            }
         });
     })();
 
@@ -1140,6 +1398,7 @@ i<!DOCTYPE html>
                     const rel = trueSphericalVolume !== 0 ? (diff / Math.abs(trueSphericalVolume)) * 100 : 0;
                     surfaceRelSpan.textContent = rel.toFixed(2) + '%';
                 }
+                emitReadout();
             }
 
             // 初始绘制球棱锥轮廓
@@ -1384,6 +1643,7 @@ i<!DOCTYPE html>
                         const rel = trueVolume !== 0 ? (diff / Math.abs(trueVolume)) * 100 : 0;
                         relSpan.textContent = rel.toFixed(2) + '%';
                     }
+                    emitReadout();
                 } catch (error) {
                     console.error('Error creating polyhedron:', error);
                 }
@@ -1405,41 +1665,172 @@ i<!DOCTYPE html>
             return { renderer, camera };
         }
         
-        function initApps() {
-            surfaceApp = initSurfaceApp();
-            volumeApp = initVolumeApp();
+        function initApps(targetScene) {
+            if ((targetScene === 4 || targetScene == null) && !surfaceApp) {
+                surfaceApp = initSurfaceApp();
+            }
+            if ((targetScene === 5 || targetScene == null) && !volumeApp) {
+                volumeApp = initVolumeApp();
+            }
         }
 
         // Export init function for external access
         initScene3Apps = initApps;
 
-        // Initialize when scene3 is shown
-        scene3Button.addEventListener('click', () => {
-            if (!surfaceApp || !volumeApp) {
-                setTimeout(() => {
-                    initApps();
-                }, 100);
+        scene4Button.addEventListener('click', () => {
+            if (!surfaceApp) {
+                setTimeout(() => initApps(4), 100);
+            }
+        });
+        scene5Button.addEventListener('click', () => {
+            if (!volumeApp) {
+                setTimeout(() => initApps(5), 100);
             }
         });
         
         window.addEventListener('resize', () => {
-            if (activeScene !== 3 || !surfaceApp || !volumeApp) return;
+            if (activeScene !== 4 && activeScene !== 5) return;
 
             const surfaceContainer = document.getElementById('surface-canvas-container');
-            if (surfaceContainer) {
+            if (surfaceApp && surfaceContainer) {
                 surfaceApp.camera.aspect = surfaceContainer.clientWidth / surfaceContainer.clientHeight;
                 surfaceApp.camera.updateProjectionMatrix();
                 surfaceApp.renderer.setSize(surfaceContainer.clientWidth, surfaceContainer.clientHeight);
             }
 
             const volumeContainer = document.getElementById('volume-canvas-container');
-            if (volumeContainer) {
+            if (volumeApp && volumeContainer) {
                 volumeApp.camera.aspect = volumeContainer.clientWidth / volumeContainer.clientHeight;
                 volumeApp.camera.updateProjectionMatrix();
                 volumeApp.renderer.setSize(volumeContainer.clientWidth, volumeContainer.clientHeight);
             }
         });
     })();
+
+    function resolveSceneNumber(sceneValue) {
+        if (sceneValue === 'scene1' || sceneValue === 1 || sceneValue === '1') return 1;
+        if (sceneValue === 'scene2' || sceneValue === 2 || sceneValue === '2') return 2;
+        if (sceneValue === 'scene3' || sceneValue === 3 || sceneValue === '3') return 3;
+        if (sceneValue === 'scene4' || sceneValue === 4 || sceneValue === '4') return 4;
+        if (sceneValue === 'scene5' || sceneValue === 5 || sceneValue === '5') return 5;
+        return null;
+    }
+
+    function applyExternalCommand(command, payload) {
+        if (command === 'set-scene') {
+            const sceneNum = resolveSceneNumber(payload && payload.scene);
+            if (sceneNum !== null) {
+                switchScene(sceneNum);
+            }
+            return;
+        }
+
+        if (command === 'scene1:set-func') {
+            if (payload && typeof payload.expr === 'string') {
+                const input = document.getElementById('vt-func');
+                if (input instanceof HTMLTextAreaElement) {
+                    input.value = payload.expr;
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            }
+            return;
+        }
+
+        if (command === 'scene1:set-rects') {
+            if (payload && typeof payload.value === 'number') {
+                setRangeOrInputValue('vt-rects', Math.max(2, Math.min(40, Math.round(payload.value))));
+            }
+            return;
+        }
+
+        if (command === 'scene1:set-time') {
+            if (payload && typeof payload.value === 'number') {
+                const time = Math.max(1, Math.min(10, Math.round(payload.value * 2) / 2));
+                setRangeOrInputValue('vt-time', time);
+            }
+            return;
+        }
+
+        if (command === 'scene1:set-method') {
+            if (payload && typeof payload.method === 'string') {
+                setSelectValue('vt-method', payload.method);
+            }
+            return;
+        }
+
+        if (command === 'scene2:set-amplitude') {
+            if (payload && typeof payload.value === 'number') {
+                const amplitude = Math.max(0.05, Math.min(0.45, Math.round(payload.value * 100) / 100));
+                setRangeOrInputValue('curve-amp-slider', amplitude);
+            }
+            return;
+        }
+
+        if (command === 'scene3:set-n' || command === 'scene2:set-n') {
+            if (payload && typeof payload.value === 'number') {
+                setRangeOrInputValue('n-slider', Math.max(3, Math.min(200, Math.round(payload.value))));
+            }
+            return;
+        }
+
+        if (command === 'scene4:set-surface-n' || command === 'scene3:set-surface-n') {
+            if (payload && typeof payload.value === 'number') {
+                setRangeOrInputValue('side-length-slider', Math.max(1, Math.min(10, Math.round(payload.value))));
+            }
+            return;
+        }
+
+        if (command === 'scene5:set-division' || command === 'scene3:set-division') {
+            if (payload && typeof payload.value === 'number') {
+                setRangeOrInputValue('division-slider', Math.max(16, Math.min(100, Math.round(payload.value))));
+            }
+            return;
+        }
+
+        if (command === 'set-presentation') {
+            const presentation = !!(payload && payload.presentation === true);
+            applyPresentationMode(presentation);
+            return;
+        }
+
+        if (command === 'reset') {
+            resetDefaults();
+        }
+    }
+
+    window.addEventListener('message', (event) => {
+        if (event.origin !== window.location.origin) {
+            return;
+        }
+        const data = event.data;
+        if (!data || typeof data !== 'object') {
+            return;
+        }
+
+        if (data.type === 'legacy:control') {
+            if (data.action === 'reset') {
+                resetDefaults();
+                return;
+            }
+            if (data.action === 'step') {
+                stepScene();
+                emitReadout(true);
+                return;
+            }
+            if (data.action === 'play' || data.action === 'pause') {
+                emitStatus('该场景采用参数交互，播放/暂停不改变状态');
+                emitReadout(true);
+            }
+            return;
+        }
+
+        if (data.type === 'legacy:control-ext' && typeof data.command === 'string') {
+            applyExternalCommand(data.command, data.payload);
+        }
+    });
+
+    emitStatus(isEmbedMode ? '2D 动画嵌入模式已就绪' : '场景已就绪');
+    emitReadout(true);
 </script>
 
 </body>

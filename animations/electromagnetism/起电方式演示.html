@@ -17,6 +17,8 @@
             --neutral-color: #6c757d; /* 中性物体颜色 */
             --surface-color: #2c344a; /* 控件区域背景色 */
             --font-family: 'Inter', sans-serif;
+            --stroke-scale: 1;
+            --label-scale: 1;
         }
 
         body {
@@ -169,7 +171,7 @@
         }
         .atom-text {
             font-family: var(--font-family);
-            font-size: 16px;
+            font-size: calc(16px * var(--label-scale));
             font-weight: bold;
             fill: var(--bg-color);
             user-select: none;
@@ -177,12 +179,12 @@
         }
         .object-body {
             stroke: var(--neutral-color);
-            stroke-width: 3;
+            stroke-width: calc(3px * var(--stroke-scale));
             fill: rgba(108, 117, 125, 0.2);
             transition: transform 1s ease-in-out;
         }
         .net-charge-indicator {
-            font-size: 150px;
+            font-size: calc(150px * var(--label-scale));
             font-weight: bold;
             opacity: 0;
             transition: opacity 1s ease-in-out, transform 1s ease-in-out;
@@ -190,7 +192,7 @@
             transform-origin: center;
         }
         .polarization-indicator {
-            font-size: 120px;
+            font-size: calc(120px * var(--label-scale));
             font-weight: bold;
             opacity: 0;
             transition: opacity 1s ease-in-out;
@@ -206,6 +208,32 @@
         }
         .glowing {
             animation: glow 1s infinite;
+        }
+
+        body.embed-mode {
+            padding: 0;
+        }
+        body.embed-mode #container {
+            max-width: none;
+            width: 100vw;
+            height: 100vh;
+            padding: 0;
+            border-radius: 0;
+            background: transparent;
+            box-shadow: none;
+            gap: 0;
+        }
+        body.embed-mode h1,
+        body.embed-mode #main-controls,
+        body.embed-mode #explanation-text,
+        body.embed-mode #scene-actions {
+            display: none !important;
+        }
+        body.embed-mode #animation-canvas {
+            width: 100vw;
+            height: 100vh;
+            aspect-ratio: auto;
+            border-radius: 0;
         }
     </style>
 </head>
@@ -241,13 +269,26 @@
         };
         const SVG_NS = "http://www.w3.org/2000/svg";
         let currentScene = null;
+        const sceneLabels = {
+            friction: '摩擦起电',
+            induction: '感应起电',
+            contact: '接触起电'
+        };
+        const searchParams = new URLSearchParams(window.location.search);
+        const isEmbedMode = searchParams.get('embed') === '1';
+        let lastReadoutAt = 0;
+        let isPresentationMode = false;
         
         // V4.2 全局常量: 统一原子模型
-        const ATOM_CONFIG = {
+        let ATOM_CONFIG = {
             nucleusRadius: 10,
             electronRadius: 4,
             animationDuration: 1.2  // 秒
         };
+
+        if (isEmbedMode) {
+            document.body.classList.add('embed-mode');
+        }
 
         function createSVGElement(tag, attrs, textContent) {
             const el = document.createElementNS(SVG_NS, tag);
@@ -282,6 +323,42 @@
             return Math.max(min, Math.min(max, value));
         }
 
+        function postToHost(payload) {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage(payload, '*');
+            }
+        }
+
+        function emitStatus(text) {
+            postToHost({ type: 'legacy:status', text });
+        }
+
+        function activeActionLabel() {
+            const candidate = sceneActionsContainer.querySelector('button:not(:disabled)');
+            if (!(candidate instanceof HTMLButtonElement)) {
+                return '无';
+            }
+            return candidate.textContent || '无';
+        }
+
+        function buildReadout() {
+            return [
+                { label: '场景', value: currentScene ? sceneLabels[currentScene] : '未选择' },
+                { label: '显示模式', value: isPresentationMode ? '演示模式' : '标准模式' },
+                { label: '下一步动作', value: activeActionLabel() },
+                { label: '说明', value: explanationText.textContent || '无' }
+            ];
+        }
+
+        function emitReadout(force = false) {
+            const now = performance.now();
+            if (!force && now - lastReadoutAt < 120) {
+                return;
+            }
+            lastReadoutAt = now;
+            postToHost({ type: 'legacy:readout', items: buildReadout() });
+        }
+
         function clearCanvas() {
             svg.innerHTML = '';
             sceneActionsContainer.innerHTML = '';
@@ -298,6 +375,7 @@
             setTimeout(() => {
                 explanationText.textContent = text;
                 explanationText.style.opacity = 1;
+                emitReadout(true);
             }, 300);
         }
 
@@ -308,9 +386,58 @@
             button.onclick = () => {
                 sceneActionsContainer.querySelectorAll('button').forEach(b => b.disabled = true);
                 onClick();
+                emitReadout(true);
             };
             sceneActionsContainer.appendChild(button);
+            emitReadout(true);
             return button;
+        }
+
+        function setupScene(sceneName) {
+            if (sceneName === 'friction') {
+                setupFrictionScene();
+                return;
+            }
+            if (sceneName === 'induction') {
+                setupInductionScene();
+                return;
+            }
+            if (sceneName === 'contact') {
+                setupContactScene();
+            }
+        }
+
+        function resetCurrentScene() {
+            if (!currentScene) {
+                setupFrictionScene();
+                return;
+            }
+            setupScene(currentScene);
+        }
+
+        function runCurrentSceneAction() {
+            const button = sceneActionsContainer.querySelector('button:not(:disabled)');
+            if (!(button instanceof HTMLButtonElement)) {
+                emitStatus('当前场景没有可执行的下一步动作');
+                emitReadout(true);
+                return;
+            }
+            const label = button.textContent || '下一步';
+            button.click();
+            emitStatus(`已执行场景动作：${label}`);
+            emitReadout(true);
+        }
+
+        function applyPresentationMode(presentation) {
+            isPresentationMode = presentation;
+            ATOM_CONFIG = presentation
+                ? { nucleusRadius: 14, electronRadius: 6, animationDuration: 1.5 }
+                : { nucleusRadius: 10, electronRadius: 4, animationDuration: 1.2 };
+            document.documentElement.style.setProperty('--stroke-scale', presentation ? '1.35' : '1');
+            document.documentElement.style.setProperty('--label-scale', presentation ? '1.2' : '1');
+            resetCurrentScene();
+            emitStatus(presentation ? '演示模式已应用到动画' : '标准模式已应用到动画');
+            emitReadout(true);
         }
         
         // ====================================================================
@@ -321,6 +448,7 @@
             currentScene = 'friction';
             updateActiveButton('friction');
             setExplanation('初始状态：丝绸和玻璃棒都是电中性的。');
+            emitStatus('已切换到摩擦起电场景');
 
             const rod = createSVGElement('g', { id: 'rod', transform: 'translate(500, 150)' });
             rod.appendChild(createSVGElement('rect', { x: 0, y: 0, width: 40, height: 200, rx: 20, class: 'object-body' }));
@@ -433,7 +561,9 @@
                 rodCharge.style.opacity = '1';
                 rodCharge.setAttribute('x', '620');   // 玻璃棒中心: 600 + 20
                 rodCharge.setAttribute('y', '300');   // 玻璃棒下方
+                emitReadout(true);
             }
+            emitReadout(true);
         }
 
         // ====================================================================
@@ -444,6 +574,7 @@
             currentScene = 'induction';
             updateActiveButton('induction');
             setExplanation('初始状态：金属导体呈电中性，自由电子均匀分布。');
+            emitStatus('已切换到感应起电场景');
 
             const conductor = createSVGElement('g', { id: 'conductor' });
             conductor.appendChild(createSVGElement('rect', { x: 200, y: 175, width: 400, height: 100, rx: 10, class: 'object-body' }));
@@ -533,6 +664,7 @@
                     }, 400);
                 }, 300);
             });
+            emitReadout(true);
         }
 
         // ====================================================================
@@ -543,7 +675,8 @@
             currentScene = 'contact';
             updateActiveButton('contact');
             setExplanation('初始状态：金属球 A 带负电，金属球 B 不带电。');
-            const sphereRadius = 60;
+            emitStatus('已切换到接触起电场景');
+            const sphereRadius = isPresentationMode ? 70 : 60;
 
             // V4.1 优化: 辅助函数，创建金属球内部的晶格结构（背景），增加物理真实感
             function createLattice(group, radius) {
@@ -555,8 +688,8 @@
                         // 简单的圆形裁剪，只在球体内绘制
                         if (Math.sqrt(cx*cx + cy*cy) < radius - 15) {
                             group.append(
-                                createSVGElement('circle', { cx: cx, cy: cy, r: 4, class: 'nucleus', 'fill-opacity': '0.3' }),
-                                createSVGElement('circle', { cx: cx + 6, cy: cy, r: 2, class: 'electron', 'fill-opacity': '0.3' })
+                                createSVGElement('circle', { cx: cx, cy: cy, r: Math.max(2, ATOM_CONFIG.nucleusRadius * 0.4), class: 'nucleus', 'fill-opacity': '0.3' }),
+                                createSVGElement('circle', { cx: cx + 6, cy: cy, r: Math.max(1.5, ATOM_CONFIG.electronRadius * 0.5), class: 'electron', 'fill-opacity': '0.3' })
                             );
                         }
                     }
@@ -653,30 +786,85 @@
             function showFinalState() {
                 setExplanation('结果：两个金属球都带上了同种电荷（负电）。');
                 sphereA.setAttribute('transform', 'translate(250, 225)');
+                emitReadout(true);
             }
+            emitReadout(true);
         }
 
         // ====================================================================
         // 主事件监听器
         // ====================================================================
-        mainButtons.friction.addEventListener('click', setupFrictionScene);
-        mainButtons.induction.addEventListener('click', setupInductionScene);
-        mainButtons.contact.addEventListener('click', setupContactScene);
-
+        mainButtons.friction.addEventListener('click', () => setupScene('friction'));
+        mainButtons.induction.addEventListener('click', () => setupScene('induction'));
+        mainButtons.contact.addEventListener('click', () => setupScene('contact'));
         mainButtons.reset.addEventListener('click', () => {
-            if (currentScene) {
-                switch (currentScene) {
-                    case 'friction': setupFrictionScene(); break;
-                    case 'induction': setupInductionScene(); break;
-                    case 'contact': setupContactScene(); break;
+            resetCurrentScene();
+            emitStatus('已重置当前场景');
+            emitReadout(true);
+        });
+
+        function applyExternalCommand(command, payload) {
+            if (command === 'set-scene') {
+                const scene = payload && typeof payload.scene === 'string' ? payload.scene : '';
+                if (scene in sceneLabels) {
+                    setupScene(scene);
                 }
+                return;
+            }
+
+            if (command === 'run-scene-action') {
+                runCurrentSceneAction();
+                return;
+            }
+
+            if (command === 'set-presentation') {
+                const presentation = !!(payload && payload.presentation === true);
+                applyPresentationMode(presentation);
+                return;
+            }
+
+            if (command === 'reset') {
+                resetCurrentScene();
+                emitStatus('已重置当前场景');
+                emitReadout(true);
+            }
+        }
+
+        window.addEventListener('message', (event) => {
+            if (event.origin !== window.location.origin) {
+                return;
+            }
+            const data = event.data;
+            if (!data || typeof data !== 'object') {
+                return;
+            }
+
+            if (data.type === 'legacy:control') {
+                if (data.action === 'reset') {
+                    resetCurrentScene();
+                    emitStatus('已重置当前场景');
+                    emitReadout(true);
+                    return;
+                }
+                if (data.action === 'play' || data.action === 'step') {
+                    runCurrentSceneAction();
+                    return;
+                }
+                if (data.action === 'pause') {
+                    emitStatus('该场景无连续播放机制，可执行“下一步动作”');
+                }
+                return;
+            }
+
+            if (data.type === 'legacy:control-ext' && typeof data.command === 'string') {
+                applyExternalCommand(data.command, data.payload);
             }
         });
 
         // 初始加载
-        window.onload = () => {
-            setupFrictionScene(); // 默认加载第一个场景
-        };
+        setupScene('friction');
+        emitReadout(true);
+        emitStatus(isEmbedMode ? '2D 动画嵌入模式已就绪' : '场景已就绪');
 
     </script>
 </body>

@@ -33,22 +33,6 @@ export function resolveLegacy2DSceneIdFromSearch(search: string): string | null 
 
 export const legacyAnimationCatalog: LegacyAnimationRecord[] = [
   {
-    id: 'legacy-potential-3d',
-    title: '交互式点电荷电势能演示',
-    sourcePath: '/animations/electromagnetism/3D 生成电势图.html',
-    keywords: ['电磁学', '电势能', '3D'],
-    objective: '点电荷电势能三维可视化',
-    dimension: '3d'
-  },
-  {
-    id: 'legacy-equipotential-3d',
-    title: '3D Charge Equipotential Surfaces - Debug',
-    sourcePath: '/animations/electromagnetism/3D电荷等势面.html',
-    keywords: ['电磁学', '等势面', '3D'],
-    objective: '多电荷等势面三维观察',
-    dimension: '3d'
-  },
-  {
     id: 'legacy-field-lines',
     title: '电场矢量到电场线的演化',
     sourcePath: '/animations/electromagnetism/模拟电场线.html',
@@ -76,9 +60,9 @@ export const legacyAnimationCatalog: LegacyAnimationRecord[] = [
     id: 'legacy-vt-integral',
     title: '微元法交互式动画',
     sourcePath: '/animations/mechanics/v-t面积与微元法.html',
-    keywords: ['力学', '微元法', '3D'],
+    keywords: ['力学', '微元法', '多场景'],
     objective: '微元法中的曲线、曲面与体积演示',
-    dimension: '3d'
+    dimension: '2d'
   },
   {
     id: 'legacy-chase-meet',

@@ -2,14 +2,20 @@ import '../ui/teaching-demo.css';
 import { createControlPanel } from '../ui/control-panel';
 import { createLegacy2DAdapter } from './legacy-2d-adapter';
 import { getLegacy2DAnimationById, resolveLegacy2DSceneIdFromSearch } from './legacy-animation-catalog';
+import { createLegacyChaseMeetControls } from './legacy-chase-meet-controls';
+import { createLegacyElectrificationControls } from './legacy-electrification-controls';
+import { createLegacyEmfAnalogyControls } from './legacy-emf-analogy-controls';
+import { createLegacyFieldLinesControls } from './legacy-field-lines-controls';
+import { createLegacyVtIntegralControls } from './legacy-vt-integral-controls';
+import { toNavFileName } from './navigation-display';
 import { createPageLifecycle } from './page-lifecycle';
 import { createTeachingDemoShell, type ReadoutItem } from './teaching-demo-shell';
 
 function fallbackReadout(sourcePath: string): ReadoutItem[] {
   return [
     { label: '迁移方式', value: '2D 兼容中间层' },
-    { label: '控制协议', value: 'postMessage legacy:control' },
-    { label: '原始页面', value: sourcePath }
+    { label: '控制协议', value: 'postMessage legacy:control + legacy:control-ext' },
+    { label: '原始页面', value: toNavFileName(sourcePath) }
   ];
 }
 
@@ -34,6 +40,7 @@ function boot(): void {
     defaultMode: 'normal'
   });
   const lifecycle = createPageLifecycle();
+  lifecycle.onDispose(() => shell.dispose());
 
   shell.stageCanvas.remove();
   shell.setReadout(fallbackReadout(scene.sourcePath));
@@ -43,6 +50,7 @@ function boot(): void {
     stageSlot: shell.stageSlot,
     sceneId: scene.id,
     sourcePath: scene.sourcePath,
+    embedQuery: { embed: '1', host: 'teaching-shell' },
     onReadout: (items) => {
       shell.setReadout(items);
     },
@@ -52,29 +60,75 @@ function boot(): void {
   });
   lifecycle.onDispose(() => adapter.dispose());
 
-  createControlPanel(shell.controlSlot, {
-    onPlay: () => {
-      adapter.sendControl('play');
-      shell.setStatus('已发送播放指令');
-    },
-    onPause: () => {
-      adapter.sendControl('pause');
-      shell.setStatus('已发送暂停指令');
-    },
-    onReset: () => {
-      adapter.sendControl('reset');
-      shell.setStatus('已发送重置指令');
-      shell.setReadout(fallbackReadout(scene.sourcePath));
-    },
-    onStep: () => {
-      adapter.sendControl('step');
-      shell.setStatus('已发送单步指令');
-    }
-  });
+  if (scene.id === 'legacy-field-lines') {
+    const controls = createLegacyFieldLinesControls({
+      container: shell.controlSlot,
+      onCommand: (command, payload) => adapter.sendControlExt(command, payload),
+      onStatus: (text) => shell.setStatus(text)
+    });
+    lifecycle.onDispose(() => controls.dispose());
+    shell.setStatus('左侧可调场景、密度与电荷参数');
+  } else if (scene.id === 'legacy-emf-analogy') {
+    const controls = createLegacyEmfAnalogyControls({
+      container: shell.controlSlot,
+      onCommand: (command, payload) => adapter.sendControlExt(command, payload),
+      onStatus: (text) => shell.setStatus(text)
+    });
+    lifecycle.onDispose(() => controls.dispose());
+    shell.setStatus('左侧可调通路开关与水龙头开度');
+  } else if (scene.id === 'legacy-electrification') {
+    const controls = createLegacyElectrificationControls({
+      container: shell.controlSlot,
+      onCommand: (command, payload) => adapter.sendControlExt(command, payload),
+      onStatus: (text) => shell.setStatus(text)
+    });
+    lifecycle.onDispose(() => controls.dispose());
+    shell.setStatus('左侧可切换起电场景并执行步骤');
+  } else if (scene.id === 'legacy-chase-meet') {
+    const controls = createLegacyChaseMeetControls({
+      container: shell.controlSlot,
+      onControl: (action) => adapter.sendControl(action),
+      onCommand: (command, payload) => adapter.sendControlExt(command, payload),
+      onStatus: (text) => shell.setStatus(text)
+    });
+    lifecycle.onDispose(() => controls.dispose());
+    shell.setStatus('左侧可配置参数并控制播放流程');
+  } else if (scene.id === 'legacy-vt-integral') {
+    const controls = createLegacyVtIntegralControls({
+      container: shell.controlSlot,
+      onCommand: (command, payload) => adapter.sendControlExt(command, payload),
+      onStatus: (text) => shell.setStatus(text)
+    });
+    lifecycle.onDispose(() => controls.dispose());
+    shell.setStatus('左侧可切换微元法子场景并调参');
+  } else {
+    createControlPanel(shell.controlSlot, {
+      onPlay: () => {
+        adapter.sendControl('play');
+        shell.setStatus('已发送播放指令');
+      },
+      onPause: () => {
+        adapter.sendControl('pause');
+        shell.setStatus('已发送暂停指令');
+      },
+      onReset: () => {
+        adapter.sendControl('reset');
+        shell.setStatus('已发送重置指令');
+        shell.setReadout(fallbackReadout(scene.sourcePath));
+      },
+      onStep: () => {
+        adapter.sendControl('step');
+        shell.setStatus('已发送单步指令');
+      }
+    });
+  }
+
+  adapter.sendControlExt('set-presentation', { presentation: shell.getMode() === 'presentation' });
 
   const onModeToggle = () => {
     const nextMode = shell.getMode() === 'normal' ? 'presentation' : 'normal';
     shell.setMode(nextMode);
+    adapter.sendControlExt('set-presentation', { presentation: nextMode === 'presentation' });
     shell.setStatus(nextMode === 'presentation' ? '演示模式已开启' : '标准模式已开启');
   };
   shell.modeButton.addEventListener('click', onModeToggle);

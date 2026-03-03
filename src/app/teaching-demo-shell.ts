@@ -1,4 +1,5 @@
 import { getTeachingStandards, type TeachingMode } from './teaching-standards';
+import { clampSidebarWidth, getDefaultSidebarWidth } from './sidebar-layout';
 
 export type ReadoutItem = {
   label: string;
@@ -16,6 +17,7 @@ export type TeachingDemoShell = {
   setReadout: (items: ReadoutItem[]) => void;
   setMode: (mode: TeachingMode) => void;
   getMode: () => TeachingMode;
+  dispose: () => void;
 };
 
 export type CreateTeachingDemoShellOptions = {
@@ -50,6 +52,7 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
         <header class="teaching-header">
           <h1 class="teaching-title">${options.title}</h1>
           <p class="teaching-subtitle">${options.subtitle}</p>
+          <button type="button" class="sidebar-toggle sidebar-toggle-inline">隐藏控制面板</button>
         </header>
         <section class="teaching-card">
           <h2 class="teaching-card-title">显示模式</h2>
@@ -69,10 +72,12 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
           <p class="status-text">就绪</p>
         </section>
       </aside>
+      <div class="sidebar-resizer" role="separator" aria-orientation="vertical" aria-label="调整控制面板宽度"></div>
       <section class="teaching-stage-panel">
+        <button type="button" class="sidebar-toggle sidebar-toggle-float">隐藏控制面板</button>
         <div class="stage-frame">
           <div class="stage-slot">
-            <canvas class="stage-canvas" aria-label="2D 物理动画演示区域"></canvas>
+            <canvas class="stage-canvas" aria-label="2D 教学动画演示区域"></canvas>
           </div>
         </div>
       </section>
@@ -86,6 +91,10 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
   const stageSlot = options.mount.querySelector('.stage-slot');
   const stageCanvas = options.mount.querySelector('.stage-canvas');
   const modeButton = options.mount.querySelector('.mode-toggle');
+  const sidebar = options.mount.querySelector('.teaching-sidebar');
+  const resizer = options.mount.querySelector('.sidebar-resizer');
+  const inlineToggle = options.mount.querySelector('.sidebar-toggle-inline');
+  const floatToggle = options.mount.querySelector('.sidebar-toggle-float');
 
   if (
     !(root instanceof HTMLElement) ||
@@ -94,10 +103,87 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
     !(statusText instanceof HTMLElement) ||
     !(stageSlot instanceof HTMLElement) ||
     !(stageCanvas instanceof HTMLCanvasElement) ||
-    !(modeButton instanceof HTMLButtonElement)
+    !(modeButton instanceof HTMLButtonElement) ||
+    !(sidebar instanceof HTMLElement) ||
+    !(resizer instanceof HTMLElement) ||
+    !(inlineToggle instanceof HTMLButtonElement) ||
+    !(floatToggle instanceof HTMLButtonElement)
   ) {
     throw new Error('Failed to mount teaching demo shell');
   }
+
+  const sidebarMinPx = 300;
+  const sidebarMaxPx = 700;
+  let collapsed = false;
+  let dragging = false;
+
+  const setSidebarWidth = (widthPx: number): void => {
+    const clamped = clampSidebarWidth(widthPx, sidebarMinPx, sidebarMaxPx);
+    root.style.setProperty('--sidebar-width', `${clamped}px`);
+  };
+
+  const updateSidebarToggleLabel = (): void => {
+    const label = collapsed ? '显示控制面板' : '隐藏控制面板';
+    inlineToggle.textContent = label;
+    floatToggle.textContent = label;
+    inlineToggle.setAttribute('aria-pressed', String(collapsed));
+    floatToggle.setAttribute('aria-pressed', String(collapsed));
+  };
+
+  const setSidebarCollapsed = (next: boolean): void => {
+    collapsed = next;
+    root.classList.toggle('is-sidebar-collapsed', collapsed);
+    updateSidebarToggleLabel();
+  };
+
+  const onToggleSidebar = (): void => {
+    setSidebarCollapsed(!collapsed);
+  };
+
+  const onResizerPointerDown = (event: PointerEvent): void => {
+    if (collapsed || window.matchMedia('(max-width: 1180px)').matches) return;
+    dragging = true;
+    const pointerId = event.pointerId;
+    const startX = event.clientX;
+    const startWidth = sidebar.getBoundingClientRect().width;
+
+    const onPointerMove = (moveEvent: PointerEvent): void => {
+      if (!dragging) return;
+      const delta = moveEvent.clientX - startX;
+      setSidebarWidth(startWidth + delta);
+    };
+
+    const onPointerUp = (): void => {
+      dragging = false;
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      try {
+        resizer.releasePointerCapture(pointerId);
+      } catch {
+        // Ignore if pointer capture wasn't acquired.
+      }
+    };
+
+    try {
+      resizer.setPointerCapture(pointerId);
+    } catch {
+      // Ignore unsupported pointer capture.
+    }
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+  };
+
+  const onViewportResize = (): void => {
+    if (window.matchMedia('(max-width: 1180px)').matches) {
+      setSidebarCollapsed(false);
+      root.style.removeProperty('--sidebar-width');
+      return;
+    }
+    if (!root.style.getPropertyValue('--sidebar-width')) {
+      setSidebarWidth(getDefaultSidebarWidth(window.innerWidth, sidebarMinPx, sidebarMaxPx));
+    }
+  };
 
   const setMode = (mode: TeachingMode): void => {
     modeState.value = mode;
@@ -108,6 +194,13 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
 
   applyModeTokens(root, modeState.value);
   modeButton.setAttribute('aria-pressed', String(modeState.value === 'presentation'));
+  setSidebarWidth(getDefaultSidebarWidth(window.innerWidth, sidebarMinPx, sidebarMaxPx));
+  updateSidebarToggleLabel();
+
+  inlineToggle.addEventListener('click', onToggleSidebar);
+  floatToggle.addEventListener('click', onToggleSidebar);
+  resizer.addEventListener('pointerdown', onResizerPointerDown);
+  window.addEventListener('resize', onViewportResize);
 
   return {
     root,
@@ -131,6 +224,12 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
     setMode,
     getMode() {
       return modeState.value;
+    },
+    dispose() {
+      inlineToggle.removeEventListener('click', onToggleSidebar);
+      floatToggle.removeEventListener('click', onToggleSidebar);
+      resizer.removeEventListener('pointerdown', onResizerPointerDown);
+      window.removeEventListener('resize', onViewportResize);
     }
   };
 }

@@ -317,6 +317,36 @@ body[data-theme="light"] .buttons button.secondary {
     align-items: flex-start;
   }
 }
+
+body.embed-mode {
+  overflow: hidden;
+}
+body.embed-mode .page {
+  max-width: none;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 8px;
+}
+body.embed-mode .page-header,
+body.embed-mode .subtitle,
+body.embed-mode .controls,
+body.embed-mode .info-panel {
+  display: none !important;
+}
+body.embed-mode .stack {
+  height: 100%;
+  gap: 8px;
+}
+body.embed-mode .stack > .card {
+  padding: 8px;
+}
+body.embed-mode .stack > .card:first-child {
+  flex: 0 0 50%;
+}
+body.embed-mode .stack > .card:nth-child(2) {
+  flex: 1 1 auto;
+}
 </style>
 </head>
 <body data-theme="dark">
@@ -421,6 +451,22 @@ body[data-theme="light"] .buttons button.secondary {
 
 <script>
 (function () {
+  const searchParams = new URLSearchParams(window.location.search);
+  const isEmbedMode = searchParams.get('embed') === '1';
+  if (isEmbedMode) {
+    document.body.classList.add('embed-mode');
+  }
+
+  function postToHost(payload) {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage(payload, '*');
+    }
+  }
+
+  function emitStatus(text) {
+    postToHost({ type: 'legacy:status', text });
+  }
+
   const dpr = window.devicePixelRatio || 1;
 
   const motionCanvas = document.getElementById('motionCanvas');
@@ -443,10 +489,17 @@ body[data-theme="light"] .buttons button.secondary {
   function initSize() {
     const pageEl = document.querySelector('.page');
     const pageWidth = pageEl ? pageEl.clientWidth : window.innerWidth;
-    const totalWidth = Math.min(pageWidth - 32, 1100);
+    const horizontalPadding = isEmbedMode ? 16 : 32;
+    const totalWidth = Math.max(320, Math.min(pageWidth - horizontalPadding, isEmbedMode ? window.innerWidth : 1100));
 
-    const trackHeight = Math.min(320, Math.max(190, window.innerHeight * 0.35));
-    const graphHeight = Math.min(260, Math.max(170, window.innerHeight * 0.28));
+    const trackHeight = Math.min(
+      isPresentationMode ? 460 : 380,
+      Math.max(isPresentationMode ? 240 : 190, window.innerHeight * (isEmbedMode ? 0.42 : 0.35))
+    );
+    const graphHeight = Math.min(
+      isPresentationMode ? 340 : 260,
+      Math.max(isPresentationMode ? 220 : 170, window.innerHeight * (isEmbedMode ? 0.34 : 0.28))
+    );
 
     motionCtx = resizeCanvas(motionCanvas, totalWidth, trackHeight);
     xCtx = resizeCanvas(xCanvas, totalWidth / 2 - 8, graphHeight);
@@ -480,6 +533,30 @@ body[data-theme="light"] .buttons button.secondary {
   let lastTimestamp = null;
   let samples = [];
   let bounds = { minX: 0, maxX: 1, maxSpeed: 1 };
+  let lastReadoutAt = 0;
+  let isPresentationMode = false;
+
+  function buildReadout() {
+    return [
+      { label: '显示模式', value: isPresentationMode ? '演示模式' : '标准模式' },
+      { label: '动画状态', value: running ? '运行中' : '已暂停' },
+      { label: '当前时间', value: (infoTime.textContent || '0.00') + ' s' },
+      { label: '当前距离', value: (infoDistance.textContent || '0.00') + ' m' },
+      { label: '相遇信息', value: infoMeet.textContent || '尚未相遇' },
+      { label: 'T / Δt', value: `${T.toFixed(2)} / ${dt.toFixed(3)}` },
+      { label: 'vA(t)', value: vExprAInput.value.trim() || '0' },
+      { label: 'vB(t)', value: vExprBInput.value.trim() || '0' }
+    ];
+  }
+
+  function emitReadout(force) {
+    const now = performance.now();
+    if (!force && now - lastReadoutAt < 120) {
+      return;
+    }
+    lastReadoutAt = now;
+    postToHost({ type: 'legacy:readout', items: buildReadout() });
+  }
 
   function createVelocityFunction(expr) {
     expr = (expr || '').trim();
@@ -565,6 +642,7 @@ body[data-theme="light"] .buttons button.secondary {
   function drawScene() {
     const cssW = motionCanvas.width / dpr;
     const cssH = motionCanvas.height / dpr;
+    const visualScale = isPresentationMode ? 1.35 : 1;
 
     motionCtx.clearRect(0, 0, cssW, cssH);
 
@@ -583,13 +661,13 @@ body[data-theme="light"] .buttons button.secondary {
     const mid = cssH * 0.55;
 
     motionCtx.strokeStyle = isLight ? 'rgba(15,23,42,0.35)' : 'rgba(255,255,255,0.22)';
-    motionCtx.lineWidth = 2;
+    motionCtx.lineWidth = 2 * visualScale;
     motionCtx.beginPath();
     motionCtx.moveTo(20, mid);
     motionCtx.lineTo(cssW - 20, mid);
     motionCtx.stroke();
 
-    motionCtx.font = '12px system-ui';
+    motionCtx.font = `${Math.round(12 * visualScale)}px system-ui`;
     motionCtx.fillStyle = isLight ? 'rgba(30,41,59,0.8)' : 'rgba(226,232,240,0.8)';
     motionCtx.textAlign = 'center';
     const steps = 8;
@@ -598,10 +676,10 @@ body[data-theme="light"] .buttons button.secondary {
       const x = 20 + (cssW - 40) * ratio;
       const worldX = bounds.minX + ratio * (bounds.maxX - bounds.minX);
       motionCtx.beginPath();
-      motionCtx.moveTo(x, mid - 6);
-      motionCtx.lineTo(x, mid + 6);
+      motionCtx.moveTo(x, mid - 6 * visualScale);
+      motionCtx.lineTo(x, mid + 6 * visualScale);
       motionCtx.stroke();
-      motionCtx.fillText(worldX.toFixed(1), x, mid + 20);
+      motionCtx.fillText(worldX.toFixed(1), x, mid + 20 * visualScale);
     }
 
     let sCurrent = samples[0];
@@ -617,7 +695,7 @@ body[data-theme="light"] .buttons button.secondary {
     const screenXB = worldToScreenX(xB);
 
     function drawObject(x, color, label) {
-      const r = 16;
+      const r = 16 * visualScale;
       const glowColor = color.replace('1)', '0.23)');
       motionCtx.beginPath();
       motionCtx.fillStyle = glowColor;
@@ -629,21 +707,22 @@ body[data-theme="light"] .buttons button.secondary {
       motionCtx.arc(x, mid, r, 0, Math.PI * 2);
       motionCtx.fill();
 
-      motionCtx.lineWidth = 2;
+      motionCtx.lineWidth = 2 * visualScale;
       motionCtx.strokeStyle = isLight ? 'rgba(15,23,42,0.9)' : 'rgba(248,250,252,0.95)';
       motionCtx.stroke();
 
       motionCtx.fillStyle = isLight ? '#111827' : '#f9fafb';
-      motionCtx.font = 'bold 15px system-ui';
+      motionCtx.font = `bold ${Math.round(15 * visualScale)}px system-ui`;
       motionCtx.textAlign = 'center';
-      motionCtx.fillText(label, x, mid - 22);
+      motionCtx.fillText(label, x, mid - 22 * visualScale);
     }
 
     drawObject(screenXA, 'rgba(96,165,250,1)', 'A');
     drawObject(screenXB, 'rgba(248,113,113,1)', 'B');
 
-    motionCtx.setLineDash([6, 4]);
+    motionCtx.setLineDash([6 * visualScale, 4 * visualScale]);
     motionCtx.strokeStyle = isLight ? 'rgba(30,64,175,0.7)' : 'rgba(148,163,184,0.7)';
+    motionCtx.lineWidth = 1.5 * visualScale;
     motionCtx.beginPath();
     motionCtx.moveTo(screenXA, mid);
     motionCtx.lineTo(screenXB, mid);
@@ -652,12 +731,12 @@ body[data-theme="light"] .buttons button.secondary {
 
     const distance = Math.abs(xB - xA);
     motionCtx.fillStyle = isLight ? '#111827' : '#f9fafb';
-    motionCtx.font = '13px system-ui';
+    motionCtx.font = `${Math.round(13 * visualScale)}px system-ui`;
     motionCtx.textAlign = 'center';
     motionCtx.fillText(
       '距离 = ' + distance.toFixed(2) + ' m',
       (screenXA + screenXB) / 2,
-      mid - 34
+      mid - 34 * visualScale
     );
 
     infoTime.textContent = t.toFixed(2);
@@ -695,9 +774,11 @@ body[data-theme="light"] .buttons button.secondary {
     infoMeet.textContent = meetMsg;
 
     drawGraphs();
+    emitReadout();
   }
 
 function drawGraphs() {
+  const visualScale = isPresentationMode ? 1.35 : 1;
   const xW = xCanvas.width / dpr;
   const xH = xCanvas.height / dpr;
   const vW = vCanvas.width / dpr;
@@ -706,25 +787,25 @@ function drawGraphs() {
   xCtx.clearRect(0, 0, xW, xH);
   vCtx.clearRect(0, 0, vW, vH);
 
-  const paddingLeft = 40;
-  const paddingBottom = 30;
-  const paddingTop = 10;
-  const paddingRight = 10;
+  const paddingLeft = 40 * visualScale;
+  const paddingBottom = 30 * visualScale;
+  const paddingTop = 10 * visualScale;
+  const paddingRight = 10 * visualScale;
 
   function drawAxis(ctx, w, h, yLabel) {
     ctx.save();
     ctx.strokeStyle = 'rgba(148,163,184,0.8)';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1.2 * visualScale;
     ctx.beginPath();
     ctx.moveTo(paddingLeft, paddingTop);
     ctx.lineTo(paddingLeft, h - paddingBottom);
     ctx.lineTo(w - paddingRight, h - paddingBottom);
     ctx.stroke();
 
-    ctx.font = '12px system-ui';
+    ctx.font = `${Math.round(12 * visualScale)}px system-ui`;
     ctx.fillStyle = 'rgba(148,163,184,0.9)';
     ctx.textAlign = 'left';
-    ctx.fillText(yLabel, 6, paddingTop + 12);
+    ctx.fillText(yLabel, 6, paddingTop + 12 * visualScale);
     ctx.textAlign = 'right';
     ctx.fillText('t / s', w - 6, h - 6);
     ctx.restore();
@@ -761,9 +842,9 @@ function drawGraphs() {
   function drawGrid(ctx, w, h) {
     ctx.save();
     ctx.strokeStyle = 'rgba(148,163,184,0.25)';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([4, 4]);
-    ctx.font = '11px system-ui';
+    ctx.lineWidth = 1 * visualScale;
+    ctx.setLineDash([4 * visualScale, 4 * visualScale]);
+    ctx.font = `${Math.round(11 * visualScale)}px system-ui`;
     ctx.fillStyle = 'rgba(148,163,184,0.9)';
 
     const step = Math.max(1, Math.round(T / 5));
@@ -775,7 +856,7 @@ function drawGraphs() {
       ctx.lineTo(x, h - paddingBottom);
       ctx.stroke();
       ctx.textAlign = 'center';
-      ctx.fillText(tv.toFixed(0), x, h - 10);
+      ctx.fillText(tv.toFixed(0), x, h - 10 * visualScale);
     }
 
     ctx.setLineDash([]);
@@ -788,7 +869,7 @@ function drawGraphs() {
   // 只画到 currentTime 的折线
   function drawPolyline(ctx, w, h, type, colorA, colorB, maxTime) {
     ctx.save();
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.2 * visualScale;
     const grad = ctx.createLinearGradient(
       paddingLeft,
       paddingTop,
@@ -866,7 +947,8 @@ function drawGraphs() {
     const x = tToXpix(currentTime, w);
     ctx.save();
     ctx.strokeStyle = 'rgba(248,250,252,0.85)';
-    ctx.setLineDash([6, 4]);
+    ctx.setLineDash([6 * visualScale, 4 * visualScale]);
+    ctx.lineWidth = 1.6 * visualScale;
     ctx.beginPath();
     ctx.moveTo(x, paddingTop);
     ctx.lineTo(x, h - paddingBottom);
@@ -885,6 +967,7 @@ function drawGraphs() {
     t = 0;
     lastTimestamp = null;
     drawScene();
+    emitReadout(true);
   }
 
   function stepAnimation(timestamp) {
@@ -910,16 +993,21 @@ function drawGraphs() {
       running = true;
       lastTimestamp = null;
       requestAnimationFrame(stepAnimation);
+      emitStatus('动画已开始');
+      emitReadout(true);
     }
   });
 
   document.getElementById('btnPause').addEventListener('click', function () {
     running = false;
+    emitStatus('动画已暂停');
+    emitReadout(true);
   });
 
   document.getElementById('btnReset').addEventListener('click', function () {
     running = false;
     reset();
+    emitStatus('动画已重置');
   });
 
   ['change', 'blur'].forEach(function (ev) {
@@ -941,11 +1029,125 @@ function drawGraphs() {
     document.body.dataset.theme = isLight ? 'dark' : 'light';
     updateThemeButton();
     drawScene();
+    emitStatus(isLight ? '已切换到夜间主题' : '已切换到白天主题');
+    emitReadout(true);
   });
   updateThemeButton();
 
+  function setPresentationMode(presentation) {
+    isPresentationMode = presentation;
+    initSize();
+    drawScene();
+    emitStatus(presentation ? '演示模式已应用到动画' : '标准模式已应用到动画');
+    emitReadout(true);
+  }
+
+  function applyExternalCommand(command, payload) {
+    if (command === 'set-theme') {
+      const theme = payload && typeof payload.theme === 'string' ? payload.theme : '';
+      if (theme === 'dark' || theme === 'light') {
+        document.body.dataset.theme = theme;
+        updateThemeButton();
+        drawScene();
+        emitReadout(true);
+      }
+      return;
+    }
+
+    if (command === 'set-settings') {
+      if (payload && typeof payload === 'object') {
+        if (typeof payload.totalTime === 'number' && isFinite(payload.totalTime)) {
+          totalTimeInput.value = String(Math.max(1, payload.totalTime));
+        }
+        if (typeof payload.dt === 'number' && isFinite(payload.dt)) {
+          dtInput.value = String(Math.max(0.005, payload.dt));
+        }
+        if (typeof payload.x0A === 'number' && isFinite(payload.x0A)) {
+          x0AInput.value = String(payload.x0A);
+        }
+        if (typeof payload.x0B === 'number' && isFinite(payload.x0B)) {
+          x0BInput.value = String(payload.x0B);
+        }
+        if (typeof payload.vExprA === 'string') {
+          vExprAInput.value = payload.vExprA;
+        }
+        if (typeof payload.vExprB === 'string') {
+          vExprBInput.value = payload.vExprB;
+        }
+      }
+      running = false;
+      reset();
+      emitStatus('参数已更新');
+      return;
+    }
+
+    if (command === 'set-presentation') {
+      const presentation = !!(payload && payload.presentation === true);
+      setPresentationMode(presentation);
+      return;
+    }
+
+    if (command === 'reset') {
+      running = false;
+      reset();
+      emitStatus('动画已重置');
+    }
+  }
+
+  window.addEventListener('message', function (event) {
+    if (event.origin !== window.location.origin) {
+      return;
+    }
+    const data = event.data;
+    if (!data || typeof data !== 'object') {
+      return;
+    }
+
+    if (data.type === 'legacy:control') {
+      if (data.action === 'play') {
+        if (!running) {
+          running = true;
+          lastTimestamp = null;
+          requestAnimationFrame(stepAnimation);
+        }
+        emitStatus('动画已开始');
+        emitReadout(true);
+        return;
+      }
+
+      if (data.action === 'pause') {
+        running = false;
+        emitStatus('动画已暂停');
+        emitReadout(true);
+        return;
+      }
+
+      if (data.action === 'reset') {
+        running = false;
+        reset();
+        emitStatus('动画已重置');
+        return;
+      }
+
+      if (data.action === 'step') {
+        running = false;
+        t = Math.min(T, t + dt);
+        drawScene();
+        emitStatus('已单步推进');
+        emitReadout(true);
+      }
+      return;
+    }
+
+    if (data.type === 'legacy:control-ext' && typeof data.command === 'string') {
+      applyExternalCommand(data.command, data.payload);
+    }
+  });
+
   initSize();
   reset();
+  emitStatus(isEmbedMode ? '2D 动画嵌入模式已就绪' : '场景已就绪');
+  emitReadout(true);
 })();
 </script>
 </body>
