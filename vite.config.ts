@@ -14,7 +14,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
-        projectile: resolve(__dirname, 'src/pages/projectile.html')
+        projectile: resolve(__dirname, 'src/pages/projectile.html'),
+        legacy2d: resolve(__dirname, 'src/pages/legacy-2d.html')
       }
     }
   }

@@ -21,6 +21,9 @@ export function createFixedStepper(config: FixedStepperConfig) {
       }
 
       return steps;
+    },
+    reset(): void {
+      accumulator = 0;
     }
   };
 }

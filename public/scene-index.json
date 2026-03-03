@@ -2,32 +2,52 @@
   {
     "id": "legacy-equipotential-3d",
     "title": "3D Charge Equipotential Surfaces - Debug",
-    "path": "animations/electromagnetism/3D电荷等势面.html",
-    "keywords": []
+    "path": "/animations/electromagnetism/3D电荷等势面.html",
+    "keywords": [
+      "电磁学",
+      "等势面",
+      "3D"
+    ]
   },
   {
     "id": "legacy-field-lines",
     "title": "电场矢量到电场线的演化",
-    "path": "animations/electromagnetism/模拟电场线.html",
-    "keywords": []
+    "path": "/src/pages/legacy-2d.html?scene=legacy-field-lines",
+    "keywords": [
+      "电磁学",
+      "电场线",
+      "2D"
+    ]
   },
   {
     "id": "legacy-emf-analogy",
     "title": "电路水流类比模型",
-    "path": "animations/electromagnetism/电动势类比动画.html",
-    "keywords": []
+    "path": "/src/pages/legacy-2d.html?scene=legacy-emf-analogy",
+    "keywords": [
+      "电磁学",
+      "电路",
+      "2D"
+    ]
   },
   {
     "id": "legacy-potential-3d",
     "title": "交互式点电荷电势能演示",
-    "path": "animations/electromagnetism/3D 生成电势图.html",
-    "keywords": []
+    "path": "/animations/electromagnetism/3D 生成电势图.html",
+    "keywords": [
+      "电磁学",
+      "电势能",
+      "3D"
+    ]
   },
   {
     "id": "legacy-electrification",
     "title": "交互式静电起电演示 (V4 最终修复版)",
-    "path": "animations/electromagnetism/起电方式演示.html",
-    "keywords": []
+    "path": "/src/pages/legacy-2d.html?scene=legacy-electrification",
+    "keywords": [
+      "电磁学",
+      "静电",
+      "2D"
+    ]
   },
   {
     "id": "projectile",
@@ -42,13 +62,21 @@
   {
     "id": "legacy-vt-integral",
     "title": "微元法交互式动画",
-    "path": "animations/mechanics/v-t面积与微元法.html",
-    "keywords": []
+    "path": "/animations/mechanics/v-t面积与微元法.html",
+    "keywords": [
+      "力学",
+      "微元法",
+      "3D"
+    ]
   },
   {
     "id": "legacy-chase-meet",
     "title": "追及相遇演示动画",
-    "path": "animations/mechanics/追击相遇问题.html",
-    "keywords": []
+    "path": "/src/pages/legacy-2d.html?scene=legacy-chase-meet",
+    "keywords": [
+      "力学",
+      "追及相遇",
+      "2D"
+    ]
   }
 ]
