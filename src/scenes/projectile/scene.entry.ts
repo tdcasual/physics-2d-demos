@@ -61,5 +61,3 @@ export function createProjectileScene(options: CreateProjectileSceneOptions = {}
     }
   };
 }
-
-export const projectileScene = createProjectileScene();

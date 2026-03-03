@@ -1,8 +1,8 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { legacySceneEntries, type SceneIndexEntry } from '../src/app/scene-index';
-import { projectileMeta } from '../src/scenes/projectile/scene.meta';
+import { sceneRegistry } from '../src/catalog/scene-registry';
+import type { SceneIndexEntry } from '../src/app/scene-index';
 
 export function toSceneIndex(items: Array<Pick<SceneIndexEntry, 'id' | 'title' | 'path'> & Partial<SceneIndexEntry>>): SceneIndexEntry[] {
   const map = new Map<string, SceneIndexEntry>();
@@ -21,15 +21,14 @@ export function toSceneIndex(items: Array<Pick<SceneIndexEntry, 'id' | 'title' |
 }
 
 export async function generateSceneIndex(outFile = resolve(process.cwd(), 'public/scene-index.json')): Promise<SceneIndexEntry[]> {
-  const generated = toSceneIndex([
-    ...legacySceneEntries,
-    {
-      id: projectileMeta.id,
-      title: projectileMeta.title,
-      path: projectileMeta.path,
-      keywords: projectileMeta.keywords
-    }
-  ]);
+  const generated = toSceneIndex(
+    sceneRegistry.map((item) => ({
+      id: item.id,
+      title: item.title,
+      path: item.path,
+      keywords: item.keywords
+    }))
+  );
 
   await mkdir(dirname(outFile), { recursive: true });
   await writeFile(outFile, JSON.stringify(generated, null, 2), 'utf8');

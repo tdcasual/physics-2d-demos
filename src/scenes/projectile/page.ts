@@ -1,4 +1,5 @@
 import '../../ui/teaching-demo.css';
+import { createPageLifecycle } from '../../app/page-lifecycle';
 import { createSceneShell } from '../../app/scene-shell';
 import { createTeachingDemoShell, type ReadoutItem } from '../../app/teaching-demo-shell';
 import { createControlPanel } from '../../ui/control-panel';
@@ -27,6 +28,7 @@ function boot(): void {
     subtitle: '统一教学页面规范：左数据区，右动画演示区',
     defaultMode: 'normal'
   });
+  const lifecycle = createPageLifecycle();
 
   const scene = createProjectileScene({
     canvas: shell.stageCanvas,
@@ -40,6 +42,8 @@ function boot(): void {
     onStep: (dt) => scene.step(dt),
     onRender: () => scene.render()
   });
+  lifecycle.onDispose(() => transport.dispose());
+  lifecycle.onDispose(() => scene.dispose());
 
   createControlPanel(shell.controlSlot, {
     onPlay: () => {
@@ -63,14 +67,17 @@ function boot(): void {
     }
   });
 
-  shell.modeButton.addEventListener('click', () => {
+  const onModeToggle = () => {
     const nextMode = shell.getMode() === 'normal' ? 'presentation' : 'normal';
     shell.setMode(nextMode);
     scene.setMode(nextMode);
     scene.resize();
     scene.render();
     shell.setStatus(nextMode === 'presentation' ? '演示模式已开启' : '标准模式已开启');
-  });
+  };
+
+  shell.modeButton.addEventListener('click', onModeToggle);
+  lifecycle.onDispose(() => shell.modeButton.removeEventListener('click', onModeToggle));
 
   const onResize = () => {
     scene.resize();
@@ -79,6 +86,8 @@ function boot(): void {
 
   window.addEventListener('resize', onResize);
   window.visualViewport?.addEventListener('resize', onResize);
+  lifecycle.onDispose(() => window.removeEventListener('resize', onResize));
+  lifecycle.onDispose(() => window.visualViewport?.removeEventListener('resize', onResize));
 
   let dprQuery: MediaQueryList | null = null;
 
@@ -98,6 +107,11 @@ function boot(): void {
   };
 
   bindDprQuery();
+  lifecycle.onDispose(() => dprQuery?.removeEventListener('change', handleDprChange));
+
+  const onBeforeUnload = () => lifecycle.dispose();
+  window.addEventListener('beforeunload', onBeforeUnload);
+  lifecycle.onDispose(() => window.removeEventListener('beforeunload', onBeforeUnload));
 
   scene.init();
   scene.resize();

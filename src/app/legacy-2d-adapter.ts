@@ -1,4 +1,10 @@
 import type { ReadoutItem } from './teaching-demo-shell';
+import {
+  isLegacyReadoutMessage,
+  isLegacyStatusMessage,
+  isTrustedLegacyOrigin,
+  resolveLegacyTargetOrigin
+} from './legacy-2d-protocol';
 
 export type Legacy2DControlAction = 'play' | 'pause' | 'reset' | 'step';
 
@@ -10,26 +16,9 @@ export type CreateLegacy2DAdapterOptions = {
   onStatus: (text: string) => void;
 };
 
-type LegacyReadoutMessage = {
-  type: 'legacy:readout';
-  items: ReadoutItem[];
-};
-
-type LegacyStatusMessage = {
-  type: 'legacy:status';
-  text: string;
-};
-
-function isReadoutItems(value: unknown): value is ReadoutItem[] {
-  if (!Array.isArray(value)) return false;
-  return value.every((item) => {
-    if (typeof item !== 'object' || item === null) return false;
-    const row = item as Record<string, unknown>;
-    return typeof row.label === 'string' && typeof row.value === 'string';
-  });
-}
-
 export function createLegacy2DAdapter(options: CreateLegacy2DAdapterOptions) {
+  const targetOrigin = resolveLegacyTargetOrigin(options.sourcePath, window.location.origin);
+
   const iframe = document.createElement('iframe');
   iframe.className = 'legacy-iframe';
   iframe.setAttribute('title', `${options.sceneId}-legacy-2d`);
@@ -42,16 +31,15 @@ export function createLegacy2DAdapter(options: CreateLegacy2DAdapterOptions) {
 
   const onMessage = (event: MessageEvent): void => {
     if (event.source !== iframe.contentWindow) return;
-    const payload = event.data as LegacyReadoutMessage | LegacyStatusMessage | unknown;
-    if (!payload || typeof payload !== 'object') return;
-    const record = payload as Record<string, unknown>;
+    if (!isTrustedLegacyOrigin(event.origin, targetOrigin)) return;
 
-    if (record.type === 'legacy:readout' && isReadoutItems(record.items)) {
-      options.onReadout(record.items);
+    if (isLegacyReadoutMessage(event.data)) {
+      options.onReadout(event.data.items);
+      return;
     }
 
-    if (record.type === 'legacy:status' && typeof record.text === 'string') {
-      options.onStatus(record.text);
+    if (isLegacyStatusMessage(event.data)) {
+      options.onStatus(event.data.text);
     }
   };
 
@@ -73,7 +61,7 @@ export function createLegacy2DAdapter(options: CreateLegacy2DAdapterOptions) {
         sceneId: options.sceneId,
         action
       },
-      '*'
+      targetOrigin
     );
   }
 

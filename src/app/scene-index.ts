@@ -1,13 +1,17 @@
-import { toLegacySceneIndexEntries } from './legacy-animation-catalog';
+import { sceneRegistry, type SceneRegistryEntry } from '../catalog/scene-registry';
 
-export type SceneIndexEntry = {
-  id: string;
-  title: string;
-  path: string;
+export type SceneIndexEntry = Pick<SceneRegistryEntry, 'id' | 'title' | 'path'> & {
   keywords?: string[];
 };
 
-export const legacySceneEntries: SceneIndexEntry[] = toLegacySceneIndexEntries();
+export const sceneIndexEntries: SceneIndexEntry[] = sceneRegistry.map((item) => ({
+  id: item.id,
+  title: item.title,
+  path: item.path,
+  keywords: item.keywords
+}));
+
+export const legacySceneEntries: SceneIndexEntry[] = sceneIndexEntries.filter((item) => item.id.startsWith('legacy-'));
 
 export function isSceneIndexEntry(value: unknown): value is SceneIndexEntry {
   if (typeof value !== 'object' || value === null) return false;

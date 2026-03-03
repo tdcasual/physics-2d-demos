@@ -1,5 +1,3 @@
-import type { SceneIndexEntry } from './scene-index';
-
 export type LegacyAnimationDimension = '2d' | '3d';
 
 export type LegacyAnimationRecord = {
@@ -9,6 +7,13 @@ export type LegacyAnimationRecord = {
   keywords: string[];
   objective: string;
   dimension: LegacyAnimationDimension;
+};
+
+export type LegacySceneIndexEntry = {
+  id: string;
+  title: string;
+  path: string;
+  keywords?: string[];
 };
 
 export const LEGACY_2D_HOST_PAGE_PATH = '/src/pages/legacy-2d.html';
@@ -92,7 +97,7 @@ export function getLegacy2DAnimationById(sceneId: string): LegacyAnimationRecord
   return legacy2DAnimationCatalog.find((item) => item.id === sceneId);
 }
 
-export function toLegacySceneIndexEntries(): SceneIndexEntry[] {
+export function toLegacySceneIndexEntries(): LegacySceneIndexEntry[] {
   return legacyAnimationCatalog.map((item) => ({
     id: item.id,
     title: item.title,

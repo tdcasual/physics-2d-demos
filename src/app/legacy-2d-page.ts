@@ -2,6 +2,7 @@ import '../ui/teaching-demo.css';
 import { createControlPanel } from '../ui/control-panel';
 import { createLegacy2DAdapter } from './legacy-2d-adapter';
 import { getLegacy2DAnimationById, resolveLegacy2DSceneIdFromSearch } from './legacy-animation-catalog';
+import { createPageLifecycle } from './page-lifecycle';
 import { createTeachingDemoShell, type ReadoutItem } from './teaching-demo-shell';
 
 function fallbackReadout(sourcePath: string): ReadoutItem[] {
@@ -32,6 +33,7 @@ function boot(): void {
     subtitle: `2D 迁移中间层：${scene.objective}`,
     defaultMode: 'normal'
   });
+  const lifecycle = createPageLifecycle();
 
   shell.stageCanvas.remove();
   shell.setReadout(fallbackReadout(scene.sourcePath));
@@ -48,6 +50,7 @@ function boot(): void {
       shell.setStatus(text);
     }
   });
+  lifecycle.onDispose(() => adapter.dispose());
 
   createControlPanel(shell.controlSlot, {
     onPlay: () => {
@@ -69,13 +72,17 @@ function boot(): void {
     }
   });
 
-  shell.modeButton.addEventListener('click', () => {
+  const onModeToggle = () => {
     const nextMode = shell.getMode() === 'normal' ? 'presentation' : 'normal';
     shell.setMode(nextMode);
     shell.setStatus(nextMode === 'presentation' ? '演示模式已开启' : '标准模式已开启');
-  });
+  };
+  shell.modeButton.addEventListener('click', onModeToggle);
+  lifecycle.onDispose(() => shell.modeButton.removeEventListener('click', onModeToggle));
 
-  window.addEventListener('beforeunload', () => adapter.dispose());
+  const onBeforeUnload = () => lifecycle.dispose();
+  window.addEventListener('beforeunload', onBeforeUnload);
+  lifecycle.onDispose(() => window.removeEventListener('beforeunload', onBeforeUnload));
 }
 
 boot();

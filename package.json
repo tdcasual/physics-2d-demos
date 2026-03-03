@@ -10,7 +10,7 @@
     "test": "vitest run",
     "lint": "eslint . --ext .ts,.tsx,.js",
     "format": "prettier --write .",
-    "generate:index": "node --import tsx scripts/generate-scene-index.ts",
+    "generate:index": "node --import tsx scripts/generate-scene-index.ts && node --import tsx scripts/generate-nav-fallback.ts",
     "test:visual": "playwright test",
     "test:visual:update": "playwright test --update-snapshots"
   },

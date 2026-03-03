@@ -37,7 +37,7 @@ pnpm build
 - `pnpm dev`：本地开发
 - `pnpm build`：构建产物到 `dist/`
 - `pnpm preview`：预览构建结果
-- `pnpm generate:index`：从代码生成 `public/scene-index.json`
+- `pnpm generate:index`：从场景注册表生成 `public/scene-index.json` 与 `public/scene-fallback.js`
 - `pnpm lint`：静态检查
 - `pnpm test`：Vitest（不包含 visual）
 - `pnpm test:visual`：Playwright 视觉回归
@@ -99,6 +99,16 @@ tests/
 - adapter：`src/app/legacy-2d-adapter.ts`
 
 适配器通过 `postMessage` 发送 `legacy:control` 指令，并接收可选的 `legacy:readout / legacy:status` 回传。
+
+## Architecture Boundaries
+
+为避免后续 2D 场景扩展时引入隐式耦合，当前仓库使用测试 + lint 双重边界约束：
+
+- `src/scenes/**/scene.sim.ts` 只允许关注物理与状态，不允许导入 `src/app` 与 `src/ui`。
+- `src/core/**` 作为底层通用能力，不允许导入 `src/app/**`，也不允许依赖 `src/scenes/**/page*` 页面入口。
+- 场景导航数据以 `src/catalog/scene-registry.ts` 作为单一源，构建脚本统一生成导航 JSON 与 HTML fallback 脚本。
+
+新增场景时如果触发这些限制，优先通过分层拆分模块解决，而不是放宽规则。
 
 ## Adding a New 2D Scene
 
