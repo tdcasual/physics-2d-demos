@@ -1,7 +1,12 @@
-import { buildLegacy2DHostPath, legacyAnimationCatalog, type LegacyAnimationDimension } from '../app/legacy-animation-catalog';
+import { chaseMeetMeta } from '../scenes/chase-meet/scene.meta';
+import { electrificationMeta } from '../scenes/electrification/scene.meta';
+import { emfAnalogyMeta } from '../scenes/emf-analogy/scene.meta';
+import { fieldLinesMeta } from '../scenes/field-lines/scene.meta';
 import { projectileMeta } from '../scenes/projectile/scene.meta';
+import { vtIntegralMeta } from '../scenes/vt-integral/scene.meta';
 
-export type SceneRegistrySource = 'modern' | 'legacy';
+export type SceneRegistrySource = 'modern';
+export type SceneRegistryDimension = '2d' | '3d';
 
 export type SceneRegistryEntry = {
   id: string;
@@ -9,10 +14,10 @@ export type SceneRegistryEntry = {
   path: string;
   keywords: string[];
   source: SceneRegistrySource;
-  dimension: LegacyAnimationDimension;
+  dimension: SceneRegistryDimension;
 };
 
-const modernScenes: SceneRegistryEntry[] = [
+export const sceneRegistry: SceneRegistryEntry[] = [
   {
     id: projectileMeta.id,
     title: projectileMeta.title,
@@ -20,16 +25,45 @@ const modernScenes: SceneRegistryEntry[] = [
     keywords: projectileMeta.keywords,
     source: 'modern',
     dimension: '2d'
+  },
+  {
+    id: chaseMeetMeta.id,
+    title: chaseMeetMeta.title,
+    path: chaseMeetMeta.path,
+    keywords: chaseMeetMeta.keywords,
+    source: 'modern',
+    dimension: '2d'
+  },
+  {
+    id: fieldLinesMeta.id,
+    title: fieldLinesMeta.title,
+    path: fieldLinesMeta.path,
+    keywords: fieldLinesMeta.keywords,
+    source: 'modern',
+    dimension: '2d'
+  },
+  {
+    id: emfAnalogyMeta.id,
+    title: emfAnalogyMeta.title,
+    path: emfAnalogyMeta.path,
+    keywords: emfAnalogyMeta.keywords,
+    source: 'modern',
+    dimension: '2d'
+  },
+  {
+    id: electrificationMeta.id,
+    title: electrificationMeta.title,
+    path: electrificationMeta.path,
+    keywords: electrificationMeta.keywords,
+    source: 'modern',
+    dimension: '2d'
+  },
+  {
+    id: vtIntegralMeta.id,
+    title: vtIntegralMeta.title,
+    path: vtIntegralMeta.path,
+    keywords: vtIntegralMeta.keywords,
+    source: 'modern',
+    dimension: '2d'
   }
 ];
-
-const legacyScenes: SceneRegistryEntry[] = legacyAnimationCatalog.map((item) => ({
-  id: item.id,
-  title: item.title,
-  path: item.dimension === '2d' ? buildLegacy2DHostPath(item.id) : item.sourcePath,
-  keywords: item.keywords,
-  source: 'legacy',
-  dimension: item.dimension
-}));
-
-export const sceneRegistry: SceneRegistryEntry[] = [...modernScenes, ...legacyScenes];

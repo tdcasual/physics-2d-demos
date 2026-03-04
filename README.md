@@ -1,11 +1,6 @@
 # Teaching Demo Hub
 
-面向课堂演示的多学科动画静态站点。当前仓库同时包含：
-
-- `legacy` 动画资源：`animations/` 下的历史单文件 HTML（2D/3D 混合）
-- `foundation` 新架构：TypeScript + Vite + 测试门禁，支持批量生产 2D 教学动画
-
-项目目标是把可维护的 2D 教学规范先跑通，再逐步迁移 legacy 页面。
+面向课堂演示的多学科动画静态站点。当前仓库已统一为单一 modern 架构：TypeScript + Vite + 测试门禁，用于批量生产 2D 教学动画。
 
 ## Tech Stack
 
@@ -46,23 +41,25 @@ pnpm build
 ## Project Layout
 
 ```text
-animations/                    # legacy 静态动画页面
 src/
   app/
     scene-index.ts             # 导航索引模型 + fallback
     scene-shell.ts             # 统一仿真时钟/播放控制
     teaching-demo-shell.ts     # 教学页壳层（左数据右演示）
-    legacy-2d-*.ts             # legacy 2D 中间层适配
   core/
     fixed-step.ts              # 固定步长步进器
     rng.ts                     # 可复现实验随机数
     guards.ts                  # 参数守卫
     high-dpi-canvas.ts         # 高 DPI 画布缩放
   scenes/
-    projectile/                # 示例 2D 场景
+    projectile/                # 抛体运动
+    chase-meet/                # 追及相遇
+    field-lines/               # 电场线
+    emf-analogy/               # 电路水流类比
+    electrification/           # 起电方式
+    vt-integral/               # 微元法多场景
   pages/
-    projectile.html            # 新架构场景页面
-    legacy-2d.html             # legacy 2D 宿主页
+    *.html                     # modern 场景页面
   ui/
     control-panel.ts           # 通用播放/暂停/重置/单步控件
     teaching-demo.css          # 教学页视觉规范
@@ -78,7 +75,11 @@ tests/
 
 - `/`：可爱导航页（读取 `scene-index.json`，支持搜索）
 - `/src/pages/projectile.html`：标准化 2D 抛体演示页
-- `/src/pages/legacy-2d.html?scene=<scene-id>`：legacy 2D 统一宿主页
+- `/src/pages/chase-meet.html`：追及相遇演示页
+- `/src/pages/field-lines.html`：电场线演示页
+- `/src/pages/emf-analogy.html`：电路水流类比页
+- `/src/pages/electrification.html`：起电方式演示页
+- `/src/pages/vt-integral.html`：微元法演示页
 
 ## Teaching Demo Standard (2D)
 
@@ -89,16 +90,6 @@ tests/
   - presentation 面向 1080P 投影，字号、线宽、关键点尺寸统一放大
 - 控制协议：统一 `播放/暂停/重置/单步`
 - 清晰度：`high-dpi-canvas` 自动适配 `devicePixelRatio`
-
-## Legacy 2D Adapter
-
-为了不阻断已有内容，legacy 2D 页面通过中间层接入新壳层：
-
-- catalog：`src/app/legacy-animation-catalog.ts`
-- host page：`src/pages/legacy-2d.html`
-- adapter：`src/app/legacy-2d-adapter.ts`
-
-适配器通过 `postMessage` 发送 `legacy:control` 指令，并接收可选的 `legacy:readout / legacy:status` 回传。
 
 ## Architecture Boundaries
 

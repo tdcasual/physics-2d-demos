@@ -7,7 +7,7 @@ describe('toNavFileName', () => {
   });
 
   it('strips query/hash from html route', () => {
-    expect(toNavFileName('/src/pages/legacy-2d.html?scene=legacy-field-lines#demo')).toBe('legacy-2d.html');
+    expect(toNavFileName('/src/pages/chase-meet.html?mode=presentation#demo')).toBe('chase-meet.html');
   });
 
   it('falls back safely for empty path', () => {

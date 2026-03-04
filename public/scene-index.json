@@ -1,8 +1,8 @@
 [
   {
-    "id": "legacy-field-lines",
-    "title": "电场矢量到电场线的演化",
-    "path": "/src/pages/legacy-2d.html?scene=legacy-field-lines",
+    "id": "field-lines",
+    "title": "电场矢量到电场线的演化（2D）",
+    "path": "/src/pages/field-lines.html",
     "keywords": [
       "电磁学",
       "电场线",
@@ -10,22 +10,24 @@
     ]
   },
   {
-    "id": "legacy-emf-analogy",
-    "title": "电路水流类比模型",
-    "path": "/src/pages/legacy-2d.html?scene=legacy-emf-analogy",
+    "id": "emf-analogy",
+    "title": "电路水流类比模型（2D）",
+    "path": "/src/pages/emf-analogy.html",
     "keywords": [
       "电磁学",
       "电路",
+      "电动势",
       "2D"
     ]
   },
   {
-    "id": "legacy-electrification",
-    "title": "交互式静电起电演示 (V4 最终修复版)",
-    "path": "/src/pages/legacy-2d.html?scene=legacy-electrification",
+    "id": "electrification",
+    "title": "交互式静电起电演示（2D）",
+    "path": "/src/pages/electrification.html",
     "keywords": [
       "电磁学",
       "静电",
+      "起电",
       "2D"
     ]
   },
@@ -40,19 +42,20 @@
     ]
   },
   {
-    "id": "legacy-vt-integral",
-    "title": "微元法交互式动画",
-    "path": "/src/pages/legacy-2d.html?scene=legacy-vt-integral",
+    "id": "vt-integral",
+    "title": "微元法交互式动画（2D）",
+    "path": "/src/pages/vt-integral.html",
     "keywords": [
       "力学",
       "微元法",
-      "多场景"
+      "多场景",
+      "2D"
     ]
   },
   {
-    "id": "legacy-chase-meet",
-    "title": "追及相遇演示动画",
-    "path": "/src/pages/legacy-2d.html?scene=legacy-chase-meet",
+    "id": "chase-meet",
+    "title": "追及相遇演示动画（2D）",
+    "path": "/src/pages/chase-meet.html",
     "keywords": [
       "力学",
       "追及相遇",

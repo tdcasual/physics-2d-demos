@@ -1,0 +1,179 @@
+import '../../ui/teaching-demo.css';
+import { createPageLifecycle } from '../../app/page-lifecycle';
+import { createSceneShell } from '../../app/scene-shell';
+import { createTeachingDemoShell, type ReadoutItem } from '../../app/teaching-demo-shell';
+import { createVtIntegralControls } from './controls';
+import { createVtIntegralScene } from './scene.entry';
+import type { VtIntegralSnapshot } from './scene.sim';
+
+function sceneLabel(scene: VtIntegralSnapshot['params']['scene']): string {
+  if (scene === 'scene1') return '场景一：v-t积分';
+  if (scene === 'scene2') return '场景二：曲线逼近';
+  if (scene === 'scene3') return '场景三：圆周逼近';
+  if (scene === 'scene4') return '场景四：球棱锥体积';
+  return '场景五：球体积逼近';
+}
+
+function formatReadout(snapshot: VtIntegralSnapshot, mode: 'normal' | 'presentation'): ReadoutItem[] {
+  const head = [
+    { label: '场景', value: sceneLabel(snapshot.params.scene) },
+    { label: '显示模式', value: mode === 'presentation' ? '演示模式' : '标准模式' }
+  ];
+  if (snapshot.params.scene === 'scene1') {
+    return [
+      ...head,
+      { label: '矩形总面积', value: snapshot.metrics.rectArea.toFixed(3) },
+      { label: '积分面积', value: snapshot.metrics.trueArea.toFixed(3) },
+      { label: '绝对误差', value: snapshot.metrics.absErr.toFixed(3) },
+      { label: '相对误差', value: `${(snapshot.metrics.relErr * 100).toFixed(2)}%` }
+    ];
+  }
+  if (snapshot.params.scene === 'scene2') {
+    return [
+      ...head,
+      { label: '曲线振幅', value: snapshot.params.curveAmplitude.toFixed(2) },
+      { label: '曲线长度', value: snapshot.metrics.curveLength.toFixed(3) },
+      { label: '直线距离', value: snapshot.metrics.lineDistance.toFixed(3) }
+    ];
+  }
+  if (snapshot.params.scene === 'scene3') {
+    return [...head, { label: '多边形周长差', value: snapshot.metrics.circumferenceDiff.toFixed(4) }];
+  }
+  if (snapshot.params.scene === 'scene4') {
+    return [
+      ...head,
+      { label: '球棱锥真实体积', value: snapshot.metrics.surfaceTrue.toFixed(4) },
+      { label: '球棱锥近似体积', value: snapshot.metrics.surfaceApprox.toFixed(4) },
+      { label: '相对误差', value: `${(snapshot.metrics.surfaceRelErr * 100).toFixed(2)}%` }
+    ];
+  }
+  return [
+    ...head,
+    { label: '球体真实体积', value: snapshot.metrics.sphereTrue.toFixed(4) },
+    { label: '球体近似体积', value: snapshot.metrics.sphereApprox.toFixed(4) },
+    { label: '相对误差', value: `${(snapshot.metrics.sphereRelErr * 100).toFixed(2)}%` }
+  ];
+}
+
+function boot(): void {
+  const mount = document.getElementById('app');
+  if (!(mount instanceof HTMLElement)) {
+    throw new Error('Missing #app container');
+  }
+
+  const shell = createTeachingDemoShell({
+    mount,
+    title: '微元法交互式动画（2D）',
+    subtitle: '多场景积分与逼近演示',
+    defaultMode: 'normal'
+  });
+  const lifecycle = createPageLifecycle();
+  lifecycle.onDispose(() => shell.dispose());
+
+  let snapshot: VtIntegralSnapshot | null = null;
+
+  const scene = createVtIntegralScene({
+    canvas: shell.stageCanvas,
+    mode: shell.getMode(),
+    theme: shell.getTheme(),
+    onReadout: (next) => {
+      snapshot = next;
+      shell.setReadout(formatReadout(next, shell.getMode()));
+    }
+  });
+  lifecycle.onDispose(() => scene.dispose());
+
+  const transport = createSceneShell({
+    stepSeconds: 1 / 60,
+    maxSubSteps: 5,
+    onStep: (dt) => scene.step(dt),
+    onRender: () => scene.render()
+  });
+  lifecycle.onDispose(() => transport.dispose());
+
+  const controls = createVtIntegralControls({
+    container: shell.controlSlot,
+    onSetScene: (value) => {
+      scene.setScene(value);
+      scene.render();
+    },
+    onSetRects: (value) => {
+      scene.setRects(value);
+      scene.render();
+    },
+    onSetTime: (value) => {
+      scene.setTime(value);
+      scene.render();
+    },
+    onSetMethod: (value) => {
+      scene.setMethod(value);
+      scene.render();
+    },
+    onSetCurveAmplitude: (value) => {
+      scene.setCurveAmplitude(value);
+      scene.render();
+    },
+    onSetCircleN: (value) => {
+      scene.setCircleN(value);
+      scene.render();
+    },
+    onSetSurfaceN: (value) => {
+      scene.setSurfaceN(value);
+      scene.render();
+    },
+    onSetDivision: (value) => {
+      scene.setDivision(value);
+      scene.render();
+    },
+    onReset: () => {
+      transport.reset();
+      scene.reset();
+      scene.render();
+    },
+    onStatus: (text) => shell.setStatus(text)
+  });
+  lifecycle.onDispose(() => controls.dispose());
+
+  const onModeToggle = () => {
+    const nextMode = shell.getMode() === 'normal' ? 'presentation' : 'normal';
+    shell.setMode(nextMode);
+    scene.setMode(nextMode);
+    scene.resize();
+    scene.render();
+    if (snapshot) shell.setReadout(formatReadout(snapshot, shell.getMode()));
+    shell.setStatus(nextMode === 'presentation' ? '演示模式已开启' : '标准模式已开启');
+  };
+
+  const onThemeToggle = () => {
+    const nextTheme = shell.getTheme() === 'dark' ? 'light' : 'dark';
+    shell.setTheme(nextTheme);
+    scene.setTheme(nextTheme);
+    scene.render();
+    shell.setStatus(nextTheme === 'dark' ? '夜间主题已开启' : '白天主题已开启');
+  };
+
+  shell.modeButton.addEventListener('click', onModeToggle);
+  shell.themeButton.addEventListener('click', onThemeToggle);
+  lifecycle.onDispose(() => shell.modeButton.removeEventListener('click', onModeToggle));
+  lifecycle.onDispose(() => shell.themeButton.removeEventListener('click', onThemeToggle));
+
+  const onResize = () => {
+    scene.resize();
+    scene.render();
+  };
+  window.addEventListener('resize', onResize);
+  window.visualViewport?.addEventListener('resize', onResize);
+  lifecycle.onDispose(() => window.removeEventListener('resize', onResize));
+  lifecycle.onDispose(() => window.visualViewport?.removeEventListener('resize', onResize));
+
+  const onBeforeUnload = () => lifecycle.dispose();
+  window.addEventListener('beforeunload', onBeforeUnload);
+  lifecycle.onDispose(() => window.removeEventListener('beforeunload', onBeforeUnload));
+
+  scene.init();
+  scene.resize();
+  scene.render();
+  shell.setStatus('就绪');
+}
+
+boot();

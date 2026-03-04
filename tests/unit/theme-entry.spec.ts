@@ -7,26 +7,22 @@ function read(relativePath: string): string {
 }
 
 describe('theme entry architecture', () => {
-  it('keeps one shell-level theme入口 and removes per-scene side toggles', () => {
+  it('keeps one shell-level theme入口 and modern pages use shell theme toggle', () => {
     const shell = read('src/app/teaching-demo-shell.ts');
-    const fieldControls = read('src/app/legacy-field-lines-controls.ts');
-    const chaseControls = read('src/app/legacy-chase-meet-controls.ts');
-    const legacyFieldLines = read('animations/electromagnetism/模拟电场线.html');
-    const legacyChaseMeet = read('animations/mechanics/追击相遇问题.html');
-    const legacyEmf = read('animations/electromagnetism/电动势类比动画.html');
-    const legacyElectrification = read('animations/electromagnetism/起电方式演示.html');
-    const legacyVt = read('animations/mechanics/v-t面积与微元法.html');
+    const pages = [
+      read('src/scenes/projectile/page.ts'),
+      read('src/scenes/chase-meet/page.ts'),
+      read('src/scenes/field-lines/page.ts'),
+      read('src/scenes/emf-analogy/page.ts'),
+      read('src/scenes/electrification/page.ts'),
+      read('src/scenes/vt-integral/page.ts')
+    ];
 
     expect(shell).toContain('shell-theme-toggle');
-    expect(fieldControls.includes('data-role="theme-toggle"')).toBe(false);
-    expect(chaseControls.includes('data-role="theme-toggle"')).toBe(false);
-    expect(legacyFieldLines.includes('themeToggle')).toBe(false);
-    expect(legacyChaseMeet.includes('themeToggle')).toBe(false);
-
-    expect(legacyFieldLines).toContain('set-theme');
-    expect(legacyChaseMeet).toContain('set-theme');
-    expect(legacyEmf).toContain('set-theme');
-    expect(legacyElectrification).toContain('set-theme');
-    expect(legacyVt).toContain('set-theme');
+    for (const page of pages) {
+      expect(page).toContain('onThemeToggle');
+      expect(page).toContain('shell.themeButton');
+      expect(page.includes('themeToggle')).toBe(false);
+    }
   });
 });

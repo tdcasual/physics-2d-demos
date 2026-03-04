@@ -11,8 +11,6 @@ export const sceneIndexEntries: SceneIndexEntry[] = sceneRegistry.map((item) => 
   keywords: item.keywords
 }));
 
-export const legacySceneEntries: SceneIndexEntry[] = sceneIndexEntries.filter((item) => item.id.startsWith('legacy-'));
-
 export function isSceneIndexEntry(value: unknown): value is SceneIndexEntry {
   if (typeof value !== 'object' || value === null) return false;
   const item = value as Record<string, unknown>;
