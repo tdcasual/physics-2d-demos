@@ -43,6 +43,8 @@
 
 ### legacy-field-lines
 
+- [x] 路由分批：`renderer=modern-lab` 已切至 modern 实现，`renderer=modern` 仍锁定 legacy
+
 - [ ] 场景预设切换一致
 - [ ] 电荷拖拽反馈一致
 - [ ] 场线密度调节结果一致

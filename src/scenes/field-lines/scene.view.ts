@@ -4,14 +4,65 @@ import type { TeachingTheme } from '../../app/teaching-demo-shell';
 import { applyHiDpiCanvasMetrics, computeHiDpiCanvasMetrics } from '../../core/high-dpi-canvas';
 import type { FieldLinesSnapshot } from './scene.sim';
 
+type PixelCharge = {
+  x: number;
+  y: number;
+  q: number;
+  radius: number;
+};
+
+type VisualConfig = {
+  chargeRadius: number;
+  chargeFontPx: number;
+  arrowStrokeWidth: number;
+  arrowSize: number;
+  maxArrowLength: number;
+  minArrowLength: number;
+};
+
 export type CreateFieldLinesViewOptions = {
   canvas?: HTMLCanvasElement;
   mode?: TeachingMode;
   theme?: TeachingTheme;
 };
 
-function blend(theme: TeachingTheme, light: string, dark: string): string {
-  return theme === 'light' ? light : dark;
+const VISUAL_CONFIG: Record<TeachingMode, VisualConfig> = {
+  normal: {
+    chargeRadius: 26,
+    chargeFontPx: Math.round(getTeachingStandards('normal').rightStage.primaryFontPx * 1.08),
+    arrowStrokeWidth: getTeachingStandards('normal').rightStage.majorStrokePx,
+    arrowSize: 20,
+    maxArrowLength: 34,
+    minArrowLength: getTeachingStandards('normal').rightStage.secondaryFontPx * 0.85
+  },
+  presentation: {
+    chargeRadius: 40,
+    chargeFontPx: Math.round(getTeachingStandards('presentation').rightStage.primaryFontPx * 1.08),
+    arrowStrokeWidth: getTeachingStandards('presentation').rightStage.majorStrokePx,
+    arrowSize: 30,
+    maxArrowLength: 58,
+    minArrowLength: getTeachingStandards('presentation').rightStage.secondaryFontPx * 0.95
+  }
+};
+
+const THEME_CONFIG = {
+  dark: {
+    canvasBg: 'rgb(17, 24, 39)',
+    arrowColor: 'rgba(96, 173, 255, 0.98)'
+  },
+  light: {
+    canvasBg: '#f9fafb',
+    arrowColor: 'rgba(39, 112, 255, 0.95)'
+  }
+} as const;
+
+function getLineCountForCharge(q: number): number {
+  const baseLines = 12;
+  const absq = Math.abs(q);
+  const minLines = 8;
+  const maxLines = 40;
+  const lines = Math.round(baseLines * absq);
+  return Math.min(maxLines, Math.max(minLines, lines));
 }
 
 export function createFieldLinesView(options: CreateFieldLinesViewOptions = {}) {
@@ -40,125 +91,170 @@ export function createFieldLinesView(options: CreateFieldLinesViewOptions = {}) 
     applyHiDpiCanvasMetrics(canvas, ctx, surface);
   }
 
-  function worldToCanvasX(x: number): number {
-    return x * surface.cssWidth;
+  function toPixelCharges(next: FieldLinesSnapshot): PixelCharge[] {
+    const visuals = VISUAL_CONFIG[mode];
+    return next.charges.map((charge) => ({
+      x: charge.x * surface.cssWidth,
+      y: charge.y * surface.cssHeight,
+      q: charge.q,
+      radius: visuals.chargeRadius
+    }));
   }
 
-  function worldToCanvasY(y: number): number {
-    return y * surface.cssHeight;
+  function getElectricFieldAt(px: number, py: number, charges: PixelCharge[]): { Ex: number; Ey: number } {
+    let Ex = 0;
+    let Ey = 0;
+    for (const charge of charges) {
+      const dx = px - charge.x;
+      const dy = py - charge.y;
+      const rSquared = Math.max(charge.radius * charge.radius, dx * dx + dy * dy);
+      const r = Math.sqrt(rSquared);
+      const magnitude = charge.q / rSquared;
+      Ex += magnitude * (dx / r);
+      Ey += magnitude * (dy / r);
+    }
+    return { Ex, Ey };
   }
 
-  function drawArrows(next: FieldLinesSnapshot): void {
+  function drawArrow(x: number, y: number, angle: number, length: number): void {
     if (!ctx) return;
-    const visuals = getTeachingStandards(mode).rightStage;
-    const density = next.params.density;
-    const cols = Math.max(7, Math.min(28, Math.round(6 + density * 0.2)));
-    const rows = Math.max(5, Math.min(18, Math.round(4 + density * 0.12)));
-    const stepX = surface.cssWidth / cols;
-    const stepY = surface.cssHeight / rows;
+    const visuals = VISUAL_CONFIG[mode];
+    const colors = THEME_CONFIG[theme];
 
-    ctx.lineWidth = Math.max(1, visuals.minorStrokePx * 0.35);
-    ctx.strokeStyle = blend(theme, 'rgba(30,64,175,0.7)', 'rgba(125,211,252,0.75)');
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
 
-    for (let gx = 1; gx < cols; gx += 1) {
-      for (let gy = 1; gy < rows; gy += 1) {
-        const px = gx * stepX;
-        const py = gy * stepY;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(length, 0);
+    ctx.strokeStyle = colors.arrowColor;
+    ctx.lineWidth = visuals.arrowStrokeWidth;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
 
-        let fx = 0;
-        let fy = 0;
-        for (const charge of next.charges) {
-          const cx = worldToCanvasX(charge.x);
-          const cy = worldToCanvasY(charge.y);
-          const dx = px - cx;
-          const dy = py - cy;
-          const distanceSq = dx * dx + dy * dy + 260;
-          const influence = charge.q / distanceSq;
-          fx += influence * dx;
-          fy += influence * dy;
+    ctx.beginPath();
+    ctx.moveTo(length, 0);
+    ctx.lineTo(length - visuals.arrowSize, -visuals.arrowSize / 2);
+    ctx.lineTo(length - visuals.arrowSize, visuals.arrowSize / 2);
+    ctx.closePath();
+    ctx.fillStyle = colors.arrowColor;
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function traceLine(
+    startX: number,
+    startY: number,
+    maxSegments: number,
+    visualStepSize: number,
+    direction: 1 | -1,
+    charges: PixelCharge[]
+  ): void {
+    const CALCULATION_STEP = 4;
+    let px = startX;
+    let py = startY;
+    let distanceSinceLastArrow = 0;
+
+    for (let i = 0; i < maxSegments; i += 1) {
+      const field = getElectricFieldAt(px, py, charges);
+      const magnitude = Math.hypot(field.Ex, field.Ey);
+      if (magnitude < 0.00001) break;
+
+      const dirX = direction * (field.Ex / magnitude);
+      const dirY = direction * (field.Ey / magnitude);
+
+      px += dirX * CALCULATION_STEP;
+      py += dirY * CALCULATION_STEP;
+      distanceSinceLastArrow += CALCULATION_STEP;
+
+      if (distanceSinceLastArrow >= visualStepSize) {
+        const visuals = VISUAL_CONFIG[mode];
+        const fieldAngle = Math.atan2(dirY, dirX);
+        const vectorLength = Math.max(
+          visuals.minArrowLength,
+          Math.min(visualStepSize * 0.35, visuals.maxArrowLength)
+        );
+        drawArrow(px, py, fieldAngle, vectorLength);
+        distanceSinceLastArrow = 0;
+      }
+
+      if (px < -10 || px > surface.cssWidth + 10 || py < -10 || py > surface.cssHeight + 10) {
+        break;
+      }
+
+      let nearCharge = false;
+      for (const charge of charges) {
+        if (Math.hypot(px - charge.x, py - charge.y) < charge.radius + 5) {
+          nearCharge = true;
+          break;
         }
+      }
+      if (nearCharge) break;
+    }
+  }
 
-        const magnitude = Math.hypot(fx, fy);
-        if (magnitude < 0.00001) continue;
-        const ux = fx / magnitude;
-        const uy = fy / magnitude;
-        const arrowLength = Math.max(5, Math.min(26, 8 + magnitude * 2500));
+  function drawField(charges: PixelCharge[], density: number): void {
+    const visualStepSize = 120 - (density - 1) * (115 / 99);
+    const maxSegments = 900;
 
-        const x2 = px + ux * arrowLength;
-        const y2 = py + uy * arrowLength;
+    for (const charge of charges) {
+      if (charge.q <= 0) continue;
+      const numLines = getLineCountForCharge(charge.q);
+      for (let i = 0; i < numLines; i += 1) {
+        const angle = (i / numLines) * Math.PI * 2;
+        const startX = charge.x + charge.radius * 1.5 * Math.cos(angle);
+        const startY = charge.y + charge.radius * 1.5 * Math.sin(angle);
+        traceLine(startX, startY, maxSegments, visualStepSize, 1, charges);
+      }
+    }
 
-        ctx.beginPath();
-        ctx.moveTo(px, py);
-        ctx.lineTo(x2, y2);
-        ctx.stroke();
-
-        const head = Math.max(4, arrowLength * 0.24);
-        const leftX = x2 - ux * head - uy * (head * 0.6);
-        const leftY = y2 - uy * head + ux * (head * 0.6);
-        const rightX = x2 - ux * head + uy * (head * 0.6);
-        const rightY = y2 - uy * head - ux * (head * 0.6);
-
-        ctx.beginPath();
-        ctx.moveTo(x2, y2);
-        ctx.lineTo(leftX, leftY);
-        ctx.lineTo(rightX, rightY);
-        ctx.closePath();
-        ctx.fillStyle = ctx.strokeStyle as string;
-        ctx.fill();
+    for (const charge of charges) {
+      if (charge.q >= 0) continue;
+      const numLines = getLineCountForCharge(charge.q);
+      for (let i = 0; i < numLines; i += 1) {
+        const angle = (i / numLines) * Math.PI * 2;
+        const startX = charge.x + charge.radius * 1.5 * Math.cos(angle);
+        const startY = charge.y + charge.radius * 1.5 * Math.sin(angle);
+        traceLine(startX, startY, maxSegments, visualStepSize, -1, charges);
       }
     }
   }
 
-  function drawCharges(next: FieldLinesSnapshot): void {
+  function drawCharges(charges: PixelCharge[]): void {
     if (!ctx) return;
-    const visuals = getTeachingStandards(mode).rightStage;
-    const radius = Math.max(14, visuals.markerRadiusPx * 1.9);
-    for (const charge of next.charges) {
-      const x = worldToCanvasX(charge.x);
-      const y = worldToCanvasY(charge.y);
-      const positive = charge.q >= 0;
+    const visuals = VISUAL_CONFIG[mode];
 
+    for (const charge of charges) {
       ctx.beginPath();
-      ctx.fillStyle = positive
-        ? blend(theme, 'rgba(239,68,68,0.85)', 'rgba(248,113,113,0.92)')
-        : blend(theme, 'rgba(37,99,235,0.85)', 'rgba(96,165,250,0.92)');
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.arc(charge.x, charge.y, charge.radius, 0, Math.PI * 2);
+      ctx.fillStyle = charge.q > 0 ? '#F5A623' : '#7ED321';
       ctx.fill();
 
-      ctx.lineWidth = Math.max(2, visuals.majorStrokePx * 0.28);
-      ctx.strokeStyle = blend(theme, 'rgba(15,23,42,0.9)', 'rgba(226,232,240,0.92)');
-      ctx.stroke();
-
-      ctx.fillStyle = blend(theme, '#0f172a', '#f8fafc');
+      ctx.fillStyle = 'white';
+      ctx.font = `bold ${visuals.chargeFontPx}px Arial`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.font = `700 ${Math.max(16, visuals.primaryFontPx * 0.42)}px "Noto Sans SC", "PingFang SC", sans-serif`;
-      const prefix = charge.q > 0 ? '+' : '';
-      ctx.fillText(`${prefix}${charge.q.toFixed(1)}`, x, y);
+      ctx.fillText(charge.q > 0 ? '+' : '−', charge.x, charge.y + 1);
     }
   }
 
   function draw(next: FieldLinesSnapshot): void {
     if (!ctx) return;
+
     const width = surface.cssWidth;
     const height = surface.cssHeight;
-    ctx.clearRect(0, 0, width, height);
-    const gradient = ctx.createLinearGradient(0, 0, width, height);
-    gradient.addColorStop(0, blend(theme, '#eff6ff', '#020617'));
-    gradient.addColorStop(1, blend(theme, '#dbeafe', '#0f172a'));
-    ctx.fillStyle = gradient;
+    const colors = THEME_CONFIG[theme];
+    const charges = toPixelCharges(next);
+    const density = Math.max(1, Math.min(100, Math.round(next.params.density)));
+
+    ctx.fillStyle = colors.canvasBg;
     ctx.fillRect(0, 0, width, height);
 
-    drawArrows(next);
-    drawCharges(next);
-
-    const visuals = getTeachingStandards(mode).rightStage;
-    ctx.fillStyle = blend(theme, 'rgba(15,23,42,0.85)', 'rgba(226,232,240,0.88)');
-    ctx.font = `600 ${Math.max(12, visuals.secondaryFontPx * 0.35)}px "Noto Sans SC", "PingFang SC", sans-serif`;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'alphabetic';
-    ctx.fillText(`场景：${next.params.scene}`, 16, 26);
-    ctx.fillText(`矢量密度：${Math.round(next.params.density)}`, 16, 46);
+    drawField(charges, density);
+    drawCharges(charges);
   }
 
   return {

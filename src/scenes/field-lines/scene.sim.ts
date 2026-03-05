@@ -30,19 +30,19 @@ function defaultCharges(scene: FieldLinesScene, q1: number, q2: number): FieldCh
   }
   if (scene === 'like') {
     return [
-      { x: 0.38, y: 0.5, q: 1 },
-      { x: 0.62, y: 0.5, q: 1 }
+      { x: 0.34, y: 0.5, q: 1 },
+      { x: 0.66, y: 0.5, q: 1 }
     ];
   }
   if (scene === 'unlike') {
     return [
-      { x: 0.38, y: 0.5, q: 1 },
-      { x: 0.62, y: 0.5, q: -1 }
+      { x: 0.34, y: 0.5, q: 1 },
+      { x: 0.66, y: 0.5, q: -1 }
     ];
   }
   return [
-    { x: 0.38, y: 0.5, q: q1 },
-    { x: 0.62, y: 0.5, q: q2 }
+    { x: 0.34, y: 0.5, q: q1 },
+    { x: 0.66, y: 0.5, q: q2 }
   ];
 }
 
@@ -95,7 +95,7 @@ export function createFieldLinesSim(initial: Partial<FieldLinesParams>) {
       }
       return { ...params };
     },
-    pickCharge(x: number, y: number, radiusNorm = 0.06): number | null {
+    pickCharge(x: number, y: number, radiusNorm = 0.045): number | null {
       for (let i = charges.length - 1; i >= 0; i -= 1) {
         const dx = x - charges[i].x;
         const dy = y - charges[i].y;
@@ -107,8 +107,8 @@ export function createFieldLinesSim(initial: Partial<FieldLinesParams>) {
     },
     setChargePosition(index: number, x: number, y: number): void {
       if (index < 0 || index >= charges.length) return;
-      charges[index].x = clamp(x, 0.08, 0.92);
-      charges[index].y = clamp(y, 0.1, 0.9);
+      charges[index].x = clamp(x, 0.02, 0.98);
+      charges[index].y = clamp(y, 0.02, 0.98);
     },
     reset(): void {
       params = normalizeParams({
