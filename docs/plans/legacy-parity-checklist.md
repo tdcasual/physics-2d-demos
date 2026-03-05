@@ -22,7 +22,7 @@
 
 ### legacy-vt-integral
 
-- [x] 路由统一：默认入口与 `renderer=modern`/`renderer=modern-lab` 已切至 modern，`renderer=legacy` 保留回退
+- [ ] 已回退到迁移前：默认入口恢复 legacy（仅 `renderer=experimental` 使用 modern）
 
 - [ ] 子场景切换行为一致
 - [ ] 面积/体积读数与公式展示一致

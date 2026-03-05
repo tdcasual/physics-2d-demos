@@ -38,32 +38,6 @@ function drawMetricBox(
   });
 }
 
-function scene1Palette(theme: TeachingTheme): {
-  axis: string;
-  zeroLine: string;
-  curve: string;
-  areaStroke: string;
-} {
-  if (theme === 'light') {
-    return {
-      axis: '#1f2937',
-      zeroLine: 'rgba(100, 116, 139, 0.6)',
-      curve: '#0d6efd',
-      areaStroke: 'rgba(40, 167, 69, 0.8)'
-    };
-  }
-  return {
-    axis: '#cbd5e1',
-    zeroLine: 'rgba(148, 163, 184, 0.7)',
-    curve: '#66a9ff',
-    areaStroke: 'rgba(52, 211, 153, 0.92)'
-  };
-}
-
-function scene1Velocity(t: number): number {
-  return 2 + 3 * t;
-}
-
 export function createVtIntegralView(options: CreateVtIntegralViewOptions = {}) {
   let canvas = options.canvas ?? null;
   let ctx = canvas?.getContext('2d') ?? null;
@@ -95,108 +69,6 @@ export function createVtIntegralView(options: CreateVtIntegralViewOptions = {}) 
     const width = surface.cssWidth;
     const height = surface.cssHeight;
     const visuals = getTeachingStandards(mode).rightStage;
-    if (next.params.scene === 'scene1') {
-      const palette = scene1Palette(theme);
-      const panelInset = 9;
-      const panelX = panelInset;
-      const panelY = panelInset;
-      const panelW = width - panelInset * 2;
-      const panelH = height - panelInset * 2;
-      const margin = { left: 50, right: 20, top: 30, bottom: 40 };
-      const plotW = panelW - margin.left - margin.right;
-      const plotH = panelH - margin.top - margin.bottom;
-
-      ctx.fillStyle = blend(theme, '#f9fbff', '#020817');
-      ctx.fillRect(panelX, panelY, panelW, panelH);
-      ctx.strokeStyle = blend(theme, 'rgba(148,163,184,0.52)', '#1e293b');
-      ctx.lineWidth = 1.2;
-      ctx.strokeRect(panelX, panelY, panelW, panelH);
-      const samples = 200;
-      const points: Array<{ t: number; v: number }> = [];
-      let minV = Infinity;
-      let maxV = -Infinity;
-
-      for (let i = 0; i <= samples; i += 1) {
-        const t = (next.params.time * i) / samples;
-        const v = scene1Velocity(t);
-        points.push({ t, v });
-        minV = Math.min(minV, v);
-        maxV = Math.max(maxV, v);
-      }
-
-      minV = Math.min(minV, 0);
-      maxV = Math.max(maxV, 0.1);
-      const pad = (maxV - minV) * 0.1 + 1e-6;
-      minV -= pad;
-      maxV += pad;
-
-      const xToPx = (t: number) => panelX + margin.left + (t / next.params.time) * plotW;
-      const yToPx = (v: number) => panelY + margin.top + (maxV - v) * (plotH / (maxV - minV));
-
-      ctx.strokeStyle = palette.axis;
-      ctx.lineWidth = Math.max(visuals.majorStrokePx * 1.15, visuals.majorStrokePx);
-      ctx.beginPath();
-      ctx.moveTo(panelX + margin.left, panelY + margin.top);
-      ctx.lineTo(panelX + margin.left, panelY + panelH - margin.bottom);
-      ctx.lineTo(panelX + panelW - margin.right, panelY + panelH - margin.bottom);
-      ctx.stroke();
-
-      const zeroY = yToPx(0);
-      ctx.strokeStyle = palette.zeroLine;
-      ctx.setLineDash([6, 6]);
-      ctx.lineWidth = Math.max(visuals.minorStrokePx * 1.15, visuals.minorStrokePx);
-      ctx.beginPath();
-      ctx.moveTo(panelX + margin.left, zeroY);
-      ctx.lineTo(panelX + panelW - margin.right, zeroY);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      ctx.strokeStyle = palette.curve;
-      ctx.lineWidth = Math.max(visuals.majorStrokePx * 1.25, visuals.majorStrokePx);
-      ctx.beginPath();
-      points.forEach((point, index) => {
-        const x = xToPx(point.t);
-        const y = yToPx(point.v);
-        if (index === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      });
-      ctx.stroke();
-
-      ctx.fillStyle = '#ff6b6b';
-      points.forEach((point, index) => {
-        if (index % 20 !== 0 && index !== points.length - 1) return;
-        const x = xToPx(point.t);
-        const y = yToPx(point.v);
-        ctx.beginPath();
-        ctx.arc(x, y, visuals.markerRadiusPx, 0, Math.PI * 2);
-        ctx.fill();
-      });
-
-      const dt = next.params.time / next.params.rects;
-      ctx.fillStyle = 'rgba(40, 167, 69, 0.25)';
-      ctx.strokeStyle = palette.areaStroke;
-      ctx.lineWidth = Math.max(visuals.minorStrokePx * 1.2, visuals.minorStrokePx);
-      for (let i = 0; i < next.params.rects; i += 1) {
-        const t0 = i * dt;
-        const t1 = t0 + dt;
-        let vSample = 0;
-        if (next.params.method === 'left') vSample = scene1Velocity(t0);
-        else if (next.params.method === 'right') vSample = scene1Velocity(t1);
-        else if (next.params.method === 'mid') vSample = scene1Velocity(t0 + dt / 2);
-        else vSample = 0.5 * (scene1Velocity(t0) + scene1Velocity(t1));
-
-        const x = xToPx(t0);
-        const w = xToPx(t1) - xToPx(t0);
-        const y = yToPx(Math.max(vSample, 0));
-        const h = yToPx(Math.min(vSample, 0)) - y;
-        ctx.beginPath();
-        ctx.rect(x, y, w, h);
-        ctx.fill();
-        ctx.stroke();
-      }
-      return;
-    }
-
     const baseY = height * 0.75;
     const left = 70;
     const right = width - 60;
@@ -215,11 +87,26 @@ export function createVtIntegralView(options: CreateVtIntegralViewOptions = {}) 
     for (let i = 0; i <= 500; i += 1) {
       const t = i / 500;
       const x = left + t * axisWidth;
-      const y = baseY - scene1Velocity(t * next.params.time) * (height * 0.045);
+      const y = baseY - (1 + 0.8 * (t * next.params.time)) * (height * 0.045);
       if (i === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
     }
     ctx.stroke();
+
+    if (next.params.scene === 'scene1') {
+      const n = next.params.rects;
+      const dt = next.params.time / n;
+      ctx.fillStyle = blend(theme, 'rgba(30,64,175,0.25)', 'rgba(96,165,250,0.22)');
+      for (let i = 0; i < n; i += 1) {
+        const t0 = i * dt;
+        const t1 = (i + 1) * dt;
+        const x0 = left + (t0 / next.params.time) * axisWidth;
+        const x1 = left + (t1 / next.params.time) * axisWidth;
+        const hVal = 1 + 0.8 * (t0 + t1) * 0.5;
+        const hPix = hVal * (height * 0.045);
+        ctx.fillRect(x0, baseY - hPix, Math.max(1, x1 - x0), hPix);
+      }
+    }
   }
 
   function drawSceneSpecific(next: VtIntegralSnapshot): void {
@@ -274,16 +161,11 @@ export function createVtIntegralView(options: CreateVtIntegralViewOptions = {}) 
     const visuals = getTeachingStandards(mode).rightStage;
 
     ctx.clearRect(0, 0, width, height);
-    if (next.params.scene === 'scene1') {
-      ctx.fillStyle = blend(theme, '#f8fbff', '#020617');
-      ctx.fillRect(0, 0, width, height);
-    } else {
-      const gradient = ctx.createLinearGradient(0, 0, width, height);
-      gradient.addColorStop(0, blend(theme, '#eef2ff', '#020617'));
-      gradient.addColorStop(1, blend(theme, '#e0e7ff', '#0f172a'));
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, width, height);
-    }
+    const gradient = ctx.createLinearGradient(0, 0, width, height);
+    gradient.addColorStop(0, blend(theme, '#eef2ff', '#020617'));
+    gradient.addColorStop(1, blend(theme, '#e0e7ff', '#0f172a'));
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
 
     drawCurveDemo(next);
     drawSceneSpecific(next);
@@ -311,16 +193,14 @@ export function createVtIntegralView(options: CreateVtIntegralViewOptions = {}) 
       lines.push(`相对误差: ${(next.metrics.sphereRelErr * 100).toFixed(2)}%`);
     }
 
-    if (next.params.scene !== 'scene1') {
-      drawMetricBox(
-        ctx,
-        theme,
-        width - 360,
-        16,
-        [`场景：${next.params.scene}`, ...lines],
-        Math.max(12, visuals.secondaryFontPx * 0.34)
-      );
-    }
+    drawMetricBox(
+      ctx,
+      theme,
+      width - 360,
+      16,
+      [`场景：${next.params.scene}`, ...lines],
+      Math.max(12, visuals.secondaryFontPx * 0.34)
+    );
   }
 
   return {

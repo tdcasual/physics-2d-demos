@@ -7,24 +7,15 @@ import { createVtIntegralControls } from './controls';
 import { createVtIntegralScene } from './scene.entry';
 import type { VtIntegralSnapshot } from './scene.sim';
 
-type Renderer = 'legacy' | 'modern' | 'modern-lab' | 'experimental';
+type Renderer = 'legacy' | 'experimental';
 
 function resolveRenderer(search: string): Renderer {
   const query = new URLSearchParams(search);
   const renderer = query.get('renderer');
-  if (renderer === 'legacy') {
-    return 'legacy';
-  }
-  if (renderer === 'modern') {
-    return 'modern';
-  }
-  if (renderer === 'modern-lab') {
-    return 'modern-lab';
-  }
   if (renderer === 'experimental') {
     return 'experimental';
   }
-  return 'modern';
+  return 'legacy';
 }
 
 function sceneLabel(scene: VtIntegralSnapshot['params']['scene']): string {
@@ -109,7 +100,7 @@ function bootModern(mount: HTMLElement): void {
   const shell = createTeachingDemoShell({
     mount,
     title: '微元法交互式动画（2D）',
-    subtitle: '右侧使用历史场景渲染，保持显示一致',
+    subtitle: '多场景积分与逼近演示',
     defaultMode: 'normal'
   });
   const lifecycle = createPageLifecycle();
@@ -218,7 +209,7 @@ function bootModern(mount: HTMLElement): void {
   scene.init();
   scene.resize();
   scene.render();
-  shell.setStatus('左侧可切换微元法子场景并调参');
+  shell.setStatus('就绪');
 }
 
 function boot(): void {
@@ -228,11 +219,11 @@ function boot(): void {
   }
 
   const renderer = resolveRenderer(window.location.search);
-  if (renderer === 'legacy') {
-    bootLegacy(mount);
+  if (renderer === 'experimental') {
+    bootModern(mount);
     return;
   }
-  bootModern(mount);
+  bootLegacy(mount);
 }
 
 boot();
