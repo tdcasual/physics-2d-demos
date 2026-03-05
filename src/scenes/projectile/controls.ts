@@ -36,49 +36,49 @@ function formatValue(role: string, value: number): string {
 
 export function createProjectileControls(options: ProjectileControlsOptions): { dispose(): void } {
   const panel = document.createElement('div');
-  panel.className = 'legacy-field-controls projectile-control-panel';
+  panel.className = 'scene-control-panel projectile-control-panel';
   panel.innerHTML = `
-    <div class="legacy-field-row">
-      <span class="legacy-field-label">初速度 v0</span>
+    <div class="scene-control-row">
+      <span class="scene-control-label">初速度 v0</span>
       <input type="range" min="0" max="80" step="0.5" data-role="speed">
-      <span class="legacy-field-value" data-role="speed-value"></span>
+      <span class="scene-control-value" data-role="speed-value"></span>
     </div>
-    <div class="legacy-field-row">
-      <span class="legacy-field-label">发射角 θ</span>
+    <div class="scene-control-row">
+      <span class="scene-control-label">发射角 θ</span>
       <input type="range" min="0" max="85" step="0.5" data-role="angle">
-      <span class="legacy-field-value" data-role="angle-value"></span>
+      <span class="scene-control-value" data-role="angle-value"></span>
     </div>
-    <div class="legacy-field-row">
-      <span class="legacy-field-label">重力 g</span>
+    <div class="scene-control-row">
+      <span class="scene-control-label">重力 g</span>
       <input type="range" min="0" max="30" step="0.1" data-role="gravity">
-      <span class="legacy-field-value" data-role="gravity-value"></span>
+      <span class="scene-control-value" data-role="gravity-value"></span>
     </div>
-    <div class="legacy-field-row">
-      <span class="legacy-field-label">初始高度 h0</span>
+    <div class="scene-control-row">
+      <span class="scene-control-label">初始高度 h0</span>
       <input type="range" min="0" max="20" step="0.1" data-role="height">
-      <span class="legacy-field-value" data-role="height-value"></span>
+      <span class="scene-control-value" data-role="height-value"></span>
     </div>
-    <div class="legacy-field-row">
-      <span class="legacy-field-label">水平风加速度</span>
+    <div class="scene-control-row">
+      <span class="scene-control-label">水平风加速度</span>
       <input type="range" min="-12" max="12" step="0.1" data-role="wind">
-      <span class="legacy-field-value" data-role="wind-value"></span>
+      <span class="scene-control-value" data-role="wind-value"></span>
     </div>
-    <div class="legacy-field-row">
-      <span class="legacy-field-label">阻力系数</span>
+    <div class="scene-control-row">
+      <span class="scene-control-label">阻力系数</span>
       <input type="range" min="0" max="0.2" step="0.005" data-role="drag">
-      <span class="legacy-field-value" data-role="drag-value"></span>
+      <span class="scene-control-value" data-role="drag-value"></span>
     </div>
 
-    <div class="legacy-field-scenes">
-      <button type="button" class="legacy-scene-btn" data-role="preset-earth">地球</button>
-      <button type="button" class="legacy-scene-btn" data-role="preset-moon">月球</button>
-      <button type="button" class="legacy-scene-btn" data-role="preset-mars">火星</button>
-      <button type="button" class="legacy-scene-btn" data-role="preset-crosswind">侧风课堂</button>
+    <div class="scene-switch-grid">
+      <button type="button" class="scene-tab-btn" data-role="preset-earth">地球</button>
+      <button type="button" class="scene-tab-btn" data-role="preset-moon">月球</button>
+      <button type="button" class="scene-tab-btn" data-role="preset-mars">火星</button>
+      <button type="button" class="scene-tab-btn" data-role="preset-crosswind">侧风课堂</button>
     </div>
 
-    <div class="legacy-action-grid">
-      <button type="button" class="legacy-reset-btn legacy-wide-btn" data-role="apply">应用并重置</button>
-      <button type="button" class="legacy-reset-btn legacy-wide-btn" data-role="random">随机案例</button>
+    <div class="scene-action-grid">
+      <button type="button" class="scene-reset-btn scene-wide-btn" data-role="apply">应用并重置</button>
+      <button type="button" class="scene-reset-btn scene-wide-btn" data-role="random">随机案例</button>
     </div>
 
     <div class="transport-controls">

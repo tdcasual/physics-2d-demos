@@ -30,39 +30,39 @@ export function createChaseMeetControls(options: ChaseMeetControlsOptions): { di
   };
 
   options.container.innerHTML = `
-    <div class="legacy-field-controls">
-      <div class="legacy-form-grid">
-        <label class="legacy-form-row">
-          <span class="legacy-field-label">总时间 T</span>
+    <div class="scene-control-panel">
+      <div class="scene-form-grid">
+        <label class="scene-form-row">
+          <span class="scene-control-label">总时间 T</span>
           <input type="number" min="1" max="120" step="0.5" value="${state.totalTime}" data-role="total-time">
         </label>
-        <label class="legacy-form-row">
-          <span class="legacy-field-label">步长 Δt</span>
+        <label class="scene-form-row">
+          <span class="scene-control-label">步长 Δt</span>
           <input type="number" min="0.005" max="1" step="0.005" value="${state.dt}" data-role="dt">
         </label>
-        <label class="legacy-form-row">
-          <span class="legacy-field-label">x₀A</span>
+        <label class="scene-form-row">
+          <span class="scene-control-label">x₀A</span>
           <input type="number" step="0.5" value="${state.x0A}" data-role="x0a">
         </label>
-        <label class="legacy-form-row">
-          <span class="legacy-field-label">x₀B</span>
+        <label class="scene-form-row">
+          <span class="scene-control-label">x₀B</span>
           <input type="number" step="0.5" value="${state.x0B}" data-role="x0b">
         </label>
-        <label class="legacy-form-row">
-          <span class="legacy-field-label">vA(t)</span>
+        <label class="scene-form-row">
+          <span class="scene-control-label">vA(t)</span>
           <input type="text" value="${state.vExprA}" data-role="vexpr-a">
         </label>
-        <label class="legacy-form-row">
-          <span class="legacy-field-label">vB(t)</span>
+        <label class="scene-form-row">
+          <span class="scene-control-label">vB(t)</span>
           <input type="text" value="${state.vExprB}" data-role="vexpr-b">
         </label>
       </div>
-      <button type="button" class="legacy-chip-btn legacy-wide-btn" data-role="apply-settings">应用参数</button>
-      <div class="legacy-transport-grid transport-controls">
-        <button type="button" class="legacy-scene-btn" data-role="play">播放</button>
-        <button type="button" class="legacy-scene-btn" data-role="pause">暂停</button>
-        <button type="button" class="legacy-scene-btn" data-role="step">单步</button>
-        <button type="button" class="legacy-reset-btn" data-role="reset">重置</button>
+      <button type="button" class="scene-chip-btn scene-wide-btn" data-role="apply-settings">应用参数</button>
+      <div class="scene-transport-grid transport-controls">
+        <button type="button" class="scene-tab-btn" data-role="play">播放</button>
+        <button type="button" class="scene-tab-btn" data-role="pause">暂停</button>
+        <button type="button" class="scene-tab-btn" data-role="step">单步</button>
+        <button type="button" class="scene-reset-btn" data-role="reset">重置</button>
       </div>
     </div>
   `;

@@ -12,7 +12,7 @@ export default defineConfig({
   },
   test: {
     include: ['tests/**/*.spec.ts'],
-    exclude: ['tests/visual/**', 'node_modules/**', 'dist/**']
+    exclude: ['tests/visual/**', 'tests/parity/**', 'node_modules/**', 'dist/**']
   },
   build: {
     rollupOptions: {

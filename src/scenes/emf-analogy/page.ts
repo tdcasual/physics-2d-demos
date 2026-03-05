@@ -1,10 +1,22 @@
 import '../../ui/teaching-demo.css';
+import { bootLegacy2DBridgePage } from '../../app/legacy-2d-bridge-page';
 import { createPageLifecycle } from '../../app/page-lifecycle';
 import { createSceneShell } from '../../app/scene-shell';
 import { createTeachingDemoShell, type ReadoutItem } from '../../app/teaching-demo-shell';
 import { createEmfAnalogyControls } from './controls';
 import { createEmfAnalogyScene } from './scene.entry';
 import type { EmfAnalogySnapshot } from './scene.sim';
+
+type Renderer = 'legacy' | 'experimental';
+
+function resolveRenderer(search: string): Renderer {
+  const query = new URLSearchParams(search);
+  const renderer = query.get('renderer');
+  if (renderer === 'experimental') {
+    return 'experimental';
+  }
+  return 'legacy';
+}
 
 function formatReadout(snapshot: EmfAnalogySnapshot, mode: 'normal' | 'presentation'): ReadoutItem[] {
   return [
@@ -17,12 +29,30 @@ function formatReadout(snapshot: EmfAnalogySnapshot, mode: 'normal' | 'presentat
   ];
 }
 
-function boot(): void {
-  const mount = document.getElementById('app');
-  if (!(mount instanceof HTMLElement)) {
-    throw new Error('Missing #app container');
-  }
+function bootLegacy(mount: HTMLElement): void {
+  bootLegacy2DBridgePage({
+    mount,
+    title: '电路水流类比模型（2D）',
+    subtitle: '右侧使用历史场景渲染，保持显示一致',
+    scene: {
+      sceneId: 'legacy-emf-analogy',
+      sourcePath: '/animations/electromagnetism/电动势类比动画.html'
+    },
+    setupControls: ({ shell, adapter, lifecycle }) => {
+      const controls = createEmfAnalogyControls({
+        container: shell.controlSlot,
+        onSetSystemOn: (on) => adapter.sendControlExt('set-system-on', { on }),
+        onSetTapOpening: (opening) => adapter.sendControlExt('set-tap-opening', { opening }),
+        onReset: () => adapter.sendControl('reset'),
+        onStatus: (text) => shell.setStatus(text)
+      });
+      lifecycle.onDispose(() => controls.dispose());
+      shell.setStatus('左侧可调通路开关与水龙头开度');
+    }
+  });
+}
 
+function bootModern(mount: HTMLElement): void {
   const shell = createTeachingDemoShell({
     mount,
     title: '电路水流类比模型（2D）',
@@ -127,6 +157,20 @@ function boot(): void {
   if (isPlaying) {
     transport.play();
   }
+}
+
+function boot(): void {
+  const mount = document.getElementById('app');
+  if (!(mount instanceof HTMLElement)) {
+    throw new Error('Missing #app container');
+  }
+
+  const renderer = resolveRenderer(window.location.search);
+  if (renderer === 'experimental') {
+    bootModern(mount);
+    return;
+  }
+  bootLegacy(mount);
 }
 
 boot();

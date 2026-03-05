@@ -24,15 +24,15 @@ export function createElectrificationControls(options: ElectrificationControlsOp
   };
 
   options.container.innerHTML = `
-    <div class="legacy-field-controls">
-      <div class="legacy-field-scenes" data-role="scene-group">
-        <button type="button" class="legacy-scene-btn" data-scene="friction">摩擦起电</button>
-        <button type="button" class="legacy-scene-btn" data-scene="induction">感应起电</button>
-        <button type="button" class="legacy-scene-btn" data-scene="contact">接触起电</button>
+    <div class="scene-control-panel">
+      <div class="scene-switch-grid" data-role="scene-group">
+        <button type="button" class="scene-tab-btn" data-scene="friction">摩擦起电</button>
+        <button type="button" class="scene-tab-btn" data-scene="induction">感应起电</button>
+        <button type="button" class="scene-tab-btn" data-scene="contact">接触起电</button>
       </div>
-      <div class="legacy-action-grid">
-        <button type="button" class="legacy-chip-btn legacy-wide-btn" data-role="run-step">执行下一步</button>
-        <button type="button" class="legacy-reset-btn" data-role="reset">重置场景</button>
+      <div class="scene-action-grid">
+        <button type="button" class="scene-chip-btn scene-wide-btn" data-role="run-step">执行下一步</button>
+        <button type="button" class="scene-reset-btn" data-role="reset">重置场景</button>
       </div>
     </div>
   `;
@@ -49,7 +49,7 @@ export function createElectrificationControls(options: ElectrificationControlsOp
     throw new Error('Failed to mount electrification controls');
   }
 
-  const sceneButtons = Array.from(sceneGroup.querySelectorAll('.legacy-scene-btn')).filter(
+  const sceneButtons = Array.from(sceneGroup.querySelectorAll('.scene-tab-btn')).filter(
     (node): node is HTMLButtonElement => node instanceof HTMLButtonElement
   );
 

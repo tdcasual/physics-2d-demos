@@ -1,9 +1,21 @@
 import '../../ui/teaching-demo.css';
+import { bootLegacy2DBridgePage } from '../../app/legacy-2d-bridge-page';
 import { createPageLifecycle } from '../../app/page-lifecycle';
 import { createTeachingDemoShell, type ReadoutItem } from '../../app/teaching-demo-shell';
 import { createFieldLinesControls } from './controls';
 import { createFieldLinesScene } from './scene.entry';
 import type { FieldLinesSnapshot } from './scene.sim';
+
+type Renderer = 'legacy' | 'experimental';
+
+function resolveRenderer(search: string): Renderer {
+  const query = new URLSearchParams(search);
+  const renderer = query.get('renderer');
+  if (renderer === 'experimental') {
+    return 'experimental';
+  }
+  return 'legacy';
+}
 
 function formatReadout(snapshot: FieldLinesSnapshot, theme: 'light' | 'dark', mode: 'normal' | 'presentation'): ReadoutItem[] {
   return [
@@ -12,17 +24,42 @@ function formatReadout(snapshot: FieldLinesSnapshot, theme: 'light' | 'dark', mo
     { label: '显示模式', value: mode === 'presentation' ? '演示模式' : '标准模式' },
     { label: '矢量密度', value: String(Math.round(snapshot.params.density)) },
     { label: '电荷数量', value: String(snapshot.charges.length) },
-    { label: '电荷1', value: snapshot.charges[0] ? `${snapshot.charges[0].q > 0 ? '+' : ''}${snapshot.charges[0].q.toFixed(1)}` : '--' },
-    { label: '电荷2', value: snapshot.charges[1] ? `${snapshot.charges[1].q > 0 ? '+' : ''}${snapshot.charges[1].q.toFixed(1)}` : '--' }
+    {
+      label: '电荷1',
+      value: snapshot.charges[0] ? `${snapshot.charges[0].q > 0 ? '+' : ''}${snapshot.charges[0].q.toFixed(1)}` : '--'
+    },
+    {
+      label: '电荷2',
+      value: snapshot.charges[1] ? `${snapshot.charges[1].q > 0 ? '+' : ''}${snapshot.charges[1].q.toFixed(1)}` : '--'
+    }
   ];
 }
 
-function boot(): void {
-  const mount = document.getElementById('app');
-  if (!(mount instanceof HTMLElement)) {
-    throw new Error('Missing #app container');
-  }
+function bootLegacy(mount: HTMLElement): void {
+  bootLegacy2DBridgePage({
+    mount,
+    title: '电场矢量到电场线的演化（2D）',
+    subtitle: '右侧使用历史场景渲染，保持显示一致',
+    scene: {
+      sceneId: 'legacy-field-lines',
+      sourcePath: '/animations/electromagnetism/模拟电场线.html'
+    },
+    setupControls: ({ shell, adapter, lifecycle }) => {
+      const controls = createFieldLinesControls({
+        container: shell.controlSlot,
+        onSetScene: (scene) => adapter.sendControlExt('set-scene', { scene }),
+        onSetDensity: (density) => adapter.sendControlExt('set-density', { density }),
+        onSetCustomCharges: (q1, q2) => adapter.sendControlExt('set-custom-charges', { q1, q2 }),
+        onReset: () => adapter.sendControl('reset'),
+        onStatus: (text) => shell.setStatus(text)
+      });
+      lifecycle.onDispose(() => controls.dispose());
+      shell.setStatus('左侧可调场景、密度与电荷参数');
+    }
+  });
+}
 
+function bootModern(mount: HTMLElement): void {
   const shell = createTeachingDemoShell({
     mount,
     title: '电场矢量到电场线的演化（2D）',
@@ -159,6 +196,20 @@ function boot(): void {
   const onBeforeUnload = () => lifecycle.dispose();
   window.addEventListener('beforeunload', onBeforeUnload);
   lifecycle.onDispose(() => window.removeEventListener('beforeunload', onBeforeUnload));
+}
+
+function boot(): void {
+  const mount = document.getElementById('app');
+  if (!(mount instanceof HTMLElement)) {
+    throw new Error('Missing #app container');
+  }
+
+  const renderer = resolveRenderer(window.location.search);
+  if (renderer === 'experimental') {
+    bootModern(mount);
+    return;
+  }
+  bootLegacy(mount);
 }
 
 boot();

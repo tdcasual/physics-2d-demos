@@ -1,10 +1,25 @@
 import '../../ui/teaching-demo.css';
+import { bootLegacy2DBridgePage } from '../../app/legacy-2d-bridge-page';
 import { createPageLifecycle } from '../../app/page-lifecycle';
 import { createSceneShell } from '../../app/scene-shell';
 import { createTeachingDemoShell, type ReadoutItem } from '../../app/teaching-demo-shell';
 import { createChaseMeetControls } from './controls';
 import { createChaseMeetScene } from './scene.entry';
 import type { ChaseMeetSnapshot, ResolvedChaseMeetParams } from './scene.sim';
+
+type Renderer = 'legacy' | 'modern-lab' | 'experimental';
+
+function resolveRenderer(search: string): Renderer {
+  const query = new URLSearchParams(search);
+  const renderer = query.get('renderer');
+  if (renderer === 'modern-lab') {
+    return 'modern-lab';
+  }
+  if (renderer === 'experimental') {
+    return 'experimental';
+  }
+  return 'legacy';
+}
 
 function formatReadout(
   snapshot: ChaseMeetSnapshot,
@@ -23,12 +38,40 @@ function formatReadout(
   ];
 }
 
-function boot(): void {
-  const mount = document.getElementById('app');
-  if (!(mount instanceof HTMLElement)) {
-    throw new Error('Missing #app container');
-  }
+function bootLegacy(mount: HTMLElement): void {
+  bootLegacy2DBridgePage({
+    mount,
+    title: '追及相遇演示动画（2D）',
+    subtitle: '右侧使用历史场景渲染，保持显示一致',
+    scene: {
+      sceneId: 'legacy-chase-meet',
+      sourcePath: '/animations/mechanics/追击相遇问题.html'
+    },
+    setupControls: ({ shell, adapter, lifecycle }) => {
+      const controls = createChaseMeetControls({
+        container: shell.controlSlot,
+        initialParams: {
+          totalTime: 10,
+          dt: 0.02,
+          x0A: 0,
+          x0B: 10,
+          vExprA: '2',
+          vExprB: '0.5'
+        },
+        onPlay: () => adapter.sendControl('play'),
+        onPause: () => adapter.sendControl('pause'),
+        onReset: () => adapter.sendControl('reset'),
+        onStep: () => adapter.sendControl('step'),
+        onApplyParams: (next) => adapter.sendControlExt('set-settings', next),
+        onStatus: (text) => shell.setStatus(text)
+      });
+      lifecycle.onDispose(() => controls.dispose());
+      shell.setStatus('左侧可配置参数并控制播放流程');
+    }
+  });
+}
 
+function bootModern(mount: HTMLElement): void {
   const shell = createTeachingDemoShell({
     mount,
     title: '追及相遇演示动画（2D）',
@@ -42,8 +85,10 @@ function boot(): void {
   let isPlaying = false;
   let currentParams: ResolvedChaseMeetParams | null = null;
 
+  shell.stageCanvas.remove();
+
   const scene = createChaseMeetScene({
-    canvas: shell.stageCanvas,
+    stageSlot: shell.stageSlot,
     mode: shell.getMode(),
     theme: shell.getTheme(),
     onReadout: (snapshot) => {
@@ -179,6 +224,20 @@ function boot(): void {
   scene.resize();
   scene.render();
   shell.setStatus('就绪');
+}
+
+function boot(): void {
+  const mount = document.getElementById('app');
+  if (!(mount instanceof HTMLElement)) {
+    throw new Error('Missing #app container');
+  }
+
+  const renderer = resolveRenderer(window.location.search);
+  if (renderer === 'modern-lab' || renderer === 'experimental') {
+    bootModern(mount);
+    return;
+  }
+  bootLegacy(mount);
 }
 
 boot();

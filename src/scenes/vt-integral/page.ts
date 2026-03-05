@@ -1,10 +1,22 @@
 import '../../ui/teaching-demo.css';
+import { bootLegacy2DBridgePage } from '../../app/legacy-2d-bridge-page';
 import { createPageLifecycle } from '../../app/page-lifecycle';
 import { createSceneShell } from '../../app/scene-shell';
 import { createTeachingDemoShell, type ReadoutItem } from '../../app/teaching-demo-shell';
 import { createVtIntegralControls } from './controls';
 import { createVtIntegralScene } from './scene.entry';
 import type { VtIntegralSnapshot } from './scene.sim';
+
+type Renderer = 'legacy' | 'experimental';
+
+function resolveRenderer(search: string): Renderer {
+  const query = new URLSearchParams(search);
+  const renderer = query.get('renderer');
+  if (renderer === 'experimental') {
+    return 'experimental';
+  }
+  return 'legacy';
+}
 
 function sceneLabel(scene: VtIntegralSnapshot['params']['scene']): string {
   if (scene === 'scene1') return '场景一：v-t积分';
@@ -55,12 +67,36 @@ function formatReadout(snapshot: VtIntegralSnapshot, mode: 'normal' | 'presentat
   ];
 }
 
-function boot(): void {
-  const mount = document.getElementById('app');
-  if (!(mount instanceof HTMLElement)) {
-    throw new Error('Missing #app container');
-  }
+function bootLegacy(mount: HTMLElement): void {
+  bootLegacy2DBridgePage({
+    mount,
+    title: '微元法交互式动画（2D）',
+    subtitle: '右侧使用历史场景渲染，保持显示一致',
+    scene: {
+      sceneId: 'legacy-vt-integral',
+      sourcePath: '/animations/mechanics/v-t面积与微元法.html'
+    },
+    setupControls: ({ shell, adapter, lifecycle }) => {
+      const controls = createVtIntegralControls({
+        container: shell.controlSlot,
+        onSetScene: (scene) => adapter.sendControlExt('set-scene', { scene }),
+        onSetRects: (value) => adapter.sendControlExt('scene1:set-rects', { value }),
+        onSetTime: (value) => adapter.sendControlExt('scene1:set-time', { value }),
+        onSetMethod: (method) => adapter.sendControlExt('scene1:set-method', { method }),
+        onSetCurveAmplitude: (value) => adapter.sendControlExt('scene2:set-amplitude', { value }),
+        onSetCircleN: (value) => adapter.sendControlExt('scene3:set-n', { value }),
+        onSetSurfaceN: (value) => adapter.sendControlExt('scene4:set-surface-n', { value }),
+        onSetDivision: (value) => adapter.sendControlExt('scene5:set-division', { value }),
+        onReset: () => adapter.sendControl('reset'),
+        onStatus: (text) => shell.setStatus(text)
+      });
+      lifecycle.onDispose(() => controls.dispose());
+      shell.setStatus('左侧可切换微元法子场景并调参');
+    }
+  });
+}
 
+function bootModern(mount: HTMLElement): void {
   const shell = createTeachingDemoShell({
     mount,
     title: '微元法交互式动画（2D）',
@@ -174,6 +210,20 @@ function boot(): void {
   scene.resize();
   scene.render();
   shell.setStatus('就绪');
+}
+
+function boot(): void {
+  const mount = document.getElementById('app');
+  if (!(mount instanceof HTMLElement)) {
+    throw new Error('Missing #app container');
+  }
+
+  const renderer = resolveRenderer(window.location.search);
+  if (renderer === 'experimental') {
+    bootModern(mount);
+    return;
+  }
+  bootLegacy(mount);
 }
 
 boot();

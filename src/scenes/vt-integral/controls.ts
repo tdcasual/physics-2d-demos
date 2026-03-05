@@ -51,28 +51,28 @@ export function createVtIntegralControls(options: VtIntegralControlsOptions) {
   };
 
   options.container.innerHTML = `
-    <div class="legacy-field-controls">
-      <div class="legacy-field-scenes" data-role="scene-group">
-        <button type="button" class="legacy-scene-btn" data-scene="scene1">场景一</button>
-        <button type="button" class="legacy-scene-btn" data-scene="scene2">场景二</button>
-        <button type="button" class="legacy-scene-btn" data-scene="scene3">场景三</button>
-        <button type="button" class="legacy-scene-btn" data-scene="scene4">场景四</button>
-        <button type="button" class="legacy-scene-btn" data-scene="scene5">场景五</button>
+    <div class="scene-control-panel">
+      <div class="scene-switch-grid" data-role="scene-group">
+        <button type="button" class="scene-tab-btn" data-scene="scene1">场景一</button>
+        <button type="button" class="scene-tab-btn" data-scene="scene2">场景二</button>
+        <button type="button" class="scene-tab-btn" data-scene="scene3">场景三</button>
+        <button type="button" class="scene-tab-btn" data-scene="scene4">场景四</button>
+        <button type="button" class="scene-tab-btn" data-scene="scene5">场景五</button>
       </div>
 
-      <div class="legacy-custom-wrap" data-role="scene1-panel">
-        <label class="legacy-field-row">
-          <span class="legacy-field-label">矩形数 n</span>
+      <div class="scene-section-card" data-role="scene1-panel">
+        <label class="scene-control-row">
+          <span class="scene-control-label">矩形数 n</span>
           <input type="range" min="2" max="40" step="1" value="${state.rects}" data-role="rects-slider">
-          <span class="legacy-field-value" data-role="rects-value">${state.rects}</span>
+          <span class="scene-control-value" data-role="rects-value">${state.rects}</span>
         </label>
-        <label class="legacy-field-row">
-          <span class="legacy-field-label">时间 T</span>
+        <label class="scene-control-row">
+          <span class="scene-control-label">时间 T</span>
           <input type="range" min="1" max="10" step="0.5" value="${state.time}" data-role="time-slider">
-          <span class="legacy-field-value" data-role="time-value">${state.time.toFixed(1)}</span>
+          <span class="scene-control-value" data-role="time-value">${state.time.toFixed(1)}</span>
         </label>
-        <label class="legacy-form-row">
-          <span class="legacy-field-label">方法</span>
+        <label class="scene-form-row">
+          <span class="scene-control-label">方法</span>
           <select data-role="method-select">
             <option value="left">左端</option>
             <option value="mid" selected>中点</option>
@@ -82,39 +82,39 @@ export function createVtIntegralControls(options: VtIntegralControlsOptions) {
         </label>
       </div>
 
-      <div class="legacy-custom-wrap is-hidden" data-role="scene2-panel">
-        <label class="legacy-field-row">
-          <span class="legacy-field-label">曲线振幅 A</span>
+      <div class="scene-section-card is-hidden" data-role="scene2-panel">
+        <label class="scene-control-row">
+          <span class="scene-control-label">曲线振幅 A</span>
           <input type="range" min="0.05" max="0.45" step="0.01" value="${state.curveAmplitude}" data-role="curve-amp-slider">
-          <span class="legacy-field-value" data-role="curve-amp-value">${state.curveAmplitude.toFixed(2)}</span>
+          <span class="scene-control-value" data-role="curve-amp-value">${state.curveAmplitude.toFixed(2)}</span>
         </label>
       </div>
 
-      <div class="legacy-custom-wrap is-hidden" data-role="scene3-panel">
-        <label class="legacy-field-row">
-          <span class="legacy-field-label">多边形 n</span>
+      <div class="scene-section-card is-hidden" data-role="scene3-panel">
+        <label class="scene-control-row">
+          <span class="scene-control-label">多边形 n</span>
           <input type="range" min="3" max="200" step="1" value="${state.circleN}" data-role="circle-slider">
-          <span class="legacy-field-value" data-role="circle-value">${state.circleN}</span>
+          <span class="scene-control-value" data-role="circle-value">${state.circleN}</span>
         </label>
       </div>
 
-      <div class="legacy-custom-wrap is-hidden" data-role="scene4-panel">
-        <label class="legacy-field-row">
-          <span class="legacy-field-label">四棱锥 n</span>
+      <div class="scene-section-card is-hidden" data-role="scene4-panel">
+        <label class="scene-control-row">
+          <span class="scene-control-label">四棱锥 n</span>
           <input type="range" min="1" max="10" step="1" value="${state.surfaceN}" data-role="surface-slider">
-          <span class="legacy-field-value" data-role="surface-value">${state.surfaceN}</span>
+          <span class="scene-control-value" data-role="surface-value">${state.surfaceN}</span>
         </label>
       </div>
 
-      <div class="legacy-custom-wrap is-hidden" data-role="scene5-panel">
-        <label class="legacy-field-row">
-          <span class="legacy-field-label">细分等级</span>
+      <div class="scene-section-card is-hidden" data-role="scene5-panel">
+        <label class="scene-control-row">
+          <span class="scene-control-label">细分等级</span>
           <input type="range" min="16" max="100" step="1" value="${state.division}" data-role="division-slider">
-          <span class="legacy-field-value" data-role="division-value">${state.division}</span>
+          <span class="scene-control-value" data-role="division-value">${state.division}</span>
         </label>
       </div>
 
-      <button type="button" class="legacy-reset-btn" data-role="reset">重置场景</button>
+      <button type="button" class="scene-reset-btn" data-role="reset">重置场景</button>
     </div>
   `;
 
@@ -164,7 +164,7 @@ export function createVtIntegralControls(options: VtIntegralControlsOptions) {
     throw new Error('Failed to mount vt-integral controls');
   }
 
-  const sceneButtons = Array.from(sceneGroup.querySelectorAll('.legacy-scene-btn')).filter(
+  const sceneButtons = Array.from(sceneGroup.querySelectorAll('.scene-tab-btn')).filter(
     (node): node is HTMLButtonElement => node instanceof HTMLButtonElement
   );
 

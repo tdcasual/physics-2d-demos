@@ -20,8 +20,9 @@ describe('theme entry architecture', () => {
 
     expect(shell).toContain('shell-theme-toggle');
     for (const page of pages) {
-      expect(page).toContain('onThemeToggle');
-      expect(page).toContain('shell.themeButton');
+      const hasInlineThemeToggle = page.includes('onThemeToggle') && page.includes('shell.themeButton');
+      const usesLegacyBridge = page.includes('bootLegacy2DBridgePage');
+      expect(hasInlineThemeToggle || usesLegacyBridge).toBe(true);
       expect(page.includes('themeToggle')).toBe(false);
     }
   });

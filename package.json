@@ -12,7 +12,9 @@
     "format": "prettier --write .",
     "generate:index": "node --import tsx scripts/generate-scene-index.ts && node --import tsx scripts/generate-nav-fallback.ts",
     "test:visual": "playwright test",
-    "test:visual:update": "playwright test --update-snapshots"
+    "test:visual:update": "playwright test --update-snapshots",
+    "test:parity": "playwright test -c playwright.parity.config.ts tests/parity",
+    "test:parity:chase-meet": "playwright test -c playwright.parity.config.ts tests/parity/chase-meet.parity.spec.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.0",
@@ -21,6 +23,8 @@
     "@typescript-eslint/parser": "^8.43.0",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^10.1.8",
+    "pixelmatch": "^7.1.0",
+    "pngjs": "^7.0.0",
     "prettier": "^3.6.2",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",

@@ -1,9 +1,21 @@
 import '../../ui/teaching-demo.css';
+import { bootLegacy2DBridgePage } from '../../app/legacy-2d-bridge-page';
 import { createPageLifecycle } from '../../app/page-lifecycle';
 import { createTeachingDemoShell, type ReadoutItem } from '../../app/teaching-demo-shell';
 import { createElectrificationControls } from './controls';
 import { createElectrificationScene } from './scene.entry';
 import type { ElectrificationSnapshot } from './scene.sim';
+
+type Renderer = 'legacy' | 'experimental';
+
+function resolveRenderer(search: string): Renderer {
+  const query = new URLSearchParams(search);
+  const renderer = query.get('renderer');
+  if (renderer === 'experimental') {
+    return 'experimental';
+  }
+  return 'legacy';
+}
 
 function sceneLabel(scene: ElectrificationSnapshot['state']['scene']): string {
   if (scene === 'friction') return '摩擦起电';
@@ -20,12 +32,30 @@ function formatReadout(snapshot: ElectrificationSnapshot, mode: 'normal' | 'pres
   ];
 }
 
-function boot(): void {
-  const mount = document.getElementById('app');
-  if (!(mount instanceof HTMLElement)) {
-    throw new Error('Missing #app container');
-  }
+function bootLegacy(mount: HTMLElement): void {
+  bootLegacy2DBridgePage({
+    mount,
+    title: '交互式静电起电演示（2D）',
+    subtitle: '右侧使用历史场景渲染，保持显示一致',
+    scene: {
+      sceneId: 'legacy-electrification',
+      sourcePath: '/animations/electromagnetism/起电方式演示.html'
+    },
+    setupControls: ({ shell, adapter, lifecycle }) => {
+      const controls = createElectrificationControls({
+        container: shell.controlSlot,
+        onSetScene: (scene) => adapter.sendControlExt('set-scene', { scene }),
+        onRunStep: () => adapter.sendControlExt('run-scene-action'),
+        onReset: () => adapter.sendControl('reset'),
+        onStatus: (text) => shell.setStatus(text)
+      });
+      lifecycle.onDispose(() => controls.dispose());
+      shell.setStatus('左侧可切换起电场景并执行步骤');
+    }
+  });
+}
 
+function bootModern(mount: HTMLElement): void {
   const shell = createTeachingDemoShell({
     mount,
     title: '交互式静电起电演示（2D）',
@@ -106,6 +136,20 @@ function boot(): void {
   const onBeforeUnload = () => lifecycle.dispose();
   window.addEventListener('beforeunload', onBeforeUnload);
   lifecycle.onDispose(() => window.removeEventListener('beforeunload', onBeforeUnload));
+}
+
+function boot(): void {
+  const mount = document.getElementById('app');
+  if (!(mount instanceof HTMLElement)) {
+    throw new Error('Missing #app container');
+  }
+
+  const renderer = resolveRenderer(window.location.search);
+  if (renderer === 'experimental') {
+    bootModern(mount);
+    return;
+  }
+  bootLegacy(mount);
 }
 
 boot();

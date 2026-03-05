@@ -40,31 +40,31 @@ export function createFieldLinesControls(options: FieldLinesControlsOptions) {
   };
 
   options.container.innerHTML = `
-    <div class="legacy-field-controls">
-      <div class="legacy-field-scenes" data-role="scene-group">
-        <button type="button" class="legacy-scene-btn" data-scene="single">单个电荷</button>
-        <button type="button" class="legacy-scene-btn" data-scene="like">同种电荷</button>
-        <button type="button" class="legacy-scene-btn" data-scene="unlike">异种电荷</button>
-        <button type="button" class="legacy-scene-btn" data-scene="custom">自定义双电荷</button>
+    <div class="scene-control-panel">
+      <div class="scene-switch-grid" data-role="scene-group">
+        <button type="button" class="scene-tab-btn" data-scene="single">单个电荷</button>
+        <button type="button" class="scene-tab-btn" data-scene="like">同种电荷</button>
+        <button type="button" class="scene-tab-btn" data-scene="unlike">异种电荷</button>
+        <button type="button" class="scene-tab-btn" data-scene="custom">自定义双电荷</button>
       </div>
-      <div class="legacy-field-row">
-        <span class="legacy-field-label">密度</span>
+      <div class="scene-control-row">
+        <span class="scene-control-label">密度</span>
         <input type="range" min="1" max="100" step="1" value="10" data-role="density-slider">
-        <span class="legacy-field-value" data-role="density-value">10</span>
+        <span class="scene-control-value" data-role="density-value">10</span>
       </div>
-      <div class="legacy-custom-wrap is-hidden" data-role="custom-wrap">
-        <label class="legacy-field-row legacy-charge-row">
-          <span class="legacy-field-label">电荷1</span>
+      <div class="scene-section-card is-hidden" data-role="custom-wrap">
+        <label class="scene-control-row scene-charge-row">
+          <span class="scene-control-label">电荷1</span>
           <input type="range" min="-5" max="5" step="0.5" value="1" data-role="q1-slider">
-          <span class="legacy-field-value" data-role="q1-value">+1.0</span>
+          <span class="scene-control-value" data-role="q1-value">+1.0</span>
         </label>
-        <label class="legacy-field-row legacy-charge-row">
-          <span class="legacy-field-label">电荷2</span>
+        <label class="scene-control-row scene-charge-row">
+          <span class="scene-control-label">电荷2</span>
           <input type="range" min="-5" max="5" step="0.5" value="-1" data-role="q2-slider">
-          <span class="legacy-field-value" data-role="q2-value">-1.0</span>
+          <span class="scene-control-value" data-role="q2-value">-1.0</span>
         </label>
       </div>
-      <button type="button" class="legacy-reset-btn" data-role="reset">重置场景</button>
+      <button type="button" class="scene-reset-btn" data-role="reset">重置场景</button>
     </div>
   `;
 
@@ -92,7 +92,7 @@ export function createFieldLinesControls(options: FieldLinesControlsOptions) {
     throw new Error('Failed to mount field-lines controls');
   }
 
-  const sceneButtons = Array.from(sceneGroup.querySelectorAll('.legacy-scene-btn')).filter(
+  const sceneButtons = Array.from(sceneGroup.querySelectorAll('.scene-tab-btn')).filter(
     (node): node is HTMLButtonElement => node instanceof HTMLButtonElement
   );
 

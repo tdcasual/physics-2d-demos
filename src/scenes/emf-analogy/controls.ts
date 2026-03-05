@@ -26,17 +26,17 @@ export function createEmfAnalogyControls(options: EmfAnalogyControlsOptions) {
   };
 
   options.container.innerHTML = `
-    <div class="legacy-field-controls">
-      <div class="legacy-field-row">
-        <span class="legacy-field-label">系统开关</span>
-        <button type="button" class="legacy-chip-btn" data-role="system-toggle">已关闭</button>
+    <div class="scene-control-panel">
+      <div class="scene-control-row">
+        <span class="scene-control-label">系统开关</span>
+        <button type="button" class="scene-chip-btn" data-role="system-toggle">已关闭</button>
       </div>
-      <label class="legacy-field-row">
-        <span class="legacy-field-label">水龙头开度</span>
+      <label class="scene-control-row">
+        <span class="scene-control-label">水龙头开度</span>
         <input type="range" min="0" max="1" step="0.01" value="${state.opening}" data-role="opening-slider">
-        <span class="legacy-field-value" data-role="opening-value">${formatOpening(state.opening)}</span>
+        <span class="scene-control-value" data-role="opening-value">${formatOpening(state.opening)}</span>
       </label>
-      <button type="button" class="legacy-reset-btn" data-role="reset">重置场景</button>
+      <button type="button" class="scene-reset-btn" data-role="reset">重置场景</button>
     </div>
   `;
 

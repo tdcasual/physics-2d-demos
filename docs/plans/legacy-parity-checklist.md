@@ -13,6 +13,8 @@
 
 ### legacy-chase-meet
 
+- [x] 路由分批：`renderer=modern-lab` 已切至 modern 实现，`renderer=modern` 仍锁定 legacy
+
 - [ ] 初始参数和初始读数一致
 - [ ] 播放后距离随时间变化曲线一致
 - [ ] 单步行为与时间步长一致
