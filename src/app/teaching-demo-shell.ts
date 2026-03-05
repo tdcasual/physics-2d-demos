@@ -72,18 +72,8 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
           <button type="button" class="sidebar-toggle sidebar-toggle-inline">隐藏控制面板</button>
         </header>
         <section class="teaching-card">
-          <h2 class="teaching-card-title">显示模式</h2>
-          <button type="button" class="mode-toggle">${modeToggleLabel(modeState.value)}</button>
-          <button type="button" class="shell-theme-toggle">${themeToggleLabel(themeState.value)}</button>
-          <p class="mode-hint">演示模式按 1080P 教室场景放大字体与线条。</p>
-        </section>
-        <section class="teaching-card">
           <h2 class="teaching-card-title">控制区</h2>
           <div class="control-slot"></div>
-        </section>
-        <section class="teaching-card">
-          <h2 class="teaching-card-title">数据区</h2>
-          <ul class="readout-slot"></ul>
         </section>
         <section class="teaching-card status-card">
           <h2 class="teaching-card-title">状态</h2>
@@ -93,10 +83,17 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
       <div class="sidebar-resizer" role="separator" aria-orientation="vertical" aria-label="调整控制面板宽度"></div>
       <section class="teaching-stage-panel">
         <button type="button" class="sidebar-toggle sidebar-toggle-float">隐藏控制面板</button>
+        <div class="stage-toolbar" role="group" aria-label="演示区设置">
+          <button type="button" class="mode-toggle">${modeToggleLabel(modeState.value)}</button>
+          <button type="button" class="shell-theme-toggle">${themeToggleLabel(themeState.value)}</button>
+        </div>
         <div class="stage-frame">
           <div class="stage-slot">
             <canvas class="stage-canvas" aria-label="2D 教学动画演示区域"></canvas>
           </div>
+        </div>
+        <div class="stage-readout">
+          <ul class="readout-slot"></ul>
         </div>
       </section>
     </section>
@@ -105,6 +102,7 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
   const root = options.mount.querySelector('.teaching-demo');
   const controlSlot = options.mount.querySelector('.control-slot');
   const readoutSlot = options.mount.querySelector('.readout-slot');
+  const stageReadout = options.mount.querySelector('.stage-readout');
   const statusText = options.mount.querySelector('.status-text');
   const stageSlot = options.mount.querySelector('.stage-slot');
   const stageCanvas = options.mount.querySelector('.stage-canvas');
@@ -119,6 +117,7 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
     !(root instanceof HTMLElement) ||
     !(controlSlot instanceof HTMLElement) ||
     !(readoutSlot instanceof HTMLElement) ||
+    !(stageReadout instanceof HTMLElement) ||
     !(statusText instanceof HTMLElement) ||
     !(stageSlot instanceof HTMLElement) ||
     !(stageCanvas instanceof HTMLCanvasElement) ||
@@ -235,6 +234,7 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
 
   applyModeTokens(root, modeState.value);
   applyThemeTokens(root, themeState.value);
+  stageReadout.classList.add('is-empty');
   modeButton.setAttribute('aria-pressed', String(modeState.value === 'presentation'));
   themeButton.setAttribute('aria-pressed', String(themeState.value === 'dark'));
   themeButton.textContent = themeToggleLabel(themeState.value);
@@ -259,6 +259,7 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
     },
     setReadout(items: ReadoutItem[]) {
       readoutSlot.innerHTML = '';
+      stageReadout.classList.toggle('is-empty', items.length === 0);
       for (const item of items) {
         const line = document.createElement('li');
         line.className = 'readout-item';

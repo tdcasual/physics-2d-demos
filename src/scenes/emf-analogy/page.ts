@@ -27,9 +27,8 @@ function resolveRenderer(search: string): Renderer {
   return 'modern';
 }
 
-function formatReadout(snapshot: EmfAnalogySnapshot, mode: 'normal' | 'presentation'): ReadoutItem[] {
+function formatReadout(snapshot: EmfAnalogySnapshot): ReadoutItem[] {
   return [
-    { label: '显示模式', value: mode === 'presentation' ? '演示模式' : '标准模式' },
     { label: '系统状态', value: snapshot.state.isSystemOn ? '通路' : '断路' },
     { label: '开度', value: `${Math.round(snapshot.state.tapOpening * 100)}%` },
     { label: '电流 I', value: `${snapshot.state.currentI.toFixed(2)} A` },
@@ -80,7 +79,7 @@ function bootModern(mount: HTMLElement): void {
     theme: shell.getTheme(),
     onReadout: (next) => {
       snapshot = next;
-      shell.setReadout(formatReadout(next, shell.getMode()));
+      shell.setReadout(formatReadout(next));
     }
   });
   lifecycle.onDispose(() => scene.dispose());
@@ -128,7 +127,7 @@ function bootModern(mount: HTMLElement): void {
     scene.setMode(nextMode);
     scene.resize();
     scene.render();
-    if (snapshot) shell.setReadout(formatReadout(snapshot, shell.getMode()));
+    if (snapshot) shell.setReadout(formatReadout(snapshot));
     shell.setStatus(nextMode === 'presentation' ? '演示模式已开启' : '标准模式已开启');
   };
 

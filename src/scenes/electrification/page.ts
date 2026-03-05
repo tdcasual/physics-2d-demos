@@ -26,16 +26,8 @@ function resolveRenderer(search: string): Renderer {
   return 'modern';
 }
 
-function sceneLabel(scene: ElectrificationSnapshot['state']['scene']): string {
-  if (scene === 'friction') return '摩擦起电';
-  if (scene === 'induction') return '感应起电';
-  return '接触起电';
-}
-
-function formatReadout(snapshot: ElectrificationSnapshot, mode: 'normal' | 'presentation'): ReadoutItem[] {
+function formatReadout(snapshot: ElectrificationSnapshot): ReadoutItem[] {
   return [
-    { label: '场景', value: sceneLabel(snapshot.state.scene) },
-    { label: '显示模式', value: mode === 'presentation' ? '演示模式' : '标准模式' },
     { label: '下一步动作', value: snapshot.state.nextActionLabel },
     { label: '说明', value: snapshot.state.explanation }
   ];
@@ -82,7 +74,7 @@ function bootModern(mount: HTMLElement): void {
     theme: shell.getTheme(),
     onReadout: (next) => {
       snapshot = next;
-      shell.setReadout(formatReadout(next, shell.getMode()));
+      shell.setReadout(formatReadout(next));
     }
   });
   lifecycle.onDispose(() => scene.dispose());
@@ -111,7 +103,7 @@ function bootModern(mount: HTMLElement): void {
     scene.setMode(nextMode);
     scene.resize();
     scene.render();
-    if (snapshot) shell.setReadout(formatReadout(snapshot, shell.getMode()));
+    if (snapshot) shell.setReadout(formatReadout(snapshot));
     shell.setStatus(nextMode === 'presentation' ? '演示模式已开启' : '标准模式已开启');
   };
 

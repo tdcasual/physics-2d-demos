@@ -29,11 +29,9 @@ function resolveRenderer(search: string): Renderer {
 
 function formatReadout(
   snapshot: ChaseMeetSnapshot,
-  mode: 'normal' | 'presentation',
   isPlaying: boolean
 ): ReadoutItem[] {
   return [
-    { label: '显示模式', value: mode === 'presentation' ? '演示模式' : '标准模式' },
     { label: '动画状态', value: isPlaying ? '运行中' : '已暂停' },
     { label: '当前时间', value: `${snapshot.state.t.toFixed(2)} s` },
     { label: '当前距离', value: `${snapshot.state.distance.toFixed(2)} m` },
@@ -99,7 +97,7 @@ function bootModern(mount: HTMLElement): void {
     theme: shell.getTheme(),
     onReadout: (snapshot) => {
       currentSnapshot = snapshot;
-      shell.setReadout(formatReadout(snapshot, shell.getMode(), isPlaying));
+      shell.setReadout(formatReadout(snapshot, isPlaying));
     }
   });
   lifecycle.onDispose(() => scene.dispose());
@@ -120,7 +118,7 @@ function bootModern(mount: HTMLElement): void {
       transport.play();
       isPlaying = true;
       if (currentSnapshot) {
-        shell.setReadout(formatReadout(currentSnapshot, shell.getMode(), isPlaying));
+        shell.setReadout(formatReadout(currentSnapshot, isPlaying));
       }
       shell.setStatus('动画已开始');
     },
@@ -128,7 +126,7 @@ function bootModern(mount: HTMLElement): void {
       transport.pause();
       isPlaying = false;
       if (currentSnapshot) {
-        shell.setReadout(formatReadout(currentSnapshot, shell.getMode(), isPlaying));
+        shell.setReadout(formatReadout(currentSnapshot, isPlaying));
       }
       shell.setStatus('动画已暂停');
     },
@@ -138,7 +136,7 @@ function bootModern(mount: HTMLElement): void {
       scene.reset();
       scene.render();
       if (currentSnapshot) {
-        shell.setReadout(formatReadout(currentSnapshot, shell.getMode(), isPlaying));
+        shell.setReadout(formatReadout(currentSnapshot, isPlaying));
       }
       shell.setStatus('动画已重置');
     },
@@ -148,7 +146,7 @@ function bootModern(mount: HTMLElement): void {
       });
       isPlaying = false;
       if (currentSnapshot) {
-        shell.setReadout(formatReadout(currentSnapshot, shell.getMode(), isPlaying));
+        shell.setReadout(formatReadout(currentSnapshot, isPlaying));
       }
       shell.setStatus('已单步推进');
     },
@@ -159,7 +157,7 @@ function bootModern(mount: HTMLElement): void {
       scene.reset();
       scene.render();
       if (currentSnapshot) {
-        shell.setReadout(formatReadout(currentSnapshot, shell.getMode(), isPlaying));
+        shell.setReadout(formatReadout(currentSnapshot, isPlaying));
       }
       shell.setStatus('参数已更新');
     },
@@ -174,7 +172,7 @@ function bootModern(mount: HTMLElement): void {
     scene.resize();
     scene.render();
     if (currentSnapshot) {
-      shell.setReadout(formatReadout(currentSnapshot, shell.getMode(), isPlaying));
+      shell.setReadout(formatReadout(currentSnapshot, isPlaying));
     }
     shell.setStatus(nextMode === 'presentation' ? '演示模式已开启' : '标准模式已开启');
   };

@@ -26,11 +26,8 @@ function resolveRenderer(search: string): Renderer {
   return 'modern';
 }
 
-function formatReadout(snapshot: FieldLinesSnapshot, theme: 'light' | 'dark', mode: 'normal' | 'presentation'): ReadoutItem[] {
+function formatReadout(snapshot: FieldLinesSnapshot): ReadoutItem[] {
   return [
-    { label: '场景', value: snapshot.params.scene },
-    { label: '主题', value: theme === 'dark' ? '夜间' : '白天' },
-    { label: '显示模式', value: mode === 'presentation' ? '演示模式' : '标准模式' },
     { label: '矢量密度', value: String(Math.round(snapshot.params.density)) },
     { label: '电荷数量', value: String(snapshot.charges.length) },
     {
@@ -86,7 +83,7 @@ function bootModern(mount: HTMLElement): void {
     theme: shell.getTheme(),
     onReadout: (next) => {
       snapshot = next;
-      shell.setReadout(formatReadout(next, shell.getTheme(), shell.getMode()));
+      shell.setReadout(formatReadout(next));
     }
   });
   lifecycle.onDispose(() => scene.dispose());
@@ -167,7 +164,7 @@ function bootModern(mount: HTMLElement): void {
     scene.resize();
     scene.render();
     if (snapshot) {
-      shell.setReadout(formatReadout(snapshot, shell.getTheme(), shell.getMode()));
+      shell.setReadout(formatReadout(snapshot));
     }
     shell.setStatus(nextMode === 'presentation' ? '演示模式已开启' : '标准模式已开启');
   };
@@ -178,7 +175,7 @@ function bootModern(mount: HTMLElement): void {
     scene.setTheme(nextTheme);
     scene.render();
     if (snapshot) {
-      shell.setReadout(formatReadout(snapshot, shell.getTheme(), shell.getMode()));
+      shell.setReadout(formatReadout(snapshot));
     }
     shell.setStatus(nextTheme === 'dark' ? '夜间主题已开启' : '白天主题已开启');
   };
