@@ -40,6 +40,8 @@
 
 ### legacy-emf-analogy
 
+- [x] 路由分批：`renderer=modern-lab` 已切至 modern 实现，`renderer=modern` 仍锁定 legacy
+
 - [ ] 通路开关语义一致
 - [ ] 流动方向/速度表现一致
 - [ ] 关键读数变化趋势一致

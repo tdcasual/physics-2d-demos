@@ -7,11 +7,14 @@ import { createEmfAnalogyControls } from './controls';
 import { createEmfAnalogyScene } from './scene.entry';
 import type { EmfAnalogySnapshot } from './scene.sim';
 
-type Renderer = 'legacy' | 'experimental';
+type Renderer = 'legacy' | 'modern-lab' | 'experimental';
 
 function resolveRenderer(search: string): Renderer {
   const query = new URLSearchParams(search);
   const renderer = query.get('renderer');
+  if (renderer === 'modern-lab') {
+    return 'modern-lab';
+  }
   if (renderer === 'experimental') {
     return 'experimental';
   }
@@ -166,7 +169,7 @@ function boot(): void {
   }
 
   const renderer = resolveRenderer(window.location.search);
-  if (renderer === 'experimental') {
+  if (renderer === 'modern-lab' || renderer === 'experimental') {
     bootModern(mount);
     return;
   }
