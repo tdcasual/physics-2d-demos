@@ -38,7 +38,7 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 function vFn(t: number): number {
-  return 1 + 0.8 * t;
+  return 2 + 3 * t;
 }
 
 function integrateByRects(time: number, rects: number, method: VtMethod): number {
@@ -75,7 +75,7 @@ function curveLength(amplitude: number, segments = 800): number {
 }
 
 function buildMetrics(params: VtIntegralParams): VtIntegralMetrics {
-  const trueArea = params.time + 0.4 * params.time * params.time;
+  const trueArea = 2 * params.time + 1.5 * params.time * params.time;
   const rectArea = integrateByRects(params.time, params.rects, params.method);
   const absErr = Math.abs(rectArea - trueArea);
   const relErr = trueArea === 0 ? 0 : absErr / Math.abs(trueArea);

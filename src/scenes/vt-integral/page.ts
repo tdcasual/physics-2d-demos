@@ -7,11 +7,14 @@ import { createVtIntegralControls } from './controls';
 import { createVtIntegralScene } from './scene.entry';
 import type { VtIntegralSnapshot } from './scene.sim';
 
-type Renderer = 'legacy' | 'experimental';
+type Renderer = 'legacy' | 'modern-lab' | 'experimental';
 
 function resolveRenderer(search: string): Renderer {
   const query = new URLSearchParams(search);
   const renderer = query.get('renderer');
+  if (renderer === 'modern-lab') {
+    return 'modern-lab';
+  }
   if (renderer === 'experimental') {
     return 'experimental';
   }
@@ -100,7 +103,7 @@ function bootModern(mount: HTMLElement): void {
   const shell = createTeachingDemoShell({
     mount,
     title: '微元法交互式动画（2D）',
-    subtitle: '多场景积分与逼近演示',
+    subtitle: '右侧使用历史场景渲染，保持显示一致',
     defaultMode: 'normal'
   });
   const lifecycle = createPageLifecycle();
@@ -209,7 +212,7 @@ function bootModern(mount: HTMLElement): void {
   scene.init();
   scene.resize();
   scene.render();
-  shell.setStatus('就绪');
+  shell.setStatus('左侧可切换微元法子场景并调参');
 }
 
 function boot(): void {
@@ -219,7 +222,7 @@ function boot(): void {
   }
 
   const renderer = resolveRenderer(window.location.search);
-  if (renderer === 'experimental') {
+  if (renderer === 'modern-lab' || renderer === 'experimental') {
     bootModern(mount);
     return;
   }

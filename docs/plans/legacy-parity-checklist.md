@@ -22,6 +22,8 @@
 
 ### legacy-vt-integral
 
+- [x] 路由分批：`renderer=modern-lab` 已切至 modern 实现，`renderer=modern` 仍锁定 legacy
+
 - [ ] 子场景切换行为一致
 - [ ] 面积/体积读数与公式展示一致
 - [ ] 动画推进节奏与暂停位置一致
