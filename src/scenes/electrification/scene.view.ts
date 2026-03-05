@@ -19,6 +19,98 @@ function formatCharge(charge: number): string {
   return String(charge);
 }
 
+function drawFrictionLegacyLike(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  theme: TeachingTheme,
+  visuals: ReturnType<typeof getTeachingStandards>['rightStage']
+): void {
+  const darkPalette = {
+    bg: '#1a1f2c',
+    electron: '#00aaff',
+    positive: '#ff5555',
+    neutralStroke: '#6c757d',
+    neutralFill: 'rgba(108, 117, 125, 0.2)'
+  } as const;
+  const lightPalette = {
+    bg: '#f4f7fb',
+    electron: '#0d6efd',
+    positive: '#d14343',
+    neutralStroke: '#6b7280',
+    neutralFill: 'rgba(107, 114, 128, 0.18)'
+  } as const;
+  const palette = theme === 'light' ? lightPalette : darkPalette;
+
+  ctx.fillStyle = palette.bg;
+  ctx.fillRect(0, 0, width, height);
+
+  const viewW = 800;
+  const viewH = 450;
+  const scale = Math.min(width / viewW, height / viewH);
+  const offsetX = (width - viewW * scale) * 0.5;
+  const offsetY = (height - viewH * scale) * 0.5;
+  const mapX = (x: number) => offsetX + x * scale;
+  const mapY = (y: number) => offsetY + y * scale;
+  const mapLen = (value: number) => value * scale;
+  const atomFont = Math.max(12, visuals.secondaryFontPx * 0.9 * scale);
+
+  const drawBody = (x: number, y: number, w: number, h: number, r: number): void => {
+    const left = mapX(x);
+    const top = mapY(y);
+    const widthPx = mapLen(w);
+    const heightPx = mapLen(h);
+    const radius = mapLen(r);
+    ctx.beginPath();
+    ctx.moveTo(left + radius, top);
+    ctx.arcTo(left + widthPx, top, left + widthPx, top + heightPx, radius);
+    ctx.arcTo(left + widthPx, top + heightPx, left, top + heightPx, radius);
+    ctx.arcTo(left, top + heightPx, left, top, radius);
+    ctx.arcTo(left, top, left + widthPx, top, radius);
+    ctx.closePath();
+    ctx.fillStyle = palette.neutralFill;
+    ctx.fill();
+    ctx.strokeStyle = palette.neutralStroke;
+    ctx.lineWidth = Math.max(1.5, visuals.minorStrokePx * 0.42);
+    ctx.stroke();
+  };
+
+  const drawAtom = (x: number, y: number, withElectronAtX: number): void => {
+    const cx = mapX(x);
+    const cy = mapY(y);
+    ctx.beginPath();
+    ctx.fillStyle = palette.positive;
+    ctx.arc(cx, cy, mapLen(14), 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = palette.bg;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `700 ${atomFont}px "Noto Sans SC", "PingFang SC", sans-serif`;
+    ctx.fillText('+', cx, cy);
+
+    ctx.beginPath();
+    ctx.fillStyle = palette.electron;
+    ctx.arc(mapX(withElectronAtX), cy, mapLen(6), 0, Math.PI * 2);
+    ctx.fill();
+  };
+
+  drawBody(500, 150, 40, 200, 20);
+  for (let i = 0; i < 3; i += 1) {
+    const atomY = 150 + (40 + i * 60);
+    drawAtom(500 + 20, atomY, 500 + 5);
+  }
+
+  drawBody(250, 125, 80, 250, 10);
+  for (let i = 0; i < 4; i += 1) {
+    for (let j = 0; j < 2; j += 1) {
+      const atomX = 250 + (25 + j * 30);
+      const atomY = 125 + (40 + i * 60);
+      drawAtom(atomX, atomY, atomX - 15);
+    }
+  }
+}
+
 export function createElectrificationView(options: CreateElectrificationViewOptions = {}) {
   let canvas = options.canvas ?? null;
   let ctx = canvas?.getContext('2d') ?? null;
@@ -50,6 +142,11 @@ export function createElectrificationView(options: CreateElectrificationViewOpti
     const width = surface.cssWidth;
     const height = surface.cssHeight;
     const visuals = getTeachingStandards(mode).rightStage;
+
+    if (next.state.scene === 'friction' && next.state.stepIndex === 0) {
+      drawFrictionLegacyLike(ctx, width, height, theme, visuals);
+      return;
+    }
 
     ctx.clearRect(0, 0, width, height);
     const gradient = ctx.createLinearGradient(0, 0, width, height);

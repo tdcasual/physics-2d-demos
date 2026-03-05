@@ -31,6 +31,8 @@
 
 ### legacy-electrification
 
+- [x] 路由分批：`renderer=modern-lab` 已切至 modern 实现，`renderer=modern` 仍锁定 legacy
+
 - [ ] 三种起电流程步骤一致
 - [ ] 状态切换与提示文本一致
 - [ ] 可视电荷分布变化一致
