@@ -1,7 +1,11 @@
 import '../../ui/teaching-demo.css';
 import { bootLegacy2DBridgePage } from '../../app/legacy-2d-bridge-page';
 import { createPageLifecycle } from '../../app/page-lifecycle';
-import { createTeachingDemoShell, type ReadoutItem } from '../../app/teaching-demo-shell';
+import {
+  createTeachingDemoShell,
+  type ReadoutItem
+} from '../../app/teaching-demo-shell';
+import type { TeachingMode } from '../../app/teaching-standards';
 import { createElectrificationControls } from './controls';
 import { createElectrificationScene } from './scene.entry';
 import type { ElectrificationSnapshot } from './scene.sim';
@@ -26,8 +30,23 @@ function resolveRenderer(search: string): Renderer {
   return 'modern';
 }
 
-function formatReadout(snapshot: ElectrificationSnapshot): ReadoutItem[] {
+function sceneLabel(scene: ElectrificationSnapshot['state']['scene']): string {
+  if (scene === 'friction') return '摩擦起电';
+  if (scene === 'induction') return '感应起电';
+  return '接触起电';
+}
+
+function modeLabel(mode: TeachingMode): string {
+  return mode === 'presentation' ? '演示模式' : '标准模式';
+}
+
+function formatReadout(
+  snapshot: ElectrificationSnapshot,
+  mode: TeachingMode
+): ReadoutItem[] {
   return [
+    { label: '场景', value: sceneLabel(snapshot.state.scene) },
+    { label: '显示模式', value: modeLabel(mode) },
     { label: '下一步动作', value: snapshot.state.nextActionLabel },
     { label: '说明', value: snapshot.state.explanation }
   ];
@@ -36,7 +55,7 @@ function formatReadout(snapshot: ElectrificationSnapshot): ReadoutItem[] {
 function bootLegacy(mount: HTMLElement): void {
   bootLegacy2DBridgePage({
     mount,
-    title: '交互式静电起电演示（2D）',
+    title: '静电起电演示',
     subtitle: '右侧使用历史场景渲染，保持显示一致',
     scene: {
       sceneId: 'legacy-electrification',
@@ -59,7 +78,7 @@ function bootLegacy(mount: HTMLElement): void {
 function bootModern(mount: HTMLElement): void {
   const shell = createTeachingDemoShell({
     mount,
-    title: '交互式静电起电演示（2D）',
+    title: '静电起电演示',
     subtitle: '三类起电过程按步骤演示，可逐步执行',
     defaultMode: 'normal'
   });
@@ -74,7 +93,7 @@ function bootModern(mount: HTMLElement): void {
     theme: shell.getTheme(),
     onReadout: (next) => {
       snapshot = next;
-      shell.setReadout(formatReadout(next));
+      shell.setReadout(formatReadout(next, shell.getMode()));
     }
   });
   lifecycle.onDispose(() => scene.dispose());
@@ -103,8 +122,10 @@ function bootModern(mount: HTMLElement): void {
     scene.setMode(nextMode);
     scene.resize();
     scene.render();
-    if (snapshot) shell.setReadout(formatReadout(snapshot));
-    shell.setStatus(nextMode === 'presentation' ? '演示模式已开启' : '标准模式已开启');
+    if (snapshot) shell.setReadout(formatReadout(snapshot, shell.getMode()));
+    shell.setStatus(
+      nextMode === 'presentation' ? '演示模式已开启' : '标准模式已开启'
+    );
   };
 
   const onThemeToggle = () => {
@@ -112,13 +133,18 @@ function bootModern(mount: HTMLElement): void {
     shell.setTheme(nextTheme);
     scene.setTheme(nextTheme);
     scene.render();
+    if (snapshot) shell.setReadout(formatReadout(snapshot, shell.getMode()));
     shell.setStatus(nextTheme === 'dark' ? '夜间主题已开启' : '白天主题已开启');
   };
 
   shell.modeButton.addEventListener('click', onModeToggle);
   shell.themeButton.addEventListener('click', onThemeToggle);
-  lifecycle.onDispose(() => shell.modeButton.removeEventListener('click', onModeToggle));
-  lifecycle.onDispose(() => shell.themeButton.removeEventListener('click', onThemeToggle));
+  lifecycle.onDispose(() =>
+    shell.modeButton.removeEventListener('click', onModeToggle)
+  );
+  lifecycle.onDispose(() =>
+    shell.themeButton.removeEventListener('click', onThemeToggle)
+  );
 
   const onResize = () => {
     scene.resize();
@@ -127,7 +153,9 @@ function bootModern(mount: HTMLElement): void {
   window.addEventListener('resize', onResize);
   window.visualViewport?.addEventListener('resize', onResize);
   lifecycle.onDispose(() => window.removeEventListener('resize', onResize));
-  lifecycle.onDispose(() => window.visualViewport?.removeEventListener('resize', onResize));
+  lifecycle.onDispose(() =>
+    window.visualViewport?.removeEventListener('resize', onResize)
+  );
 
   scene.init();
   scene.resize();
@@ -136,7 +164,9 @@ function bootModern(mount: HTMLElement): void {
 
   const onBeforeUnload = () => lifecycle.dispose();
   window.addEventListener('beforeunload', onBeforeUnload);
-  lifecycle.onDispose(() => window.removeEventListener('beforeunload', onBeforeUnload));
+  lifecycle.onDispose(() =>
+    window.removeEventListener('beforeunload', onBeforeUnload)
+  );
 }
 
 function boot(): void {
@@ -145,8 +175,10 @@ function boot(): void {
     throw new Error('Missing #app container');
   }
 
+  const query = new URLSearchParams(window.location.search);
   const renderer = resolveRenderer(window.location.search);
-  if (renderer === 'legacy') {
+  const explicitModernCompat = query.get('renderer') === 'modern';
+  if (renderer === 'legacy' || explicitModernCompat) {
     bootLegacy(mount);
     return;
   }

@@ -3,6 +3,7 @@ import { bootLegacy2DBridgePage } from '../../app/legacy-2d-bridge-page';
 import { createPageLifecycle } from '../../app/page-lifecycle';
 import { createSceneShell } from '../../app/scene-shell';
 import { createTeachingDemoShell, type ReadoutItem } from '../../app/teaching-demo-shell';
+import type { TeachingMode } from '../../app/teaching-standards';
 import { createChaseMeetControls } from './controls';
 import { createChaseMeetScene } from './scene.entry';
 import type { ChaseMeetSnapshot, ResolvedChaseMeetParams } from './scene.sim';
@@ -29,9 +30,11 @@ function resolveRenderer(search: string): Renderer {
 
 function formatReadout(
   snapshot: ChaseMeetSnapshot,
-  isPlaying: boolean
+  isPlaying: boolean,
+  mode: TeachingMode
 ): ReadoutItem[] {
   return [
+    { label: '显示模式', value: mode === 'presentation' ? '演示模式' : '标准模式' },
     { label: '动画状态', value: isPlaying ? '运行中' : '已暂停' },
     { label: '当前时间', value: `${snapshot.state.t.toFixed(2)} s` },
     { label: '当前距离', value: `${snapshot.state.distance.toFixed(2)} m` },
@@ -45,7 +48,7 @@ function formatReadout(
 function bootLegacy(mount: HTMLElement): void {
   bootLegacy2DBridgePage({
     mount,
-    title: '追及相遇演示动画（2D）',
+    title: '追及相遇',
     subtitle: '右侧使用历史场景渲染，保持显示一致',
     scene: {
       sceneId: 'legacy-chase-meet',
@@ -78,7 +81,7 @@ function bootLegacy(mount: HTMLElement): void {
 function bootModern(mount: HTMLElement): void {
   const shell = createTeachingDemoShell({
     mount,
-    title: '追及相遇演示动画（2D）',
+    title: '追及相遇',
     subtitle: '一维追及场景：上方位移演示，下方 x-t / v-t 图像联动',
     defaultMode: 'normal'
   });
@@ -97,7 +100,7 @@ function bootModern(mount: HTMLElement): void {
     theme: shell.getTheme(),
     onReadout: (snapshot) => {
       currentSnapshot = snapshot;
-      shell.setReadout(formatReadout(snapshot, isPlaying));
+      shell.setReadout(formatReadout(snapshot, isPlaying, shell.getMode()));
     }
   });
   lifecycle.onDispose(() => scene.dispose());
@@ -118,7 +121,7 @@ function bootModern(mount: HTMLElement): void {
       transport.play();
       isPlaying = true;
       if (currentSnapshot) {
-        shell.setReadout(formatReadout(currentSnapshot, isPlaying));
+        shell.setReadout(formatReadout(currentSnapshot, isPlaying, shell.getMode()));
       }
       shell.setStatus('动画已开始');
     },
@@ -126,7 +129,7 @@ function bootModern(mount: HTMLElement): void {
       transport.pause();
       isPlaying = false;
       if (currentSnapshot) {
-        shell.setReadout(formatReadout(currentSnapshot, isPlaying));
+        shell.setReadout(formatReadout(currentSnapshot, isPlaying, shell.getMode()));
       }
       shell.setStatus('动画已暂停');
     },
@@ -136,7 +139,7 @@ function bootModern(mount: HTMLElement): void {
       scene.reset();
       scene.render();
       if (currentSnapshot) {
-        shell.setReadout(formatReadout(currentSnapshot, isPlaying));
+        shell.setReadout(formatReadout(currentSnapshot, isPlaying, shell.getMode()));
       }
       shell.setStatus('动画已重置');
     },
@@ -146,7 +149,7 @@ function bootModern(mount: HTMLElement): void {
       });
       isPlaying = false;
       if (currentSnapshot) {
-        shell.setReadout(formatReadout(currentSnapshot, isPlaying));
+        shell.setReadout(formatReadout(currentSnapshot, isPlaying, shell.getMode()));
       }
       shell.setStatus('已单步推进');
     },
@@ -157,7 +160,7 @@ function bootModern(mount: HTMLElement): void {
       scene.reset();
       scene.render();
       if (currentSnapshot) {
-        shell.setReadout(formatReadout(currentSnapshot, isPlaying));
+        shell.setReadout(formatReadout(currentSnapshot, isPlaying, shell.getMode()));
       }
       shell.setStatus('参数已更新');
     },
@@ -172,7 +175,7 @@ function bootModern(mount: HTMLElement): void {
     scene.resize();
     scene.render();
     if (currentSnapshot) {
-      shell.setReadout(formatReadout(currentSnapshot, isPlaying));
+      shell.setReadout(formatReadout(currentSnapshot, isPlaying, shell.getMode()));
     }
     shell.setStatus(nextMode === 'presentation' ? '演示模式已开启' : '标准模式已开启');
   };

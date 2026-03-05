@@ -27,7 +27,7 @@ function boot(): void {
 
   const shell = createTeachingDemoShell({
     mount,
-    title: '抛体运动（2D）',
+    title: '抛体运动',
     subtitle: '统一教学页面规范：左数据区，右动画演示区',
     defaultMode: 'normal'
   });

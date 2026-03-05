@@ -34,6 +34,10 @@ export type CreateTeachingDemoShellOptions = {
   subtitle: string;
   defaultMode?: TeachingMode;
   defaultTheme?: TeachingTheme;
+  desktopReadoutCollapsible?: boolean;
+  desktopReadoutDefaultCollapsed?: boolean;
+  desktopReadoutDraggable?: boolean;
+  readoutLabel?: string;
 };
 
 const COMPACT_BREAKPOINT_PX = 1024;
@@ -105,6 +109,11 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
   const themeState: { value: TeachingTheme } = {
     value: options.defaultTheme ?? 'dark'
   };
+  const desktopReadoutCollapsible = options.desktopReadoutCollapsible ?? false;
+  const desktopReadoutDefaultCollapsed = desktopReadoutCollapsible && (options.desktopReadoutDefaultCollapsed ?? false);
+  const desktopReadoutDraggable = options.desktopReadoutDraggable ?? false;
+  const readoutHeaderEnabled = desktopReadoutCollapsible || desktopReadoutDraggable;
+  const readoutLabel = options.readoutLabel ?? '数据区';
 
   options.mount.innerHTML = `
     <section class="teaching-demo" data-mode="${modeState.value}" data-theme="${themeState.value}">
@@ -137,12 +146,20 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
           </div>
         </div>
         <button type="button" class="readout-drawer-toggle">显示数据区</button>
+        <button type="button" class="readout-desktop-toggle" hidden>显示状态面板</button>
         <div class="stage-frame">
           <div class="stage-slot">
             <canvas class="stage-canvas" aria-label="2D 教学动画演示区域"></canvas>
           </div>
         </div>
-        <div class="stage-readout">
+        <div class="stage-readout${desktopReadoutDraggable ? ' is-desktop-draggable' : ''}">
+          <div class="readout-header${readoutHeaderEnabled ? '' : ' is-hidden'}">
+            <span class="readout-header-title">${readoutLabel}</span>
+            <div class="readout-header-actions">
+              <button type="button" class="readout-inline-toggle" hidden>折叠</button>
+              <button type="button" class="readout-drag-handle" aria-label="拖动数据区" hidden>拖动</button>
+            </div>
+          </div>
           <ul class="readout-slot"></ul>
         </div>
       </section>
@@ -153,7 +170,11 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
   const controlSlot = options.mount.querySelector('.control-slot');
   const readoutSlot = options.mount.querySelector('.readout-slot');
   const stageReadout = options.mount.querySelector('.stage-readout');
+  const stagePanel = options.mount.querySelector('.teaching-stage-panel');
   const drawerToggle = options.mount.querySelector('.readout-drawer-toggle');
+  const desktopToggle = options.mount.querySelector('.readout-desktop-toggle');
+  const inlineReadoutToggle = options.mount.querySelector('.readout-inline-toggle');
+  const dragHandle = options.mount.querySelector('.readout-drag-handle');
   const statusCard = options.mount.querySelector('.status-card');
   const statusPill = options.mount.querySelector('.status-pill');
   const statusTime = options.mount.querySelector('.status-time');
@@ -172,7 +193,11 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
     !(controlSlot instanceof HTMLElement) ||
     !(readoutSlot instanceof HTMLElement) ||
     !(stageReadout instanceof HTMLElement) ||
+    !(stagePanel instanceof HTMLElement) ||
     !(drawerToggle instanceof HTMLButtonElement) ||
+    !(desktopToggle instanceof HTMLButtonElement) ||
+    !(inlineReadoutToggle instanceof HTMLButtonElement) ||
+    !(dragHandle instanceof HTMLButtonElement) ||
     !(statusCard instanceof HTMLElement) ||
     !(statusPill instanceof HTMLElement) ||
     !(statusTime instanceof HTMLElement) ||
@@ -196,7 +221,10 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
   let collapsed = false;
   let dragging = false;
   let compactViewport = isCompactViewport();
-  let readoutCollapsed = compactViewport;
+  let readoutCollapsed = compactViewport ? true : desktopReadoutDefaultCollapsed;
+  let readoutOffsetX = 0;
+  let readoutOffsetY = 0;
+  let readoutDragging = false;
   let hasReadoutItems = false;
 
   const getSidebarMaxForViewport = (): number => {
@@ -262,20 +290,47 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
     window.addEventListener('pointerup', onPointerUp);
   };
 
+  const updateReadoutOffset = (): void => {
+    stageReadout.style.setProperty('--readout-offset-x', `${readoutOffsetX}px`);
+    stageReadout.style.setProperty('--readout-offset-y', `${readoutOffsetY}px`);
+  };
+
+  const resetReadoutOffset = (): void => {
+    readoutOffsetX = 0;
+    readoutOffsetY = 0;
+    updateReadoutOffset();
+  };
+
   const updateReadoutDrawer = (): void => {
     root.classList.toggle('is-compact-viewport', compactViewport);
     const drawerEnabled = compactViewport && hasReadoutItems;
+    const desktopToggleEnabled = !compactViewport && desktopReadoutCollapsible && hasReadoutItems;
+    const toggleEnabled = drawerEnabled || desktopToggleEnabled;
+    const expanded = !(toggleEnabled && readoutCollapsed);
     drawerToggle.hidden = !drawerEnabled;
+    desktopToggle.hidden = !desktopToggleEnabled || expanded;
+    inlineReadoutToggle.hidden = !desktopToggleEnabled || !expanded;
+    dragHandle.hidden = !(desktopReadoutDraggable && !compactViewport && hasReadoutItems);
     stageReadout.classList.toggle('is-empty', !hasReadoutItems);
-    stageReadout.classList.toggle('is-collapsed', drawerEnabled && readoutCollapsed);
-    drawerToggle.textContent = drawerEnabled && readoutCollapsed ? '显示数据区' : '隐藏数据区';
-    drawerToggle.setAttribute('aria-expanded', String(!(drawerEnabled && readoutCollapsed)));
+    stageReadout.classList.toggle('is-collapsed', toggleEnabled && readoutCollapsed);
+    stageReadout.classList.toggle('has-header', readoutHeaderEnabled && !compactViewport && hasReadoutItems);
+    drawerToggle.textContent = expanded ? '隐藏数据区' : '显示数据区';
+    drawerToggle.setAttribute('aria-expanded', String(expanded));
+    desktopToggle.textContent = '显示状态面板';
+    desktopToggle.setAttribute('aria-expanded', String(expanded));
+    inlineReadoutToggle.textContent = '折叠';
+    inlineReadoutToggle.setAttribute('aria-expanded', String(expanded));
   };
 
   const onViewportResize = (): void => {
     const nextCompact = isCompactViewport();
-    if (nextCompact && !compactViewport) {
-      readoutCollapsed = true;
+    if (nextCompact !== compactViewport) {
+      if (nextCompact) {
+        readoutCollapsed = true;
+        resetReadoutOffset();
+      } else {
+        readoutCollapsed = desktopReadoutCollapsible ? desktopReadoutDefaultCollapsed : false;
+      }
     }
     compactViewport = nextCompact;
 
@@ -283,7 +338,6 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
       setSidebarCollapsed(false);
       root.style.removeProperty('--sidebar-width');
     } else {
-      readoutCollapsed = false;
       const widthToken = root.style.getPropertyValue('--sidebar-width');
       if (!widthToken) {
         setSidebarWidth(getDefaultSidebarWidth(window.innerWidth, sidebarMinPx, getSidebarMaxForViewport()));
@@ -298,9 +352,57 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
   };
 
   const onToggleReadoutDrawer = (): void => {
-    if (!compactViewport || !hasReadoutItems) return;
+    if (!hasReadoutItems) return;
+    if (!compactViewport && !desktopReadoutCollapsible) return;
     readoutCollapsed = !readoutCollapsed;
     updateReadoutDrawer();
+  };
+
+  const onReadoutDragStart = (event: PointerEvent): void => {
+    if (!desktopReadoutDraggable || compactViewport || !hasReadoutItems) return;
+    if (desktopReadoutCollapsible && readoutCollapsed) return;
+    readoutDragging = true;
+    event.preventDefault();
+    const pointerId = event.pointerId;
+    const panelRect = stagePanel.getBoundingClientRect();
+    const readoutRect = stageReadout.getBoundingClientRect();
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const baseOffsetX = readoutOffsetX;
+    const baseOffsetY = readoutOffsetY;
+    const minOffsetX = baseOffsetX + (panelRect.left - readoutRect.left);
+    const maxOffsetX = baseOffsetX + (panelRect.right - readoutRect.right);
+    const minOffsetY = baseOffsetY + (panelRect.top - readoutRect.top);
+    const maxOffsetY = baseOffsetY + (panelRect.bottom - readoutRect.bottom);
+
+    const onPointerMove = (moveEvent: PointerEvent): void => {
+      if (!readoutDragging) return;
+      const deltaX = moveEvent.clientX - startX;
+      const deltaY = moveEvent.clientY - startY;
+      readoutOffsetX = Math.max(minOffsetX, Math.min(maxOffsetX, baseOffsetX + deltaX));
+      readoutOffsetY = Math.max(minOffsetY, Math.min(maxOffsetY, baseOffsetY + deltaY));
+      updateReadoutOffset();
+    };
+
+    const onPointerUp = (): void => {
+      readoutDragging = false;
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      try {
+        dragHandle.releasePointerCapture(pointerId);
+      } catch {
+        // Ignore if pointer capture wasn't acquired.
+      }
+    };
+
+    try {
+      dragHandle.setPointerCapture(pointerId);
+    } catch {
+      // Ignore unsupported pointer capture.
+    }
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
   };
 
   const setMode = (mode: TeachingMode): void => {
@@ -342,12 +444,16 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
   themeButton.textContent = themeToggleText(themeState.value);
   setSidebarWidth(getDefaultSidebarWidth(window.innerWidth, sidebarMinPx, getSidebarMaxForViewport()));
   updateSidebarToggleLabel();
+  updateReadoutOffset();
   setStatus('就绪', 'ready');
   updateReadoutDrawer();
 
   inlineToggle.addEventListener('click', onToggleSidebar);
   floatToggle.addEventListener('click', onToggleSidebar);
   drawerToggle.addEventListener('click', onToggleReadoutDrawer);
+  desktopToggle.addEventListener('click', onToggleReadoutDrawer);
+  inlineReadoutToggle.addEventListener('click', onToggleReadoutDrawer);
+  dragHandle.addEventListener('pointerdown', onReadoutDragStart);
   resizer.addEventListener('pointerdown', onResizerPointerDown);
   window.addEventListener('resize', onViewportResize);
   window.visualViewport?.addEventListener('resize', onViewportResize);
@@ -384,6 +490,9 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
       inlineToggle.removeEventListener('click', onToggleSidebar);
       floatToggle.removeEventListener('click', onToggleSidebar);
       drawerToggle.removeEventListener('click', onToggleReadoutDrawer);
+      desktopToggle.removeEventListener('click', onToggleReadoutDrawer);
+      inlineReadoutToggle.removeEventListener('click', onToggleReadoutDrawer);
+      dragHandle.removeEventListener('pointerdown', onReadoutDragStart);
       resizer.removeEventListener('pointerdown', onResizerPointerDown);
       window.removeEventListener('resize', onViewportResize);
       window.visualViewport?.removeEventListener('resize', onViewportResize);

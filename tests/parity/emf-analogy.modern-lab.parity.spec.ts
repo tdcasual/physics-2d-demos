@@ -14,7 +14,7 @@ function cropTopLeft(source: PNG, width: number, height: number): PNG {
 
 async function captureStageFrame(page: import('@playwright/test').Page, pagePath: string): Promise<Buffer> {
   await page.goto(pagePath);
-  await expect(page.getByRole('heading', { name: '电路水流类比模型（2D）' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '电路水流类比' })).toBeVisible();
   const stage = page.locator('.stage-frame');
   await expect(stage).toBeVisible();
   await page.waitForTimeout(500);

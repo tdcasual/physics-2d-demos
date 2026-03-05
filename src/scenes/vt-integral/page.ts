@@ -3,6 +3,7 @@ import { bootLegacy2DBridgePage } from '../../app/legacy-2d-bridge-page';
 import { createPageLifecycle } from '../../app/page-lifecycle';
 import { createSceneShell } from '../../app/scene-shell';
 import { createTeachingDemoShell, type ReadoutItem } from '../../app/teaching-demo-shell';
+import type { TeachingMode } from '../../app/teaching-standards';
 import { createVtIntegralControls } from './controls';
 import { createVtIntegralScene } from './scene.entry';
 import type { VtIntegralSnapshot } from './scene.sim';
@@ -18,33 +19,57 @@ function resolveRenderer(search: string): Renderer {
   return 'legacy';
 }
 
-function formatReadout(snapshot: VtIntegralSnapshot): ReadoutItem[] {
+function sceneLabel(scene: VtIntegralSnapshot['params']['scene']): string {
+  if (scene === 'scene1') return '场景一：v-t积分';
+  if (scene === 'scene2') return '场景二：曲线长度';
+  if (scene === 'scene3') return '场景三：圆周逼近';
+  if (scene === 'scene4') return '场景四：球棱锥体积';
+  return '场景五：球体体积';
+}
+
+function modeLabel(mode: TeachingMode): string {
+  return mode === 'presentation' ? '演示模式' : '标准模式';
+}
+
+function formatReadout(snapshot: VtIntegralSnapshot, mode: TeachingMode): ReadoutItem[] {
   if (snapshot.params.scene === 'scene1') {
     return [
-      { label: '矩形总面积', value: snapshot.metrics.rectArea.toFixed(3) },
-      { label: '积分面积', value: snapshot.metrics.trueArea.toFixed(3) },
-      { label: '绝对误差', value: snapshot.metrics.absErr.toFixed(3) },
+      { label: '场景', value: sceneLabel(snapshot.params.scene) },
+      { label: '显示模式', value: modeLabel(mode) },
+      { label: '矩形总面积', value: snapshot.metrics.rectArea.toFixed(4) },
+      { label: '积分面积', value: snapshot.metrics.trueArea.toFixed(4) },
+      { label: '绝对误差', value: snapshot.metrics.absErr.toFixed(4) },
       { label: '相对误差', value: `${(snapshot.metrics.relErr * 100).toFixed(2)}%` }
     ];
   }
   if (snapshot.params.scene === 'scene2') {
     return [
+      { label: '场景', value: sceneLabel(snapshot.params.scene) },
+      { label: '显示模式', value: modeLabel(mode) },
       { label: '曲线振幅', value: snapshot.params.curveAmplitude.toFixed(2) },
       { label: '曲线长度', value: snapshot.metrics.curveLength.toFixed(3) },
       { label: '直线距离', value: snapshot.metrics.lineDistance.toFixed(3) }
     ];
   }
   if (snapshot.params.scene === 'scene3') {
-    return [{ label: '多边形周长差', value: snapshot.metrics.circumferenceDiff.toFixed(4) }];
+    return [
+      { label: '场景', value: sceneLabel(snapshot.params.scene) },
+      { label: '显示模式', value: modeLabel(mode) },
+      { label: '多边形周长差', value: snapshot.metrics.circumferenceDiff.toFixed(4) }
+    ];
   }
   if (snapshot.params.scene === 'scene4') {
     return [
+      { label: '场景', value: sceneLabel(snapshot.params.scene) },
+      { label: '显示模式', value: modeLabel(mode) },
       { label: '球棱锥真实体积', value: snapshot.metrics.surfaceTrue.toFixed(4) },
       { label: '球棱锥近似体积', value: snapshot.metrics.surfaceApprox.toFixed(4) },
       { label: '相对误差', value: `${(snapshot.metrics.surfaceRelErr * 100).toFixed(2)}%` }
     ];
   }
   return [
+    { label: '场景', value: sceneLabel(snapshot.params.scene) },
+    { label: '显示模式', value: modeLabel(mode) },
     { label: '球体真实体积', value: snapshot.metrics.sphereTrue.toFixed(4) },
     { label: '球体近似体积', value: snapshot.metrics.sphereApprox.toFixed(4) },
     { label: '相对误差', value: `${(snapshot.metrics.sphereRelErr * 100).toFixed(2)}%` }
@@ -54,7 +79,7 @@ function formatReadout(snapshot: VtIntegralSnapshot): ReadoutItem[] {
 function bootLegacy(mount: HTMLElement): void {
   bootLegacy2DBridgePage({
     mount,
-    title: '微元法交互式动画（2D）',
+    title: '微元法演示',
     subtitle: '右侧使用历史场景渲染，保持显示一致',
     scene: {
       sceneId: 'legacy-vt-integral',
@@ -83,7 +108,7 @@ function bootLegacy(mount: HTMLElement): void {
 function bootModern(mount: HTMLElement): void {
   const shell = createTeachingDemoShell({
     mount,
-    title: '微元法交互式动画（2D）',
+    title: '微元法演示',
     subtitle: '多场景积分与逼近演示',
     defaultMode: 'normal'
   });
@@ -98,7 +123,7 @@ function bootModern(mount: HTMLElement): void {
     theme: shell.getTheme(),
     onReadout: (next) => {
       snapshot = next;
-      shell.setReadout(formatReadout(next));
+      shell.setReadout(formatReadout(next, shell.getMode()));
     }
   });
   lifecycle.onDispose(() => scene.dispose());
@@ -160,7 +185,7 @@ function bootModern(mount: HTMLElement): void {
     scene.setMode(nextMode);
     scene.resize();
     scene.render();
-    if (snapshot) shell.setReadout(formatReadout(snapshot));
+    if (snapshot) shell.setReadout(formatReadout(snapshot, shell.getMode()));
     shell.setStatus(nextMode === 'presentation' ? '演示模式已开启' : '标准模式已开启');
   };
 
@@ -169,6 +194,7 @@ function bootModern(mount: HTMLElement): void {
     shell.setTheme(nextTheme);
     scene.setTheme(nextTheme);
     scene.render();
+    if (snapshot) shell.setReadout(formatReadout(snapshot, shell.getMode()));
     shell.setStatus(nextTheme === 'dark' ? '夜间主题已开启' : '白天主题已开启');
   };
 

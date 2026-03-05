@@ -1,12 +1,19 @@
-import { getTeachingStandards, type TeachingMode } from '../../app/teaching-standards';
+import {
+  getTeachingStandards,
+  type TeachingMode
+} from '../../app/teaching-standards';
 import type { TeachingTheme } from '../../app/teaching-demo-shell';
-import { applyHiDpiCanvasMetrics, computeHiDpiCanvasMetrics } from '../../core/high-dpi-canvas';
+import {
+  applyHiDpiCanvasMetrics,
+  computeHiDpiCanvasMetrics
+} from '../../core/high-dpi-canvas';
 import type { EmfAnalogySnapshot } from './scene.sim';
 
 export type CreateEmfAnalogyViewOptions = {
   canvas?: HTMLCanvasElement;
   mode?: TeachingMode;
   theme?: TeachingTheme;
+  legacyFlowDark?: boolean;
 };
 
 type Particle = {
@@ -62,25 +69,15 @@ function drawRoundedRect(
   ctx.closePath();
 }
 
-function createSeededRandom(seedValue: number): () => number {
-  let seed = seedValue >>> 0;
-  return () => {
-    seed = (seed * 1664525 + 1013904223) >>> 0;
-    return seed / 0x100000000;
-  };
-}
-
 function buildParticles(): Particle[] {
-  const random = createSeededRandom(20260305);
   const particles: Particle[] = [];
   const particleCount = 160;
   for (let i = 0; i < particleCount; i += 1) {
-    const xWeight = Math.pow(random(), 2.35);
     particles.push({
-      x: xWeight * 1400,
-      y: (random() - 0.5) * 26,
-      speedOffset: 0.8 + random() * 0.4,
-      size: 1.4 + random() * 1.6
+      x: Math.random() * 1400,
+      y: (Math.random() - 0.5) * 26,
+      speedOffset: 0.8 + Math.random() * 0.4,
+      size: 2 + Math.random() * 2
     });
   }
   return particles;
@@ -106,9 +103,15 @@ function drawCards(
 
   const cards = [
     {
-      title: '',
+      title: '系统状态',
       value: snapshot.state.isSystemOn ? '通路' : '断路',
-      valueColor: snapshot.state.isSystemOn ? (isDark ? '#60a5fa' : '#1d4ed8') : isDark ? '#cbd5e1' : '#334155',
+      valueColor: snapshot.state.isSystemOn
+        ? isDark
+          ? '#60a5fa'
+          : '#1d4ed8'
+        : isDark
+          ? '#cbd5e1'
+          : '#334155',
       bg: baseCardBg,
       border: baseCardBorder,
       titleColor: baseTitleColor
@@ -147,12 +150,19 @@ function drawCards(
     }
   ] as const;
 
-  const titleFont = Math.max(10, Math.round(cardHeight * 0.16));
-  const valueFont = Math.max(19, Math.round(cardHeight * 0.37));
+  const titleFont = 14;
+  const valueFont = 24;
 
   cards.forEach((card, index) => {
     const left = x + index * (cardWidth + gap);
-    drawRoundedRect(ctx, left, y, cardWidth, cardHeight, Math.max(7, cardHeight * 0.12));
+    drawRoundedRect(
+      ctx,
+      left,
+      y,
+      cardWidth,
+      cardHeight,
+      Math.max(7, cardHeight * 0.12)
+    );
     ctx.fillStyle = card.bg;
     ctx.fill();
     ctx.strokeStyle = card.border;
@@ -163,13 +173,17 @@ function drawCards(
     ctx.textBaseline = 'top';
     if (card.title) {
       ctx.fillStyle = card.titleColor;
-      ctx.font = `500 ${titleFont}px "Noto Sans SC", "PingFang SC", sans-serif`;
+      ctx.font = `500 ${titleFont}px sans-serif`;
       ctx.fillText(card.title, left + cardWidth * 0.08, y + cardHeight * 0.14);
     }
 
     ctx.fillStyle = card.valueColor;
-    ctx.font = `700 ${valueFont}px "Noto Sans SC", "PingFang SC", sans-serif`;
-    ctx.fillText(card.value, left + cardWidth * 0.08, y + cardHeight * (card.title ? 0.42 : 0.34));
+    ctx.font = `700 ${valueFont}px sans-serif`;
+    ctx.fillText(
+      card.value,
+      left + cardWidth * 0.08,
+      y + cardHeight * (card.title ? 0.46 : 0.32)
+    );
   });
 }
 
@@ -179,24 +193,22 @@ function drawLegendAndFormula(
   y: number,
   width: number,
   height: number,
-  snapshot: EmfAnalogySnapshot,
-  theme: TeachingTheme
+  snapshot: EmfAnalogySnapshot
 ): void {
-  const isDark = theme === 'dark';
-  const panelX = x + Math.max(10, width * 0.015);
-  const panelY = y + Math.max(10, height * 0.02);
-  const panelW = Math.min(width * 0.2, 150);
-  const panelH = Math.max(40, height * 0.095);
+  const panelX = x + 12;
+  const panelY = y + 12;
+  const panelW = 144;
+  const panelH = 58;
 
   drawRoundedRect(ctx, panelX, panelY, panelW, panelH, 10);
-  ctx.fillStyle = isDark ? 'rgba(15, 23, 42, 0.92)' : 'rgba(255, 255, 255, 0.92)';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
   ctx.fill();
-  ctx.strokeStyle = isDark ? '#334155' : '#e2e8f0';
+  ctx.strokeStyle = '#e2e8f0';
   ctx.lineWidth = 1;
   ctx.stroke();
 
-  ctx.fillStyle = isDark ? '#94a3b8' : '#64748b';
-  ctx.font = `600 ${Math.max(9, Math.round(panelH * 0.18))}px "Noto Sans SC", "PingFang SC", sans-serif`;
+  ctx.fillStyle = '#64748b';
+  ctx.font = `600 ${Math.max(9, Math.round(panelH * 0.18))}px sans-serif`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   ctx.fillText('颜色代表水压 (电势)', panelX + 10, panelY + 9);
@@ -206,14 +218,14 @@ function drawLegendAndFormula(
   const gradW = panelW - 24;
   const gradH = Math.max(7, panelH * 0.11);
   const gradient = ctx.createLinearGradient(gradX, gradY, gradX + gradW, gradY);
-  gradient.addColorStop(0, isDark ? '#60a5fa' : '#2563eb');
-  gradient.addColorStop(1, isDark ? '#1e3a8a' : '#dbeafe');
+  gradient.addColorStop(0, '#2563eb');
+  gradient.addColorStop(1, '#dbeafe');
   drawRoundedRect(ctx, gradX, gradY, gradW, gradH, gradH * 0.5);
   ctx.fillStyle = gradient;
   ctx.fill();
 
-  ctx.fillStyle = isDark ? '#cbd5e1' : '#94a3b8';
-  ctx.font = `500 ${Math.max(8, Math.round(panelH * 0.15))}px "Noto Sans SC", "PingFang SC", sans-serif`;
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = `500 ${Math.max(8, Math.round(panelH * 0.15))}px sans-serif`;
   ctx.fillText('高', panelX + 10, panelY + panelH - 16);
   ctx.textAlign = 'right';
   ctx.fillText('低', panelX + panelW - 10, panelY + panelH - 16);
@@ -224,9 +236,9 @@ function drawLegendAndFormula(
   const formulaY = y + height - formulaH - Math.max(10, height * 0.03);
 
   drawRoundedRect(ctx, formulaX, formulaY, formulaW, formulaH, 10);
-  ctx.fillStyle = isDark ? 'rgba(2, 6, 23, 0.96)' : 'rgba(15, 23, 42, 0.95)';
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
   ctx.fill();
-  ctx.strokeStyle = isDark ? '#475569' : '#334155';
+  ctx.strokeStyle = '#334155';
   ctx.lineWidth = 1;
   ctx.stroke();
 
@@ -256,7 +268,7 @@ function drawLegendAndFormula(
   const textX = formulaX + (formulaW - prefixWidth - valueWidth) * 0.5;
   const textY = formulaY + formulaH * 0.56;
 
-  ctx.fillStyle = isDark ? '#f1f5f9' : '#e2e8f0';
+  ctx.fillStyle = '#e2e8f0';
   ctx.font = prefixFont;
   ctx.fillText(prefix, textX, textY);
   ctx.fillStyle = '#4ade80';
@@ -274,9 +286,7 @@ function drawFlowArea(
   mode: TeachingMode,
   theme: TeachingTheme,
   particles: Particle[],
-  random: () => number,
-  impellerAngle: number,
-  idlePhase: number
+  impellerAngle: number
 ): number {
   const visuals = getTeachingStandards(mode).rightStage;
   const readability = LEGACY_READABILITY_PRESET[mode];
@@ -285,9 +295,21 @@ function drawFlowArea(
   const pipeHeight = Math.max(110 * visualScale, height * 0.24);
   const pipeY = centerY - pipeHeight * 0.5;
   const geometryScale = visualScale * 1.2;
-  const majorStroke = Math.max(readability.majorStrokePx, visuals.majorStrokePx * 0.9, 2 * geometryScale);
-  const minorStroke = Math.max(readability.minorStrokePx, visuals.minorStrokePx * 0.9, 1.2 * geometryScale);
-  const primaryFont = Math.max(readability.primaryFontPx, visuals.primaryFontPx * 0.8, Math.round(12 * geometryScale));
+  const majorStroke = Math.max(
+    readability.majorStrokePx,
+    visuals.majorStrokePx * 0.9,
+    2 * geometryScale
+  );
+  const minorStroke = Math.max(
+    readability.minorStrokePx,
+    visuals.minorStrokePx * 0.9,
+    1.2 * geometryScale
+  );
+  const primaryFont = Math.max(
+    readability.primaryFontPx,
+    visuals.primaryFontPx * 0.8,
+    Math.round(12 * geometryScale)
+  );
   const secondaryFont = Math.max(
     readability.secondaryFontPx,
     visuals.secondaryFontPx * 0.8,
@@ -373,28 +395,40 @@ function drawFlowArea(
   ctx.clip();
 
   const flowSpeed = next.state.currentI * 15;
+  const idleVisibleCutoff = width * 0.36;
   for (const particle of particles) {
     if (next.state.isSystemOn) {
       particle.x += flowSpeed * particle.speedOffset;
     } else {
-      particle.x += Math.sin(idlePhase + particle.y * 0.2) * 0.2;
+      particle.x += Math.sin(Date.now() / 500) * 0.2;
+      if (particle.x > width * 0.55) {
+        particle.x = -10 + Math.random() * 18;
+      }
     }
     if (particle.x > width) {
       particle.x = -10;
     }
+    if (!next.state.isSystemOn && particle.x > idleVisibleCutoff) {
+      continue;
+    }
 
     let color = palette.particleMain;
-    if (particle.x > width * 0.42) {
+    if (particle.x > resX - x) {
       const dropRatio = next.state.internalDrop / 0.5;
-      const cutoff = !next.state.isSystemOn ? 0.12 : 1;
-      const opacity = (1 - dropRatio * 0.8) * cutoff;
+      const opacity = 1.0 - dropRatio * 0.8;
       const base = isLight ? '37, 99, 235' : '96, 165, 250';
       color = `rgba(${base}, ${Math.max(0.2, opacity)})`;
     }
 
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.arc(x + particle.x, centerY + particle.y * visualScale, particle.size * visualScale, 0, Math.PI * 2);
+    ctx.arc(
+      x + particle.x,
+      centerY + particle.y * visualScale,
+      particle.size * visualScale,
+      0,
+      Math.PI * 2
+    );
     ctx.fill();
   }
   ctx.restore();
@@ -414,7 +448,15 @@ function drawFlowArea(
   ctx.fillStyle = palette.pumpBlade;
   for (let i = 0; i < 6; i += 1) {
     ctx.beginPath();
-    ctx.ellipse(0, -20 * geometryScale, 8 * geometryScale, 20 * geometryScale, 0, 0, Math.PI * 2);
+    ctx.ellipse(
+      0,
+      -20 * geometryScale,
+      8 * geometryScale,
+      20 * geometryScale,
+      0,
+      0,
+      Math.PI * 2
+    );
     ctx.fill();
     ctx.rotate(Math.PI / 3);
   }
@@ -425,7 +467,7 @@ function drawFlowArea(
   ctx.restore();
 
   ctx.fillStyle = palette.labelMain;
-  ctx.font = `700 ${Math.round(primaryFont)}px "Noto Sans SC", "PingFang SC", sans-serif`;
+  ctx.font = `700 ${Math.round(primaryFont)}px sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
   ctx.fillText('泵 (E)', pumpX, centerY + 65 * geometryScale);
@@ -458,13 +500,19 @@ function drawFlowArea(
   ctx.fillStyle = palette.resRust;
   for (let i = 0; i < 5; i += 1) {
     ctx.beginPath();
-    ctx.arc((random() - 0.5) * 40 * geometryScale, (random() - 0.5) * 40 * geometryScale, random() * 8 * geometryScale, 0, Math.PI * 2);
+    ctx.arc(
+      (Math.random() - 0.5) * 40 * geometryScale,
+      (Math.random() - 0.5) * 40 * geometryScale,
+      Math.random() * 8 * geometryScale,
+      0,
+      Math.PI * 2
+    );
     ctx.fill();
   }
   ctx.restore();
 
   ctx.fillStyle = palette.resLabel;
-  ctx.font = `700 ${Math.round(primaryFont)}px "Noto Sans SC", "PingFang SC", sans-serif`;
+  ctx.font = `700 ${Math.round(primaryFont)}px sans-serif`;
   ctx.textAlign = 'center';
   ctx.fillText('内阻 (r)', resX, centerY + 65 * geometryScale);
 
@@ -474,11 +522,21 @@ function drawFlowArea(
   ctx.fillRect(-10 * geometryScale, 0, 20 * geometryScale, 30 * geometryScale);
   ctx.beginPath();
   ctx.moveTo(-10 * geometryScale, 0);
-  ctx.quadraticCurveTo(-10 * geometryScale, -20 * geometryScale, 20 * geometryScale, -25 * geometryScale);
+  ctx.quadraticCurveTo(
+    -10 * geometryScale,
+    -20 * geometryScale,
+    20 * geometryScale,
+    -25 * geometryScale
+  );
   ctx.lineTo(30 * geometryScale, -20 * geometryScale);
   ctx.lineTo(30 * geometryScale, -10 * geometryScale);
   ctx.lineTo(20 * geometryScale, -15 * geometryScale);
-  ctx.quadraticCurveTo(10 * geometryScale, -10 * geometryScale, 10 * geometryScale, 0);
+  ctx.quadraticCurveTo(
+    10 * geometryScale,
+    -10 * geometryScale,
+    10 * geometryScale,
+    0
+  );
   ctx.fill();
   ctx.fillStyle = palette.tapDark;
   ctx.save();
@@ -494,7 +552,7 @@ function drawFlowArea(
   ctx.restore();
 
   ctx.fillStyle = palette.labelMain;
-  ctx.font = `700 ${Math.round(primaryFont)}px "Noto Sans SC", "PingFang SC", sans-serif`;
+  ctx.font = `700 ${Math.round(primaryFont)}px sans-serif`;
   ctx.textAlign = 'center';
   ctx.fillText('用户水管', tapX, centerY + 65 * geometryScale);
 
@@ -528,12 +586,12 @@ function drawFlowArea(
     ctx.stroke();
 
     ctx.fillStyle = palette.gaugeText;
-    ctx.font = `${Math.round(secondaryFont)}px "Noto Sans SC", "PingFang SC", sans-serif`;
+    ctx.font = `${Math.round(secondaryFont)}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.fillText(value.toFixed(2), gaugeX, gy - 28 * geometryScale);
 
     ctx.fillStyle = palette.gaugeLabel;
-    ctx.font = `${Math.round(secondaryFont)}px "Noto Sans SC", "PingFang SC", sans-serif`;
+    ctx.font = `${Math.round(secondaryFont)}px sans-serif`;
     ctx.fillText(label, gaugeX, gy + 35 * geometryScale);
   };
 
@@ -543,11 +601,14 @@ function drawFlowArea(
   return impellerAngle + (next.state.isSystemOn ? 0.15 : 0.02);
 }
 
-export function createEmfAnalogyView(options: CreateEmfAnalogyViewOptions = {}) {
+export function createEmfAnalogyView(
+  options: CreateEmfAnalogyViewOptions = {}
+) {
   let canvas = options.canvas ?? null;
   let ctx = canvas?.getContext('2d') ?? null;
   let mode: TeachingMode = options.mode ?? 'normal';
   let theme: TeachingTheme = options.theme ?? 'dark';
+  const legacyFlowDark = options.legacyFlowDark ?? false;
   let snapshot: EmfAnalogySnapshot | null = null;
   let surface = computeHiDpiCanvasMetrics({
     cssWidth: 1280,
@@ -556,17 +617,160 @@ export function createEmfAnalogyView(options: CreateEmfAnalogyViewOptions = {}) 
   });
 
   const particles = buildParticles();
-  const rustRandom = createSeededRandom(913578);
   let impellerAngle = 0;
-  let idlePhase = 0;
   let rafId: number | null = null;
+
+  type LegacyOverlay = {
+    root: HTMLDivElement;
+    topbar: HTMLDivElement;
+    stateValue: HTMLDivElement;
+    openingValue: HTMLDivElement;
+    currentValue: HTMLDivElement;
+    dropValue: HTMLDivElement;
+    terminalValue: HTMLDivElement;
+    legend: HTMLDivElement;
+    formula: HTMLDivElement;
+    formulaPrefix: HTMLSpanElement;
+    formulaValue: HTMLSpanElement;
+  };
+
+  function createLegacyOverlay(): LegacyOverlay | null {
+    if (
+      !legacyFlowDark ||
+      !canvas ||
+      !(canvas.parentElement instanceof HTMLElement)
+    ) {
+      return null;
+    }
+    const host = canvas.parentElement;
+    if (
+      typeof window !== 'undefined' &&
+      window.getComputedStyle(host).position === 'static'
+    ) {
+      host.style.position = 'relative';
+    }
+
+    const root = document.createElement('div');
+    root.style.position = 'absolute';
+    root.style.inset = '0';
+    root.style.pointerEvents = 'none';
+    root.style.zIndex = '2';
+    root.style.fontFamily = 'sans-serif';
+
+    const topbar = document.createElement('div');
+    topbar.style.position = 'absolute';
+    topbar.style.display = 'grid';
+    topbar.style.gridTemplateColumns = 'repeat(5, minmax(0, 1fr))';
+    topbar.style.gap = '8px';
+    topbar.style.padding = '10px 12px';
+    topbar.style.borderBottom = '1px solid #e2e8f0';
+    topbar.style.background = 'linear-gradient(90deg, #f8fafc, #eff6ff)';
+    topbar.style.borderRadius = '10px';
+    topbar.style.boxSizing = 'border-box';
+
+    const createCard = (
+      title: string,
+      dark = false
+    ): { card: HTMLDivElement; value: HTMLDivElement } => {
+      const card = document.createElement('div');
+      card.style.border = '1px solid #cbd5e1';
+      card.style.borderRadius = '10px';
+      card.style.padding = '6px 10px';
+      card.style.background = dark ? '#0f172a' : '#ffffff';
+      card.style.display = 'grid';
+      card.style.alignContent = 'start';
+      card.style.boxSizing = 'border-box';
+
+      const titleEl = document.createElement('div');
+      titleEl.textContent = title;
+      titleEl.style.fontSize = '14px';
+      titleEl.style.lineHeight = '1.2';
+      titleEl.style.color = dark ? '#94a3b8' : '#64748b';
+      card.appendChild(titleEl);
+
+      const valueEl = document.createElement('div');
+      valueEl.style.marginTop = '4px';
+      valueEl.style.fontSize = '24px';
+      valueEl.style.fontWeight = '700';
+      valueEl.style.lineHeight = '1.05';
+      valueEl.style.color = dark ? '#4ade80' : '#1f2937';
+      card.appendChild(valueEl);
+      return { card, value: valueEl };
+    };
+
+    const state = createCard('系统状态');
+    const opening = createCard('开度');
+    const current = createCard('电流 I');
+    const drop = createCard('内阻压降 Ir');
+    const terminal = createCard('路端电压 U', true);
+
+    topbar.append(
+      state.card,
+      opening.card,
+      current.card,
+      drop.card,
+      terminal.card
+    );
+
+    const legend = document.createElement('div');
+    legend.style.position = 'absolute';
+    legend.style.width = '160px';
+    legend.style.padding = '9px 12px';
+    legend.style.border = '1px solid #e2e8f0';
+    legend.style.borderRadius = '10px';
+    legend.style.background = 'rgba(255, 255, 255, 0.9)';
+    legend.style.boxSizing = 'border-box';
+    legend.innerHTML = `
+      <div style="font-size:14px; color:#64748b; font-weight:600; line-height:1.2; margin-bottom:6px;">颜色代表水压 (电势)</div>
+      <div style="height:8px; border-radius:999px; background: linear-gradient(90deg, #2563eb, #dbeafe);"></div>
+      <div style="display:flex; justify-content:space-between; margin-top:4px; font-size:13px; color:#94a3b8;"><span>高</span><span>低</span></div>
+    `;
+
+    const formula = document.createElement('div');
+    formula.style.position = 'absolute';
+    formula.style.padding = '8px 12px';
+    formula.style.border = '1px solid #334155';
+    formula.style.borderRadius = '10px';
+    formula.style.background = 'rgba(15, 23, 42, 0.95)';
+    formula.style.fontFamily = 'monospace';
+    formula.style.fontSize = '34px';
+    formula.style.lineHeight = '1.1';
+    formula.style.color = '#e2e8f0';
+    formula.style.whiteSpace = 'nowrap';
+    formula.style.boxSizing = 'border-box';
+    const formulaPrefix = document.createElement('span');
+    const formulaValue = document.createElement('span');
+    formulaValue.style.color = '#4ade80';
+    formulaValue.style.fontWeight = '700';
+    formula.append(formulaPrefix, formulaValue);
+
+    root.append(topbar, legend, formula);
+    host.appendChild(root);
+
+    return {
+      root,
+      topbar,
+      stateValue: state.value,
+      openingValue: opening.value,
+      currentValue: current.value,
+      dropValue: drop.value,
+      terminalValue: terminal.value,
+      legend,
+      formula,
+      formulaPrefix,
+      formulaValue
+    };
+  }
+
+  const legacyOverlay = createLegacyOverlay();
 
   function resizeCanvas(): void {
     if (!canvas || !ctx) return;
     const rect = canvas.getBoundingClientRect();
     const cssWidth = Math.max(480, Math.floor(rect.width || 1280));
     const cssHeight = Math.max(280, Math.floor(rect.height || 720));
-    const dpr = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1;
+    const dpr =
+      typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1;
     surface = computeHiDpiCanvasMetrics({
       cssWidth,
       cssHeight,
@@ -600,29 +804,49 @@ export function createEmfAnalogyView(options: CreateEmfAnalogyViewOptions = {}) 
     const headerX = cardX + 12;
     const headerY = cardY + 12;
     const headerW = cardW - 24;
-    const headerH = Math.max(78, Math.min(122, cardH * 0.2));
-
-    drawRoundedRect(ctx, headerX, headerY, headerW, headerH, 10);
-    const headerGradient = ctx.createLinearGradient(headerX, headerY, headerX + headerW, headerY);
-    if (isDark) {
-      headerGradient.addColorStop(0, '#111b2d');
-      headerGradient.addColorStop(1, '#0b1220');
-    } else {
-      headerGradient.addColorStop(0, '#f8fafc');
-      headerGradient.addColorStop(1, '#eff6ff');
-    }
-    ctx.fillStyle = headerGradient;
-    ctx.fill();
-    ctx.strokeStyle = isDark ? '#334155' : '#e2e8f0';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    drawCards(ctx, headerX + 8, headerY + 8, headerW - 16, headerH - 16, next, theme);
+    const headerH = legacyOverlay
+      ? Math.max(92, Math.min(104, cardH * 0.17))
+      : Math.max(72, Math.min(112, cardH * 0.19));
 
     const flowX = cardX + 8;
-    const flowY = headerY + headerH + 8;
+    const flowY = legacyOverlay ? headerY + headerH - 6 : headerY + headerH + 8;
     const flowW = cardW - 16;
-    const flowH = cardH - (flowY - cardY) - 8;
+    const flowH = cardH - (flowY - cardY) - (legacyOverlay ? 0 : 8);
+
+    if (!legacyOverlay) {
+      drawRoundedRect(ctx, headerX, headerY, headerW, headerH, 10);
+      const headerGradient = ctx.createLinearGradient(
+        headerX,
+        headerY,
+        headerX + headerW,
+        headerY
+      );
+      if (isDark) {
+        headerGradient.addColorStop(0, '#111b2d');
+        headerGradient.addColorStop(1, '#0b1220');
+      } else {
+        headerGradient.addColorStop(0, '#f8fafc');
+        headerGradient.addColorStop(1, '#eff6ff');
+      }
+      ctx.fillStyle = headerGradient;
+      ctx.fill();
+      ctx.strokeStyle = isDark ? '#334155' : '#e2e8f0';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      drawCards(
+        ctx,
+        headerX + 8,
+        headerY + 8,
+        headerW - 16,
+        headerH - 16,
+        next,
+        theme
+      );
+    }
+
+    const flowTheme: TeachingTheme =
+      legacyFlowDark && theme === 'light' ? 'dark' : theme;
 
     impellerAngle = drawFlowArea(
       ctx,
@@ -632,14 +856,52 @@ export function createEmfAnalogyView(options: CreateEmfAnalogyViewOptions = {}) 
       flowH,
       next,
       mode,
-      theme,
+      flowTheme,
       particles,
-      rustRandom,
-      impellerAngle,
-      idlePhase
+      impellerAngle
     );
-    drawLegendAndFormula(ctx, flowX, flowY, flowW, flowH, next, theme);
-    idlePhase += 0.032;
+
+    if (legacyOverlay) {
+      legacyOverlay.topbar.style.left = `${headerX}px`;
+      legacyOverlay.topbar.style.top = `${headerY}px`;
+      legacyOverlay.topbar.style.width = `${headerW}px`;
+      legacyOverlay.topbar.style.height = `${headerH}px`;
+
+      legacyOverlay.legend.style.left = `${flowX + 12}px`;
+      legacyOverlay.legend.style.top = `${flowY + 12}px`;
+
+      const formulaW = Math.min(420, flowW * 0.46);
+      const formulaH = 46;
+      const formulaX = flowX + (flowW - formulaW) * 0.5;
+      const formulaY = flowY + flowH - formulaH - 12;
+      legacyOverlay.formula.style.left = `${formulaX}px`;
+      legacyOverlay.formula.style.top = `${formulaY}px`;
+      legacyOverlay.formula.style.width = `${formulaW}px`;
+      legacyOverlay.formula.style.height = `${formulaH}px`;
+      legacyOverlay.formula.style.display = 'flex';
+      legacyOverlay.formula.style.alignItems = 'center';
+      legacyOverlay.formula.style.justifyContent = 'center';
+      legacyOverlay.formula.style.fontSize = `${Math.max(24, Math.round(formulaH * 0.42))}px`;
+
+      legacyOverlay.stateValue.textContent = next.state.isSystemOn
+        ? '通路'
+        : '断路';
+      legacyOverlay.stateValue.style.color = next.state.isSystemOn
+        ? '#1d4ed8'
+        : '#334155';
+      legacyOverlay.openingValue.textContent = `${Math.round(next.state.tapOpening * 100)}%`;
+      legacyOverlay.openingValue.style.color = '#1f2937';
+      legacyOverlay.currentValue.textContent = `${next.state.currentI.toFixed(2)} A`;
+      legacyOverlay.currentValue.style.color = '#1d4ed8';
+      legacyOverlay.dropValue.textContent = `${next.state.internalDrop.toFixed(2)} V`;
+      legacyOverlay.dropValue.style.color = '#dc2626';
+      legacyOverlay.terminalValue.textContent = `${next.state.terminalVoltage.toFixed(2)} V`;
+
+      legacyOverlay.formulaPrefix.textContent = `U = E - Ir = 1.50 - ${next.state.internalDrop.toFixed(2)} = `;
+      legacyOverlay.formulaValue.textContent = `${next.state.terminalVoltage.toFixed(2)} V`;
+    } else {
+      drawLegendAndFormula(ctx, flowX, flowY, flowW, flowH, next);
+    }
   }
 
   const tick = () => {
@@ -676,6 +938,7 @@ export function createEmfAnalogyView(options: CreateEmfAnalogyViewOptions = {}) 
       if (rafId !== null && typeof window !== 'undefined') {
         window.cancelAnimationFrame(rafId);
       }
+      legacyOverlay?.root.remove();
       snapshot = null;
       canvas = null;
       ctx = null;

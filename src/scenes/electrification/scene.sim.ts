@@ -21,7 +21,7 @@ const SCENE_LABELS: Record<ElectrificationScene, string[]> = {
 
 const SCENE_EXPLANATIONS: Record<ElectrificationScene, string[]> = {
   friction: [
-    '初始状态：丝绸和玻璃棒都接近电中性。',
+    '初始状态：丝绸和玻璃棒都是电中性的。',
     '摩擦过程中电子从玻璃棒转移到丝绸。',
     '分离后玻璃棒带正电，丝绸带负电。'
   ],

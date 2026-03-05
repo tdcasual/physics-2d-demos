@@ -8,6 +8,7 @@ export type CreateEmfAnalogySceneOptions = {
   canvas?: HTMLCanvasElement;
   mode?: TeachingMode;
   theme?: TeachingTheme;
+  legacyFlowDark?: boolean;
   onReadout?: (snapshot: EmfAnalogySnapshot) => void;
 };
 
@@ -24,7 +25,8 @@ export function createEmfAnalogyScene(options: CreateEmfAnalogySceneOptions = {}
   const view = createEmfAnalogyView({
     canvas: options.canvas,
     mode: options.mode ?? 'normal',
-    theme: options.theme ?? 'dark'
+    theme: options.theme ?? 'dark',
+    legacyFlowDark: options.legacyFlowDark ?? false
   });
 
   function renderAndEmit(): void {

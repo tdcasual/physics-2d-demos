@@ -4,7 +4,7 @@ import { PNG } from 'pngjs';
 
 async function captureStageFrame(page: import('@playwright/test').Page, pagePath: string): Promise<Buffer> {
   await page.goto(pagePath);
-  await expect(page.getByRole('heading', { name: '追及相遇演示动画（2D）' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '追及相遇' })).toBeVisible();
   const stage = page.locator('.stage-frame');
   await expect(stage).toBeVisible();
   await page.waitForTimeout(400);

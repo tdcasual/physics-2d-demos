@@ -1,7 +1,10 @@
 import type { TeachingMode } from '../../app/teaching-standards';
 import { getTeachingStandards } from '../../app/teaching-standards';
 import type { TeachingTheme } from '../../app/teaching-demo-shell';
-import { applyHiDpiCanvasMetrics, computeHiDpiCanvasMetrics } from '../../core/high-dpi-canvas';
+import {
+  applyHiDpiCanvasMetrics,
+  computeHiDpiCanvasMetrics
+} from '../../core/high-dpi-canvas';
 import type { ElectrificationSnapshot } from './scene.sim';
 
 export type CreateElectrificationViewOptions = {
@@ -53,9 +56,15 @@ function drawFrictionLegacyLike(
   const mapX = (x: number) => offsetX + x * scale;
   const mapY = (y: number) => offsetY + y * scale;
   const mapLen = (value: number) => value * scale;
-  const atomFont = Math.max(12, visuals.secondaryFontPx * 0.9 * scale);
+  const atomFont = Math.max(12, visuals.secondaryFontPx * scale);
 
-  const drawBody = (x: number, y: number, w: number, h: number, r: number): void => {
+  const drawBody = (
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    r: number
+  ): void => {
     const left = mapX(x);
     const top = mapY(y);
     const widthPx = mapLen(w);
@@ -71,7 +80,7 @@ function drawFrictionLegacyLike(
     ctx.fillStyle = palette.neutralFill;
     ctx.fill();
     ctx.strokeStyle = palette.neutralStroke;
-    ctx.lineWidth = Math.max(1.5, visuals.minorStrokePx * 0.42);
+    ctx.lineWidth = Math.max(1, visuals.majorStrokePx * scale);
     ctx.stroke();
   };
 
@@ -86,7 +95,7 @@ function drawFrictionLegacyLike(
     ctx.fillStyle = palette.bg;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = `700 ${atomFont}px "Noto Sans SC", "PingFang SC", sans-serif`;
+    ctx.font = `700 ${atomFont}px Inter, "Noto Sans SC", "PingFang SC", sans-serif`;
     ctx.fillText('+', cx, cy);
 
     ctx.beginPath();
@@ -111,7 +120,9 @@ function drawFrictionLegacyLike(
   }
 }
 
-export function createElectrificationView(options: CreateElectrificationViewOptions = {}) {
+export function createElectrificationView(
+  options: CreateElectrificationViewOptions = {}
+) {
   let canvas = options.canvas ?? null;
   let ctx = canvas?.getContext('2d') ?? null;
   let mode: TeachingMode = options.mode ?? 'normal';
@@ -128,7 +139,8 @@ export function createElectrificationView(options: CreateElectrificationViewOpti
     const rect = canvas.getBoundingClientRect();
     const cssWidth = Math.max(480, Math.floor(rect.width || 1280));
     const cssHeight = Math.max(280, Math.floor(rect.height || 720));
-    const dpr = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1;
+    const dpr =
+      typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1;
     surface = computeHiDpiCanvasMetrics({
       cssWidth,
       cssHeight,
@@ -166,8 +178,16 @@ export function createElectrificationView(options: CreateElectrificationViewOpti
     const drawBody = (x: number, charge: number, color: string) => {
       const x0 = x - bodyW * 0.5;
       const y0 = centerY - bodyH * 0.5;
-      context.fillStyle = blend(theme, 'rgba(255,255,255,0.76)', 'rgba(15,23,42,0.75)');
-      context.strokeStyle = blend(theme, 'rgba(71,85,105,0.45)', 'rgba(148,163,184,0.35)');
+      context.fillStyle = blend(
+        theme,
+        'rgba(255,255,255,0.76)',
+        'rgba(15,23,42,0.75)'
+      );
+      context.strokeStyle = blend(
+        theme,
+        'rgba(71,85,105,0.45)',
+        'rgba(148,163,184,0.35)'
+      );
       context.lineWidth = Math.max(1.5, visuals.minorStrokePx * 0.36);
       context.fillRect(x0, y0, bodyW, bodyH);
       context.strokeRect(x0, y0, bodyW, bodyH);
@@ -184,7 +204,11 @@ export function createElectrificationView(options: CreateElectrificationViewOpti
     };
 
     drawBody(leftX, next.state.leftCharge, blend(theme, '#60a5fa', '#3b82f6'));
-    drawBody(rightX, next.state.rightCharge, blend(theme, '#f87171', '#ef4444'));
+    drawBody(
+      rightX,
+      next.state.rightCharge,
+      blend(theme, '#f87171', '#ef4444')
+    );
 
     if (next.state.scene === 'friction' && next.state.stepIndex >= 1) {
       context.strokeStyle = blend(theme, '#334155', '#e5e7eb');

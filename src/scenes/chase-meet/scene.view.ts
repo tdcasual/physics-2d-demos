@@ -188,14 +188,14 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
     });
     dom.root.classList.toggle('is-narrow', viewport.isNarrow);
 
-    const viewportHeight = Math.max(1, viewport.height);
+    const stageHeight = Math.max(1, Math.floor(dom.root.getBoundingClientRect().height || viewport.height));
     const trackHeight = Math.min(
       isPresentation ? 460 : 380,
-      Math.max(isPresentation ? 220 : 170, viewportHeight * (viewport.isNarrow ? 0.34 : 0.42))
+      Math.max(isPresentation ? 220 : 170, stageHeight * (viewport.isNarrow ? 0.34 : 0.42))
     );
     const graphHeight = Math.min(
       isPresentation ? 320 : 250,
-      Math.max(isPresentation ? 180 : 150, viewportHeight * (viewport.isNarrow ? 0.22 : 0.34))
+      Math.max(isPresentation ? 180 : 150, stageHeight * (viewport.isNarrow ? 0.22 : 0.34))
     );
     const graphWidth = viewport.isNarrow ? totalWidth : Math.max(180, totalWidth / 2 - 8);
 
