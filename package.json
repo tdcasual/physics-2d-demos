@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "lint": "eslint . --ext .ts,.tsx,.js",
+    "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "generate:index": "node --import tsx scripts/generate-scene-index.ts && node --import tsx scripts/generate-nav-fallback.ts",
     "test:visual": "playwright test",

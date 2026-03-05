@@ -36,12 +36,22 @@ export type CreateTeachingDemoShellOptions = {
   defaultTheme?: TeachingTheme;
 };
 
+const COMPACT_BREAKPOINT_PX = 1024;
+
 function modeToggleLabel(mode: TeachingMode): string {
   return mode === 'presentation' ? '切换到标准模式' : '切换到演示模式';
 }
 
 function themeToggleLabel(theme: TeachingTheme): string {
   return theme === 'dark' ? '切换到白天主题' : '切换到夜间主题';
+}
+
+function modeToggleText(mode: TeachingMode): string {
+  return mode === 'presentation' ? '标准' : '演示';
+}
+
+function themeToggleText(theme: TeachingTheme): string {
+  return theme === 'dark' ? '白天' : '夜间';
 }
 
 function applyModeTokens(root: HTMLElement, mode: TeachingMode): void {
@@ -59,7 +69,7 @@ function applyThemeTokens(root: HTMLElement, theme: TeachingTheme): void {
 }
 
 function isCompactViewport(): boolean {
-  return getResponsiveViewport(1180).isNarrow;
+  return getResponsiveViewport(COMPACT_BREAKPOINT_PX).isNarrow;
 }
 
 function inferStatusLevel(text: string): StatusLevel {
@@ -104,7 +114,7 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
           <p class="teaching-subtitle">${options.subtitle}</p>
           <button type="button" class="sidebar-toggle sidebar-toggle-inline">隐藏控制面板</button>
         </header>
-        <section class="teaching-card">
+        <section class="teaching-card control-card">
           <h2 class="teaching-card-title">控制区</h2>
           <div class="control-slot"></div>
         </section>
@@ -119,10 +129,12 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
       </aside>
       <div class="sidebar-resizer" role="separator" aria-orientation="vertical" aria-label="调整控制面板宽度"></div>
       <section class="teaching-stage-panel">
-        <button type="button" class="sidebar-toggle sidebar-toggle-float">隐藏控制面板</button>
-        <div class="stage-toolbar" role="group" aria-label="演示区设置">
-          <button type="button" class="mode-toggle">${modeToggleLabel(modeState.value)}</button>
-          <button type="button" class="shell-theme-toggle">${themeToggleLabel(themeState.value)}</button>
+        <div class="stage-topbar">
+          <button type="button" class="sidebar-toggle sidebar-toggle-float">隐藏控制面板</button>
+          <div class="stage-toolbar" role="group" aria-label="演示区设置">
+            <button type="button" class="mode-toggle" aria-label="${modeToggleLabel(modeState.value)}">${modeToggleText(modeState.value)}</button>
+            <button type="button" class="shell-theme-toggle" aria-label="${themeToggleLabel(themeState.value)}">${themeToggleText(themeState.value)}</button>
+          </div>
         </div>
         <button type="button" class="readout-drawer-toggle">显示数据区</button>
         <div class="stage-frame">
@@ -177,9 +189,9 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
     throw new Error('Failed to mount teaching demo shell');
   }
 
-  const sidebarMinPx = 260;
-  const sidebarMaxPx = 560;
-  const stageMinPx = 960;
+  const sidebarMinPx = 240;
+  const sidebarMaxPx = 520;
+  const stageMinPx = 700;
   const dividerPx = 12;
   let collapsed = false;
   let dragging = false;
@@ -294,14 +306,18 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
   const setMode = (mode: TeachingMode): void => {
     modeState.value = mode;
     applyModeTokens(root, modeState.value);
-    modeButton.textContent = modeToggleLabel(modeState.value);
+    modeButton.textContent = modeToggleText(modeState.value);
+    modeButton.setAttribute('aria-label', modeToggleLabel(modeState.value));
+    modeButton.title = modeToggleLabel(modeState.value);
     modeButton.setAttribute('aria-pressed', String(modeState.value === 'presentation'));
   };
 
   const setTheme = (theme: TeachingTheme): void => {
     themeState.value = theme;
     applyThemeTokens(root, themeState.value);
-    themeButton.textContent = themeToggleLabel(themeState.value);
+    themeButton.textContent = themeToggleText(themeState.value);
+    themeButton.setAttribute('aria-label', themeToggleLabel(themeState.value));
+    themeButton.title = themeToggleLabel(themeState.value);
     themeButton.setAttribute('aria-pressed', String(themeState.value === 'dark'));
   };
 
@@ -317,8 +333,13 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
   applyThemeTokens(root, themeState.value);
   applyTouchInteractionMode(stageCanvas, 'default');
   modeButton.setAttribute('aria-pressed', String(modeState.value === 'presentation'));
+  modeButton.setAttribute('aria-label', modeToggleLabel(modeState.value));
+  modeButton.title = modeToggleLabel(modeState.value);
+  modeButton.textContent = modeToggleText(modeState.value);
   themeButton.setAttribute('aria-pressed', String(themeState.value === 'dark'));
-  themeButton.textContent = themeToggleLabel(themeState.value);
+  themeButton.setAttribute('aria-label', themeToggleLabel(themeState.value));
+  themeButton.title = themeToggleLabel(themeState.value);
+  themeButton.textContent = themeToggleText(themeState.value);
   setSidebarWidth(getDefaultSidebarWidth(window.innerWidth, sidebarMinPx, getSidebarMaxForViewport()));
   updateSidebarToggleLabel();
   setStatus('就绪', 'ready');

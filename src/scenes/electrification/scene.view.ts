@@ -138,22 +138,23 @@ export function createElectrificationView(options: CreateElectrificationViewOpti
   }
 
   function drawScene(next: ElectrificationSnapshot): void {
-    if (!ctx) return;
+    const context = ctx;
+    if (!context) return;
     const width = surface.cssWidth;
     const height = surface.cssHeight;
     const visuals = getTeachingStandards(mode).rightStage;
 
     if (next.state.scene === 'friction' && next.state.stepIndex === 0) {
-      drawFrictionLegacyLike(ctx, width, height, theme, visuals);
+      drawFrictionLegacyLike(context, width, height, theme, visuals);
       return;
     }
 
-    ctx.clearRect(0, 0, width, height);
-    const gradient = ctx.createLinearGradient(0, 0, width, height);
+    context.clearRect(0, 0, width, height);
+    const gradient = context.createLinearGradient(0, 0, width, height);
     gradient.addColorStop(0, blend(theme, '#fff7ed', '#111827'));
     gradient.addColorStop(1, blend(theme, '#ffedd5', '#1f2937'));
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, width, height);
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, width, height);
 
     const leftX = width * 0.3;
     const rightX = width * 0.7;
@@ -165,43 +166,43 @@ export function createElectrificationView(options: CreateElectrificationViewOpti
     const drawBody = (x: number, charge: number, color: string) => {
       const x0 = x - bodyW * 0.5;
       const y0 = centerY - bodyH * 0.5;
-      ctx.fillStyle = blend(theme, 'rgba(255,255,255,0.76)', 'rgba(15,23,42,0.75)');
-      ctx.strokeStyle = blend(theme, 'rgba(71,85,105,0.45)', 'rgba(148,163,184,0.35)');
-      ctx.lineWidth = Math.max(1.5, visuals.minorStrokePx * 0.36);
-      ctx.fillRect(x0, y0, bodyW, bodyH);
-      ctx.strokeRect(x0, y0, bodyW, bodyH);
+      context.fillStyle = blend(theme, 'rgba(255,255,255,0.76)', 'rgba(15,23,42,0.75)');
+      context.strokeStyle = blend(theme, 'rgba(71,85,105,0.45)', 'rgba(148,163,184,0.35)');
+      context.lineWidth = Math.max(1.5, visuals.minorStrokePx * 0.36);
+      context.fillRect(x0, y0, bodyW, bodyH);
+      context.strokeRect(x0, y0, bodyW, bodyH);
 
-      ctx.beginPath();
-      ctx.fillStyle = color;
-      ctx.arc(x, centerY, radius * 1.6, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = blend(theme, '#0f172a', '#f8fafc');
-      ctx.font = `700 ${Math.max(14, visuals.primaryFontPx * 0.36)}px "Noto Sans SC", "PingFang SC", sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(formatCharge(charge), x, centerY);
+      context.beginPath();
+      context.fillStyle = color;
+      context.arc(x, centerY, radius * 1.6, 0, Math.PI * 2);
+      context.fill();
+      context.fillStyle = blend(theme, '#0f172a', '#f8fafc');
+      context.font = `700 ${Math.max(14, visuals.primaryFontPx * 0.36)}px "Noto Sans SC", "PingFang SC", sans-serif`;
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.fillText(formatCharge(charge), x, centerY);
     };
 
     drawBody(leftX, next.state.leftCharge, blend(theme, '#60a5fa', '#3b82f6'));
     drawBody(rightX, next.state.rightCharge, blend(theme, '#f87171', '#ef4444'));
 
     if (next.state.scene === 'friction' && next.state.stepIndex >= 1) {
-      ctx.strokeStyle = blend(theme, '#334155', '#e5e7eb');
-      ctx.lineWidth = Math.max(2, visuals.majorStrokePx * 0.32);
-      ctx.beginPath();
-      ctx.moveTo(leftX + bodyW * 0.5, centerY - bodyH * 0.15);
-      ctx.lineTo(rightX - bodyW * 0.5, centerY - bodyH * 0.15);
-      ctx.stroke();
+      context.strokeStyle = blend(theme, '#334155', '#e5e7eb');
+      context.lineWidth = Math.max(2, visuals.majorStrokePx * 0.32);
+      context.beginPath();
+      context.moveTo(leftX + bodyW * 0.5, centerY - bodyH * 0.15);
+      context.lineTo(rightX - bodyW * 0.5, centerY - bodyH * 0.15);
+      context.stroke();
     }
 
-    ctx.fillStyle = blend(theme, '#0f172a', '#e2e8f0');
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'alphabetic';
-    ctx.font = `700 ${Math.max(14, visuals.secondaryFontPx * 0.45)}px "Noto Sans SC", "PingFang SC", sans-serif`;
-    ctx.fillText(`场景：${next.state.scene}`, 16, 30);
-    ctx.fillText(`下一步动作：${next.state.nextActionLabel}`, 16, 56);
-    ctx.font = `600 ${Math.max(13, visuals.secondaryFontPx * 0.42)}px "Noto Sans SC", "PingFang SC", sans-serif`;
-    ctx.fillText(next.state.explanation, 16, 84);
+    context.fillStyle = blend(theme, '#0f172a', '#e2e8f0');
+    context.textAlign = 'left';
+    context.textBaseline = 'alphabetic';
+    context.font = `700 ${Math.max(14, visuals.secondaryFontPx * 0.45)}px "Noto Sans SC", "PingFang SC", sans-serif`;
+    context.fillText(`场景：${next.state.scene}`, 16, 30);
+    context.fillText(`下一步动作：${next.state.nextActionLabel}`, 16, 56);
+    context.font = `600 ${Math.max(13, visuals.secondaryFontPx * 0.42)}px "Noto Sans SC", "PingFang SC", sans-serif`;
+    context.fillText(next.state.explanation, 16, 84);
   }
 
   return {

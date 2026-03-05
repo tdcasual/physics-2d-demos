@@ -54,13 +54,18 @@ export function createEmfAnalogyControls(options: EmfAnalogyControlsOptions) {
     throw new Error('Failed to mount emf-analogy controls');
   }
 
+  const toggleControl: HTMLButtonElement = toggleButton;
+  const openingControl: HTMLInputElement = openingSlider;
+  const openingValueLabel: HTMLElement = openingValue;
+  const resetControl: HTMLButtonElement = resetButton;
+
   function syncToggleButton(): void {
-    toggleButton.textContent = state.isSystemOn ? '已打开' : '已关闭';
-    toggleButton.setAttribute('aria-pressed', String(state.isSystemOn));
+    toggleControl.textContent = state.isSystemOn ? '已打开' : '已关闭';
+    toggleControl.setAttribute('aria-pressed', String(state.isSystemOn));
   }
 
   function syncOpeningValue(): void {
-    openingValue.textContent = formatOpening(state.opening);
+    openingValueLabel.textContent = formatOpening(state.opening);
   }
 
   const onToggleClick = () => {
@@ -71,8 +76,8 @@ export function createEmfAnalogyControls(options: EmfAnalogyControlsOptions) {
   };
 
   const onOpeningInput = () => {
-    state.opening = clampOpening(Number(openingSlider.value));
-    openingSlider.value = String(state.opening);
+    state.opening = clampOpening(Number(openingControl.value));
+    openingControl.value = String(state.opening);
     syncOpeningValue();
     if (state.opening > 0 && !state.isSystemOn) {
       state.isSystemOn = true;
@@ -85,25 +90,25 @@ export function createEmfAnalogyControls(options: EmfAnalogyControlsOptions) {
   const onResetClick = () => {
     state.isSystemOn = false;
     state.opening = 0.5;
-    openingSlider.value = String(state.opening);
+    openingControl.value = String(state.opening);
     syncToggleButton();
     syncOpeningValue();
     options.onReset();
     options.onStatus?.('已重置场景');
   };
 
-  toggleButton.addEventListener('click', onToggleClick);
-  openingSlider.addEventListener('input', onOpeningInput);
-  resetButton.addEventListener('click', onResetClick);
+  toggleControl.addEventListener('click', onToggleClick);
+  openingControl.addEventListener('input', onOpeningInput);
+  resetControl.addEventListener('click', onResetClick);
 
   syncToggleButton();
   syncOpeningValue();
 
   return {
     dispose(): void {
-      toggleButton.removeEventListener('click', onToggleClick);
-      openingSlider.removeEventListener('input', onOpeningInput);
-      resetButton.removeEventListener('click', onResetClick);
+      toggleControl.removeEventListener('click', onToggleClick);
+      openingControl.removeEventListener('input', onOpeningInput);
+      resetControl.removeEventListener('click', onResetClick);
       options.container.innerHTML = '';
     }
   };

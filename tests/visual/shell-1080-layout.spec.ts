@@ -46,3 +46,25 @@ test('mode and theme toggles are rendered in the stage corner toolbar', async ({
   await expect(page.locator('.teaching-sidebar .mode-toggle')).toHaveCount(0);
   await expect(page.locator('.teaching-sidebar .shell-theme-toggle')).toHaveCount(0);
 });
+
+test('stage toolbar is separated from stage frame content', async ({ page }) => {
+  for (const path of modernPages) {
+    await page.goto(path);
+    const geometry = await page.evaluate(() => {
+      const topbar = document.querySelector('.stage-topbar');
+      const frame = document.querySelector('.stage-frame');
+      if (!(topbar instanceof HTMLElement) || !(frame instanceof HTMLElement)) {
+        return { valid: false, topbarBottom: 0, frameTop: 0 };
+      }
+      const topbarRect = topbar.getBoundingClientRect();
+      const frameRect = frame.getBoundingClientRect();
+      return {
+        valid: true,
+        topbarBottom: topbarRect.bottom,
+        frameTop: frameRect.top
+      };
+    });
+    expect(geometry.valid, `${path} missing topbar/frame geometry`).toBeTruthy();
+    expect(geometry.topbarBottom, `${path} toolbar should not overlap stage frame`).toBeLessThanOrEqual(geometry.frameTop + 1);
+  }
+});

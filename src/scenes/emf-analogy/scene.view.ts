@@ -92,8 +92,14 @@ function drawCards(
   y: number,
   width: number,
   height: number,
-  snapshot: EmfAnalogySnapshot
+  snapshot: EmfAnalogySnapshot,
+  theme: TeachingTheme
 ): void {
+  const isDark = theme === 'dark';
+  const baseCardBg = isDark ? '#111b2d' : '#ffffff';
+  const baseCardBorder = isDark ? '#334155' : '#e2e8f0';
+  const baseTitleColor = isDark ? '#94a3b8' : '#64748b';
+
   const gap = Math.max(6, width * 0.01);
   const cardWidth = (width - gap * 4) / 5;
   const cardHeight = height;
@@ -102,34 +108,34 @@ function drawCards(
     {
       title: '',
       value: snapshot.state.isSystemOn ? '通路' : '断路',
-      valueColor: snapshot.state.isSystemOn ? '#1d4ed8' : '#334155',
-      bg: '#ffffff',
-      border: '#e2e8f0',
-      titleColor: '#64748b'
+      valueColor: snapshot.state.isSystemOn ? (isDark ? '#60a5fa' : '#1d4ed8') : isDark ? '#cbd5e1' : '#334155',
+      bg: baseCardBg,
+      border: baseCardBorder,
+      titleColor: baseTitleColor
     },
     {
       title: '开度',
       value: `${Math.round(snapshot.state.tapOpening * 100)}%`,
-      valueColor: '#1f2937',
-      bg: '#ffffff',
-      border: '#e2e8f0',
-      titleColor: '#64748b'
+      valueColor: isDark ? '#e2e8f0' : '#1f2937',
+      bg: baseCardBg,
+      border: baseCardBorder,
+      titleColor: baseTitleColor
     },
     {
       title: '电流 I',
       value: `${snapshot.state.currentI.toFixed(2)} A`,
-      valueColor: '#1d4ed8',
-      bg: '#ffffff',
-      border: '#e2e8f0',
-      titleColor: '#64748b'
+      valueColor: isDark ? '#60a5fa' : '#1d4ed8',
+      bg: baseCardBg,
+      border: baseCardBorder,
+      titleColor: baseTitleColor
     },
     {
       title: '内阻压降 Ir',
       value: `${snapshot.state.internalDrop.toFixed(2)} V`,
-      valueColor: '#dc2626',
-      bg: '#ffffff',
-      border: '#e2e8f0',
-      titleColor: '#64748b'
+      valueColor: isDark ? '#f87171' : '#dc2626',
+      bg: baseCardBg,
+      border: baseCardBorder,
+      titleColor: baseTitleColor
     },
     {
       title: '路端电压 U',
@@ -173,21 +179,23 @@ function drawLegendAndFormula(
   y: number,
   width: number,
   height: number,
-  snapshot: EmfAnalogySnapshot
+  snapshot: EmfAnalogySnapshot,
+  theme: TeachingTheme
 ): void {
+  const isDark = theme === 'dark';
   const panelX = x + Math.max(10, width * 0.015);
   const panelY = y + Math.max(10, height * 0.02);
   const panelW = Math.min(width * 0.2, 150);
   const panelH = Math.max(40, height * 0.095);
 
   drawRoundedRect(ctx, panelX, panelY, panelW, panelH, 10);
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+  ctx.fillStyle = isDark ? 'rgba(15, 23, 42, 0.92)' : 'rgba(255, 255, 255, 0.92)';
   ctx.fill();
-  ctx.strokeStyle = '#e2e8f0';
+  ctx.strokeStyle = isDark ? '#334155' : '#e2e8f0';
   ctx.lineWidth = 1;
   ctx.stroke();
 
-  ctx.fillStyle = '#64748b';
+  ctx.fillStyle = isDark ? '#94a3b8' : '#64748b';
   ctx.font = `600 ${Math.max(9, Math.round(panelH * 0.18))}px "Noto Sans SC", "PingFang SC", sans-serif`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
@@ -198,13 +206,13 @@ function drawLegendAndFormula(
   const gradW = panelW - 24;
   const gradH = Math.max(7, panelH * 0.11);
   const gradient = ctx.createLinearGradient(gradX, gradY, gradX + gradW, gradY);
-  gradient.addColorStop(0, '#2563eb');
-  gradient.addColorStop(1, '#dbeafe');
+  gradient.addColorStop(0, isDark ? '#60a5fa' : '#2563eb');
+  gradient.addColorStop(1, isDark ? '#1e3a8a' : '#dbeafe');
   drawRoundedRect(ctx, gradX, gradY, gradW, gradH, gradH * 0.5);
   ctx.fillStyle = gradient;
   ctx.fill();
 
-  ctx.fillStyle = '#94a3b8';
+  ctx.fillStyle = isDark ? '#cbd5e1' : '#94a3b8';
   ctx.font = `500 ${Math.max(8, Math.round(panelH * 0.15))}px "Noto Sans SC", "PingFang SC", sans-serif`;
   ctx.fillText('高', panelX + 10, panelY + panelH - 16);
   ctx.textAlign = 'right';
@@ -216,9 +224,9 @@ function drawLegendAndFormula(
   const formulaY = y + height - formulaH - Math.max(10, height * 0.03);
 
   drawRoundedRect(ctx, formulaX, formulaY, formulaW, formulaH, 10);
-  ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
+  ctx.fillStyle = isDark ? 'rgba(2, 6, 23, 0.96)' : 'rgba(15, 23, 42, 0.95)';
   ctx.fill();
-  ctx.strokeStyle = '#334155';
+  ctx.strokeStyle = isDark ? '#475569' : '#334155';
   ctx.lineWidth = 1;
   ctx.stroke();
 
@@ -248,7 +256,7 @@ function drawLegendAndFormula(
   const textX = formulaX + (formulaW - prefixWidth - valueWidth) * 0.5;
   const textY = formulaY + formulaH * 0.56;
 
-  ctx.fillStyle = '#e2e8f0';
+  ctx.fillStyle = isDark ? '#f1f5f9' : '#e2e8f0';
   ctx.font = prefixFont;
   ctx.fillText(prefix, textX, textY);
   ctx.fillStyle = '#4ade80';
@@ -569,11 +577,12 @@ export function createEmfAnalogyView(options: CreateEmfAnalogyViewOptions = {}) 
 
   function draw(next: EmfAnalogySnapshot): void {
     if (!ctx) return;
+    const isDark = theme === 'dark';
     const width = surface.cssWidth;
     const height = surface.cssHeight;
 
     ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = '#f1f5f9';
+    ctx.fillStyle = isDark ? '#0b1220' : '#f1f5f9';
     ctx.fillRect(0, 0, width, height);
 
     const outerPad = Math.max(8, Math.min(width, height) * 0.012);
@@ -582,9 +591,9 @@ export function createEmfAnalogyView(options: CreateEmfAnalogyViewOptions = {}) 
     const cardW = width - outerPad * 2;
     const cardH = height - outerPad * 2;
     drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 12);
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = isDark ? '#0f172a' : '#ffffff';
     ctx.fill();
-    ctx.strokeStyle = '#dce5f2';
+    ctx.strokeStyle = isDark ? '#334155' : '#dce5f2';
     ctx.lineWidth = 1.2;
     ctx.stroke();
 
@@ -595,15 +604,20 @@ export function createEmfAnalogyView(options: CreateEmfAnalogyViewOptions = {}) 
 
     drawRoundedRect(ctx, headerX, headerY, headerW, headerH, 10);
     const headerGradient = ctx.createLinearGradient(headerX, headerY, headerX + headerW, headerY);
-    headerGradient.addColorStop(0, '#f8fafc');
-    headerGradient.addColorStop(1, '#eff6ff');
+    if (isDark) {
+      headerGradient.addColorStop(0, '#111b2d');
+      headerGradient.addColorStop(1, '#0b1220');
+    } else {
+      headerGradient.addColorStop(0, '#f8fafc');
+      headerGradient.addColorStop(1, '#eff6ff');
+    }
     ctx.fillStyle = headerGradient;
     ctx.fill();
-    ctx.strokeStyle = '#e2e8f0';
+    ctx.strokeStyle = isDark ? '#334155' : '#e2e8f0';
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    drawCards(ctx, headerX + 8, headerY + 8, headerW - 16, headerH - 16, next);
+    drawCards(ctx, headerX + 8, headerY + 8, headerW - 16, headerH - 16, next, theme);
 
     const flowX = cardX + 8;
     const flowY = headerY + headerH + 8;
@@ -624,7 +638,7 @@ export function createEmfAnalogyView(options: CreateEmfAnalogyViewOptions = {}) 
       impellerAngle,
       idlePhase
     );
-    drawLegendAndFormula(ctx, flowX, flowY, flowW, flowH, next);
+    drawLegendAndFormula(ctx, flowX, flowY, flowW, flowH, next, theme);
     idlePhase += 0.032;
   }
 

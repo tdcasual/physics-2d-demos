@@ -146,22 +146,45 @@ export function createProjectileControls(options: ProjectileControlsOptions): { 
     throw new Error('Failed to mount projectile controls');
   }
 
+  const speedField: HTMLInputElement = speedInput;
+  const angleField: HTMLInputElement = angleInput;
+  const gravityField: HTMLInputElement = gravityInput;
+  const heightField: HTMLInputElement = heightInput;
+  const windField: HTMLInputElement = windInput;
+  const dragField: HTMLInputElement = dragInput;
+  const speedValueField: HTMLElement = speedValue;
+  const angleValueField: HTMLElement = angleValue;
+  const gravityValueField: HTMLElement = gravityValue;
+  const heightValueField: HTMLElement = heightValue;
+  const windValueField: HTMLElement = windValue;
+  const dragValueField: HTMLElement = dragValue;
+  const playControl: HTMLButtonElement = playBtn;
+  const pauseControl: HTMLButtonElement = pauseBtn;
+  const resetControl: HTMLButtonElement = resetBtn;
+  const stepControl: HTMLButtonElement = stepBtn;
+  const applyControl: HTMLButtonElement = applyBtn;
+  const randomControl: HTMLButtonElement = randomBtn;
+  const presetEarthControl: HTMLButtonElement = presetEarth;
+  const presetMoonControl: HTMLButtonElement = presetMoon;
+  const presetMarsControl: HTMLButtonElement = presetMars;
+  const presetCrosswindControl: HTMLButtonElement = presetCrosswind;
+
   const valueMap = new Map<string, HTMLElement>([
-    ['speed', speedValue],
-    ['angle', angleValue],
-    ['gravity', gravityValue],
-    ['height', heightValue],
-    ['wind', windValue],
-    ['drag', dragValue]
+    ['speed', speedValueField],
+    ['angle', angleValueField],
+    ['gravity', gravityValueField],
+    ['height', heightValueField],
+    ['wind', windValueField],
+    ['drag', dragValueField]
   ]);
 
   const inputMap = new Map<string, HTMLInputElement>([
-    ['speed', speedInput],
-    ['angle', angleInput],
-    ['gravity', gravityInput],
-    ['height', heightInput],
-    ['wind', windInput],
-    ['drag', dragInput]
+    ['speed', speedField],
+    ['angle', angleField],
+    ['gravity', gravityField],
+    ['height', heightField],
+    ['wind', windField],
+    ['drag', dragField]
   ]);
 
   function setInputValue(role: string, value: number): void {
@@ -180,12 +203,12 @@ export function createProjectileControls(options: ProjectileControlsOptions): { 
 
   function readParams(): Required<Pick<ProjectileParams, 'speed' | 'angleDeg' | 'gravity' | 'initialHeight' | 'windAccel' | 'drag'>> {
     return {
-      speed: clamp(Number(speedInput.value), 0, 80),
-      angleDeg: clamp(Number(angleInput.value), 0, 85),
-      gravity: clamp(Number(gravityInput.value), 0, 30),
-      initialHeight: clamp(Number(heightInput.value), 0, 20),
-      windAccel: clamp(Number(windInput.value), -12, 12),
-      drag: clamp(Number(dragInput.value), 0, 0.2)
+      speed: clamp(Number(speedField.value), 0, 80),
+      angleDeg: clamp(Number(angleField.value), 0, 85),
+      gravity: clamp(Number(gravityField.value), 0, 30),
+      initialHeight: clamp(Number(heightField.value), 0, 20),
+      windAccel: clamp(Number(windField.value), -12, 12),
+      drag: clamp(Number(dragField.value), 0, 0.2)
     };
   }
 
@@ -241,32 +264,32 @@ export function createProjectileControls(options: ProjectileControlsOptions): { 
   for (const input of inputMap.values()) {
     input.addEventListener('input', onAnyInput);
   }
-  playBtn.addEventListener('click', onPlay);
-  pauseBtn.addEventListener('click', onPause);
-  resetBtn.addEventListener('click', onReset);
-  stepBtn.addEventListener('click', onStep);
-  applyBtn.addEventListener('click', onApply);
-  randomBtn.addEventListener('click', onRandom);
-  presetEarth.addEventListener('click', onPresetEarth);
-  presetMoon.addEventListener('click', onPresetMoon);
-  presetMars.addEventListener('click', onPresetMars);
-  presetCrosswind.addEventListener('click', onPresetCrosswind);
+  playControl.addEventListener('click', onPlay);
+  pauseControl.addEventListener('click', onPause);
+  resetControl.addEventListener('click', onReset);
+  stepControl.addEventListener('click', onStep);
+  applyControl.addEventListener('click', onApply);
+  randomControl.addEventListener('click', onRandom);
+  presetEarthControl.addEventListener('click', onPresetEarth);
+  presetMoonControl.addEventListener('click', onPresetMoon);
+  presetMarsControl.addEventListener('click', onPresetMars);
+  presetCrosswindControl.addEventListener('click', onPresetCrosswind);
 
   return {
     dispose(): void {
       for (const input of inputMap.values()) {
         input.removeEventListener('input', onAnyInput);
       }
-      playBtn.removeEventListener('click', onPlay);
-      pauseBtn.removeEventListener('click', onPause);
-      resetBtn.removeEventListener('click', onReset);
-      stepBtn.removeEventListener('click', onStep);
-      applyBtn.removeEventListener('click', onApply);
-      randomBtn.removeEventListener('click', onRandom);
-      presetEarth.removeEventListener('click', onPresetEarth);
-      presetMoon.removeEventListener('click', onPresetMoon);
-      presetMars.removeEventListener('click', onPresetMars);
-      presetCrosswind.removeEventListener('click', onPresetCrosswind);
+      playControl.removeEventListener('click', onPlay);
+      pauseControl.removeEventListener('click', onPause);
+      resetControl.removeEventListener('click', onReset);
+      stepControl.removeEventListener('click', onStep);
+      applyControl.removeEventListener('click', onApply);
+      randomControl.removeEventListener('click', onRandom);
+      presetEarthControl.removeEventListener('click', onPresetEarth);
+      presetMoonControl.removeEventListener('click', onPresetMoon);
+      presetMarsControl.removeEventListener('click', onPresetMars);
+      presetCrosswindControl.removeEventListener('click', onPresetCrosswind);
       controlTier.dispose();
     }
   };

@@ -96,22 +96,34 @@ export function createChaseMeetControls(options: ChaseMeetControlsOptions): { di
     throw new Error('Failed to mount chase-meet controls');
   }
 
+  const totalTimeField: HTMLInputElement = totalTimeInput;
+  const dtField: HTMLInputElement = dtInput;
+  const x0aField: HTMLInputElement = x0aInput;
+  const x0bField: HTMLInputElement = x0bInput;
+  const vExprAField: HTMLInputElement = vExprAInput;
+  const vExprBField: HTMLInputElement = vExprBInput;
+  const applySettingsControl: HTMLButtonElement = applySettingsButton;
+  const playControl: HTMLButtonElement = playButton;
+  const pauseControl: HTMLButtonElement = pauseButton;
+  const stepControl: HTMLButtonElement = stepButton;
+  const resetControl: HTMLButtonElement = resetButton;
+
   const controlTier = mountControlTier(options.container);
 
   function readStateFromInputs(): ChaseMeetParams {
-    state.totalTime = clampTotalTime(Number(totalTimeInput.value));
-    state.dt = clampDt(Number(dtInput.value));
-    state.x0A = Number.isFinite(Number(x0aInput.value)) ? Number(x0aInput.value) : 0;
-    state.x0B = Number.isFinite(Number(x0bInput.value)) ? Number(x0bInput.value) : 10;
-    state.vExprA = vExprAInput.value.trim() || '0';
-    state.vExprB = vExprBInput.value.trim() || '0';
+    state.totalTime = clampTotalTime(Number(totalTimeField.value));
+    state.dt = clampDt(Number(dtField.value));
+    state.x0A = Number.isFinite(Number(x0aField.value)) ? Number(x0aField.value) : 0;
+    state.x0B = Number.isFinite(Number(x0bField.value)) ? Number(x0bField.value) : 10;
+    state.vExprA = vExprAField.value.trim() || '0';
+    state.vExprB = vExprBField.value.trim() || '0';
 
-    totalTimeInput.value = String(state.totalTime);
-    dtInput.value = String(state.dt);
-    x0aInput.value = String(state.x0A);
-    x0bInput.value = String(state.x0B);
-    vExprAInput.value = state.vExprA;
-    vExprBInput.value = state.vExprB;
+    totalTimeField.value = String(state.totalTime);
+    dtField.value = String(state.dt);
+    x0aField.value = String(state.x0A);
+    x0bField.value = String(state.x0B);
+    vExprAField.value = state.vExprA;
+    vExprBField.value = state.vExprB;
     return { ...state };
   }
 
@@ -141,19 +153,19 @@ export function createChaseMeetControls(options: ChaseMeetControlsOptions): { di
     options.onStatus?.('动画已重置');
   };
 
-  applySettingsButton.addEventListener('click', onApplySettingsClick);
-  playButton.addEventListener('click', onPlayClick);
-  pauseButton.addEventListener('click', onPauseClick);
-  stepButton.addEventListener('click', onStepClick);
-  resetButton.addEventListener('click', onResetClick);
+  applySettingsControl.addEventListener('click', onApplySettingsClick);
+  playControl.addEventListener('click', onPlayClick);
+  pauseControl.addEventListener('click', onPauseClick);
+  stepControl.addEventListener('click', onStepClick);
+  resetControl.addEventListener('click', onResetClick);
 
   return {
     dispose(): void {
-      applySettingsButton.removeEventListener('click', onApplySettingsClick);
-      playButton.removeEventListener('click', onPlayClick);
-      pauseButton.removeEventListener('click', onPauseClick);
-      stepButton.removeEventListener('click', onStepClick);
-      resetButton.removeEventListener('click', onResetClick);
+      applySettingsControl.removeEventListener('click', onApplySettingsClick);
+      playControl.removeEventListener('click', onPlayClick);
+      pauseControl.removeEventListener('click', onPauseClick);
+      stepControl.removeEventListener('click', onStepClick);
+      resetControl.removeEventListener('click', onResetClick);
       controlTier.dispose();
       options.container.innerHTML = '';
     }

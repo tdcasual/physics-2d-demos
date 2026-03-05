@@ -165,6 +165,19 @@ export function createVtIntegralControls(options: VtIntegralControlsOptions) {
     throw new Error('Failed to mount vt-integral controls');
   }
 
+  const scene1PanelEl: HTMLElement = scene1Panel;
+  const scene2PanelEl: HTMLElement = scene2Panel;
+  const scene3PanelEl: HTMLElement = scene3Panel;
+  const scene4PanelEl: HTMLElement = scene4Panel;
+  const scene5PanelEl: HTMLElement = scene5Panel;
+  const rectsValueEl: HTMLElement = rectsValue;
+  const timeValueEl: HTMLElement = timeValue;
+  const curveAmpValueEl: HTMLElement = curveAmpValue;
+  const circleValueEl: HTMLElement = circleValue;
+  const surfaceValueEl: HTMLElement = surfaceValue;
+  const divisionValueEl: HTMLElement = divisionValue;
+  const methodSelectEl: HTMLSelectElement = methodSelect;
+
   const sceneButtons = Array.from(sceneGroup.querySelectorAll('.scene-tab-btn')).filter(
     (node): node is HTMLButtonElement => node instanceof HTMLButtonElement
   );
@@ -177,21 +190,21 @@ export function createVtIntegralControls(options: VtIntegralControlsOptions) {
       button.classList.toggle('is-active', active);
       button.setAttribute('aria-pressed', String(active));
     }
-    scene1Panel.classList.toggle('is-hidden', state.scene !== 'scene1');
-    scene2Panel.classList.toggle('is-hidden', state.scene !== 'scene2');
-    scene3Panel.classList.toggle('is-hidden', state.scene !== 'scene3');
-    scene4Panel.classList.toggle('is-hidden', state.scene !== 'scene4');
-    scene5Panel.classList.toggle('is-hidden', state.scene !== 'scene5');
+    scene1PanelEl.classList.toggle('is-hidden', state.scene !== 'scene1');
+    scene2PanelEl.classList.toggle('is-hidden', state.scene !== 'scene2');
+    scene3PanelEl.classList.toggle('is-hidden', state.scene !== 'scene3');
+    scene4PanelEl.classList.toggle('is-hidden', state.scene !== 'scene4');
+    scene5PanelEl.classList.toggle('is-hidden', state.scene !== 'scene5');
   }
 
   function syncValues(): void {
-    rectsValue.textContent = String(state.rects);
-    timeValue.textContent = state.time.toFixed(1);
-    curveAmpValue.textContent = state.curveAmplitude.toFixed(2);
-    circleValue.textContent = String(state.circleN);
-    surfaceValue.textContent = String(state.surfaceN);
-    divisionValue.textContent = String(state.division);
-    methodSelect.value = state.method;
+    rectsValueEl.textContent = String(state.rects);
+    timeValueEl.textContent = state.time.toFixed(1);
+    curveAmpValueEl.textContent = state.curveAmplitude.toFixed(2);
+    circleValueEl.textContent = String(state.circleN);
+    surfaceValueEl.textContent = String(state.surfaceN);
+    divisionValueEl.textContent = String(state.division);
+    methodSelectEl.value = state.method;
   }
 
   const onSceneClick = (event: Event) => {
@@ -220,7 +233,7 @@ export function createVtIntegralControls(options: VtIntegralControlsOptions) {
   };
 
   const onMethodChange = () => {
-    state.method = methodSelect.value as VtMethod;
+    state.method = methodSelectEl.value as VtMethod;
     syncValues();
     options.onSetMethod(state.method);
   };
@@ -277,7 +290,7 @@ export function createVtIntegralControls(options: VtIntegralControlsOptions) {
   sceneGroup.addEventListener('click', onSceneClick);
   rectsSlider.addEventListener('input', onRectsInput);
   timeSlider.addEventListener('input', onTimeInput);
-  methodSelect.addEventListener('change', onMethodChange);
+  methodSelectEl.addEventListener('change', onMethodChange);
   curveAmpSlider.addEventListener('input', onCurveAmpInput);
   circleSlider.addEventListener('input', onCircleInput);
   surfaceSlider.addEventListener('input', onSurfaceInput);
@@ -292,7 +305,7 @@ export function createVtIntegralControls(options: VtIntegralControlsOptions) {
       sceneGroup.removeEventListener('click', onSceneClick);
       rectsSlider.removeEventListener('input', onRectsInput);
       timeSlider.removeEventListener('input', onTimeInput);
-      methodSelect.removeEventListener('change', onMethodChange);
+      methodSelectEl.removeEventListener('change', onMethodChange);
       curveAmpSlider.removeEventListener('input', onCurveAmpInput);
       circleSlider.removeEventListener('input', onCircleInput);
       surfaceSlider.removeEventListener('input', onSurfaceInput);

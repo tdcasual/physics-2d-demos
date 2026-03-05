@@ -29,6 +29,32 @@ async function horizontalOverflowPx(page: Page): Promise<number> {
   return page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 }
 
+async function controlCardMetrics(page: Page): Promise<{
+  cardClientHeight: number;
+  cardScrollHeight: number;
+  sidebarClientHeight: number;
+  sidebarScrollHeight: number;
+}> {
+  return page.evaluate(() => {
+    const card = document.querySelector('.control-card');
+    const sidebar = document.querySelector('.teaching-sidebar');
+    if (!(card instanceof HTMLElement) || !(sidebar instanceof HTMLElement)) {
+      return {
+        cardClientHeight: 0,
+        cardScrollHeight: 0,
+        sidebarClientHeight: 0,
+        sidebarScrollHeight: 0
+      };
+    }
+    return {
+      cardClientHeight: card.clientHeight,
+      cardScrollHeight: card.scrollHeight,
+      sidebarClientHeight: sidebar.clientHeight,
+      sidebarScrollHeight: sidebar.scrollHeight
+    };
+  });
+}
+
 test.describe('responsive overflow guardrails', () => {
   test.describe('iPhone 12', () => {
     test.use(iPhone12Use);
@@ -38,6 +64,17 @@ test.describe('responsive overflow guardrails', () => {
         await page.goto(path);
         const overflow = await horizontalOverflowPx(page);
         expect(overflow, `${path} should not overflow horizontally on iPhone`).toBeLessThanOrEqual(1);
+      }
+    });
+
+    test('control area stays usable in compact sidebar', async ({ page }) => {
+      for (const path of modernPages) {
+        await page.goto(path);
+        const metrics = await controlCardMetrics(page);
+        expect(metrics.cardClientHeight, `${path} control card collapsed on iPhone`).toBeGreaterThanOrEqual(120);
+        expect(metrics.sidebarScrollHeight, `${path} sidebar should remain scrollable on iPhone`).toBeGreaterThanOrEqual(
+          metrics.sidebarClientHeight
+        );
       }
     });
   });

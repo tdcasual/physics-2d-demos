@@ -93,6 +93,11 @@ export function createFieldLinesControls(options: FieldLinesControlsOptions) {
     throw new Error('Failed to mount field-lines controls');
   }
 
+  const customPanel: HTMLElement = customWrap;
+  const densityValueLabel: HTMLElement = densityValue;
+  const q1ValueLabel: HTMLElement = q1Value;
+  const q2ValueLabel: HTMLElement = q2Value;
+
   const sceneButtons = Array.from(sceneGroup.querySelectorAll('.scene-tab-btn')).filter(
     (node): node is HTMLButtonElement => node instanceof HTMLButtonElement
   );
@@ -105,16 +110,16 @@ export function createFieldLinesControls(options: FieldLinesControlsOptions) {
       button.classList.toggle('is-active', active);
       button.setAttribute('aria-pressed', String(active));
     }
-    customWrap.classList.toggle('is-hidden', scene !== 'custom');
+    customPanel.classList.toggle('is-hidden', scene !== 'custom');
   }
 
   function syncDensityLabel(): void {
-    densityValue.textContent = String(state.density);
+    densityValueLabel.textContent = String(state.density);
   }
 
   function syncChargeLabels(): void {
-    q1Value.textContent = formatChargeValue(state.q1);
-    q2Value.textContent = formatChargeValue(state.q2);
+    q1ValueLabel.textContent = formatChargeValue(state.q1);
+    q2ValueLabel.textContent = formatChargeValue(state.q2);
   }
 
   const onSceneClick = (event: Event) => {
