@@ -1,5 +1,7 @@
 import { getTeachingStandards, type TeachingMode } from './teaching-standards';
 import { clampSidebarWidth, getDefaultSidebarWidth } from './sidebar-layout';
+import { getResponsiveViewport } from './responsive-stage';
+import { applyTouchInteractionMode } from './touch-interaction';
 
 export type ReadoutItem = {
   label: string;
@@ -14,7 +16,7 @@ export type TeachingDemoShell = {
   stageCanvas: HTMLCanvasElement;
   modeButton: HTMLButtonElement;
   themeButton: HTMLButtonElement;
-  setStatus: (text: string) => void;
+  setStatus: (text: string, level?: StatusLevel) => void;
   setReadout: (items: ReadoutItem[]) => void;
   setMode: (mode: TeachingMode) => void;
   setTheme: (theme: TeachingTheme) => void;
@@ -24,6 +26,7 @@ export type TeachingDemoShell = {
 };
 
 export type TeachingTheme = 'dark' | 'light';
+export type StatusLevel = 'ready' | 'running' | 'paused' | 'success' | 'error' | 'info';
 
 export type CreateTeachingDemoShellOptions = {
   mount: HTMLElement;
@@ -55,6 +58,36 @@ function applyThemeTokens(root: HTMLElement, theme: TeachingTheme): void {
   root.dataset.theme = theme;
 }
 
+function isCompactViewport(): boolean {
+  return getResponsiveViewport(1180).isNarrow;
+}
+
+function inferStatusLevel(text: string): StatusLevel {
+  if (/错误|失败|异常|无效|非法/.test(text)) return 'error';
+  if (/播放|运行|开始/.test(text)) return 'running';
+  if (/暂停/.test(text)) return 'paused';
+  if (/就绪/.test(text)) return 'ready';
+  if (/已|完成|更新|重置|应用|开启|切换/.test(text)) return 'success';
+  return 'info';
+}
+
+function statusLevelLabel(level: StatusLevel): string {
+  if (level === 'ready') return '就绪';
+  if (level === 'running') return '运行中';
+  if (level === 'paused') return '已暂停';
+  if (level === 'success') return '已完成';
+  if (level === 'error') return '异常';
+  return '提示';
+}
+
+function nowTimeLabel(): string {
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  const ss = String(now.getSeconds()).padStart(2, '0');
+  return `${hh}:${mm}:${ss}`;
+}
+
 export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions): TeachingDemoShell {
   const modeState: { value: TeachingMode } = {
     value: options.defaultMode ?? 'normal'
@@ -77,6 +110,10 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
         </section>
         <section class="teaching-card status-card">
           <h2 class="teaching-card-title">状态</h2>
+          <div class="status-row">
+            <span class="status-pill">就绪</span>
+            <span class="status-time">--:--:--</span>
+          </div>
           <p class="status-text">就绪</p>
         </section>
       </aside>
@@ -87,6 +124,7 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
           <button type="button" class="mode-toggle">${modeToggleLabel(modeState.value)}</button>
           <button type="button" class="shell-theme-toggle">${themeToggleLabel(themeState.value)}</button>
         </div>
+        <button type="button" class="readout-drawer-toggle">显示数据区</button>
         <div class="stage-frame">
           <div class="stage-slot">
             <canvas class="stage-canvas" aria-label="2D 教学动画演示区域"></canvas>
@@ -103,6 +141,10 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
   const controlSlot = options.mount.querySelector('.control-slot');
   const readoutSlot = options.mount.querySelector('.readout-slot');
   const stageReadout = options.mount.querySelector('.stage-readout');
+  const drawerToggle = options.mount.querySelector('.readout-drawer-toggle');
+  const statusCard = options.mount.querySelector('.status-card');
+  const statusPill = options.mount.querySelector('.status-pill');
+  const statusTime = options.mount.querySelector('.status-time');
   const statusText = options.mount.querySelector('.status-text');
   const stageSlot = options.mount.querySelector('.stage-slot');
   const stageCanvas = options.mount.querySelector('.stage-canvas');
@@ -118,6 +160,10 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
     !(controlSlot instanceof HTMLElement) ||
     !(readoutSlot instanceof HTMLElement) ||
     !(stageReadout instanceof HTMLElement) ||
+    !(drawerToggle instanceof HTMLButtonElement) ||
+    !(statusCard instanceof HTMLElement) ||
+    !(statusPill instanceof HTMLElement) ||
+    !(statusTime instanceof HTMLElement) ||
     !(statusText instanceof HTMLElement) ||
     !(stageSlot instanceof HTMLElement) ||
     !(stageCanvas instanceof HTMLCanvasElement) ||
@@ -137,9 +183,12 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
   const dividerPx = 12;
   let collapsed = false;
   let dragging = false;
+  let compactViewport = isCompactViewport();
+  let readoutCollapsed = compactViewport;
+  let hasReadoutItems = false;
 
   const getSidebarMaxForViewport = (): number => {
-    const hardLimit = window.innerWidth - stageMinPx - dividerPx;
+    const hardLimit = getResponsiveViewport().width - stageMinPx - dividerPx;
     return Math.max(sidebarMinPx, Math.min(sidebarMaxPx, hardLimit));
   };
 
@@ -168,7 +217,7 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
   };
 
   const onResizerPointerDown = (event: PointerEvent): void => {
-    if (collapsed || window.matchMedia('(max-width: 1180px)').matches) return;
+    if (collapsed || isCompactViewport()) return;
     dragging = true;
     const pointerId = event.pointerId;
     const startX = event.clientX;
@@ -201,21 +250,45 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
     window.addEventListener('pointerup', onPointerUp);
   };
 
+  const updateReadoutDrawer = (): void => {
+    root.classList.toggle('is-compact-viewport', compactViewport);
+    const drawerEnabled = compactViewport && hasReadoutItems;
+    drawerToggle.hidden = !drawerEnabled;
+    stageReadout.classList.toggle('is-empty', !hasReadoutItems);
+    stageReadout.classList.toggle('is-collapsed', drawerEnabled && readoutCollapsed);
+    drawerToggle.textContent = drawerEnabled && readoutCollapsed ? '显示数据区' : '隐藏数据区';
+    drawerToggle.setAttribute('aria-expanded', String(!(drawerEnabled && readoutCollapsed)));
+  };
+
   const onViewportResize = (): void => {
-    if (window.matchMedia('(max-width: 1180px)').matches) {
+    const nextCompact = isCompactViewport();
+    if (nextCompact && !compactViewport) {
+      readoutCollapsed = true;
+    }
+    compactViewport = nextCompact;
+
+    if (compactViewport) {
       setSidebarCollapsed(false);
       root.style.removeProperty('--sidebar-width');
-      return;
+    } else {
+      readoutCollapsed = false;
+      const widthToken = root.style.getPropertyValue('--sidebar-width');
+      if (!widthToken) {
+        setSidebarWidth(getDefaultSidebarWidth(window.innerWidth, sidebarMinPx, getSidebarMaxForViewport()));
+      } else {
+        const current = parseFloat(widthToken);
+        if (Number.isFinite(current)) {
+          setSidebarWidth(current);
+        }
+      }
     }
-    const widthToken = root.style.getPropertyValue('--sidebar-width');
-    if (!widthToken) {
-      setSidebarWidth(getDefaultSidebarWidth(window.innerWidth, sidebarMinPx, getSidebarMaxForViewport()));
-      return;
-    }
-    const current = parseFloat(widthToken);
-    if (Number.isFinite(current)) {
-      setSidebarWidth(current);
-    }
+    updateReadoutDrawer();
+  };
+
+  const onToggleReadoutDrawer = (): void => {
+    if (!compactViewport || !hasReadoutItems) return;
+    readoutCollapsed = !readoutCollapsed;
+    updateReadoutDrawer();
   };
 
   const setMode = (mode: TeachingMode): void => {
@@ -232,19 +305,31 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
     themeButton.setAttribute('aria-pressed', String(themeState.value === 'dark'));
   };
 
+  const setStatus = (text: string, level?: StatusLevel): void => {
+    const resolvedLevel = level ?? inferStatusLevel(text);
+    statusCard.dataset.statusLevel = resolvedLevel;
+    statusPill.textContent = statusLevelLabel(resolvedLevel);
+    statusTime.textContent = nowTimeLabel();
+    statusText.textContent = text;
+  };
+
   applyModeTokens(root, modeState.value);
   applyThemeTokens(root, themeState.value);
-  stageReadout.classList.add('is-empty');
+  applyTouchInteractionMode(stageCanvas, 'default');
   modeButton.setAttribute('aria-pressed', String(modeState.value === 'presentation'));
   themeButton.setAttribute('aria-pressed', String(themeState.value === 'dark'));
   themeButton.textContent = themeToggleLabel(themeState.value);
   setSidebarWidth(getDefaultSidebarWidth(window.innerWidth, sidebarMinPx, getSidebarMaxForViewport()));
   updateSidebarToggleLabel();
+  setStatus('就绪', 'ready');
+  updateReadoutDrawer();
 
   inlineToggle.addEventListener('click', onToggleSidebar);
   floatToggle.addEventListener('click', onToggleSidebar);
+  drawerToggle.addEventListener('click', onToggleReadoutDrawer);
   resizer.addEventListener('pointerdown', onResizerPointerDown);
   window.addEventListener('resize', onViewportResize);
+  window.visualViewport?.addEventListener('resize', onViewportResize);
 
   return {
     root,
@@ -254,18 +339,17 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
     stageCanvas,
     modeButton,
     themeButton,
-    setStatus(text: string) {
-      statusText.textContent = text;
-    },
+    setStatus,
     setReadout(items: ReadoutItem[]) {
       readoutSlot.innerHTML = '';
-      stageReadout.classList.toggle('is-empty', items.length === 0);
+      hasReadoutItems = items.length > 0;
       for (const item of items) {
         const line = document.createElement('li');
         line.className = 'readout-item';
         line.innerHTML = `<span class="readout-label">${item.label}</span><strong class="readout-value">${item.value}</strong>`;
         readoutSlot.appendChild(line);
       }
+      updateReadoutDrawer();
     },
     setMode,
     setTheme,
@@ -278,8 +362,10 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
     dispose() {
       inlineToggle.removeEventListener('click', onToggleSidebar);
       floatToggle.removeEventListener('click', onToggleSidebar);
+      drawerToggle.removeEventListener('click', onToggleReadoutDrawer);
       resizer.removeEventListener('pointerdown', onResizerPointerDown);
       window.removeEventListener('resize', onViewportResize);
+      window.visualViewport?.removeEventListener('resize', onViewportResize);
     }
   };
 }

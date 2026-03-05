@@ -2,6 +2,7 @@ import '../../ui/teaching-demo.css';
 import { bootLegacy2DBridgePage } from '../../app/legacy-2d-bridge-page';
 import { createPageLifecycle } from '../../app/page-lifecycle';
 import { createTeachingDemoShell, type ReadoutItem } from '../../app/teaching-demo-shell';
+import { applyTouchInteractionMode } from '../../app/touch-interaction';
 import { createFieldLinesControls } from './controls';
 import { createFieldLinesScene } from './scene.entry';
 import type { FieldLinesSnapshot } from './scene.sim';
@@ -87,6 +88,7 @@ function bootModern(mount: HTMLElement): void {
     }
   });
   lifecycle.onDispose(() => scene.dispose());
+  applyTouchInteractionMode(shell.stageCanvas, 'drag');
 
   const controls = createFieldLinesControls({
     container: shell.controlSlot,

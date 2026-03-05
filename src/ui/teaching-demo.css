@@ -10,6 +10,10 @@ html {
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   min-height: 100%;
@@ -91,9 +95,10 @@ body {
   border-radius: 10px;
   background: rgba(247, 251, 255, 0.94);
   color: #1e3553;
-  font-size: calc(var(--control-font-px) * 0.62);
+  font-size: calc(var(--control-font-px) * 0.56);
   line-height: 1.2;
-  padding: 7px 10px;
+  min-height: 44px;
+  padding: 10px 12px;
   white-space: nowrap;
   box-shadow: 0 4px 12px rgba(13, 39, 78, 0.14);
   cursor: pointer;
@@ -269,6 +274,63 @@ body {
   font-weight: 700;
 }
 
+.status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid #c7d6eb;
+  background: #edf4ff;
+  color: #1e3553;
+  font-size: calc(var(--body-font-px) * 0.54);
+  font-weight: 700;
+}
+
+.status-time {
+  font-size: calc(var(--body-font-px) * 0.5);
+  color: #557092;
+}
+
+.status-card[data-status-level='ready'] .status-pill {
+  background: #edf4ff;
+  border-color: #c7d6eb;
+  color: #1e3553;
+}
+
+.status-card[data-status-level='running'] .status-pill {
+  background: #dff4e6;
+  border-color: #9ed1ae;
+  color: #0b6b34;
+}
+
+.status-card[data-status-level='paused'] .status-pill {
+  background: #f4efe0;
+  border-color: #d0bf8e;
+  color: #7b5e00;
+}
+
+.status-card[data-status-level='success'] .status-pill {
+  background: #e7f8f2;
+  border-color: #91d6bc;
+  color: #046447;
+}
+
+.status-card[data-status-level='error'] .status-pill {
+  background: #fbe7e7;
+  border-color: #e2a2a2;
+  color: #9f1d1d;
+}
+
 .teaching-stage-panel {
   grid-column: 3;
   padding: 10px;
@@ -372,6 +434,28 @@ body {
   display: none;
 }
 
+.stage-readout.is-collapsed {
+  display: none;
+}
+
+.readout-drawer-toggle {
+  display: none;
+}
+
+.control-tier-toggle {
+  justify-self: stretch;
+  margin-bottom: 8px;
+}
+
+.touch-interaction-surface {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.touch-interaction-surface.is-touch-drag {
+  cursor: grab;
+}
+
 .stage-iframe {
   width: 100%;
   height: 100%;
@@ -459,6 +543,14 @@ body {
   color: #9ca3af;
 }
 
+.chase-modern-stage.is-narrow .chase-modern-plots {
+  flex-wrap: wrap;
+}
+
+.chase-modern-stage.is-narrow .chase-modern-plot {
+  flex: 1 1 100%;
+}
+
 .teaching-demo.is-sidebar-collapsed {
   grid-template-columns: 0 10px 1fr;
 }
@@ -504,6 +596,10 @@ body {
   color: #f8fafc;
 }
 
+.teaching-demo[data-theme='dark'] .status-time {
+  color: #94a3b8;
+}
+
 .teaching-demo[data-theme='dark'] .shell-theme-toggle,
 .teaching-demo[data-theme='dark'] .sidebar-toggle,
 .teaching-demo[data-theme='dark'] .scene-tab-btn,
@@ -519,6 +615,12 @@ body {
 .teaching-demo[data-theme='dark'] .readout-item {
   background: #111b2d;
   border-color: #334155;
+}
+
+.teaching-demo[data-theme='dark'] .status-pill {
+  background: #111b2d;
+  border-color: #334155;
+  color: #e2e8f0;
 }
 
 .teaching-demo[data-theme='dark'] .stage-readout {
@@ -612,11 +714,40 @@ body {
     right: 12px;
   }
 
+  .readout-drawer-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    z-index: 5;
+    left: 12px;
+    bottom: 12px;
+    min-height: 44px;
+    padding: 8px 12px;
+    border: 1px solid #91a7c1;
+    border-radius: 10px;
+    background: rgba(247, 251, 255, 0.94);
+    color: #1e3553;
+    font-size: calc(var(--control-font-px) * 0.58);
+    box-shadow: 0 8px 16px rgba(13, 39, 78, 0.18);
+    backdrop-filter: blur(4px);
+  }
+
   .stage-readout {
-    position: static;
-    margin-top: 10px;
-    width: 100%;
-    max-height: 220px;
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 62px;
+    width: auto;
+    max-height: min(42vh, 280px);
+    margin-top: 0;
+    z-index: 5;
+  }
+
+  .teaching-demo[data-theme='dark'] .readout-drawer-toggle {
+    background: rgba(15, 23, 42, 0.92);
+    border-color: #334155;
+    color: #e2e8f0;
   }
 
   .stage-frame {

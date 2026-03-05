@@ -1,4 +1,5 @@
 import type { VtMethod, VtScene } from './scene.sim';
+import { mountControlTier } from '../../app/control-tier';
 
 export type VtIntegralControlsOptions = {
   container: HTMLElement;
@@ -71,7 +72,7 @@ export function createVtIntegralControls(options: VtIntegralControlsOptions) {
           <input type="range" min="1" max="10" step="0.5" value="${state.time}" data-role="time-slider">
           <span class="scene-control-value" data-role="time-value">${state.time.toFixed(1)}</span>
         </label>
-        <label class="scene-form-row">
+        <label class="scene-form-row scene-advanced">
           <span class="scene-control-label">方法</span>
           <select data-role="method-select">
             <option value="left">左端</option>
@@ -90,7 +91,7 @@ export function createVtIntegralControls(options: VtIntegralControlsOptions) {
         </label>
       </div>
 
-      <div class="scene-section-card is-hidden" data-role="scene3-panel">
+      <div class="scene-section-card scene-advanced is-hidden" data-role="scene3-panel">
         <label class="scene-control-row">
           <span class="scene-control-label">多边形 n</span>
           <input type="range" min="3" max="200" step="1" value="${state.circleN}" data-role="circle-slider">
@@ -98,7 +99,7 @@ export function createVtIntegralControls(options: VtIntegralControlsOptions) {
         </label>
       </div>
 
-      <div class="scene-section-card is-hidden" data-role="scene4-panel">
+      <div class="scene-section-card scene-advanced is-hidden" data-role="scene4-panel">
         <label class="scene-control-row">
           <span class="scene-control-label">四棱锥 n</span>
           <input type="range" min="1" max="10" step="1" value="${state.surfaceN}" data-role="surface-slider">
@@ -106,7 +107,7 @@ export function createVtIntegralControls(options: VtIntegralControlsOptions) {
         </label>
       </div>
 
-      <div class="scene-section-card is-hidden" data-role="scene5-panel">
+      <div class="scene-section-card scene-advanced is-hidden" data-role="scene5-panel">
         <label class="scene-control-row">
           <span class="scene-control-label">细分等级</span>
           <input type="range" min="16" max="100" step="1" value="${state.division}" data-role="division-slider">
@@ -167,6 +168,7 @@ export function createVtIntegralControls(options: VtIntegralControlsOptions) {
   const sceneButtons = Array.from(sceneGroup.querySelectorAll('.scene-tab-btn')).filter(
     (node): node is HTMLButtonElement => node instanceof HTMLButtonElement
   );
+  const controlTier = mountControlTier(options.container);
 
   function syncPanels(): void {
     for (const button of sceneButtons) {
@@ -296,6 +298,7 @@ export function createVtIntegralControls(options: VtIntegralControlsOptions) {
       surfaceSlider.removeEventListener('input', onSurfaceInput);
       divisionSlider.removeEventListener('input', onDivisionInput);
       resetButton.removeEventListener('click', onResetClick);
+      controlTier.dispose();
       options.container.innerHTML = '';
     }
   };

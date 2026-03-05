@@ -1,4 +1,5 @@
 import type { ProjectileParams, ResolvedProjectileParams } from './scene.sim';
+import { mountControlTier } from '../../app/control-tier';
 
 type ProjectilePresetKey = 'earth' | 'moon' | 'mars' | 'crosswind';
 
@@ -53,17 +54,17 @@ export function createProjectileControls(options: ProjectileControlsOptions): { 
       <input type="range" min="0" max="30" step="0.1" data-role="gravity">
       <span class="scene-control-value" data-role="gravity-value"></span>
     </div>
-    <div class="scene-control-row">
+    <div class="scene-control-row scene-advanced">
       <span class="scene-control-label">初始高度 h0</span>
       <input type="range" min="0" max="20" step="0.1" data-role="height">
       <span class="scene-control-value" data-role="height-value"></span>
     </div>
-    <div class="scene-control-row">
+    <div class="scene-control-row scene-advanced">
       <span class="scene-control-label">水平风加速度</span>
       <input type="range" min="-12" max="12" step="0.1" data-role="wind">
       <span class="scene-control-value" data-role="wind-value"></span>
     </div>
-    <div class="scene-control-row">
+    <div class="scene-control-row scene-advanced">
       <span class="scene-control-label">阻力系数</span>
       <input type="range" min="0" max="0.2" step="0.005" data-role="drag">
       <span class="scene-control-value" data-role="drag-value"></span>
@@ -72,13 +73,13 @@ export function createProjectileControls(options: ProjectileControlsOptions): { 
     <div class="scene-switch-grid">
       <button type="button" class="scene-tab-btn" data-role="preset-earth">地球</button>
       <button type="button" class="scene-tab-btn" data-role="preset-moon">月球</button>
-      <button type="button" class="scene-tab-btn" data-role="preset-mars">火星</button>
-      <button type="button" class="scene-tab-btn" data-role="preset-crosswind">侧风课堂</button>
+      <button type="button" class="scene-tab-btn scene-advanced" data-role="preset-mars">火星</button>
+      <button type="button" class="scene-tab-btn scene-advanced" data-role="preset-crosswind">侧风课堂</button>
     </div>
 
     <div class="scene-action-grid">
       <button type="button" class="scene-reset-btn scene-wide-btn" data-role="apply">应用并重置</button>
-      <button type="button" class="scene-reset-btn scene-wide-btn" data-role="random">随机案例</button>
+      <button type="button" class="scene-reset-btn scene-wide-btn scene-advanced" data-role="random">随机案例</button>
     </div>
 
     <div class="transport-controls">
@@ -223,6 +224,7 @@ export function createProjectileControls(options: ProjectileControlsOptions): { 
   setInputValue('wind', options.initialParams.windAccel);
   setInputValue('drag', options.initialParams.drag);
   updateValueLabels();
+  const controlTier = mountControlTier(options.container);
 
   const onAnyInput = () => updateValueLabels();
   const onPlay = () => options.onPlay();
@@ -265,6 +267,7 @@ export function createProjectileControls(options: ProjectileControlsOptions): { 
       presetMoon.removeEventListener('click', onPresetMoon);
       presetMars.removeEventListener('click', onPresetMars);
       presetCrosswind.removeEventListener('click', onPresetCrosswind);
+      controlTier.dispose();
     }
   };
 }

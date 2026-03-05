@@ -1,4 +1,5 @@
 import type { ChaseMeetParams, ResolvedChaseMeetParams } from './scene.sim';
+import { mountControlTier } from '../../app/control-tier';
 
 export type ChaseMeetControlsOptions = {
   container: HTMLElement;
@@ -40,19 +41,19 @@ export function createChaseMeetControls(options: ChaseMeetControlsOptions): { di
           <span class="scene-control-label">步长 Δt</span>
           <input type="number" min="0.005" max="1" step="0.005" value="${state.dt}" data-role="dt">
         </label>
-        <label class="scene-form-row">
+        <label class="scene-form-row scene-advanced">
           <span class="scene-control-label">x₀A</span>
           <input type="number" step="0.5" value="${state.x0A}" data-role="x0a">
         </label>
-        <label class="scene-form-row">
+        <label class="scene-form-row scene-advanced">
           <span class="scene-control-label">x₀B</span>
           <input type="number" step="0.5" value="${state.x0B}" data-role="x0b">
         </label>
-        <label class="scene-form-row">
+        <label class="scene-form-row scene-advanced">
           <span class="scene-control-label">vA(t)</span>
           <input type="text" value="${state.vExprA}" data-role="vexpr-a">
         </label>
-        <label class="scene-form-row">
+        <label class="scene-form-row scene-advanced">
           <span class="scene-control-label">vB(t)</span>
           <input type="text" value="${state.vExprB}" data-role="vexpr-b">
         </label>
@@ -94,6 +95,8 @@ export function createChaseMeetControls(options: ChaseMeetControlsOptions): { di
   ) {
     throw new Error('Failed to mount chase-meet controls');
   }
+
+  const controlTier = mountControlTier(options.container);
 
   function readStateFromInputs(): ChaseMeetParams {
     state.totalTime = clampTotalTime(Number(totalTimeInput.value));
@@ -151,6 +154,7 @@ export function createChaseMeetControls(options: ChaseMeetControlsOptions): { di
       pauseButton.removeEventListener('click', onPauseClick);
       stepButton.removeEventListener('click', onStepClick);
       resetButton.removeEventListener('click', onResetClick);
+      controlTier.dispose();
       options.container.innerHTML = '';
     }
   };

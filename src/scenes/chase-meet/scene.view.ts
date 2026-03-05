@@ -2,6 +2,8 @@ import type { ChaseMeetSample, ChaseMeetSnapshot } from './scene.sim';
 import type { TeachingMode } from '../../app/teaching-standards';
 import { getTeachingStandards } from '../../app/teaching-standards';
 import type { TeachingTheme } from '../../app/teaching-demo-shell';
+import { getResponsiveViewport, resolveResponsiveStageWidth } from '../../app/responsive-stage';
+import { applyTouchInteractionMode } from '../../app/touch-interaction';
 import { applyHiDpiCanvasMetrics, computeHiDpiCanvasMetrics } from '../../core/high-dpi-canvas';
 
 export type CreateChaseMeetViewOptions = {
@@ -115,6 +117,10 @@ function createStageDom(slot: HTMLElement): StageDom {
     throw new Error('Failed to create chase stage contexts');
   }
 
+  applyTouchInteractionMode(motionCanvas, 'default');
+  applyTouchInteractionMode(xCanvas, 'default');
+  applyTouchInteractionMode(vCanvas, 'default');
+
   slot.innerHTML = '';
   slot.appendChild(root);
 
@@ -174,31 +180,30 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
     }
 
     const isPresentation = mode === 'presentation';
-    const pageWidth = dom.root.clientWidth || dom.root.getBoundingClientRect().width || 1280;
-    const horizontalPadding = 16;
-    const totalWidth = Math.max(
-      320,
-      Math.min(pageWidth - horizontalPadding, typeof window === 'undefined' ? pageWidth : window.innerWidth)
-    );
+    const viewport = getResponsiveViewport(960);
+    const totalWidth = resolveResponsiveStageWidth(dom.root, {
+      minWidthPx: 320,
+      horizontalPaddingPx: 16,
+      narrowBreakpointPx: 960
+    });
+    dom.root.classList.toggle('is-narrow', viewport.isNarrow);
 
-    const viewportHeight = Math.max(
-      1,
-      Math.floor(dom.root.getBoundingClientRect().height || (typeof window === 'undefined' ? 980 : window.innerHeight))
-    );
+    const viewportHeight = Math.max(1, viewport.height);
     const trackHeight = Math.min(
       isPresentation ? 460 : 380,
-      Math.max(isPresentation ? 240 : 190, viewportHeight * 0.42)
+      Math.max(isPresentation ? 220 : 170, viewportHeight * (viewport.isNarrow ? 0.34 : 0.42))
     );
     const graphHeight = Math.min(
-      isPresentation ? 340 : 260,
-      Math.max(isPresentation ? 220 : 170, viewportHeight * 0.34)
+      isPresentation ? 320 : 250,
+      Math.max(isPresentation ? 180 : 150, viewportHeight * (viewport.isNarrow ? 0.22 : 0.34))
     );
+    const graphWidth = viewport.isNarrow ? totalWidth : Math.max(180, totalWidth / 2 - 8);
 
     const dpr = Math.min(2, typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1);
     dom.dpr = dpr;
     resizeCanvasWithDpr(dom.motionCanvas, dom.motionCtx, totalWidth, trackHeight, dpr);
-    resizeCanvasWithDpr(dom.xCanvas, dom.xCtx, totalWidth / 2 - 8, graphHeight, dpr);
-    resizeCanvasWithDpr(dom.vCanvas, dom.vCtx, totalWidth / 2 - 8, graphHeight, dpr);
+    resizeCanvasWithDpr(dom.xCanvas, dom.xCtx, graphWidth, graphHeight, dpr);
+    resizeCanvasWithDpr(dom.vCanvas, dom.vCtx, graphWidth, graphHeight, dpr);
   }
 
   function drawMotion(next: ChaseMeetSnapshot, dom: StageDom): void {

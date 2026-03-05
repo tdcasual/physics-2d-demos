@@ -1,4 +1,5 @@
 import type { FieldLinesScene } from './scene.sim';
+import { mountControlTier } from '../../app/control-tier';
 
 export type FieldLinesControlsOptions = {
   container: HTMLElement;
@@ -52,7 +53,7 @@ export function createFieldLinesControls(options: FieldLinesControlsOptions) {
         <input type="range" min="1" max="100" step="1" value="10" data-role="density-slider">
         <span class="scene-control-value" data-role="density-value">10</span>
       </div>
-      <div class="scene-section-card is-hidden" data-role="custom-wrap">
+      <div class="scene-section-card scene-advanced is-hidden" data-role="custom-wrap">
         <label class="scene-control-row scene-charge-row">
           <span class="scene-control-label">电荷1</span>
           <input type="range" min="-5" max="5" step="0.5" value="1" data-role="q1-slider">
@@ -95,6 +96,7 @@ export function createFieldLinesControls(options: FieldLinesControlsOptions) {
   const sceneButtons = Array.from(sceneGroup.querySelectorAll('.scene-tab-btn')).filter(
     (node): node is HTMLButtonElement => node instanceof HTMLButtonElement
   );
+  const controlTier = mountControlTier(options.container);
 
   function markSceneActive(scene: FieldLinesScene): void {
     for (const button of sceneButtons) {
@@ -177,6 +179,7 @@ export function createFieldLinesControls(options: FieldLinesControlsOptions) {
       q1Slider.removeEventListener('input', onChargeInput);
       q2Slider.removeEventListener('input', onChargeInput);
       resetButton.removeEventListener('click', onResetClick);
+      controlTier.dispose();
       options.container.innerHTML = '';
     }
   };
