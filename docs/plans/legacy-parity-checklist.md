@@ -13,7 +13,7 @@
 
 ### legacy-chase-meet
 
-- [x] 路由分批：`renderer=modern-lab` 已切至 modern 实现，`renderer=modern` 仍锁定 legacy
+- [x] 路由统一：默认入口与 `renderer=modern`/`renderer=modern-lab` 已切至 modern，`renderer=legacy` 保留回退
 
 - [ ] 初始参数和初始读数一致
 - [ ] 播放后距离随时间变化曲线一致
@@ -22,7 +22,7 @@
 
 ### legacy-vt-integral
 
-- [x] 路由分批：`renderer=modern-lab` 已切至 modern 实现，`renderer=modern` 仍锁定 legacy
+- [x] 路由统一：默认入口与 `renderer=modern`/`renderer=modern-lab` 已切至 modern，`renderer=legacy` 保留回退
 
 - [ ] 子场景切换行为一致
 - [ ] 面积/体积读数与公式展示一致
@@ -31,7 +31,7 @@
 
 ### legacy-electrification
 
-- [x] 路由分批：`renderer=modern-lab` 已切至 modern 实现，`renderer=modern` 仍锁定 legacy
+- [x] 路由统一：默认入口与 `renderer=modern`/`renderer=modern-lab` 已切至 modern，`renderer=legacy` 保留回退
 
 - [ ] 三种起电流程步骤一致
 - [ ] 状态切换与提示文本一致
@@ -40,7 +40,7 @@
 
 ### legacy-emf-analogy
 
-- [x] 路由分批：`renderer=modern-lab` 已切至 modern 实现，`renderer=modern` 仍锁定 legacy
+- [x] 路由统一：默认入口与 `renderer=modern`/`renderer=modern-lab` 已切至 modern，`renderer=legacy` 保留回退
 
 - [ ] 通路开关语义一致
 - [ ] 流动方向/速度表现一致
@@ -49,7 +49,7 @@
 
 ### legacy-field-lines
 
-- [x] 路由分批：`renderer=modern-lab` 已切至 modern 实现，`renderer=modern` 仍锁定 legacy
+- [x] 路由统一：默认入口与 `renderer=modern`/`renderer=modern-lab` 已切至 modern，`renderer=legacy` 保留回退
 
 - [ ] 场景预设切换一致
 - [ ] 电荷拖拽反馈一致

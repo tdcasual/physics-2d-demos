@@ -6,18 +6,24 @@ import { createElectrificationControls } from './controls';
 import { createElectrificationScene } from './scene.entry';
 import type { ElectrificationSnapshot } from './scene.sim';
 
-type Renderer = 'legacy' | 'modern-lab' | 'experimental';
+type Renderer = 'legacy' | 'modern' | 'modern-lab' | 'experimental';
 
 function resolveRenderer(search: string): Renderer {
   const query = new URLSearchParams(search);
   const renderer = query.get('renderer');
+  if (renderer === 'legacy') {
+    return 'legacy';
+  }
+  if (renderer === 'modern') {
+    return 'modern';
+  }
   if (renderer === 'modern-lab') {
     return 'modern-lab';
   }
   if (renderer === 'experimental') {
     return 'experimental';
   }
-  return 'legacy';
+  return 'modern';
 }
 
 function sceneLabel(scene: ElectrificationSnapshot['state']['scene']): string {
@@ -148,11 +154,11 @@ function boot(): void {
   }
 
   const renderer = resolveRenderer(window.location.search);
-  if (renderer === 'modern-lab' || renderer === 'experimental') {
-    bootModern(mount);
+  if (renderer === 'legacy') {
+    bootLegacy(mount);
     return;
   }
-  bootLegacy(mount);
+  bootModern(mount);
 }
 
 boot();

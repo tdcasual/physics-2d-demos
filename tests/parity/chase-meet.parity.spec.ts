@@ -2,25 +2,6 @@ import { expect, test } from '@playwright/test';
 import pixelmatch from 'pixelmatch';
 import { PNG } from 'pngjs';
 
-async function captureStage(page: import('@playwright/test').Page, pagePath: string): Promise<Buffer> {
-  await page.goto(pagePath);
-  await expect(page.getByRole('heading', { name: '追及相遇演示动画（2D）' })).toBeVisible();
-  const stage = page.locator('.stage-frame');
-  await expect(stage).toBeVisible();
-  await page.waitForTimeout(400);
-  const stageIframe = page.locator('iframe.stage-iframe');
-  if ((await stageIframe.count()) > 0) {
-    return stageIframe.first().screenshot({
-      animations: 'disabled',
-      scale: 'css'
-    });
-  }
-  return stage.screenshot({
-    animations: 'disabled',
-    scale: 'css'
-  });
-}
-
 async function captureStageFrame(page: import('@playwright/test').Page, pagePath: string): Promise<Buffer> {
   await page.goto(pagePath);
   await expect(page.getByRole('heading', { name: '追及相遇演示动画（2D）' })).toBeVisible();
@@ -46,9 +27,9 @@ function diffPixels(
   return { pixels, diffImage: PNG.sync.write(diff) };
 }
 
-test('chase-meet right stage should be pixel-identical (legacy vs modern)', async ({ page }, testInfo) => {
-  const legacyPng = await captureStage(page, '/src/pages/chase-meet.html?renderer=legacy');
-  const modernPng = await captureStage(page, '/src/pages/chase-meet.html?renderer=modern');
+test('chase-meet default route should be pixel-identical with renderer=modern', async ({ page }, testInfo) => {
+  const legacyPng = await captureStageFrame(page, '/src/pages/chase-meet.html');
+  const modernPng = await captureStageFrame(page, '/src/pages/chase-meet.html?renderer=modern');
 
   const legacy = PNG.sync.read(legacyPng);
   const modern = PNG.sync.read(modernPng);

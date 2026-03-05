@@ -6,18 +6,24 @@ import { createFieldLinesControls } from './controls';
 import { createFieldLinesScene } from './scene.entry';
 import type { FieldLinesSnapshot } from './scene.sim';
 
-type Renderer = 'legacy' | 'modern-lab' | 'experimental';
+type Renderer = 'legacy' | 'modern' | 'modern-lab' | 'experimental';
 
 function resolveRenderer(search: string): Renderer {
   const query = new URLSearchParams(search);
   const renderer = query.get('renderer');
+  if (renderer === 'legacy') {
+    return 'legacy';
+  }
+  if (renderer === 'modern') {
+    return 'modern';
+  }
   if (renderer === 'modern-lab') {
     return 'modern-lab';
   }
   if (renderer === 'experimental') {
     return 'experimental';
   }
-  return 'legacy';
+  return 'modern';
 }
 
 function formatReadout(snapshot: FieldLinesSnapshot, theme: 'light' | 'dark', mode: 'normal' | 'presentation'): ReadoutItem[] {
@@ -208,11 +214,11 @@ function boot(): void {
   }
 
   const renderer = resolveRenderer(window.location.search);
-  if (renderer === 'modern-lab' || renderer === 'experimental') {
-    bootModern(mount);
+  if (renderer === 'legacy') {
+    bootLegacy(mount);
     return;
   }
-  bootLegacy(mount);
+  bootModern(mount);
 }
 
 boot();
