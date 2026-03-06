@@ -81,6 +81,7 @@ function inferStatusLevel(text: string): StatusLevel {
   if (/播放|运行|开始/.test(text)) return 'running';
   if (/暂停/.test(text)) return 'paused';
   if (/就绪/.test(text)) return 'ready';
+  if (/单步|推进/.test(text)) return 'success';
   if (/已|完成|更新|重置|应用|开启|切换/.test(text)) return 'success';
   return 'info';
 }

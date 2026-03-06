@@ -47,6 +47,22 @@ test('mode and theme toggles are rendered in the stage corner toolbar', async ({
   await expect(page.locator('.teaching-sidebar .shell-theme-toggle')).toHaveCount(0);
 });
 
+
+test('desktop layout avoids duplicate sidebar toggle affordances', async ({ page }) => {
+  for (const path of modernPages) {
+    await page.goto(path);
+    const visibleSidebarToggles = await page.locator('.sidebar-toggle').evaluateAll((nodes) => {
+      return nodes.filter((node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        const rect = node.getBoundingClientRect();
+        const style = getComputedStyle(node);
+        return !node.hidden && rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+      }).length;
+    });
+    expect(visibleSidebarToggles, `${path} should expose exactly one sidebar toggle on desktop`).toBe(1);
+  }
+});
+
 test('stage toolbar is separated from stage frame content', async ({ page }) => {
   for (const path of modernPages) {
     await page.goto(path);

@@ -81,7 +81,7 @@ function boot(): void {
       transport.stepOnce(() => {
         scene.step(1 / 60);
       });
-      shell.setStatus('单步执行');
+      shell.setStatus('已单步推进');
     },
     onApplyParams: (next: Partial<ProjectileParams>) => {
       currentParams = scene.setParams(next);

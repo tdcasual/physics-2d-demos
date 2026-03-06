@@ -9,11 +9,12 @@ const cases = [
   { path: '/src/pages/vt-integral.html?renderer=experimental', title: '微元法演示' }
 ] as const;
 
-test('all scene headings use concise naming and remove （2D） suffix', async ({ page }) => {
+test('all scene headings and document titles use concise naming', async ({ page }) => {
   for (const item of cases) {
     await page.goto(item.path);
     const heading = page.locator('.teaching-title');
     await expect(heading, item.path).toHaveText(item.title);
     await expect(heading, item.path).not.toContainText('（2D）');
+    await expect(page, item.path).toHaveTitle(item.title);
   }
 });

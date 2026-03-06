@@ -443,6 +443,10 @@ body {
   padding: 6px 10px;
 }
 
+.sidebar-toggle-inline {
+  display: none;
+}
+
 .sidebar-toggle-float {
   background: rgba(247, 251, 255, 0.92);
   backdrop-filter: blur(4px);
@@ -807,8 +811,28 @@ body {
     display: none;
   }
 
+  .sidebar-toggle-inline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .teaching-demo.is-sidebar-collapsed .sidebar-toggle-inline {
+    display: none;
+  }
+
+  .teaching-demo.is-sidebar-collapsed .sidebar-toggle-float {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   .stage-topbar {
     justify-content: flex-end;
+  }
+
+  .teaching-demo.is-sidebar-collapsed .stage-topbar {
+    justify-content: space-between;
   }
 
   .readout-drawer-toggle {

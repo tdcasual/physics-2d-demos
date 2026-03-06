@@ -121,6 +121,25 @@ test.describe('mobile usability semantics', () => {
     await drawerToggle.click();
     await expect(readout).not.toHaveClass(/is-collapsed/);
   });
+
+  test('compact sidebar can be restored after collapsing', async ({ page }) => {
+    await page.goto('/src/pages/projectile.html');
+
+    const shell = page.locator('.teaching-demo');
+    const inlineToggle = page.locator('.sidebar-toggle-inline');
+    const floatToggle = page.locator('.sidebar-toggle-float');
+
+    await expect(inlineToggle).toBeVisible();
+    await inlineToggle.click();
+    await expect(shell).toHaveClass(/is-sidebar-collapsed/);
+
+    await expect(floatToggle).toBeVisible();
+    await expect(floatToggle).toHaveText('显示控制面板');
+    await floatToggle.click();
+
+    await expect(shell).not.toHaveClass(/is-sidebar-collapsed/);
+    await expect(page.locator('.teaching-sidebar')).toBeVisible();
+  });
 });
 
 test('classroom control tier defaults to simple mode', async ({ page }) => {
@@ -147,6 +166,9 @@ test('status card exposes structured state levels', async ({ page }) => {
 
   await page.locator('[data-role="pause"]').dispatchEvent('click');
   await expect(statusCard).toHaveAttribute('data-status-level', 'paused');
+
+  await page.locator('[data-role="step"]').dispatchEvent('click');
+  await expect(statusCard).toHaveAttribute('data-status-level', 'success');
 });
 
 test('touch interaction policy prioritizes drag scenes', async ({ page }) => {
