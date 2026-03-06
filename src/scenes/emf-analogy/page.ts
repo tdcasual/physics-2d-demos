@@ -83,7 +83,7 @@ function bootLegacy(mount: HTMLElement): void {
 }
 
 function bootModern(mount: HTMLElement, renderer: Renderer): void {
-  const enableDesktopStatusPanel = renderer === 'modern';
+  const enableDesktopStatusPanel = true;
   const includeModeReadout = renderer !== 'modern';
   const lockLegacyVisualTheme = renderer !== 'modern';
   const legacyFlowDark = renderer !== 'modern';

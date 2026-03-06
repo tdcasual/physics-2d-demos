@@ -64,6 +64,27 @@ test('desktop layout avoids duplicate sidebar toggle affordances', async ({ page
   }
 });
 
+
+
+test('desktop readout defaults collapsed and expands into compact layout for all modern pages', async ({ page }) => {
+  for (const path of modernPages) {
+    await page.goto(path);
+
+    const readout = page.locator('.stage-readout');
+    const desktopToggle = page.locator('.readout-desktop-toggle');
+    const dragHandle = page.locator('.readout-drag-handle');
+
+    await expect(desktopToggle, `${path} should expose desktop readout toggle`).toBeVisible();
+    await expect(readout, `${path} should default desktop readout to collapsed`).toHaveClass(/is-collapsed/);
+
+    await desktopToggle.click();
+
+    await expect(readout, `${path} should expand after desktop toggle`).not.toHaveClass(/is-collapsed/);
+    await expect(dragHandle, `${path} should allow dragging once expanded`).toBeVisible();
+    await expect(readout.locator('.readout-item--half').first(), `${path} should render compact half-width items`).toBeVisible();
+  }
+});
+
 test('stage toolbar is separated from stage frame content', async ({ page }) => {
   for (const path of modernPages) {
     await page.goto(path);

@@ -6,6 +6,7 @@ import { applyTouchInteractionMode } from './touch-interaction';
 export type ReadoutItem = {
   label: string;
   value: string;
+  layout?: 'half' | 'full';
 };
 
 export type TeachingDemoShell = {
@@ -103,6 +104,15 @@ function nowTimeLabel(): string {
   return `${hh}:${mm}:${ss}`;
 }
 
+function resolveReadoutLayout(item: ReadoutItem): 'half' | 'full' {
+  if (item.layout) return item.layout;
+  const labelLength = item.label.trim().length;
+  const valueLength = item.value.trim().length;
+  if (/[\n\r]/.test(item.value)) return 'full';
+  if (valueLength > 14) return 'full';
+  return labelLength + valueLength <= 18 ? 'half' : 'full';
+}
+
 export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions): TeachingDemoShell {
   const modeState: { value: TeachingMode } = {
     value: options.defaultMode ?? 'normal'
@@ -110,9 +120,9 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
   const themeState: { value: TeachingTheme } = {
     value: options.defaultTheme ?? 'dark'
   };
-  const desktopReadoutCollapsible = options.desktopReadoutCollapsible ?? false;
-  const desktopReadoutDefaultCollapsed = desktopReadoutCollapsible && (options.desktopReadoutDefaultCollapsed ?? false);
-  const desktopReadoutDraggable = options.desktopReadoutDraggable ?? false;
+  const desktopReadoutCollapsible = options.desktopReadoutCollapsible ?? true;
+  const desktopReadoutDefaultCollapsed = desktopReadoutCollapsible && (options.desktopReadoutDefaultCollapsed ?? true);
+  const desktopReadoutDraggable = options.desktopReadoutDraggable ?? true;
   const readoutHeaderEnabled = desktopReadoutCollapsible || desktopReadoutDraggable;
   const readoutLabel = options.readoutLabel ?? '数据区';
 
@@ -311,13 +321,15 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
     drawerToggle.hidden = !drawerEnabled;
     desktopToggle.hidden = !desktopToggleEnabled || expanded;
     inlineReadoutToggle.hidden = !desktopToggleEnabled || !expanded;
-    dragHandle.hidden = !(desktopReadoutDraggable && !compactViewport && hasReadoutItems);
+    dragHandle.hidden = !(desktopReadoutDraggable && !compactViewport && hasReadoutItems && expanded);
     stageReadout.classList.toggle('is-empty', !hasReadoutItems);
     stageReadout.classList.toggle('is-collapsed', toggleEnabled && readoutCollapsed);
     stageReadout.classList.toggle('has-header', readoutHeaderEnabled && !compactViewport && hasReadoutItems);
-    drawerToggle.textContent = expanded ? '隐藏数据区' : '显示数据区';
+    const openLabel = readoutLabel === '数据区' ? '显示数据区' : `显示${readoutLabel}`;
+    const closeLabel = readoutLabel === '数据区' ? '隐藏数据区' : `隐藏${readoutLabel}`;
+    drawerToggle.textContent = expanded ? closeLabel : openLabel;
     drawerToggle.setAttribute('aria-expanded', String(expanded));
-    desktopToggle.textContent = '显示状态面板';
+    desktopToggle.textContent = openLabel;
     desktopToggle.setAttribute('aria-expanded', String(expanded));
     inlineReadoutToggle.textContent = '折叠';
     inlineReadoutToggle.setAttribute('aria-expanded', String(expanded));
@@ -472,9 +484,11 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
       readoutSlot.innerHTML = '';
       hasReadoutItems = items.length > 0;
       for (const item of items) {
+        const layout = resolveReadoutLayout(item);
         const line = document.createElement('li');
-        line.className = 'readout-item';
+        line.className = `readout-item readout-item--${layout}`;
         line.innerHTML = `<span class="readout-label">${item.label}</span><strong class="readout-value">${item.value}</strong>`;
+        line.title = `${item.label}：${item.value}`;
         readoutSlot.appendChild(line);
       }
       updateReadoutDrawer();

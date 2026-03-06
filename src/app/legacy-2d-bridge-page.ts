@@ -32,7 +32,10 @@ export function bootLegacy2DBridgePage(options: BootLegacy2DBridgePageOptions): 
     mount: options.mount,
     title: options.title,
     subtitle: options.subtitle,
-    defaultMode: 'normal'
+    defaultMode: 'normal',
+    desktopReadoutCollapsible: false,
+    desktopReadoutDefaultCollapsed: false,
+    desktopReadoutDraggable: false
   });
 
   const lifecycle = createPageLifecycle();

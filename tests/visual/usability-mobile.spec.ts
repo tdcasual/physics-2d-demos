@@ -120,6 +120,7 @@ test.describe('mobile usability semantics', () => {
     await expect(readout).toHaveClass(/is-collapsed/);
     await drawerToggle.click();
     await expect(readout).not.toHaveClass(/is-collapsed/);
+    await expect(readout.locator('.readout-item--half').first()).toBeVisible();
   });
 
   test('compact sidebar can be restored after collapsing', async ({ page }) => {
