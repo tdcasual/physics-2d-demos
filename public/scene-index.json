@@ -1,8 +1,14 @@
 [
   {
     "id": "field-lines",
-    "title": "电场矢量到电场线的演化（2D）",
+    "title": "电场线演化",
     "path": "/src/pages/field-lines.html",
+    "subject": "电磁学",
+    "concept": "电场分布",
+    "subConcepts": [
+      "电荷叠加",
+      "场线疏密"
+    ],
     "keywords": [
       "电磁学",
       "电场线",
@@ -11,8 +17,14 @@
   },
   {
     "id": "emf-analogy",
-    "title": "电路水流类比模型（2D）",
+    "title": "电路水流类比",
     "path": "/src/pages/emf-analogy.html",
+    "subject": "电磁学",
+    "concept": "闭合电路",
+    "subConcepts": [
+      "路端电压",
+      "内电压"
+    ],
     "keywords": [
       "电磁学",
       "电路",
@@ -22,8 +34,14 @@
   },
   {
     "id": "electrification",
-    "title": "交互式静电起电演示（2D）",
+    "title": "静电起电演示",
     "path": "/src/pages/electrification.html",
+    "subject": "电磁学",
+    "concept": "电荷转移",
+    "subConcepts": [
+      "摩擦起电",
+      "感应起电"
+    ],
     "keywords": [
       "电磁学",
       "静电",
@@ -33,8 +51,14 @@
   },
   {
     "id": "projectile",
-    "title": "抛体运动（2D）",
+    "title": "抛体运动",
     "path": "/src/pages/projectile.html",
+    "subject": "力学",
+    "concept": "曲线运动",
+    "subConcepts": [
+      "速度分解",
+      "轨迹方程"
+    ],
     "keywords": [
       "力学",
       "抛体",
@@ -43,8 +67,14 @@
   },
   {
     "id": "vt-integral",
-    "title": "微元法交互式动画（2D）",
+    "title": "微元法演示",
     "path": "/src/pages/vt-integral.html",
+    "subject": "力学",
+    "concept": "积分思想",
+    "subConcepts": [
+      "面积法",
+      "微元累积"
+    ],
     "keywords": [
       "力学",
       "微元法",
@@ -54,8 +84,14 @@
   },
   {
     "id": "chase-meet",
-    "title": "追及相遇演示动画（2D）",
+    "title": "追及相遇",
     "path": "/src/pages/chase-meet.html",
+    "subject": "力学",
+    "concept": "运动关系",
+    "subConcepts": [
+      "位移比较",
+      "相遇条件"
+    ],
     "keywords": [
       "力学",
       "追及相遇",

@@ -4,6 +4,9 @@ export const fieldLinesMeta: SceneMeta = {
   id: 'field-lines',
   title: '电场线演化',
   path: '/src/pages/field-lines.html',
+  subject: '电磁学',
+  concept: '电场分布',
+  subConcepts: ['电荷叠加', '场线疏密'],
   keywords: ['电磁学', '电场线', '2D'],
   objective: '展示点电荷组合下电场矢量分布和拖拽交互反馈',
   defaultParams: {

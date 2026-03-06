@@ -43,6 +43,7 @@ test('mode and theme toggles are rendered in the stage corner toolbar', async ({
   await expect(toolbar).toBeVisible();
   await expect(toolbar.locator('.mode-toggle')).toBeVisible();
   await expect(toolbar.locator('.shell-theme-toggle')).toBeVisible();
+  await expect(toolbar.locator('.shell-theme-toggle')).toHaveText('春日');
   await expect(page.locator('.teaching-sidebar .mode-toggle')).toHaveCount(0);
   await expect(page.locator('.teaching-sidebar .shell-theme-toggle')).toHaveCount(0);
 });

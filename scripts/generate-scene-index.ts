@@ -4,15 +4,20 @@ import { pathToFileURL } from 'node:url';
 import { sceneRegistry } from '../src/catalog/scene-registry';
 import type { SceneIndexEntry } from '../src/app/scene-index';
 
-export function toSceneIndex(items: Array<Pick<SceneIndexEntry, 'id' | 'title' | 'path'> & Partial<SceneIndexEntry>>): SceneIndexEntry[] {
+export function toSceneIndex(
+  items: Array<Pick<SceneIndexEntry, 'id' | 'title' | 'path' | 'subject' | 'concept' | 'subConcepts'> & Partial<SceneIndexEntry>>
+): SceneIndexEntry[] {
   const map = new Map<string, SceneIndexEntry>();
 
   for (const item of items) {
-    if (!item.id || !item.title || !item.path) continue;
+    if (!item.id || !item.title || !item.path || !item.subject || !item.concept || item.subConcepts.length !== 2) continue;
     map.set(item.id, {
       id: item.id,
       title: item.title.trim(),
       path: item.path.trim(),
+      subject: item.subject.trim(),
+      concept: item.concept.trim(),
+      subConcepts: [item.subConcepts[0].trim(), item.subConcepts[1].trim()],
       keywords: item.keywords ?? []
     });
   }
@@ -26,6 +31,9 @@ export async function generateSceneIndex(outFile = resolve(process.cwd(), 'publi
       id: item.id,
       title: item.title,
       path: item.path,
+      subject: item.subject,
+      concept: item.concept,
+      subConcepts: item.subConcepts,
       keywords: item.keywords
     }))
   );

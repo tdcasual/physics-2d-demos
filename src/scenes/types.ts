@@ -6,7 +6,13 @@ export type SceneLifecycle = {
   dispose(): void;
 };
 
-export type SceneMeta = {
+export type ScenePlacardMeta = {
+  subject: string;
+  concept: string;
+  subConcepts: [string, string];
+};
+
+export type SceneMeta = ScenePlacardMeta & {
   id: string;
   title: string;
   path: string;

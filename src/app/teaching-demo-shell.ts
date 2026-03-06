@@ -47,7 +47,7 @@ function modeToggleLabel(mode: TeachingMode): string {
 }
 
 function themeToggleLabel(theme: TeachingTheme): string {
-  return theme === 'dark' ? '切换到白天主题' : '切换到夜间主题';
+  return theme === 'dark' ? '切换到春日主题' : '切换到月夜主题';
 }
 
 function modeToggleText(mode: TeachingMode): string {
@@ -55,7 +55,7 @@ function modeToggleText(mode: TeachingMode): string {
 }
 
 function themeToggleText(theme: TeachingTheme): string {
-  return theme === 'dark' ? '白天' : '夜间';
+  return theme === 'dark' ? '春日' : '月夜';
 }
 
 function applyModeTokens(root: HTMLElement, mode: TeachingMode): void {

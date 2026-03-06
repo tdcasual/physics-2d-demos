@@ -4,6 +4,9 @@ export const emfAnalogyMeta: SceneMeta = {
   id: 'emf-analogy',
   title: '电路水流类比',
   path: '/src/pages/emf-analogy.html',
+  subject: '电磁学',
+  concept: '闭合电路',
+  subConcepts: ['路端电压', '内电压'],
   keywords: ['电磁学', '电路', '电动势', '2D'],
   objective: '用水流类比演示电流、内阻压降与路端电压关系',
   defaultParams: {

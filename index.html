@@ -7,21 +7,29 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <style>
     :root {
-      --bg-a: #edf7ff;
-      --bg-b: #f4f6fb;
-      --bg-c: #ffffff;
-      --ink: #1e3553;
-      --ink-soft: #4a607a;
-      --card: rgba(255, 255, 255, 0.94);
-      --line: rgba(148, 163, 184, 0.34);
-      --cta-bg: #f7fbff;
-      --cta-ink: #1e3553;
-      --pill-bg: #edf4ff;
-      --pill-ink: #1e3553;
-      --accent: #2f6fed;
-      --accent-2: #7cb4ff;
-      --shadow: 0 16px 36px rgba(30, 53, 83, 0.12);
-      --card-shadow: 0 12px 28px rgba(30, 53, 83, 0.1);
+      --bg-sky: #eef6ec;
+      --bg-mist: #f8fbf4;
+      --bg-paper: rgba(255, 253, 248, 0.92);
+      --ink: #233229;
+      --ink-soft: #5f7265;
+      --line: rgba(106, 138, 110, 0.22);
+      --line-strong: rgba(106, 138, 110, 0.36);
+      --moss: #6d8d6f;
+      --sprout: #9fbe84;
+      --pollen: #e7cf8d;
+      --sage: #dbe9d2;
+      --shadow: 0 18px 42px rgba(40, 65, 45, 0.12);
+      --card-shadow: 0 16px 26px rgba(40, 65, 45, 0.08);
+      --card-hover-shadow: 0 22px 34px rgba(40, 65, 45, 0.12);
+      --tag-bg: rgba(236, 244, 229, 0.96);
+      --tag-ink: #566b59;
+      --card-accent: linear-gradient(180deg, rgba(160, 191, 133, 0.74), rgba(215, 228, 194, 0.22));
+      --chip-bg: rgba(255, 251, 242, 0.9);
+      --chip-active-bg: rgba(233, 242, 223, 0.96);
+      --chip-active-line: rgba(109, 141, 111, 0.48);
+      --cta-bg: #2f4e39;
+      --cta-ink: #f7f8f3;
+      --file-bg: rgba(246, 249, 241, 0.94);
     }
 
     * {
@@ -34,281 +42,450 @@
       color: var(--ink);
       font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
       background:
-        radial-gradient(circle at 12% 12%, rgba(47, 111, 237, 0.14), transparent 24%),
-        radial-gradient(circle at 88% 10%, rgba(148, 163, 184, 0.18), transparent 22%),
-        radial-gradient(circle at 20% 84%, rgba(148, 197, 255, 0.14), transparent 24%),
-        linear-gradient(180deg, var(--bg-a), var(--bg-b) 52%, var(--bg-c));
+        radial-gradient(circle at 12% 12%, rgba(201, 224, 175, 0.36), transparent 22%),
+        radial-gradient(circle at 86% 10%, rgba(231, 207, 141, 0.18), transparent 18%),
+        radial-gradient(circle at 12% 88%, rgba(189, 214, 191, 0.24), transparent 18%),
+        linear-gradient(180deg, var(--bg-sky), var(--bg-mist) 45%, #fbfcf9 100%);
       background-attachment: fixed;
     }
 
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: auto;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.22;
+      filter: blur(0.2px);
+    }
+
+    body::before {
+      width: 220px;
+      height: 220px;
+      left: -48px;
+      bottom: -56px;
+      background:
+        radial-gradient(circle at 56% 18%, rgba(109, 141, 111, 0.22), transparent 30%),
+        linear-gradient(180deg, rgba(125, 156, 119, 0.26), rgba(125, 156, 119, 0));
+      border-radius: 40% 60% 0 0;
+      transform: rotate(-8deg);
+    }
+
+    body::after {
+      width: 200px;
+      height: 200px;
+      right: -44px;
+      top: 72px;
+      background:
+        radial-gradient(circle at 42% 28%, rgba(231, 207, 141, 0.3), transparent 18%),
+        linear-gradient(180deg, rgba(159, 190, 132, 0.28), rgba(159, 190, 132, 0));
+      border-radius: 52% 48% 60% 40%;
+      transform: rotate(16deg);
+    }
+
     .page {
-      width: min(1100px, 92vw);
-      margin: 40px auto 56px;
+      position: relative;
+      z-index: 1;
+      width: min(1180px, 92vw);
+      margin: 42px auto 64px;
     }
 
     .hero {
       position: relative;
+      padding: 30px 32px 26px;
+      border-radius: 30px;
       border: 1px solid var(--line);
-      border-radius: 28px;
-      padding: 28px 26px;
-      background: var(--card);
+      background: linear-gradient(180deg, rgba(255, 254, 250, 0.94), rgba(250, 251, 246, 0.9));
       box-shadow: var(--shadow);
       overflow: hidden;
     }
 
-    .hero::before,
-    .hero::after {
+    .hero::before {
       content: "";
       position: absolute;
-      border-radius: 999px;
+      inset: 16px 16px auto auto;
+      width: 96px;
+      height: 96px;
+      border-radius: 30px 60px 24px 54px;
+      background: linear-gradient(180deg, rgba(159, 190, 132, 0.22), rgba(159, 190, 132, 0));
+      opacity: 0.9;
+      transform: rotate(8deg);
       pointer-events: none;
-      filter: blur(2px);
-      opacity: 0.75;
     }
 
-    .hero::before {
-      width: 150px;
-      height: 150px;
-      top: -70px;
-      right: -35px;
-      background: linear-gradient(135deg, rgba(47, 111, 237, 0.18), rgba(124, 180, 255, 0.22));
+    .hero-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: start;
     }
 
-    .hero::after {
-      width: 120px;
-      height: 120px;
-      bottom: -54px;
-      left: -38px;
-      background: linear-gradient(135deg, rgba(148, 163, 184, 0.16), rgba(237, 244, 255, 0.22));
+    .hero-copy {
+      display: grid;
+      gap: 12px;
+    }
+
+    .hero-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(159, 190, 132, 0.3);
+      background: rgba(244, 248, 236, 0.92);
+      color: var(--ink-soft);
+      font-size: 13px;
+      letter-spacing: 0.08em;
+    }
+
+    .hero-kicker::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, var(--sprout), var(--moss));
+      box-shadow: 0 0 0 4px rgba(159, 190, 132, 0.14);
     }
 
     h1 {
       margin: 0;
-      font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
-      font-size: clamp(30px, 5vw, 44px);
-      line-height: 1.12;
-      letter-spacing: 0.02em;
+      font-size: clamp(32px, 5.5vw, 52px);
+      line-height: 1.08;
+      letter-spacing: 0.04em;
       font-weight: 700;
     }
 
     .subtext {
-      margin: 10px 0 0;
+      margin: 0;
+      max-width: 760px;
       color: var(--ink-soft);
-      font-size: clamp(15px, 2.6vw, 18px);
+      font-size: clamp(15px, 2.2vw, 18px);
+      line-height: 1.78;
+    }
+
+    .hero-note {
+      min-width: 212px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(106, 138, 110, 0.22);
+      background: rgba(248, 249, 241, 0.9);
+      display: grid;
+      gap: 8px;
+      align-self: stretch;
+    }
+
+    .hero-note-label {
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      color: var(--ink-soft);
+    }
+
+    .hero-note-text {
+      margin: 0;
+      color: var(--ink);
+      font-size: 14px;
+      line-height: 1.7;
     }
 
     .search-wrap {
-      margin-top: 20px;
+      margin-top: 22px;
       display: grid;
-      gap: 10px;
-      position: relative;
-      z-index: 1;
+      gap: 12px;
+    }
+
+    .search-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: end;
+    }
+
+    .search-field {
+      display: grid;
+      gap: 8px;
+    }
+
+    .search-label {
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      color: var(--ink-soft);
     }
 
     #searchInput {
       width: 100%;
-      border-radius: 16px;
-      border: 1px solid rgba(145, 167, 193, 0.78);
-      background: #fff;
-      padding: 13px 14px;
+      min-height: 52px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(125, 153, 126, 0.34);
+      background: rgba(255, 254, 251, 0.96);
+      color: var(--ink);
       font-size: 16px;
       outline: none;
-      color: var(--ink);
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
     }
 
     #searchInput:focus {
-      border-color: rgba(47, 111, 237, 0.62);
-      box-shadow: 0 0 0 4px rgba(47, 111, 237, 0.14);
+      border-color: rgba(109, 141, 111, 0.56);
+      box-shadow: 0 0 0 4px rgba(159, 190, 132, 0.16);
+      transform: translateY(-1px);
     }
 
     .meta {
       display: flex;
-      justify-content: space-between;
       align-items: center;
+      justify-content: space-between;
+      gap: 10px;
       color: var(--ink-soft);
       font-size: 14px;
     }
 
+    .meta-dot {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .meta-dot::before {
+      content: "";
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, var(--sprout), var(--moss));
+      box-shadow: 0 0 0 4px rgba(159, 190, 132, 0.14);
+    }
+
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .filter-chip {
+      border: 1px solid rgba(125, 153, 126, 0.28);
+      border-radius: 999px;
+      background: var(--chip-bg);
+      color: var(--ink-soft);
+      padding: 8px 13px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+    }
+
+    .filter-chip:hover,
+    .filter-chip:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(109, 141, 111, 0.42);
+      color: var(--ink);
+      outline: none;
+    }
+
+    .filter-chip.is-active {
+      background: var(--chip-active-bg);
+      border-color: var(--chip-active-line);
+      color: var(--ink);
+      box-shadow: 0 8px 14px rgba(69, 94, 72, 0.08);
+    }
+
     .card-grid {
-      margin-top: 22px;
+      margin-top: 24px;
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 15px;
+      gap: 16px;
     }
 
     .card {
       position: relative;
-      border: 1px solid var(--line);
+      display: grid;
+      gap: 14px;
+      padding: 18px 18px 16px;
       border-radius: 24px;
-      padding: 16px 16px 14px;
-      background: var(--card);
+      border: 1px solid var(--line);
+      background:
+        linear-gradient(180deg, rgba(255, 253, 248, 0.95), rgba(253, 252, 248, 0.92)),
+        var(--card-accent);
       box-shadow: var(--card-shadow);
-      text-decoration: none;
       color: inherit;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      transform: translateY(0);
-      transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+      text-decoration: none;
       overflow: hidden;
+      transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
       isolation: isolate;
     }
 
     .card::before {
       content: "";
       position: absolute;
-      inset: 0 0 auto 0;
-      height: 4px;
-      background: linear-gradient(90deg, var(--accent), #60a5fa, var(--accent-2));
-      opacity: 0.9;
+      inset: 0 auto 0 0;
+      width: 10px;
+      background: linear-gradient(180deg, rgba(159, 190, 132, 0.76), rgba(159, 190, 132, 0.14));
+      opacity: 0.96;
     }
 
-    .card:hover {
-      transform: translateY(-4px);
-      border-color: rgba(47, 111, 237, 0.42);
-      box-shadow: 0 18px 30px rgba(30, 53, 83, 0.14);
+    .card::after {
+      content: "";
+      position: absolute;
+      inset: auto 18px 14px auto;
+      width: 36px;
+      height: 36px;
+      border-radius: 18px 18px 18px 6px;
+      background: radial-gradient(circle at 28% 28%, rgba(231, 207, 141, 0.36), rgba(231, 207, 141, 0));
+      opacity: 0.85;
+      pointer-events: none;
     }
 
-    .card-top {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      align-items: flex-start;
+    .card:hover,
+    .card:focus-visible {
+      transform: translateY(-3px);
+      box-shadow: var(--card-hover-shadow);
+      border-color: rgba(109, 141, 111, 0.34);
+      outline: none;
+    }
+
+    .card-head {
+      display: grid;
+      gap: 12px;
+      padding-left: 8px;
+    }
+
+    .card-subject {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      padding: 6px 11px;
+      border-radius: 999px;
+      background: var(--tag-bg);
+      border: 1px solid rgba(125, 153, 126, 0.24);
+      color: var(--tag-ink);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+    }
+
+    .card-subject::before {
+      content: "学科签";
+      color: rgba(86, 107, 89, 0.72);
     }
 
     .card-title {
       margin: 0;
-      font-size: 27px;
+      font-size: 28px;
       line-height: 1.24;
       font-weight: 700;
-      letter-spacing: 0.1px;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      letter-spacing: 0.02em;
     }
 
-    .card-id {
-      flex: 0 0 auto;
-      border-radius: 999px;
-      padding: 4px 9px;
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--pill-ink);
-      background: var(--pill-bg);
-      border: 1px solid rgba(145, 167, 193, 0.45);
-      max-width: 112px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+    .card-concept {
+      padding-left: 8px;
+      color: var(--ink-soft);
+      font-size: 14px;
+      line-height: 1.7;
+      letter-spacing: 0.02em;
     }
 
-    .card-cta {
-      display: flex;
+    .card-footer {
+      display: grid;
+      gap: 10px;
+      padding-left: 8px;
+    }
+
+    .card-link {
+      display: inline-flex;
+      align-items: center;
       justify-content: space-between;
+      gap: 12px;
+      min-height: 44px;
+      padding: 10px 14px;
+      border-radius: 16px;
+      background: rgba(247, 248, 241, 0.94);
+      border: 1px solid rgba(125, 153, 126, 0.2);
+      color: var(--ink);
+      font-size: 14px;
+    }
+
+    .card-link-label {
+      display: inline-flex;
       align-items: center;
       gap: 10px;
+      font-weight: 600;
     }
 
-    .chip {
-      align-self: flex-start;
-      border-radius: 999px;
-      padding: 6px 12px;
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 0.2px;
-      background: var(--cta-bg);
-      color: var(--cta-ink);
-      border: 1px solid rgba(145, 167, 193, 0.45);
-      box-shadow: 0 2px 0 rgba(145, 167, 193, 0.18);
-    }
-
-    .card-arrow {
-      width: 30px;
-      height: 30px;
-      border-radius: 999px;
+    .card-link-label::before {
+      content: "↗";
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-size: 16px;
-      font-weight: 700;
-      color: #fff;
-      background: linear-gradient(160deg, var(--accent), var(--accent-2));
-      transform: translateX(0);
-      transition: transform 0.18s ease;
-      box-shadow: 0 8px 16px rgba(30, 53, 83, 0.16);
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      background: var(--cta-bg);
+      color: var(--cta-ink);
+      font-size: 13px;
+      box-shadow: 0 8px 12px rgba(47, 78, 57, 0.18);
     }
 
-    .card:hover .card-arrow {
-      transform: translateX(2px);
-    }
-
-    .path-wrap {
+    .card-file {
+      padding: 8px 10px;
       border-radius: 12px;
-      background: rgba(237, 244, 255, 0.86);
-      border: 1px dashed rgba(145, 167, 193, 0.68);
-      padding: 7px 9px;
-    }
-
-    .path {
-      font-size: 12px;
+      background: var(--file-bg);
+      border: 1px dashed rgba(125, 153, 126, 0.24);
       color: var(--ink-soft);
-      word-break: break-all;
-      opacity: 0.95;
+      font-size: 12px;
+      line-height: 1.5;
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-      line-height: 1.4;
+      word-break: break-all;
     }
 
     .empty {
       margin-top: 18px;
-      border: 1px dashed rgba(145, 167, 193, 0.68);
-      border-radius: 16px;
-      padding: 18px;
-      background: rgba(255, 255, 255, 0.8);
+      border: 1px dashed rgba(125, 153, 126, 0.34);
+      border-radius: 18px;
+      padding: 20px;
+      background: rgba(255, 253, 248, 0.86);
       color: var(--ink-soft);
       text-align: center;
       display: none;
     }
 
-    .dot {
-      display: inline-block;
-      width: 10px;
-      height: 10px;
-      border-radius: 99px;
-      margin-right: 6px;
-      vertical-align: -1px;
-      background: linear-gradient(180deg, var(--accent), var(--accent-2));
-    }
-
-    @media (max-width: 640px) {
+    @media (max-width: 820px) {
       .page {
-        width: min(1100px, 95vw);
-        margin-top: 22px;
+        width: min(1180px, 95vw);
+        margin-top: 24px;
       }
 
       .hero {
-        border-radius: 22px;
-        padding: 20px 16px;
+        padding: 22px 18px 20px;
+        border-radius: 24px;
       }
 
+      .hero-head,
+      .search-row {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-note,
+      .filter-bar {
+        justify-self: start;
+      }
+
+      .card-title {
+        font-size: 24px;
+      }
+    }
+
+    @media (max-width: 640px) {
       .card-grid {
-        gap: 12px;
         grid-template-columns: 1fr;
       }
 
       .card {
-        border-radius: 18px;
-        padding: 14px 13px;
+        border-radius: 20px;
       }
 
       .card-title {
-        font-size: 21px;
-      }
-
-      .card-id {
-        max-width: 96px;
+        font-size: 22px;
       }
     }
   </style>
@@ -316,37 +493,62 @@
 <body>
   <main class="page">
     <section class="hero">
-      <h1>Teaching Animations</h1>
-      <p class="subtext">统一 2D 教学演示入口，按主题快速定位并打开课堂场景。</p>
+      <div class="hero-head">
+        <div class="hero-copy">
+          <span class="hero-kicker">植物园课堂 · 导航页</span>
+          <h1>植物园课堂</h1>
+          <p class="subtext">把课堂演示整理成一面安静的展签墙：先看学科与主概念，再从标准术语进入每个实验页面，轻一点、活一点，但仍然以教学内容为主。</p>
+        </div>
+        <aside class="hero-note" aria-label="策展说明">
+          <span class="hero-note-label">展墙索引</span>
+          <p class="hero-note-text">学科签 → 标题 → 主概念｜子概念 · 子概念 → 进入演示</p>
+        </aside>
+      </div>
+
       <div class="search-wrap">
-        <input id="searchInput" type="search" placeholder="搜索页面名称，例如：电场 / 几何 / 微元" aria-label="搜索演示页面">
+        <div class="search-row">
+          <div class="search-field">
+            <label class="search-label" for="searchInput">搜索课堂展签</label>
+            <input id="searchInput" type="search" placeholder="试试：力学 / 电场分布 / 轨迹方程" aria-label="搜索课堂展签">
+          </div>
+          <div class="filter-bar" role="group" aria-label="展签筛选">
+            <button type="button" class="filter-chip is-active" data-filter="all" aria-pressed="true">全部课堂</button>
+            <button type="button" class="filter-chip" data-filter="mechanics" aria-pressed="false">力学</button>
+            <button type="button" class="filter-chip" data-filter="electromagnetism" aria-pressed="false">电磁学</button>
+            <button type="button" class="filter-chip" data-filter="methods" aria-pressed="false">方法思想</button>
+          </div>
+        </div>
         <div class="meta">
-          <span><span class="dot"></span>实时过滤</span>
+          <span class="meta-dot">展签按术语实时过滤</span>
           <span id="countText"></span>
         </div>
       </div>
     </section>
 
     <section id="cardGrid" class="card-grid" aria-live="polite"></section>
-    <div id="emptyState" class="empty">没有找到匹配页面，换个关键词试试。</div>
+    <div id="emptyState" class="empty">没有找到匹配展签，换一个主概念或学科术语试试。</div>
   </main>
 
   <script src="/scene-fallback.js"></script>
   <script type="module">
     import { toNavFileName } from "/src/app/navigation-display.ts";
+    import { normalizeSceneIndex, sceneIndexEntries } from "/src/app/scene-index.ts";
 
     const fallbackPages = Array.isArray(window.__SCENE_FALLBACK__) ? window.__SCENE_FALLBACK__ : [];
+    const builtinPages = sceneIndexEntries;
 
-    let pages = [...fallbackPages];
+    let pages = [...builtinPages];
     let usingFallback = false;
+    let activeFilter = "all";
 
     const searchInput = document.getElementById("searchInput");
     const cardGrid = document.getElementById("cardGrid");
     const emptyState = document.getElementById("emptyState");
     const countText = document.getElementById("countText");
+    const filterChips = Array.from(document.querySelectorAll(".filter-chip"));
 
     function setCountText(filteredCount, totalCount) {
-      const suffix = usingFallback ? "（使用内置列表）" : "";
+      const suffix = usingFallback ? "（使用内置索引）" : "";
       countText.textContent = `显示 ${filteredCount} / ${totalCount}${suffix}`;
     }
 
@@ -355,69 +557,78 @@
     }
 
     function normalizePages(input) {
-      if (!Array.isArray(input)) return [];
-      return input
-        .filter((item) => item && typeof item.title === "string" && typeof item.path === "string")
-        .map((item, index) => ({
-          id: typeof item.id === "string" ? item.id : `scene-${index}`,
-          title: item.title.trim(),
-          path: item.path.trim()
-        }))
-        .filter((item) => item.title.length > 0 && item.path.length > 0);
+      return normalizeSceneIndex(input).map((item) => ({
+        id: item.id,
+        title: item.title,
+        path: item.path,
+        subject: item.subject,
+        concept: item.concept,
+        subConcepts: item.subConcepts,
+        keywords: Array.isArray(item.keywords) ? item.keywords : []
+      }));
+    }
+
+    function matchesFilter(item, filter) {
+      if (filter === "mechanics") return item.subject === "力学";
+      if (filter === "electromagnetism") return item.subject === "电磁学";
+      if (filter === "methods") return item.concept.includes("积分") || item.title.includes("类比") || item.keywords.includes("多场景");
+      return true;
+    }
+
+    function matchesQuery(item, query) {
+      if (!query) return true;
+      const haystacks = [
+        item.title,
+        item.subject,
+        item.concept,
+        item.path,
+        ...item.subConcepts,
+        ...item.keywords
+      ];
+      return haystacks.some((entry) => entry.toLowerCase().includes(query));
     }
 
     function renderCards(keyword) {
       const query = keyword.trim().toLowerCase();
-      const filtered = pages.filter((item) => {
-        return item.title.toLowerCase().includes(query) || item.path.toLowerCase().includes(query);
-      });
+      const filtered = pages.filter((item) => matchesFilter(item, activeFilter) && matchesQuery(item, query));
 
       cardGrid.innerHTML = "";
       for (const item of filtered) {
         const card = document.createElement("a");
         card.className = "card";
         card.href = encodeURI(item.path);
-        card.setAttribute("aria-label", `打开页面：${item.title}`);
+        card.setAttribute("aria-label", `进入演示：${item.title}`);
 
-        const top = document.createElement("div");
-        top.className = "card-top";
+        const head = document.createElement("div");
+        head.className = "card-head";
+
+        const subject = document.createElement("span");
+        subject.className = "card-subject";
+        subject.append(item.subject);
 
         const title = document.createElement("h2");
         title.className = "card-title";
         title.textContent = item.title;
 
-        const sceneId = document.createElement("span");
-        sceneId.className = "card-id";
-        sceneId.textContent = item.id;
+        head.append(subject, title);
 
-        top.appendChild(title);
-        top.appendChild(sceneId);
+        const concept = document.createElement("div");
+        concept.className = "card-concept";
+        concept.textContent = `${item.concept}｜${item.subConcepts[0]} · ${item.subConcepts[1]}`;
 
-        const ctaRow = document.createElement("div");
-        ctaRow.className = "card-cta";
+        const footer = document.createElement("div");
+        footer.className = "card-footer";
 
-        const chip = document.createElement("span");
-        chip.className = "chip";
-        chip.textContent = "打开页面";
+        const link = document.createElement("div");
+        link.className = "card-link";
+        link.innerHTML = `<span class="card-link-label">进入演示</span><span aria-hidden="true">${item.subject}</span>`;
 
-        const arrow = document.createElement("span");
-        arrow.className = "card-arrow";
-        arrow.setAttribute("aria-hidden", "true");
-        arrow.textContent = "↗";
+        const file = document.createElement("div");
+        file.className = "card-file";
+        file.textContent = toNavFileName(item.path);
 
-        ctaRow.appendChild(chip);
-        ctaRow.appendChild(arrow);
-
-        const pathWrap = document.createElement("div");
-        pathWrap.className = "path-wrap";
-        const path = document.createElement("div");
-        path.className = "path";
-        path.textContent = toNavFileName(item.path);
-        pathWrap.appendChild(path);
-
-        card.appendChild(top);
-        card.appendChild(ctaRow);
-        card.appendChild(pathWrap);
+        footer.append(link, file);
+        card.append(head, concept, footer);
         cardGrid.appendChild(card);
       }
 
@@ -435,26 +646,41 @@
     }
 
     async function initPageList() {
-      countText.textContent = "正在加载索引...";
+      countText.textContent = "正在整理展签...";
       try {
         const loaded = await loadPagesFromIndex();
         if (loaded.length > 0) {
           pages = sortPages(loaded);
           usingFallback = false;
         } else {
-          pages = sortPages(fallbackPages);
+          const fallback = normalizePages(fallbackPages);
+          pages = sortPages(fallback.length > 0 ? fallback : builtinPages);
           usingFallback = true;
         }
       } catch (error) {
-        pages = sortPages(fallbackPages);
+        const fallback = normalizePages(fallbackPages);
+        pages = sortPages(fallback.length > 0 ? fallback : builtinPages);
         usingFallback = true;
-        console.warn("加载 scene-index.json 失败，已使用内置列表:", error);
+        console.warn("加载 scene-index.json 失败，已使用内置索引:", error);
       }
 
       renderCards(searchInput.value);
     }
 
     searchInput.addEventListener("input", (event) => renderCards(event.target.value));
+
+    for (const chip of filterChips) {
+      chip.addEventListener("click", () => {
+        activeFilter = chip.dataset.filter || "all";
+        for (const entry of filterChips) {
+          const isActive = entry === chip;
+          entry.classList.toggle("is-active", isActive);
+          entry.setAttribute("aria-pressed", String(isActive));
+        }
+        renderCards(searchInput.value);
+      });
+    }
+
     initPageList();
   </script>
 </body>
