@@ -265,12 +265,17 @@
     }
 
     .filter-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
       border: 1px solid rgba(125, 153, 126, 0.28);
       border-radius: 999px;
       background: var(--chip-bg);
       color: var(--ink-soft);
       padding: 8px 13px;
       font-size: 13px;
+      white-space: nowrap;
       cursor: pointer;
       transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
     }
@@ -446,6 +451,9 @@
       background: rgba(255, 253, 248, 0.86);
       color: var(--ink-soft);
       text-align: center;
+    }
+
+    .empty[hidden] {
       display: none;
     }
 
@@ -526,7 +534,7 @@
     </section>
 
     <section id="cardGrid" class="card-grid" aria-live="polite"></section>
-    <div id="emptyState" class="empty">没有找到匹配展签，换一个主概念或学科术语试试。</div>
+    <div id="emptyState" class="empty" role="status" aria-live="polite" tabindex="-1" hidden>没有找到匹配展签，换一个主概念或学科术语试试。</div>
   </main>
 
   <script src="/scene-fallback.js"></script>
@@ -633,7 +641,9 @@
       }
 
       setCountText(filtered.length, pages.length);
-      emptyState.style.display = filtered.length === 0 ? "block" : "none";
+      const showEmptyState = filtered.length === 0;
+      emptyState.hidden = !showEmptyState;
+      emptyState.tabIndex = showEmptyState ? 0 : -1;
     }
 
     async function loadPagesFromIndex() {

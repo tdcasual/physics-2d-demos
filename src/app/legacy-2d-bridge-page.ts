@@ -19,6 +19,27 @@ export type BootLegacy2DBridgePageOptions = {
   }) => void;
 };
 
+const focusableSelector = [
+  'button:not([disabled])',
+  '[href]',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  'iframe',
+  '[tabindex]:not([tabindex="-1"])'
+].join(', ');
+
+function isVisibleFocusable(node: Element): node is HTMLElement {
+  if (!(node instanceof HTMLElement)) return false;
+  if (node.hidden || node.getAttribute('aria-hidden') === 'true') return false;
+  if (node.closest('[inert], [aria-hidden="true"]')) return false;
+  if (node instanceof HTMLInputElement && node.type === 'hidden') return false;
+  const style = window.getComputedStyle(node);
+  if (style.display === 'none' || style.visibility === 'hidden') return false;
+  const rect = node.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0 && node.tabIndex >= 0;
+}
+
 function fallbackReadout(sourcePath: string): ReadoutItem[] {
   return [
     { label: '渲染模式', value: 'Legacy 右侧视图桥接' },
@@ -41,6 +62,25 @@ export function bootLegacy2DBridgePage(options: BootLegacy2DBridgePageOptions): 
   const lifecycle = createPageLifecycle();
   lifecycle.onDispose(() => shell.dispose());
 
+  const moveFocusFromLegacyStage = (direction: 'forward' | 'backward'): void => {
+    const iframe = shell.root.querySelector('.stage-iframe');
+    if (!(iframe instanceof HTMLElement)) return;
+
+    const focusableElements = Array.from(shell.root.querySelectorAll(focusableSelector)).filter(isVisibleFocusable);
+    if (focusableElements.length < 2) return;
+
+    const currentIndex = focusableElements.indexOf(iframe);
+    if (currentIndex === -1) return;
+
+    const nextIndex = direction === 'backward'
+      ? (currentIndex - 1 + focusableElements.length) % focusableElements.length
+      : (currentIndex + 1) % focusableElements.length;
+    const nextTarget = focusableElements[nextIndex];
+    if (!nextTarget || nextTarget === iframe) return;
+
+    if (isVisibleFocusable(nextTarget)) nextTarget.focus();
+  };
+
   // Legacy scene renders inside iframe rather than shell canvas.
   shell.stageCanvas.remove();
   shell.setReadout(fallbackReadout(options.scene.sourcePath));
@@ -56,7 +96,8 @@ export function bootLegacy2DBridgePage(options: BootLegacy2DBridgePageOptions): 
       theme: shell.getTheme()
     },
     onReadout: (items) => shell.setReadout(items),
-    onStatus: (text) => shell.setStatus(text)
+    onStatus: (text) => shell.setStatus(text),
+    onExitIframeFocus: (direction) => moveFocusFromLegacyStage(direction)
   });
   lifecycle.onDispose(() => adapter.dispose());
 

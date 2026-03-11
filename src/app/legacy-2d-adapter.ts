@@ -9,6 +9,8 @@ import {
 
 export type Legacy2DControlAction = 'play' | 'pause' | 'reset' | 'step';
 
+export type LegacyIframeFocusDirection = 'forward' | 'backward';
+
 export type CreateLegacy2DAdapterOptions = {
   stageSlot: HTMLElement;
   sceneId: string;
@@ -16,12 +18,14 @@ export type CreateLegacy2DAdapterOptions = {
   embedQuery?: Record<string, string>;
   onReadout: (items: ReadoutItem[]) => void;
   onStatus: (text: string) => void;
+  onExitIframeFocus?: (direction: LegacyIframeFocusDirection) => void;
 };
 
 export function createLegacy2DAdapter(options: CreateLegacy2DAdapterOptions) {
   const targetOrigin = resolveLegacyTargetOrigin(options.sourcePath, window.location.origin);
   const pendingMessages: Array<{ type: string; [key: string]: unknown }> = [];
   let loaded = false;
+  let disposeFocusBridge: (() => void) | null = null;
 
   const iframe = document.createElement('iframe');
   iframe.className = 'stage-iframe';
@@ -32,6 +36,56 @@ export function createLegacy2DAdapter(options: CreateLegacy2DAdapterOptions) {
 
   options.stageSlot.innerHTML = '';
   options.stageSlot.appendChild(iframe);
+
+  const installFocusBridge = (): void => {
+    disposeFocusBridge?.();
+    disposeFocusBridge = null;
+
+    if (!options.onExitIframeFocus) return;
+
+    try {
+      const doc = iframe.contentDocument;
+      const body = doc?.body;
+      if (!doc || !body) return;
+
+      const createSentinel = (direction: LegacyIframeFocusDirection) => {
+        const sentinel = doc.createElement('div');
+        sentinel.tabIndex = 0;
+        sentinel.setAttribute('data-legacy-focus-sentinel', direction);
+        sentinel.setAttribute('aria-hidden', 'true');
+        Object.assign(sentinel.style, {
+          position: 'fixed',
+          inset: '0 auto auto 0',
+          width: '1px',
+          height: '1px',
+          overflow: 'hidden',
+          opacity: '0',
+          pointerEvents: 'none'
+        });
+
+        const onFocus = () => {
+          options.onExitIframeFocus?.(direction);
+        };
+
+        sentinel.addEventListener('focus', onFocus);
+        return { sentinel, onFocus };
+      };
+
+      const start = createSentinel('forward');
+      const end = createSentinel('backward');
+      body.insertBefore(start.sentinel, body.firstChild);
+      body.append(end.sentinel);
+
+      disposeFocusBridge = () => {
+        start.sentinel.removeEventListener('focus', start.onFocus);
+        end.sentinel.removeEventListener('focus', end.onFocus);
+        start.sentinel.remove();
+        end.sentinel.remove();
+      };
+    } catch {
+      disposeFocusBridge = null;
+    }
+  };
 
   const onMessage = (event: MessageEvent): void => {
     if (event.source !== iframe.contentWindow) return;
@@ -49,6 +103,7 @@ export function createLegacy2DAdapter(options: CreateLegacy2DAdapterOptions) {
 
   const onLoad = (): void => {
     loaded = true;
+    installFocusBridge();
     if (iframe.contentWindow) {
       for (const message of pendingMessages.splice(0)) {
         iframe.contentWindow.postMessage(message, targetOrigin);
@@ -95,6 +150,7 @@ export function createLegacy2DAdapter(options: CreateLegacy2DAdapterOptions) {
     dispose(): void {
       window.removeEventListener('message', onMessage);
       iframe.removeEventListener('load', onLoad);
+      disposeFocusBridge?.();
       iframe.remove();
     }
   };

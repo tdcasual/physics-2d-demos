@@ -139,6 +139,29 @@
             display: block;
         }
 
+        .webgl-fallback-note {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 24px;
+            text-align: center;
+            color: var(--text-main);
+            background: radial-gradient(circle at top, rgba(99, 102, 241, 0.10), transparent 55%), var(--canvas-bg);
+        }
+        .webgl-fallback-note strong {
+            font-size: 16px;
+            font-weight: 700;
+        }
+        .webgl-fallback-note span {
+            max-width: 26ch;
+            color: var(--muted);
+            line-height: 1.6;
+            font-size: 13px;
+        }
+
         .ui-controls {
             padding-top: 18px;
             display: flex;
@@ -572,6 +595,31 @@
         if (!force && now - lastReadoutAt < 120) return;
         lastReadoutAt = now;
         postToHost({ type: 'legacy:readout', items: buildReadout() });
+    }
+
+    function createSafeWebGLRenderer() {
+        if (typeof THREE === 'undefined') return null;
+        const originalConsoleError = console.error;
+        try {
+            console.error = () => {};
+            return new THREE.WebGLRenderer({ antialias: true });
+        } catch (error) {
+            return null;
+        } finally {
+            console.error = originalConsoleError;
+        }
+    }
+
+    function renderWebGLFallback(container, title) {
+        if (!(container instanceof HTMLElement)) return { isFallback: true };
+        container.innerHTML = `
+            <div class="webgl-fallback-note">
+                <strong>${title}</strong>
+                <span>当前环境暂不支持 WebGL，已切换为静态提示视图。请在支持硬件加速的浏览器中查看 3D 演示。</span>
+            </div>
+        `;
+        emitStatus(`当前环境暂不支持 WebGL，${title}已切换为提示视图`);
+        return { isFallback: true };
     }
 
     function setRangeOrInputValue(id, value, eventName = 'input') {
@@ -1168,14 +1216,14 @@
         function initSurfaceApp() {
             const container = document.getElementById('surface-canvas-container');
             if (!container || container.children.length > 0) return;
-
             const scene = new THREE.Scene();
-            scene.background = new THREE.Color(0xfdfdfd);
+            scene.background = new THREE.Color(currentTheme === 'light' ? 0xfdfdfd : 0x0f172a);
             const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
             camera.position.set(4, 3, 4);
             camera.lookAt(0, 0, 0);
 
-            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            const renderer = createSafeWebGLRenderer();
+            if (!renderer) return renderWebGLFallback(container, '场景四：球棱锥体积');
             renderer.setSize(container.clientWidth, container.clientHeight);
             container.appendChild(renderer.domElement);
 
@@ -1609,7 +1657,6 @@
                 console.log('Container not found or already initialized');
                 return;
             }
-
             console.log('Container size:', container.clientWidth, 'x', container.clientHeight);
             
             // Ensure container has valid size
@@ -1622,11 +1669,12 @@
             console.log('Initializing volume app...');
 
             const scene = new THREE.Scene();
-            scene.background = new THREE.Color(0xfdfdfd);
+            scene.background = new THREE.Color(currentTheme === 'light' ? 0xfdfdfd : 0x0f172a);
             const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
             camera.position.z = 3.5;
 
-            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            const renderer = createSafeWebGLRenderer();
+            if (!renderer) return renderWebGLFallback(container, '场景五：球体积逼近');
             renderer.setSize(container.clientWidth, container.clientHeight);
             container.appendChild(renderer.domElement);
 
@@ -1791,14 +1839,14 @@
             if (activeScene !== 4 && activeScene !== 5) return;
 
             const surfaceContainer = document.getElementById('surface-canvas-container');
-            if (surfaceApp && surfaceContainer) {
+            if (surfaceApp && !surfaceApp.isFallback && surfaceContainer) {
                 surfaceApp.camera.aspect = surfaceContainer.clientWidth / surfaceContainer.clientHeight;
                 surfaceApp.camera.updateProjectionMatrix();
                 surfaceApp.renderer.setSize(surfaceContainer.clientWidth, surfaceContainer.clientHeight);
             }
 
             const volumeContainer = document.getElementById('volume-canvas-container');
-            if (volumeApp && volumeContainer) {
+            if (volumeApp && !volumeApp.isFallback && volumeContainer) {
                 volumeApp.camera.aspect = volumeContainer.clientWidth / volumeContainer.clientHeight;
                 volumeApp.camera.updateProjectionMatrix();
                 volumeApp.renderer.setSize(volumeContainer.clientWidth, volumeContainer.clientHeight);

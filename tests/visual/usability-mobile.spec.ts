@@ -17,6 +17,14 @@ const iPhone12Use = {
   hasTouch: devices['iPhone 12'].hasTouch
 } as const;
 
+const iPhoneSEUse = {
+  viewport: devices['iPhone SE'].viewport,
+  userAgent: devices['iPhone SE'].userAgent,
+  deviceScaleFactor: devices['iPhone SE'].deviceScaleFactor,
+  isMobile: devices['iPhone SE'].isMobile,
+  hasTouch: devices['iPhone SE'].hasTouch
+} as const;
+
 const iPadPro11Use = {
   viewport: devices['iPad Pro 11'].viewport,
   userAgent: devices['iPad Pro 11'].userAgent,
@@ -92,6 +100,25 @@ test.describe('responsive overflow guardrails', () => {
   });
 });
 
+
+test('dark mobile stage panel avoids light toolbar strip', async ({ page }) => {
+  await page.goto('/src/pages/projectile.html');
+
+  const panelTheme = await page.evaluate(() => {
+    const panel = document.querySelector('.teaching-stage-panel');
+    if (!(panel instanceof HTMLElement)) return null;
+    const style = getComputedStyle(panel);
+    return {
+      backgroundImage: style.backgroundImage,
+      backgroundColor: style.backgroundColor
+    };
+  });
+
+  expect(panelTheme).not.toBeNull();
+  expect(panelTheme?.backgroundImage.includes('248, 250, 244')).toBe(false);
+  expect(panelTheme?.backgroundImage.includes('211, 225, 194')).toBe(false);
+});
+
 test('stage toolbar touch targets meet 44px minimum', async ({ page }) => {
   for (const path of modernPages) {
     await page.goto(path);
@@ -106,6 +133,89 @@ test('stage toolbar touch targets meet 44px minimum', async ({ page }) => {
     });
     expect(minTarget, `${path} toolbar buttons should be touch-safe`).toBeGreaterThanOrEqual(44);
   }
+});
+
+
+test('control-area action buttons meet 44px minimum', async ({ page }) => {
+  const touchSelectors = '.control-tier-toggle, .scene-tab-btn, .scene-chip-btn, .scene-reset-btn, .transport-controls button';
+
+  for (const path of modernPages) {
+    await page.goto(path);
+    const minTarget = await page.locator(touchSelectors).evaluateAll((nodes) => {
+      let min = Number.POSITIVE_INFINITY;
+      for (const node of nodes) {
+        if (!(node instanceof HTMLElement)) continue;
+        const rect = node.getBoundingClientRect();
+        const style = getComputedStyle(node);
+        if (node.hidden || style.display === 'none' || style.visibility === 'hidden' || rect.width <= 0 || rect.height <= 0) {
+          continue;
+        }
+        min = Math.min(min, Math.min(rect.width, rect.height));
+      }
+      return Number.isFinite(min) ? min : 0;
+    });
+    expect(minTarget, `${path} control buttons should be touch-safe`).toBeGreaterThanOrEqual(44);
+  }
+});
+
+
+test.describe('mobile control forms', () => {
+  test.use(iPhone12Use);
+
+  test('control-area form controls meet 44px minimum after expanding advanced controls', async ({ page }) => {
+    const touchSelectors = '.scene-form-row input, .scene-form-row select, .scene-form-row textarea, .control-slot input[type="range"]';
+
+    for (const path of modernPages) {
+      await page.goto(path);
+
+      const tierToggle = page.locator('.control-tier-toggle');
+      if (await tierToggle.count()) {
+        await tierToggle.click();
+      }
+
+      const metrics = await page.locator(touchSelectors).evaluateAll((nodes) => {
+        let min = Number.POSITIVE_INFINITY;
+        let count = 0;
+        for (const node of nodes) {
+          if (!(node instanceof HTMLElement)) continue;
+          const rect = node.getBoundingClientRect();
+          const style = getComputedStyle(node);
+          if (node.hidden || style.display === 'none' || style.visibility === 'hidden' || rect.width <= 0 || rect.height <= 0) {
+            continue;
+          }
+          count += 1;
+          min = Math.min(min, Math.min(rect.width, rect.height));
+        }
+        return {
+          count,
+          min: Number.isFinite(min) ? min : 0
+        };
+      });
+
+      if (metrics.count === 0) continue;
+      expect(metrics.min, `${path} form controls should be touch-safe`).toBeGreaterThanOrEqual(44);
+    }
+  });
+});
+
+test.describe('compact readout keyboard flow', () => {
+  test.use(iPhone12Use);
+
+  test('keyboard opening the drawer moves focus into the readout region', async ({ page }) => {
+    await page.goto('/src/pages/projectile.html');
+
+    const drawerToggle = page.locator('.readout-drawer-toggle');
+    const readout = page.locator('.stage-readout');
+
+    await drawerToggle.focus();
+    await page.keyboard.press('Enter');
+
+    await expect(readout).not.toHaveClass(/is-collapsed/);
+    await expect(readout).toBeFocused();
+
+    await page.keyboard.press('Shift+Tab');
+    await expect(drawerToggle).toBeFocused();
+  });
 });
 
 test.describe('mobile usability semantics', () => {
@@ -140,6 +250,83 @@ test.describe('mobile usability semantics', () => {
 
     await expect(shell).not.toHaveClass(/is-sidebar-collapsed/);
     await expect(page.locator('.teaching-sidebar')).toBeVisible();
+  });
+});
+
+test.describe('narrow mobile collapse layout', () => {
+  test.use(iPhoneSEUse);
+
+  test('collapsed sidebar keeps the stage topbar in one compact row', async ({ page }) => {
+    for (const path of modernPages) {
+      await page.goto(path);
+      await page.locator('.sidebar-toggle-inline').click();
+
+      const geometry = await page.evaluate(() => {
+        const topbar = document.querySelector('.stage-topbar');
+        const floatToggle = document.querySelector('.sidebar-toggle-float');
+        const toolbar = document.querySelector('.stage-toolbar');
+        if (!(topbar instanceof HTMLElement) || !(floatToggle instanceof HTMLElement) || !(toolbar instanceof HTMLElement)) {
+          return null;
+        }
+
+        const visibleChildTops = Array.from(topbar.children)
+          .flatMap((node) => {
+            if (!(node instanceof HTMLElement)) return [];
+            const rect = node.getBoundingClientRect();
+            const style = getComputedStyle(node);
+            if (node.hidden || style.display === 'none' || style.visibility === 'hidden' || rect.width <= 0 || rect.height <= 0) {
+              return [];
+            }
+            return [Math.round(rect.top)];
+          });
+
+        return {
+          topbarHeight: Math.round(topbar.getBoundingClientRect().height),
+          floatToggleHeight: Math.round(floatToggle.getBoundingClientRect().height),
+          floatToggleWidth: Math.round(floatToggle.getBoundingClientRect().width),
+          visibleChildTops: [...new Set(visibleChildTops)]
+        };
+      });
+
+      expect(geometry, `${path} should expose collapsed-stage geometry`).not.toBeNull();
+      expect(geometry?.visibleChildTops, `${path} should keep collapsed topbar children on one row`).toHaveLength(1);
+      expect(geometry?.topbarHeight, `${path} should keep collapsed topbar compact on narrow phones`).toBeLessThanOrEqual(56);
+      expect(geometry?.floatToggleHeight, `${path} should keep restore button compact on narrow phones`).toBeLessThanOrEqual(48);
+      expect(geometry?.floatToggleWidth, `${path} should keep restore button readable on narrow phones`).toBeGreaterThan(88);
+    }
+  });
+
+  test('range sliders keep usable track width on narrow phones', async ({ page }) => {
+    for (const path of modernPages) {
+      await page.goto(path);
+
+      const tierToggle = page.locator('.control-tier-toggle');
+      if (await tierToggle.count()) {
+        await tierToggle.click();
+      }
+
+      const metrics = await page.locator('.scene-control-row input[type="range"]').evaluateAll((nodes) => {
+        let minWidth = Number.POSITIVE_INFINITY;
+        let count = 0;
+        for (const node of nodes) {
+          if (!(node instanceof HTMLElement)) continue;
+          const rect = node.getBoundingClientRect();
+          const style = getComputedStyle(node);
+          if (node.hidden || style.display === 'none' || style.visibility === 'hidden' || rect.width <= 0 || rect.height <= 0) {
+            continue;
+          }
+          count += 1;
+          minWidth = Math.min(minWidth, rect.width);
+        }
+        return {
+          count,
+          minWidth: Number.isFinite(minWidth) ? minWidth : 0
+        };
+      });
+
+      if (metrics.count === 0) continue;
+      expect(metrics.minWidth, `${path} range sliders should keep usable width on narrow phones`).toBeGreaterThanOrEqual(96);
+    }
   });
 });
 

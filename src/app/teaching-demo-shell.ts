@@ -147,7 +147,7 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
           <p class="status-text">就绪</p>
         </section>
       </aside>
-      <div class="sidebar-resizer" role="separator" aria-orientation="vertical" aria-label="调整控制面板宽度"></div>
+      <div class="sidebar-resizer" role="separator" aria-orientation="vertical" aria-label="调整控制面板宽度" tabindex="0"></div>
       <section class="teaching-stage-panel">
         <div class="stage-topbar">
           <button type="button" class="sidebar-toggle sidebar-toggle-float">隐藏控制面板</button>
@@ -163,12 +163,12 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
             <canvas class="stage-canvas" aria-label="2D 教学动画演示区域"></canvas>
           </div>
         </div>
-        <div class="stage-readout${desktopReadoutDraggable ? ' is-desktop-draggable' : ''}">
+        <div class="stage-readout${desktopReadoutDraggable ? ' is-desktop-draggable' : ''}" role="region" aria-label="${readoutLabel}" tabindex="-1">
           <div class="readout-header${readoutHeaderEnabled ? '' : ' is-hidden'}">
             <span class="readout-header-title">${readoutLabel}</span>
             <div class="readout-header-actions">
               <button type="button" class="readout-inline-toggle" hidden>折叠</button>
-              <button type="button" class="readout-drag-handle" aria-label="拖动数据区" hidden>拖动</button>
+              <button type="button" class="readout-drag-handle" aria-label="拖动数据区" aria-hidden="true" tabindex="-1" hidden>拖动</button>
             </div>
           </div>
           <ul class="readout-slot"></ul>
@@ -229,24 +229,167 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
   const sidebarMaxPx = 520;
   const stageMinPx = 700;
   const dividerPx = 12;
+  const resizeStepPx = 24;
   let collapsed = false;
   let dragging = false;
   let compactViewport = isCompactViewport();
+  let desktopSidebarCollapsed = collapsed;
   let readoutCollapsed = compactViewport ? true : desktopReadoutDefaultCollapsed;
+  let desktopReadoutCollapsed = desktopReadoutDefaultCollapsed;
   let readoutOffsetX = 0;
   let readoutOffsetY = 0;
   let readoutDragging = false;
   let hasReadoutItems = false;
+  let pendingViewportFocusTarget: HTMLElement | null = null;
+  let viewportFocusTimer = 0;
+  let lastFocusedShellElement: HTMLElement | null = null;
 
   const getSidebarMaxForViewport = (): number => {
     const hardLimit = getResponsiveViewport().width - stageMinPx - dividerPx;
     return Math.max(sidebarMinPx, Math.min(sidebarMaxPx, hardLimit));
   };
 
+  const focusableSelector = [
+    'button:not([disabled])',
+    '[href]',
+    'input:not([disabled])',
+    'select:not([disabled])',
+    'textarea:not([disabled])',
+    'iframe',
+    '[tabindex]:not([tabindex="-1"])'
+  ].join(', ');
+
+  const isVisibleFocusable = (node: Element): node is HTMLElement => {
+    if (!(node instanceof HTMLElement)) return false;
+    if (node.hidden || node.getAttribute('aria-hidden') === 'true') return false;
+    if (node.closest('[inert], [aria-hidden="true"]')) return false;
+    if (node instanceof HTMLInputElement && node.type === 'hidden') return false;
+    const style = window.getComputedStyle(node);
+    if (style.display === 'none' || style.visibility === 'hidden') return false;
+    const rect = node.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0 && node.tabIndex >= 0;
+  };
+
+  const getFocusableElements = (): HTMLElement[] => {
+    const elements = Array.from(root.querySelectorAll(focusableSelector)).filter(isVisibleFocusable);
+
+    if (compactViewport && hasReadoutItems && !readoutCollapsed && isVisibleFocusable(drawerToggle) && isVisibleFocusable(stageReadout)) {
+      const drawerIndex = elements.indexOf(drawerToggle);
+      const readoutIndex = elements.indexOf(stageReadout);
+      if (drawerIndex !== -1 && readoutIndex !== -1 && readoutIndex !== drawerIndex + 1) {
+        elements.splice(readoutIndex, 1);
+        elements.splice(drawerIndex + 1, 0, stageReadout);
+      }
+    }
+
+    return elements;
+  };
+
+  const getDesktopReadoutFocusTarget = (): HTMLElement | null => {
+    if (isVisibleFocusable(inlineReadoutToggle)) return inlineReadoutToggle;
+    if (isVisibleFocusable(desktopToggle)) return desktopToggle;
+    return null;
+  };
+
+  const getViewportResizeFocusTarget = (activeElement: HTMLElement | null, nextCompact: boolean): HTMLElement | null => {
+    if (activeElement === null || !root.contains(activeElement)) return null;
+
+    if (nextCompact) {
+      if (activeElement === floatToggle || activeElement === inlineToggle || activeElement === resizer) {
+        return isVisibleFocusable(inlineToggle) ? inlineToggle : null;
+      }
+      if (
+        activeElement === desktopToggle ||
+        activeElement === inlineReadoutToggle ||
+        activeElement === drawerToggle ||
+        stageReadout.contains(activeElement)
+      ) {
+        return isVisibleFocusable(drawerToggle) ? drawerToggle : null;
+      }
+      return null;
+    }
+
+    if (activeElement === inlineToggle || activeElement === floatToggle || activeElement === resizer) {
+      return isVisibleFocusable(floatToggle) ? floatToggle : null;
+    }
+    if (
+      activeElement === drawerToggle ||
+      activeElement === desktopToggle ||
+      activeElement === inlineReadoutToggle ||
+      stageReadout.contains(activeElement)
+    ) {
+      return getDesktopReadoutFocusTarget();
+    }
+    return null;
+  };
+
+  const needsViewportFocusRepair = (): boolean => {
+    const activeElement = document.activeElement;
+    if (!(activeElement instanceof HTMLElement)) return true;
+    if (activeElement === document.body) return true;
+    if (!root.contains(activeElement)) return true;
+    return !isVisibleFocusable(activeElement);
+  };
+
+  const onRootFocusIn = (event: FocusEvent): void => {
+    if (event.target instanceof HTMLElement && root.contains(event.target)) {
+      lastFocusedShellElement = event.target;
+    }
+  };
+
+  const scheduleViewportFocusRepair = (): void => {
+    if (viewportFocusTimer !== 0) {
+      window.clearTimeout(viewportFocusTimer);
+    }
+    viewportFocusTimer = window.setTimeout(() => {
+      viewportFocusTimer = 0;
+      if (pendingViewportFocusTarget !== null && isVisibleFocusable(pendingViewportFocusTarget) && needsViewportFocusRepair()) {
+        pendingViewportFocusTarget.focus();
+      }
+      if (!needsViewportFocusRepair()) {
+        pendingViewportFocusTarget = null;
+      }
+    }, 30);
+  };
+
+  const onRootTabKeyDown = (event: KeyboardEvent): void => {
+    if (event.key !== 'Tab' || event.altKey || event.ctrlKey || event.metaKey) return;
+
+    const activeElement = document.activeElement;
+    if (!(activeElement instanceof HTMLElement) || !root.contains(activeElement)) return;
+
+    const focusableElements = getFocusableElements();
+    if (focusableElements.length < 2) return;
+
+    const currentIndex = focusableElements.indexOf(activeElement);
+    if (currentIndex === -1) return;
+
+    const nextIndex = event.shiftKey
+      ? (currentIndex - 1 + focusableElements.length) % focusableElements.length
+      : (currentIndex + 1) % focusableElements.length;
+    const nextTarget = focusableElements[nextIndex];
+    if (!nextTarget || nextTarget === activeElement) return;
+
+    event.preventDefault();
+    nextTarget.focus();
+  };
+
+  const updateResizerAccessibility = (): void => {
+    const interactive = !collapsed && !compactViewport;
+    const dynamicMax = getSidebarMaxForViewport();
+    const currentWidth = Math.round(sidebar.getBoundingClientRect().width) || sidebarMinPx;
+    resizer.tabIndex = interactive ? 0 : -1;
+    resizer.setAttribute('aria-disabled', String(!interactive));
+    resizer.setAttribute('aria-valuemin', String(sidebarMinPx));
+    resizer.setAttribute('aria-valuemax', String(dynamicMax));
+    resizer.setAttribute('aria-valuenow', String(Math.max(sidebarMinPx, Math.min(dynamicMax, currentWidth))));
+  };
+
   const setSidebarWidth = (widthPx: number): void => {
     const dynamicMax = getSidebarMaxForViewport();
     const clamped = clampSidebarWidth(widthPx, sidebarMinPx, dynamicMax);
     root.style.setProperty('--sidebar-width', `${clamped}px`);
+    updateResizerAccessibility();
   };
 
   const updateSidebarToggleLabel = (): void => {
@@ -258,9 +401,22 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
   };
 
   const setSidebarCollapsed = (next: boolean): void => {
+    const focusWasInsideSidebar = document.activeElement instanceof HTMLElement && sidebar.contains(document.activeElement);
+    const focusWasOnResizer = document.activeElement === resizer;
+
     collapsed = next;
+    if (!compactViewport) {
+      desktopSidebarCollapsed = collapsed;
+    }
     root.classList.toggle('is-sidebar-collapsed', collapsed);
+    sidebar.toggleAttribute('inert', collapsed);
+    sidebar.setAttribute('aria-hidden', String(collapsed));
     updateSidebarToggleLabel();
+    updateResizerAccessibility();
+
+    if (collapsed && (focusWasInsideSidebar || focusWasOnResizer)) {
+      floatToggle.focus();
+    }
   };
 
   const onToggleSidebar = (): void => {
@@ -301,6 +457,31 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
     window.addEventListener('pointerup', onPointerUp);
   };
 
+  const onResizerKeyDown = (event: KeyboardEvent): void => {
+    if (collapsed || compactViewport) return;
+
+    const currentWidth = sidebar.getBoundingClientRect().width;
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      setSidebarWidth(currentWidth - resizeStepPx);
+      return;
+    }
+    if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      setSidebarWidth(currentWidth + resizeStepPx);
+      return;
+    }
+    if (event.key === 'Home') {
+      event.preventDefault();
+      setSidebarWidth(sidebarMinPx);
+      return;
+    }
+    if (event.key === 'End') {
+      event.preventDefault();
+      setSidebarWidth(getSidebarMaxForViewport());
+    }
+  };
+
   const updateReadoutOffset = (): void => {
     stageReadout.style.setProperty('--readout-offset-x', `${readoutOffsetX}px`);
     stageReadout.style.setProperty('--readout-offset-y', `${readoutOffsetY}px`);
@@ -322,9 +503,12 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
     desktopToggle.hidden = !desktopToggleEnabled || expanded;
     inlineReadoutToggle.hidden = !desktopToggleEnabled || !expanded;
     dragHandle.hidden = !(desktopReadoutDraggable && !compactViewport && hasReadoutItems && expanded);
+    dragHandle.tabIndex = -1;
+    dragHandle.setAttribute('aria-hidden', 'true');
     stageReadout.classList.toggle('is-empty', !hasReadoutItems);
     stageReadout.classList.toggle('is-collapsed', toggleEnabled && readoutCollapsed);
     stageReadout.classList.toggle('has-header', readoutHeaderEnabled && !compactViewport && hasReadoutItems);
+    stageReadout.tabIndex = compactViewport && hasReadoutItems && expanded ? 0 : -1;
     const openLabel = readoutLabel === '数据区' ? '显示数据区' : `显示${readoutLabel}`;
     const closeLabel = readoutLabel === '数据区' ? '隐藏数据区' : `隐藏${readoutLabel}`;
     drawerToggle.textContent = expanded ? closeLabel : openLabel;
@@ -337,18 +521,27 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
 
   const onViewportResize = (): void => {
     const nextCompact = isCompactViewport();
+    const activeBeforeResize = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusSource = activeBeforeResize !== null && root.contains(activeBeforeResize) ? activeBeforeResize : lastFocusedShellElement;
+
     if (nextCompact !== compactViewport) {
       if (nextCompact) {
+        desktopSidebarCollapsed = collapsed;
+        desktopReadoutCollapsed = readoutCollapsed;
+        compactViewport = true;
         readoutCollapsed = true;
         resetReadoutOffset();
+        setSidebarCollapsed(false);
       } else {
-        readoutCollapsed = desktopReadoutCollapsible ? desktopReadoutDefaultCollapsed : false;
+        compactViewport = false;
+        readoutCollapsed = desktopReadoutCollapsible ? desktopReadoutCollapsed : false;
+        setSidebarCollapsed(desktopSidebarCollapsed);
       }
+    } else {
+      compactViewport = nextCompact;
     }
-    compactViewport = nextCompact;
 
     if (compactViewport) {
-      setSidebarCollapsed(false);
       root.style.removeProperty('--sidebar-width');
     } else {
       const widthToken = root.style.getPropertyValue('--sidebar-width');
@@ -362,13 +555,43 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
       }
     }
     updateReadoutDrawer();
+    updateResizerAccessibility();
+    pendingViewportFocusTarget = getViewportResizeFocusTarget(focusSource, compactViewport);
+    scheduleViewportFocusRepair();
   };
 
-  const onToggleReadoutDrawer = (): void => {
+  const onToggleReadoutDrawer = (event?: Event): void => {
     if (!hasReadoutItems) return;
     if (!compactViewport && !desktopReadoutCollapsible) return;
+
+    const activeElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusWasInsideReadout = activeElement !== null && stageReadout.contains(activeElement);
+    const openingFromDesktopToggle = !compactViewport && activeElement === desktopToggle && readoutCollapsed;
+    const keyboardLikeActivation = event instanceof MouseEvent ? event.detail === 0 : false;
+
     readoutCollapsed = !readoutCollapsed;
+    if (!compactViewport) {
+      desktopReadoutCollapsed = readoutCollapsed;
+    }
     updateReadoutDrawer();
+
+    if (compactViewport && !readoutCollapsed && keyboardLikeActivation) {
+      stageReadout.focus();
+      return;
+    }
+
+    if (!compactViewport && !readoutCollapsed && openingFromDesktopToggle && !inlineReadoutToggle.hidden) {
+      inlineReadoutToggle.focus();
+      return;
+    }
+
+    if (readoutCollapsed && focusWasInsideReadout) {
+      if (compactViewport && !drawerToggle.hidden) {
+        drawerToggle.focus();
+      } else if (!desktopToggle.hidden) {
+        desktopToggle.focus();
+      }
+    }
   };
 
   const onReadoutDragStart = (event: PointerEvent): void => {
@@ -457,6 +680,7 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
   themeButton.textContent = themeToggleText(themeState.value);
   setSidebarWidth(getDefaultSidebarWidth(window.innerWidth, sidebarMinPx, getSidebarMaxForViewport()));
   updateSidebarToggleLabel();
+  updateResizerAccessibility();
   updateReadoutOffset();
   setStatus('就绪', 'ready');
   updateReadoutDrawer();
@@ -468,6 +692,9 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
   inlineReadoutToggle.addEventListener('click', onToggleReadoutDrawer);
   dragHandle.addEventListener('pointerdown', onReadoutDragStart);
   resizer.addEventListener('pointerdown', onResizerPointerDown);
+  resizer.addEventListener('keydown', onResizerKeyDown);
+  root.addEventListener('focusin', onRootFocusIn);
+  root.addEventListener('keydown', onRootTabKeyDown);
   window.addEventListener('resize', onViewportResize);
   window.visualViewport?.addEventListener('resize', onViewportResize);
 
@@ -509,8 +736,14 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
       inlineReadoutToggle.removeEventListener('click', onToggleReadoutDrawer);
       dragHandle.removeEventListener('pointerdown', onReadoutDragStart);
       resizer.removeEventListener('pointerdown', onResizerPointerDown);
+      resizer.removeEventListener('keydown', onResizerKeyDown);
+      root.removeEventListener('focusin', onRootFocusIn);
+      root.removeEventListener('keydown', onRootTabKeyDown);
       window.removeEventListener('resize', onViewportResize);
       window.visualViewport?.removeEventListener('resize', onViewportResize);
+      if (viewportFocusTimer !== 0) {
+        window.clearTimeout(viewportFocusTimer);
+      }
     }
   };
 }
