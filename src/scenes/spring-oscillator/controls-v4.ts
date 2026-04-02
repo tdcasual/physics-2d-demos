@@ -217,13 +217,12 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
     const orientBtn = document.createElement('button');
     orientBtn.type = 'button';
     orientBtn.className = [
-      'w-7 h-6 text-[10px] font-medium rounded',
-      'border border-slate-300 dark:border-slate-600',
-      'bg-white dark:bg-slate-800',
-      'text-slate-700 dark:text-slate-200',
+      'w-7 h-6 text-[10px] font-medium rounded shrink-0',
+      'border border-gray-300 dark:border-gray-600',
+      'bg-white dark:bg-gray-700',
+      'text-gray-700 dark:text-gray-200',
       'cursor-pointer transition-all',
-      'hover:bg-slate-100 dark:hover:bg-slate-700',
-      'shrink-0'
+      'hover:bg-gray-100 dark:hover:bg-gray-600'
     ].join(' ');
     orientBtn.textContent = isHorizontal ? '横' : '竖';
     orientBtn.title = '点击切换方向';
@@ -240,13 +239,27 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
     // 删除按钮
     const delBtn = document.createElement('button');
     delBtn.type = 'button';
-    delBtn.className = [
-      'w-5 h-5 text-xs',
-      'flex items-center justify-center',
-      'text-coral hover:bg-coral/10',
-      'rounded cursor-pointer',
-      'transition-colors shrink-0'
-    ].join(' ');
+    delBtn.style.cssText = `
+      width: 20px;
+      height: 20px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #FF6B6B;
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    `;
+    delBtn.addEventListener('mouseenter', () => {
+      delBtn.style.background = 'rgba(255,107,107,0.1)';
+    });
+    delBtn.addEventListener('mouseleave', () => {
+      delBtn.style.background = 'transparent';
+    });
     delBtn.textContent = '✕';
     delBtn.title = '删除';
     delBtn.addEventListener('click', () => {
