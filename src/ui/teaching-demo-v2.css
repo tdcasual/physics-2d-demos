@@ -1,0 +1,502 @@
+/**
+ * Teaching Demo Shell V2 - 四区域布局样式
+ * 
+ * 控制区 | 图表区(可选) | 动画区 | 数据区(默认折叠)
+ * 
+ * 依赖: 
+ *   - @import '../styles/themes.css' (主题变量)
+ * 
+ * 职责:
+ *   - 只包含组件特定样式
+ *   - 不定义任何CSS变量
+ *   - 使用主题变量 var(--bg-primary), var(--text-primary)等
+ */
+
+@import url('../styles/themes.css');
+
+/* ========================================
+   根布局
+   ======================================== */
+.teaching-demo.v2-layout {
+  display: grid;
+  grid-template-columns: 320px 8px 1fr;
+  grid-template-rows: 1fr;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+/* ========================================
+   左侧面板
+   ======================================== */
+.teaching-left-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border-color);
+}
+
+/* 标题区 */
+.teaching-left-panel .teaching-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+  background: var(--bg-secondary);
+}
+
+.teaching-left-panel .teaching-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.teaching-left-panel .teaching-subtitle {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* ========================================
+   控制区
+   ======================================== */
+.control-section {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  min-height: 0;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* 区域头部 - 带折叠按钮 */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.section-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.section-toggle {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: var(--btn-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.section-toggle:hover {
+  background: var(--btn-hover-bg);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+/* 折叠状态 */
+.control-section[data-collapsed="true"] .control-slot,
+.graph-section[data-collapsed="true"] .graph-slot {
+  display: none;
+}
+
+.control-section[data-collapsed="true"] .section-header,
+.graph-section[data-collapsed="true"] .section-header {
+  border-bottom: none;
+}
+
+.control-slot {
+  flex: 0 0 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.control-slot > * {
+  min-width: 0;
+}
+
+/* ========================================
+   图表区
+   ======================================== */
+.graph-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 140px;
+  background: var(--bg-primary);
+}
+
+.graph-section .section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.graph-slot {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.graph-slot canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* 无图表时隐藏图表区 */
+.teaching-demo[data-has-graph="false"] .graph-section {
+  display: none;
+}
+
+/* ========================================
+   可拖拽分隔线
+   ======================================== */
+.panel-resizer {
+  width: 8px;
+  background: var(--border-color);
+  cursor: col-resize;
+  position: relative;
+  z-index: 10;
+  transition: background 0.2s;
+}
+
+.panel-resizer:hover,
+.panel-resizer.is-dragging {
+  background: var(--accent-color);
+}
+
+.panel-resizer::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 32px;
+  background: var(--text-muted);
+  border-radius: 1px;
+  opacity: 0.5;
+}
+
+/* ========================================
+   右侧面板（动画区）
+   ======================================== */
+.teaching-right-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  background: var(--bg-primary);
+  /* 确保在 grid 的第3列 */
+  grid-column: 3;
+}
+
+/* 当左侧隐藏时，右侧面板应该占据第3列 */
+.teaching-demo[data-sidebar-hidden="true"] .teaching-right-panel {
+  grid-column: 3;
+}
+
+/* 工具栏 */
+.stage-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.stage-toolbar .sidebar-toggle {
+  padding: 6px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--btn-bg);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.stage-toolbar .sidebar-toggle:hover {
+  background: var(--btn-hover-bg);
+  color: var(--text-primary);
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.mode-toggle,
+.shell-theme-toggle {
+  padding: 6px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--btn-bg);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mode-toggle {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
+}
+
+.mode-toggle:hover,
+.shell-theme-toggle:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* 动画区框架 */
+.stage-frame {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+  background: var(--stage-bg);
+}
+
+.stage-slot {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stage-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ========================================
+   动画区浮动控制按钮
+   ======================================== */
+.stage-floating-controls {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: var(--shadow-md);
+  z-index: 50;
+}
+
+.stage-floating-controls button {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--btn-bg);
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.stage-floating-controls button:hover {
+  background: var(--btn-hover-bg);
+  border-color: var(--accent-color);
+  color: var(--text-primary);
+}
+
+.stage-floating-controls button:active {
+  transform: translateY(1px);
+}
+
+/* ========================================
+   数据区（浮动面板）
+   ======================================== */
+.readout-panel {
+  position: absolute;
+  top: 60px;
+  right: 16px;
+  min-width: 240px;
+  max-width: 360px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  font-size: 12px;
+}
+
+.readout-panel.is-collapsed {
+  min-width: auto;
+  max-width: none;
+  width: auto;
+}
+
+.readout-panel.is-collapsed .readout-slot {
+  display: none;
+}
+
+.readout-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.readout-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.readout-toggle {
+  padding: 6px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--btn-bg);
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.readout-toggle:hover {
+  background: var(--btn-hover-bg);
+}
+
+.readout-slot {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 12px;
+  margin: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-content: flex-start;
+  background: var(--bg-primary);
+}
+
+.readout-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  font-size: 16px;
+  flex: 1 1 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.readout-item--half {
+  flex: 1 1 calc(50% - 3px);
+  min-width: 140px;
+}
+
+.readout-label {
+  color: var(--text-secondary);
+  margin-right: 10px;
+  font-size: 14px;
+}
+
+.readout-value {
+  color: var(--accent-color);
+  font-weight: 600;
+  font-family: 'SF Mono', monospace;
+  font-size: 16px;
+}
+
+/* ========================================
+   响应式布局
+   ======================================== */
+
+/* 平板 */
+@media (max-width: 1024px) {
+  .teaching-demo.v2-layout {
+    grid-template-columns: 280px 8px 1fr;
+  }
+}
+
+/* 手机 */
+@media (max-width: 768px) {
+  .teaching-demo.v2-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+  
+  .teaching-left-panel {
+    max-height: 50vh;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+  }
+  
+  .panel-resizer {
+    display: none;
+  }
+  
+  .readout-panel {
+    position: fixed;
+    top: auto;
+    bottom: 16px;
+    right: 16px;
+    left: 16px;
+    max-width: none;
+  }
+}
+
+/* ========================================
+   演示模式
+   ======================================== */
+.teaching-demo[data-mode="presentation"] .stage-toolbar {
+  display: none;
+}
+
+.teaching-demo[data-mode="presentation"] .stage-floating-controls {
+  top: 16px;
+  left: 16px;
+}
+
+.teaching-demo[data-mode="presentation"] .readout-panel {
+  top: 16px;
+  right: 16px;
+}

@@ -1,0 +1,129 @@
+/**
+ * Design Tokens - 设计令牌系统
+ * 
+ * 职责: 定义设计系统的原始值（颜色、间距、字体等）
+ * 规则: 
+ *   - 使用 --token-* 命名前缀
+ *   - 不定义 [data-theme] 选择器
+ *   - 值是原始常量，不随主题变化
+ *   - 此文件不依赖其他CSS文件
+ */
+
+/* ========================================
+   颜色令牌 - Color Tokens
+   ======================================== */
+
+/* 主色调 - 珊瑚橙 */
+--token-color-coral: #FF6B6B;
+--token-color-coral-light: #FF8E72;
+--token-color-coral-dark: #E85D5D;
+
+/* 辅助色 - 薄荷青 */
+--token-color-mint: #4ECDC4;
+--token-color-mint-light: #95E1D3;
+--token-color-mint-dark: #3DBDB5;
+
+/* 点缀色 */
+--token-color-yellow: #FFE66D;
+--token-color-salmon: #FFA07A;
+
+/* 深色模式色系 */
+--token-color-slate-900: #0f172a;
+--token-color-slate-800: #1e293b;
+--token-color-slate-700: #334155;
+--token-color-slate-600: #475569;
+--token-color-slate-500: #64748b;
+--token-color-slate-400: #94a3b8;
+--token-color-slate-300: #cbd5e1;
+--token-color-slate-200: #e2e8f0;
+--token-color-slate-100: #f1f5f9;
+--token-color-slate-50: #f8fafc;
+
+/* ========================================
+   间距令牌 - Space Tokens
+   ======================================== */
+--token-space-1: 0.25rem;   /* 4px */
+--token-space-2: 0.5rem;    /* 8px */
+--token-space-3: 0.75rem;   /* 12px */
+--token-space-4: 1rem;      /* 16px */
+--token-space-5: 1.25rem;   /* 20px */
+--token-space-6: 1.5rem;    /* 24px */
+--token-space-8: 2rem;      /* 32px */
+--token-space-10: 2.5rem;   /* 40px */
+--token-space-12: 3rem;     /* 48px */
+--token-space-16: 4rem;     /* 64px */
+
+/* ========================================
+   字体令牌 - Typography Tokens
+   ======================================== */
+--token-font-family-sans: 'Satoshi', 'Noto Sans SC', system-ui, sans-serif;
+--token-font-family-display: 'Clash Display', system-ui, sans-serif;
+--token-font-family-mono: 'SF Mono', Monaco, monospace;
+
+/* 字体大小 */
+--token-font-size-xs: 0.75rem;    /* 12px */
+--token-font-size-sm: 0.875rem;   /* 14px */
+--token-font-size-base: 1rem;     /* 16px */
+--token-font-size-lg: 1.125rem;   /* 18px */
+--token-font-size-xl: 1.25rem;    /* 20px */
+--token-font-size-2xl: 1.5rem;    /* 24px */
+
+/* 字体粗细 */
+--token-font-weight-normal: 400;
+--token-font-weight-medium: 500;
+--token-font-weight-semibold: 600;
+--token-font-weight-bold: 700;
+
+/* 行高 */
+--token-line-height-tight: 1.25;
+--token-line-height-normal: 1.5;
+--token-line-height-relaxed: 1.75;
+
+/* ========================================
+   圆角令牌 - Radius Tokens
+   ======================================== */
+--token-radius-sm: 4px;
+--token-radius-md: 8px;
+--token-radius-lg: 12px;
+--token-radius-xl: 16px;
+--token-radius-full: 9999px;
+
+/* ========================================
+   阴影令牌 - Shadow Tokens
+   ======================================== */
+--token-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+--token-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+--token-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+--token-shadow-dark-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+--token-shadow-dark-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+--token-shadow-dark-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+
+/* ========================================
+   过渡令牌 - Transition Tokens
+   ======================================== */
+--token-duration-fast: 150ms;
+--token-duration-normal: 300ms;
+--token-duration-slow: 500ms;
+
+--token-ease-out: cubic-bezier(0, 0, 0.2, 1);
+--token-ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
+
+/* ========================================
+   Z-Index 令牌
+   ======================================== */
+--token-z-base: 0;
+--token-z-dropdown: 100;
+--token-z-sticky: 200;
+--token-z-fixed: 300;
+--token-z-modal: 400;
+--token-z-tooltip: 500;
+
+/* ========================================
+   布局令牌 - Layout Tokens
+   ======================================== */
+--token-sidebar-width: 320px;
+--token-sidebar-min-width: 280px;
+--token-sidebar-max-width: 960px;
+--token-resizer-width: 8px;
+--token-toolbar-height: 48px;
+--token-header-height: 64px;

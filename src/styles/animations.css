@@ -1,0 +1,502 @@
+/**
+ * 物理学实验室 - 动画系统
+ * Animation System for Physics Lab
+ * 
+ * 风格：柔和、物理感、有机曲线
+ */
+
+/* ========================================
+   1. 关键帧定义
+   ======================================== */
+
+/* 淡入 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 缩放 */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes scaleOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+/* 漂浮 - 张博士默认动画 */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(1deg);
+  }
+}
+
+/* 摇摆 - 思考动画 */
+@keyframes sway {
+  0%, 100% {
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+
+/* 呼吸 - 脉冲效果 */
+@keyframes breathe {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.02);
+  }
+}
+
+/* 弹跳 - 按钮点击 */
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  25% {
+    transform: translateY(-6px);
+  }
+  50% {
+    transform: translateY(0);
+  }
+  75% {
+    transform: translateY(-3px);
+  }
+}
+
+/* 闪烁 - 光标/提示 */
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+/* 进度 - 加载 */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* 线条绘制 - 时间线动画 */
+@keyframes drawLine {
+  from {
+    stroke-dashoffset: 1000;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* 弹性进入 */
+@keyframes elasticIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 滑入 */
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* 旋转 */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spinSlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 波纹 */
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* 震动 - 错误提示 */
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-4px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(4px);
+  }
+}
+
+/* 翻页 - 笔记本 */
+@keyframes pageFlip {
+  0% {
+    transform: perspective(600px) rotateX(0deg);
+    transform-origin: bottom;
+  }
+  100% {
+    transform: perspective(600px) rotateX(-90deg);
+    transform-origin: bottom;
+  }
+}
+
+/* 墨水滴落 */
+@keyframes inkDrop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+}
+
+/* 星光闪烁 - 背景装饰 */
+@keyframes twinkle {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+/* ========================================
+   2. 动画工具类
+   ======================================== */
+
+.animate-fade-in {
+  animation: fadeIn 0.5s var(--ease-out) forwards;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s var(--ease-out) forwards;
+}
+
+.animate-fade-in-down {
+  animation: fadeInDown 0.6s var(--ease-out) forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.4s var(--ease-spring) forwards;
+}
+
+.animate-float {
+  animation: float 3s var(--ease-in-out) infinite;
+}
+
+.animate-float-slow {
+  animation: floatSlow 4s var(--ease-in-out) infinite;
+}
+
+.animate-sway {
+  animation: sway 2s var(--ease-in-out) infinite;
+}
+
+.animate-breathe {
+  animation: breathe 3s var(--ease-in-out) infinite;
+}
+
+.animate-bounce {
+  animation: bounce 0.6s var(--ease-spring);
+}
+
+.animate-blink {
+  animation: blink 2s var(--ease-in-out) infinite;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+.animate-spin-slow {
+  animation: spinSlow 8s linear infinite;
+}
+
+.animate-shake {
+  animation: shake 0.5s var(--ease-out);
+}
+
+.animate-elastic-in {
+  animation: elasticIn 0.6s var(--ease-elastic) forwards;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.5s var(--ease-out) forwards;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.5s var(--ease-out) forwards;
+}
+
+/* ========================================
+   3. 交错动画延迟
+   ======================================== */
+
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+.stagger-5 { animation-delay: 0.5s; }
+.stagger-6 { animation-delay: 0.6s; }
+.stagger-7 { animation-delay: 0.7s; }
+.stagger-8 { animation-delay: 0.8s; }
+
+/* ========================================
+   4. 过渡工具类
+   ======================================== */
+
+.transition-fast {
+  transition: all var(--transition-fast);
+}
+
+.transition-normal {
+  transition: all var(--transition-normal);
+}
+
+.transition-slow {
+  transition: all var(--transition-slow);
+}
+
+.transition-transform {
+  transition: transform var(--transition-normal);
+}
+
+.transition-opacity {
+  transition: opacity var(--transition-normal);
+}
+
+.transition-colors {
+  transition: color var(--transition-fast),
+              background-color var(--transition-fast),
+              border-color var(--transition-fast);
+}
+
+/* ========================================
+   5. 悬停效果
+   ======================================== */
+
+.hover-lift {
+  transition: transform var(--transition-normal),
+              box-shadow var(--transition-normal);
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.hover-scale {
+  transition: transform var(--transition-normal);
+}
+
+.hover-scale:hover {
+  transform: scale(1.03);
+}
+
+.hover-glow {
+  transition: box-shadow var(--transition-normal);
+}
+
+.hover-glow:hover {
+  box-shadow: var(--shadow-glow);
+}
+
+/* ========================================
+   6. 滚动触发显示
+   ======================================== */
+
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s var(--ease-out),
+              transform 0.6s var(--ease-out);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ========================================
+   7. 加载状态
+   ======================================== */
+
+.loading-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--bg-secondary) 25%,
+    var(--bg-tertiary) 50%,
+    var(--bg-secondary) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* ========================================
+   8. 张博士专用动画
+   ======================================== */
+
+.dr-thinking {
+  animation: sway 2s var(--ease-in-out) infinite;
+}
+
+.dr-excited {
+  animation: bounce 0.6s var(--ease-spring);
+}
+
+.dr-idle {
+  animation: floatSlow 4s var(--ease-in-out) infinite;
+}
+
+.dr-glasses-glow {
+  transition: filter var(--transition-normal);
+}
+
+.dr-glasses-glow:hover {
+  filter: drop-shadow(0 0 8px var(--accent-gold));
+}
+
+/* ========================================
+   9. 页面过渡
+   ======================================== */
+
+.page-transition-enter {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.page-transition-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.4s var(--ease-out),
+              transform 0.4s var(--ease-out);
+}
+
+.page-transition-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.page-transition-exit-active {
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: opacity 0.3s var(--ease-in),
+              transform 0.3s var(--ease-in);
+}
