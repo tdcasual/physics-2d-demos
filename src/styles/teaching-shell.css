@@ -1,0 +1,403 @@
+/**
+ * Teaching Shell - 四区域布局核心样式
+ * 基于 Tailwind CSS
+ * 
+ * 四区域结构:
+ * - 控制区 (control-section)
+ * - 图表区 (graph-section)  
+ * - 动画区 (stage-frame)
+ * - 数据区 (readout-panel)
+ */
+
+@import "tailwindcss";
+
+/* ========================================
+   主题配置 - 与 themes.css 保持一致
+   ======================================== */
+@theme {
+  /* 主色调 */
+  --color-coral: #FF6B6B;
+  --color-mint: #4ECDC4;
+  --color-yellow: #FFE66D;
+  
+  /* 背景色 */
+  --color-bg-primary: #faf8f5;
+  --color-bg-secondary: rgba(255, 255, 255, 0.6);
+  --color-sidebar-bg: #f5f3f0;
+  --color-stage-bg: #faf8f5;
+  
+  /* 边框 */
+  --color-border-color: rgba(0, 0, 0, 0.08);
+  
+  /* 文本 */
+  --color-text-primary: #1a1a1a;
+  --color-text-secondary: #666666;
+  --color-text-muted: #888888;
+  
+  /* 按钮 */
+  --color-btn-bg: rgba(0, 0, 0, 0.05);
+  --color-btn-hover-bg: rgba(0, 0, 0, 0.1);
+  
+  /* 强调色 */
+  --color-accent-color: #4ECDC4;
+  
+  /* 阴影 */
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* 暗色主题 */
+@layer base {
+  [data-theme="dark"] {
+    --color-bg-primary: #0f172a;
+    --color-bg-secondary: rgba(30, 41, 59, 0.6);
+    --color-sidebar-bg: #0a0f1a;
+    --color-stage-bg: #0f172a;
+    --color-border-color: rgba(255, 255, 255, 0.1);
+    --color-text-primary: #fafafa;
+    --color-text-secondary: #888888;
+    --color-text-muted: #666666;
+    --color-btn-bg: rgba(255, 255, 255, 0.1);
+    --color-btn-hover-bg: rgba(255, 255, 255, 0.15);
+    --color-accent-color: #4ECDC4;
+  }
+}
+
+/* ========================================
+   根布局 - V2 网格布局
+   ======================================== */
+.teaching-demo.v2-layout {
+  @apply grid h-dvh overflow-hidden;
+  background: var(--color-bg-primary);
+  grid-template-columns: minmax(260px, 40%) 8px 1fr;
+}
+
+/* ========================================
+   左侧面板 - 控制区 + 图表区
+   ======================================== */
+.teaching-left-panel {
+  @apply flex flex-col overflow-hidden border-r;
+  background: var(--color-sidebar-bg);
+  border-color: var(--color-border-color);
+}
+
+/* 标题区 */
+.teaching-left-panel .teaching-header {
+  @apply shrink-0 border-b p-4;
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border-color);
+}
+
+.teaching-left-panel .teaching-title {
+  @apply m-0 text-xl font-semibold;
+  color: var(--color-text-primary);
+}
+
+.teaching-left-panel .teaching-subtitle {
+  @apply mt-1 text-xs;
+  color: var(--color-text-secondary);
+}
+
+/* ========================================
+   控制区
+   ======================================== */
+.control-section {
+  @apply flex shrink-0 flex-col overflow-hidden border-b;
+  border-color: var(--color-border-color);
+}
+
+/* 区域头部 - 带折叠按钮 */
+.section-header {
+  @apply flex shrink-0 items-center justify-between border-b px-4 py-2;
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border-color);
+}
+
+.section-title {
+  @apply m-0 text-xs font-semibold uppercase tracking-wide;
+  color: var(--color-text-primary);
+}
+
+.section-toggle {
+  @apply flex h-6 w-6 items-center justify-center rounded border p-0 text-sm font-semibold transition-all;
+  background: var(--color-btn-bg);
+  border-color: var(--color-border-color);
+  color: var(--color-text-secondary);
+}
+
+.section-toggle:hover {
+  background: var(--color-btn-hover-bg);
+  border-color: var(--color-accent-color);
+  color: var(--color-accent-color);
+}
+
+/* 折叠状态 */
+.control-section[data-collapsed="true"] .control-slot,
+.graph-section[data-collapsed="true"] .graph-slot {
+  @apply hidden;
+}
+
+.control-section[data-collapsed="true"] .section-header,
+.graph-section[data-collapsed="true"] .section-header {
+  @apply border-b-0;
+}
+
+.control-slot {
+  @apply flex shrink-0 flex-col gap-2.5 overflow-y-auto overflow-x-hidden px-4 py-3;
+}
+
+.control-slot > * {
+  @apply min-w-0;
+}
+
+/* ========================================
+   图表区
+   ======================================== */
+.graph-section {
+  @apply flex min-h-[140px] flex-1 flex-col;
+  background: var(--color-bg-primary);
+}
+
+.graph-section .section-title {
+  @apply text-xs font-semibold;
+  color: var(--color-text-primary);
+}
+
+.graph-slot {
+  @apply relative min-h-0 flex-1;
+}
+
+.graph-slot canvas {
+  @apply block h-full w-full;
+}
+
+/* 无图表时隐藏 */
+.teaching-demo[data-has-graph="false"] .graph-section {
+  @apply hidden;
+}
+
+/* ========================================
+   可拖拽分隔线
+   ======================================== */
+.panel-resizer {
+  @apply relative z-10 w-2 cursor-col-resize transition-colors;
+  background: var(--color-border-color);
+}
+
+.panel-resizer:hover,
+.panel-resizer.is-dragging {
+  background: var(--color-accent-color);
+}
+
+.panel-resizer::before {
+  @apply absolute left-1/2 top-1/2 h-8 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-50;
+  content: '';
+  background: var(--color-text-muted);
+}
+
+/* ========================================
+   右侧面板 - 动画区 + 数据区
+   ======================================== */
+.teaching-right-panel {
+  @apply relative col-start-3 flex flex-col overflow-hidden;
+  background: var(--color-bg-primary);
+}
+
+/* 工具栏 */
+.stage-toolbar {
+  @apply flex shrink-0 items-center justify-between gap-3 border-b px-4 py-3;
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border-color);
+}
+
+.stage-toolbar .sidebar-toggle {
+  @apply cursor-pointer rounded-md border px-3 py-1.5 text-sm transition-all;
+  background: var(--color-btn-bg);
+  border-color: var(--color-border-color);
+  color: var(--color-text-secondary);
+}
+
+.stage-toolbar .sidebar-toggle:hover {
+  background: var(--color-btn-hover-bg);
+  color: var(--color-text-primary);
+}
+
+.toolbar-actions {
+  @apply flex gap-2;
+}
+
+.mode-toggle,
+.shell-theme-toggle {
+  @apply cursor-pointer rounded-md border px-3 py-1.5 text-sm transition-all;
+  background: var(--color-btn-bg);
+  border-color: var(--color-border-color);
+  color: var(--color-text-secondary);
+}
+
+.mode-toggle {
+  background: var(--color-accent-color);
+  border-color: var(--color-accent-color);
+  color: white;
+}
+
+.mode-toggle:hover,
+.shell-theme-toggle:hover {
+  @apply -translate-y-px opacity-90;
+}
+
+/* 动画区框架 */
+.stage-frame {
+  @apply relative min-h-0 flex-1 overflow-hidden p-0;
+  background: var(--color-stage-bg);
+}
+
+.stage-slot {
+  @apply absolute left-0 top-0 flex h-full w-full items-center justify-center;
+}
+
+/* 场景自定义内容填满舞台（排除canvas和浮动控件） */
+.stage-slot > *:not(canvas):not(.stage-floating-controls) {
+  @apply h-full max-h-full w-full max-w-full;
+}
+
+.stage-canvas {
+  @apply block h-full max-h-none w-full max-w-none;
+}
+
+/* ========================================
+   动画区浮动控制按钮
+   ======================================== */
+.stage-floating-controls {
+  @apply absolute left-3 top-3 z-50 inline-flex gap-1.5 rounded-lg border p-1.5;
+  background: var(--color-bg-primary);
+  border-color: var(--color-border-color);
+  box-shadow: var(--shadow-lg);
+}
+
+.stage-floating-controls button {
+  @apply flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border p-0 text-sm transition-all;
+  background: var(--color-btn-bg);
+  border-color: var(--color-border-color);
+  color: var(--color-text-secondary);
+}
+
+.stage-floating-controls button:hover {
+  border-color: var(--color-accent-color);
+  background: var(--color-btn-hover-bg);
+  color: var(--color-text-primary);
+}
+
+.stage-floating-controls button:active {
+  @apply translate-y-px;
+}
+
+/* ========================================
+   数据区 - 浮动面板
+   ======================================== */
+.readout-panel {
+  @apply absolute right-4 top-[60px] z-[100] min-w-[240px] max-w-[360px] overflow-hidden rounded-xl border text-xs transition-all;
+  background: var(--color-bg-primary);
+  border-color: var(--color-border-color);
+  box-shadow: var(--shadow-lg);
+}
+
+.readout-panel.is-collapsed {
+  @apply h-auto w-auto min-w-0 max-w-none;
+}
+
+.readout-panel.is-collapsed .readout-slot {
+  @apply hidden;
+}
+
+.readout-header {
+  @apply flex items-center justify-between border-b px-4 py-3;
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border-color);
+}
+
+.readout-title {
+  @apply text-base font-semibold;
+  color: var(--color-text-primary);
+}
+
+.readout-toggle {
+  @apply cursor-pointer rounded border px-3 py-1.5 text-sm transition-all;
+  background: var(--color-btn-bg);
+  border-color: var(--color-border-color);
+  color: var(--color-text-secondary);
+}
+
+.readout-toggle:hover {
+  background: var(--color-btn-hover-bg);
+}
+
+.readout-slot {
+  @apply m-0 flex max-h-[400px] list-none flex-wrap content-start gap-1.5 overflow-y-auto p-3;
+  background: var(--color-bg-primary);
+}
+
+.readout-item {
+  @apply box-border flex min-w-0 flex-1 basis-full items-center justify-between rounded-md px-3.5 py-2.5 text-base;
+  background: var(--color-bg-secondary);
+}
+
+.readout-item--half {
+  @apply min-w-[140px] flex-1 basis-[calc(50%-3px)];
+}
+
+.readout-label {
+  @apply mr-2.5 text-sm;
+  color: var(--color-text-secondary);
+}
+
+.readout-value {
+  @apply font-mono text-base font-semibold;
+  color: var(--color-accent-color);
+}
+
+/* ========================================
+   响应式布局
+   ======================================== */
+
+/* 平板 */
+@media (max-width: 1024px) {
+  .teaching-demo.v2-layout {
+    grid-template-columns: 280px 8px 1fr;
+  }
+}
+
+/* 手机 */
+@media (max-width: 768px) {
+  .teaching-demo.v2-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+  
+  .teaching-left-panel {
+    @apply max-h-[50vh] border-r-0 border-b;
+    border-color: var(--color-border-color);
+  }
+  
+  .panel-resizer {
+    @apply hidden;
+  }
+  
+  .readout-panel {
+    @apply fixed bottom-4 right-4 left-4 top-auto max-w-none;
+  }
+}
+
+/* ========================================
+   演示模式
+   ======================================== */
+.teaching-demo[data-mode="presentation"] .stage-toolbar {
+  @apply hidden;
+}
+
+.teaching-demo[data-mode="presentation"] .stage-floating-controls {
+  @apply left-4 top-4;
+}
+
+.teaching-demo[data-mode="presentation"] .readout-panel {
+  @apply right-4 top-4;
+}
