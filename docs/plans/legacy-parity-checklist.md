@@ -1,6 +1,8 @@
 # Legacy -> Modern Parity Checklist
 
 > 用于逐场景验证“modern 版本与 legacy 演示一致”。
+**迁移实施前请阅读：[场景迁移到统一框架的要求规范](../scene-migration-requirements.md)**
+
 
 ## Global Rules
 
