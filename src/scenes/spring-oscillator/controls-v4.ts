@@ -216,14 +216,18 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
     const isHorizontal = osc.params.orientation === 'horizontal';
     const orientBtn = document.createElement('button');
     orientBtn.type = 'button';
-    orientBtn.className = [
-      'w-7 h-6 text-[10px] font-medium rounded shrink-0',
-      'border border-gray-300 dark:border-gray-600',
-      'bg-white dark:bg-gray-700',
-      'text-gray-700 dark:text-gray-200',
-      'cursor-pointer transition-all',
-      'hover:bg-gray-100 dark:hover:bg-gray-600'
-    ].join(' ');
+    orientBtn.className = 'w-7 h-6 text-[10px] font-medium rounded shrink-0 cursor-pointer transition-all';
+    orientBtn.style.cssText = `
+      border: 1px solid var(--border-color);
+      background: var(--btn-bg);
+      color: var(--text-primary);
+    `;
+    orientBtn.addEventListener('mouseenter', () => {
+      orientBtn.style.background = 'var(--btn-hover-bg)';
+    });
+    orientBtn.addEventListener('mouseleave', () => {
+      orientBtn.style.background = 'var(--btn-bg)';
+    });
     orientBtn.textContent = isHorizontal ? '横' : '竖';
     orientBtn.title = '点击切换方向';
     
@@ -288,7 +292,8 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
     container.className = 'flex items-center gap-0.5 flex-1 min-w-0';
     
     const labelSpan = document.createElement('span');
-    labelSpan.className = 'text-[11px] text-slate-500 dark:text-slate-400 font-medium shrink-0';
+    labelSpan.className = 'text-[11px] font-medium shrink-0';
+    labelSpan.style.color = 'var(--text-secondary)';
     labelSpan.textContent = label;
     
     const slider = document.createElement('input');
@@ -300,7 +305,8 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
     slider.className = 'flex-1 h-1 min-w-[30px] accent-coral';
     
     const valueSpan = document.createElement('span');
-    valueSpan.className = 'text-[10px] w-6 text-right text-slate-700 dark:text-slate-200 shrink-0';
+    valueSpan.className = 'text-[10px] w-6 text-right shrink-0';
+    valueSpan.style.color = 'var(--text-primary)';
     valueSpan.textContent = String(value);
     
     slider.addEventListener('input', () => {
@@ -320,11 +326,11 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
     listContainer.innerHTML = '';
     
     if (scene.sim.oscillators.length === 0) {
-      listContainer.innerHTML = `
-        <div class="text-center py-3 text-xs text-slate-500 dark:text-slate-400">
-          暂无振子，点击上方"+ 添加"按钮
-        </div>
-      `;
+      const emptyDiv = document.createElement('div');
+      emptyDiv.className = 'text-center py-3 text-xs';
+      emptyDiv.style.color = 'var(--text-secondary)';
+      emptyDiv.textContent = '暂无振子，点击上方"+ 添加"按钮';
+      listContainer.appendChild(emptyDiv);
       return;
     }
     
