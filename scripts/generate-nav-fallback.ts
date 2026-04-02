@@ -1,39 +1,41 @@
-import { mkdir, writeFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { sceneRegistry, type SceneRegistryEntry } from '../src/catalog/scene-registry';
+import { writeFileSync } from 'fs';
+import { resolve } from 'path';
 
-type FallbackEntry = Pick<SceneRegistryEntry, 'id' | 'title' | 'path' | 'subject' | 'concept' | 'subConcepts'>;
-
-export function toFallbackScript(entries: FallbackEntry[]): string {
-  return `window.__SCENE_FALLBACK__ = ${JSON.stringify(entries)};\n`;
+interface ScenePage {
+  id: string;
+  title: string;
+  path: string;
+  subject: string;
+  concept: string;
+  subConcepts: string[];
 }
 
-export async function generateNavFallback(outFile = resolve(process.cwd(), 'public/scene-fallback.js')): Promise<FallbackEntry[]> {
-  const entries = sceneRegistry.map((item) => ({
-    id: item.id,
-    title: item.title,
-    path: item.path,
-    subject: item.subject,
-    concept: item.concept,
-    subConcepts: item.subConcepts
-  }));
-
-  await mkdir(dirname(outFile), { recursive: true });
-  await writeFile(outFile, toFallbackScript(entries), 'utf8');
-  return entries;
+export function toFallbackScript(pages: ScenePage[]) {
+  return `<script>window.__SCENE_FALLBACK__ = ${JSON.stringify(pages)}</script>`;
 }
 
-async function maybeRunCli(): Promise<void> {
-  const entryArg = process.argv[1];
-  if (!entryArg) return;
+const pages = [
+  { id: 'projectile', title: '抛体运动', path: '/scenes/projectile/', subject: '力学', concept: '曲线运动', subConcepts: ['速度分解'] },
+  { id: 'chase-meet', title: '追及相遇', path: '/scenes/chase-meet/', subject: '力学', concept: '相对运动', subConcepts: ['v-t图像'] },
+  { id: 'field-lines', title: '电场分布', path: '/scenes/field-lines/', subject: '电磁学', concept: '电场分布', subConcepts: ['场线疏密'] },
+];
 
-  const expected = pathToFileURL(resolve(entryArg)).href;
-  if (import.meta.url !== expected) return;
+const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>物理实验室</title>
+  ${toFallbackScript(pages)}
+  <meta http-equiv="refresh" content="0;url=/">
+</head>
+<body>
+  <p>Redirecting...</p>
+</body>
+</html>`;
 
-  const outFile = process.argv[2] ? resolve(process.cwd(), process.argv[2]) : resolve(process.cwd(), 'public/scene-fallback.js');
-  const result = await generateNavFallback(outFile);
-  console.log(`Generated ${result.length} fallback entries -> ${outFile}`);
-}
+writeFileSync(
+  resolve(process.cwd(), 'dist/nav-fallback.html'),
+  html
+);
 
-void maybeRunCli();
+console.log('Nav fallback generated');

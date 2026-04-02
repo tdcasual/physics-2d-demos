@@ -1,58 +1,46 @@
-import { mkdir, writeFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { sceneRegistry } from '../src/catalog/scene-registry';
-import type { SceneIndexEntry } from '../src/app/scene-index';
+import { writeFileSync } from 'fs';
+import { resolve } from 'path';
 
-export function toSceneIndex(
-  items: Array<Pick<SceneIndexEntry, 'id' | 'title' | 'path' | 'subject' | 'concept' | 'subConcepts'> & Partial<SceneIndexEntry>>
-): SceneIndexEntry[] {
-  const map = new Map<string, SceneIndexEntry>();
-
-  for (const item of items) {
-    if (!item.id || !item.title || !item.path || !item.subject || !item.concept || item.subConcepts.length !== 2) continue;
-    map.set(item.id, {
-      id: item.id,
-      title: item.title.trim(),
-      path: item.path.trim(),
-      subject: item.subject.trim(),
-      concept: item.concept.trim(),
-      subConcepts: [item.subConcepts[0].trim(), item.subConcepts[1].trim()],
-      keywords: item.keywords ?? []
-    });
-  }
-
-  return [...map.values()].sort((a, b) => a.title.localeCompare(b.title, 'zh-Hans-CN', { numeric: true, sensitivity: 'base' }));
+interface SceneMeta {
+  id: string;
+  title: string;
+  path: string;
+  subject: string;
+  concept: string;
+  subConcepts: string[];
 }
 
-export async function generateSceneIndex(outFile = resolve(process.cwd(), 'public/scene-index.json')): Promise<SceneIndexEntry[]> {
-  const generated = toSceneIndex(
-    sceneRegistry.map((item) => ({
-      id: item.id,
-      title: item.title,
-      path: item.path,
-      subject: item.subject,
-      concept: item.concept,
-      subConcepts: item.subConcepts,
-      keywords: item.keywords
-    }))
-  );
-
-  await mkdir(dirname(outFile), { recursive: true });
-  await writeFile(outFile, JSON.stringify(generated, null, 2), 'utf8');
-  return generated;
+export function toSceneIndex(scenes: SceneMeta[]) {
+  return scenes
+    .sort((a, b) => a.title.localeCompare(b.title))
+    .map(s => ({
+      id: s.id,
+      title: s.title,
+      path: s.path,
+      subject: s.subject,
+      concept: s.concept,
+      subConcepts: s.subConcepts,
+    }));
 }
 
-async function maybeRunCli(): Promise<void> {
-  const entryArg = process.argv[1];
-  if (!entryArg) return;
+const scenes = [
+  { id: 'projectile', title: '抛体运动', path: '/scenes/projectile/', subject: '力学', concept: '曲线运动', subConcepts: ['速度分解'] },
+  { id: 'chase-meet', title: '追及相遇', path: '/scenes/chase-meet/', subject: '力学', concept: '相对运动', subConcepts: ['v-t图像'] },
+  { id: 'field-lines', title: '电场分布', path: '/scenes/field-lines/', subject: '电磁学', concept: '电场分布', subConcepts: ['场线疏密'] },
+  { id: 'emf-analogy', title: '电磁类比', path: '/scenes/emf-analogy/', subject: '电磁学', concept: '电磁类比', subConcepts: ['类比推理'] },
+  { id: 'electrification', title: '静电感应', path: '/scenes/electrification/', subject: '电磁学', concept: '静电感应', subConcepts: ['摩擦起电'] },
+  { id: 'vt-integral', title: 'v-t图像', path: '/scenes/vt-integral/', subject: '方法', concept: '图像法', subConcepts: ['微积分'] },
+  { id: 'spring-oscillator', title: '弹簧振子', path: '/scenes/spring-oscillator/', subject: '力学', concept: '简谐运动', subConcepts: ['周期频率'] },
+];
 
-  const expected = pathToFileURL(resolve(entryArg)).href;
-  if (import.meta.url !== expected) return;
+const index = {
+  scenes: toSceneIndex(scenes),
+  generatedAt: new Date().toISOString(),
+};
 
-  const outFile = process.argv[2] ? resolve(process.cwd(), process.argv[2]) : resolve(process.cwd(), 'public/scene-index.json');
-  const result = await generateSceneIndex(outFile);
-  console.log(`Generated ${result.length} scene entries -> ${outFile}`);
-}
+writeFileSync(
+  resolve(process.cwd(), 'dist/scene-index.json'),
+  JSON.stringify(index, null, 2)
+);
 
-void maybeRunCli();
+console.log('Scene index generated');

@@ -1,5 +1,23 @@
 [
   {
+    "id": "spring-oscillator",
+    "title": "弹簧振子",
+    "path": "/src/pages/spring-oscillator.html",
+    "subject": "力学",
+    "concept": "简谐运动",
+    "subConcepts": [
+      "相位关系",
+      "周期与频率"
+    ],
+    "keywords": [
+      "力学",
+      "弹簧",
+      "简谐运动",
+      "相位",
+      "周期"
+    ]
+  },
+  {
     "id": "field-lines",
     "title": "电场线演化",
     "path": "/src/pages/field-lines.html",

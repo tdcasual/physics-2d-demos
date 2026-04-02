@@ -114,6 +114,8 @@ tests/
    - 至少 1 个 visual test（页面截图）
 6. 执行质量门禁并更新快照（如需要）
 
+详细迁移要求见：[场景迁移到统一框架的要求规范](./docs/scene-migration-requirements.md)
+
 ## CI
 
 GitHub Actions workflow：`.github/workflows/ci.yml`
