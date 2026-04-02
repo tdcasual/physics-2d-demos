@@ -147,6 +147,18 @@ function bootModern(mount: HTMLElement): void {
       scene.setCustomCharges(q1, q2);
       scene.render();
     },
+    onAddCharge: (q) => {
+      scene.addCharge(q);
+      scene.render();
+      shell.setStatus(q > 0 ? '添加正电荷' : '添加负电荷');
+    },
+    onRemoveCharge: (index) => {
+      const charges = scene.getSnapshot().charges;
+      const removeIndex = index === -1 ? charges.length - 1 : index;
+      scene.removeCharge(removeIndex);
+      scene.render();
+      shell.setStatus('移除电荷');
+    },
     onReset: () => {
       scene.reset();
       scene.render();

@@ -110,6 +110,20 @@ export function createFieldLinesSim(initial: Partial<FieldLinesParams>) {
       charges[index].x = clamp(x, 0.02, 0.98);
       charges[index].y = clamp(y, 0.02, 0.98);
     },
+    addCharge(q: number): void {
+      // 在随机位置添加新电荷
+      const newCharge: FieldCharge = {
+        x: 0.2 + Math.random() * 0.6,
+        y: 0.2 + Math.random() * 0.6,
+        q: q
+      };
+      charges.push(newCharge);
+    },
+    removeCharge(index: number): void {
+      if (index < 0 || index >= charges.length) return;
+      if (charges.length <= 1) return; // 至少保留一个电荷
+      charges.splice(index, 1);
+    },
     reset(): void {
       params = normalizeParams({
         scene: 'single',

@@ -20,6 +20,8 @@ export function createFieldLinesScene(options: CreateFieldLinesSceneOptions = {}
   setCustomCharges(q1: number, q2: number): void;
   pickCharge(normX: number, normY: number): number | null;
   moveCharge(index: number, normX: number, normY: number): void;
+  addCharge(q: number): void;
+  removeCharge(index: number): void;
   getSnapshot(): FieldLinesSnapshot;
 } {
   const sim = createFieldLinesSim({
@@ -81,6 +83,12 @@ export function createFieldLinesScene(options: CreateFieldLinesSceneOptions = {}
     },
     moveCharge(index: number, normX: number, normY: number): void {
       sim.setChargePosition(index, normX, normY);
+    },
+    addCharge(q: number): void {
+      sim.addCharge(q);
+    },
+    removeCharge(index: number): void {
+      sim.removeCharge(index);
     },
     getSnapshot(): FieldLinesSnapshot {
       return sim.getSnapshot();

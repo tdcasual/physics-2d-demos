@@ -3,8 +3,8 @@
  */
 
 import { createControlCard } from '../../ui/components/ControlCard';
-import { createButtonGrid, createSliderRow } from '../../ui/components/SceneControls';
-import { styles, createElement } from '../../ui/components';
+import { createSliderRow } from '../../ui/components/SceneControls';
+import { createElement } from '../../ui/components';
 
 export interface ProjectileControlsOptions {
   mount: HTMLElement;
@@ -73,32 +73,43 @@ export function createProjectileControlsV4(options: ProjectileControlsOptions): 
   const presetButtons: Record<string, HTMLElement> = {};
   
   presets.forEach(p => {
-    const btn = createElement('button', [
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = [
       'flex flex-col items-center justify-center',
       'px-2 py-2',
-      'bg-slate-100 dark:bg-slate-700/50',
-      'border border-slate-200 dark:border-slate-600',
       'rounded-lg cursor-pointer',
       'transition-all duration-200',
-      'hover:bg-slate-200 dark:hover:bg-slate-600',
-      p.value === activePreset ? 'border-coral bg-coral/10' : '',
-    ].join(' '));
+    ].join(' ');
     
-    btn.innerHTML = `
-      <span class="text-xs font-semibold ${p.value === activePreset ? 'text-coral' : 'text-slate-900 dark:text-slate-100'}">${p.label}</span>
-      <span class="text-[10px] text-slate-500 dark:text-slate-400">${p.desc}</span>
+    const labelSpan = document.createElement('span');
+    labelSpan.className = 'text-xs font-semibold';
+    labelSpan.style.color = p.value === activePreset ? 'var(--accent-primary)' : 'var(--text-primary)';
+    labelSpan.textContent = p.label;
+    
+    const descSpan = document.createElement('span');
+    descSpan.className = 'text-[10px]';
+    descSpan.style.color = 'var(--text-secondary)';
+    descSpan.textContent = p.desc;
+    
+    btn.append(labelSpan, descSpan);
+    
+    // 设置基础样式
+    btn.style.cssText = `
+      background: ${p.value === activePreset ? 'var(--btn-hover-bg)' : 'var(--btn-bg)'};
+      border: 1px solid ${p.value === activePreset ? 'var(--accent-primary)' : 'var(--border-color)'};
     `;
     
     btn.addEventListener('click', () => {
       // 更新激活状态
       Object.entries(presetButtons).forEach(([key, button]) => {
         const isActive = key === p.value;
-        button.classList.toggle('border-coral', isActive);
-        button.classList.toggle('bg-coral/10', isActive);
-        const labelSpan = button.querySelector('span:first-child')!;
-        labelSpan.classList.toggle('text-coral', isActive);
-        labelSpan.classList.toggle('text-slate-900', !isActive);
-        labelSpan.classList.toggle('dark:text-slate-100', !isActive);
+        const btnLabelSpan = button.querySelector('span:first-child') as HTMLElement;
+        if (btnLabelSpan) {
+          btnLabelSpan.style.color = isActive ? 'var(--accent-primary)' : 'var(--text-primary)';
+        }
+        button.style.background = isActive ? 'var(--btn-hover-bg)' : 'var(--btn-bg)';
+        button.style.borderColor = isActive ? 'var(--accent-primary)' : 'var(--border-color)';
       });
       activePreset = p.value;
       onPresetSelect?.(p.value);
@@ -122,20 +133,15 @@ export function createProjectileControlsV4(options: ProjectileControlsOptions): 
   const checkboxContainer = createElement('div', 'flex flex-col gap-2');
   
   checkboxes.forEach(cb => {
-    const label = createElement('label', [
-      'flex items-center gap-2',
-      'text-xs cursor-pointer',
-      'text-slate-700 dark:text-slate-300',
-    ].join(' '));
+    const label = document.createElement('label');
+    label.className = 'flex items-center gap-2 text-xs cursor-pointer';
+    label.style.color = 'var(--text-primary)';
     
-    const input = createElement('input', '', {
-      attrs: {
-        type: 'checkbox',
-        'data-role': cb.key,
-        ...(cb.checked ? { checked: 'checked' } : {}),
-      },
-    }) as HTMLInputElement;
-    input.style.accentColor = '#4ECDC4';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.dataset.role = cb.key;
+    if (cb.checked) input.checked = true;
+    input.style.accentColor = 'var(--accent-color)';
     
     const span = createElement('span', '', { text: cb.label });
     
@@ -157,12 +163,12 @@ export function createProjectileControlsV4(options: ProjectileControlsOptions): 
     updatePreset(preset: string) {
       Object.entries(presetButtons).forEach(([key, button]) => {
         const isActive = key === preset;
-        button.classList.toggle('border-coral', isActive);
-        button.classList.toggle('bg-coral/10', isActive);
-        const labelSpan = button.querySelector('span:first-child')!;
-        labelSpan.classList.toggle('text-coral', isActive);
-        labelSpan.classList.toggle('text-slate-900', !isActive);
-        labelSpan.classList.toggle('dark:text-slate-100', !isActive);
+        const btnLabelSpan = button.querySelector('span:first-child') as HTMLElement;
+        if (btnLabelSpan) {
+          btnLabelSpan.style.color = isActive ? 'var(--accent-primary)' : 'var(--text-primary)';
+        }
+        button.style.background = isActive ? 'var(--btn-hover-bg)' : 'var(--btn-bg)';
+        button.style.borderColor = isActive ? 'var(--accent-primary)' : 'var(--border-color)';
       });
       activePreset = preset;
     }

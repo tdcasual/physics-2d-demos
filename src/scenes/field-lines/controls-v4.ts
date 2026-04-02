@@ -27,10 +27,10 @@ export function createFieldLinesControlsV4(options: FieldLinesControlsOptions) {
   sceneBtns.className = 'grid grid-cols-2 gap-2';
   
   const scenes = [
-    { label: '点电荷', value: 'point', desc: '单点电荷电场' },
-    { label: '双极子', value: 'dipole', desc: '电偶极子电场' },
-    { label: '四极子', value: 'quadrupole', desc: '电四极子电场' },
-    { label: '平行板', value: 'plates', desc: '平行板电场' }
+    { label: '单个电荷', value: 'single', desc: '单点电荷电场' },
+    { label: '同种电荷', value: 'like', desc: '同种电荷电场' },
+    { label: '异种电荷', value: 'unlike', desc: '异种电荷电场' },
+    { label: '自定义双电荷', value: 'custom', desc: '自定义双电荷电场' }
   ];
   
   scenes.forEach(s => {
@@ -91,12 +91,28 @@ export function createFieldLinesControlsV4(options: FieldLinesControlsOptions) {
     onStatus?.('添加负电荷');
   });
   
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.textContent = '移除电荷';
+  removeBtn.className = [
+    'px-3 py-2',
+    'bg-slate-200 dark:bg-slate-700',
+    'text-slate-900 dark:text-slate-100 text-sm font-medium',
+    'rounded-lg cursor-pointer',
+    'hover:bg-slate-300 dark:hover:bg-slate-600 transition-all'
+  ].join(' ');
+  removeBtn.addEventListener('click', () => {
+    onRemoveCharge?.(-1); // 移除最后一个
+    onStatus?.('移除电荷');
+  });
+  
   chargeBtns.append(addPosBtn, addNegBtn);
+  chargeCard.body.appendChild(removeBtn);
   chargeCard.body.appendChild(chargeBtns);
 
   // 密度控制卡片
   const densityCard = createControlCard('线密度', { defaultCollapsed: true });
-  const densitySlider = createSliderRow('电场线密度', 0.5, 2, 0.1, 1, '', (val) => {
+  const densitySlider = createSliderRow('电场线密度', 1, 100, 1, 10, '', (val) => {
     onSetDensity?.(val);
   });
   densityCard.body.appendChild(densitySlider);

@@ -32,10 +32,15 @@ export function createEmfAnalogyControlsV4(options: EmfAnalogyControlsOptions) {
   onBtn.textContent = '闭合开关';
   onBtn.className = [
     'px-3 py-2',
-    'bg-coral text-white text-sm font-medium',
+    'text-sm font-medium',
     'rounded-lg cursor-pointer',
     'hover:brightness-110 transition-all'
   ].join(' ');
+  onBtn.style.cssText = `
+    background: var(--accent-primary);
+    color: var(--text-inverse);
+    border: none;
+  `;
   onBtn.addEventListener('click', () => {
     onSetSystemOn?.(true);
     onStatus?.('开关闭合');
@@ -46,11 +51,21 @@ export function createEmfAnalogyControlsV4(options: EmfAnalogyControlsOptions) {
   offBtn.textContent = '断开开关';
   offBtn.className = [
     'px-3 py-2',
-    'bg-slate-200 dark:bg-slate-700',
-    'text-slate-900 dark:text-slate-100 text-sm font-medium',
+    'text-sm font-medium',
     'rounded-lg cursor-pointer',
-    'hover:bg-slate-300 dark:hover:bg-slate-600 transition-all'
+    'transition-all'
   ].join(' ');
+  offBtn.style.cssText = `
+    background: var(--btn-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+  `;
+  offBtn.addEventListener('mouseenter', () => {
+    offBtn.style.background = 'var(--btn-hover-bg)';
+  });
+  offBtn.addEventListener('mouseleave', () => {
+    offBtn.style.background = 'var(--btn-bg)';
+  });
   offBtn.addEventListener('click', () => {
     onSetSystemOn?.(false);
     onStatus?.('开关断开');
@@ -86,15 +101,23 @@ export function createEmfAnalogyControlsV4(options: EmfAnalogyControlsOptions) {
       button.className = [
         'flex flex-col items-center gap-1',
         'px-2 py-2',
-        'bg-slate-100 dark:bg-slate-700/50',
-        'border border-slate-200 dark:border-slate-600',
         'rounded-lg cursor-pointer',
-        'hover:bg-slate-200 dark:hover:bg-slate-600 transition-all'
+        'transition-all'
       ].join(' ');
+      button.style.cssText = `
+        background: var(--btn-bg);
+        border: 1px solid var(--border-color);
+      `;
       button.innerHTML = `
         <span class="text-sm">${btn.icon}</span>
-        <span class="text-[10px] text-slate-600 dark:text-slate-400">${btn.label}</span>
+        <span class="text-[10px]" style="color: var(--text-secondary)">${btn.label}</span>
       `;
+      button.addEventListener('mouseenter', () => {
+        button.style.background = 'var(--btn-hover-bg)';
+      });
+      button.addEventListener('mouseleave', () => {
+        button.style.background = 'var(--btn-bg)';
+      });
       button.addEventListener('click', btn.action);
       transport.appendChild(button);
     });
@@ -114,10 +137,15 @@ export function createEmfAnalogyControlsV4(options: EmfAnalogyControlsOptions) {
     circuitBtn.textContent = '电路视图';
     circuitBtn.className = [
       'px-3 py-2',
-      'bg-coral text-white text-sm font-medium',
+      'text-sm font-medium',
       'rounded-lg cursor-pointer',
       'hover:brightness-110 transition-all'
     ].join(' ');
+    circuitBtn.style.cssText = `
+      background: var(--accent-primary);
+      color: var(--text-inverse);
+      border: none;
+    `;
     circuitBtn.addEventListener('click', () => {
       onSwitchView?.('circuit');
       onStatus?.('切换到电路视图');
@@ -128,11 +156,21 @@ export function createEmfAnalogyControlsV4(options: EmfAnalogyControlsOptions) {
     waterBtn.textContent = '水类比';
     waterBtn.className = [
       'px-3 py-2',
-      'bg-slate-200 dark:bg-slate-700',
-      'text-slate-900 dark:text-slate-100 text-sm font-medium',
+      'text-sm font-medium',
       'rounded-lg cursor-pointer',
-      'hover:bg-slate-300 dark:hover:bg-slate-600 transition-all'
+      'transition-all'
     ].join(' ');
+    waterBtn.style.cssText = `
+      background: var(--btn-bg);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    `;
+    waterBtn.addEventListener('mouseenter', () => {
+      waterBtn.style.background = 'var(--btn-hover-bg)';
+    });
+    waterBtn.addEventListener('mouseleave', () => {
+      waterBtn.style.background = 'var(--btn-bg)';
+    });
     waterBtn.addEventListener('click', () => {
       onSwitchView?.('water');
       onStatus?.('切换到水类比视图');
@@ -164,11 +202,21 @@ export function createEmfAnalogyControlsV4(options: EmfAnalogyControlsOptions) {
     resetBtn.textContent = '重置系统';
     resetBtn.className = [
       'w-full px-3 py-2',
-      'bg-slate-200 dark:bg-slate-700',
-      'text-slate-900 dark:text-slate-100 text-sm font-medium',
+      'text-sm font-medium',
       'rounded-lg cursor-pointer',
-      'hover:bg-slate-300 dark:hover:bg-slate-600 transition-all'
+      'transition-all'
     ].join(' ');
+    resetBtn.style.cssText = `
+      background: var(--btn-bg);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    `;
+    resetBtn.addEventListener('mouseenter', () => {
+      resetBtn.style.background = 'var(--btn-hover-bg)';
+    });
+    resetBtn.addEventListener('mouseleave', () => {
+      resetBtn.style.background = 'var(--btn-bg)';
+    });
     resetBtn.addEventListener('click', () => {
       onReset?.();
       onStatus?.('系统已重置');

@@ -48,15 +48,23 @@ export function createVtIntegralControlsV4(options: VtIntegralControlsOptions) {
       button.className = [
         'flex flex-col items-center gap-1',
         'px-2 py-2',
-        'bg-slate-100 dark:bg-slate-700/50',
-        'border border-slate-200 dark:border-slate-600',
         'rounded-lg cursor-pointer',
-        'hover:bg-slate-200 dark:hover:bg-slate-600 transition-all'
+        'transition-all'
       ].join(' ');
+      button.style.cssText = `
+        background: var(--btn-bg);
+        border: 1px solid var(--border-color);
+      `;
       button.innerHTML = `
         <span class="text-sm">${btn.icon}</span>
-        <span class="text-[10px] text-slate-600 dark:text-slate-400">${btn.label}</span>
+        <span class="text-[10px]" style="color: var(--text-secondary)">${btn.label}</span>
       `;
+      button.addEventListener('mouseenter', () => {
+        button.style.background = 'var(--btn-hover-bg)';
+      });
+      button.addEventListener('mouseleave', () => {
+        button.style.background = 'var(--btn-bg)';
+      });
       button.addEventListener('click', btn.action);
       transport.appendChild(button);
     });
@@ -77,17 +85,25 @@ export function createVtIntegralControlsV4(options: VtIntegralControlsOptions) {
       btn.className = [
         'flex items-center justify-between',
         'px-3 py-2',
-        'bg-slate-100 dark:bg-slate-700/50',
-        'border border-slate-200 dark:border-slate-600',
         'rounded-lg cursor-pointer',
-        'transition-all duration-200',
-        'hover:bg-slate-200 dark:hover:bg-slate-600',
-        'hover:border-teal-400'
+        'transition-all duration-200'
       ].join(' ');
-      btn.innerHTML = `
-        <span class="text-xs font-semibold text-slate-900 dark:text-slate-100">${s.label}</span>
-        <span class="text-[10px] text-slate-500 dark:text-slate-400">${s.desc}</span>
+      btn.style.cssText = `
+        background: var(--btn-bg);
+        border: 1px solid var(--border-color);
       `;
+      btn.innerHTML = `
+        <span class="text-xs font-semibold" style="color: var(--text-primary)">${s.label}</span>
+        <span class="text-[10px]" style="color: var(--text-secondary)">${s.desc}</span>
+      `;
+      btn.addEventListener('mouseenter', () => {
+        btn.style.background = 'var(--btn-hover-bg)';
+        btn.style.borderColor = 'var(--accent-color)';
+      });
+      btn.addEventListener('mouseleave', () => {
+        btn.style.background = 'var(--btn-bg)';
+        btn.style.borderColor = 'var(--border-color)';
+      });
       btn.addEventListener('click', () => {
         if (isValidVtScene(s.value)) {
           onSetScene?.(s.value);
@@ -119,17 +135,25 @@ export function createVtIntegralControlsV4(options: VtIntegralControlsOptions) {
       btn.className = [
         'flex flex-col items-center',
         'px-2 py-2',
-        'bg-slate-100 dark:bg-slate-700/50',
-        'border border-slate-200 dark:border-slate-600',
         'rounded-lg cursor-pointer',
-        'transition-all duration-200',
-        'hover:bg-slate-200 dark:hover:bg-slate-600',
-        'hover:border-teal-400'
+        'transition-all duration-200'
       ].join(' ');
-      btn.innerHTML = `
-        <span class="text-xs font-semibold text-slate-900 dark:text-slate-100">${p.label}</span>
-        <span class="text-[10px] text-slate-500 dark:text-slate-400">${p.desc}</span>
+      btn.style.cssText = `
+        background: var(--btn-bg);
+        border: 1px solid var(--border-color);
       `;
+      btn.innerHTML = `
+        <span class="text-xs font-semibold" style="color: var(--text-primary)">${p.label}</span>
+        <span class="text-[10px]" style="color: var(--text-secondary)">${p.desc}</span>
+      `;
+      btn.addEventListener('mouseenter', () => {
+        btn.style.background = 'var(--btn-hover-bg)';
+        btn.style.borderColor = 'var(--accent-color)';
+      });
+      btn.addEventListener('mouseleave', () => {
+        btn.style.background = 'var(--btn-bg)';
+        btn.style.borderColor = 'var(--border-color)';
+      });
       btn.addEventListener('click', () => {
         onPreset?.(p.value);
         onStatus?.(`${p.label}运动 ${p.desc}`);
@@ -159,7 +183,8 @@ export function createVtIntegralControlsV4(options: VtIntegralControlsOptions) {
     }
     
     const hint = document.createElement('div');
-    hint.className = 'mt-2 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1';
+    hint.className = 'mt-2 text-xs flex items-center gap-1';
+    hint.style.color = 'var(--text-secondary)';
     hint.innerHTML = '<span>💡</span><span>微元越窄，近似越接近真实值。</span>';
     elementCard.body.appendChild(hint);
     
@@ -219,7 +244,8 @@ function createSliderRow(
   row.className = 'flex items-center gap-2 py-1';
   
   const labelEl = document.createElement('span');
-  labelEl.className = 'text-xs text-slate-600 dark:text-slate-400 w-16 shrink-0';
+  labelEl.className = 'text-xs w-16 shrink-0';
+  labelEl.style.color = 'var(--text-secondary)';
   labelEl.textContent = label;
   
   const slider = document.createElement('input');
@@ -228,10 +254,12 @@ function createSliderRow(
   slider.max = String(max);
   slider.step = String(step);
   slider.value = String(value);
-  slider.className = 'flex-1 h-1 accent-coral';
+  slider.className = 'flex-1 h-1';
+  slider.style.accentColor = 'var(--accent-primary)';
   
   const valueEl = document.createElement('span');
-  valueEl.className = 'text-xs font-mono w-10 text-right text-slate-700 dark:text-slate-200 shrink-0';
+  valueEl.className = 'text-xs font-mono w-10 text-right shrink-0';
+  valueEl.style.color = 'var(--text-primary)';
   valueEl.textContent = unit ? `${value}${unit}` : String(value);
   
   slider.addEventListener('input', () => {
