@@ -1,7 +1,9 @@
 import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 
 export default defineConfig({
+  plugins: [react()],
   server: {
     host: true,
     port: 5177
@@ -23,7 +25,8 @@ export default defineConfig({
         fieldLines: resolve(__dirname, 'src/pages/field-lines.html'),
         emfAnalogy: resolve(__dirname, 'src/pages/emf-analogy.html'),
         electrification: resolve(__dirname, 'src/pages/electrification.html'),
-        vtIntegral: resolve(__dirname, 'src/pages/vt-integral.html')
+        vtIntegral: resolve(__dirname, 'src/pages/vt-integral.html'),
+        springOscillator: resolve(__dirname, 'src/pages/spring-oscillator.html')
       }
     }
   }
