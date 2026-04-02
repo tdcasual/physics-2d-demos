@@ -1,4 +1,5 @@
-export type VtScene = 'scene1' | 'scene2' | 'scene3' | 'scene4' | 'scene5';
+export const VT_SCENE_VALUES = ['scene1', 'scene2', 'scene3', 'scene4', 'scene5'] as const;
+export type VtScene = typeof VT_SCENE_VALUES[number];
 export type VtMethod = 'left' | 'mid' | 'right' | 'trap';
 
 export type VtIntegralParams = {
@@ -113,14 +114,10 @@ function buildMetrics(params: VtIntegralParams): VtIntegralMetrics {
 }
 
 function normalize(input: Partial<VtIntegralParams>): VtIntegralParams {
-  const scene: VtScene =
-    input.scene === 'scene1' ||
-    input.scene === 'scene2' ||
-    input.scene === 'scene3' ||
-    input.scene === 'scene4' ||
-    input.scene === 'scene5'
-      ? input.scene
-      : 'scene1';
+  // 运行时验证：无效场景值会回退到默认值，避免静默失败
+  const scene: VtScene = VT_SCENE_VALUES.includes(input.scene as VtScene)
+    ? input.scene as VtScene
+    : 'scene1';
   const method: VtMethod =
     input.method === 'left' || input.method === 'mid' || input.method === 'right' || input.method === 'trap'
       ? input.method

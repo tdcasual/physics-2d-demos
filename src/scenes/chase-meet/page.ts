@@ -1,11 +1,12 @@
-import '../../ui/teaching-demo.css';
-import '../../ui/teaching-demo-v2.css';
+import '../../styles/teaching-shell.css';
+// 教学演示壳层样式 (包含四区域布局)
+import '../../styles/teaching-shell.css';
 import { bootLegacy2DBridgePage } from '../../app/legacy-2d-bridge-page';
 import { createPageLifecycle } from '../../app/page-lifecycle';
 import { createSceneShell } from '../../app/scene-shell';
 import { createTeachingDemoShell, type ReadoutItem } from '../../app/teaching-demo-shell';
 import type { TeachingMode } from '../../app/teaching-standards';
-import { createChaseMeetControlsV3 } from './controls-v3';
+import { createChaseMeetControlsV4 } from './controls-v4';
 import { createChaseMeetScene } from './scene.entry';
 import type { ChaseMeetSnapshot, ResolvedChaseMeetParams } from './scene.sim';
 
@@ -56,7 +57,7 @@ function bootLegacy(mount: HTMLElement): void {
       sourcePath: '/animations/mechanics/追击相遇问题.html'
     },
     setupControls: ({ shell, adapter, lifecycle }) => {
-      const controls = createChaseMeetControlsV3({
+      const controls = createChaseMeetControlsV4({
         mount: shell.controlSlot,
         initialParams: {
           totalTime: 10,
@@ -138,7 +139,7 @@ function bootModern(mount: HTMLElement): void {
   });
   lifecycle.onDispose(() => transport.dispose());
 
-  const controls = createChaseMeetControlsV3({
+  const controls = createChaseMeetControlsV4({
     mount: shell.controlSlot,
     initialParams: currentParams,
     onApplyParams: (next) => {

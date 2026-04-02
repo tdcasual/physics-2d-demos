@@ -30,7 +30,7 @@ export type CreateProjectileSceneOptions = {
 };
 
 export function createProjectileScene(
-  options: CreateProjectileSceneOptions
+  options: CreateProjectileSceneOptions = {} as CreateProjectileSceneOptions
 ): SceneLifecycle & {
   resize(): void;
   setTheme(theme: 'light' | 'dark'): void;
@@ -52,14 +52,14 @@ export function createProjectileScene(
       view.reset();
       const state = sim.getState();
       options.onReadout?.(state);
-      view.render(state);
+      // 不在这里调用 render，让调用者在 resize 后调用
     },
     reset(): void {
       sim.reset();
       view.reset();
       const state = sim.getState();
       options.onReadout?.(state);
-      view.render(state);
+      // 不在这里调用 render，让调用者控制
     },
     step(dt: number): void {
       sim.step(dt);

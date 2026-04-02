@@ -1,5 +1,6 @@
-import '../../ui/teaching-demo.css';
-import '../../ui/teaching-demo-v2.css';
+import '../../styles/teaching-shell.css';
+// 教学演示壳层样式 (包含四区域布局)
+import '../../styles/teaching-shell.css';
 import { bootLegacy2DBridgePage } from '../../app/legacy-2d-bridge-page';
 import { createPageLifecycle } from '../../app/page-lifecycle';
 import {
@@ -8,7 +9,7 @@ import {
   type TeachingTheme
 } from '../../app/teaching-demo-shell';
 import { applyTouchInteractionMode } from '../../app/touch-interaction';
-import { createFieldLinesControlsV3 } from './controls-v3';
+import { createFieldLinesControlsV4 } from './controls-v4';
 import { createFieldLinesScene } from './scene.entry';
 import type { FieldLinesSnapshot } from './scene.sim';
 import type { TeachingMode } from '../../app/teaching-standards';
@@ -82,7 +83,7 @@ function bootLegacy(mount: HTMLElement): void {
       sourcePath: '/animations/electromagnetism/模拟电场线.html'
     },
     setupControls: ({ shell, adapter, lifecycle }) => {
-      const controls = createFieldLinesControlsV3({
+      const controls = createFieldLinesControlsV4({
         mount: shell.controlSlot,
         onSetScene: (scene) => adapter.sendControlExt('set-scene', { scene }),
         onSetDensity: (density) =>
@@ -132,7 +133,7 @@ function bootModern(mount: HTMLElement): void {
   lifecycle.onDispose(() => scene.dispose());
   applyTouchInteractionMode(shell.stageCanvas, 'drag');
 
-  const controls = createFieldLinesControlsV3({
+  const controls = createFieldLinesControlsV4({
     mount: shell.controlSlot,
     onSetScene: (nextScene: string) => {
       scene.setScene(nextScene as import('./scene.sim').FieldLinesScene);

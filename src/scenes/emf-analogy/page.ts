@@ -1,5 +1,6 @@
-import '../../ui/teaching-demo.css';
-import '../../ui/teaching-demo-v2.css';
+import '../../styles/teaching-shell.css';
+// 教学演示壳层样式 (包含四区域布局)
+import '../../styles/teaching-shell.css';
 import { bootLegacy2DBridgePage } from '../../app/legacy-2d-bridge-page';
 import { createPageLifecycle } from '../../app/page-lifecycle';
 import { createSceneShell } from '../../app/scene-shell';
@@ -8,7 +9,7 @@ import {
   type ReadoutItem
 } from '../../app/teaching-demo-shell';
 import type { TeachingMode } from '../../app/teaching-standards';
-import { createEmfAnalogyControlsV3 } from './controls-v3';
+import { createEmfAnalogyControlsV4 } from './controls-v4';
 import { createEmfAnalogyScene } from './scene.entry';
 import type { EmfAnalogySnapshot } from './scene.sim';
 
@@ -69,7 +70,7 @@ function bootLegacy(mount: HTMLElement): void {
       sourcePath: '/animations/electromagnetism/电动势类比动画.html'
     },
     setupControls: ({ shell, adapter, lifecycle }) => {
-      const controls = createEmfAnalogyControlsV3({
+      const controls = createEmfAnalogyControlsV4({
         mount: shell.controlSlot,
         onSetSystemOn: (on) => adapter.sendControlExt('set-system-on', { on }),
         onSetTapOpening: (opening) =>
@@ -132,7 +133,7 @@ function bootModern(mount: HTMLElement, renderer: Renderer): void {
   });
   lifecycle.onDispose(() => transport.dispose());
 
-  const controls = createEmfAnalogyControlsV3({
+  const controls = createEmfAnalogyControlsV4({
     mount: shell.controlSlot,
     onSetSystemOn: (on) => {
       scene.setSystemOn(on);

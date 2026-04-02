@@ -1,19 +1,17 @@
-import '../../ui/teaching-demo.css';
-import '../../ui/teaching-demo-v2.css';
+/**
+ * 弹簧振子场景 - Tailwind 重构版 (V2)
+ * 与原版 page.ts 像素级一致
+ */
+
+// 教学演示壳层样式 (包含四区域布局)
+import '../../styles/teaching-shell.css';
+
 import { createPageLifecycle } from '../../app/page-lifecycle';
 import { createTeachingDemoShell, type ReadoutItem } from '../../app/teaching-demo-shell';
 import { createFloatingControls } from '../../ui/control-layout';
-import { createSpringOscillatorControlsV3 } from './controls-v3';
+import { createSpringOscillatorControlsV4 } from './controls-v4';
 import { createSpringOscillatorScene } from './scene.entry';
 
-/**
- * 弹簧振子场景 - 控制区标准范式参考实现
- * 
- * 布局配置：
- * - 左侧：38%（380-520px），1:2 分割
- * - 左侧结构：控制列表 + 预设场景 + 图表区（图表自适应剩余空间）
- * - 控制区标题隐藏，节省空间
- */
 function boot(): void {
   const mount = document.getElementById('app');
   if (!(mount instanceof HTMLElement)) {
@@ -25,21 +23,18 @@ function boot(): void {
     title: '弹簧振子',
     subtitle: '简谐运动与相位关系演示',
     defaultMode: 'normal',
-    hideHeader: true,  // 标准范式：隐藏左侧标题区
+    hideHeader: true,
     readoutLabel: '数据读数',
-    // 标准布局配置
     layout: {
-      defaultLeftRatio: 0.38,  // 左侧38%（约1:2.6比例）
-      leftMinWidth: 380,       // 最小380px
-      leftMaxWidth: 960,       // 最大960px，支持到50%宽度
-      hasGraph: true,          // 有图表区
-      graphHeight: 0.4,        // 图表占40%，控制区自适应
+      defaultLeftRatio: 0.38,
+      leftMinWidth: 380,
+      leftMaxWidth: 960,
+      hasGraph: true,
+      graphHeight: 0.4,
       controlColumns: 1,
       readoutCollapsed: true,
     },
-    // 尺寸变化回调 - 拖动分隔条时触发
     onResize: () => {
-      // 使用 setTimeout 确保 DOM 更新后再 resize canvas
       requestAnimationFrame(() => {
         scene.resize();
         scene.render();
@@ -66,8 +61,8 @@ function boot(): void {
   });
   lifecycle.onDispose(() => scene.dispose());
 
-  // 控制面板（标准范式）
-  const controls = createSpringOscillatorControlsV3({
+  // 控制面板 - 使用 V4 (Tailwind 版本)
+  const controls = createSpringOscillatorControlsV4({
     mount: shell.controlSlot,
     scene,
     onStatus: (text) => {
@@ -76,7 +71,7 @@ function boot(): void {
   });
   lifecycle.onDispose(() => controls.dispose());
 
-  // 浮动控制按钮（标准范式：位于动画区左上方）
+  // 浮动控制按钮
   const floatingControls = createFloatingControls({
     isPlaying: () => scene.sim.oscillators.some(o => o.isPlaying),
     onTogglePlay: () => {
@@ -104,7 +99,6 @@ function boot(): void {
   });
   shell.stageSlot.appendChild(floatingControls);
   
-  // 设置 stageSlot 为相对定位，以便浮动控制按钮正确定位
   shell.stageSlot.style.position = 'relative';
 
   // 动画循环
@@ -127,7 +121,6 @@ function boot(): void {
   animationId = requestAnimationFrame(animate);
   lifecycle.onDispose(() => {
     if (animationId) cancelAnimationFrame(animationId);
-    // 清理浮动控制按钮的事件监听器
     (floatingControls as any).dispose?.();
   });
 

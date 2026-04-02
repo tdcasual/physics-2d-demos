@@ -1,10 +1,11 @@
-import '../../ui/teaching-demo.css';
-import '../../ui/teaching-demo-v2.css';
+// 教学演示壳层样式 (包含四区域布局)
+import '../../styles/teaching-shell.css';
+
 import { createPageLifecycle } from '../../app/page-lifecycle';
 import { createSceneShell } from '../../app/scene-shell';
 import { createTeachingDemoShell, type ReadoutItem } from '../../app/teaching-demo-shell';
 import { createProjectileScene } from './scene.entry';
-import { createProjectileControlsV3 } from './controls-v3';
+import { createProjectileControlsV4 } from './controls-v4';
 import type { ProjectileParams, ProjectileState, ResolvedProjectileParams } from './scene.sim';
 
 function formatReadout(state: ProjectileState, params: ResolvedProjectileParams): ReadoutItem[] {
@@ -72,7 +73,7 @@ function boot(): void {
   lifecycle.onDispose(() => scene.dispose());
 
   // V3 控制面板
-  const controls = createProjectileControlsV3({
+  const controls = createProjectileControlsV4({
     mount: shell.controlSlot,
     onParamChange: (key, value) => {
       const paramMap: Record<string, keyof ProjectileParams> = {
@@ -166,8 +167,8 @@ function boot(): void {
   lifecycle.onDispose(() => window.removeEventListener('resize', onResize));
 
   scene.init();
-  scene.resize();
-  scene.render();
+  scene.resize();  // 先确保尺寸正确
+  scene.render();  // 然后再渲染
   
   controls.setParam('v0', currentParams.speed);
   controls.setParam('theta', currentParams.angleDeg);

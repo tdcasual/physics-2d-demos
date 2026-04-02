@@ -61,6 +61,7 @@ export function createElectrificationScene(options: CreateElectrificationSceneOp
     },
     setScene(scene: ElectrificationScene): void {
       sim.setScene(scene);
+      renderAndEmit();
     },
     runSceneAction(): void {
       sim.runSceneAction();

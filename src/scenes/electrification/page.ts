@@ -1,5 +1,7 @@
-import '../../ui/teaching-demo.css';
-import '../../ui/teaching-demo-v2.css';
+import '../../styles/teaching-shell.css';
+import '../../ui/teaching-demo-controls.css';
+// 教学演示壳层样式 (包含四区域布局)
+import '../../styles/teaching-shell.css';
 import { bootLegacy2DBridgePage } from '../../app/legacy-2d-bridge-page';
 import { createPageLifecycle } from '../../app/page-lifecycle';
 import {
@@ -7,7 +9,7 @@ import {
   type ReadoutItem
 } from '../../app/teaching-demo-shell';
 import type { TeachingMode } from '../../app/teaching-standards';
-import { createElectrificationControlsV3 } from './controls-v3';
+import { createElectrificationControlsV4 } from './controls-v4';
 import { createElectrificationScene } from './scene.entry';
 import type { ElectrificationSnapshot } from './scene.sim';
 
@@ -63,14 +65,22 @@ function bootLegacy(mount: HTMLElement): void {
       sourcePath: '/animations/electromagnetism/起电方式演示.html'
     },
     setupControls: ({ shell, adapter, lifecycle }) => {
-      const controls = createElectrificationControlsV3({
+      const controls = createElectrificationControlsV4({
         mount: shell.controlSlot,
+        initialScene: 'friction',
         onSetScene: (scene) => adapter.sendControlExt('set-scene', { scene }),
         onRunStep: () => adapter.sendControlExt('run-scene-action'),
         onReset: () => adapter.sendControl('reset'),
         onStatus: (text) => shell.setStatus(text)
       });
       lifecycle.onDispose(() => controls.dispose());
+
+  // 同步场景切换时按钮状态
+  const originalSetScene = scene.setScene.bind(scene);
+  scene.setScene = (s: import('./scene.sim').ElectrificationScene) => {
+    originalSetScene(s);
+    controls.setScene(s);
+  };
       shell.setStatus('左侧可切换起电场景并执行步骤');
     }
   });
@@ -109,8 +119,9 @@ function bootModern(mount: HTMLElement): void {
   });
   lifecycle.onDispose(() => scene.dispose());
 
-  const controls = createElectrificationControlsV3({
+  const controls = createElectrificationControlsV4({
     mount: shell.controlSlot,
+    initialScene: 'friction',
     onSetScene: (nextScene: string) => {
       scene.setScene(nextScene as import('./scene.sim').ElectrificationScene);
       scene.render();
@@ -126,6 +137,13 @@ function bootModern(mount: HTMLElement): void {
     onStatus: (text) => shell.setStatus(text)
   });
   lifecycle.onDispose(() => controls.dispose());
+
+  // 同步场景状态到按钮
+  const originalSetScene = scene.setScene.bind(scene);
+  scene.setScene = (s: import('./scene.sim').ElectrificationScene) => {
+    originalSetScene(s);
+    controls.setActiveScene(s);
+  };
 
   const onModeToggle = () => {
     const nextMode = shell.getMode() === 'normal' ? 'presentation' : 'normal';
