@@ -58,12 +58,21 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .ctrl-card-icon {
   width: 16px;
   height: 16px;
   opacity: 0.7;
+}
+
+.ctrl-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .ctrl-card-toggle {

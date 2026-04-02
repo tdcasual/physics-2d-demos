@@ -1,233 +1,156 @@
 /**
- * Themes - 主题系统
+ * 主题系统 - 语义化 CSS 变量
  * 
- * 职责: 定义深色/浅色模式的CSS变量映射
- * 规则:
- *   - 仅此文件定义 [data-theme] 选择器
- *   - 将设计令牌映射到语义化变量
- *   - 变量命名遵循语义化规范
- *   - 导入 design-tokens.css 作为基础
+ * 职责: 将 design tokens 映射为语义化变量
+ * 支持 light/dark 主题切换
  */
 
-@import url('./design-tokens.css');
+/* ========================================
+   基础语义变量（在 :root 中定义默认值）
+   ======================================== */
+:root {
+  /* 字体 */
+  --font-body: var(--token-font-family-sans);
+  --font-display: var(--token-font-family-display);
+  --font-mono: var(--token-font-family-mono);
+
+  /* 字体大小 */
+  --text-xs: var(--token-font-size-xs);
+  --text-sm: var(--token-font-size-sm);
+  --text-base: var(--token-font-size-base);
+  --text-lg: var(--token-font-size-lg);
+  --text-xl: var(--token-font-size-xl);
+  --text-2xl: var(--token-font-size-2xl);
+  --text-3xl: 1.875rem;   /* 30px */
+  --text-4xl: 2.25rem;    /* 36px */
+  --text-5xl: 3rem;       /* 48px */
+  --text-6xl: 3.75rem;    /* 60px */
+
+  /* 字体粗细 */
+  --font-normal: var(--token-font-weight-normal);
+  --font-medium: var(--token-font-weight-medium);
+  --font-semibold: var(--token-font-weight-semibold);
+  --font-bold: var(--token-font-weight-bold);
+
+  /* 行高 */
+  --leading-tight: var(--token-line-height-tight);
+  --leading-normal: var(--token-line-height-normal);
+  --leading-relaxed: var(--token-line-height-relaxed);
+  --leading-snug: 1.375;
+
+  /* 字间距 */
+  --tracking-tight: -0.025em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.025em;
+  --tracking-wider: 0.05em;
+
+  /* 间距 */
+  --space-1: var(--token-space-1);
+  --space-2: var(--token-space-2);
+  --space-3: var(--token-space-3);
+  --space-4: var(--token-space-4);
+  --space-5: var(--token-space-5);
+  --space-6: var(--token-space-6);
+  --space-8: var(--token-space-8);
+  --space-10: var(--token-space-10);
+  --space-12: var(--token-space-12);
+  --space-16: var(--token-space-16);
+  --space-20: 5rem;      /* 80px */
+  --space-24: 6rem;      /* 96px */
+  --space-32: 8rem;      /* 128px */
+
+  /* 圆角 */
+  --radius-sm: var(--token-radius-sm);
+  --radius-md: var(--token-radius-md);
+  --radius-lg: var(--token-radius-lg);
+  --radius-xl: var(--token-radius-xl);
+  --radius-full: var(--token-radius-full);
+
+  /* 阴影 */
+  --shadow-sm: var(--token-shadow-sm);
+  --shadow-md: var(--token-shadow-md);
+  --shadow-lg: var(--token-shadow-lg);
+
+  /* 过渡 */
+  --transition-fast: var(--token-duration-fast);
+  --transition-normal: var(--token-duration-normal);
+  --transition-slow: var(--token-duration-slow);
+  --ease-out: var(--token-ease-out);
+  --ease-out-expo: var(--token-ease-out-expo);
+
+  /* 布局尺寸 */
+  --size-max: 1440px;
+  --size-content: 768px;
+}
 
 /* ========================================
-   浅色主题 (默认)
+   浅色主题（默认）
    ======================================== */
+:root,
 [data-theme="light"] {
+  /* 主色 */
+  --accent-primary: var(--token-color-coral);
+  --accent-secondary: var(--token-color-mint);
+  
   /* 背景色 */
-  --bg-primary: #ffffff;
-  --bg-secondary: #f1f5f9;
-  --bg-tertiary: #e2e8f0;
-  --bg-hover: #e2e8f0;
-  --bg-card: rgba(255, 255, 255, 0.7);
-  --bg-card-header: rgba(248, 250, 252, 0.9);
+  --bg-primary: #faf8f5;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-hover: #f5f3f0;
   
-  /* 侧边栏和舞台背景 */
-  --sidebar-bg: #f8fafc;
-  --stage-bg: #f8fafc;
-  
+  /* 卡片背景（别名，用于浮动控制等） */
+  --card-bg: rgba(255, 255, 255, 0.85);
+
   /* 文字色 */
-  --text-primary: #1e293b;
-  --text-secondary: #64748b;
-  --text-tertiary: #94a3b8;
-  --text-muted: #cbd5e1;
-  --text-inverse: #f8fafc;
-  
-  /* 边框 */
-  --border-color: rgba(148, 163, 184, 0.25);
-  --border-light: rgba(148, 163, 184, 0.15);
-  --border-medium: rgba(148, 163, 184, 0.25);
-  --border-strong: #94a3b8;
-  
-  /* 强调色 */
-  --accent-color: #14b8a6;
-  --accent-color-soft: rgba(20, 184, 166, 0.12);
-  --primary-color: #ef4444;
-  --primary-color-soft: rgba(239, 68, 68, 0.12);
-  --secondary-color: #0ea5e9;
-  
-  /* 按钮 */
-  --btn-bg: rgba(241, 245, 249, 0.8);
-  --btn-border: rgba(148, 163, 184, 0.3);
-  --btn-hover-bg: rgba(226, 232, 240, 0.9);
-  
-  /* 输入框 */
-  --input-bg: rgba(255, 255, 255, 0.9);
-  --input-border: rgba(148, 163, 184, 0.35);
-  
-  /* 滑块 */
-  --slider-bg: rgba(148, 163, 184, 0.25);
-  --slider-fill: var(--accent-color);
-  
-  /* 运输控制 */
-  --transport-bg: rgba(241, 245, 249, 0.8);
-  
-  /* 提示 */
-  --hint-bg: rgba(245, 158, 11, 0.1);
-  --hint-border: rgba(245, 158, 11, 0.25);
-  --hint-color: #d97706;
-  
-  /* 状态 */
-  --status-bg: rgba(241, 245, 249, 0.6);
-  
+  --text-primary: #1a1a1a;
+  --text-secondary: #666666;
+  --text-muted: #999999;
+  --text-inverse: #ffffff;
+
+  /* 边框色 */
+  --border-light: #e8e6e3;
+  --border-medium: #d4d2cf;
+  --border-strong: #a8a6a3;
+  --border-color: var(--border-medium);
+
   /* 阴影 */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
-  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --shadow-color: rgba(0, 0, 0, 0.1);
 }
 
 /* ========================================
    深色主题
    ======================================== */
 [data-theme="dark"] {
+  /* 主色 */
+  --accent-primary: var(--token-color-coral);
+  --accent-secondary: var(--token-color-mint);
+  
   /* 背景色 */
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-tertiary: #334155;
-  --bg-hover: #334155;
-  --bg-card: rgba(30, 41, 59, 0.6);
-  --bg-card-header: rgba(30, 41, 59, 0.8);
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #1a1a1a;
+  --bg-card: #1f1f1f;
+  --bg-hover: #2a2a2a;
   
-  /* 侧边栏和舞台背景 */
-  --sidebar-bg: #0f172a;
-  --stage-bg: #0f172a;
-  
+  /* 卡片背景（别名，用于浮动控制等） */
+  --card-bg: rgba(30, 30, 30, 0.85);
+
   /* 文字色 */
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-tertiary: #64748b;
-  --text-muted: #475569;
-  --text-inverse: #0f172a;
-  
-  /* 边框 */
-  --border-color: rgba(148, 163, 184, 0.15);
-  --border-light: rgba(148, 163, 184, 0.1);
-  --border-medium: rgba(148, 163, 184, 0.2);
-  --border-strong: #94a3b8;
-  
-  /* 强调色 */
-  --accent-color: #2dd4bf;
-  --accent-color-soft: rgba(45, 212, 191, 0.15);
-  --primary-color: #f87171;
-  --primary-color-soft: rgba(248, 113, 113, 0.15);
-  --secondary-color: #38bdf8;
-  
-  /* 按钮 */
-  --btn-bg: rgba(51, 65, 85, 0.5);
-  --btn-border: rgba(148, 163, 184, 0.2);
-  --btn-hover-bg: rgba(71, 85, 105, 0.6);
-  
-  /* 输入框 */
-  --input-bg: rgba(15, 23, 42, 0.5);
-  --input-border: rgba(148, 163, 184, 0.2);
-  
-  /* 滑块 */
-  --slider-bg: rgba(148, 163, 184, 0.2);
-  --slider-fill: var(--accent-color);
-  
-  /* 运输控制 */
-  --transport-bg: rgba(15, 23, 42, 0.6);
-  
-  /* 提示 */
-  --hint-bg: rgba(251, 191, 36, 0.1);
-  --hint-border: rgba(251, 191, 36, 0.25);
-  --hint-color: #fbbf24;
-  
-  /* 状态 */
-  --status-bg: rgba(30, 41, 59, 0.5);
-  
+  --text-primary: #f5f5f5;
+  --text-secondary: #a0a0a0;
+  --text-muted: #666666;
+  --text-inverse: #0a0a0a;
+
+  /* 边框色 */
+  --border-light: #2a2a2a;
+  --border-medium: #3a3a3a;
+  --border-strong: #555555;
+  --border-color: var(--border-medium);
+
   /* 阴影 */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
-}
+  --shadow-color: rgba(0, 0, 0, 0.3);
 
-/* ========================================
-   系统偏好适配
-   ======================================== */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    /* 复制深色主题的变量 */
-    --bg-primary: #0f172a;
-    --bg-secondary: #1e293b;
-    --bg-tertiary: #334155;
-    --bg-hover: #334155;
-    --bg-card: rgba(30, 41, 59, 0.6);
-    --bg-card-header: rgba(30, 41, 59, 0.8);
-    --sidebar-bg: #0f172a;
-    --stage-bg: #0f172a;
-    --text-primary: #f1f5f9;
-    --text-secondary: #94a3b8;
-    --text-tertiary: #64748b;
-    --text-muted: #475569;
-    --text-inverse: #0f172a;
-    --border-color: rgba(148, 163, 184, 0.15);
-    --border-light: rgba(148, 163, 184, 0.1);
-    --border-medium: rgba(148, 163, 184, 0.2);
-    --border-strong: #94a3b8;
-    --accent-color: #2dd4bf;
-    --accent-color-soft: rgba(45, 212, 191, 0.15);
-    --primary-color: #f87171;
-    --primary-color-soft: rgba(248, 113, 113, 0.15);
-    --secondary-color: #38bdf8;
-    --btn-bg: rgba(51, 65, 85, 0.5);
-    --btn-border: rgba(148, 163, 184, 0.2);
-    --btn-hover-bg: rgba(71, 85, 105, 0.6);
-    --input-bg: rgba(15, 23, 42, 0.5);
-    --input-border: rgba(148, 163, 184, 0.2);
-    --slider-bg: rgba(148, 163, 184, 0.2);
-    --slider-fill: var(--accent-color);
-    --transport-bg: rgba(15, 23, 42, 0.6);
-    --hint-bg: rgba(251, 191, 36, 0.1);
-    --hint-border: rgba(251, 191, 36, 0.25);
-    --hint-color: #fbbf24;
-    --status-bg: rgba(30, 41, 59, 0.5);
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
-  }
-}
-
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) {
-    /* 复制浅色主题的变量 */
-    --bg-primary: #ffffff;
-    --bg-secondary: #f1f5f9;
-    --bg-tertiary: #e2e8f0;
-    --bg-hover: #e2e8f0;
-    --bg-card: rgba(255, 255, 255, 0.7);
-    --bg-card-header: rgba(248, 250, 252, 0.9);
-    --sidebar-bg: #f8fafc;
-    --stage-bg: #f8fafc;
-    --text-primary: #1e293b;
-    --text-secondary: #64748b;
-    --text-tertiary: #94a3b8;
-    --text-muted: #cbd5e1;
-    --text-inverse: #f8fafc;
-    --border-color: rgba(148, 163, 184, 0.25);
-    --border-light: rgba(148, 163, 184, 0.15);
-    --border-medium: rgba(148, 163, 184, 0.25);
-    --border-strong: #94a3b8;
-    --accent-color: #14b8a6;
-    --accent-color-soft: rgba(20, 184, 166, 0.12);
-    --primary-color: #ef4444;
-    --primary-color-soft: rgba(239, 68, 68, 0.12);
-    --secondary-color: #0ea5e9;
-    --btn-bg: rgba(241, 245, 249, 0.8);
-    --btn-border: rgba(148, 163, 184, 0.3);
-    --btn-hover-bg: rgba(226, 232, 240, 0.9);
-    --input-bg: rgba(255, 255, 255, 0.9);
-    --input-border: rgba(148, 163, 184, 0.35);
-    --slider-bg: rgba(148, 163, 184, 0.25);
-    --slider-fill: var(--accent-color);
-    --transport-bg: rgba(241, 245, 249, 0.8);
-    --hint-bg: rgba(245, 158, 11, 0.1);
-    --hint-border: rgba(245, 158, 11, 0.25);
-    --hint-color: #d97706;
-    --status-bg: rgba(241, 245, 249, 0.6);
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
-    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
-  }
+  /* 深色模式专用阴影 */
+  --shadow-sm: var(--token-shadow-dark-sm);
+  --shadow-md: var(--token-shadow-dark-md);
+  --shadow-lg: var(--token-shadow-dark-lg);
 }

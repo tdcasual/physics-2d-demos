@@ -139,35 +139,34 @@ export function createControlLayout(options: ControlLayoutOptions): ControlLayou
     };
   }
 
-  function initResizeObserver(): void {
-    if (typeof ResizeObserver === 'undefined') {
-      window.addEventListener('resize', updateLayout);
-      return;
+  // 使用 ResizeObserver 监听容器变化
+  function initResizeObserver(): (() => void) {
+    // 优先使用 ResizeObserver
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const width = entry.contentRect.width;
+          const columns = calculateColumns(width);
+          const density = calculateDensity(width);
+          applyLayout(columns, density);
+        }
+      });
+      ro.observe(container);
+      return () => ro.disconnect();
     }
-
-    resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const width = entry.contentRect.width;
-        const columns = calculateColumns(width);
-        const density = calculateDensity(width);
-        applyLayout(columns, density);
-      }
-    });
-
-    resizeObserver.observe(container);
+    
+    // Fallback: 使用 window resize
+    const onWindowResize = () => updateLayout();
+    window.addEventListener('resize', onWindowResize);
+    return () => window.removeEventListener('resize', onWindowResize);
   }
+
+  const cleanupResizeObserver = initResizeObserver();
+  updateLayout();
 
   function dispose(): void {
-    if (resizeObserver) {
-      resizeObserver.disconnect();
-      resizeObserver = null;
-    } else {
-      window.removeEventListener('resize', updateLayout);
-    }
+    cleanupResizeObserver();
   }
-
-  initResizeObserver();
-  updateLayout();
 
   return {
     updateLayout,
@@ -192,6 +191,16 @@ export function createControlLayout(options: ControlLayoutOptions): ControlLayou
 // ==================== 标准组件工厂 ====================
 
 /**
+ * 控制卡片选项
+ */
+export interface ControlCardOptions {
+  icon?: string;
+  defaultCollapsed?: boolean;
+  className?: string;
+  headerActions?: HTMLElement[];
+}
+
+/**
  * 创建可折叠卡片（标准控制区卡片）
  * 标题行包含：图标 + 标题 + [操作按钮] + [折叠按钮]
  * 
@@ -199,12 +208,7 @@ export function createControlLayout(options: ControlLayoutOptions): ControlLayou
  */
 export function createControlCard(
   title: string,
-  options?: {
-    icon?: string;
-    defaultCollapsed?: boolean;
-    className?: string;
-    headerActions?: HTMLElement[]; // 标题栏右侧的操作按钮（在折叠按钮左侧）
-  }
+  options?: ControlCardOptions
 ): { element: HTMLElement; body: HTMLElement; header: HTMLElement; setCollapsed: (collapsed: boolean) => void } {
   const card = document.createElement('div');
   card.className = `ctrl-card ${options?.className || ''}`;
@@ -225,9 +229,14 @@ export function createControlCard(
 
   header.appendChild(titleEl);
   
+  // 操作按钮容器（包含自定义操作按钮和折叠按钮）
+  const actionsContainer = document.createElement('div');
+  actionsContainer.className = 'ctrl-card-actions';
+  actionsContainer.style.cssText = 'display: flex; align-items: center; gap: 8px; flex-shrink: 0;';;
+  
   // 插入自定义操作按钮
   if (options?.headerActions) {
-    options.headerActions.forEach(btn => header.appendChild(btn));
+    options.headerActions.forEach(btn => actionsContainer.appendChild(btn));
   }
 
   const toggle = document.createElement('button');
@@ -235,7 +244,8 @@ export function createControlCard(
   toggle.innerHTML = options?.defaultCollapsed ? '▶' : '▼';
   toggle.setAttribute('aria-label', options?.defaultCollapsed ? '展开' : '折叠');
 
-  header.appendChild(toggle);
+  actionsContainer.appendChild(toggle);
+  header.appendChild(actionsContainer);
 
   const body = document.createElement('div');
   body.className = 'ctrl-card-body';
@@ -620,7 +630,7 @@ export function createFloatingControls(
     position: absolute;
     top: 12px;
     left: 12px;
-    display: flex;
+    display: inline-flex;
     gap: 12px;
     align-items: center;
     z-index: 10;
