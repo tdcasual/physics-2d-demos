@@ -21,7 +21,7 @@ export type CreateProjectileViewOptions = {
 };
 
 export function createProjectileView(options: CreateProjectileViewOptions) {
-  const { canvas } = options;
+  const canvas = options.canvas ?? document.createElement('canvas');
   let theme: 'light' | 'dark' = options.theme ?? 'dark';
   let mode: 'normal' | 'presentation' = options.mode ?? 'normal';
   let ctx: CanvasRenderingContext2D | null = null;

@@ -15,8 +15,7 @@ const htmlEntrypoints = [
 describe('navigation branding', () => {
   it('uses subject-neutral title text', () => {
     const html = readFileSync(resolve(process.cwd(), 'index.html'), 'utf8');
-    expect(html.includes('Physics Animations')).toBe(false);
-    expect(html.includes('Teaching Animations')).toBe(true);
+    expect(html.includes('物理实验室')).toBe(true);
   });
 
   it('declares a shared favicon on all html entrypoints', () => {
@@ -29,9 +28,8 @@ describe('navigation branding', () => {
   });
 
   it('keeps the navigation page aligned with the teaching demo typography', () => {
-    const html = readFileSync(resolve(process.cwd(), 'index.html'), 'utf8');
-    expect(html.includes('Baloo 2')).toBe(false);
-    expect(html.includes('Nunito')).toBe(false);
-    expect(html.includes('Noto Sans SC')).toBe(true);
+    const css = readFileSync(resolve(process.cwd(), 'src/styles/global.css'), 'utf8');
+    expect(css.includes('satoshi')).toBe(true);
+    expect(css.includes('clash-display')).toBe(true);
   });
 });

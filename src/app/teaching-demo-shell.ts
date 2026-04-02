@@ -306,6 +306,15 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
   let compactViewport = isCompactViewport();
   let readoutCollapsed = layout.readoutCollapsed;
   let sidebarHidden = false;  // 控制区隐藏状态
+  
+  // 设备类型追踪
+  function getCurrentDeviceType(): 'mobile' | 'tablet' | 'desktop' {
+    const width = window.innerWidth;
+    if (width < 768) return 'mobile';
+    if (width < 1024) return 'tablet';
+    return 'desktop';
+  }
+  let currentDeviceType = getCurrentDeviceType();
 
   // 初始化控制区布局管理器
   const controlLayout = createControlLayout({
@@ -322,7 +331,9 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
 
   // 设置左侧宽度
   function setLeftRatio(ratio: number): void {
-    leftRatio = Math.max(0.2, Math.min(0.5, ratio));
+    const minRatio = layout.leftMinWidth / window.innerWidth;
+    const maxRatio = Math.min(layout.leftMaxWidth / window.innerWidth, 0.5);
+    leftRatio = Math.max(minRatio, Math.min(maxRatio, ratio));
     applyLayout();
   }
 
@@ -488,6 +499,11 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
       toggleBtn.textContent = !isCollapsed ? '+' : '−';
       toggleBtn.setAttribute('aria-label', !isCollapsed ? `展开${target === 'control' ? '控制区' : '图表区'}` : `折叠${target === 'control' ? '控制区' : '图表区'}`);
     }
+    
+    // 触发 resize 通知，让 Canvas 重新调整尺寸
+    requestAnimationFrame(() => {
+      notifyResize();
+    });
   }
   
   // 绑定区域折叠按钮
@@ -508,9 +524,25 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
 
   readoutToggle.addEventListener('click', toggleReadout);
 
-  // 响应式监听
-  function handleResize(): void {
+  // Resize 节流处理
+  let resizeRafId: number | null = null;
+  let pendingResize = false;
+  
+  function processResize(): void {
+    resizeRafId = null;
+    if (!pendingResize) return;
+    pendingResize = false;
+    
     const newCompact = isCompactViewport();
+    const newDeviceType = getCurrentDeviceType();
+    
+    // 设备类型变化时触发回调
+    if (newDeviceType !== currentDeviceType) {
+      currentDeviceType = newDeviceType;
+      // 通过 onResize 通知外部
+      options.onResize?.();
+    }
+    
     if (newCompact !== compactViewport) {
       compactViewport = newCompact;
       applyLayout();
@@ -518,8 +550,24 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
       updateControlColumns();
     }
   }
+  
+  function handleResize(): void {
+    pendingResize = true;
+    if (resizeRafId === null) {
+      resizeRafId = requestAnimationFrame(processResize);
+    }
+  }
 
   window.addEventListener('resize', handleResize);
+  
+  // 方向变化处理（移动端旋转屏幕）
+  function onOrientationChange(): void {
+    setTimeout(() => {
+      pendingResize = true;
+      processResize();
+    }, 300);
+  }
+  window.addEventListener('orientationchange', onOrientationChange);
 
   // 初始化
   applyModeTokens(root, modeState.value);
@@ -547,11 +595,17 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
       startX = e.clientX;
       startY = e.clientY;
       
-      initialLeft = element.offsetLeft;
-      initialTop = element.offsetTop;
+      // 获取当前计算后的 left/top 值
+      const rect = element.getBoundingClientRect();
+      initialLeft = rect.left + window.scrollX;
+      initialTop = rect.top + window.scrollY;
       
-      element.style.transition = 'none';
+      // 切换为 left/top 定位，保持当前位置不变
+      element.style.left = `${initialLeft}px`;
+      element.style.top = `${initialTop}px`;
       element.style.right = 'auto';
+      element.style.bottom = 'auto';
+      element.style.transition = 'none';
       document.body.style.userSelect = 'none';
       
       e.preventDefault();
@@ -645,6 +699,10 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
     
     dispose() {
       window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', onOrientationChange);
+      if (resizeRafId !== null) {
+        cancelAnimationFrame(resizeRafId);
+      }
       controlLayout.dispose();
       cleanupReadoutDrag?.();
     }

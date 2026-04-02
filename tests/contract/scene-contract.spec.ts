@@ -8,7 +8,7 @@ import { createVtIntegralScene } from '../../src/scenes/vt-integral/scene.entry'
 
 describe('scene contract', () => {
   it('implements required lifecycle methods', () => {
-    const projectileScene = createProjectileScene();
+    const projectileScene = createProjectileScene({ canvas: document.createElement('canvas') });
     expect(typeof projectileScene.init).toBe('function');
     expect(typeof projectileScene.reset).toBe('function');
     expect(typeof projectileScene.step).toBe('function');

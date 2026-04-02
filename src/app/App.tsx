@@ -8,6 +8,7 @@ import { ExperimentsSection } from './sections';
 import { useTheme } from './hooks';
 
 import '../styles/design-tokens.css';
+import '../styles/themes.css';
 import '../styles/global.css';
 
 const App: React.FC = () => {
