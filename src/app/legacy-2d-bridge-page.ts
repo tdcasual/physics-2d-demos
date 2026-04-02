@@ -54,9 +54,16 @@ export function bootLegacy2DBridgePage(options: BootLegacy2DBridgePageOptions): 
     title: options.title,
     subtitle: options.subtitle,
     defaultMode: 'normal',
-    desktopReadoutCollapsible: false,
-    desktopReadoutDefaultCollapsed: false,
-    desktopReadoutDraggable: false
+    hideHeader: true,
+    readoutLabel: '数据区',
+    layout: {
+      defaultLeftRatio: 0.28,
+      leftMinWidth: 240,
+      leftMaxWidth: 350,
+      hasGraph: false,
+      controlColumns: 1,
+      readoutCollapsed: true,
+    }
   });
 
   const lifecycle = createPageLifecycle();

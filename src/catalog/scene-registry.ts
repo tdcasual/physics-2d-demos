@@ -3,6 +3,7 @@ import { electrificationMeta } from '../scenes/electrification/scene.meta';
 import { emfAnalogyMeta } from '../scenes/emf-analogy/scene.meta';
 import { fieldLinesMeta } from '../scenes/field-lines/scene.meta';
 import { projectileMeta } from '../scenes/projectile/scene.meta';
+import { springOscillatorMeta } from '../scenes/spring-oscillator/scene.meta';
 import { vtIntegralMeta } from '../scenes/vt-integral/scene.meta';
 import type { ScenePlacardMeta } from '../scenes/types';
 
@@ -27,6 +28,17 @@ export const sceneRegistry: SceneRegistryEntry[] = [
     concept: projectileMeta.concept,
     subConcepts: projectileMeta.subConcepts,
     keywords: projectileMeta.keywords,
+    source: 'modern',
+    dimension: '2d'
+  },
+  {
+    id: springOscillatorMeta.id,
+    title: springOscillatorMeta.title,
+    path: springOscillatorMeta.path,
+    subject: springOscillatorMeta.subject,
+    concept: springOscillatorMeta.concept,
+    subConcepts: springOscillatorMeta.subConcepts,
+    keywords: springOscillatorMeta.keywords,
     source: 'modern',
     dimension: '2d'
   },

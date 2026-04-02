@@ -1,7 +1,7 @@
 import { getTeachingStandards, type TeachingMode } from './teaching-standards';
-import { clampSidebarWidth, getDefaultSidebarWidth } from './sidebar-layout';
 import { getResponsiveViewport } from './responsive-stage';
 import { applyTouchInteractionMode } from './touch-interaction';
+import { createControlLayout, type ControlLayoutManager, type ColumnLayout, type DensityMode } from '../ui/control-layout';
 
 export type ReadoutItem = {
   label: string;
@@ -9,9 +9,27 @@ export type ReadoutItem = {
   layout?: 'half' | 'full';
 };
 
+export type LayoutConfig = {
+  /** 左侧默认宽度占比 (0.3 = 30%) */
+  defaultLeftRatio?: number;
+  /** 左侧最小宽度 (px) */
+  leftMinWidth?: number;
+  /** 左侧最大宽度 (px) */
+  leftMaxWidth?: number;
+  /** 是否显示图表区 */
+  hasGraph?: boolean;
+  /** 图表区默认高度 (px 或 0-1 的比例) */
+  graphHeight?: number;
+  /** 控制区列数 (auto=自适应) */
+  controlColumns?: 'auto' | 1 | 2 | 3;
+  /** 数据区默认折叠 */
+  readoutCollapsed?: boolean;
+};
+
 export type TeachingDemoShell = {
   root: HTMLElement;
   controlSlot: HTMLElement;
+  graphSlot: HTMLElement | null;
   readoutSlot: HTMLElement;
   stageSlot: HTMLElement;
   stageCanvas: HTMLCanvasElement;
@@ -24,6 +42,12 @@ export type TeachingDemoShell = {
   getMode: () => TeachingMode;
   getTheme: () => TeachingTheme;
   dispose: () => void;
+  /** 设置左侧宽度比例 (0-1) */
+  setLeftRatio: (ratio: number) => void;
+  /** 获取当前左侧宽度比例 */
+  getLeftRatio: () => number;
+  /** 获取控制区布局管理器 */
+  getControlLayout: () => ControlLayoutManager;
 };
 
 export type TeachingTheme = 'dark' | 'light';
@@ -35,13 +59,57 @@ export type CreateTeachingDemoShellOptions = {
   subtitle: string;
   defaultMode?: TeachingMode;
   defaultTheme?: TeachingTheme;
-  desktopReadoutCollapsible?: boolean;
-  desktopReadoutDefaultCollapsed?: boolean;
-  desktopReadoutDraggable?: boolean;
   readoutLabel?: string;
+  hideHeader?: boolean;
+  /** 布局配置 */
+  layout?: LayoutConfig;
+  /** 左侧区域尺寸变化回调（拖拽分隔条时触发） */
+  onResize?: () => void;
 };
 
-const COMPACT_BREAKPOINT_PX = 1024;
+const COMPACT_BREAKPOINT_PX = 900;
+
+// 根据视口宽度计算动态尺寸
+function getDynamicLayoutSizes(): { minWidth: number; maxWidth: number; defaultRatio: number } {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const minDim = Math.min(vw, vh);
+  
+  // 高分屏检测：DPR >= 2 或屏幕宽度 >= 2560
+  const isHighRes = window.devicePixelRatio >= 2 || vw >= 2560;
+  
+  // 基础尺寸
+  const baseMinWidth = isHighRes ? 320 : 280;
+  const baseMaxWidth = Math.min(vw * 0.5, isHighRes ? 1200 : 960);
+  const defaultRatio = vw < 1440 ? 0.38 : 0.35;
+  
+  // 根据视口大小调整
+  if (minDim < 768) {
+    // 小屏幕
+    return { minWidth: 240, maxWidth: vw * 0.6, defaultRatio: 0.5 };
+  } else if (minDim < 1080) {
+    // 中等屏幕
+    return { minWidth: 260, maxWidth: vw * 0.5, defaultRatio: 0.38 };
+  } else {
+    // 大屏幕/高分屏
+    return { 
+      minWidth: Math.min(baseMinWidth, vw * 0.2), 
+      maxWidth: Math.max(baseMaxWidth, vw * 0.5),
+      defaultRatio 
+    };
+  }
+}
+
+// 默认布局配置
+const DEFAULT_LAYOUT: Required<LayoutConfig> = {
+  defaultLeftRatio: 0.35,
+  leftMinWidth: 280,
+  leftMaxWidth: 960,  // 支持到 50% 宽度（假设 1920px 屏幕）
+  hasGraph: false,
+  graphHeight: 240,
+  controlColumns: 'auto',
+  readoutCollapsed: true,
+};
 
 function modeToggleLabel(mode: TeachingMode): string {
   return mode === 'presentation' ? '切换到标准模式' : '切换到演示模式';
@@ -118,58 +186,91 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
     value: options.defaultMode ?? 'normal'
   };
   const themeState: { value: TeachingTheme } = {
-    value: options.defaultTheme ?? 'dark'
+    value: options.defaultTheme ?? 'light'  // 默认为春日模式（浅色）
   };
-  const desktopReadoutCollapsible = options.desktopReadoutCollapsible ?? true;
-  const desktopReadoutDefaultCollapsed = desktopReadoutCollapsible && (options.desktopReadoutDefaultCollapsed ?? true);
-  const desktopReadoutDraggable = options.desktopReadoutDraggable ?? true;
-  const readoutHeaderEnabled = desktopReadoutCollapsible || desktopReadoutDraggable;
   const readoutLabel = options.readoutLabel ?? '数据区';
+  const hideHeader = options.hideHeader ?? false;
+  
+  // 获取动态尺寸（根据视口和高分屏）
+  const dynamicSizes = typeof window !== 'undefined' ? getDynamicLayoutSizes() : {
+    minWidth: 280,
+    maxWidth: 960,
+    defaultRatio: 0.35
+  };
+  
+  // 合并布局配置（用户配置优先于动态计算）
+  const layout: Required<LayoutConfig> = {
+    ...DEFAULT_LAYOUT,
+    defaultLeftRatio: options.layout?.defaultLeftRatio ?? dynamicSizes.defaultRatio,
+    leftMinWidth: options.layout?.leftMinWidth ?? dynamicSizes.minWidth,
+    leftMaxWidth: options.layout?.leftMaxWidth ?? dynamicSizes.maxWidth,
+    ...options.layout,
+  };
 
+  // 生成HTML结构
+  const hasGraph = layout.hasGraph;
+  
   options.mount.innerHTML = `
-    <section class="teaching-demo" data-mode="${modeState.value}" data-theme="${themeState.value}">
-      <aside class="teaching-sidebar">
+    <section class="teaching-demo v2-layout ${hideHeader ? 'is-compact-sidebar' : ''}" 
+             data-mode="${modeState.value}" 
+             data-theme="${themeState.value}"
+             data-has-graph="${hasGraph}"
+             data-control-columns="${layout.controlColumns}">
+      
+      <!-- 左侧面板：控制区 + 图表区 -->
+      <aside class="teaching-left-panel">
+        ${hideHeader ? '' : `
         <header class="teaching-header">
           <h1 class="teaching-title">${options.title}</h1>
           <p class="teaching-subtitle">${options.subtitle}</p>
-          <button type="button" class="sidebar-toggle sidebar-toggle-inline">隐藏控制面板</button>
         </header>
-        <section class="teaching-card control-card">
-          <h2 class="teaching-card-title">控制区</h2>
+        `}
+        
+        <!-- 控制区 -->
+        <section class="control-section" data-collapsed="false">
+          <div class="section-header">
+            <h2 class="section-title">控制区</h2>
+            <button type="button" class="section-toggle" data-target="control" aria-label="折叠控制区">−</button>
+          </div>
           <div class="control-slot"></div>
         </section>
-        <section class="teaching-card status-card">
-          <h2 class="teaching-card-title">状态</h2>
-          <div class="status-row">
-            <span class="status-pill">就绪</span>
-            <span class="status-time">--:--:--</span>
+        
+        ${hasGraph ? `
+        <!-- 图表区（可选） - 占据所有剩余空间 -->
+        <section class="graph-section" data-collapsed="false">
+          <div class="section-header">
+            <h2 class="section-title">图表</h2>
+            <button type="button" class="section-toggle" data-target="graph" aria-label="折叠图表区">−</button>
           </div>
-          <p class="status-text">就绪</p>
+          <div class="graph-slot"></div>
         </section>
+        ` : ''}
       </aside>
-      <div class="sidebar-resizer" role="separator" aria-orientation="vertical" aria-label="调整控制面板宽度" tabindex="0"></div>
-      <section class="teaching-stage-panel">
-        <div class="stage-topbar">
-          <button type="button" class="sidebar-toggle sidebar-toggle-float">隐藏控制面板</button>
-          <div class="stage-toolbar" role="group" aria-label="演示区设置">
+      
+      <!-- 可拖拽分隔线 -->
+      <div class="panel-resizer" role="separator" aria-orientation="vertical" aria-label="调整面板宽度" tabindex="0"></div>
+      
+      <!-- 右侧：动画区 -->
+      <section class="teaching-right-panel">
+        <div class="stage-toolbar">
+          <button type="button" class="sidebar-toggle">隐藏控制面板</button>
+          <div class="toolbar-actions">
             <button type="button" class="mode-toggle" aria-label="${modeToggleLabel(modeState.value)}">${modeToggleText(modeState.value)}</button>
             <button type="button" class="shell-theme-toggle" aria-label="${themeToggleLabel(themeState.value)}">${themeToggleText(themeState.value)}</button>
           </div>
         </div>
-        <button type="button" class="readout-drawer-toggle">显示数据区</button>
-        <button type="button" class="readout-desktop-toggle" hidden>显示状态面板</button>
+        
         <div class="stage-frame">
           <div class="stage-slot">
-            <canvas class="stage-canvas" aria-label="2D 教学动画演示区域"></canvas>
+            <canvas class="stage-canvas" aria-label="动画演示区域"></canvas>
           </div>
         </div>
-        <div class="stage-readout${desktopReadoutDraggable ? ' is-desktop-draggable' : ''}" role="region" aria-label="${readoutLabel}" tabindex="-1">
-          <div class="readout-header${readoutHeaderEnabled ? '' : ' is-hidden'}">
-            <span class="readout-header-title">${readoutLabel}</span>
-            <div class="readout-header-actions">
-              <button type="button" class="readout-inline-toggle" hidden>折叠</button>
-              <button type="button" class="readout-drag-handle" aria-label="拖动数据区" aria-hidden="true" tabindex="-1" hidden>拖动</button>
-            </div>
+        
+        <!-- 数据区（默认折叠） -->
+        <div class="readout-panel ${layout.readoutCollapsed ? 'is-collapsed' : ''}" role="region" aria-label="${readoutLabel}">
+          <div class="readout-header">
+            <span class="readout-title">${readoutLabel}</span>
+            <button type="button" class="readout-toggle" aria-label="${layout.readoutCollapsed ? '展开' : '折叠'}">${layout.readoutCollapsed ? '展开' : '折叠'}</button>
           </div>
           <ul class="readout-slot"></ul>
         </div>
@@ -177,539 +278,332 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
     </section>
   `;
 
-  const root = options.mount.querySelector('.teaching-demo');
-  const controlSlot = options.mount.querySelector('.control-slot');
-  const readoutSlot = options.mount.querySelector('.readout-slot');
-  const stageReadout = options.mount.querySelector('.stage-readout');
-  const stagePanel = options.mount.querySelector('.teaching-stage-panel');
-  const drawerToggle = options.mount.querySelector('.readout-drawer-toggle');
-  const desktopToggle = options.mount.querySelector('.readout-desktop-toggle');
-  const inlineReadoutToggle = options.mount.querySelector('.readout-inline-toggle');
-  const dragHandle = options.mount.querySelector('.readout-drag-handle');
-  const statusCard = options.mount.querySelector('.status-card');
-  const statusPill = options.mount.querySelector('.status-pill');
-  const statusTime = options.mount.querySelector('.status-time');
-  const statusText = options.mount.querySelector('.status-text');
-  const stageSlot = options.mount.querySelector('.stage-slot');
-  const stageCanvas = options.mount.querySelector('.stage-canvas');
-  const modeButton = options.mount.querySelector('.mode-toggle');
-  const themeButton = options.mount.querySelector('.shell-theme-toggle');
-  const sidebar = options.mount.querySelector('.teaching-sidebar');
-  const resizer = options.mount.querySelector('.sidebar-resizer');
-  const inlineToggle = options.mount.querySelector('.sidebar-toggle-inline');
-  const floatToggle = options.mount.querySelector('.sidebar-toggle-float');
+  // 获取DOM引用
+  const root = options.mount.querySelector('.teaching-demo') as HTMLElement;
+  const leftPanel = options.mount.querySelector('.teaching-left-panel') as HTMLElement;
+  const rightPanel = options.mount.querySelector('.teaching-right-panel') as HTMLElement;
+  const resizer = options.mount.querySelector('.panel-resizer') as HTMLElement;
+  const controlSlot = options.mount.querySelector('.control-slot') as HTMLElement;
+  const graphSlot = options.mount.querySelector('.graph-slot') as HTMLElement | null;
+  const stageSlot = options.mount.querySelector('.stage-slot') as HTMLElement;
+  const stageCanvas = options.mount.querySelector('.stage-canvas') as HTMLCanvasElement;
+  const modeButton = options.mount.querySelector('.mode-toggle') as HTMLButtonElement;
+  const themeButton = options.mount.querySelector('.shell-theme-toggle') as HTMLButtonElement;
+  const sidebarToggle = options.mount.querySelector('.sidebar-toggle') as HTMLButtonElement;
+  const readoutPanel = options.mount.querySelector('.readout-panel') as HTMLElement;
+  const readoutSlot = options.mount.querySelector('.readout-slot') as HTMLElement;
+  const readoutToggle = options.mount.querySelector('.readout-toggle') as HTMLButtonElement;
 
-  if (
-    !(root instanceof HTMLElement) ||
-    !(controlSlot instanceof HTMLElement) ||
-    !(readoutSlot instanceof HTMLElement) ||
-    !(stageReadout instanceof HTMLElement) ||
-    !(stagePanel instanceof HTMLElement) ||
-    !(drawerToggle instanceof HTMLButtonElement) ||
-    !(desktopToggle instanceof HTMLButtonElement) ||
-    !(inlineReadoutToggle instanceof HTMLButtonElement) ||
-    !(dragHandle instanceof HTMLButtonElement) ||
-    !(statusCard instanceof HTMLElement) ||
-    !(statusPill instanceof HTMLElement) ||
-    !(statusTime instanceof HTMLElement) ||
-    !(statusText instanceof HTMLElement) ||
-    !(stageSlot instanceof HTMLElement) ||
-    !(stageCanvas instanceof HTMLCanvasElement) ||
-    !(modeButton instanceof HTMLButtonElement) ||
-    !(themeButton instanceof HTMLButtonElement) ||
-    !(sidebar instanceof HTMLElement) ||
-    !(resizer instanceof HTMLElement) ||
-    !(inlineToggle instanceof HTMLButtonElement) ||
-    !(floatToggle instanceof HTMLButtonElement)
-  ) {
-    throw new Error('Failed to mount teaching demo shell');
+  if (!root || !leftPanel || !rightPanel || !resizer || !controlSlot || !stageSlot || 
+      !stageCanvas || !modeButton || !themeButton || !sidebarToggle || 
+      !readoutPanel || !readoutSlot || !readoutToggle) {
+    throw new Error('Failed to mount teaching demo shell: missing required elements');
   }
 
-  const sidebarMinPx = 240;
-  const sidebarMaxPx = 520;
-  const stageMinPx = 700;
-  const dividerPx = 12;
-  const resizeStepPx = 24;
-  let collapsed = false;
-  let dragging = false;
+  // 当前左侧宽度比例
+  let leftRatio = layout.defaultLeftRatio;
+  let isDragging = false;
   let compactViewport = isCompactViewport();
-  let desktopSidebarCollapsed = collapsed;
-  let readoutCollapsed = compactViewport ? true : desktopReadoutDefaultCollapsed;
-  let desktopReadoutCollapsed = desktopReadoutDefaultCollapsed;
-  let readoutOffsetX = 0;
-  let readoutOffsetY = 0;
-  let readoutDragging = false;
-  let hasReadoutItems = false;
-  let pendingViewportFocusTarget: HTMLElement | null = null;
-  let viewportFocusTimer = 0;
-  let lastFocusedShellElement: HTMLElement | null = null;
+  let readoutCollapsed = layout.readoutCollapsed;
+  let sidebarHidden = false;  // 控制区隐藏状态
 
-  const getSidebarMaxForViewport = (): number => {
-    const hardLimit = getResponsiveViewport().width - stageMinPx - dividerPx;
-    return Math.max(sidebarMinPx, Math.min(sidebarMaxPx, hardLimit));
-  };
-
-  const focusableSelector = [
-    'button:not([disabled])',
-    '[href]',
-    'input:not([disabled])',
-    'select:not([disabled])',
-    'textarea:not([disabled])',
-    'iframe',
-    '[tabindex]:not([tabindex="-1"])'
-  ].join(', ');
-
-  const isVisibleFocusable = (node: Element): node is HTMLElement => {
-    if (!(node instanceof HTMLElement)) return false;
-    if (node.hidden || node.getAttribute('aria-hidden') === 'true') return false;
-    if (node.closest('[inert], [aria-hidden="true"]')) return false;
-    if (node instanceof HTMLInputElement && node.type === 'hidden') return false;
-    const style = window.getComputedStyle(node);
-    if (style.display === 'none' || style.visibility === 'hidden') return false;
-    const rect = node.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0 && node.tabIndex >= 0;
-  };
-
-  const getFocusableElements = (): HTMLElement[] => {
-    const elements = Array.from(root.querySelectorAll(focusableSelector)).filter(isVisibleFocusable);
-
-    if (compactViewport && hasReadoutItems && !readoutCollapsed && isVisibleFocusable(drawerToggle) && isVisibleFocusable(stageReadout)) {
-      const drawerIndex = elements.indexOf(drawerToggle);
-      const readoutIndex = elements.indexOf(stageReadout);
-      if (drawerIndex !== -1 && readoutIndex !== -1 && readoutIndex !== drawerIndex + 1) {
-        elements.splice(readoutIndex, 1);
-        elements.splice(drawerIndex + 1, 0, stageReadout);
-      }
+  // 初始化控制区布局管理器
+  const controlLayout = createControlLayout({
+    container: controlSlot,
+    minWidth1Col: 0,
+    minWidth2Col: 260,
+    minWidth3Col: 360,
+    defaultDensity: 'compact',
+    onLayoutChange: (columns, density) => {
+      // 布局变化时的回调
+      console.log('[Control Layout] Columns:', columns, 'Density:', density);
     }
+  });
 
-    return elements;
-  };
+  // 设置左侧宽度
+  function setLeftRatio(ratio: number): void {
+    leftRatio = Math.max(0.2, Math.min(0.5, ratio));
+    applyLayout();
+  }
 
-  const getDesktopReadoutFocusTarget = (): HTMLElement | null => {
-    if (isVisibleFocusable(inlineReadoutToggle)) return inlineReadoutToggle;
-    if (isVisibleFocusable(desktopToggle)) return desktopToggle;
-    return null;
-  };
+  function getLeftRatio(): number {
+    return leftRatio;
+  }
 
-  const getViewportResizeFocusTarget = (activeElement: HTMLElement | null, nextCompact: boolean): HTMLElement | null => {
-    if (activeElement === null || !root.contains(activeElement)) return null;
-
-    if (nextCompact) {
-      if (activeElement === floatToggle || activeElement === inlineToggle || activeElement === resizer) {
-        return isVisibleFocusable(inlineToggle) ? inlineToggle : null;
-      }
-      if (
-        activeElement === desktopToggle ||
-        activeElement === inlineReadoutToggle ||
-        activeElement === drawerToggle ||
-        stageReadout.contains(activeElement)
-      ) {
-        return isVisibleFocusable(drawerToggle) ? drawerToggle : null;
-      }
-      return null;
-    }
-
-    if (activeElement === inlineToggle || activeElement === floatToggle || activeElement === resizer) {
-      return isVisibleFocusable(floatToggle) ? floatToggle : null;
-    }
-    if (
-      activeElement === drawerToggle ||
-      activeElement === desktopToggle ||
-      activeElement === inlineReadoutToggle ||
-      stageReadout.contains(activeElement)
-    ) {
-      return getDesktopReadoutFocusTarget();
-    }
-    return null;
-  };
-
-  const needsViewportFocusRepair = (): boolean => {
-    const activeElement = document.activeElement;
-    if (!(activeElement instanceof HTMLElement)) return true;
-    if (activeElement === document.body) return true;
-    if (!root.contains(activeElement)) return true;
-    return !isVisibleFocusable(activeElement);
-  };
-
-  const onRootFocusIn = (event: FocusEvent): void => {
-    if (event.target instanceof HTMLElement && root.contains(event.target)) {
-      lastFocusedShellElement = event.target;
-    }
-  };
-
-  const scheduleViewportFocusRepair = (): void => {
-    if (viewportFocusTimer !== 0) {
-      window.clearTimeout(viewportFocusTimer);
-    }
-    viewportFocusTimer = window.setTimeout(() => {
-      viewportFocusTimer = 0;
-      if (pendingViewportFocusTarget !== null && isVisibleFocusable(pendingViewportFocusTarget) && needsViewportFocusRepair()) {
-        pendingViewportFocusTarget.focus();
-      }
-      if (!needsViewportFocusRepair()) {
-        pendingViewportFocusTarget = null;
-      }
-    }, 30);
-  };
-
-  const onRootTabKeyDown = (event: KeyboardEvent): void => {
-    if (event.key !== 'Tab' || event.altKey || event.ctrlKey || event.metaKey) return;
-
-    const activeElement = document.activeElement;
-    if (!(activeElement instanceof HTMLElement) || !root.contains(activeElement)) return;
-
-    const focusableElements = getFocusableElements();
-    if (focusableElements.length < 2) return;
-
-    const currentIndex = focusableElements.indexOf(activeElement);
-    if (currentIndex === -1) return;
-
-    const nextIndex = event.shiftKey
-      ? (currentIndex - 1 + focusableElements.length) % focusableElements.length
-      : (currentIndex + 1) % focusableElements.length;
-    const nextTarget = focusableElements[nextIndex];
-    if (!nextTarget || nextTarget === activeElement) return;
-
-    event.preventDefault();
-    nextTarget.focus();
-  };
-
-  const updateResizerAccessibility = (): void => {
-    const interactive = !collapsed && !compactViewport;
-    const dynamicMax = getSidebarMaxForViewport();
-    const currentWidth = Math.round(sidebar.getBoundingClientRect().width) || sidebarMinPx;
-    resizer.tabIndex = interactive ? 0 : -1;
-    resizer.setAttribute('aria-disabled', String(!interactive));
-    resizer.setAttribute('aria-valuemin', String(sidebarMinPx));
-    resizer.setAttribute('aria-valuemax', String(dynamicMax));
-    resizer.setAttribute('aria-valuenow', String(Math.max(sidebarMinPx, Math.min(dynamicMax, currentWidth))));
-  };
-
-  const setSidebarWidth = (widthPx: number): void => {
-    const dynamicMax = getSidebarMaxForViewport();
-    const clamped = clampSidebarWidth(widthPx, sidebarMinPx, dynamicMax);
-    root.style.setProperty('--sidebar-width', `${clamped}px`);
-    updateResizerAccessibility();
-  };
-
-  const updateSidebarToggleLabel = (): void => {
-    const label = collapsed ? '显示控制面板' : '隐藏控制面板';
-    inlineToggle.textContent = label;
-    floatToggle.textContent = label;
-    inlineToggle.setAttribute('aria-pressed', String(collapsed));
-    floatToggle.setAttribute('aria-pressed', String(collapsed));
-  };
-
-  const setSidebarCollapsed = (next: boolean): void => {
-    const focusWasInsideSidebar = document.activeElement instanceof HTMLElement && sidebar.contains(document.activeElement);
-    const focusWasOnResizer = document.activeElement === resizer;
-
-    collapsed = next;
-    if (!compactViewport) {
-      desktopSidebarCollapsed = collapsed;
-    }
-    root.classList.toggle('is-sidebar-collapsed', collapsed);
-    sidebar.toggleAttribute('inert', collapsed);
-    sidebar.setAttribute('aria-hidden', String(collapsed));
-    updateSidebarToggleLabel();
-    updateResizerAccessibility();
-
-    if (collapsed && (focusWasInsideSidebar || focusWasOnResizer)) {
-      floatToggle.focus();
-    }
-  };
-
-  const onToggleSidebar = (): void => {
-    setSidebarCollapsed(!collapsed);
-  };
-
-  const onResizerPointerDown = (event: PointerEvent): void => {
-    if (collapsed || isCompactViewport()) return;
-    dragging = true;
-    const pointerId = event.pointerId;
-    const startX = event.clientX;
-    const startWidth = sidebar.getBoundingClientRect().width;
-
-    const onPointerMove = (moveEvent: PointerEvent): void => {
-      if (!dragging) return;
-      const delta = moveEvent.clientX - startX;
-      setSidebarWidth(startWidth + delta);
-    };
-
-    const onPointerUp = (): void => {
-      dragging = false;
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
-      try {
-        resizer.releasePointerCapture(pointerId);
-      } catch {
-        // Ignore if pointer capture wasn't acquired.
-      }
-    };
-
-    try {
-      resizer.setPointerCapture(pointerId);
-    } catch {
-      // Ignore unsupported pointer capture.
-    }
-
-    window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('pointerup', onPointerUp);
-  };
-
-  const onResizerKeyDown = (event: KeyboardEvent): void => {
-    if (collapsed || compactViewport) return;
-
-    const currentWidth = sidebar.getBoundingClientRect().width;
-    if (event.key === 'ArrowLeft') {
-      event.preventDefault();
-      setSidebarWidth(currentWidth - resizeStepPx);
-      return;
-    }
-    if (event.key === 'ArrowRight') {
-      event.preventDefault();
-      setSidebarWidth(currentWidth + resizeStepPx);
-      return;
-    }
-    if (event.key === 'Home') {
-      event.preventDefault();
-      setSidebarWidth(sidebarMinPx);
-      return;
-    }
-    if (event.key === 'End') {
-      event.preventDefault();
-      setSidebarWidth(getSidebarMaxForViewport());
-    }
-  };
-
-  const updateReadoutOffset = (): void => {
-    stageReadout.style.setProperty('--readout-offset-x', `${readoutOffsetX}px`);
-    stageReadout.style.setProperty('--readout-offset-y', `${readoutOffsetY}px`);
-  };
-
-  const resetReadoutOffset = (): void => {
-    readoutOffsetX = 0;
-    readoutOffsetY = 0;
-    updateReadoutOffset();
-  };
-
-  const updateReadoutDrawer = (): void => {
-    root.classList.toggle('is-compact-viewport', compactViewport);
-    const drawerEnabled = compactViewport && hasReadoutItems;
-    const desktopToggleEnabled = !compactViewport && desktopReadoutCollapsible && hasReadoutItems;
-    const toggleEnabled = drawerEnabled || desktopToggleEnabled;
-    const expanded = !(toggleEnabled && readoutCollapsed);
-    drawerToggle.hidden = !drawerEnabled;
-    desktopToggle.hidden = !desktopToggleEnabled || expanded;
-    inlineReadoutToggle.hidden = !desktopToggleEnabled || !expanded;
-    dragHandle.hidden = !(desktopReadoutDraggable && !compactViewport && hasReadoutItems && expanded);
-    dragHandle.tabIndex = -1;
-    dragHandle.setAttribute('aria-hidden', 'true');
-    stageReadout.classList.toggle('is-empty', !hasReadoutItems);
-    stageReadout.classList.toggle('is-collapsed', toggleEnabled && readoutCollapsed);
-    stageReadout.classList.toggle('has-header', readoutHeaderEnabled && !compactViewport && hasReadoutItems);
-    stageReadout.tabIndex = compactViewport && hasReadoutItems && expanded ? 0 : -1;
-    const openLabel = readoutLabel === '数据区' ? '显示数据区' : `显示${readoutLabel}`;
-    const closeLabel = readoutLabel === '数据区' ? '隐藏数据区' : `隐藏${readoutLabel}`;
-    drawerToggle.textContent = expanded ? closeLabel : openLabel;
-    drawerToggle.setAttribute('aria-expanded', String(expanded));
-    desktopToggle.textContent = openLabel;
-    desktopToggle.setAttribute('aria-expanded', String(expanded));
-    inlineReadoutToggle.textContent = '折叠';
-    inlineReadoutToggle.setAttribute('aria-expanded', String(expanded));
-  };
-
-  const onViewportResize = (): void => {
-    const nextCompact = isCompactViewport();
-    const activeBeforeResize = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const focusSource = activeBeforeResize !== null && root.contains(activeBeforeResize) ? activeBeforeResize : lastFocusedShellElement;
-
-    if (nextCompact !== compactViewport) {
-      if (nextCompact) {
-        desktopSidebarCollapsed = collapsed;
-        desktopReadoutCollapsed = readoutCollapsed;
-        compactViewport = true;
-        readoutCollapsed = true;
-        resetReadoutOffset();
-        setSidebarCollapsed(false);
-      } else {
-        compactViewport = false;
-        readoutCollapsed = desktopReadoutCollapsible ? desktopReadoutCollapsed : false;
-        setSidebarCollapsed(desktopSidebarCollapsed);
-      }
-    } else {
-      compactViewport = nextCompact;
-    }
-
+  // 应用布局
+  function applyLayout(): void {
+    // 设置侧边栏隐藏状态属性
+    root.dataset.sidebarHidden = String(sidebarHidden);
+    
     if (compactViewport) {
-      root.style.removeProperty('--sidebar-width');
+      // 移动端：堆叠布局
+      root.style.gridTemplateColumns = '1fr';
+      leftPanel.style.display = readoutCollapsed ? 'none' : 'flex';
+      leftPanel.style.width = 'auto';
+      rightPanel.style.display = 'flex';
+      resizer.style.display = 'none';
     } else {
-      const widthToken = root.style.getPropertyValue('--sidebar-width');
-      if (!widthToken) {
-        setSidebarWidth(getDefaultSidebarWidth(window.innerWidth, sidebarMinPx, getSidebarMaxForViewport()));
+      // 桌面端：左右布局
+      if (sidebarHidden) {
+        // 左侧边栏折叠 - 只保留分隔条用于恢复
+        root.style.gridTemplateColumns = '0px 8px 1fr';
+        leftPanel.style.display = 'none';
+        leftPanel.style.width = '0px';
+        rightPanel.style.display = 'flex';
+        rightPanel.style.width = 'auto';
+        resizer.style.display = 'block';
       } else {
-        const current = parseFloat(widthToken);
-        if (Number.isFinite(current)) {
-          setSidebarWidth(current);
+        const totalWidth = root.clientWidth;
+        // 计算左侧宽度：按比例，但受 min/max 限制
+        let leftWidth = totalWidth * leftRatio;
+        leftWidth = Math.max(layout.leftMinWidth, Math.min(layout.leftMaxWidth, leftWidth));
+        // 确保不超过屏幕 50%
+        leftWidth = Math.min(leftWidth, totalWidth * 0.5);
+        root.style.gridTemplateColumns = `${leftWidth}px 8px 1fr`;
+        leftPanel.style.display = 'flex';
+        leftPanel.style.width = 'auto';
+        rightPanel.style.display = 'flex';
+        rightPanel.style.width = 'auto';
+        resizer.style.display = 'block';
+      }
+    }
+    
+    // 更新控制区列数
+    updateControlColumns();
+    
+    // 触发resize通知
+    notifyResize();
+    
+    // 更新按钮文本
+    sidebarToggle.textContent = sidebarHidden ? '显示左侧区域' : '隐藏左侧区域';
+  }
+
+  // 更新控制区列数（自适应）
+  function updateControlColumns(): void {
+    if (layout.controlColumns === 'auto') {
+      const leftWidth = leftPanel.clientWidth;
+      let columns = 1;
+      if (leftWidth > 380) columns = 3;
+      else if (leftWidth > 300) columns = 2;
+      controlSlot.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
+    } else {
+      controlSlot.style.gridTemplateColumns = `repeat(${layout.controlColumns}, 1fr)`;
+    }
+  }
+
+  // 触发尺寸变化回调
+  function notifyResize(): void {
+    if (!options.onResize) return;
+    // 触发回调，让场景自行处理 resize
+    options.onResize();
+  }
+
+  // 拖拽分隔线
+  function startDrag(e: MouseEvent | TouchEvent): void {
+    if (compactViewport) return;
+    isDragging = true;
+    e.preventDefault();
+    
+    const startX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const startLeftWidth = leftPanel.clientWidth;
+    
+    // 使用 requestAnimationFrame 节流 resize 通知
+    let rafId: number | null = null;
+    let pendingResize = false;
+    
+    function scheduleResize(): void {
+      if (rafId) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        if (pendingResize) {
+          notifyResize();
+          pendingResize = false;
         }
-      }
+      });
     }
-    updateReadoutDrawer();
-    updateResizerAccessibility();
-    pendingViewportFocusTarget = getViewportResizeFocusTarget(focusSource, compactViewport);
-    scheduleViewportFocusRepair();
-  };
+    
+    function onMove(e: MouseEvent | TouchEvent): void {
+      if (!isDragging) return;
+      const currentX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const deltaX = currentX - startX;
+      const newLeftWidth = startLeftWidth + deltaX;
+      const totalWidth = root.clientWidth;
+      const newRatio = newLeftWidth / totalWidth;
+      setLeftRatio(newRatio);
+      
+      // 使用 requestAnimationFrame 确保 DOM 更新后再通知
+      // 这保证场景获取到的是最新的尺寸
+      requestAnimationFrame(() => {
+        notifyResize();
+      });
+    }
+    
+    function onEnd(): void {
+      isDragging = false;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onEnd);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onEnd);
+      if (rafId) cancelAnimationFrame(rafId);
+      notifyResize(); // 确保最终状态通知
+    }
+    
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onEnd);
+    document.addEventListener('touchmove', onMove, { passive: true });
+    document.addEventListener('touchend', onEnd);
+  }
 
-  const onToggleReadoutDrawer = (event?: Event): void => {
-    if (!hasReadoutItems) return;
-    if (!compactViewport && !desktopReadoutCollapsible) return;
+  resizer.addEventListener('mousedown', startDrag);
+  resizer.addEventListener('touchstart', startDrag, { passive: false });
 
-    const activeElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const focusWasInsideReadout = activeElement !== null && stageReadout.contains(activeElement);
-    const openingFromDesktopToggle = !compactViewport && activeElement === desktopToggle && readoutCollapsed;
-    const keyboardLikeActivation = event instanceof MouseEvent ? event.detail === 0 : false;
+  // 侧边栏折叠/显示切换（折叠整个左侧区域）
+  function toggleSidebar(): void {
+    if (compactViewport) {
+      // 移动端：切换数据区折叠状态
+      readoutCollapsed = !readoutCollapsed;
+      applyLayout();
+    } else {
+      // 桌面端：折叠/展开整个左侧边栏
+      sidebarHidden = !sidebarHidden;
+      applyLayout();
+    }
+  }
 
+  sidebarToggle.addEventListener('click', toggleSidebar);
+  
+  // 区域折叠切换（控制区/图表区独立折叠）
+  const controlSection = leftPanel.querySelector('.control-section') as HTMLElement;
+  const graphSection = leftPanel.querySelector('.graph-section') as HTMLElement;
+  
+  function toggleSection(target: 'control' | 'graph'): void {
+    const section = target === 'control' ? controlSection : graphSection;
+    if (!section) return;
+    
+    const isCollapsed = section.dataset.collapsed === 'true';
+    section.dataset.collapsed = String(!isCollapsed);
+    
+    const toggleBtn = section.querySelector('.section-toggle') as HTMLButtonElement;
+    if (toggleBtn) {
+      toggleBtn.textContent = !isCollapsed ? '+' : '−';
+      toggleBtn.setAttribute('aria-label', !isCollapsed ? `展开${target === 'control' ? '控制区' : '图表区'}` : `折叠${target === 'control' ? '控制区' : '图表区'}`);
+    }
+  }
+  
+  // 绑定区域折叠按钮
+  leftPanel.querySelectorAll('.section-toggle').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const target = (e.currentTarget as HTMLElement).dataset.target as 'control' | 'graph';
+      toggleSection(target);
+    });
+  });
+
+  // 数据区折叠
+  function toggleReadout(): void {
     readoutCollapsed = !readoutCollapsed;
-    if (!compactViewport) {
-      desktopReadoutCollapsed = readoutCollapsed;
+    readoutPanel.classList.toggle('is-collapsed', readoutCollapsed);
+    readoutToggle.textContent = readoutCollapsed ? '展开' : '折叠';
+    readoutToggle.setAttribute('aria-label', readoutCollapsed ? '展开' : '折叠');
+  }
+
+  readoutToggle.addEventListener('click', toggleReadout);
+
+  // 响应式监听
+  function handleResize(): void {
+    const newCompact = isCompactViewport();
+    if (newCompact !== compactViewport) {
+      compactViewport = newCompact;
+      applyLayout();
+    } else {
+      updateControlColumns();
     }
-    updateReadoutDrawer();
+  }
 
-    if (compactViewport && !readoutCollapsed && keyboardLikeActivation) {
-      stageReadout.focus();
-      return;
-    }
+  window.addEventListener('resize', handleResize);
 
-    if (!compactViewport && !readoutCollapsed && openingFromDesktopToggle && !inlineReadoutToggle.hidden) {
-      inlineReadoutToggle.focus();
-      return;
-    }
-
-    if (readoutCollapsed && focusWasInsideReadout) {
-      if (compactViewport && !drawerToggle.hidden) {
-        drawerToggle.focus();
-      } else if (!desktopToggle.hidden) {
-        desktopToggle.focus();
-      }
-    }
-  };
-
-  const onReadoutDragStart = (event: PointerEvent): void => {
-    if (!desktopReadoutDraggable || compactViewport || !hasReadoutItems) return;
-    if (desktopReadoutCollapsible && readoutCollapsed) return;
-    readoutDragging = true;
-    event.preventDefault();
-    const pointerId = event.pointerId;
-    const panelRect = stagePanel.getBoundingClientRect();
-    const readoutRect = stageReadout.getBoundingClientRect();
-    const startX = event.clientX;
-    const startY = event.clientY;
-    const baseOffsetX = readoutOffsetX;
-    const baseOffsetY = readoutOffsetY;
-    const minOffsetX = baseOffsetX + (panelRect.left - readoutRect.left);
-    const maxOffsetX = baseOffsetX + (panelRect.right - readoutRect.right);
-    const minOffsetY = baseOffsetY + (panelRect.top - readoutRect.top);
-    const maxOffsetY = baseOffsetY + (panelRect.bottom - readoutRect.bottom);
-
-    const onPointerMove = (moveEvent: PointerEvent): void => {
-      if (!readoutDragging) return;
-      const deltaX = moveEvent.clientX - startX;
-      const deltaY = moveEvent.clientY - startY;
-      readoutOffsetX = Math.max(minOffsetX, Math.min(maxOffsetX, baseOffsetX + deltaX));
-      readoutOffsetY = Math.max(minOffsetY, Math.min(maxOffsetY, baseOffsetY + deltaY));
-      updateReadoutOffset();
-    };
-
-    const onPointerUp = (): void => {
-      readoutDragging = false;
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
-      try {
-        dragHandle.releasePointerCapture(pointerId);
-      } catch {
-        // Ignore if pointer capture wasn't acquired.
-      }
-    };
-
-    try {
-      dragHandle.setPointerCapture(pointerId);
-    } catch {
-      // Ignore unsupported pointer capture.
-    }
-
-    window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('pointerup', onPointerUp);
-  };
-
-  const setMode = (mode: TeachingMode): void => {
-    modeState.value = mode;
-    applyModeTokens(root, modeState.value);
-    modeButton.textContent = modeToggleText(modeState.value);
-    modeButton.setAttribute('aria-label', modeToggleLabel(modeState.value));
-    modeButton.title = modeToggleLabel(modeState.value);
-    modeButton.setAttribute('aria-pressed', String(modeState.value === 'presentation'));
-  };
-
-  const setTheme = (theme: TeachingTheme): void => {
-    themeState.value = theme;
-    applyThemeTokens(root, themeState.value);
-    themeButton.textContent = themeToggleText(themeState.value);
-    themeButton.setAttribute('aria-label', themeToggleLabel(themeState.value));
-    themeButton.title = themeToggleLabel(themeState.value);
-    themeButton.setAttribute('aria-pressed', String(themeState.value === 'dark'));
-  };
-
-  const setStatus = (text: string, level?: StatusLevel): void => {
-    const resolvedLevel = level ?? inferStatusLevel(text);
-    statusCard.dataset.statusLevel = resolvedLevel;
-    statusPill.textContent = statusLevelLabel(resolvedLevel);
-    statusTime.textContent = nowTimeLabel();
-    statusText.textContent = text;
-  };
-
+  // 初始化
   applyModeTokens(root, modeState.value);
   applyThemeTokens(root, themeState.value);
   applyTouchInteractionMode(stageCanvas, 'default');
-  modeButton.setAttribute('aria-pressed', String(modeState.value === 'presentation'));
-  modeButton.setAttribute('aria-label', modeToggleLabel(modeState.value));
-  modeButton.title = modeToggleLabel(modeState.value);
-  modeButton.textContent = modeToggleText(modeState.value);
-  themeButton.setAttribute('aria-pressed', String(themeState.value === 'dark'));
-  themeButton.setAttribute('aria-label', themeToggleLabel(themeState.value));
-  themeButton.title = themeToggleLabel(themeState.value);
-  themeButton.textContent = themeToggleText(themeState.value);
-  setSidebarWidth(getDefaultSidebarWidth(window.innerWidth, sidebarMinPx, getSidebarMaxForViewport()));
-  updateSidebarToggleLabel();
-  updateResizerAccessibility();
-  updateReadoutOffset();
-  setStatus('就绪', 'ready');
-  updateReadoutDrawer();
+  applyLayout();
 
-  inlineToggle.addEventListener('click', onToggleSidebar);
-  floatToggle.addEventListener('click', onToggleSidebar);
-  drawerToggle.addEventListener('click', onToggleReadoutDrawer);
-  desktopToggle.addEventListener('click', onToggleReadoutDrawer);
-  inlineReadoutToggle.addEventListener('click', onToggleReadoutDrawer);
-  dragHandle.addEventListener('pointerdown', onReadoutDragStart);
-  resizer.addEventListener('pointerdown', onResizerPointerDown);
-  resizer.addEventListener('keydown', onResizerKeyDown);
-  root.addEventListener('focusin', onRootFocusIn);
-  root.addEventListener('keydown', onRootTabKeyDown);
-  window.addEventListener('resize', onViewportResize);
-  window.visualViewport?.addEventListener('resize', onViewportResize);
+  // 使数据读数面板可拖拽
+  const cleanupReadoutDrag = makeElementDraggable(readoutPanel, readoutPanel.querySelector('.readout-header') as HTMLElement);
+
+  // 拖拽功能辅助函数
+  function makeElementDraggable(element: HTMLElement, handle: HTMLElement | null): (() => void) | void {
+    if (!handle) return;
+    
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+    let initialLeft = 0;
+    let initialTop = 0;
+    
+    handle.style.cursor = 'move';
+    
+    function onMouseDown(e: MouseEvent) {
+      isDragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      
+      initialLeft = element.offsetLeft;
+      initialTop = element.offsetTop;
+      
+      element.style.transition = 'none';
+      element.style.right = 'auto';
+      document.body.style.userSelect = 'none';
+      
+      e.preventDefault();
+    }
+    
+    function onMouseMove(e: MouseEvent) {
+      if (!isDragging) return;
+      
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      
+      element.style.left = `${initialLeft + dx}px`;
+      element.style.top = `${initialTop + dy}px`;
+    }
+    
+    function onMouseUp() {
+      if (isDragging) {
+        isDragging = false;
+        element.style.transition = '';
+        document.body.style.userSelect = '';
+      }
+    }
+    
+    handle.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    
+    // 返回清理函数
+    return () => {
+      handle.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+  }
 
   return {
     root,
     controlSlot,
+    graphSlot,
     readoutSlot,
     stageSlot,
     stageCanvas,
     modeButton,
     themeButton,
-    setStatus,
-    setReadout(items: ReadoutItem[]) {
+    
+    setStatus(text: string, level?: StatusLevel): void {
+      // 状态信息可以通过 setReadout 显示
+      this.setReadout([{ label: '状态', value: text }]);
+    },
+    
+    setReadout(items: ReadoutItem[]): void {
       readoutSlot.innerHTML = '';
-      hasReadoutItems = items.length > 0;
       for (const item of items) {
         const layout = resolveReadoutLayout(item);
         const line = document.createElement('li');
@@ -718,32 +612,41 @@ export function createTeachingDemoShell(options: CreateTeachingDemoShellOptions)
         line.title = `${item.label}：${item.value}`;
         readoutSlot.appendChild(line);
       }
-      updateReadoutDrawer();
     },
-    setMode,
-    setTheme,
+    
+    setMode(mode: TeachingMode): void {
+      modeState.value = mode;
+      applyModeTokens(root, mode);
+      modeButton.textContent = modeToggleText(mode);
+      modeButton.setAttribute('aria-label', modeToggleLabel(mode));
+      modeButton.setAttribute('aria-pressed', String(mode === 'presentation'));
+    },
+    
+    setTheme(theme: TeachingTheme): void {
+      themeState.value = theme;
+      applyThemeTokens(root, theme);
+      themeButton.textContent = themeToggleText(theme);
+      themeButton.setAttribute('aria-label', themeToggleLabel(theme));
+      themeButton.setAttribute('aria-pressed', String(theme === 'dark'));
+    },
+    
     getMode() {
       return modeState.value;
     },
+    
     getTheme() {
       return themeState.value;
     },
+    
+    setLeftRatio,
+    getLeftRatio,
+    
+    getControlLayout: () => controlLayout,
+    
     dispose() {
-      inlineToggle.removeEventListener('click', onToggleSidebar);
-      floatToggle.removeEventListener('click', onToggleSidebar);
-      drawerToggle.removeEventListener('click', onToggleReadoutDrawer);
-      desktopToggle.removeEventListener('click', onToggleReadoutDrawer);
-      inlineReadoutToggle.removeEventListener('click', onToggleReadoutDrawer);
-      dragHandle.removeEventListener('pointerdown', onReadoutDragStart);
-      resizer.removeEventListener('pointerdown', onResizerPointerDown);
-      resizer.removeEventListener('keydown', onResizerKeyDown);
-      root.removeEventListener('focusin', onRootFocusIn);
-      root.removeEventListener('keydown', onRootTabKeyDown);
-      window.removeEventListener('resize', onViewportResize);
-      window.visualViewport?.removeEventListener('resize', onViewportResize);
-      if (viewportFocusTimer !== 0) {
-        window.clearTimeout(viewportFocusTimer);
-      }
+      window.removeEventListener('resize', handleResize);
+      controlLayout.dispose();
+      cleanupReadoutDrag?.();
     }
   };
 }
