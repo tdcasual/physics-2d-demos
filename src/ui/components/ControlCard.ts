@@ -42,24 +42,25 @@ export function createControlCard(
     card.classList.add('collapsed');
   }
 
-  // 头部
+  // 头部 - 极致紧凑，高分屏适配
   const header = document.createElement('div');
   header.style.cssText = `
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 14px;
+    padding: calc(6px * var(--ui-scale, 1)) calc(10px * var(--ui-scale, 1));
     background: var(--bg-secondary);
     border-bottom: 1px solid var(--border-color);
     cursor: pointer;
     user-select: none;
+    min-height: calc(32px * var(--ui-scale, 1));
   `;
 
-  // 标题
+  // 标题 - 响应式字体
   const titleEl = document.createElement('div');
   titleEl.style.cssText = `
-    font-size: 14px;
-    font-weight: 600;
+    font-size: calc(15px * var(--ui-scale, 1));
+    font-weight: 700;
     color: var(--text-primary);
     display: flex;
     align-items: center;
@@ -80,12 +81,12 @@ export function createControlCard(
   const actionsContainer = document.createElement('div');
   actionsContainer.style.cssText = 'display: flex; align-items: center; gap: 8px; flex-shrink: 0;';
 
-  // 插入自定义操作按钮 - 使用主题变量
+  // 插入自定义操作按钮 - 使用主题变量，高分屏适配
   if (options?.headerActions) {
     options.headerActions.forEach(btn => {
       btn.style.cssText = `
-        padding: 6px 14px;
-        font-size: 12px;
+        padding: calc(5px * var(--ui-scale, 1)) calc(12px * var(--ui-scale, 1));
+        font-size: calc(13px * var(--ui-scale, 1));
         font-weight: 600;
         background: var(--accent-primary);
         color: var(--text-inverse);
@@ -94,6 +95,7 @@ export function createControlCard(
         cursor: pointer;
         transition: all 0.2s;
         box-shadow: var(--shadow-sm);
+        min-height: calc(28px * var(--ui-scale, 1));
       `;
       btn.addEventListener('mouseenter', () => {
         btn.style.filter = 'brightness(1.1)';
@@ -105,19 +107,19 @@ export function createControlCard(
     });
   }
 
-  // 折叠按钮
+  // 折叠按钮 - 高分屏适配
   const toggle = document.createElement('button');
   toggle.type = 'button';
   toggle.style.cssText = `
-    width: 24px;
-    height: 24px;
+    width: calc(22px * var(--ui-scale, 1));
+    height: calc(22px * var(--ui-scale, 1));
     display: flex;
     align-items: center;
     justify-content: center;
     background: transparent;
     border: none;
     color: var(--text-muted);
-    font-size: 12px;
+    font-size: calc(13px * var(--ui-scale, 1));
     cursor: pointer;
     transition: all 0.2s;
     border-radius: 4px;
@@ -134,13 +136,13 @@ export function createControlCard(
   actionsContainer.appendChild(toggle);
   header.appendChild(actionsContainer);
 
-  // 内容区域
+  // 内容区域 - 极致紧凑，高分屏适配
   const body = document.createElement('div');
   body.style.cssText = `
-    padding: 14px;
+    padding: calc(4px * var(--ui-scale, 1)) calc(6px * var(--ui-scale, 1));
     display: ${options?.defaultCollapsed ? 'none' : 'flex'};
     flex-direction: column;
-    gap: 10px;
+    gap: calc(4px * var(--ui-scale, 1));
   `;
 
   card.appendChild(header);

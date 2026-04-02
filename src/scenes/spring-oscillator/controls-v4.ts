@@ -26,8 +26,19 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
   // ===== 1. 控制列表卡片 =====
   const addBtn = document.createElement('button');
   addBtn.textContent = '+ 添加';
-  // 精确复刻 V3 按钮样式
-  addBtn.className = 'px-2 py-0.5 text-[11px] font-medium bg-coral text-white rounded-full hover:brightness-110 transition-all';
+  // 响应式字体，高分屏适配
+  addBtn.style.cssText = `
+    padding: calc(6px * var(--ui-scale, 1)) calc(12px * var(--ui-scale, 1));
+    font-size: calc(14px * var(--ui-scale, 1));
+    font-weight: 600;
+    background: var(--accent-primary);
+    color: var(--text-inverse);
+    border-radius: 9999px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-height: calc(32px * var(--ui-scale, 1));
+  `;
   
   const listCard = createControlCard('振子列表', {
     defaultCollapsed: false,
@@ -35,7 +46,7 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
   });
   
   const listContainer = document.createElement('div');
-  listContainer.className = 'flex flex-col gap-1';
+  listContainer.className = 'flex flex-col gap-[2px]';
   listCard.body.appendChild(listContainer);
 
   // 添加按钮点击事件
@@ -57,7 +68,7 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
   
   // 精确复刻 V3 网格布局
   const presetContainer = document.createElement('div');
-  presetContainer.className = 'grid grid-cols-2 gap-2';
+  presetContainer.className = 'grid grid-cols-2 gap-1';
   
   // 计算周期
   const period = 2 * Math.PI * Math.sqrt(1 / 10);
@@ -132,18 +143,20 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 10px 8px;
+      padding: calc(4px * var(--ui-scale, 1)) calc(4px * var(--ui-scale, 1));
       background: var(--btn-bg);
       border: 1px solid var(--border-color);
-      border-radius: 8px;
+      border-radius: 4px;
       cursor: pointer;
       transition: all 0.2s ease;
       text-align: center;
-      gap: 4px;
+      gap: 1px;
+      min-height: calc(36px * var(--ui-scale, 1));
+      justify-content: center;
     `;
     button.innerHTML = `
-      <span style="font-size: 12px; font-weight: 600; color: var(--text-primary);">${btn.label}</span>
-      <span style="font-size: 10px; color: var(--text-secondary);">${btn.desc}</span>
+      <span style="font-size: calc(15px * var(--ui-scale, 1)); font-weight: 700; color: var(--text-primary);">${btn.label}</span>
+      <span style="font-size: calc(13px * var(--ui-scale, 1)); color: var(--text-secondary);">${btn.desc}</span>
     `;
     button.addEventListener('click', btn.onClick);
     button.addEventListener('mouseenter', () => {
@@ -172,22 +185,25 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
     item.style.cssText = `
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 4px 8px;
+      gap: calc(5px * var(--ui-scale, 1));
+      padding: calc(4px * var(--ui-scale, 1)) calc(8px * var(--ui-scale, 1));
       background: var(--bg-card);
-      border-radius: 6px;
+      border-radius: 5px;
       border: 1px solid var(--border-color);
+      min-height: calc(36px * var(--ui-scale, 1));
     `;
     item.style.borderLeft = `3px solid ${osc.color}`;
 
-    // 色块标识
+    // 色块标识 - 响应式大小
     const colorDot = document.createElement('div');
-    colorDot.className = 'w-2 h-2 rounded-full shrink-0';
+    colorDot.className = 'rounded-full shrink-0';
+    colorDot.style.width = 'calc(8px * var(--ui-scale, 1))';
+    colorDot.style.height = 'calc(8px * var(--ui-scale, 1))';
     colorDot.style.background = osc.color;
     
     // 参数控制区（三个滑块紧凑排列）
     const paramsContainer = document.createElement('div');
-    paramsContainer.className = 'flex-1 flex items-center gap-1 min-w-0';
+    paramsContainer.className = 'flex-1 flex items-center gap-[2px] min-w-0';
     
     // k 滑块
     const kControl = createMiniSlider('k', osc.params.k, 1, 100, 1, '', (val) => {
@@ -216,8 +232,11 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
     const isHorizontal = osc.params.orientation === 'horizontal';
     const orientBtn = document.createElement('button');
     orientBtn.type = 'button';
-    orientBtn.className = 'w-7 h-6 text-[10px] font-medium rounded shrink-0 cursor-pointer transition-all';
+    orientBtn.className = 'font-bold rounded shrink-0 cursor-pointer transition-all';
     orientBtn.style.cssText = `
+      width: calc(28px * var(--ui-scale, 1));
+      height: calc(24px * var(--ui-scale, 1));
+      font-size: calc(14px * var(--ui-scale, 1));
       border: 1px solid var(--border-color);
       background: var(--btn-bg);
       color: var(--text-primary);
@@ -244,9 +263,9 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
     const delBtn = document.createElement('button');
     delBtn.type = 'button';
     delBtn.style.cssText = `
-      width: 20px;
-      height: 20px;
-      font-size: 12px;
+      width: calc(22px * var(--ui-scale, 1));
+      height: calc(22px * var(--ui-scale, 1));
+      font-size: calc(14px * var(--ui-scale, 1));
       display: flex;
       align-items: center;
       justify-content: center;
@@ -278,7 +297,7 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
     return item;
   }
   
-  // 创建迷你滑块控制
+  // 创建迷你滑块控制 - 响应式字体，高分屏适配
   function createMiniSlider(
     label: string,
     value: number,
@@ -289,24 +308,41 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
     onChange: (val: number) => void
   ): HTMLElement {
     const container = document.createElement('div');
-    container.className = 'flex items-center gap-0.5 flex-1 min-w-0';
+    container.className = 'flex items-center flex-1 min-w-0';
+    container.style.gap = '1px';
     
+    // 标签 - 响应式字体（k, m等增大20%）
     const labelSpan = document.createElement('span');
-    labelSpan.className = 'text-[11px] font-medium shrink-0';
+    labelSpan.className = 'font-black shrink-0';
+    labelSpan.style.fontSize = 'calc(17px * var(--ui-scale, 1))';
     labelSpan.style.color = 'var(--text-secondary)';
+    labelSpan.style.minWidth = 'calc(18px * var(--ui-scale, 1))';
+    labelSpan.style.textAlign = 'center';
+    labelSpan.style.lineHeight = '1.1';
     labelSpan.textContent = label;
     
+    // 滑块 - 响应式高度
     const slider = document.createElement('input');
     slider.type = 'range';
     slider.min = String(min);
     slider.max = String(max);
     slider.step = String(step);
     slider.value = String(value);
-    slider.className = 'flex-1 h-1 min-w-[30px] accent-coral';
+    slider.style.height = 'calc(5px * var(--ui-scale, 1))';
+    slider.style.accentColor = 'var(--accent-primary)';
+    slider.style.flex = '1 1 0';
+    slider.style.minWidth = 'calc(20px * var(--ui-scale, 1))';
     
+    // 数值 - 响应式字体
     const valueSpan = document.createElement('span');
-    valueSpan.className = 'text-[10px] w-6 text-right shrink-0';
+    valueSpan.className = 'font-bold shrink-0';
+    valueSpan.style.fontSize = 'calc(14px * var(--ui-scale, 1))';
     valueSpan.style.color = 'var(--text-primary)';
+    valueSpan.style.minWidth = 'calc(32px * var(--ui-scale, 1))';
+    valueSpan.style.maxWidth = 'calc(40px * var(--ui-scale, 1))';
+    valueSpan.style.textAlign = 'left';
+    valueSpan.style.paddingLeft = '2px';
+    valueSpan.style.lineHeight = '1.1';
     valueSpan.textContent = String(value);
     
     slider.addEventListener('input', () => {
@@ -327,7 +363,9 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
     
     if (scene.sim.oscillators.length === 0) {
       const emptyDiv = document.createElement('div');
-      emptyDiv.className = 'text-center py-3 text-xs';
+      emptyDiv.style.fontSize = 'calc(15px * var(--ui-scale, 1))';
+      emptyDiv.style.textAlign = 'center';
+      emptyDiv.style.padding = 'calc(8px * var(--ui-scale, 1)) 0';
       emptyDiv.style.color = 'var(--text-secondary)';
       emptyDiv.textContent = '暂无振子，点击上方"+ 添加"按钮';
       listContainer.appendChild(emptyDiv);

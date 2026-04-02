@@ -74,6 +74,37 @@
   --accent-color: var(--color-accent-color);
   --accent-primary: var(--color-coral);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  
+  /* 高分屏字体缩放系数 - 默认1.0 */
+  --ui-scale: 1;
+  --font-base: calc(1rem * var(--ui-scale));
+  --font-sm: calc(0.875rem * var(--ui-scale));
+  --font-xs: calc(0.75rem * var(--ui-scale));
+  --font-lg: calc(1.125rem * var(--ui-scale));
+  
+  /* 触摸目标最小尺寸 */
+  --touch-min: 44px;
+  
+  /* 间距 */
+  --space-xs: calc(0.25rem * var(--ui-scale));
+  --space-sm: calc(0.5rem * var(--ui-scale));
+  --space-md: calc(0.75rem * var(--ui-scale));
+}
+
+/* 高分屏优化：DPR >= 2 时增大 UI */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  :root {
+    --ui-scale: 1.15;
+    --touch-min: 48px;
+  }
+}
+
+/* 超高分屏优化：DPR >= 3 */
+@media (-webkit-min-device-pixel-ratio: 3), (min-resolution: 288dpi) {
+  :root {
+    --ui-scale: 1.25;
+    --touch-min: 52px;
+  }
 }
 
 /* 暗色主题 */
@@ -161,13 +192,13 @@
 
 /* 区域头部 - 带折叠按钮 */
 .section-header {
-  @apply flex shrink-0 items-center justify-between border-b px-4 py-2;
+  @apply flex shrink-0 items-center justify-between border-b px-3 py-1.5;
   background: var(--color-bg-secondary);
   border-color: var(--color-border-color);
 }
 
 .section-title {
-  @apply m-0 text-xs font-semibold uppercase tracking-wide;
+  @apply m-0 text-sm font-semibold;
   color: var(--color-text-primary);
 }
 
@@ -196,7 +227,9 @@
 }
 
 .control-slot {
-  @apply flex shrink-0 flex-col gap-2.5 overflow-y-auto overflow-x-hidden px-4 py-3;
+  @apply flex shrink-0 flex-col overflow-y-auto overflow-x-hidden;
+  gap: calc(0.25rem * var(--ui-scale, 1));
+  padding: calc(0.375rem * var(--ui-scale, 1)) calc(0.5rem * var(--ui-scale, 1));
 }
 
 .control-slot > * {
@@ -321,14 +354,21 @@
    动画区浮动控制按钮
    ======================================== */
 .stage-floating-controls {
-  @apply absolute left-3 top-3 z-50 inline-flex gap-1.5 rounded-lg border p-1.5;
+  @apply absolute z-50 inline-flex rounded-md border;
+  left: calc(0.5rem * var(--ui-scale, 1));
+  top: calc(0.5rem * var(--ui-scale, 1));
+  gap: calc(0.25rem * var(--ui-scale, 1));
+  padding: calc(0.25rem * var(--ui-scale, 1));
   background: var(--color-bg-primary);
   border-color: var(--color-border-color);
   box-shadow: var(--shadow-lg);
 }
 
 .stage-floating-controls button {
-  @apply flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border p-0 text-sm transition-all;
+  @apply flex cursor-pointer items-center justify-center rounded-md border p-0 transition-all;
+  width: calc(1.75rem * var(--ui-scale, 1));
+  height: calc(1.75rem * var(--ui-scale, 1));
+  font-size: calc(0.875rem * var(--ui-scale, 1));
   background: var(--color-btn-bg);
   border-color: var(--color-border-color);
   color: var(--color-text-secondary);
@@ -348,7 +388,7 @@
    数据区 - 浮动面板
    ======================================== */
 .readout-panel {
-  @apply absolute right-4 top-[60px] z-[100] min-w-[240px] max-w-[360px] overflow-hidden rounded-xl border text-xs transition-all;
+  @apply absolute right-3 top-[52px] z-[100] min-w-[200px] max-w-[320px] overflow-hidden rounded-lg border text-xs transition-all;
   background: var(--color-bg-primary);
   border-color: var(--color-border-color);
   box-shadow: var(--shadow-lg);
@@ -363,7 +403,7 @@
 }
 
 .readout-header {
-  @apply flex items-center justify-between border-b px-4 py-3;
+  @apply flex items-center justify-between border-b px-3 py-2;
   background: var(--color-bg-secondary);
   border-color: var(--color-border-color);
 }
@@ -385,12 +425,12 @@
 }
 
 .readout-slot {
-  @apply m-0 flex max-h-[400px] list-none flex-wrap content-start gap-1.5 overflow-y-auto p-3;
+  @apply m-0 flex max-h-[320px] list-none flex-wrap content-start gap-1 overflow-y-auto p-2;
   background: var(--color-bg-primary);
 }
 
 .readout-item {
-  @apply box-border flex min-w-0 flex-1 basis-full items-center justify-between rounded-md px-3.5 py-2.5 text-base;
+  @apply box-border flex min-w-0 flex-1 basis-full items-center justify-between rounded-md px-2.5 py-1.5 text-sm;
   background: var(--color-bg-secondary);
 }
 
