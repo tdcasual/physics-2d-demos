@@ -23,15 +23,15 @@ export function createControlCard(
   title: string,
   options?: ControlCardOptions
 ): ControlCardInstance {
-  // 卡片容器 - 白色背景
+  // 卡片容器 - 使用主题变量
   const card = document.createElement('div');
   card.style.cssText = `
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
     border-radius: 10px;
     overflow: hidden;
     transition: all 0.2s ease;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    box-shadow: var(--shadow-sm);
   `;
   
   if (options?.className) {
@@ -49,8 +49,8 @@ export function createControlCard(
     align-items: center;
     justify-content: space-between;
     padding: 12px 14px;
-    background: #fafafa;
-    border-bottom: 1px solid #e5e7eb;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
     cursor: pointer;
     user-select: none;
   `;
@@ -60,7 +60,7 @@ export function createControlCard(
   titleEl.style.cssText = `
     font-size: 14px;
     font-weight: 600;
-    color: #374151;
+    color: var(--text-primary);
     display: flex;
     align-items: center;
     gap: 6px;
@@ -80,20 +80,20 @@ export function createControlCard(
   const actionsContainer = document.createElement('div');
   actionsContainer.style.cssText = 'display: flex; align-items: center; gap: 8px; flex-shrink: 0;';
 
-  // 插入自定义操作按钮 - 珊瑚红风格
+  // 插入自定义操作按钮 - 使用主题变量
   if (options?.headerActions) {
     options.headerActions.forEach(btn => {
       btn.style.cssText = `
         padding: 6px 14px;
         font-size: 12px;
         font-weight: 600;
-        background: #FF6B6B;
-        color: #ffffff;
+        background: var(--accent-primary);
+        color: var(--text-inverse);
         border: none;
         border-radius: 20px;
         cursor: pointer;
         transition: all 0.2s;
-        box-shadow: 0 1px 3px rgba(255,107,107,0.3);
+        box-shadow: var(--shadow-sm);
       `;
       btn.addEventListener('mouseenter', () => {
         btn.style.filter = 'brightness(1.1)';
@@ -116,7 +116,7 @@ export function createControlCard(
     justify-content: center;
     background: transparent;
     border: none;
-    color: #9ca3af;
+    color: var(--text-muted);
     font-size: 12px;
     cursor: pointer;
     transition: all 0.2s;
@@ -125,7 +125,7 @@ export function createControlCard(
   toggle.innerHTML = options?.defaultCollapsed ? '▶' : '▼';
   toggle.setAttribute('aria-label', options?.defaultCollapsed ? '展开' : '折叠');
   toggle.addEventListener('mouseenter', () => {
-    toggle.style.background = '#e5e7eb';
+    toggle.style.background = 'var(--border-light)';
   });
   toggle.addEventListener('mouseleave', () => {
     toggle.style.background = 'transparent';

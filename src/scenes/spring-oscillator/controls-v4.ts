@@ -174,9 +174,9 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
       align-items: center;
       gap: 6px;
       padding: 4px 8px;
-      background: #ffffff;
+      background: var(--bg-card);
       border-radius: 6px;
-      border: 1px solid #e5e7eb;
+      border: 1px solid var(--border-color);
     `;
     item.style.borderLeft = `3px solid ${osc.color}`;
 
