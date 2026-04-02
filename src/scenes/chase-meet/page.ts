@@ -1,10 +1,11 @@
 import '../../ui/teaching-demo.css';
+import '../../ui/teaching-demo-v2.css';
 import { bootLegacy2DBridgePage } from '../../app/legacy-2d-bridge-page';
 import { createPageLifecycle } from '../../app/page-lifecycle';
 import { createSceneShell } from '../../app/scene-shell';
 import { createTeachingDemoShell, type ReadoutItem } from '../../app/teaching-demo-shell';
 import type { TeachingMode } from '../../app/teaching-standards';
-import { createChaseMeetControls } from './controls';
+import { createChaseMeetControlsV3 } from './controls-v3';
 import { createChaseMeetScene } from './scene.entry';
 import type { ChaseMeetSnapshot, ResolvedChaseMeetParams } from './scene.sim';
 
@@ -55,8 +56,8 @@ function bootLegacy(mount: HTMLElement): void {
       sourcePath: '/animations/mechanics/追击相遇问题.html'
     },
     setupControls: ({ shell, adapter, lifecycle }) => {
-      const controls = createChaseMeetControls({
-        container: shell.controlSlot,
+      const controls = createChaseMeetControlsV3({
+        mount: shell.controlSlot,
         initialParams: {
           totalTime: 10,
           dt: 0.02,
@@ -65,14 +66,27 @@ function bootLegacy(mount: HTMLElement): void {
           vExprA: '2',
           vExprB: '0.5'
         },
-        onPlay: () => adapter.sendControl('play'),
-        onPause: () => adapter.sendControl('pause'),
-        onReset: () => adapter.sendControl('reset'),
-        onStep: () => adapter.sendControl('step'),
         onApplyParams: (next) => adapter.sendControlExt('set-settings', next),
         onStatus: (text) => shell.setStatus(text)
       });
       lifecycle.onDispose(() => controls.dispose());
+      
+      // 浮动控制按钮
+      const floatingControls = document.createElement('div');
+      floatingControls.className = 'stage-floating-controls';
+      floatingControls.innerHTML = `
+        <button type="button" data-action="play" title="播放">▶</button>
+        <button type="button" data-action="pause" title="暂停">⏸</button>
+        <button type="button" data-action="reset" title="重置">⏹</button>
+        <button type="button" data-action="step" title="单步">⏵</button>
+      `;
+      shell.stageSlot.appendChild(floatingControls);
+
+      floatingControls.querySelector('[data-action="play"]')?.addEventListener('click', () => adapter.sendControl('play'));
+      floatingControls.querySelector('[data-action="pause"]')?.addEventListener('click', () => adapter.sendControl('pause'));
+      floatingControls.querySelector('[data-action="reset"]')?.addEventListener('click', () => adapter.sendControl('reset'));
+      floatingControls.querySelector('[data-action="step"]')?.addEventListener('click', () => adapter.sendControl('step'));
+      
       shell.setStatus('左侧可配置参数并控制播放流程');
     }
   });
@@ -83,7 +97,17 @@ function bootModern(mount: HTMLElement): void {
     mount,
     title: '追及相遇',
     subtitle: '一维追及场景：上方位移演示，下方 x-t / v-t 图像联动',
-    defaultMode: 'normal'
+    defaultMode: 'normal',
+    hideHeader: false,
+    readoutLabel: '数据区',
+    layout: {
+      defaultLeftRatio: 0.32,
+      leftMinWidth: 270,
+      leftMaxWidth: 960,
+      hasGraph: false,  // 图表集成在动画区内
+      controlColumns: 1,
+      readoutCollapsed: true,
+    }
   });
   const lifecycle = createPageLifecycle();
   lifecycle.onDispose(() => shell.dispose());
@@ -114,45 +138,9 @@ function bootModern(mount: HTMLElement): void {
   });
   lifecycle.onDispose(() => transport.dispose());
 
-  const controls = createChaseMeetControls({
-    container: shell.controlSlot,
+  const controls = createChaseMeetControlsV3({
+    mount: shell.controlSlot,
     initialParams: currentParams,
-    onPlay: () => {
-      transport.play();
-      isPlaying = true;
-      if (currentSnapshot) {
-        shell.setReadout(formatReadout(currentSnapshot, isPlaying, shell.getMode()));
-      }
-      shell.setStatus('动画已开始');
-    },
-    onPause: () => {
-      transport.pause();
-      isPlaying = false;
-      if (currentSnapshot) {
-        shell.setReadout(formatReadout(currentSnapshot, isPlaying, shell.getMode()));
-      }
-      shell.setStatus('动画已暂停');
-    },
-    onReset: () => {
-      transport.reset();
-      isPlaying = false;
-      scene.reset();
-      scene.render();
-      if (currentSnapshot) {
-        shell.setReadout(formatReadout(currentSnapshot, isPlaying, shell.getMode()));
-      }
-      shell.setStatus('动画已重置');
-    },
-    onStep: () => {
-      transport.stepOnce(() => {
-        scene.step(1 / 60);
-      });
-      isPlaying = false;
-      if (currentSnapshot) {
-        shell.setReadout(formatReadout(currentSnapshot, isPlaying, shell.getMode()));
-      }
-      shell.setStatus('已单步推进');
-    },
     onApplyParams: (next) => {
       currentParams = scene.setParams(next);
       transport.reset();
@@ -167,6 +155,44 @@ function bootModern(mount: HTMLElement): void {
     onStatus: (text) => shell.setStatus(text)
   });
   lifecycle.onDispose(() => controls.dispose());
+
+  // 浮动控制按钮
+  const floatingControls = document.createElement('div');
+  floatingControls.className = 'stage-floating-controls';
+  floatingControls.innerHTML = `
+    <button type="button" data-action="play" title="播放">▶</button>
+    <button type="button" data-action="pause" title="暂停">⏸</button>
+    <button type="button" data-action="reset" title="重置">⏹</button>
+    <button type="button" data-action="step" title="单步">⏵</button>
+  `;
+  shell.stageSlot.appendChild(floatingControls);
+
+  floatingControls.querySelector('[data-action="play"]')?.addEventListener('click', () => {
+    transport.play();
+    isPlaying = true;
+    if (currentSnapshot) shell.setReadout(formatReadout(currentSnapshot, isPlaying, shell.getMode()));
+    shell.setStatus('动画已开始');
+  });
+  floatingControls.querySelector('[data-action="pause"]')?.addEventListener('click', () => {
+    transport.pause();
+    isPlaying = false;
+    if (currentSnapshot) shell.setReadout(formatReadout(currentSnapshot, isPlaying, shell.getMode()));
+    shell.setStatus('动画已暂停');
+  });
+  floatingControls.querySelector('[data-action="reset"]')?.addEventListener('click', () => {
+    transport.reset();
+    isPlaying = false;
+    scene.reset();
+    scene.render();
+    if (currentSnapshot) shell.setReadout(formatReadout(currentSnapshot, isPlaying, shell.getMode()));
+    shell.setStatus('动画已重置');
+  });
+  floatingControls.querySelector('[data-action="step"]')?.addEventListener('click', () => {
+    transport.stepOnce(() => scene.step(1 / 60));
+    isPlaying = false;
+    if (currentSnapshot) shell.setReadout(formatReadout(currentSnapshot, isPlaying, shell.getMode()));
+    shell.setStatus('已单步推进');
+  });
 
   const onModeToggle = () => {
     const nextMode = shell.getMode() === 'normal' ? 'presentation' : 'normal';

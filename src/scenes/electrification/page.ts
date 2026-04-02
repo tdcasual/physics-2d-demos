@@ -1,4 +1,5 @@
 import '../../ui/teaching-demo.css';
+import '../../ui/teaching-demo-v2.css';
 import { bootLegacy2DBridgePage } from '../../app/legacy-2d-bridge-page';
 import { createPageLifecycle } from '../../app/page-lifecycle';
 import {
@@ -6,7 +7,7 @@ import {
   type ReadoutItem
 } from '../../app/teaching-demo-shell';
 import type { TeachingMode } from '../../app/teaching-standards';
-import { createElectrificationControls } from './controls';
+import { createElectrificationControlsV3 } from './controls-v3';
 import { createElectrificationScene } from './scene.entry';
 import type { ElectrificationSnapshot } from './scene.sim';
 
@@ -62,8 +63,8 @@ function bootLegacy(mount: HTMLElement): void {
       sourcePath: '/animations/electromagnetism/起电方式演示.html'
     },
     setupControls: ({ shell, adapter, lifecycle }) => {
-      const controls = createElectrificationControls({
-        container: shell.controlSlot,
+      const controls = createElectrificationControlsV3({
+        mount: shell.controlSlot,
         onSetScene: (scene) => adapter.sendControlExt('set-scene', { scene }),
         onRunStep: () => adapter.sendControlExt('run-scene-action'),
         onReset: () => adapter.sendControl('reset'),
@@ -80,7 +81,17 @@ function bootModern(mount: HTMLElement): void {
     mount,
     title: '静电起电演示',
     subtitle: '三类起电过程按步骤演示，可逐步执行',
-    defaultMode: 'normal'
+    defaultMode: 'normal',
+    hideHeader: false,
+    readoutLabel: '状态',
+    layout: {
+      defaultLeftRatio: 0.35,
+      leftMinWidth: 280,
+      leftMaxWidth: 960,
+      hasGraph: false,
+      controlColumns: 1,
+      readoutCollapsed: false,
+    }
   });
   const lifecycle = createPageLifecycle();
   lifecycle.onDispose(() => shell.dispose());
@@ -98,10 +109,10 @@ function bootModern(mount: HTMLElement): void {
   });
   lifecycle.onDispose(() => scene.dispose());
 
-  const controls = createElectrificationControls({
-    container: shell.controlSlot,
-    onSetScene: (nextScene) => {
-      scene.setScene(nextScene);
+  const controls = createElectrificationControlsV3({
+    mount: shell.controlSlot,
+    onSetScene: (nextScene: string) => {
+      scene.setScene(nextScene as import('./scene.sim').ElectrificationScene);
       scene.render();
     },
     onRunStep: () => {

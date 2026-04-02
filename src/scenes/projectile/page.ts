@@ -1,9 +1,10 @@
 import '../../ui/teaching-demo.css';
+import '../../ui/teaching-demo-v2.css';
 import { createPageLifecycle } from '../../app/page-lifecycle';
 import { createSceneShell } from '../../app/scene-shell';
 import { createTeachingDemoShell, type ReadoutItem } from '../../app/teaching-demo-shell';
 import { createProjectileScene } from './scene.entry';
-import { createProjectileControls } from './controls';
+import { createProjectileControlsV3 } from './controls-v3';
 import type { ProjectileParams, ProjectileState, ResolvedProjectileParams } from './scene.sim';
 
 function formatReadout(state: ProjectileState, params: ResolvedProjectileParams): ReadoutItem[] {
@@ -28,8 +29,18 @@ function boot(): void {
   const shell = createTeachingDemoShell({
     mount,
     title: '抛体运动',
-    subtitle: '统一教学页面规范：左数据区，右动画演示区',
-    defaultMode: 'normal'
+    subtitle: 'Projectile Motion',
+    defaultMode: 'normal',
+    hideHeader: true,
+    readoutLabel: '数据区',
+    layout: {
+      defaultLeftRatio: 0.32,
+      leftMinWidth: 260,
+      leftMaxWidth: 960,
+      hasGraph: false,
+      controlColumns: 'auto',
+      readoutCollapsed: true,
+    }
   });
   const lifecycle = createPageLifecycle();
   lifecycle.onDispose(() => shell.dispose());
@@ -60,40 +71,70 @@ function boot(): void {
   lifecycle.onDispose(() => transport.dispose());
   lifecycle.onDispose(() => scene.dispose());
 
-  const controls = createProjectileControls({
-    container: shell.controlSlot,
-    initialParams: currentParams,
-    onPlay: () => {
-      transport.play();
-      shell.setStatus('播放中');
+  // V3 控制面板
+  const controls = createProjectileControlsV3({
+    mount: shell.controlSlot,
+    onParamChange: (key, value) => {
+      const paramMap: Record<string, keyof ProjectileParams> = {
+        'v0': 'speed',
+        'theta': 'angleDeg',
+        'h0': 'initialHeight',
+        'g': 'gravity',
+        'c': 'drag'
+      };
+      const paramKey = paramMap[key];
+      if (paramKey) {
+        currentParams = scene.setParams({ [paramKey]: value });
+        shell.setReadout(formatReadout(scene.getState(), currentParams));
+      }
     },
-    onPause: () => {
-      transport.pause();
-      shell.setStatus('已暂停');
-    },
-    onReset: () => {
+    onPresetSelect: (preset) => {
+      let params: Partial<ProjectileParams> = {};
+      switch (preset) {
+        case 'earth': params = { gravity: 9.8, windAccel: 0 }; break;
+        case 'moon': params = { gravity: 1.62, windAccel: 0 }; break;
+        case 'mars': params = { gravity: 3.71, windAccel: 0 }; break;
+        case 'wind': params = { windAccel: 2.0 }; break;
+      }
+      currentParams = scene.setParams(params);
+      controls.setParam('g', currentParams.gravity);
+      controls.updatePreset(preset);
       transport.reset();
       scene.reset();
       scene.render();
-      shell.setStatus('已重置');
-    },
-    onStep: () => {
-      transport.stepOnce(() => {
-        scene.step(1 / 60);
-      });
-      shell.setStatus('已单步推进');
-    },
-    onApplyParams: (next: Partial<ProjectileParams>) => {
-      currentParams = scene.setParams(next);
-      transport.reset();
-      scene.reset();
-      scene.render();
-    },
-    onStatus: (text) => {
-      shell.setStatus(text);
+      shell.setReadout(formatReadout(scene.getState(), currentParams));
     }
   });
-  lifecycle.onDispose(() => controls.dispose());
+
+  // 浮动控制按钮
+  const floatingControls = document.createElement('div');
+  floatingControls.className = 'stage-floating-controls';
+  floatingControls.innerHTML = `
+    <button type="button" data-action="play" title="播放">▶</button>
+    <button type="button" data-action="pause" title="暂停">⏸</button>
+    <button type="button" data-action="reset" title="重置">⏹</button>
+    <button type="button" data-action="step" title="单步">⏵</button>
+  `;
+  shell.stageSlot.appendChild(floatingControls);
+
+  floatingControls.querySelector('[data-action="play"]')?.addEventListener('click', () => {
+    transport.play();
+    shell.setStatus('播放中');
+  });
+  floatingControls.querySelector('[data-action="pause"]')?.addEventListener('click', () => {
+    transport.pause();
+    shell.setStatus('已暂停');
+  });
+  floatingControls.querySelector('[data-action="reset"]')?.addEventListener('click', () => {
+    transport.reset();
+    scene.reset();
+    scene.render();
+    shell.setStatus('已重置');
+  });
+  floatingControls.querySelector('[data-action="step"]')?.addEventListener('click', () => {
+    transport.stepOnce(() => scene.step(1 / 60));
+    shell.setStatus('已单步推进');
+  });
 
   const onModeToggle = () => {
     const nextMode = shell.getMode() === 'normal' ? 'presentation' : 'normal';
@@ -121,39 +162,19 @@ function boot(): void {
     scene.resize();
     scene.render();
   };
-
   window.addEventListener('resize', onResize);
-  window.visualViewport?.addEventListener('resize', onResize);
   lifecycle.onDispose(() => window.removeEventListener('resize', onResize));
-  lifecycle.onDispose(() => window.visualViewport?.removeEventListener('resize', onResize));
-
-  let dprQuery: MediaQueryList | null = null;
-
-  const handleDprChange = () => {
-    bindDprQuery();
-    onResize();
-  };
-
-  const bindDprQuery = () => {
-    if (typeof window.matchMedia !== 'function') return;
-    if (dprQuery) {
-      dprQuery.removeEventListener('change', handleDprChange);
-    }
-    const currentDpr = window.devicePixelRatio || 1;
-    dprQuery = window.matchMedia(`(resolution: ${currentDpr}dppx)`);
-    dprQuery.addEventListener('change', handleDprChange);
-  };
-
-  bindDprQuery();
-  lifecycle.onDispose(() => dprQuery?.removeEventListener('change', handleDprChange));
-
-  const onBeforeUnload = () => lifecycle.dispose();
-  window.addEventListener('beforeunload', onBeforeUnload);
-  lifecycle.onDispose(() => window.removeEventListener('beforeunload', onBeforeUnload));
 
   scene.init();
   scene.resize();
   scene.render();
+  
+  controls.setParam('v0', currentParams.speed);
+  controls.setParam('theta', currentParams.angleDeg);
+  controls.setParam('h0', currentParams.initialHeight);
+  controls.setParam('g', currentParams.gravity);
+  controls.setParam('c', currentParams.drag);
+  
   shell.setStatus('就绪');
 }
 

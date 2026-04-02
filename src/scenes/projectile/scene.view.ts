@@ -1,184 +1,231 @@
+/**
+ * 抛体运动视图 - 使用统一框架
+ * 优化 Canvas 尺寸计算和绘制逻辑
+ */
+
 import type { ProjectileState } from './scene.sim';
-import { getTeachingStandards, type TeachingMode } from '../../app/teaching-standards';
-import { applyHiDpiCanvasMetrics, computeHiDpiCanvasMetrics } from '../../core/high-dpi-canvas';
-import type { TeachingTheme } from '../../app/teaching-demo-shell';
+import { Colors, alpha, getThemeColors } from '../../core/colors';
+import { 
+  getOptimalCanvasSize, 
+  setCanvasSize,
+  drawGrid,
+  drawBall,
+  drawTrail,
+  drawDataPanel
+} from '../../core/unified-canvas';
 
 export type CreateProjectileViewOptions = {
-  canvas?: HTMLCanvasElement;
-  mode?: TeachingMode;
-  theme?: TeachingTheme;
+  canvas: HTMLCanvasElement;
+  theme?: 'light' | 'dark';
+  mode?: 'normal' | 'presentation';
 };
 
-export function createProjectileView(options: CreateProjectileViewOptions = {}) {
+export function createProjectileView(options: CreateProjectileViewOptions) {
+  const { canvas } = options;
+  let theme: 'light' | 'dark' = options.theme ?? 'dark';
+  let mode: 'normal' | 'presentation' = options.mode ?? 'normal';
+  let ctx: CanvasRenderingContext2D | null = null;
+  let width = 0;
+  let height = 0;
+  let scale = 1;
+  let trail: Array<{ x: number; y: number }> = [];
   let lastState: ProjectileState | null = null;
-  let trail: Array<Pick<ProjectileState, 'x' | 'y'>> = [];
-  let canvas = options.canvas ?? null;
-  let ctx = canvas?.getContext('2d') ?? null;
-  let mode: TeachingMode = options.mode ?? 'normal';
-  let theme: TeachingTheme = options.theme ?? 'dark';
-  let surface = computeHiDpiCanvasMetrics({
-    cssWidth: 1280,
-    cssHeight: 720,
-    devicePixelRatio: 1
-  });
-
-  function resizeCanvas(): void {
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const width = Math.max(320, Math.floor(rect.width || 1280));
-    const height = Math.max(220, Math.floor(rect.height || 720));
-    const dpr = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1;
-    surface = computeHiDpiCanvasMetrics({
-      cssWidth: width,
-      cssHeight: height,
-      devicePixelRatio: dpr
-    });
-    if (ctx) {
-      applyHiDpiCanvasMetrics(canvas, ctx, surface);
+  
+  // 坐标系配置
+  const originX = 60;
+  const originY = () => height - 60;
+  
+  function resize(): void {
+    // 获取舞台容器的尺寸
+    let rect = canvas.parentElement?.getBoundingClientRect();
+    
+    // 如果 parent 没有尺寸，尝试使用 canvas 自身的尺寸
+    if (!rect || rect.width === 0 || rect.height === 0) {
+      rect = canvas.getBoundingClientRect();
     }
+    
+    // 如果仍然没有尺寸，使用默认值
+    if (!rect || rect.width === 0 || rect.height === 0) {
+      width = 800;
+      height = 600;
+    } else {
+      // 使用统一工具计算最佳 Canvas 尺寸
+      const optimal = getOptimalCanvasSize(rect.width, rect.height, 40);
+      width = optimal.width;
+      height = optimal.height;
+      scale = optimal.scale;
+    }
+    
+    // 设置 Canvas 尺寸并处理高DPI
+    ctx = setCanvasSize(canvas, width, height);
   }
-
-  function drawAxes(width: number, height: number, strokeWidth: number): void {
-    if (!ctx) return;
-    const originX = 70;
-    const originY = height - 60;
-    ctx.lineWidth = strokeWidth;
-    ctx.strokeStyle = theme === 'dark' ? '#6f9fd8' : '#345b8a';
-    ctx.beginPath();
-    ctx.moveTo(originX, 30);
-    ctx.lineTo(originX, originY);
-    ctx.lineTo(width - 24, originY);
-    ctx.stroke();
-  }
-
-  function drawTrail(width: number, height: number, strokeWidth: number, pointRadius: number): void {
-    if (!ctx || trail.length === 0) return;
-
-    const originX = 70;
-    const originY = height - 60;
-    const maxX = Math.max(25, ...trail.map((p) => p.x + 3));
-    const maxY = Math.max(10, ...trail.map((p) => p.y + 2));
-    const scaleX = (width - 100) / maxX;
+  
+  function worldToScreen(state: ProjectileState): { x: number; y: number } {
+    // 计算缩放比例以适应画布
+    const maxX = Math.max(50, ...trail.map(p => p.x), state.x);
+    const maxY = Math.max(30, ...trail.map(p => p.y), state.y);
+    
+    const scaleX = (width - originX - 40) / maxX;
     const scaleY = (height - 100) / maxY;
-
-    ctx.lineWidth = strokeWidth;
-    ctx.strokeStyle = theme === 'dark' ? '#4db0ff' : '#0f6fc6';
-    ctx.beginPath();
-    for (let i = 0; i < trail.length; i += 1) {
-      const x = originX + trail[i].x * scaleX;
-      const y = originY - trail[i].y * scaleY;
-      if (i === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
-    }
-    ctx.stroke();
-
-    const tip = trail[trail.length - 1];
-    const tipX = originX + tip.x * scaleX;
-    const tipY = originY - tip.y * scaleY;
-    ctx.fillStyle = theme === 'dark' ? '#ff6b6b' : '#f14545';
-    ctx.beginPath();
-    ctx.arc(tipX, tipY, pointRadius, 0, Math.PI * 2);
-    ctx.fill();
+    const s = Math.min(scaleX, scaleY);
+    
+    return {
+      x: originX + state.x * s,
+      y: originY() - state.y * s
+    };
   }
-
-  function drawText(
-    state: ProjectileState,
-    width: number,
-    primaryFontSize: number,
-    secondaryFontSize: number
-  ): void {
+  
+  function drawAxes(): void {
     if (!ctx) return;
-    const boxWidth = Math.max(280, Math.round(primaryFontSize * 8.2));
-    const lineGap = Math.round(secondaryFontSize * 1.35);
-    const boxHeight = Math.round(primaryFontSize + lineGap * 2 + 28);
-    const boxX = width - boxWidth - 24;
-    const boxY = 16;
-
-    ctx.fillStyle = theme === 'dark' ? 'rgba(3,10,25,0.78)' : 'rgba(255,255,255,0.78)';
-    ctx.strokeStyle = theme === 'dark' ? 'rgba(148,163,184,0.45)' : 'rgba(52,91,138,0.35)';
-    ctx.lineWidth = Math.max(2, Math.round(primaryFontSize * 0.14));
+    const colors = getThemeColors(theme);
+    
+    // 根据屏幕尺寸调整线条粗细
+    const isMobile = width < 500;
+    const lineWidth = isMobile ? 1.5 : 2;
+    const fontSize = isMobile ? 10 : 12;
+    const labelOffset = isMobile ? 14 : 20;
+    
+    ctx.save();
+    ctx.strokeStyle = colors.secondary;
+    ctx.lineWidth = lineWidth;
+    
+    // Y轴
     ctx.beginPath();
-    ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 12);
-    ctx.fill();
+    ctx.moveTo(originX, 20);
+    ctx.lineTo(originX, originY());
     ctx.stroke();
-
-    const textColor = theme === 'dark' ? '#e2e8f0' : '#243b57';
-    ctx.fillStyle = textColor;
-    ctx.textAlign = 'left';
-    ctx.font = `700 ${primaryFontSize}px "Noto Sans SC", "PingFang SC", sans-serif`;
-    ctx.fillText(`t=${state.t.toFixed(2)}s`, boxX + 16, boxY + primaryFontSize + 6);
-    ctx.font = `700 ${secondaryFontSize}px "Noto Sans SC", "PingFang SC", sans-serif`;
-    ctx.fillText(`x=${state.x.toFixed(2)}m`, boxX + 16, boxY + primaryFontSize + 10 + lineGap);
-    ctx.fillText(`y=${state.y.toFixed(2)}m`, boxX + 16, boxY + primaryFontSize + 10 + lineGap * 2);
+    
+    // X轴
+    ctx.beginPath();
+    ctx.moveTo(originX, originY());
+    ctx.lineTo(width - 20, originY());
+    ctx.stroke();
+    
+    // 箭头
+    ctx.fillStyle = colors.secondary;
+    // X轴箭头
+    ctx.beginPath();
+    ctx.moveTo(width - 20, originY());
+    ctx.lineTo(width - 30, originY() - 5);
+    ctx.lineTo(width - 30, originY() + 5);
+    ctx.fill();
+    // Y轴箭头
+    ctx.beginPath();
+    ctx.moveTo(originX, 20);
+    ctx.lineTo(originX - 5, 30);
+    ctx.lineTo(originX + 5, 30);
+    ctx.fill();
+    
+    // 标签
+    ctx.font = `500 ${fontSize}px Satoshi, Noto Sans SC, sans-serif`;
+    ctx.fillStyle = colors.text;
+    ctx.textAlign = 'center';
+    ctx.fillText('x', width - labelOffset, originY() + (isMobile ? 14 : 20));
+    ctx.fillText('y', originX - (isMobile ? 10 : 15), isMobile ? 22 : 25);
+    
+    ctx.restore();
   }
-
-  function draw(state: ProjectileState): void {
-    if (!ctx || !canvas) return;
-    const standards = getTeachingStandards(mode);
-    const visuals = standards.rightStage;
-    const width = surface.cssWidth;
-    const height = surface.cssHeight;
-
-    ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = theme === 'dark' ? '#0b1220' : '#f4f9ff';
+  
+  function drawBackground(): void {
+    if (!ctx) return;
+    const colors = getThemeColors(theme);
+    
+    // 背景
+    ctx.fillStyle = colors.canvasBg;
     ctx.fillRect(0, 0, width, height);
-    drawAxes(width, height, visuals.majorStrokePx);
-    drawTrail(width, height, visuals.majorStrokePx, visuals.markerRadiusPx);
-    drawText(state, width, visuals.primaryFontPx, visuals.secondaryFontPx);
+    
+    // 网格 - 使用统一工具
+    drawGrid(ctx, width, height, {
+      originX,
+      originY: originY(),
+      showGrid: true,
+      showAxes: false  // 我们自己画轴
+    }, theme === 'dark');
   }
-
+  
+  function drawTrajectory(): void {
+    if (!ctx || trail.length < 2) return;
+    
+    // 计算缩放
+    const maxX = Math.max(50, ...trail.map(p => p.x));
+    const maxY = Math.max(30, ...trail.map(p => p.y));
+    const scaleX = (width - originX - 40) / maxX;
+    const scaleY = (height - 100) / maxY;
+    const s = Math.min(scaleX, scaleY);
+    
+    // 转换轨迹点为屏幕坐标
+    const points = trail.map(p => ({
+      x: originX + p.x * s,
+      y: originY() - p.y * s
+    }));
+    
+    // 根据屏幕尺寸调整轨迹线宽
+    const isMobile = width < 500;
+    const trailWidth = isMobile ? 2 : 3;
+    
+    // 使用统一工具绘制轨迹
+    drawTrail(ctx, points, Colors.coral, trailWidth);
+  }
+  
+  function drawProjectile(state: ProjectileState): void {
+    if (!ctx) return;
+    const pos = worldToScreen(state);
+    
+    // 根据屏幕尺寸调整小球大小
+    const isMobile = width < 500;
+    const ballRadius = isMobile ? 5 : 8;
+    
+    // 使用统一工具绘制高亮小球
+    drawBall(ctx, pos.x, pos.y, ballRadius * Math.max(0.8, scale), Colors.coral);
+  }
+  
+  function drawUI(state: ProjectileState): void {
+    // Canvas 内不再绘制数据面板，使用 HTML 数据区替代
+    // 这样可以支持拖动、折叠等交互功能
+  }
+  
+  function render(state: ProjectileState): void {
+    // 如果 ctx 不存在或 Canvas 尺寸为 0，尝试 resize
+    if (!ctx || width === 0 || height === 0) {
+      resize();
+      if (!ctx || width === 0 || height === 0) return;
+    }
+    
+    lastState = state;
+    
+    // 更新轨迹
+    trail.push({ x: state.x, y: state.y });
+    if (trail.length > 800) {
+      trail = trail.slice(-800);
+    }
+    
+    // 绘制
+    drawBackground();
+    drawAxes();
+    drawTrajectory();
+    drawProjectile(state);
+    drawUI(state);
+  }
+  
+  function reset(): void {
+    trail = [];
+  }
+  
+  // 初始化
+  resize();
+  
   return {
-    render(state: ProjectileState): void {
-      lastState = { ...state };
-      trail.push({ x: state.x, y: state.y });
-      if (trail.length > 1200) {
-        trail = trail.slice(-1200);
-      }
-      draw(lastState);
+    render,
+    reset,
+    resize,
+    setTheme(newTheme: 'light' | 'dark') {
+      theme = newTheme;
     },
-    reset(): void {
-      trail = [];
-      if (lastState) {
-        draw(lastState);
-      }
+    setMode(newMode: 'normal' | 'presentation') {
+      mode = newMode;
     },
-    attachCanvas(nextCanvas: HTMLCanvasElement): void {
-      canvas = nextCanvas;
-      ctx = canvas.getContext('2d');
-      resizeCanvas();
-      if (lastState) {
-        draw(lastState);
-      }
-    },
-    resize(): void {
-      resizeCanvas();
-      if (lastState) {
-        draw(lastState);
-      }
-    },
-    setMode(nextMode: TeachingMode): void {
-      mode = nextMode;
-      if (lastState) {
-        draw(lastState);
-      }
-    },
-    setTheme(nextTheme: TeachingTheme): void {
-      theme = nextTheme;
-      if (lastState) {
-        draw(lastState);
-      }
-    },
-    getLastState(): ProjectileState | null {
-      return lastState;
-    },
-    dispose(): void {
-      lastState = null;
-      trail = [];
-      canvas = null;
-      ctx = null;
+    dispose() {
+      // 清理资源（如果需要）
     }
   };
 }

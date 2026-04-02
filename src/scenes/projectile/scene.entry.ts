@@ -1,6 +1,9 @@
+/**
+ * 抛体运动场景入口 - 使用统一框架
+ * 集成新版本的 view 和现有 sim
+ */
+
 import type { SceneLifecycle } from '../types';
-import type { TeachingMode } from '../../app/teaching-standards';
-import type { TeachingTheme } from '../../app/teaching-demo-shell';
 import { projectileMeta } from './scene.meta';
 import {
   createProjectileSim,
@@ -20,16 +23,18 @@ const defaultParams: ProjectileParams = {
 };
 
 export type CreateProjectileSceneOptions = {
-  canvas?: HTMLCanvasElement;
-  mode?: TeachingMode;
-  theme?: TeachingTheme;
+  canvas: HTMLCanvasElement;
+  theme?: 'light' | 'dark';
+  mode?: 'normal' | 'presentation';
   onReadout?: (state: ProjectileState) => void;
 };
 
-export function createProjectileScene(options: CreateProjectileSceneOptions = {}): SceneLifecycle & {
+export function createProjectileScene(
+  options: CreateProjectileSceneOptions
+): SceneLifecycle & {
   resize(): void;
-  setMode(mode: TeachingMode): void;
-  setTheme(theme: TeachingTheme): void;
+  setTheme(theme: 'light' | 'dark'): void;
+  setMode(mode: 'normal' | 'presentation'): void;
   getState(): ProjectileState;
   getParams(): ResolvedProjectileParams;
   setParams(next: Partial<ProjectileParams>): ResolvedProjectileParams;
@@ -37,8 +42,8 @@ export function createProjectileScene(options: CreateProjectileSceneOptions = {}
   const sim = createProjectileSim(defaultParams);
   const view = createProjectileView({
     canvas: options.canvas,
-    mode: options.mode ?? 'normal',
-    theme: options.theme ?? 'dark'
+    theme: options.theme ?? 'dark',
+    mode: options.mode ?? 'normal'
   });
 
   return {
@@ -67,11 +72,11 @@ export function createProjectileScene(options: CreateProjectileSceneOptions = {}
     resize(): void {
       view.resize();
     },
-    setMode(mode: TeachingMode): void {
-      view.setMode(mode);
-    },
-    setTheme(theme: TeachingTheme): void {
+    setTheme(theme: 'light' | 'dark'): void {
       view.setTheme(theme);
+    },
+    setMode(mode: 'normal' | 'presentation'): void {
+      view.setMode(mode);
     },
     getState(): ProjectileState {
       return sim.getState();
@@ -83,7 +88,7 @@ export function createProjectileScene(options: CreateProjectileSceneOptions = {}
       return sim.setParams(next);
     },
     dispose(): void {
-      view.dispose();
+      // view 和 sim 没有需要显式清理的资源
     }
   };
 }

@@ -1,4 +1,5 @@
 import '../../ui/teaching-demo.css';
+import '../../ui/teaching-demo-v2.css';
 import { bootLegacy2DBridgePage } from '../../app/legacy-2d-bridge-page';
 import { createPageLifecycle } from '../../app/page-lifecycle';
 import { createSceneShell } from '../../app/scene-shell';
@@ -7,7 +8,7 @@ import {
   type ReadoutItem
 } from '../../app/teaching-demo-shell';
 import type { TeachingMode } from '../../app/teaching-standards';
-import { createEmfAnalogyControls } from './controls';
+import { createEmfAnalogyControlsV3 } from './controls-v3';
 import { createEmfAnalogyScene } from './scene.entry';
 import type { EmfAnalogySnapshot } from './scene.sim';
 
@@ -68,8 +69,8 @@ function bootLegacy(mount: HTMLElement): void {
       sourcePath: '/animations/electromagnetism/电动势类比动画.html'
     },
     setupControls: ({ shell, adapter, lifecycle }) => {
-      const controls = createEmfAnalogyControls({
-        container: shell.controlSlot,
+      const controls = createEmfAnalogyControlsV3({
+        mount: shell.controlSlot,
         onSetSystemOn: (on) => adapter.sendControlExt('set-system-on', { on }),
         onSetTapOpening: (opening) =>
           adapter.sendControlExt('set-tap-opening', { opening }),
@@ -92,10 +93,16 @@ function bootModern(mount: HTMLElement, renderer: Renderer): void {
     title: '电路水流类比',
     subtitle: '通过开关与开度观察 I、Ir、U 的联动变化',
     defaultMode: 'normal',
-    desktopReadoutCollapsible: enableDesktopStatusPanel,
-    desktopReadoutDefaultCollapsed: enableDesktopStatusPanel,
-    desktopReadoutDraggable: enableDesktopStatusPanel,
-    readoutLabel: '系统状态'
+    hideHeader: false,
+    readoutLabel: '系统状态',
+    layout: {
+      defaultLeftRatio: 0.30,
+      leftMinWidth: 260,
+      leftMaxWidth: 960,
+      hasGraph: false,
+      controlColumns: 1,
+      readoutCollapsed: enableDesktopStatusPanel,
+    }
   });
   const lifecycle = createPageLifecycle();
   lifecycle.onDispose(() => shell.dispose());
@@ -125,8 +132,8 @@ function bootModern(mount: HTMLElement, renderer: Renderer): void {
   });
   lifecycle.onDispose(() => transport.dispose());
 
-  const controls = createEmfAnalogyControls({
-    container: shell.controlSlot,
+  const controls = createEmfAnalogyControlsV3({
+    mount: shell.controlSlot,
     onSetSystemOn: (on) => {
       scene.setSystemOn(on);
       if (on) {

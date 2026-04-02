@@ -1,10 +1,11 @@
 import '../../ui/teaching-demo.css';
+import '../../ui/teaching-demo-v2.css';
 import { bootLegacy2DBridgePage } from '../../app/legacy-2d-bridge-page';
 import { createPageLifecycle } from '../../app/page-lifecycle';
 import { createSceneShell } from '../../app/scene-shell';
 import { createTeachingDemoShell, type ReadoutItem } from '../../app/teaching-demo-shell';
 import type { TeachingMode } from '../../app/teaching-standards';
-import { createVtIntegralControls } from './controls';
+import { createVtIntegralControlsV3 } from './controls-v3';
 import { createVtIntegralScene } from './scene.entry';
 import type { VtIntegralSnapshot } from './scene.sim';
 
@@ -86,8 +87,8 @@ function bootLegacy(mount: HTMLElement): void {
       sourcePath: '/animations/mechanics/v-t面积与微元法.html'
     },
     setupControls: ({ shell, adapter, lifecycle }) => {
-      const controls = createVtIntegralControls({
-        container: shell.controlSlot,
+      const controls = createVtIntegralControlsV3({
+        mount: shell.controlSlot,
         onSetScene: (scene) => adapter.sendControlExt('set-scene', { scene }),
         onSetRects: (value) => adapter.sendControlExt('scene1:set-rects', { value }),
         onSetTime: (value) => adapter.sendControlExt('scene1:set-time', { value }),
@@ -110,7 +111,17 @@ function bootModern(mount: HTMLElement): void {
     mount,
     title: '微元法演示',
     subtitle: '多场景积分与逼近演示',
-    defaultMode: 'normal'
+    defaultMode: 'normal',
+    hideHeader: false,
+    readoutLabel: '数据区',
+    layout: {
+      defaultLeftRatio: 0.35,
+      leftMinWidth: 280,
+      leftMaxWidth: 960,
+      hasGraph: false,  // 图表在动画区内显示
+      controlColumns: 'auto',
+      readoutCollapsed: true,
+    }
   });
   const lifecycle = createPageLifecycle();
   lifecycle.onDispose(() => shell.dispose());
@@ -136,10 +147,10 @@ function bootModern(mount: HTMLElement): void {
   });
   lifecycle.onDispose(() => transport.dispose());
 
-  const controls = createVtIntegralControls({
-    container: shell.controlSlot,
-    onSetScene: (value) => {
-      scene.setScene(value);
+  const controls = createVtIntegralControlsV3({
+    mount: shell.controlSlot,
+    onSetScene: (value: string) => {
+      scene.setScene(value as import('./scene.sim').VtScene);
       scene.render();
     },
     onSetRects: (value) => {
@@ -150,8 +161,8 @@ function bootModern(mount: HTMLElement): void {
       scene.setTime(value);
       scene.render();
     },
-    onSetMethod: (value) => {
-      scene.setMethod(value);
+    onSetMethod: (value: string) => {
+      scene.setMethod(value as import('./scene.sim').VtMethod);
       scene.render();
     },
     onSetCurveAmplitude: (value) => {

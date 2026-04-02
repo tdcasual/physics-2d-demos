@@ -1,4 +1,5 @@
 import '../../ui/teaching-demo.css';
+import '../../ui/teaching-demo-v2.css';
 import { bootLegacy2DBridgePage } from '../../app/legacy-2d-bridge-page';
 import { createPageLifecycle } from '../../app/page-lifecycle';
 import {
@@ -7,7 +8,7 @@ import {
   type TeachingTheme
 } from '../../app/teaching-demo-shell';
 import { applyTouchInteractionMode } from '../../app/touch-interaction';
-import { createFieldLinesControls } from './controls';
+import { createFieldLinesControlsV3 } from './controls-v3';
 import { createFieldLinesScene } from './scene.entry';
 import type { FieldLinesSnapshot } from './scene.sim';
 import type { TeachingMode } from '../../app/teaching-standards';
@@ -81,8 +82,8 @@ function bootLegacy(mount: HTMLElement): void {
       sourcePath: '/animations/electromagnetism/模拟电场线.html'
     },
     setupControls: ({ shell, adapter, lifecycle }) => {
-      const controls = createFieldLinesControls({
-        container: shell.controlSlot,
+      const controls = createFieldLinesControlsV3({
+        mount: shell.controlSlot,
         onSetScene: (scene) => adapter.sendControlExt('set-scene', { scene }),
         onSetDensity: (density) =>
           adapter.sendControlExt('set-density', { density }),
@@ -102,7 +103,17 @@ function bootModern(mount: HTMLElement): void {
     mount,
     title: '电场线演化',
     subtitle: '支持场景切换、密度调节与电荷拖拽',
-    defaultMode: 'normal'
+    defaultMode: 'normal',
+    hideHeader: false,
+    readoutLabel: '数据区',
+    layout: {
+      defaultLeftRatio: 0.28,
+      leftMinWidth: 250,
+      leftMaxWidth: 960,
+      hasGraph: false,
+      controlColumns: 1,
+      readoutCollapsed: true,
+    }
   });
   const lifecycle = createPageLifecycle();
   lifecycle.onDispose(() => shell.dispose());
@@ -121,10 +132,10 @@ function bootModern(mount: HTMLElement): void {
   lifecycle.onDispose(() => scene.dispose());
   applyTouchInteractionMode(shell.stageCanvas, 'drag');
 
-  const controls = createFieldLinesControls({
-    container: shell.controlSlot,
-    onSetScene: (nextScene) => {
-      scene.setScene(nextScene);
+  const controls = createFieldLinesControlsV3({
+    mount: shell.controlSlot,
+    onSetScene: (nextScene: string) => {
+      scene.setScene(nextScene as import('./scene.sim').FieldLinesScene);
       scene.render();
     },
     onSetDensity: (density) => {
