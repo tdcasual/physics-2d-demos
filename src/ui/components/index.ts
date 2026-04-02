@@ -8,41 +8,144 @@ export { createControlCard, type ControlCardOptions, type ControlCardInstance } 
 /**
  * 通用样式工具类
  */
+// 使用CSS变量的样式（与主题系统一致）
+export function getThemeStyles() {
+  return {
+    // 按钮样式 - 基础类名
+    btn: {
+      base: 'px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 cursor-pointer',
+      primary: 'bg-coral text-white hover:brightness-110',
+      // secondary和ghost现在需要通过applyThemeButton函数应用
+    },
+    
+    // 布局样式（纯布局，无颜色）
+    layout: {
+      row: 'flex items-center gap-2',
+      col: 'flex flex-col gap-2',
+      grid2: 'grid grid-cols-2 gap-2',
+    },
+  };
+}
+
+/**
+ * 应用主题按钮样式到元素
+ */
+export function applyThemeButton(
+  element: HTMLElement, 
+  variant: 'primary' | 'secondary' | 'ghost' = 'secondary'
+): void {
+  const baseClasses = 'px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 cursor-pointer';
+  element.className = baseClasses;
+  
+  switch (variant) {
+    case 'primary':
+      element.style.cssText = `
+        background: var(--accent-primary);
+        color: var(--text-inverse);
+        border: none;
+      `;
+      break;
+    case 'secondary':
+      element.style.cssText = `
+        background: var(--btn-bg);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+      `;
+      element.addEventListener('mouseenter', () => {
+        element.style.background = 'var(--btn-hover-bg)';
+      });
+      element.addEventListener('mouseleave', () => {
+        element.style.background = 'var(--btn-bg)';
+      });
+      break;
+    case 'ghost':
+      element.style.cssText = `
+        background: transparent;
+        color: var(--text-secondary);
+        border: none;
+      `;
+      element.addEventListener('mouseenter', () => {
+        element.style.background = 'var(--btn-bg)';
+      });
+      element.addEventListener('mouseleave', () => {
+        element.style.background = 'transparent';
+      });
+      break;
+  }
+}
+
+/**
+ * 应用主题卡片样式到元素
+ */
+export function applyThemeCard(element: HTMLElement): void {
+  element.className = 'rounded-lg overflow-hidden';
+  element.style.cssText = `
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+  `;
+}
+
+/**
+ * 应用主题输入框样式到元素
+ */
+export function applyThemeInput(
+  element: HTMLInputElement | HTMLSelectElement,
+  type: 'range' | 'select' = 'select'
+): void {
+  if (type === 'range') {
+    element.className = 'w-full h-1 rounded-lg appearance-none cursor-pointer';
+    element.style.cssText = `
+      background: var(--border-color);
+      accent-color: var(--accent-primary);
+    `;
+  } else {
+    element.className = 'text-xs px-1 py-0.5 rounded';
+    element.style.cssText = `
+      border: 1px solid var(--border-color);
+      background: var(--bg-card);
+      color: var(--text-primary);
+    `;
+  }
+}
+
+/**
+ * 应用主题文本样式到元素
+ */
+export function applyThemeText(
+  element: HTMLElement,
+  variant: 'primary' | 'secondary' | 'muted' | 'label' = 'primary'
+): void {
+  const sizeClasses = {
+    primary: 'text-sm',
+    secondary: 'text-sm',
+    muted: 'text-[10px]',
+    label: 'text-[13px] font-semibold',
+  };
+  
+  element.className = sizeClasses[variant];
+  
+  const colors = {
+    primary: 'var(--text-primary)',
+    secondary: 'var(--text-secondary)',
+    muted: 'var(--text-muted)',
+    label: 'var(--text-secondary)',
+  };
+  
+  element.style.color = colors[variant];
+}
+
+// 保留旧的styles对象以兼容现有代码（已弃用，建议迁移到上面的函数）
 export const styles = {
-  // 按钮样式
   btn: {
     base: 'px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 cursor-pointer',
     primary: 'bg-coral text-white hover:brightness-110',
-    secondary: 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-600',
-    ghost: 'bg-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800',
+    secondary: '',
+    ghost: '',
   },
-  
-  // 卡片样式
-  card: {
-    base: 'bg-white/5 dark:bg-slate-800/60 border border-slate-200/10 dark:border-slate-400/10 rounded-lg overflow-hidden',
-    hover: 'hover:border-teal-400 hover:shadow-[0_2px_8px_rgba(0,0,0,0.1)]',
-  },
-  
-  // 输入框样式
-  input: {
-    range: 'w-full h-1 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer',
-    select: 'text-xs px-1 py-0.5 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100',
-  },
-  
-  // 布局样式
-  layout: {
-    row: 'flex items-center gap-2',
-    col: 'flex flex-col gap-2',
-    grid2: 'grid grid-cols-2 gap-2',
-  },
-  
-  // 文本样式
-  text: {
-    primary: 'text-slate-900 dark:text-slate-100',
-    secondary: 'text-slate-500 dark:text-slate-400',
-    muted: 'text-slate-400 dark:text-slate-500 text-[10px]',
-    label: 'text-[13px] font-semibold text-slate-500 dark:text-slate-400',
-  },
+  card: { base: '', hover: '' },
+  input: { range: '', select: '' },
+  layout: { row: 'flex items-center gap-2', col: 'flex flex-col gap-2', grid2: 'grid grid-cols-2 gap-2' },
+  text: { primary: '', secondary: '', muted: '', label: '' },
 };
 
 /**

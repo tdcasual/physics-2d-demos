@@ -4,7 +4,7 @@
  */
 
 import { createControlCard, type ControlCardOptions } from './ControlCard';
-import { styles, createElement } from './index';
+import { createElement } from './index';
 
 export interface ControlItem {
   type: 'slider' | 'select' | 'button' | 'button-group';
@@ -85,21 +85,27 @@ export function createSliderRow(
 ): HTMLElement {
   const row = createElement('div', 'flex items-center gap-2 py-1');
   
-  const labelEl = createElement('span', styles.text.label + ' w-6 shrink-0', { text: label });
+  const labelEl = document.createElement('span');
+  labelEl.className = 'text-[13px] font-semibold w-6 shrink-0';
+  labelEl.style.color = 'var(--text-secondary)';
+  labelEl.textContent = label;
   
-  const slider = createElement('input', styles.input.range + ' flex-1 min-w-0', {
-    attrs: {
-      type: 'range',
-      min: String(options.min),
-      max: String(options.max),
-      step: String(options.step),
-      value: String(options.value),
-    },
-  }) as HTMLInputElement;
+  const slider = document.createElement('input');
+  slider.type = 'range';
+  slider.min = String(options.min);
+  slider.max = String(options.max);
+  slider.step = String(options.step);
+  slider.value = String(options.value);
+  slider.className = 'flex-1 min-w-0 w-full h-1 rounded-lg appearance-none cursor-pointer';
+  slider.style.cssText = `
+    background: var(--border-color);
+    accent-color: var(--accent-primary);
+  `;
   
-  const valueEl = createElement('span', 'text-xs font-semibold w-10 text-right shrink-0 text-slate-900 dark:text-slate-100', {
-    text: options.value + (options.unit || ''),
-  });
+  const valueEl = document.createElement('span');
+  valueEl.className = 'text-xs font-semibold w-10 text-right shrink-0';
+  valueEl.style.color = 'var(--text-primary)';
+  valueEl.textContent = options.value + (options.unit || '');
   
   slider.addEventListener('input', () => {
     const val = parseFloat(slider.value);
@@ -124,9 +130,18 @@ export function createSelectRow(
 ): HTMLElement {
   const row = createElement('div', 'flex items-center gap-2 py-1');
   
-  const labelEl = createElement('span', styles.text.label + ' shrink-0', { text: label });
+  const labelEl = document.createElement('span');
+  labelEl.className = 'text-[13px] font-semibold shrink-0';
+  labelEl.style.color = 'var(--text-secondary)';
+  labelEl.textContent = label;
   
-  const select = createElement('select', styles.input.select + ' flex-1 min-w-0', {}) as HTMLSelectElement;
+  const select = document.createElement('select');
+  select.className = 'text-xs px-1 py-0.5 rounded flex-1 min-w-0';
+  select.style.cssText = `
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-primary);
+  `;
   
   options.choices.forEach(choice => {
     const opt = document.createElement('option');
@@ -155,25 +170,46 @@ export function createButtonGrid(
   }>,
   columns: 2 | 3 = 2
 ): HTMLElement {
-  const grid = createElement('div', `grid grid-cols-${columns} gap-2`);
+  const grid = document.createElement('div');
+  grid.className = `grid grid-cols-${columns} gap-2`;
   
   buttons.forEach(btn => {
-    const button = createElement('button', [
+    const button = document.createElement('button');
+    button.className = [
       'flex flex-col items-center justify-center',
       'px-2 py-2.5',
-      'bg-slate-100 dark:bg-slate-700/50',
-      'border border-slate-200 dark:border-slate-600',
       'rounded-lg cursor-pointer',
       'transition-all duration-200',
-      'hover:bg-slate-200 dark:hover:bg-slate-600',
-      'hover:border-teal-400',
       'hover:-translate-y-px',
-    ].join(' '));
-    
-    button.innerHTML = `
-      <span class="text-xs font-semibold text-slate-900 dark:text-slate-100">${btn.label}</span>
-      ${btn.desc ? `<span class="text-[10px] text-slate-500 dark:text-slate-400">${btn.desc}</span>` : ''}
+    ].join(' ');
+    button.style.cssText = `
+      background: var(--btn-bg);
+      border: 1px solid var(--border-color);
     `;
+    
+    button.addEventListener('mouseenter', () => {
+      button.style.background = 'var(--btn-hover-bg)';
+      button.style.borderColor = 'var(--accent-color)';
+    });
+    button.addEventListener('mouseleave', () => {
+      button.style.background = 'var(--btn-bg)';
+      button.style.borderColor = 'var(--border-color)';
+    });
+    
+    const labelSpan = document.createElement('span');
+    labelSpan.className = 'text-xs font-semibold';
+    labelSpan.style.color = 'var(--text-primary)';
+    labelSpan.textContent = btn.label;
+    
+    if (btn.desc) {
+      const descSpan = document.createElement('span');
+      descSpan.className = 'text-[10px]';
+      descSpan.style.color = 'var(--text-secondary)';
+      descSpan.textContent = btn.desc;
+      button.append(labelSpan, descSpan);
+    } else {
+      button.appendChild(labelSpan);
+    }
     
     button.addEventListener('click', btn.onClick);
     grid.appendChild(button);
