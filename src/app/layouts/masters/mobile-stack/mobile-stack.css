@@ -1,0 +1,311 @@
+/**
+ * MobileStackLayout - 移动端垂直堆叠布局样式
+ * 
+ * @review-date 2026-04-03
+ * @version 0.1.0
+ */
+
+/* ============================================================================
+   布局容器
+   ============================================================================ */
+
+.mobile-stack-layout {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--color-bg-primary);
+}
+
+/* ============================================================================
+   滚动容器
+   ============================================================================ */
+
+.mobile-scroll-container {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ============================================================================
+   控制条（固定在顶部）
+   ============================================================================ */
+
+.mobile-controls-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border-color);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+/* 控制按钮 */
+.mobile-control-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.mobile-control-btn:active {
+  transform: scale(0.95);
+}
+
+/* 播放/暂停按钮 */
+.mobile-control-btn.play-pause {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--color-accent-primary, #3b82f6);
+  color: white;
+  font-size: 20px;
+}
+
+.mobile-control-btn.play-pause:hover {
+  background: var(--color-accent-primary-hover, #2563eb);
+}
+
+/* 重置按钮 */
+.mobile-control-btn.reset {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border-color);
+  background: var(--color-btn-bg);
+  color: var(--color-text-primary);
+  font-size: 18px;
+}
+
+.mobile-control-btn.reset:hover {
+  background: var(--color-btn-hover-bg);
+}
+
+/* 速度控制容器 */
+.mobile-speed-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mobile-speed-control .speed-label {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.mobile-speed-control .speed-slider {
+  width: 100px;
+  height: 6px;
+}
+
+.mobile-speed-control .speed-value {
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 50px;
+  color: var(--color-text-primary);
+}
+
+/* ============================================================================
+   动画区
+   ============================================================================ */
+
+.mobile-animation-section {
+  position: relative;
+  height: 50vh;
+  min-height: 300px;
+  background: var(--color-bg-primary);
+  border-bottom: 1px solid var(--color-border-color);
+}
+
+.mobile-stage-slot {
+  position: absolute;
+  inset: 0;
+}
+
+.mobile-stage-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+
+/* ============================================================================
+   图表区（可折叠）
+   ============================================================================ */
+
+.mobile-graph-section {
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border-color);
+}
+
+.mobile-section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--color-bg-secondary);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+
+.mobile-section-toggle:hover {
+  background: var(--color-bg-hover, rgba(0, 0, 0, 0.05));
+}
+
+.mobile-section-toggle .toggle-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mobile-section-toggle .toggle-icon {
+  transition: transform 0.2s ease;
+  color: var(--color-text-secondary);
+}
+
+.mobile-graph-section.is-expanded .toggle-icon {
+  transform: rotate(90deg);
+}
+
+.mobile-graph-slot {
+  height: 0;
+  overflow: hidden;
+  transition: height 0.3s ease;
+}
+
+.mobile-graph-section.is-expanded .mobile-graph-slot {
+  height: 200px;
+}
+
+/* ============================================================================
+   控制区
+   ============================================================================ */
+
+.mobile-control-section {
+  background: var(--color-bg-secondary);
+  min-height: 200px;
+}
+
+.mobile-control-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border-color);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mobile-control-slot {
+  padding: 16px;
+}
+
+/* ============================================================================
+   数据读数条
+   ============================================================================ */
+
+.mobile-readout-bar {
+  padding: 12px 16px;
+  background: var(--color-bg-primary);
+  border-top: 1px solid var(--color-border-color);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.mobile-readout-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 4px;
+}
+
+.mobile-readout-item .readout-label {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.mobile-readout-item .readout-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+/* ============================================================================
+   响应式适配
+   ============================================================================ */
+
+/* 小屏手机 (< 380px) */
+@media (max-width: 380px) {
+  .mobile-controls-bar {
+    padding: 10px 12px;
+    gap: 12px;
+  }
+  
+  .mobile-control-btn.play-pause {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+  }
+  
+  .mobile-control-btn.reset {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+  
+  .mobile-speed-control .speed-slider {
+    width: 80px;
+  }
+  
+  .mobile-animation-section {
+    min-height: 250px;
+  }
+  
+  .mobile-readout-bar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 大屏手机/平板 (>= 414px) */
+@media (min-width: 414px) {
+  .mobile-animation-section {
+    height: 55vh;
+    min-height: 350px;
+  }
+}
+
+/* ============================================================================
+   深色模式适配
+   ============================================================================ */
+
+[data-theme="dark"] .mobile-stack-layout {
+  --color-bg-hover: rgba(255, 255, 255, 0.05);
+}
+
+/* ============================================================================
+   安全区域适配（刘海屏）
+   ============================================================================ */
+
+@supports (padding-top: env(safe-area-inset-top)) {
+  .mobile-controls-bar {
+    padding-top: max(12px, env(safe-area-inset-top));
+  }
+  
+  .mobile-scroll-container {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

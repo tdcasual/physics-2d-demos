@@ -53,6 +53,11 @@ export {
   type SplitRightConfig
 } from './masters/split-right/split-right';
 
+export {
+  MobileStackLayout,
+  type MobileStackConfig
+} from './masters/mobile-stack/mobile-stack';
+
 /**
  * 布局系统导出
  * 
