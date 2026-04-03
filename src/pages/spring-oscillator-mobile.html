@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>弹簧振子（移动端）- 物理演示</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      overscroll-behavior: none;
+    }
+    
+    #app {
+      height: 100%;
+    }
+    
+    /* 移动端优化 */
+    @media (max-width: 768px) {
+      body {
+        font-size: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module" src="/src/scenes/spring-oscillator/page-new.ts"></script>
+</body>
+</html>

@@ -230,15 +230,26 @@ function boot(): void {
     throw new Error('Missing #app container');
   }
   
-  // 动态导入注册表和布局母版
+  // 动态导入注册表和布局母版（桌面端 + 移动端）
   Promise.all([
     import('../../app/layouts/registry'),
-    import('../../app/layouts/masters/split-right/split-right')
-  ]).then(([{ registerLayout }, { SplitRightLayout }]) => {
+    import('../../app/layouts/masters/split-right/split-right'),
+    import('../../app/layouts/masters/mobile-stack/mobile-stack')
+  ]).then(([{ registerLayout }, { SplitRightLayout }, { MobileStackLayout }]) => {
+    // 注册桌面端布局
     registerLayout('split-right', SplitRightLayout, {
       name: '左右分栏',
       description: '与 teaching-demo-shell 像素级一致',
       tags: ['左右分栏'],
+      supportsMobile: false,
+      supportedSlots: ['header', 'control', 'animation', 'graph', 'readout']
+    });
+    
+    // 注册移动端布局
+    registerLayout('mobile-stack', MobileStackLayout, {
+      name: '移动端堆叠',
+      description: '适合手机的垂直堆叠布局，控制面板从底部滑出',
+      tags: ['移动端', '底部面板'],
       supportsMobile: true,
       supportedSlots: ['header', 'control', 'animation', 'graph', 'readout']
     });

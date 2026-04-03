@@ -76,6 +76,16 @@ export class SceneContainerImpl implements SceneContainer {
   }
   
   /**
+   * 检测设备是否为移动端
+   * 基于视口宽度判断（<768px视为移动端）
+   * 注：不严格依赖触摸检测，允许桌面浏览器小窗口使用移动端布局
+   */
+  private detectMobile(): boolean {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth < 768;
+  }
+  
+  /**
    * 设置场景
    * @param scene - 场景实例
    */
@@ -88,7 +98,9 @@ export class SceneContainerImpl implements SceneContainer {
     this._currentScene = scene;
     
     // 确定使用哪个布局
-    const layoutId = this._userPreferredLayout || scene.preferredLayout;
+    // 移动端优先使用 mobile-stack 布局
+    const effectiveLayout = this.detectMobile() ? 'mobile-stack' : (scene.preferredLayout || 'split-right');
+    const layoutId = this._userPreferredLayout || effectiveLayout;
     
     // 如果当前布局与需要的布局不同，切换布局
     if (!this._currentLayout || this._currentLayout.id !== layoutId) {
@@ -464,9 +476,19 @@ export class SceneContainerImpl implements SceneContainer {
   private initResizeObserver(): void {
     if (!window.ResizeObserver) return;
     
+    let lastWasMobile = this.detectMobile();
+    
     this._resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const { width, height } = entry.contentRect;
+        
+        // 检测移动端/桌面端切换（只根据宽度判断）
+        const isMobile = width < 768;
+        if (isMobile !== lastWasMobile && this._currentScene && !this._userPreferredLayout) {
+          lastWasMobile = isMobile;
+          // 延迟切换避免频繁布局变更
+          this.debounceLayoutSwitch();
+        }
         
         // 通知布局
         this._currentLayout?.handleResize(width, height);
@@ -477,6 +499,25 @@ export class SceneContainerImpl implements SceneContainer {
     });
     
     this._resizeObserver.observe(this.container);
+  }
+  
+  private _layoutSwitchTimer: ReturnType<typeof setTimeout> | null = null;
+  
+  /**
+   * 防抖处理布局切换
+   */
+  private debounceLayoutSwitch(): void {
+    if (this._layoutSwitchTimer) {
+      clearTimeout(this._layoutSwitchTimer);
+    }
+    this._layoutSwitchTimer = setTimeout(() => {
+      if (this._currentScene) {
+        const targetLayout = this.detectMobile() ? 'mobile-stack' : (this._currentScene.preferredLayout || 'split-right');
+        if (targetLayout !== this._currentLayout?.id) {
+          this.switchLayout(targetLayout, { animate: false });
+        }
+      }
+    }, 300);
   }
   
   /**
