@@ -3,10 +3,15 @@ import type { TeachingMode } from '../../app/teaching-standards';
 import type { TeachingTheme } from '../../app/teaching-demo-shell';
 import {
   setCanvasSize,
-  fitCanvasToContainer,
-  drawGrid
+  fitCanvasToContainer
 } from '../../core/unified-canvas';
 import { Colors, alpha } from '../../core/colors';
+import {
+  createChartCanvas,
+  getChartTheme,
+  renderLineChart,
+  type LineChartSeries
+} from '../../core/chart';
 
 export type SpringOscillatorViewOptions = {
   graphCanvas?: HTMLCanvasElement;
@@ -101,31 +106,50 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
   let stageWidth = 800;
   let stageHeight = 600;
 
+  // 新版通用图表 Canvas（带 ResizeObserver 和高DPI适配）
+  let chartCanvasDisposer: (() => void) | null = null;
+  let chartState = {
+    canvas: null as HTMLCanvasElement | null,
+    ctx: null as CanvasRenderingContext2D | null,
+    cssWidth: 0,
+    cssHeight: 0,
+    dpr: 1,
+    hairlineWidth: 1
+  };
+
   // 每个振子的历史轨迹
   const history: Map<string, Array<{ t: number; x: number }>> = new Map();
 
-  // 点击区域记录（用于检测点击小球）
-  const clickAreas: Array<{ id: string; x: number; y: number; r: number }> = [];
+  // 点击区域记录（用于检测点击弹簧/小球）
+  type ClickArea = {
+    id: string;
+    type: 'circle' | 'rect';
+    x: number;
+    y: number;
+    r: number;
+    left: number;
+    top: number;
+    right: number;
+    bottom: number;
+  };
+  const clickAreas: ClickArea[] = [];
 
   function resizeGraphCanvas(): void {
+    // 如果已使用通用 ChartCanvas，resize 由 ResizeObserver 自动处理
+    if (chartState.cssWidth > 0) return;
+
+    // 兼容旧路径（直接传入 canvas 且未走 ChartCanvas）
     if (!graphCanvas || !graphCtx) return;
-    // 获取父容器（.graph-slot）的尺寸，而不是 canvas 自身的尺寸
-    // 这样当父容器变化时，canvas 会正确更新
     const parent = graphCanvas.parentElement;
     if (!parent) return;
-    
-    // 强制浏览器重排，确保获取最新的尺寸
-    parent.getBoundingClientRect();
-    
+
     const rect = parent.getBoundingClientRect();
     const newWidth = Math.max(200, Math.floor(rect.width || 400));
     const newHeight = Math.max(150, Math.floor(rect.height || 300));
-    
-    // 只有尺寸变化时才重新设置 canvas
+
     if (newWidth !== graphWidth || newHeight !== graphHeight) {
       graphWidth = newWidth;
       graphHeight = newHeight;
-      // 不设置 CSS 尺寸（保持 width: 100%; height: 100%），只更新内部像素尺寸
       setCanvasSize(graphCanvas, graphWidth, graphHeight, false);
     }
   }
@@ -158,110 +182,72 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
 
   // 绘制 x-t 图表
   function drawGraph(): void {
-    if (!graphCtx || !graphCanvas || !sim) return;
+    if (!sim) return;
 
-    const width = graphWidth;
-    const height = graphHeight;
-    const isDark = theme === 'dark';
+    const ctx = chartState.ctx || graphCtx;
+    const cssWidth = chartState.cssWidth || graphWidth;
+    const cssHeight = chartState.cssHeight || graphHeight;
+    if (!ctx || cssWidth === 0 || cssHeight === 0) return;
 
-    // 清空画布
-    graphCtx.clearRect(0, 0, width, height);
-
-    // 背景
-    graphCtx.fillStyle = isDark ? Colors.darkBg : Colors.bg;
-    graphCtx.fillRect(0, 0, width, height);
-
-    // 边距
-    const margin = { top: 25, right: 12, bottom: 28, left: 38 };
-    const chartWidth = width - margin.left - margin.right;
-    const chartHeight = height - margin.top - margin.bottom;
-
-    // 使用 unified-canvas 的网格绘制
-    drawGrid(graphCtx, width, height, {
-      originX: margin.left,
-      originY: margin.top + chartHeight / 2,
-      showGrid: true,
-      showAxes: true,
-      gridColor: isDark ? alpha(Colors.gray, 0.2) : alpha(Colors.grayLight, 0.3),
-      axisColor: isDark ? Colors.mintLight : Colors.mint
-    }, isDark);
-
-    // 标签
-    graphCtx.fillStyle = isDark ? Colors.darkText : Colors.dark;
-    graphCtx.font = `bold 11px "Noto Sans SC", sans-serif`;
-    graphCtx.textAlign = 'center';
-    graphCtx.fillText('t (s)', width - margin.right - 15, margin.top + chartHeight / 2 + 14);
-    graphCtx.textAlign = 'right';
-    graphCtx.fillText('x (m)', margin.left - 6, margin.top + 8);
-
-    // 时间刻度
     const tEnd = sim.globalTime;
     const tStart = Math.max(0, tEnd - HISTORY_DURATION);
-    graphCtx.textAlign = 'center';
-    graphCtx.fillStyle = isDark ? Colors.gray : Colors.gray;
-    graphCtx.font = `10px "Noto Sans SC", sans-serif`;
-    for (let i = 0; i <= 5; i++) {
-      const t = tStart + (tEnd - tStart) * (i / 5);
-      const x = margin.left + (chartWidth * i) / 5;
-      graphCtx.fillText(t.toFixed(1), x, height - margin.bottom + 14);
-    }
 
-    // 位移刻度
-    graphCtx.textAlign = 'right';
-    const maxDisplayX = 20; // 显示范围 ±20m
-    for (let i = -2; i <= 2; i++) {
-      const y = margin.top + chartHeight / 2 - (i / 2) * (chartHeight / 2);
-      if (y >= margin.top && y <= height - margin.bottom) {
-        graphCtx.fillText(String(i * 10), margin.left - 4, y + 3);
-      }
-    }
-
-    // 绘制每个振子的轨迹
-    if (sim.oscillators.length === 0) return;
-
-    const ctx = graphCtx;
-    const zeroY = margin.top + chartHeight / 2;
-
+    // 组装系列数据
+    const series: LineChartSeries[] = [];
     sim.oscillators.forEach(osc => {
       const hist = history.get(osc.id);
       if (!hist || hist.length < 2) return;
+      series.push({
+        id: osc.id,
+        color: osc.color,
+        data: hist.map(p => ({ x: p.t, y: p.x }))
+      });
+    });
 
-      ctx.strokeStyle = osc.color;
-      ctx.lineWidth = 2.5;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.beginPath();
+    const chartTheme = getChartTheme(theme);
 
-      for (let i = 0; i < hist.length; i++) {
-        const point = hist[i];
-        const xRatio = (point.t - tStart) / (tEnd - tStart || 1);
-        const px = margin.left + xRatio * chartWidth;
-        const yRatio = point.x / maxDisplayX;
-        const py = zeroY - yRatio * (chartHeight / 2);
+    renderLineChart({
+      state: {
+        ctx,
+        cssWidth,
+        cssHeight,
+        dpr: chartState.dpr || 1,
+        hairlineWidth: chartState.hairlineWidth || 1,
+        canvas: chartState.canvas || graphCanvas!
+      },
+      theme: chartTheme,
+      series,
+      xDomain: [tStart, tEnd || tStart + 1],
+      yDomain: [-20, 20],
+      xLabel: 't (s)',
+      yLabel: 'x (m)',
+      showGrid: true,
+      yBaseLine: 0
+    });
 
-        if (i === 0) {
-          ctx.moveTo(px, py);
-        } else {
-          ctx.lineTo(px, py);
-        }
-      }
-      ctx.stroke();
+    // 绘制当前位置点（外圈白 + 内圈彩）
+    const margin = {
+      top: cssHeight < 250 ? 16 : 24,
+      right: cssWidth < 350 ? 10 : 16,
+      bottom: cssHeight < 250 ? 28 : 36,
+      left: cssWidth < 350 ? 36 : 44
+    };
+    const chartW = Math.max(50, cssWidth - margin.left - margin.right);
+    const chartH = Math.max(30, cssHeight - margin.top - margin.bottom);
+    const xScale = chartW / ((tEnd - tStart) || 1);
+    const yScale = chartH / 40; // [-20, 20] => 40
 
-      // 绘制当前位置点
-      const last = hist[hist.length - 1];
-      const xRatio = (last.t - tStart) / (tEnd - tStart || 1);
-      const px = margin.left + xRatio * chartWidth;
-      const yRatio = last.x / maxDisplayX;
-      const py = zeroY - yRatio * (chartHeight / 2);
+    series.forEach(s => {
+      const last = s.data[s.data.length - 1];
+      const px = margin.left + (last.x - tStart) * xScale;
+      const py = margin.top + chartH / 2 - last.y * yScale;
 
-      // 外圈
       ctx.fillStyle = '#fff';
       ctx.beginPath();
       ctx.arc(px, py, 5, 0, Math.PI * 2);
       ctx.fill();
 
-      // 内圈
-      ctx.fillStyle = osc.color;
+      ctx.fillStyle = s.color;
       ctx.beginPath();
       ctx.arc(px, py, 3, 0, Math.PI * 2);
       ctx.fill();
@@ -435,14 +421,16 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
       ctx.arc(massX - ballRadius * 0.25, baseY - ballRadius * 0.25, ballRadius * 0.25, 0, Math.PI * 2);
       ctx.fill();
 
-      // 记录点击区域（确保触摸目标至少 30px）
-      const clickCenterX = (fixedX + massX) / 2;
-      const clickWidth = massX - fixedX + 40;
-      clickAreas.push({ 
-        id: osc.id, 
-        x: clickCenterX, 
-        y: baseY, 
-        r: Math.max(clickWidth / 2, sizes.minClickRadius) 
+      // 记录点击区域：矩形覆盖整个弹簧+小球区域（更易点击）
+      const clickPadding = 20;
+      clickAreas.push({
+        id: osc.id,
+        type: 'rect',
+        x: 0, y: 0, r: 0, // 占位，不使用
+        left: fixedX - 10,
+        top: baseY - sizes.ballRadius - clickPadding,
+        right: massX + sizes.ballRadius + 10,
+        bottom: baseY + sizes.ballRadius + clickPadding
       });
 
       // 相位标记
@@ -519,14 +507,15 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
       ctx.arc(drawCenterX - ballRadius * 0.25, massY - ballRadius * 0.25, ballRadius * 0.25, 0, Math.PI * 2);
       ctx.fill();
 
-      // 记录点击区域（确保触摸目标至少 30px）
-      const clickCenterY = (fixedY + massY) / 2;
-      const clickHeight = massY - fixedY + 40;
-      clickAreas.push({ 
-        id: osc.id, 
-        x: drawCenterX, 
-        y: clickCenterY, 
-        r: Math.max(clickHeight / 2, sizes.minClickRadius) 
+      // 记录点击区域：矩形覆盖整个弹簧+小球区域（更易点击）
+      const clickPadding = 20; // 左右扩展点击区域
+      clickAreas.push({
+        id: osc.id,
+        type: 'rect',
+        left: drawCenterX - sizes.ballRadius - clickPadding,
+        top: fixedY - 10,
+        right: drawCenterX + sizes.ballRadius + clickPadding,
+        bottom: massY + sizes.ballRadius + 10
       });
 
       // 相位标记
@@ -624,33 +613,19 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
     });
   }
 
-  // 处理点击/触摸事件
-  function handlePointerEvent(event: MouseEvent | TouchEvent): void {
+  // 处理点击/触摸事件（使用 pointerdown 避免 300ms 延迟）
+  function handlePointerDown(event: PointerEvent): void {
     if (!stageCanvas || clickAreas.length === 0) return;
 
     const rect = stageCanvas.getBoundingClientRect();
-    let clientX: number, clientY: number;
+    
+    // 计算在 canvas 中的坐标
+    const x = (event.clientX - rect.left) * (stageWidth / rect.width);
+    const y = (event.clientY - rect.top) * (stageHeight / rect.height);
 
-    if (event instanceof TouchEvent) {
-      if (event.touches.length === 0) return;
-      clientX = event.touches[0].clientX;
-      clientY = event.touches[0].clientY;
-    } else {
-      clientX = (event as MouseEvent).clientX;
-      clientY = (event as MouseEvent).clientY;
-    }
-
-    // 计算在canvas中的坐标
-    const x = (clientX - rect.left) * (stageWidth / rect.width);
-    const y = (clientY - rect.top) * (stageHeight / rect.height);
-
-    // 检查是否点击了某个小球
+    // 检查是否点击了某个弹簧振子（矩形区域覆盖整个弹簧+小球）
     for (const area of clickAreas) {
-      const dx = x - area.x;
-      const dy = y - area.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-
-      if (dist <= area.r) {
+      if (x >= area.left && x <= area.right && y >= area.top && y <= area.bottom) {
         event.preventDefault();
         onToggleOscillator?.(area.id);
         return;
@@ -658,17 +633,16 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
     }
   }
 
-  // 绑定事件
+  // 绑定事件（使用 pointerdown 统一处理鼠标和触摸，无延迟）
   function bindEvents(): void {
     if (!stageCanvas) return;
-    stageCanvas.addEventListener('click', handlePointerEvent);
-    stageCanvas.addEventListener('touchstart', handlePointerEvent, { passive: false });
+    stageCanvas.style.touchAction = 'none';
+    stageCanvas.addEventListener('pointerdown', handlePointerDown);
   }
 
   function unbindEvents(): void {
     if (!stageCanvas) return;
-    stageCanvas.removeEventListener('click', handlePointerEvent);
-    stageCanvas.removeEventListener('touchstart', handlePointerEvent);
+    stageCanvas.removeEventListener('pointerdown', handlePointerDown);
   }
 
   bindEvents();
@@ -733,9 +707,44 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
     },
 
     attachGraphCanvas(canvas: HTMLCanvasElement): void {
+      // 清理旧的 ChartCanvas
+      if (chartCanvasDisposer) {
+        chartCanvasDisposer();
+        chartCanvasDisposer = null;
+      }
+
       graphCanvas = canvas;
       graphCtx = canvas.getContext('2d');
-      resizeGraphCanvas();
+
+      // 使用通用 ChartCanvas 接管 resize 和 DPR 管理
+      const parent = canvas.parentElement;
+      if (parent) {
+        const { state, dispose } = createChartCanvas(
+          { container: parent, autoCreate: false },
+          (s) => {
+            chartState = {
+              canvas: s.canvas,
+              ctx: s.ctx,
+              cssWidth: s.cssWidth,
+              cssHeight: s.cssHeight,
+              dpr: s.dpr,
+              hairlineWidth: s.hairlineWidth
+            };
+            drawGraph();
+          }
+        );
+        chartCanvasDisposer = dispose;
+        chartState = {
+          canvas: state.canvas,
+          ctx: state.ctx,
+          cssWidth: state.cssWidth,
+          cssHeight: state.cssHeight,
+          dpr: state.dpr,
+          hairlineWidth: state.hairlineWidth
+        };
+      } else {
+        resizeGraphCanvas();
+      }
     },
 
     attachStageCanvas(canvas: HTMLCanvasElement): void {
@@ -775,6 +784,11 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
       unbindEvents();
       history.clear();
       clickAreas.length = 0;
+      if (chartCanvasDisposer) {
+        chartCanvasDisposer();
+        chartCanvasDisposer = null;
+      }
+      chartState = { canvas: null, ctx: null, cssWidth: 0, cssHeight: 0, dpr: 1, hairlineWidth: 1 };
       graphCanvas = null;
       stageCanvas = null;
       graphCtx = null;

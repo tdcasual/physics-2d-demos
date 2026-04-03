@@ -4,41 +4,23 @@ import { createSpringOscillatorView, type SpringOscillatorViewOptions } from './
 export type CreateSpringOscillatorSceneOptions = {
   graphCanvas?: HTMLCanvasElement;
   stageCanvas?: HTMLCanvasElement;
-  onReadout?: (items: Array<{ label: string; value: string }>) => void;
 };
 
 export function createSpringOscillatorScene(options: CreateSpringOscillatorSceneOptions = {}) {
   const sim = createSpringOscillatorSim();
   
-  // 定时渲染（用于没有 transport 的情况）
-  let renderInterval: ReturnType<typeof setInterval> | null = null;
-  let viewRef: ReturnType<typeof createSpringOscillatorView> | null = null;
-  
   // 时间缩放因子（播放速度控制）
   let timeScale = 1;
   
-  function startRenderLoop(): void {
-    if (renderInterval || !viewRef) return;
-    renderInterval = setInterval(() => {
-      const dt = 1 / 60;
-      sim.step(dt);
-      viewRef?.render();
-      updateReadout();
-      
-      // 如果没有振子在运行，停止循环
-      if (!sim.oscillators.some(o => o.isPlaying)) {
-        if (renderInterval) {
-          clearInterval(renderInterval);
-          renderInterval = null;
-        }
-      }
-    }, 1000 / 60);
+  // 状态变化监听器
+  const listeners = new Set<() => void>();
+  
+  function notify(): void {
+    listeners.forEach(fn => fn());
   }
   
-  // 更新读取数据
-  function updateReadout(): void {
-    if (!options.onReadout) return;
-    
+  // 生成读数数据（供容器统一刷新）
+  function getReadoutItems(): Array<{ label: string; value: string }> {
     const items: Array<{ label: string; value: string }> = [
       { label: '全局时间', value: `${sim.globalTime.toFixed(2)} s` },
       { label: '振子数量', value: String(sim.oscillators.length) }
@@ -47,17 +29,20 @@ export function createSpringOscillatorScene(options: CreateSpringOscillatorScene
     sim.oscillators.forEach((osc, index) => {
       const omega = sim.getOmega(osc.id);
       const period = sim.getPeriod(osc.id);
+      // 实时相位角，归一化到 [0°, 360°)
+      let phaseDeg = (osc.state.phase * 180 / Math.PI) % 360;
+      if (phaseDeg < 0) phaseDeg += 360;
       items.push(
         { label: `#${index + 1} ω`, value: `${omega.toFixed(2)} rad/s` },
-        { label: `#${index + 1} T`, value: `${period.toFixed(2)} s` }
+        { label: `#${index + 1} T`, value: `${period.toFixed(2)} s` },
+        { label: `#${index + 1} 相位`, value: `${phaseDeg.toFixed(0)}°` }
       );
     });
 
-    // 如果有两个以上振子，显示相位差
-    if (sim.oscillators.length >= 2) {
-      const osc1 = sim.oscillators[0];
-      const osc2 = sim.oscillators[1];
-      const phaseDiff = sim.getPhaseDifference(osc1.id, osc2.id);
+    // 如果有两个以上振子正在运行，显示它们之间的相位差
+    const running = sim.oscillators.filter(o => o.isPlaying);
+    if (running.length >= 2) {
+      const phaseDiff = sim.getPhaseDifference(running[0].id, running[1].id);
       if (phaseDiff !== null) {
         const diffDeg = (phaseDiff * 180 / Math.PI).toFixed(0);
         let relation = '';
@@ -67,7 +52,7 @@ export function createSpringOscillatorScene(options: CreateSpringOscillatorScene
       }
     }
 
-    options.onReadout(items);
+    return items;
   }
   
   // 点击小球切换播放/暂停
@@ -79,11 +64,8 @@ export function createSpringOscillatorScene(options: CreateSpringOscillatorScene
       sim.pauseOscillator(id);
     } else {
       sim.startOscillator(id);
-      // 启动渲染循环
-      startRenderLoop();
     }
-    // 触发回调以更新 UI
-    updateReadout();
+    notify();
   }
   
   const viewOptions: SpringOscillatorViewOptions = {
@@ -94,7 +76,6 @@ export function createSpringOscillatorScene(options: CreateSpringOscillatorScene
   };
   
   const view = createSpringOscillatorView(viewOptions);
-  viewRef = view;
 
   return {
     sim,
@@ -104,14 +85,10 @@ export function createSpringOscillatorScene(options: CreateSpringOscillatorScene
       // 添加两个默认振子用于演示相位
       sim.addOscillator({ k: 10, m: 1, x0: 8, orientation: 'horizontal' });
       sim.addOscillator({ k: 10, m: 1, x0: 8, orientation: 'horizontal' });
-      
-      // 更新读取数据
-      updateReadout();
     },
 
     step(dt: number): void {
       sim.step(dt * timeScale);
-      updateReadout();
     },
 
     render(): void {
@@ -124,7 +101,7 @@ export function createSpringOscillatorScene(options: CreateSpringOscillatorScene
     resetAll(): void {
       sim.resetAll();
       view.reset();
-      updateReadout();
+      notify();
     },
 
     resize(): void {
@@ -141,7 +118,7 @@ export function createSpringOscillatorScene(options: CreateSpringOscillatorScene
 
     addOscillator(params?: Partial<OscillatorParams>, startDelay?: number) {
       const osc = sim.addOscillator(params, startDelay);
-      updateReadout();
+      notify();
       return osc;
     },
 
@@ -149,7 +126,7 @@ export function createSpringOscillatorScene(options: CreateSpringOscillatorScene
       const result = sim.removeOscillator(id);
       if (result) {
         view.removeOscillatorHistory(id);
-        updateReadout();
+        notify();
       }
       return result;
     },
@@ -157,34 +134,34 @@ export function createSpringOscillatorScene(options: CreateSpringOscillatorScene
     updateOscillator(id: string, params: Partial<OscillatorParams>): boolean {
       const result = sim.updateOscillator(id, params);
       if (result) {
-        updateReadout();
+        notify();
       }
       return result;
     },
 
     startOscillator(id: string): void {
       sim.startOscillator(id);
-      updateReadout();
+      notify();
     },
 
     pauseOscillator(id: string): void {
       sim.pauseOscillator(id);
-      updateReadout();
+      notify();
     },
 
     resetOscillator(id: string): void {
       sim.resetOscillator(id);
-      updateReadout();
+      notify();
     },
 
     startAll(): void {
       sim.oscillators.forEach(o => sim.startOscillator(o.id));
-      updateReadout();
+      notify();
     },
 
     pauseAll(): void {
       sim.oscillators.forEach(o => sim.pauseOscillator(o.id));
-      updateReadout();
+      notify();
     },
 
     setTimeScale(scale: number): void {
@@ -198,12 +175,23 @@ export function createSpringOscillatorScene(options: CreateSpringOscillatorScene
     attachGraphCanvas(canvas: HTMLCanvasElement): void {
       view.attachGraphCanvas(canvas);
     },
+    
+    getReadoutItems,
+    
+    getTransportState(): { isPlaying: boolean; speed: number } {
+      return {
+        isPlaying: sim.oscillators.some(o => o.isPlaying),
+        speed: timeScale
+      };
+    },
+    
+    subscribe(listener: () => void): () => void {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
 
     dispose(): void {
-      if (renderInterval) {
-        clearInterval(renderInterval);
-        renderInterval = null;
-      }
+      listeners.clear();
       view.dispose();
     }
   };
