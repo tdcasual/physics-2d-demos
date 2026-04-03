@@ -806,5 +806,19 @@ export function createFloatingControls(
     cleanupDrag();
   };
   
+  // 事件驱动状态更新（供布局母版调用）
+  (container as any).setState = (state: { isPlaying?: boolean; speed?: number }) => {
+    if (typeof state.isPlaying === 'boolean') {
+      playPauseBtn.textContent = state.isPlaying ? '⏸' : '▶';
+      playPauseBtn.style.borderColor = state.isPlaying 
+        ? 'var(--accent-color, #4db0ff)' 
+        : 'var(--border-color, rgba(255,255,255,0.15))';
+    }
+    if (typeof state.speed === 'number') {
+      speedSlider.value = String(state.speed);
+      speedValue.textContent = `${state.speed.toFixed(2)}×`;
+    }
+  };
+  
   return container;
 }

@@ -28,6 +28,8 @@ export interface FloatingControls {
   updatePlayState: () => void;
   /** 手动刷新布局（响应窗口大小变化） */
   refreshLayout: () => void;
+  /** 事件驱动设置状态 */
+  setState: (state: { isPlaying?: boolean; speed?: number }) => void;
   /** 销毁组件 */
   dispose: () => void;
 }
@@ -243,10 +245,24 @@ export function createFloatingControls(options: FloatingControlsOptions): Floati
   
   window.addEventListener('resize', onWindowResize);
 
+  function setState(state: { isPlaying?: boolean; speed?: number }): void {
+    if (typeof state.isPlaying === 'boolean') {
+      playPauseBtn.textContent = state.isPlaying ? '⏸' : '▶';
+      playPauseBtn.style.borderColor = state.isPlaying 
+        ? 'var(--accent-color, #4db0ff)' 
+        : 'var(--border-color, rgba(255,255,255,0.15))';
+    }
+    if (typeof state.speed === 'number') {
+      speedSlider.value = String(state.speed);
+      speedValue.textContent = `${state.speed.toFixed(isMobileDevice() ? 1 : 2)}×`;
+    }
+  }
+
   return {
     element: container,
     updatePlayState,
     refreshLayout,
+    setState,
     dispose: () => {
       if (intervalId !== null) {
         clearInterval(intervalId);

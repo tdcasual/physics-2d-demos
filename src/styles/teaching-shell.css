@@ -190,6 +190,11 @@
   border-color: var(--color-border-color);
 }
 
+/* 有图表时限制控制区最大高度，避免挤压图表区 */
+.teaching-demo[data-has-graph="true"] .control-section {
+  max-height: 60%;
+}
+
 /* 区域头部 - 带折叠按钮 */
 .section-header {
   @apply flex shrink-0 items-center justify-between border-b px-3 py-1.5;
@@ -227,7 +232,7 @@
 }
 
 .control-slot {
-  @apply flex shrink-0 flex-col overflow-y-auto overflow-x-hidden;
+  @apply flex flex-1 flex-col overflow-y-auto overflow-x-hidden;
   gap: calc(0.25rem * var(--ui-scale, 1));
   padding: calc(0.375rem * var(--ui-scale, 1)) calc(0.5rem * var(--ui-scale, 1));
 }
@@ -446,6 +451,10 @@
 
 .readout-slot--2col {
   grid-template-columns: repeat(2, 1fr);
+}
+
+.readout-slot--3col {
+  grid-template-columns: repeat(3, 1fr);
 }
 
 .readout-item {
