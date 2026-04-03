@@ -57,8 +57,8 @@ class SpringOscillatorScene implements Scene {
     // 设置相对定位（与旧版相同）
     container.style.position = 'relative';
     
-    // 获取布局创建的 Canvas
-    const canvas = container.querySelector('.stage-canvas') as HTMLCanvasElement;
+    // 获取布局创建的 Canvas（兼容桌面端和移动端）
+    const canvas = container.querySelector('.stage-canvas, .mobile-stage-canvas') as HTMLCanvasElement;
     if (!canvas) return;
     
     // 创建场景（传入 Canvas）
