@@ -1,0 +1,314 @@
+/**
+ * 布局母版基类
+ * 
+ * 所有布局母版的抽象基类，提供通用功能
+ * 
+ * @review-date 2026-04-02
+ * @version 0.1.0
+ */
+
+import type {
+  LayoutMaster,
+  LayoutSlots,
+  LayoutConfig,
+  LayoutTransition,
+  Theme,
+  SlotName,
+  SlotConfig
+} from '../types';
+
+/** 布局基类 */
+export abstract class BaseLayout implements LayoutMaster {
+  /** 布局ID */
+  abstract readonly id: string;
+  
+  /** 布局显示名称 */
+  abstract readonly name: string;
+  
+  /** 布局描述 */
+  abstract readonly description: string;
+  
+  /** 支持的区域 */
+  abstract readonly supportedSlots: SlotName[];
+  
+  /** 容器元素 */
+  protected container: HTMLElement;
+  
+  /** 布局配置 */
+  protected config: LayoutConfig;
+  
+  /** 区域槽位映射 */
+  protected slots: Partial<LayoutSlots> = {};
+  
+  /** 当前主题 */
+  protected currentTheme: Theme = 'light';
+  
+  /** 是否已挂载 */
+  protected isMounted = false;
+  
+  /** ResizeObserver 实例 */
+  private resizeObserver: ResizeObserver | null = null;
+  
+  constructor(container: HTMLElement, config: LayoutConfig = {}) {
+    this.container = container;
+    this.config = {
+      theme: 'light',
+      mobileBreakpoint: 768,
+      tabletBreakpoint: 1024,
+      ...config
+    };
+    this.currentTheme = this.config.theme || 'light';
+  }
+  
+  /**
+   * 渲染布局结构
+   * 子类必须实现此方法
+   */
+  abstract render(container: HTMLElement): LayoutSlots;
+  
+  /**
+   * 挂载布局
+   * 初始化事件监听、ResizeObserver 等
+   */
+  async mount(): Promise<void> {
+    if (this.isMounted) {
+      console.warn(`[${this.id}] Already mounted`);
+      return;
+    }
+    
+    // 先渲染布局结构
+    this.slots = this.render(this.container);
+    
+    // 添加根类名
+    this.container.classList.add('layout-master', `layout-${this.id}`);
+    
+    // 设置初始主题
+    this.setTheme(this.currentTheme);
+    
+    // 初始化 ResizeObserver
+    this.initResizeObserver();
+    
+    this.isMounted = true;
+    console.log(`[${this.id}] Mounted`);
+  }
+  
+  /**
+   * 卸载布局
+   * 清理资源
+   */
+  async unmount(): Promise<void> {
+    if (!this.isMounted) return;
+    
+    // 断开 ResizeObserver
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
+    
+    // 清空容器
+    this.container.innerHTML = '';
+    this.container.className = '';
+    
+    // 清空槽位引用
+    this.slots = {};
+    
+    this.isMounted = false;
+    console.log(`[${this.id}] Unmounted`);
+  }
+  
+  /**
+   * 处理尺寸变化
+   * 子类可覆盖以实现响应式逻辑
+   */
+  handleResize(width: number, height: number): void {
+    // 子类实现
+    console.log(`[${this.id}] Resized: ${width}x${height}`);
+  }
+  
+  /**
+   * 设置主题
+   */
+  setTheme(theme: Theme): void {
+    this.currentTheme = theme;
+    this.container.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute('data-theme', theme);
+  }
+  
+  /**
+   * 进入动画
+   * 默认淡入效果，子类可覆盖
+   */
+  async enter(transition: LayoutTransition = { type: 'fade', duration: 250, easing: 'ease-out' }): Promise<void> {
+    const { type, duration, easing } = transition;
+    
+    this.container.style.opacity = '0';
+    this.container.style.transition = `opacity ${duration}ms ${easing}`;
+    
+    // 强制重绘
+    this.container.offsetHeight;
+    
+    this.container.style.opacity = '1';
+    
+    await new Promise(resolve => setTimeout(resolve, duration));
+    
+    this.container.style.transition = '';
+  }
+  
+  /**
+   * 退出动画
+   * 默认淡出效果，子类可覆盖
+   */
+  async exit(transition: LayoutTransition = { type: 'fade', duration: 250, easing: 'ease-in' }): Promise<void> {
+    const { duration, easing } = transition;
+    
+    this.container.style.transition = `opacity ${duration}ms ${easing}`;
+    this.container.style.opacity = '0';
+    
+    await new Promise(resolve => setTimeout(resolve, duration));
+  }
+  
+  /**
+   * 获取区域配置
+   * 子类可覆盖以提供默认配置
+   */
+  getSlotConfig(slot: SlotName): SlotConfig | undefined {
+    return this.config.slots?.[slot];
+  }
+  
+  /**
+   * 设置区域折叠状态
+   * 子类应覆盖此方法
+   */
+  setSlotCollapsed(slot: SlotName, collapsed: boolean): void {
+    const element = this.slots[slot];
+    if (element) {
+      element.classList.toggle('is-collapsed', collapsed);
+      element.setAttribute('data-collapsed', String(collapsed));
+    }
+  }
+  
+  /**
+   * 获取区域元素
+   */
+  getSlot(name: SlotName): HTMLElement | undefined {
+    return this.slots[name];
+  }
+  
+  /**
+   * 检查是否支持某区域
+   */
+  supportsSlot(name: SlotName): boolean {
+    return this.supportedSlots.includes(name);
+  }
+  
+  /**
+   * 初始化 ResizeObserver
+   */
+  private initResizeObserver(): void {
+    if (!window.ResizeObserver) return;
+    
+    this.resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        this.handleResize(width, height);
+      }
+    });
+    
+    this.resizeObserver.observe(this.container);
+  }
+  
+  /**
+   * 创建区域元素
+   * @param name - 区域名称
+   * @param className - 附加类名
+   */
+  protected createSlot(name: SlotName, className?: string): HTMLElement {
+    const element = document.createElement('div');
+    element.className = `layout-region ${className || ''}`.trim();
+    element.setAttribute('data-region', name);
+    return element;
+  }
+  
+  /**
+   * 创建可折叠面板
+   */
+  protected createFoldablePanel(
+    name: SlotName,
+    title: string,
+    defaultCollapsed = false
+  ): HTMLElement {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'foldable-panel';
+    wrapper.setAttribute('data-region', name);
+    
+    if (defaultCollapsed) {
+      wrapper.classList.add('is-collapsed');
+    }
+    
+    // 头部
+    const header = document.createElement('div');
+    header.className = 'foldable-header';
+    header.innerHTML = `
+      <span class="foldable-title">${title}</span>
+      <svg class="foldable-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="6 9 12 15 18 9"></polyline>
+      </svg>
+    `;
+    
+    // 内容区
+    const content = document.createElement('div');
+    content.className = 'foldable-content';
+    
+    // 折叠/展开逻辑
+    header.addEventListener('click', () => {
+      const isCollapsed = wrapper.classList.toggle('is-collapsed');
+      wrapper.setAttribute('data-collapsed', String(isCollapsed));
+    });
+    
+    wrapper.appendChild(header);
+    wrapper.appendChild(content);
+    
+    // 将实际内容区返回给调用者使用
+    Object.defineProperty(wrapper, 'contentSlot', {
+      value: content,
+      writable: false
+    });
+    
+    return wrapper;
+  }
+  
+  /**
+   * 创建分隔条
+   */
+  protected createResizer(direction: 'vertical' | 'horizontal'): HTMLElement {
+    const resizer = document.createElement('div');
+    resizer.className = `resizer ${direction}`;
+    resizer.setAttribute('role', 'separator');
+    resizer.setAttribute('aria-orientation', direction === 'vertical' ? 'vertical' : 'horizontal');
+    return resizer;
+  }
+  
+  /**
+   * 检查是否为移动端
+   */
+  protected isMobile(width?: number): boolean {
+    const w = width ?? this.container.clientWidth;
+    return w < (this.config.mobileBreakpoint || 768);
+  }
+  
+  /**
+   * 检查是否为平板
+   */
+  protected isTablet(width?: number): boolean {
+    const w = width ?? this.container.clientWidth;
+    const mobileBreakpoint = this.config.mobileBreakpoint || 768;
+    const tabletBreakpoint = this.config.tabletBreakpoint || 1024;
+    return w >= mobileBreakpoint && w < tabletBreakpoint;
+  }
+  
+  /**
+   * 检查是否为桌面端
+   */
+  protected isDesktop(width?: number): boolean {
+    const w = width ?? this.container.clientWidth;
+    return w >= (this.config.tabletBreakpoint || 1024);
+  }
+}

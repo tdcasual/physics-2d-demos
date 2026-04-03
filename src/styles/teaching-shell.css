@@ -429,6 +429,25 @@
   background: var(--color-bg-primary);
 }
 
+/* 自适应列数变体 */
+.readout-slot--adaptive {
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+}
+
+.readout-slot--1col {
+  grid-template-columns: 1fr;
+}
+
+.readout-slot--auto {
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.readout-slot--2col {
+  grid-template-columns: repeat(2, 1fr);
+}
+
 .readout-item {
   @apply box-border flex min-w-0 flex-1 basis-full items-center justify-between rounded-md px-2.5 py-1.5 text-sm;
   background: var(--color-bg-secondary);

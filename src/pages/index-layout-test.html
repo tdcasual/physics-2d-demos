@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>布局母版系统测试</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    h1 { color: #333; }
+    .version-card {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+      background: #fafafa;
+    }
+    .version-card h2 { margin-top: 0; }
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .tag-legacy { background: #fef3c7; color: #92400e; }
+    .tag-new { background: #d1fae5; color: #065f46; }
+    a {
+      display: inline-block;
+      padding: 10px 20px;
+      background: #4f46e5;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      margin-top: 10px;
+    }
+    a:hover { background: #4338ca; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <h1>🔬 布局母版系统测试页面</h1>
+  <p>选择下方链接查看不同版本的弹簧振子场景：</p>
+  
+  <div class="grid">
+    <div class="version-card">
+      <h2>Legacy 版本 <span class="tag tag-legacy">旧版</span></h2>
+      <p>使用 <code>createTeachingDemoShell</code> 的现有实现</p>
+      <ul>
+        <li>单一布局，通过配置调整</li>
+        <li>所有场景共享同一套 DOM 结构</li>
+        <li>作为模板参考保留</li>
+      </ul>
+      <a href="/src/pages/spring-oscillator-legacy.html">打开 Legacy 版本 →</a>
+    </div>
+    
+    <div class="version-card">
+      <h2>V3 新版本 <span class="tag tag-new">新版</span></h2>
+      <p>使用新的<strong>布局母版系统</strong></p>
+      <ul>
+        <li>SplitRightLayout 母版</li>
+        <li>场景实现 Scene 接口</li>
+        <li>支持布局切换</li>
+        <li>独立响应式策略</li>
+      </ul>
+      <a href="/src/pages/spring-oscillator.html">打开 V3 新版本 →</a>
+    </div>
+  </div>
+  
+  <h2>📋 系统文档</h2>
+  <ul>
+    <li><a href="/docs/layout-master-system-design.md" target="_blank">系统设计文档</a></li>
+  </ul>
+  
+  <hr>
+  <p style="color: #666; font-size: 14px;">
+    提示：开发时可同时打开两个版本进行对比测试
+  </p>
+</body>
+</html>

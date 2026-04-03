@@ -195,6 +195,10 @@ export function createSpringOscillatorScene(options: CreateSpringOscillatorScene
       return timeScale;
     },
 
+    attachGraphCanvas(canvas: HTMLCanvasElement): void {
+      view.attachGraphCanvas(canvas);
+    },
+
     dispose(): void {
       if (renderInterval) {
         clearInterval(renderInterval);
