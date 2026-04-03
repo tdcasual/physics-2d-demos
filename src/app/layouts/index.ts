@@ -24,7 +24,9 @@ export type {
   CanvasConfig,
   LayoutChangeEvent,
   ThemeChangeEvent,
-  SceneContainerEvents
+  SceneContainerEvents,
+  TransportState,
+  SceneStateListener
 } from './types';
 
 // 注册表导出

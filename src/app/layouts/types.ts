@@ -144,6 +144,18 @@ export interface LayoutMaster {
   getSlotConfig?(slot: SlotName): SlotConfig | undefined;
   
   /**
+   * 刷新运输控制状态
+   * @param state - 控制状态
+   */
+  updateTransportState?(state: TransportState): void;
+  
+  /**
+   * 刷新读数面板
+   * @param items - 读数项列表
+   */
+  updateReadout?(items: ReadoutItem[]): void;
+  
+  /**
    * 设置区域折叠状态
    * @param slot - 区域名称
    * @param collapsed - 是否折叠
@@ -238,6 +250,56 @@ export interface Scene {
    * 清理资源
    */
   unmount?(): void;
+  
+  /**
+   * 设置主题
+   * @param theme - 主题类型
+   */
+  setTheme?(theme: Theme): void;
+  
+  /**
+   * 设置演示模式
+   * @param mode - 模式类型
+   */
+  setMode?(mode: 'normal' | 'presentation'): void;
+  
+  /**
+   * 全部播放
+   */
+  startAll?(): void;
+  
+  /**
+   * 全部暂停
+   */
+  pauseAll?(): void;
+  
+  /**
+   * 重置场景
+   */
+  reset?(): void;
+  
+  /**
+   * 设置时间缩放（播放速度）
+   * @param scale - 速度倍数
+   */
+  setTimeScale?(scale: number): void;
+  
+  /**
+   * 获取运输控制状态，供容器同步给布局
+   */
+  getTransportState?(): TransportState;
+  
+  /**
+   * 获取读数数据，供容器统一刷新
+   */
+  getReadoutItems?(): ReadoutItem[];
+  
+  /**
+   * 订阅场景内部状态变化
+   * @param listener - 变化监听器
+   * @returns 取消订阅函数
+   */
+  subscribe?(listener: SceneStateListener): () => void;
 }
 
 // ============================================================================
@@ -262,7 +324,7 @@ export interface SceneContainer {
    * 设置场景
    * @param scene - 场景实例
    */
-  setScene(scene: Scene): void;
+  setScene(scene: Scene): Promise<void>;
   
   /**
    * 切换布局
@@ -292,6 +354,17 @@ export interface SceneContainer {
    * 获取当前主题
    */
   getTheme(): Theme;
+  
+  /**
+   * 添加事件监听
+   * @param event - 事件名称
+   * @param listener - 监听器
+   * @returns 取消订阅函数
+   */
+  on<K extends keyof SceneContainerEvents>(
+    event: K,
+    listener: (payload: SceneContainerEvents[K]) => void
+  ): () => void;
   
   /**
    * 保存状态到 localStorage
@@ -353,6 +426,16 @@ export interface ReadoutItem {
   /** 布局: half=半宽, full=全宽 */
   layout?: 'half' | 'full';
 }
+
+/** 运输控制状态（播放/暂停/速度） */
+export interface TransportState {
+  isPlaying: boolean;
+  speed?: number;
+  canReset?: boolean;
+}
+
+/** 场景状态变化监听器 */
+export type SceneStateListener = () => void;
 
 /** 头部配置 */
 export interface HeaderConfig {

@@ -46,8 +46,11 @@ export abstract class BaseLayout implements LayoutMaster {
   /** 是否已挂载 */
   protected isMounted = false;
   
-  /** ResizeObserver 实例 */
-  private resizeObserver: ResizeObserver | null = null;
+  /** 是否正在进行动画 */
+  private isAnimating = false;
+  
+  /** 动画中断控制器 */
+  private animationAbortController: AbortController | null = null;
   
   constructor(container: HTMLElement, config: LayoutConfig = {}) {
     this.container = container;
@@ -85,9 +88,6 @@ export abstract class BaseLayout implements LayoutMaster {
     // 设置初始主题
     this.setTheme(this.currentTheme);
     
-    // 初始化 ResizeObserver
-    this.initResizeObserver();
-    
     this.isMounted = true;
     console.log(`[${this.id}] Mounted`);
   }
@@ -99,13 +99,14 @@ export abstract class BaseLayout implements LayoutMaster {
   async unmount(): Promise<void> {
     if (!this.isMounted) return;
     
-    // 断开 ResizeObserver
-    this.resizeObserver?.disconnect();
-    this.resizeObserver = null;
+    // 中断进行中的动画
+    this.animationAbortController?.abort();
+    this.animationAbortController = null;
     
     // 清空容器
     this.container.innerHTML = '';
-    this.container.className = '';
+    this.container.classList.remove('layout-master', `layout-${this.id}`);
+    this.container.removeAttribute('data-theme');
     
     // 清空槽位引用
     this.slots = {};
@@ -129,7 +130,6 @@ export abstract class BaseLayout implements LayoutMaster {
   setTheme(theme: Theme): void {
     this.currentTheme = theme;
     this.container.setAttribute('data-theme', theme);
-    document.documentElement.setAttribute('data-theme', theme);
   }
   
   /**
@@ -137,7 +137,14 @@ export abstract class BaseLayout implements LayoutMaster {
    * 默认淡入效果，子类可覆盖
    */
   async enter(transition: LayoutTransition = { type: 'fade', duration: 250, easing: 'ease-out' }): Promise<void> {
-    const { type, duration, easing } = transition;
+    if (this.isAnimating) {
+      this.animationAbortController?.abort();
+    }
+    this.isAnimating = true;
+    this.animationAbortController = new AbortController();
+    const signal = this.animationAbortController.signal;
+    
+    const { duration, easing } = transition;
     
     this.container.style.opacity = '0';
     this.container.style.transition = `opacity ${duration}ms ${easing}`;
@@ -147,9 +154,22 @@ export abstract class BaseLayout implements LayoutMaster {
     
     this.container.style.opacity = '1';
     
-    await new Promise(resolve => setTimeout(resolve, duration));
-    
-    this.container.style.transition = '';
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        if (!signal.aborted) {
+          this.container.style.transition = '';
+        }
+        this.isAnimating = false;
+        resolve();
+      }, duration);
+      
+      signal.addEventListener('abort', () => {
+        clearTimeout(timer);
+        reject(new Error('Animation aborted'));
+      }, { once: true });
+    }).catch(() => {
+      // 动画被中断，静默处理
+    });
   }
   
   /**
@@ -157,12 +177,31 @@ export abstract class BaseLayout implements LayoutMaster {
    * 默认淡出效果，子类可覆盖
    */
   async exit(transition: LayoutTransition = { type: 'fade', duration: 250, easing: 'ease-in' }): Promise<void> {
+    if (this.isAnimating) {
+      this.animationAbortController?.abort();
+    }
+    this.isAnimating = true;
+    this.animationAbortController = new AbortController();
+    const signal = this.animationAbortController.signal;
+    
     const { duration, easing } = transition;
     
     this.container.style.transition = `opacity ${duration}ms ${easing}`;
     this.container.style.opacity = '0';
     
-    await new Promise(resolve => setTimeout(resolve, duration));
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.isAnimating = false;
+        resolve();
+      }, duration);
+      
+      signal.addEventListener('abort', () => {
+        clearTimeout(timer);
+        reject(new Error('Animation aborted'));
+      }, { once: true });
+    }).catch(() => {
+      // 动画被中断，静默处理
+    });
   }
   
   /**
@@ -199,21 +238,8 @@ export abstract class BaseLayout implements LayoutMaster {
     return this.supportedSlots.includes(name);
   }
   
-  /**
-   * 初始化 ResizeObserver
-   */
-  private initResizeObserver(): void {
-    if (!window.ResizeObserver) return;
-    
-    this.resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        this.handleResize(width, height);
-      }
-    });
-    
-    this.resizeObserver.observe(this.container);
-  }
+  // ResizeObserver 已由 SceneContainerImpl 统一管理，基类不再重复监听
+  // 子类仍可通过 handleResize() 接收尺寸变化通知
   
   /**
    * 创建区域元素

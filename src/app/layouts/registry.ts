@@ -7,7 +7,7 @@
  * @version 0.1.0
  */
 
-import type { LayoutMaster, LayoutMasterConstructor } from './types';
+import type { LayoutMaster, LayoutMasterConstructor, LayoutConfig, SlotName } from './types';
 
 /** 布局元数据 */
 export interface LayoutMetadata {
@@ -20,7 +20,7 @@ export interface LayoutMetadata {
   /** 是否支持移动端 */
   supportsMobile: boolean;
   /** 支持的区域 */
-  supportedSlots: string[];
+  supportedSlots: SlotName[];
 }
 
 /** 布局注册表 */
@@ -39,6 +39,16 @@ class LayoutRegistry {
     ctor: LayoutMasterConstructor,
     metadata: Omit<LayoutMetadata, 'id'>
   ): void {
+    if (!id || typeof id !== 'string') {
+      throw new Error('Layout id must be a non-empty string');
+    }
+    if (!ctor || typeof ctor !== 'function') {
+      throw new Error(`Layout constructor for "${id}" must be a valid class/function`);
+    }
+    if (!metadata || typeof metadata !== 'object') {
+      throw new Error(`Layout metadata for "${id}" must be a valid object`);
+    }
+    
     if (this.layouts.has(id)) {
       console.warn(`[LayoutRegistry] Layout "${id}" is already registered, overwriting`);
     }
@@ -56,10 +66,17 @@ class LayoutRegistry {
    * @param config - 布局配置
    * @returns 布局实例
    */
-  create(id: string, container: HTMLElement, config?: any): LayoutMaster {
+  create(id: string, container: HTMLElement, config?: LayoutConfig): LayoutMaster {
+    if (!id || typeof id !== 'string') {
+      throw new Error('Layout id must be a non-empty string');
+    }
+    if (!container || !(container instanceof HTMLElement)) {
+      throw new Error('Layout container must be a valid HTMLElement');
+    }
+    
     const LayoutClass = this.layouts.get(id);
     
-    if (!LayoutClass) {
+    if (!LayoutClass || typeof LayoutClass !== 'function') {
       const available = this.list().join(', ');
       throw new Error(
         `Layout "${id}" not found. ` +
@@ -143,7 +160,7 @@ export function registerLayout(
  * 获取默认布局ID
  * 如果用户有偏好设置，返回偏好布局；否则返回第一个可用布局
  */
-export function getDefaultLayoutId(): string {
+export function getDefaultLayoutId(): string | null {
   // 尝试从 localStorage 读取用户偏好
   try {
     const userPref = localStorage.getItem('physics-demos-preferred-layout');
@@ -154,9 +171,9 @@ export function getDefaultLayoutId(): string {
     // localStorage 不可用
   }
   
-  // 返回第一个可用布局，或 fallback
+  // 返回第一个可用布局，若注册表为空则返回 null
   const available = layoutRegistry.list();
-  return available[0] || 'split-right';
+  return available[0] || null;
 }
 
 /**

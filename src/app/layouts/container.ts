@@ -34,7 +34,10 @@ export class SceneContainerImpl implements SceneContainer {
   private _storageKey: string;
   private _resizeObserver: ResizeObserver | null = null;
   private _onResize?: (width: number, height: number) => void;
-  private _layoutConfig?: any;
+  private _layoutConfig?: unknown;
+  private _sceneUnsubscribers: (() => void)[] = [];
+  private _layoutThemeHandler?: (e: Event) => void;
+  private _layoutModeHandler?: (e: Event) => void;
   
   // 事件监听器映射
   private listeners: {
@@ -76,7 +79,7 @@ export class SceneContainerImpl implements SceneContainer {
    * 设置场景
    * @param scene - 场景实例
    */
-  setScene(scene: Scene): void {
+  async setScene(scene: Scene): Promise<void> {
     // 如果有旧场景，先卸载
     if (this._currentScene) {
       this.unmountCurrentScene();
@@ -88,10 +91,8 @@ export class SceneContainerImpl implements SceneContainer {
     const layoutId = this._userPreferredLayout || scene.preferredLayout;
     
     // 如果当前布局与需要的布局不同，切换布局
-    // switchLayout 会在完成后自动挂载当前场景（如果存在）
     if (!this._currentLayout || this._currentLayout.id !== layoutId) {
-      this.switchLayout(layoutId, { animate: false });
-      // 注意：不需要在这里调用 mountScene，因为 switchLayout 内部会处理
+      await this.switchLayout(layoutId, { animate: false });
     } else {
       this.mountScene(scene);
     }
@@ -100,20 +101,25 @@ export class SceneContainerImpl implements SceneContainer {
   /**
    * 挂载场景到当前布局
    */
-  private mountScene(scene: Scene): void {
-    if (!this._currentLayout) return;
+  private mountScene(scene: Scene, layout?: LayoutMaster): void {
+    const targetLayout = layout || this._currentLayout;
+    if (!targetLayout) return;
     
-    // 获取已渲染的 slots，而不是重新渲染
-    // layout.render() 已经在 mount() 中被调用
-    const slots = this.getLayoutSlots();
+    // 从布局实例获取已渲染的 slots（避免硬编码类名耦合）
+    const slots = (targetLayout as { slots?: Record<string, HTMLElement | undefined> }).slots || {};
     
     // 渲染各区域
     if (slots.header && scene.renderHeader) {
       scene.renderHeader(slots.header);
     }
     
-    scene.renderControl(slots.control);
-    scene.renderAnimation(slots.animation);
+    if (slots.control && scene.renderControl) {
+      scene.renderControl(slots.control);
+    }
+    
+    if (slots.animation && scene.renderAnimation) {
+      scene.renderAnimation(slots.animation);
+    }
     
     if (slots.graph && scene.renderGraph) {
       scene.renderGraph(slots.graph);
@@ -123,13 +129,78 @@ export class SceneContainerImpl implements SceneContainer {
       scene.renderReadout(slots.readout);
     }
     
+    // 恢复场景持久化状态
+    const savedState = this.restoreSceneState(scene.id);
+    if (savedState && scene.restoreState) {
+      try {
+        scene.restoreState(savedState);
+      } catch (err) {
+        console.error(`[SceneContainer] Failed to restore state for scene ${scene.id}:`, err);
+      }
+    }
+    
+    // 初始同步场景状态到布局
+    this.syncSceneStateToLayout(scene, targetLayout);
+    
+    // 订阅场景状态变化，自动刷新布局
+    if (scene.subscribe) {
+      const unsubscribe = scene.subscribe(() => {
+        this.syncSceneStateToLayout(scene);
+      });
+      this._sceneUnsubscribers.push(unsubscribe);
+    }
+    
+    // 监听布局内部触发的主题/模式变化并转发给场景
+    this._layoutThemeHandler = (e: Event) => {
+      const custom = e as CustomEvent<{ theme: Theme }>;
+      if (custom.detail?.theme && scene.setTheme) {
+        scene.setTheme(custom.detail.theme);
+      }
+    };
+    this._layoutModeHandler = (e: Event) => {
+      const custom = e as CustomEvent<{ mode: 'normal' | 'presentation' }>;
+      if (custom.detail?.mode && scene.setMode) {
+        scene.setMode(custom.detail.mode);
+      }
+    };
+    this.container.addEventListener('layout:themechange', this._layoutThemeHandler);
+    this.container.addEventListener('layout:modechange', this._layoutModeHandler);
+    
+    // 如果布局支持浮动控制条，自动绑定场景运输控制
+    interface LayoutWithFloatingControls extends LayoutMaster {
+      setFloatingControls(options: {
+        isPlaying?: () => boolean;
+        onTogglePlay?: () => void;
+        onReset?: () => void;
+        onSpeedChange?: (speed: number) => void;
+        getSpeed?: () => number;
+      }): void;
+    }
+    const layoutWithControls = targetLayout as LayoutWithFloatingControls | null;
+    if (layoutWithControls?.setFloatingControls && scene.getTransportState) {
+      layoutWithControls.setFloatingControls({
+        isPlaying: () => scene.getTransportState!().isPlaying,
+        onTogglePlay: () => {
+          const isPlaying = scene.getTransportState!().isPlaying;
+          if (isPlaying) {
+            scene.pauseAll?.();
+          } else {
+            scene.startAll?.();
+          }
+        },
+        onReset: () => scene.reset?.(),
+        onSpeedChange: (speed: number) => scene.setTimeScale?.(speed),
+        getSpeed: () => scene.getTransportState!().speed ?? 1
+      });
+    }
+    
     // 调用场景挂载生命周期
     scene.mount?.();
     
     // 触发事件
     this.emit('scene:mount', { sceneId: scene.id });
     
-    console.log(`[SceneContainer] Mounted scene: ${scene.id}`);
+
   }
   
   /**
@@ -137,6 +208,20 @@ export class SceneContainerImpl implements SceneContainer {
    */
   private unmountCurrentScene(): void {
     if (!this._currentScene) return;
+    
+    // 取消场景状态订阅
+    this._sceneUnsubscribers.forEach(fn => fn());
+    this._sceneUnsubscribers = [];
+    
+    // 移除布局事件监听
+    if (this._layoutThemeHandler) {
+      this.container.removeEventListener('layout:themechange', this._layoutThemeHandler);
+      this._layoutThemeHandler = undefined;
+    }
+    if (this._layoutModeHandler) {
+      this.container.removeEventListener('layout:modechange', this._layoutModeHandler);
+      this._layoutModeHandler = undefined;
+    }
     
     // 保存场景状态
     const state = this._currentScene.saveState?.();
@@ -198,33 +283,37 @@ export class SceneContainerImpl implements SceneContainer {
     // 清空容器
     this.container.innerHTML = '';
     
-    // 创建新布局（传入配置）
-    const newLayout = layoutRegistry.create(layoutId, this.container, {
-      theme: this._currentTheme,
-      ...this._layoutConfig
-    });
+    let newLayout: LayoutMaster;
+    try {
+      // 创建并挂载新布局（事务准备阶段）
+      newLayout = layoutRegistry.create(layoutId, this.container, {
+        theme: this._currentTheme,
+        ...(this._layoutConfig as Record<string, unknown> || {})
+      });
+      
+      await newLayout.mount();
+      newLayout.setTheme(this._currentTheme);
+      
+      // 如果有场景，重新渲染到新的布局
+      if (this._currentScene) {
+        this.mountScene(this._currentScene, newLayout);
+      }
+      
+      // 进入动画
+      if (animate) {
+        const enterTransition: LayoutTransition = {
+          ...transition,
+          easing: 'ease-out'
+        };
+        await newLayout.enter(enterTransition);
+      }
+    } catch (err) {
+      console.error(`[SceneContainer] Failed to switch to layout ${layoutId}:`, err);
+      throw err;
+    }
     
-    // 挂载新布局
-    await newLayout.mount();
-    
-    // 设置主题
-    newLayout.setTheme(this._currentTheme);
-    
+    // 事务提交：只有全部成功后，才更新当前布局引用
     this._currentLayout = newLayout;
-    
-    // 如果有场景，重新渲染到新的布局
-    if (this._currentScene) {
-      this.mountScene(this._currentScene);
-    }
-    
-    // 进入动画
-    if (animate) {
-      const enterTransition: LayoutTransition = {
-        ...transition,
-        easing: 'ease-out'
-      };
-      await newLayout.enter(enterTransition);
-    }
     
     // 通知场景布局已变化
     this._currentScene?.onLayoutDidChange?.(layoutId);
@@ -309,10 +398,10 @@ export class SceneContainerImpl implements SceneContainer {
       const saved = localStorage.getItem(this._storageKey);
       if (saved) {
         const state = JSON.parse(saved);
-        if (state.theme) {
+        if (state.theme === 'light' || state.theme === 'dark') {
           this._currentTheme = state.theme;
         }
-        if (state.preferredLayout) {
+        if (state.preferredLayout && layoutRegistry.has(state.preferredLayout)) {
           this._userPreferredLayout = state.preferredLayout;
         }
       }
@@ -351,6 +440,22 @@ export class SceneContainerImpl implements SceneContainer {
       // 忽略
     }
     return null;
+  }
+  
+  /**
+   * 同步场景状态到当前布局
+   */
+  private syncSceneStateToLayout(scene: Scene, layout?: LayoutMaster): void {
+    const targetLayout = layout || this._currentLayout;
+    if (!targetLayout) return;
+    
+    if (targetLayout.updateReadout && scene.getReadoutItems) {
+      targetLayout.updateReadout(scene.getReadoutItems());
+    }
+    
+    if (targetLayout.updateTransportState && scene.getTransportState) {
+      targetLayout.updateTransportState(scene.getTransportState());
+    }
   }
   
   /**
@@ -421,16 +526,8 @@ export class SceneContainerImpl implements SceneContainer {
    * 获取当前布局的 slots
    * 通过查询 DOM 获取已渲染的槽位
    */
-  private getLayoutSlots() {
-    const container = this.container;
-    return {
-      header: container.querySelector('.teaching-header') as HTMLElement | undefined,
-      control: container.querySelector('.control-slot') as HTMLElement,
-      animation: container.querySelector('.stage-slot') as HTMLElement,
-      graph: container.querySelector('.graph-slot') as HTMLElement | undefined,
-      readout: container.querySelector('.readout-slot') as HTMLElement | undefined
-    };
-  }
+  // 已废弃：通过 layout.slots 直接获取槽位，避免硬编码类名耦合
+  // private getLayoutSlots() { ... }
   
   /**
    * 销毁容器

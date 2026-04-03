@@ -12,7 +12,7 @@
  */
 
 import { BaseLayout } from '../base-layout';
-import type { LayoutSlots, LayoutConfig, Theme, SlotName, SlotConfig } from '../../types';
+import type { LayoutSlots, LayoutConfig, Theme, SlotName, SlotConfig, TransportState, ReadoutItem } from '../../types';
 import { createFloatingControls } from '../../../../ui/control-layout';
 
 /** SplitRight 布局配置 */
@@ -82,9 +82,8 @@ export class SplitRightLayout extends BaseLayout {
   
   constructor(container: HTMLElement, config: SplitRightConfig = {}) {
     super(container, config);
-    this.config = config;
     
-    const cfg = config as SplitRightConfig;
+    const cfg = this.config as SplitRightConfig;
     this.leftRatio = cfg.defaultLeftRatio ?? 0.38;
     this.readoutCollapsed = cfg.readoutCollapsed ?? true;
   }
@@ -97,7 +96,7 @@ export class SplitRightLayout extends BaseLayout {
     const subtitle = cfg.subtitle ?? '';
     const readoutLabel = cfg.readoutLabel ?? '数据读数';
     
-    container.className = 'teaching-demo v2-layout';
+    container.classList.add('teaching-demo', 'v2-layout');
     container.setAttribute('data-mode', this.mode);
     container.setAttribute('data-theme', this.currentTheme);
     container.setAttribute('data-has-graph', String(hasGraph));
@@ -294,6 +293,30 @@ export class SplitRightLayout extends BaseLayout {
         }
       });
     });
+    
+    // 主题切换按钮
+    if (this.themeButton) {
+      this.themeButton.addEventListener('click', () => {
+        const nextTheme = this.currentTheme === 'dark' ? 'light' : 'dark';
+        this.setTheme(nextTheme);
+        this.container.dispatchEvent(new CustomEvent('layout:themechange', {
+          detail: { theme: nextTheme },
+          bubbles: true
+        }));
+      });
+    }
+    
+    // 模式切换按钮
+    if (this.modeButton) {
+      this.modeButton.addEventListener('click', () => {
+        const nextMode = this.mode === 'normal' ? 'presentation' : 'normal';
+        this.setMode(nextMode);
+        this.container.dispatchEvent(new CustomEvent('layout:modechange', {
+          detail: { mode: nextMode },
+          bubbles: true
+        }));
+      });
+    }
   }
   
   /**
@@ -373,8 +396,20 @@ export class SplitRightLayout extends BaseLayout {
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
       
-      element.style.left = `${initialLeft + dx}px`;
-      element.style.top = `${initialTop + dy}px`;
+      let nextLeft = initialLeft + dx;
+      let nextTop = initialTop + dy;
+      
+      // 边界限制：保持在父容器可视范围内
+      const parent = element.offsetParent as HTMLElement | null;
+      if (parent) {
+        const parentRect = parent.getBoundingClientRect();
+        const elemRect = element.getBoundingClientRect();
+        nextLeft = Math.max(0, Math.min(nextLeft, parentRect.width - elemRect.width));
+        nextTop = Math.max(0, Math.min(nextTop, parentRect.height - elemRect.height));
+      }
+      
+      element.style.left = `${nextLeft}px`;
+      element.style.top = `${nextTop}px`;
     };
     
     const onMouseUp = () => {
@@ -407,18 +442,21 @@ export class SplitRightLayout extends BaseLayout {
         const width = entry.contentRect.width;
         
         // 移除旧的列数类
-        this.readoutSlot!.classList.remove('readout-slot--1col', 'readout-slot--2col', 'readout-slot--auto');
+        this.readoutSlot!.classList.remove('readout-slot--1col', 'readout-slot--2col', 'readout-slot--3col', 'readout-slot--auto');
         
         // 根据宽度设置列数类
         if (width < 220) {
           this.readoutSlot!.classList.add('readout-slot--1col');
           this.readoutSlot!.setAttribute('data-columns', '1');
-        } else if (width < 340) {
+        } else if (width < 320) {
           this.readoutSlot!.classList.add('readout-slot--auto');
           this.readoutSlot!.setAttribute('data-columns', 'auto');
-        } else {
+        } else if (width < 420) {
           this.readoutSlot!.classList.add('readout-slot--2col');
           this.readoutSlot!.setAttribute('data-columns', '2');
+        } else {
+          this.readoutSlot!.classList.add('readout-slot--3col');
+          this.readoutSlot!.setAttribute('data-columns', '3');
         }
       }
     });
@@ -536,8 +574,22 @@ export class SplitRightLayout extends BaseLayout {
       document.removeEventListener('mouseup', handleMouseUp);
     };
     
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      e.preventDefault();
+      const step = e.key === 'ArrowLeft' ? -10 : 10;
+      const cfg = this.config as SplitRightConfig;
+      const minWidth = cfg.leftMinWidth ?? 260;
+      const maxWidth = Math.min(cfg.leftMaxWidth ?? 960, containerWidth * 0.5);
+      const currentWidth = this.leftPanel?.clientWidth || minWidth;
+      const newWidth = Math.max(minWidth, Math.min(maxWidth, currentWidth + step));
+      this.leftRatio = newWidth / containerWidth;
+      this.container.style.gridTemplateColumns = `${newWidth}px 8px 1fr`;
+    };
+    
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
+    this.resizer?.addEventListener('keydown', handleKeyDown, { once: true });
   }
   
   private toggleSidebar(): void {
@@ -589,6 +641,7 @@ export class SplitRightLayout extends BaseLayout {
    * 设置浮动控制条的回调
    */
   setFloatingControls(callbacks: {
+    onTogglePlay?: () => void;
     onPlayPause?: () => void;
     onReset?: () => void;
     onSpeedChange?: (speed: number) => void;
@@ -602,10 +655,13 @@ export class SplitRightLayout extends BaseLayout {
       this.floatingControls = null;
     }
     
+    // 兼容 onPlayPause 旧命名
+    const togglePlay = callbacks.onTogglePlay ?? callbacks.onPlayPause;
+    
     // 使用 createFloatingControls 创建新的
     this.floatingControls = createFloatingControls({
       isPlaying: callbacks.isPlaying,
-      onTogglePlay: callbacks.onPlayPause,
+      onTogglePlay: togglePlay,
       onReset: callbacks.onReset,
       onSpeedChange: callbacks.onSpeedChange,
       getSpeed: callbacks.getSpeed
@@ -739,6 +795,16 @@ export class SplitRightLayout extends BaseLayout {
     `).join('');
   }
   
+  updateReadout(items: ReadoutItem[]): void {
+    this.setReadout(items);
+  }
+  
+  updateTransportState(state: TransportState): void {
+    if (this.floatingControls && (this.floatingControls as any).setState) {
+      (this.floatingControls as any).setState(state);
+    }
+  }
+  
   getCanvas(): HTMLCanvasElement | null {
     return this.stageCanvas;
   }
@@ -761,6 +827,13 @@ export class SplitRightLayout extends BaseLayout {
    * 卸载时清理资源
    */
   async unmount(): Promise<void> {
+    // 清理浮动控制条定时器
+    if (this.floatingControls) {
+      (this.floatingControls as { dispose?: () => void }).dispose?.();
+      this.floatingControls.remove();
+      this.floatingControls = null;
+    }
+    
     // 清理拖拽
     if (this.readoutDragCleanup) {
       this.readoutDragCleanup();
