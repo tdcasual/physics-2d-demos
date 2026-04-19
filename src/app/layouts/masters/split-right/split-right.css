@@ -15,6 +15,30 @@
 }
 
 /* 右侧面板 */
+.layout-split-right .teaching-right-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  position: relative;
+}
+
+/* 动画区框架 */
+.layout-split-right .stage-frame {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  position: relative;
+}
+
+/* 动画插槽 */
+.layout-split-right .stage-slot {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+/* 旧类名兼容 */
 .layout-split-right .right-panel {
   position: relative;
 }
