@@ -30,10 +30,13 @@ bootScenePage({
         return scene.getSnapshot();
       },
       startAll() {
-        scene.render();
+        (scene as unknown as { start(): void }).start();
       },
       pauseAll() {
-        scene.render();
+        (scene as unknown as { stop(): void }).stop();
+      },
+      getTransportState() {
+        return { isPlaying: false, speed: 1 };
       }
     } as SceneInstance;
   },

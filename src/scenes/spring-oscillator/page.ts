@@ -9,8 +9,6 @@ bootScenePage({
     const scene = createSpringOscillatorScene({
       stageCanvas: canvas
     });
-    scene.init();
-    scene.setTheme(theme);
     return scene as unknown as SceneInstance;
   },
   createControls: ({ mount, scene, onStatus }) => {

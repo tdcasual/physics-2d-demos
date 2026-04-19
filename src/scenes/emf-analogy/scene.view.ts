@@ -904,7 +904,10 @@ export function createEmfAnalogyView(
     }
   }
 
+  let isRunning = false;
+
   const tick = () => {
+    if (!isRunning) return;
     if (snapshot) {
       draw(snapshot);
     }
@@ -912,10 +915,6 @@ export function createEmfAnalogyView(
       rafId = window.requestAnimationFrame(tick);
     }
   };
-
-  if (typeof window !== 'undefined') {
-    rafId = window.requestAnimationFrame(tick);
-  }
 
   return {
     render(next: EmfAnalogySnapshot): void {
@@ -934,7 +933,20 @@ export function createEmfAnalogyView(
       theme = nextTheme;
       if (snapshot) draw(snapshot);
     },
+    start() {
+      if (isRunning) return;
+      isRunning = true;
+      tick();
+    },
+    stop() {
+      isRunning = false;
+      if (rafId !== null && typeof window !== 'undefined') {
+        window.cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+    },
     dispose(): void {
+      isRunning = false;
       if (rafId !== null && typeof window !== 'undefined') {
         window.cancelAnimationFrame(rafId);
       }

@@ -20,6 +20,8 @@ export function createEmfAnalogyScene(options: CreateEmfAnalogySceneOptions = {}
   setTapOpening(opening: number): void;
   incrementOpening(step?: number): void;
   getSnapshot(): EmfAnalogySnapshot;
+  start(): void;
+  stop(): void;
 } {
   const sim = createEmfAnalogySim();
   const view = createEmfAnalogyView({
@@ -73,6 +75,12 @@ export function createEmfAnalogyScene(options: CreateEmfAnalogySceneOptions = {}
     },
     getSnapshot(): EmfAnalogySnapshot {
       return sim.getSnapshot();
+    },
+    start(): void {
+      (view as any).start?.();
+    },
+    stop(): void {
+      (view as any).stop?.();
     },
     dispose(): void {
       view.dispose();
