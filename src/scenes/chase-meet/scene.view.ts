@@ -1,7 +1,7 @@
 import type { ChaseMeetSample, ChaseMeetSnapshot } from './scene.sim';
 import type { TeachingMode } from '../../app/teaching-standards';
 import { getTeachingStandards } from '../../app/teaching-standards';
-import type { TeachingTheme } from '../../app/teaching-demo-shell';
+import type { TeachingTheme } from '../../app/teaching-standards';
 import { getResponsiveViewport, resolveResponsiveStageWidth } from '../../app/responsive-stage';
 import { applyTouchInteractionMode } from '../../app/touch-interaction';
 import { applyHiDpiCanvasMetrics, computeHiDpiCanvasMetrics } from '../../core/high-dpi-canvas';

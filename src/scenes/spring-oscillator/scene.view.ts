@@ -1,6 +1,6 @@
 import type { SpringOscillatorSim, Oscillator } from './scene.sim';
 import type { TeachingMode } from '../../app/teaching-standards';
-import type { TeachingTheme } from '../../app/teaching-demo-shell';
+import type { TeachingTheme } from '../../app/teaching-standards';
 import {
   setCanvasSize,
   fitCanvasToContainer
@@ -124,9 +124,9 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
   type ClickArea = {
     id: string;
     type: 'circle' | 'rect';
-    x: number;
-    y: number;
-    r: number;
+    x?: number;
+    y?: number;
+    r?: number;
     left: number;
     top: number;
     right: number;

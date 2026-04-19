@@ -1,26 +1,11 @@
-import '../../styles/teaching-shell.css';
-// 教学演示壳层样式 (包含四区域布局)
-import '../../styles/teaching-shell.css';
-import { bootLegacy2DBridgePage } from '../../app/legacy-2d-bridge-page';
-import { createPageLifecycle } from '../../app/page-lifecycle';
-import { createSceneShell } from '../../app/scene-shell';
-import { createTeachingDemoShell, type ReadoutItem } from '../../app/teaching-demo-shell';
+import { bootScenePage, type SceneInstance } from '../../app/scene-bootstrapper';
+import type { ReadoutItem, Theme } from '../../app/layouts/types';
 import type { TeachingMode } from '../../app/teaching-standards';
-import { createVtIntegralControlsV4 } from './controls-v4';
+import { vtIntegralMeta } from './scene.meta';
 import { createVtIntegralScene } from './scene.entry';
-import type { VtIntegralSnapshot, VtScene } from './scene.sim';
+import { createVtIntegralControlsV4 } from './controls-v4';
+import type { VtIntegralSnapshot } from './scene.sim';
 import { isValidVtScene } from './scene-values';
-
-type Renderer = 'legacy' | 'experimental';
-
-function resolveRenderer(search: string): Renderer {
-  const query = new URLSearchParams(search);
-  const renderer = query.get('renderer');
-  if (renderer === 'experimental') {
-    return 'experimental';
-  }
-  return 'legacy';
-}
 
 function sceneLabel(scene: VtIntegralSnapshot['params']['scene']): string {
   if (scene === 'scene1') return '场景一：v-t积分';
@@ -79,176 +64,84 @@ function formatReadout(snapshot: VtIntegralSnapshot, mode: TeachingMode): Readou
   ];
 }
 
-function bootLegacy(mount: HTMLElement): void {
-  bootLegacy2DBridgePage({
-    mount,
-    title: '微元法演示',
-    subtitle: '右侧使用历史场景渲染，保持显示一致',
-    scene: {
-      sceneId: 'legacy-vt-integral',
-      sourcePath: '/animations/mechanics/v-t面积与微元法.html'
-    },
-    setupControls: ({ shell, adapter, lifecycle }) => {
-      const controls = createVtIntegralControlsV4({
-        mount: shell.controlSlot,
-        onSetScene: (scene) => adapter.sendControlExt('set-scene', { scene }),
-        onSetRects: (value) => adapter.sendControlExt('scene1:set-rects', { value }),
-        onSetTime: (value) => adapter.sendControlExt('scene1:set-time', { value }),
-        onSetMethod: (method) => adapter.sendControlExt('scene1:set-method', { method }),
-        onSetCurveAmplitude: (value) => adapter.sendControlExt('scene2:set-amplitude', { value }),
-        onSetCircleN: (value) => adapter.sendControlExt('scene3:set-n', { value }),
-        onSetSurfaceN: (value) => adapter.sendControlExt('scene4:set-surface-n', { value }),
-        onSetDivision: (value) => adapter.sendControlExt('scene5:set-division', { value }),
-        onReset: () => adapter.sendControl('reset'),
-        onStatus: (text) => shell.setStatus(text)
-      });
-      lifecycle.onDispose(() => controls.dispose());
-      shell.setStatus('左侧可切换微元法子场景并调参');
-    }
-  });
-}
+bootScenePage({
+  meta: vtIntegralMeta,
+  createScene: ({ canvas, theme, mode }) => {
+    const scene = createVtIntegralScene({
+      canvas,
+      mode,
+      theme,
+      onReadout: () => {}
+    });
 
-function bootModern(mount: HTMLElement): void {
-  const shell = createTeachingDemoShell({
-    mount,
-    title: '微元法演示',
-    subtitle: '多场景积分与逼近演示',
-    defaultMode: 'normal',
-    hideHeader: false,
-    readoutLabel: '数据区',
-    layout: {
-      defaultLeftRatio: 0.35,
-      leftMinWidth: 280,
-      leftMaxWidth: 960,
-      hasGraph: false,  // 图表在动画区内显示
-      controlColumns: 'auto',
-      readoutCollapsed: true,
-    }
-  });
-  const lifecycle = createPageLifecycle();
-  lifecycle.onDispose(() => shell.dispose());
+    let currentMode = mode;
 
-  let snapshot: VtIntegralSnapshot | null = null;
-
-  const scene = createVtIntegralScene({
-    canvas: shell.stageCanvas,
-    mode: shell.getMode(),
-    theme: shell.getTheme(),
-    onReadout: (next) => {
-      snapshot = next;
-      shell.setReadout(formatReadout(next, shell.getMode()));
-    }
-  });
-  lifecycle.onDispose(() => scene.dispose());
-
-  const transport = createSceneShell({
-    stepSeconds: 1 / 60,
-    maxSubSteps: 5,
-    onStep: (dt) => scene.step(dt),
-    onRender: () => scene.render()
-  });
-  lifecycle.onDispose(() => transport.dispose());
-
-  const controls = createVtIntegralControlsV4({
-    mount: shell.controlSlot,
-    onSetScene: (value: string) => {
-      if (isValidVtScene(value)) {
-        scene.setScene(value);
-        scene.render();
+    return {
+      ...scene,
+      getState() {
+        return scene.getSnapshot();
+      },
+      getReadoutItems() {
+        return formatReadout(scene.getSnapshot(), currentMode);
+      },
+      setMode(m: 'normal' | 'presentation') {
+        currentMode = m;
+        scene.setMode(m);
+      },
+      setTheme(t: Theme) {
+        scene.setTheme(t);
       }
-    },
-    onSetRects: (value) => {
-      scene.setRects(value);
-      scene.render();
-    },
-    onSetTime: (value) => {
-      scene.setTime(value);
-      scene.render();
-    },
-    onSetMethod: (value: string) => {
-      scene.setMethod(value as import('./scene.sim').VtMethod);
-      scene.render();
-    },
-    onSetCurveAmplitude: (value) => {
-      scene.setCurveAmplitude(value);
-      scene.render();
-    },
-    onSetCircleN: (value) => {
-      scene.setCircleN(value);
-      scene.render();
-    },
-    onSetSurfaceN: (value) => {
-      scene.setSurfaceN(value);
-      scene.render();
-    },
-    onSetDivision: (value) => {
-      scene.setDivision(value);
-      scene.render();
-    },
-    onReset: () => {
-      transport.reset();
-      scene.reset();
-      scene.render();
-    },
-    onStatus: (text) => shell.setStatus(text)
-  });
-  lifecycle.onDispose(() => controls.dispose());
-
-  const onModeToggle = () => {
-    const nextMode = shell.getMode() === 'normal' ? 'presentation' : 'normal';
-    shell.setMode(nextMode);
-    scene.setMode(nextMode);
-    scene.resize();
-    scene.render();
-    if (snapshot) shell.setReadout(formatReadout(snapshot, shell.getMode()));
-    shell.setStatus(nextMode === 'presentation' ? '演示模式已开启' : '标准模式已开启');
-  };
-
-  const onThemeToggle = () => {
-    const nextTheme = shell.getTheme() === 'dark' ? 'light' : 'dark';
-    shell.setTheme(nextTheme);
-    scene.setTheme(nextTheme);
-    scene.render();
-    if (snapshot) shell.setReadout(formatReadout(snapshot, shell.getMode()));
-    shell.setStatus(nextTheme === 'dark' ? '夜间主题已开启' : '白天主题已开启');
-  };
-
-  shell.modeButton.addEventListener('click', onModeToggle);
-  shell.themeButton.addEventListener('click', onThemeToggle);
-  lifecycle.onDispose(() => shell.modeButton.removeEventListener('click', onModeToggle));
-  lifecycle.onDispose(() => shell.themeButton.removeEventListener('click', onThemeToggle));
-
-  const onResize = () => {
-    scene.resize();
-    scene.render();
-  };
-  window.addEventListener('resize', onResize);
-  window.visualViewport?.addEventListener('resize', onResize);
-  lifecycle.onDispose(() => window.removeEventListener('resize', onResize));
-  lifecycle.onDispose(() => window.visualViewport?.removeEventListener('resize', onResize));
-
-  const onBeforeUnload = () => lifecycle.dispose();
-  window.addEventListener('beforeunload', onBeforeUnload);
-  lifecycle.onDispose(() => window.removeEventListener('beforeunload', onBeforeUnload));
-
-  scene.init();
-  scene.resize();
-  scene.render();
-  shell.setStatus('就绪');
-}
-
-function boot(): void {
-  const mount = document.getElementById('app');
-  if (!(mount instanceof HTMLElement)) {
-    throw new Error('Missing #app container');
+    } as SceneInstance;
+  },
+  createControls: ({ mount, scene, onStatus }) => {
+    return createVtIntegralControlsV4({
+      mount,
+      onSetScene: (value: string) => {
+        if (isValidVtScene(value)) {
+          (scene as unknown as { setScene(s: string): void }).setScene(value);
+          scene.render();
+        }
+      },
+      onSetRects: (value) => {
+        (scene as unknown as { setRects(v: number): void }).setRects(value);
+        scene.render();
+      },
+      onSetTime: (value) => {
+        (scene as unknown as { setTime(v: number): void }).setTime(value);
+        scene.render();
+      },
+      onSetMethod: (value: string) => {
+        (scene as unknown as { setMethod(m: string): void }).setMethod(value);
+        scene.render();
+      },
+      onSetCurveAmplitude: (value) => {
+        (scene as unknown as { setCurveAmplitude(v: number): void }).setCurveAmplitude(value);
+        scene.render();
+      },
+      onSetCircleN: (value) => {
+        (scene as unknown as { setCircleN(v: number): void }).setCircleN(value);
+        scene.render();
+      },
+      onSetSurfaceN: (value) => {
+        (scene as unknown as { setSurfaceN(v: number): void }).setSurfaceN(value);
+        scene.render();
+      },
+      onSetDivision: (value) => {
+        (scene as unknown as { setDivision(v: number): void }).setDivision(value);
+        scene.render();
+      },
+      onReset: () => {
+        scene.reset?.();
+        scene.render();
+      },
+      onStatus
+    });
+  },
+  preferredLayout: 'split-right',
+  layoutConfig: {
+    defaultLeftRatio: 0.35,
+    hasGraph: false,
+    controlColumns: 'auto',
+    readoutCollapsed: true
   }
-
-  const renderer = resolveRenderer(window.location.search);
-  if (renderer === 'experimental') {
-    bootModern(mount);
-    return;
-  }
-  bootLegacy(mount);
-}
-
-boot();
+});

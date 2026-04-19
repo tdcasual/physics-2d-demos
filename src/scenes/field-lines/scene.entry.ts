@@ -1,5 +1,5 @@
 import type { TeachingMode } from '../../app/teaching-standards';
-import type { TeachingTheme } from '../../app/teaching-demo-shell';
+import type { TeachingTheme } from '../../app/teaching-standards';
 import type { SceneLifecycle } from '../types';
 import { createFieldLinesSim, type FieldLinesScene, type FieldLinesSnapshot } from './scene.sim';
 import { createFieldLinesView } from './scene.view';

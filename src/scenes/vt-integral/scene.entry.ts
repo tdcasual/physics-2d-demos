@@ -1,5 +1,5 @@
 import type { TeachingMode } from '../../app/teaching-standards';
-import type { TeachingTheme } from '../../app/teaching-demo-shell';
+import type { TeachingTheme } from '../../app/teaching-standards';
 import type { SceneLifecycle } from '../types';
 import { createVtIntegralSim, type VtIntegralSnapshot, type VtMethod, type VtScene } from './scene.sim';
 import { createVtIntegralView } from './scene.view';

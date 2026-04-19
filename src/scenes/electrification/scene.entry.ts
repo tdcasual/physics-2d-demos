@@ -1,5 +1,5 @@
 import type { TeachingMode } from '../../app/teaching-standards';
-import type { TeachingTheme } from '../../app/teaching-demo-shell';
+import type { TeachingTheme } from '../../app/teaching-standards';
 import type { SceneLifecycle } from '../types';
 import { createElectrificationSim, type ElectrificationScene, type ElectrificationSnapshot } from './scene.sim';
 import { createElectrificationView } from './scene.view';

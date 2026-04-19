@@ -1,5 +1,5 @@
 import type { TeachingMode } from '../../app/teaching-standards';
-import type { TeachingTheme } from '../../app/teaching-demo-shell';
+import type { TeachingTheme } from '../../app/teaching-standards';
 import type { SceneLifecycle } from '../types';
 import { createEmfAnalogySim, type EmfAnalogySnapshot } from './scene.sim';
 import { createEmfAnalogyView } from './scene.view';

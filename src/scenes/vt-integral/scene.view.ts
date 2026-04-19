@@ -1,6 +1,6 @@
 import type { TeachingMode } from '../../app/teaching-standards';
 import { getTeachingStandards } from '../../app/teaching-standards';
-import type { TeachingTheme } from '../../app/teaching-demo-shell';
+import type { TeachingTheme } from '../../app/teaching-standards';
 import {
   getOptimalCanvasSize,
   setCanvasSize

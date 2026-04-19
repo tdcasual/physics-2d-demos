@@ -1,34 +1,10 @@
-import '../../styles/teaching-shell.css';
-// 教学演示壳层样式 (包含四区域布局)
-import '../../styles/teaching-shell.css';
-import { bootLegacy2DBridgePage } from '../../app/legacy-2d-bridge-page';
-import { createPageLifecycle } from '../../app/page-lifecycle';
-import { createSceneShell } from '../../app/scene-shell';
-import { createTeachingDemoShell, type ReadoutItem } from '../../app/teaching-demo-shell';
+import { bootScenePage, type SceneInstance } from '../../app/scene-bootstrapper';
+import type { ReadoutItem, Theme } from '../../app/layouts/types';
 import type { TeachingMode } from '../../app/teaching-standards';
-import { createChaseMeetControlsV4 } from './controls-v4';
+import { chaseMeetMeta } from './scene.meta';
 import { createChaseMeetScene } from './scene.entry';
-import type { ChaseMeetSnapshot, ResolvedChaseMeetParams } from './scene.sim';
-
-type Renderer = 'legacy' | 'modern' | 'modern-lab' | 'experimental';
-
-function resolveRenderer(search: string): Renderer {
-  const query = new URLSearchParams(search);
-  const renderer = query.get('renderer');
-  if (renderer === 'legacy') {
-    return 'legacy';
-  }
-  if (renderer === 'modern') {
-    return 'modern';
-  }
-  if (renderer === 'modern-lab') {
-    return 'modern-lab';
-  }
-  if (renderer === 'experimental') {
-    return 'experimental';
-  }
-  return 'modern';
-}
+import { createChaseMeetControlsV4 } from './controls-v4';
+import type { ChaseMeetSnapshot, ChaseMeetParams } from './scene.sim';
 
 function formatReadout(
   snapshot: ChaseMeetSnapshot,
@@ -47,231 +23,98 @@ function formatReadout(
   ];
 }
 
-function bootLegacy(mount: HTMLElement): void {
-  bootLegacy2DBridgePage({
-    mount,
-    title: '追及相遇',
-    subtitle: '右侧使用历史场景渲染，保持显示一致',
-    scene: {
-      sceneId: 'legacy-chase-meet',
-      sourcePath: '/animations/mechanics/追击相遇问题.html'
-    },
-    setupControls: ({ shell, adapter, lifecycle }) => {
-      const controls = createChaseMeetControlsV4({
-        mount: shell.controlSlot,
-        initialParams: {
-          totalTime: 10,
-          dt: 0.02,
-          x0A: 0,
-          x0B: 10,
-          vExprA: '2',
-          vExprB: '0.5'
-        },
-        onApplyParams: (next) => adapter.sendControlExt('set-settings', next),
-        onStatus: (text) => shell.setStatus(text)
-      });
-      lifecycle.onDispose(() => controls.dispose());
-      
-      // 浮动控制按钮
-      const floatingControls = document.createElement('div');
-      floatingControls.className = 'stage-floating-controls';
-      floatingControls.innerHTML = `
-        <button type="button" data-action="play" title="播放">▶</button>
-        <button type="button" data-action="pause" title="暂停">⏸</button>
-        <button type="button" data-action="reset" title="重置">⏹</button>
-        <button type="button" data-action="step" title="单步">⏵</button>
-      `;
-      shell.stageSlot.appendChild(floatingControls);
-
-      floatingControls.querySelector('[data-action="play"]')?.addEventListener('click', () => adapter.sendControl('play'));
-      floatingControls.querySelector('[data-action="pause"]')?.addEventListener('click', () => adapter.sendControl('pause'));
-      floatingControls.querySelector('[data-action="reset"]')?.addEventListener('click', () => adapter.sendControl('reset'));
-      floatingControls.querySelector('[data-action="step"]')?.addEventListener('click', () => adapter.sendControl('step'));
-      
-      shell.setStatus('左侧可配置参数并控制播放流程');
+bootScenePage({
+  meta: chaseMeetMeta,
+  createScene: ({ canvas, theme, mode }) => {
+    const stageSlot = canvas.parentElement;
+    if (!stageSlot) {
+      throw new Error('Missing animation container for chase-meet');
     }
-  });
-}
 
-function bootModern(mount: HTMLElement): void {
-  const shell = createTeachingDemoShell({
-    mount,
-    title: '追及相遇',
-    subtitle: '一维追及场景：上方位移演示，下方 x-t / v-t 图像联动',
-    defaultMode: 'normal',
-    hideHeader: false,
-    readoutLabel: '数据区',
-    layout: {
-      defaultLeftRatio: 0.32,
-      leftMinWidth: 270,
-      leftMaxWidth: 960,
-      hasGraph: false,  // 图表集成在动画区内
-      controlColumns: 1,
-      readoutCollapsed: true,
-    }
-  });
-  const lifecycle = createPageLifecycle();
-  lifecycle.onDispose(() => shell.dispose());
+    const scene = createChaseMeetScene({
+      stageSlot,
+      mode,
+      theme,
+      onReadout: () => {}
+    });
 
-  let currentSnapshot: ChaseMeetSnapshot | null = null;
-  let isPlaying = false;
-  let currentParams: ResolvedChaseMeetParams | null = null;
+    let currentMode = mode;
+    let isPlaying = false;
 
-  shell.stageCanvas.remove();
-
-  const scene = createChaseMeetScene({
-    stageSlot: shell.stageSlot,
-    mode: shell.getMode(),
-    theme: shell.getTheme(),
-    onReadout: (snapshot) => {
-      currentSnapshot = snapshot;
-      shell.setReadout(formatReadout(snapshot, isPlaying, shell.getMode()));
-    }
-  });
-  lifecycle.onDispose(() => scene.dispose());
-  currentParams = scene.getParams();
-
-  const transport = createSceneShell({
-    stepSeconds: 1 / 60,
-    maxSubSteps: 5,
-    onStep: (dt) => scene.step(dt),
-    onRender: () => scene.render()
-  });
-  lifecycle.onDispose(() => transport.dispose());
-
-  const controls = createChaseMeetControlsV4({
-    mount: shell.controlSlot,
-    initialParams: currentParams,
-    onApplyParams: (next) => {
-      currentParams = scene.setParams(next);
-      transport.reset();
-      isPlaying = false;
-      scene.reset();
+    // DPR change handling
+    let dprQuery: MediaQueryList | null = null;
+    const handleDprChange = () => {
+      bindDprQuery();
+      scene.resize();
       scene.render();
-      if (currentSnapshot) {
-        shell.setReadout(formatReadout(currentSnapshot, isPlaying, shell.getMode()));
+    };
+    const bindDprQuery = () => {
+      if (typeof window.matchMedia !== 'function') return;
+      if (dprQuery) {
+        dprQuery.removeEventListener('change', handleDprChange);
       }
-      shell.setStatus('参数已更新');
-    },
-    onStatus: (text) => shell.setStatus(text)
-  });
-  lifecycle.onDispose(() => controls.dispose());
-
-  // 浮动控制按钮
-  const floatingControls = document.createElement('div');
-  floatingControls.className = 'stage-floating-controls';
-  floatingControls.innerHTML = `
-    <button type="button" data-action="play" title="播放">▶</button>
-    <button type="button" data-action="pause" title="暂停">⏸</button>
-    <button type="button" data-action="reset" title="重置">⏹</button>
-    <button type="button" data-action="step" title="单步">⏵</button>
-  `;
-  shell.stageSlot.appendChild(floatingControls);
-
-  floatingControls.querySelector('[data-action="play"]')?.addEventListener('click', () => {
-    transport.play();
-    isPlaying = true;
-    if (currentSnapshot) shell.setReadout(formatReadout(currentSnapshot, isPlaying, shell.getMode()));
-    shell.setStatus('动画已开始');
-  });
-  floatingControls.querySelector('[data-action="pause"]')?.addEventListener('click', () => {
-    transport.pause();
-    isPlaying = false;
-    if (currentSnapshot) shell.setReadout(formatReadout(currentSnapshot, isPlaying, shell.getMode()));
-    shell.setStatus('动画已暂停');
-  });
-  floatingControls.querySelector('[data-action="reset"]')?.addEventListener('click', () => {
-    transport.reset();
-    isPlaying = false;
-    scene.reset();
-    scene.render();
-    if (currentSnapshot) shell.setReadout(formatReadout(currentSnapshot, isPlaying, shell.getMode()));
-    shell.setStatus('动画已重置');
-  });
-  floatingControls.querySelector('[data-action="step"]')?.addEventListener('click', () => {
-    transport.stepOnce(() => scene.step(1 / 60));
-    isPlaying = false;
-    if (currentSnapshot) shell.setReadout(formatReadout(currentSnapshot, isPlaying, shell.getMode()));
-    shell.setStatus('已单步推进');
-  });
-
-  const onModeToggle = () => {
-    const nextMode = shell.getMode() === 'normal' ? 'presentation' : 'normal';
-    shell.setMode(nextMode);
-    scene.setMode(nextMode);
-    scene.resize();
-    scene.render();
-    if (currentSnapshot) {
-      shell.setReadout(formatReadout(currentSnapshot, isPlaying, shell.getMode()));
-    }
-    shell.setStatus(nextMode === 'presentation' ? '演示模式已开启' : '标准模式已开启');
-  };
-
-  const onThemeToggle = () => {
-    const nextTheme = shell.getTheme() === 'dark' ? 'light' : 'dark';
-    shell.setTheme(nextTheme);
-    scene.setTheme(nextTheme);
-    scene.render();
-    shell.setStatus(nextTheme === 'dark' ? '夜间主题已开启' : '白天主题已开启');
-  };
-
-  shell.modeButton.addEventListener('click', onModeToggle);
-  shell.themeButton.addEventListener('click', onThemeToggle);
-  lifecycle.onDispose(() => shell.modeButton.removeEventListener('click', onModeToggle));
-  lifecycle.onDispose(() => shell.themeButton.removeEventListener('click', onThemeToggle));
-
-  const onResize = () => {
-    scene.resize();
-    scene.render();
-  };
-
-  window.addEventListener('resize', onResize);
-  window.visualViewport?.addEventListener('resize', onResize);
-  lifecycle.onDispose(() => window.removeEventListener('resize', onResize));
-  lifecycle.onDispose(() => window.visualViewport?.removeEventListener('resize', onResize));
-
-  let dprQuery: MediaQueryList | null = null;
-
-  const handleDprChange = () => {
+      const currentDpr = window.devicePixelRatio || 1;
+      dprQuery = window.matchMedia(`(resolution: ${currentDpr}dppx)`);
+      dprQuery.addEventListener('change', handleDprChange);
+    };
     bindDprQuery();
-    onResize();
-  };
 
-  const bindDprQuery = () => {
-    if (typeof window.matchMedia !== 'function') return;
-    if (dprQuery) {
-      dprQuery.removeEventListener('change', handleDprChange);
-    }
-    const currentDpr = window.devicePixelRatio || 1;
-    dprQuery = window.matchMedia(`(resolution: ${currentDpr}dppx)`);
-    dprQuery.addEventListener('change', handleDprChange);
-  };
+    const originalDispose = scene.dispose.bind(scene);
+    const originalSetParams = scene.setParams.bind(scene);
+    const originalReset = scene.reset.bind(scene);
 
-  bindDprQuery();
-  lifecycle.onDispose(() => dprQuery?.removeEventListener('change', handleDprChange));
-
-  const onBeforeUnload = () => lifecycle.dispose();
-  window.addEventListener('beforeunload', onBeforeUnload);
-  lifecycle.onDispose(() => window.removeEventListener('beforeunload', onBeforeUnload));
-
-  scene.init();
-  scene.resize();
-  scene.render();
-  shell.setStatus('就绪');
-}
-
-function boot(): void {
-  const mount = document.getElementById('app');
-  if (!(mount instanceof HTMLElement)) {
-    throw new Error('Missing #app container');
+    return {
+      ...scene,
+      getState() {
+        return scene.getSnapshot();
+      },
+      getReadoutItems() {
+        return formatReadout(scene.getSnapshot(), isPlaying, currentMode);
+      },
+      setMode(m: 'normal' | 'presentation') {
+        currentMode = m;
+        scene.setMode(m);
+      },
+      setParams(next: Partial<ChaseMeetParams>) {
+        const result = originalSetParams(next);
+        originalReset();
+        scene.render();
+        return result;
+      },
+      startAll() {
+        isPlaying = true;
+      },
+      pauseAll() {
+        isPlaying = false;
+      },
+      reset() {
+        isPlaying = false;
+        originalReset();
+      },
+      dispose() {
+        if (dprQuery) {
+          dprQuery.removeEventListener('change', handleDprChange);
+        }
+        originalDispose();
+      }
+    } as SceneInstance;
+  },
+  createControls: ({ mount, scene, onStatus }) => {
+    return createChaseMeetControlsV4({
+      mount,
+      initialParams: (scene as unknown as { getParams(): { totalTime: number; dt: number; x0A: number; x0B: number; vExprA: string; vExprB: string } }).getParams(),
+      onApplyParams: (next) => {
+        (scene as unknown as { setParams(n: Partial<ChaseMeetParams>): unknown }).setParams(next);
+        onStatus?.('参数已更新');
+      },
+      onStatus
+    });
+  },
+  preferredLayout: 'split-right',
+  layoutConfig: {
+    defaultLeftRatio: 0.32,
+    hasGraph: false,
+    controlColumns: 1,
+    readoutCollapsed: true
   }
-
-  const renderer = resolveRenderer(window.location.search);
-  if (renderer === 'legacy') {
-    bootLegacy(mount);
-    return;
-  }
-  bootModern(mount);
-}
-
-boot();
+});

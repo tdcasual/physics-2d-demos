@@ -1,38 +1,11 @@
-import '../../styles/teaching-shell.css';
-// 教学演示壳层样式 (包含四区域布局)
-import '../../styles/teaching-shell.css';
-import { bootLegacy2DBridgePage } from '../../app/legacy-2d-bridge-page';
-import { createPageLifecycle } from '../../app/page-lifecycle';
-import {
-  createTeachingDemoShell,
-  type ReadoutItem,
-  type TeachingTheme
-} from '../../app/teaching-demo-shell';
-import { applyTouchInteractionMode } from '../../app/touch-interaction';
-import { createFieldLinesControlsV4 } from './controls-v4';
-import { createFieldLinesScene } from './scene.entry';
-import type { FieldLinesSnapshot } from './scene.sim';
+import { bootScenePage, type SceneInstance } from '../../app/scene-bootstrapper';
+import type { ReadoutItem, Theme } from '../../app/layouts/types';
 import type { TeachingMode } from '../../app/teaching-standards';
-
-type Renderer = 'legacy' | 'modern' | 'modern-lab' | 'experimental';
-
-function resolveRenderer(search: string): Renderer {
-  const query = new URLSearchParams(search);
-  const renderer = query.get('renderer');
-  if (renderer === 'legacy') {
-    return 'legacy';
-  }
-  if (renderer === 'modern') {
-    return 'modern';
-  }
-  if (renderer === 'modern-lab') {
-    return 'modern-lab';
-  }
-  if (renderer === 'experimental') {
-    return 'experimental';
-  }
-  return 'modern';
-}
+import { applyTouchInteractionMode } from '../../app/touch-interaction';
+import { fieldLinesMeta } from './scene.meta';
+import { createFieldLinesScene } from './scene.entry';
+import { createFieldLinesControlsV4 } from './controls-v4';
+import type { FieldLinesSnapshot } from './scene.sim';
 
 function sceneLabel(scene: FieldLinesSnapshot['params']['scene']): string {
   if (scene === 'single') return '单个电荷';
@@ -41,18 +14,18 @@ function sceneLabel(scene: FieldLinesSnapshot['params']['scene']): string {
   return '自定义双电荷';
 }
 
-function modeLabel(mode: TeachingMode): string {
-  return mode === 'presentation' ? '演示模式' : '标准模式';
+function themeLabel(theme: Theme): string {
+  return theme === 'dark' ? '夜间' : '白天';
 }
 
-function themeLabel(theme: TeachingTheme): string {
-  return theme === 'dark' ? '夜间' : '白天';
+function modeLabel(mode: TeachingMode): string {
+  return mode === 'presentation' ? '演示模式' : '标准模式';
 }
 
 function formatReadout(
   snapshot: FieldLinesSnapshot,
   mode: TeachingMode,
-  theme: TeachingTheme
+  theme: Theme
 ): ReadoutItem[] {
   return [
     { label: '场景', value: sceneLabel(snapshot.params.scene) },
@@ -73,230 +46,129 @@ function formatReadout(
   ];
 }
 
-function bootLegacy(mount: HTMLElement): void {
-  bootLegacy2DBridgePage({
-    mount,
-    title: '电场线演化',
-    subtitle: '右侧使用历史场景渲染，保持显示一致',
-    scene: {
-      sceneId: 'legacy-field-lines',
-      sourcePath: '/animations/electromagnetism/模拟电场线.html'
-    },
-    setupControls: ({ shell, adapter, lifecycle }) => {
-      const controls = createFieldLinesControlsV4({
-        mount: shell.controlSlot,
-        onSetScene: (scene) => adapter.sendControlExt('set-scene', { scene }),
-        onSetDensity: (density) =>
-          adapter.sendControlExt('set-density', { density }),
-        onSetCustomCharges: (q1, q2) =>
-          adapter.sendControlExt('set-custom-charges', { q1, q2 }),
-        onReset: () => adapter.sendControl('reset'),
-        onStatus: (text) => shell.setStatus(text)
-      });
-      lifecycle.onDispose(() => controls.dispose());
-      shell.setStatus('左侧可调场景、密度与电荷参数');
-    }
-  });
-}
+bootScenePage({
+  meta: fieldLinesMeta,
+  createScene: ({ canvas, theme, mode }) => {
+    applyTouchInteractionMode(canvas, 'drag');
 
-function bootModern(mount: HTMLElement): void {
-  const shell = createTeachingDemoShell({
-    mount,
-    title: '电场线演化',
-    subtitle: '支持场景切换、密度调节与电荷拖拽',
-    defaultMode: 'normal',
-    hideHeader: false,
-    readoutLabel: '数据区',
-    layout: {
-      defaultLeftRatio: 0.28,
-      leftMinWidth: 250,
-      leftMaxWidth: 960,
-      hasGraph: false,
-      controlColumns: 1,
-      readoutCollapsed: true,
-    }
-  });
-  const lifecycle = createPageLifecycle();
-  lifecycle.onDispose(() => shell.dispose());
+    const scene = createFieldLinesScene({
+      canvas,
+      mode,
+      theme,
+      onReadout: () => {}
+    });
 
-  let snapshot: FieldLinesSnapshot | null = null;
+    let currentMode = mode;
+    let currentTheme = theme as Theme;
 
-  const scene = createFieldLinesScene({
-    canvas: shell.stageCanvas,
-    mode: shell.getMode(),
-    theme: shell.getTheme(),
-    onReadout: (next) => {
-      snapshot = next;
-      shell.setReadout(formatReadout(next, shell.getMode(), shell.getTheme()));
-    }
-  });
-  lifecycle.onDispose(() => scene.dispose());
-  applyTouchInteractionMode(shell.stageCanvas, 'drag');
+    // 拖拽交互
+    let draggingIndex: number | null = null;
+    const toNorm = (event: PointerEvent): { x: number; y: number } => {
+      const rect = canvas.getBoundingClientRect();
+      const x = (event.clientX - rect.left) / Math.max(1, rect.width);
+      const y = (event.clientY - rect.top) / Math.max(1, rect.height);
+      return { x, y };
+    };
 
-  const controls = createFieldLinesControlsV4({
-    mount: shell.controlSlot,
-    onSetScene: (nextScene: string) => {
-      scene.setScene(nextScene as import('./scene.sim').FieldLinesScene);
-      scene.render();
-    },
-    onSetDensity: (density) => {
-      scene.setDensity(density);
-      scene.render();
-    },
-    onSetCustomCharges: (q1, q2) => {
-      scene.setCustomCharges(q1, q2);
-      scene.render();
-    },
-    onAddCharge: (q) => {
-      scene.addCharge(q);
-      scene.render();
-      shell.setStatus(q > 0 ? '添加正电荷' : '添加负电荷');
-    },
-    onRemoveCharge: (index) => {
-      const charges = scene.getSnapshot().charges;
-      const removeIndex = index === -1 ? charges.length - 1 : index;
-      scene.removeCharge(removeIndex);
-      scene.render();
-      shell.setStatus('移除电荷');
-    },
-    onReset: () => {
-      scene.reset();
-      scene.render();
-      shell.setStatus('已重置场景');
-    },
-    onStatus: (text) => shell.setStatus(text)
-  });
-  lifecycle.onDispose(() => controls.dispose());
-
-  let draggingIndex: number | null = null;
-
-  const toNorm = (event: PointerEvent): { x: number; y: number } => {
-    const rect = shell.stageCanvas.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / Math.max(1, rect.width);
-    const y = (event.clientY - rect.top) / Math.max(1, rect.height);
-    return { x, y };
-  };
-
-  const onPointerDown = (event: PointerEvent) => {
-    const point = toNorm(event);
-    draggingIndex = scene.pickCharge(point.x, point.y);
-    if (draggingIndex !== null) {
-      shell.stageCanvas.setPointerCapture(event.pointerId);
-      shell.setStatus('拖拽中');
-    }
-  };
-
-  const onPointerMove = (event: PointerEvent) => {
-    if (draggingIndex === null) return;
-    const point = toNorm(event);
-    scene.moveCharge(draggingIndex, point.x, point.y);
-    scene.render();
-  };
-
-  const onPointerUp = (event: PointerEvent) => {
-    if (draggingIndex !== null) {
-      draggingIndex = null;
-      try {
-        shell.stageCanvas.releasePointerCapture(event.pointerId);
-      } catch {
-        // no-op
+    const onPointerDown = (event: PointerEvent) => {
+      const point = toNorm(event);
+      draggingIndex = scene.pickCharge(point.x, point.y);
+      if (draggingIndex !== null) {
+        canvas.setPointerCapture(event.pointerId);
       }
-      shell.setStatus('拖拽完成');
-    }
-  };
+    };
 
-  shell.stageCanvas.addEventListener('pointerdown', onPointerDown);
-  shell.stageCanvas.addEventListener('pointermove', onPointerMove);
-  shell.stageCanvas.addEventListener('pointerup', onPointerUp);
-  shell.stageCanvas.addEventListener('pointercancel', onPointerUp);
-  lifecycle.onDispose(() =>
-    shell.stageCanvas.removeEventListener('pointerdown', onPointerDown)
-  );
-  lifecycle.onDispose(() =>
-    shell.stageCanvas.removeEventListener('pointermove', onPointerMove)
-  );
-  lifecycle.onDispose(() =>
-    shell.stageCanvas.removeEventListener('pointerup', onPointerUp)
-  );
-  lifecycle.onDispose(() =>
-    shell.stageCanvas.removeEventListener('pointercancel', onPointerUp)
-  );
+    const onPointerMove = (event: PointerEvent) => {
+      if (draggingIndex === null) return;
+      const point = toNorm(event);
+      scene.moveCharge(draggingIndex, point.x, point.y);
+      scene.render();
+    };
 
-  const onModeToggle = () => {
-    const nextMode = shell.getMode() === 'normal' ? 'presentation' : 'normal';
-    shell.setMode(nextMode);
-    scene.setMode(nextMode);
-    scene.resize();
-    scene.render();
-    if (snapshot) {
-      shell.setReadout(
-        formatReadout(snapshot, shell.getMode(), shell.getTheme())
-      );
-    }
-    shell.setStatus(
-      nextMode === 'presentation' ? '演示模式已开启' : '标准模式已开启'
-    );
-  };
+    const onPointerUp = (event: PointerEvent) => {
+      if (draggingIndex !== null) {
+        draggingIndex = null;
+        try {
+          canvas.releasePointerCapture(event.pointerId);
+        } catch {
+          // no-op
+        }
+      }
+    };
 
-  const onThemeToggle = () => {
-    const nextTheme = shell.getTheme() === 'dark' ? 'light' : 'dark';
-    shell.setTheme(nextTheme);
-    scene.setTheme(nextTheme);
-    scene.render();
-    if (snapshot) {
-      shell.setReadout(
-        formatReadout(snapshot, shell.getMode(), shell.getTheme())
-      );
-    }
-    shell.setStatus(nextTheme === 'dark' ? '夜间主题已开启' : '白天主题已开启');
-  };
+    canvas.addEventListener('pointerdown', onPointerDown);
+    canvas.addEventListener('pointermove', onPointerMove);
+    canvas.addEventListener('pointerup', onPointerUp);
+    canvas.addEventListener('pointercancel', onPointerUp);
 
-  shell.modeButton.addEventListener('click', onModeToggle);
-  shell.themeButton.addEventListener('click', onThemeToggle);
-  lifecycle.onDispose(() =>
-    shell.modeButton.removeEventListener('click', onModeToggle)
-  );
-  lifecycle.onDispose(() =>
-    shell.themeButton.removeEventListener('click', onThemeToggle)
-  );
+    const originalDispose = scene.dispose.bind(scene);
 
-  const onResize = () => {
-    scene.resize();
-    scene.render();
-  };
-  window.addEventListener('resize', onResize);
-  window.visualViewport?.addEventListener('resize', onResize);
-  lifecycle.onDispose(() => window.removeEventListener('resize', onResize));
-  lifecycle.onDispose(() =>
-    window.visualViewport?.removeEventListener('resize', onResize)
-  );
-
-  scene.init();
-  scene.resize();
-  scene.render();
-  shell.setStatus('就绪，可拖拽电荷观察场线变化');
-
-  const onBeforeUnload = () => lifecycle.dispose();
-  window.addEventListener('beforeunload', onBeforeUnload);
-  lifecycle.onDispose(() =>
-    window.removeEventListener('beforeunload', onBeforeUnload)
-  );
-}
-
-function boot(): void {
-  const mount = document.getElementById('app');
-  if (!(mount instanceof HTMLElement)) {
-    throw new Error('Missing #app container');
+    return {
+      ...scene,
+      getState() {
+        return scene.getSnapshot();
+      },
+      getReadoutItems() {
+        return formatReadout(scene.getSnapshot(), currentMode, currentTheme);
+      },
+      setMode(m: 'normal' | 'presentation') {
+        currentMode = m;
+        scene.setMode(m);
+      },
+      setTheme(t: Theme) {
+        currentTheme = t;
+        scene.setTheme(t);
+      },
+      dispose() {
+        canvas.removeEventListener('pointerdown', onPointerDown);
+        canvas.removeEventListener('pointermove', onPointerMove);
+        canvas.removeEventListener('pointerup', onPointerUp);
+        canvas.removeEventListener('pointercancel', onPointerUp);
+        originalDispose();
+      }
+    } as SceneInstance;
+  },
+  createControls: ({ mount, scene, onStatus }) => {
+    return createFieldLinesControlsV4({
+      mount,
+      onSetScene: (nextScene: string) => {
+        (scene as unknown as { setScene(s: string): void }).setScene(nextScene);
+        scene.render();
+      },
+      onSetDensity: (density) => {
+        (scene as unknown as { setDensity(v: number): void }).setDensity(density);
+        scene.render();
+      },
+      onSetCustomCharges: (q1, q2) => {
+        (scene as unknown as { setCustomCharges(q1: number, q2: number): void }).setCustomCharges(q1, q2);
+        scene.render();
+      },
+      onAddCharge: (q) => {
+        (scene as unknown as { addCharge(q: number): void }).addCharge(q);
+        scene.render();
+        onStatus?.(q > 0 ? '添加正电荷' : '添加负电荷');
+      },
+      onRemoveCharge: (index) => {
+        const snap = (scene as unknown as { getSnapshot(): FieldLinesSnapshot }).getSnapshot();
+        const charges = snap.charges;
+        const removeIndex = index === -1 ? charges.length - 1 : index;
+        (scene as unknown as { removeCharge(i: number): void }).removeCharge(removeIndex);
+        scene.render();
+        onStatus?.('移除电荷');
+      },
+      onReset: () => {
+        scene.reset?.();
+        scene.render();
+        onStatus?.('已重置场景');
+      },
+      onStatus
+    });
+  },
+  preferredLayout: 'split-right',
+  layoutConfig: {
+    defaultLeftRatio: 0.28,
+    hasGraph: false,
+    controlColumns: 1,
+    readoutCollapsed: true
   }
-
-  const query = new URLSearchParams(window.location.search);
-  const renderer = resolveRenderer(window.location.search);
-  const explicitModernCompat = query.get('renderer') === 'modern';
-  if (renderer === 'legacy' || explicitModernCompat) {
-    bootLegacy(mount);
-    return;
-  }
-  bootModern(mount);
-}
-
-boot();
+});
