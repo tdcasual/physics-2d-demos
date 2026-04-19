@@ -18,12 +18,7 @@ bootScenePage({
   },
   createScene: ({ canvas, theme, mode }) => {
     const scene = createProjectileScene({ canvas, theme, mode });
-    return {
-      ...scene,
-      getTransportState() {
-        return { isPlaying: false, speed: 1 };
-      }
-    };
+    return scene;
   },
   createControls: ({ mount, scene }) => {
     const controls = createProjectileControlsV4({

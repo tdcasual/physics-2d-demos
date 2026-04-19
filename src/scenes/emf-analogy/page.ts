@@ -45,6 +45,7 @@ bootScenePage({
       mount,
       onSetSystemOn: (on) => {
         (scene as unknown as { setSystemOn(on: boolean): void }).setSystemOn(on);
+        scene.render();
         if (on) {
           (scene as SceneInstance).startAll?.();
         } else {
@@ -53,6 +54,7 @@ bootScenePage({
       },
       onSetTapOpening: (opening) => {
         (scene as unknown as { setTapOpening(opening: number): void }).setTapOpening(opening);
+        scene.render();
         (scene as SceneInstance).startAll?.();
       },
       onStatus

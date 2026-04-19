@@ -69,7 +69,6 @@ bootScenePage({
       setParams(next: Partial<ChaseMeetParams>) {
         const result = originalSetParams(next);
         originalReset();
-        scene.render();
         _listener?.();
         return result;
       },

@@ -40,10 +40,11 @@ export function createVtIntegralView(options: CreateVtIntegralViewOptions = {}) 
     x: number,
     y: number,
     lines: string[],
-    fontSize: number
+    fontSize: number,
+    boxWidth = 330
   ): void {
     if (!ctx) return;
-    const width = 330;
+    const width = boxWidth;
     const lineHeight = Math.max(20, fontSize * 1.2);
     const height = 16 + lines.length * lineHeight;
     
@@ -216,7 +217,8 @@ export function createVtIntegralView(options: CreateVtIntegralViewOptions = {}) 
       Math.max(16, width - boxWidth - 30),
       16,
       [`场景：${next.params.scene}`, ...lines],
-      Math.max(12, visuals.secondaryFontPx * 0.34)
+      Math.max(12, visuals.secondaryFontPx * 0.34),
+      boxWidth
     );
   }
 
