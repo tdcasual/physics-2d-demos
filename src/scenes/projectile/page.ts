@@ -16,8 +16,15 @@ bootScenePage({
     hideHeader: true,
     readoutLabel: '数据区'
   },
-  createScene: ({ canvas, theme, mode }) =>
-    createProjectileScene({ canvas, theme, mode }),
+  createScene: ({ canvas, theme, mode }) => {
+    const scene = createProjectileScene({ canvas, theme, mode });
+    return {
+      ...scene,
+      getTransportState() {
+        return { isPlaying: false, speed: 1 };
+      }
+    };
+  },
   createControls: ({ mount, scene }) => {
     const controls = createProjectileControlsV4({
       mount,

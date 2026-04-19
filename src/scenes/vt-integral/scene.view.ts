@@ -211,8 +211,9 @@ export function createVtIntegralView(options: CreateVtIntegralViewOptions = {}) 
       lines.push(`相对误差: ${(next.metrics.sphereRelErr * 100).toFixed(2)}%`);
     }
 
+    const boxWidth = Math.min(330, Math.max(180, width - 60));
     drawMetricBox(
-      width - 360,
+      Math.max(16, width - boxWidth - 30),
       16,
       [`场景：${next.params.scene}`, ...lines],
       Math.max(12, visuals.secondaryFontPx * 0.34)
