@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "generate:index": "node --import tsx scripts/generate-scene-index.ts && node --import tsx scripts/generate-nav-fallback.ts",
+    "test:e2e": "playwright test -c playwright.e2e.config.ts",
     "test:visual": "playwright test",
     "test:visual:update": "playwright test --update-snapshots",
     "test:parity": "playwright test -c playwright.parity.config.ts tests/parity",

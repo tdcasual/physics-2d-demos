@@ -1,4 +1,5 @@
 export type TeachingMode = 'normal' | 'presentation';
+export type TeachingTheme = 'dark' | 'light';
 
 export type RightStageReadability = {
   primaryFontPx: number;
