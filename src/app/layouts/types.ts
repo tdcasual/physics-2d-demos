@@ -161,6 +161,30 @@ export interface LayoutMaster {
    * @param collapsed - 是否折叠
    */
   setSlotCollapsed?(slot: SlotName, collapsed: boolean): void;
+  
+  /**
+   * 更新状态栏文本
+   * @param text - 状态文本
+   * @param level - 状态级别
+   */
+  updateStatus?(text: string, level?: string): void;
+
+  /**
+   * 设置浮动控制条（播放/暂停/重置/速度）
+   * 由 SceneContainer 在挂载场景时自动调用
+   */
+  setFloatingControls?(options: {
+    isPlaying?: () => boolean;
+    onTogglePlay?: () => void;
+    onReset?: () => void;
+    onSpeedChange?: (speed: number) => void;
+    getSpeed?: () => number;
+  }): void;
+
+  /**
+   * 获取所有已渲染的区域槽位
+   */
+  getSlots?(): Partial<LayoutSlots>;
 }
 
 /** 布局母版构造函数 */
@@ -396,6 +420,8 @@ export interface LayoutConfig {
   mobileBreakpoint?: number;
   /** 平板断点 */
   tabletBreakpoint?: number;
+  /** 内部标记：是否由 SceneContainer 管理（禁用独立行为如系统主题跟随） */
+  __managedByContainer?: boolean;
 }
 
 /** 创建容器选项 */

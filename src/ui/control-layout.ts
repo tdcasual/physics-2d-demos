@@ -75,6 +75,12 @@ export interface ControlLayoutManager {
   dispose: () => void;
 }
 
+/** 浮动控制条元素，包含布局母版需要的额外方法 */
+export interface FloatingControls extends HTMLElement {
+  dispose(): void;
+  setState(state: { isPlaying?: boolean; speed?: number }): void;
+}
+
 /**
  * 创建控制区域布局管理器
  * 自动根据容器宽度计算最优列数
@@ -623,8 +629,8 @@ export function createFloatingControls(
     onSpeedChange?: (speed: number) => void;
     getSpeed?: () => number;
   }
-): HTMLElement {
-  const container = document.createElement('div');
+): FloatingControls {
+  const container = document.createElement('div') as unknown as FloatingControls;
   container.className = 'stage-floating-controls';
   container.style.cssText = `
     position: absolute;
@@ -801,13 +807,13 @@ export function createFloatingControls(
   const intervalId = setInterval(updatePlayPauseBtn, 200);
   
   // 保存清理方法
-  (container as any).dispose = () => {
+  container.dispose = () => {
     clearInterval(intervalId);
     cleanupDrag();
   };
   
   // 事件驱动状态更新（供布局母版调用）
-  (container as any).setState = (state: { isPlaying?: boolean; speed?: number }) => {
+  container.setState = (state: { isPlaying?: boolean; speed?: number }) => {
     if (typeof state.isPlaying === 'boolean') {
       playPauseBtn.textContent = state.isPlaying ? '⏸' : '▶';
       playPauseBtn.style.borderColor = state.isPlaying 

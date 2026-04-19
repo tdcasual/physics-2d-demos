@@ -230,6 +230,13 @@ export abstract class BaseLayout implements LayoutMaster {
   getSlot(name: SlotName): HTMLElement | undefined {
     return this.slots[name];
   }
+
+  /**
+   * 获取所有已渲染的区域槽位
+   */
+  getSlots(): Partial<LayoutSlots> {
+    return this.slots;
+  }
   
   /**
    * 检查是否支持某区域

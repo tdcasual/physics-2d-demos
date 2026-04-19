@@ -13,7 +13,7 @@
 
 import { BaseLayout } from '../base-layout';
 import type { LayoutSlots, LayoutConfig, Theme, SlotName, SlotConfig, TransportState, ReadoutItem } from '../../types';
-import { createFloatingControls } from '../../../../ui/control-layout';
+import { createFloatingControls, type FloatingControls } from '../../../../ui/control-layout';
 
 /** SplitRight 布局配置 */
 export interface SplitRightConfig extends LayoutConfig {
@@ -71,7 +71,7 @@ export class SplitRightLayout extends BaseLayout {
   private isReadoutResizing = false;
   
   // 浮动控制条
-  private floatingControls: HTMLElement | null = null;
+  private floatingControls: FloatingControls | null = null;
   private floatingCallbacks: {
     onPlayPause?: () => void;
     onReset?: () => void;
@@ -650,7 +650,7 @@ export class SplitRightLayout extends BaseLayout {
   }): void {
     // 如果已存在，先移除旧的
     if (this.floatingControls) {
-      (this.floatingControls as any).dispose?.();
+      this.floatingControls.dispose?.();
       this.floatingControls.remove();
       this.floatingControls = null;
     }
@@ -800,9 +800,63 @@ export class SplitRightLayout extends BaseLayout {
   }
   
   updateTransportState(state: TransportState): void {
-    if (this.floatingControls && (this.floatingControls as any).setState) {
-      (this.floatingControls as any).setState(state);
+    if (this.floatingControls?.setState) {
+      this.floatingControls.setState(state);
     }
+  }
+  
+  /**
+   * 设置状态栏文本
+   */
+  setStatus(text: string, _level?: string): void {
+    this.updateStatus(text, _level);
+  }
+  
+  /**
+   * 更新状态栏文本（LayoutMaster 接口）
+   */
+  updateStatus(text: string, _level?: string): void {
+    // 在工具栏显示简短状态，或在读数面板第一行显示
+    const statusEl = this.container.querySelector('.layout-status');
+    if (statusEl) {
+      statusEl.textContent = text;
+    } else if (this.readoutSlot) {
+      // 临时在读数面板顶部插入状态项
+      const existing = this.readoutSlot.querySelector('.readout-status');
+      if (existing) {
+        existing.querySelector('.readout-value')!.textContent = text;
+      } else {
+        const li = document.createElement('li');
+        li.className = 'readout-item readout-status';
+        li.innerHTML = `<span class="readout-label">状态</span><strong class="readout-value">${text}</strong>`;
+        this.readoutSlot.insertBefore(li, this.readoutSlot.firstChild);
+      }
+    }
+  }
+  
+  /**
+   * 设置左侧宽度比例
+   */
+  setLeftRatio(ratio: number): void {
+    const cfg = this.config as SplitRightConfig;
+    const minWidth = cfg.leftMinWidth ?? 260;
+    const maxWidth = cfg.leftMaxWidth ?? 960;
+    const containerWidth = this.container.clientWidth;
+    const minRatio = minWidth / containerWidth;
+    const maxRatio = Math.min(maxWidth / containerWidth, 0.5);
+    this.leftRatio = Math.max(minRatio, Math.min(maxRatio, ratio));
+    
+    if (!this.isCompactViewport && this.leftPanel) {
+      const leftWidth = Math.max(minWidth, Math.min(maxWidth, containerWidth * this.leftRatio));
+      this.container.style.gridTemplateColumns = `${leftWidth}px 8px 1fr`;
+    }
+  }
+  
+  /**
+   * 获取当前左侧宽度比例
+   */
+  getLeftRatio(): number {
+    return this.leftRatio;
   }
   
   getCanvas(): HTMLCanvasElement | null {
