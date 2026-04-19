@@ -8,7 +8,7 @@ function read(relativePath: string): string {
 
 describe('theme entry architecture', () => {
   it('keeps one shell-level theme入口 and modern pages use shell theme toggle', () => {
-    const shell = read('src/app/teaching-demo-shell.ts');
+    const shell = read('src/app/layouts/masters/split-right/split-right.ts');
     const pages = [
       read('src/scenes/projectile/page.ts'),
       read('src/scenes/chase-meet/page.ts'),
@@ -21,8 +21,8 @@ describe('theme entry architecture', () => {
     expect(shell).toContain('shell-theme-toggle');
     for (const page of pages) {
       const hasInlineThemeToggle = page.includes('onThemeToggle') && page.includes('shell.themeButton');
-      const usesLegacyBridge = page.includes('bootLegacy2DBridgePage');
-      expect(hasInlineThemeToggle || usesLegacyBridge).toBe(true);
+      const usesBootstrapper = page.includes('bootScenePage');
+      expect(hasInlineThemeToggle || usesBootstrapper).toBe(true);
       expect(page.includes('themeToggle')).toBe(false);
     }
   });

@@ -32,7 +32,10 @@ describe('right stage readability standards', () => {
   it('all modern scene views consume shared teaching standards tokens', () => {
     for (const file of modernSceneViewFiles) {
       const content = readFileSync(file, 'utf8');
-      expect(content).toContain('getTeachingStandards');
+      // 允许使用 getTeachingStandards 或统一 Canvas 框架作为共享标准
+      const usesStandards = content.includes('getTeachingStandards');
+      const usesUnifiedCanvas = content.includes('unified-canvas');
+      expect(usesStandards || usesUnifiedCanvas).toBe(true);
       expect(content.includes('RIGHT_STAGE_STANDARD')).toBe(false);
     }
   });
