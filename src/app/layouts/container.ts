@@ -8,6 +8,7 @@
  */
 
 import { layoutRegistry, saveLayoutPreference } from './registry';
+import { TransportBridge } from './transport-bridge';
 import type {
   SceneContainer,
   Scene,
@@ -35,6 +36,7 @@ export class SceneContainerImpl implements SceneContainer {
   private _resizeObserver: ResizeObserver | null = null;
   private _onResize?: (width: number, height: number) => void;
   private _layoutConfig?: unknown;
+  private _transportBridge = new TransportBridge();
   private _sceneUnsubscribers: (() => void)[] = [];
   private _layoutThemeHandler?: (e: Event) => void;
   private _layoutModeHandler?: (e: Event) => void;
@@ -49,7 +51,7 @@ export class SceneContainerImpl implements SceneContainer {
     this._storageKey = options.storageKey || 'physics-demos-container-state';
     this._onResize = options.onResize;
     this._currentTheme = options.defaultTheme || 'light';
-    this._layoutConfig = (options as any).layoutConfig;
+    this._layoutConfig = options.layoutConfig;
     
     // 设置容器样式
     this.container.style.cssText = `
@@ -86,6 +88,18 @@ export class SceneContainerImpl implements SceneContainer {
   }
   
   /**
+   * 查找注册表中支持移动端的布局
+   */
+  private findMobileLayout(): string | null {
+    const mobileLayouts = layoutRegistry.findByTag('mobile');
+    if (mobileLayouts.length > 0) return mobileLayouts[0].id;
+    // 兼容旧元数据字段
+    const allMeta = layoutRegistry.getAllMetadata();
+    const mobileMeta = allMeta.find(m => m.supportsMobile);
+    return mobileMeta?.id || null;
+  }
+  
+  /**
    * 设置场景
    * @param scene - 场景实例
    */
@@ -98,8 +112,10 @@ export class SceneContainerImpl implements SceneContainer {
     this._currentScene = scene;
     
     // 确定使用哪个布局
-    // 移动端优先使用 mobile-stack 布局
-    const effectiveLayout = this.detectMobile() ? 'mobile-stack' : (scene.preferredLayout || 'split-right');
+    // 移动端自动选择支持移动端的布局，桌面端使用场景偏好布局
+    const effectiveLayout = this.detectMobile()
+      ? (this.findMobileLayout() || 'mobile-stack')
+      : (scene.preferredLayout || 'split-right');
     const layoutId = this._userPreferredLayout || effectiveLayout;
     
     // 如果当前布局与需要的布局不同，切换布局
@@ -117,8 +133,8 @@ export class SceneContainerImpl implements SceneContainer {
     const targetLayout = layout || this._currentLayout;
     if (!targetLayout) return;
     
-    // 从布局实例获取已渲染的 slots（避免硬编码类名耦合）
-    const slots = (targetLayout as { slots?: Record<string, HTMLElement | undefined> }).slots || {};
+    // 从布局实例获取已渲染的 slots（通过公共 getter 避免反射）
+    const slots = targetLayout.getSlots?.() || {};
     
     // 渲染各区域
     if (slots.header && scene.renderHeader) {
@@ -152,15 +168,11 @@ export class SceneContainerImpl implements SceneContainer {
     }
     
     // 初始同步场景状态到布局
-    this.syncSceneStateToLayout(scene, targetLayout);
+    this._transportBridge.syncSceneStateToLayout(scene, targetLayout);
     
     // 订阅场景状态变化，自动刷新布局
-    if (scene.subscribe) {
-      const unsubscribe = scene.subscribe(() => {
-        this.syncSceneStateToLayout(scene);
-      });
-      this._sceneUnsubscribers.push(unsubscribe);
-    }
+    const unsubscribe = this._transportBridge.subscribeSceneChanges(scene, targetLayout);
+    this._sceneUnsubscribers.push(unsubscribe);
     
     // 监听布局内部触发的主题/模式变化并转发给场景
     this._layoutThemeHandler = (e: Event) => {
@@ -179,18 +191,8 @@ export class SceneContainerImpl implements SceneContainer {
     this.container.addEventListener('layout:modechange', this._layoutModeHandler);
     
     // 如果布局支持浮动控制条，自动绑定场景运输控制
-    interface LayoutWithFloatingControls extends LayoutMaster {
-      setFloatingControls(options: {
-        isPlaying?: () => boolean;
-        onTogglePlay?: () => void;
-        onReset?: () => void;
-        onSpeedChange?: (speed: number) => void;
-        getSpeed?: () => number;
-      }): void;
-    }
-    const layoutWithControls = targetLayout as LayoutWithFloatingControls | null;
-    if (layoutWithControls?.setFloatingControls && scene.getTransportState) {
-      layoutWithControls.setFloatingControls({
+    if (scene.getTransportState) {
+      this._transportBridge.bindFloatingControls(targetLayout, {
         isPlaying: () => scene.getTransportState!().isPlaying,
         onTogglePlay: () => {
           const isPlaying = scene.getTransportState!().isPlaying;
@@ -224,6 +226,9 @@ export class SceneContainerImpl implements SceneContainer {
     // 取消场景状态订阅
     this._sceneUnsubscribers.forEach(fn => fn());
     this._sceneUnsubscribers = [];
+    
+    // 清理 TransportBridge
+    this._transportBridge.dispose();
     
     // 移除布局事件监听
     if (this._layoutThemeHandler) {
@@ -455,22 +460,6 @@ export class SceneContainerImpl implements SceneContainer {
   }
   
   /**
-   * 同步场景状态到当前布局
-   */
-  private syncSceneStateToLayout(scene: Scene, layout?: LayoutMaster): void {
-    const targetLayout = layout || this._currentLayout;
-    if (!targetLayout) return;
-    
-    if (targetLayout.updateReadout && scene.getReadoutItems) {
-      targetLayout.updateReadout(scene.getReadoutItems());
-    }
-    
-    if (targetLayout.updateTransportState && scene.getTransportState) {
-      targetLayout.updateTransportState(scene.getTransportState());
-    }
-  }
-  
-  /**
    * 初始化 ResizeObserver
    */
   private initResizeObserver(): void {
@@ -512,7 +501,9 @@ export class SceneContainerImpl implements SceneContainer {
     }
     this._layoutSwitchTimer = setTimeout(() => {
       if (this._currentScene) {
-        const targetLayout = this.detectMobile() ? 'mobile-stack' : (this._currentScene.preferredLayout || 'split-right');
+        const targetLayout = this.detectMobile()
+          ? (this.findMobileLayout() || 'mobile-stack')
+          : (this._currentScene.preferredLayout || 'split-right');
         if (targetLayout !== this._currentLayout?.id) {
           this.switchLayout(targetLayout, { animate: false });
         }
@@ -590,6 +581,9 @@ export class SceneContainerImpl implements SceneContainer {
     
     // 清空监听器
     this.listeners = {};
+    
+    // 清理 TransportBridge
+    this._transportBridge.dispose();
     
     console.log('[SceneContainer] Disposed');
   }
