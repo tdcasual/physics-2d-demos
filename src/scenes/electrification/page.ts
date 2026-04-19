@@ -22,10 +22,18 @@ bootScenePage({
       theme,
       onReadout: () => {}
     });
+    let _listener: (() => void) | null = null;
     return {
       ...scene,
       getState() {
         return scene.getSnapshot();
+      },
+      getTransportState() {
+        return { isPlaying: false, speed: 1 };
+      },
+      subscribe(listener: () => void) {
+        _listener = listener;
+        return () => { _listener = null; };
       }
     } as SceneInstance;
   },
@@ -36,6 +44,7 @@ bootScenePage({
       onSetScene: (nextScene: string) => {
         (scene as unknown as { setScene(s: string): void }).setScene(nextScene);
         scene.render();
+        (controls as unknown as { setActiveScene(s: string): void }).setActiveScene(nextScene);
       },
       onRunStep: () => {
         (scene as unknown as { runSceneAction(): void }).runSceneAction();
@@ -43,18 +52,9 @@ bootScenePage({
       },
       onReset: () => {
         scene.reset?.();
-        scene.render();
       },
       onStatus
     }) as unknown as { setActiveScene(s: string): void; dispose(): void };
-
-    // 同步场景状态到按钮
-    const rawScene = scene as unknown as { setScene(s: string): void };
-    const originalSetScene = rawScene.setScene.bind(rawScene);
-    rawScene.setScene = (s: string) => {
-      originalSetScene(s);
-      controls.setActiveScene(s);
-    };
 
     return controls;
   },

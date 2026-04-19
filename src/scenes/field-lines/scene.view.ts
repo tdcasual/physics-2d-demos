@@ -80,9 +80,9 @@ export function createFieldLinesView(options: CreateFieldLinesViewOptions = {}) 
   function resizeCanvas(): void {
     if (!canvas || !ctx) return;
     const rect = canvas.getBoundingClientRect();
-    const cssWidth = Math.max(480, Math.floor(rect.width || 1280));
-    const cssHeight = Math.max(300, Math.floor(rect.height || 720));
-    const dpr = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1;
+    const cssWidth = Math.max(200, Math.floor(rect.width || 1280));
+    const cssHeight = Math.max(150, Math.floor(rect.height || 720));
+    const dpr = Math.min(2, typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1);
     surface = computeHiDpiCanvasMetrics({
       cssWidth,
       cssHeight,

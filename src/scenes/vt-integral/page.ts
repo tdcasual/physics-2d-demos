@@ -75,6 +75,7 @@ bootScenePage({
     });
 
     let currentMode = mode;
+    let _listener: (() => void) | null = null;
 
     return {
       ...scene,
@@ -84,12 +85,21 @@ bootScenePage({
       getReadoutItems() {
         return formatReadout(scene.getSnapshot(), currentMode);
       },
+      getTransportState() {
+        return { isPlaying: false, speed: 1 };
+      },
+      subscribe(listener: () => void) {
+        _listener = listener;
+        return () => { _listener = null; };
+      },
       setMode(m: 'normal' | 'presentation') {
         currentMode = m;
         scene.setMode(m);
+        _listener?.();
       },
       setTheme(t: Theme) {
         scene.setTheme(t);
+        _listener?.();
       }
     } as SceneInstance;
   },
@@ -130,9 +140,17 @@ bootScenePage({
         (scene as unknown as { setDivision(v: number): void }).setDivision(value);
         scene.render();
       },
+      onPlay: () => {
+        (scene as unknown as { step(dt: number): void }).step(0.1);
+        scene.render();
+      },
+      onPause: () => {},
+      onStep: () => {
+        (scene as unknown as { step(dt: number): void }).step(0.1);
+        scene.render();
+      },
       onReset: () => {
         scene.reset?.();
-        scene.render();
       },
       onStatus
     });

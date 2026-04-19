@@ -122,39 +122,9 @@ export function createProjectileControlsV4(options: ProjectileControlsOptions): 
   presetCard.body.appendChild(presetGrid);
 
   // ===== 3. 显示选项卡片 =====
-  const optionsCard = createControlCard('显示选项', { defaultCollapsed: true });
-  
-  const checkboxes = [
-    { key: 'show-trajectory', label: '显示轨迹', checked: true },
-    { key: 'show-velocity', label: '显示速度矢量', checked: true },
-    { key: 'show-energy', label: '显示能量分析', checked: false },
-  ];
-  
-  const checkboxContainer = createElement('div', 'flex flex-col gap-2');
-  
-  checkboxes.forEach(cb => {
-    const label = document.createElement('label');
-    label.className = 'flex items-center gap-2 text-xs cursor-pointer';
-    label.style.color = 'var(--text-primary)';
-    
-    const input = document.createElement('input');
-    input.type = 'checkbox';
-    input.dataset.role = cb.key;
-    if (cb.checked) input.checked = true;
-    input.style.accentColor = 'var(--accent-color)';
-    
-    const span = createElement('span', '', { text: cb.label });
-    
-    label.append(input, span);
-    checkboxContainer.appendChild(label);
-  });
-  
-  optionsCard.body.appendChild(checkboxContainer);
-
   // 组装
   mount.appendChild(paramsCard.element);
   mount.appendChild(presetCard.element);
-  mount.appendChild(optionsCard.element);
 
   return {
     setParam(key: string, value: number) {

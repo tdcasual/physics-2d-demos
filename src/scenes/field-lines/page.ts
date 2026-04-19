@@ -102,6 +102,9 @@ bootScenePage({
     canvas.addEventListener('pointercancel', onPointerUp);
 
     const originalDispose = scene.dispose.bind(scene);
+    let _listener: (() => void) | null = null;
+
+    const notify = () => { _listener?.(); };
 
     return {
       ...scene,
@@ -111,13 +114,22 @@ bootScenePage({
       getReadoutItems() {
         return formatReadout(scene.getSnapshot(), currentMode, currentTheme);
       },
+      getTransportState() {
+        return { isPlaying: false, speed: 1 };
+      },
+      subscribe(listener: () => void) {
+        _listener = listener;
+        return () => { _listener = null; };
+      },
       setMode(m: 'normal' | 'presentation') {
         currentMode = m;
         scene.setMode(m);
+        notify();
       },
       setTheme(t: Theme) {
         currentTheme = t;
         scene.setTheme(t);
+        notify();
       },
       dispose() {
         canvas.removeEventListener('pointerdown', onPointerDown);
@@ -158,7 +170,6 @@ bootScenePage({
       },
       onReset: () => {
         scene.reset?.();
-        scene.render();
         onStatus?.('已重置场景');
       },
       onStatus

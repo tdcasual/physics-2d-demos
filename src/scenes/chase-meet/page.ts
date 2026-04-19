@@ -41,27 +41,10 @@ bootScenePage({
     let currentMode = mode;
     let isPlaying = false;
 
-    // DPR change handling
-    let dprQuery: MediaQueryList | null = null;
-    const handleDprChange = () => {
-      bindDprQuery();
-      scene.resize();
-      scene.render();
-    };
-    const bindDprQuery = () => {
-      if (typeof window.matchMedia !== 'function') return;
-      if (dprQuery) {
-        dprQuery.removeEventListener('change', handleDprChange);
-      }
-      const currentDpr = window.devicePixelRatio || 1;
-      dprQuery = window.matchMedia(`(resolution: ${currentDpr}dppx)`);
-      dprQuery.addEventListener('change', handleDprChange);
-    };
-    bindDprQuery();
-
     const originalDispose = scene.dispose.bind(scene);
     const originalSetParams = scene.setParams.bind(scene);
     const originalReset = scene.reset.bind(scene);
+    let _listener: (() => void) | null = null;
 
     return {
       ...scene,
@@ -71,30 +54,39 @@ bootScenePage({
       getReadoutItems() {
         return formatReadout(scene.getSnapshot(), isPlaying, currentMode);
       },
+      getTransportState() {
+        return { isPlaying, speed: 1 };
+      },
+      subscribe(listener: () => void) {
+        _listener = listener;
+        return () => { _listener = null; };
+      },
       setMode(m: 'normal' | 'presentation') {
         currentMode = m;
         scene.setMode(m);
+        _listener?.();
       },
       setParams(next: Partial<ChaseMeetParams>) {
         const result = originalSetParams(next);
         originalReset();
         scene.render();
+        _listener?.();
         return result;
       },
       startAll() {
         isPlaying = true;
+        _listener?.();
       },
       pauseAll() {
         isPlaying = false;
+        _listener?.();
       },
       reset() {
         isPlaying = false;
         originalReset();
+        _listener?.();
       },
       dispose() {
-        if (dprQuery) {
-          dprQuery.removeEventListener('change', handleDprChange);
-        }
         originalDispose();
       }
     } as SceneInstance;
