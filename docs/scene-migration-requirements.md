@@ -1,362 +1,388 @@
-# 场景迁移到统一框架的要求规范
+# 场景开发规范
 
-> 本文档定义将 legacy 或独立场景迁移到 `teaching-demo-shell` 统一框架的硬性要求。
+> 本文档定义创建新场景或迁移旧场景到统一框架的硬性要求。
+>
+> 旧版 `createTeachingDemoShell()` API 已废弃，所有场景统一使用 `bootScenePage()`。
 
-## 一、迁移前提
+---
 
-### 1.1 何时需要迁移
+## 一、何时需要新建/迁移场景
 
-- 场景使用独立的 HTML/CSS，未接入 `createTeachingDemoShell()`
-- 场景存在自定义 Canvas 尺寸计算逻辑，未使用 `getOptimalCanvasSize()`
-- 场景自行管理播放/暂停/重置/单步控制，未使用统一控件
-- 场景需要支持 mobile/presentation 双模式适配
+### 1.1 新建场景
 
-### 1.2 禁止迁移的场景
+- 有新的物理概念需要可视化演示
+- 已有 legacy 场景需要接入 modern 统一框架（获得布局自适应、主题切换、E2E 测试等能力）
 
-- 3D WebGL 场景（使用 Three.js 的独立渲染循环）
-- 特殊布局场景（如双面板 spring-oscillator，需单独设计）
+### 1.2 禁止直接修改的场景
+
+- 3D WebGL 场景（使用 Three.js 的独立渲染循环，需单独评估）
+- iframe 嵌入的外部内容
 
 ---
 
 ## 二、文件结构要求
 
-迁移后的场景必须遵循以下文件结构：
+新建场景必须遵循以下文件结构：
 
 ```
 src/scenes/<scene-id>/
-├── scene.meta.ts          # 场景元数据（subject/concept/keywords）
-├── scene.sim.ts           # 物理仿真（纯计算，无DOM操作）
-├── scene.view.ts          # Canvas 渲染（使用 unified-canvas 工具）
-├── scene.entry.ts         # 场景入口（实现 SceneEntry 接口）
-├── controls.ts            # 控制面板组件（参数调节UI）
-└── page.ts                # 页面入口（调用 createTeachingDemoShell）
+├── scene.meta.ts          # 场景元数据（subject / concept / keywords）
+├── scene.sim.ts           # 物理仿真（纯计算，零 DOM 依赖）
+├── scene.view.ts          # Canvas 渲染（接收 snapshot，绘制帧）
+├── scene.entry.ts         # 场景组装入口（导出 createScene）
+├── controls-v4.ts         # 控制面板（参数调节 UI，v4 标准）
+└── page.ts                # 页面入口（调用 bootScenePage）
 
-src/pages/<scene-id>.html  # 页面HTML（Vite入口）
+src/pages/<scene-id>.html   # HTML 入口（Vite 自动扫描，无需手动注册）
 ```
 
 ### 2.1 必须实现的文件
 
-| 文件 | 必须实现 | 说明 |
-|-----|---------|------|
-| `scene.meta.ts` | ✅ | 导出 `ScenePlacardMeta` |
-| `scene.sim.ts` | ✅ | 导出 `createSceneSim()`，返回 `{ init, reset, step, getState }` |
-| `scene.view.ts` | ✅ | 导出 `createSceneView()`，使用 `unified-canvas` 绘制工具 |
-| `scene.entry.ts` | ✅ | 导出 `createSceneEntry()`，实现 `SceneEntry` 接口 |
-| `controls.ts` | ✅ | 导出控制面板构建函数 |
-| `page.ts` | ✅ | 调用 `createTeachingDemoShell()` 组装页面 |
+| 文件             | 必须 | 说明                                                      |
+| ---------------- | ---- | --------------------------------------------------------- |
+| `scene.meta.ts`  | ✅   | 导出 `SceneMeta`，包含 subject/concept/keywords/objective |
+| `scene.sim.ts`   | ✅   | 导出仿真工厂，返回 `{ init, reset, step, getSnapshot }`   |
+| `scene.view.ts`  | ✅   | 导出渲染工厂，接收 canvas 和 snapshot，绘制帧             |
+| `scene.entry.ts` | ✅   | 组装 sim + view，返回 `SceneInstance`                     |
+| `controls-v4.ts` | ✅   | 导出控制面板构建函数                                      |
+| `page.ts`        | ✅   | 调用 `bootScenePage()`，唯一入口                          |
 
 ---
 
-## 三、Shell 接入要求
-
-### 3.1 page.ts 必须配置
+## 三、page.ts 最小实现
 
 ```typescript
-const shell = createTeachingDemoShell({
-  mount: document.getElementById('app')!,
-  title: '场景中文名',
-  subtitle: 'Scene English Name',
-  defaultMode: 'normal',
-  hideHeader: true,       // 推荐使用：隐藏左侧标题区，更紧凑
-  hideStatusCard: true,   // 推荐使用：隐藏状态卡片，简化布局
+import { bootScenePage } from '../../app/scene-bootstrapper';
+import { createProjectileScene } from './scene.entry';
+import { createProjectileControlsV4 } from './controls-v4';
+import { projectileMeta } from './scene.meta';
+
+bootScenePage({
+  meta: projectileMeta,
+  preferredLayout: 'split-right',
+  layoutConfig: {
+    defaultLeftRatio: 0.32,
+    hasGraph: false,
+    controlColumns: 'auto',
+    readoutCollapsed: true
+  },
+  createScene: ({ canvas, theme, mode }) => {
+    return createProjectileScene({ canvas, theme, mode });
+  },
+  createControls: ({ mount, scene }) => {
+    return createProjectileControlsV4({
+      mount,
+      onParamChange: (key, value) => {
+        (scene as unknown as { setParams(p: object): void }).setParams({
+          [key]: value
+        });
+      },
+      onPresetSelect: (preset) => {
+        // 应用预设参数
+      }
+    });
+  }
 });
 ```
 
-### 3.2 必须连接的生命周期
+### 3.1 禁止在 page.ts 中做的事
 
-```typescript
-// 1. 初始化时连接 shell
-shell.onInit = (ctx) => {
-  scene.init(ctx.width, ctx.height, ctx.isDark);
-};
-
-// 2. 播放控制连接
-shell.onPlay = () => scene.play();
-shell.onPause = () => scene.pause();
-shell.onReset = () => scene.reset();
-shell.onStep = () => scene.step(1/60);
-
-// 3. 渲染循环连接
-shell.onRender = (ctx) => {
-  scene.render();
-  return scene.getReadout();  // 返回数据读数对象
-};
-
-// 4. 主题切换连接
-shell.onThemeChange = (isDark) => {
-  scene.setTheme(isDark ? 'dark' : 'light');
-};
-
-// 5. 尺寸变化连接
-shell.onResize = (width, height) => {
-  scene.resize(width, height);
-};
-```
-
-### 3.3 控制面板必须接入
-
-```typescript
-// 将控制面板插入 sidebar
-const controlSlot = shell.sidebar.querySelector('.control-slot')!;
-controlSlot.appendChild(buildControls(scene));
-```
+- ❌ 手动调用 `scene.init()` —— `SceneAdapter` 自动调用
+- ❌ 手动调用 `scene.setTheme()` —— `SceneAdapter` 自动调用
+- ❌ 手动调用 `scene.resize()` —— `SceneContainer` 通过 ResizeObserver 自动调用
+- ❌ 硬编码布局注册 —— 使用 `auto-register.ts`
 
 ---
 
-## 四、Canvas 绘制要求
-
-### 4.1 必须使用统一工具
-
-从 `@/core/unified-canvas` 导入：
+## 四、SceneInstance 必须实现的契约
 
 ```typescript
-import {
-  getOptimalCanvasSize,    // 计算最佳 Canvas 尺寸
-  setCanvasSize,           // 设置高DPI Canvas 尺寸
-  drawGrid,                // 绘制网格背景
-  drawBall,                // 绘制带高光的小球
-  drawTrail,               // 绘制发光轨迹
-  drawVector,              // 绘制带箭头的矢量
-  drawDataPanel,           // 绘制数据面板（可选，推荐使用 HTML overlay）
-} from '@/core/unified-canvas';
+interface SceneInstance {
+  // === 生命周期（必须）===
+  init(): void; // 初始化仿真状态和渲染
+  resize(): void; // 响应画布尺寸变化
+  render(): void; // 绘制当前帧
+  dispose(): void; // 清理资源（事件监听、RAF、定时器）
+
+  // === 主题/模式（必须）===
+  setTheme(theme: Theme): void;
+  setMode(mode: 'normal' | 'presentation'): void;
+
+  // === 动画控制（必须）===
+  step(dt: number): void; // 单步推进仿真
+
+  // === 可选但强烈建议 ===
+  reset?(): void; // 重置到初始状态
+  startAll?(): void; // 启动 RAF 动画循环
+  pauseAll?(): void; // 停止 RAF 动画循环
+  setTimeScale?(scale: number): void; // 时间缩放
+
+  // === 数据契约（必须，供 TransportBridge 同步到布局）===
+  getTransportState?(): TransportState; // { isPlaying: boolean, speed: number }
+  getReadoutItems?(): ReadoutItem[]; // { label, value }[]
+  subscribe?(listener: () => void): () => void; // 单监听器，状态变化时通知
+
+  // === 状态持久化（可选）===
+  getState?(): unknown;
+}
 ```
 
-### 4.2 尺寸计算规范
+### 4.1 关键注意事项
+
+**`getTransportState()` 禁止硬编码 `isPlaying: false`**
+
+错误示例：
 
 ```typescript
-// ✅ 正确：使用统一工具
-const optimal = getOptimalCanvasSize(rect.width, rect.height, 40);
-setCanvasSize(canvas, optimal.width, optimal.height);
-
-// ❌ 错误：自行计算
-const width = Math.max(320, Math.floor(rect.width || 1280));
-const height = Math.max(220, Math.floor(rect.height || 720));
+getTransportState() {
+  return { isPlaying: false, speed: 1 };  // ❌ 永远显示暂停
+}
 ```
 
-### 4.3 响应式绘制规范
+正确示例：
 
 ```typescript
-function drawAxes(): void {
-  // 根据视口调整线宽
-  ctx.lineWidth = window.innerWidth <= 900 ? 1 : 2;
-  
-  // 根据视口调整字体
-  ctx.font = window.innerWidth <= 900 
-    ? '10px Satoshi, sans-serif' 
-    : '12px Satoshi, sans-serif';
-  
-  // 使用 dpr 调整绘制精度
-  const dpr = window.devicePixelRatio || 1;
-  ctx.save();
-  ctx.scale(dpr, dpr);
-  // ... 绘制逻辑
-  ctx.restore();
+getTransportState() {
+  return { isPlaying: this.isRunning, speed: this.timeScale };
+}
+```
+
+**`subscribe()` 使用单监听器模式**
+
+```typescript
+let _listener: (() => void) | null = null;
+
+return {
+  subscribe(listener: () => void) {
+    _listener = listener;
+    return () => {
+      _listener = null;
+    };
+  }
+  // 内部状态变化时调用 _listener?.()
+};
+```
+
+**`dispose()` 必须清理所有副作用**
+
+```typescript
+dispose() {
+  cancelAnimationFrame(this.rafId);
+  this.canvas.removeEventListener('pointerdown', this.onPointerDown);
+  // 清理所有事件监听、定时器、RAF
 }
 ```
 
 ---
 
-## 五、数据读数要求
+## 五、控制面板约定（controls-v4.ts）
 
-### 5.1 必须提供的数据格式
+### 5.1 标准结构
+
+控制面板使用卡片分组，每卡片包含相关参数：
 
 ```typescript
-interface SceneReadout {
-  [key: string]: {
-    value: string | number;
-    unit?: string;
+export function createMyControlsV4(opts: {
+  mount: HTMLElement;
+  onParamChange: (key: string, value: number) => void;
+  onPresetSelect: (preset: string) => void;
+}) {
+  // 1. 创建容器
+  const container = document.createElement('div');
+  container.className = 'control-panel';
+
+  // 2. 创建参数卡片
+  const paramCard = createControlCard({ title: '参数设置', mount: container });
+  createSlider({
+    mount: paramCard,
+    label: '初速度 v₀',
+    min: 0,
+    max: 100,
+    step: 1,
+    value: 30,
+    onChange: (v) => opts.onParamChange('v0', v)
+  });
+
+  // 3. 创建预设卡片
+  const presetCard = createControlCard({ title: '环境预设', mount: container });
+  createPresetButtons({
+    mount: presetCard,
+    presets: [
+      { id: 'earth', label: '地球 g=9.8' },
+      { id: 'moon', label: '月球 g=1.62' }
+    ],
+    onSelect: opts.onPresetSelect
+  });
+
+  opts.mount.appendChild(container);
+
+  return {
+    updatePreset: (preset: string) => {
+      /* 更新预设按钮高亮 */
+    },
+    dispose: () => container.remove()
+  };
+}
+```
+
+### 5.2 控件类型标准
+
+| 控件   | 组件函数              | 必须属性                               |
+| ------ | --------------------- | -------------------------------------- |
+| 滑块   | `createSlider`        | min, max, step, value, label, onChange |
+| 按钮   | `createButton`        | label, onClick, variant                |
+| 预设   | `createPresetButtons` | presets[], onSelect                    |
+| 复选框 | `createCheckbox`      | label, checked, onChange               |
+| 下拉   | `createSelect`        | options[], value, onChange             |
+
+所有控件必须响应 `data-theme="dark"` 属性。
+
+---
+
+## 六、仿真层约定（scene.sim.ts）
+
+### 6.1 纯计算原则
+
+`scene.sim.ts` **严禁**导入任何 DOM 相关模块：
+
+```typescript
+// ✅ 正确：纯数学计算
+import { Vec2 } from '../../core/vector';
+
+export function createProjectileSim(params: ProjectileParams) {
+  let state = initState(params);
+
+  return {
+    step(dt: number) {
+      state = integrate(state, dt);
+    },
+    reset() {
+      state = initState(params);
+    },
+    getSnapshot() {
+      return { state, params };
+    }
   };
 }
 
-// 示例
-return {
-  time: { value: state.t.toFixed(2), unit: 's' },
-  velocity: { value: v.toFixed(1), unit: 'm/s' },
-  position: { value: `(${x.toFixed(1)}, ${y.toFixed(1)})`, unit: 'm' },
-};
+// ❌ 错误：导入 DOM
+import { getCanvasSize } from '../../core/high-dpi-canvas'; // 禁止！
 ```
 
-### 5.2 数据面板显示规则
+### 6.2 状态快照模式
 
-- **Desktop (>900px)**: 8项数据使用 2×4 网格布局
-- **Mobile (≤900px)**: 8项数据使用 4×2 网格布局，字号缩小至 10px/11px
-- **超过8项**: 滚动显示或分组折叠
+仿真必须提供 `getSnapshot()` 返回不可变快照，视图层只读取快照：
+
+```typescript
+interface ProjectileSnapshot {
+  state: {
+    pos: Vec2;
+    vel: Vec2;
+    time: number;
+  };
+  params: ProjectileParams;
+}
+```
 
 ---
 
-## 六、移动端适配要求
+## 七、视图层约定（scene.view.ts）
 
-### 6.1 必须检测的断点
+### 7.1 接收快照，绘制帧
 
 ```typescript
-const compactViewport = window.innerWidth <= 900;
+export function createProjectileView(opts: {
+  canvas: HTMLCanvasElement;
+  theme: Theme;
+}) {
+  const ctx = opts.canvas.getContext('2d')!;
+
+  return {
+    render(snapshot: ProjectileSnapshot) {
+      const { width, height } = opts.canvas;
+      ctx.clearRect(0, 0, width, height);
+
+      // 绘制背景网格
+      drawGrid(ctx, width, height, opts.theme);
+
+      // 绘制轨迹
+      drawTrajectory(ctx, snapshot.state);
+
+      // 绘制当前位置
+      drawProjectile(ctx, snapshot.state.pos);
+    }
+  };
+}
 ```
 
-### 6.2 移动端布局要求
+### 7.2 高 DPI 处理
 
-| 元素 | Desktop | Mobile |
-|-----|---------|--------|
-| 侧边栏 | 固定 300px | 可折叠，默认收起 |
-| Canvas | 自适应剩余空间 | 全屏宽度，高度自适应 |
-| 数据面板 | 浮动右上角 | 底部抽屉式，可收起 |
-| 字体基准 | 18px | 14px |
-| 控制行高 | 48px | 40px |
-| 按钮尺寸 | 48px | 40px |
+必须使用 `high-dpi-canvas` 工具处理 `devicePixelRatio`：
 
-### 6.3 触摸交互要求
+```typescript
+import { setupHighDpiCanvas } from '../../core/high-dpi-canvas';
 
-- 按钮最小触摸区域 44×44px
-- 滑块需要支持触摸拖动
-- Canvas 交互（如拖拽）需要处理 touch 事件
+// 在 scene.entry.ts 中初始化时调用
+setupHighDpiCanvas(canvas);
+```
 
 ---
 
-## 七、测试要求
+## 八、测试要求
 
-### 7.1 必须编写的测试
+### 8.1 新增场景最低测试覆盖
 
-| 测试类型 | 文件路径 | 覆盖要求 |
-|---------|---------|---------|
-| 单元测试 | `tests/unit/<scene>.sim.spec.ts` | 仿真数值正确性 |
-| 契约测试 | `tests/contract/scene-contract.spec.ts` | 接口合规性 |
-| 视觉测试 | `tests/visual/<scene>.spec.ts` | 截图对比 |
-| 移动端测试 | `tests/visual/mobile-<scene>.spec.ts` | 移动端布局 |
+| 测试   | 文件                                     | 要求                                     |
+| ------ | ---------------------------------------- | ---------------------------------------- |
+| Unit   | `tests/unit/<scene-id>.spec.ts`          | 仿真数值正确性（如抛体运动轨迹公式验证） |
+| E2E    | `tests/e2e/`（追加到现有 spec）          | 页面加载 + 至少 1 个控件响应验证         |
+| Visual | `tests/visual/<scene-id>.visual.spec.ts` | 可选但推荐：初始状态截图                 |
 
-### 7.2 视觉测试必须通过
+### 8.2 E2E 测试模板
 
 ```typescript
-// tests/visual/<scene>.spec.ts
+// tests/e2e/scene-interactions.spec.ts
 import { test, expect } from '@playwright/test';
 
-test('scene renders correctly', async ({ page }) => {
-  await page.goto('/src/pages/<scene>.html');
-  await page.waitForTimeout(500);
-  await expect(page).toHaveScreenshot('scene-initial.png');
-});
+test.describe('MyScene', () => {
+  test('loads with correct structure', async ({ page }) => {
+    await page.goto('/src/pages/my-scene.html');
+    await expect(page.locator('canvas')).toBeVisible();
+    await expect(page.locator('[data-region="control"]')).toBeVisible();
+  });
 
-test('mobile layout', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/src/pages/<scene>.html');
-  await expect(page).toHaveScreenshot('scene-mobile.png');
+  test('slider changes parameter', async ({ page }) => {
+    await page.goto('/src/pages/my-scene.html');
+    const slider = page.locator('input[type="range"]').first();
+    await slider.fill('50');
+    // 验证读数或画布变化
+  });
 });
 ```
 
 ---
 
-## 八、质量门禁
+## 九、质量门禁
 
-迁移完成后必须通过以下检查：
+提交前必须全绿：
 
 ```bash
-# 1. 生成索引
 pnpm generate:index
-
-# 2. 代码检查
 pnpm lint
-
-# 3. 单元测试
+pnpm typecheck
 pnpm test
-
-# 4. 视觉回归测试
-pnpm test:visual
-
-# 5. 构建验证
+pnpm test:e2e
 pnpm build
 ```
-
-全部通过后方可提交。
-
----
-
-## 九、迁移检查清单
-
-### 9.1 功能检查
-
-- [ ] 页面加载正常，无控制台报错
-- [ ] 播放/暂停/重置/单步按钮工作正常
-- [ ] 参数调节实时生效
-- [ ] 主题切换（春日/月夜）正常
-- [ ] 窗口resize自适应正常
-- [ ] 数据读数实时更新
-
-### 9.2 视觉检查
-
-- [ ] 网格背景显示正常
-- [ ] 坐标轴标签清晰可读
-- [ ] 小球/轨迹渲染正确
-- [ ] 深色/浅色模式配色正确
-- [ ] 数据面板布局整齐
-
-### 9.3 移动端检查
-
-- [ ] 390×844 视口布局正常
-- [ ] 侧边栏折叠/展开正常
-- [ ] 数据面板收起/展开正常
-- [ ] 触摸交互响应正常
-- [ ] 字体大小适中可读
 
 ---
 
 ## 十、参考实现
 
-完整的迁移参考实现：
+最规范的参考场景：
 
-```
-src/scenes/projectile/
-```
-
-关键文件对比：
-
-| 文件 | 行数 | 说明 |
-|-----|------|------|
-| `page.ts` | ~30 | 简洁的 shell 组装 |
-| `scene.view.ts` | ~175 | 使用 unified-canvas 工具 |
-| `scene.entry.ts` | ~82 | 实现 SceneEntry 接口 |
-
----
-
-## 附录：快速迁移模板
-
-### page.ts 模板
-
-```typescript
-import { createTeachingDemoShell } from '@/app/teaching-demo-shell';
-import { buildSceneControls } from './controls';
-import { createSceneEntry } from './scene.entry';
-
-const mount = document.getElementById('app');
-if (!mount) throw new Error('Mount point not found');
-
-const shell = createTeachingDemoShell({
-  mount,
-  title: '场景中文名',
-  subtitle: 'Scene English Name',
-  defaultMode: 'normal',
-  hideHeader: true,
-  hideStatusCard: true,
-});
-
-const scene = createSceneEntry();
-
-// 连接生命周期
-shell.onInit = (ctx) => scene.init(ctx.width, ctx.height, ctx.isDark);
-shell.onPlay = () => scene.play();
-shell.onPause = () => scene.pause();
-shell.onReset = () => scene.reset();
-shell.onStep = () => scene.step(1/60);
-shell.onRender = () => {
-  scene.render();
-  return scene.getReadout();
-};
-shell.onThemeChange = (isDark) => scene.setTheme(isDark ? 'dark' : 'light');
-shell.onResize = (w, h) => scene.resize(w, h);
-
-// 插入控制面板
-const controlSlot = shell.sidebar.querySelector('.control-slot');
-if (controlSlot) {
-  controlSlot.appendChild(buildSceneControls(scene));
-}
-
-// 启动
-shell.init();
-```
+| 场景                | 推荐理由                                    |
+| ------------------- | ------------------------------------------- |
+| `projectile`        | page.ts 最简洁， controls-v4.ts 结构清晰    |
+| `spring-oscillator` | 复杂控制面板（多体系统），读数面板格式丰富  |
+| `emf-analogy`       | RAF 控制正确（start/stop 模式），状态机清晰 |

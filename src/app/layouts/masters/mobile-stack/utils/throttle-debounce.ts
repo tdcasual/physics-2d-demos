@@ -3,6 +3,7 @@
  */
 
 export class ThrottleDebounce {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static throttle<T extends (...args: any[]) => void>(
     fn: T,
     limit: number
@@ -12,11 +13,12 @@ export class ThrottleDebounce {
       if (!inThrottle) {
         fn(...args);
         inThrottle = true;
-        setTimeout(() => inThrottle = false, limit);
+        setTimeout(() => (inThrottle = false), limit);
       }
     };
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static debounce<T extends (...args: any[]) => void>(
     fn: T,
     delay: number
@@ -28,6 +30,7 @@ export class ThrottleDebounce {
     };
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static rafThrottle<T extends (...args: any[]) => void>(
     fn: T
   ): (...args: Parameters<T>) => void {

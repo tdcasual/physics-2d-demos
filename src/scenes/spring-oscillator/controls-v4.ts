@@ -4,7 +4,6 @@
  */
 
 import { createControlCard } from '../../ui/components/ControlCard';
-import type { OscillatorParams, Orientation } from './scene.sim';
 import type { SpringOscillatorScene } from './scene.entry';
 
 export interface SpringOscillatorControlsOptions {
@@ -18,7 +17,9 @@ export interface SpringOscillatorControls {
   dispose: () => void;
 }
 
-export function createSpringOscillatorControlsV4(options: SpringOscillatorControlsOptions): SpringOscillatorControls {
+export function createSpringOscillatorControlsV4(
+  options: SpringOscillatorControlsOptions
+): SpringOscillatorControls {
   const { mount, scene, onStatus } = options;
 
   mount.innerHTML = '';
@@ -39,12 +40,12 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
     transition: all 0.2s;
     min-height: calc(32px * var(--ui-scale, 1));
   `;
-  
+
   const listCard = createControlCard('振子列表', {
     defaultCollapsed: false,
     headerActions: [addBtn]
   });
-  
+
   const listContainer = document.createElement('div');
   listContainer.className = 'flex flex-col gap-[2px]';
   listCard.body.appendChild(listContainer);
@@ -65,69 +66,93 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
 
   // ===== 2. 预设场景卡片 =====
   const presetCard = createControlCard('相位演示', { defaultCollapsed: false });
-  
+
   // 精确复刻 V3 网格布局
   const presetContainer = document.createElement('div');
   presetContainer.className = 'grid grid-cols-2 gap-1';
-  
+
   // 计算周期
   const period = 2 * Math.PI * Math.sqrt(1 / 10);
-  
+
   const presetButtons = [
-    { 
-      label: '同相 (0°)', 
+    {
+      label: '同相 (0°)',
       desc: '同时启动',
       onClick: () => {
         while (scene.sim.oscillators.length > 0) {
           scene.removeOscillator(scene.sim.oscillators[0].id);
         }
-        scene.addOscillator({ k: 10, m: 1, x0: 8, orientation: 'horizontal' }, 0);
-        scene.addOscillator({ k: 10, m: 1, x0: 8, orientation: 'horizontal' }, 0);
+        scene.addOscillator(
+          { k: 10, m: 1, x0: 8, orientation: 'horizontal' },
+          0
+        );
+        scene.addOscillator(
+          { k: 10, m: 1, x0: 8, orientation: 'horizontal' },
+          0
+        );
         renderOscillatorList();
         scene.reset();
         scene.render();
         onStatus?.('同相演示：两振子同时启动');
       }
     },
-    { 
-      label: '反相 (180°)', 
+    {
+      label: '反相 (180°)',
       desc: '延迟 T/2',
       onClick: () => {
         while (scene.sim.oscillators.length > 0) {
           scene.removeOscillator(scene.sim.oscillators[0].id);
         }
-        scene.addOscillator({ k: 10, m: 1, x0: 8, orientation: 'horizontal' }, 0);
-        scene.addOscillator({ k: 10, m: 1, x0: 8, orientation: 'horizontal' }, period / 2);
+        scene.addOscillator(
+          { k: 10, m: 1, x0: 8, orientation: 'horizontal' },
+          0
+        );
+        scene.addOscillator(
+          { k: 10, m: 1, x0: 8, orientation: 'horizontal' },
+          period / 2
+        );
         renderOscillatorList();
         scene.reset();
         scene.render();
         onStatus?.('反相演示：第2个振子延迟半个周期启动');
       }
     },
-    { 
-      label: '1/2 相位 (90°)', 
+    {
+      label: '1/2 相位 (90°)',
       desc: '延迟 T/4',
       onClick: () => {
         while (scene.sim.oscillators.length > 0) {
           scene.removeOscillator(scene.sim.oscillators[0].id);
         }
-        scene.addOscillator({ k: 10, m: 1, x0: 8, orientation: 'horizontal' }, 0);
-        scene.addOscillator({ k: 10, m: 1, x0: 8, orientation: 'horizontal' }, period / 4);
+        scene.addOscillator(
+          { k: 10, m: 1, x0: 8, orientation: 'horizontal' },
+          0
+        );
+        scene.addOscillator(
+          { k: 10, m: 1, x0: 8, orientation: 'horizontal' },
+          period / 4
+        );
         renderOscillatorList();
         scene.reset();
         scene.render();
         onStatus?.('1/2相位演示：第2个振子延迟1/4周期启动');
       }
     },
-    { 
-      label: '1/4 相位 (45°)', 
+    {
+      label: '1/4 相位 (45°)',
       desc: '延迟 T/8',
       onClick: () => {
         while (scene.sim.oscillators.length > 0) {
           scene.removeOscillator(scene.sim.oscillators[0].id);
         }
-        scene.addOscillator({ k: 10, m: 1, x0: 8, orientation: 'horizontal' }, 0);
-        scene.addOscillator({ k: 10, m: 1, x0: 8, orientation: 'horizontal' }, period / 8);
+        scene.addOscillator(
+          { k: 10, m: 1, x0: 8, orientation: 'horizontal' },
+          0
+        );
+        scene.addOscillator(
+          { k: 10, m: 1, x0: 8, orientation: 'horizontal' },
+          period / 8
+        );
         renderOscillatorList();
         scene.reset();
         scene.render();
@@ -135,8 +160,8 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
       }
     }
   ];
-  
-  presetButtons.forEach(btn => {
+
+  presetButtons.forEach((btn) => {
     const button = document.createElement('button');
     // 精确复刻 V3 按钮样式（使用相同的 CSS 变量）
     button.style.cssText = `
@@ -171,7 +196,7 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
     });
     presetContainer.appendChild(button);
   });
-  
+
   presetCard.body.appendChild(presetContainer);
 
   // 组装控制面板
@@ -179,7 +204,10 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
   mount.appendChild(presetCard.element);
 
   // ===== 渲染单个振子控制行（紧凑布局 + 点击切换方向）=====
-  function renderOscillatorItem(osc: typeof scene.sim.oscillators[0], index: number): HTMLElement {
+  function renderOscillatorItem(
+    osc: (typeof scene.sim.oscillators)[0],
+    index: number
+  ): HTMLElement {
     const item = document.createElement('div');
     // 紧凑的布局：色块 | k滑块 m滑块 x0滑块 | 方向 | 删除
     item.style.cssText = `
@@ -200,39 +228,64 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
     colorDot.style.width = 'calc(8px * var(--ui-scale, 1))';
     colorDot.style.height = 'calc(8px * var(--ui-scale, 1))';
     colorDot.style.background = osc.color;
-    
+
     // 参数控制区（三个滑块紧凑排列）
     const paramsContainer = document.createElement('div');
     paramsContainer.className = 'flex-1 flex items-center gap-[2px] min-w-0';
-    
+
     // k 滑块
-    const kControl = createMiniSlider('k', osc.params.k, 1, 100, 1, '', (val) => {
-      scene.updateOscillator(osc.id, { k: val });
-      scene.resetOscillator(osc.id);
-      scene.render();
-    });
-    
+    const kControl = createMiniSlider(
+      'k',
+      osc.params.k,
+      1,
+      100,
+      1,
+      '',
+      (val) => {
+        scene.updateOscillator(osc.id, { k: val });
+        scene.resetOscillator(osc.id);
+        scene.render();
+      }
+    );
+
     // m 滑块
-    const mControl = createMiniSlider('m', osc.params.m, 0.1, 10, 0.1, '', (val) => {
-      scene.updateOscillator(osc.id, { m: val });
-      scene.resetOscillator(osc.id);
-      scene.render();
-    });
-    
+    const mControl = createMiniSlider(
+      'm',
+      osc.params.m,
+      0.1,
+      10,
+      0.1,
+      '',
+      (val) => {
+        scene.updateOscillator(osc.id, { m: val });
+        scene.resetOscillator(osc.id);
+        scene.render();
+      }
+    );
+
     // x0 滑块
-    const x0Control = createMiniSlider('x₀', osc.params.x0, -20, 20, 0.5, '', (val) => {
-      scene.updateOscillator(osc.id, { x0: val });
-      scene.resetOscillator(osc.id);
-      scene.render();
-    });
-    
+    const x0Control = createMiniSlider(
+      'x₀',
+      osc.params.x0,
+      -20,
+      20,
+      0.5,
+      '',
+      (val) => {
+        scene.updateOscillator(osc.id, { x0: val });
+        scene.resetOscillator(osc.id);
+        scene.render();
+      }
+    );
+
     paramsContainer.append(kControl, mControl, x0Control);
-    
+
     // 方向切换按钮（点击切换）
     const isHorizontal = osc.params.orientation === 'horizontal';
     const orientBtn = document.createElement('button');
     orientBtn.type = 'button';
-    orientBtn.className = 'font-bold rounded shrink-0 cursor-pointer transition-all';
+    orientBtn.className =
+      'font-bold rounded shrink-0 cursor-pointer transition-all';
     orientBtn.style.cssText = `
       width: calc(28px * var(--ui-scale, 1));
       height: calc(24px * var(--ui-scale, 1));
@@ -249,16 +302,18 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
     });
     orientBtn.textContent = isHorizontal ? '横' : '竖';
     orientBtn.title = '点击切换方向';
-    
+
     orientBtn.addEventListener('click', () => {
       const newOrientation = isHorizontal ? 'vertical' : 'horizontal';
       scene.updateOscillator(osc.id, { orientation: newOrientation });
       scene.resetOscillator(osc.id);
       scene.render();
       renderOscillatorList();
-      onStatus?.(`${index + 1}号${newOrientation === 'horizontal' ? '横向' : '竖向'}`);
+      onStatus?.(
+        `${index + 1}号${newOrientation === 'horizontal' ? '横向' : '竖向'}`
+      );
     });
-    
+
     // 删除按钮
     const delBtn = document.createElement('button');
     delBtn.type = 'button';
@@ -291,12 +346,12 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
       scene.render();
       onStatus?.(`删除振子 ${index + 1}`);
     });
-    
+
     item.append(colorDot, paramsContainer, orientBtn, delBtn);
-    
+
     return item;
   }
-  
+
   // 创建迷你滑块控制 - 响应式字体，高分屏适配
   function createMiniSlider(
     label: string,
@@ -310,7 +365,7 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
     const container = document.createElement('div');
     container.className = 'flex items-center flex-1 min-w-0';
     container.style.gap = '1px';
-    
+
     // 标签 - 响应式字体（k, m等增大20%）
     const labelSpan = document.createElement('span');
     labelSpan.className = 'font-black shrink-0';
@@ -320,7 +375,7 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
     labelSpan.style.textAlign = 'center';
     labelSpan.style.lineHeight = '1.1';
     labelSpan.textContent = label;
-    
+
     // 滑块 - 响应式高度
     const slider = document.createElement('input');
     slider.type = 'range';
@@ -332,7 +387,7 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
     slider.style.accentColor = 'var(--accent-primary)';
     slider.style.flex = '1 1 0';
     slider.style.minWidth = 'calc(20px * var(--ui-scale, 1))';
-    
+
     // 数值 - 响应式字体
     const valueSpan = document.createElement('span');
     valueSpan.className = 'font-bold shrink-0';
@@ -344,15 +399,15 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
     valueSpan.style.paddingLeft = '2px';
     valueSpan.style.lineHeight = '1.1';
     valueSpan.textContent = String(value);
-    
+
     slider.addEventListener('input', () => {
       valueSpan.textContent = slider.value;
     });
-    
+
     slider.addEventListener('change', () => {
       onChange(parseFloat(slider.value));
     });
-    
+
     container.append(labelSpan, slider, valueSpan);
     return container;
   }
@@ -360,7 +415,7 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
   // 渲染振子列表
   function renderOscillatorList(): void {
     listContainer.innerHTML = '';
-    
+
     if (scene.sim.oscillators.length === 0) {
       const emptyDiv = document.createElement('div');
       emptyDiv.style.fontSize = 'calc(15px * var(--ui-scale, 1))';
@@ -371,7 +426,7 @@ export function createSpringOscillatorControlsV4(options: SpringOscillatorContro
       listContainer.appendChild(emptyDiv);
       return;
     }
-    
+
     scene.sim.oscillators.forEach((osc, index) => {
       listContainer.appendChild(renderOscillatorItem(osc, index));
     });

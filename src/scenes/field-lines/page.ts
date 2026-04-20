@@ -1,11 +1,13 @@
-import { bootScenePage, type SceneInstance } from '../../app/scene-bootstrapper';
+import { bootScenePage } from '../../app/scene-bootstrapper';
 import type { ReadoutItem, Theme } from '../../app/layouts/types';
-import type { TeachingMode } from '../../app/teaching-standards';
-import { applyTouchInteractionMode } from '../../app/touch-interaction';
+import type { TeachingMode } from '../../platform/standards';
+import { applyTouchInteractionMode } from '../../platform/input/touch';
+import { createSceneListener } from '../../app/scene-listener';
 import { fieldLinesMeta } from './scene.meta';
 import { createFieldLinesScene } from './scene.entry';
-import { createFieldLinesControlsV4 } from './controls-v4';
-import type { FieldLinesSnapshot } from './scene.sim';
+import { fieldLinesControlsSchema } from './controls-schema';
+import { renderSchema } from '../../ui/components/SchemaRenderer';
+import type { FieldLinesSnapshot, FieldLinesScene } from './scene.sim';
 
 function sceneLabel(scene: FieldLinesSnapshot['params']['scene']): string {
   if (scene === 'single') return '单个电荷';
@@ -102,9 +104,7 @@ bootScenePage({
     canvas.addEventListener('pointercancel', onPointerUp);
 
     const originalDispose = scene.dispose.bind(scene);
-    let _listener: (() => void) | null = null;
-
-    const notify = () => { _listener?.(); };
+    const { subscribe, notify } = createSceneListener();
 
     return {
       ...scene,
@@ -114,13 +114,7 @@ bootScenePage({
       getReadoutItems() {
         return formatReadout(scene.getSnapshot(), currentMode, currentTheme);
       },
-      getTransportState() {
-        return { isPlaying: false, speed: 1 };
-      },
-      subscribe(listener: () => void) {
-        _listener = listener;
-        return () => { _listener = null; };
-      },
+      subscribe,
       setMode(m: 'normal' | 'presentation') {
         currentMode = m;
         scene.setMode(m);
@@ -138,42 +132,64 @@ bootScenePage({
         canvas.removeEventListener('pointercancel', onPointerUp);
         originalDispose();
       }
-    } as SceneInstance;
+    };
   },
   createControls: ({ mount, scene, onStatus }) => {
-    return createFieldLinesControlsV4({
+    const renderer = renderSchema({
       mount,
-      onSetScene: (nextScene: string) => {
-        (scene as unknown as { setScene(s: string): void }).setScene(nextScene);
-        scene.render();
+      schema: fieldLinesControlsSchema,
+      onChange: (key, value) => {
+        if (key === 'density') {
+          scene.setDensity(value as number);
+          scene.render();
+        } else if (key === 'q1' || key === 'q2') {
+          // Values are updated in the input; apply happens via button
+        }
       },
-      onSetDensity: (density) => {
-        (scene as unknown as { setDensity(v: number): void }).setDensity(density);
-        scene.render();
-      },
-      onSetCustomCharges: (q1, q2) => {
-        (scene as unknown as { setCustomCharges(q1: number, q2: number): void }).setCustomCharges(q1, q2);
-        scene.render();
-      },
-      onAddCharge: (q) => {
-        (scene as unknown as { addCharge(q: number): void }).addCharge(q);
-        scene.render();
-        onStatus?.(q > 0 ? '添加正电荷' : '添加负电荷');
-      },
-      onRemoveCharge: (index) => {
-        const snap = (scene as unknown as { getSnapshot(): FieldLinesSnapshot }).getSnapshot();
-        const charges = snap.charges;
-        const removeIndex = index === -1 ? charges.length - 1 : index;
-        (scene as unknown as { removeCharge(i: number): void }).removeCharge(removeIndex);
-        scene.render();
-        onStatus?.('移除电荷');
-      },
-      onReset: () => {
-        scene.reset?.();
-        onStatus?.('已重置场景');
-      },
-      onStatus
+      onAction: (key) => {
+        if (
+          key === 'single' ||
+          key === 'like' ||
+          key === 'unlike' ||
+          key === 'custom'
+        ) {
+          scene.setScene(key as FieldLinesScene);
+          scene.render();
+          onStatus?.(
+            sceneLabel(key as FieldLinesSnapshot['params']['scene']) + '电场'
+          );
+        } else if (key === 'add-positive') {
+          scene.addCharge(1);
+          scene.render();
+          onStatus?.('添加正电荷');
+        } else if (key === 'add-negative') {
+          scene.addCharge(-1);
+          scene.render();
+          onStatus?.('添加负电荷');
+        } else if (key === 'remove') {
+          const snap = scene.getSnapshot();
+          const removeIndex = snap.charges.length - 1;
+          scene.removeCharge(removeIndex);
+          scene.render();
+          onStatus?.('移除电荷');
+        } else if (key === 'apply-charges') {
+          const q1 = (renderer.getValue('q1') as number) ?? 1;
+          const q2 = (renderer.getValue('q2') as number) ?? -1;
+          scene.setCustomCharges(q1, q2);
+          scene.render();
+          onStatus?.(`设置电荷 Q₁=${q1}, Q₂=${q2}`);
+        } else if (key === 'reset') {
+          scene.reset?.();
+          onStatus?.('已重置场景');
+        }
+      }
     });
+
+    return {
+      dispose: () => {
+        mount.innerHTML = '';
+      }
+    };
   },
   preferredLayout: 'split-right',
   layoutConfig: {

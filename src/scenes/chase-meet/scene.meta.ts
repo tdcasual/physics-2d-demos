@@ -9,6 +9,11 @@ export const chaseMeetMeta: SceneMeta = {
   subConcepts: ['位移比较', '相遇条件'],
   keywords: ['力学', '追及相遇', '2D'],
   objective: '演示一维追及场景中位置与速度图像的联动关系',
+  description: '速度的较量，相对运动的魅力，v-t图像实战',
+  difficulty: 2,
+  icon: '🏃',
+  category: 'mechanics',
+  featured: true,
   defaultParams: {
     totalTime: 10,
     dt: 0.02,

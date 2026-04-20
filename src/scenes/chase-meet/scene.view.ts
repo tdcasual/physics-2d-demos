@@ -1,10 +1,16 @@
 import type { ChaseMeetSample, ChaseMeetSnapshot } from './scene.sim';
-import type { TeachingMode } from '../../app/teaching-standards';
-import { getTeachingStandards } from '../../app/teaching-standards';
-import type { TeachingTheme } from '../../app/teaching-standards';
-import { getResponsiveViewport, resolveResponsiveStageWidth } from '../../app/responsive-stage';
-import { applyTouchInteractionMode } from '../../app/touch-interaction';
-import { applyHiDpiCanvasMetrics, computeHiDpiCanvasMetrics } from '../../core/high-dpi-canvas';
+import type { TeachingMode } from '../../platform/standards';
+import { getTeachingStandards } from '../../platform/standards';
+import type { TeachingTheme } from '../../platform/standards';
+import {
+  getResponsiveViewport,
+  resolveResponsiveStageWidth
+} from '../../platform/viewport';
+import { applyTouchInteractionMode } from '../../platform/input/touch';
+import {
+  applyHiDpiCanvasMetrics,
+  computeHiDpiCanvasMetrics
+} from '../../core/high-dpi-canvas';
 
 export type CreateChaseMeetViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -163,7 +169,8 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
     const rect = canvas.getBoundingClientRect();
     const cssWidth = Math.max(480, Math.floor(rect.width || 1280));
     const cssHeight = Math.max(280, Math.floor(rect.height || 720));
-    const dpr = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1;
+    const dpr =
+      typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1;
     surface = computeHiDpiCanvasMetrics({
       cssWidth,
       cssHeight,
@@ -188,20 +195,40 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
     });
     dom.root.classList.toggle('is-narrow', viewport.isNarrow);
 
-    const stageHeight = Math.max(1, Math.floor(dom.root.getBoundingClientRect().height || viewport.height));
+    const stageHeight = Math.max(
+      1,
+      Math.floor(dom.root.getBoundingClientRect().height || viewport.height)
+    );
     const trackHeight = Math.min(
       isPresentation ? 460 : 380,
-      Math.max(isPresentation ? 220 : 170, stageHeight * (viewport.isNarrow ? 0.34 : 0.42))
+      Math.max(
+        isPresentation ? 220 : 170,
+        stageHeight * (viewport.isNarrow ? 0.34 : 0.42)
+      )
     );
     const graphHeight = Math.min(
       isPresentation ? 320 : 250,
-      Math.max(isPresentation ? 180 : 150, stageHeight * (viewport.isNarrow ? 0.22 : 0.34))
+      Math.max(
+        isPresentation ? 180 : 150,
+        stageHeight * (viewport.isNarrow ? 0.22 : 0.34)
+      )
     );
-    const graphWidth = viewport.isNarrow ? totalWidth : Math.max(180, totalWidth / 2 - 8);
+    const graphWidth = viewport.isNarrow
+      ? totalWidth
+      : Math.max(180, totalWidth / 2 - 8);
 
-    const dpr = Math.min(2, typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1);
+    const dpr = Math.min(
+      2,
+      typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1
+    );
     dom.dpr = dpr;
-    resizeCanvasWithDpr(dom.motionCanvas, dom.motionCtx, totalWidth, trackHeight, dpr);
+    resizeCanvasWithDpr(
+      dom.motionCanvas,
+      dom.motionCtx,
+      totalWidth,
+      trackHeight,
+      dpr
+    );
     resizeCanvasWithDpr(dom.xCanvas, dom.xCtx, graphWidth, graphHeight, dpr);
     resizeCanvasWithDpr(dom.vCanvas, dom.vCtx, graphWidth, graphHeight, dpr);
   }
@@ -230,7 +257,9 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
     motionCtx.fillRect(0, 0, cssW, cssH);
 
     const mid = cssH * 0.55;
-    motionCtx.strokeStyle = isLight ? 'rgba(15,23,42,0.35)' : 'rgba(255,255,255,0.22)';
+    motionCtx.strokeStyle = isLight
+      ? 'rgba(15,23,42,0.35)'
+      : 'rgba(255,255,255,0.22)';
     motionCtx.lineWidth = Math.max(majorStroke, visuals.majorStrokePx * 1.15);
     motionCtx.beginPath();
     motionCtx.moveTo(20, mid);
@@ -238,13 +267,16 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
     motionCtx.stroke();
 
     motionCtx.font = `${Math.max(visuals.secondaryFontPx, Math.round(12 * visualScale))}px system-ui`;
-    motionCtx.fillStyle = isLight ? 'rgba(30,41,59,0.8)' : 'rgba(226,232,240,0.8)';
+    motionCtx.fillStyle = isLight
+      ? 'rgba(30,41,59,0.8)'
+      : 'rgba(226,232,240,0.8)';
     motionCtx.textAlign = 'center';
     const steps = 8;
     for (let i = 0; i <= steps; i += 1) {
       const ratio = i / steps;
       const x = 20 + (cssW - 40) * ratio;
-      const worldX = next.bounds.minX + ratio * (next.bounds.maxX - next.bounds.minX);
+      const worldX =
+        next.bounds.minX + ratio * (next.bounds.maxX - next.bounds.minX);
       motionCtx.beginPath();
       motionCtx.moveTo(x, mid - 6 * visualScale);
       motionCtx.lineTo(x, mid + 6 * visualScale);
@@ -255,8 +287,16 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
     const current = nearestSample(next.samples, next.state.t);
     const padding = 40;
     const usable = cssW - 2 * padding;
-    const screenXA = padding + ((current.xA - next.bounds.minX) / (next.bounds.maxX - next.bounds.minX)) * usable;
-    const screenXB = padding + ((current.xB - next.bounds.minX) / (next.bounds.maxX - next.bounds.minX)) * usable;
+    const screenXA =
+      padding +
+      ((current.xA - next.bounds.minX) /
+        (next.bounds.maxX - next.bounds.minX)) *
+        usable;
+    const screenXB =
+      padding +
+      ((current.xB - next.bounds.minX) /
+        (next.bounds.maxX - next.bounds.minX)) *
+        usable;
 
     const drawObject = (x: number, color: string, label: string): void => {
       const r = Math.max(16 * visualScale, visuals.markerRadiusPx * 2.6);
@@ -272,7 +312,9 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
       motionCtx.fill();
 
       motionCtx.lineWidth = Math.max(majorStroke, visuals.majorStrokePx * 1.15);
-      motionCtx.strokeStyle = isLight ? 'rgba(15,23,42,0.9)' : 'rgba(248,250,252,0.95)';
+      motionCtx.strokeStyle = isLight
+        ? 'rgba(15,23,42,0.9)'
+        : 'rgba(248,250,252,0.95)';
       motionCtx.stroke();
 
       motionCtx.fillStyle = isLight ? '#111827' : '#f9fafb';
@@ -285,7 +327,9 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
     drawObject(screenXB, 'rgba(248,113,113,1)', 'B');
 
     motionCtx.setLineDash([6 * visualScale, 4 * visualScale]);
-    motionCtx.strokeStyle = isLight ? 'rgba(30,64,175,0.7)' : 'rgba(148,163,184,0.7)';
+    motionCtx.strokeStyle = isLight
+      ? 'rgba(30,64,175,0.7)'
+      : 'rgba(148,163,184,0.7)';
     motionCtx.lineWidth = Math.max(minorStroke, visuals.minorStrokePx * 1.1);
     motionCtx.beginPath();
     motionCtx.moveTo(screenXA, mid);
@@ -321,10 +365,18 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
     const paddingTop = 10 * visualScale;
     const paddingRight = 10 * visualScale;
 
-    const drawAxis = (target: CanvasRenderingContext2D, w: number, h: number, yLabel: string): void => {
+    const drawAxis = (
+      target: CanvasRenderingContext2D,
+      w: number,
+      h: number,
+      yLabel: string
+    ): void => {
       target.save();
       target.strokeStyle = 'rgba(148,163,184,0.8)';
-      target.lineWidth = Math.max(visuals.minorStrokePx * 1.15, 1.4 * visualScale);
+      target.lineWidth = Math.max(
+        visuals.minorStrokePx * 1.15,
+        1.4 * visualScale
+      );
       target.beginPath();
       target.moveTo(paddingLeft, paddingTop);
       target.lineTo(paddingLeft, h - paddingBottom);
@@ -364,10 +416,17 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
     const vToYpix = (vVal: number, h: number): number =>
       paddingTop + ((maxV - vVal) / vRange) * (h - paddingTop - paddingBottom);
 
-    const drawGrid = (target: CanvasRenderingContext2D, w: number, h: number): void => {
+    const drawGrid = (
+      target: CanvasRenderingContext2D,
+      w: number,
+      h: number
+    ): void => {
       target.save();
       target.strokeStyle = 'rgba(148,163,184,0.25)';
-      target.lineWidth = Math.max(visuals.minorStrokePx * 1.1, 1.2 * visualScale);
+      target.lineWidth = Math.max(
+        visuals.minorStrokePx * 1.1,
+        1.2 * visualScale
+      );
       target.setLineDash([4 * visualScale, 4 * visualScale]);
       target.font = `${Math.max(visuals.secondaryFontPx - 1, Math.round(11 * visualScale))}px system-ui`;
       target.fillStyle = 'rgba(148,163,184,0.9)';
@@ -400,8 +459,16 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
       maxTime: number
     ): void => {
       target.save();
-      target.lineWidth = Math.max(visuals.majorStrokePx * 1.2, 2.6 * visualScale);
-      const grad = target.createLinearGradient(paddingLeft, paddingTop, w - paddingRight, h - paddingBottom);
+      target.lineWidth = Math.max(
+        visuals.majorStrokePx * 1.2,
+        2.6 * visualScale
+      );
+      const grad = target.createLinearGradient(
+        paddingLeft,
+        paddingTop,
+        w - paddingRight,
+        h - paddingBottom
+      );
       grad.addColorStop(0, colorA);
       grad.addColorStop(1, colorB);
       target.strokeStyle = grad;
@@ -426,17 +493,56 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
       target.restore();
     };
 
-    drawPolyline(xCtx, xW, xH, 'xA', 'rgba(96,165,250,0.95)', 'rgba(59,130,246,0.5)', currentTime);
-    drawPolyline(xCtx, xW, xH, 'xB', 'rgba(248,113,113,0.95)', 'rgba(239,68,68,0.5)', currentTime);
-    drawPolyline(vCtx, vW, vH, 'vA', 'rgba(96,165,250,0.95)', 'rgba(59,130,246,0.5)', currentTime);
-    drawPolyline(vCtx, vW, vH, 'vB', 'rgba(248,113,113,0.95)', 'rgba(239,68,68,0.5)', currentTime);
+    drawPolyline(
+      xCtx,
+      xW,
+      xH,
+      'xA',
+      'rgba(96,165,250,0.95)',
+      'rgba(59,130,246,0.5)',
+      currentTime
+    );
+    drawPolyline(
+      xCtx,
+      xW,
+      xH,
+      'xB',
+      'rgba(248,113,113,0.95)',
+      'rgba(239,68,68,0.5)',
+      currentTime
+    );
+    drawPolyline(
+      vCtx,
+      vW,
+      vH,
+      'vA',
+      'rgba(96,165,250,0.95)',
+      'rgba(59,130,246,0.5)',
+      currentTime
+    );
+    drawPolyline(
+      vCtx,
+      vW,
+      vH,
+      'vB',
+      'rgba(248,113,113,0.95)',
+      'rgba(239,68,68,0.5)',
+      currentTime
+    );
 
-    const drawMarker = (target: CanvasRenderingContext2D, w: number, h: number): void => {
+    const drawMarker = (
+      target: CanvasRenderingContext2D,
+      w: number,
+      h: number
+    ): void => {
       const x = tToXpix(currentTime, w);
       target.save();
       target.strokeStyle = 'rgba(248,250,252,0.85)';
       target.setLineDash([6 * visualScale, 4 * visualScale]);
-      target.lineWidth = Math.max(visuals.minorStrokePx * 1.15, 1.9 * visualScale);
+      target.lineWidth = Math.max(
+        visuals.minorStrokePx * 1.15,
+        1.9 * visualScale
+      );
       target.beginPath();
       target.moveTo(x, paddingTop);
       target.lineTo(x, h - paddingBottom);

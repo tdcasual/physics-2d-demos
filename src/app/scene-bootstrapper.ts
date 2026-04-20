@@ -7,7 +7,7 @@
 import '../styles/teaching-shell.css';
 
 import { createSceneContainer } from './layouts/container';
-import { layoutRegistry, registerLayout } from './layouts/registry';
+
 import type {
   Scene,
   Theme,
@@ -15,9 +15,8 @@ import type {
   ReadoutItem,
   TransportState
 } from './layouts/types';
-import { SplitRightLayout } from './layouts/masters/split-right/split-right';
-import { MobileStackLayout } from './layouts/masters/mobile-stack/mobile-stack';
-import type { SceneMeta } from '../scenes/types';
+import { registerAllLayouts } from './layouts/auto-register';
+import type { SceneMeta } from '../platform/scene-contract';
 import { createSceneShell } from './scene-shell';
 import { createPageLifecycle } from './page-lifecycle';
 
@@ -41,7 +40,7 @@ export type SceneInstance = {
   [key: string]: unknown;
 };
 
-export type ScenePageOptions = {
+export type ScenePageOptions<TScene extends SceneInstance = SceneInstance> = {
   /** 场景元数据 */
   meta: SceneMeta;
   /** 首选布局 ID */
@@ -53,11 +52,11 @@ export type ScenePageOptions = {
     canvas: HTMLCanvasElement;
     theme: Theme;
     mode: 'normal' | 'presentation';
-  }) => SceneInstance;
+  }) => TScene;
   /** 创建控制面板（可选） */
   createControls?: (opts: {
     mount: HTMLElement;
-    scene: SceneInstance;
+    scene: TScene;
     onStatus?: (text: string) => void;
   }) => unknown;
   /** 格式化读数数据（可选，若场景提供 getReadoutItems 则不需要） */
@@ -68,11 +67,23 @@ export type ScenePageOptions = {
   maxSubSteps?: number;
 };
 
-class SceneAdapter implements Scene {
+/**
+ * 场景适配器
+ *
+ * 将场景实例适配为标准 Scene 接口，供 SceneContainer 使用。
+ * 核心职责：
+ * - 延迟控制面板创建（如果 renderControl 在 renderAnimation 之前被调用）
+ * - 桥接场景生命周期到容器（init / resize / theme / mode）
+ * - 聚合场景状态并通知布局刷新
+ * - 管理运输控制循环（play/pause/step/reset/speed）
+ */
+export class SceneAdapter<
+  TScene extends SceneInstance = SceneInstance
+> implements Scene {
   readonly id: string;
   readonly preferredLayout: string;
 
-  private scene: SceneInstance | null = null;
+  private scene: TScene | null = null;
   private controls: unknown = null;
   private lifecycle = createPageLifecycle();
   private transport: ReturnType<typeof createSceneShell> | null = null;
@@ -83,7 +94,7 @@ class SceneAdapter implements Scene {
   private _deferredControlContainer: HTMLElement | null = null;
 
   constructor(
-    private options: ScenePageOptions,
+    private options: ScenePageOptions<TScene>,
     private layoutUpdateStatus?: (text: string) => void
   ) {
     this.id = options.meta.id;
@@ -92,11 +103,12 @@ class SceneAdapter implements Scene {
 
   private _createControls(container: HTMLElement): void {
     if (!this.scene || !this.options.createControls) return;
-    this.controls = this.options.createControls({
-      mount: container,
-      scene: this.scene,
-      onStatus: (text) => this.layoutUpdateStatus?.(text)
-    }) || null;
+    this.controls =
+      this.options.createControls({
+        mount: container,
+        scene: this.scene,
+        onStatus: (text) => this.layoutUpdateStatus?.(text)
+      }) || null;
     if (this.controls) {
       this.lifecycle.onDispose(() => {
         const c = this.controls as { dispose?(): void } | null;
@@ -181,14 +193,17 @@ class SceneAdapter implements Scene {
 
   renderGraph(container: HTMLElement): void {
     // 如果场景支持 attachGraphCanvas，自动创建并附加图表 canvas
-    if (this.scene && typeof (this.scene as any).attachGraphCanvas === 'function') {
+    const scene = this.scene as {
+      attachGraphCanvas?(canvas: HTMLCanvasElement): void;
+    } | null;
+    if (scene && typeof scene.attachGraphCanvas === 'function') {
       const canvas = document.createElement('canvas');
       canvas.style.width = '100%';
       canvas.style.height = '100%';
       canvas.style.display = 'block';
       container.innerHTML = '';
       container.appendChild(canvas);
-      (this.scene as any).attachGraphCanvas(canvas);
+      scene.attachGraphCanvas(canvas);
     }
   }
 
@@ -244,7 +259,8 @@ class SceneAdapter implements Scene {
     }
     // 默认从 transport 推断
     const isPlaying = this.transport
-      ? (this.transport as any).transport?.isPlaying ?? false
+      ? ((this.transport as { transport?: { isPlaying?: boolean } }).transport
+          ?.isPlaying ?? false)
       : false;
     return { isPlaying, speed: 1 };
   }
@@ -301,44 +317,31 @@ class SceneAdapter implements Scene {
  * });
  * ```
  */
-export function bootScenePage(options: ScenePageOptions): void {
+export function bootScenePage<TScene extends SceneInstance>(
+  options: ScenePageOptions<TScene>
+): void {
   const mount = document.getElementById('app');
   if (!mount) {
     throw new Error('Missing #app container');
   }
 
-  // 注册布局（若未注册）
-  if (!layoutRegistry.has('split-right')) {
-    registerLayout('split-right', SplitRightLayout, {
-      name: '左右分栏',
-      description: '控制区在左，动画区在右',
-      tags: ['desktop'],
-      supportsMobile: false,
-      supportedSlots: ['header', 'control', 'animation', 'graph', 'readout']
-    });
-  }
-  if (!layoutRegistry.has('mobile-stack')) {
-    registerLayout('mobile-stack', MobileStackLayout, {
-      name: '移动端堆叠',
-      description: '适合手机的垂直堆叠布局',
-      tags: ['mobile'],
-      supportsMobile: true,
-      supportedSlots: ['header', 'control', 'animation', 'graph', 'readout']
-    });
-  }
+  // 统一注册所有布局（幂等）
+  registerAllLayouts();
 
   // 创建场景容器
   const container = createSceneContainer({
     mount,
     defaultLayout: options.preferredLayout ?? 'split-right',
     defaultTheme: 'light',
-    layoutConfig: options.layoutConfig
+    layoutConfig: {
+      ...options.layoutConfig,
+      title: options.meta.title
+    }
   });
 
   // 创建场景适配器
-  const adapter = new SceneAdapter(
-    options,
-    (text) => container.currentLayout?.updateStatus?.(text)
+  const adapter = new SceneAdapter<TScene>(options, (text) =>
+    container.currentLayout?.updateStatus?.(text)
   );
 
   // 设置场景

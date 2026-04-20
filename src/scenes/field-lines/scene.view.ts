@@ -1,7 +1,10 @@
-import type { TeachingMode } from '../../app/teaching-standards';
-import { getTeachingStandards } from '../../app/teaching-standards';
-import type { TeachingTheme } from '../../app/teaching-standards';
-import { applyHiDpiCanvasMetrics, computeHiDpiCanvasMetrics } from '../../core/high-dpi-canvas';
+import type { TeachingMode } from '../../platform/standards';
+import { getTeachingStandards } from '../../platform/standards';
+import type { TeachingTheme } from '../../platform/standards';
+import {
+  applyHiDpiCanvasMetrics,
+  computeHiDpiCanvasMetrics
+} from '../../core/high-dpi-canvas';
 import type { FieldLinesSnapshot } from './scene.sim';
 
 type PixelCharge = {
@@ -29,19 +32,26 @@ export type CreateFieldLinesViewOptions = {
 const VISUAL_CONFIG: Record<TeachingMode, VisualConfig> = {
   normal: {
     chargeRadius: 26,
-    chargeFontPx: Math.round(getTeachingStandards('normal').rightStage.primaryFontPx * 1.08),
+    chargeFontPx: Math.round(
+      getTeachingStandards('normal').rightStage.primaryFontPx * 1.08
+    ),
     arrowStrokeWidth: getTeachingStandards('normal').rightStage.majorStrokePx,
     arrowSize: 20,
     maxArrowLength: 34,
-    minArrowLength: getTeachingStandards('normal').rightStage.secondaryFontPx * 0.85
+    minArrowLength:
+      getTeachingStandards('normal').rightStage.secondaryFontPx * 0.85
   },
   presentation: {
     chargeRadius: 40,
-    chargeFontPx: Math.round(getTeachingStandards('presentation').rightStage.primaryFontPx * 1.08),
-    arrowStrokeWidth: getTeachingStandards('presentation').rightStage.majorStrokePx,
+    chargeFontPx: Math.round(
+      getTeachingStandards('presentation').rightStage.primaryFontPx * 1.08
+    ),
+    arrowStrokeWidth:
+      getTeachingStandards('presentation').rightStage.majorStrokePx,
     arrowSize: 30,
     maxArrowLength: 58,
-    minArrowLength: getTeachingStandards('presentation').rightStage.secondaryFontPx * 0.95
+    minArrowLength:
+      getTeachingStandards('presentation').rightStage.secondaryFontPx * 0.95
   }
 };
 
@@ -65,7 +75,9 @@ function getLineCountForCharge(q: number): number {
   return Math.min(maxLines, Math.max(minLines, lines));
 }
 
-export function createFieldLinesView(options: CreateFieldLinesViewOptions = {}) {
+export function createFieldLinesView(
+  options: CreateFieldLinesViewOptions = {}
+) {
   let canvas = options.canvas ?? null;
   let ctx = canvas?.getContext('2d') ?? null;
   let mode: TeachingMode = options.mode ?? 'normal';
@@ -82,7 +94,10 @@ export function createFieldLinesView(options: CreateFieldLinesViewOptions = {}) 
     const rect = canvas.getBoundingClientRect();
     const cssWidth = Math.max(200, Math.floor(rect.width || 1280));
     const cssHeight = Math.max(150, Math.floor(rect.height || 720));
-    const dpr = Math.min(2, typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1);
+    const dpr = Math.min(
+      2,
+      typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1
+    );
     surface = computeHiDpiCanvasMetrics({
       cssWidth,
       cssHeight,
@@ -101,13 +116,20 @@ export function createFieldLinesView(options: CreateFieldLinesViewOptions = {}) 
     }));
   }
 
-  function getElectricFieldAt(px: number, py: number, charges: PixelCharge[]): { Ex: number; Ey: number } {
+  function getElectricFieldAt(
+    px: number,
+    py: number,
+    charges: PixelCharge[]
+  ): { Ex: number; Ey: number } {
     let Ex = 0;
     let Ey = 0;
     for (const charge of charges) {
       const dx = px - charge.x;
       const dy = py - charge.y;
-      const rSquared = Math.max(charge.radius * charge.radius, dx * dx + dy * dy);
+      const rSquared = Math.max(
+        charge.radius * charge.radius,
+        dx * dx + dy * dy
+      );
       const r = Math.sqrt(rSquared);
       const magnitude = charge.q / rSquared;
       Ex += magnitude * (dx / r);
@@ -116,7 +138,12 @@ export function createFieldLinesView(options: CreateFieldLinesViewOptions = {}) 
     return { Ex, Ey };
   }
 
-  function drawArrow(x: number, y: number, angle: number, length: number): void {
+  function drawArrow(
+    x: number,
+    y: number,
+    angle: number,
+    length: number
+  ): void {
     if (!ctx) return;
     const visuals = VISUAL_CONFIG[mode];
     const colors = THEME_CONFIG[theme];
@@ -181,7 +208,12 @@ export function createFieldLinesView(options: CreateFieldLinesViewOptions = {}) 
         distanceSinceLastArrow = 0;
       }
 
-      if (px < -10 || px > surface.cssWidth + 10 || py < -10 || py > surface.cssHeight + 10) {
+      if (
+        px < -10 ||
+        px > surface.cssWidth + 10 ||
+        py < -10 ||
+        py > surface.cssHeight + 10
+      ) {
         break;
       }
 

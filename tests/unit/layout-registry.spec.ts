@@ -1,0 +1,236 @@
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
+import type { LayoutMasterConstructor } from '../../src/app/layouts/types';
+import {
+  layoutRegistry,
+  registerLayout,
+  getDefaultLayoutId,
+  saveLayoutPreference
+} from '../../src/app/layouts/registry';
+import { registerAllLayouts } from '../../src/app/layouts/auto-register';
+
+const FakeLayout = class {
+  constructor() {}
+} as unknown as LayoutMasterConstructor;
+
+const fakeMeta = {
+  name: 'Test',
+  description: 'Test layout',
+  tags: ['test'],
+  supportsMobile: false,
+  supportedSlots: ['header', 'control'] as Array<
+    'header' | 'control' | 'animation' | 'graph' | 'readout'
+  >
+};
+
+describe('layoutRegistry', () => {
+  beforeEach(() => {
+    layoutRegistry.clear();
+  });
+
+  it('should register and create layout', () => {
+    layoutRegistry.register('test-layout', FakeLayout, fakeMeta);
+    const container = document.createElement('div');
+    const layout = layoutRegistry.create('test-layout', container);
+    expect(layout).toBeInstanceOf(FakeLayout);
+  });
+
+  it('should throw for unknown layout', () => {
+    const container = document.createElement('div');
+    expect(() => layoutRegistry.create('unknown', container)).toThrow(
+      'Layout "unknown" not found'
+    );
+  });
+
+  it('should throw for invalid id', () => {
+    expect(() => layoutRegistry.register('', FakeLayout, fakeMeta)).toThrow(
+      'Layout id must be a non-empty string'
+    );
+  });
+
+  it('should throw for invalid constructor', () => {
+    expect(() =>
+      layoutRegistry.register(
+        'bad',
+        null as unknown as LayoutMasterConstructor,
+        fakeMeta
+      )
+    ).toThrow('Layout constructor for "bad" must be a valid class/function');
+  });
+
+  it('should throw for invalid metadata', () => {
+    expect(() =>
+      layoutRegistry.register(
+        'bad',
+        FakeLayout,
+        null as unknown as typeof fakeMeta
+      )
+    ).toThrow('Layout metadata for "bad" must be a valid object');
+  });
+
+  it('should throw for invalid container', () => {
+    layoutRegistry.register('test-layout', FakeLayout, fakeMeta);
+    expect(() =>
+      layoutRegistry.create('test-layout', null as unknown as HTMLElement)
+    ).toThrow('Layout container must be a valid HTMLElement');
+  });
+
+  it('should list registered layouts', () => {
+    layoutRegistry.register('a', FakeLayout, fakeMeta);
+    layoutRegistry.register('b', FakeLayout, fakeMeta);
+    expect(layoutRegistry.list()).toEqual(['a', 'b']);
+  });
+
+  it('should check if layout exists', () => {
+    layoutRegistry.register('exists', FakeLayout, fakeMeta);
+    expect(layoutRegistry.has('exists')).toBe(true);
+    expect(layoutRegistry.has('missing')).toBe(false);
+  });
+
+  it('should get metadata', () => {
+    layoutRegistry.register('meta-test', FakeLayout, {
+      ...fakeMeta,
+      name: 'Special'
+    });
+    const meta = layoutRegistry.getMetadata('meta-test');
+    expect(meta?.name).toBe('Special');
+    expect(meta?.id).toBe('meta-test');
+  });
+
+  it('should return undefined for missing metadata', () => {
+    expect(layoutRegistry.getMetadata('none')).toBeUndefined();
+  });
+
+  it('should get all metadata', () => {
+    layoutRegistry.register('m1', FakeLayout, fakeMeta);
+    layoutRegistry.register('m2', FakeLayout, fakeMeta);
+    expect(layoutRegistry.getAllMetadata()).toHaveLength(2);
+  });
+
+  it('should unregister layout', () => {
+    layoutRegistry.register('gone', FakeLayout, fakeMeta);
+    layoutRegistry.unregister('gone');
+    expect(layoutRegistry.has('gone')).toBe(false);
+  });
+
+  it('should warn on duplicate registration', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    layoutRegistry.register('dup', FakeLayout, fakeMeta);
+    layoutRegistry.register('dup', FakeLayout, fakeMeta);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('already registered')
+    );
+    warnSpy.mockRestore();
+  });
+
+  it('should find layouts by tag', () => {
+    layoutRegistry.register('tagged', FakeLayout, {
+      ...fakeMeta,
+      tags: ['special']
+    });
+    layoutRegistry.register('other', FakeLayout, {
+      ...fakeMeta,
+      tags: ['other']
+    });
+    expect(layoutRegistry.findByTag('special')).toHaveLength(1);
+    expect(layoutRegistry.findByTag('special')[0].id).toBe('tagged');
+  });
+
+  it('should clear all layouts', () => {
+    layoutRegistry.register('x', FakeLayout, fakeMeta);
+    layoutRegistry.clear();
+    expect(layoutRegistry.list()).toEqual([]);
+  });
+});
+
+describe('registerLayout helper', () => {
+  beforeEach(() => {
+    layoutRegistry.clear();
+  });
+
+  it('should delegate to layoutRegistry.register', () => {
+    registerLayout('helper', FakeLayout, fakeMeta);
+    expect(layoutRegistry.has('helper')).toBe(true);
+  });
+});
+
+describe('registerAllLayouts', () => {
+  beforeEach(() => {
+    layoutRegistry.clear();
+  });
+
+  afterEach(() => {
+    layoutRegistry.clear();
+  });
+
+  it('should register split-right and mobile-stack', () => {
+    registerAllLayouts();
+    expect(layoutRegistry.list()).toContain('split-right');
+    expect(layoutRegistry.list()).toContain('mobile-stack');
+  });
+
+  it('should be idempotent', () => {
+    registerAllLayouts();
+    const first = layoutRegistry.list().length;
+    registerAllLayouts();
+    expect(layoutRegistry.list().length).toBe(first);
+  });
+});
+
+describe('getDefaultLayoutId', () => {
+  beforeEach(() => {
+    layoutRegistry.clear();
+    try {
+      localStorage.removeItem('physics-demos-preferred-layout');
+    } catch {
+      /* ignore */
+    }
+  });
+
+  afterEach(() => {
+    layoutRegistry.clear();
+    try {
+      localStorage.removeItem('physics-demos-preferred-layout');
+    } catch {
+      /* ignore */
+    }
+  });
+
+  it('should return first available layout when no preference', () => {
+    layoutRegistry.register('first', FakeLayout, fakeMeta);
+    layoutRegistry.register('second', FakeLayout, fakeMeta);
+    expect(getDefaultLayoutId()).toBe('first');
+  });
+
+  it('should return null when registry is empty', () => {
+    expect(getDefaultLayoutId()).toBeNull();
+  });
+
+  it('should return user preference when valid', () => {
+    layoutRegistry.register('preferred', FakeLayout, fakeMeta);
+    saveLayoutPreference('preferred');
+    expect(getDefaultLayoutId()).toBe('preferred');
+  });
+
+  it('should ignore invalid preference', () => {
+    layoutRegistry.register('real', FakeLayout, fakeMeta);
+    saveLayoutPreference('nonexistent');
+    expect(getDefaultLayoutId()).toBe('real');
+  });
+});
+
+describe('saveLayoutPreference', () => {
+  afterEach(() => {
+    try {
+      localStorage.removeItem('physics-demos-preferred-layout');
+    } catch {
+      /* ignore */
+    }
+  });
+
+  it('should save to localStorage', () => {
+    saveLayoutPreference('my-layout');
+    expect(localStorage.getItem('physics-demos-preferred-layout')).toBe(
+      'my-layout'
+    );
+  });
+});

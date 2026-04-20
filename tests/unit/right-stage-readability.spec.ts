@@ -33,7 +33,10 @@ describe('right stage readability standards', () => {
     for (const file of modernSceneViewFiles) {
       const content = readFileSync(file, 'utf8');
       // 允许使用 getTeachingStandards 或统一 Canvas 框架作为共享标准
-      const usesStandards = content.includes('getTeachingStandards');
+      // 拆分后的 renderer 子目录也需要检查
+      const usesStandards =
+        content.includes('getTeachingStandards') ||
+        content.includes('../../platform/standards');
       const usesUnifiedCanvas = content.includes('unified-canvas');
       expect(usesStandards || usesUnifiedCanvas).toBe(true);
       expect(content.includes('RIGHT_STAGE_STANDARD')).toBe(false);

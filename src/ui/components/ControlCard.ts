@@ -25,6 +25,7 @@ export function createControlCard(
 ): ControlCardInstance {
   // 卡片容器 - 使用主题变量
   const card = document.createElement('div');
+  card.dataset.testid = 'control-card';
   card.style.cssText = `
     background: var(--bg-card);
     border: 1px solid var(--border-color);
@@ -33,11 +34,11 @@ export function createControlCard(
     transition: all 0.2s ease;
     box-shadow: var(--shadow-sm);
   `;
-  
+
   if (options?.className) {
     card.className = options.className;
   }
-  
+
   if (options?.defaultCollapsed) {
     card.classList.add('collapsed');
   }
@@ -68,7 +69,7 @@ export function createControlCard(
     flex-shrink: 0;
     white-space: nowrap;
   `;
-  
+
   if (options?.icon) {
     titleEl.innerHTML = `<span style="width:16px;height:16px;opacity:0.7">${options.icon}</span>${title}`;
   } else {
@@ -79,11 +80,12 @@ export function createControlCard(
 
   // 操作按钮容器
   const actionsContainer = document.createElement('div');
-  actionsContainer.style.cssText = 'display: flex; align-items: center; gap: 8px; flex-shrink: 0;';
+  actionsContainer.style.cssText =
+    'display: flex; align-items: center; gap: 8px; flex-shrink: 0;';
 
   // 插入自定义操作按钮 - 使用主题变量，高分屏适配
   if (options?.headerActions) {
-    options.headerActions.forEach(btn => {
+    options.headerActions.forEach((btn) => {
       btn.style.cssText = `
         padding: calc(5px * var(--ui-scale, 1)) calc(12px * var(--ui-scale, 1));
         font-size: calc(13px * var(--ui-scale, 1));
@@ -110,6 +112,7 @@ export function createControlCard(
   // 折叠按钮 - 高分屏适配
   const toggle = document.createElement('button');
   toggle.type = 'button';
+  toggle.dataset.testid = 'card-toggle';
   toggle.style.cssText = `
     width: calc(22px * var(--ui-scale, 1));
     height: calc(22px * var(--ui-scale, 1));
@@ -125,7 +128,10 @@ export function createControlCard(
     border-radius: 4px;
   `;
   toggle.innerHTML = options?.defaultCollapsed ? '▶' : '▼';
-  toggle.setAttribute('aria-label', options?.defaultCollapsed ? '展开' : '折叠');
+  toggle.setAttribute(
+    'aria-label',
+    options?.defaultCollapsed ? '展开' : '折叠'
+  );
   toggle.addEventListener('mouseenter', () => {
     toggle.style.background = 'var(--border-light)';
   });

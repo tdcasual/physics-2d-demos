@@ -1,13 +1,18 @@
 /**
  * 布局母版注册表
- * 
+ *
  * 管理所有可用的布局母版，提供注册和创建功能
- * 
+ *
  * @review-date 2026-04-02
  * @version 0.1.0
  */
 
-import type { LayoutMaster, LayoutMasterConstructor, LayoutConfig, SlotName } from './types';
+import type {
+  LayoutMaster,
+  LayoutMasterConstructor,
+  LayoutConfig,
+  SlotName
+} from './types';
 
 /** 布局元数据 */
 export interface LayoutMetadata {
@@ -21,13 +26,28 @@ export interface LayoutMetadata {
   supportsMobile: boolean;
   /** 支持的区域 */
   supportedSlots: SlotName[];
+
+  /** 视口约束：满足这些约束时布局才可被自动选中 */
+  constraints?: {
+    minWidth?: number;
+    maxWidth?: number;
+    minHeight?: number;
+    maxHeight?: number;
+    orientation?: 'portrait' | 'landscape' | 'any';
+  };
+
+  /** 自动选择优先级（数字越大越优先） */
+  priority?: number;
+
+  /** 是否允许自动选择（false 则只能用户手动切换或场景主动指定） */
+  autoSelectable?: boolean;
 }
 
 /** 布局注册表 */
 class LayoutRegistry {
   private layouts = new Map<string, LayoutMasterConstructor>();
   private metadata = new Map<string, LayoutMetadata>();
-  
+
   /**
    * 注册布局母版
    * @param id - 布局ID
@@ -35,7 +55,7 @@ class LayoutRegistry {
    * @param metadata - 布局元数据
    */
   register(
-    id: string, 
+    id: string,
     ctor: LayoutMasterConstructor,
     metadata: Omit<LayoutMetadata, 'id'>
   ): void {
@@ -43,22 +63,26 @@ class LayoutRegistry {
       throw new Error('Layout id must be a non-empty string');
     }
     if (!ctor || typeof ctor !== 'function') {
-      throw new Error(`Layout constructor for "${id}" must be a valid class/function`);
+      throw new Error(
+        `Layout constructor for "${id}" must be a valid class/function`
+      );
     }
     if (!metadata || typeof metadata !== 'object') {
       throw new Error(`Layout metadata for "${id}" must be a valid object`);
     }
-    
+
     if (this.layouts.has(id)) {
-      console.warn(`[LayoutRegistry] Layout "${id}" is already registered, overwriting`);
+      console.warn(
+        `[LayoutRegistry] Layout "${id}" is already registered, overwriting`
+      );
     }
-    
+
     this.layouts.set(id, ctor);
     this.metadata.set(id, { id, ...metadata });
-    
-    console.log(`[LayoutRegistry] Registered layout: "${id}"`);
+
+    // layout registered
   }
-  
+
   /**
    * 创建布局实例
    * @param id - 布局ID
@@ -66,27 +90,31 @@ class LayoutRegistry {
    * @param config - 布局配置
    * @returns 布局实例
    */
-  create(id: string, container: HTMLElement, config?: LayoutConfig): LayoutMaster {
+  create(
+    id: string,
+    container: HTMLElement,
+    config?: LayoutConfig
+  ): LayoutMaster {
     if (!id || typeof id !== 'string') {
       throw new Error('Layout id must be a non-empty string');
     }
     if (!container || !(container instanceof HTMLElement)) {
       throw new Error('Layout container must be a valid HTMLElement');
     }
-    
+
     const LayoutClass = this.layouts.get(id);
-    
+
     if (!LayoutClass || typeof LayoutClass !== 'function') {
       const available = this.list().join(', ');
       throw new Error(
         `Layout "${id}" not found. ` +
-        `Available layouts: ${available || 'none'}`
+          `Available layouts: ${available || 'none'}`
       );
     }
-    
+
     return new LayoutClass(container, config);
   }
-  
+
   /**
    * 获取布局元数据
    * @param id - 布局ID
@@ -94,21 +122,21 @@ class LayoutRegistry {
   getMetadata(id: string): LayoutMetadata | undefined {
     return this.metadata.get(id);
   }
-  
+
   /**
    * 获取所有布局元数据
    */
   getAllMetadata(): LayoutMetadata[] {
     return Array.from(this.metadata.values());
   }
-  
+
   /**
    * 列出所有布局ID
    */
   list(): string[] {
     return Array.from(this.layouts.keys());
   }
-  
+
   /**
    * 检查布局是否存在
    * @param id - 布局ID
@@ -116,7 +144,7 @@ class LayoutRegistry {
   has(id: string): boolean {
     return this.layouts.has(id);
   }
-  
+
   /**
    * 注销布局
    * @param id - 布局ID
@@ -124,17 +152,17 @@ class LayoutRegistry {
   unregister(id: string): void {
     this.layouts.delete(id);
     this.metadata.delete(id);
-    console.log(`[LayoutRegistry] Unregistered layout: "${id}"`);
+    // layout unregistered
   }
-  
+
   /**
    * 根据标签筛选布局
    * @param tag - 标签
    */
   findByTag(tag: string): LayoutMetadata[] {
-    return this.getAllMetadata().filter(meta => meta.tags.includes(tag));
+    return this.getAllMetadata().filter((meta) => meta.tags.includes(tag));
   }
-  
+
   /**
    * 清空所有注册
    */
@@ -170,7 +198,7 @@ export function getDefaultLayoutId(): string | null {
   } catch {
     // localStorage 不可用
   }
-  
+
   // 返回第一个可用布局，若注册表为空则返回 null
   const available = layoutRegistry.list();
   return available[0] || null;

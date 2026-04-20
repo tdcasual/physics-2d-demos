@@ -1,7 +1,10 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createProjectileScene } from './scene.entry';
-import { createProjectileControlsV4 } from './controls-v4';
 import { projectileMeta } from './scene.meta';
+import { projectileControlsSchema } from './controls-schema';
+import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { createParamMapper, createPresetApplier } from '../page-utils';
+import type { ProjectileParams } from './scene.sim';
 
 bootScenePage({
   meta: projectileMeta,
@@ -17,47 +20,58 @@ bootScenePage({
     readoutLabel: '数据区'
   },
   createScene: ({ canvas, theme, mode }) => {
-    const scene = createProjectileScene({ canvas, theme, mode });
-    return scene;
+    return createProjectileScene({ canvas, theme, mode });
   },
   createControls: ({ mount, scene }) => {
-    const controls = createProjectileControlsV4({
-      mount,
-      onParamChange: (key, value) => {
-        const paramMap: Record<string, string> = {
-          v0: 'speed',
-          theta: 'angleDeg',
-          h0: 'initialHeight',
-          g: 'gravity',
-          c: 'drag'
-        };
-        const paramKey = paramMap[key];
-        if (paramKey) {
-          (scene as any).setParams({ [paramKey]: value });
-        }
+    const applyParam = createParamMapper<ProjectileParams>(
+      {
+        v0: 'speed',
+        theta: 'angleDeg',
+        h0: 'initialHeight',
+        g: 'gravity',
+        c: 'drag'
       },
-      onPresetSelect: (preset) => {
-        let params: Partial<Record<string, number>> = {};
-        switch (preset) {
-          case 'earth':
-            params = { gravity: 9.8, windAccel: 0 };
-            break;
-          case 'moon':
-            params = { gravity: 1.62, windAccel: 0 };
-            break;
-          case 'mars':
-            params = { gravity: 3.71, windAccel: 0 };
-            break;
-          case 'wind':
-            params = { windAccel: 2.0 };
-            break;
-        }
-        (scene as any).setParams(params);
+      (params) => scene.setParams(params)
+    );
+
+    const applyPreset = createPresetApplier<ProjectileParams>(
+      {
+        earth: { gravity: 9.8, windAccel: 0 },
+        moon: { gravity: 1.62, windAccel: 0 },
+        mars: { gravity: 3.71, windAccel: 0 },
+        wind: { windAccel: 2.0 }
+      },
+      (params) => scene.setParams(params),
+      () => {
         scene.reset?.();
         scene.render();
-        controls.updatePreset(preset);
+      }
+    );
+
+    const renderer = renderSchema({
+      mount,
+      schema: projectileControlsSchema,
+      onChange: (key, value) => {
+        if (key === 'preset') {
+          if (applyPreset(String(value))) {
+            renderer.setActive(key, String(value));
+          }
+        } else {
+          applyParam(key, value);
+        }
+      },
+      onAction: () => {
+        // No action buttons in this schema
       }
     });
-    return controls;
+
+    return {
+      setParam(key: string, value: number) {
+        renderer.setValue(key, value);
+      },
+      updatePreset(preset: string) {
+        renderer.setActive('preset', preset);
+      }
+    };
   }
 });

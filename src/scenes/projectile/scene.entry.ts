@@ -29,16 +29,28 @@ export type CreateProjectileSceneOptions = {
   onReadout?: (state: ProjectileState) => void;
 };
 
-function formatReadout(state: ProjectileState, params: ResolvedProjectileParams) {
+function formatReadout(
+  state: ProjectileState,
+  params: ResolvedProjectileParams
+) {
   return [
     { label: '时间 t', value: `${state.t.toFixed(2)} s` },
     { label: '位移 x', value: `${state.x.toFixed(2)} m` },
     { label: '高度 y', value: `${state.y.toFixed(2)} m` },
     { label: '速度 vx', value: `${state.vx.toFixed(2)} m/s` },
     { label: '速度 vy', value: `${state.vy.toFixed(2)} m/s` },
-    { label: '参数 v0/θ', value: `${params.speed.toFixed(1)} / ${params.angleDeg.toFixed(1)}` },
-    { label: '参数 g/h0', value: `${params.gravity.toFixed(2)} / ${params.initialHeight.toFixed(1)}` },
-    { label: '风/阻力', value: `${params.windAccel.toFixed(1)} / ${params.drag.toFixed(3)}` }
+    {
+      label: '参数 v0/θ',
+      value: `${params.speed.toFixed(1)} / ${params.angleDeg.toFixed(1)}`
+    },
+    {
+      label: '参数 g/h0',
+      value: `${params.gravity.toFixed(2)} / ${params.initialHeight.toFixed(1)}`
+    },
+    {
+      label: '风/阻力',
+      value: `${params.windAccel.toFixed(1)} / ${params.drag.toFixed(3)}`
+    }
   ];
 }
 
@@ -51,7 +63,11 @@ export function createProjectileScene(
   getState(): ProjectileState;
   getParams(): ResolvedProjectileParams;
   setParams(next: Partial<ProjectileParams>): ResolvedProjectileParams;
-  getReadoutItems(): Array<{ label: string; value: string | number; layout?: 'half' | 'full' }>;
+  getReadoutItems(): Array<{
+    label: string;
+    value: string | number;
+    layout?: 'half' | 'full';
+  }>;
   subscribe(listener: () => void): () => void;
 } {
   const sim = createProjectileSim(defaultParams);
@@ -60,12 +76,16 @@ export function createProjectileScene(
     theme: options.theme ?? 'dark',
     mode: options.mode ?? 'normal'
   });
-  
+
   const listeners: (() => void)[] = [];
-  
+
   function notify(): void {
     listeners.forEach((fn) => {
-      try { fn(); } catch (e) { /* ignore */ }
+      try {
+        fn();
+      } catch {
+        /* ignore */
+      }
     });
   }
 
@@ -112,7 +132,11 @@ export function createProjectileScene(
       notify();
       return params;
     },
-    getReadoutItems(): Array<{ label: string; value: string | number; layout?: 'half' | 'full' }> {
+    getReadoutItems(): Array<{
+      label: string;
+      value: string | number;
+      layout?: 'half' | 'full';
+    }> {
       return formatReadout(sim.getState(), sim.getParams());
     },
     subscribe(listener: () => void): () => void {

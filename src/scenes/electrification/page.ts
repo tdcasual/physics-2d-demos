@@ -1,13 +1,25 @@
-import { bootScenePage, type SceneInstance } from '../../app/scene-bootstrapper';
+import { bootScenePage } from '../../app/scene-bootstrapper';
 import type { ReadoutItem } from '../../app/layouts/types';
 import { electrificationMeta } from './scene.meta';
 import { createElectrificationScene } from './scene.entry';
-import { createElectrificationControlsV4 } from './controls-v4';
-import type { ElectrificationSnapshot } from './scene.sim';
+import { electrificationControlsSchema } from './controls-schema';
+import { renderSchema } from '../../ui/components/SchemaRenderer';
+import type {
+  ElectrificationSnapshot,
+  ElectrificationScene
+} from './scene.sim';
 
 function formatReadout(snapshot: ElectrificationSnapshot): ReadoutItem[] {
   return [
-    { label: '场景', value: snapshot.state.scene === 'friction' ? '摩擦起电' : snapshot.state.scene === 'induction' ? '感应起电' : '接触起电' },
+    {
+      label: '场景',
+      value:
+        snapshot.state.scene === 'friction'
+          ? '摩擦起电'
+          : snapshot.state.scene === 'induction'
+            ? '感应起电'
+            : '接触起电'
+    },
     { label: '下一步动作', value: snapshot.state.nextActionLabel },
     { label: '说明', value: snapshot.state.explanation }
   ];
@@ -22,41 +34,45 @@ bootScenePage({
       theme,
       onReadout: () => {}
     });
-    let _listener: (() => void) | null = null;
     return {
       ...scene,
       getState() {
         return scene.getSnapshot();
-      },
-      getTransportState() {
-        return { isPlaying: false, speed: 1 };
-      },
-      subscribe(listener: () => void) {
-        _listener = listener;
-        return () => { _listener = null; };
       }
-    } as SceneInstance;
+    };
   },
   createControls: ({ mount, scene, onStatus }) => {
-    const controls = createElectrificationControlsV4({
+    const renderer = renderSchema({
       mount,
-      initialScene: 'friction',
-      onSetScene: (nextScene: string) => {
-        (scene as unknown as { setScene(s: string): void }).setScene(nextScene);
-        scene.render();
-        (controls as unknown as { setActiveScene(s: string): void }).setActiveScene(nextScene);
+      schema: electrificationControlsSchema,
+      onChange: (key, value) => {
+        if (key === 'scene') {
+          scene.setScene(value as ElectrificationScene);
+          scene.render();
+          renderer.setActive(key, String(value));
+        }
       },
-      onRunStep: () => {
-        (scene as unknown as { runSceneAction(): void }).runSceneAction();
-        scene.render();
-      },
-      onReset: () => {
-        scene.reset?.();
-      },
-      onStatus
-    }) as unknown as { setActiveScene(s: string): void; dispose(): void };
+      onAction: (key) => {
+        if (key === 'step') {
+          scene.runSceneAction();
+          scene.render();
+          onStatus?.('执行下一步');
+        } else if (key === 'reset') {
+          scene.reset?.();
+          renderer.setActive('scene', 'friction');
+          onStatus?.('已重置');
+        }
+      }
+    });
 
-    return controls;
+    return {
+      setActiveScene(scene: string) {
+        renderer.setActive('scene', scene);
+      },
+      dispose: () => {
+        mount.innerHTML = '';
+      }
+    };
   },
   formatReadout: (state) => formatReadout(state as ElectrificationSnapshot),
   preferredLayout: 'split-right',

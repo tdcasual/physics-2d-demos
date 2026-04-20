@@ -1,5 +1,5 @@
-import type { TeachingMode } from '../../app/teaching-standards';
-import type { TeachingTheme } from '../../app/teaching-standards';
+import type { TeachingMode } from '../../platform/standards';
+import type { TeachingTheme } from '../../platform/standards';
 import type { SceneLifecycle } from '../types';
 import { createEmfAnalogySim, type EmfAnalogySnapshot } from './scene.sim';
 import { createEmfAnalogyView } from './scene.view';
@@ -12,7 +12,9 @@ export type CreateEmfAnalogySceneOptions = {
   onReadout?: (snapshot: EmfAnalogySnapshot) => void;
 };
 
-export function createEmfAnalogyScene(options: CreateEmfAnalogySceneOptions = {}): SceneLifecycle & {
+export function createEmfAnalogyScene(
+  options: CreateEmfAnalogySceneOptions = {}
+): SceneLifecycle & {
   resize(): void;
   setMode(mode: TeachingMode): void;
   setTheme(theme: TeachingTheme): void;
@@ -77,10 +79,10 @@ export function createEmfAnalogyScene(options: CreateEmfAnalogySceneOptions = {}
       return sim.getSnapshot();
     },
     start(): void {
-      (view as any).start?.();
+      (view as { start?(): void }).start?.();
     },
     stop(): void {
-      (view as any).stop?.();
+      (view as { stop?(): void }).stop?.();
     },
     dispose(): void {
       view.dispose();

@@ -1,5 +1,5 @@
-import type { TeachingMode } from '../../app/teaching-standards';
-import type { TeachingTheme } from '../../app/teaching-standards';
+import type { TeachingMode } from '../../platform/standards';
+import type { TeachingTheme } from '../../platform/standards';
 import type { SceneLifecycle } from '../types';
 import {
   createChaseMeetSim,
@@ -27,7 +27,9 @@ export type CreateChaseMeetSceneOptions = {
   onReadout?: (snapshot: ChaseMeetSnapshot) => void;
 };
 
-export function createChaseMeetScene(options: CreateChaseMeetSceneOptions = {}): SceneLifecycle & {
+export function createChaseMeetScene(
+  options: CreateChaseMeetSceneOptions = {}
+): SceneLifecycle & {
   resize(): void;
   setMode(mode: TeachingMode): void;
   setTheme(theme: TeachingTheme): void;

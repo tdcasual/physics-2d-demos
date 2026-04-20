@@ -1,15 +1,4 @@
-import { describe, expect, it, beforeAll } from 'vitest';
-
-beforeAll(() => {
-  (globalThis as any).window = {
-    devicePixelRatio: 1,
-    matchMedia: () => ({ matches: false, addEventListener: () => {}, removeEventListener: () => {} }),
-    requestAnimationFrame: (fn: FrameRequestCallback) => setTimeout(fn, 16) as unknown as number,
-    cancelAnimationFrame: (id: number) => clearTimeout(id),
-    addEventListener: () => {},
-    removeEventListener: () => {},
-  };
-});
+import { describe, expect, it } from 'vitest';
 import { createChaseMeetScene } from '../../src/scenes/chase-meet/scene.entry';
 import { createElectrificationScene } from '../../src/scenes/electrification/scene.entry';
 import { createEmfAnalogyScene } from '../../src/scenes/emf-analogy/scene.entry';
@@ -38,7 +27,7 @@ describe('scene contract', () => {
       strokeRect: () => {},
       closePath: () => {},
       clip: () => {},
-      measureText: () => ({ width: 0 }),
+      measureText: () => ({ width: 0 })
     } as unknown as CanvasRenderingContext2D;
     const mockCanvas = {
       getContext: () => mockCtx,
@@ -47,7 +36,7 @@ describe('scene contract', () => {
       style: {},
       getBoundingClientRect: () => ({ width: 800, height: 600 }),
       addEventListener: () => {},
-      removeEventListener: () => {},
+      removeEventListener: () => {}
     } as unknown as HTMLCanvasElement;
     const projectileScene = createProjectileScene({ canvas: mockCanvas });
     expect(typeof projectileScene.init).toBe('function');

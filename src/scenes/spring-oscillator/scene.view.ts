@@ -1,10 +1,7 @@
 import type { SpringOscillatorSim, Oscillator } from './scene.sim';
-import type { TeachingMode } from '../../app/teaching-standards';
-import type { TeachingTheme } from '../../app/teaching-standards';
-import {
-  setCanvasSize,
-  fitCanvasToContainer
-} from '../../core/unified-canvas';
+import type { TeachingMode } from '../../platform/standards';
+import type { TeachingTheme } from '../../platform/standards';
+import { setCanvasSize } from '../../core/unified-canvas';
 import { Colors, alpha } from '../../core/colors';
 import {
   createChartCanvas,
@@ -25,17 +22,6 @@ export type SpringOscillatorViewOptions = {
 // x-t 图表历史数据
 const HISTORY_DURATION = 10; // 显示最近 10 秒
 
-// 移动设备检测
-function isMobileDevice(): boolean {
-  return window.innerWidth < 768 || window.matchMedia('(pointer: coarse)').matches;
-}
-
-// 平板设备检测
-function isTabletDevice(): boolean {
-  const width = window.innerWidth;
-  return width >= 768 && width < 1024;
-}
-
 // 获取设备类型
 function getDeviceType(): 'mobile' | 'tablet' | 'desktop' {
   const width = window.innerWidth;
@@ -48,7 +34,9 @@ function getDeviceType(): 'mobile' | 'tablet' | 'desktop' {
 let globalFrameCount = 0;
 
 // 性能优化：是否记录当前帧
-function shouldRecordFrame(deviceType: 'mobile' | 'tablet' | 'desktop'): boolean {
+function shouldRecordFrame(
+  deviceType: 'mobile' | 'tablet' | 'desktop'
+): boolean {
   globalFrameCount++;
   if (deviceType === 'mobile') {
     // 移动端：每2帧记录一次（30fps效果）
@@ -59,39 +47,46 @@ function shouldRecordFrame(deviceType: 'mobile' | 'tablet' | 'desktop'): boolean
 }
 
 // 响应式尺寸配置
-function getResponsiveSizes(deviceType: 'mobile' | 'tablet' | 'desktop', cellWidth: number) {
+function getResponsiveSizes(
+  deviceType: 'mobile' | 'tablet' | 'desktop',
+  cellWidth: number
+) {
   const isMobile = deviceType === 'mobile';
   const isTablet = deviceType === 'tablet';
-  
+
   // 弹簧最大长度：移动端更短，避免溢出
-  const maxSpringLength = isMobile ? Math.min(cellWidth * 0.4, 80) : 
-                          isTablet ? Math.min(cellWidth * 0.5, 120) : 
-                          Math.min(cellWidth * 0.6, 180);
-  
+  const maxSpringLength = isMobile
+    ? Math.min(cellWidth * 0.4, 80)
+    : isTablet
+      ? Math.min(cellWidth * 0.5, 120)
+      : Math.min(cellWidth * 0.6, 180);
+
   // 位移缩放：移动端减小，避免小球跑出单元格
   const displacementScale = isMobile ? 2 : isTablet ? 3 : 4;
-  
+
   // 小球半径：移动端更小
   const ballRadius = isMobile ? 14 : isTablet ? 18 : 22;
-  
+
   // 字体大小：移动端更大（更易读）
   const labelFontSize = isMobile ? 14 : 12;
   const paramFontSize = isMobile ? 12 : 9;
-  
+
   // 点击区域最小半径（触摸目标）
   const minClickRadius = isMobile ? 30 : 22;
-  
+
   return {
     maxSpringLength,
     displacementScale,
     ballRadius,
     labelFontSize,
     paramFontSize,
-    minClickRadius,
+    minClickRadius
   };
 }
 
-export function createSpringOscillatorView(options: SpringOscillatorViewOptions = {}) {
+export function createSpringOscillatorView(
+  options: SpringOscillatorViewOptions = {}
+) {
   let graphCanvas = options.graphCanvas ?? null;
   let stageCanvas = options.stageCanvas ?? null;
   let graphCtx = graphCanvas?.getContext('2d') ?? null;
@@ -159,14 +154,14 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
     // 获取父容器（.stage-slot）的尺寸
     const parent = stageCanvas.parentElement;
     if (!parent) return;
-    
+
     // 强制浏览器重排，确保获取最新的尺寸
     parent.getBoundingClientRect();
-    
+
     const rect = parent.getBoundingClientRect();
     const newWidth = Math.max(320, Math.floor(rect.width || 800));
     const newHeight = Math.max(200, Math.floor(rect.height || 600));
-    
+
     // 只有尺寸变化时才重新设置 canvas
     if (newWidth !== stageWidth || newHeight !== stageHeight) {
       stageWidth = newWidth;
@@ -174,10 +169,6 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
       // 不设置 CSS 尺寸，只更新内部像素尺寸
       setCanvasSize(stageCanvas, stageWidth, stageHeight, false);
     }
-  }
-
-  function getThemeColor(light: string, dark: string): string {
-    return theme === 'light' ? light : dark;
   }
 
   // 绘制 x-t 图表
@@ -194,13 +185,13 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
 
     // 组装系列数据
     const series: LineChartSeries[] = [];
-    sim.oscillators.forEach(osc => {
+    sim.oscillators.forEach((osc) => {
       const hist = history.get(osc.id);
       if (!hist || hist.length < 2) return;
       series.push({
         id: osc.id,
         color: osc.color,
-        data: hist.map(p => ({ x: p.t, y: p.x }))
+        data: hist.map((p) => ({ x: p.t, y: p.x }))
       });
     });
 
@@ -234,10 +225,10 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
     };
     const chartW = Math.max(50, cssWidth - margin.left - margin.right);
     const chartH = Math.max(30, cssHeight - margin.top - margin.bottom);
-    const xScale = chartW / ((tEnd - tStart) || 1);
+    const xScale = chartW / (tEnd - tStart || 1);
     const yScale = chartH / 40; // [-20, 20] => 40
 
-    series.forEach(s => {
+    series.forEach((s) => {
       const last = s.data[s.data.length - 1];
       const px = margin.left + (last.x - tStart) * xScale;
       const py = margin.top + chartH / 2 - last.y * yScale;
@@ -308,18 +299,18 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
   // 计算布局 - 根据设备类型优化
   function calculateGridLayout(total: number): { cols: number; rows: number } {
     const deviceType = getDeviceType();
-    
+
     // 移动端：强制单列，垂直排列
     if (deviceType === 'mobile') {
       return { cols: 1, rows: total };
     }
-    
+
     // 平板：最多2列
     if (deviceType === 'tablet') {
       if (total <= 2) return { cols: 1, rows: total };
       return { cols: 2, rows: Math.ceil(total / 2) };
     }
-    
+
     // 桌面端：原有逻辑
     if (total <= 3) return { cols: 1, rows: total };
     if (total <= 6) return { cols: 2, rows: Math.ceil(total / 2) };
@@ -346,9 +337,10 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
     const sizes = getResponsiveSizes(deviceType, isHorizontal ? cellW : cellH);
 
     // 紧凑的单元格边距（移动端增加边距）
-    const margin = deviceType === 'mobile' 
-      ? { top: 28, bottom: 12, left: 12, right: 12 }
-      : { top: 22, bottom: 8, left: 8, right: 8 };
+    const margin =
+      deviceType === 'mobile'
+        ? { top: 28, bottom: 12, left: 12, right: 12 }
+        : { top: 22, bottom: 8, left: 8, right: 8 };
     const drawW = cellW - margin.left - margin.right;
     const drawH = cellH - margin.top - margin.bottom;
 
@@ -357,16 +349,27 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
     ctx.font = `bold ${sizes.labelFontSize}px "Noto Sans SC", sans-serif`;
     ctx.textAlign = 'left';
     const statusText = osc.isPlaying ? '▶' : '⏸';
-    ctx.fillText(`${index + 1}.${statusText}`, cellX + margin.left, cellY + (deviceType === 'mobile' ? 20 : 16));
+    ctx.fillText(
+      `${index + 1}.${statusText}`,
+      cellX + margin.left,
+      cellY + (deviceType === 'mobile' ? 20 : 16)
+    );
 
     // 参数（右上角）
     ctx.fillStyle = isDark ? Colors.gray : Colors.gray;
     ctx.font = `${sizes.paramFontSize}px "Noto Sans SC", sans-serif`;
     ctx.textAlign = 'right';
-    ctx.fillText(`k=${osc.params.k} m=${osc.params.m}`, cellX + cellW - margin.right, cellY + (deviceType === 'mobile' ? 20 : 16));
+    ctx.fillText(
+      `k=${osc.params.k} m=${osc.params.m}`,
+      cellX + cellW - margin.right,
+      cellY + (deviceType === 'mobile' ? 20 : 16)
+    );
 
     // 根据方向调整绘制参数（响应式尺寸）
-    const springLength = Math.min(isHorizontal ? drawW * 0.5 : drawH * 0.5, sizes.maxSpringLength);
+    const springLength = Math.min(
+      isHorizontal ? drawW * 0.5 : drawH * 0.5,
+      sizes.maxSpringLength
+    );
     const scale = sizes.displacementScale;
     const displacement = osc.state.x * scale;
 
@@ -378,7 +381,9 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
       const baseY = centerY;
 
       // 平衡位置虚线（短虚线）
-      ctx.strokeStyle = isDark ? alpha(Colors.gray, 0.25) : alpha(Colors.grayLight, 0.4);
+      ctx.strokeStyle = isDark
+        ? alpha(Colors.gray, 0.25)
+        : alpha(Colors.grayLight, 0.4);
       ctx.setLineDash([3, 3]);
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -405,7 +410,16 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
         // 移动端减少线圈数和宽度
         const coils = deviceType === 'mobile' ? 8 : 12;
         const coilWidth = deviceType === 'mobile' ? 12 : 18;
-        drawSpring(ctx, fixedX, baseY, springEndX, baseY, coils, coilWidth, osc.color);
+        drawSpring(
+          ctx,
+          fixedX,
+          baseY,
+          springEndX,
+          baseY,
+          coils,
+          coilWidth,
+          osc.color
+        );
       }
 
       // 小球（响应式尺寸）
@@ -418,7 +432,13 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
       // 光泽
       ctx.fillStyle = 'rgba(255,255,255,0.3)';
       ctx.beginPath();
-      ctx.arc(massX - ballRadius * 0.25, baseY - ballRadius * 0.25, ballRadius * 0.25, 0, Math.PI * 2);
+      ctx.arc(
+        massX - ballRadius * 0.25,
+        baseY - ballRadius * 0.25,
+        ballRadius * 0.25,
+        0,
+        Math.PI * 2
+      );
       ctx.fill();
 
       // 记录点击区域：矩形覆盖整个弹簧+小球区域（更易点击）
@@ -426,7 +446,9 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
       clickAreas.push({
         id: osc.id,
         type: 'rect',
-        x: 0, y: 0, r: 0, // 占位，不使用
+        x: 0,
+        y: 0,
+        r: 0, // 占位，不使用
         left: fixedX - 10,
         top: baseY - sizes.ballRadius - clickPadding,
         right: massX + sizes.ballRadius + 10,
@@ -457,8 +479,11 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
       ctx.fillStyle = isDark ? Colors.darkText : Colors.dark;
       ctx.font = `bold ${deviceType === 'mobile' ? 13 : 11}px "Noto Sans SC", sans-serif`;
       ctx.textAlign = 'center';
-      ctx.fillText(`${osc.state.x.toFixed(1)}m`, massX, baseY + ballRadius + (deviceType === 'mobile' ? 16 : 12));
-
+      ctx.fillText(
+        `${osc.state.x.toFixed(1)}m`,
+        massX,
+        baseY + ballRadius + (deviceType === 'mobile' ? 16 : 12)
+      );
     } else {
       // ===== 竖直弹簧振子 =====
       const drawCenterX = centerX;
@@ -467,7 +492,9 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
       const fixedY = equilibriumY - springLength;
 
       // 平衡位置虚线
-      ctx.strokeStyle = isDark ? alpha(Colors.gray, 0.25) : alpha(Colors.grayLight, 0.4);
+      ctx.strokeStyle = isDark
+        ? alpha(Colors.gray, 0.25)
+        : alpha(Colors.grayLight, 0.4);
       ctx.setLineDash([3, 3]);
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -491,7 +518,16 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
       if (springEndY > fixedY + 8) {
         const coils = deviceType === 'mobile' ? 8 : 12;
         const coilWidth = deviceType === 'mobile' ? 12 : 18;
-        drawSpring(ctx, drawCenterX, fixedY, drawCenterX, springEndY, coils, coilWidth, osc.color);
+        drawSpring(
+          ctx,
+          drawCenterX,
+          fixedY,
+          drawCenterX,
+          springEndY,
+          coils,
+          coilWidth,
+          osc.color
+        );
       }
 
       // 小球（响应式尺寸）
@@ -504,7 +540,13 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
       // 光泽
       ctx.fillStyle = 'rgba(255,255,255,0.3)';
       ctx.beginPath();
-      ctx.arc(drawCenterX - ballRadius * 0.25, massY - ballRadius * 0.25, ballRadius * 0.25, 0, Math.PI * 2);
+      ctx.arc(
+        drawCenterX - ballRadius * 0.25,
+        massY - ballRadius * 0.25,
+        ballRadius * 0.25,
+        0,
+        Math.PI * 2
+      );
       ctx.fill();
 
       // 记录点击区域：矩形覆盖整个弹簧+小球区域（更易点击）
@@ -542,7 +584,11 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
       ctx.fillStyle = isDark ? Colors.darkText : Colors.dark;
       ctx.font = `bold ${deviceType === 'mobile' ? 13 : 11}px "Noto Sans SC", sans-serif`;
       ctx.textAlign = 'left';
-      ctx.fillText(`${osc.state.x.toFixed(1)}m`, drawCenterX + ballRadius + (deviceType === 'mobile' ? 16 : 12), massY + 4);
+      ctx.fillText(
+        `${osc.state.x.toFixed(1)}m`,
+        drawCenterX + ballRadius + (deviceType === 'mobile' ? 16 : 12),
+        massY + 4
+      );
     }
   }
 
@@ -585,9 +631,11 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
     const cellH = height / layout.rows;
 
     // 绘制网格分隔线
-    ctx.strokeStyle = isDark ? alpha(Colors.gray, 0.15) : alpha(Colors.grayLight, 0.25);
+    ctx.strokeStyle = isDark
+      ? alpha(Colors.gray, 0.15)
+      : alpha(Colors.grayLight, 0.25);
     ctx.lineWidth = 1;
-    
+
     // 垂直分隔线
     for (let i = 1; i < layout.cols; i++) {
       ctx.beginPath();
@@ -618,14 +666,19 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
     if (!stageCanvas || clickAreas.length === 0) return;
 
     const rect = stageCanvas.getBoundingClientRect();
-    
+
     // 计算在 canvas 中的坐标
     const x = (event.clientX - rect.left) * (stageWidth / rect.width);
     const y = (event.clientY - rect.top) * (stageHeight / rect.height);
 
     // 检查是否点击了某个弹簧振子（矩形区域覆盖整个弹簧+小球）
     for (const area of clickAreas) {
-      if (x >= area.left && x <= area.right && y >= area.top && y <= area.bottom) {
+      if (
+        x >= area.left &&
+        x <= area.right &&
+        y >= area.top &&
+        y <= area.bottom
+      ) {
         event.preventDefault();
         onToggleOscillator?.(area.id);
         return;
@@ -653,7 +706,7 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
       const currentSim = sim;
       if (currentSim) {
         const globalTime = currentSim.globalTime;
-        currentSim.oscillators.forEach(osc => {
+        currentSim.oscillators.forEach((osc) => {
           // 只在振子正在播放时记录历史
           if (!osc.isPlaying) {
             // 振子暂停时，不添加新数据点，只清理过期数据
@@ -667,13 +720,13 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
             }
             return;
           }
-          
+
           let hist = history.get(osc.id);
           if (!hist) {
             hist = [];
             history.set(osc.id, hist);
           }
-          
+
           // 性能优化：移动端降采样
           const deviceType = getDeviceType();
           if (shouldRecordFrame(deviceType)) {
@@ -788,7 +841,14 @@ export function createSpringOscillatorView(options: SpringOscillatorViewOptions 
         chartCanvasDisposer();
         chartCanvasDisposer = null;
       }
-      chartState = { canvas: null, ctx: null, cssWidth: 0, cssHeight: 0, dpr: 1, hairlineWidth: 1 };
+      chartState = {
+        canvas: null,
+        ctx: null,
+        cssWidth: 0,
+        cssHeight: 0,
+        dpr: 1,
+        hairlineWidth: 1
+      };
       graphCanvas = null;
       stageCanvas = null;
       graphCtx = null;

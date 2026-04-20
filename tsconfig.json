@@ -10,9 +10,15 @@
     "resolveJsonModule": true,
     "jsx": "react-jsx",
     "jsxImportSource": "react",
-    "types": ["node", "vitest/globals", "react", "react-dom"],
+    "types": ["node", "vitest/globals", "react", "react-dom", "vite/client"],
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "skipLibCheck": true
   },
-  "include": ["src", "tests", "scripts", "vite.config.ts", "playwright.config.ts"]
+  "include": [
+    "src",
+    "tests",
+    "scripts",
+    "vite.config.ts",
+    "playwright.config.ts"
+  ]
 }

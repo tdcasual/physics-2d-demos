@@ -6,6 +6,7 @@
 import React, { useEffect, useState } from 'react';
 import { ExperimentsSection } from './sections';
 import { useTheme } from './hooks';
+import { featuredScenes } from './data/scenes';
 
 import '../styles/design-tokens.css';
 import '../styles/themes.css';
@@ -18,7 +19,7 @@ const App: React.FC = () => {
   useEffect(() => {
     setMounted(true);
     document.title = '物理实验室';
-    
+
     const metaThemeColor = document.querySelector('meta[name="theme-color"]');
     if (metaThemeColor) {
       metaThemeColor.setAttribute(
@@ -34,11 +35,13 @@ const App: React.FC = () => {
     <div className="app">
       {/* 点阵网格背景 */}
       <div className="dot-grid" />
-      
+
       {/* 头部 */}
       <header className="site-header">
         <div className="container header-inner">
-          <a href="/" className="logo">物理实验室</a>
+          <a href="/" className="logo">
+            物理实验室
+          </a>
           <nav className="nav">
             <a href="#experiments">实验</a>
             <a href="#about">关于</a>
@@ -66,26 +69,15 @@ const App: React.FC = () => {
 
             {/* 项目/实验列表 */}
             <div className="hero-experiments">
-              <a href="/src/pages/projectile.html" className="exp-item">
-                <span className="exp-number">01</span>
-                <span className="exp-name">抛体运动</span>
-                <span className="exp-desc">抛物线轨迹模拟</span>
-              </a>
-              <a href="/src/pages/spring-oscillator.html" className="exp-item">
-                <span className="exp-number">02</span>
-                <span className="exp-name">弹簧振子</span>
-                <span className="exp-desc">简谐运动可视化</span>
-              </a>
-              <a href="/src/pages/field-lines.html" className="exp-item">
-                <span className="exp-number">03</span>
-                <span className="exp-name">电场分布</span>
-                <span className="exp-desc">场线绘制演示</span>
-              </a>
-              <a href="/src/pages/chase-meet.html" className="exp-item">
-                <span className="exp-number">04</span>
-                <span className="exp-name">追及相遇</span>
-                <span className="exp-desc">相对运动分析</span>
-              </a>
+              {featuredScenes.slice(0, 4).map((scene, i) => (
+                <a href={scene.path} className="exp-item" key={scene.id}>
+                  <span className="exp-number">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <span className="exp-name">{scene.title}</span>
+                  <span className="exp-desc">{scene.description}</span>
+                </a>
+              ))}
             </div>
 
             {/* 技能/分类标签 */}
@@ -98,8 +90,12 @@ const App: React.FC = () => {
 
             {/* CTA 按钮 */}
             <div className="hero-cta">
-              <a href="#experiments" className="btn-primary">浏览全部实验</a>
-              <a href="#about" className="btn-text">了解更多 →</a>
+              <a href="#experiments" className="btn-primary">
+                浏览全部实验
+              </a>
+              <a href="#about" className="btn-text">
+                了解更多 →
+              </a>
             </div>
           </div>
 
@@ -123,7 +119,8 @@ const App: React.FC = () => {
           <div className="container about-inner">
             <span className="section-label">关于</span>
             <h2 className="about-title">
-              用交互的方式<br />
+              用交互的方式
+              <br />
               理解物理概念
             </h2>
             <p className="about-text">

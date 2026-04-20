@@ -35,14 +35,14 @@ export interface SceneInitOptions {
  */
 export function initializeScene(options: SceneInitOptions): () => void {
   const { scene, onReady } = options;
-  
+
   // 标准初始化顺序
   scene.init();
   scene.resize();
   scene.render();
-  
+
   onReady?.();
-  
+
   // 返回清理函数
   return () => scene.dispose();
 }
@@ -63,7 +63,7 @@ export function observeContainerResize(
 ): () => void {
   const { debounceMs = 100, autoRender = true } = options ?? {};
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-  
+
   const handleResize = () => {
     if (debounceTimer) {
       clearTimeout(debounceTimer);
@@ -75,7 +75,7 @@ export function observeContainerResize(
       }
     }, debounceMs);
   };
-  
+
   // 优先使用 ResizeObserver
   if (typeof ResizeObserver !== 'undefined') {
     const ro = new ResizeObserver(() => handleResize());
@@ -87,7 +87,7 @@ export function observeContainerResize(
       }
     };
   }
-  
+
   // Fallback: 使用 window resize
   window.addEventListener('resize', handleResize);
   return () => {
@@ -104,13 +104,13 @@ export function observeContainerResize(
  */
 export function createPageLifecycleManager() {
   const disposers: Array<() => void> = [];
-  
+
   return {
     /** 注册清理函数 */
     onDispose(fn: () => void): void {
       disposers.push(fn);
     },
-    
+
     /** 注册 ResizeObserver */
     observeResize(
       container: HTMLElement,
@@ -120,41 +120,52 @@ export function createPageLifecycleManager() {
       const cleanup = observeContainerResize(container, scene, options);
       disposers.push(cleanup);
     },
-    
+
     /** 注册 window 事件 */
     onWindowEvent<K extends keyof WindowEventMap>(
       type: K,
-      listener: (ev: WindowEventMap[K]) => any,
+      listener: (ev: WindowEventMap[K]) => void,
       options?: boolean | AddEventListenerOptions
     ): void {
       window.addEventListener(type, listener, options);
       disposers.push(() => window.removeEventListener(type, listener, options));
     },
-    
+
     /** 清理所有资源 */
     dispose(): void {
-      disposers.forEach(fn => {
-        try { fn(); } catch (e) { /* ignore */ }
+      disposers.forEach((fn) => {
+        try {
+          fn();
+        } catch {
+          /* ignore */
+        }
       });
       disposers.length = 0;
-    },
+    }
   };
 }
 
 /**
  * 验证场景实现是否符合生命周期契约
  */
-export function validateSceneContract(scene: Partial<SceneLifecycle>): string[] {
+export function validateSceneContract(
+  scene: Partial<SceneLifecycle>
+): string[] {
   const errors: string[] = [];
   const requiredMethods: Array<keyof SceneLifecycle> = [
-    'init', 'reset', 'step', 'render', 'resize', 'dispose'
+    'init',
+    'reset',
+    'step',
+    'render',
+    'resize',
+    'dispose'
   ];
-  
+
   for (const method of requiredMethods) {
     if (typeof scene[method] !== 'function') {
       errors.push(`Missing required method: ${method}`);
     }
   }
-  
+
   return errors;
 }

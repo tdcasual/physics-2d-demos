@@ -9,6 +9,11 @@ export const vtIntegralMeta: SceneMeta = {
   subConcepts: ['面积法', '微元累积'],
   keywords: ['力学', '微元法', '多场景', '2D'],
   objective: '展示积分逼近、曲线逼近与体积逼近的多场景演示',
+  description: '微积分与物理的交汇，图像法求解运动学问题',
+  difficulty: 3,
+  icon: '📊',
+  category: 'method',
+  featured: false,
   defaultParams: {
     scene: 1
   }

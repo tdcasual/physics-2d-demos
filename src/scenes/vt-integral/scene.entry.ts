@@ -1,7 +1,12 @@
-import type { TeachingMode } from '../../app/teaching-standards';
-import type { TeachingTheme } from '../../app/teaching-standards';
+import type { TeachingMode } from '../../platform/standards';
+import type { TeachingTheme } from '../../platform/standards';
 import type { SceneLifecycle } from '../types';
-import { createVtIntegralSim, type VtIntegralSnapshot, type VtMethod, type VtScene } from './scene.sim';
+import {
+  createVtIntegralSim,
+  type VtIntegralSnapshot,
+  type VtMethod,
+  type VtScene
+} from './scene.sim';
 import { createVtIntegralView } from './scene.view';
 
 export type CreateVtIntegralSceneOptions = {
@@ -11,7 +16,9 @@ export type CreateVtIntegralSceneOptions = {
   onReadout?: (snapshot: VtIntegralSnapshot) => void;
 };
 
-export function createVtIntegralScene(options: CreateVtIntegralSceneOptions = {}): SceneLifecycle & {
+export function createVtIntegralScene(
+  options: CreateVtIntegralSceneOptions = {}
+): SceneLifecycle & {
   resize(): void;
   setMode(mode: TeachingMode): void;
   setTheme(theme: TeachingTheme): void;

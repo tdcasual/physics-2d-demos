@@ -10,6 +10,8 @@
  * @version 0.3.0
  */
 
+@import url('../../layout-primitives.css');
+
 /* ============================================================================
    CSS 变量系统
    ============================================================================ */
@@ -17,70 +19,70 @@
 .mobile-stack-layout {
   /* 尺寸系统 */
   --ms-space-unit: 8px;
-  --ms-spacing-xs: calc(var(--ms-space-unit) * 0.5);   /* 4px */
-  --ms-spacing-sm: var(--ms-space-unit);               /* 8px */
-  --ms-spacing-md: calc(var(--ms-space-unit) * 2);     /* 16px */
-  --ms-spacing-lg: calc(var(--ms-space-unit) * 3);     /* 24px */
-  --ms-spacing-xl: calc(var(--ms-space-unit) * 4);     /* 32px */
-  
+  --ms-spacing-xs: calc(var(--ms-space-unit) * 0.5); /* 4px */
+  --ms-spacing-sm: var(--ms-space-unit); /* 8px */
+  --ms-spacing-md: calc(var(--ms-space-unit) * 2); /* 16px */
+  --ms-spacing-lg: calc(var(--ms-space-unit) * 3); /* 24px */
+  --ms-spacing-xl: calc(var(--ms-space-unit) * 4); /* 32px */
+
   /* 控件尺寸 */
   --ms-control-height: 60px;
   --ms-btn-size: 44px;
   --ms-btn-size-sm: 36px;
-  
+
   /* 动画区 */
   --ms-animation-min-height: 250px;
   --ms-animation-max-height: 500px;
   --ms-graph-height: 200px;
-  
+
   /* 字体 */
   --ms-font-xs: 10px;
   --ms-font-sm: 12px;
   --ms-font-md: 14px;
   --ms-font-lg: 16px;
   --ms-font-xl: 20px;
-  
+
   /* 圆角 */
   --ms-radius-sm: 4px;
   --ms-radius-md: 8px;
   --ms-radius-lg: 12px;
   --ms-radius-full: 9999px;
-  
+
   /* 阴影 */
   --ms-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --ms-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   --ms-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  
+
   /* 过渡 */
   --ms-transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   --ms-transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --ms-transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  
+
   /* 主题变量 - 浅色模式（默认） */
   --ms-bg-primary: #ffffff;
   --ms-bg-secondary: #f8f9fa;
   --ms-bg-tertiary: #e9ecef;
   --ms-bg-hover: rgba(0, 0, 0, 0.05);
   --ms-bg-active: rgba(0, 0, 0, 0.1);
-  
+
   --ms-text-primary: #212529;
   --ms-text-secondary: #6c757d;
   --ms-text-tertiary: #adb5bd;
-  
+
   --ms-border-color: #dee2e6;
   --ms-border-color-strong: #adb5bd;
-  
+
   --ms-accent-primary: #3b82f6;
   --ms-accent-primary-hover: #2563eb;
   --ms-accent-primary-light: rgba(59, 130, 246, 0.1);
-  
+
   --ms-success: #10b981;
   --ms-warning: #f59e0b;
   --ms-error: #ef4444;
-  
+
   /* 焦点环 */
   --ms-focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.4);
-  
+
   /* 手势反馈 */
   --ms-tap-highlight: rgba(59, 130, 246, 0.2);
 }
@@ -89,20 +91,20 @@
    深色模式 - 显式设置
    ============================================================================ */
 
-[data-theme="dark"] .mobile-stack-layout {
+[data-theme='dark'] .mobile-stack-layout {
   --ms-bg-primary: #0f172a;
   --ms-bg-secondary: #1e293b;
   --ms-bg-tertiary: #334155;
   --ms-bg-hover: rgba(255, 255, 255, 0.05);
   --ms-bg-active: rgba(255, 255, 255, 0.1);
-  
+
   --ms-text-primary: #f1f5f9;
   --ms-text-secondary: #94a3b8;
   --ms-text-tertiary: #64748b;
-  
+
   --ms-border-color: #334155;
   --ms-border-color-strong: #475569;
-  
+
   --ms-accent-primary: #60a5fa;
   --ms-accent-primary-hover: #3b82f6;
   --ms-accent-primary-light: rgba(96, 165, 250, 0.2);
@@ -113,20 +115,20 @@
    ============================================================================ */
 
 @media (prefers-color-scheme: dark) {
-  .mobile-stack-layout:not([data-theme="light"]) {
+  .mobile-stack-layout:not([data-theme='light']) {
     --ms-bg-primary: #0f172a;
     --ms-bg-secondary: #1e293b;
     --ms-bg-tertiary: #334155;
     --ms-bg-hover: rgba(255, 255, 255, 0.05);
     --ms-bg-active: rgba(255, 255, 255, 0.1);
-    
+
     --ms-text-primary: #f1f5f9;
     --ms-text-secondary: #94a3b8;
     --ms-text-tertiary: #64748b;
-    
+
     --ms-border-color: #334155;
     --ms-border-color-strong: #475569;
-    
+
     --ms-accent-primary: #60a5fa;
     --ms-accent-primary-hover: #3b82f6;
     --ms-accent-primary-light: rgba(96, 165, 250, 0.2);
@@ -147,7 +149,7 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  
+
   .mobile-graph-slot {
     transition: none !important;
   }
@@ -162,20 +164,20 @@
     --ms-border-color: currentColor;
     --ms-border-color-strong: currentColor;
   }
-  
+
   .mobile-control-btn {
     border: 2px solid currentColor !important;
   }
-  
+
   .mobile-control-btn.play-pause {
     box-shadow: none !important;
   }
-  
+
   .mobile-section-toggle {
     border-top: 2px solid currentColor;
     border-bottom: 2px solid currentColor;
   }
-  
+
   .mobile-control-btn:focus-visible,
   .mobile-section-toggle:focus-visible {
     outline: 3px solid currentColor;
@@ -194,14 +196,15 @@
   overflow: hidden;
   background: var(--ms-bg-primary);
   color: var(--ms-text-primary);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: var(--ms-font-md);
   line-height: 1.5;
-  
+
   /* 防止 iOS 橡皮筋效果 */
   overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
-  
+
   /* 容器查询支持 */
   container-type: inline-size;
   container-name: mobile-layout;
@@ -218,7 +221,7 @@
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
   }
-  
+
   .mobile-controls-bar {
     margin-top: calc(-1 * env(safe-area-inset-top));
     padding-top: max(var(--ms-spacing-md), env(safe-area-inset-top)) !important;
@@ -234,7 +237,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  
+
   /* 滚动条样式 */
   scrollbar-width: thin;
   scrollbar-color: var(--ms-border-color) transparent;
@@ -273,7 +276,7 @@
   justify-content: center;
   gap: var(--ms-spacing-md);
   flex-shrink: 0;
-  
+
   /* 玻璃拟态效果（可选） */
   @supports (backdrop-filter: blur(10px)) {
     background: rgba(var(--ms-bg-secondary-rgb, 248, 249, 250), 0.85);
@@ -288,9 +291,10 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform var(--ms-transition-fast),
-              background-color var(--ms-transition-fast),
-              box-shadow var(--ms-transition-fast);
+  transition:
+    transform var(--ms-transition-fast),
+    background-color var(--ms-transition-fast),
+    box-shadow var(--ms-transition-fast);
   border: none;
   background: transparent;
   -webkit-tap-highlight-color: transparent;
@@ -303,10 +307,16 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle, var(--ms-tap-highlight) 0%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    var(--ms-tap-highlight) 0%,
+    transparent 70%
+  );
   opacity: 0;
   transform: scale(0.5);
-  transition: opacity 0.3s, transform 0.3s;
+  transition:
+    opacity 0.3s,
+    transform 0.3s;
 }
 
 .mobile-control-btn:active::after {
@@ -443,7 +453,7 @@
   background: var(--ms-bg-primary);
   border-bottom: 1px solid var(--ms-border-color);
   flex-shrink: 0;
-  
+
   /* 手势触摸区域 */
   touch-action: pan-y;
 }
@@ -474,7 +484,7 @@
   background: var(--ms-bg-secondary);
   border-bottom: 1px solid var(--ms-border-color);
   flex-shrink: 0;
-  
+
   /* 懒加载占位 */
   min-height: 48px;
 }
@@ -632,8 +642,8 @@
   grid-template-columns: 1fr 1fr;
   grid-template-rows: auto 1fr;
   grid-template-areas:
-    "controls controls"
-    "animation sidebar";
+    'controls controls'
+    'animation sidebar';
 }
 
 .mobile-stack-layout.is-landscape .mobile-controls-bar {
@@ -661,17 +671,17 @@
     padding: var(--ms-spacing-sm) var(--ms-spacing-md);
     gap: var(--ms-spacing-sm);
   }
-  
+
   .mobile-control-btn.play-pause {
     width: var(--ms-btn-size-sm);
     height: var(--ms-btn-size-sm);
     font-size: var(--ms-font-lg);
   }
-  
+
   .mobile-speed-control .speed-slider {
     width: 80px;
   }
-  
+
   .mobile-readout-bar {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -681,7 +691,7 @@
   .mobile-animation-section {
     min-height: 350px;
   }
-  
+
   .mobile-readout-bar {
     grid-template-columns: repeat(4, 1fr);
   }
@@ -729,19 +739,19 @@
     height: auto;
     overflow: visible;
   }
-  
+
   .mobile-controls-bar,
   .mobile-section-toggle,
   .mobile-debug-panel {
     display: none !important;
   }
-  
+
   .mobile-graph-slot,
   .mobile-control-slot {
     height: auto !important;
     overflow: visible !important;
   }
-  
+
   .mobile-animation-section {
     page-break-inside: avoid;
   }

@@ -9,7 +9,7 @@
  * - 数据区 (readout-panel)
  */
 
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* ========================================
    Tailwind 暗色模式配置 - 使用 data-theme
@@ -21,39 +21,41 @@
    ======================================== */
 @theme {
   /* 主色调 */
-  --color-coral: #FF6B6B;
-  --color-mint: #4ECDC4;
-  --color-yellow: #FFE66D;
-  
+  --color-coral: #ff6b6b;
+  --color-mint: #4ecdc4;
+  --color-yellow: #ffe66d;
+
   /* 背景色 */
   --color-bg-primary: #faf8f5;
   --color-bg-secondary: rgba(255, 255, 255, 0.6);
   --color-bg-card: rgba(255, 255, 255, 0.6);
   --color-sidebar-bg: #f5f3f0;
   --color-stage-bg: #faf8f5;
-  
+
   /* 边框 */
   --color-border-color: rgba(0, 0, 0, 0.08);
   --color-border-light: rgba(0, 0, 0, 0.08);
-  
+
   /* 文本 */
   --color-text-primary: #1a1a1a;
   --color-text-secondary: #666666;
   --color-text-muted: #888888;
   --color-text-inverse: #ffffff;
-  
+
   /* 按钮 */
   --color-btn-bg: rgba(0, 0, 0, 0.05);
   --color-btn-hover-bg: rgba(0, 0, 0, 0.1);
-  
+
   /* 强调色 */
-  --color-accent-color: #4ECDC4;
-  --color-accent-primary: #FF6B6B;
-  
+  --color-accent-color: #4ecdc4;
+  --color-accent-primary: #ff6b6b;
+
   /* 阴影 */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-md:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 /* 标准 CSS 变量别名（与控件代码兼容） */
@@ -73,18 +75,19 @@
   --btn-hover-bg: var(--color-btn-hover-bg);
   --accent-color: var(--color-accent-color);
   --accent-primary: var(--color-coral);
+  --accent-primary-light: rgba(255, 107, 107, 0.1);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
-  
+
   /* 高分屏字体缩放系数 - 默认1.0 */
   --ui-scale: 1;
   --font-base: calc(1rem * var(--ui-scale));
   --font-sm: calc(0.875rem * var(--ui-scale));
   --font-xs: calc(0.75rem * var(--ui-scale));
   --font-lg: calc(1.125rem * var(--ui-scale));
-  
+
   /* 触摸目标最小尺寸 */
   --touch-min: 44px;
-  
+
   /* 间距 */
   --space-xs: calc(0.25rem * var(--ui-scale));
   --space-sm: calc(0.5rem * var(--ui-scale));
@@ -109,7 +112,7 @@
 
 /* 暗色主题 */
 @layer base {
-  [data-theme="dark"] {
+  [data-theme='dark'] {
     /* Tailwind @theme 变量覆盖 */
     --color-bg-primary: #0f172a;
     --color-bg-secondary: rgba(30, 41, 59, 0.6);
@@ -124,9 +127,9 @@
     --color-text-inverse: #0a0a0a;
     --color-btn-bg: rgba(255, 255, 255, 0.1);
     --color-btn-hover-bg: rgba(255, 255, 255, 0.15);
-    --color-accent-color: #4ECDC4;
-    --color-accent-primary: #FF6B6B;
-    
+    --color-accent-color: #4ecdc4;
+    --color-accent-primary: #ff6b6b;
+
     /* 标准变量别名（向后兼容） */
     --bg-primary: var(--color-bg-primary);
     --bg-secondary: var(--color-bg-secondary);
@@ -191,7 +194,7 @@
 }
 
 /* 有图表时限制控制区最大高度，避免挤压图表区 */
-.teaching-demo[data-has-graph="true"] .control-section {
+.teaching-demo[data-has-graph='true'] .control-section {
   max-height: 60%;
 }
 
@@ -221,13 +224,13 @@
 }
 
 /* 折叠状态 */
-.control-section[data-collapsed="true"] .control-slot,
-.graph-section[data-collapsed="true"] .graph-slot {
+.control-section[data-collapsed='true'] .control-slot,
+.graph-section[data-collapsed='true'] .graph-slot {
   @apply hidden;
 }
 
-.control-section[data-collapsed="true"] .section-header,
-.graph-section[data-collapsed="true"] .section-header {
+.control-section[data-collapsed='true'] .section-header,
+.graph-section[data-collapsed='true'] .section-header {
   @apply border-b-0;
 }
 
@@ -263,7 +266,7 @@
 }
 
 /* 无图表时隐藏 */
-.teaching-demo[data-has-graph="false"] .graph-section {
+.teaching-demo[data-has-graph='false'] .graph-section {
   @apply hidden;
 }
 
@@ -306,6 +309,8 @@
   background: var(--color-btn-bg);
   border-color: var(--color-border-color);
   color: var(--color-text-secondary);
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .stage-toolbar .sidebar-toggle:hover {
@@ -323,6 +328,8 @@
   background: var(--color-btn-bg);
   border-color: var(--color-border-color);
   color: var(--color-text-secondary);
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .mode-toggle {
@@ -353,6 +360,7 @@
 
 .stage-canvas {
   @apply block h-full max-h-none w-full max-w-none;
+  touch-action: manipulation;
 }
 
 /* ========================================
@@ -493,16 +501,16 @@
     grid-template-columns: 1fr;
     grid-template-rows: auto 1fr;
   }
-  
+
   .teaching-left-panel {
     @apply max-h-[50vh] border-r-0 border-b;
     border-color: var(--color-border-color);
   }
-  
+
   .panel-resizer {
     @apply hidden;
   }
-  
+
   .readout-panel {
     @apply fixed bottom-4 right-4 left-4 top-auto max-w-none;
   }
@@ -511,14 +519,14 @@
 /* ========================================
    演示模式
    ======================================== */
-.teaching-demo[data-mode="presentation"] .stage-toolbar {
+.teaching-demo[data-mode='presentation'] .stage-toolbar {
   @apply hidden;
 }
 
-.teaching-demo[data-mode="presentation"] .stage-floating-controls {
+.teaching-demo[data-mode='presentation'] .stage-floating-controls {
   @apply left-4 top-4;
 }
 
-.teaching-demo[data-mode="presentation"] .readout-panel {
+.teaching-demo[data-mode='presentation'] .readout-panel {
   @apply right-4 top-4;
 }

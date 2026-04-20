@@ -36,7 +36,7 @@ module.exports = {
       }
     },
     {
-      files: ['src/scenes/**/scene.sim.ts'],
+      files: ['src/scenes/**/scene.sim.ts', 'src/scenes/**/scene.entry.ts', 'src/scenes/**/scene.view.ts'],
       rules: {
         'no-restricted-imports': [
           'error',
@@ -44,11 +44,35 @@ module.exports = {
             patterns: [
               {
                 group: ['../../app/*', '../../app/**', '../../../app/*', '../../../app/**'],
-                message: 'Simulation layer cannot import app layer.'
+                message: 'Scene layer cannot import app layer. Use platform/* instead.'
               },
               {
                 group: ['../../ui/*', '../../ui/**', '../../../ui/*', '../../../ui/**'],
-                message: 'Simulation layer cannot import ui layer.'
+                message: 'Scene layer cannot import ui layer.'
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      files: ['src/platform/**/*.ts'],
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            patterns: [
+              {
+                group: ['../app/*', '../app/**', '../../app/*', '../../app/**'],
+                message: 'Platform layer must stay independent from app layer.'
+              },
+              {
+                group: ['../ui/*', '../ui/**', '../../ui/*', '../../ui/**'],
+                message: 'Platform layer must stay independent from ui layer.'
+              },
+              {
+                group: ['../scenes/*', '../scenes/**', '../../scenes/*', '../../scenes/**'],
+                message: 'Platform layer must stay independent from scenes layer.'
               }
             ]
           }

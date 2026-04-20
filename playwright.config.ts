@@ -1,19 +1,13 @@
 import { defineConfig } from '@playwright/test';
+import { sharedConfig } from './tests/playwright.shared';
 
 export default defineConfig({
+  ...sharedConfig,
   testDir: './tests/visual',
   timeout: 30_000,
   fullyParallel: false,
   use: {
-    baseURL: 'http://127.0.0.1:5177',
-    viewport: { width: 1280, height: 720 },
-    locale: 'zh-CN',
-    timezoneId: 'Asia/Shanghai'
-  },
-  webServer: {
-    command: 'pnpm build && pnpm preview --host 127.0.0.1 --port 5177',
-    url: 'http://127.0.0.1:5177',
-    reuseExistingServer: true,
-    timeout: 120_000
+    ...sharedConfig.use,
+    viewport: { width: 1280, height: 720 }
   }
 });

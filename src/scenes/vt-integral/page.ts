@@ -1,11 +1,13 @@
-import { bootScenePage, type SceneInstance } from '../../app/scene-bootstrapper';
+import { bootScenePage } from '../../app/scene-bootstrapper';
 import type { ReadoutItem, Theme } from '../../app/layouts/types';
-import type { TeachingMode } from '../../app/teaching-standards';
+import type { TeachingMode } from '../../platform/standards';
 import { vtIntegralMeta } from './scene.meta';
 import { createVtIntegralScene } from './scene.entry';
-import { createVtIntegralControlsV4 } from './controls-v4';
+import { vtIntegralControlsSchema } from './controls-schema';
+import { renderSchema } from '../../ui/components/SchemaRenderer';
 import type { VtIntegralSnapshot } from './scene.sim';
 import { isValidVtScene } from './scene-values';
+import { createSceneListener } from '../../app/scene-listener';
 
 function sceneLabel(scene: VtIntegralSnapshot['params']['scene']): string {
   if (scene === 'scene1') return '场景一：v-t积分';
@@ -19,7 +21,10 @@ function modeLabel(mode: TeachingMode): string {
   return mode === 'presentation' ? '演示模式' : '标准模式';
 }
 
-function formatReadout(snapshot: VtIntegralSnapshot, mode: TeachingMode): ReadoutItem[] {
+function formatReadout(
+  snapshot: VtIntegralSnapshot,
+  mode: TeachingMode
+): ReadoutItem[] {
   if (snapshot.params.scene === 'scene1') {
     return [
       { label: '场景', value: sceneLabel(snapshot.params.scene) },
@@ -27,7 +32,10 @@ function formatReadout(snapshot: VtIntegralSnapshot, mode: TeachingMode): Readou
       { label: '矩形总面积', value: snapshot.metrics.rectArea.toFixed(4) },
       { label: '积分面积', value: snapshot.metrics.trueArea.toFixed(4) },
       { label: '绝对误差', value: snapshot.metrics.absErr.toFixed(4) },
-      { label: '相对误差', value: `${(snapshot.metrics.relErr * 100).toFixed(2)}%` }
+      {
+        label: '相对误差',
+        value: `${(snapshot.metrics.relErr * 100).toFixed(2)}%`
+      }
     ];
   }
   if (snapshot.params.scene === 'scene2') {
@@ -43,16 +51,28 @@ function formatReadout(snapshot: VtIntegralSnapshot, mode: TeachingMode): Readou
     return [
       { label: '场景', value: sceneLabel(snapshot.params.scene) },
       { label: '显示模式', value: modeLabel(mode) },
-      { label: '多边形周长差', value: snapshot.metrics.circumferenceDiff.toFixed(4) }
+      {
+        label: '多边形周长差',
+        value: snapshot.metrics.circumferenceDiff.toFixed(4)
+      }
     ];
   }
   if (snapshot.params.scene === 'scene4') {
     return [
       { label: '场景', value: sceneLabel(snapshot.params.scene) },
       { label: '显示模式', value: modeLabel(mode) },
-      { label: '球棱锥真实体积', value: snapshot.metrics.surfaceTrue.toFixed(4) },
-      { label: '球棱锥近似体积', value: snapshot.metrics.surfaceApprox.toFixed(4) },
-      { label: '相对误差', value: `${(snapshot.metrics.surfaceRelErr * 100).toFixed(2)}%` }
+      {
+        label: '球棱锥真实体积',
+        value: snapshot.metrics.surfaceTrue.toFixed(4)
+      },
+      {
+        label: '球棱锥近似体积',
+        value: snapshot.metrics.surfaceApprox.toFixed(4)
+      },
+      {
+        label: '相对误差',
+        value: `${(snapshot.metrics.surfaceRelErr * 100).toFixed(2)}%`
+      }
     ];
   }
   return [
@@ -60,7 +80,10 @@ function formatReadout(snapshot: VtIntegralSnapshot, mode: TeachingMode): Readou
     { label: '显示模式', value: modeLabel(mode) },
     { label: '球体真实体积', value: snapshot.metrics.sphereTrue.toFixed(4) },
     { label: '球体近似体积', value: snapshot.metrics.sphereApprox.toFixed(4) },
-    { label: '相对误差', value: `${(snapshot.metrics.sphereRelErr * 100).toFixed(2)}%` }
+    {
+      label: '相对误差',
+      value: `${(snapshot.metrics.sphereRelErr * 100).toFixed(2)}%`
+    }
   ];
 }
 
@@ -75,7 +98,7 @@ bootScenePage({
     });
 
     let currentMode = mode;
-    let _listener: (() => void) | null = null;
+    const { subscribe, notify } = createSceneListener();
 
     return {
       ...scene,
@@ -85,75 +108,79 @@ bootScenePage({
       getReadoutItems() {
         return formatReadout(scene.getSnapshot(), currentMode);
       },
-      getTransportState() {
-        return { isPlaying: false, speed: 1 };
-      },
-      subscribe(listener: () => void) {
-        _listener = listener;
-        return () => { _listener = null; };
-      },
+      subscribe,
       setMode(m: 'normal' | 'presentation') {
         currentMode = m;
         scene.setMode(m);
-        _listener?.();
+        notify();
       },
       setTheme(t: Theme) {
         scene.setTheme(t);
-        _listener?.();
+        notify();
       }
-    } as SceneInstance;
+    };
   },
   createControls: ({ mount, scene, onStatus }) => {
-    return createVtIntegralControlsV4({
+    const renderer = renderSchema({
       mount,
-      onSetScene: (value: string) => {
-        if (isValidVtScene(value)) {
-          (scene as unknown as { setScene(s: string): void }).setScene(value);
+      schema: vtIntegralControlsSchema,
+      onChange: (key, value) => {
+        if (key === 'scene') {
+          const sceneId = String(value);
+          if (isValidVtScene(sceneId)) {
+            scene.setScene(sceneId);
+            scene.render();
+            renderer.setActive(key, sceneId);
+          }
+        } else if (key === 'rects') {
+          scene.setRects(value as number);
+          scene.render();
+        } else if (key === 'time') {
+          scene.setTime(value as number);
+          scene.render();
+        } else if (key === 'amplitude') {
+          scene.setCurveAmplitude(value as number);
+          scene.render();
+        } else if (key === 'circle-n') {
+          scene.setCircleN(value as number);
+          scene.render();
+        } else if (key === 'surface-n') {
+          scene.setSurfaceN(value as number);
+          scene.render();
+        } else if (key === 'division') {
+          scene.setDivision(value as number);
           scene.render();
         }
       },
-      onSetRects: (value) => {
-        (scene as unknown as { setRects(v: number): void }).setRects(value);
-        scene.render();
-      },
-      onSetTime: (value) => {
-        (scene as unknown as { setTime(v: number): void }).setTime(value);
-        scene.render();
-      },
-      onSetMethod: (value: string) => {
-        (scene as unknown as { setMethod(m: string): void }).setMethod(value);
-        scene.render();
-      },
-      onSetCurveAmplitude: (value) => {
-        (scene as unknown as { setCurveAmplitude(v: number): void }).setCurveAmplitude(value);
-        scene.render();
-      },
-      onSetCircleN: (value) => {
-        (scene as unknown as { setCircleN(v: number): void }).setCircleN(value);
-        scene.render();
-      },
-      onSetSurfaceN: (value) => {
-        (scene as unknown as { setSurfaceN(v: number): void }).setSurfaceN(value);
-        scene.render();
-      },
-      onSetDivision: (value) => {
-        (scene as unknown as { setDivision(v: number): void }).setDivision(value);
-        scene.render();
-      },
-      onPlay: () => {
-        (scene as unknown as { step(dt: number): void }).step(0.1);
-        scene.render();
-      },
-      onPause: () => {},
-      onStep: () => {
-        (scene as unknown as { step(dt: number): void }).step(0.1);
-        scene.render();
-      },
-      onReset: () => {
-        scene.reset?.();
-      },
-      onStatus
+      onAction: (key) => {
+        if (key === 'constant') {
+          // scene.setPreset?.('constant');
+          onStatus?.('匀速运动 v(t)=2');
+        } else if (key === 'linear') {
+          onStatus?.('匀加速运动 v(t)=0.5t');
+        } else if (key === 'quadratic') {
+          onStatus?.('变加速运动 v(t)=0.1t²');
+        } else if (key === 'sine') {
+          onStatus?.('正弦运动 v(t)=sin(t)');
+        } else if (key === 'transport:play') {
+          scene.step(0.1);
+          scene.render();
+        } else if (key === 'transport:pause') {
+          // no-op
+        } else if (key === 'transport:reset') {
+          scene.reset?.();
+        } else if (key === 'transport:step') {
+          scene.step(0.1);
+          scene.render();
+        }
+      }
     });
+
+    return {
+      dispose: () => {
+        mount.innerHTML = '';
+      }
+    };
   },
   preferredLayout: 'split-right',
   layoutConfig: {

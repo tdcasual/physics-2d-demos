@@ -1,14 +1,16 @@
 /**
  * 场景容器实现
- * 
+ *
  * 管理场景和布局的协调，处理布局切换、主题切换、状态持久化
- * 
+ *
  * @review-date 2026-04-02
  * @version 0.1.0
  */
 
 import { layoutRegistry, saveLayoutPreference } from './registry';
 import { TransportBridge } from './transport-bridge';
+import { layoutSelector } from './selector';
+import type { LayoutSelectionContext } from './selector';
 import type {
   SceneContainer,
   Scene,
@@ -27,7 +29,7 @@ type EventListener<T> = (payload: T) => void;
 /** 场景容器实现类 */
 export class SceneContainerImpl implements SceneContainer {
   readonly container: HTMLElement;
-  
+
   private _currentLayout: LayoutMaster | null = null;
   private _currentScene: Scene | null = null;
   private _currentTheme: Theme = 'light';
@@ -40,19 +42,21 @@ export class SceneContainerImpl implements SceneContainer {
   private _sceneUnsubscribers: (() => void)[] = [];
   private _layoutThemeHandler?: (e: Event) => void;
   private _layoutModeHandler?: (e: Event) => void;
-  
+
   // 事件监听器映射
   private listeners: {
-    [K in keyof SceneContainerEvents]?: EventListener<SceneContainerEvents[K]>[];
+    [K in keyof SceneContainerEvents]?: EventListener<
+      SceneContainerEvents[K]
+    >[];
   } = {};
-  
+
   constructor(options: CreateContainerOptions) {
     this.container = options.mount;
     this._storageKey = options.storageKey || 'physics-demos-container-state';
     this._onResize = options.onResize;
     this._currentTheme = options.defaultTheme || 'light';
     this._layoutConfig = options.layoutConfig;
-    
+
     // 设置容器样式
     this.container.style.cssText = `
       width: 100%;
@@ -60,23 +64,34 @@ export class SceneContainerImpl implements SceneContainer {
       overflow: hidden;
       position: relative;
     `;
-    
+
     // 初始化 ResizeObserver
     this.initResizeObserver();
-    
+
     // 尝试恢复持久化状态
     this.restorePersistedState();
   }
-  
+
   // Getters
   get currentLayout(): LayoutMaster | null {
     return this._currentLayout;
   }
-  
+
   get currentScene(): Scene | null {
     return this._currentScene;
   }
-  
+
+  /**
+   * 获取断点配置
+   */
+  private getBreakpoints(): { mobile: number; tablet: number } {
+    const config = (this._layoutConfig as Record<string, unknown>) || {};
+    return {
+      mobile: (config.mobileBreakpoint as number) || 768,
+      tablet: (config.tabletBreakpoint as number) || 1024
+    };
+  }
+
   /**
    * 检测设备是否为移动端
    * 基于视口宽度判断（<768px视为移动端）
@@ -84,21 +99,53 @@ export class SceneContainerImpl implements SceneContainer {
    */
   private detectMobile(): boolean {
     if (typeof window === 'undefined') return false;
-    return window.innerWidth < 768;
+    return window.innerWidth < this.getBreakpoints().mobile;
   }
-  
+
   /**
-   * 查找注册表中支持移动端的布局
+   * 检测设备是否为平板
    */
-  private findMobileLayout(): string | null {
-    const mobileLayouts = layoutRegistry.findByTag('mobile');
-    if (mobileLayouts.length > 0) return mobileLayouts[0].id;
-    // 兼容旧元数据字段
-    const allMeta = layoutRegistry.getAllMetadata();
-    const mobileMeta = allMeta.find(m => m.supportsMobile);
-    return mobileMeta?.id || null;
+  private detectTablet(): boolean {
+    if (typeof window === 'undefined') return false;
+    const { mobile, tablet } = this.getBreakpoints();
+    const w = window.innerWidth;
+    return w >= mobile && w < tablet;
   }
-  
+
+  /**
+   * 检测设备是否为桌面端
+   */
+  private detectDesktop(): boolean {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth >= this.getBreakpoints().tablet;
+  }
+
+  /**
+   * 解析当前场景应使用的布局
+   * 使用布局选择器，支持策略插件化
+   */
+  private resolveLayout(scene: Scene): string {
+    const width = this.container.clientWidth;
+    const height = this.container.clientHeight;
+    const { mobile, tablet } = this.getBreakpoints();
+
+    const ctx: LayoutSelectionContext = {
+      viewport: { width, height },
+      isMobile: width < mobile,
+      isTablet: width >= mobile && width < tablet,
+      isDesktop: width >= tablet,
+      orientation: width >= height ? 'landscape' : 'portrait',
+      userPreference: this._userPreferredLayout,
+      scenePreference: scene.preferredLayout || null,
+      availableLayouts: layoutRegistry.getAllMetadata()
+    };
+
+    return layoutSelector.select(ctx);
+  }
+
+  // findMobileLayout 已被 resolveLayout + 选择器策略取代，保留注释供追溯
+  // private findMobileLayout(): string | null { ... }
+
   /**
    * 设置场景
    * @param scene - 场景实例
@@ -108,16 +155,12 @@ export class SceneContainerImpl implements SceneContainer {
     if (this._currentScene) {
       this.unmountCurrentScene();
     }
-    
+
     this._currentScene = scene;
-    
-    // 确定使用哪个布局
-    // 移动端自动选择支持移动端的布局，桌面端使用场景偏好布局
-    const effectiveLayout = this.detectMobile()
-      ? (this.findMobileLayout() || 'mobile-stack')
-      : (scene.preferredLayout || 'split-right');
-    const layoutId = this._userPreferredLayout || effectiveLayout;
-    
+
+    // 使用布局选择器解析最佳布局（策略插件化）
+    const layoutId = this.resolveLayout(scene);
+
     // 如果当前布局与需要的布局不同，切换布局
     if (!this._currentLayout || this._currentLayout.id !== layoutId) {
       await this.switchLayout(layoutId, { animate: false });
@@ -125,55 +168,61 @@ export class SceneContainerImpl implements SceneContainer {
       this.mountScene(scene);
     }
   }
-  
+
   /**
    * 挂载场景到当前布局
    */
   private mountScene(scene: Scene, layout?: LayoutMaster): void {
     const targetLayout = layout || this._currentLayout;
     if (!targetLayout) return;
-    
+
     // 从布局实例获取已渲染的 slots（通过公共 getter 避免反射）
     const slots = targetLayout.getSlots?.() || {};
-    
+
     // 渲染各区域
     if (slots.header && scene.renderHeader) {
       scene.renderHeader(slots.header);
     }
-    
+
     if (slots.control && scene.renderControl) {
       scene.renderControl(slots.control);
     }
-    
+
     if (slots.animation && scene.renderAnimation) {
       scene.renderAnimation(slots.animation);
     }
-    
+
     if (slots.graph && scene.renderGraph) {
       scene.renderGraph(slots.graph);
     }
-    
+
     if (slots.readout && scene.renderReadout) {
       scene.renderReadout(slots.readout);
     }
-    
+
     // 恢复场景持久化状态
     const savedState = this.restoreSceneState(scene.id);
     if (savedState && scene.restoreState) {
       try {
         scene.restoreState(savedState);
       } catch (err) {
-        console.error(`[SceneContainer] Failed to restore state for scene ${scene.id}:`, err);
+        console.error(
+          `[SceneContainer] Failed to restore state for scene ${scene.id}:`,
+          err
+        );
       }
     }
-    
+
     // 初始同步场景状态到布局
     this._transportBridge.syncSceneStateToLayout(scene, targetLayout);
-    
+
     // 订阅场景状态变化，自动刷新布局
-    const unsubscribe = this._transportBridge.subscribeSceneChanges(scene, targetLayout);
+    const unsubscribe = this._transportBridge.subscribeSceneChanges(
+      scene,
+      targetLayout
+    );
     this._sceneUnsubscribers.push(unsubscribe);
-    
+
     // 监听布局内部触发的主题/模式变化并转发给场景
     this._layoutThemeHandler = (e: Event) => {
       const custom = e as CustomEvent<{ theme: Theme }>;
@@ -187,9 +236,15 @@ export class SceneContainerImpl implements SceneContainer {
         scene.setMode(custom.detail.mode);
       }
     };
-    this.container.addEventListener('layout:themechange', this._layoutThemeHandler);
-    this.container.addEventListener('layout:modechange', this._layoutModeHandler);
-    
+    this.container.addEventListener(
+      'layout:themechange',
+      this._layoutThemeHandler
+    );
+    this.container.addEventListener(
+      'layout:modechange',
+      this._layoutModeHandler
+    );
+
     // 如果布局支持浮动控制条，自动绑定场景运输控制
     if (scene.getTransportState) {
       this._transportBridge.bindFloatingControls(targetLayout, {
@@ -207,146 +262,146 @@ export class SceneContainerImpl implements SceneContainer {
         getSpeed: () => scene.getTransportState!().speed ?? 1
       });
     }
-    
+
     // 调用场景挂载生命周期
     scene.mount?.();
-    
+
     // 触发事件
     this.emit('scene:mount', { sceneId: scene.id });
-    
-
   }
-  
+
   /**
    * 卸载当前场景
    */
   private unmountCurrentScene(): void {
     if (!this._currentScene) return;
-    
+
     // 取消场景状态订阅
-    this._sceneUnsubscribers.forEach(fn => fn());
+    this._sceneUnsubscribers.forEach((fn) => fn());
     this._sceneUnsubscribers = [];
-    
+
     // 清理 TransportBridge
     this._transportBridge.dispose();
-    
+
     // 移除布局事件监听
     if (this._layoutThemeHandler) {
-      this.container.removeEventListener('layout:themechange', this._layoutThemeHandler);
+      this.container.removeEventListener(
+        'layout:themechange',
+        this._layoutThemeHandler
+      );
       this._layoutThemeHandler = undefined;
     }
     if (this._layoutModeHandler) {
-      this.container.removeEventListener('layout:modechange', this._layoutModeHandler);
+      this.container.removeEventListener(
+        'layout:modechange',
+        this._layoutModeHandler
+      );
       this._layoutModeHandler = undefined;
     }
-    
+
     // 保存场景状态
     const state = this._currentScene.saveState?.();
     if (state) {
       this.saveSceneState(this._currentScene.id, state);
     }
-    
+
     // 调用场景卸载生命周期
     this._currentScene.unmount?.();
-    
+
     // 触发事件
     this.emit('scene:unmount', { sceneId: this._currentScene.id });
-    
+
     this._currentScene = null;
   }
-  
+
   /**
    * 切换布局
    */
-  async switchLayout(layoutId: string, options: SwitchOptions = {}): Promise<void> {
+  async switchLayout(
+    layoutId: string,
+    options: SwitchOptions = {}
+  ): Promise<void> {
     const {
       reason = 'manual',
       animate = true,
       transition = { type: 'fade', duration: 250, easing: 'ease-in-out' },
       savePreference = false
     } = options;
-    
+
     // 检查是否已经是当前布局
     if (this._currentLayout?.id === layoutId) {
-      console.log(`[SceneContainer] Already using layout: ${layoutId}`);
       return;
     }
-    
+
     // 检查布局是否存在
     if (!layoutRegistry.has(layoutId)) {
       throw new Error(`Layout "${layoutId}" not found`);
     }
-    
+
     const fromLayout = this._currentLayout;
     const fromId = fromLayout?.id || null;
-    
-    console.log(`[SceneContainer] Switching layout: ${fromId} -> ${layoutId}`);
-    
+
+    // layout switch begins
+
     // 通知场景布局即将变化
     if (this._currentScene?.onLayoutWillChange) {
       await this._currentScene.onLayoutWillChange(fromId || '', layoutId);
     }
-    
+
     // 退出当前布局动画
     if (fromLayout && animate) {
       await fromLayout.exit(transition);
     }
-    
+
     // 卸载当前布局
     if (fromLayout) {
       await fromLayout.unmount();
     }
-    
+
     // 清空容器
     this.container.innerHTML = '';
-    
-    let newLayout: LayoutMaster;
-    try {
-      // 创建并挂载新布局（事务准备阶段）
-      newLayout = layoutRegistry.create(layoutId, this.container, {
-        theme: this._currentTheme,
-        ...(this._layoutConfig as Record<string, unknown> || {})
-      });
-      
-      await newLayout.mount();
-      newLayout.setTheme(this._currentTheme);
-      
-      // 如果有场景，重新渲染到新的布局
-      if (this._currentScene) {
-        this.mountScene(this._currentScene, newLayout);
-      }
-      
-      // 进入动画
-      if (animate) {
-        const enterTransition: LayoutTransition = {
-          ...transition,
-          easing: 'ease-out'
-        };
-        await newLayout.enter(enterTransition);
-      }
-    } catch (err) {
-      console.error(`[SceneContainer] Failed to switch to layout ${layoutId}:`, err);
-      throw err;
+
+    // 创建并挂载新布局（事务准备阶段）
+    const newLayout = layoutRegistry.create(layoutId, this.container, {
+      theme: this._currentTheme,
+      ...((this._layoutConfig as Record<string, unknown>) || {})
+    });
+
+    await newLayout.mount();
+    newLayout.setTheme(this._currentTheme);
+
+    // 如果有场景，重新渲染到新的布局
+    if (this._currentScene) {
+      this.mountScene(this._currentScene, newLayout);
     }
-    
+
+    // 进入动画
+    if (animate) {
+      const enterTransition: LayoutTransition = {
+        ...transition,
+        easing: 'ease-out'
+      };
+      await newLayout.enter(enterTransition);
+    }
+
     // 事务提交：只有全部成功后，才更新当前布局引用
     this._currentLayout = newLayout;
-    
+
     // 通知场景布局已变化
     this._currentScene?.onLayoutDidChange?.(layoutId);
-    
+
     // 触发事件
     const event: LayoutChangeEvent = { from: fromId, to: layoutId, reason };
     this.emit('layout:change', event);
-    
+
     // 保存用户偏好
     if (savePreference) {
       this.setUserPreferredLayout(layoutId);
     }
-    
-    console.log(`[SceneContainer] Switched to layout: ${layoutId}`);
+
+    // layout switch complete
   }
-  
+
   /**
    * 设置用户偏好的布局
    */
@@ -355,42 +410,42 @@ export class SceneContainerImpl implements SceneContainer {
     saveLayoutPreference(layoutId);
     this.persistState();
   }
-  
+
   /**
    * 获取用户偏好的布局
    */
   getUserPreferredLayout(): string | null {
     return this._userPreferredLayout;
   }
-  
+
   /**
    * 设置主题
    */
   setTheme(theme: Theme): void {
     if (this._currentTheme === theme) return;
-    
+
     const fromTheme = this._currentTheme;
     this._currentTheme = theme;
-    
+
     // 应用到当前布局
     this._currentLayout?.setTheme(theme);
-    
+
     // 触发事件
     this.emit('theme:change', { from: fromTheme, to: theme });
-    
+
     // 持久化状态
     this.persistState();
-    
-    console.log(`[SceneContainer] Theme changed: ${fromTheme} -> ${theme}`);
+
+    // theme changed
   }
-  
+
   /**
    * 获取当前主题
    */
   getTheme(): Theme {
     return this._currentTheme;
   }
-  
+
   /**
    * 保存状态到 localStorage
    */
@@ -406,7 +461,7 @@ export class SceneContainerImpl implements SceneContainer {
       // localStorage 不可用，忽略
     }
   }
-  
+
   /**
    * 从 localStorage 恢复状态
    */
@@ -418,7 +473,10 @@ export class SceneContainerImpl implements SceneContainer {
         if (state.theme === 'light' || state.theme === 'dark') {
           this._currentTheme = state.theme;
         }
-        if (state.preferredLayout && layoutRegistry.has(state.preferredLayout)) {
+        if (
+          state.preferredLayout &&
+          layoutRegistry.has(state.preferredLayout)
+        ) {
           this._userPreferredLayout = state.preferredLayout;
         }
       }
@@ -426,22 +484,25 @@ export class SceneContainerImpl implements SceneContainer {
       // localStorage 不可用或数据损坏，忽略
     }
   }
-  
+
   /**
    * 保存场景状态
    */
   private saveSceneState(sceneId: string, state: object): void {
     try {
       const key = `${this._storageKey}-scene-${sceneId}`;
-      localStorage.setItem(key, JSON.stringify({
-        state,
-        timestamp: Date.now()
-      }));
+      localStorage.setItem(
+        key,
+        JSON.stringify({
+          state,
+          timestamp: Date.now()
+        })
+      );
     } catch {
       // 忽略
     }
   }
-  
+
   /**
    * 恢复场景状态
    */
@@ -458,59 +519,56 @@ export class SceneContainerImpl implements SceneContainer {
     }
     return null;
   }
-  
+
   /**
    * 初始化 ResizeObserver
    */
   private initResizeObserver(): void {
     if (!window.ResizeObserver) return;
-    
-    let lastWasMobile = this.detectMobile();
-    
+
+    let lastLayoutId = this._currentLayout?.id || null;
+
     this._resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const { width, height } = entry.contentRect;
-        
-        // 检测移动端/桌面端切换（只根据宽度判断）
-        const isMobile = width < 768;
-        if (isMobile !== lastWasMobile && this._currentScene && !this._userPreferredLayout) {
-          lastWasMobile = isMobile;
-          // 延迟切换避免频繁布局变更
-          this.debounceLayoutSwitch();
+
+        // 使用选择器重新计算最佳布局（支持多断点、约束等）
+        if (this._currentScene && !this._userPreferredLayout) {
+          const newLayoutId = this.resolveLayout(this._currentScene);
+          if (newLayoutId !== lastLayoutId) {
+            lastLayoutId = newLayoutId;
+            this.debounceLayoutSwitch(newLayoutId);
+          }
         }
-        
+
         // 通知布局
         this._currentLayout?.handleResize(width, height);
-        
+
         // 回调
         this._onResize?.(width, height);
       }
     });
-    
+
     this._resizeObserver.observe(this.container);
   }
-  
+
   private _layoutSwitchTimer: ReturnType<typeof setTimeout> | null = null;
-  
+
   /**
    * 防抖处理布局切换
+   * @param targetLayoutId - 目标布局 ID（由选择器解析得出）
    */
-  private debounceLayoutSwitch(): void {
+  private debounceLayoutSwitch(targetLayoutId: string): void {
     if (this._layoutSwitchTimer) {
       clearTimeout(this._layoutSwitchTimer);
     }
     this._layoutSwitchTimer = setTimeout(() => {
-      if (this._currentScene) {
-        const targetLayout = this.detectMobile()
-          ? (this.findMobileLayout() || 'mobile-stack')
-          : (this._currentScene.preferredLayout || 'split-right');
-        if (targetLayout !== this._currentLayout?.id) {
-          this.switchLayout(targetLayout, { animate: false });
-        }
+      if (targetLayoutId !== this._currentLayout?.id) {
+        this.switchLayout(targetLayoutId, { animate: false });
       }
     }, 300);
   }
-  
+
   /**
    * 添加事件监听
    */
@@ -522,7 +580,7 @@ export class SceneContainerImpl implements SceneContainer {
       this.listeners[event] = [];
     }
     this.listeners[event]!.push(listener);
-    
+
     // 返回取消订阅函数
     return () => {
       const list = this.listeners[event];
@@ -534,7 +592,7 @@ export class SceneContainerImpl implements SceneContainer {
       }
     };
   }
-  
+
   /**
    * 触发事件
    */
@@ -544,54 +602,59 @@ export class SceneContainerImpl implements SceneContainer {
   ): void {
     const list = this.listeners[event];
     if (list) {
-      list.forEach(listener => {
+      list.forEach((listener) => {
         try {
           listener(payload);
         } catch (err) {
-          console.error(`[SceneContainer] Event handler error for ${event}:`, err);
+          console.error(
+            `[SceneContainer] Event handler error for ${event}:`,
+            err
+          );
         }
       });
     }
   }
-  
+
   /**
    * 获取当前布局的 slots
    * 通过查询 DOM 获取已渲染的槽位
    */
   // 已废弃：通过 layout.slots 直接获取槽位，避免硬编码类名耦合
   // private getLayoutSlots() { ... }
-  
+
   /**
    * 销毁容器
    */
   dispose(): void {
     // 卸载场景
     this.unmountCurrentScene();
-    
+
     // 卸载布局
     this._currentLayout?.unmount();
     this._currentLayout = null;
-    
+
     // 断开 ResizeObserver
     this._resizeObserver?.disconnect();
     this._resizeObserver = null;
-    
+
     // 清空容器
     this.container.innerHTML = '';
-    
+
     // 清空监听器
     this.listeners = {};
-    
+
     // 清理 TransportBridge
     this._transportBridge.dispose();
-    
-    console.log('[SceneContainer] Disposed');
+
+    // container disposed
   }
 }
 
 /**
  * 创建场景容器的便捷函数
  */
-export function createSceneContainer(options: CreateContainerOptions): SceneContainer {
+export function createSceneContainer(
+  options: CreateContainerOptions
+): SceneContainer {
   return new SceneContainerImpl(options);
 }

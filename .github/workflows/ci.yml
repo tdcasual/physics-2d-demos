@@ -39,6 +39,16 @@ jobs:
       - name: Unit tests
         run: pnpm test
 
+      - name: Coverage
+        run: pnpm test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage/lcov.info
+          fail_ci_if_error: false
+          verbose: true
+
       - name: Visual tests
         run: pnpm test:visual
 

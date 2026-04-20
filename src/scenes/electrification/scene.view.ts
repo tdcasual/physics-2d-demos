@@ -1,6 +1,6 @@
-import type { TeachingMode } from '../../app/teaching-standards';
-import { getTeachingStandards } from '../../app/teaching-standards';
-import type { TeachingTheme } from '../../app/teaching-standards';
+import type { TeachingMode } from '../../platform/standards';
+import { getTeachingStandards } from '../../platform/standards';
+import type { TeachingTheme } from '../../platform/standards';
 import {
   applyHiDpiCanvasMetrics,
   computeHiDpiCanvasMetrics

@@ -1,10 +1,7 @@
-import type { TeachingMode } from '../../app/teaching-standards';
-import { getTeachingStandards } from '../../app/teaching-standards';
-import type { TeachingTheme } from '../../app/teaching-standards';
-import {
-  getOptimalCanvasSize,
-  setCanvasSize
-} from '../../core/unified-canvas';
+import type { TeachingMode } from '../../platform/standards';
+import { getTeachingStandards } from '../../platform/standards';
+import type { TeachingTheme } from '../../platform/standards';
+import { getOptimalCanvasSize, setCanvasSize } from '../../core/unified-canvas';
 import { Colors, alpha } from '../../core/colors';
 import type { VtIntegralSnapshot } from './scene.sim';
 
@@ -14,7 +11,9 @@ export type CreateVtIntegralViewOptions = {
   theme?: TeachingTheme;
 };
 
-export function createVtIntegralView(options: CreateVtIntegralViewOptions = {}) {
+export function createVtIntegralView(
+  options: CreateVtIntegralViewOptions = {}
+) {
   let canvas = options.canvas ?? null;
   let ctx = canvas?.getContext('2d') ?? null;
   let mode: TeachingMode = options.mode ?? 'normal';
@@ -47,7 +46,7 @@ export function createVtIntegralView(options: CreateVtIntegralViewOptions = {}) 
     const width = boxWidth;
     const lineHeight = Math.max(20, fontSize * 1.2);
     const height = 16 + lines.length * lineHeight;
-    
+
     ctx.fillStyle = getThemeColor(
       alpha(Colors.white, 0.8),
       alpha(Colors.darkCard, 0.72)
@@ -59,7 +58,7 @@ export function createVtIntegralView(options: CreateVtIntegralViewOptions = {}) 
     ctx.lineWidth = 1.5;
     ctx.fillRect(x, y, width, height);
     ctx.strokeRect(x, y, width, height);
-    
+
     if (!ctx) return;
     ctx.fillStyle = getThemeColor(Colors.dark, Colors.darkText);
     ctx.font = `600 ${fontSize}px "Noto Sans SC", "PingFang SC", sans-serif`;
@@ -129,7 +128,7 @@ export function createVtIntegralView(options: CreateVtIntegralViewOptions = {}) 
       const cx = width * 0.28;
       const cy = height * 0.42;
       const r = Math.min(width, height) * 0.2;
-      
+
       ctx.strokeStyle = getThemeColor(Colors.grayLight, Colors.gray);
       ctx.lineWidth = Math.max(2, visuals.minorStrokePx * 0.35);
       ctx.beginPath();
@@ -156,16 +155,30 @@ export function createVtIntegralView(options: CreateVtIntegralViewOptions = {}) 
       const baseY = height * 0.68;
       const barW = 48;
       const scale = height * 0.2;
-      const trueV = scene === 'scene4' ? next.metrics.surfaceTrue : next.metrics.sphereTrue;
-      const approxV = scene === 'scene4' ? next.metrics.surfaceApprox : next.metrics.sphereApprox;
-      
+      const trueV =
+        scene === 'scene4' ? next.metrics.surfaceTrue : next.metrics.sphereTrue;
+      const approxV =
+        scene === 'scene4'
+          ? next.metrics.surfaceApprox
+          : next.metrics.sphereApprox;
+
       // 真实值（灰色）
       ctx.fillStyle = getThemeColor(Colors.grayLight, Colors.gray);
-      ctx.fillRect(baseX, baseY - trueV * scale * 0.12, barW, trueV * scale * 0.12);
-      
+      ctx.fillRect(
+        baseX,
+        baseY - trueV * scale * 0.12,
+        barW,
+        trueV * scale * 0.12
+      );
+
       // 近似值（薄荷色）
       ctx.fillStyle = Colors.mint;
-      ctx.fillRect(baseX + 70, baseY - approxV * scale * 0.12, barW, approxV * scale * 0.12);
+      ctx.fillRect(
+        baseX + 70,
+        baseY - approxV * scale * 0.12,
+        barW,
+        approxV * scale * 0.12
+      );
     }
   }
 
@@ -181,7 +194,10 @@ export function createVtIntegralView(options: CreateVtIntegralViewOptions = {}) 
     // 渐变背景
     const gradient = ctx.createLinearGradient(0, 0, width, height);
     gradient.addColorStop(0, theme === 'light' ? '#eef2ff' : Colors.darkBg);
-    gradient.addColorStop(1, theme === 'light' ? '#e0e7ff' : alpha(Colors.darkCard, 0.8));
+    gradient.addColorStop(
+      1,
+      theme === 'light' ? '#e0e7ff' : alpha(Colors.darkCard, 0.8)
+    );
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, width, height);
 

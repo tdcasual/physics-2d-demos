@@ -17,13 +17,13 @@ function discoverScenes(): string[] {
   const __dirname = fileURLToPath(new URL('.', import.meta.url));
   const pagesDir = resolve(__dirname, '../../src/pages');
   return readdirSync(pagesDir)
-    .filter(f => f.endsWith('.html'))
-    .filter(f => !f.startsWith('index'))
-    .filter(f => !f.includes('-legacy'))
-    .filter(f => !f.includes('-demo'))
-    .filter(f => !f.includes('-mobile'))
-    .filter(f => !f.includes('-v2'))
-    .map(f => f.replace('.html', ''));
+    .filter((f) => f.endsWith('.html'))
+    .filter((f) => !f.startsWith('index'))
+    .filter((f) => !f.includes('-legacy'))
+    .filter((f) => !f.includes('-demo'))
+    .filter((f) => !f.includes('-mobile'))
+    .filter((f) => !f.includes('-v2'))
+    .map((f) => f.replace('.html', ''));
 }
 
 const ALL_SCENE_IDS = discoverScenes();
@@ -36,16 +36,47 @@ const MOBILE_VP = { width: 375, height: 812 } as const;
 /** Scenes with continuous auto-playback animation and auto-updating readout */
 const AUTO_READOUT_SCENES = ['projectile'] as const;
 /** Scenes with continuous animation (readout may not auto-update during playback) */
-const ANIMATED_SCENES = ['spring-oscillator', 'chase-meet', 'emf-analogy'] as const;
+const ANIMATED_SCENES = [
+  'spring-oscillator',
+  'chase-meet',
+  'emf-analogy'
+] as const;
 
-const SCENE_META: Record<string, { name: string; hasGraph: boolean; canvasSelector: string }> = {
-  projectile: { name: '抛体运动', hasGraph: false, canvasSelector: 'canvas.stage-canvas' },
-  'spring-oscillator': { name: '弹簧振子', hasGraph: true, canvasSelector: 'canvas.stage-canvas' },
+const SCENE_META: Record<
+  string,
+  { name: string; hasGraph: boolean; canvasSelector: string }
+> = {
+  projectile: {
+    name: '抛体运动',
+    hasGraph: false,
+    canvasSelector: 'canvas.stage-canvas'
+  },
+  'spring-oscillator': {
+    name: '弹簧振子',
+    hasGraph: true,
+    canvasSelector: 'canvas.stage-canvas'
+  },
   'chase-meet': { name: '追及相遇', hasGraph: false, canvasSelector: 'canvas' },
-  'field-lines': { name: '电场线', hasGraph: false, canvasSelector: 'canvas.stage-canvas' },
-  electrification: { name: '静电起电', hasGraph: false, canvasSelector: 'canvas.stage-canvas' },
-  'vt-integral': { name: '微元法', hasGraph: false, canvasSelector: 'canvas.stage-canvas' },
-  'emf-analogy': { name: '电路类比', hasGraph: false, canvasSelector: 'canvas.stage-canvas' },
+  'field-lines': {
+    name: '电场线',
+    hasGraph: false,
+    canvasSelector: 'canvas.stage-canvas'
+  },
+  electrification: {
+    name: '静电起电',
+    hasGraph: false,
+    canvasSelector: 'canvas.stage-canvas'
+  },
+  'vt-integral': {
+    name: '微元法',
+    hasGraph: false,
+    canvasSelector: 'canvas.stage-canvas'
+  },
+  'emf-analogy': {
+    name: '电路类比',
+    hasGraph: false,
+    canvasSelector: 'canvas.stage-canvas'
+  }
 };
 
 const BASE_URL = 'http://127.0.0.1:5177';
@@ -54,7 +85,10 @@ const BASE_URL = 'http://127.0.0.1:5177';
 
 async function gotoScene(page: Page, sceneId: string) {
   await page.goto(`${BASE_URL}/src/pages/${sceneId}.html`);
-  await page.waitForSelector('.layout-master', { state: 'visible', timeout: 10000 });
+  await page.waitForSelector('.layout-master', {
+    state: 'visible',
+    timeout: 10000
+  });
   await page.waitForTimeout(800);
 }
 
@@ -73,14 +107,19 @@ async function getReadoutMap(page: Page): Promise<Record<string, string>> {
 }
 
 /** Read the floating play/pause button state */
-async function getFloatingPlayState(page: Page): Promise<{ text: string; isPlaying: boolean }> {
+async function getFloatingPlayState(
+  page: Page
+): Promise<{ text: string; isPlaying: boolean }> {
   const btn = page.locator('.stage-floating-controls button').first();
-  const text = await btn.textContent() ?? '';
+  const text = (await btn.textContent()) ?? '';
   return { text, isPlaying: text.includes('⏸') };
 }
 
 /** Check if a canvas has any non-white/non-transparent pixels (i.e. has been drawn) */
-async function canvasHasContent(page: Page, selector: string): Promise<boolean> {
+async function canvasHasContent(
+  page: Page,
+  selector: string
+): Promise<boolean> {
   return page.evaluate((sel) => {
     const canvas = document.querySelector(sel) as HTMLCanvasElement | null;
     if (!canvas) return false;
@@ -106,23 +145,6 @@ async function canvasHasContent(page: Page, selector: string): Promise<boolean> 
   }, selector);
 }
 
-/** Capture canvas center pixel checksum for change detection */
-async function getCanvasChecksum(page: Page, selector: string): Promise<number> {
-  return page.evaluate((sel) => {
-    const canvas = document.querySelector(sel) as HTMLCanvasElement | null;
-    if (!canvas) return 0;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return 0;
-    const cx = Math.floor(canvas.width / 2);
-    const cy = Math.floor(canvas.height / 2);
-    const size = 20;
-    const data = ctx.getImageData(cx - size, cy - size, size * 2, size * 2).data;
-    let sum = 0;
-    for (let i = 0; i < data.length; i++) sum += data[i];
-    return sum;
-  }, selector);
-}
-
 // ── SplitRightLayout Desktop Tests ──────────────────────────────────────
 
 test.describe('SplitRightLayout Desktop', () => {
@@ -142,24 +164,33 @@ test.describe('SplitRightLayout Desktop', () => {
       await expect(canvas).toBeVisible();
       const size = await canvas.evaluate((c: HTMLCanvasElement) => ({
         w: c.clientWidth,
-        h: c.clientHeight,
+        h: c.clientHeight
       }));
       expect(size.w).toBeGreaterThan(100);
       expect(size.h).toBeGreaterThan(100);
 
       // Canvas should have content (not blank)
       const hasContent = await canvasHasContent(page, meta.canvasSelector);
-      expect(hasContent, `${meta.name} canvas should have rendered content`).toBe(true);
+      expect(
+        hasContent,
+        `${meta.name} canvas should have rendered content`
+      ).toBe(true);
 
       // Floating controls
       const floatingButtons = page.locator('.stage-floating-controls button');
       await expect(floatingButtons).toHaveCount(2);
-      await expect(page.locator('.stage-floating-controls input[type="range"]')).toBeVisible();
+      await expect(
+        page.locator('.stage-floating-controls input[type="range"]')
+      ).toBeVisible();
 
       // Toolbar
-      await expect(page.locator('.stage-toolbar .sidebar-toggle')).toBeVisible();
+      await expect(
+        page.locator('.stage-toolbar .sidebar-toggle')
+      ).toBeVisible();
       await expect(page.locator('.stage-toolbar .mode-toggle')).toBeVisible();
-      await expect(page.locator('.stage-toolbar .shell-theme-toggle')).toBeVisible();
+      await expect(
+        page.locator('.stage-toolbar .shell-theme-toggle')
+      ).toBeVisible();
 
       // Readout
       await expect(page.locator('.readout-panel')).toBeVisible();
@@ -170,7 +201,9 @@ test.describe('SplitRightLayout Desktop', () => {
   test('play/pause toggles animation state', async ({ page }) => {
     await gotoScene(page, 'projectile');
 
-    const playPauseBtn = page.locator('.stage-floating-controls button').first();
+    const playPauseBtn = page
+      .locator('.stage-floating-controls button')
+      .first();
 
     const initial = await getFloatingPlayState(page);
     expect(initial.isPlaying).toBe(false);
@@ -200,7 +233,9 @@ test.describe('SplitRightLayout Desktop', () => {
   test('reset restores initial animation state', async ({ page }) => {
     await gotoScene(page, 'projectile');
 
-    const playPauseBtn = page.locator('.stage-floating-controls button').first();
+    const playPauseBtn = page
+      .locator('.stage-floating-controls button')
+      .first();
     const resetBtn = page.locator('.stage-floating-controls button').nth(1);
 
     await playPauseBtn.click();
@@ -217,7 +252,10 @@ test.describe('SplitRightLayout Desktop', () => {
     const resetChanged = Object.keys(midReadout).some(
       (k) => midReadout[k] !== afterReset[k]
     );
-    expect(resetChanged, 'reset should change readout back toward initial').toBe(true);
+    expect(
+      resetChanged,
+      'reset should change readout back toward initial'
+    ).toBe(true);
 
     const state = await getFloatingPlayState(page);
     expect(state.isPlaying).toBe(false);
@@ -261,7 +299,7 @@ test.describe('SplitRightLayout Desktop', () => {
     await toggle.click();
     await page.waitForTimeout(300);
 
-    const isHidden = await leftPanel.evaluate((el) => {
+    const isHidden = await leftPanel.evaluate((el: HTMLElement) => {
       const style = window.getComputedStyle(el);
       return style.display === 'none' || el.hidden;
     });
@@ -273,7 +311,9 @@ test.describe('SplitRightLayout Desktop', () => {
   });
 
   // ── 6. Mode toggle ──
-  test('mode toggle switches between normal and presentation', async ({ page }) => {
+  test('mode toggle switches between normal and presentation', async ({
+    page
+  }) => {
     await gotoScene(page, 'projectile');
 
     const container = page.locator('.layout-master');
@@ -283,7 +323,9 @@ test.describe('SplitRightLayout Desktop', () => {
 
     // Click to presentation (toolbar gets hidden by CSS, so use evaluate)
     await page.evaluate(() => {
-      const btn = document.querySelector('.stage-toolbar .mode-toggle') as HTMLButtonElement;
+      const btn = document.querySelector(
+        '.stage-toolbar .mode-toggle'
+      ) as HTMLButtonElement;
       btn?.click();
     });
     await page.waitForTimeout(200);
@@ -292,7 +334,9 @@ test.describe('SplitRightLayout Desktop', () => {
 
     // Click back to normal
     await page.evaluate(() => {
-      const btn = document.querySelector('.stage-toolbar .mode-toggle') as HTMLButtonElement;
+      const btn = document.querySelector(
+        '.stage-toolbar .mode-toggle'
+      ) as HTMLButtonElement;
       btn?.click();
     });
     await page.waitForTimeout(200);
@@ -330,18 +374,24 @@ test.describe('SplitRightLayout Desktop', () => {
     const toggle = page.locator('.readout-panel .readout-toggle');
     const panel = page.locator('.readout-panel');
 
-    const wasCollapsed = await panel.evaluate((el) => el.classList.contains('is-collapsed'));
+    const wasCollapsed = await panel.evaluate((el) =>
+      el.classList.contains('is-collapsed')
+    );
 
     await toggle.click();
     await page.waitForTimeout(200);
 
-    const isCollapsedAfterClick = await panel.evaluate((el) => el.classList.contains('is-collapsed'));
+    const isCollapsedAfterClick = await panel.evaluate((el) =>
+      el.classList.contains('is-collapsed')
+    );
     expect(isCollapsedAfterClick).toBe(!wasCollapsed);
 
     await toggle.click();
     await page.waitForTimeout(200);
 
-    const isCollapsedAfterSecond = await panel.evaluate((el) => el.classList.contains('is-collapsed'));
+    const isCollapsedAfterSecond = await panel.evaluate((el) =>
+      el.classList.contains('is-collapsed')
+    );
     expect(isCollapsedAfterSecond).toBe(wasCollapsed);
   });
 
@@ -352,26 +402,40 @@ test.describe('SplitRightLayout Desktop', () => {
     const resizer = page.locator('.panel-resizer');
     const leftPanel = page.locator('.teaching-left-panel');
 
-    const initialWidth = await leftPanel.evaluate((el) => el.getBoundingClientRect().width);
+    const initialWidth = await leftPanel.evaluate(
+      (el) => el.getBoundingClientRect().width
+    );
 
     const resizerBox = await resizer.boundingBox();
     expect(resizerBox).not.toBeNull();
 
-    await page.mouse.move(resizerBox!.x + resizerBox!.width / 2, resizerBox!.y + resizerBox!.height / 2);
+    await page.mouse.move(
+      resizerBox!.x + resizerBox!.width / 2,
+      resizerBox!.y + resizerBox!.height / 2
+    );
     await page.mouse.down();
-    await page.mouse.move(resizerBox!.x + resizerBox!.width / 2 + 100, resizerBox!.y + resizerBox!.height / 2);
+    await page.mouse.move(
+      resizerBox!.x + resizerBox!.width / 2 + 100,
+      resizerBox!.y + resizerBox!.height / 2
+    );
     await page.mouse.up();
     await page.waitForTimeout(300);
 
-    const newWidth = await leftPanel.evaluate((el) => el.getBoundingClientRect().width);
+    const newWidth = await leftPanel.evaluate(
+      (el) => el.getBoundingClientRect().width
+    );
     expect(newWidth).toBeGreaterThan(initialWidth + 50);
   });
 
   // ── 10. Animation produces visible readout changes (projectile only) ──
-  test('projectile animation advances readout values over time', async ({ page }) => {
+  test('projectile animation advances readout values over time', async ({
+    page
+  }) => {
     await gotoScene(page, 'projectile');
 
-    const playPauseBtn = page.locator('.stage-floating-controls button').first();
+    const playPauseBtn = page
+      .locator('.stage-floating-controls button')
+      .first();
     const resetBtn = page.locator('.stage-floating-controls button').nth(1);
 
     await resetBtn.click();
@@ -389,7 +453,10 @@ test.describe('SplitRightLayout Desktop', () => {
     for (const key of Object.keys(t0)) {
       if (t0[key] !== t1[key]) changedCount++;
     }
-    expect(changedCount, `readout changed from ${JSON.stringify(t0)} to ${JSON.stringify(t1)}`).toBeGreaterThan(0);
+    expect(
+      changedCount,
+      `readout changed from ${JSON.stringify(t0)} to ${JSON.stringify(t1)}`
+    ).toBeGreaterThan(0);
 
     await resetBtn.click();
     await page.waitForTimeout(300);
@@ -399,7 +466,9 @@ test.describe('SplitRightLayout Desktop', () => {
     for (const key of Object.keys(t0)) {
       if (t0[key] === t2[key]) restoredCount++;
     }
-    expect(restoredCount).toBeGreaterThanOrEqual(Math.max(1, Object.keys(t0).length - 2));
+    expect(restoredCount).toBeGreaterThanOrEqual(
+      Math.max(1, Object.keys(t0).length - 2)
+    );
   });
 });
 
@@ -482,7 +551,7 @@ test.describe('MobileStackLayout Mobile', () => {
     await gotoScene(page, 'spring-oscillator');
 
     const graphToggle = page.locator('.mobile-section-toggle');
-    if (await graphToggle.count() === 0) {
+    if ((await graphToggle.count()) === 0) {
       test.skip(true, 'No graph toggle found on mobile spring-oscillator');
       return;
     }
@@ -491,7 +560,9 @@ test.describe('MobileStackLayout Mobile', () => {
     await page.waitForTimeout(300);
 
     const graphSection = page.locator('.mobile-graph-section');
-    const isExpanded = await graphSection.evaluate((el) => el.classList.contains('is-expanded'));
+    const isExpanded = await graphSection.evaluate((el) =>
+      el.classList.contains('is-expanded')
+    );
     expect(isExpanded).toBe(true);
   });
 });
@@ -499,7 +570,9 @@ test.describe('MobileStackLayout Mobile', () => {
 // ── Layout Auto-Switch Tests ────────────────────────────────────────────
 
 test.describe('Layout Auto-Switch on Resize', () => {
-  test('switches from desktop to mobile on narrow viewport', async ({ page }) => {
+  test('switches from desktop to mobile on narrow viewport', async ({
+    page
+  }) => {
     await page.setViewportSize(DESKTOP_VP);
     await gotoScene(page, 'projectile');
 
@@ -508,14 +581,18 @@ test.describe('Layout Auto-Switch on Resize', () => {
     await page.setViewportSize(MOBILE_VP);
     await page.waitForTimeout(600);
 
-    await expect(page.locator('.layout-master')).toHaveClass(/mobile-stack-layout/);
+    await expect(page.locator('.layout-master')).toHaveClass(
+      /mobile-stack-layout/
+    );
   });
 
   test('switches from mobile to desktop on wide viewport', async ({ page }) => {
     await page.setViewportSize(MOBILE_VP);
     await gotoScene(page, 'projectile');
 
-    await expect(page.locator('.layout-master')).toHaveClass(/mobile-stack-layout/);
+    await expect(page.locator('.layout-master')).toHaveClass(
+      /mobile-stack-layout/
+    );
 
     await page.setViewportSize(DESKTOP_VP);
     await page.waitForTimeout(600);
@@ -535,7 +612,9 @@ test.describe('All scenes transport and playback', () => {
     test(`${meta.name} play/pause/reset controls work`, async ({ page }) => {
       await gotoScene(page, sceneId);
 
-      const playPauseBtn = page.locator('.stage-floating-controls button').first();
+      const playPauseBtn = page
+        .locator('.stage-floating-controls button')
+        .first();
       const resetBtn = page.locator('.stage-floating-controls button').nth(1);
 
       // Initial: paused
@@ -570,7 +649,9 @@ test.describe('All scenes transport and playback', () => {
     test(`${meta.name} readout updates during playback`, async ({ page }) => {
       await gotoScene(page, sceneId);
 
-      const playPauseBtn = page.locator('.stage-floating-controls button').first();
+      const playPauseBtn = page
+        .locator('.stage-floating-controls button')
+        .first();
       const resetBtn = page.locator('.stage-floating-controls button').nth(1);
 
       await resetBtn.click();
@@ -584,7 +665,9 @@ test.describe('All scenes transport and playback', () => {
 
       const after = await getReadoutMap(page);
       const changed = Object.keys(before).some((k) => before[k] !== after[k]);
-      expect(changed, `${meta.name}: readout should change after playing`).toBe(true);
+      expect(changed, `${meta.name}: readout should change after playing`).toBe(
+        true
+      );
     });
   }
 
@@ -593,23 +676,24 @@ test.describe('All scenes transport and playback', () => {
     test(`${meta.name} canvas changes during playback`, async ({ page }) => {
       await gotoScene(page, sceneId);
 
-      const playPauseBtn = page.locator('.stage-floating-controls button').first();
+      const playPauseBtn = page
+        .locator('.stage-floating-controls button')
+        .first();
       const resetBtn = page.locator('.stage-floating-controls button').nth(1);
 
       await resetBtn.click();
       await page.waitForTimeout(300);
 
-      const beforeChecksum = await getCanvasChecksum(page, meta.canvasSelector);
-
       await playPauseBtn.click();
       await page.waitForTimeout(1200);
       await playPauseBtn.click();
 
-      const afterChecksum = await getCanvasChecksum(page, meta.canvasSelector);
-
       // Canvas checksum should differ after animation (or at least canvas should still have content)
       const hasContentAfter = await canvasHasContent(page, meta.canvasSelector);
-      expect(hasContentAfter, `${meta.name} canvas should have content after playback`).toBe(true);
+      expect(
+        hasContentAfter,
+        `${meta.name} canvas should have content after playback`
+      ).toBe(true);
 
       // For scenes where readout auto-updates, also check that
       if (sceneId === 'chase-meet') {

@@ -8,16 +8,16 @@ export const Colors = {
   coral: '#FF6B6B',
   coralLight: '#FF8E72',
   coralDark: '#E85D5D',
-  
+
   /* 辅助色 - 清新薄荷 */
   mint: '#4ECDC4',
   mintLight: '#95E1D3',
   mintDark: '#3DBDB5',
-  
+
   /* 点缀色 - 活泼明黄 */
   yellow: '#FFE66D',
   salmon: '#FFA07A',
-  
+
   /* 中性色 */
   dark: '#2C3E50',
   gray: '#5D6D7E',
@@ -25,45 +25,12 @@ export const Colors = {
   bg: '#FFFEF7',
   cream: '#FFF8E7',
   white: '#FFFFFF',
-  
+
   /* 深色模式 - 新主题系统 */
   darkBg: '#0f172a',
   darkCard: '#1e293b',
-  darkText: '#f1f5f9',
+  darkText: '#f1f5f9'
 } as const;
-
-export type ColorKey = keyof typeof Colors;
-
-/**
- * 获取 Canvas 配色
- * @param isDark 是否为深色模式
- */
-export function getCanvasColors(isDark: boolean) {
-  return {
-    background: isDark ? Colors.darkBg : Colors.bg,
-    grid: isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(189, 195, 199, 0.3)',
-    primary: Colors.coral,
-    secondary: Colors.mint,
-    accent: Colors.yellow,
-    text: isDark ? Colors.darkText : Colors.dark,
-    textSecondary: isDark ? Colors.gray : Colors.gray,
-  };
-}
-
-/**
- * 获取物理量配色
- */
-export function getPhysicsColors() {
-  return {
-    velocity: Colors.coral,
-    acceleration: Colors.mint,
-    displacement: Colors.yellow,
-    force: Colors.salmon,
-    energy: Colors.mintLight,
-    time: Colors.gray,
-    position: Colors.coralLight,
-  };
-}
 
 /**
  * 带透明度的颜色
@@ -83,28 +50,30 @@ export function alpha(color: string, opacity: number): string {
  */
 export function getThemeColors(theme: 'light' | 'dark') {
   const isDark = theme === 'dark';
-  
+
   return {
     /* 背景 */
     background: isDark ? Colors.darkBg : Colors.bg,
     cardBg: isDark ? Colors.darkCard : Colors.white,
-    
+
     /* 文字 */
     text: isDark ? Colors.darkText : Colors.dark,
     textSecondary: isDark ? Colors.gray : Colors.gray,
     textMuted: isDark ? Colors.grayLight : Colors.grayLight,
-    
+
     /* 强调 */
     primary: Colors.coral,
     secondary: Colors.mint,
     accent: Colors.yellow,
-    
+
     /* 边框 */
     border: isDark ? 'rgba(148, 163, 184, 0.2)' : Colors.grayLight,
-    
+
     /* Canvas */
     canvasBg: isDark ? Colors.darkBg : Colors.bg,
-    canvasGrid: isDark ? 'rgba(148, 163, 184, 0.12)' : 'rgba(189, 195, 199, 0.25)',
-    canvasText: isDark ? Colors.darkText : Colors.dark,
+    canvasGrid: isDark
+      ? 'rgba(148, 163, 184, 0.12)'
+      : 'rgba(189, 195, 199, 0.25)',
+    canvasText: isDark ? Colors.darkText : Colors.dark
   };
 }

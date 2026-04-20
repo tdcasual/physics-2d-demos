@@ -1,7 +1,11 @@
-import type { TeachingMode } from '../../app/teaching-standards';
-import type { TeachingTheme } from '../../app/teaching-standards';
+import type { TeachingMode } from '../../platform/standards';
+import type { TeachingTheme } from '../../platform/standards';
 import type { SceneLifecycle } from '../types';
-import { createElectrificationSim, type ElectrificationScene, type ElectrificationSnapshot } from './scene.sim';
+import {
+  createElectrificationSim,
+  type ElectrificationScene,
+  type ElectrificationSnapshot
+} from './scene.sim';
 import { createElectrificationView } from './scene.view';
 
 export type CreateElectrificationSceneOptions = {
@@ -11,7 +15,9 @@ export type CreateElectrificationSceneOptions = {
   onReadout?: (snapshot: ElectrificationSnapshot) => void;
 };
 
-export function createElectrificationScene(options: CreateElectrificationSceneOptions = {}): SceneLifecycle & {
+export function createElectrificationScene(
+  options: CreateElectrificationSceneOptions = {}
+): SceneLifecycle & {
   resize(): void;
   setMode(mode: TeachingMode): void;
   setTheme(theme: TeachingTheme): void;

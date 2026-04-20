@@ -1,7 +1,11 @@
-import type { TeachingMode } from '../../app/teaching-standards';
-import type { TeachingTheme } from '../../app/teaching-standards';
+import type { TeachingMode } from '../../platform/standards';
+import type { TeachingTheme } from '../../platform/standards';
 import type { SceneLifecycle } from '../types';
-import { createFieldLinesSim, type FieldLinesScene, type FieldLinesSnapshot } from './scene.sim';
+import {
+  createFieldLinesSim,
+  type FieldLinesScene,
+  type FieldLinesSnapshot
+} from './scene.sim';
 import { createFieldLinesView } from './scene.view';
 
 export type CreateFieldLinesSceneOptions = {
@@ -11,7 +15,9 @@ export type CreateFieldLinesSceneOptions = {
   onReadout?: (snapshot: FieldLinesSnapshot) => void;
 };
 
-export function createFieldLinesScene(options: CreateFieldLinesSceneOptions = {}): SceneLifecycle & {
+export function createFieldLinesScene(
+  options: CreateFieldLinesSceneOptions = {}
+): SceneLifecycle & {
   resize(): void;
   setMode(mode: TeachingMode): void;
   setTheme(theme: TeachingTheme): void;

@@ -1,20 +1,20 @@
-import { bootScenePage, type SceneInstance } from '../../app/scene-bootstrapper';
+import { bootScenePage } from '../../app/scene-bootstrapper';
 import { springOscillatorMeta } from './scene.meta';
-import { createSpringOscillatorScene, type SpringOscillatorScene } from './scene.entry';
+import { createSpringOscillatorScene } from './scene.entry';
 import { createSpringOscillatorControlsV4 } from './controls-v4';
 
 bootScenePage({
   meta: springOscillatorMeta,
-  createScene: ({ canvas, theme, mode }) => {
+  createScene: ({ canvas }) => {
     const scene = createSpringOscillatorScene({
       stageCanvas: canvas
     });
-    return scene as unknown as SceneInstance;
+    return scene;
   },
   createControls: ({ mount, scene, onStatus }) => {
     return createSpringOscillatorControlsV4({
       mount,
-      scene: scene as unknown as SpringOscillatorScene,
+      scene,
       onStatus
     });
   },

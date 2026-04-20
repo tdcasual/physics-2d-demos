@@ -1,0 +1,67 @@
+/**
+ * 场景 page.ts 可重用工具
+ *
+ * 提取多个场景中重复的参数映射和预设应用逻辑，
+ * 使 page.ts 更薄、更易测试。
+ */
+
+/**
+ * 创建参数映射器：将控制面板的 key 映射到场景参数 key。
+ *
+ * @param mapping - 控制 key → 场景参数 key 的映射表
+ * @param onApply - 应用参数的回调
+ * @returns 可直接传给 renderSchema onChange 的处理函数
+ */
+export function createParamMapper<TParams extends Record<string, unknown>>(
+  mapping: Record<string, string>,
+  onApply: (params: Partial<TParams>) => void
+): (key: string, value: unknown) => void {
+  return (key: string, value: unknown) => {
+    const paramKey = mapping[key];
+    if (paramKey) {
+      onApply({ [paramKey]: value } as Partial<TParams>);
+    }
+  };
+}
+
+/**
+ * 创建预设应用器：根据预设 ID 查找并应用参数。
+ *
+ * @param presets - 预设 ID → 参数 Partial 的映射表
+ * @param onApply - 应用参数的回调
+ * @param onAfterApply - 应用后的可选回调（如 reset + render）
+ * @returns 可直接在 onChange 中调用的处理函数
+ */
+export function createPresetApplier<TParams>(
+  presets: Record<string, Partial<TParams>>,
+  onApply: (params: Partial<TParams>) => void,
+  onAfterApply?: () => void
+): (presetId: string) => boolean {
+  return (presetId: string) => {
+    const params = presets[presetId];
+    if (params) {
+      onApply(params);
+      onAfterApply?.();
+      return true;
+    }
+    return false;
+  };
+}
+
+/**
+ * 创建场景选择器处理器：将控制面板的场景选择映射到场景方法调用。
+ *
+ * @param setScene - 场景切换方法
+ * @param onAfterSet - 切换后的可选回调（如 render）
+ * @returns 可直接在 onChange 中调用的处理函数
+ */
+export function createSceneSelectorHandler<TSceneId extends string>(
+  setScene: (id: TSceneId) => void,
+  onAfterSet?: () => void
+): (sceneId: string) => boolean {
+  return (sceneId: string) => {
+    setScene(sceneId as TSceneId);
+    onAfterSet?.();
+    return true;
+  };
+}

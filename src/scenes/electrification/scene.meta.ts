@@ -9,6 +9,11 @@ export const electrificationMeta: SceneMeta = {
   subConcepts: ['摩擦起电', '感应起电'],
   keywords: ['电磁学', '静电', '起电', '2D'],
   objective: '演示摩擦、感应、接触起电的步骤与结果',
+  description: '摩擦起电与静电感应的原理演示',
+  difficulty: 1,
+  icon: '🔋',
+  category: 'electromagnetism',
+  featured: false,
   defaultParams: {
     scene: 0
   }
