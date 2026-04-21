@@ -5,13 +5,8 @@
 
 import type { ProjectileState } from './scene.sim';
 import { Colors, getThemeColors } from '../../core/colors';
-import {
-  getOptimalCanvasSize,
-  setCanvasSize,
-  drawGrid,
-  drawBall,
-  drawTrail
-} from '../../core/unified-canvas';
+import { sizeCanvasToFill } from '../../core/canvas-sizing';
+import { drawGrid, drawBall, drawTrail } from '../../core/unified-canvas';
 
 export type CreateProjectileViewOptions = {
   canvas: HTMLCanvasElement;
@@ -35,28 +30,17 @@ export function createProjectileView(options: CreateProjectileViewOptions) {
   const originY = () => height - 60;
 
   function resize(): void {
-    // 获取舞台容器的尺寸
-    let rect = canvas.parentElement?.getBoundingClientRect();
+    // 使用新的 fill 策略：canvas 完全填满容器
+    // 抛体运动需要最大化利用屏幕空间
+    ctx = sizeCanvasToFill(canvas);
 
-    // 如果 parent 没有尺寸，尝试使用 canvas 自身的尺寸
-    if (!rect || rect.width === 0 || rect.height === 0) {
-      rect = canvas.getBoundingClientRect();
-    }
+    const rect = canvas.getBoundingClientRect();
+    width = rect.width;
+    height = rect.height;
 
-    // 如果仍然没有尺寸，使用默认值
-    if (!rect || rect.width === 0 || rect.height === 0) {
-      width = 800;
-      height = 600;
-    } else {
-      // 使用统一工具计算最佳 Canvas 尺寸
-      const optimal = getOptimalCanvasSize(rect.width, rect.height, 40);
-      width = optimal.width;
-      height = optimal.height;
-      scale = optimal.scale;
-    }
-
-    // 设置 Canvas 尺寸并处理高DPI
-    ctx = setCanvasSize(canvas, width, height);
+    // 计算缩放比例（用于坐标映射）
+    scale = Math.min(width / 800, height / 600);
+    scale = Math.max(0.5, Math.min(2, scale));
   }
 
   function worldToScreen(state: ProjectileState): { x: number; y: number } {

@@ -22,6 +22,7 @@ const DEFAULT_PARAMS: ChaseMeetParams = {
 export type CreateChaseMeetSceneOptions = {
   canvas?: HTMLCanvasElement;
   stageSlot?: HTMLElement;
+  graphSlot?: HTMLElement;
   mode?: TeachingMode;
   theme?: TeachingTheme;
   onReadout?: (snapshot: ChaseMeetSnapshot) => void;
@@ -42,6 +43,7 @@ export function createChaseMeetScene(
   const view = createChaseMeetView({
     canvas: options.canvas,
     stageSlot: options.stageSlot,
+    graphSlot: options.graphSlot,
     mode: options.mode ?? 'normal',
     theme: options.theme ?? 'dark'
   });

@@ -219,8 +219,9 @@ export interface Scene {
   /**
    * 渲染动画区域
    * @param container - 动画区域容器
+   * @param slots - 所有布局槽位（可选，供多画布场景使用）
    */
-  renderAnimation(container: HTMLElement): void;
+  renderAnimation(container: HTMLElement, slots?: LayoutSlots): void;
 
   /**
    * 渲染图表区域 (可选)

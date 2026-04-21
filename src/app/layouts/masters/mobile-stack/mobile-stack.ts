@@ -142,7 +142,17 @@ export class MobileStackLayout extends BaseLayout {
       const testEl = document.createElement('div');
       testEl.style.height = '1dvh';
       const vhUnit = testEl.style.height === '1dvh' ? 'dvh' : 'vh';
-      this.animationSection.style.height = `${cfg.animationHeightVh}${vhUnit}`;
+      // 如果场景自行管理内容高度（如 chase-meet），允许 auto 模式
+      const layoutCfg = this.config as MobileStackConfig & {
+        hasGraph?: boolean;
+      };
+      if (layoutCfg.hasGraph === false) {
+        this.animationSection.classList.add('auto-height');
+        this.animationSection.style.height = 'auto';
+        this.animationSection.style.minHeight = `${cfg.animationMinHeight}px`;
+      } else {
+        this.animationSection.style.height = `${cfg.animationHeightVh}${vhUnit}`;
+      }
 
       this.stageSlot = document.createElement('div');
       this.stageSlot.className = 'mobile-stage-slot';
@@ -153,23 +163,26 @@ export class MobileStackLayout extends BaseLayout {
       this.animationSection.appendChild(this.stageSlot);
       this.scrollContainer.appendChild(this.animationSection);
 
-      // 3. 图表区
-      const graphExpanded =
-        (this.config as MobileStackConfig).graphExpanded ??
-        DEFAULT_CONFIG.graphExpanded;
-      this.graphManager = new GraphSectionManager(
-        this.scrollContainer,
-        cfg.sectionTitles.graph || '📈 数据图表',
-        graphExpanded,
-        (expanded) => {
-          this.saveState();
-          this.container?.dispatchEvent(
-            new CustomEvent('graphToggle', {
-              detail: { expanded }
-            })
-          );
-        }
-      );
+      // 3. 图表区（仅在 hasGraph !== false 时创建）
+      const hasGraph = layoutCfg.hasGraph !== false;
+      if (hasGraph) {
+        const graphExpanded =
+          (this.config as MobileStackConfig).graphExpanded ??
+          DEFAULT_CONFIG.graphExpanded;
+        this.graphManager = new GraphSectionManager(
+          this.scrollContainer,
+          cfg.sectionTitles.graph || '📈 数据图表',
+          graphExpanded,
+          (expanded) => {
+            this.saveState();
+            this.container?.dispatchEvent(
+              new CustomEvent('graphToggle', {
+                detail: { expanded }
+              })
+            );
+          }
+        );
+      }
 
       // 4. 控制区
       this.renderControlSection(cfg);
@@ -198,7 +211,7 @@ export class MobileStackLayout extends BaseLayout {
         header: undefined,
         control: this.controlSlot,
         animation: this.stageSlot,
-        graph: this.graphManager.slot,
+        graph: this.graphManager?.slot,
         readout: this.readoutManager.bar
       };
     }, 'render');
@@ -345,11 +358,14 @@ export class MobileStackLayout extends BaseLayout {
   }
 
   getSlotConfig(slot: SlotName): SlotConfig | undefined {
+    const hasGraph = this.graphManager !== null;
     const configs: Partial<Record<SlotName, SlotConfig>> = {
       header: { visible: false },
       control: { visible: true },
       animation: { visible: true },
-      graph: { visible: this.graphManager?.isExpanded() ?? false },
+      graph: {
+        visible: hasGraph ? (this.graphManager?.isExpanded() ?? false) : false
+      },
       readout: { visible: true }
     };
     return configs[slot];
@@ -363,7 +379,11 @@ export class MobileStackLayout extends BaseLayout {
     const config = cfg || this.getConfig();
 
     this.safely(() => {
-      if (this.animationSection) {
+      // 仅在 animation section 不是 auto-height 时调整高度
+      if (
+        this.animationSection &&
+        !this.animationSection.classList.contains('auto-height')
+      ) {
         const newHeight = Math.max(
           config.animationMinHeight,
           Math.min(

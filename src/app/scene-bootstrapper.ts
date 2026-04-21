@@ -47,9 +47,16 @@ export type ScenePageOptions<TScene extends SceneInstance = SceneInstance> = {
   preferredLayout?: string;
   /** 布局配置 */
   layoutConfig?: Record<string, unknown>;
-  /** 创建场景实例 */
+  /** 创建场景实例
+   *
+   * @param opts.canvas - 动画区域 canvas（向后兼容）
+   * @param opts.slots - 所有布局槽位（推荐新场景使用）
+   * @param opts.theme - 当前主题
+   * @param opts.mode - 演示模式
+   */
   createScene: (opts: {
     canvas: HTMLCanvasElement;
+    slots: LayoutSlots;
     theme: Theme;
     mode: 'normal' | 'presentation';
   }) => TScene;
@@ -93,6 +100,7 @@ export class SceneAdapter<
   private listeners: (() => void)[] = [];
   private _deferredControlContainer: HTMLElement | null = null;
   private _resizeHandlerAdded = false;
+  private _graphRendered = false;
 
   constructor(
     private options: ScenePageOptions<TScene>,
@@ -128,7 +136,9 @@ export class SceneAdapter<
     this._createControls(container);
   }
 
-  renderAnimation(container: HTMLElement): void {
+  renderAnimation(container: HTMLElement, slots: LayoutSlots): void {
+    this.slots = slots;
+
     // 获取布局创建的 Canvas（animation slot 中只有一个 canvas）
     const canvas = container.querySelector('canvas');
     if (!canvas) {
@@ -148,7 +158,8 @@ export class SceneAdapter<
         | 'normal'
         | 'presentation') || 'normal';
 
-    this.scene = this.options.createScene({ canvas, theme, mode });
+    // 传递所有 slots 给场景，让场景自行决定如何使用
+    this.scene = this.options.createScene({ canvas, slots, theme, mode });
 
     // 初始化
     this.scene.init();
@@ -181,6 +192,11 @@ export class SceneAdapter<
       this._deferredControlContainer = null;
     }
 
+    // 如果存在 graph slot 且场景支持，自动渲染图表
+    if (slots.graph && !this._graphRendered) {
+      this._renderGraphSlot(slots.graph);
+    }
+
     // 立即渲染
     this.scene.resize();
     this.scene.render();
@@ -196,10 +212,25 @@ export class SceneAdapter<
   }
 
   renderGraph(container: HTMLElement): void {
-    // 如果场景支持 attachGraphCanvas，自动创建并附加图表 canvas
+    this._renderGraphSlot(container);
+  }
+
+  private _renderGraphSlot(container: HTMLElement): void {
+    if (this._graphRendered) return;
+    this._graphRendered = true;
+
+    // 优先使用场景暴露的 renderGraph 方法（新 API）
     const scene = this.scene as {
+      renderGraph?(container: HTMLElement): void;
       attachGraphCanvas?(canvas: HTMLCanvasElement): void;
     } | null;
+
+    if (scene && typeof scene.renderGraph === 'function') {
+      scene.renderGraph(container);
+      return;
+    }
+
+    // 兼容旧 API：如果场景支持 attachGraphCanvas，自动创建并附加图表 canvas
     if (scene && typeof scene.attachGraphCanvas === 'function') {
       const canvas = document.createElement('canvas');
       canvas.style.width = '100%';

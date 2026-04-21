@@ -33,14 +33,18 @@ function formatReadout(
 
 bootScenePage({
   meta: chaseMeetMeta,
-  createScene: ({ canvas, theme, mode }) => {
+  createScene: ({ canvas, slots, theme, mode }) => {
     const stageSlot = canvas.parentElement;
     if (!stageSlot) {
       throw new Error('Missing animation container for chase-meet');
     }
 
+    // 检测是否为移动端布局：mobile-stack 提供 graph slot
+    const isMobileStack = !!slots.graph;
+
     const scene = createChaseMeetScene({
       stageSlot,
+      graphSlot: isMobileStack ? slots.graph : undefined,
       mode,
       theme,
       onReadout: () => {}

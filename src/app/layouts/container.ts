@@ -21,6 +21,7 @@ import type {
   SceneContainer,
   Scene,
   LayoutMaster,
+  LayoutSlots,
   Theme,
   SwitchOptions,
   LayoutTransition,
@@ -209,8 +210,15 @@ export class SceneContainerImpl implements SceneContainer {
       scene.renderControl(slots.control);
     }
 
+    // renderAnimation 接收完整 slots，让场景自行决定如何使用各区域
     if (slots.animation && scene.renderAnimation) {
-      scene.renderAnimation(slots.animation);
+      // SceneAdapter 的 renderAnimation 接收 slots 对象
+      // 使用 .call() 保持 this 绑定
+      (scene.renderAnimation as (c: HTMLElement, s?: LayoutSlots) => void).call(
+        scene,
+        slots.animation,
+        slots as LayoutSlots
+      );
     }
 
     if (slots.graph && scene.renderGraph) {

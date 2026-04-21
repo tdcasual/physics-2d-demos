@@ -4,6 +4,7 @@ import {
   bootScenePage,
   type ScenePageOptions
 } from '../../src/app/scene-bootstrapper';
+import type { LayoutSlots } from '../../src/app/layouts/types';
 import { layoutRegistry } from '../../src/app/layouts/registry';
 
 // Mock createSceneContainer to avoid heavy DOM layout logic
@@ -86,7 +87,10 @@ describe('SceneAdapter', () => {
     canvas.className = 'stage-canvas';
     container.appendChild(canvas);
 
-    adapter.renderAnimation(container);
+    adapter.renderAnimation(container, {
+      animation: container,
+      control: container
+    } as LayoutSlots);
 
     // Scene should be created and initialized
     // We verify by checking renderAnimation succeeded without error
@@ -98,7 +102,10 @@ describe('SceneAdapter', () => {
     const container = document.createElement('div');
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    adapter.renderAnimation(container);
+    adapter.renderAnimation(container, {
+      animation: container,
+      control: container
+    } as LayoutSlots);
 
     expect(consoleSpy).toHaveBeenCalledWith(
       expect.stringContaining('Canvas not found')
@@ -143,7 +150,10 @@ describe('SceneAdapter', () => {
     canvas.className = 'stage-canvas';
     container.appendChild(canvas);
 
-    adapter.renderAnimation(container);
+    adapter.renderAnimation(container, {
+      animation: container,
+      control: container
+    } as LayoutSlots);
     adapter.setMode('presentation');
 
     expect(scene.setMode).toHaveBeenCalledWith('presentation');
@@ -159,7 +169,10 @@ describe('SceneAdapter', () => {
     canvas.className = 'stage-canvas';
     container.appendChild(canvas);
 
-    adapter.renderAnimation(container);
+    adapter.renderAnimation(container, {
+      animation: container,
+      control: container
+    } as LayoutSlots);
     adapter.setTheme('dark');
 
     expect(scene.setTheme).toHaveBeenCalledWith('dark');
@@ -174,7 +187,10 @@ describe('SceneAdapter', () => {
     canvas.className = 'stage-canvas';
     container.appendChild(canvas);
 
-    adapter.renderAnimation(container);
+    adapter.renderAnimation(container, {
+      animation: container,
+      control: container
+    } as LayoutSlots);
     adapter.startAll();
 
     expect(scene.startAll).toHaveBeenCalled();
@@ -188,7 +204,10 @@ describe('SceneAdapter', () => {
     canvas.className = 'stage-canvas';
     container.appendChild(canvas);
 
-    adapter.renderAnimation(container);
+    adapter.renderAnimation(container, {
+      animation: container,
+      control: container
+    } as LayoutSlots);
     adapter.pauseAll();
 
     expect(scene.pauseAll).toHaveBeenCalled();
@@ -202,7 +221,10 @@ describe('SceneAdapter', () => {
     canvas.className = 'stage-canvas';
     container.appendChild(canvas);
 
-    adapter.renderAnimation(container);
+    adapter.renderAnimation(container, {
+      animation: container,
+      control: container
+    } as LayoutSlots);
     adapter.reset();
 
     expect(scene.reset).toHaveBeenCalled();
@@ -217,7 +239,10 @@ describe('SceneAdapter', () => {
     canvas.className = 'stage-canvas';
     container.appendChild(canvas);
 
-    adapter.renderAnimation(container);
+    adapter.renderAnimation(container, {
+      animation: container,
+      control: container
+    } as LayoutSlots);
     adapter.setTimeScale(2);
 
     expect(scene.setTimeScale).toHaveBeenCalledWith(2);
@@ -241,7 +266,10 @@ describe('SceneAdapter', () => {
     canvas.className = 'stage-canvas';
     container.appendChild(canvas);
 
-    adapter.renderAnimation(container);
+    adapter.renderAnimation(container, {
+      animation: container,
+      control: container
+    } as LayoutSlots);
 
     const listener = vi.fn();
     const unsubscribe = adapter.subscribe(listener);
@@ -265,7 +293,10 @@ describe('SceneAdapter', () => {
     canvas.className = 'stage-canvas';
     container.appendChild(canvas);
 
-    adapter.renderAnimation(container);
+    adapter.renderAnimation(container, {
+      animation: container,
+      control: container
+    } as LayoutSlots);
     adapter.unmount();
 
     expect(scene.dispose).toHaveBeenCalled();
@@ -282,7 +313,10 @@ describe('SceneAdapter', () => {
     canvas.className = 'stage-canvas';
     container.appendChild(canvas);
 
-    adapter.renderAnimation(container);
+    adapter.renderAnimation(container, {
+      animation: container,
+      control: container
+    } as LayoutSlots);
 
     const graphContainer = document.createElement('div');
     adapter.renderGraph(graphContainer);
@@ -324,7 +358,10 @@ describe('SceneAdapter', () => {
     const canvas = document.createElement('canvas');
     canvas.className = 'stage-canvas';
     container.appendChild(canvas);
-    adapter.renderAnimation(container);
+    adapter.renderAnimation(container, {
+      animation: container,
+      control: container
+    } as LayoutSlots);
 
     scene.getState.mockReturnValue({ val: 42 });
     expect(adapter.getReadoutItems()).toEqual([{ label: 'Val', value: '42' }]);
@@ -341,7 +378,10 @@ describe('SceneAdapter', () => {
     const canvas = document.createElement('canvas');
     canvas.className = 'stage-canvas';
     container.appendChild(canvas);
-    adapter.renderAnimation(container);
+    adapter.renderAnimation(container, {
+      animation: container,
+      control: container
+    } as LayoutSlots);
     expect(adapter.getReadoutItems()).toEqual([
       { label: 'Speed', value: '10 m/s' }
     ]);
@@ -357,7 +397,10 @@ describe('SceneAdapter', () => {
     const canvas = document.createElement('canvas');
     canvas.className = 'stage-canvas';
     container.appendChild(canvas);
-    adapter.renderAnimation(container);
+    adapter.renderAnimation(container, {
+      animation: container,
+      control: container
+    } as LayoutSlots);
     expect(adapter.getTransportState()).toEqual({ isPlaying: true, speed: 2 });
   });
 });

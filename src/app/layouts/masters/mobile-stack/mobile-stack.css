@@ -458,6 +458,16 @@
   touch-action: pan-y;
 }
 
+.mobile-animation-section.auto-height {
+  height: auto;
+  min-height: var(--ms-animation-min-height);
+}
+
+.mobile-animation-section.auto-height .mobile-stage-slot {
+  position: relative;
+  min-height: var(--ms-animation-min-height);
+}
+
 .mobile-stage-slot {
   position: absolute;
   top: 0;

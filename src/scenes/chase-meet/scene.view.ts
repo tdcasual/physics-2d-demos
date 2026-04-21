@@ -20,6 +20,7 @@ import {
 export type CreateChaseMeetViewOptions = {
   canvas?: HTMLCanvasElement;
   stageSlot?: HTMLElement;
+  graphSlot?: HTMLElement;
   mode?: TeachingMode;
   theme?: TeachingTheme;
 };
@@ -28,6 +29,7 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
   let canvas = options.canvas ?? null;
   let ctx = canvas?.getContext('2d') ?? null;
   let stageSlot = options.stageSlot ?? null;
+  let graphSlot = options.graphSlot ?? null;
   let stageDom: StageDom | null = null;
   let mode: TeachingMode = options.mode ?? 'normal';
   let theme: TeachingTheme = options.theme ?? 'dark';
@@ -42,6 +44,17 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
     if (!stageSlot) return null;
     if (!stageDom) {
       stageDom = createStageDom(stageSlot);
+      // 如果有独立的 graph slot（移动端布局），将图表区迁移过去
+      if (graphSlot && stageDom) {
+        const graphsSection = stageDom.root.querySelector(
+          '.chase-modern-card--graphs'
+        );
+        if (graphsSection) {
+          stageDom.root.removeChild(graphsSection);
+          graphSlot.replaceChildren();
+          graphSlot.appendChild(graphsSection);
+        }
+      }
     }
     return stageDom;
   }
@@ -77,6 +90,7 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
     });
     dom.root.classList.toggle('is-narrow', viewport.isNarrow);
 
+    // 计算 motion canvas 尺寸
     const stageHeight = Math.max(
       1,
       Math.floor(dom.root.getBoundingClientRect().height || viewport.height)
@@ -88,16 +102,28 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
         stageHeight * (viewport.isNarrow ? 0.34 : 0.42)
       )
     );
-    const graphHeight = Math.min(
-      isPresentation ? 320 : 250,
-      Math.max(
-        isPresentation ? 180 : 150,
-        stageHeight * (viewport.isNarrow ? 0.22 : 0.34)
-      )
-    );
-    const graphWidth = viewport.isNarrow
-      ? totalWidth
-      : Math.max(180, totalWidth / 2 - 8);
+
+    // 计算 graph canvas 尺寸
+    // 如果有独立的 graph slot（移动端），使用 slot 的实际尺寸
+    let graphHeight: number;
+    let graphWidth: number;
+    if (graphSlot) {
+      const gRect = graphSlot.getBoundingClientRect();
+      graphWidth = Math.max(1, Math.floor(gRect.width || totalWidth));
+      // graph slot 中并排放置 x-t 和 v-t，各占一半高度
+      graphHeight = Math.max(120, Math.floor((gRect.height || 300) / 2 - 8));
+    } else {
+      graphHeight = Math.min(
+        isPresentation ? 320 : 250,
+        Math.max(
+          isPresentation ? 180 : 150,
+          stageHeight * (viewport.isNarrow ? 0.22 : 0.34)
+        )
+      );
+      graphWidth = viewport.isNarrow
+        ? totalWidth
+        : Math.max(180, totalWidth / 2 - 8);
+    }
 
     const dpr = Math.min(
       2,
@@ -509,8 +535,12 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
       if (stageSlot) {
         stageSlot.replaceChildren();
       }
+      if (graphSlot) {
+        graphSlot.replaceChildren();
+      }
       stageDom = null;
       stageSlot = null;
+      graphSlot = null;
       canvas = null;
       ctx = null;
     }
