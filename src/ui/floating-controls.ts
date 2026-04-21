@@ -1,13 +1,16 @@
 /**
  * 浮动控制组件
- * 
+ *
  * 位于动画区左上方的控制条，包含：
  * - 播放/暂停按钮（合并）
  * - 重置按钮
  * - 速度控制滑块
- * 
+ *
  * 支持拖拽移动位置，自动响应设备类型变化
  */
+
+// 模块级按钮清理函数存储（避免 any 类型断言）
+const buttonDisposers = new WeakMap<HTMLButtonElement, () => void>();
 
 export interface FloatingControlsOptions {
   /** 获取当前是否播放中 */
@@ -47,14 +50,16 @@ function getDeviceType(): 'mobile' | 'desktop' {
 /**
  * 创建浮动控制组件
  */
-export function createFloatingControls(options: FloatingControlsOptions): FloatingControls {
+export function createFloatingControls(
+  options: FloatingControlsOptions
+): FloatingControls {
   // 追踪当前设备类型
   let currentDeviceType = getDeviceType();
-  
+
   // 创建容器
   const container = document.createElement('div');
   container.className = 'floating-controls';
-  
+
   // UI 元素引用
   let playPauseBtn: HTMLButtonElement;
   let resetBtn: HTMLButtonElement;
@@ -62,26 +67,40 @@ export function createFloatingControls(options: FloatingControlsOptions): Floati
   let speedLabel: HTMLSpanElement;
   let speedSlider: HTMLInputElement;
   let speedValue: HTMLSpanElement;
-  
+
   // 拖拽清理函数
   let cleanupDrag: (() => void) | null = null;
-  
+
   // 定时器
   let intervalId: number | null = null;
-  
+
+  // 事件监听器清理函数
+  const eventCleanups: (() => void)[] = [];
+
   // 构建 UI
   function buildUI(): void {
     // 清空容器
-    container.innerHTML = '';
-    
+    container.replaceChildren();
+
+    // 清理旧的按钮事件监听器
+    [playPauseBtn, resetBtn].forEach((btn) => {
+      if (btn) {
+        const dispose = buttonDisposers.get(btn);
+        if (dispose) {
+          dispose();
+          buttonDisposers.delete(btn);
+        }
+      }
+    });
+
     // 清理旧的拖拽监听
     if (cleanupDrag) {
       cleanupDrag();
       cleanupDrag = null;
     }
-    
+
     const isMobile = currentDeviceType === 'mobile';
-    
+
     // 设置容器样式
     if (isMobile) {
       container.style.cssText = `
@@ -130,7 +149,7 @@ export function createFloatingControls(options: FloatingControlsOptions): Floati
       onClick: () => {
         options.onTogglePlay();
         updatePlayState();
-      },
+      }
     });
 
     // 重置按钮
@@ -144,7 +163,7 @@ export function createFloatingControls(options: FloatingControlsOptions): Floati
       onClick: () => {
         options.onReset();
         updatePlayState();
-      },
+      }
     });
 
     // 分隔线
@@ -191,29 +210,46 @@ export function createFloatingControls(options: FloatingControlsOptions): Floati
     `;
 
     // 速度变化事件
-    speedSlider.addEventListener('input', () => {
+    const onSpeedInput = () => {
       const speed = parseFloat(speedSlider.value);
       speedValue.textContent = `${speed.toFixed(isMobile ? 1 : 2)}×`;
       options.onSpeedChange(speed);
-    });
+    };
+    speedSlider.addEventListener('input', onSpeedInput);
+    eventCleanups.push(() =>
+      speedSlider.removeEventListener('input', onSpeedInput)
+    );
 
     // 阻止滑块上的 mousedown 冒泡（避免触发拖拽）
-    [speedSlider, speedLabel, speedValue, playPauseBtn, resetBtn].forEach(el => {
-      el.addEventListener('mousedown', (e) => e.stopPropagation());
-    });
+    const stopPropagation = (e: MouseEvent) => e.stopPropagation();
+    [speedSlider, speedLabel, speedValue, playPauseBtn, resetBtn].forEach(
+      (el) => {
+        el.addEventListener('mousedown', stopPropagation);
+        eventCleanups.push(() =>
+          el.removeEventListener('mousedown', stopPropagation)
+        );
+      }
+    );
 
     // 组装
-    container.append(playPauseBtn, resetBtn, divider, speedLabel, speedSlider, speedValue);
+    container.append(
+      playPauseBtn,
+      resetBtn,
+      divider,
+      speedLabel,
+      speedSlider,
+      speedValue
+    );
 
     // 拖拽功能（仅在桌面端启用）
     if (!isMobile) {
       cleanupDrag = initDrag(container);
     }
-    
+
     // 更新播放状态
     updatePlayState();
   }
-  
+
   // 初始构建
   buildUI();
 
@@ -224,11 +260,11 @@ export function createFloatingControls(options: FloatingControlsOptions): Floati
     if (!playPauseBtn) return;
     const isPlaying = options.isPlaying();
     playPauseBtn.textContent = isPlaying ? '⏸' : '▶';
-    playPauseBtn.style.borderColor = isPlaying 
-      ? 'var(--accent-color, #4db0ff)' 
+    playPauseBtn.style.borderColor = isPlaying
+      ? 'var(--accent-color, #4db0ff)'
       : 'var(--border-color, rgba(255, 255, 255, 0.15))';
   }
-  
+
   // 刷新布局（响应窗口大小变化）
   function refreshLayout(): void {
     const newDeviceType = getDeviceType();
@@ -237,19 +273,19 @@ export function createFloatingControls(options: FloatingControlsOptions): Floati
       buildUI();
     }
   }
-  
+
   // 监听窗口大小变化
   function onWindowResize(): void {
     refreshLayout();
   }
-  
+
   window.addEventListener('resize', onWindowResize);
 
   function setState(state: { isPlaying?: boolean; speed?: number }): void {
     if (typeof state.isPlaying === 'boolean') {
       playPauseBtn.textContent = state.isPlaying ? '⏸' : '▶';
-      playPauseBtn.style.borderColor = state.isPlaying 
-        ? 'var(--accent-color, #4db0ff)' 
+      playPauseBtn.style.borderColor = state.isPlaying
+        ? 'var(--accent-color, #4db0ff)'
         : 'var(--border-color, rgba(255,255,255,0.15))';
     }
     if (typeof state.speed === 'number') {
@@ -266,13 +302,17 @@ export function createFloatingControls(options: FloatingControlsOptions): Floati
     dispose: () => {
       if (intervalId !== null) {
         clearInterval(intervalId);
+        intervalId = null;
       }
       window.removeEventListener('resize', onWindowResize);
+      eventCleanups.forEach((cleanup) => cleanup());
+      eventCleanups.length = 0;
       if (cleanupDrag) {
         cleanupDrag();
+        cleanupDrag = null;
       }
       container.remove();
-    },
+    }
   };
 }
 
@@ -308,14 +348,25 @@ function createButton(options: ButtonOptions): HTMLButtonElement {
     padding: 0;
   `;
 
-  btn.addEventListener('click', options.onClick);
-  btn.addEventListener('mouseenter', () => {
+  const onClick = options.onClick;
+  const onMouseEnter = () => {
     btn.style.background = 'var(--btn-hover-bg, rgba(255, 255, 255, 0.2))';
     btn.style.transform = 'translateY(-1px)';
-  });
-  btn.addEventListener('mouseleave', () => {
+  };
+  const onMouseLeave = () => {
     btn.style.background = 'var(--btn-bg, rgba(255, 255, 255, 0.1))';
     btn.style.transform = 'none';
+  };
+
+  btn.addEventListener('click', onClick);
+  btn.addEventListener('mouseenter', onMouseEnter);
+  btn.addEventListener('mouseleave', onMouseLeave);
+
+  // 注册按钮清理函数
+  buttonDisposers.set(btn, () => {
+    btn.removeEventListener('click', onClick);
+    btn.removeEventListener('mouseenter', onMouseEnter);
+    btn.removeEventListener('mouseleave', onMouseLeave);
   });
 
   return btn;
@@ -324,12 +375,15 @@ function createButton(options: ButtonOptions): HTMLButtonElement {
 // 初始化拖拽
 function initDrag(element: HTMLElement): () => void {
   let isDragging = false;
-  let startX = 0, startY = 0, initialLeft = 0, initialTop = 0;
+  let startX = 0,
+    startY = 0,
+    initialLeft = 0,
+    initialTop = 0;
 
   function onMouseDown(e: MouseEvent) {
     // 只有直接点击容器时才拖拽
     if (e.target !== element) return;
-    
+
     isDragging = true;
     startX = e.clientX;
     startY = e.clientY;

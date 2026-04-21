@@ -53,10 +53,15 @@ export class GraphSectionManager {
   }
 
   private _updateToggleHtml(title: string): void {
-    this.toggle.innerHTML = `
-      <span class="toggle-title">${title || '📈 数据图表'}</span>
-      <span class="toggle-icon" aria-hidden="true">${this.expanded ? '▼' : '▶'}</span>
-    `;
+    this.toggle.replaceChildren();
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'toggle-title';
+    titleSpan.textContent = title || '📈 数据图表';
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'toggle-icon';
+    iconSpan.setAttribute('aria-hidden', 'true');
+    iconSpan.textContent = this.expanded ? '▼' : '▶';
+    this.toggle.append(titleSpan, iconSpan);
   }
 
   toggleExpanded(): void {

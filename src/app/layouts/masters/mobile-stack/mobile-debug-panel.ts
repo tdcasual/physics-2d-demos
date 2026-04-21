@@ -6,14 +6,32 @@ export class DebugPanelManager {
   constructor(parent: HTMLElement) {
     this.panel = document.createElement('div');
     this.panel.className = 'mobile-debug-panel';
-    this.panel.innerHTML = `
-      <div class="debug-header">Debug</div>
-      <div class="debug-content">
-        <div>FPS: <span class="debug-fps">--</span></div>
-        <div>Memory: <span class="debug-memory">--</span>MB</div>
-        <div>Theme: <span class="debug-theme">--</span></div>
-      </div>
-    `;
+    const debugHeader = document.createElement('div');
+    debugHeader.className = 'debug-header';
+    debugHeader.textContent = 'Debug';
+    const debugContent = document.createElement('div');
+    debugContent.className = 'debug-content';
+    const fpsDiv = document.createElement('div');
+    fpsDiv.append('FPS: ');
+    const fpsSpan = document.createElement('span');
+    fpsSpan.className = 'debug-fps';
+    fpsSpan.textContent = '--';
+    fpsDiv.appendChild(fpsSpan);
+    const memDiv = document.createElement('div');
+    memDiv.append('Memory: ');
+    const memSpan = document.createElement('span');
+    memSpan.className = 'debug-memory';
+    memSpan.textContent = '--';
+    memDiv.appendChild(memSpan);
+    memDiv.append('MB');
+    const themeDiv = document.createElement('div');
+    themeDiv.append('Theme: ');
+    const themeSpan = document.createElement('span');
+    themeSpan.className = 'debug-theme';
+    themeSpan.textContent = '--';
+    themeDiv.appendChild(themeSpan);
+    debugContent.append(fpsDiv, memDiv, themeDiv);
+    this.panel.append(debugHeader, debugContent);
     parent.appendChild(this.panel);
   }
 

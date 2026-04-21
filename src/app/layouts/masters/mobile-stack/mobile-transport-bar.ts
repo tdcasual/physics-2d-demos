@@ -26,9 +26,12 @@ export class TransportBarManager {
     const fsHandler = () => {
       this.isFullscreen = !!document.fullscreenElement;
       if (this.fullscreenBtn) {
-        this.fullscreenBtn.innerHTML = this.isFullscreen
-          ? ICONS.fullscreenExit
-          : ICONS.fullscreen;
+        this.fullscreenBtn.replaceChildren(
+          (this.isFullscreen
+            ? ICONS.fullscreenExit
+            : ICONS.fullscreen
+          ).cloneNode(true)
+        );
         this.fullscreenBtn.setAttribute(
           'aria-label',
           this.isFullscreen ? '退出全屏' : '全屏'
@@ -42,7 +45,7 @@ export class TransportBarManager {
   }
 
   render(config: ControlButtonConfig, callbacks: TransportCallbacks): void {
-    this.bar.innerHTML = '';
+    this.bar.replaceChildren();
     this.playBtn = null;
     this.fullscreenBtn = null;
 
@@ -53,13 +56,15 @@ export class TransportBarManager {
     if (config.showPlayPause) {
       this.playBtn = this._createButton({
         className: 'play-pause',
-        html: isPlaying ? ICONS.pause : ICONS.play,
+        icon: isPlaying ? ICONS.pause : ICONS.play,
         ariaLabel: isPlaying ? '暂停动画' : '播放动画',
         onClick: () => {
           togglePlay?.();
           const nowPlaying = callbacks.isPlaying?.() ?? false;
           if (this.playBtn) {
-            this.playBtn.innerHTML = nowPlaying ? ICONS.pause : ICONS.play;
+            this.playBtn.replaceChildren(
+              (nowPlaying ? ICONS.pause : ICONS.play).cloneNode(true)
+            );
             this.playBtn.setAttribute(
               'aria-label',
               nowPlaying ? '暂停动画' : '播放动画'
@@ -74,7 +79,7 @@ export class TransportBarManager {
       this.bar.appendChild(
         this._createButton({
           className: 'reset',
-          html: ICONS.reset,
+          icon: ICONS.reset,
           ariaLabel: '重置动画',
           onClick: () => callbacks.onReset?.()
         })
@@ -88,7 +93,7 @@ export class TransportBarManager {
     if (config.showFullscreen) {
       this.fullscreenBtn = this._createButton({
         className: 'fullscreen',
-        html: ICONS.fullscreen,
+        icon: ICONS.fullscreen,
         ariaLabel: '全屏',
         onClick: () => {
           if (!document.fullscreenElement) {
@@ -104,7 +109,9 @@ export class TransportBarManager {
 
   updatePlayState(isPlaying: boolean): void {
     if (!this.playBtn) return;
-    this.playBtn.innerHTML = isPlaying ? ICONS.pause : ICONS.play;
+    this.playBtn.replaceChildren(
+      (isPlaying ? ICONS.pause : ICONS.play).cloneNode(true)
+    );
     this.playBtn.setAttribute(
       'aria-label',
       isPlaying ? '暂停动画' : '播放动画'
@@ -113,13 +120,13 @@ export class TransportBarManager {
 
   private _createButton(options: {
     className: string;
-    html: string;
+    icon: SVGSVGElement;
     ariaLabel: string;
     onClick: () => void;
   }): HTMLButtonElement {
     const btn = document.createElement('button');
     btn.className = `mobile-control-btn ${options.className}`;
-    btn.innerHTML = options.html;
+    btn.appendChild(options.icon.cloneNode(true));
     btn.setAttribute('aria-label', options.ariaLabel);
     btn.addEventListener('click', options.onClick);
     return btn;

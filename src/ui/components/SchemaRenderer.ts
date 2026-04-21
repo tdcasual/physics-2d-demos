@@ -14,7 +14,7 @@ import {
   createPresetButtonGroup,
   createTransportRow,
   createSceneSelector
-} from './SceneControls';
+} from './scene-controls';
 import type {
   ControlsSchema,
   ControlField
@@ -38,7 +38,7 @@ export function renderSchema(
   options: SchemaRendererOptions
 ): SchemaRendererInstance {
   const { mount, schema, onChange, onAction } = options;
-  mount.innerHTML = '';
+  mount.replaceChildren();
 
   const valueSetters = new Map<string, (value: unknown) => void>();
   const valueGetters = new Map<string, () => unknown>();

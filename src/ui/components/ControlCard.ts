@@ -71,7 +71,11 @@ export function createControlCard(
   `;
 
   if (options?.icon) {
-    titleEl.innerHTML = `<span style="width:16px;height:16px;opacity:0.7">${options.icon}</span>${title}`;
+    const iconSpan = document.createElement('span');
+    iconSpan.style.cssText = 'width:16px;height:16px;opacity:0.7';
+    iconSpan.textContent = options.icon;
+    titleEl.appendChild(iconSpan);
+    titleEl.appendChild(document.createTextNode(title));
   } else {
     titleEl.textContent = title;
   }
@@ -127,7 +131,7 @@ export function createControlCard(
     transition: all 0.2s;
     border-radius: 4px;
   `;
-  toggle.innerHTML = options?.defaultCollapsed ? '▶' : '▼';
+  toggle.textContent = options?.defaultCollapsed ? '▶' : '▼';
   toggle.setAttribute(
     'aria-label',
     options?.defaultCollapsed ? '展开' : '折叠'
@@ -160,14 +164,14 @@ export function createControlCard(
       return;
     }
     const isCollapsed = card.classList.toggle('collapsed');
-    toggle.innerHTML = isCollapsed ? '▶' : '▼';
+    toggle.textContent = isCollapsed ? '▶' : '▼';
     toggle.setAttribute('aria-label', isCollapsed ? '展开' : '折叠');
     body.style.display = isCollapsed ? 'none' : 'flex';
   });
 
   function setCollapsed(collapsed: boolean): void {
     card.classList.toggle('collapsed', collapsed);
-    toggle.innerHTML = collapsed ? '▶' : '▼';
+    toggle.textContent = collapsed ? '▶' : '▼';
     toggle.setAttribute('aria-label', collapsed ? '展开' : '折叠');
     body.style.display = collapsed ? 'none' : 'flex';
   }

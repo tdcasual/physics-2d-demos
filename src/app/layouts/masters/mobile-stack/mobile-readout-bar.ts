@@ -15,17 +15,19 @@ export class ReadoutBarManager {
   }
 
   setItems(items: ReadoutItem[], maxItems: number): void {
-    this.bar.innerHTML = items
-      .slice(0, maxItems)
-      .map(
-        (item) => `
-      <div class="mobile-readout-item">
-        <span class="readout-label">${item.label}</span>
-        <span class="readout-value">${item.value}</span>
-      </div>
-    `
-      )
-      .join('');
+    this.bar.replaceChildren();
+    items.slice(0, maxItems).forEach((item) => {
+      const div = document.createElement('div');
+      div.className = 'mobile-readout-item';
+      const label = document.createElement('span');
+      label.className = 'readout-label';
+      label.textContent = item.label;
+      const value = document.createElement('span');
+      value.className = 'readout-value';
+      value.textContent = String(item.value);
+      div.append(label, value);
+      this.bar.appendChild(div);
+    });
   }
 
   destroy(): void {
