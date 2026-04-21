@@ -92,6 +92,7 @@ export class SceneAdapter<
   private _readoutItems: ReadoutItem[] = [];
   private listeners: (() => void)[] = [];
   private _deferredControlContainer: HTMLElement | null = null;
+  private _resizeHandlerAdded = false;
 
   constructor(
     private options: ScenePageOptions<TScene>,
@@ -128,24 +129,24 @@ export class SceneAdapter<
   }
 
   renderAnimation(container: HTMLElement): void {
-    // 获取布局创建的 Canvas
-    const canvas = container.querySelector(
-      '.stage-canvas, .mobile-stage-canvas'
-    ) as HTMLCanvasElement | null;
+    // 获取布局创建的 Canvas（animation slot 中只有一个 canvas）
+    const canvas = container.querySelector('canvas');
     if (!canvas) {
       console.error('[SceneAdapter] Canvas not found in animation slot');
       return;
     }
 
-    // 从容器或文档获取当前主题/模式
-    const root = document.querySelector('.layout-master, .teaching-demo');
+    // 从容器或文档获取当前主题/模式（不依赖具体 className，更鲁棒）
     const theme =
-      (root?.getAttribute('data-theme') as Theme) ||
+      (container
+        .closest('[data-theme]')
+        ?.getAttribute('data-theme') as Theme) ||
       (document.documentElement.getAttribute('data-theme') as Theme) ||
       'light';
     const mode =
-      (root?.getAttribute('data-mode') as 'normal' | 'presentation') ||
-      'normal';
+      (container.closest('[data-mode]')?.getAttribute('data-mode') as
+        | 'normal'
+        | 'presentation') || 'normal';
 
     this.scene = this.options.createScene({ canvas, theme, mode });
 
@@ -161,15 +162,18 @@ export class SceneAdapter<
     });
     this.lifecycle.onDispose(() => this.transport?.dispose());
 
-    // 绑定 resize
-    const handleResize = () => {
-      this.scene?.resize();
-      this.scene?.render();
-    };
-    window.addEventListener('resize', handleResize);
-    this.lifecycle.onDispose(() =>
-      window.removeEventListener('resize', handleResize)
-    );
+    // 绑定 resize（只添加一次，防止布局切换后重复注册）
+    if (!this._resizeHandlerAdded) {
+      const handleResize = () => {
+        this.scene?.resize();
+        this.scene?.render();
+      };
+      window.addEventListener('resize', handleResize);
+      this.lifecycle.onDispose(() =>
+        window.removeEventListener('resize', handleResize)
+      );
+      this._resizeHandlerAdded = true;
+    }
 
     // 如果 renderControl 在 scene 创建之前被调用，延迟创建 controls
     if (this._deferredControlContainer) {
@@ -201,7 +205,7 @@ export class SceneAdapter<
       canvas.style.width = '100%';
       canvas.style.height = '100%';
       canvas.style.display = 'block';
-      container.innerHTML = '';
+      container.replaceChildren();
       container.appendChild(canvas);
       scene.attachGraphCanvas(canvas);
     }

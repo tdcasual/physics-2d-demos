@@ -15,7 +15,7 @@ import { MobileStackLayout } from './masters/mobile-stack/mobile-stack';
  * 幂等调用：重复调用不会导致重复注册。
  */
 export function registerAllLayouts(): void {
-  // 先注册默认选择策略（幂等）
+  // 先注册默认选择策略（幂等：先清空再注册，避免策略累积）
   registerDefaultStrategies();
 
   if (!layoutRegistry.has('split-right')) {

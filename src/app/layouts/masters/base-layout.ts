@@ -32,7 +32,7 @@ export abstract class BaseLayout implements LayoutMaster {
   abstract readonly supportedSlots: SlotName[];
 
   /** 容器元素 */
-  protected container: HTMLElement;
+  readonly container: HTMLElement;
 
   /** 布局配置 */
   protected config: LayoutConfig;
@@ -75,7 +75,6 @@ export abstract class BaseLayout implements LayoutMaster {
    */
   async mount(): Promise<void> {
     if (this.isMounted) {
-      console.warn(`[${this.id}] Already mounted`);
       return;
     }
 
@@ -103,7 +102,7 @@ export abstract class BaseLayout implements LayoutMaster {
     this.animationAbortController = null;
 
     // 清空容器
-    this.container.innerHTML = '';
+    this.container.replaceChildren();
     this.container.classList.remove('layout-master', `layout-${this.id}`);
     this.container.removeAttribute('data-theme');
 
@@ -160,26 +159,28 @@ export abstract class BaseLayout implements LayoutMaster {
 
     this.container.style.opacity = '1';
 
-    await new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        if (!signal.aborted) {
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(() => {
           this.container.style.transition = '';
-        }
-        this.isAnimating = false;
-        resolve();
-      }, duration);
+          this.isAnimating = false;
+          resolve();
+        }, duration);
 
-      signal.addEventListener(
-        'abort',
-        () => {
-          clearTimeout(timer);
-          reject(new Error('Animation aborted'));
-        },
-        { once: true }
-      );
-    }).catch(() => {
-      // 动画被中断，静默处理
-    });
+        signal.addEventListener(
+          'abort',
+          () => {
+            clearTimeout(timer);
+            this.container.style.transition = '';
+            this.isAnimating = false;
+            reject(new Error('Animation aborted'));
+          },
+          { once: true }
+        );
+      });
+    } catch {
+      // 动画被中断，transition 和 isAnimating 已在 abort handler 中清理
+    }
   }
 
   /**
@@ -205,23 +206,26 @@ export abstract class BaseLayout implements LayoutMaster {
     this.container.style.transition = `opacity ${duration}ms ${easing}`;
     this.container.style.opacity = '0';
 
-    await new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        this.isAnimating = false;
-        resolve();
-      }, duration);
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(() => {
+          this.isAnimating = false;
+          resolve();
+        }, duration);
 
-      signal.addEventListener(
-        'abort',
-        () => {
-          clearTimeout(timer);
-          reject(new Error('Animation aborted'));
-        },
-        { once: true }
-      );
-    }).catch(() => {
-      // 动画被中断，静默处理
-    });
+        signal.addEventListener(
+          'abort',
+          () => {
+            clearTimeout(timer);
+            this.isAnimating = false;
+            reject(new Error('Animation aborted'));
+          },
+          { once: true }
+        );
+      });
+    } catch {
+      // 动画被中断，isAnimating 已在 abort handler 中清理
+    }
   }
 
   /**
@@ -278,68 +282,6 @@ export abstract class BaseLayout implements LayoutMaster {
     element.className = `layout-region ${className || ''}`.trim();
     element.setAttribute('data-region', name);
     return element;
-  }
-
-  /**
-   * 创建可折叠面板
-   */
-  protected createFoldablePanel(
-    name: SlotName,
-    title: string,
-    defaultCollapsed = false
-  ): HTMLElement {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'foldable-panel';
-    wrapper.setAttribute('data-region', name);
-
-    if (defaultCollapsed) {
-      wrapper.classList.add('is-collapsed');
-    }
-
-    // 头部
-    const header = document.createElement('div');
-    header.className = 'foldable-header';
-    header.innerHTML = `
-      <span class="foldable-title">${title}</span>
-      <svg class="foldable-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="6 9 12 15 18 9"></polyline>
-      </svg>
-    `;
-
-    // 内容区
-    const content = document.createElement('div');
-    content.className = 'foldable-content';
-
-    // 折叠/展开逻辑
-    header.addEventListener('click', () => {
-      const isCollapsed = wrapper.classList.toggle('is-collapsed');
-      wrapper.setAttribute('data-collapsed', String(isCollapsed));
-    });
-
-    wrapper.appendChild(header);
-    wrapper.appendChild(content);
-
-    // 将实际内容区返回给调用者使用
-    Object.defineProperty(wrapper, 'contentSlot', {
-      value: content,
-      writable: false
-    });
-
-    return wrapper;
-  }
-
-  /**
-   * 创建分隔条
-   */
-  protected createResizer(direction: 'vertical' | 'horizontal'): HTMLElement {
-    const resizer = document.createElement('div');
-    resizer.className = `resizer ${direction}`;
-    resizer.setAttribute('role', 'separator');
-    resizer.setAttribute(
-      'aria-orientation',
-      direction === 'vertical' ? 'vertical' : 'horizontal'
-    );
-    return resizer;
   }
 
   /**

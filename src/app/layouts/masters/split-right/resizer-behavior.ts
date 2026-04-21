@@ -11,6 +11,7 @@ export interface ResizerConfig {
 
 export class ResizerBehavior {
   private isDragging = false;
+  private _handleKeyDown?: (e: KeyboardEvent) => void;
 
   constructor(
     private container: HTMLElement,
@@ -56,7 +57,13 @@ export class ResizerBehavior {
       document.removeEventListener('mouseup', handleMouseUp);
     };
 
-    const handleKeyDown = (e: KeyboardEvent) => {
+    // 先移除旧 keydown 监听器，防止快速点击时短暂累积
+    this.resizer?.removeEventListener(
+      'keydown',
+      this._handleKeyDown as EventListener
+    );
+
+    this._handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
       e.preventDefault();
       const step = e.key === 'ArrowLeft' ? -10 : 10;
@@ -76,6 +83,8 @@ export class ResizerBehavior {
 
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
-    this.resizer?.addEventListener('keydown', handleKeyDown, { once: true });
+    this.resizer?.addEventListener('keydown', this._handleKeyDown, {
+      once: true
+    });
   }
 }

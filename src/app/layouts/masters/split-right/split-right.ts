@@ -84,6 +84,9 @@ export class SplitRightLayout extends BaseLayout {
   // 分隔条拖拽行为
   private resizerBehavior: ResizerBehavior | null = null;
 
+  // 事件监听器清理函数（防止 unmount 后泄漏）
+  private eventCleanups: (() => void)[] = [];
+
   // 浮动控制条
   private floatingControls: FloatingControls | null = null;
   private floatingCallbacks: {
@@ -139,10 +142,16 @@ export class SplitRightLayout extends BaseLayout {
     if (!hideHeader) {
       this.header = document.createElement('header');
       this.header.className = 'teaching-header';
-      this.header.innerHTML = `
-        <h1 class="teaching-title">${title}</h1>
-        ${subtitle ? `<p class="teaching-subtitle">${subtitle}</p>` : ''}
-      `;
+      const h1 = document.createElement('h1');
+      h1.className = 'teaching-title';
+      h1.textContent = title;
+      this.header.appendChild(h1);
+      if (subtitle) {
+        const p = document.createElement('p');
+        p.className = 'teaching-subtitle';
+        p.textContent = subtitle;
+        this.header.appendChild(p);
+      }
       this.leftPanel.appendChild(this.header);
     }
 
@@ -150,12 +159,19 @@ export class SplitRightLayout extends BaseLayout {
     this.controlSection = document.createElement('section');
     this.controlSection.className = 'control-section';
     this.controlSection.setAttribute('data-collapsed', 'false');
-    this.controlSection.innerHTML = `
-      <div class="section-header">
-        <h2 class="section-title">控制区</h2>
-        <button type="button" class="section-toggle" data-target="control" aria-label="折叠控制区">−</button>
-      </div>
-    `;
+    const controlHeader = document.createElement('div');
+    controlHeader.className = 'section-header';
+    const controlH2 = document.createElement('h2');
+    controlH2.className = 'section-title';
+    controlH2.textContent = '控制区';
+    const controlToggle = document.createElement('button');
+    controlToggle.type = 'button';
+    controlToggle.className = 'section-toggle';
+    controlToggle.dataset.target = 'control';
+    controlToggle.setAttribute('aria-label', '折叠控制区');
+    controlToggle.textContent = '−';
+    controlHeader.append(controlH2, controlToggle);
+    this.controlSection.appendChild(controlHeader);
     this.controlSlot = document.createElement('div');
     this.controlSlot.className = 'control-slot';
     this.controlSection.appendChild(this.controlSlot);
@@ -166,12 +182,19 @@ export class SplitRightLayout extends BaseLayout {
       this.graphSection = document.createElement('section');
       this.graphSection.className = 'graph-section';
       this.graphSection.setAttribute('data-collapsed', 'false');
-      this.graphSection.innerHTML = `
-        <div class="section-header">
-          <h2 class="section-title">图表</h2>
-          <button type="button" class="section-toggle" data-target="graph" aria-label="折叠图表区">−</button>
-        </div>
-      `;
+      const graphHeader = document.createElement('div');
+      graphHeader.className = 'section-header';
+      const graphH2 = document.createElement('h2');
+      graphH2.className = 'section-title';
+      graphH2.textContent = '图表';
+      const graphToggle = document.createElement('button');
+      graphToggle.type = 'button';
+      graphToggle.className = 'section-toggle';
+      graphToggle.dataset.target = 'graph';
+      graphToggle.setAttribute('aria-label', '折叠图表区');
+      graphToggle.textContent = '−';
+      graphHeader.append(graphH2, graphToggle);
+      this.graphSection.appendChild(graphHeader);
       this.graphSlot = document.createElement('div');
       this.graphSlot.className = 'graph-slot';
       this.graphSection.appendChild(this.graphSlot);
@@ -207,26 +230,27 @@ export class SplitRightLayout extends BaseLayout {
     // 工具栏
     this.stageToolbar = document.createElement('div');
     this.stageToolbar.className = 'stage-toolbar';
-    this.stageToolbar.innerHTML = `
-      <button type="button" class="sidebar-toggle">隐藏控制面板</button>
-      <div class="toolbar-actions">
-        <button type="button" class="mode-toggle" aria-label="切换到演示模式">演示</button>
-        <button type="button" class="shell-theme-toggle" aria-label="切换到夜间主题">夜间</button>
-      </div>
-    `;
+    this.sidebarToggle = document.createElement('button');
+    this.sidebarToggle.type = 'button';
+    this.sidebarToggle.className = 'sidebar-toggle';
+    this.sidebarToggle.textContent = '隐藏控制面板';
+    const toolbarActions = document.createElement('div');
+    toolbarActions.className = 'toolbar-actions';
+    this.modeButton = document.createElement('button');
+    this.modeButton.type = 'button';
+    this.modeButton.className = 'mode-toggle';
+    this.modeButton.setAttribute('aria-label', '切换到演示模式');
+    this.modeButton.textContent = '演示';
+    this.themeButton = document.createElement('button');
+    this.themeButton.type = 'button';
+    this.themeButton.className = 'shell-theme-toggle';
+    this.themeButton.setAttribute('aria-label', '切换到夜间主题');
+    this.themeButton.textContent = '夜间';
+    toolbarActions.append(this.modeButton, this.themeButton);
+    this.stageToolbar.append(this.sidebarToggle, toolbarActions);
     this.rightPanel.appendChild(this.stageToolbar);
 
     // 浮动控制条由 setFloatingControls 方法延迟创建
-
-    this.sidebarToggle = this.stageToolbar.querySelector(
-      '.sidebar-toggle'
-    ) as HTMLButtonElement;
-    this.modeButton = this.stageToolbar.querySelector(
-      '.mode-toggle'
-    ) as HTMLButtonElement;
-    this.themeButton = this.stageToolbar.querySelector(
-      '.shell-theme-toggle'
-    ) as HTMLButtonElement;
 
     // 动画区
     this.stageFrame = document.createElement('div');
@@ -258,13 +282,26 @@ export class SplitRightLayout extends BaseLayout {
 
     const readoutHeader = document.createElement('div');
     readoutHeader.className = 'readout-header';
-    readoutHeader.innerHTML = `
-      <span class="readout-title">${readoutLabel}</span>
-      <div class="readout-actions">
-        <button type="button" class="readout-resize-toggle" title="调整大小">⤢</button>
-        <button type="button" class="readout-toggle" aria-label="${readoutCollapsed ? '展开' : '折叠'}">${readoutCollapsed ? '展开' : '折叠'}</button>
-      </div>
-    `;
+    const readoutTitle = document.createElement('span');
+    readoutTitle.className = 'readout-title';
+    readoutTitle.textContent = readoutLabel;
+    const readoutActions = document.createElement('div');
+    readoutActions.className = 'readout-actions';
+    const resizeToggle = document.createElement('button');
+    resizeToggle.type = 'button';
+    resizeToggle.className = 'readout-resize-toggle';
+    resizeToggle.title = '调整大小';
+    resizeToggle.textContent = '⤢';
+    const readoutToggle = document.createElement('button');
+    readoutToggle.type = 'button';
+    readoutToggle.className = 'readout-toggle';
+    readoutToggle.setAttribute(
+      'aria-label',
+      readoutCollapsed ? '展开' : '折叠'
+    );
+    readoutToggle.textContent = readoutCollapsed ? '展开' : '折叠';
+    readoutActions.append(resizeToggle, readoutToggle);
+    readoutHeader.append(readoutTitle, readoutActions);
 
     const readoutSlot = document.createElement('ul');
     readoutSlot.className = 'readout-slot readout-slot--adaptive';
@@ -273,10 +310,6 @@ export class SplitRightLayout extends BaseLayout {
     readoutPanel.appendChild(readoutHeader);
     readoutPanel.appendChild(readoutSlot);
     this.rightPanel.appendChild(readoutPanel);
-
-    const readoutToggle = readoutHeader.querySelector(
-      '.readout-toggle'
-    ) as HTMLButtonElement;
 
     this.readoutManager = new ReadoutPanelManager({
       panel: readoutPanel,
@@ -304,18 +337,27 @@ export class SplitRightLayout extends BaseLayout {
   }
 
   private bindEvents(): void {
+    // 先清理旧监听器（防止 render 被多次调用时累积）
+    this.eventCleanups.forEach((cleanup) => cleanup());
+    this.eventCleanups = [];
+
     // 分隔条拖拽
     if (this.resizer && this.resizerBehavior) {
-      this.resizer.addEventListener('mousedown', (e) => {
+      const onMouseDown = (e: MouseEvent) => {
         this.resizerBehavior!.onMouseDown(e, this.isCompactViewport);
-      });
+      };
+      this.resizer.addEventListener('mousedown', onMouseDown);
+      this.eventCleanups.push(() =>
+        this.resizer?.removeEventListener('mousedown', onMouseDown)
+      );
     }
 
     // 侧边栏折叠
     if (this.sidebarToggle) {
-      this.sidebarToggle.addEventListener(
-        'click',
-        this.toggleSidebar.bind(this)
+      const onToggleSidebar = this.toggleSidebar.bind(this);
+      this.sidebarToggle.addEventListener('click', onToggleSidebar);
+      this.eventCleanups.push(() =>
+        this.sidebarToggle?.removeEventListener('click', onToggleSidebar)
       );
     }
 
@@ -325,23 +367,31 @@ export class SplitRightLayout extends BaseLayout {
         .getPanel()
         .querySelector('.readout-toggle') as HTMLButtonElement | null;
       if (toggleBtn) {
-        toggleBtn.addEventListener('click', () =>
-          this.readoutManager?.toggle()
+        const onToggle = () => this.readoutManager?.toggle();
+        toggleBtn.addEventListener('click', onToggle);
+        this.eventCleanups.push(() =>
+          toggleBtn.removeEventListener('click', onToggle)
         );
       }
       const resizeToggleBtn = this.readoutManager
         .getPanel()
         .querySelector('.readout-resize-toggle') as HTMLButtonElement | null;
       if (resizeToggleBtn) {
-        resizeToggleBtn.addEventListener('click', () =>
-          this.readoutManager?.toggle()
+        const onToggle = () => this.readoutManager?.toggle();
+        resizeToggleBtn.addEventListener('click', onToggle);
+        this.eventCleanups.push(() =>
+          resizeToggleBtn.removeEventListener('click', onToggle)
         );
       }
     }
 
     // 区域折叠按钮
+    const sectionToggleHandlers: {
+      btn: Element;
+      handler: (e: Event) => void;
+    }[] = [];
     this.container.querySelectorAll('.section-toggle').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
+      const handler = (e: Event) => {
         const target = (e.currentTarget as HTMLElement).getAttribute(
           'data-target'
         );
@@ -350,12 +400,19 @@ export class SplitRightLayout extends BaseLayout {
         } else if (target === 'graph') {
           this.toggleGraphSection();
         }
-      });
+      };
+      btn.addEventListener('click', handler);
+      sectionToggleHandlers.push({ btn, handler });
+    });
+    this.eventCleanups.push(() => {
+      sectionToggleHandlers.forEach(({ btn, handler }) =>
+        btn.removeEventListener('click', handler)
+      );
     });
 
     // 主题切换按钮
     if (this.themeButton) {
-      this.themeButton.addEventListener('click', () => {
+      const onThemeClick = () => {
         const nextTheme = this.currentTheme === 'dark' ? 'light' : 'dark';
         this.setTheme(nextTheme);
         this.container.dispatchEvent(
@@ -364,12 +421,16 @@ export class SplitRightLayout extends BaseLayout {
             bubbles: true
           })
         );
-      });
+      };
+      this.themeButton.addEventListener('click', onThemeClick);
+      this.eventCleanups.push(() =>
+        this.themeButton?.removeEventListener('click', onThemeClick)
+      );
     }
 
     // 模式切换按钮
     if (this.modeButton) {
-      this.modeButton.addEventListener('click', () => {
+      const onModeClick = () => {
         const nextMode = this.mode === 'normal' ? 'presentation' : 'normal';
         this.setMode(nextMode);
         this.container.dispatchEvent(
@@ -378,7 +439,11 @@ export class SplitRightLayout extends BaseLayout {
             bubbles: true
           })
         );
-      });
+      };
+      this.modeButton.addEventListener('click', onModeClick);
+      this.eventCleanups.push(() =>
+        this.modeButton?.removeEventListener('click', onModeClick)
+      );
     }
   }
 
@@ -411,13 +476,7 @@ export class SplitRightLayout extends BaseLayout {
     }
   }
 
-  private toggleReadout(): void {
-    this.readoutManager?.toggle();
-  }
-
   /**
-   * 初始化浮动控制条事件
-   */
   /**
    * 设置浮动控制条的回调
    */
@@ -459,13 +518,6 @@ export class SplitRightLayout extends BaseLayout {
    */
   getFloatingControls(): HTMLElement | null {
     return this.floatingControls;
-  }
-
-  /**
-   * 刷新浮动控制条状态
-   */
-  refreshFloatingControls(): void {
-    // createFloatingControls 内部有定时器自动更新，无需手动调用
   }
 
   private toggleControlSection(): void {
@@ -589,16 +641,19 @@ export class SplitRightLayout extends BaseLayout {
     const slot = this.readoutManager?.getSlot();
     if (!slot) return;
 
-    slot.innerHTML = items
-      .map(
-        (item) => `
-      <li class="readout-item ${item.layout === 'half' ? 'readout-item--half' : ''}">
-        <span class="readout-label">${item.label}</span>
-        <strong class="readout-value">${item.value}</strong>
-      </li>
-    `
-      )
-      .join('');
+    slot.replaceChildren();
+    items.forEach((item) => {
+      const li = document.createElement('li');
+      li.className = `readout-item ${item.layout === 'half' ? 'readout-item--half' : ''}`;
+      const label = document.createElement('span');
+      label.className = 'readout-label';
+      label.textContent = item.label;
+      const value = document.createElement('strong');
+      value.className = 'readout-value';
+      value.textContent = String(item.value);
+      li.append(label, value);
+      slot.appendChild(li);
+    });
   }
 
   updateReadout(items: ReadoutItem[]): void {
@@ -635,7 +690,13 @@ export class SplitRightLayout extends BaseLayout {
         } else {
           const li = document.createElement('li');
           li.className = 'readout-item readout-status';
-          li.innerHTML = `<span class="readout-label">状态</span><strong class="readout-value">${text}</strong>`;
+          const labelSpan = document.createElement('span');
+          labelSpan.className = 'readout-label';
+          labelSpan.textContent = '状态';
+          const valueStrong = document.createElement('strong');
+          valueStrong.className = 'readout-value';
+          valueStrong.textContent = text;
+          li.append(labelSpan, valueStrong);
           slot.insertBefore(li, slot.firstChild);
         }
       }
@@ -695,6 +756,10 @@ export class SplitRightLayout extends BaseLayout {
    * 卸载时清理资源
    */
   async unmount(): Promise<void> {
+    // 清理所有绑定的事件监听器
+    this.eventCleanups.forEach((cleanup) => cleanup());
+    this.eventCleanups = [];
+
     // 清理浮动控制条定时器
     if (this.floatingControls) {
       (this.floatingControls as { dispose?: () => void }).dispose?.();
@@ -705,6 +770,24 @@ export class SplitRightLayout extends BaseLayout {
     // 清理读数面板管理器
     this.readoutManager?.dispose();
     this.readoutManager = null;
+
+    // 清理 DOM 引用，允许 GC 回收事件监听器
+    this.leftPanel = null;
+    this.rightPanel = null;
+    this.resizer = null;
+    this.resizerBehavior = null;
+    this.controlSection = null;
+    this.controlSlot = null;
+    this.graphSection = null;
+    this.graphSlot = null;
+    this.stageToolbar = null;
+    this.stageFrame = null;
+    this.stageSlot = null;
+    this.stageCanvas = null;
+    this.header = null;
+    this.themeButton = null;
+    this.modeButton = null;
+    this.sidebarToggle = null;
 
     await super.unmount();
   }

@@ -45,7 +45,10 @@ function createDefaultFrameDriver(): FrameDriver {
       clearTimeout(handle as ReturnType<typeof setTimeout>);
     },
     now() {
-      if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+      if (
+        typeof performance !== 'undefined' &&
+        typeof performance.now === 'function'
+      ) {
         return performance.now();
       }
       return Date.now();
@@ -81,7 +84,10 @@ export function createSceneShell(options: SceneShellOptions = {}) {
       options.onRender?.();
     }
 
-    requestNextFrame();
+    // 再次检查 isPlaying，防止 pause() 在 step/render 期间被调用后仍请求下一帧
+    if (transport.isPlaying) {
+      requestNextFrame();
+    }
   }
 
   function stopFrameLoop(): void {

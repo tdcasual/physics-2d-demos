@@ -44,6 +44,7 @@ export class ReadoutPanelManager {
     this.collapsed = !this.collapsed;
     this.panel.classList.toggle('is-collapsed', this.collapsed);
 
+    // 动态查找当前 toggle 按钮（支持 DOM 替换场景）
     const btn = this.panel.querySelector(
       '.readout-toggle'
     ) as HTMLButtonElement | null;
@@ -77,10 +78,15 @@ export class ReadoutPanelManager {
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
 
-    if (this.resizeHandle && this.resizeHandle.parentNode) {
-      this.resizeHandle.parentNode.removeChild(this.resizeHandle);
+    // 先移除 resizeHandle 的事件监听器，再移除 DOM（防止闭包泄漏）
+    if (this.resizeHandle) {
+      // 由于监听器是箭头函数且未保存引用，直接克隆替换节点是最稳妥的方式
+      const parent = this.resizeHandle.parentNode;
+      if (parent) {
+        parent.removeChild(this.resizeHandle);
+      }
+      this.resizeHandle = null;
     }
-    this.resizeHandle = null;
   }
 
   // -----------------------------------------------------------------------

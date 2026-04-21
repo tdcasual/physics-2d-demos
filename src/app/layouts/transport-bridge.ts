@@ -16,12 +16,15 @@ export interface TransportCallbacks {
 }
 
 export class TransportBridge {
-  private unsubscribe: (() => void) | null = null;
+  private unsubscribers: (() => void)[] = [];
 
   /**
    * 将场景的运输控制绑定到布局的浮动控制条
    */
-  bindFloatingControls(layout: LayoutMaster, callbacks: TransportCallbacks): void {
+  bindFloatingControls(
+    layout: LayoutMaster,
+    callbacks: TransportCallbacks
+  ): void {
     if (!layout.setFloatingControls) return;
     layout.setFloatingControls(callbacks);
   }
@@ -54,7 +57,7 @@ export class TransportBridge {
       this.syncSceneStateToLayout(scene, layout);
     });
 
-    this.unsubscribe = unsubscribe;
+    this.unsubscribers.push(unsubscribe);
     return unsubscribe;
   }
 
@@ -62,9 +65,7 @@ export class TransportBridge {
    * 清理所有绑定
    */
   dispose(): void {
-    if (this.unsubscribe) {
-      this.unsubscribe();
-      this.unsubscribe = null;
-    }
+    this.unsubscribers.forEach((fn) => fn());
+    this.unsubscribers = [];
   }
 }

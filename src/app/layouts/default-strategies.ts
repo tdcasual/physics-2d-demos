@@ -40,6 +40,9 @@ function satisfiesConstraints(
  * 注册所有默认选择策略
  */
 export function registerDefaultStrategies(): void {
+  // 清空旧策略，确保幂等调用不会累积
+  layoutSelector.clear();
+
   // 策略 1：用户偏好（最高优先级）
   layoutSelector.register((ctx) => {
     if (ctx.userPreference) return ctx.userPreference;
