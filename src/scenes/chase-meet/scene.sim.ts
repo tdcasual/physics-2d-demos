@@ -43,7 +43,7 @@ export type ChaseMeetSnapshot = {
 type VelocityFn = (t: number) => number;
 
 function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
+  return Math.max(min, Math.min(value, max));
 }
 
 function toFiniteOr(value: unknown, fallback: number): number {
@@ -51,15 +51,135 @@ function toFiniteOr(value: unknown, fallback: number): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function normalizeParams(input: Partial<ChaseMeetParams>): ResolvedChaseMeetParams {
+function normalizeParams(
+  input: Partial<ChaseMeetParams>
+): ResolvedChaseMeetParams {
   return {
     totalTime: clamp(toFiniteOr(input.totalTime, 10), 1, 120),
     dt: clamp(toFiniteOr(input.dt, 0.02), 0.005, 1),
     x0A: toFiniteOr(input.x0A, 0),
     x0B: toFiniteOr(input.x0B, 10),
-    vExprA: typeof input.vExprA === 'string' && input.vExprA.trim().length > 0 ? input.vExprA.trim() : '0',
-    vExprB: typeof input.vExprB === 'string' && input.vExprB.trim().length > 0 ? input.vExprB.trim() : '0'
+    vExprA:
+      typeof input.vExprA === 'string' && input.vExprA.trim().length > 0
+        ? input.vExprA.trim()
+        : '0',
+    vExprB:
+      typeof input.vExprB === 'string' && input.vExprB.trim().length > 0
+        ? input.vExprB.trim()
+        : '0'
   };
+}
+
+/* ── Safe expression evaluator (replaces new Function) ─────────────────── */
+
+function tokenize(expr: string): (number | string)[] {
+  const tokens: (number | string)[] = [];
+  let i = 0;
+  while (i < expr.length) {
+    const ch = expr[i];
+    if (/\s/.test(ch)) {
+      i++;
+      continue;
+    }
+    if (/[0-9]/.test(ch) || (ch === '.' && /[0-9]/.test(expr[i + 1] || ''))) {
+      let num = '';
+      while (i < expr.length && (/[0-9]/.test(expr[i]) || expr[i] === '.')) {
+        num += expr[i++];
+      }
+      const parsed = parseFloat(num);
+      if (Number.isFinite(parsed)) {
+        tokens.push(parsed);
+      }
+    } else if (ch === 't') {
+      tokens.push('t');
+      i++;
+    } else if ('+-*/()'.includes(ch)) {
+      tokens.push(ch);
+      i++;
+    } else {
+      // Invalid character — abort tokenization
+      return [];
+    }
+  }
+  return tokens;
+}
+
+function evaluateExpression(tokens: (number | string)[], t: number): number {
+  let pos = 0;
+
+  function peek(): number | string | undefined {
+    return tokens[pos];
+  }
+
+  function consume(): number | string | undefined {
+    return tokens[pos++];
+  }
+
+  function parseExpression(): number {
+    let value = parseTerm();
+    while (pos < tokens.length) {
+      const op = peek();
+      if (op === '+' || op === '-') {
+        consume();
+        const rhs = parseTerm();
+        value = op === '+' ? value + rhs : value - rhs;
+      } else {
+        break;
+      }
+    }
+    return value;
+  }
+
+  function parseTerm(): number {
+    let value = parseFactor();
+    while (pos < tokens.length) {
+      const op = peek();
+      if (op === '*' || op === '/') {
+        consume();
+        const rhs = parseFactor();
+        value = op === '*' ? value * rhs : rhs === 0 ? 0 : value / rhs;
+      } else {
+        break;
+      }
+    }
+    return value;
+  }
+
+  function parseFactor(): number {
+    const token = peek();
+    if (token === undefined) return 0;
+
+    if (token === '(') {
+      consume();
+      const value = parseExpression();
+      if (peek() === ')') consume();
+      return value;
+    }
+
+    if (token === 't') {
+      consume();
+      return t;
+    }
+
+    if (typeof token === 'number') {
+      consume();
+      return token;
+    }
+
+    if (token === '-') {
+      consume();
+      return -parseFactor();
+    }
+
+    if (token === '+') {
+      consume();
+      return parseFactor();
+    }
+
+    return 0;
+  }
+
+  return parseExpression();
 }
 
 function createVelocityFunction(expression: string): VelocityFn {
@@ -68,19 +188,21 @@ function createVelocityFunction(expression: string): VelocityFn {
     return () => 0;
   }
 
-  try {
-    const fn = new Function('t', `return ${expr};`) as (t: number) => unknown;
-    const testValue = Number(fn(0));
-    if (!Number.isFinite(testValue)) {
-      return () => 0;
-    }
-    return (t: number) => {
-      const value = Number(fn(t));
-      return Number.isFinite(value) ? value : 0;
-    };
-  } catch {
+  const tokens = tokenize(expr);
+  if (tokens.length === 0) {
     return () => 0;
   }
+
+  // Pre-compute at t=0 to validate expression
+  const testValue = evaluateExpression(tokens, 0);
+  if (!Number.isFinite(testValue)) {
+    return () => 0;
+  }
+
+  return (t: number) => {
+    const value = evaluateExpression(tokens, t);
+    return Number.isFinite(value) ? value : 0;
+  };
 }
 
 function preSample(
@@ -98,142 +220,100 @@ function preSample(
   while (t < params.totalTime) {
     const vA = velocityA(t);
     const vB = velocityB(t);
-    xA += vA * params.dt;
-    xB += vB * params.dt;
-    t += params.dt;
+    const dt = Math.min(params.dt, params.totalTime - t);
+    xA += vA * dt;
+    xB += vB * dt;
+    t += dt;
     samples.push({ t, xA, xB, vA, vB });
   }
 
   return samples;
 }
 
-function resolveBounds(samples: ChaseMeetSample[]): ChaseMeetBounds {
-  let minX = Number.POSITIVE_INFINITY;
-  let maxX = Number.NEGATIVE_INFINITY;
+function computeBounds(samples: ChaseMeetSample[]): ChaseMeetBounds {
+  let minX = Infinity;
+  let maxX = -Infinity;
   let maxSpeed = 0;
 
-  for (const sample of samples) {
-    if (Number.isFinite(sample.xA)) {
-      minX = Math.min(minX, sample.xA);
-      maxX = Math.max(maxX, sample.xA);
-    }
-    if (Number.isFinite(sample.xB)) {
-      minX = Math.min(minX, sample.xB);
-      maxX = Math.max(maxX, sample.xB);
-    }
-    if (Number.isFinite(sample.vA)) {
-      maxSpeed = Math.max(maxSpeed, Math.abs(sample.vA));
-    }
-    if (Number.isFinite(sample.vB)) {
-      maxSpeed = Math.max(maxSpeed, Math.abs(sample.vB));
-    }
-  }
-
-  if (!Number.isFinite(minX) || !Number.isFinite(maxX) || minX === maxX) {
-    minX = 0;
-    maxX = 1;
-  }
-  if (maxSpeed <= 0 || !Number.isFinite(maxSpeed)) {
-    maxSpeed = 1;
+  for (const s of samples) {
+    minX = Math.min(minX, s.xA, s.xB);
+    maxX = Math.max(maxX, s.xA, s.xB);
+    maxSpeed = Math.max(maxSpeed, Math.abs(s.vA), Math.abs(s.vB));
   }
 
   return { minX, maxX, maxSpeed };
 }
 
-function resolveMeetMessage(samples: ChaseMeetSample[]): string {
-  for (let i = 1; i < samples.length; i += 1) {
-    const s0 = samples[i - 1];
-    const s1 = samples[i];
-    const d0 = s0.xA - s0.xB;
-    const d1 = s1.xA - s1.xB;
-
-    if (d0 === 0) {
-      return `首次相遇大约在 t ≈ ${s0.t.toFixed(2)} s, x ≈ ${s0.xA.toFixed(2)} m`;
-    }
-
-    if (d0 * d1 < 0) {
-      const alpha = Math.abs(d0) / (Math.abs(d0) + Math.abs(d1));
-      const tMeet = s0.t + alpha * (s1.t - s0.t);
-      const xMeet = s0.xA + alpha * (s1.xA - s0.xA);
-      return `首次相遇大约在 t ≈ ${tMeet.toFixed(2)} s, x ≈ ${xMeet.toFixed(2)} m`;
-    }
-  }
-  return '尚未相遇';
-}
-
-function nearestSample(samples: ChaseMeetSample[], t: number): ChaseMeetSample {
-  let best = samples[0];
-  let bestDistance = Math.abs(samples[0].t - t);
-
-  for (let i = 1; i < samples.length; i += 1) {
-    const distance = Math.abs(samples[i].t - t);
-    if (distance < bestDistance) {
-      best = samples[i];
-      bestDistance = distance;
-    }
-  }
-
-  return best;
-}
-
-export function createChaseMeetSim(initial: Partial<ChaseMeetParams>) {
+export function createChaseMeetSim(initial: Partial<ChaseMeetParams> = {}) {
   let params = normalizeParams(initial);
   let velocityA = createVelocityFunction(params.vExprA);
   let velocityB = createVelocityFunction(params.vExprB);
   let samples = preSample(params, velocityA, velocityB);
-  let bounds = resolveBounds(samples);
-  let meetMessage = resolveMeetMessage(samples);
-  let currentTime = 0;
+  let bounds = computeBounds(samples);
+  let t = 0;
 
-  function rebuild(nextParams: Partial<ChaseMeetParams>): void {
-    params = normalizeParams({ ...params, ...nextParams });
+  function regenerate() {
     velocityA = createVelocityFunction(params.vExprA);
     velocityB = createVelocityFunction(params.vExprB);
     samples = preSample(params, velocityA, velocityB);
-    bounds = resolveBounds(samples);
-    meetMessage = resolveMeetMessage(samples);
-    currentTime = 0;
+    bounds = computeBounds(samples);
   }
 
-  function buildState(): ChaseMeetState {
-    const clampedTime = clamp(currentTime, 0, params.totalTime);
-    const sample = nearestSample(samples, clampedTime);
-    return {
-      t: clampedTime,
-      xA: sample.xA,
-      xB: sample.xB,
-      vA: sample.vA,
-      vB: sample.vB,
-      distance: Math.abs(sample.xB - sample.xA),
+  function tick() {
+    t += params.dt;
+    if (t > params.totalTime) {
+      t = params.totalTime;
+    }
+  }
+
+  function step(dt: number) {
+    const steps = Math.max(1, Math.round(dt / params.dt));
+    for (let i = 0; i < steps; i++) tick();
+  }
+
+  function reset() {
+    t = 0;
+  }
+
+  function getSnapshot(): ChaseMeetSnapshot {
+    const idx = Math.min(Math.floor(t / params.dt), samples.length - 1);
+    const s = samples[idx];
+
+    const distance = Math.abs(s.xB - s.xA);
+    let meetMessage = '';
+    if (distance < 0.1) {
+      meetMessage = `相遇于 t=${s.t.toFixed(2)}s`;
+    }
+
+    const state: ChaseMeetState = {
+      t: s.t,
+      xA: s.xA,
+      xB: s.xB,
+      vA: s.vA,
+      vB: s.vB,
+      distance,
       meetMessage
     };
+
+    return { state, params, samples, bounds };
   }
 
-  return {
-    getState(): ChaseMeetState {
-      return buildState();
-    },
-    getParams(): ResolvedChaseMeetParams {
-      return { ...params };
-    },
-    getSnapshot(): ChaseMeetSnapshot {
-      return {
-        state: buildState(),
-        params: { ...params },
-        samples,
-        bounds
-      };
-    },
-    setParams(next: Partial<ChaseMeetParams>): ResolvedChaseMeetParams {
-      rebuild(next);
-      return { ...params };
-    },
-    step(dt: number): void {
-      void dt;
-      currentTime = Math.min(params.totalTime, currentTime + params.dt);
-    },
-    reset(): void {
-      currentTime = 0;
-    }
-  };
+  function getState(): ChaseMeetState {
+    return getSnapshot().state;
+  }
+
+  function getParams(): ResolvedChaseMeetParams {
+    return params;
+  }
+
+  function setParams(next: Partial<ChaseMeetParams>): ResolvedChaseMeetParams {
+    params = normalizeParams({ ...params, ...next });
+    regenerate();
+    reset();
+    return params;
+  }
+
+  return { tick, step, reset, getSnapshot, getState, getParams, setParams };
 }
+
+export type ChaseMeetSim = ReturnType<typeof createChaseMeetSim>;

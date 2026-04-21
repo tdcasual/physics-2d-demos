@@ -1,16 +1,21 @@
-import type { ChaseMeetSample, ChaseMeetSnapshot } from './scene.sim';
+import type { ChaseMeetSnapshot } from './scene.sim';
 import type { TeachingMode } from '../../platform/standards';
-import { getTeachingStandards } from '../../platform/standards';
 import type { TeachingTheme } from '../../platform/standards';
 import {
   getResponsiveViewport,
   resolveResponsiveStageWidth
 } from '../../platform/viewport';
-import { applyTouchInteractionMode } from '../../platform/input/touch';
 import {
   applyHiDpiCanvasMetrics,
   computeHiDpiCanvasMetrics
 } from '../../core/high-dpi-canvas';
+import {
+  createStageDom,
+  resizeCanvasWithDpr,
+  resolveVisuals,
+  nearestSample,
+  type StageDom
+} from './renderer/view-utils';
 
 export type CreateChaseMeetViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -18,129 +23,6 @@ export type CreateChaseMeetViewOptions = {
   mode?: TeachingMode;
   theme?: TeachingTheme;
 };
-
-type StageDom = {
-  root: HTMLElement;
-  motionCanvas: HTMLCanvasElement;
-  xCanvas: HTMLCanvasElement;
-  vCanvas: HTMLCanvasElement;
-  motionCtx: CanvasRenderingContext2D;
-  xCtx: CanvasRenderingContext2D;
-  vCtx: CanvasRenderingContext2D;
-  dpr: number;
-};
-
-type Visuals = ReturnType<typeof getTeachingStandards>['rightStage'] & {
-  scale: number;
-};
-
-const MODE_SCALE: Record<TeachingMode, number> = {
-  normal: 1.45,
-  presentation: 2.6
-};
-
-function resolveVisuals(mode: TeachingMode): Visuals {
-  return {
-    ...getTeachingStandards(mode).rightStage,
-    scale: MODE_SCALE[mode]
-  };
-}
-
-function nearestSample(samples: ChaseMeetSample[], t: number): ChaseMeetSample {
-  let best = samples[0];
-  let bestDistance = Math.abs(samples[0].t - t);
-  for (let i = 1; i < samples.length; i += 1) {
-    const distance = Math.abs(samples[i].t - t);
-    if (distance < bestDistance) {
-      best = samples[i];
-      bestDistance = distance;
-    }
-  }
-  return best;
-}
-
-function resizeCanvasWithDpr(
-  canvas: HTMLCanvasElement,
-  ctx: CanvasRenderingContext2D,
-  cssWidth: number,
-  cssHeight: number,
-  dpr: number
-): void {
-  const pixelWidth = Math.max(1, Math.floor(cssWidth * dpr));
-  const pixelHeight = Math.max(1, Math.floor(cssHeight * dpr));
-  if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
-    canvas.width = pixelWidth;
-    canvas.height = pixelHeight;
-  }
-  canvas.style.width = `${cssWidth}px`;
-  canvas.style.height = `${cssHeight}px`;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, cssWidth, cssHeight);
-}
-
-function createStageDom(slot: HTMLElement): StageDom {
-  const root = document.createElement('div');
-  root.className = 'chase-modern-stage';
-  root.innerHTML = `
-    <section class="chase-modern-card chase-modern-card--motion">
-      <div class="chase-modern-card-header">
-        <div class="chase-modern-card-title">空间位置动画</div>
-        <div class="chase-modern-card-tag">A / B 一维追及</div>
-      </div>
-      <canvas class="chase-modern-motion-canvas"></canvas>
-    </section>
-    <section class="chase-modern-card chase-modern-card--graphs">
-      <div class="chase-modern-card-header">
-        <div class="chase-modern-card-title">x–t 与 v–t 图像</div>
-      </div>
-      <div class="chase-modern-plots">
-        <div class="chase-modern-plot">
-          <div class="chase-modern-plot-title">位置–时间 图 x(t)</div>
-          <canvas class="chase-modern-x-canvas"></canvas>
-        </div>
-        <div class="chase-modern-plot">
-          <div class="chase-modern-plot-title">速度–时间 图 v(t)</div>
-          <canvas class="chase-modern-v-canvas"></canvas>
-        </div>
-      </div>
-    </section>
-  `;
-
-  const motionCanvas = root.querySelector('.chase-modern-motion-canvas');
-  const xCanvas = root.querySelector('.chase-modern-x-canvas');
-  const vCanvas = root.querySelector('.chase-modern-v-canvas');
-  if (
-    !(motionCanvas instanceof HTMLCanvasElement) ||
-    !(xCanvas instanceof HTMLCanvasElement) ||
-    !(vCanvas instanceof HTMLCanvasElement)
-  ) {
-    throw new Error('Failed to create chase stage canvases');
-  }
-  const motionCtx = motionCanvas.getContext('2d');
-  const xCtx = xCanvas.getContext('2d');
-  const vCtx = vCanvas.getContext('2d');
-  if (!motionCtx || !xCtx || !vCtx) {
-    throw new Error('Failed to create chase stage contexts');
-  }
-
-  applyTouchInteractionMode(motionCanvas, 'default');
-  applyTouchInteractionMode(xCanvas, 'default');
-  applyTouchInteractionMode(vCanvas, 'default');
-
-  slot.innerHTML = '';
-  slot.appendChild(root);
-
-  return {
-    root,
-    motionCanvas,
-    xCanvas,
-    vCanvas,
-    motionCtx,
-    xCtx,
-    vCtx,
-    dpr: 1
-  };
-}
 
 export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
   let canvas = options.canvas ?? null;
@@ -625,7 +507,7 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
     dispose(): void {
       snapshot = null;
       if (stageSlot) {
-        stageSlot.innerHTML = '';
+        stageSlot.replaceChildren();
       }
       stageDom = null;
       stageSlot = null;

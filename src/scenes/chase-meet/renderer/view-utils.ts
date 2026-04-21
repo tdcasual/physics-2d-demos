@@ -1,0 +1,146 @@
+import type { ChaseMeetSample } from '../scene.sim';
+import type { TeachingMode } from '../../../platform/standards';
+import { getTeachingStandards } from '../../../platform/standards';
+import { applyTouchInteractionMode } from '../../../platform/input/touch';
+
+export type StageDom = {
+  root: HTMLElement;
+  motionCanvas: HTMLCanvasElement;
+  xCanvas: HTMLCanvasElement;
+  vCanvas: HTMLCanvasElement;
+  motionCtx: CanvasRenderingContext2D;
+  xCtx: CanvasRenderingContext2D;
+  vCtx: CanvasRenderingContext2D;
+  dpr: number;
+};
+
+export type Visuals = ReturnType<typeof getTeachingStandards>['rightStage'] & {
+  scale: number;
+};
+
+const MODE_SCALE: Record<TeachingMode, number> = {
+  normal: 1.45,
+  presentation: 2.6
+};
+
+export function resolveVisuals(mode: TeachingMode): Visuals {
+  return {
+    ...getTeachingStandards(mode).rightStage,
+    scale: MODE_SCALE[mode]
+  };
+}
+
+export function nearestSample(
+  samples: ChaseMeetSample[],
+  t: number
+): ChaseMeetSample {
+  let best = samples[0];
+  let bestDistance = Math.abs(samples[0].t - t);
+  for (let i = 1; i < samples.length; i += 1) {
+    const distance = Math.abs(samples[i].t - t);
+    if (distance < bestDistance) {
+      best = samples[i];
+      bestDistance = distance;
+    }
+  }
+  return best;
+}
+
+export function resizeCanvasWithDpr(
+  canvas: HTMLCanvasElement,
+  ctx: CanvasRenderingContext2D,
+  cssWidth: number,
+  cssHeight: number,
+  dpr: number
+): void {
+  const pixelWidth = Math.max(1, Math.floor(cssWidth * dpr));
+  const pixelHeight = Math.max(1, Math.floor(cssHeight * dpr));
+  if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+    canvas.width = pixelWidth;
+    canvas.height = pixelHeight;
+  }
+  canvas.style.width = `${cssWidth}px`;
+  canvas.style.height = `${cssHeight}px`;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cssWidth, cssHeight);
+}
+
+export function createStageDom(slot: HTMLElement): StageDom {
+  const root = document.createElement('div');
+  root.className = 'chase-modern-stage';
+
+  // Motion section
+  const motionSection = document.createElement('section');
+  motionSection.className = 'chase-modern-card chase-modern-card--motion';
+  const motionHeader = document.createElement('div');
+  motionHeader.className = 'chase-modern-card-header';
+  const motionTitle = document.createElement('div');
+  motionTitle.className = 'chase-modern-card-title';
+  motionTitle.textContent = '空间位置动画';
+  const motionTag = document.createElement('div');
+  motionTag.className = 'chase-modern-card-tag';
+  motionTag.textContent = 'A / B 一维追及';
+  motionHeader.append(motionTitle, motionTag);
+  const motionCanvas = document.createElement('canvas');
+  motionCanvas.className = 'chase-modern-motion-canvas';
+  motionSection.append(motionHeader, motionCanvas);
+  root.appendChild(motionSection);
+
+  // Graphs section
+  const graphsSection = document.createElement('section');
+  graphsSection.className = 'chase-modern-card chase-modern-card--graphs';
+  const graphsHeader = document.createElement('div');
+  graphsHeader.className = 'chase-modern-card-header';
+  const graphsTitle = document.createElement('div');
+  graphsTitle.className = 'chase-modern-card-title';
+  graphsTitle.textContent = 'x–t 与 v–t 图像';
+  graphsHeader.appendChild(graphsTitle);
+  const plotsDiv = document.createElement('div');
+  plotsDiv.className = 'chase-modern-plots';
+
+  const xPlot = document.createElement('div');
+  xPlot.className = 'chase-modern-plot';
+  const xTitle = document.createElement('div');
+  xTitle.className = 'chase-modern-plot-title';
+  xTitle.textContent = '位置–时间 图 x(t)';
+  const xCanvas = document.createElement('canvas');
+  xCanvas.className = 'chase-modern-x-canvas';
+  xPlot.append(xTitle, xCanvas);
+
+  const vPlot = document.createElement('div');
+  vPlot.className = 'chase-modern-plot';
+  const vTitle = document.createElement('div');
+  vTitle.className = 'chase-modern-plot-title';
+  vTitle.textContent = '速度–时间 图 v(t)';
+  const vCanvas = document.createElement('canvas');
+  vCanvas.className = 'chase-modern-v-canvas';
+  vPlot.append(vTitle, vCanvas);
+
+  plotsDiv.append(xPlot, vPlot);
+  graphsSection.append(graphsHeader, plotsDiv);
+  root.appendChild(graphsSection);
+  const motionCtx = motionCanvas.getContext('2d');
+  const xCtx = xCanvas.getContext('2d');
+  const vCtx = vCanvas.getContext('2d');
+  if (!motionCtx || !xCtx || !vCtx) {
+    throw new Error('Failed to create chase stage contexts');
+  }
+
+  applyTouchInteractionMode(motionCanvas, 'default');
+  applyTouchInteractionMode(xCanvas, 'default');
+  applyTouchInteractionMode(vCanvas, 'default');
+
+  slot.replaceChildren();
+  slot.appendChild(root);
+
+  return {
+    root,
+    motionCanvas,
+    xCanvas,
+    vCanvas,
+    motionCtx,
+    xCtx,
+    vCtx,
+    dpr: 1
+  };
+}

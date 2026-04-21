@@ -47,21 +47,3 @@ export function createPresetApplier<TParams>(
     return false;
   };
 }
-
-/**
- * 创建场景选择器处理器：将控制面板的场景选择映射到场景方法调用。
- *
- * @param setScene - 场景切换方法
- * @param onAfterSet - 切换后的可选回调（如 render）
- * @returns 可直接在 onChange 中调用的处理函数
- */
-export function createSceneSelectorHandler<TSceneId extends string>(
-  setScene: (id: TSceneId) => void,
-  onAfterSet?: () => void
-): (sceneId: string) => boolean {
-  return (sceneId: string) => {
-    setScene(sceneId as TSceneId);
-    onAfterSet?.();
-    return true;
-  };
-}

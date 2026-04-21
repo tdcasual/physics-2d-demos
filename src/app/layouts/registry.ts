@@ -71,11 +71,7 @@ class LayoutRegistry {
       throw new Error(`Layout metadata for "${id}" must be a valid object`);
     }
 
-    if (this.layouts.has(id)) {
-      console.warn(
-        `[LayoutRegistry] Layout "${id}" is already registered, overwriting`
-      );
-    }
+    // Overwrite existing layout if same id
 
     this.layouts.set(id, ctor);
     this.metadata.set(id, { id, ...metadata });

@@ -70,7 +70,7 @@ bootScenePage({
         renderer.setActive('scene', scene);
       },
       dispose: () => {
-        mount.innerHTML = '';
+        mount.replaceChildren();
       }
     };
   },

@@ -103,11 +103,22 @@ export function createLegacyOverlay(
   legend.style.borderRadius = '10px';
   legend.style.background = 'rgba(255, 255, 255, 0.9)';
   legend.style.boxSizing = 'border-box';
-  legend.innerHTML = `
-    <div style="font-size:14px; color:#64748b; font-weight:600; line-height:1.2; margin-bottom:6px;">颜色代表水压 (电势)</div>
-    <div style="height:8px; border-radius:999px; background: linear-gradient(90deg, #2563eb, #dbeafe);"></div>
-    <div style="display:flex; justify-content:space-between; margin-top:4px; font-size:13px; color:#94a3b8;"><span>高</span><span>低</span></div>
-  `;
+  const titleDiv = document.createElement('div');
+  titleDiv.style.cssText =
+    'font-size:14px; color:#64748b; font-weight:600; line-height:1.2; margin-bottom:6px;';
+  titleDiv.textContent = '颜色代表水压 (电势)';
+  const barDiv = document.createElement('div');
+  barDiv.style.cssText =
+    'height:8px; border-radius:999px; background: linear-gradient(90deg, #2563eb, #dbeafe);';
+  const labelsDiv = document.createElement('div');
+  labelsDiv.style.cssText =
+    'display:flex; justify-content:space-between; margin-top:4px; font-size:13px; color:#94a3b8;';
+  const highSpan = document.createElement('span');
+  highSpan.textContent = '高';
+  const lowSpan = document.createElement('span');
+  lowSpan.textContent = '低';
+  labelsDiv.append(highSpan, lowSpan);
+  legend.append(titleDiv, barDiv, labelsDiv);
 
   const formula = document.createElement('div');
   formula.style.position = 'absolute';

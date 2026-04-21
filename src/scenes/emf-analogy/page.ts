@@ -94,7 +94,7 @@ bootScenePage({
 
     return {
       dispose: () => {
-        mount.innerHTML = '';
+        mount.replaceChildren();
       }
     };
   },
