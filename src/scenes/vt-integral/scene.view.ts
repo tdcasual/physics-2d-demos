@@ -1,7 +1,7 @@
 import type { TeachingMode } from '../../platform/standards';
 import { getTeachingStandards } from '../../platform/standards';
 import type { TeachingTheme } from '../../platform/standards';
-import { getOptimalCanvasSize, setCanvasSize } from '../../core/unified-canvas';
+import { sizeCanvasToFill } from '../../core/canvas-sizing';
 import { Colors, alpha } from '../../core/colors';
 import type { VtIntegralSnapshot } from './scene.sim';
 
@@ -23,12 +23,11 @@ export function createVtIntegralView(
   let canvasHeight = 600;
 
   function resizeCanvas(): void {
-    if (!canvas || !ctx) return;
-    const rect = canvas.getBoundingClientRect();
-    const optimal = getOptimalCanvasSize(rect.width, rect.height, 40);
-    canvasWidth = optimal.width;
-    canvasHeight = optimal.height;
-    setCanvasSize(canvas, canvasWidth, canvasHeight);
+    if (!canvas) return;
+    const newCtx = sizeCanvasToFill(canvas);
+    ctx = newCtx;
+    canvasWidth = canvas.clientWidth;
+    canvasHeight = canvas.clientHeight;
   }
 
   function getThemeColor(light: string, dark: string): string {
