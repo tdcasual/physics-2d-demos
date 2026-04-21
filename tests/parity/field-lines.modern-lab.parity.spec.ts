@@ -2,21 +2,35 @@ import { expect, test } from '@playwright/test';
 import pixelmatch from 'pixelmatch';
 import { PNG } from 'pngjs';
 
-async function captureStageFrame(page: import('@playwright/test').Page, pagePath: string): Promise<Buffer> {
+async function captureStageFrame(
+  page: import('@playwright/test').Page,
+  pagePath: string
+): Promise<Buffer> {
   await page.goto(pagePath);
   await expect(page.getByRole('heading', { name: '电场线演化' })).toBeVisible();
   const stage = page.locator('.stage-frame');
   await expect(stage).toBeVisible();
-  await page.waitForTimeout(450);
+  await page.waitForFunction(() => {
+    const canvas = document.querySelector('canvas');
+    return canvas !== null && (canvas as HTMLCanvasElement).width > 0;
+  });
   return stage.screenshot({
     animations: 'disabled',
     scale: 'css'
   });
 }
 
-test('field-lines modern-lab should stay visually aligned with legacy right stage', async ({ page }, testInfo) => {
-  const legacyPng = await captureStageFrame(page, '/src/pages/field-lines.html?renderer=legacy');
-  const modernLabPng = await captureStageFrame(page, '/src/pages/field-lines.html?renderer=modern-lab');
+test('field-lines modern-lab should stay visually aligned with legacy right stage', async ({
+  page
+}, testInfo) => {
+  const legacyPng = await captureStageFrame(
+    page,
+    '/src/pages/field-lines.html?renderer=legacy'
+  );
+  const modernLabPng = await captureStageFrame(
+    page,
+    '/src/pages/field-lines.html?renderer=modern-lab'
+  );
 
   const legacy = PNG.sync.read(legacyPng);
   const modernLab = PNG.sync.read(modernLabPng);
@@ -44,8 +58,14 @@ test('field-lines modern-lab should stay visually aligned with legacy right stag
     { threshold: 0.1, includeAA: true }
   );
 
-  await testInfo.attach('field-lines-legacy-stage', { body: legacyPng, contentType: 'image/png' });
-  await testInfo.attach('field-lines-modern-lab-stage', { body: modernLabPng, contentType: 'image/png' });
+  await testInfo.attach('field-lines-legacy-stage', {
+    body: legacyPng,
+    contentType: 'image/png'
+  });
+  await testInfo.attach('field-lines-modern-lab-stage', {
+    body: modernLabPng,
+    contentType: 'image/png'
+  });
   await testInfo.attach('field-lines-diff-threshold0', {
     body: PNG.sync.write(strictDiff),
     contentType: 'image/png'

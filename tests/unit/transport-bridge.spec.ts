@@ -128,17 +128,21 @@ describe('TransportBridge', () => {
     expect(typeof unsubscribe).toBe('function');
   });
 
-  it('should dispose and unsubscribe', () => {
+  it('should dispose and unsubscribe all subscriptions', () => {
     const bridge = new TransportBridge();
-    const mockUnsubscribe = vi.fn();
+    const mockUnsubscribe1 = vi.fn();
+    const mockUnsubscribe2 = vi.fn();
 
-    // Manually set the unsubscribe
-    (bridge as unknown as { unsubscribe: (() => void) | null }).unsubscribe =
-      mockUnsubscribe;
+    // Manually set the unsubscribers array
+    (bridge as unknown as { unsubscribers: (() => void)[] }).unsubscribers = [
+      mockUnsubscribe1,
+      mockUnsubscribe2
+    ];
 
     bridge.dispose();
 
-    expect(mockUnsubscribe).toHaveBeenCalled();
+    expect(mockUnsubscribe1).toHaveBeenCalled();
+    expect(mockUnsubscribe2).toHaveBeenCalled();
   });
 
   it('should dispose safely when no unsubscribe exists', () => {

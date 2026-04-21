@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { BaseLayout } from '../../src/app/layouts/masters/base-layout';
 import type { LayoutSlots, SlotName } from '../../src/app/layouts/types';
 
@@ -57,12 +57,9 @@ describe('BaseLayout', () => {
       expect(container.getAttribute('data-theme')).toBe('light');
     });
 
-    it('should warn on double mount', async () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    it('should silently return on double mount', async () => {
       await layout.mount();
-      await layout.mount();
-      expect(warnSpy).toHaveBeenCalled();
-      warnSpy.mockRestore();
+      await expect(layout.mount()).resolves.toBeUndefined();
     });
   });
 
@@ -216,37 +213,6 @@ describe('BaseLayout', () => {
       expect(el.classList.contains('layout-region')).toBe(true);
       expect(el.classList.contains('extra-class')).toBe(true);
       expect(el.getAttribute('data-region')).toBe('header');
-    });
-
-    it('should create foldable panel', () => {
-      const panel = layout['createFoldablePanel']('control', 'Controls', false);
-      expect(panel.classList.contains('foldable-panel')).toBe(true);
-      expect(panel.querySelector('.foldable-header')).toBeTruthy();
-      expect(panel.querySelector('.foldable-content')).toBeTruthy();
-    });
-
-    it('should create foldable panel collapsed by default', () => {
-      const panel = layout['createFoldablePanel']('control', 'Controls', true);
-      expect(panel.classList.contains('is-collapsed')).toBe(true);
-    });
-
-    it('should toggle foldable panel on header click', () => {
-      const panel = layout['createFoldablePanel']('control', 'Controls', false);
-      const header = panel.querySelector('.foldable-header')!;
-      header.dispatchEvent(new MouseEvent('click'));
-      expect(panel.classList.contains('is-collapsed')).toBe(true);
-      expect(panel.getAttribute('data-collapsed')).toBe('true');
-    });
-
-    it('should create resizer', () => {
-      const v = layout['createResizer']('vertical');
-      expect(v.classList.contains('resizer')).toBe(true);
-      expect(v.classList.contains('vertical')).toBe(true);
-      expect(v.getAttribute('role')).toBe('separator');
-
-      const h = layout['createResizer']('horizontal');
-      expect(h.classList.contains('horizontal')).toBe(true);
-      expect(h.getAttribute('aria-orientation')).toBe('horizontal');
     });
   });
 });

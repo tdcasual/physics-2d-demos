@@ -107,7 +107,10 @@ async function captureStage(
       }
     });
   } else {
-    await page.waitForTimeout(400);
+    await page.waitForFunction(() => {
+      const canvas = document.querySelector('canvas');
+      return canvas !== null && (canvas as HTMLCanvasElement).width > 0;
+    });
   }
 
   return stage.screenshot({

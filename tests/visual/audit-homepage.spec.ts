@@ -3,7 +3,7 @@ import { test } from '@playwright/test';
 test('audit homepage - full check', async ({ page }) => {
   await page.setViewportSize({ width: 1400, height: 900 });
   await page.goto('http://localhost:5177/');
-  await page.waitForTimeout(3000);
+  await page.waitForLoadState('networkidle');
 
   // 1. 截图 Hero 区域
   await page.screenshot({ path: '/tmp/audit-01-hero.png' });

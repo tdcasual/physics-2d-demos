@@ -1,8 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   createParamMapper,
-  createPresetApplier,
-  createSceneSelectorHandler
+  createPresetApplier
 } from '../../src/scenes/page-utils';
 
 describe('createParamMapper', () => {
@@ -77,26 +76,5 @@ describe('createPresetApplier', () => {
 
     applier('a');
     expect(onApply).toHaveBeenCalledWith({ x: 1 });
-  });
-});
-
-describe('createSceneSelectorHandler', () => {
-  it('should call setScene and after callback', () => {
-    const setScene = vi.fn();
-    const after = vi.fn();
-    const handler = createSceneSelectorHandler(setScene, after);
-
-    const result = handler('friction');
-    expect(result).toBe(true);
-    expect(setScene).toHaveBeenCalledWith('friction');
-    expect(after).toHaveBeenCalled();
-  });
-
-  it('should work without after callback', () => {
-    const setScene = vi.fn();
-    const handler = createSceneSelectorHandler(setScene);
-
-    handler('induction');
-    expect(setScene).toHaveBeenCalledWith('induction');
   });
 });

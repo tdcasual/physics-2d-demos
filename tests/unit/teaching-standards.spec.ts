@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getTeachingStandards } from '../../src/app/teaching-standards';
+import { getTeachingStandards } from '../../src/platform/standards';
 
 describe('teaching standards', () => {
   it('uses 1080p baseline and larger presentation tokens', () => {

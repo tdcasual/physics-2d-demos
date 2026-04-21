@@ -36,7 +36,6 @@ const MOBILE_VP = { width: 375, height: 812 } as const;
 
 const SCENE_NAMES: Record<string, string> = {
   projectile: '抛体运动',
-  'spring-oscillator': '弹簧振子',
   'chase-meet': '追及相遇',
   'field-lines': '电场线',
   electrification: '静电起电',
@@ -60,7 +59,10 @@ async function gotoScene(page: Page, sceneId: string) {
     state: 'visible',
     timeout: 10000
   });
-  await page.waitForTimeout(800);
+  await page.waitForFunction(() => {
+    const canvas = document.querySelector('canvas');
+    return canvas !== null && (canvas as HTMLCanvasElement).width > 0;
+  });
 }
 
 async function getReadoutMap(page: Page): Promise<Record<string, string>> {

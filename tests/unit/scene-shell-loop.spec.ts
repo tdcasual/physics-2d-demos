@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { createSceneShell, type FrameDriver, type FrameHandle } from '../../src/app/scene-shell';
+import {
+  createSceneShell,
+  type FrameDriver,
+  type FrameHandle
+} from '../../src/app/scene-shell';
 
 function createMockFrameDriver(): FrameDriver & { tick(ms: number): void } {
   let nowMs = 0;
@@ -66,5 +70,36 @@ describe('scene shell loop', () => {
 
     expect(count).toBe(1);
     expect(shell.transport.isPlaying).toBe(false);
+  });
+
+  it('does not request next frame when paused during step callback', () => {
+    const driver = createMockFrameDriver();
+    let frameRequests = 0;
+
+    const instrumentedDriver: FrameDriver = {
+      requestFrame(callback) {
+        frameRequests += 1;
+        return driver.requestFrame(callback);
+      },
+      cancelFrame: driver.cancelFrame,
+      now: driver.now
+    };
+
+    const shell = createSceneShell({
+      stepSeconds: 0.1,
+      maxSubSteps: 5,
+      frameDriver: instrumentedDriver,
+      onStep: () => {
+        shell.pause(); // 在 step 回调中暂停
+      },
+      onRender: () => {}
+    });
+
+    shell.play();
+    const requestsBefore = frameRequests;
+    driver.tick(100);
+
+    // 只应该有初始的 requestFrame，tick 后不应再有新的请求
+    expect(frameRequests).toBe(requestsBefore);
   });
 });

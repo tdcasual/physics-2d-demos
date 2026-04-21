@@ -20,9 +20,9 @@ describe('architecture boundaries', () => {
   it('core modules do not import app layer', () => {
     const coreFiles = [
       'src/core/fixed-step.ts',
-      'src/core/rng.ts',
-      'src/core/guards.ts',
-      'src/core/high-dpi-canvas.ts'
+      'src/core/high-dpi-canvas.ts',
+      'src/core/unified-canvas.ts',
+      'src/core/colors.ts'
     ];
 
     for (const file of coreFiles) {

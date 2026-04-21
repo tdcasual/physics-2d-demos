@@ -8,7 +8,7 @@ import {
   createPresetButtonGroup,
   createTransportRow,
   createSceneSelector
-} from '../../src/ui/components/SceneControls';
+} from '../../src/ui/components/scene-controls';
 
 describe('SceneControls', () => {
   describe('createSliderRow', () => {

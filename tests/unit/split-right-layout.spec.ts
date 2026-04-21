@@ -259,4 +259,43 @@ describe('SplitRightLayout', () => {
 
     expect(container.querySelector('.graph-section')).toBeFalsy();
   });
+
+  it('should clean up event listeners on unmount', async () => {
+    const { container, layout } = createLayout();
+    layout.render(container);
+    await layout.mount();
+
+    // unmount 后 DOM 被清理，再 query 不到 toggle 按钮
+    await layout.unmount();
+    expect(container.querySelector('.sidebar-toggle')).toBeFalsy();
+    expect(container.querySelector('.teaching-left-panel')).toBeFalsy();
+  });
+
+  it('should not accumulate listeners on repeated render + unmount', async () => {
+    const container = document.createElement('div');
+    container.style.width = '1200px';
+    container.style.height = '800px';
+
+    const layout1 = new SplitRightLayout(container);
+    layout1.render(container);
+    await layout1.mount();
+    await layout1.unmount();
+
+    container.replaceChildren();
+
+    const layout2 = new SplitRightLayout(container);
+    layout2.render(container);
+    await layout2.mount();
+
+    const toggle = container.querySelector(
+      '.sidebar-toggle'
+    ) as HTMLButtonElement;
+    expect(toggle).toBeTruthy();
+
+    // 点击 toggle 应该正常工作（不会触发旧 layout 的 handler）
+    toggle.click();
+    expect(container.style.gridTemplateColumns).toBe('0px 8px 1fr');
+
+    await layout2.unmount();
+  });
 });

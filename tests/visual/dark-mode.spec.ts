@@ -1,13 +1,13 @@
 import { test } from '@playwright/test';
 
-test('弹簧振子暗色模式', async ({ page }) => {
+test('projectile dark mode', async ({ page }) => {
   await page.setViewportSize({ width: 1400, height: 900 });
-  await page.goto('http://localhost:5177/src/pages/spring-oscillator.html');
+  await page.goto('http://localhost:5177/src/pages/projectile.html');
   await page.waitForTimeout(2000);
-  
-  // 点击月夜按钮切换暗色模式
+
+  // Click theme toggle to switch dark mode
   await page.click('.shell-theme-toggle');
   await page.waitForTimeout(1000);
-  
-  await page.screenshot({ path: '/tmp/spring-dark.png' });
+
+  await page.screenshot({ path: '/tmp/projectile-dark.png' });
 });

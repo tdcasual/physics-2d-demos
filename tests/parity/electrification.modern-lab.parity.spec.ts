@@ -2,21 +2,37 @@ import { expect, test } from '@playwright/test';
 import pixelmatch from 'pixelmatch';
 import { PNG } from 'pngjs';
 
-async function captureStageFrame(page: import('@playwright/test').Page, pagePath: string): Promise<Buffer> {
+async function captureStageFrame(
+  page: import('@playwright/test').Page,
+  pagePath: string
+): Promise<Buffer> {
   await page.goto(pagePath);
-  await expect(page.getByRole('heading', { name: '静电起电演示' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: '静电起电演示' })
+  ).toBeVisible();
   const stage = page.locator('.stage-frame');
   await expect(stage).toBeVisible();
-  await page.waitForTimeout(500);
+  await page.waitForFunction(() => {
+    const canvas = document.querySelector('canvas');
+    return canvas !== null && (canvas as HTMLCanvasElement).width > 0;
+  });
   return stage.screenshot({
     animations: 'disabled',
     scale: 'css'
   });
 }
 
-test('electrification modern-lab should stay visually aligned with legacy right stage', async ({ page }, testInfo) => {
-  const legacyPng = await captureStageFrame(page, '/src/pages/electrification.html?renderer=legacy');
-  const modernLabPng = await captureStageFrame(page, '/src/pages/electrification.html?renderer=modern-lab');
+test('electrification modern-lab should stay visually aligned with legacy right stage', async ({
+  page
+}, testInfo) => {
+  const legacyPng = await captureStageFrame(
+    page,
+    '/src/pages/electrification.html?renderer=legacy'
+  );
+  const modernLabPng = await captureStageFrame(
+    page,
+    '/src/pages/electrification.html?renderer=modern-lab'
+  );
 
   const legacy = PNG.sync.read(legacyPng);
   const modernLab = PNG.sync.read(modernLabPng);
@@ -44,8 +60,14 @@ test('electrification modern-lab should stay visually aligned with legacy right 
     { threshold: 0.1, includeAA: true }
   );
 
-  await testInfo.attach('electrification-legacy-stage', { body: legacyPng, contentType: 'image/png' });
-  await testInfo.attach('electrification-modern-lab-stage', { body: modernLabPng, contentType: 'image/png' });
+  await testInfo.attach('electrification-legacy-stage', {
+    body: legacyPng,
+    contentType: 'image/png'
+  });
+  await testInfo.attach('electrification-modern-lab-stage', {
+    body: modernLabPng,
+    contentType: 'image/png'
+  });
   await testInfo.attach('electrification-diff-threshold0', {
     body: PNG.sync.write(strictDiff),
     contentType: 'image/png'

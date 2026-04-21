@@ -36,11 +36,7 @@ const MOBILE_VP = { width: 375, height: 812 } as const;
 /** Scenes with continuous auto-playback animation and auto-updating readout */
 const AUTO_READOUT_SCENES = ['projectile'] as const;
 /** Scenes with continuous animation (readout may not auto-update during playback) */
-const ANIMATED_SCENES = [
-  'spring-oscillator',
-  'chase-meet',
-  'emf-analogy'
-] as const;
+const ANIMATED_SCENES = ['chase-meet', 'emf-analogy'] as const;
 
 const SCENE_META: Record<
   string,
@@ -49,11 +45,6 @@ const SCENE_META: Record<
   projectile: {
     name: '抛体运动',
     hasGraph: false,
-    canvasSelector: 'canvas.stage-canvas'
-  },
-  'spring-oscillator': {
-    name: '弹簧振子',
-    hasGraph: true,
     canvasSelector: 'canvas.stage-canvas'
   },
   'chase-meet': { name: '追及相遇', hasGraph: false, canvasSelector: 'canvas' },
@@ -546,25 +537,6 @@ test.describe('MobileStackLayout Mobile', () => {
     const newText = await speedValue.textContent();
     expect(newText).toContain('2.00');
   });
-
-  test('spring-oscillator graph toggle on mobile', async ({ page }) => {
-    await gotoScene(page, 'spring-oscillator');
-
-    const graphToggle = page.locator('.mobile-section-toggle');
-    if ((await graphToggle.count()) === 0) {
-      test.skip(true, 'No graph toggle found on mobile spring-oscillator');
-      return;
-    }
-
-    await graphToggle.click();
-    await page.waitForTimeout(300);
-
-    const graphSection = page.locator('.mobile-graph-section');
-    const isExpanded = await graphSection.evaluate((el) =>
-      el.classList.contains('is-expanded')
-    );
-    expect(isExpanded).toBe(true);
-  });
 });
 
 // ── Layout Auto-Switch Tests ────────────────────────────────────────────
@@ -579,8 +551,6 @@ test.describe('Layout Auto-Switch on Resize', () => {
     await expect(page.locator('.teaching-left-panel')).toBeVisible();
 
     await page.setViewportSize(MOBILE_VP);
-    await page.waitForTimeout(600);
-
     await expect(page.locator('.layout-master')).toHaveClass(
       /mobile-stack-layout/
     );
@@ -595,8 +565,6 @@ test.describe('Layout Auto-Switch on Resize', () => {
     );
 
     await page.setViewportSize(DESKTOP_VP);
-    await page.waitForTimeout(600);
-
     await expect(page.locator('.teaching-left-panel')).toBeVisible();
     await expect(page.locator('.stage-floating-controls')).toBeVisible();
   });

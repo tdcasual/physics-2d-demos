@@ -109,6 +109,7 @@ describe('SceneContainerImpl', () => {
     localStorage.setItem(
       'test-state',
       JSON.stringify({
+        v: 1,
         theme: 'dark',
         preferredLayout: 'split-right'
       })
@@ -207,6 +208,7 @@ describe('SceneContainerImpl', () => {
     localStorage.setItem(
       'test-state-scene-projectile',
       JSON.stringify({
+        v: 1,
         state: { angle: 45, speed: 10 }
       })
     );

@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
+import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 import type { LayoutMasterConstructor } from '../../src/app/layouts/types';
 import {
   layoutRegistry,
@@ -112,14 +112,12 @@ describe('layoutRegistry', () => {
     expect(layoutRegistry.has('gone')).toBe(false);
   });
 
-  it('should warn on duplicate registration', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  it('should allow overwriting duplicate registration', () => {
     layoutRegistry.register('dup', FakeLayout, fakeMeta);
-    layoutRegistry.register('dup', FakeLayout, fakeMeta);
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('already registered')
-    );
-    warnSpy.mockRestore();
+    expect(() =>
+      layoutRegistry.register('dup', FakeLayout, fakeMeta)
+    ).not.toThrow();
+    expect(layoutRegistry.has('dup')).toBe(true);
   });
 
   it('should find layouts by tag', () => {
