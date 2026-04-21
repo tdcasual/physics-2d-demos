@@ -18,12 +18,12 @@ export function createSelectRow(
   row.dataset.testid = 'select-row';
 
   const labelEl = document.createElement('span');
-  labelEl.className = 'text-[13px] font-semibold shrink-0';
+  labelEl.className = 'text-[12px] font-semibold shrink-0';
   labelEl.style.color = 'var(--text-secondary)';
   labelEl.textContent = label;
 
   const select = document.createElement('select');
-  select.className = 'text-xs px-1 py-0.5 rounded flex-1 min-w-0';
+  select.className = 'text-[11px] px-1 py-0.5 rounded flex-1 min-w-0';
   select.style.cssText = `
     border: 1px solid var(--border-color);
     background: var(--bg-card);

@@ -22,7 +22,7 @@ export function createNumberInputRow(
   row.className = 'flex items-center gap-2 py-1';
 
   const labelEl = document.createElement('label');
-  labelEl.className = 'text-[13px] font-semibold w-20 shrink-0';
+  labelEl.className = 'text-[12px] font-semibold w-20 shrink-0';
   labelEl.style.color = 'var(--text-secondary)';
   labelEl.textContent = label;
 
@@ -33,7 +33,7 @@ export function createNumberInputRow(
   input.step = String(options.step ?? '');
   input.value = String(options.value);
   if (options.role) input.dataset.role = options.role;
-  input.className = 'flex-1 px-2 py-1.5 rounded text-sm min-w-0';
+  input.className = 'flex-1 px-2 py-1 rounded text-[13px] min-w-0';
   input.style.cssText = `
     background: var(--bg-card);
     border: 1px solid var(--border-color);
@@ -57,7 +57,7 @@ export function createNumberInputRow(
 
   if (options.unit) {
     const unitEl = document.createElement('span');
-    unitEl.className = 'text-xs w-6 shrink-0';
+    unitEl.className = 'text-[11px] w-6 shrink-0';
     unitEl.style.color = 'var(--text-secondary)';
     unitEl.textContent = options.unit;
     row.appendChild(unitEl);

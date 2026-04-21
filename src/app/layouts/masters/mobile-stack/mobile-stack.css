@@ -38,9 +38,12 @@
   /* 字体 */
   --ms-font-xs: 10px;
   --ms-font-sm: 12px;
-  --ms-font-md: 14px;
-  --ms-font-lg: 16px;
-  --ms-font-xl: 20px;
+  --ms-font-md: 13px;
+  --ms-font-lg: 15px;
+  --ms-font-xl: 18px;
+
+  /* UI 缩放因子（影响 ControlCard 等组件的 padding / font-size） */
+  --ui-scale: 0.92;
 
   /* 圆角 */
   --ms-radius-sm: 4px;

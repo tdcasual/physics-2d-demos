@@ -21,7 +21,7 @@ export function createSliderRow(
   row.dataset.testid = 'slider-row';
 
   const labelEl = document.createElement('span');
-  labelEl.className = 'text-[13px] font-semibold w-6 shrink-0';
+  labelEl.className = 'text-[12px] font-semibold w-6 shrink-0';
   labelEl.style.color = 'var(--text-secondary)';
   labelEl.textContent = label;
 
@@ -39,7 +39,7 @@ export function createSliderRow(
   `;
 
   const valueEl = document.createElement('span');
-  valueEl.className = 'text-xs font-semibold w-10 text-right shrink-0';
+  valueEl.className = 'text-[11px] font-semibold w-10 text-right shrink-0';
   valueEl.style.color = 'var(--text-primary)';
   valueEl.textContent = options.value + (options.unit || '');
 

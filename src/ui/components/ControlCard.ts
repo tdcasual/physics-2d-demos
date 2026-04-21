@@ -57,11 +57,11 @@ export function createControlCard(
     min-height: calc(32px * var(--ui-scale, 1));
   `;
 
-  // 标题 - 响应式字体
+  // 标题 - 响应式字体（移动端适当缩小）
   const titleEl = document.createElement('div');
   titleEl.style.cssText = `
-    font-size: calc(15px * var(--ui-scale, 1));
-    font-weight: 700;
+    font-size: calc(13px * var(--ui-scale, 1));
+    font-weight: 600;
     color: var(--text-primary);
     display: flex;
     align-items: center;
@@ -91,9 +91,9 @@ export function createControlCard(
   if (options?.headerActions) {
     options.headerActions.forEach((btn) => {
       btn.style.cssText = `
-        padding: calc(5px * var(--ui-scale, 1)) calc(12px * var(--ui-scale, 1));
-        font-size: calc(13px * var(--ui-scale, 1));
-        font-weight: 600;
+        padding: calc(4px * var(--ui-scale, 1)) calc(10px * var(--ui-scale, 1));
+        font-size: calc(12px * var(--ui-scale, 1));
+        font-weight: 500;
         background: var(--accent-primary);
         color: var(--text-inverse);
         border: none;

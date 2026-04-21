@@ -19,7 +19,7 @@ export function createTextInputRow(
   row.className = 'flex flex-col gap-1 py-1';
 
   const labelEl = document.createElement('label');
-  labelEl.className = 'text-[13px] font-semibold';
+  labelEl.className = 'text-[12px] font-semibold';
   labelEl.style.color = 'var(--text-secondary)';
   labelEl.textContent = label;
 
@@ -27,7 +27,7 @@ export function createTextInputRow(
   input.type = 'text';
   input.value = options.value;
   if (options.role) input.dataset.role = options.role;
-  input.className = 'w-full px-2 py-1.5 rounded text-sm';
+  input.className = 'w-full px-2 py-1 rounded text-[13px]';
   input.style.cssText = `
     background: var(--bg-card);
     border: 1px solid var(--border-color);
