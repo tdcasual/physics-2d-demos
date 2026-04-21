@@ -62,9 +62,7 @@ export default defineConfig({
         '**/*.config.*',
         'src/scenes/*/page.ts',
         'src/scenes/*/scene.view.ts',
-        'src/scenes/spring-oscillator/controls-v4.ts',
-        'src/scenes/spring-oscillator/scene.entry.ts',
-        'src/scenes/spring-oscillator/scene.sim.ts'
+        'src/scenes/*/scene.meta.ts'
       ],
       thresholds: {
         lines: 25,
@@ -80,6 +78,29 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         ...discoverPageEntries(resolve(__dirname, 'src/pages'))
+      },
+      output: {
+        manualChunks(id) {
+          // Vendor chunk: React ecosystem
+          if (
+            id.includes('node_modules/react') ||
+            id.includes('node_modules/scheduler')
+          ) {
+            return 'vendor';
+          }
+          // UI components chunk
+          if (id.includes('/src/ui/')) {
+            return 'ui';
+          }
+          // Layout system chunk
+          if (id.includes('/src/app/layouts/')) {
+            return 'layouts';
+          }
+          // Core utilities chunk
+          if (id.includes('/src/core/') || id.includes('/src/platform/')) {
+            return 'core';
+          }
+        }
       }
     }
   }

@@ -46,30 +46,28 @@
 </head>
 <body>
   <h1>🔬 布局母版系统测试页面</h1>
-  <p>选择下方链接查看不同版本的弹簧振子场景：</p>
-  
+  <p>点击下方链接查看各场景演示：</p>
+
   <div class="grid">
     <div class="version-card">
-      <h2>Legacy 版本 <span class="tag tag-legacy">旧版</span></h2>
-      <p>使用 <code>createTeachingDemoShell</code> 的现有实现</p>
-      <ul>
-        <li>单一布局，通过配置调整</li>
-        <li>所有场景共享同一套 DOM 结构</li>
-        <li>作为模板参考保留</li>
-      </ul>
-      <a href="/src/pages/spring-oscillator-legacy.html">打开 Legacy 版本 →</a>
+      <h2>抛体运动 <span class="tag tag-new">力学</span></h2>
+      <p>二维抛体运动轨迹模拟</p>
+      <a href="/src/pages/projectile.html">打开 →</a>
     </div>
-    
     <div class="version-card">
-      <h2>V3 新版本 <span class="tag tag-new">新版</span></h2>
-      <p>使用新的<strong>布局母版系统</strong></p>
-      <ul>
-        <li>SplitRightLayout 母版</li>
-        <li>场景实现 Scene 接口</li>
-        <li>支持布局切换</li>
-        <li>独立响应式策略</li>
-      </ul>
-      <a href="/src/pages/spring-oscillator.html">打开 V3 新版本 →</a>
+      <h2>追及相遇 <span class="tag tag-new">力学</span></h2>
+      <p>运动学追及相遇问题</p>
+      <a href="/src/pages/chase-meet.html">打开 →</a>
+    </div>
+    <div class="version-card">
+      <h2>电场线演化 <span class="tag tag-new">电磁学</span></h2>
+      <p>电荷电场线分布演示</p>
+      <a href="/src/pages/field-lines.html">打开 →</a>
+    </div>
+    <div class="version-card">
+      <h2>电路水流类比 <span class="tag tag-new">电磁学</span></h2>
+      <p>闭合电路与水流类比</p>
+      <a href="/src/pages/emf-analogy.html">打开 →</a>
     </div>
   </div>
   

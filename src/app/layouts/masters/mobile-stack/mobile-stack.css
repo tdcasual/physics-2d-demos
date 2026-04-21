@@ -489,10 +489,6 @@
   min-height: 48px;
 }
 
-.mobile-graph-section.is-lazy:not(.is-visible) .mobile-graph-slot {
-  visibility: hidden;
-}
-
 .mobile-section-toggle {
   display: flex;
   align-items: center;

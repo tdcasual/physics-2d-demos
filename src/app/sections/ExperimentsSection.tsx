@@ -3,7 +3,11 @@
  */
 
 import React, { useState } from 'react';
-import { sceneRegistry, categoryInfo, getDifficultyLabel } from '../data/scenes';
+import {
+  sceneRegistry,
+  categoryInfo,
+  getDifficultyLabel
+} from '../data/scenes';
 import { useScrollReveal } from '../hooks';
 
 type FilterCategory = 'all' | 'mechanics' | 'electromagnetism' | 'method';
@@ -21,11 +25,15 @@ export const ExperimentsSection: React.FC = () => {
     { id: 'all', label: '全部' },
     { id: 'mechanics', label: '力学' },
     { id: 'electromagnetism', label: '电磁学' },
-    { id: 'method', label: '方法' },
+    { id: 'method', label: '方法' }
   ];
 
   return (
-    <section id="experiments" className="experiments-section" ref={sectionRef as React.RefObject<HTMLDivElement>}>
+    <section
+      id="experiments"
+      className="experiments-section"
+      ref={sectionRef as React.RefObject<HTMLDivElement>}
+    >
       <div className="container">
         <div className={`section-header ${isVisible ? 'visible' : ''}`}>
           <span className="section-label">实践</span>
@@ -36,6 +44,7 @@ export const ExperimentsSection: React.FC = () => {
         <div className={`filter-bar ${isVisible ? 'visible' : ''}`}>
           {filters.map((filter) => (
             <button
+              type="button"
               key={filter.id}
               className={`filter-btn ${activeFilter === filter.id ? 'active' : ''}`}
               onClick={() => setActiveFilter(filter.id)}
@@ -68,7 +77,10 @@ export const ExperimentsSection: React.FC = () => {
               </div>
 
               <div className="card-footer">
-                <span className="card-category" style={{ color: categoryInfo[scene.category].color }}>
+                <span
+                  className="card-category"
+                  style={{ color: categoryInfo[scene.category].color }}
+                >
                   {categoryInfo[scene.category].label}
                 </span>
                 <span className="card-arrow">→</span>

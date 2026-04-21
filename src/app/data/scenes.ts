@@ -19,20 +19,7 @@ export interface SceneMeta {
   thumbnail?: string;
 }
 
-export const scenes = _sceneRegistry as unknown as SceneMeta[];
-
 export const featuredScenes = _sceneRegistry.filter((s) => s.featured);
-
-export const scenesByCategory = _sceneRegistry.reduce(
-  (acc, scene) => {
-    if (!acc[scene.category]) {
-      acc[scene.category] = [];
-    }
-    acc[scene.category].push(scene as unknown as SceneMeta);
-    return acc;
-  },
-  {} as Record<string, SceneMeta[]>
-);
 
 export const categoryInfo: Record<
   string,
@@ -41,12 +28,6 @@ export const categoryInfo: Record<
   mechanics: { label: '力学', color: '#74b9ff', icon: '⚙️' },
   electromagnetism: { label: '电磁学', color: '#fdcb6e', icon: '⚡' },
   method: { label: '方法', color: '#a29bfe', icon: '📐' }
-};
-
-export const getSceneById = (id: string): SceneMeta | undefined => {
-  return _sceneRegistry.find((scene) => scene.id === id) as unknown as
-    | SceneMeta
-    | undefined;
 };
 
 export const getDifficultyLabel = (difficulty: number): string => {

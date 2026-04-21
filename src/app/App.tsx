@@ -46,7 +46,14 @@ const App: React.FC = () => {
             <a href="#experiments">实验</a>
             <a href="#about">关于</a>
           </nav>
-          <button className="theme-toggle" onClick={toggleTheme}>
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={toggleTheme}
+            aria-label={
+              resolvedTheme === 'light' ? '切换到暗色模式' : '切换到亮色模式'
+            }
+          >
             {resolvedTheme === 'light' ? '☾' : '☀'}
           </button>
         </div>

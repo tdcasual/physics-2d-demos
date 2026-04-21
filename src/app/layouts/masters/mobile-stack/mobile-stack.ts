@@ -191,12 +191,15 @@ export class MobileStackLayout extends BaseLayout {
         this.debugManager = new DebugPanelManager(container);
       }
 
+      if (!this.controlSlot || !this.readoutManager) {
+        throw new Error('[MobileStackLayout] control section not rendered');
+      }
       return {
         header: undefined,
-        control: this.controlSlot!,
+        control: this.controlSlot,
         animation: this.stageSlot,
         graph: this.graphManager.slot,
-        readout: this.readoutManager!.bar
+        readout: this.readoutManager.bar
       };
     }, 'render');
 

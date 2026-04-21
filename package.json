@@ -19,6 +19,7 @@
     "test:visual:update": "playwright test --update-snapshots",
     "test:parity": "playwright test -c playwright.parity.config.ts tests/parity",
     "test:parity:chase-meet": "playwright test -c playwright.parity.config.ts tests/parity/chase-meet.parity.spec.ts",
+    "check:circular": "madge --circular --extensions ts,tsx src/",
     "prepare": "husky"
   },
   "devDependencies": {
@@ -37,6 +38,7 @@
     "happy-dom": "^20.9.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
+    "madge": "^8.0.0",
     "pixelmatch": "^7.1.0",
     "pngjs": "^7.0.0",
     "postcss": "^8.5.8",
