@@ -3,6 +3,7 @@ import {
   SceneContainerImpl,
   createSceneContainer
 } from '../../src/app/layouts/container';
+import type { Scene } from '../../src/app/layouts/types';
 
 // Mock layout registry
 vi.mock('../../src/app/layouts/registry', () => ({
@@ -224,5 +225,144 @@ describe('SceneContainerImpl', () => {
     ).restoreSceneState('projectile');
 
     expect(state).toEqual({ angle: 45, speed: 10 });
+  });
+
+  it('should set scene and mount it', async () => {
+    const container = createSceneContainer({ mount });
+
+    const mockScene = {
+      id: 'test-scene',
+      preferredLayout: 'split-right',
+      renderAnimation: vi.fn(),
+      renderControl: vi.fn(),
+      renderHeader: vi.fn(),
+      renderGraph: vi.fn(),
+      renderReadout: vi.fn(),
+      mount: vi.fn(),
+      unmount: vi.fn(),
+      saveState: vi.fn(() => ({ test: true })),
+      getTransportState: vi.fn(() => ({ isPlaying: false, speed: 1 })),
+      subscribe: vi.fn(() => vi.fn())
+    } as unknown as Scene;
+
+    await container.setScene(mockScene);
+
+    expect(container.currentScene).toBe(mockScene);
+    expect(mockScene.renderAnimation).toHaveBeenCalled();
+    expect(mockScene.mount).toHaveBeenCalled();
+
+    container.dispose();
+  });
+
+  it('should handle event listener errors gracefully', () => {
+    const container = createSceneContainer({ mount });
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    container.on('theme:change', () => {
+      throw new Error('listener error');
+    });
+
+    container.setTheme('dark');
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      '[SceneContainer] Event handler error for theme:change:',
+      expect.any(Error)
+    );
+
+    errorSpy.mockRestore();
+    container.dispose();
+  });
+
+  it('should clear layout switch timer on dispose', async () => {
+    const container = createSceneContainer({ mount });
+    await container.switchLayout('split-right', { animate: false });
+    expect(() => container.dispose()).not.toThrow();
+  });
+
+  it('should unmount current scene when setting new scene', async () => {
+    const container = createSceneContainer({ mount });
+
+    const mockScene1 = {
+      id: 'scene-1',
+      preferredLayout: 'split-right',
+      renderAnimation: vi.fn(),
+      renderControl: vi.fn(),
+      mount: vi.fn(),
+      unmount: vi.fn(),
+      saveState: vi.fn(() => null),
+      getTransportState: vi.fn(() => ({ isPlaying: false, speed: 1 })),
+      subscribe: vi.fn(() => vi.fn())
+    } as unknown as Scene;
+
+    const mockScene2 = {
+      id: 'scene-2',
+      preferredLayout: 'split-right',
+      renderAnimation: vi.fn(),
+      renderControl: vi.fn(),
+      mount: vi.fn(),
+      unmount: vi.fn(),
+      saveState: vi.fn(() => null),
+      getTransportState: vi.fn(() => ({ isPlaying: false, speed: 1 })),
+      subscribe: vi.fn(() => vi.fn())
+    } as unknown as Scene;
+
+    await container.setScene(mockScene1);
+    await container.setScene(mockScene2);
+
+    expect(mockScene1.unmount).toHaveBeenCalled();
+    expect(container.currentScene).toBe(mockScene2);
+
+    container.dispose();
+  });
+
+  it('should emit scene:mount event when setting scene', async () => {
+    const container = createSceneContainer({ mount });
+    const listener = vi.fn();
+    container.on('scene:mount', listener);
+
+    const mockScene = {
+      id: 'test-scene',
+      preferredLayout: 'split-right',
+      renderAnimation: vi.fn(),
+      renderControl: vi.fn(),
+      mount: vi.fn(),
+      saveState: vi.fn(() => null),
+      getTransportState: vi.fn(() => ({ isPlaying: false, speed: 1 })),
+      subscribe: vi.fn(() => vi.fn())
+    } as unknown as Scene;
+
+    await container.setScene(mockScene);
+
+    expect(listener).toHaveBeenCalledWith({ sceneId: 'test-scene' });
+
+    container.dispose();
+  });
+
+  it('should restore scene state on mount if available', async () => {
+    localStorage.setItem(
+      'physics-demos-container-state-scene-test-scene',
+      JSON.stringify({ v: 1, state: { angle: 45 } })
+    );
+
+    const container = createSceneContainer({ mount });
+    const restoreState = vi.fn();
+
+    const mockScene = {
+      id: 'test-scene',
+      preferredLayout: 'split-right',
+      renderAnimation: vi.fn(),
+      renderControl: vi.fn(),
+      mount: vi.fn(),
+      restoreState,
+      saveState: vi.fn(() => null),
+      getTransportState: vi.fn(() => ({ isPlaying: false, speed: 1 })),
+      subscribe: vi.fn(() => vi.fn())
+    } as unknown as Scene;
+
+    await container.setScene(mockScene);
+
+    expect(restoreState).toHaveBeenCalledWith({ angle: 45 });
+
+    container.dispose();
   });
 });

@@ -100,6 +100,17 @@ export default defineConfig({
           if (id.includes('/src/core/') || id.includes('/src/platform/')) {
             return 'core';
           }
+          // Scene metadata shared across entries
+          if (id.includes('/scene.meta.')) {
+            return 'scene-meta';
+          }
+          // Scene bootstrapper shared across entries
+          if (
+            id.includes('/scene-bootstrapper.') ||
+            id.includes('/scene-listener.')
+          ) {
+            return 'scene-bootstrapper';
+          }
         }
       }
     }
