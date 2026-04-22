@@ -41,9 +41,17 @@ export function computeHiDpiCanvasMetrics(args: {
 export function applyHiDpiCanvasMetrics(
   canvas: HTMLCanvasElement,
   context: CanvasRenderingContext2D,
-  metrics: HiDpiCanvasMetrics
+  metrics: HiDpiCanvasMetrics,
+  responsiveScale?: number
 ): void {
   canvas.width = metrics.backingWidth;
   canvas.height = metrics.backingHeight;
+  const scale =
+    responsiveScale ??
+    Math.max(
+      0.3,
+      Math.min(1.5, Math.min(metrics.cssWidth, metrics.cssHeight) / 600)
+    );
+  canvas.dataset.responsiveScale = String(scale);
   context.setTransform(metrics.pixelRatio, 0, 0, metrics.pixelRatio, 0, 0);
 }

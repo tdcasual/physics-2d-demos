@@ -177,6 +177,64 @@ pnpm build       # Vite
 
 Husky pre-commit 自动运行 `lint-staged`（eslint --fix + prettier --write）。
 
+## Canvas 响应式渲染规范（强制）
+
+所有场景的 `scene.view.ts` 必须遵循以下规范，以避免移动端元素过大/过小：
+
+### 1. 禁止使用裸数字（magic number）定义元素尺寸
+
+❌ 错误示例：
+
+```typescript
+ctx.arc(x, y, 45, 0, Math.PI * 2); // 45px 固定半径
+ctx.fillText(label, x, y + 65); // 65px 固定偏移
+const pipeHeight = Math.max(143, h * 0.24); // 143px 固定高度
+```
+
+✅ 正确示例：
+
+```typescript
+const scale = parseFloat(canvas.dataset.responsiveScale || '1');
+ctx.arc(x, y, 45 * scale, 0, Math.PI * 2);
+ctx.fillText(label, x, y + 65 * scale);
+const pipeHeight = Math.max(110 * scale, h * 0.22);
+```
+
+### 2. 使用标准工具函数
+
+`src/core/canvas-sizing.ts` 提供统一的响应式缩放：
+
+```typescript
+import { getResponsiveScale } from '../../core/canvas-sizing';
+
+function resize() {
+  const ctx = sizeCanvasToFill(canvas);
+  // canvas.dataset.responsiveScale 已自动设置
+  const scale = parseFloat(canvas.dataset.responsiveScale || '1');
+  // 所有绘制尺寸基于 scale
+}
+```
+
+`getResponsiveScale(width, height, referenceSize?)` 基于 canvas 短边与参考尺寸的比例计算：
+
+- 桌面端（短边 ~500px）→ scale ≈ 0.8~1.0
+- 移动端（短边 ~200px）→ scale ≈ 0.3~0.5
+- 返回值范围: **[0.3, 1.5]**
+
+### 3. 参考实现
+
+- **projectile**（最简模式）：`scale = Math.min(width / 800, height / 600)`
+- **chase-meet**（标准模式）：`resolveVisuals(mode, cssW, cssH)` 内部使用 `getResponsiveScale`
+- **emf-analogy**（复杂模式）：`drawFlowArea` 接收 width/height，内部计算 `responsiveScale`
+
+### 4. 审查清单
+
+新增场景 PR 必须通过以下检查：
+
+- [ ] `scene.view.ts` 中没有大于 50 的裸数字用于元素尺寸
+- [ ] 使用了 `canvas.dataset.responsiveScale` 或 `getResponsiveScale`
+- [ ] Playwright 移动端截图通过审查（无元素遮挡、无过度拥挤）
+
 ## 已知限制
 
 - `spring-oscillator` 使用 imperative controls（动态增删振子），不支持纯 schema

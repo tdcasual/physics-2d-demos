@@ -38,6 +38,36 @@ export interface CanvasSizingResult {
   cssWidth: number;
   cssHeight: number;
   dpr: number;
+  /**
+   * 响应式缩放因子，基于 canvas 短边与参考尺寸的比例。
+   * 用于统一调整绘制元素大小以适配不同屏幕。
+   * 范围: [0.3, 1.5]
+   */
+  responsiveScale: number;
+}
+
+/**
+ * 计算响应式缩放因子
+ *
+ * 基于 canvas 短边与参考尺寸的比例，返回一个 clamp 后的 scale 值。
+ * 所有场景的绘制元素大小应乘以该因子，以确保移动端不会出现过大的元素。
+ *
+ * @param canvasWidth  canvas CSS 宽度
+ * @param canvasHeight canvas CSS 高度
+ * @param referenceSize 参考短边尺寸（默认 600，对应桌面端典型值）
+ * @returns 缩放因子，范围 [0.3, 1.5]
+ *
+ * @example
+ * const scale = getResponsiveScale(width, height, 600);
+ * const ballRadius = 20 * scale;
+ */
+export function getResponsiveScale(
+  canvasWidth: number,
+  canvasHeight: number,
+  referenceSize = 600
+): number {
+  const shortEdge = Math.min(canvasWidth, canvasHeight);
+  return Math.max(0.3, Math.min(1.5, shortEdge / referenceSize));
 }
 
 /**
@@ -69,7 +99,8 @@ export function computeFillSize(
     height: Math.floor(height * dpr),
     cssWidth: width,
     cssHeight: height,
-    dpr
+    dpr,
+    responsiveScale: getResponsiveScale(width, height)
   };
 }
 
@@ -125,7 +156,8 @@ export function computeFitSize(
     height: Math.floor(cssH * dpr),
     cssWidth: cssW,
     cssHeight: cssH,
-    dpr
+    dpr,
+    responsiveScale: getResponsiveScale(cssW, cssH)
   };
 }
 
@@ -148,7 +180,8 @@ export function computeScrollSize(
     height: Math.floor(height * dpr),
     cssWidth: width,
     cssHeight: height,
-    dpr
+    dpr,
+    responsiveScale: getResponsiveScale(width, height)
   };
 }
 
@@ -189,6 +222,11 @@ export function applyCanvasSize(
   // 设置内部像素尺寸
   canvas.width = sizing.width;
   canvas.height = sizing.height;
+
+  // 暴露响应式缩放因子，供场景绘制代码读取
+  if (canvas.dataset) {
+    canvas.dataset.responsiveScale = String(sizing.responsiveScale);
+  }
 
   const ctx = canvas.getContext('2d');
   if (!ctx) {
@@ -252,7 +290,8 @@ export function sizeCanvasToFill(
       height: 600,
       cssWidth: 800,
       cssHeight: 600,
-      dpr: 1
+      dpr: 1,
+      responsiveScale: 1
     });
   }
   if (target === canvas) {
