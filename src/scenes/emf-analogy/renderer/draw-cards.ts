@@ -69,8 +69,9 @@ export function drawCards(
     }
   ] as const;
 
-  const titleFont = 14;
-  const valueFont = 24;
+  const scaleFactor = Math.max(0.55, Math.min(1.0, width / 520));
+  const titleFont = Math.round(14 * scaleFactor);
+  const valueFont = Math.round(24 * scaleFactor);
 
   cards.forEach((card, index) => {
     const left = x + index * (cardWidth + gap);

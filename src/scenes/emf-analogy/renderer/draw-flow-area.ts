@@ -66,9 +66,11 @@ export function drawFlowArea(
 ): number {
   const visuals = getTeachingStandards(mode).rightStage;
   const readability = LEGACY_READABILITY_PRESET[mode];
-  const visualScale = readability.visualScale;
+  const shortEdge = Math.min(width, height);
+  const responsiveScale = Math.max(0.3, Math.min(1.0, shortEdge / 400));
+  const visualScale = readability.visualScale * responsiveScale;
   const centerY = y + height * 0.56;
-  const pipeHeight = Math.max(110 * visualScale, height * 0.24);
+  const pipeHeight = Math.max(110 * visualScale, height * 0.22);
   const pipeY = centerY - pipeHeight * 0.5;
   const geometryScale = visualScale * 1.2;
   const majorStroke = Math.max(

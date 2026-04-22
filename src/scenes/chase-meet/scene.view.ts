@@ -142,13 +142,13 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
   }
 
   function drawMotion(next: ChaseMeetSnapshot, dom: StageDom): void {
-    const visuals = resolveVisuals(mode);
+    const cssW = dom.motionCanvas.width / dom.dpr;
+    const cssH = dom.motionCanvas.height / dom.dpr;
+    const visuals = resolveVisuals(mode, cssW, cssH);
     const visualScale = visuals.scale;
     const majorStroke = Math.max(visuals.majorStrokePx, 2 * visualScale);
     const minorStroke = Math.max(visuals.minorStrokePx, 1.5 * visualScale);
     const motionCtx = dom.motionCtx;
-    const cssW = dom.motionCanvas.width / dom.dpr;
-    const cssH = dom.motionCanvas.height / dom.dpr;
 
     motionCtx.clearRect(0, 0, cssW, cssH);
 
@@ -256,14 +256,15 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
   }
 
   function drawGraphs(next: ChaseMeetSnapshot, dom: StageDom): void {
-    const visuals = resolveVisuals(mode);
-    const visualScale = visuals.scale;
-    const xCtx = dom.xCtx;
-    const vCtx = dom.vCtx;
     const xW = dom.xCanvas.width / dom.dpr;
     const xH = dom.xCanvas.height / dom.dpr;
     const vW = dom.vCanvas.width / dom.dpr;
     const vH = dom.vCanvas.height / dom.dpr;
+    const shortEdge = Math.min(xW, xH, vW, vH);
+    const visuals = resolveVisuals(mode, shortEdge * 2, shortEdge);
+    const visualScale = visuals.scale;
+    const xCtx = dom.xCtx;
+    const vCtx = dom.vCtx;
 
     xCtx.clearRect(0, 0, xW, xH);
     vCtx.clearRect(0, 0, vW, vH);

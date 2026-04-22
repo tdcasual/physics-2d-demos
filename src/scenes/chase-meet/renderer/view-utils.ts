@@ -23,10 +23,38 @@ const MODE_SCALE: Record<TeachingMode, number> = {
   presentation: 2.6
 };
 
-export function resolveVisuals(mode: TeachingMode): Visuals {
+export function resolveVisuals(
+  mode: TeachingMode,
+  canvasWidth?: number,
+  canvasHeight?: number
+): Visuals {
+  const base = getTeachingStandards(mode).rightStage;
+  let scale = MODE_SCALE[mode];
+  let markerRadiusPx = base.markerRadiusPx;
+  let primaryFontPx = base.primaryFontPx;
+  let secondaryFontPx = base.secondaryFontPx;
+  let majorStrokePx = base.majorStrokePx;
+  let minorStrokePx = base.minorStrokePx;
+
+  if (canvasWidth && canvasHeight && canvasWidth > 0 && canvasHeight > 0) {
+    const shortEdge = Math.min(canvasWidth, canvasHeight);
+    const responsiveScale = Math.max(0.3, Math.min(1.0, shortEdge / 550));
+    scale *= responsiveScale;
+    markerRadiusPx *= responsiveScale;
+    primaryFontPx = Math.max(10, base.primaryFontPx * responsiveScale);
+    secondaryFontPx = Math.max(9, base.secondaryFontPx * responsiveScale);
+    majorStrokePx = Math.max(1.5, base.majorStrokePx * responsiveScale);
+    minorStrokePx = Math.max(1, base.minorStrokePx * responsiveScale);
+  }
+
   return {
-    ...getTeachingStandards(mode).rightStage,
-    scale: MODE_SCALE[mode]
+    ...base,
+    scale,
+    markerRadiusPx,
+    primaryFontPx,
+    secondaryFontPx,
+    majorStrokePx,
+    minorStrokePx
   };
 }
 
