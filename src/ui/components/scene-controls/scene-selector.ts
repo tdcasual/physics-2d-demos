@@ -31,7 +31,7 @@ export function createSceneSelector(
         background: ${isActive ? 'var(--accent-primary-light, rgba(79,70,229,0.1))' : 'var(--btn-bg, #ffffff)'};
         border: 1px solid ${isActive ? 'var(--accent-primary)' : 'var(--border-color)'};
         border-radius: 8px;
-        color: ${isActive ? 'var(--accent-primary)' : 'var(--text-primary)'};
+        color: var(--text-primary);
         font-size: 13px;
         font-weight: 500;
         cursor: pointer;

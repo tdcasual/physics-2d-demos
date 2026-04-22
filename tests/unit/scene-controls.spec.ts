@@ -167,7 +167,7 @@ describe('SceneControls', () => {
       const buttons = mount.querySelectorAll('button');
       expect(buttons.length).toBe(2);
       const labelSpan = buttons[0].querySelector('span') as HTMLElement;
-      expect(labelSpan.style.color).toContain('var(--accent-primary)');
+      expect(labelSpan.style.color).toContain('var(--text-primary)');
     });
 
     it('should call onSelect and update active state', () => {
@@ -188,7 +188,7 @@ describe('SceneControls', () => {
 
       preset.setActive('b');
       const labelSpan = buttons[1].querySelector('span') as HTMLElement;
-      expect(labelSpan.style.color).toContain('var(--accent-primary)');
+      expect(labelSpan.style.color).toContain('var(--text-primary)');
     });
   });
 

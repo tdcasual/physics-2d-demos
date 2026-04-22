@@ -3,10 +3,11 @@
  * 基于 Shruti 网站深度分析 - 丰富Hero区域
  */
 
-import React, { useEffect, useState } from 'react';
-import { ExperimentsSection } from './sections';
+import React, { useEffect, useState, Suspense, lazy } from 'react';
 import { useTheme } from './hooks';
 import { featuredScenes } from './data/scenes';
+
+const ExperimentsSection = lazy(() => import('./sections/ExperimentsSection'));
 
 import '../styles/design-tokens.css';
 import '../styles/themes.css';
@@ -118,8 +119,18 @@ const App: React.FC = () => {
           </div>
         </section>
 
-        {/* 实验区域 */}
-        <ExperimentsSection />
+        {/* 实验区域 — 懒加载以减少首屏 bundle */}
+        <Suspense
+          fallback={
+            <div style={{ padding: '120px 0', textAlign: 'center' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>
+                正在加载实验列表…
+              </span>
+            </div>
+          }
+        >
+          <ExperimentsSection />
+        </Suspense>
 
         {/* 关于区域 */}
         <section id="about" className="about-section">

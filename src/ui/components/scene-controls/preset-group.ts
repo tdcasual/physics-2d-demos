@@ -27,9 +27,7 @@ export function createPresetButtonGroup(
       const isActive = id === activeId;
       const labelSpan = btn.querySelector('span:first-child') as HTMLElement;
       if (labelSpan) {
-        labelSpan.style.color = isActive
-          ? 'var(--accent-primary)'
-          : 'var(--text-primary)';
+        labelSpan.style.color = 'var(--text-primary)';
       }
       btn.style.background = isActive ? 'var(--btn-hover-bg)' : 'var(--btn-bg)';
       btn.style.borderColor = isActive

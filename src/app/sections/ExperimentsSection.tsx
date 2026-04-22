@@ -61,7 +61,21 @@ export const ExperimentsSection: React.FC = () => {
               href={`/src/pages/${scene.id}.html`}
               className={`experiment-card ${isVisible ? 'visible' : ''} ${hoveredId === scene.id ? 'hovered' : ''}`}
               style={{ transitionDelay: `${index * 0.05}s` }}
-              onMouseEnter={() => setHoveredId(scene.id)}
+              onMouseEnter={() => {
+                setHoveredId(scene.id);
+                // 预加载场景页面（hover 时提前拉取，点击后秒开）
+                const pageUrl = `/src/pages/${scene.id}.html`;
+                if (
+                  !document.querySelector(
+                    `link[rel="prefetch"][href="${pageUrl}"]`
+                  )
+                ) {
+                  const link = document.createElement('link');
+                  link.rel = 'prefetch';
+                  link.href = pageUrl;
+                  document.head.appendChild(link);
+                }
+              }}
               onMouseLeave={() => setHoveredId(null)}
             >
               <div className="card-meta">

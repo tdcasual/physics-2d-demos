@@ -128,7 +128,7 @@ describe('SchemaRenderer', () => {
 
     renderer.setActive('env', 'moon');
     expect(buttons[2].querySelector('span')?.style.color).toContain(
-      'var(--accent-primary)'
+      'var(--text-primary)'
     );
   });
 

@@ -180,7 +180,7 @@ export function createFloatingControls(
     speedLabel.textContent = isMobile ? '⚡' : '速度';
     speedLabel.style.cssText = `
       font-size: ${isMobile ? '14px' : '16px'};
-      color: var(--text-secondary, #aaa);
+      color: var(--text-primary);
       font-weight: 500;
       white-space: nowrap;
     `;

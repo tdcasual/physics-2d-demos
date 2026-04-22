@@ -38,7 +38,7 @@
 
   /* 文本 */
   --color-text-primary: #1a1a1a;
-  --color-text-secondary: #666666;
+  --color-text-secondary: #555555;
   --color-text-muted: #888888;
   --color-text-inverse: #ffffff;
 
@@ -122,7 +122,7 @@
     --color-border-color: rgba(255, 255, 255, 0.1);
     --color-border-light: rgba(255, 255, 255, 0.08);
     --color-text-primary: #fafafa;
-    --color-text-secondary: #888888;
+    --color-text-secondary: #b0b8c4;
     --color-text-muted: #666666;
     --color-text-inverse: #0a0a0a;
     --color-btn-bg: rgba(255, 255, 255, 0.1);
@@ -335,7 +335,7 @@
 .mode-toggle {
   background: var(--color-accent-color);
   border-color: var(--color-accent-color);
-  color: white;
+  color: #1a1a1a;
 }
 
 .mode-toggle:hover,
@@ -481,7 +481,22 @@
 
 .readout-value {
   @apply font-mono text-base font-semibold;
-  color: var(--color-accent-color);
+  color: var(--color-text-primary);
+}
+
+/* ========================================
+   Chase-meet 场景卡片样式
+   ======================================== */
+.chase-modern-card-title {
+  color: var(--color-text-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.chase-modern-plot-title {
+  color: var(--color-text-primary);
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
 /* ========================================

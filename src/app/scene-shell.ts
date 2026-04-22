@@ -20,6 +20,7 @@ export type SceneShellOptions = {
   stepSeconds?: number;
   maxSubSteps?: number;
   frameDriver?: FrameDriver;
+  targetFps?: number;
   onStep?: (dt: number) => void;
   onRender?: () => void;
 };
@@ -66,6 +67,8 @@ export function createSceneShell(options: SceneShellOptions = {}) {
   const transport = createTransportState();
   let frameHandle: FrameHandle | null = null;
   let previousTimeMs = frameDriver.now();
+  let targetFps = options.targetFps ?? 60;
+  let lastRenderTimeMs = 0;
 
   function requestNextFrame(): void {
     frameHandle = frameDriver.requestFrame(loop);
@@ -74,8 +77,24 @@ export function createSceneShell(options: SceneShellOptions = {}) {
   function loop(timestampMs: number): void {
     if (!transport.isPlaying) return;
 
-    const frameDt = Math.max(0, (timestampMs - previousTimeMs) / 1000);
+    const elapsed = timestampMs - previousTimeMs;
     previousTimeMs = timestampMs;
+
+    // RAF 节流：如果距离上次渲染时间太短，只请求下一帧但不执行 render
+    const targetIntervalMs = 1000 / Math.max(1, targetFps);
+    const timeSinceRender = timestampMs - lastRenderTimeMs;
+
+    if (timeSinceRender < targetIntervalMs) {
+      // 时间不够，跳过本次 render，但继续 RAF
+      if (transport.isPlaying) {
+        requestNextFrame();
+      }
+      return;
+    }
+
+    lastRenderTimeMs = timestampMs;
+
+    const frameDt = Math.max(0, elapsed / 1000);
     const steps = stepper.consume(frameDt);
     for (let i = 0; i < steps; i += 1) {
       options.onStep?.(stepSeconds);
@@ -103,6 +122,7 @@ export function createSceneShell(options: SceneShellOptions = {}) {
       if (transport.isPlaying) return;
       transport.isPlaying = true;
       previousTimeMs = frameDriver.now();
+      lastRenderTimeMs = 0; // 重置，确保第一帧立即渲染
       requestNextFrame();
     },
     pause(): void {
@@ -118,6 +138,12 @@ export function createSceneShell(options: SceneShellOptions = {}) {
     stepOnce(onStep: () => void): void {
       onStep();
       options.onRender?.();
+    },
+    setTargetFps(fps: number): void {
+      targetFps = Math.max(1, Math.min(120, fps));
+    },
+    getTargetFps(): number {
+      return targetFps;
     },
     dispose(): void {
       transport.isPlaying = false;

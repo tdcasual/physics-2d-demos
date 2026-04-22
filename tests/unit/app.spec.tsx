@@ -1,4 +1,5 @@
 import { describe, expect, it, beforeAll } from 'vitest';
+import { waitFor } from '@testing-library/react';
 import { render } from '../utils/render';
 import App from '../../src/app/App';
 
@@ -18,9 +19,11 @@ describe('App', () => {
     cleanup();
   });
 
-  it('should render experiments section', () => {
+  it('should render experiments section', async () => {
     const { container, cleanup } = render(<App />);
-    expect(container.querySelector('#experiments')).toBeTruthy();
+    await waitFor(() => {
+      expect(container.querySelector('#experiments')).toBeTruthy();
+    });
     cleanup();
   });
 

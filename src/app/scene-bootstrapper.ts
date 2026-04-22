@@ -34,6 +34,7 @@ export type SceneInstance = {
   startAll?(): void;
   pauseAll?(): void;
   setTimeScale?(scale: number): void;
+  getTimeScale?(): number;
   getState?(): unknown;
   getReadoutItems?(): ReadoutItem[];
   getTransportState?(): TransportState;
@@ -202,7 +203,15 @@ export class SceneAdapter<
         document.documentElement.setAttribute('data-theme', next);
       },
       arrowleft: () => this.scene?.step?.(-0.016),
-      arrowright: () => this.scene?.step?.(0.016)
+      arrowright: () => this.scene?.step?.(0.016),
+      a: () => {
+        const next = Math.min(3, (this.scene?.getTimeScale?.() ?? 1) + 0.25);
+        this.scene?.setTimeScale?.(next);
+      },
+      d: () => {
+        const next = Math.max(0.25, (this.scene?.getTimeScale?.() ?? 1) - 0.25);
+        this.scene?.setTimeScale?.(next);
+      }
     });
     this.keyboard.init();
     this.lifecycle.onDispose(() => this.keyboard?.dispose());
@@ -216,6 +225,17 @@ export class SceneAdapter<
       this.perfMonitor?.stop();
       delete (window as unknown as Record<string, unknown>).__perfMonitor;
     });
+
+    // 自适应 RAF 节流：根据性能监控动态调整 targetFps
+    const fpsCheckInterval = window.setInterval(() => {
+      if (!this.transport || !this.perfMonitor) return;
+      const recommended = this.perfMonitor.getRecommendedFps();
+      const current = this.transport.getTargetFps();
+      if (Math.abs(recommended - current) >= 5) {
+        this.transport.setTargetFps(recommended);
+      }
+    }, 2000);
+    this.lifecycle.onDispose(() => window.clearInterval(fpsCheckInterval));
 
     // 绑定 resize（只添加一次，防止布局切换后重复注册）
     if (!this._resizeHandlerAdded) {
