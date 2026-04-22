@@ -18,6 +18,8 @@ import type {
 import { registerAllLayouts } from './layouts/auto-register';
 import type { SceneMeta } from '../platform/scene-contract';
 import { createSceneShell } from './scene-shell';
+import { KeyboardShortcutManager } from '../platform/input/keyboard-shortcuts';
+import { PerformanceMonitor } from '../core/performance-monitor';
 import { createPageLifecycle } from './page-lifecycle';
 
 export type SceneInstance = {
@@ -94,6 +96,8 @@ export class SceneAdapter<
   private controls: unknown = null;
   private lifecycle = createPageLifecycle();
   private transport: ReturnType<typeof createSceneShell> | null = null;
+  private keyboard: KeyboardShortcutManager | null = null;
+  private perfMonitor: PerformanceMonitor | null = null;
   private slots: LayoutSlots | null = null;
   private currentState: unknown = null;
   private _readoutItems: ReadoutItem[] = [];
@@ -146,6 +150,10 @@ export class SceneAdapter<
       return;
     }
 
+    // 自动添加 ARIA 可访问性属性
+    canvas.setAttribute('role', 'img');
+    canvas.setAttribute('aria-label', `${this.options.meta.title}演示图`);
+
     // 从容器或文档获取当前主题/模式（不依赖具体 className，更鲁棒）
     const theme =
       (container
@@ -172,6 +180,42 @@ export class SceneAdapter<
       onRender: () => this.scene?.render()
     });
     this.lifecycle.onDispose(() => this.transport?.dispose());
+
+    // 注册键盘快捷键
+    this.keyboard = new KeyboardShortcutManager();
+    this.keyboard.registerMultiple({
+      ' ': () => {
+        if (this.transport?.transport.isPlaying) {
+          this.transport?.pause();
+        } else {
+          this.transport?.play();
+        }
+      },
+      r: () => {
+        this.transport?.reset?.();
+        this.scene?.reset?.();
+      },
+      t: () => {
+        const current = document.documentElement.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        this.scene?.setTheme(next as Theme);
+        document.documentElement.setAttribute('data-theme', next);
+      },
+      arrowleft: () => this.scene?.step?.(-0.016),
+      arrowright: () => this.scene?.step?.(0.016)
+    });
+    this.keyboard.init();
+    this.lifecycle.onDispose(() => this.keyboard?.dispose());
+
+    // 启动性能监控（供测试和调试使用）
+    this.perfMonitor = new PerformanceMonitor();
+    this.perfMonitor.start();
+    (window as unknown as Record<string, unknown>).__perfMonitor =
+      this.perfMonitor;
+    this.lifecycle.onDispose(() => {
+      this.perfMonitor?.stop();
+      delete (window as unknown as Record<string, unknown>).__perfMonitor;
+    });
 
     // 绑定 resize（只添加一次，防止布局切换后重复注册）
     if (!this._resizeHandlerAdded) {
