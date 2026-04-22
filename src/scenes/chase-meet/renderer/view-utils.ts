@@ -116,6 +116,8 @@ export function createStageDom(slot: HTMLElement): StageDom {
   motionHeader.append(motionTitle, motionTag);
   const motionCanvas = document.createElement('canvas');
   motionCanvas.className = 'chase-modern-motion-canvas';
+  motionCanvas.setAttribute('role', 'img');
+  motionCanvas.setAttribute('aria-label', '空间位置动画：A/B 一维追及');
   motionSection.append(motionHeader, motionCanvas);
   root.appendChild(motionSection);
 
@@ -138,6 +140,8 @@ export function createStageDom(slot: HTMLElement): StageDom {
   xTitle.textContent = '位置–时间 图 x(t)';
   const xCanvas = document.createElement('canvas');
   xCanvas.className = 'chase-modern-x-canvas';
+  xCanvas.setAttribute('role', 'img');
+  xCanvas.setAttribute('aria-label', '位置-时间图像 x(t)');
   xPlot.append(xTitle, xCanvas);
 
   const vPlot = document.createElement('div');
@@ -147,6 +151,8 @@ export function createStageDom(slot: HTMLElement): StageDom {
   vTitle.textContent = '速度–时间 图 v(t)';
   const vCanvas = document.createElement('canvas');
   vCanvas.className = 'chase-modern-v-canvas';
+  vCanvas.setAttribute('role', 'img');
+  vCanvas.setAttribute('aria-label', '速度-时间图像 v(t)');
   vPlot.append(vTitle, vCanvas);
 
   plotsDiv.append(xPlot, vPlot);
