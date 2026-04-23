@@ -1,0 +1,265 @@
+/**
+ * 物体绘制：玻璃棒、丝绸、导体球、接地符号
+ */
+
+/** 玻璃棒：棕色渐变 + 纵向纹理 */
+export function drawGlassRod(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  isDark: boolean
+): void {
+  ctx.save();
+
+  // 主体渐变
+  const grad = ctx.createLinearGradient(x, y, x + w, y + h);
+  if (isDark) {
+    grad.addColorStop(0, 'rgba(180,130,70,0.9)');
+    grad.addColorStop(0.5, 'rgba(160,110,50,0.85)');
+    grad.addColorStop(1, 'rgba(140,90,30,0.8)');
+  } else {
+    grad.addColorStop(0, 'rgba(210,170,110,0.9)');
+    grad.addColorStop(0.5, 'rgba(190,150,90,0.85)');
+    grad.addColorStop(1, 'rgba(170,130,70,0.8)');
+  }
+
+  ctx.fillStyle = grad;
+  roundRect(ctx, x, y, w, h, Math.min(8, h * 0.1));
+  ctx.fill();
+
+  // 纵向纹理线
+  ctx.strokeStyle = isDark
+    ? 'rgba(255,255,255,0.08)'
+    : 'rgba(0,0,0,0.06)';
+  ctx.lineWidth = 1;
+  for (let i = 1; i < 6; i++) {
+    const lx = x + (w * i) / 6;
+    ctx.beginPath();
+    ctx.moveTo(lx, y + 4);
+    ctx.lineTo(lx, y + h - 4);
+    ctx.stroke();
+  }
+
+  // 边框
+  ctx.strokeStyle = isDark
+    ? 'rgba(200,150,80,0.5)'
+    : 'rgba(160,120,60,0.4)';
+  ctx.lineWidth = 1.5;
+  roundRect(ctx, x, y, w, h, Math.min(8, h * 0.1));
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+/** 丝绸：淡紫渐变 + 横向波纹 */
+export function drawSilk(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  isDark: boolean
+): void {
+  ctx.save();
+
+  const grad = ctx.createLinearGradient(x, y, x + w, y + h);
+  if (isDark) {
+    grad.addColorStop(0, 'rgba(150,120,180,0.9)');
+    grad.addColorStop(0.5, 'rgba(130,100,160,0.85)');
+    grad.addColorStop(1, 'rgba(110,80,140,0.8)');
+  } else {
+    grad.addColorStop(0, 'rgba(200,180,220,0.9)');
+    grad.addColorStop(0.5, 'rgba(180,160,200,0.85)');
+    grad.addColorStop(1, 'rgba(160,140,180,0.8)');
+  }
+
+  ctx.fillStyle = grad;
+  roundRect(ctx, x, y, w, h, Math.min(8, h * 0.1));
+  ctx.fill();
+
+  // 横向波纹
+  ctx.strokeStyle = isDark
+    ? 'rgba(255,255,255,0.06)'
+    : 'rgba(0,0,0,0.05)';
+  ctx.lineWidth = 1;
+  for (let i = 1; i < 5; i++) {
+    const ly = y + (h * i) / 5;
+    ctx.beginPath();
+    ctx.moveTo(x + 4, ly);
+    ctx.lineTo(x + w - 4, ly);
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle = isDark
+    ? 'rgba(170,140,200,0.5)'
+    : 'rgba(140,120,170,0.4)';
+  ctx.lineWidth = 1.5;
+  roundRect(ctx, x, y, w, h, Math.min(8, h * 0.1));
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+/** 导体球：金属质感 */
+export function drawConductor(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  isDark: boolean
+): void {
+  ctx.save();
+
+  // 金属径向渐变
+  const grad = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
+  if (isDark) {
+    grad.addColorStop(0, 'rgba(180,190,200,0.95)');
+    grad.addColorStop(0.4, 'rgba(120,130,140,0.9)');
+    grad.addColorStop(1, 'rgba(70,80,90,0.85)');
+  } else {
+    grad.addColorStop(0, 'rgba(220,225,230,0.95)');
+    grad.addColorStop(0.4, 'rgba(170,175,180,0.9)');
+    grad.addColorStop(1, 'rgba(120,125,130,0.85)');
+  }
+
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 边框
+  ctx.strokeStyle = isDark
+    ? 'rgba(160,170,180,0.5)'
+    : 'rgba(130,135,140,0.4)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // 高光
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.beginPath();
+  ctx.arc(x - r * 0.35, y - r * 0.35, r * 0.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+/** 接地符号：标准三线 */
+export function drawGround(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  isDark: boolean
+): void {
+  ctx.save();
+  ctx.strokeStyle = isDark
+    ? 'rgba(226,232,240,0.7)'
+    : 'rgba(71,85,105,0.7)';
+  ctx.lineWidth = Math.max(1.5, size * 0.08);
+  ctx.lineCap = 'round';
+
+  // 竖线
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x, y + size * 0.3);
+  ctx.stroke();
+
+  // 顶部横线
+  ctx.beginPath();
+  ctx.moveTo(x - size * 0.15, y + size * 0.3);
+  ctx.lineTo(x + size * 0.15, y + size * 0.3);
+  ctx.stroke();
+
+  // 中间横线（略短）
+  ctx.beginPath();
+  ctx.moveTo(x - size * 0.1, y + size * 0.42);
+  ctx.lineTo(x + size * 0.1, y + size * 0.42);
+  ctx.stroke();
+
+  // 底部横线（最短）
+  ctx.beginPath();
+  ctx.moveTo(x - size * 0.05, y + size * 0.54);
+  ctx.lineTo(x + size * 0.05, y + size * 0.54);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+/** 带电球体：带颜色 glow */
+export function drawChargedSphere(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  charge: number,
+  isDark: boolean
+): void {
+  ctx.save();
+
+  const isPositive = charge > 0;
+  const glowColor = isPositive
+    ? isDark ? 'rgba(239,68,68,0.35)' : 'rgba(239,68,68,0.25)'
+    : isDark ? 'rgba(59,130,246,0.35)' : 'rgba(59,130,246,0.25)';
+  const coreColor = isPositive
+    ? isDark ? 'rgba(220,60,60,0.9)' : 'rgba(220,60,60,0.85)'
+    : isDark ? 'rgba(50,110,220,0.9)' : 'rgba(50,110,220,0.85)';
+
+  // 外发光
+  ctx.shadowBlur = r * 0.5;
+  ctx.shadowColor = glowColor;
+
+  // 主体
+  const grad = ctx.createRadialGradient(x - r * 0.2, y - r * 0.2, r * 0.1, x, y, r);
+  grad.addColorStop(0, isPositive ? 'rgba(255,150,150,0.9)' : 'rgba(150,180,255,0.9)');
+  grad.addColorStop(1, coreColor);
+
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.shadowBlur = 0;
+
+  // 边框
+  ctx.strokeStyle = isPositive
+    ? isDark ? 'rgba(239,68,68,0.6)' : 'rgba(220,50,50,0.5)'
+    : isDark ? 'rgba(59,130,246,0.6)' : 'rgba(40,100,220,0.5)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // 高光
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.beginPath();
+  ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.15, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 电荷数值
+  const fontSize = Math.max(12, r * 0.5);
+  ctx.fillStyle = 'white';
+  ctx.font = `bold ${fontSize}px "Noto Sans SC", Arial, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const label = charge > 0 ? `+${charge}` : String(charge);
+  ctx.fillText(label, x, y + 1);
+
+  ctx.restore();
+}
+
+function roundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number
+): void {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
