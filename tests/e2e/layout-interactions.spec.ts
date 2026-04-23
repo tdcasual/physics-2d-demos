@@ -67,6 +67,11 @@ const SCENE_META: Record<
     name: '电路类比',
     hasGraph: false,
     canvasSelector: 'canvas.stage-canvas'
+  },
+  'spring-oscillator': {
+    name: '弹簧振子',
+    hasGraph: true,
+    canvasSelector: 'canvas.stage-canvas'
   }
 };
 

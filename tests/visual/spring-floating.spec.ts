@@ -1,19 +1,17 @@
 import { test } from '@playwright/test';
 
-test('emf-analogy floating controls', async ({ page }) => {
+test('spring oscillator floating controls', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('http://localhost:5177/src/pages/emf-analogy.html');
+  await page.goto('http://localhost:5177/src/pages/spring-oscillator.html');
   await page.waitForTimeout(3000);
 
-  // Screenshot floating controls area
+  // 截图浮动控制区域
   const floatingControls = await page.locator('.stage-floating-controls');
   await floatingControls.screenshot({ path: '/tmp/floating-controls.png' });
 
-  // Get styles
+  // 获取样式
   const styles = await page.evaluate(() => {
-    const el = document.querySelector(
-      '.stage-floating-controls'
-    ) as HTMLElement;
+    const el = document.querySelector('.stage-floating-controls') as HTMLElement;
     if (!el) return null;
     const computed = getComputedStyle(el);
     return {
@@ -22,7 +20,7 @@ test('emf-analogy floating controls', async ({ page }) => {
       borderColor: computed.borderColor,
       position: computed.position,
       top: computed.top,
-      left: computed.left
+      left: computed.left,
     };
   });
 
