@@ -8,7 +8,7 @@ import {
 } from '../../../core/chart';
 import type { OscillatorHistory } from './types';
 
-const HISTORY_DURATION = 10; // 显示最近 10 秒
+const HISTORY_DURATION = 30; // 显示最近 30 秒
 
 export interface ChartState {
   canvas: HTMLCanvasElement | null;
@@ -152,8 +152,9 @@ export function updateHistory(
     // 暂停的振子：不添加新数据点，只限制最大点数
     if (!osc.isPlaying) {
       const hist = history.get(osc.id);
-      if (hist && hist.length > 600) {
-        hist.splice(0, hist.length - 600);
+      const maxIdlePoints = deviceType === 'mobile' ? 900 : 1800;
+      if (hist && hist.length > maxIdlePoints) {
+        hist.splice(0, hist.length - maxIdlePoints);
       }
       return;
     }
@@ -177,8 +178,8 @@ export function updateHistory(
       hist.shift();
     }
 
-    // 限制最大点数
-    const maxPoints = deviceType === 'mobile' ? 300 : 600;
+    // 限制最大点数（30秒 @ 60fps = 1800点）
+    const maxPoints = deviceType === 'mobile' ? 900 : 1800;
     if (hist.length > maxPoints) {
       hist.splice(0, hist.length - maxPoints);
     }

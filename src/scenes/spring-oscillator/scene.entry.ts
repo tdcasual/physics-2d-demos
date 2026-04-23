@@ -82,9 +82,9 @@ export function createSpringOscillatorScene(options: CreateSpringOscillatorScene
     view,
 
     init(): void {
-      // 添加两个默认振子用于演示相位
+      // 添加两个默认振子，使用不同参数确保 x-t 曲线可区分
       sim.addOscillator({ k: 10, m: 1, x0: 8, orientation: 'horizontal' });
-      sim.addOscillator({ k: 10, m: 1, x0: 8, orientation: 'horizontal' });
+      sim.addOscillator({ k: 25, m: 1, x0: 5, orientation: 'horizontal' });
     },
 
     step(dt: number): void {
