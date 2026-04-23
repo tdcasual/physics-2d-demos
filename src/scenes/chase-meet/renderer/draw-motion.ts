@@ -63,33 +63,124 @@ export function drawMotion(context: MotionDrawContext): void {
       (snapshot.bounds.maxX - snapshot.bounds.minX)) *
       usable;
 
-  const drawObject = (x: number, color: string, label: string): void => {
-    const r = Math.max(16 * visualScale, 12 * 2.6 * visualScale);
-    const glowColor = color.replace('1)', '0.23)');
-    ctx.beginPath();
+  const drawCar = (
+    x: number,
+    color: string,
+    label: string,
+    velocity: number
+  ): void => {
+    const s = visualScale;
+    const facingRight = velocity >= 0;
+
+    ctx.save();
+    ctx.translate(x, mid);
+    if (!facingRight) {
+      ctx.scale(-1, 1);
+    }
+
+    // 车身尺寸参数
+    const carW = 52 * s;
+    const carH = 22 * s;
+    const wheelR = 7 * s;
+    const wheelOffsetX = 14 * s;
+
+    // 底部阴影/光晕
+    const glowColor = color.replace('1)', '0.18)');
     ctx.fillStyle = glowColor;
-    ctx.arc(x, mid, r * 1.9, 0, Math.PI * 2);
-    ctx.fill();
-
     ctx.beginPath();
-    ctx.fillStyle = color;
-    ctx.arc(x, mid, r, 0, Math.PI * 2);
+    ctx.arc(0, carH * 0.5 + 2 * s, carW * 0.6, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.lineWidth = Math.max(majorStroke, 3 * visualScale);
+    // 车身主体（下半部分）
+    const bodyY = -carH * 0.3;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(-carW * 0.5, bodyY + carH * 0.6);
+    ctx.lineTo(-carW * 0.5, bodyY);
+    ctx.lineTo(carW * 0.5, bodyY);
+    ctx.lineTo(carW * 0.5, bodyY + carH * 0.6);
+    ctx.closePath();
+    ctx.fill();
+
+    // 车顶（上半部分，梯形）
+    const roofW = carW * 0.55;
+    const roofH = carH * 0.5;
+    const roofY = bodyY - roofH;
+    ctx.beginPath();
+    ctx.moveTo(-roofW * 0.5, bodyY);
+    ctx.lineTo(-roofW * 0.35, roofY);
+    ctx.lineTo(roofW * 0.35, roofY);
+    ctx.lineTo(roofW * 0.5, bodyY);
+    ctx.closePath();
+    ctx.fill();
+
+    // 车身描边
+    ctx.lineWidth = Math.max(1.5, 1.8 * s);
     ctx.strokeStyle = isLight
-      ? 'rgba(15,23,42,0.9)'
-      : 'rgba(248,250,252,0.95)';
+      ? 'rgba(15,23,42,0.8)'
+      : 'rgba(248,250,252,0.9)';
+    ctx.beginPath();
+    ctx.moveTo(-carW * 0.5, bodyY + carH * 0.6);
+    ctx.lineTo(-carW * 0.5, bodyY);
+    ctx.lineTo(-roofW * 0.35, roofY);
+    ctx.lineTo(roofW * 0.35, roofY);
+    ctx.lineTo(carW * 0.5, bodyY);
+    ctx.lineTo(carW * 0.5, bodyY + carH * 0.6);
     ctx.stroke();
 
+    // 车窗
+    ctx.fillStyle = isLight
+      ? 'rgba(191,219,254,0.7)'
+      : 'rgba(30,58,138,0.5)';
+    const winW = roofW * 0.5;
+    const winH = roofH * 0.65;
+    const winY = roofY + roofH * 0.2;
+    ctx.beginPath();
+    ctx.moveTo(-winW * 0.5, winY + winH);
+    ctx.lineTo(-winW * 0.35, winY);
+    ctx.lineTo(winW * 0.35, winY);
+    ctx.lineTo(winW * 0.5, winY + winH);
+    ctx.closePath();
+    ctx.fill();
+    ctx.lineWidth = Math.max(1, 1.2 * s);
+    ctx.strokeStyle = isLight
+      ? 'rgba(15,23,42,0.5)'
+      : 'rgba(148,163,184,0.5)';
+    ctx.stroke();
+
+    // 车轮
+    ctx.fillStyle = isLight ? '#1f2937' : '#e5e7eb';
+    for (const wx of [-wheelOffsetX, wheelOffsetX]) {
+      ctx.beginPath();
+      ctx.arc(wx, bodyY + carH * 0.6 + wheelR * 0.1, wheelR, 0, Math.PI * 2);
+      ctx.fill();
+      // 轮毂
+      ctx.fillStyle = isLight ? '#4b5563' : '#9ca3af';
+      ctx.beginPath();
+      ctx.arc(wx, bodyY + carH * 0.6 + wheelR * 0.1, wheelR * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = isLight ? '#1f2937' : '#e5e7eb';
+    }
+
+    // 车灯（车头方向在右侧，因为 facingRight 时未翻转）
+    const lightColor = facingRight
+      ? 'rgba(250,204,21,0.9)'
+      : 'rgba(239,68,68,0.9)';
+    ctx.fillStyle = lightColor;
+    ctx.beginPath();
+    ctx.arc(carW * 0.48, bodyY + carH * 0.25, 3 * s, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 标签（在车上方）
+    ctx.restore();
     ctx.fillStyle = isLight ? '#111827' : '#f9fafb';
-    ctx.font = `bold ${Math.max(18, Math.round(15 * visualScale))}px system-ui`;
+    ctx.font = `bold ${Math.max(16, Math.round(14 * visualScale))}px system-ui`;
     ctx.textAlign = 'center';
-    ctx.fillText(label, x, mid - 22 * visualScale);
+    ctx.fillText(label, x, mid - 32 * visualScale);
   };
 
-  drawObject(screenXA, 'rgba(96,165,250,1)', 'A');
-  drawObject(screenXB, 'rgba(248,113,113,1)', 'B');
+  drawCar(screenXA, 'rgba(96,165,250,1)', 'A', current.vA);
+  drawCar(screenXB, 'rgba(248,113,113,1)', 'B', current.vB);
 
   ctx.setLineDash([6 * visualScale, 4 * visualScale]);
   ctx.strokeStyle = isLight

@@ -73,8 +73,7 @@ export const chaseMeetControlsSchema: ControlsSchema = {
           columns: 1,
           buttons: [
             { key: 'uniform', label: '匀速追赶', desc: 'vA=2, vB=1' },
-            { key: 'accelerated', label: '加速追赶', desc: 'vA=0.5t, vB=2' },
-            { key: 'opposite', label: '相向而行', desc: 'vA=3, vB=-2' }
+            { key: 'accelerated', label: '加速追赶', desc: 'vA=0.5t, vB=2' }
           ]
         }
       ]

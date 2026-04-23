@@ -1,7 +1,6 @@
 import type { VtIntegralSnapshot } from '../scene.sim';
 import type { DrawContext } from './types';
 import { drawAxis } from './draw-axis';
-import { drawMetricPanel } from './draw-metric-panel';
 
 /**
  * Scene 2: 曲线长度 — 用折线段逼近正弦曲线
@@ -151,12 +150,4 @@ export function drawScene2(context: DrawContext, snapshot: VtIntegralSnapshot): 
   ctx.fillText(`折线逼近 (n=${segments})`, legendX + 24 * s, legendY + legendLineH);
 
   ctx.restore();
-
-  // 数据面板
-  drawMetricPanel(context, [
-    { icon: '📏', label: '曲线振幅', value: params.curveAmplitude.toFixed(2) },
-    { icon: '📐', label: '曲线长度', value: metrics.curveLength.toFixed(4) },
-    { icon: '📊', label: '直线距离', value: metrics.lineDistance.toFixed(3) },
-    { icon: '⚡', label: '逼近段数', value: String(segments) }
-  ]);
 }

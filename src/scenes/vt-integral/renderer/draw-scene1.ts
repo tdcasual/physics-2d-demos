@@ -1,7 +1,6 @@
 import type { VtIntegralSnapshot } from '../scene.sim';
 import type { DrawContext } from './types';
 import { drawAxis } from './draw-axis';
-import { drawMetricPanel } from './draw-metric-panel';
 
 /**
  * Scene 1: v-t 图面积 — 用矩形逼近曲线下面积
@@ -146,12 +145,4 @@ export function drawScene1(context: DrawContext, snapshot: VtIntegralSnapshot): 
   ctx.fillText('矩形近似', legendX + 24 * s, legendY + legendLineH);
 
   ctx.restore();
-
-  // 数据面板
-  drawMetricPanel(context, [
-    { icon: '📊', label: '矩形总面积', value: metrics.rectArea.toFixed(4) },
-    { icon: '📐', label: '积分面积', value: metrics.trueArea.toFixed(4) },
-    { icon: '⚠', label: '绝对误差', value: metrics.absErr.toFixed(4) },
-    { icon: '📈', label: '相对误差', value: `${(metrics.relErr * 100).toFixed(2)}%`, highlight: true }
-  ]);
 }

@@ -1,6 +1,5 @@
 import type { VtIntegralSnapshot } from '../scene.sim';
 import type { DrawContext } from './types';
-import { drawMetricPanel } from './draw-metric-panel';
 
 /**
  * Scene 3: 圆内接多边形 — 用多边形逼近圆周
@@ -137,12 +136,4 @@ export function drawScene3(context: DrawContext, snapshot: VtIntegralSnapshot): 
   }
 
   ctx.restore();
-
-  // 数据面板
-  drawMetricPanel(context, [
-    { icon: '🔷', label: '分割数 n', value: String(n) },
-    { icon: '📐', label: '圆周长', value: (2 * Math.PI).toFixed(4) },
-    { icon: '📏', label: '多边形周长', value: (2 * n * Math.sin(Math.PI / n)).toFixed(4) },
-    { icon: '⚠', label: '周长差', value: metrics.circumferenceDiff.toFixed(4), highlight: true }
-  ]);
 }

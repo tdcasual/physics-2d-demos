@@ -499,6 +499,26 @@
   font-weight: 500;
 }
 
+.chase-modern-plots {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+}
+
+.chase-modern-plot {
+  flex: 1 1 50%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.chase-modern-plot canvas {
+  flex: 1;
+  min-height: 0;
+}
+
 /* ========================================
    响应式布局
    ======================================== */

@@ -137,12 +137,6 @@ bootScenePage({
           renderer.setValue('x0A', 0);
           renderer.setValue('x0B', 15);
           onStatus?.('应用预设: 加速追赶');
-        } else if (key === 'opposite') {
-          renderer.setValue('vExprA', '3');
-          renderer.setValue('vExprB', '-2');
-          renderer.setValue('x0A', 0);
-          renderer.setValue('x0B', 20);
-          onStatus?.('应用预设: 相向而行');
         }
       }
     });

@@ -57,34 +57,7 @@ function formatReadout(
       }
     ];
   }
-  if (snapshot.params.scene === 'scene4') {
-    return [
-      { label: '场景', value: sceneLabel(snapshot.params.scene) },
-      { label: '显示模式', value: modeLabel(mode) },
-      {
-        label: '球棱锥真实体积',
-        value: snapshot.metrics.surfaceTrue.toFixed(4)
-      },
-      {
-        label: '球棱锥近似体积',
-        value: snapshot.metrics.surfaceApprox.toFixed(4)
-      },
-      {
-        label: '相对误差',
-        value: `${(snapshot.metrics.surfaceRelErr * 100).toFixed(2)}%`
-      }
-    ];
-  }
-  return [
-    { label: '场景', value: sceneLabel(snapshot.params.scene) },
-    { label: '显示模式', value: modeLabel(mode) },
-    { label: '球体真实体积', value: snapshot.metrics.sphereTrue.toFixed(4) },
-    { label: '球体近似体积', value: snapshot.metrics.sphereApprox.toFixed(4) },
-    {
-      label: '相对误差',
-      value: `${(snapshot.metrics.sphereRelErr * 100).toFixed(2)}%`
-    }
-  ];
+  return [];
 }
 
 bootScenePage({
@@ -143,12 +116,6 @@ bootScenePage({
           scene.render();
         } else if (key === 'circle-n') {
           scene.setCircleN(value as number);
-          scene.render();
-        } else if (key === 'surface-n') {
-          scene.setSurfaceN(value as number);
-          scene.render();
-        } else if (key === 'division') {
-          scene.setDivision(value as number);
           scene.render();
         }
       },

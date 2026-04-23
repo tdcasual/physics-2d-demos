@@ -26,9 +26,7 @@ export const vtIntegralControlsSchema: ControlsSchema = {
           scenes: [
             { id: 'scene1', label: 'v-t面积', desc: '速度时间图面积' },
             { id: 'scene2', label: '曲线逼近', desc: '用矩形逼近曲线下面积' },
-            { id: 'scene3', label: '圆面积', desc: '圆面积微元法' },
-            { id: 'scene4', label: '表面积', desc: '表面积微元法' },
-            { id: 'scene5', label: '旋转体', desc: '旋转体体积' }
+            { id: 'scene3', label: '圆面积', desc: '圆面积微元法' }
           ]
         }
       ]

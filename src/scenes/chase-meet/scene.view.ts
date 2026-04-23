@@ -95,8 +95,8 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
     let graphWidth: number;
     if (graphSlot) {
       const gRect = graphSlot.getBoundingClientRect();
-      graphWidth = Math.max(1, Math.floor(gRect.width || totalWidth));
-      graphHeight = Math.max(120, Math.floor((gRect.height || 300) / 2 - 8));
+      graphWidth = Math.max(1, Math.floor((gRect.width || totalWidth) / 2 - 4));
+      graphHeight = Math.max(120, Math.floor(gRect.height || 300));
     } else {
       graphHeight = Math.min(
         isPresentation ? 320 : 250,

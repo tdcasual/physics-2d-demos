@@ -4,8 +4,7 @@ import { drawMetricPanel } from '../../src/scenes/vt-integral/renderer/draw-metr
 import { drawScene1 } from '../../src/scenes/vt-integral/renderer/draw-scene1';
 import { drawScene2 } from '../../src/scenes/vt-integral/renderer/draw-scene2';
 import { drawScene3 } from '../../src/scenes/vt-integral/renderer/draw-scene3';
-import { drawScene4 } from '../../src/scenes/vt-integral/renderer/draw-scene4';
-import { drawScene5 } from '../../src/scenes/vt-integral/renderer/draw-scene5';
+
 import type { VtIntegralSnapshot } from '../../src/scenes/vt-integral/scene.sim';
 
 function createSnapshot(scene: VtIntegralSnapshot['params']['scene']): VtIntegralSnapshot {
@@ -28,12 +27,7 @@ function createSnapshot(scene: VtIntegralSnapshot['params']['scene']): VtIntegra
       curveLength: 8.5,
       lineDistance: 7.2,
       circumferenceDiff: 0.3,
-      surfaceTrue: 25.0,
-      surfaceApprox: 24.2,
-      surfaceRelErr: 0.03,
-      sphereTrue: 33.5,
-      sphereApprox: 32.8,
-      sphereRelErr: 0.02
+
     }
   };
 }
@@ -89,9 +83,7 @@ describe('vt-integral renderer', () => {
     const scenes: Array<{ name: string; fn: typeof drawScene1; scene: VtIntegralSnapshot['params']['scene'] }> = [
       { name: 'scene1', fn: drawScene1, scene: 'scene1' },
       { name: 'scene2', fn: drawScene2, scene: 'scene2' },
-      { name: 'scene3', fn: drawScene3, scene: 'scene3' },
-      { name: 'scene4', fn: drawScene4, scene: 'scene4' },
-      { name: 'scene5', fn: drawScene5, scene: 'scene5' }
+      { name: 'scene3', fn: drawScene3, scene: 'scene3' }
     ];
 
     for (const { name, fn, scene } of scenes) {

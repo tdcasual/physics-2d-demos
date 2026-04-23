@@ -6,8 +6,6 @@ import type { VtIntegralSnapshot } from './scene.sim';
 import { drawScene1 } from './renderer/draw-scene1';
 import { drawScene2 } from './renderer/draw-scene2';
 import { drawScene3 } from './renderer/draw-scene3';
-import { drawScene4 } from './renderer/draw-scene4';
-import { drawScene5 } from './renderer/draw-scene5';
 
 export type CreateVtIntegralViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -27,9 +25,7 @@ const SCENE_RENDERERS: Record<
 > = {
   scene1: drawScene1,
   scene2: drawScene2,
-  scene3: drawScene3,
-  scene4: drawScene4,
-  scene5: drawScene5
+  scene3: drawScene3
 };
 
 export function createVtIntegralView(

@@ -1,4 +1,4 @@
-export const VT_SCENE_VALUES = ['scene1', 'scene2', 'scene3', 'scene4', 'scene5'] as const;
+export const VT_SCENE_VALUES = ['scene1', 'scene2', 'scene3'] as const;
 export type VtScene = typeof VT_SCENE_VALUES[number];
 export type VtMethod = 'left' | 'mid' | 'right' | 'trap';
 
@@ -21,12 +21,7 @@ export type VtIntegralMetrics = {
   curveLength: number;
   lineDistance: number;
   circumferenceDiff: number;
-  surfaceTrue: number;
-  surfaceApprox: number;
-  surfaceRelErr: number;
-  sphereTrue: number;
-  sphereApprox: number;
-  sphereRelErr: number;
+
 };
 
 export type VtIntegralSnapshot = {
@@ -88,14 +83,6 @@ function buildMetrics(params: VtIntegralParams): VtIntegralMetrics {
   const polygon = 2 * params.circleN * Math.sin(Math.PI / params.circleN);
   const circumferenceDiff = Math.abs(circumference - polygon);
 
-  const surfaceTrue = (4 / 3) * Math.PI;
-  const surfaceApprox = surfaceTrue * (1 - 1 / (params.surfaceN + 2));
-  const surfaceRelErr = Math.abs(surfaceApprox - surfaceTrue) / surfaceTrue;
-
-  const sphereTrue = (4 / 3) * Math.PI;
-  const sphereApprox = sphereTrue * (1 - 1 / (params.division / 12 + 5));
-  const sphereRelErr = Math.abs(sphereApprox - sphereTrue) / sphereTrue;
-
   return {
     rectArea,
     trueArea,
@@ -103,13 +90,7 @@ function buildMetrics(params: VtIntegralParams): VtIntegralMetrics {
     relErr,
     curveLength: curveLen,
     lineDistance,
-    circumferenceDiff,
-    surfaceTrue,
-    surfaceApprox,
-    surfaceRelErr,
-    sphereTrue,
-    sphereApprox,
-    sphereRelErr
+    circumferenceDiff
   };
 }
 
@@ -129,8 +110,8 @@ function normalize(input: Partial<VtIntegralParams>): VtIntegralParams {
     method,
     curveAmplitude: clamp(Number.isFinite(input.curveAmplitude) ? Number(input.curveAmplitude) : 0.25, 0.05, 0.45),
     circleN: Math.round(clamp(Number.isFinite(input.circleN) ? Number(input.circleN) : 8, 3, 200)),
-    surfaceN: Math.round(clamp(Number.isFinite(input.surfaceN) ? Number(input.surfaceN) : 1, 1, 10)),
-    division: Math.round(clamp(Number.isFinite(input.division) ? Number(input.division) : 16, 16, 100))
+    surfaceN: 1,
+    division: 16
   };
 }
 
@@ -190,15 +171,7 @@ export function createVtIntegralSim(initial: Partial<VtIntegralParams> = {}) {
         params = normalize({ ...params, curveAmplitude: params.curveAmplitude + 0.01 });
         return;
       }
-      if (params.scene === 'scene3') {
-        params = normalize({ ...params, circleN: params.circleN + 1 });
-        return;
-      }
-      if (params.scene === 'scene4') {
-        params = normalize({ ...params, surfaceN: params.surfaceN + 1 });
-        return;
-      }
-      params = normalize({ ...params, division: params.division + 1 });
+      params = normalize({ ...params, circleN: params.circleN + 1 });
     }
   };
 }

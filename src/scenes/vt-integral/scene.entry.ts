@@ -28,8 +28,6 @@ export function createVtIntegralScene(
   setMethod(value: VtMethod): void;
   setCurveAmplitude(value: number): void;
   setCircleN(value: number): void;
-  setSurfaceN(value: number): void;
-  setDivision(value: number): void;
   getSnapshot(): VtIntegralSnapshot;
 } {
   const sim = createVtIntegralSim();
@@ -90,12 +88,7 @@ export function createVtIntegralScene(
     setCircleN(value: number): void {
       sim.setCircleN(value);
     },
-    setSurfaceN(value: number): void {
-      sim.setSurfaceN(value);
-    },
-    setDivision(value: number): void {
-      sim.setDivision(value);
-    },
+
     getSnapshot(): VtIntegralSnapshot {
       return sim.getSnapshot();
     },
