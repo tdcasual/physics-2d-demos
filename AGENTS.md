@@ -4,7 +4,7 @@
 
 ## 项目概述
 
-Physics-2D-Demos 是一个物理教学演示中心（Teaching Demo Hub），包含 6 个交互式 2D 物理场景（抛体运动、追及相遇、静电起电、电路水流类比、电场线演化、微元法）。
+Physics-2D-Demos 是一个物理教学演示中心（Teaching Demo Hub），包含 7 个交互式 2D 物理场景（抛体运动、弹簧振子、追及相遇、静电起电、电路水流类比、电场线演化、微元法）。
 
 - **技术栈**: Vite 7 + TypeScript 5.9 (strict) + React 18 + Tailwind CSS v4
 - **测试**: Vitest 3.2 (单元/契约) + Playwright (E2E/视觉)
@@ -26,6 +26,7 @@ app/           — 布局系统、场景引导器、首页
 ui/            — 共享组件库（DOM widgets）
                — 可依赖 platform/core
 scenes/        — 7 个物理场景（每个: meta/sim/view/entry/controls/page）
+               — 场景由 catalog/scene-registry.ts 自动发现（import.meta.glob）
                — 非 page.ts 不依赖 app/ui
 ```
 
@@ -165,6 +166,17 @@ export type SceneMeta = {
 - E2E 测试放在 `tests/visual/*.spec.ts`
 - 覆盖率阈值: lines 10%, functions 10%, branches 5%, statements 10%
 
+### 场景删除保护规则（强制）
+
+**任何涉及 `src/scenes/*` 目录或 `src/pages/*.html` 的删除操作，必须经过双重确认：**
+
+1. **检查 registry 引用**: 确认该场景不在 `src/catalog/scene-registry.ts` 的自动发现路径中（glob 模式 `/src/scenes/*/scene.meta.ts`）
+2. **检查跨文件引用**: 运行 `grep -r "scene-id" src/ tests/` 确认无残留引用
+3. **检查构建产物**: 删除后必须运行 `pnpm build`，确认无 chunk 缺失错误
+4. **检查 HTML 入口**: 确认 `src/pages/<scene-id>.html` 是否同时被删除
+
+**历史教训**: `spring-oscillator`（弹簧振子）曾因未迁移到 controls-schema 命名规范，被误判为 dead code 而误删。场景控制面板可以是 `controls-schema.ts`（声明式）或 `controls.ts`（imperative），两者均为有效形态。
+
 ### 提交前检查
 
 ```bash
@@ -237,6 +249,6 @@ function resize() {
 
 ## 已知限制
 
-- `spring-oscillator` 使用 imperative controls（动态增删振子），不支持纯 schema
+- `spring-oscillator` 使用 imperative `controls.ts`（动态增删振子），已通过 `custom` 字段兼容 controls-schema 系统
 - `ui/control-layout.ts` 有未使用的 legacy 代码（预留未来布局重构）
 - E2E 中 35 个测试不稳定（超时/元素定位），与 schema 迁移无关
