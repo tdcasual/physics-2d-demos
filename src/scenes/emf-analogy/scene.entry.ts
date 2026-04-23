@@ -2,13 +2,12 @@ import type { TeachingMode } from '../../platform/standards';
 import type { TeachingTheme } from '../../platform/standards';
 import type { SceneLifecycle } from '../types';
 import { createEmfAnalogySim, type EmfAnalogySnapshot } from './scene.sim';
-import { createEmfAnalogyView } from './scene.view';
+import { createEmfAnalogyView, type EmfViewMode } from './scene.view';
 
 export type CreateEmfAnalogySceneOptions = {
   canvas?: HTMLCanvasElement;
   mode?: TeachingMode;
   theme?: TeachingTheme;
-  legacyFlowDark?: boolean;
   onReadout?: (snapshot: EmfAnalogySnapshot) => void;
 };
 
@@ -21,6 +20,8 @@ export function createEmfAnalogyScene(
   setSystemOn(on: boolean): void;
   setTapOpening(opening: number): void;
   incrementOpening(step?: number): void;
+  setView(view: EmfViewMode): void;
+  getView(): EmfViewMode;
   getSnapshot(): EmfAnalogySnapshot;
   start(): void;
   stop(): void;
@@ -29,8 +30,7 @@ export function createEmfAnalogyScene(
   const view = createEmfAnalogyView({
     canvas: options.canvas,
     mode: options.mode ?? 'normal',
-    theme: options.theme ?? 'dark',
-    legacyFlowDark: options.legacyFlowDark ?? false
+    theme: options.theme ?? 'dark'
   });
 
   function renderAndEmit(): void {
@@ -74,6 +74,13 @@ export function createEmfAnalogyScene(
     },
     incrementOpening(step = 0.05): void {
       sim.incrementOpening(step);
+    },
+    setView(viewMode: EmfViewMode): void {
+      view.setView(viewMode);
+      renderAndEmit();
+    },
+    getView(): EmfViewMode {
+      return view.getView();
     },
     getSnapshot(): EmfAnalogySnapshot {
       return sim.getSnapshot();

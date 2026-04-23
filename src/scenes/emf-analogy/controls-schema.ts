@@ -18,17 +18,18 @@ export const emfAnalogyControlsSchema: ControlsSchema = {
       ]
     },
     {
-      title: '水龙头开度',
+      title: '外电阻 R',
       collapsed: false,
       fields: [
         {
           type: 'slider',
           key: 'tap',
-          label: '开度',
+          label: '阀门开度',
           min: 0,
           max: 1,
           step: 0.05,
-          value: 0.5
+          value: 0.5,
+          unit: '(R↑)'
         }
       ]
     },
