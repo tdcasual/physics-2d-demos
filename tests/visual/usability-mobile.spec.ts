@@ -25,6 +25,15 @@ const iPadPro11Use = {
   hasTouch: devices['iPad Pro 11'].hasTouch
 } as const;
 
+const iPhoneSEUse = {
+  viewport: { width: 375, height: 667 },
+  userAgent:
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
+  deviceScaleFactor: 2,
+  isMobile: true,
+  hasTouch: true
+} as const;
+
 async function horizontalOverflowPx(page: Page): Promise<number> {
   return page.evaluate(
     () => document.documentElement.scrollWidth - window.innerWidth
@@ -57,6 +66,21 @@ test.describe('responsive overflow guardrails', () => {
         expect(
           overflow,
           `${path} should not overflow horizontally on iPad`
+        ).toBeLessThanOrEqual(1);
+      }
+    });
+  });
+
+  test.describe('iPhone SE', () => {
+    test.use(iPhoneSEUse);
+
+    test('all modern pages avoid horizontal overflow', async ({ page }) => {
+      for (const path of modernPages) {
+        await page.goto(path);
+        const overflow = await horizontalOverflowPx(page);
+        expect(
+          overflow,
+          `${path} should not overflow horizontally on iPhone SE`
         ).toBeLessThanOrEqual(1);
       }
     });
