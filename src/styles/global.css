@@ -31,6 +31,10 @@ body {
   height: 100%;
 }
 
+#app {
+  height: 100%;
+}
+
 /* 滚动条 */
 ::-webkit-scrollbar {
   width: 6px;
