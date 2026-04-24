@@ -108,12 +108,12 @@ bootScenePage({
       },
       onAction: (key) => {
         if (key === 'apply') {
-          const totalTime = (renderer.getValue('totalTime') as number) ?? 10;
-          const dt = (renderer.getValue('dt') as number) ?? 0.05;
-          const x0A = (renderer.getValue('x0A') as number) ?? 0;
-          const x0B = (renderer.getValue('x0B') as number) ?? 10;
-          const vExprA = (renderer.getValue('vExprA') as string) ?? '2';
-          const vExprB = (renderer.getValue('vExprB') as string) ?? '1';
+          const totalTime = renderer.getValue<number>('totalTime') ?? 10;
+          const dt = renderer.getValue<number>('dt') ?? 0.05;
+          const x0A = renderer.getValue<number>('x0A') ?? 0;
+          const x0B = renderer.getValue<number>('x0B') ?? 10;
+          const vExprA = renderer.getValue<string>('vExprA') ?? '2';
+          const vExprB = renderer.getValue<string>('vExprB') ?? '1';
 
           const next: Partial<ChaseMeetParams> = {
             totalTime: Math.max(1, Math.min(120, totalTime)),

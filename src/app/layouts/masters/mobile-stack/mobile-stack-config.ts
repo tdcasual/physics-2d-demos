@@ -51,6 +51,7 @@ export interface MobileStackConfig extends LayoutConfig {
   themeTransitionDuration?: number;
   enableDebugPanel?: boolean;
   enablePerfMonitor?: boolean;
+  hasGraph?: boolean;
 }
 
 export const DEFAULT_CONFIG: Required<MobileStackConfig> = {
@@ -92,6 +93,7 @@ export const DEFAULT_CONFIG: Required<MobileStackConfig> = {
   themeTransitionDuration: 300,
   enableDebugPanel: false,
   enablePerfMonitor: false,
+  hasGraph: true,
   theme: 'light',
   slots: {},
   mobileBreakpoint: 768,

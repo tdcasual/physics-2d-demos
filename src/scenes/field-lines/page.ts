@@ -173,8 +173,8 @@ bootScenePage({
           scene.render();
           onStatus?.('移除电荷');
         } else if (key === 'apply-charges') {
-          const q1 = (renderer.getValue('q1') as number) ?? 1;
-          const q2 = (renderer.getValue('q2') as number) ?? -1;
+          const q1 = renderer.getValue<number>('q1') ?? 1;
+          const q2 = renderer.getValue<number>('q2') ?? -1;
           scene.setCustomCharges(q1, q2);
           scene.render();
           onStatus?.(`设置电荷 Q₁=${q1}, Q₂=${q2}`);

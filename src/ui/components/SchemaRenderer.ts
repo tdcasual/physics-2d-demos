@@ -30,7 +30,7 @@ export interface SchemaRendererOptions {
 export interface SchemaRendererInstance {
   element: HTMLElement;
   setValue: (key: string, value: unknown) => void;
-  getValue: (key: string) => unknown;
+  getValue: <T>(key: string) => T | undefined;
   setActive: (key: string, id: string) => void;
 }
 
@@ -72,8 +72,8 @@ export function renderSchema(
     setValue(key: string, value: unknown) {
       valueSetters.get(key)?.(value);
     },
-    getValue(key: string) {
-      return valueGetters.get(key)?.();
+    getValue<T>(key: string): T | undefined {
+      return valueGetters.get(key)?.() as T | undefined;
     },
     setActive(key: string, id: string) {
       activeSetters.get(key)?.(id);

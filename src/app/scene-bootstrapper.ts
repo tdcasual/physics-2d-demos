@@ -368,10 +368,23 @@ export class SceneAdapter<
     if (this.scene?.getReadoutItems) {
       return this.scene.getReadoutItems();
     }
-    if (this.options.formatReadout && this.scene?.getState) {
-      return this.options.formatReadout(this.scene.getState());
+    const state = this.resolveSceneState();
+    if (this.options.formatReadout && state !== undefined) {
+      return this.options.formatReadout(state);
     }
     return this._readoutItems;
+  }
+
+  private resolveSceneState(): unknown {
+    if (!this.scene) return undefined;
+    if (this.scene.getState) {
+      return this.scene.getState();
+    }
+    const getSnapshot = (this.scene as { getSnapshot?: () => unknown }).getSnapshot;
+    if (typeof getSnapshot === 'function') {
+      return getSnapshot();
+    }
+    return undefined;
   }
 
   subscribe(listener: () => void): () => void {
@@ -386,8 +399,11 @@ export class SceneAdapter<
     if (!this.scene) return;
     if (this.scene.getReadoutItems) {
       this._readoutItems = this.scene.getReadoutItems();
-    } else if (this.options.formatReadout && this.scene.getState) {
-      this._readoutItems = this.options.formatReadout(this.scene.getState());
+      return;
+    }
+    const state = this.resolveSceneState();
+    if (this.options.formatReadout && state !== undefined) {
+      this._readoutItems = this.options.formatReadout(state);
     }
   }
 

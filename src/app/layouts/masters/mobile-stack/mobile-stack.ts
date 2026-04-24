@@ -143,9 +143,7 @@ export class MobileStackLayout extends BaseLayout {
       testEl.style.height = '1dvh';
       const vhUnit = testEl.style.height === '1dvh' ? 'dvh' : 'vh';
       // 如果场景自行管理内容高度（如 chase-meet），允许 auto 模式
-      const layoutCfg = this.config as MobileStackConfig & {
-        hasGraph?: boolean;
-      };
+      const layoutCfg = this.config as MobileStackConfig;
       if (layoutCfg.hasGraph === false) {
         this.animationSection.classList.add('auto-height');
         this.animationSection.style.height = 'auto';
