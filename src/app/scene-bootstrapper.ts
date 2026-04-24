@@ -17,6 +17,7 @@ import type {
 } from './layouts/types';
 import { registerAllLayouts } from './layouts/auto-register';
 import type { SceneMeta } from '../platform/scene-contract';
+import type { DemoRenderHints, SceneDemoProfile } from './demo-profile';
 import { createSceneShell } from './scene-shell';
 import { KeyboardShortcutManager } from '../platform/input/keyboard-shortcuts';
 import { PerformanceMonitor } from '../core/performance-monitor';
@@ -50,18 +51,22 @@ export type ScenePageOptions<TScene extends SceneInstance = SceneInstance> = {
   preferredLayout?: string;
   /** 布局配置 */
   layoutConfig?: Record<string, unknown>;
+  /** 演示配置（默认从 meta.demoProfile 读取） */
+  demoProfile?: SceneDemoProfile;
   /** 创建场景实例
    *
    * @param opts.canvas - 动画区域 canvas（向后兼容）
    * @param opts.slots - 所有布局槽位（推荐新场景使用）
    * @param opts.theme - 当前主题
    * @param opts.mode - 演示模式
+   * @param opts.demoHints - 演示渲染提示（新系统）
    */
   createScene: (opts: {
     canvas: HTMLCanvasElement;
     slots: LayoutSlots;
     theme: Theme;
     mode: 'normal' | 'presentation';
+    demoHints?: DemoRenderHints;
   }) => TScene;
   /** 创建控制面板（可选） */
   createControls?: (opts: {
@@ -168,7 +173,11 @@ export class SceneAdapter<
         | 'presentation') || 'normal';
 
     // 传递所有 slots 给场景，让场景自行决定如何使用
-    this.scene = this.options.createScene({ canvas, slots, theme, mode });
+    const demoHints =
+      mode === 'presentation'
+        ? (this.options.demoProfile ?? this.options.meta.demoProfile)?.renderHints
+        : undefined;
+    this.scene = this.options.createScene({ canvas, slots, theme, mode, demoHints });
 
     // 初始化
     this.scene.init();
@@ -347,7 +356,53 @@ export class SceneAdapter<
   }
 
   setMode(mode: 'normal' | 'presentation'): void {
-    this.scene?.setMode(mode);
+    const profile =
+      mode === 'presentation'
+        ? (this.options.demoProfile ?? this.options.meta.demoProfile)
+        : null;
+
+    // 1. 通知布局
+    const container = (this as unknown as { slots?: LayoutSlots }).slots;
+    if (container) {
+      // 通过 DOM 事件通知布局（与现有 layout:modechange 机制兼容）
+      const layoutEl = document.querySelector('.layout-master');
+      if (layoutEl) {
+        layoutEl.dispatchEvent(
+          new CustomEvent('layout:modechange', {
+            detail: { mode },
+            bubbles: true
+          })
+        );
+      }
+    }
+
+    // 2. 应用/恢复演示配置
+    if (profile && mode === 'presentation') {
+      // 通过 SceneContainer 获取当前布局并应用 profile
+      const layoutMaster = document.querySelector('.layout-master') as
+        | (HTMLElement & { applyDemoProfile?: (p: SceneDemoProfile) => void })
+        | null;
+      layoutMaster?.applyDemoProfile?.(profile);
+    } else if (mode === 'normal') {
+      const layoutMaster = document.querySelector('.layout-master') as
+        | (HTMLElement & { resetDemoProfile?: () => void })
+        | null;
+      layoutMaster?.resetDemoProfile?.();
+    }
+
+    // 3. 通知场景
+    if (this.scene?.setMode) {
+      if (mode === 'presentation' && profile) {
+        // 尝试传递 hints 给已改造的场景
+        const sceneWithHints = this.scene as unknown as {
+          setMode(m: 'normal' | 'presentation', hints?: DemoRenderHints): void;
+        };
+        sceneWithHints.setMode(mode, profile.renderHints);
+      } else {
+        this.scene.setMode(mode);
+      }
+    }
+
     this.scene?.resize();
     this.scene?.render();
   }

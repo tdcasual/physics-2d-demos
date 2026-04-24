@@ -27,6 +27,7 @@ import {
 } from '../../../../ui/floating-controls-legacy';
 import { ReadoutPanelManager } from './readout-panel';
 import { ResizerBehavior } from './resizer-behavior';
+import type { SceneDemoProfile } from '../../../demo-profile';
 
 /** SplitRight 布局配置 */
 export interface SplitRightConfig extends LayoutConfig {
@@ -620,6 +621,147 @@ export class SplitRightLayout extends BaseLayout {
         'aria-label',
         mode === 'presentation' ? '切换到标准模式' : '切换到演示模式'
       );
+    }
+  }
+
+  // ========================================================================
+  // 演示配置
+  // ========================================================================
+
+  applyDemoProfile(profile: SceneDemoProfile): void {
+    // 1. 控制面板策略
+    switch (profile.controlPanel) {
+      case 'hidden':
+        this.hideSidebar();
+        break;
+      case 'collapsed':
+        this.collapseControlSection();
+        break;
+      case 'minimal':
+        this.collapseGraphSection();
+        break;
+      case 'full':
+        // 标准布局，不做额外调整
+        break;
+    }
+
+    // 2. 读数面板策略
+    switch (profile.readoutPanel) {
+      case 'hidden':
+        this.readoutManager?.setVisible(false);
+        break;
+      case 'overlay':
+        this.readoutManager?.setPosition('overlay');
+        this.readoutManager?.setCollapsed(false);
+        this.readoutManager?.enlargeFont();
+        break;
+      case 'docked-top':
+        this.readoutManager?.setPosition('docked-top');
+        this.readoutManager?.setCollapsed(false);
+        break;
+      case 'docked-bottom':
+        this.readoutManager?.setPosition('docked-bottom');
+        this.readoutManager?.setCollapsed(false);
+        break;
+    }
+
+    // 3. 图表区策略
+    if (profile.graphPanel === 'hidden') {
+      this.collapseGraphSection();
+      if (this.graphSection) {
+        this.graphSection.style.display = 'none';
+      }
+    } else if (profile.graphPanel === 'collapsed') {
+      this.collapseGraphSection();
+    }
+
+    // 4. 触摸目标放大
+    const minSize = profile.interactionHints?.touchTargetMinSize;
+    if (minSize && minSize > 44) {
+      this.container.style.setProperty('--demo-touch-min', `${minSize}px`);
+      this.container.classList.add('demo-touch-optimized');
+    }
+  }
+
+  resetDemoProfile(): void {
+    this.showSidebar();
+    this.expandControlSection();
+    this.expandGraphSection();
+    if (this.graphSection) {
+      this.graphSection.style.display = '';
+    }
+    this.readoutManager?.resetPosition();
+    this.readoutManager?.setCollapsed(true);
+    this.readoutManager?.setVisible(true);
+    this.readoutManager?.resetFont();
+    this.container.classList.remove('demo-touch-optimized');
+    this.container.style.removeProperty('--demo-touch-min');
+  }
+
+  private showSidebar(): void {
+    if (!this.sidebarHidden) return;
+    this.sidebarHidden = false;
+    const cfg = this.config as SplitRightConfig;
+    const minWidth = cfg.leftMinWidth ?? 260;
+    const maxWidth = cfg.leftMaxWidth ?? 960;
+    const width = Math.max(
+      minWidth,
+      Math.min(maxWidth, this.container.clientWidth * this.leftRatio)
+    );
+    this.container.style.gridTemplateColumns = `${width}px 8px 1fr`;
+    if (this.leftPanel) {
+      this.leftPanel.style.display = 'flex';
+    }
+    if (this.sidebarToggle) {
+      this.sidebarToggle.textContent = '隐藏控制面板';
+    }
+  }
+
+  private hideSidebar(): void {
+    if (this.sidebarHidden) return;
+    this.sidebarHidden = true;
+    this.container.style.gridTemplateColumns = '0px 8px 1fr';
+    if (this.leftPanel) {
+      this.leftPanel.style.display = 'none';
+    }
+    if (this.sidebarToggle) {
+      this.sidebarToggle.textContent = '显示控制面板';
+    }
+  }
+
+  private expandControlSection(): void {
+    if (!this.controlSection) return;
+    this.controlSection.setAttribute('data-collapsed', 'false');
+    const toggle = this.controlSection.querySelector('.section-toggle');
+    if (toggle) {
+      toggle.textContent = '−';
+    }
+  }
+
+  private collapseControlSection(): void {
+    if (!this.controlSection) return;
+    this.controlSection.setAttribute('data-collapsed', 'true');
+    const toggle = this.controlSection.querySelector('.section-toggle');
+    if (toggle) {
+      toggle.textContent = '+';
+    }
+  }
+
+  private expandGraphSection(): void {
+    if (!this.graphSection) return;
+    this.graphSection.setAttribute('data-collapsed', 'false');
+    const toggle = this.graphSection.querySelector('.section-toggle');
+    if (toggle) {
+      toggle.textContent = '−';
+    }
+  }
+
+  private collapseGraphSection(): void {
+    if (!this.graphSection) return;
+    this.graphSection.setAttribute('data-collapsed', 'true');
+    const toggle = this.graphSection.querySelector('.section-toggle');
+    if (toggle) {
+      toggle.textContent = '+';
     }
   }
 

@@ -16,6 +16,7 @@ import type {
   SlotName,
   SlotConfig
 } from '../types';
+import type { SceneDemoProfile } from '../../demo-profile';
 
 /** 布局基类 */
 export abstract class BaseLayout implements LayoutMaster {
@@ -271,6 +272,23 @@ export abstract class BaseLayout implements LayoutMaster {
 
   // ResizeObserver 已由 SceneContainerImpl 统一管理，基类不再重复监听
   // 子类仍可通过 handleResize() 接收尺寸变化通知
+
+  /**
+   * 设置演示模式（默认空实现，子类覆盖）
+   */
+  setMode(mode: 'normal' | 'presentation'): void {
+    this.container.setAttribute('data-mode', mode);
+  }
+
+  /**
+   * 应用演示配置（子类必须实现）
+   */
+  abstract applyDemoProfile(profile: SceneDemoProfile): void;
+
+  /**
+   * 恢复标准模式（子类必须实现）
+   */
+  abstract resetDemoProfile(): void;
 
   /**
    * 创建区域元素

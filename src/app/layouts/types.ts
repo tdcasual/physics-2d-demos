@@ -185,6 +185,23 @@ export interface LayoutMaster {
   }): void;
 
   /**
+   * 设置演示模式
+   * @param mode - 模式类型
+   */
+  setMode?(mode: 'normal' | 'presentation'): void;
+
+  /**
+   * 应用演示配置（布局母版根据场景偏好调整结构）
+   * @param profile - 场景演示配置
+   */
+  applyDemoProfile?(profile: import('../demo-profile').SceneDemoProfile): void;
+
+  /**
+   * 恢复标准模式（撤销演示配置）
+   */
+  resetDemoProfile?(): void;
+
+  /**
    * 获取所有已渲染的区域槽位
    */
   getSlots?(): Partial<LayoutSlots>;

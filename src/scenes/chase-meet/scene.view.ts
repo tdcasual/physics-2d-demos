@@ -1,6 +1,7 @@
 import type { ChaseMeetSnapshot } from './scene.sim';
 import type { TeachingMode } from '../../platform/standards';
 import type { TeachingTheme } from '../../platform/standards';
+import type { DemoRenderHints } from '../../app/demo-profile';
 import { sizeCanvasToFill } from '../../core/canvas-sizing';
 import {
   getResponsiveViewport,
@@ -21,6 +22,7 @@ export type CreateChaseMeetViewOptions = {
   stageSlot?: HTMLElement;
   graphSlot?: HTMLElement;
   mode?: TeachingMode;
+  demoHints?: DemoRenderHints;
   theme?: TeachingTheme;
 };
 
@@ -31,6 +33,7 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
   let graphSlot = options.graphSlot ?? null;
   let stageDom: StageDom | null = null;
   let mode: TeachingMode = options.mode ?? 'normal';
+  let demoHints: DemoRenderHints | null = options.demoHints ?? null;
   let theme: TeachingTheme = options.theme ?? 'dark';
   let snapshot: ChaseMeetSnapshot | null = null;
   let cssWidth = 1280;
@@ -70,7 +73,7 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
       return;
     }
 
-    const isPresentation = mode === 'presentation';
+    const scale = demoHints?.contentScale ?? (mode === 'presentation' ? 1.5 : 1.0);
     const viewport = getResponsiveViewport(960);
     const totalWidth = resolveResponsiveStageWidth(dom.root, {
       minWidthPx: 320,
@@ -84,9 +87,9 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
       Math.floor(dom.root.getBoundingClientRect().height || viewport.height)
     );
     const trackHeight = Math.min(
-      isPresentation ? 460 : 380,
+      Math.round(380 * scale),
       Math.max(
-        isPresentation ? 220 : 170,
+        Math.round(170 * scale),
         stageHeight * (viewport.isNarrow ? 0.34 : 0.42)
       )
     );
@@ -99,9 +102,9 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
       graphHeight = Math.max(120, Math.floor(gRect.height || 300));
     } else {
       graphHeight = Math.min(
-        isPresentation ? 320 : 250,
+        Math.round(250 * scale),
         Math.max(
-          isPresentation ? 180 : 150,
+          Math.round(150 * scale),
           stageHeight * (viewport.isNarrow ? 0.22 : 0.34)
         )
       );
@@ -137,7 +140,8 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
 
     const cssW = dom.motionCanvas.width / dom.dpr;
     const cssH = dom.motionCanvas.height / dom.dpr;
-    const visuals = resolveVisuals(mode, cssW, cssH);
+    const s = demoHints?.contentScale ?? (mode === 'presentation' ? 1.5 : 1.0);
+    const visuals = resolveVisuals(s, cssW, cssH);
 
     drawMotion({
       ctx: dom.motionCtx,
@@ -153,7 +157,7 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
     const vW = dom.vCanvas.width / dom.dpr;
     const vH = dom.vCanvas.height / dom.dpr;
     const shortEdge = Math.min(xW, xH, vW, vH);
-    const graphVisuals = resolveVisuals(mode, shortEdge * 2, shortEdge);
+    const graphVisuals = resolveVisuals(s, shortEdge * 2, shortEdge);
 
     drawGraphs({
       xCtx: dom.xCtx,
@@ -200,8 +204,11 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
         draw(snapshot);
       }
     },
-    setMode(nextMode: TeachingMode): void {
+    setMode(nextMode: TeachingMode, hints?: DemoRenderHints): void {
       mode = nextMode;
+      if (hints) {
+        demoHints = hints;
+      }
       initStageSize();
       if (snapshot) {
         draw(snapshot);

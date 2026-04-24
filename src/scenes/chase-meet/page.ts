@@ -33,7 +33,7 @@ function formatReadout(
 
 bootScenePage({
   meta: chaseMeetMeta,
-  createScene: ({ canvas, slots, theme, mode }) => {
+  createScene: ({ canvas, slots, theme, mode, demoHints }) => {
     const stageSlot = canvas.parentElement;
     if (!stageSlot) {
       throw new Error('Missing animation container for chase-meet');
@@ -46,6 +46,7 @@ bootScenePage({
       stageSlot,
       graphSlot: isMobileStack ? slots.graph : undefined,
       mode,
+      demoHints,
       theme,
       onReadout: () => {}
     });
@@ -70,9 +71,9 @@ bootScenePage({
         return { isPlaying, speed: 1 };
       },
       subscribe,
-      setMode(m: 'normal' | 'presentation') {
+      setMode(m: 'normal' | 'presentation', hints?: unknown) {
         currentMode = m;
-        scene.setMode(m);
+        scene.setMode(m, hints as Parameters<typeof scene.setMode>[1]);
         notify();
       },
       setParams(next: Partial<ChaseMeetParams>) {

@@ -28,6 +28,7 @@ import { GraphSectionManager } from './mobile-graph-section';
 import { ReadoutBarManager } from './mobile-readout-bar';
 import { TransportBarManager } from './mobile-transport-bar';
 import { DebugPanelManager } from './mobile-debug-panel';
+import type { SceneDemoProfile } from '../../../demo-profile';
 
 import './mobile-stack.css';
 
@@ -477,6 +478,70 @@ export class MobileStackLayout extends BaseLayout {
     }, 'unmount');
 
     await super.unmount();
+  }
+
+  // ========================================================================
+  // 演示配置
+  // ========================================================================
+
+  setMode(mode: 'normal' | 'presentation'): void {
+    this.container.setAttribute('data-mode', mode);
+  }
+
+  applyDemoProfile(profile: SceneDemoProfile): void {
+    // 1. 控制区策略
+    switch (profile.controlPanel) {
+      case 'hidden':
+        if (this.controlSection) {
+          this.controlSection.style.display = 'none';
+        }
+        break;
+      case 'collapsed':
+      case 'minimal':
+        if (this.controlSection) {
+          this.controlSection.classList.add('is-collapsed-demo');
+        }
+        break;
+      case 'full':
+        break;
+    }
+
+    // 2. 读数面板策略
+    switch (profile.readoutPanel) {
+      case 'hidden':
+        this.readoutManager?.hide();
+        break;
+      case 'overlay':
+        this.readoutManager?.setStyle('overlay');
+        break;
+      case 'docked-top':
+      case 'docked-bottom':
+        this.readoutManager?.setStyle('inline');
+        break;
+    }
+
+    // 3. 图表区
+    if (profile.graphPanel === 'visible') {
+      this.graphManager?.expand();
+    } else if (profile.graphPanel === 'hidden') {
+      this.graphManager?.hide();
+    }
+
+    // 4. 触摸优化
+    if (profile.interactionHints?.touchTargetMinSize) {
+      this.container.classList.add('demo-touch-optimized');
+    }
+  }
+
+  resetDemoProfile(): void {
+    if (this.controlSection) {
+      this.controlSection.style.display = '';
+      this.controlSection.classList.remove('is-collapsed-demo');
+    }
+    this.readoutManager?.show();
+    this.readoutManager?.setStyle('default');
+    this.graphManager?.show();
+    this.container.classList.remove('demo-touch-optimized');
   }
 }
 

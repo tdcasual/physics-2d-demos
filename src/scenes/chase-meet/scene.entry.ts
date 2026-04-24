@@ -1,5 +1,6 @@
 import type { TeachingMode } from '../../platform/standards';
 import type { TeachingTheme } from '../../platform/standards';
+import type { DemoRenderHints } from '../../app/demo-profile';
 import type { SceneLifecycle } from '../types';
 import {
   createChaseMeetSim,
@@ -24,6 +25,7 @@ export type CreateChaseMeetSceneOptions = {
   stageSlot?: HTMLElement;
   graphSlot?: HTMLElement;
   mode?: TeachingMode;
+  demoHints?: DemoRenderHints;
   theme?: TeachingTheme;
   onReadout?: (snapshot: ChaseMeetSnapshot) => void;
 };
@@ -32,7 +34,7 @@ export function createChaseMeetScene(
   options: CreateChaseMeetSceneOptions = {}
 ): SceneLifecycle & {
   resize(): void;
-  setMode(mode: TeachingMode): void;
+  setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
   setTheme(theme: TeachingTheme): void;
   getState(): ChaseMeetState;
   getParams(): ResolvedChaseMeetParams;
@@ -45,6 +47,7 @@ export function createChaseMeetScene(
     stageSlot: options.stageSlot,
     graphSlot: options.graphSlot,
     mode: options.mode ?? 'normal',
+    demoHints: options.demoHints,
     theme: options.theme ?? 'dark'
   });
 
@@ -74,8 +77,8 @@ export function createChaseMeetScene(
     resize(): void {
       view.resize();
     },
-    setMode(mode: TeachingMode): void {
-      view.setMode(mode);
+    setMode(mode: TeachingMode, hints?: DemoRenderHints): void {
+      view.setMode(mode, hints);
     },
     setTheme(theme: TeachingTheme): void {
       view.setTheme(theme);

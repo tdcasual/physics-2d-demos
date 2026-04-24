@@ -14,6 +14,14 @@ class TestLayout extends BaseLayout {
     container.appendChild(slot);
     return { header: slot, control: slot, animation: slot };
   }
+
+  applyDemoProfile(): void {
+    // test stub
+  }
+
+  resetDemoProfile(): void {
+    // test stub
+  }
 }
 
 describe('BaseLayout', () => {

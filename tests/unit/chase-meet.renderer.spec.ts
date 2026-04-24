@@ -205,36 +205,36 @@ describe('chase-meet renderer', () => {
     });
 
     describe('resolveVisuals', () => {
-      it('returns visuals for normal mode', () => {
-        const visuals = resolveVisuals('normal');
+      it('returns visuals for normal scale', () => {
+        const visuals = resolveVisuals(1.0);
         expect(visuals.scale).toBeGreaterThan(0);
         expect(visuals.primaryFontPx).toBeGreaterThan(0);
         expect(visuals.markerRadiusPx).toBeGreaterThan(0);
       });
 
-      it('returns visuals for presentation mode', () => {
-        const visuals = resolveVisuals('presentation');
+      it('returns visuals for presentation scale', () => {
+        const visuals = resolveVisuals(1.5);
         expect(visuals.scale).toBeGreaterThan(0);
         expect(visuals.primaryFontPx).toBeGreaterThan(0);
         expect(visuals.markerRadiusPx).toBeGreaterThan(0);
       });
 
       it('applies responsive scaling when canvas dimensions are provided', () => {
-        const normal = resolveVisuals('normal');
-        const responsive = resolveVisuals('normal', 400, 300);
+        const normal = resolveVisuals(1.0);
+        const responsive = resolveVisuals(1.0, 400, 300);
         expect(responsive.scale).not.toBe(normal.scale);
         expect(responsive.scale).toBeLessThan(normal.scale);
       });
 
       it('falls back to base values when canvas dimensions are zero', () => {
-        const normal = resolveVisuals('normal');
-        const zeroDim = resolveVisuals('normal', 0, 0);
+        const normal = resolveVisuals(1.0);
+        const zeroDim = resolveVisuals(1.0, 0, 0);
         expect(zeroDim.scale).toBe(normal.scale);
       });
 
       it('scales down for small canvas short edge', () => {
-        const large = resolveVisuals('normal', 1000, 800);
-        const small = resolveVisuals('normal', 200, 150);
+        const large = resolveVisuals(1.0, 1000, 800);
+        const small = resolveVisuals(1.0, 200, 150);
         expect(small.scale).toBeLessThan(large.scale);
       });
     });

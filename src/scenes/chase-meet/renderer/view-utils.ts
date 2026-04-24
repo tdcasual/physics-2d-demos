@@ -1,6 +1,5 @@
 import type { ChaseMeetSample } from '../scene.sim';
-import type { TeachingMode } from '../../../platform/standards';
-import { getTeachingStandards } from '../../../platform/standards';
+import { getRenderTokens } from '../../../platform/standards';
 import { applyTouchInteractionMode } from '../../../platform/input/touch';
 
 export type StageDom = {
@@ -14,22 +13,19 @@ export type StageDom = {
   dpr: number;
 };
 
-export type Visuals = ReturnType<typeof getTeachingStandards>['rightStage'] & {
+export type Visuals = ReturnType<typeof getRenderTokens>['rightStage'] & {
   scale: number;
 };
 
-const MODE_SCALE: Record<TeachingMode, number> = {
-  normal: 1.45,
-  presentation: 2.6
-};
+const BASE_SCALE = 1.45;
 
 export function resolveVisuals(
-  mode: TeachingMode,
+  scale: number = 1.0,
   canvasWidth?: number,
   canvasHeight?: number
 ): Visuals {
-  const base = getTeachingStandards(mode).rightStage;
-  let scale = MODE_SCALE[mode];
+  const base = getRenderTokens(scale).rightStage;
+  let computedScale = BASE_SCALE * scale;
   let markerRadiusPx = base.markerRadiusPx;
   let primaryFontPx = base.primaryFontPx;
   let secondaryFontPx = base.secondaryFontPx;
@@ -39,7 +35,7 @@ export function resolveVisuals(
   if (canvasWidth && canvasHeight && canvasWidth > 0 && canvasHeight > 0) {
     const shortEdge = Math.min(canvasWidth, canvasHeight);
     const responsiveScale = Math.max(0.3, Math.min(1.0, shortEdge / 550));
-    scale *= responsiveScale;
+    computedScale *= responsiveScale;
     markerRadiusPx *= responsiveScale;
     primaryFontPx = Math.max(10, base.primaryFontPx * responsiveScale);
     secondaryFontPx = Math.max(9, base.secondaryFontPx * responsiveScale);
@@ -49,7 +45,7 @@ export function resolveVisuals(
 
   return {
     ...base,
-    scale,
+    scale: computedScale,
     markerRadiusPx,
     primaryFontPx,
     secondaryFontPx,

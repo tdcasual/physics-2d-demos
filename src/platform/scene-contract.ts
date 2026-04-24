@@ -9,6 +9,8 @@ export type ScenePlacardMeta = {
   subConcepts: [string, string];
 };
 
+import type { SceneDemoProfile } from '../app/demo-profile';
+
 export type SceneMeta = ScenePlacardMeta & {
   id: string;
   title: string;
@@ -21,6 +23,8 @@ export type SceneMeta = ScenePlacardMeta & {
   icon?: string;
   category?: 'mechanics' | 'electromagnetism' | 'method';
   featured?: boolean;
+  /** 演示模式配置（可选，未配置则走旧逻辑） */
+  demoProfile?: SceneDemoProfile;
 };
 
 export type SceneLifecycle = {

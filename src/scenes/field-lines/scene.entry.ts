@@ -1,5 +1,6 @@
 import type { TeachingMode } from '../../platform/standards';
 import type { TeachingTheme } from '../../platform/standards';
+import type { DemoRenderHints } from '../../app/demo-profile';
 import type { SceneLifecycle } from '../types';
 import {
   createFieldLinesSim,
@@ -11,6 +12,7 @@ import { createFieldLinesView } from './scene.view';
 export type CreateFieldLinesSceneOptions = {
   canvas?: HTMLCanvasElement;
   mode?: TeachingMode;
+  demoHints?: DemoRenderHints;
   theme?: TeachingTheme;
   onReadout?: (snapshot: FieldLinesSnapshot) => void;
 };
@@ -19,7 +21,7 @@ export function createFieldLinesScene(
   options: CreateFieldLinesSceneOptions = {}
 ): SceneLifecycle & {
   resize(): void;
-  setMode(mode: TeachingMode): void;
+  setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
   setTheme(theme: TeachingTheme): void;
   setScene(scene: FieldLinesScene): void;
   setDensity(value: number): void;
@@ -39,6 +41,7 @@ export function createFieldLinesScene(
   const view = createFieldLinesView({
     canvas: options.canvas,
     mode: options.mode ?? 'normal',
+    demoHints: options.demoHints,
     theme: options.theme ?? 'dark'
   });
 
@@ -67,8 +70,8 @@ export function createFieldLinesScene(
       view.resize();
       renderAndEmit();
     },
-    setMode(mode: TeachingMode): void {
-      view.setMode(mode);
+    setMode(mode: TeachingMode, hints?: DemoRenderHints): void {
+      view.setMode(mode, hints);
       renderAndEmit();
     },
     setTheme(theme: TeachingTheme): void {

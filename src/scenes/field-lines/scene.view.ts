@@ -1,6 +1,7 @@
 import type { TeachingMode } from '../../platform/standards';
-import { getTeachingStandards } from '../../platform/standards';
+import { getRenderTokens } from '../../platform/standards';
 import type { TeachingTheme } from '../../platform/standards';
+import type { DemoRenderHints } from '../../app/demo-profile';
 import { sizeCanvasToFill } from '../../core/canvas-sizing';
 import type { FieldLinesSnapshot } from './scene.sim';
 import { generateFieldLines } from './renderer/trace-field';
@@ -13,36 +14,23 @@ import type { PixelCharge, VisualConfig, ThemeColors } from './renderer/types';
 export type CreateFieldLinesViewOptions = {
   canvas?: HTMLCanvasElement;
   mode?: TeachingMode;
+  demoHints?: DemoRenderHints;
   theme?: TeachingTheme;
 };
 
 let _cachedScale = 1;
 
-const VISUAL_CONFIG: Record<TeachingMode, VisualConfig> = {
-  normal: {
-    chargeRadius: 26,
-    chargeFontPx: Math.round(
-      getTeachingStandards('normal').rightStage.primaryFontPx * 1.08
-    ),
-    arrowStrokeWidth: getTeachingStandards('normal').rightStage.majorStrokePx,
-    arrowSize: 20,
-    maxArrowLength: 34,
-    minArrowLength:
-      getTeachingStandards('normal').rightStage.secondaryFontPx * 0.85
-  },
-  presentation: {
-    chargeRadius: 40,
-    chargeFontPx: Math.round(
-      getTeachingStandards('presentation').rightStage.primaryFontPx * 1.08
-    ),
-    arrowStrokeWidth:
-      getTeachingStandards('presentation').rightStage.majorStrokePx,
-    arrowSize: 30,
-    maxArrowLength: 58,
-    minArrowLength:
-      getTeachingStandards('presentation').rightStage.secondaryFontPx * 0.95
-  }
-};
+function getVisuals(scale: number = 1.0): VisualConfig {
+  const tokens = getRenderTokens(scale).rightStage;
+  return {
+    chargeRadius: Math.round(26 * scale),
+    chargeFontPx: Math.round(tokens.primaryFontPx * 1.08),
+    arrowStrokeWidth: tokens.majorStrokePx,
+    arrowSize: Math.round(20 * scale),
+    maxArrowLength: Math.round(34 * scale),
+    minArrowLength: Math.round(tokens.secondaryFontPx * 0.85)
+  };
+}
 
 const THEME_CONFIG: Record<TeachingTheme, ThemeColors> = {
   dark: {
@@ -67,6 +55,7 @@ export function createFieldLinesView(
   let canvas = options.canvas ?? null;
   let ctx = canvas?.getContext('2d') ?? null;
   let mode: TeachingMode = options.mode ?? 'normal';
+  let demoHints: DemoRenderHints | null = options.demoHints ?? null;
   let theme: TeachingTheme = options.theme ?? 'dark';
   let snapshot: FieldLinesSnapshot | null = null;
   let cssWidth = 1280;
@@ -82,8 +71,12 @@ export function createFieldLinesView(
     _cachedScale = parseFloat(canvas.dataset.responsiveScale || '1');
   }
 
+  function getScale(): number {
+    return demoHints?.contentScale ?? (mode === 'presentation' ? 1.5 : 1.0);
+  }
+
   function toPixelCharges(next: FieldLinesSnapshot): PixelCharge[] {
-    const visuals = VISUAL_CONFIG[mode];
+    const visuals = getVisuals(getScale());
     const s = _cachedScale;
     return next.charges.map((charge) => ({
       x: charge.x * cssWidth,
@@ -120,7 +113,7 @@ export function createFieldLinesView(
     drawFieldLines(ctx, paths, s, isDark);
 
     // 5. 立体电荷球
-    const visuals = VISUAL_CONFIG[mode];
+    const visuals = getVisuals(getScale());
     drawCharges(ctx, charges, visuals.chargeFontPx, s);
   }
 
@@ -133,8 +126,11 @@ export function createFieldLinesView(
       resizeCanvas();
       if (snapshot) draw(snapshot);
     },
-    setMode(nextMode: TeachingMode): void {
+    setMode(nextMode: TeachingMode, hints?: DemoRenderHints): void {
       mode = nextMode;
+      if (hints) {
+        demoHints = hints;
+      }
       if (snapshot) {
         draw(snapshot);
       }

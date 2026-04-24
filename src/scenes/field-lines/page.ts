@@ -50,12 +50,13 @@ function formatReadout(
 
 bootScenePage({
   meta: fieldLinesMeta,
-  createScene: ({ canvas, theme, mode }) => {
+  createScene: ({ canvas, theme, mode, demoHints }) => {
     applyTouchInteractionMode(canvas, 'drag');
 
     const scene = createFieldLinesScene({
       canvas,
       mode,
+      demoHints,
       theme,
       onReadout: () => {}
     });
@@ -115,9 +116,9 @@ bootScenePage({
         return formatReadout(scene.getSnapshot(), currentMode, currentTheme);
       },
       subscribe,
-      setMode(m: 'normal' | 'presentation') {
+      setMode(m: 'normal' | 'presentation', hints?: unknown) {
         currentMode = m;
-        scene.setMode(m);
+        scene.setMode(m, hints as Parameters<typeof scene.setMode>[1]);
         notify();
       },
       setTheme(t: Theme) {

@@ -1,4 +1,17 @@
 import type { SceneMeta } from '../types';
+import type { SceneDemoProfile } from '../../app/demo-profile';
+
+export const demoProfile: SceneDemoProfile = {
+  controlPanel: 'minimal',
+  readoutPanel: 'overlay',
+  renderHints: {
+    contentScale: 1.6
+  },
+  interactionHints: {
+    touchTargetMinSize: 48,
+    visibleControlKeys: ['q1', 'q2', 'preset']
+  }
+};
 
 export const fieldLinesMeta: SceneMeta = {
   id: 'field-lines',
@@ -18,5 +31,6 @@ export const fieldLinesMeta: SceneMeta = {
     density: 10,
     q1: 1,
     q2: -1
-  }
+  },
+  demoProfile
 };

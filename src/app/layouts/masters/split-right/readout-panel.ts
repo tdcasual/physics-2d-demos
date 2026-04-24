@@ -70,6 +70,95 @@ export class ReadoutPanelManager {
     return this.slot;
   }
 
+  /** 设置面板位置 */
+  setPosition(
+    position: 'overlay' | 'docked-top' | 'docked-bottom' | 'default'
+  ): void {
+    this.panel.classList.remove(
+      'is-docked-top',
+      'is-docked-bottom',
+      'is-overlay'
+    );
+
+    if (position === 'default') {
+      this.panel.style.cssText = `
+        position: absolute;
+        right: 12px;
+        top: 60px;
+        min-width: 200px;
+        width: 280px;
+        max-width: 400px;
+        z-index: 100;
+      `;
+      return;
+    }
+
+    if (position === 'overlay') {
+      this.panel.classList.add('is-overlay');
+      this.panel.style.cssText = `
+        position: absolute;
+        right: 12px;
+        top: 12px;
+        min-width: 200px;
+        width: 320px;
+        max-width: 480px;
+        z-index: 100;
+      `;
+      return;
+    }
+
+    if (position === 'docked-top' || position === 'docked-bottom') {
+      this.panel.classList.add(
+        position === 'docked-top' ? 'is-docked-top' : 'is-docked-bottom'
+      );
+      this.panel.style.cssText = `
+        position: absolute;
+        left: 0;
+        right: 0;
+        ${position === 'docked-top' ? 'top: 0; bottom: auto;' : 'top: auto; bottom: 0;'}
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+        z-index: 100;
+        border-radius: 0;
+      `;
+    }
+  }
+
+  /** 显示/隐藏面板 */
+  setVisible(visible: boolean): void {
+    this.panel.style.display = visible ? '' : 'none';
+  }
+
+  /** 设置折叠状态 */
+  setCollapsed(collapsed: boolean): void {
+    this.collapsed = collapsed;
+    this.panel.classList.toggle('is-collapsed', collapsed);
+    const btn = this.panel.querySelector(
+      '.readout-toggle'
+    ) as HTMLButtonElement | null;
+    if (btn) {
+      btn.textContent = collapsed ? '展开' : '折叠';
+      btn.setAttribute('aria-label', collapsed ? '展开' : '折叠');
+    }
+    this.toggleBtn = btn;
+  }
+
+  /** 放大读数字号（演示模式） */
+  enlargeFont(): void {
+    this.panel.classList.add('readout-enlarged');
+  }
+
+  /** 恢复默认字号 */
+  resetFont(): void {
+    this.panel.classList.remove('readout-enlarged');
+  }
+
+  /** 恢复默认位置 */
+  resetPosition(): void {
+    this.setPosition('default');
+  }
+
   /** 清理资源 */
   dispose(): void {
     this.dragCleanup?.();

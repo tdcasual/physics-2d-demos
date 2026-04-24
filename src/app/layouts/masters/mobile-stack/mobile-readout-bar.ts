@@ -30,6 +30,21 @@ export class ReadoutBarManager {
     });
   }
 
+  hide(): void {
+    this.bar.style.display = 'none';
+  }
+
+  show(): void {
+    this.bar.style.display = '';
+  }
+
+  setStyle(style: 'default' | 'overlay' | 'inline'): void {
+    this.bar.classList.remove('is-overlay', 'is-inline');
+    if (style !== 'default') {
+      this.bar.classList.add(`is-${style}`);
+    }
+  }
+
   destroy(): void {
     this.bar.remove();
   }

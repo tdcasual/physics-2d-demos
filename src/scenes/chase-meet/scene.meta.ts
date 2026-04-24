@@ -1,4 +1,19 @@
 import type { SceneMeta } from '../types';
+import type { SceneDemoProfile } from '../../app/demo-profile';
+
+export const demoProfile: SceneDemoProfile = {
+  controlPanel: 'hidden',
+  readoutPanel: 'docked-bottom',
+  graphPanel: 'visible',
+  renderHints: {
+    contentScale: 1.8,
+    fontScale: 2.0,
+    strokeScale: 1.5
+  },
+  interactionHints: {
+    touchTargetMinSize: 56
+  }
+};
 
 export const chaseMeetMeta: SceneMeta = {
   id: 'chase-meet',
@@ -19,5 +34,6 @@ export const chaseMeetMeta: SceneMeta = {
     dt: 0.02,
     x0A: 0,
     x0B: 10
-  }
+  },
+  demoProfile
 };

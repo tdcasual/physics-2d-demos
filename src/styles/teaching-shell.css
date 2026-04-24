@@ -565,3 +565,57 @@
 .teaching-demo[data-mode='presentation'] .readout-panel {
   @apply right-4 top-4;
 }
+
+/* 读数面板 dock 在底部 */
+.readout-panel.is-docked-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: auto;
+  max-width: none;
+  width: 100%;
+  border-radius: 0;
+}
+
+/* 读数面板 dock 在顶部 */
+.readout-panel.is-docked-top {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: auto;
+  max-width: none;
+  width: 100%;
+  border-radius: 0;
+}
+
+/* 读数面板叠加模式 */
+.readout-panel.is-overlay {
+  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.6);
+}
+
+/* 演示模式放大读数字号 */
+.readout-panel.readout-enlarged .readout-label {
+  font-size: 1.1rem;
+}
+.readout-panel.readout-enlarged .readout-value {
+  font-size: 1.25rem;
+}
+
+/* 触摸优化 */
+.demo-touch-optimized .section-toggle,
+.demo-touch-optimized .readout-toggle,
+.demo-touch-optimized .sidebar-toggle {
+  min-width: var(--demo-touch-min, 48px);
+  min-height: var(--demo-touch-min, 48px);
+}
+
+/* 移动端演示模式：控制区收起 */
+.mobile-control-section.is-collapsed-demo .mobile-control-slot {
+  display: none;
+}
+.mobile-control-section.is-collapsed-demo .mobile-readout-bar {
+  display: block;
+}

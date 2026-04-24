@@ -77,6 +77,20 @@ export class GraphSectionManager {
     return this.expanded;
   }
 
+  expand(): void {
+    if (!this.expanded) {
+      this.toggleExpanded();
+    }
+  }
+
+  hide(): void {
+    this.section.style.display = 'none';
+  }
+
+  show(): void {
+    this.section.style.display = '';
+  }
+
   destroy(): void {
     this.eventCleanups.forEach((c) => c());
     this.eventCleanups = [];
