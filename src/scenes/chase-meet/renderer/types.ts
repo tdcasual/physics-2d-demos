@@ -1,5 +1,4 @@
 import type { ChaseMeetSnapshot } from '../scene.sim';
-import type { StageDom } from './view-utils';
 
 export type DrawContext = {
   snapshot: ChaseMeetSnapshot;

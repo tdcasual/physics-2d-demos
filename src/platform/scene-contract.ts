@@ -9,7 +9,7 @@ export type ScenePlacardMeta = {
   subConcepts: [string, string];
 };
 
-import type { SceneDemoProfile } from '../app/demo-profile';
+import type { SceneDemoProfile } from './demo-profile';
 
 export type SceneMeta = ScenePlacardMeta & {
   id: string;

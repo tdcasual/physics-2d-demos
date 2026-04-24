@@ -1,4 +1,3 @@
-import type { ProjectileState } from '../scene.sim';
 
 export type DrawContext = {
   ctx: CanvasRenderingContext2D;

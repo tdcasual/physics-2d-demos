@@ -7,7 +7,7 @@ import { drawAxis } from './draw-axis';
  */
 export function drawScene2(context: DrawContext, snapshot: VtIntegralSnapshot): void {
   const { ctx, width, height, theme, responsiveScale } = context;
-  const { params, metrics } = snapshot;
+  const { params } = snapshot;
   const isDark = theme === 'dark';
   const s = responsiveScale;
 

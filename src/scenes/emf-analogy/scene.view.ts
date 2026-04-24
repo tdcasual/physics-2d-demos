@@ -7,7 +7,7 @@ import { drawWaterAnalogy } from './renderer/draw-water-analogy';
 
 export type EmfViewMode = 'circuit' | 'water';
 
-import type { DemoRenderHints } from '../../app/demo-profile';
+import type { DemoRenderHints } from '../../platform/demo-profile';
 
 export type CreateEmfAnalogyViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -22,7 +22,7 @@ export function createEmfAnalogyView(
   let canvas = options.canvas ?? null;
   let ctx = canvas?.getContext('2d') ?? null;
   let theme: TeachingTheme = options.theme ?? 'dark';
-  let demoHints: DemoRenderHints | null = options.demoHints ?? null;
+  // demoHints reserved for future demo profile integration
   let currentView: EmfViewMode = 'water';
   let snapshot: EmfAnalogySnapshot | null = null;
   let cssWidth = 1280;
@@ -90,11 +90,7 @@ export function createEmfAnalogyView(
       if (snapshot) draw();
     },
 
-    setMode(nextMode: TeachingMode, hints?: DemoRenderHints): void {
-      void nextMode;
-      if (hints) {
-        demoHints = hints;
-      }
+    setMode(_nextMode: TeachingMode, _hints?: DemoRenderHints): void {
       if (snapshot) draw();
     },
 

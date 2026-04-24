@@ -1,6 +1,6 @@
 import type { TeachingMode } from '../../platform/standards';
 import type { TeachingTheme } from '../../platform/standards';
-import type { DemoRenderHints } from '../../app/demo-profile';
+import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { SceneLifecycle } from '../types';
 import { createEmfAnalogySim, type EmfAnalogySnapshot } from './scene.sim';
 import { createEmfAnalogyView, type EmfViewMode } from './scene.view';

@@ -3,7 +3,7 @@ import {
   createSpringOscillatorSim,
   createOscillatorState,
   OSCILLATOR_COLORS,
-  type OscillatorParams
+
 } from '../../src/scenes/spring-oscillator/scene.sim';
 
 describe('spring-oscillator sim', () => {
@@ -123,7 +123,6 @@ describe('spring-oscillator sim', () => {
     const osc = sim.addOscillator({ k: 10, m: 1, x0: 5 });
     sim.startOscillator(osc.id);
     sim.step(1);
-    const xBeforeUpdate = osc.state.x;
     sim.updateOscillator(osc.id, { k: 20 });
     // 更新后重置到初始状态但使用新参数
     expect(osc.params.k).toBe(20);

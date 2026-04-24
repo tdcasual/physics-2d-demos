@@ -20,8 +20,6 @@ export function drawContact(
   const cx = width * 0.5;
   const cy = height * 0.4;
 
-  const sphereR = Math.max(35, 55 * s);
-
   if (state.stepIndex === 0) {
     drawContactStep0(ctx, cx, cy, s, isDark, state);
   } else {

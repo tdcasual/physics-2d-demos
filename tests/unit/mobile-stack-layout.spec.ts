@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MobileStackLayout } from '../../src/app/layouts/masters/mobile-stack/mobile-stack';
+import type { SlotName } from '../../src/app/layouts/types';
 
 describe('MobileStackLayout', () => {
   function createLayout(
@@ -134,8 +135,6 @@ describe('MobileStackLayout', () => {
     const animSection = container.querySelector(
       '.mobile-animation-section'
     ) as HTMLElement;
-    const beforeHeight = animSection.style.height;
-
     layout.handleResize(375, 800);
     const afterHeight = animSection.style.height;
     expect(afterHeight).not.toBe('');
@@ -191,11 +190,11 @@ describe('MobileStackLayout', () => {
   });
 
   it('should support slot queries after mount', async () => {
-    const { container, layout } = createLayout();
+    const { layout } = createLayout();
     await layout.mount();
 
     expect(layout.supportsSlot('animation')).toBe(true);
-    expect(layout.supportsSlot('unknown' as any)).toBe(false);
+    expect(layout.supportsSlot('unknown' as unknown as SlotName)).toBe(false);
     expect(layout.getSlot('animation')).toBeTruthy();
     expect(layout.getSlots().animation).toBeTruthy();
   });

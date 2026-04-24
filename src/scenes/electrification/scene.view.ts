@@ -5,7 +5,7 @@ import { drawFriction } from './renderer/draw-friction';
 import { drawInduction } from './renderer/draw-induction';
 import { drawContact } from './renderer/draw-contact';
 
-import type { DemoRenderHints } from '../../app/demo-profile';
+import type { DemoRenderHints } from '../../platform/demo-profile';
 
 export type CreateElectrificationViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -19,8 +19,7 @@ export function createElectrificationView(
 ) {
   let canvas = options.canvas ?? null;
   let ctx = canvas?.getContext('2d') ?? null;
-  let _mode: TeachingMode = options.mode ?? 'normal';
-  let demoHints: DemoRenderHints | null = options.demoHints ?? null;
+  // mode / demoHints reserved for future demo profile integration
   let theme: TeachingTheme = options.theme ?? 'dark';
   let snapshot: ElectrificationSnapshot | null = null;
   let cssWidth = 1280;
@@ -82,11 +81,7 @@ export function createElectrificationView(
       resizeCanvas();
       if (snapshot) drawScene(snapshot);
     },
-    setMode(nextMode: TeachingMode, hints?: DemoRenderHints): void {
-      _mode = nextMode;
-      if (hints) {
-        demoHints = hints;
-      }
+    setMode(_nextMode: TeachingMode, _hints?: DemoRenderHints): void {
       if (snapshot) drawScene(snapshot);
     },
     setTheme(nextTheme: TeachingTheme): void {

@@ -4,7 +4,7 @@
  */
 
 import type { SceneLifecycle } from '../types';
-import type { DemoRenderHints } from '../../app/demo-profile';
+import type { DemoRenderHints } from '../../platform/demo-profile';
 import { projectileMeta } from './scene.meta';
 import {
   createProjectileSim,

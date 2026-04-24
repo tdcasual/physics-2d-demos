@@ -2,7 +2,7 @@ import type { SpringOscillatorSim } from './scene.sim';
 import type { TeachingMode } from '../../platform/standards';
 import type { TeachingTheme } from '../../platform/standards';
 import { setCanvasSize } from '../../core/unified-canvas';
-import { sizeCanvasToFill, getResponsiveScale } from '../../core/canvas-sizing';
+import { sizeCanvasToFill } from '../../core/canvas-sizing';
 import { Colors } from '../../core/colors';
 import { drawOscillatorCell } from './renderer/draw-oscillator';
 import {
@@ -14,7 +14,7 @@ import {
 } from './renderer/draw-graph';
 import type { ClickArea } from './renderer/types';
 
-import type { DemoRenderHints } from '../../app/demo-profile';
+import type { DemoRenderHints } from '../../platform/demo-profile';
 
 export type SpringOscillatorViewOptions = {
   graphCanvas?: HTMLCanvasElement;
@@ -31,16 +31,6 @@ function getDeviceType(canvasWidth: number): 'mobile' | 'tablet' | 'desktop' {
   if (canvasWidth < 420) return 'mobile';
   if (canvasWidth < 640) return 'tablet';
   return 'desktop';
-}
-
-// 响应式尺寸配置（基于 responsiveScale 的连续缩放）
-function getResponsiveSizes(responsiveScale: number) {
-  return {
-    displacementScale: Math.max(1.5, 4 * responsiveScale),
-    ballRadius: Math.max(10, Math.round(22 * responsiveScale)),
-    labelFontSize: Math.max(10, Math.round(12 * responsiveScale)),
-    paramFontSize: Math.max(8, Math.round(9 * responsiveScale))
-  };
 }
 
 // 计算布局（按设备宽度决定列数）
@@ -74,7 +64,7 @@ export function createSpringOscillatorView(
   let sim = options.sim ?? null;
 
   let theme: TeachingTheme = options.theme ?? 'dark';
-  let demoHints: DemoRenderHints | null = options.demoHints ?? null;
+  // demoHints reserved for future demo profile integration
   let onToggleOscillator = options.onToggleOscillator;
 
   let graphWidth = 400;
@@ -298,10 +288,8 @@ export function createSpringOscillatorView(
       resizeStageCanvas();
     },
 
-    setMode(_mode?: TeachingMode, hints?: DemoRenderHints): void {
-      if (hints) {
-        demoHints = hints;
-      }
+    setMode(_mode?: TeachingMode, _hints?: DemoRenderHints): void {
+      // no-op for now
     },
 
     setTheme(nextTheme: TeachingTheme): void {

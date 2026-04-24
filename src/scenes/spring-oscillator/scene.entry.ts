@@ -2,7 +2,7 @@ import { createSpringOscillatorSim, type OscillatorParams } from './scene.sim';
 import { createSpringOscillatorView, type SpringOscillatorViewOptions } from './scene.view';
 
 import type { TeachingMode } from '../../platform/standards';
-import type { DemoRenderHints } from '../../app/demo-profile';
+import type { DemoRenderHints } from '../../platform/demo-profile';
 
 export type CreateSpringOscillatorSceneOptions = {
   graphCanvas?: HTMLCanvasElement;

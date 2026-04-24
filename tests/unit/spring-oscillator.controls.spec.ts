@@ -16,7 +16,6 @@ describe('spring-oscillator controls', () => {
 
   it('creates control DOM structure', () => {
     const { mount } = setup();
-    const cards = mount.querySelectorAll('[class*="control-card"]');
     // 至少有一个控制卡片
     expect(mount.children.length).toBeGreaterThanOrEqual(1);
   });

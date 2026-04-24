@@ -1,4 +1,4 @@
-import type { FieldLinePath, PixelCharge } from './types';
+import type { FieldLinePath } from './types';
 
 /**
  * 绘制连续电场线

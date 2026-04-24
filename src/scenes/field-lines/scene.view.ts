@@ -1,7 +1,7 @@
 import type { TeachingMode } from '../../platform/standards';
 import { getRenderTokens } from '../../platform/standards';
 import type { TeachingTheme } from '../../platform/standards';
-import type { DemoRenderHints } from '../../app/demo-profile';
+import type { DemoRenderHints } from '../../platform/demo-profile';
 import { sizeCanvasToFill } from '../../core/canvas-sizing';
 import type { FieldLinesSnapshot } from './scene.sim';
 import { generateFieldLines } from './renderer/trace-field';

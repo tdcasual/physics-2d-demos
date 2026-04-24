@@ -6,14 +6,14 @@
 import type { ProjectileState } from './scene.sim';
 import { sizeCanvasToFill } from '../../core/canvas-sizing';
 // keep unified-canvas import for right-stage-readability contract
-import { drawGrid } from '../../core/unified-canvas';
+// drawGrid reserved for future grid background feature
 import { buildCoordSystem, computeWorldBounds } from './renderer/coords';
 import { drawBackground } from './renderer/draw-background';
 import { drawAxes } from './renderer/draw-axes';
 import { drawTrajectory } from './renderer/draw-trajectory';
 import { drawProjectile } from './renderer/draw-projectile';
 
-import type { DemoRenderHints } from '../../app/demo-profile';
+import type { DemoRenderHints } from '../../platform/demo-profile';
 
 export type CreateProjectileViewOptions = {
   canvas: HTMLCanvasElement;
@@ -25,8 +25,7 @@ export type CreateProjectileViewOptions = {
 export function createProjectileView(options: CreateProjectileViewOptions) {
   const canvas = options.canvas ?? document.createElement('canvas');
   let theme: 'light' | 'dark' = options.theme ?? 'dark';
-  let mode: 'normal' | 'presentation' = options.mode ?? 'normal';
-  let demoHints: DemoRenderHints | null = options.demoHints ?? null;
+  // mode / demoHints reserved for future demo profile integration
   let ctx: CanvasRenderingContext2D | null = null;
   let width = 0;
   let height = 0;
@@ -84,11 +83,8 @@ export function createProjectileView(options: CreateProjectileViewOptions) {
     setTheme(newTheme: 'light' | 'dark') {
       theme = newTheme;
     },
-    setMode(newMode: 'normal' | 'presentation', hints?: DemoRenderHints) {
-      mode = newMode;
-      if (hints) {
-        demoHints = hints;
-      }
+    setMode(_newMode: 'normal' | 'presentation', _hints?: DemoRenderHints) {
+      // no-op for now
     },
     dispose() {
       trail = [];
