@@ -18,8 +18,6 @@ export type CreateFieldLinesViewOptions = {
   theme?: TeachingTheme;
 };
 
-let _cachedScale = 1;
-
 function getVisuals(scale: number = 1.0): VisualConfig {
   const tokens = getRenderTokens(scale).rightStage;
   return {
@@ -60,6 +58,7 @@ export function createFieldLinesView(
   let snapshot: FieldLinesSnapshot | null = null;
   let cssWidth = 1280;
   let cssHeight = 720;
+  let cachedScale = 1;
 
   function resizeCanvas(): void {
     if (!canvas) return;
@@ -68,7 +67,7 @@ export function createFieldLinesView(
     const rect = canvas.getBoundingClientRect();
     cssWidth = Math.max(200, Math.floor(rect.width || 1280));
     cssHeight = Math.max(150, Math.floor(rect.height || 720));
-    _cachedScale = parseFloat(canvas.dataset.responsiveScale || '1');
+    cachedScale = parseFloat(canvas.dataset.responsiveScale || '1');
   }
 
   function getScale(): number {
@@ -77,7 +76,7 @@ export function createFieldLinesView(
 
   function toPixelCharges(next: FieldLinesSnapshot): PixelCharge[] {
     const visuals = getVisuals(getScale());
-    const s = _cachedScale;
+    const s = cachedScale;
     return next.charges.map((charge) => ({
       x: charge.x * cssWidth,
       y: charge.y * cssHeight,
@@ -94,7 +93,7 @@ export function createFieldLinesView(
     const colors = THEME_CONFIG[theme];
     const charges = toPixelCharges(next);
     const density = Math.max(1, Math.min(100, Math.round(next.params.density)));
-    const s = _cachedScale;
+    const s = cachedScale;
     const isDark = theme === 'dark';
 
     // 1. 纯色背景

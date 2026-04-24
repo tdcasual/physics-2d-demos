@@ -22,6 +22,31 @@ interface UseThemeReturn {
 }
 
 const STORAGE_KEY = 'physics-lab-theme';
+const THEME_SCHEMA_VERSION = 1;
+
+interface ThemeStorageSchema {
+  v: number;
+  theme: Theme;
+}
+
+function migrateThemeStorage(raw: string | null): Theme | null {
+  if (!raw) return null;
+  // 兼容旧版：直接存储的原始字符串
+  if (raw === 'light' || raw === 'dark' || raw === 'system') {
+    return raw;
+  }
+  try {
+    const parsed = JSON.parse(raw) as ThemeStorageSchema;
+    if (parsed.v === THEME_SCHEMA_VERSION && parsed.theme) {
+      if (['light', 'dark', 'system'].includes(parsed.theme)) {
+        return parsed.theme;
+      }
+    }
+  } catch {
+    // 数据损坏，忽略
+  }
+  return null;
+}
 
 export function useTheme(): UseThemeReturn {
   // 初始化主题
@@ -29,10 +54,8 @@ export function useTheme(): UseThemeReturn {
     if (typeof window === 'undefined') return 'system';
     
     try {
-      const stored = localStorage.getItem(STORAGE_KEY) as Theme;
-      if (stored && ['light', 'dark', 'system'].includes(stored)) {
-        return stored;
-      }
+      const stored = migrateThemeStorage(localStorage.getItem(STORAGE_KEY));
+      if (stored) return stored;
     } catch {
       // 忽略 localStorage 错误
     }
@@ -65,7 +88,11 @@ export function useTheme(): UseThemeReturn {
     setThemeState(newTheme);
     
     try {
-      localStorage.setItem(STORAGE_KEY, newTheme);
+      const payload: ThemeStorageSchema = {
+        v: THEME_SCHEMA_VERSION,
+        theme: newTheme
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     } catch {
       // 忽略 localStorage 错误
     }

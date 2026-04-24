@@ -225,10 +225,18 @@ describe('saveLayoutPreference', () => {
     }
   });
 
-  it('should save to localStorage', () => {
+  it('should save to localStorage as versioned schema', () => {
     saveLayoutPreference('my-layout');
-    expect(localStorage.getItem('physics-demos-preferred-layout')).toBe(
-      'my-layout'
-    );
+    const raw = localStorage.getItem('physics-demos-preferred-layout');
+    expect(raw).toBeTruthy();
+    const parsed = JSON.parse(raw!);
+    expect(parsed.v).toBe(1);
+    expect(parsed.layoutId).toBe('my-layout');
+  });
+
+  it('should migrate old plain string preference', () => {
+    layoutRegistry.register('legacy', FakeLayout, fakeMeta);
+    localStorage.setItem('physics-demos-preferred-layout', 'legacy');
+    expect(getDefaultLayoutId()).toBe('legacy');
   });
 });

@@ -184,11 +184,38 @@ export function registerLayout(
  * 获取默认布局ID
  * 如果用户有偏好设置，返回偏好布局；否则返回第一个可用布局
  */
+const LAYOUT_PREF_KEY = 'physics-demos-preferred-layout';
+const LAYOUT_SCHEMA_VERSION = 1;
+
+interface LayoutPrefSchema {
+  v: number;
+  layoutId: string;
+}
+
+function migrateLayoutPref(raw: string | null): string | null {
+  if (!raw) return null;
+  // 兼容旧版：直接存储的 layoutId 字符串
+  if (layoutRegistry.has(raw)) {
+    return raw;
+  }
+  try {
+    const parsed = JSON.parse(raw) as LayoutPrefSchema;
+    if (parsed.v === LAYOUT_SCHEMA_VERSION && parsed.layoutId) {
+      if (layoutRegistry.has(parsed.layoutId)) {
+        return parsed.layoutId;
+      }
+    }
+  } catch {
+    // 数据损坏，忽略
+  }
+  return null;
+}
+
 export function getDefaultLayoutId(): string | null {
   // 尝试从 localStorage 读取用户偏好
   try {
-    const userPref = localStorage.getItem('physics-demos-preferred-layout');
-    if (userPref && layoutRegistry.has(userPref)) {
+    const userPref = migrateLayoutPref(localStorage.getItem(LAYOUT_PREF_KEY));
+    if (userPref) {
       return userPref;
     }
   } catch {
@@ -206,7 +233,11 @@ export function getDefaultLayoutId(): string | null {
  */
 export function saveLayoutPreference(layoutId: string): void {
   try {
-    localStorage.setItem('physics-demos-preferred-layout', layoutId);
+    const payload: LayoutPrefSchema = {
+      v: LAYOUT_SCHEMA_VERSION,
+      layoutId
+    };
+    localStorage.setItem(LAYOUT_PREF_KEY, JSON.stringify(payload));
   } catch {
     // localStorage 不可用，忽略
   }
