@@ -30,10 +30,11 @@ function formatReadout(snapshot: EmfAnalogySnapshot): ReadoutItem[] {
 
 bootScenePage({
   meta: emfAnalogyMeta,
-  createScene: ({ canvas, theme, mode }) => {
+  createScene: ({ canvas, theme, mode, demoHints }) => {
     const scene = createEmfAnalogyScene({
       canvas,
       mode,
+      demoHints,
       theme,
       onReadout: () => {}
     });

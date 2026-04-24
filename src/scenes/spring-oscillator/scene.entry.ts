@@ -1,9 +1,14 @@
 import { createSpringOscillatorSim, type OscillatorParams } from './scene.sim';
 import { createSpringOscillatorView, type SpringOscillatorViewOptions } from './scene.view';
 
+import type { TeachingMode } from '../../platform/standards';
+import type { DemoRenderHints } from '../../app/demo-profile';
+
 export type CreateSpringOscillatorSceneOptions = {
   graphCanvas?: HTMLCanvasElement;
   stageCanvas?: HTMLCanvasElement;
+  mode?: TeachingMode;
+  demoHints?: DemoRenderHints;
 };
 
 export function createSpringOscillatorScene(options: CreateSpringOscillatorSceneOptions = {}) {
@@ -72,6 +77,8 @@ export function createSpringOscillatorScene(options: CreateSpringOscillatorScene
     graphCanvas: options.graphCanvas,
     stageCanvas: options.stageCanvas,
     sim,
+    mode: options.mode ?? 'normal',
+    demoHints: options.demoHints,
     onToggleOscillator: handleToggleOscillator
   };
   
@@ -108,8 +115,8 @@ export function createSpringOscillatorScene(options: CreateSpringOscillatorScene
       view.resize();
     },
 
-    setMode(): void {
-      view.setMode();
+    setMode(mode?: TeachingMode, hints?: DemoRenderHints): void {
+      view.setMode(mode, hints);
     },
 
     setTheme(theme: 'dark' | 'light'): void {

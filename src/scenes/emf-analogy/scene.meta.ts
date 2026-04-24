@@ -1,20 +1,35 @@
 import type { SceneMeta } from '../types';
+import type { SceneDemoProfile } from '../../app/demo-profile';
+
+export const demoProfile: SceneDemoProfile = {
+  controlPanel: 'collapsed',
+  readoutPanel: 'docked-bottom',
+  renderHints: {
+    contentScale: 1.5
+  },
+  interactionHints: {
+    touchTargetMinSize: 48
+  }
+};
 
 export const emfAnalogyMeta: SceneMeta = {
   id: 'emf-analogy',
-  title: '电路水流类比',
+  title: '电磁感应-水路类比',
   path: '/src/pages/emf-analogy.html',
   subject: '电磁学',
-  concept: '闭合电路',
-  subConcepts: ['路端电压', '内电压'],
-  keywords: ['电磁学', '电路', '电动势', '2D'],
-  objective: '用水流类比演示电流、内阻压降与路端电压关系',
-  description: '用熟悉理解陌生，将电磁现象与日常生活类比',
-  difficulty: 3,
-  icon: '🔗',
+  concept: '电磁感应',
+  subConcepts: ['电路', '水路类比'],
+  keywords: ['电磁学', '电磁感应', '类比'],
+  objective: '通过水路类比理解电磁感应的基本原理',
+  description: '用水路系统类比电路，直观理解电磁感应',
+  difficulty: 2,
+  icon: '💧',
   category: 'electromagnetism',
   featured: false,
   defaultParams: {
-    opening: 0.5
-  }
+    B: 1,
+    v: 2,
+    L: 1
+  },
+  demoProfile
 };

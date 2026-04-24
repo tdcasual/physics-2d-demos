@@ -1,20 +1,34 @@
 import type { SceneMeta } from '../types';
+import type { SceneDemoProfile } from '../../app/demo-profile';
+
+export const demoProfile: SceneDemoProfile = {
+  controlPanel: 'collapsed',
+  readoutPanel: 'docked-bottom',
+  renderHints: {
+    contentScale: 1.7
+  },
+  interactionHints: {
+    touchTargetMinSize: 48
+  }
+};
 
 export const vtIntegralMeta: SceneMeta = {
   id: 'vt-integral',
-  title: '微元法演示',
+  title: '微元法',
   path: '/src/pages/vt-integral.html',
-  subject: '力学',
+  subject: '数学方法',
   concept: '积分思想',
-  subConcepts: ['面积法', '微元累积'],
-  keywords: ['力学', '微元法', '多场景', '2D'],
+  subConcepts: ['黎曼和', '面积逼近'],
+  keywords: ['数学', '微元法', '积分'],
   objective: '展示积分逼近、曲线逼近与体积逼近的多场景演示',
-  description: '微积分与物理的交汇，图像法求解运动学问题',
+  description: '通过可视化理解微积分的基本思想',
   difficulty: 3,
-  icon: '📊',
+  icon: '📐',
   category: 'method',
-  featured: false,
+  featured: true,
   defaultParams: {
+    n: 10,
     scene: 1
-  }
+  },
+  demoProfile
 };

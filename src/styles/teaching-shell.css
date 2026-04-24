@@ -555,6 +555,12 @@
    演示模式
    ======================================== */
 .teaching-demo[data-mode='presentation'] .stage-toolbar {
+  @apply absolute right-0 top-0 z-50 border-0 bg-transparent p-0;
+  width: auto;
+}
+
+.teaching-demo[data-mode='presentation'] .stage-toolbar .sidebar-toggle,
+.teaching-demo[data-mode='presentation'] .stage-toolbar .shell-theme-toggle {
   @apply hidden;
 }
 

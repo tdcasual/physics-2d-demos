@@ -1,4 +1,17 @@
 import type { SceneMeta } from '../types';
+import type { SceneDemoProfile } from '../../app/demo-profile';
+
+export const demoProfile: SceneDemoProfile = {
+  controlPanel: 'minimal',
+  readoutPanel: 'overlay',
+  renderHints: {
+    contentScale: 1.5
+  },
+  interactionHints: {
+    touchTargetMinSize: 48,
+    visibleControlKeys: ['v0', 'angle', 'preset']
+  }
+};
 
 export const projectileMeta: SceneMeta = {
   id: 'projectile',
@@ -6,20 +19,18 @@ export const projectileMeta: SceneMeta = {
   path: '/src/pages/projectile.html',
   subject: '力学',
   concept: '曲线运动',
-  subConcepts: ['速度分解', '轨迹方程'],
-  keywords: ['力学', '抛体', '二维'],
+  subConcepts: ['初速度', '抛射角'],
+  keywords: ['力学', '抛体运动', '2D'],
   objective: '演示初速度与重力对轨迹的影响',
-  description: '探索抛物线轨迹的奥秘，理解水平与竖直运动的独立性',
+  description: '探索抛体运动的奥秘，理解初速度和角度的影响',
   difficulty: 2,
   icon: '🎯',
   category: 'mechanics',
   featured: true,
   defaultParams: {
-    speed: 18,
-    angleDeg: 45,
-    gravity: 9.8,
-    initialHeight: 0,
-    windAccel: 0,
-    drag: 0.02
-  }
+    v0: 20,
+    angle: 45,
+    g: 9.8
+  },
+  demoProfile
 };

@@ -62,10 +62,11 @@ function formatReadout(
 
 bootScenePage({
   meta: vtIntegralMeta,
-  createScene: ({ canvas, theme, mode }) => {
+  createScene: ({ canvas, theme, mode, demoHints }) => {
     const scene = createVtIntegralScene({
       canvas,
       mode,
+      demoHints,
       theme,
       onReadout: () => {}
     });
@@ -82,9 +83,9 @@ bootScenePage({
         return formatReadout(scene.getSnapshot(), currentMode);
       },
       subscribe,
-      setMode(m: 'normal' | 'presentation') {
+      setMode(m: 'normal' | 'presentation', hints?: unknown) {
         currentMode = m;
-        scene.setMode(m);
+        scene.setMode(m, hints as Parameters<typeof scene.setMode>[1]);
         notify();
       },
       setTheme(t: Theme) {

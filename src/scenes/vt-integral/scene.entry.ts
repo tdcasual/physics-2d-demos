@@ -1,5 +1,6 @@
 import type { TeachingMode } from '../../platform/standards';
 import type { TeachingTheme } from '../../platform/standards';
+import type { DemoRenderHints } from '../../app/demo-profile';
 import type { SceneLifecycle } from '../types';
 import {
   createVtIntegralSim,
@@ -12,6 +13,7 @@ import { createVtIntegralView } from './scene.view';
 export type CreateVtIntegralSceneOptions = {
   canvas?: HTMLCanvasElement;
   mode?: TeachingMode;
+  demoHints?: DemoRenderHints;
   theme?: TeachingTheme;
   onReadout?: (snapshot: VtIntegralSnapshot) => void;
 };
@@ -20,7 +22,7 @@ export function createVtIntegralScene(
   options: CreateVtIntegralSceneOptions = {}
 ): SceneLifecycle & {
   resize(): void;
-  setMode(mode: TeachingMode): void;
+  setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
   setTheme(theme: TeachingTheme): void;
   setScene(scene: VtScene): void;
   setRects(value: number): void;
@@ -34,6 +36,7 @@ export function createVtIntegralScene(
   const view = createVtIntegralView({
     canvas: options.canvas,
     mode: options.mode ?? 'normal',
+    demoHints: options.demoHints,
     theme: options.theme ?? 'dark'
   });
 
@@ -62,8 +65,8 @@ export function createVtIntegralScene(
       view.resize();
       renderAndEmit();
     },
-    setMode(mode: TeachingMode): void {
-      view.setMode(mode);
+    setMode(mode: TeachingMode, hints?: DemoRenderHints): void {
+      view.setMode(mode, hints);
       renderAndEmit();
     },
     setTheme(theme: TeachingTheme): void {

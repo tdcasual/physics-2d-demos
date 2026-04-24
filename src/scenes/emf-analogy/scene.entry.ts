@@ -1,5 +1,6 @@
 import type { TeachingMode } from '../../platform/standards';
 import type { TeachingTheme } from '../../platform/standards';
+import type { DemoRenderHints } from '../../app/demo-profile';
 import type { SceneLifecycle } from '../types';
 import { createEmfAnalogySim, type EmfAnalogySnapshot } from './scene.sim';
 import { createEmfAnalogyView, type EmfViewMode } from './scene.view';
@@ -7,6 +8,7 @@ import { createEmfAnalogyView, type EmfViewMode } from './scene.view';
 export type CreateEmfAnalogySceneOptions = {
   canvas?: HTMLCanvasElement;
   mode?: TeachingMode;
+  demoHints?: DemoRenderHints;
   theme?: TeachingTheme;
   onReadout?: (snapshot: EmfAnalogySnapshot) => void;
 };
@@ -30,6 +32,7 @@ export function createEmfAnalogyScene(
   const view = createEmfAnalogyView({
     canvas: options.canvas,
     mode: options.mode ?? 'normal',
+    demoHints: options.demoHints,
     theme: options.theme ?? 'dark'
   });
 
@@ -58,8 +61,8 @@ export function createEmfAnalogyScene(
       view.resize();
       renderAndEmit();
     },
-    setMode(mode: TeachingMode): void {
-      view.setMode(mode);
+    setMode(mode: TeachingMode, hints?: DemoRenderHints): void {
+      view.setMode(mode, hints);
       renderAndEmit();
     },
     setTheme(theme: TeachingTheme): void {

@@ -377,17 +377,13 @@ export class SceneAdapter<
     }
 
     // 2. 应用/恢复演示配置
+    const layoutEl = document.querySelector('.layout-master') as
+      | (HTMLElement & { __layout?: { applyDemoProfile?: (p: SceneDemoProfile) => void; resetDemoProfile?: () => void } })
+      | null;
     if (profile && mode === 'presentation') {
-      // 通过 SceneContainer 获取当前布局并应用 profile
-      const layoutMaster = document.querySelector('.layout-master') as
-        | (HTMLElement & { applyDemoProfile?: (p: SceneDemoProfile) => void })
-        | null;
-      layoutMaster?.applyDemoProfile?.(profile);
+      layoutEl?.__layout?.applyDemoProfile?.(profile);
     } else if (mode === 'normal') {
-      const layoutMaster = document.querySelector('.layout-master') as
-        | (HTMLElement & { resetDemoProfile?: () => void })
-        | null;
-      layoutMaster?.resetDemoProfile?.();
+      layoutEl?.__layout?.resetDemoProfile?.();
     }
 
     // 3. 通知场景

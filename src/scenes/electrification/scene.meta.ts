@@ -1,20 +1,33 @@
 import type { SceneMeta } from '../types';
+import type { SceneDemoProfile } from '../../app/demo-profile';
+
+export const demoProfile: SceneDemoProfile = {
+  controlPanel: 'hidden',
+  readoutPanel: 'docked-bottom',
+  renderHints: {
+    contentScale: 1.6
+  },
+  interactionHints: {
+    touchTargetMinSize: 48
+  }
+};
 
 export const electrificationMeta: SceneMeta = {
   id: 'electrification',
-  title: '静电起电演示',
+  title: '静电起电',
   path: '/src/pages/electrification.html',
   subject: '电磁学',
-  concept: '电荷转移',
+  concept: '静电现象',
   subConcepts: ['摩擦起电', '感应起电'],
-  keywords: ['电磁学', '静电', '起电', '2D'],
+  keywords: ['电磁学', '静电', '起电'],
   objective: '演示摩擦、感应、接触起电的步骤与结果',
   description: '摩擦起电与静电感应的原理演示',
   difficulty: 1,
-  icon: '🔋',
+  icon: '⚡',
   category: 'electromagnetism',
   featured: false,
   defaultParams: {
-    scene: 0
-  }
+    step: 0
+  },
+  demoProfile
 };

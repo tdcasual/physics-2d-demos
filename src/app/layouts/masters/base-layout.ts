@@ -85,6 +85,9 @@ export abstract class BaseLayout implements LayoutMaster {
     // 添加根类名
     this.container.classList.add('layout-master', `layout-${this.id}`);
 
+    // 将布局实例附加到 DOM 元素，供外部（如 SceneAdapter）访问
+    (this.container as HTMLElement & { __layout?: BaseLayout }).__layout = this;
+
     // 设置初始主题
     this.setTheme(this.currentTheme);
 
@@ -106,6 +109,7 @@ export abstract class BaseLayout implements LayoutMaster {
     this.container.replaceChildren();
     this.container.classList.remove('layout-master', `layout-${this.id}`);
     this.container.removeAttribute('data-theme');
+    delete (this.container as HTMLElement & { __layout?: BaseLayout }).__layout;
 
     // 清空槽位引用
     this.slots = {};

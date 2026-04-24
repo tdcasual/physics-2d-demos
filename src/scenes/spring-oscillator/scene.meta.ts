@@ -1,4 +1,17 @@
 import type { SceneMeta } from '../types';
+import type { SceneDemoProfile } from '../../app/demo-profile';
+
+export const demoProfile: SceneDemoProfile = {
+  controlPanel: 'collapsed',
+  readoutPanel: 'hidden',
+  graphPanel: 'visible',
+  renderHints: {
+    contentScale: 1.5
+  },
+  interactionHints: {
+    touchTargetMinSize: 48
+  }
+};
 
 export const springOscillatorMeta: SceneMeta = {
   id: 'spring-oscillator',
@@ -6,17 +19,18 @@ export const springOscillatorMeta: SceneMeta = {
   path: '/src/pages/spring-oscillator.html',
   subject: '力学',
   concept: '简谐运动',
-  subConcepts: ['相位关系', '周期与频率'],
-  keywords: ['力学', '弹簧', '简谐运动', '相位', '周期'],
+  subConcepts: ['相位', '同相'],
+  keywords: ['力学', '弹簧振子', '简谐运动'],
   objective: '演示弹簧振子的简谐运动，理解相位、同相与反相的概念',
-  description: '探索简谐运动的韵律，周期与频率的美妙关系',
+  description: '观察弹簧振子的运动规律，探索相位的奥秘',
   difficulty: 2,
-  icon: '🌀',
+  icon: '🔄',
   category: 'mechanics',
   featured: true,
   defaultParams: {
     k: 10,
     m: 1,
-    x0: 5
-  }
+    A: 5
+  },
+  demoProfile
 };

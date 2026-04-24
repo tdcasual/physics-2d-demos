@@ -199,4 +199,98 @@ describe('MobileStackLayout', () => {
     expect(layout.getSlot('animation')).toBeTruthy();
     expect(layout.getSlots().animation).toBeTruthy();
   });
+
+  describe('demo profile', () => {
+    it('should hide control section when controlPanel is hidden', () => {
+      const { container, layout } = createLayout();
+      layout.render(container);
+
+      layout.applyDemoProfile({
+        controlPanel: 'hidden',
+        readoutPanel: 'hidden',
+        renderHints: { contentScale: 1.5 }
+      });
+
+      const controlSection = container.querySelector('.mobile-control-section');
+      expect((controlSection as HTMLElement).style.display).toBe('none');
+    });
+
+    it('should collapse control section when controlPanel is collapsed', () => {
+      const { container, layout } = createLayout();
+      layout.render(container);
+
+      layout.applyDemoProfile({
+        controlPanel: 'collapsed',
+        readoutPanel: 'hidden',
+        renderHints: { contentScale: 1.5 }
+      });
+
+      const controlSection = container.querySelector('.mobile-control-section');
+      expect(controlSection?.classList.contains('is-collapsed-demo')).toBe(true);
+    });
+
+    it('should hide readout bar when readoutPanel is hidden', () => {
+      const { container, layout } = createLayout();
+      layout.render(container);
+
+      layout.applyDemoProfile({
+        controlPanel: 'full',
+        readoutPanel: 'hidden',
+        renderHints: { contentScale: 1.5 }
+      });
+
+      const readoutBar = container.querySelector('.mobile-readout-bar');
+      expect((readoutBar as HTMLElement).style.display).toBe('none');
+    });
+
+    it('should apply overlay style to readout bar', () => {
+      const { container, layout } = createLayout();
+      layout.render(container);
+
+      layout.applyDemoProfile({
+        controlPanel: 'full',
+        readoutPanel: 'overlay',
+        renderHints: { contentScale: 1.5 }
+      });
+
+      const readoutBar = container.querySelector('.mobile-readout-bar');
+      expect(readoutBar?.classList.contains('is-overlay')).toBe(true);
+    });
+
+    it('should add touch optimization class', () => {
+      const { container, layout } = createLayout();
+      layout.render(container);
+
+      layout.applyDemoProfile({
+        controlPanel: 'full',
+        readoutPanel: 'hidden',
+        renderHints: { contentScale: 1.5 },
+        interactionHints: { touchTargetMinSize: 56 }
+      });
+
+      expect(container.classList.contains('demo-touch-optimized')).toBe(true);
+    });
+
+    it('should reset demo profile', () => {
+      const { container, layout } = createLayout();
+      layout.render(container);
+
+      layout.applyDemoProfile({
+        controlPanel: 'hidden',
+        readoutPanel: 'hidden',
+        renderHints: { contentScale: 1.5 }
+      });
+
+      layout.resetDemoProfile();
+
+      const controlSection = container.querySelector('.mobile-control-section');
+      expect((controlSection as HTMLElement).style.display).not.toBe('none');
+      expect(controlSection?.classList.contains('is-collapsed-demo')).toBe(false);
+
+      const readoutBar = container.querySelector('.mobile-readout-bar');
+      expect((readoutBar as HTMLElement).style.display).not.toBe('none');
+
+      expect(container.classList.contains('demo-touch-optimized')).toBe(false);
+    });
+  });
 });

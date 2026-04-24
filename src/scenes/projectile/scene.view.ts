@@ -13,16 +13,20 @@ import { drawAxes } from './renderer/draw-axes';
 import { drawTrajectory } from './renderer/draw-trajectory';
 import { drawProjectile } from './renderer/draw-projectile';
 
+import type { DemoRenderHints } from '../../app/demo-profile';
+
 export type CreateProjectileViewOptions = {
   canvas: HTMLCanvasElement;
   theme?: 'light' | 'dark';
   mode?: 'normal' | 'presentation';
+  demoHints?: DemoRenderHints;
 };
 
 export function createProjectileView(options: CreateProjectileViewOptions) {
   const canvas = options.canvas ?? document.createElement('canvas');
   let theme: 'light' | 'dark' = options.theme ?? 'dark';
   let mode: 'normal' | 'presentation' = options.mode ?? 'normal';
+  let demoHints: DemoRenderHints | null = options.demoHints ?? null;
   let ctx: CanvasRenderingContext2D | null = null;
   let width = 0;
   let height = 0;
@@ -80,9 +84,11 @@ export function createProjectileView(options: CreateProjectileViewOptions) {
     setTheme(newTheme: 'light' | 'dark') {
       theme = newTheme;
     },
-    setMode(newMode: 'normal' | 'presentation') {
+    setMode(newMode: 'normal' | 'presentation', hints?: DemoRenderHints) {
       mode = newMode;
-      void mode;
+      if (hints) {
+        demoHints = hints;
+      }
     },
     dispose() {
       trail = [];

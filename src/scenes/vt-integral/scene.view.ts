@@ -7,9 +7,12 @@ import { drawScene1 } from './renderer/draw-scene1';
 import { drawScene2 } from './renderer/draw-scene2';
 import { drawScene3 } from './renderer/draw-scene3';
 
+import type { DemoRenderHints } from '../../app/demo-profile';
+
 export type CreateVtIntegralViewOptions = {
   canvas?: HTMLCanvasElement;
   mode?: TeachingMode;
+  demoHints?: DemoRenderHints;
   theme?: TeachingTheme;
 };
 
@@ -34,6 +37,7 @@ export function createVtIntegralView(
   let canvas = options.canvas ?? null;
   let ctx = canvas?.getContext('2d') ?? null;
   let mode: TeachingMode = options.mode ?? 'normal';
+  let demoHints: DemoRenderHints | null = options.demoHints ?? null;
   let theme: TeachingTheme = options.theme ?? 'dark';
   let snapshot: VtIntegralSnapshot | null = null;
   let canvasWidth = 800;
@@ -95,8 +99,11 @@ export function createVtIntegralView(
       resizeCanvas();
       if (snapshot) draw(snapshot);
     },
-    setMode(nextMode: TeachingMode): void {
+    setMode(nextMode: TeachingMode, hints?: DemoRenderHints): void {
       mode = nextMode;
+      if (hints) {
+        demoHints = hints;
+      }
       if (snapshot) draw(snapshot);
     },
     setTheme(nextTheme: TeachingTheme): void {

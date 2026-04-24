@@ -4,6 +4,7 @@
  */
 
 import type { SceneLifecycle } from '../types';
+import type { DemoRenderHints } from '../../app/demo-profile';
 import { projectileMeta } from './scene.meta';
 import {
   createProjectileSim,
@@ -26,6 +27,7 @@ export type CreateProjectileSceneOptions = {
   canvas: HTMLCanvasElement;
   theme?: 'light' | 'dark';
   mode?: 'normal' | 'presentation';
+  demoHints?: DemoRenderHints;
   onReadout?: (state: ProjectileState) => void;
 };
 
@@ -74,7 +76,8 @@ export function createProjectileScene(
   const view = createProjectileView({
     canvas: options.canvas,
     theme: options.theme ?? 'dark',
-    mode: options.mode ?? 'normal'
+    mode: options.mode ?? 'normal',
+    demoHints: options.demoHints
   });
 
   const listeners: (() => void)[] = [];

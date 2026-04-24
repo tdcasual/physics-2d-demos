@@ -14,11 +14,14 @@ import {
 } from './renderer/draw-graph';
 import type { ClickArea } from './renderer/types';
 
+import type { DemoRenderHints } from '../../app/demo-profile';
+
 export type SpringOscillatorViewOptions = {
   graphCanvas?: HTMLCanvasElement;
   stageCanvas?: HTMLCanvasElement;
   sim?: SpringOscillatorSim;
   mode?: TeachingMode;
+  demoHints?: DemoRenderHints;
   theme?: TeachingTheme;
   onToggleOscillator?: (id: string) => void;
 };
@@ -71,6 +74,7 @@ export function createSpringOscillatorView(
   let sim = options.sim ?? null;
 
   let theme: TeachingTheme = options.theme ?? 'dark';
+  let demoHints: DemoRenderHints | null = options.demoHints ?? null;
   let onToggleOscillator = options.onToggleOscillator;
 
   let graphWidth = 400;
@@ -294,8 +298,10 @@ export function createSpringOscillatorView(
       resizeStageCanvas();
     },
 
-    setMode(): void {
-      // mode 预留
+    setMode(_mode?: TeachingMode, hints?: DemoRenderHints): void {
+      if (hints) {
+        demoHints = hints;
+      }
     },
 
     setTheme(nextTheme: TeachingTheme): void {

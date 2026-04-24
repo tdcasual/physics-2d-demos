@@ -5,9 +5,11 @@ import { createSpringOscillatorControls } from './controls';
 
 bootScenePage({
   meta: springOscillatorMeta,
-  createScene: ({ canvas }) => {
+  createScene: ({ canvas, mode, demoHints }) => {
     const scene = createSpringOscillatorScene({
-      stageCanvas: canvas
+      stageCanvas: canvas,
+      mode,
+      demoHints
     });
     return scene;
   },

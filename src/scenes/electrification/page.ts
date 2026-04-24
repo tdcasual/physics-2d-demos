@@ -27,10 +27,11 @@ function formatReadout(snapshot: ElectrificationSnapshot): ReadoutItem[] {
 
 bootScenePage({
   meta: electrificationMeta,
-  createScene: ({ canvas, theme, mode }) => {
+  createScene: ({ canvas, theme, mode, demoHints }) => {
     const scene = createElectrificationScene({
       canvas,
       mode,
+      demoHints,
       theme,
       onReadout: () => {}
     });

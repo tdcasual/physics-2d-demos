@@ -1,5 +1,6 @@
 import type { TeachingMode } from '../../platform/standards';
 import type { TeachingTheme } from '../../platform/standards';
+import type { DemoRenderHints } from '../../app/demo-profile';
 import type { SceneLifecycle } from '../types';
 import {
   createElectrificationSim,
@@ -11,6 +12,7 @@ import { createElectrificationView } from './scene.view';
 export type CreateElectrificationSceneOptions = {
   canvas?: HTMLCanvasElement;
   mode?: TeachingMode;
+  demoHints?: DemoRenderHints;
   theme?: TeachingTheme;
   onReadout?: (snapshot: ElectrificationSnapshot) => void;
 };
@@ -29,6 +31,7 @@ export function createElectrificationScene(
   const view = createElectrificationView({
     canvas: options.canvas,
     mode: options.mode ?? 'normal',
+    demoHints: options.demoHints,
     theme: options.theme ?? 'dark'
   });
 
@@ -57,8 +60,8 @@ export function createElectrificationScene(
       view.resize();
       renderAndEmit();
     },
-    setMode(mode: TeachingMode): void {
-      view.setMode(mode);
+    setMode(mode: TeachingMode, hints?: DemoRenderHints): void {
+      view.setMode(mode, hints);
       renderAndEmit();
     },
     setTheme(theme: TeachingTheme): void {

@@ -19,8 +19,8 @@ bootScenePage({
     hideHeader: true,
     readoutLabel: '数据区'
   },
-  createScene: ({ canvas, theme, mode }) => {
-    return createProjectileScene({ canvas, theme, mode });
+  createScene: ({ canvas, theme, mode, demoHints }) => {
+    return createProjectileScene({ canvas, theme, mode, demoHints });
   },
   createControls: ({ mount, scene }) => {
     const applyParam = createParamMapper<ProjectileParams>(
