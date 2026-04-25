@@ -7,6 +7,7 @@
  * @version 0.1.0
  */
 
+import { createEventEmitter, type EventEmitter } from './event-emitter';
 import {
   getBreakpoints,
   detectMobile,
@@ -36,10 +37,11 @@ import type {
   SceneContainerEvents
 } from './types';
 
-/** 事件监听器类型 */
-type EventListener<T> = (payload: T) => void;
-
-/** 场景容器实现类 */
+/**
+ * 场景容器实现类
+ *
+ * 管理场景和布局的协调，处理布局切换、主题切换、状态持久化
+ */
 export class SceneContainerImpl implements SceneContainer {
   readonly container: HTMLElement;
 
@@ -55,15 +57,10 @@ export class SceneContainerImpl implements SceneContainer {
   private _sceneUnsubscribers: (() => void)[] = [];
   private _layoutThemeHandler?: (e: Event) => void;
   private _layoutModeHandler?: (e: Event) => void;
-
-  // 事件监听器映射
-  private listeners: {
-    [K in keyof SceneContainerEvents]?: EventListener<
-      SceneContainerEvents[K]
-    >[];
-  } = {};
+  private _emitter: EventEmitter<SceneContainerEvents>;
 
   constructor(options: CreateContainerOptions) {
+    this._emitter = createEventEmitter<SceneContainerEvents>('SceneContainer');
     this.container = options.mount;
     this._storageKey = options.storageKey || 'physics-demos-container-state';
     this._onResize = options.onResize;
@@ -263,7 +260,7 @@ export class SceneContainerImpl implements SceneContainer {
     scene.mount?.();
 
     // 触发事件
-    this.emit('scene:mount', { sceneId: scene.id });
+    this._emitter.emit('scene:mount', { sceneId: scene.id });
   }
 
   /**
@@ -305,7 +302,7 @@ export class SceneContainerImpl implements SceneContainer {
     this._currentScene.unmount?.();
 
     // 触发事件
-    this.emit('scene:unmount', { sceneId: this._currentScene.id });
+    this._emitter.emit('scene:unmount', { sceneId: this._currentScene.id });
 
     this._currentScene = null;
   }
@@ -392,7 +389,7 @@ export class SceneContainerImpl implements SceneContainer {
 
     // 触发事件
     const event: LayoutChangeEvent = { from: fromId, to: layoutId, reason };
-    this.emit('layout:change', event);
+    this._emitter.emit('layout:change', event);
 
     // 保存用户偏好
     if (savePreference) {
@@ -431,7 +428,7 @@ export class SceneContainerImpl implements SceneContainer {
     this._currentLayout?.setTheme(theme);
 
     // 触发事件
-    this.emit('theme:change', { from: fromTheme, to: theme });
+    this._emitter.emit('theme:change', { from: fromTheme, to: theme });
 
     // 持久化状态
     this.persistState();
@@ -533,56 +530,16 @@ export class SceneContainerImpl implements SceneContainer {
     }, 300);
   }
 
-  /**
+/**
    * 添加事件监听
    */
   on<K extends keyof SceneContainerEvents>(
     event: K,
-    listener: EventListener<SceneContainerEvents[K]>
+    listener: (payload: SceneContainerEvents[K]) => void
   ): () => void {
-    if (!this.listeners[event]) {
-      this.listeners[event] = [];
-    }
-    this.listeners[event]!.push(listener);
-
-    // 返回取消订阅函数
-    return () => {
-      const list = this.listeners[event];
-      if (list) {
-        const index = list.indexOf(listener);
-        if (index > -1) {
-          list.splice(index, 1);
-        }
-      }
-    };
+    return this._emitter.on(event, listener);
   }
 
-  /**
-   * 触发事件
-   */
-  private emit<K extends keyof SceneContainerEvents>(
-    event: K,
-    payload: SceneContainerEvents[K]
-  ): void {
-    const list = this.listeners[event];
-    if (list) {
-      list.forEach((listener) => {
-        try {
-          listener(payload);
-        } catch (err) {
-          console.error(
-            `[SceneContainer] Event handler error for ${event}:`,
-            err
-          );
-        }
-      });
-    }
-  }
-
-  /**
-   * 获取当前布局的 slots
-   * 通过查询 DOM 获取已渲染的槽位
-   */
   /**
    * 销毁容器
    */
@@ -608,7 +565,7 @@ export class SceneContainerImpl implements SceneContainer {
     this.container.replaceChildren();
 
     // 清空监听器
-    this.listeners = {};
+    this._emitter.clear();
 
     // 清理 TransportBridge
     this._transportBridge.dispose();
