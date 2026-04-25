@@ -18,6 +18,7 @@ import type {
   SlotConfig,
   ReadoutItem
 } from '../../types';
+import { safely } from './utils/safe-execution';
 import { ThrottleDebounce } from './utils/throttle-debounce';
 import { GestureRecognizer } from './utils/gesture-recognizer';
 import { ThemeManager } from './utils/theme-manager';
@@ -60,7 +61,6 @@ export class MobileStackLayout extends BaseLayout {
   private debugManager: DebugPanelManager | null = null;
 
   // 状态
-  private eventCleanups: (() => void)[] = [];
   private resizeObserver: ResizeObserver | null = null;
 
   // 高级功能实例
@@ -82,32 +82,6 @@ export class MobileStackLayout extends BaseLayout {
     return { ...DEFAULT_CONFIG, ...(this.config as MobileStackConfig) };
   }
 
-  private safely<T>(
-    fn: () => T,
-    context: string,
-    defaultValue?: T
-  ): T | undefined {
-    try {
-      return fn();
-    } catch (e) {
-      console.error(`[MobileStackLayout] Error in ${context}:`, e);
-      return defaultValue;
-    }
-  }
-
-  private addEventListener<K extends keyof HTMLElementEventMap>(
-    element: HTMLElement | null,
-    type: K,
-    listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => void,
-    options?: boolean | AddEventListenerOptions
-  ): void {
-    if (!element) return;
-    element.addEventListener(type, listener as EventListener, options);
-    this.eventCleanups.push(() => {
-      element.removeEventListener(type, listener as EventListener, options);
-    });
-  }
-
   // ========================================================================
   // 渲染
   // ========================================================================
@@ -115,7 +89,7 @@ export class MobileStackLayout extends BaseLayout {
   render(container: HTMLElement): LayoutSlots {
     const cfg = this.getConfig();
 
-    const slots = this.safely<LayoutSlots>(() => {
+    const slots = safely<LayoutSlots>(() => {
       container.classList.add('mobile-stack-layout');
       container.setAttribute('data-theme', this.currentTheme);
 
@@ -324,13 +298,13 @@ export class MobileStackLayout extends BaseLayout {
     isPlaying?: () => boolean;
   }): void {
     const cfg = this.getConfig();
-    this.safely(() => {
+    safely(() => {
       this.transportManager?.render(cfg.controls, callbacks);
     }, 'setFloatingControls');
   }
 
   updateTransportState(state: { isPlaying?: boolean; speed?: number }): void {
-    this.safely(() => {
+    safely(() => {
       if (state.isPlaying !== undefined) {
         this.transportManager?.updatePlayState(state.isPlaying);
       }
@@ -343,7 +317,7 @@ export class MobileStackLayout extends BaseLayout {
 
   setReadout(items: Array<{ label: string; value: string | number }>): void {
     const cfg = this.getConfig();
-    this.safely(() => {
+    safely(() => {
       this.readoutManager?.setItems(items, cfg.maxReadoutItems);
     }, 'setReadout');
   }
@@ -377,7 +351,7 @@ export class MobileStackLayout extends BaseLayout {
   ): void {
     const config = cfg || this.getConfig();
 
-    this.safely(() => {
+    safely(() => {
       // 仅在 animation section 不是 auto-height 时调整高度
       if (
         this.animationSection &&
@@ -406,7 +380,7 @@ export class MobileStackLayout extends BaseLayout {
     const cfg = this.getConfig();
     if (!cfg.persistState || !cfg.stateKey) return;
 
-    this.safely(() => {
+    safely(() => {
       const state = {
         graphExpanded: this.graphManager?.isExpanded() ?? false,
         theme: this.themeManager?.getTheme(),
@@ -420,7 +394,7 @@ export class MobileStackLayout extends BaseLayout {
     const cfg = this.getConfig();
     if (!cfg.persistState || !cfg.stateKey) return;
 
-    this.safely(() => {
+    safely(() => {
       const saved = localStorage.getItem(cfg.stateKey);
       if (saved) {
         const state = JSON.parse(saved);
@@ -437,7 +411,7 @@ export class MobileStackLayout extends BaseLayout {
   // ========================================================================
 
   async unmount(): Promise<void> {
-    await this.safely(async () => {
+    await safely(async () => {
       this.gestureRecognizer?.destroy();
       this.gestureRecognizer = null;
 
@@ -464,9 +438,6 @@ export class MobileStackLayout extends BaseLayout {
 
       this.debugManager?.destroy();
       this.debugManager = null;
-
-      this.eventCleanups.forEach((cleanup) => cleanup());
-      this.eventCleanups = [];
 
       this.scrollContainer = null;
       this.controlsBar = null;
