@@ -105,6 +105,12 @@ export class SplitRightLayout extends BaseLayout {
     this.leftRatio = cfg.defaultLeftRatio ?? 0.38;
   }
 
+  /**
+   * 渲染 split-right 布局结构
+   *
+   * 构建左侧面板（控制区 + 图表区）、分隔条、右侧面板
+   *（工具栏 + 动画区 + 读数面板）的完整 DOM 树。
+   */
   render(container: HTMLElement): LayoutSlots {
     const cfg = this.config as SplitRightConfig;
     const hasGraph = cfg.hasGraph !== false; // 默认 true
@@ -337,6 +343,7 @@ export class SplitRightLayout extends BaseLayout {
     };
   }
 
+  /** 绑定布局内所有交互事件（分隔条拖拽、折叠按钮等） */
   private bindEvents(): void {
     // 先清理旧监听器（防止 render 被多次调用时累积）
     this.eventCleanups.forEach((cleanup) => cleanup());
@@ -547,6 +554,7 @@ export class SplitRightLayout extends BaseLayout {
     }
   }
 
+  /** 处理视口大小变化，调整布局比例与紧凑模式 */
   handleResize(width: number): void {
     const mobileBreakpoint = this.config.mobileBreakpoint || 768;
     const tabletBreakpoint = this.config.tabletBreakpoint || 1024;
@@ -597,6 +605,7 @@ export class SplitRightLayout extends BaseLayout {
     }
   }
 
+  /** 切换明暗主题，同步到所有子组件 */
   setTheme(theme: Theme): void {
     this.currentTheme = theme;
     this.container.setAttribute('data-theme', theme);
@@ -611,6 +620,7 @@ export class SplitRightLayout extends BaseLayout {
     }
   }
 
+  /** 切换正常/演示模式 */
   setMode(mode: 'normal' | 'presentation'): void {
     this.mode = mode;
     this.container.setAttribute('data-mode', mode);
@@ -798,10 +808,12 @@ export class SplitRightLayout extends BaseLayout {
     });
   }
 
+  /** 更新读数面板数据项 */
   updateReadout(items: ReadoutItem[]): void {
     this.setReadout(items);
   }
 
+  /** 更新运输控制状态（播放/暂停/速度） */
   updateTransportState(state: TransportState): void {
     if (this.floatingControls?.setState) {
       this.floatingControls.setState(state);
@@ -873,10 +885,12 @@ export class SplitRightLayout extends BaseLayout {
     return this.leftRatio;
   }
 
+  /** 获取舞台 Canvas 元素 */
   getCanvas(): HTMLCanvasElement | null {
     return this.stageCanvas;
   }
 
+  /** 获取指定 slot 的配置信息 */
   getSlotConfig(slot: SlotName): SlotConfig | undefined {
     const cfg = this.config as SplitRightConfig;
 
