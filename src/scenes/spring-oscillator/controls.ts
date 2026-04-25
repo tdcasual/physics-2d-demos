@@ -21,6 +21,7 @@ export function createSpringOscillatorControls(
   options: SpringOscillatorControlsOptions
 ): SpringOscillatorControls {
   const { mount, scene, onStatus } = options;
+  const cleanups: Array<() => void> = [];
 
   mount.innerHTML = '';
 
@@ -51,7 +52,7 @@ export function createSpringOscillatorControls(
   listCard.body.appendChild(listContainer);
 
   // 添加按钮点击事件
-  addBtn.addEventListener('click', (e) => {
+  const onAddClick = (e: MouseEvent) => {
     e.stopPropagation();
     const newOsc = scene.addOscillator({
       k: 10 + Math.floor(Math.random() * 20),
@@ -62,7 +63,9 @@ export function createSpringOscillatorControls(
     renderOscillatorList();
     scene.render();
     onStatus?.(`添加振子 #${newOsc.id.slice(-4)}`);
-  });
+  };
+  addBtn.addEventListener('click', onAddClick);
+  cleanups.push(() => addBtn.removeEventListener('click', onAddClick));
 
   // ===== 2. 预设场景卡片 =====
   const presetCard = createControlCard('相位演示', { defaultCollapsed: false });
@@ -183,16 +186,23 @@ export function createSpringOscillatorControls(
       <span style="font-size: calc(15px * var(--ui-scale, 1)); font-weight: 700; color: var(--text-primary);">${btn.label}</span>
       <span style="font-size: calc(13px * var(--ui-scale, 1)); color: var(--text-secondary);">${btn.desc}</span>
     `;
-    button.addEventListener('click', btn.onClick);
-    button.addEventListener('mouseenter', () => {
+    const onBtnEnter = () => {
       button.style.background = 'var(--btn-hover-bg)';
       button.style.borderColor = 'var(--accent-color)';
       button.style.transform = 'translateY(-1px)';
-    });
-    button.addEventListener('mouseleave', () => {
+    };
+    const onBtnLeave = () => {
       button.style.background = 'var(--btn-bg)';
       button.style.borderColor = 'var(--border-color)';
       button.style.transform = 'none';
+    };
+    button.addEventListener('click', btn.onClick);
+    button.addEventListener('mouseenter', onBtnEnter);
+    button.addEventListener('mouseleave', onBtnLeave);
+    cleanups.push(() => {
+      button.removeEventListener('click', btn.onClick);
+      button.removeEventListener('mouseenter', onBtnEnter);
+      button.removeEventListener('mouseleave', onBtnLeave);
     });
     presetContainer.appendChild(button);
   });
@@ -440,6 +450,9 @@ export function createSpringOscillatorControls(
   return {
     refresh: renderOscillatorList,
     dispose: () => {
+      cleanups.forEach((c) => c());
+      listCard.dispose();
+      presetCard.dispose();
       mount.innerHTML = '';
     }
   };

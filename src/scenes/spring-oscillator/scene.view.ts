@@ -26,19 +26,20 @@ export type SpringOscillatorViewOptions = {
   onToggleOscillator?: (id: string) => void;
 };
 
-// 获取设备类型（仅用于网格布局和历史数据降采样）
-function getDeviceType(canvasWidth: number): 'mobile' | 'tablet' | 'desktop' {
-  if (canvasWidth < 420) return 'mobile';
-  if (canvasWidth < 640) return 'tablet';
+// 获取设备类型（基于 responsiveScale 的连续判断，避免像素边界跳变）
+function getDeviceType(responsiveScale: number): 'mobile' | 'tablet' | 'desktop' {
+  if (responsiveScale < 0.7) return 'mobile';
+  if (responsiveScale < 1.0) return 'tablet';
   return 'desktop';
 }
 
 // 计算布局（按设备宽度决定列数）
 function calculateGridLayout(
   total: number,
-  stageWidth: number
+  stageWidth: number,
+  scale: number
 ): { cols: number; rows: number } {
-  const deviceType = getDeviceType(stageWidth);
+  const deviceType = getDeviceType(scale);
 
   if (deviceType === 'mobile') {
     return { cols: 1, rows: total };
@@ -140,7 +141,7 @@ export function createSpringOscillatorView(
     }
 
     const total = sim.oscillators.length;
-    const layout = calculateGridLayout(total, stageWidth);
+    const layout = calculateGridLayout(total, stageWidth, responsiveScale);
     const cellW = width / layout.cols;
     const cellH = height / layout.rows;
 
@@ -222,7 +223,7 @@ export function createSpringOscillatorView(
     render(): void {
       const currentSim = sim;
       if (currentSim) {
-        const deviceType = getDeviceType(stageWidth);
+        const deviceType = getDeviceType(responsiveScale);
         const result = updateHistory(currentSim, history, deviceType, frameCount);
         frameCount = result.newFrameCount;
       }

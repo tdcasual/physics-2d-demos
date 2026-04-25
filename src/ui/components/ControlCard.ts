@@ -14,6 +14,7 @@ export interface ControlCardInstance {
   body: HTMLElement;
   header: HTMLElement;
   setCollapsed: (collapsed: boolean) => void;
+  dispose: () => void;
 }
 
 /**
@@ -23,6 +24,7 @@ export function createControlCard(
   title: string,
   options?: ControlCardOptions
 ): ControlCardInstance {
+  const cleanups: Array<() => void> = [];
   // 卡片容器 - 使用主题变量
   const card = document.createElement('div');
   card.dataset.testid = 'control-card';
@@ -103,11 +105,13 @@ export function createControlCard(
         box-shadow: var(--shadow-sm);
         min-height: calc(28px * var(--ui-scale, 1));
       `;
-      btn.addEventListener('mouseenter', () => {
-        btn.style.filter = 'brightness(1.1)';
-      });
-      btn.addEventListener('mouseleave', () => {
-        btn.style.filter = 'none';
+      const onEnter = () => { btn.style.filter = 'brightness(1.1)'; };
+      const onLeave = () => { btn.style.filter = 'none'; };
+      btn.addEventListener('mouseenter', onEnter);
+      btn.addEventListener('mouseleave', onLeave);
+      cleanups.push(() => {
+        btn.removeEventListener('mouseenter', onEnter);
+        btn.removeEventListener('mouseleave', onLeave);
       });
       actionsContainer.appendChild(btn);
     });
@@ -136,11 +140,13 @@ export function createControlCard(
     'aria-label',
     options?.defaultCollapsed ? '展开' : '折叠'
   );
-  toggle.addEventListener('mouseenter', () => {
-    toggle.style.background = 'var(--border-light)';
-  });
-  toggle.addEventListener('mouseleave', () => {
-    toggle.style.background = 'transparent';
+  const onToggleEnter = () => { toggle.style.background = 'var(--border-light)'; };
+  const onToggleLeave = () => { toggle.style.background = 'transparent'; };
+  toggle.addEventListener('mouseenter', onToggleEnter);
+  toggle.addEventListener('mouseleave', onToggleLeave);
+  cleanups.push(() => {
+    toggle.removeEventListener('mouseenter', onToggleEnter);
+    toggle.removeEventListener('mouseleave', onToggleLeave);
   });
 
   actionsContainer.appendChild(toggle);
@@ -158,8 +164,7 @@ export function createControlCard(
   card.appendChild(header);
   card.appendChild(body);
 
-  // 点击头部折叠/展开
-  header.addEventListener('click', (e) => {
+  const onHeaderClick = (e: MouseEvent) => {
     if ((e.target as HTMLElement).closest('button') !== toggle) {
       return;
     }
@@ -167,7 +172,9 @@ export function createControlCard(
     toggle.textContent = isCollapsed ? '▶' : '▼';
     toggle.setAttribute('aria-label', isCollapsed ? '展开' : '折叠');
     body.style.display = isCollapsed ? 'none' : 'flex';
-  });
+  };
+  header.addEventListener('click', onHeaderClick);
+  cleanups.push(() => header.removeEventListener('click', onHeaderClick));
 
   function setCollapsed(collapsed: boolean): void {
     card.classList.toggle('collapsed', collapsed);
@@ -176,5 +183,5 @@ export function createControlCard(
     body.style.display = collapsed ? 'none' : 'flex';
   }
 
-  return { element: card, body, header, setCollapsed };
+  return { element: card, body, header, setCollapsed, dispose: () => cleanups.forEach((c) => c()) };
 }
