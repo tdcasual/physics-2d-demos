@@ -7,6 +7,12 @@
  * @version 0.1.0
  */
 
+import {
+  getBreakpoints,
+  detectMobile,
+  detectTablet,
+  detectDesktop
+} from './viewport-detection';
 import { layoutRegistry, saveLayoutPreference } from './registry';
 import { TransportBridge } from './transport-bridge';
 import { layoutSelector } from './selector';
@@ -89,52 +95,13 @@ export class SceneContainerImpl implements SceneContainer {
   }
 
   /**
-   * 获取断点配置
-   */
-  private getBreakpoints(): { mobile: number; tablet: number } {
-    const config = this._layoutConfig || {};
-    return {
-      mobile: (config.mobileBreakpoint as number) || 768,
-      tablet: (config.tabletBreakpoint as number) || 1024
-    };
-  }
-
-  /**
-   * 检测设备是否为移动端
-   * 基于视口宽度判断（<768px视为移动端）
-   * 注：不严格依赖触摸检测，允许桌面浏览器小窗口使用移动端布局
-   */
-  private detectMobile(): boolean {
-    if (typeof window === 'undefined') return false;
-    return window.innerWidth < this.getBreakpoints().mobile;
-  }
-
-  /**
-   * 检测设备是否为平板
-   */
-  private detectTablet(): boolean {
-    if (typeof window === 'undefined') return false;
-    const { mobile, tablet } = this.getBreakpoints();
-    const w = window.innerWidth;
-    return w >= mobile && w < tablet;
-  }
-
-  /**
-   * 检测设备是否为桌面端
-   */
-  private detectDesktop(): boolean {
-    if (typeof window === 'undefined') return false;
-    return window.innerWidth >= this.getBreakpoints().tablet;
-  }
-
-  /**
    * 解析当前场景应使用的布局
    * 使用布局选择器，支持策略插件化
    */
   private resolveLayout(scene: Scene): string {
     const width = this.container.clientWidth;
     const height = this.container.clientHeight;
-    const { mobile, tablet } = this.getBreakpoints();
+    const { mobile, tablet } = getBreakpoints(this._layoutConfig);
 
     const ctx: LayoutSelectionContext = {
       viewport: { width, height },
