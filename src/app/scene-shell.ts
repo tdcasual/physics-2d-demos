@@ -1,27 +1,43 @@
+/**
+ * 场景外壳 — 运输控制与渲染循环
+ * 管理播放/暂停/重置/单步和 RAF 渲染循环
+ */
+
 import { createFixedStepper } from '../core/fixed-step';
 
+/** 运输状态 */
 export type TransportState = {
   isPlaying: boolean;
 };
 
+/** 创建初始运输状态 */
 export function createTransportState(): TransportState {
   return { isPlaying: false };
 }
 
+/** 帧句柄（RAF 或 setTimeout） */
 export type FrameHandle = number | ReturnType<typeof setTimeout>;
 
+/** 帧驱动器接口（支持测试模拟） */
 export type FrameDriver = {
   requestFrame(callback: (timestampMs: number) => void): FrameHandle;
   cancelFrame(handle: FrameHandle): void;
   now(): number;
 };
 
+/** 场景外壳配置选项 */
 export type SceneShellOptions = {
+  /** 每步时间间隔（秒），默认 1/60 */
   stepSeconds?: number;
+  /** 最大子步数，默认 5 */
   maxSubSteps?: number;
+  /** 自定义帧驱动器（测试用） */
   frameDriver?: FrameDriver;
+  /** 目标帧率，默认 60 */
   targetFps?: number;
+  /** 每步回调 */
   onStep?: (dt: number) => void;
+  /** 每帧渲染回调 */
   onRender?: () => void;
 };
 
@@ -57,6 +73,12 @@ function createDefaultFrameDriver(): FrameDriver {
   };
 }
 
+/**
+ * 创建场景外壳
+ * 封装运输控制状态、固定步长模拟器和 RAF 渲染循环
+ * @param options - 配置选项
+ * @returns 包含 transport/play/pause/reset/dispose 的控制对象
+ */
 export function createSceneShell(options: SceneShellOptions = {}) {
   const stepSeconds = options.stepSeconds ?? 1 / 60;
   const frameDriver = options.frameDriver ?? createDefaultFrameDriver();
@@ -85,7 +107,6 @@ export function createSceneShell(options: SceneShellOptions = {}) {
     const timeSinceRender = timestampMs - lastRenderTimeMs;
 
     if (timeSinceRender < targetIntervalMs) {
-      // 时间不够，跳过本次 render，但继续 RAF
       if (transport.isPlaying) {
         requestNextFrame();
       }
@@ -103,7 +124,6 @@ export function createSceneShell(options: SceneShellOptions = {}) {
       options.onRender?.();
     }
 
-    // 再次检查 isPlaying，防止 pause() 在 step/render 期间被调用后仍请求下一帧
     if (transport.isPlaying) {
       requestNextFrame();
     }
@@ -122,7 +142,7 @@ export function createSceneShell(options: SceneShellOptions = {}) {
       if (transport.isPlaying) return;
       transport.isPlaying = true;
       previousTimeMs = frameDriver.now();
-      lastRenderTimeMs = 0; // 重置，确保第一帧立即渲染
+      lastRenderTimeMs = 0;
       requestNextFrame();
     },
     pause(): void {
