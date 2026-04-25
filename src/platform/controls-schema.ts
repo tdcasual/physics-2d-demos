@@ -4,6 +4,7 @@
  * 场景通过定义 schema 而非 imperative DOM 代码来描述控制面板。
  */
 
+/** 控制字段联合类型：滑块、数字输入、文本、选择器、按钮等 */
 export type ControlField =
   | {
       type: 'slider';
@@ -83,12 +84,14 @@ export type ControlField =
       render: (mount: HTMLElement) => void | (() => void);
     };
 
+/** 控制区域（可折叠的卡片） */
 export type ControlsSection = {
   title: string;
   collapsed?: boolean;
   fields: ControlField[];
 };
 
+/** 完整控制面板 schema */
 export type ControlsSchema = {
   sections: ControlsSection[];
 };

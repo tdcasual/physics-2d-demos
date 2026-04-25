@@ -1,6 +1,15 @@
+/**
+ * 视口工具
+ * 提供响应式视口检测和舞台宽度计算
+ */
+
+/** 响应式视口信息 */
 export type ResponsiveViewport = {
+  /** 视口宽度（像素） */
   width: number;
+  /** 视口高度（像素） */
   height: number;
+  /** 是否为窄屏 */
   isNarrow: boolean;
 };
 
@@ -20,6 +29,11 @@ function getViewportHeight(): number {
   return window.innerHeight;
 }
 
+/**
+ * 获取响应式视口尺寸
+ * @param narrowBreakpointPx - 窄屏断点（默认 1180px）
+ * @returns 视口宽度和窄屏标记
+ */
 export function getResponsiveViewport(
   narrowBreakpointPx = 1180
 ): ResponsiveViewport {
@@ -32,6 +46,13 @@ export function getResponsiveViewport(
   };
 }
 
+/**
+ * 解析响应式舞台宽度
+ * 在宿主元素和视口约束下计算最佳舞台宽度
+ * @param host - 宿主元素
+ * @param options - 配置选项
+ * @returns 可用的舞台宽度（像素）
+ */
 export function resolveResponsiveStageWidth(
   host: HTMLElement,
   options: {

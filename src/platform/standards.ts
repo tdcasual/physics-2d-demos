@@ -1,6 +1,14 @@
+/**
+ * 教学渲染标准
+ * 提供按缩放比例计算的字体、线条、标记尺寸标准
+ */
+
+/** 教学模式 */
 export type TeachingMode = 'normal' | 'presentation';
+/** 教学主题 */
 export type TeachingTheme = 'dark' | 'light';
 
+/** 右舞台可读性指标 */
 export type RightStageReadability = {
   primaryFontPx: number;
   secondaryFontPx: number;
@@ -9,11 +17,9 @@ export type RightStageReadability = {
   markerRadiusPx: number;
 };
 
+/** 完整教学渲染标准 */
 export type TeachingStandards = {
-  viewport: {
-    width: number;
-    height: number;
-  };
+  viewport: { width: number; height: number };
   bodyFontPx: number;
   controlFontPx: number;
   headingFontPx: number;

@@ -3,6 +3,7 @@
  * 这是 app 层和 scenes 层的共享契约，放置在 platform 层以避免循环依赖。
  */
 
+/** 场景展示元数据（用于生成标题卡片） */
 export type ScenePlacardMeta = {
   subject: string;
   concept: string;
@@ -11,6 +12,7 @@ export type ScenePlacardMeta = {
 
 import type { SceneDemoProfile } from './demo-profile';
 
+/** 场景完整元数据（注册表使用） */
 export type SceneMeta = ScenePlacardMeta & {
   id: string;
   title: string;
@@ -27,6 +29,7 @@ export type SceneMeta = ScenePlacardMeta & {
   demoProfile?: SceneDemoProfile;
 };
 
+/** 场景生命周期接口 */
 export type SceneLifecycle = {
   init(container?: HTMLElement | null): void;
   reset(): void;
