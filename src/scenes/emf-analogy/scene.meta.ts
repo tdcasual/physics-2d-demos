@@ -1,3 +1,9 @@
+/**
+ * 电路水流类比 — 用液压模型理解电压、电流与电阻
+ */
+
+import type { SceneMeta } from '../types';
+
 import type { SceneMeta } from '../types';
 import type { SceneDemoProfile } from '../../app/demo-profile';
 

@@ -1,3 +1,9 @@
+/**
+ * 微元法 — 速度-时间图像与位移的积分关系
+ */
+
+import type { SceneMeta } from '../types';
+
 import type { SceneMeta } from '../types';
 import type { SceneDemoProfile } from '../../app/demo-profile';
 

@@ -1,3 +1,9 @@
+/**
+ * 电场线分布 — 点电荷系统的电场强度可视化
+ */
+
+import type { SceneMeta } from '../types';
+
 import type { SceneMeta } from '../types';
 import type { SceneDemoProfile } from '../../app/demo-profile';
 

@@ -1,3 +1,9 @@
+/**
+ * 静电起电 — 摩擦起电、接触起电和感应起电
+ */
+
+import type { SceneMeta } from '../types';
+
 import type { SceneMeta } from '../types';
 import type { SceneDemoProfile } from '../../app/demo-profile';
 

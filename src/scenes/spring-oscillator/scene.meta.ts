@@ -1,3 +1,9 @@
+/**
+ * 弹簧振子 — 简谐运动的位移、速度与能量变化
+ */
+
+import type { SceneMeta } from '../types';
+
 import type { SceneMeta } from '../types';
 import type { SceneDemoProfile } from '../../app/demo-profile';
 

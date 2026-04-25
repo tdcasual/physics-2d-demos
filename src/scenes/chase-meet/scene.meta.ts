@@ -1,3 +1,9 @@
+/**
+ * 追及相遇问题 — 两物体同向/相向运动的速度-时间关系
+ */
+
+import type { SceneMeta } from '../types';
+
 import type { SceneMeta } from '../types';
 import type { SceneDemoProfile } from '../../app/demo-profile';
 

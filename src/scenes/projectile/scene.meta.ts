@@ -1,3 +1,9 @@
+/**
+ * 抛体运动 — 斜抛运动的轨迹、速度分解与射程分析
+ */
+
+import type { SceneMeta } from '../types';
+
 import type { SceneMeta } from '../types';
 import type { SceneDemoProfile } from '../../app/demo-profile';
 
