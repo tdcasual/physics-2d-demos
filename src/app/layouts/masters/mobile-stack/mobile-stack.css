@@ -397,7 +397,7 @@
 
 .mobile-speed-control .speed-label {
   font-size: var(--ms-font-sm);
-  color: var(--ms-text-secondary);
+  color: var(--ms-text-primary);
   white-space: nowrap;
 }
 

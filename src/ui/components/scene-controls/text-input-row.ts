@@ -18,12 +18,16 @@ export function createTextInputRow(
   const row = document.createElement('div');
   row.className = 'flex flex-col gap-1 py-1';
 
+  const inputId = `text-input-${Math.random().toString(36).slice(2, 8)}`;
+
   const labelEl = document.createElement('label');
+  labelEl.htmlFor = inputId;
   labelEl.className = 'text-[12px] font-semibold';
   labelEl.style.color = 'var(--text-secondary)';
   labelEl.textContent = label;
 
   const input = document.createElement('input');
+  input.id = inputId;
   input.type = 'text';
   input.value = options.value;
   if (options.role) input.dataset.role = options.role;

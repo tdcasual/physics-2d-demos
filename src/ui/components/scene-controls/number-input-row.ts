@@ -21,12 +21,16 @@ export function createNumberInputRow(
   const row = document.createElement('div');
   row.className = 'flex items-center gap-2 py-1';
 
+  const inputId = `num-input-${Math.random().toString(36).slice(2, 8)}`;
+
   const labelEl = document.createElement('label');
+  labelEl.htmlFor = inputId;
   labelEl.className = 'text-[12px] font-semibold w-20 shrink-0';
   labelEl.style.color = 'var(--text-secondary)';
   labelEl.textContent = label;
 
   const input = document.createElement('input');
+  input.id = inputId;
   input.type = 'number';
   input.min = String(options.min ?? '');
   input.max = String(options.max ?? '');
