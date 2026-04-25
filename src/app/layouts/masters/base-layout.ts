@@ -287,6 +287,9 @@ export abstract class BaseLayout implements LayoutMaster {
   /**
    * 应用演示配置（子类必须实现）
    */
+  /**
+   * 应用演示配置（子类必须实现）
+   */
   abstract applyDemoProfile(profile: SceneDemoProfile): void;
 
   /**
