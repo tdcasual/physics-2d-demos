@@ -15,7 +15,9 @@ import {
 import type { ClickArea } from './renderer/types';
 
 import type { DemoRenderHints } from '../../platform/demo-profile';
+import { calculateGridLayout, getDeviceType } from './view-layout';
 
+/** 弹簧振子视图构造选项 */
 export type SpringOscillatorViewOptions = {
   graphCanvas?: HTMLCanvasElement;
   stageCanvas?: HTMLCanvasElement;
@@ -26,35 +28,16 @@ export type SpringOscillatorViewOptions = {
   onToggleOscillator?: (id: string) => void;
 };
 
-// 获取设备类型（基于 responsiveScale 的连续判断，避免像素边界跳变）
-function getDeviceType(responsiveScale: number): 'mobile' | 'tablet' | 'desktop' {
-  if (responsiveScale < 0.7) return 'mobile';
-  if (responsiveScale < 1.0) return 'tablet';
-  return 'desktop';
-}
-
-// 计算布局（按设备宽度决定列数）
-function calculateGridLayout(
-  total: number,
-  stageWidth: number,
-  scale: number
-): { cols: number; rows: number } {
-  const deviceType = getDeviceType(scale);
-
-  if (deviceType === 'mobile') {
-    return { cols: 1, rows: total };
-  }
-
-  if (deviceType === 'tablet') {
-    if (total <= 2) return { cols: 1, rows: total };
-    return { cols: 2, rows: Math.ceil(total / 2) };
-  }
-
-  if (total <= 3) return { cols: 1, rows: total };
-  if (total <= 6) return { cols: 2, rows: Math.ceil(total / 2) };
-  return { cols: 3, rows: Math.ceil(total / 3) };
-}
-
+/**
+ * 创建弹簧振子视图实例
+ *
+ * 负责管理舞台 Canvas 与图表 Canvas 的渲染、事件绑定及生命周期。
+ * 返回的视图对象包含 `render`、`resize`、`dispose` 等标准接口，
+ * 供 {@link createSceneShell} 调用。
+ *
+ * @param options - 视图构造选项
+ * @returns 视图控制对象
+ */
 export function createSpringOscillatorView(
   options: SpringOscillatorViewOptions = {}
 ) {
