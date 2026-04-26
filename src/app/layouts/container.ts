@@ -56,6 +56,7 @@ export class SceneContainerImpl implements SceneContainer {
   private _transportBridge = new TransportBridge();
   private _sceneUnsubscribers: (() => void)[] = [];
   private _lowPowerMode = false;
+  private _disposed = false;
   private _layoutThemeHandler?: (e: Event) => void;
   private _layoutModeHandler?: (e: Event) => void;
   private _emitter: EventEmitter<SceneContainerEvents>;
@@ -91,6 +92,7 @@ export class SceneContainerImpl implements SceneContainer {
       // 低电量检测
       if ('getBattery' in navigator) {
         const battery = await (navigator as unknown as { getBattery(): Promise<{ charging: boolean; level: number }> }).getBattery();
+        if (this._disposed) return;
         if (!battery.charging && battery.level < 0.2) {
           this._lowPowerMode = true;
         }
@@ -98,6 +100,7 @@ export class SceneContainerImpl implements SceneContainer {
       // 弱网/省流量检测
       if ('connection' in navigator) {
         const conn = (navigator as unknown as { connection: { saveData?: boolean; effectiveType?: string } }).connection;
+        if (this._disposed) return;
         if (conn.saveData || /2g|slow-2g/.test(conn.effectiveType || '')) {
           this._lowPowerMode = true;
         }

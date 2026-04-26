@@ -174,11 +174,11 @@ describe('BaseLayout', () => {
       await layout.mount();
       const slot = layout.getSlot('header')!;
       layout.setSlotCollapsed('header', true);
-      expect(slot.classList.contains('is-collapsed')).toBe(true);
+      expect(slot.classList.contains('teaching-is-collapsed')).toBe(true);
       expect(slot.getAttribute('data-collapsed')).toBe('true');
 
       layout.setSlotCollapsed('header', false);
-      expect(slot.classList.contains('is-collapsed')).toBe(false);
+      expect(slot.classList.contains('teaching-is-collapsed')).toBe(false);
       expect(slot.getAttribute('data-collapsed')).toBe('false');
     });
 

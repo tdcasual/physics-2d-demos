@@ -936,6 +936,8 @@ export abstract class DesktopSplitLayout<
       const old = this.stageCanvas;
       if (old.parentElement) {
         old.parentElement.replaceChild(element, old);
+      } else if (this.stageSlot) {
+        this.stageSlot.appendChild(element);
       }
       element.className = this.getClassName('stage-canvas');
       this.stageCanvas = element as HTMLCanvasElement;
