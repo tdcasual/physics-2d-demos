@@ -114,9 +114,10 @@ export class SplitRightGraphBottomLayout extends DesktopSplitLayout {
 
     // 自动根据子元素数量调整列数（场景可放入多个 canvas）
     this._graphObserver = new MutationObserver(() => {
-      const count = this._graphSlot!.children.length;
+      if (!this._graphSlot) return;
+      const count = this._graphSlot.children.length;
       const cols = Math.max(1, Math.min(4, count));
-      this._graphSlot!.setAttribute('data-columns', String(cols));
+      this._graphSlot.setAttribute('data-columns', String(cols));
     });
     this._graphObserver.observe(this._graphSlot, { childList: true });
   };

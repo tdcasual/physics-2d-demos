@@ -485,6 +485,7 @@ export class MobileStackLayout extends BaseLayout {
       if (old.parentElement) {
         old.parentElement.replaceChild(element, old);
       }
+      element.className = 'mobile-stage-canvas';
       this.stageCanvas = element as HTMLCanvasElement;
       return old;
     }

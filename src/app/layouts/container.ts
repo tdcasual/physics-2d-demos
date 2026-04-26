@@ -128,6 +128,8 @@ export class SceneContainerImpl implements SceneContainer {
     if (!c) return true;
     if (c.minWidth !== undefined && viewport.width < c.minWidth) return false;
     if (c.maxWidth !== undefined && viewport.width > c.maxWidth) return false;
+    if (c.minHeight !== undefined && viewport.height < c.minHeight) return false;
+    if (c.maxHeight !== undefined && viewport.height > c.maxHeight) return false;
     if (c.orientation && c.orientation !== 'any' && c.orientation !== orientation) return false;
     return true;
   }
@@ -150,8 +152,8 @@ export class SceneContainerImpl implements SceneContainer {
 
     const selected = layoutSelector.select(ctx);
 
-    // 低功耗/弱网模式下，优先选择渲染负担最小的 mobile-stack
-    if (this._lowPowerMode && selected !== 'mobile-stack') {
+    // 低功耗/弱网模式下，若用户未指定偏好，优先选择渲染负担最小的 mobile-stack
+    if (this._lowPowerMode && !this._userPreferredLayout && selected !== 'mobile-stack') {
       const mobileMeta = ctx.availableLayouts.find((l) => l.id === 'mobile-stack');
       if (mobileMeta && this.satisfiesConstraints(mobileMeta, ctx.viewport, ctx.orientation)) {
         return 'mobile-stack';

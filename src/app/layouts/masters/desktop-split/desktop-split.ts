@@ -937,6 +937,7 @@ export abstract class DesktopSplitLayout extends BaseLayout {
       if (old.parentElement) {
         old.parentElement.replaceChild(element, old);
       }
+      element.className = this.getClassName('stage-canvas');
       this.stageCanvas = element as HTMLCanvasElement;
       return old;
     }
