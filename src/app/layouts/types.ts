@@ -468,6 +468,8 @@ export interface LayoutConfig {
   tabletBreakpoint?: number;
   /** 内部标记：是否由 SceneContainer 管理（禁用独立行为如系统主题跟随） */
   __managedByContainer?: boolean;
+  /** 启用调试覆盖层 */
+  enableDebugPanel?: boolean;
 }
 
 /** 创建容器选项 */
@@ -543,7 +545,7 @@ export interface ThemeChangeEvent {
 }
 
 /** 场景容器事件映射 */
-export interface SceneContainerEvents {
+export type SceneContainerEvents = {
   'layout:change': LayoutChangeEvent;
   'theme:change': ThemeChangeEvent;
   'scene:mount': { sceneId: string };
@@ -551,4 +553,4 @@ export interface SceneContainerEvents {
   'scene:state': { scene: string; state: unknown };
   'layout:mode': { mode: string };
   'slot:toggle': { slot: SlotName; collapsed: boolean };
-}
+};

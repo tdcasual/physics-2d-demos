@@ -19,7 +19,6 @@ import type {
   ReadoutItem
 } from '../../types';
 import { safely } from './utils/safe-execution';
-import { ThrottleDebounce } from './utils/throttle-debounce';
 import { GestureRecognizer } from './utils/gesture-recognizer';
 import { ThemeManager } from './utils/theme-manager';
 import { PerformanceMonitor } from './utils/performance-monitor';

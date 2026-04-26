@@ -79,7 +79,7 @@ export abstract class DesktopSplitLayout extends BaseLayout {
   protected stageSlot: HTMLElement | null = null;
   protected stageCanvas: HTMLCanvasElement | null = null;
   private debugOverlay: HTMLElement | null = null;
-  private debugInterval: ReturnType<typeof setInterval> | null = null;
+  private debugInterval: number | null = null;
   protected header: HTMLElement | null = null;
   protected themeButton: HTMLButtonElement | null = null;
   protected modeButton: HTMLButtonElement | null = null;

@@ -16,7 +16,7 @@ import type {
   ReadoutItem,
   TransportState
 } from './layouts/types';
-import type { DemoRenderHints, SceneDemoProfile } from './demo-profile';
+import type { DemoRenderHints } from './demo-profile';
 import { createSceneShell } from './scene-shell';
 import { KeyboardShortcutManager } from '../platform/input/keyboard-shortcuts';
 import { PerformanceMonitor } from '../core/performance-monitor';
