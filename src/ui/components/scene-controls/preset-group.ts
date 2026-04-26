@@ -18,7 +18,8 @@ export function createPresetButtonGroup(
   let activeId = options.initialActive ?? presets[0]?.id ?? '';
 
   const grid = document.createElement('div');
-  grid.className = `grid grid-cols-${options.columns ?? 4} gap-2`;
+  const cols = options.columns ?? 4;
+  grid.className = cols === 2 ? 'grid grid-cols-2 gap-2' : cols === 3 ? 'grid grid-cols-3 gap-2' : 'grid grid-cols-4 gap-2';
 
   const buttons = new Map<string, HTMLButtonElement>();
 
