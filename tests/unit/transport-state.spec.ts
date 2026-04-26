@@ -62,7 +62,7 @@ describe('TransportState integration', () => {
     });
 
     // Verify floating controls are attached to stage slot
-    const stageSlot = container.querySelector('.stage-slot');
+    const stageSlot = container.querySelector('.teaching-stage-slot');
     expect(stageSlot?.querySelector('.stage-floating-controls')).toBeTruthy();
   });
 

@@ -1,0 +1,707 @@
+/**
+ * SplitRightGraphBottomLayout - 样式表
+ *
+ * 结构：
+ * - 左侧：控制区
+ * - 右侧上方：动画区
+ * - 右侧下方：图表网格区（支持多列）
+ */
+
+@import '../../../../styles/layout-tokens.css';
+
+/* ========================================
+   根布局
+   ======================================== */
+.layout-srgb-graph-bottom {
+  display: grid;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--color-bg-primary, #faf8f5);
+  grid-template-columns: minmax(260px, 35%) 8px 1fr;
+}
+
+/* ========================================
+   左侧面板
+   ======================================== */
+.srgb-left-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid var(--color-border-color, rgba(0, 0, 0, 0.08));
+  background: var(--color-sidebar-bg, #f5f3f0);
+}
+
+.srgb-header {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--color-border-color, rgba(0, 0, 0, 0.08));
+  padding: 1rem;
+  background: var(--color-bg-secondary, rgba(255, 255, 255, 0.6));
+}
+
+.srgb-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text-primary, #1a1a1a);
+}
+
+.srgb-subtitle {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary, #555555);
+}
+
+/* ========================================
+   控制区
+   ======================================== */
+.srgb-control-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  border-bottom: 1px solid var(--color-border-color, rgba(0, 0, 0, 0.08));
+}
+
+.srgb-control-section[data-collapsed='true'] .srgb-control-slot {
+  display: none;
+}
+
+.srgb-control-section[data-collapsed='true'] .srgb-section-header {
+  border-bottom: none;
+}
+
+.srgb-control-slot {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  gap: calc(0.25rem * var(--ui-scale, 1));
+  padding: calc(0.375rem * var(--ui-scale, 1)) calc(0.5rem * var(--ui-scale, 1));
+}
+
+.srgb-control-slot > * {
+  min-width: 0;
+}
+
+/* ========================================
+   区域头部（控制区 + 图表区共享）
+   ======================================== */
+.srgb-section-header {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-border-color, rgba(0, 0, 0, 0.08));
+  padding: 0.375rem 0.75rem;
+  background: var(--color-bg-secondary, rgba(255, 255, 255, 0.6));
+}
+
+.srgb-section-title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-primary, #1a1a1a);
+}
+
+.srgb-section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 1px solid var(--color-border-color, rgba(0, 0, 0, 0.08));
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: var(--color-btn-bg, rgba(0, 0, 0, 0.05));
+  color: var(--color-text-secondary, #555555);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.srgb-section-toggle:hover {
+  background: var(--color-btn-hover-bg, rgba(0, 0, 0, 0.1));
+  border-color: var(--color-accent-color, #4ecdc4);
+  color: var(--color-accent-color, #4ecdc4);
+}
+
+/* ========================================
+   垂直分隔条
+   ======================================== */
+.srgb-resizer-v {
+  position: relative;
+  z-index: 10;
+  width: 8px;
+  cursor: col-resize;
+  background: var(--color-border-color, rgba(0, 0, 0, 0.08));
+  transition: background 0.15s ease;
+}
+
+.srgb-resizer-v:hover,
+.srgb-resizer-v.is-dragging {
+  background: var(--color-accent-color, #4ecdc4);
+}
+
+.srgb-resizer-v::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2px;
+  height: 2rem;
+  transform: translate(-50%, -50%);
+  border-radius: 9999px;
+  opacity: 0.5;
+  background: var(--color-text-muted, #888888);
+}
+
+/* ========================================
+   右侧面板
+   ======================================== */
+.srgb-right-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-bg-primary, #faf8f5);
+}
+
+/* 工具栏 */
+.srgb-stage-toolbar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--color-border-color, rgba(0, 0, 0, 0.08));
+  padding: 0.75rem 1rem;
+  background: var(--color-bg-secondary, rgba(255, 255, 255, 0.6));
+}
+
+.srgb-sidebar-toggle {
+  cursor: pointer;
+  border: 1px solid var(--color-border-color, rgba(0, 0, 0, 0.08));
+  border-radius: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  background: var(--color-btn-bg, rgba(0, 0, 0, 0.05));
+  color: var(--color-text-secondary, #555555);
+  min-width: 44px;
+  min-height: 44px;
+  transition: all 0.2s ease;
+}
+
+.srgb-sidebar-toggle:hover {
+  background: var(--color-btn-hover-bg, rgba(0, 0, 0, 0.1));
+  color: var(--color-text-primary, #1a1a1a);
+}
+
+.srgb-toolbar-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.srgb-mode-toggle,
+.srgb-theme-toggle {
+  cursor: pointer;
+  border: 1px solid var(--color-border-color, rgba(0, 0, 0, 0.08));
+  border-radius: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  background: var(--color-btn-bg, rgba(0, 0, 0, 0.05));
+  color: var(--color-text-secondary, #555555);
+  min-width: 44px;
+  min-height: 44px;
+  transition: all 0.2s ease;
+}
+
+.srgb-mode-toggle {
+  background: var(--color-accent-color, #4ecdc4);
+  border-color: var(--color-accent-color, #4ecdc4);
+  color: #1a1a1a;
+}
+
+.srgb-mode-toggle:hover,
+.srgb-theme-toggle:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* ========================================
+   动画区
+   ======================================== */
+.srgb-stage-frame {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+  background: var(--color-stage-bg, #faf8f5);
+}
+
+.srgb-stage-slot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.srgb-stage-slot > *:not(canvas):not(.stage-floating-controls) {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.srgb-stage-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  touch-action: manipulation;
+}
+
+/* ========================================
+   水平分隔条
+   ======================================== */
+.srgb-resizer-h {
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
+  height: 8px;
+  cursor: row-resize;
+  background: var(--color-border-color, rgba(0, 0, 0, 0.08));
+  transition: background 0.15s ease;
+}
+
+.srgb-resizer-h:hover,
+.srgb-resizer-h.is-dragging {
+  background: var(--color-accent-color, #4ecdc4);
+}
+
+.srgb-resizer-h::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2rem;
+  height: 2px;
+  transform: translate(-50%, -50%);
+  border-radius: 9999px;
+  opacity: 0.5;
+  background: var(--color-text-muted, #888888);
+}
+
+/* ========================================
+   图表区
+   ======================================== */
+.srgb-graph-section {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-top: 1px solid var(--color-border-color, rgba(0, 0, 0, 0.08));
+  background: var(--color-bg-primary, #faf8f5);
+}
+
+.srgb-graph-section[data-collapsed='true'] .srgb-graph-grid {
+  display: none;
+}
+
+.srgb-graph-section[data-collapsed='true'] .srgb-section-header {
+  border-bottom: none;
+}
+
+/* 图表网格 */
+.srgb-graph-grid {
+  display: grid;
+  gap: 4px;
+  flex: 1;
+  min-height: 0;
+  padding: 4px;
+  overflow: hidden;
+}
+
+/* 根据 data-columns 属性调整列数 */
+.srgb-graph-grid[data-columns='1'] {
+  grid-template-columns: 1fr;
+}
+
+.srgb-graph-grid[data-columns='2'] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.srgb-graph-grid[data-columns='3'] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.srgb-graph-grid[data-columns='4'] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.srgb-graph-grid[data-columns='5'] {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.srgb-graph-grid[data-columns='6'] {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+/* 图表网格中的 canvas 填满单元格 */
+.srgb-graph-grid > canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* 图表网格中的自定义图表容器 */
+.srgb-graph-grid > .graph-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 4px;
+  border: 1px solid var(--color-border-color, rgba(0, 0, 0, 0.08));
+  background: var(--color-bg-secondary, rgba(255, 255, 255, 0.6));
+}
+
+.graph-cell-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 6px;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--color-text-secondary, #555555);
+  background: var(--color-bg-secondary, rgba(255, 255, 255, 0.6));
+  border-bottom: 1px solid var(--color-border-color, rgba(0, 0, 0, 0.08));
+}
+
+.graph-cell-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.graph-cell-body canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ========================================
+   读数面板（复用 teaching-shell 样式，加 srgb 前缀）
+   ======================================== */
+.srgb-readout-panel {
+  position: absolute;
+  right: 12px;
+  top: 52px;
+  z-index: 100;
+  min-width: 200px;
+  max-width: 320px;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border-color, rgba(0, 0, 0, 0.08));
+  font-size: 0.75rem;
+  background: var(--color-bg-primary, #faf8f5);
+  box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
+  transition: all 0.25s ease;
+}
+
+.srgb-readout-panel.is-collapsed {
+  height: auto;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+}
+
+.srgb-readout-panel.is-collapsed .srgb-readout-slot {
+  display: none;
+}
+
+.srgb-readout-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-border-color, rgba(0, 0, 0, 0.08));
+  padding: 0.5rem 0.75rem;
+  background: var(--color-bg-secondary, rgba(255, 255, 255, 0.6));
+}
+
+.srgb-readout-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-primary, #1a1a1a);
+}
+
+.srgb-readout-toggle,
+.srgb-readout-resize-toggle {
+  cursor: pointer;
+  border: 1px solid var(--color-border-color, rgba(0, 0, 0, 0.08));
+  border-radius: 0.25rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  background: var(--color-btn-bg, rgba(0, 0, 0, 0.05));
+  color: var(--color-text-secondary, #555555);
+  transition: all 0.2s ease;
+}
+
+.srgb-readout-toggle:hover,
+.srgb-readout-resize-toggle:hover {
+  background: var(--color-btn-hover-bg, rgba(0, 0, 0, 0.1));
+}
+
+.srgb-readout-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.srgb-readout-slot {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  max-height: 320px;
+  padding: 8px;
+  list-style: none;
+  overflow-y: auto;
+  background: var(--color-bg-primary, #faf8f5);
+}
+
+/* ========================================
+   浮动控制条
+   ======================================== */
+.layout-srgb-graph-bottom .stage-floating-controls {
+  position: absolute;
+  top: calc(0.5rem * var(--ui-scale, 1));
+  left: calc(0.5rem * var(--ui-scale, 1));
+  z-index: 50;
+}
+
+/* ========================================
+   响应式
+   ======================================== */
+@media (max-width: 1024px) {
+  .layout-srgb-graph-bottom {
+    grid-template-columns: 280px 8px 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .layout-srgb-graph-bottom {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  .srgb-left-panel {
+    max-height: 45vh;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border-color, rgba(0, 0, 0, 0.08));
+  }
+
+  .srgb-resizer-v {
+    display: none;
+  }
+
+  .srgb-resizer-h {
+    display: none;
+  }
+
+  .srgb-graph-section {
+    max-height: 35vh;
+  }
+
+  .srgb-readout-panel {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    left: 1rem;
+    top: auto;
+    max-width: none;
+  }
+}
+
+/* ========================================
+   演示模式
+   ======================================== */
+.layout-srgb-graph-bottom[data-mode='presentation'] .srgb-stage-toolbar {
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: 50;
+  border: none;
+  background: transparent;
+  padding: 0;
+  width: auto;
+}
+
+.layout-srgb-graph-bottom[data-mode='presentation'] .srgb-stage-toolbar .srgb-sidebar-toggle,
+.layout-srgb-graph-bottom[data-mode='presentation'] .srgb-stage-toolbar .srgb-theme-toggle {
+  display: none;
+}
+
+.layout-srgb-graph-bottom[data-mode='presentation'] .stage-floating-controls {
+  left: 1rem;
+  top: 1rem;
+}
+
+.layout-srgb-graph-bottom[data-mode='presentation'] .srgb-readout-panel {
+  right: 1rem;
+  top: 1rem;
+}
+
+/* 图表区折叠时隐藏水平分隔条 */
+.layout-srgb-graph-bottom[data-graph-collapsed='true'] .srgb-resizer-h {
+  display: none;
+}
+
+/* ========================================
+   暗色主题适配
+   ======================================== */
+[data-theme='dark'] .layout-srgb-graph-bottom {
+  background: var(--color-bg-primary, #0f172a);
+}
+
+[data-theme='dark'] .srgb-left-panel {
+  background: var(--color-sidebar-bg, #0a0f1a);
+  border-color: var(--color-border-color, rgba(255, 255, 255, 0.1));
+}
+
+[data-theme='dark'] .srgb-header,
+[data-theme='dark'] .srgb-control-section,
+[data-theme='dark'] .srgb-stage-toolbar,
+[data-theme='dark'] .srgb-section-header,
+[data-theme='dark'] .srgb-readout-header {
+  background: var(--color-bg-secondary, rgba(30, 41, 59, 0.6));
+  border-color: var(--color-border-color, rgba(255, 255, 255, 0.1));
+}
+
+[data-theme='dark'] .srgb-title,
+[data-theme='dark'] .srgb-section-title,
+[data-theme='dark'] .srgb-readout-title {
+  color: var(--color-text-primary, #fafafa);
+}
+
+[data-theme='dark'] .srgb-subtitle {
+  color: var(--color-text-secondary, #b0b8c4);
+}
+
+[data-theme='dark'] .srgb-stage-frame {
+  background: var(--color-stage-bg, #0f172a);
+}
+
+[data-theme='dark'] .srgb-graph-section {
+  background: var(--color-bg-primary, #0f172a);
+  border-color: var(--color-border-color, rgba(255, 255, 255, 0.1));
+}
+
+[data-theme='dark'] .graph-cell {
+  background: var(--color-bg-secondary, rgba(30, 41, 59, 0.6));
+  border-color: var(--color-border-color, rgba(255, 255, 255, 0.1));
+}
+
+[data-theme='dark'] .graph-cell-header {
+  background: var(--color-bg-secondary, rgba(30, 41, 59, 0.6));
+  border-color: var(--color-border-color, rgba(255, 255, 255, 0.1));
+  color: var(--color-text-secondary, #b0b8c4);
+}
+
+[data-theme='dark'] .srgb-readout-panel {
+  background: var(--color-bg-primary, #0f172a);
+  border-color: var(--color-border-color, rgba(255, 255, 255, 0.1));
+}
+
+[data-theme='dark'] .srgb-readout-slot {
+  background: var(--color-bg-primary, #0f172a);
+}
+
+[data-theme='dark'] .srgb-section-toggle,
+[data-theme='dark'] .srgb-sidebar-toggle,
+[data-theme='dark'] .srgb-theme-toggle,
+[data-theme='dark'] .srgb-readout-toggle,
+[data-theme='dark'] .srgb-readout-resize-toggle {
+  background: var(--color-btn-bg, rgba(255, 255, 255, 0.1));
+  border-color: var(--color-border-color, rgba(255, 255, 255, 0.1));
+  color: var(--color-text-secondary, #b0b8c4);
+}
+
+[data-theme='dark'] .srgb-section-toggle:hover,
+[data-theme='dark'] .srgb-sidebar-toggle:hover,
+[data-theme='dark'] .srgb-theme-toggle:hover,
+[data-theme='dark'] .srgb-readout-toggle:hover,
+[data-theme='dark'] .srgb-readout-resize-toggle:hover {
+  background: var(--color-btn-hover-bg, rgba(255, 255, 255, 0.15));
+}
+
+[data-theme='dark'] .srgb-mode-toggle {
+  background: var(--color-accent-color, #4ecdc4);
+  border-color: var(--color-accent-color, #4ecdc4);
+  color: #1a1a1a;
+}
+
+/* ========================================
+   读数面板位置变体
+   ======================================== */
+.srgb-readout-panel.is-docked-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: auto;
+  max-width: none;
+  width: 100%;
+  border-radius: 0;
+}
+
+.srgb-readout-panel.is-docked-top {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: auto;
+  max-width: none;
+  width: 100%;
+  border-radius: 0;
+}
+
+.srgb-readout-panel.is-overlay {
+  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.6);
+}
+
+/* 演示模式放大字号 */
+.srgb-readout-panel.readout-enlarged .readout-label {
+  font-size: 1.1rem;
+}
+
+.srgb-readout-panel.readout-enlarged .readout-value {
+  font-size: 1.25rem;
+}
+
+/* 触摸优化 */
+.demo-touch-optimized .srgb-section-toggle,
+.demo-touch-optimized .srgb-readout-toggle,
+.demo-touch-optimized .srgb-sidebar-toggle {
+  min-width: var(--demo-touch-min, 48px);
+  min-height: var(--demo-touch-min, 48px);
+}
+
+/* 减少动画 */
+@media (prefers-reduced-motion: reduce) {
+  .layout-srgb-graph-bottom,
+  .layout-srgb-graph-bottom * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

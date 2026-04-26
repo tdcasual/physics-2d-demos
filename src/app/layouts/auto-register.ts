@@ -9,6 +9,7 @@ import { layoutRegistry, registerLayout } from './registry';
 import { registerDefaultStrategies } from './default-strategies';
 import { SplitRightLayout } from './masters/split-right/split-right';
 import { MobileStackLayout } from './masters/mobile-stack/mobile-stack';
+import { SplitRightGraphBottomLayout } from './masters/split-right-graph-bottom/split-right-graph-bottom';
 
 /**
  * 注册所有内置布局母版。
@@ -40,6 +41,19 @@ export function registerAllLayouts(): void {
       supportedSlots: ['header', 'control', 'animation', 'graph', 'readout'],
       constraints: { maxWidth: 768, orientation: 'any' },
       priority: 100,
+      autoSelectable: true
+    });
+  }
+
+  if (!layoutRegistry.has('split-right-graph-bottom')) {
+    registerLayout('split-right-graph-bottom', SplitRightGraphBottomLayout, {
+      name: '左右分栏+底部图表',
+      description: '控制区在左，动画区在右上方，图表网格在右下方（支持多列动态图表）',
+      tags: ['desktop', 'multi-graph'],
+      supportsMobile: false,
+      supportedSlots: ['header', 'control', 'animation', 'graph', 'readout'],
+      constraints: { minWidth: 900, orientation: 'any' },
+      priority: 90,
       autoSelectable: true
     });
   }

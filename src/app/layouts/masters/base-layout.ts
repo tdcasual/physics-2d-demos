@@ -248,7 +248,7 @@ export abstract class BaseLayout implements LayoutMaster {
   setSlotCollapsed(slot: SlotName, collapsed: boolean): void {
     const element = this.slots[slot];
     if (element) {
-      element.classList.toggle('is-collapsed', collapsed);
+      element.classList.toggle('teaching-is-collapsed', collapsed);
       element.setAttribute('data-collapsed', String(collapsed));
     }
   }

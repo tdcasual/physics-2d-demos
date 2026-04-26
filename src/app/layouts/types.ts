@@ -345,6 +345,11 @@ export interface Scene {
    * @returns 取消订阅函数
    */
   subscribe?(listener: SceneStateListener): () => void;
+
+  /**
+   * 获取演示配置（供容器在模式切换时应用）
+   */
+  getDemoProfile?(): import('../demo-profile').SceneDemoProfile | null;
 }
 
 // ============================================================================

@@ -61,8 +61,6 @@ export class MobileStackLayout extends BaseLayout {
   private debugManager: DebugPanelManager | null = null;
 
   // 状态
-  private resizeObserver: ResizeObserver | null = null;
-
   // 高级功能实例
   private gestureRecognizer: GestureRecognizer | null = null;
   private themeManager: ThemeManager | null = null;
@@ -242,8 +240,6 @@ export class MobileStackLayout extends BaseLayout {
     if (cfg.performance.lazyLoadSections) {
       this.initLazyLoadObserver();
     }
-
-    this.setupResizeObserver(cfg);
   }
 
   private initLazyLoadObserver(): void {
@@ -263,26 +259,6 @@ export class MobileStackLayout extends BaseLayout {
     [this.graphManager?.section, this.controlSection].forEach((el) => {
       if (el) this.intersectionObserver!.observe(el);
     });
-  }
-
-  private setupResizeObserver(cfg: Required<MobileStackConfig>): void {
-    if (!this.container || typeof ResizeObserver === 'undefined') return;
-
-    const handleResize = ThrottleDebounce.debounce(
-      (width: number, height: number) => {
-        this.handleResize(width, height, cfg);
-      },
-      cfg.performance.resizeDebounceMs ?? 100
-    );
-
-    this.resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        handleResize(width, height);
-      }
-    });
-
-    this.resizeObserver.observe(this.container);
   }
 
   // ========================================================================
@@ -376,6 +352,10 @@ export class MobileStackLayout extends BaseLayout {
   // 状态管理
   // ========================================================================
 
+  /**
+   * 持久化布局特有的状态（仅 graphExpanded）。
+   * theme 由 SceneContainerImpl 统一管理，不再重复保存。
+   */
   private saveState(): void {
     const cfg = this.getConfig();
     if (!cfg.persistState || !cfg.stateKey) return;
@@ -383,7 +363,6 @@ export class MobileStackLayout extends BaseLayout {
     safely(() => {
       const state = {
         graphExpanded: this.graphManager?.isExpanded() ?? false,
-        theme: this.themeManager?.getTheme(),
         timestamp: Date.now()
       };
       localStorage.setItem(cfg.stateKey, JSON.stringify(state));
@@ -423,9 +402,6 @@ export class MobileStackLayout extends BaseLayout {
 
       this.intersectionObserver?.disconnect();
       this.intersectionObserver = null;
-
-      this.resizeObserver?.disconnect();
-      this.resizeObserver = null;
 
       this.graphManager?.destroy();
       this.graphManager = null;

@@ -9,10 +9,7 @@
 
 import { createEventEmitter, type EventEmitter } from './event-emitter';
 import {
-  getBreakpoints,
-  detectMobile,
-  detectTablet,
-  detectDesktop
+  getBreakpoints
 } from './viewport-detection';
 import { layoutRegistry, saveLayoutPreference } from './registry';
 import { TransportBridge } from './transport-bridge';
@@ -225,8 +222,22 @@ export class SceneContainerImpl implements SceneContainer {
     };
     this._layoutModeHandler = (e: Event) => {
       const custom = e as CustomEvent<{ mode: 'normal' | 'presentation' }>;
-      if (custom.detail?.mode && scene.setMode) {
-        scene.setMode(custom.detail.mode);
+      const mode = custom.detail?.mode;
+      if (!mode) return;
+
+      // Forward mode change to scene
+      if (scene.setMode) {
+        scene.setMode(mode);
+      }
+
+      // Apply / reset demo profile directly on layout (avoids DOM backdoor in SceneAdapter)
+      if (mode === 'presentation') {
+        const profile = scene.getDemoProfile?.() || null;
+        if (profile && targetLayout.applyDemoProfile) {
+          targetLayout.applyDemoProfile(profile);
+        }
+      } else if (mode === 'normal' && targetLayout.resetDemoProfile) {
+        targetLayout.resetDemoProfile();
       }
     };
     this.container.addEventListener(

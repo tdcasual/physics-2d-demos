@@ -32,37 +32,37 @@ describe('SplitRightLayout demo profile', () => {
   it('should collapse control section when controlPanel is collapsed', () => {
     layout.applyDemoProfile({ ...baseProfile, controlPanel: 'collapsed' });
 
-    const controlSection = container.querySelector('.control-section');
+    const controlSection = container.querySelector('.teaching-control-section');
     expect(controlSection?.getAttribute('data-collapsed')).toBe('true');
   });
 
   it('should dock readout panel to bottom', () => {
     layout.applyDemoProfile({ ...baseProfile, readoutPanel: 'docked-bottom' });
 
-    const readout = container.querySelector('.readout-panel');
-    expect(readout?.classList.contains('is-docked-bottom')).toBe(true);
+    const readout = container.querySelector('.teaching-readout-panel');
+    expect(readout?.classList.contains('teaching-is-docked-bottom')).toBe(true);
   });
 
   it('should dock readout panel to top', () => {
     layout.applyDemoProfile({ ...baseProfile, readoutPanel: 'docked-top' });
 
-    const readout = container.querySelector('.readout-panel');
-    expect(readout?.classList.contains('is-docked-top')).toBe(true);
+    const readout = container.querySelector('.teaching-readout-panel');
+    expect(readout?.classList.contains('teaching-is-docked-top')).toBe(true);
   });
 
   it('should hide readout panel', () => {
     layout.applyDemoProfile({ ...baseProfile, readoutPanel: 'hidden' });
 
-    const readout = container.querySelector('.readout-panel') as HTMLElement;
+    const readout = container.querySelector('.teaching-readout-panel') as HTMLElement;
     expect(readout.style.display).toBe('none');
   });
 
   it('should overlay readout panel and enlarge font', () => {
     layout.applyDemoProfile({ ...baseProfile, readoutPanel: 'overlay' });
 
-    const readout = container.querySelector('.readout-panel');
-    expect(readout?.classList.contains('is-overlay')).toBe(true);
-    expect(readout?.classList.contains('readout-enlarged')).toBe(true);
+    const readout = container.querySelector('.teaching-readout-panel');
+    expect(readout?.classList.contains('teaching-is-overlay')).toBe(true);
+    expect(readout?.classList.contains('teaching-readout-enlarged')).toBe(true);
   });
 
   it('should add touch optimization class when touchTargetMinSize provided', () => {
@@ -71,7 +71,7 @@ describe('SplitRightLayout demo profile', () => {
       interactionHints: { touchTargetMinSize: 56 }
     });
 
-    expect(container.classList.contains('demo-touch-optimized')).toBe(true);
+    expect(container.classList.contains('teaching-demo-touch-optimized')).toBe(true);
     expect(container.style.getPropertyValue('--demo-touch-min')).toBe('56px');
   });
 
@@ -82,16 +82,16 @@ describe('SplitRightLayout demo profile', () => {
     const leftPanel = container.querySelector('.teaching-left-panel');
     expect((leftPanel as HTMLElement).style.display).not.toBe('none');
 
-    const readout = container.querySelector('.readout-panel');
-    expect(readout?.classList.contains('is-docked-bottom')).toBe(false);
-    expect(readout?.classList.contains('readout-enlarged')).toBe(false);
+    const readout = container.querySelector('.teaching-readout-panel');
+    expect(readout?.classList.contains('teaching-is-docked-bottom')).toBe(false);
+    expect(readout?.classList.contains('teaching-readout-enlarged')).toBe(false);
 
-    expect(container.classList.contains('demo-touch-optimized')).toBe(false);
+    expect(container.classList.contains('teaching-demo-touch-optimized')).toBe(false);
   });
 
   it('should setMode update button text', () => {
     layout.setMode('presentation');
-    const modeButton = container.querySelector('.mode-toggle');
+    const modeButton = container.querySelector('.teaching-mode-toggle');
     expect(modeButton?.textContent).toBe('标准');
 
     layout.setMode('normal');

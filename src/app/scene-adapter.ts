@@ -272,28 +272,18 @@ export class SceneAdapter<
         ? (this.options.demoProfile ?? this.options.meta.demoProfile)
         : null;
 
-    const container = (this as unknown as { slots?: LayoutSlots }).slots;
-    if (container) {
-      const layoutEl = document.querySelector('.layout-master');
-      if (layoutEl) {
-        layoutEl.dispatchEvent(
-          new CustomEvent('layout:modechange', {
-            detail: { mode },
-            bubbles: true
-          })
-        );
-      }
+    // Dispatch event so SceneContainerImpl can apply/reset demo profile on layout
+    const layoutEl = document.querySelector('.layout-master');
+    if (layoutEl) {
+      layoutEl.dispatchEvent(
+        new CustomEvent('layout:modechange', {
+          detail: { mode },
+          bubbles: true
+        })
+      );
     }
 
-    const layoutEl = document.querySelector('.layout-master') as
-      | (HTMLElement & { __layout?: { applyDemoProfile?: (p: SceneDemoProfile) => void; resetDemoProfile?: () => void } })
-      | null;
-    if (profile && mode === 'presentation') {
-      layoutEl?.__layout?.applyDemoProfile?.(profile);
-    } else if (mode === 'normal') {
-      layoutEl?.__layout?.resetDemoProfile?.();
-    }
-
+    // Forward to scene
     if (this.scene?.setMode) {
       if (mode === 'presentation' && profile) {
         const sceneWithHints = this.scene as unknown as {
@@ -309,6 +299,10 @@ export class SceneAdapter<
     this.scene?.render();
   }
 
+  getDemoProfile(): import('./demo-profile').SceneDemoProfile | null {
+    return this.options.demoProfile ?? this.options.meta.demoProfile ?? null;
+  }
+
   getTransportState(): TransportState {
     if (this.scene?.getTransportState) {
       return this.scene.getTransportState();
@@ -317,7 +311,8 @@ export class SceneAdapter<
       ? ((this.transport as { transport?: { isPlaying?: boolean } }).transport
           ?.isPlaying ?? false)
       : false;
-    return { isPlaying, speed: 1 };
+    const speed = this.scene?.getTimeScale?.() ?? 1;
+    return { isPlaying, speed };
   }
 
   getReadoutItems(): ReadoutItem[] {

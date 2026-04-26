@@ -44,11 +44,11 @@ export class ReadoutPanelManager {
   /** 切换折叠状态 */
   toggle(): void {
     this.collapsed = !this.collapsed;
-    this.panel.classList.toggle('is-collapsed', this.collapsed);
+    this.panel.classList.toggle('teaching-is-collapsed', this.collapsed);
 
     // 动态查找当前 toggle 按钮（支持 DOM 替换场景）
     const btn = this.panel.querySelector(
-      '.readout-toggle'
+      '.teaching-readout-toggle'
     ) as HTMLButtonElement | null;
     if (btn) {
       btn.textContent = this.collapsed ? '展开' : '折叠';
@@ -77,9 +77,9 @@ export class ReadoutPanelManager {
     position: 'overlay' | 'docked-top' | 'docked-bottom' | 'default'
   ): void {
     this.panel.classList.remove(
-      'is-docked-top',
-      'is-docked-bottom',
-      'is-overlay'
+      'teaching-is-docked-top',
+      'teaching-is-docked-bottom',
+      'teaching-is-overlay'
     );
 
     if (position === 'default') {
@@ -96,7 +96,7 @@ export class ReadoutPanelManager {
     }
 
     if (position === 'overlay') {
-      this.panel.classList.add('is-overlay');
+      this.panel.classList.add('teaching-is-overlay');
       this.panel.style.cssText = `
         position: absolute;
         right: 12px;
@@ -111,7 +111,7 @@ export class ReadoutPanelManager {
 
     if (position === 'docked-top' || position === 'docked-bottom') {
       this.panel.classList.add(
-        position === 'docked-top' ? 'is-docked-top' : 'is-docked-bottom'
+        position === 'docked-top' ? 'teaching-is-docked-top' : 'teaching-is-docked-bottom'
       );
       this.panel.style.cssText = `
         position: absolute;
@@ -135,9 +135,9 @@ export class ReadoutPanelManager {
   /** 设置折叠状态 */
   setCollapsed(collapsed: boolean): void {
     this.collapsed = collapsed;
-    this.panel.classList.toggle('is-collapsed', collapsed);
+    this.panel.classList.toggle('teaching-is-collapsed', collapsed);
     const btn = this.panel.querySelector(
-      '.readout-toggle'
+      '.teaching-readout-toggle'
     ) as HTMLButtonElement | null;
     if (btn) {
       btn.textContent = collapsed ? '展开' : '折叠';
@@ -148,12 +148,12 @@ export class ReadoutPanelManager {
 
   /** 放大读数字号（演示模式） */
   enlargeFont(): void {
-    this.panel.classList.add('readout-enlarged');
+    this.panel.classList.add('teaching-readout-enlarged');
   }
 
   /** 恢复默认字号 */
   resetFont(): void {
-    this.panel.classList.remove('readout-enlarged');
+    this.panel.classList.remove('teaching-readout-enlarged');
   }
 
   /** 恢复默认位置 */
@@ -194,23 +194,23 @@ export class ReadoutPanelManager {
         const width = entry.contentRect.width;
 
         this.slot.classList.remove(
-          'readout-slot--1col',
-          'readout-slot--2col',
-          'readout-slot--3col',
-          'readout-slot--auto'
+          'teaching-readout-slot--1col',
+          'teaching-readout-slot--2col',
+          'teaching-readout-slot--3col',
+          'teaching-readout-slot--auto'
         );
 
         if (width < 220) {
-          this.slot.classList.add('readout-slot--1col');
+          this.slot.classList.add('teaching-readout-slot--1col');
           this.slot.setAttribute('data-columns', '1');
         } else if (width < 320) {
-          this.slot.classList.add('readout-slot--auto');
+          this.slot.classList.add('teaching-readout-slot--auto');
           this.slot.setAttribute('data-columns', 'auto');
         } else if (width < 420) {
-          this.slot.classList.add('readout-slot--2col');
+          this.slot.classList.add('teaching-readout-slot--2col');
           this.slot.setAttribute('data-columns', '2');
         } else {
-          this.slot.classList.add('readout-slot--3col');
+          this.slot.classList.add('teaching-readout-slot--3col');
           this.slot.setAttribute('data-columns', '3');
         }
       }

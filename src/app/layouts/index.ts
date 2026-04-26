@@ -46,6 +46,10 @@ export {
 
 // 基类导出
 export { BaseLayout } from './masters/base-layout';
+export {
+  DesktopSplitLayout,
+  type DesktopSplitConfig
+} from './masters/desktop-split/desktop-split';
 
 // 布局实现导出
 export {
@@ -57,6 +61,11 @@ export {
   MobileStackLayout,
   type MobileStackConfig
 } from './masters/mobile-stack/mobile-stack';
+
+export {
+  SplitRightGraphBottomLayout,
+  type SplitRightGraphBottomConfig
+} from './masters/split-right-graph-bottom/split-right-graph-bottom';
 
 /**
  * 布局系统导出

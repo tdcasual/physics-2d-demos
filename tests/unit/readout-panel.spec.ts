@@ -9,13 +9,13 @@ describe('ReadoutPanelManager', () => {
 
   beforeEach(() => {
     panel = document.createElement('div');
-    panel.className = 'readout-panel';
+    panel.className = 'teaching-readout-panel';
     header = document.createElement('div');
-    header.className = 'readout-header';
+    header.className = 'teaching-readout-header';
     slot = document.createElement('div');
-    slot.className = 'readout-slot';
+    slot.className = 'teaching-readout-slot';
     toggleBtn = document.createElement('button');
-    toggleBtn.className = 'readout-toggle';
+    toggleBtn.className = 'teaching-readout-toggle';
     toggleBtn.textContent = '折叠';
     panel.appendChild(header);
     panel.appendChild(slot);
@@ -56,11 +56,11 @@ describe('ReadoutPanelManager', () => {
 
     manager.toggle();
     expect(manager.isCollapsed).toBe(true);
-    expect(panel.classList.contains('is-collapsed')).toBe(true);
+    expect(panel.classList.contains('teaching-is-collapsed')).toBe(true);
 
     manager.toggle();
     expect(manager.isCollapsed).toBe(false);
-    expect(panel.classList.contains('is-collapsed')).toBe(false);
+    expect(panel.classList.contains('teaching-is-collapsed')).toBe(false);
   });
 
   it('should update toggle button text on toggle', () => {
@@ -77,7 +77,7 @@ describe('ReadoutPanelManager', () => {
   it('should find toggle button dynamically if changed', () => {
     const manager = createManager();
     const newToggle = document.createElement('button');
-    newToggle.className = 'readout-toggle';
+    newToggle.className = 'teaching-readout-toggle';
     newToggle.textContent = '折叠';
     toggleBtn.remove();
     panel.appendChild(newToggle);
