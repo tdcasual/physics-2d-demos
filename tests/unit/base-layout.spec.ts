@@ -22,6 +22,10 @@ class TestLayout extends BaseLayout {
   resetDemoProfile(): void {
     // test stub
   }
+
+  getCanvasClassName(): string {
+    return 'test-canvas';
+  }
 }
 
 describe('BaseLayout', () => {
