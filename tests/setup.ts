@@ -1,4 +1,4 @@
-import { vi, beforeAll } from 'vitest';
+import { vi, beforeAll, beforeEach } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Canvas 2D Context Mock
@@ -12,6 +12,14 @@ class MockCanvasRenderingContext2D {
   textAlign: CanvasTextAlign = 'start';
   textBaseline: CanvasTextBaseline = 'alphabetic';
   globalAlpha = 1;
+  globalCompositeOperation = 'source-over';
+  shadowBlur = 0;
+  shadowColor = '';
+  shadowOffsetX = 0;
+  shadowOffsetY = 0;
+  lineCap: CanvasLineCap = 'butt';
+  lineJoin: CanvasLineJoin = 'miter';
+  miterLimit = 10;
 
   fillRect = vi.fn();
   strokeRect = vi.fn();
@@ -23,12 +31,28 @@ class MockCanvasRenderingContext2D {
   fill = vi.fn();
   arc = vi.fn();
   arcTo = vi.fn();
+  ellipse = vi.fn();
   roundRect = vi.fn();
   setLineDash = vi.fn();
   getLineDash = vi.fn(() => []);
   fillText = vi.fn();
   strokeText = vi.fn();
-  measureText = vi.fn(() => ({ width: 0 }));
+  measureText = vi.fn((text: string) => {
+    // Approximate width: 0.6em per character for default 10px sans-serif
+    const len = typeof text === 'string' ? text.length : String(text).length;
+    return { width: Math.max(0, len * 6) };
+  });
+  drawImage = vi.fn();
+  getImageData = vi.fn((x: number, y: number, w: number, h: number) => {
+    const data = new Uint8ClampedArray(w * h * 4);
+    return {
+      data,
+      width: w,
+      height: h,
+      colorSpace: 'srgb'
+    } as ImageData;
+  });
+  putImageData = vi.fn();
   save = vi.fn();
   restore = vi.fn();
   translate = vi.fn();
@@ -44,6 +68,9 @@ class MockCanvasRenderingContext2D {
   createRadialGradient = vi.fn(() => ({
     addColorStop: vi.fn()
   }));
+  createPattern = vi.fn(() => null);
+  isPointInPath = vi.fn(() => false);
+  isPointInStroke = vi.fn(() => false);
 }
 
 // ---------------------------------------------------------------------------
@@ -128,4 +155,11 @@ beforeAll(() => {
     };
     proto.toDataURL = () => 'data:image/png;base64,';
   }
+});
+
+// 每个测试前清理 canvas mock 缓存，确保测试隔离
+beforeEach(() => {
+  document.querySelectorAll('canvas').forEach((el) => {
+    delete (el as unknown as { __mockCtx2d?: unknown }).__mockCtx2d;
+  });
 });

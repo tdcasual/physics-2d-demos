@@ -33,8 +33,14 @@ describe('unified-canvas', () => {
     });
   });
 
+  const originalDpr = window.devicePixelRatio;
+
   afterEach(() => {
     canvas.remove();
+    Object.defineProperty(window, 'devicePixelRatio', {
+      value: originalDpr,
+      configurable: true
+    });
   });
 
   describe('createCanvasContext', () => {

@@ -25,7 +25,7 @@ export interface SplitRightGraphBottomConfig extends DesktopSplitConfig {
   graphColumns?: number;
 }
 
-export class SplitRightGraphBottomLayout extends DesktopSplitLayout {
+export class SplitRightGraphBottomLayout extends DesktopSplitLayout<SplitRightGraphBottomConfig> {
   readonly id = 'split-right-graph-bottom';
   readonly name = '左右分栏+底部图表';
   readonly description = '控制区在左，动画区在右上方，图表网格在右下方（支持多列）';
@@ -52,7 +52,7 @@ export class SplitRightGraphBottomLayout extends DesktopSplitLayout {
 
   constructor(container: HTMLElement, config: SplitRightGraphBottomConfig = {}) {
     super(container, config);
-    const cfg = this.config as SplitRightGraphBottomConfig;
+    const cfg = this.config;
     this.leftRatio = cfg.defaultLeftRatio ?? 0.35;
     this.graphHeight = cfg.graphHeight ?? 220;
   }
@@ -70,7 +70,7 @@ export class SplitRightGraphBottomLayout extends DesktopSplitLayout {
   // ========================================================================
 
   protected onBuildRightPanelExtra = (rightPanel: HTMLElement): void => {
-    const cfg = this.config as SplitRightGraphBottomConfig;
+    const cfg = this.config;
     const graphMinHeight = cfg.graphMinHeight ?? 120;
     const graphMaxHeight = cfg.graphMaxHeight ?? 480;
     const graphColumns = cfg.graphColumns ?? 3;
@@ -147,7 +147,7 @@ export class SplitRightGraphBottomLayout extends DesktopSplitLayout {
 
     const startY = e.clientY;
     const startHeight = this.graphSection?.clientHeight || this.graphHeight;
-    const cfg = this.config as SplitRightGraphBottomConfig;
+    const cfg = this.config;
     const minHeight = cfg.graphMinHeight ?? 120;
     const maxHeight = cfg.graphMaxHeight ?? 480;
 
@@ -222,7 +222,7 @@ export class SplitRightGraphBottomLayout extends DesktopSplitLayout {
   }
 
   setGraphHeight(height: number): void {
-    const cfg = this.config as SplitRightGraphBottomConfig;
+    const cfg = this.config;
     const minHeight = cfg.graphMinHeight ?? 120;
     const maxHeight = cfg.graphMaxHeight ?? 480;
     this.graphHeight = Math.max(minHeight, Math.min(maxHeight, height));

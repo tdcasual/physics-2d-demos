@@ -23,6 +23,7 @@ import {
   restoreLayoutState as restoreLayoutStateFromStorage,
   restoreSceneState as restoreSceneStateFromStorage
 } from './container-persistence';
+import { satisfiesConstraints } from './layout-constraints';
 import type {
   SceneContainer,
   Scene,
@@ -119,21 +120,6 @@ export class SceneContainerImpl implements SceneContainer {
    * 解析当前场景应使用的布局
    * 使用布局选择器，支持策略插件化
    */
-  private satisfiesConstraints(
-    meta: import('./registry').LayoutMetadata,
-    viewport: { width: number; height: number },
-    orientation: 'portrait' | 'landscape'
-  ): boolean {
-    const c = meta.constraints;
-    if (!c) return true;
-    if (c.minWidth !== undefined && viewport.width < c.minWidth) return false;
-    if (c.maxWidth !== undefined && viewport.width > c.maxWidth) return false;
-    if (c.minHeight !== undefined && viewport.height < c.minHeight) return false;
-    if (c.maxHeight !== undefined && viewport.height > c.maxHeight) return false;
-    if (c.orientation && c.orientation !== 'any' && c.orientation !== orientation) return false;
-    return true;
-  }
-
   private resolveLayout(scene: Scene): string {
     const width = this.container.clientWidth;
     const height = this.container.clientHeight;
@@ -155,7 +141,7 @@ export class SceneContainerImpl implements SceneContainer {
     // 低功耗/弱网模式下，若用户未指定偏好，优先选择渲染负担最小的 mobile-stack
     if (this._lowPowerMode && !this._userPreferredLayout && selected !== 'mobile-stack') {
       const mobileMeta = ctx.availableLayouts.find((l) => l.id === 'mobile-stack');
-      if (mobileMeta && this.satisfiesConstraints(mobileMeta, ctx.viewport, ctx.orientation)) {
+      if (mobileMeta && satisfiesConstraints(mobileMeta, ctx.viewport, ctx.orientation)) {
         return 'mobile-stack';
       }
     }
@@ -193,7 +179,13 @@ export class SceneContainerImpl implements SceneContainer {
     const targetLayout = layout || this._currentLayout;
     if (!targetLayout) return;
 
-    // 清理旧订阅和事件监听器，防止重复挂载导致累积
+    this.cleanupSceneBindings();
+    this.renderSceneToSlots(scene, targetLayout);
+    this.activateSceneLifecycle(scene, targetLayout);
+  }
+
+  /** 清理旧场景的订阅和事件监听，防止重复挂载累积 */
+  private cleanupSceneBindings(): void {
     this._sceneUnsubscribers.forEach((fn) => fn());
     this._sceneUnsubscribers = [];
     if (this._layoutThemeHandler) {
@@ -210,39 +202,36 @@ export class SceneContainerImpl implements SceneContainer {
       );
       this._layoutModeHandler = undefined;
     }
+  }
 
-    // 从布局实例获取已渲染的 slots（通过公共 getter 避免反射）
-    const slots = targetLayout.getSlots?.() || {};
+  /** 将场景渲染到布局的各 slot 中 */
+  private renderSceneToSlots(scene: Scene, layout: LayoutMaster): void {
+    const slots = layout.getSlots?.() || {};
 
-    // 渲染各区域
     if (slots.header && scene.renderHeader) {
       scene.renderHeader(slots.header);
     }
-
     if (slots.control && scene.renderControl) {
       scene.renderControl(slots.control);
     }
-
-    // renderAnimation 接收完整 slots，让场景自行决定如何使用各区域
     if (slots.animation && scene.renderAnimation) {
-      // SceneAdapter 的 renderAnimation 接收 slots 对象
-      // 使用 .call() 保持 this 绑定
       (scene.renderAnimation as (c: HTMLElement, s?: LayoutSlots) => void).call(
         scene,
         slots.animation,
         slots as LayoutSlots
       );
     }
-
     if (slots.graph && scene.renderGraph) {
       scene.renderGraph(slots.graph);
     }
-
     if (slots.readout && scene.renderReadout) {
       scene.renderReadout(slots.readout);
     }
+  }
 
-    // 恢复场景持久化状态
+  /** 激活场景生命周期：状态恢复、同步、事件绑定、挂载 */
+  private activateSceneLifecycle(scene: Scene, layout: LayoutMaster): void {
+    // 恢复持久化状态
     const savedState = this.restoreSceneState(scene.id);
     if (savedState && scene.restoreState) {
       try {
@@ -255,17 +244,35 @@ export class SceneContainerImpl implements SceneContainer {
       }
     }
 
-    // 初始同步场景状态到布局
-    this._transportBridge.syncSceneStateToLayout(scene, targetLayout);
-
-    // 订阅场景状态变化，自动刷新布局
-    const unsubscribe = this._transportBridge.subscribeSceneChanges(
-      scene,
-      targetLayout
-    );
+    // 同步状态并订阅变化
+    this._transportBridge.syncSceneStateToLayout(scene, layout);
+    const unsubscribe = this._transportBridge.subscribeSceneChanges(scene, layout);
     this._sceneUnsubscribers.push(unsubscribe);
 
-    // 监听布局内部触发的主题/模式变化并转发给场景
+    // 绑定布局事件转发
+    this.bindLayoutEventForwarders(scene, layout);
+
+    // 绑定运输控制
+    if (scene.getTransportState) {
+      this._transportBridge.bindFloatingControls(layout, {
+        isPlaying: () => scene.getTransportState!().isPlaying,
+        onTogglePlay: () => {
+          const isPlaying = scene.getTransportState!().isPlaying;
+          if (isPlaying) scene.pauseAll?.();
+          else scene.startAll?.();
+        },
+        onReset: () => scene.reset?.(),
+        onSpeedChange: (speed: number) => scene.setTimeScale?.(speed),
+        getSpeed: () => scene.getTransportState!().speed ?? 1
+      });
+    }
+
+    scene.mount?.();
+    this._emitter.emit('scene:mount', { sceneId: scene.id });
+  }
+
+  /** 绑定布局主题/模式变化事件，转发给场景 */
+  private bindLayoutEventForwarders(scene: Scene, layout: LayoutMaster): void {
     this._layoutThemeHandler = (e: Event) => {
       const custom = e as CustomEvent<{ theme: Theme }>;
       if (custom.detail?.theme && scene.setTheme) {
@@ -277,19 +284,17 @@ export class SceneContainerImpl implements SceneContainer {
       const mode = custom.detail?.mode;
       if (!mode) return;
 
-      // Forward mode change to scene
       if (scene.setMode) {
         scene.setMode(mode);
       }
 
-      // Apply / reset demo profile directly on layout (avoids DOM backdoor in SceneAdapter)
       if (mode === 'presentation') {
         const profile = scene.getDemoProfile?.() || null;
-        if (profile && targetLayout.applyDemoProfile) {
-          targetLayout.applyDemoProfile(profile);
+        if (profile && layout.applyDemoProfile) {
+          layout.applyDemoProfile(profile);
         }
-      } else if (mode === 'normal' && targetLayout.resetDemoProfile) {
-        targetLayout.resetDemoProfile();
+      } else if (mode === 'normal' && layout.resetDemoProfile) {
+        layout.resetDemoProfile();
       }
     };
     this.container.addEventListener(
@@ -300,30 +305,6 @@ export class SceneContainerImpl implements SceneContainer {
       'layout:modechange',
       this._layoutModeHandler
     );
-
-    // 如果布局支持浮动控制条，自动绑定场景运输控制
-    if (scene.getTransportState) {
-      this._transportBridge.bindFloatingControls(targetLayout, {
-        isPlaying: () => scene.getTransportState!().isPlaying,
-        onTogglePlay: () => {
-          const isPlaying = scene.getTransportState!().isPlaying;
-          if (isPlaying) {
-            scene.pauseAll?.();
-          } else {
-            scene.startAll?.();
-          }
-        },
-        onReset: () => scene.reset?.(),
-        onSpeedChange: (speed: number) => scene.setTimeScale?.(speed),
-        getSpeed: () => scene.getTransportState!().speed ?? 1
-      });
-    }
-
-    // 调用场景挂载生命周期
-    scene.mount?.();
-
-    // 触发事件
-    this._emitter.emit('scene:mount', { sceneId: scene.id });
   }
 
   /**

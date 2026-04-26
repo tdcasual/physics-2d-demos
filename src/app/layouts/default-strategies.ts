@@ -9,32 +9,7 @@
 
 import { layoutSelector } from './selector';
 import { layoutRegistry } from './registry';
-
-/**
- * 检查布局是否满足当前视口约束
- */
-function satisfiesConstraints(
-  meta: import('./registry').LayoutMetadata,
-  viewport: { width: number; height: number },
-  orientation: 'portrait' | 'landscape'
-): boolean {
-  const c = meta.constraints;
-  if (!c) return true;
-
-  if (c.minWidth !== undefined && viewport.width < c.minWidth) return false;
-  if (c.maxWidth !== undefined && viewport.width > c.maxWidth) return false;
-  if (c.minHeight !== undefined && viewport.height < c.minHeight) return false;
-  if (c.maxHeight !== undefined && viewport.height > c.maxHeight) return false;
-  if (
-    c.orientation &&
-    c.orientation !== 'any' &&
-    c.orientation !== orientation
-  ) {
-    return false;
-  }
-
-  return true;
-}
+import { satisfiesConstraints } from './layout-constraints';
 
 /**
  * 注册所有默认选择策略

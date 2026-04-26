@@ -23,7 +23,7 @@ export interface SplitRightConfig extends DesktopSplitConfig {
   controlColumns?: 'auto' | 1 | 2 | 3;
 }
 
-export class SplitRightLayout extends DesktopSplitLayout {
+export class SplitRightLayout extends DesktopSplitLayout<SplitRightConfig> {
   readonly id = 'split-right';
   readonly name = '左右分栏';
   readonly description = '控制区在左，动画区在右，数据读数面板可拖拽可调节';
@@ -44,7 +44,7 @@ export class SplitRightLayout extends DesktopSplitLayout {
 
   constructor(container: HTMLElement, config: SplitRightConfig = {}) {
     super(container, config);
-    const cfg = this.config as SplitRightConfig;
+    const cfg = this.config;
     this.leftRatio = cfg.defaultLeftRatio ?? 0.38;
   }
 
@@ -63,7 +63,7 @@ export class SplitRightLayout extends DesktopSplitLayout {
   }
 
   protected get rootAttributes(): Record<string, string> {
-    const cfg = this.config as SplitRightConfig;
+    const cfg = this.config;
     return {
       'data-has-graph': String(cfg.hasGraph !== false),
       'data-control-columns': String(cfg.controlColumns ?? 'auto')
@@ -75,7 +75,7 @@ export class SplitRightLayout extends DesktopSplitLayout {
   // ========================================================================
 
   protected onBuildLeftPanelExtra = (leftPanel: HTMLElement): void => {
-    const cfg = this.config as SplitRightConfig;
+    const cfg = this.config;
     const hasGraph = cfg.hasGraph !== false;
     if (!hasGraph) return;
 
@@ -110,7 +110,7 @@ export class SplitRightLayout extends DesktopSplitLayout {
   }
 
   getExtraSlotConfig(): Partial<Record<SlotName, SlotConfig>> {
-    const cfg = this.config as SplitRightConfig;
+    const cfg = this.config;
     return {
       graph: { visible: cfg.hasGraph ?? true }
     };
@@ -127,7 +127,7 @@ export class SplitRightLayout extends DesktopSplitLayout {
   getSlotConfig(slot: SlotName): SlotConfig | undefined {
     const base = super.getSlotConfig(slot);
     if (slot === 'graph') {
-      const cfg = this.config as SplitRightConfig;
+      const cfg = this.config;
       return { visible: cfg.hasGraph ?? true };
     }
     return base;

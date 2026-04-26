@@ -19,7 +19,9 @@ import type {
 import type { SceneDemoProfile } from '../../demo-profile';
 
 /** 布局基类 */
-export abstract class BaseLayout implements LayoutMaster {
+export abstract class BaseLayout<TConfig extends LayoutConfig = LayoutConfig>
+  implements LayoutMaster
+{
   /** 布局ID */
   abstract readonly id: string;
 
@@ -36,7 +38,7 @@ export abstract class BaseLayout implements LayoutMaster {
   readonly container: HTMLElement;
 
   /** 布局配置 */
-  protected config: LayoutConfig;
+  protected config: TConfig;
 
   /** 区域槽位映射 */
   protected slots: Partial<LayoutSlots> = {};
@@ -53,14 +55,14 @@ export abstract class BaseLayout implements LayoutMaster {
   /** 动画中断控制器 */
   private animationAbortController: AbortController | null = null;
 
-  constructor(container: HTMLElement, config: LayoutConfig = {}) {
+  constructor(container: HTMLElement, config: TConfig = {} as TConfig) {
     this.container = container;
     this.config = {
       theme: 'light',
       mobileBreakpoint: 768,
       tabletBreakpoint: 1024,
       ...config
-    };
+    } as TConfig;
     this.currentTheme = this.config.theme || 'light';
   }
 

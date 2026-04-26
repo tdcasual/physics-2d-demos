@@ -49,7 +49,9 @@ export interface DesktopSplitConfig extends LayoutConfig {
   subtitle?: string;
 }
 
-export abstract class DesktopSplitLayout extends BaseLayout {
+export abstract class DesktopSplitLayout<
+  TConfig extends DesktopSplitConfig = DesktopSplitConfig
+> extends BaseLayout<TConfig> {
   // 抽象属性（子类必须实现）
   abstract readonly id: string;
   abstract readonly name: string;
@@ -102,9 +104,9 @@ export abstract class DesktopSplitLayout extends BaseLayout {
   // 事件清理
   protected eventCleanups: (() => void)[] = [];
 
-  constructor(container: HTMLElement, config: DesktopSplitConfig = {}) {
+  constructor(container: HTMLElement, config: TConfig = {} as TConfig) {
     super(container, config);
-    const cfg = this.config as DesktopSplitConfig;
+    const cfg = this.config;
     this.leftRatio = cfg.defaultLeftRatio ?? 0.35;
   }
 
@@ -152,7 +154,7 @@ export abstract class DesktopSplitLayout extends BaseLayout {
       container.setAttribute(key, value);
     }
 
-    const cfg = this.config as DesktopSplitConfig;
+    const cfg = this.config;
     if (cfg.hideHeader) {
       container.classList.add('is-compact-sidebar');
     }
@@ -171,7 +173,7 @@ export abstract class DesktopSplitLayout extends BaseLayout {
   // ========================================================================
 
   protected buildLeftPanel(): void {
-    const cfg = this.config as DesktopSplitConfig;
+    const cfg = this.config;
     const hideHeader = cfg.hideHeader ?? false;
 
     this.leftPanel = document.createElement('aside');
@@ -242,7 +244,7 @@ export abstract class DesktopSplitLayout extends BaseLayout {
       this.container,
       this.resizer,
       this.leftPanel,
-      () => this.config as DesktopSplitConfig,
+      () => this.config,
       (ratio) => {
         this.leftRatio = ratio;
       }
@@ -322,7 +324,7 @@ export abstract class DesktopSplitLayout extends BaseLayout {
   // ========================================================================
 
   protected buildReadoutPanel(): void {
-    const cfg = this.config as DesktopSplitConfig;
+    const cfg = this.config;
     const readoutLabel = cfg.readoutLabel ?? '数据读数';
     const readoutCollapsed = cfg.readoutCollapsed ?? true;
 
@@ -385,108 +387,106 @@ export abstract class DesktopSplitLayout extends BaseLayout {
     this.eventCleanups.forEach((cleanup) => cleanup());
     this.eventCleanups = [];
 
-    // 垂直分隔条拖拽
-    if (this.resizer && this.resizerBehavior) {
-      const onMouseDown = (e: MouseEvent) => {
-        this.resizerBehavior!.onMouseDown(e, this.isCompactViewport);
-      };
-      this.resizer.addEventListener('mousedown', onMouseDown);
-      this.eventCleanups.push(() =>
-        this.resizer?.removeEventListener('mousedown', onMouseDown)
-      );
+    this.bindResizerEvents();
+    this.bindSidebarToggleEvents();
+    this.bindReadoutToggleEvents();
+    this.bindSectionToggleEvents();
+    this.bindThemeToggleEvents();
+    this.bindModeToggleEvents();
+  }
+
+  private bindResizerEvents(): void {
+    if (!this.resizer || !this.resizerBehavior) return;
+    const onMouseDown = (e: MouseEvent) => {
+      this.resizerBehavior!.onMouseDown(e, this.isCompactViewport);
+    };
+    this.resizer.addEventListener('mousedown', onMouseDown);
+    this.eventCleanups.push(() =>
+      this.resizer?.removeEventListener('mousedown', onMouseDown)
+    );
+  }
+
+  private bindSidebarToggleEvents(): void {
+    if (!this.sidebarToggle) return;
+    const onToggleSidebar = this.toggleSidebar.bind(this);
+    this.sidebarToggle.addEventListener('click', onToggleSidebar);
+    this.eventCleanups.push(() =>
+      this.sidebarToggle?.removeEventListener('click', onToggleSidebar)
+    );
+  }
+
+  private bindReadoutToggleEvents(): void {
+    if (!this.readoutManager) return;
+    const panel = this.readoutManager.getPanel();
+
+    const toggleSelector = `.${this.getClassName('readout-toggle')}`;
+    const toggleBtn = panel.querySelector(toggleSelector) as HTMLButtonElement | null;
+    if (toggleBtn) {
+      const onToggle = () => this.readoutManager?.toggle();
+      toggleBtn.addEventListener('click', onToggle);
+      this.eventCleanups.push(() => toggleBtn.removeEventListener('click', onToggle));
     }
 
-    // 侧边栏折叠
-    if (this.sidebarToggle) {
-      const onToggleSidebar = this.toggleSidebar.bind(this);
-      this.sidebarToggle.addEventListener('click', onToggleSidebar);
-      this.eventCleanups.push(() =>
-        this.sidebarToggle?.removeEventListener('click', onToggleSidebar)
-      );
+    const resizeSelector = `.${this.getClassName('readout-resize-toggle')}`;
+    const resizeToggleBtn = panel.querySelector(resizeSelector) as HTMLButtonElement | null;
+    if (resizeToggleBtn) {
+      const onToggle = () => this.readoutManager?.toggle();
+      resizeToggleBtn.addEventListener('click', onToggle);
+      this.eventCleanups.push(() => resizeToggleBtn.removeEventListener('click', onToggle));
     }
+  }
 
-    // 读数面板折叠
-    if (this.readoutManager) {
-      const toggleSelector = `.${this.getClassName('readout-toggle')}`;
-      const toggleBtn = this.readoutManager
-        .getPanel()
-        .querySelector(toggleSelector) as HTMLButtonElement | null;
-      if (toggleBtn) {
-        const onToggle = () => this.readoutManager?.toggle();
-        toggleBtn.addEventListener('click', onToggle);
-        this.eventCleanups.push(() =>
-          toggleBtn.removeEventListener('click', onToggle)
-        );
-      }
-      const resizeSelector = `.${this.getClassName('readout-resize-toggle')}`;
-      const resizeToggleBtn = this.readoutManager
-        .getPanel()
-        .querySelector(resizeSelector) as HTMLButtonElement | null;
-      if (resizeToggleBtn) {
-        const onToggle = () => this.readoutManager?.toggle();
-        resizeToggleBtn.addEventListener('click', onToggle);
-        this.eventCleanups.push(() =>
-          resizeToggleBtn.removeEventListener('click', onToggle)
-        );
-      }
-    }
-
-    // 区域折叠按钮
-    const sectionToggleHandlers: { btn: Element; handler: (e: Event) => void }[] = [];
-    const toggleSelector = `.${this.getClassName('section-toggle')}`;
-    this.container.querySelectorAll(toggleSelector).forEach((btn) => {
+  private bindSectionToggleEvents(): void {
+    const handlers: { btn: Element; handler: (e: Event) => void }[] = [];
+    const selector = `.${this.getClassName('section-toggle')}`;
+    this.container.querySelectorAll(selector).forEach((btn) => {
       const handler = (e: Event) => {
         const target = (e.currentTarget as HTMLElement).getAttribute('data-target');
-        if (target === 'control') {
-          this.toggleControlSection();
-        } else if (target === 'graph') {
-          this.toggleGraphSection();
-        }
+        if (target === 'control') this.toggleControlSection();
+        else if (target === 'graph') this.toggleGraphSection();
       };
       btn.addEventListener('click', handler);
-      sectionToggleHandlers.push({ btn, handler });
+      handlers.push({ btn, handler });
     });
     this.eventCleanups.push(() => {
-      sectionToggleHandlers.forEach(({ btn, handler }) =>
-        btn.removeEventListener('click', handler)
-      );
+      handlers.forEach(({ btn, handler }) => btn.removeEventListener('click', handler));
     });
+  }
 
-    // 主题切换
-    if (this.themeButton) {
-      const onThemeClick = () => {
-        const nextTheme = this.currentTheme === 'dark' ? 'light' : 'dark';
-        this.setTheme(nextTheme);
-        this.container.dispatchEvent(
-          new CustomEvent('layout:themechange', {
-            detail: { theme: nextTheme },
-            bubbles: true
-          })
-        );
-      };
-      this.themeButton.addEventListener('click', onThemeClick);
-      this.eventCleanups.push(() =>
-        this.themeButton?.removeEventListener('click', onThemeClick)
+  private bindThemeToggleEvents(): void {
+    if (!this.themeButton) return;
+    const onThemeClick = () => {
+      const nextTheme = this.currentTheme === 'dark' ? 'light' : 'dark';
+      this.setTheme(nextTheme);
+      this.container.dispatchEvent(
+        new CustomEvent('layout:themechange', {
+          detail: { theme: nextTheme },
+          bubbles: true
+        })
       );
-    }
+    };
+    this.themeButton.addEventListener('click', onThemeClick);
+    this.eventCleanups.push(() =>
+      this.themeButton?.removeEventListener('click', onThemeClick)
+    );
+  }
 
-    // 模式切换
-    if (this.modeButton) {
-      const onModeClick = () => {
-        const nextMode = this.mode === 'normal' ? 'presentation' : 'normal';
-        this.setMode(nextMode);
-        this.container.dispatchEvent(
-          new CustomEvent('layout:modechange', {
-            detail: { mode: nextMode },
-            bubbles: true
-          })
-        );
-      };
-      this.modeButton.addEventListener('click', onModeClick);
-      this.eventCleanups.push(() =>
-        this.modeButton?.removeEventListener('click', onModeClick)
+  private bindModeToggleEvents(): void {
+    if (!this.modeButton) return;
+    const onModeClick = () => {
+      const nextMode = this.mode === 'normal' ? 'presentation' : 'normal';
+      this.setMode(nextMode);
+      this.container.dispatchEvent(
+        new CustomEvent('layout:modechange', {
+          detail: { mode: nextMode },
+          bubbles: true
+        })
       );
-    }
+    };
+    this.modeButton.addEventListener('click', onModeClick);
+    this.eventCleanups.push(() =>
+      this.modeButton?.removeEventListener('click', onModeClick)
+    );
   }
 
   // ========================================================================
@@ -502,7 +502,7 @@ export abstract class DesktopSplitLayout extends BaseLayout {
         this.leftPanel.style.display = 'none';
       }
     } else {
-      const cfg = this.config as DesktopSplitConfig;
+      const cfg = this.config;
       const minWidth = cfg.leftMinWidth ?? 260;
       const maxWidth = cfg.leftMaxWidth ?? 960;
       const width = Math.max(
@@ -525,7 +525,7 @@ export abstract class DesktopSplitLayout extends BaseLayout {
   protected showSidebar(): void {
     if (!this.sidebarHidden) return;
     this.sidebarHidden = false;
-    const cfg = this.config as DesktopSplitConfig;
+    const cfg = this.config;
     const minWidth = cfg.leftMinWidth ?? 260;
     const maxWidth = cfg.leftMaxWidth ?? 960;
     const width = Math.max(
@@ -751,7 +751,7 @@ export abstract class DesktopSplitLayout extends BaseLayout {
         this.resizer.style.display = 'block';
       }
     } else {
-      const cfg = this.config as DesktopSplitConfig;
+      const cfg = this.config;
       const minWidth = cfg.leftMinWidth ?? 260;
       const maxWidth = Math.min(cfg.leftMaxWidth ?? 960, width * 0.5);
       const leftWidth = Math.max(minWidth, Math.min(maxWidth, width * this.leftRatio));
@@ -966,7 +966,7 @@ export abstract class DesktopSplitLayout extends BaseLayout {
   }
 
   setLeftRatio(ratio: number): void {
-    const cfg = this.config as DesktopSplitConfig;
+    const cfg = this.config;
     const minWidth = cfg.leftMinWidth ?? 260;
     const maxWidth = cfg.leftMaxWidth ?? 960;
     const containerWidth = this.container.clientWidth;
@@ -1007,7 +1007,7 @@ export abstract class DesktopSplitLayout extends BaseLayout {
   // ========================================================================
 
   getSlotConfig(slot: SlotName): SlotConfig | undefined {
-    const cfg = this.config as DesktopSplitConfig;
+    const cfg = this.config;
     const configs: Partial<Record<SlotName, SlotConfig>> = {
       header: { visible: !cfg.hideHeader },
       control: { visible: true },

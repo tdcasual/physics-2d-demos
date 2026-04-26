@@ -32,7 +32,7 @@ import type { SceneDemoProfile } from '../../../demo-profile';
 
 import './mobile-stack.css';
 
-export class MobileStackLayout extends BaseLayout {
+export class MobileStackLayout extends BaseLayout<MobileStackConfig> {
   readonly id = 'mobile-stack';
   readonly name = '移动端堆叠';
   readonly description = '适合手机的垂直堆叠布局（高级版）';
@@ -68,7 +68,7 @@ export class MobileStackLayout extends BaseLayout {
 
   constructor(container: HTMLElement, config: MobileStackConfig = {}) {
     super(container, config);
-    const cfg = this.config as MobileStackConfig;
+    const cfg = this.config;
 
     if (cfg.persistState && cfg.stateKey) {
       this.loadState();
@@ -76,7 +76,7 @@ export class MobileStackLayout extends BaseLayout {
   }
 
   private getConfig(): Required<MobileStackConfig> {
-    return { ...DEFAULT_CONFIG, ...(this.config as MobileStackConfig) };
+    return { ...DEFAULT_CONFIG, ...(this.config) };
   }
 
   // ========================================================================
@@ -115,7 +115,7 @@ export class MobileStackLayout extends BaseLayout {
       testEl.style.height = '1dvh';
       const vhUnit = testEl.style.height === '1dvh' ? 'dvh' : 'vh';
       // 如果场景自行管理内容高度（如 chase-meet），允许 auto 模式
-      const layoutCfg = this.config as MobileStackConfig;
+      const layoutCfg = this.config;
       if (layoutCfg.hasGraph === false) {
         this.animationSection.classList.add('auto-height');
         this.animationSection.style.height = 'auto';
@@ -137,7 +137,7 @@ export class MobileStackLayout extends BaseLayout {
       const hasGraph = layoutCfg.hasGraph !== false;
       if (hasGraph) {
         const graphExpanded =
-          (this.config as MobileStackConfig).graphExpanded ??
+          (this.config).graphExpanded ??
           DEFAULT_CONFIG.graphExpanded;
         this.graphManager = new GraphSectionManager(
           this.scrollContainer,
@@ -377,7 +377,7 @@ export class MobileStackLayout extends BaseLayout {
       if (saved) {
         const state = JSON.parse(saved);
         if (state.graphExpanded !== undefined) {
-          (this.config as MobileStackConfig).graphExpanded =
+          (this.config).graphExpanded =
             state.graphExpanded;
         }
       }
