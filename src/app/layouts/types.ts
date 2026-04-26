@@ -12,6 +12,12 @@
 /** 主题类型 */
 export type Theme = 'light' | 'dark';
 
+/** 布局主题变化 CustomEvent */
+export type LayoutThemeChangeEvent = CustomEvent<{ theme: Theme }>;
+
+/** 布局模式变化 CustomEvent */
+export type LayoutModeChangeEvent = CustomEvent<{ mode: 'normal' | 'presentation' }>;
+
 /** 布局过渡动画配置 */
 export interface LayoutTransition {
   /** 动画类型 */

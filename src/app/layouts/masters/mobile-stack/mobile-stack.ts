@@ -48,8 +48,6 @@ export class MobileStackLayout extends BaseLayout<MobileStackConfig> {
   private scrollContainer: HTMLElement | null = null;
   private controlsBar: HTMLElement | null = null;
   private animationSection: HTMLElement | null = null;
-  private stageSlot: HTMLElement | null = null;
-  private stageCanvas: HTMLCanvasElement | null = null;
   private controlSection: HTMLElement | null = null;
   private controlSlot: HTMLElement | null = null;
 
@@ -73,6 +71,10 @@ export class MobileStackLayout extends BaseLayout<MobileStackConfig> {
     if (cfg.persistState && cfg.stateKey) {
       this.loadState();
     }
+  }
+
+  protected getCanvasClassName(): string {
+    return 'mobile-stage-canvas';
   }
 
   private getConfig(): Required<MobileStackConfig> {
@@ -105,7 +107,7 @@ export class MobileStackLayout extends BaseLayout<MobileStackConfig> {
       // 1. 控制条
       if (cfg.stickyControls) {
         this.transportManager = new TransportBarManager(this.scrollContainer);
-        this.controlsBar = this.transportManager['bar'] ?? null;
+        this.controlsBar = this.transportManager.getBar() ?? null;
       }
 
       // 2. 动画区
@@ -479,20 +481,7 @@ export class MobileStackLayout extends BaseLayout<MobileStackConfig> {
     }
   }
 
-  replaceSlotElement(slot: SlotName, element: HTMLElement): HTMLElement | null {
-    if (slot === 'animation' && this.stageCanvas && element instanceof HTMLCanvasElement) {
-      const old = this.stageCanvas;
-      if (old.parentElement) {
-        old.parentElement.replaceChild(element, old);
-      } else if (this.stageSlot) {
-        this.stageSlot.appendChild(element);
-      }
-      element.className = 'mobile-stage-canvas';
-      this.stageCanvas = element as HTMLCanvasElement;
-      return old;
-    }
-    return null;
-  }
+
 
   resetDemoProfile(): void {
     if (this.controlSection) {

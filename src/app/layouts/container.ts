@@ -24,10 +24,14 @@ import {
   restoreSceneState as restoreSceneStateFromStorage
 } from './container-persistence';
 import { satisfiesConstraints } from './layout-constraints';
+import { ContainerResizeObserver } from './container-resize-observer';
+import { detectLowPowerMode } from './power-awareness';
 import type {
   SceneContainer,
   Scene,
   LayoutMaster,
+  LayoutThemeChangeEvent,
+  LayoutModeChangeEvent,
   LayoutSlots,
   Theme,
   SwitchOptions,
@@ -50,7 +54,6 @@ export class SceneContainerImpl implements SceneContainer {
   private _currentTheme: Theme = 'light';
   private _userPreferredLayout: string | null = null;
   private _storageKey: string;
-  private _resizeObserver: ResizeObserver | null = null;
   private _onResize?: (width: number, height: number) => void;
   private _layoutConfig?: Record<string, unknown>;
   private _transportBridge = new TransportBridge();
@@ -60,6 +63,7 @@ export class SceneContainerImpl implements SceneContainer {
   private _layoutThemeHandler?: (e: Event) => void;
   private _layoutModeHandler?: (e: Event) => void;
   private _emitter: EventEmitter<SceneContainerEvents>;
+  private _resizeObserver: ContainerResizeObserver;
 
   constructor(options: CreateContainerOptions) {
     this._emitter = createEventEmitter<SceneContainerEvents>('SceneContainer');
@@ -78,7 +82,16 @@ export class SceneContainerImpl implements SceneContainer {
     `;
 
     // 初始化 ResizeObserver
-    this.initResizeObserver();
+    this._resizeObserver = new ContainerResizeObserver(this.container, {
+      getCurrentScene: () => this._currentScene,
+      getUserPreferredLayout: () => this._userPreferredLayout,
+      getCurrentLayoutId: () => this._currentLayout?.id || null,
+      resolveLayout: (scene) => this.resolveLayout(scene),
+      switchLayout: (id) => this.switchLayout(id, { animate: false }),
+      notifyLayoutResize: (width, height) => this._currentLayout?.handleResize(width, height),
+      onResize: options.onResize
+    });
+    this._resizeObserver.start();
 
     // 尝试恢复持久化状态
     this.restorePersistedState();
@@ -88,25 +101,9 @@ export class SceneContainerImpl implements SceneContainer {
   }
 
   private async initPowerAwareness(): Promise<void> {
-    try {
-      // 低电量检测
-      if ('getBattery' in navigator) {
-        const battery = await (navigator as unknown as { getBattery(): Promise<{ charging: boolean; level: number }> }).getBattery();
-        if (this._disposed) return;
-        if (!battery.charging && battery.level < 0.2) {
-          this._lowPowerMode = true;
-        }
-      }
-      // 弱网/省流量检测
-      if ('connection' in navigator) {
-        const conn = (navigator as unknown as { connection: { saveData?: boolean; effectiveType?: string } }).connection;
-        if (this._disposed) return;
-        if (conn.saveData || /2g|slow-2g/.test(conn.effectiveType || '')) {
-          this._lowPowerMode = true;
-        }
-      }
-    } catch {
-      // API 不可用，忽略
+    const lowPower = await detectLowPowerMode();
+    if (!this._disposed && lowPower) {
+      this._lowPowerMode = true;
     }
   }
 
@@ -218,11 +215,7 @@ export class SceneContainerImpl implements SceneContainer {
       scene.renderControl(slots.control);
     }
     if (slots.animation && scene.renderAnimation) {
-      (scene.renderAnimation as (c: HTMLElement, s?: LayoutSlots) => void).call(
-        scene,
-        slots.animation,
-        slots as LayoutSlots
-      );
+      scene.renderAnimation(slots.animation, slots as LayoutSlots);
     }
     if (slots.graph && scene.renderGraph) {
       scene.renderGraph(slots.graph);
@@ -277,13 +270,13 @@ export class SceneContainerImpl implements SceneContainer {
   /** 绑定布局主题/模式变化事件，转发给场景 */
   private bindLayoutEventForwarders(scene: Scene, layout: LayoutMaster): void {
     this._layoutThemeHandler = (e: Event) => {
-      const custom = e as CustomEvent<{ theme: Theme }>;
+      const custom = e as LayoutThemeChangeEvent;
       if (custom.detail?.theme && scene.setTheme) {
         scene.setTheme(custom.detail.theme);
       }
     };
     this._layoutModeHandler = (e: Event) => {
-      const custom = e as CustomEvent<{ mode: 'normal' | 'presentation' }>;
+      const custom = e as LayoutModeChangeEvent;
       const mode = custom.detail?.mode;
       if (!mode) return;
 
@@ -368,12 +361,7 @@ export class SceneContainerImpl implements SceneContainer {
       savePreference = false
     } = options;
 
-    // 检查是否已经是当前布局
-    if (this._currentLayout?.id === layoutId) {
-      return;
-    }
-
-    // 检查布局是否存在
+    if (this._currentLayout?.id === layoutId) return;
     if (!layoutRegistry.has(layoutId)) {
       throw new Error(`Layout "${layoutId}" not found`);
     }
@@ -381,39 +369,55 @@ export class SceneContainerImpl implements SceneContainer {
     const fromLayout = this._currentLayout;
     const fromId = fromLayout?.id || null;
 
-    // layout switch begins
+    await this._notifyLayoutWillChange(fromId, layoutId);
 
-    // 通知场景布局即将变化
+    const { preservedCanvas, layoutState } = this._captureOutgoingState(fromLayout);
+    if (layoutState && fromLayout?.id) {
+      saveLayoutStateToStorage(this._storageKey, fromLayout.id, layoutState);
+    }
+
+    await this._teardownOutgoingLayout(fromLayout, animate, transition);
+    this.container.replaceChildren();
+
+    const newLayout = await this._setupIncomingLayout(layoutId, preservedCanvas);
+    this._currentLayout = newLayout;
+
+    await this._finalizeLayoutSwitch(newLayout, fromId, layoutId, reason, animate, transition, savePreference);
+  }
+
+  private async _notifyLayoutWillChange(fromId: string | null, toId: string): Promise<void> {
     if (this._currentScene?.onLayoutWillChange) {
-      await this._currentScene.onLayoutWillChange(fromId || '', layoutId);
+      await this._currentScene.onLayoutWillChange(fromId || '', toId);
     }
+  }
 
-    // 保存旧 canvas，以便布局切换时复用，避免闪烁和内容丢失
+  private _captureOutgoingState(fromLayout: LayoutMaster | null): {
+    preservedCanvas: HTMLCanvasElement | null;
+    layoutState: Record<string, unknown> | undefined;
+  } {
     const preservedCanvas = fromLayout?.getSlots?.()?.animation
-      ?.querySelector('canvas') as HTMLCanvasElement | null;
+      ?.querySelector<HTMLCanvasElement>('canvas') ?? null;
+    const layoutState = fromLayout?.getLayoutState?.();
+    return { preservedCanvas, layoutState };
+  }
 
-    // 保存旧布局状态（侧边栏比例、读数面板折叠等）
-    if (fromLayout?.id) {
-      const layoutState = fromLayout.getLayoutState?.();
-      if (layoutState) {
-        saveLayoutStateToStorage(this._storageKey, fromLayout.id, layoutState);
-      }
-    }
-
-    // 退出当前布局动画
+  private async _teardownOutgoingLayout(
+    fromLayout: LayoutMaster | null,
+    animate: boolean,
+    transition: LayoutTransition
+  ): Promise<void> {
     if (fromLayout && animate) {
       await fromLayout.exit(transition);
     }
-
-    // 卸载当前布局
     if (fromLayout) {
       await fromLayout.unmount();
     }
+  }
 
-    // 清空容器
-    this.container.replaceChildren();
-
-    // 创建并挂载新布局（事务准备阶段）
+  private async _setupIncomingLayout(
+    layoutId: string,
+    preservedCanvas: HTMLCanvasElement | null
+  ): Promise<LayoutMaster> {
     const newLayout = layoutRegistry.create(layoutId, this.container, {
       theme: this._currentTheme,
       ...(this._layoutConfig || {})
@@ -422,13 +426,11 @@ export class SceneContainerImpl implements SceneContainer {
     await newLayout.mount();
     newLayout.setTheme(this._currentTheme);
 
-    // 恢复新布局的持久化状态（侧边栏比例等）
     const savedLayoutState = restoreLayoutStateFromStorage(this._storageKey, layoutId);
     if (savedLayoutState) {
       newLayout.restoreLayoutState?.(savedLayoutState);
     }
 
-    // 将旧 canvas 注入新布局，消除 DOM 重建导致的闪烁
     if (preservedCanvas && newLayout.replaceSlotElement) {
       const replaced = newLayout.replaceSlotElement('animation', preservedCanvas);
       if (replaced) {
@@ -436,40 +438,38 @@ export class SceneContainerImpl implements SceneContainer {
       }
     }
 
-    // 如果有场景，重新渲染到新的布局
     if (this._currentScene) {
       this.mountScene(this._currentScene, newLayout);
     }
 
-    // 事务提交：mount 成功后立即更新引用（enter 动画失败不影响布局可用性）
-    this._currentLayout = newLayout;
+    return newLayout;
+  }
 
-    // 进入动画（可选视觉效果，失败不破坏状态）
+  private async _finalizeLayoutSwitch(
+    newLayout: LayoutMaster,
+    fromId: string | null,
+    layoutId: string,
+    reason: string,
+    animate: boolean,
+    transition: LayoutTransition,
+    savePreference: boolean
+  ): Promise<void> {
     if (animate) {
       try {
-        const enterTransition: LayoutTransition = {
-          ...transition,
-          easing: 'ease-out'
-        };
-        await newLayout.enter(enterTransition);
+        await newLayout.enter({ ...transition, easing: 'ease-out' });
       } catch {
         // 动画被中断或失败，布局本身已可用
       }
     }
 
-    // 通知场景布局已变化
     this._currentScene?.onLayoutDidChange?.(layoutId);
 
-    // 触发事件
     const event: LayoutChangeEvent = { from: fromId, to: layoutId, reason };
     this._emitter.emit('layout:change', event);
 
-    // 保存用户偏好
     if (savePreference) {
       this.setUserPreferredLayout(layoutId);
     }
-
-    // layout switch complete
   }
 
   /**
@@ -554,54 +554,7 @@ export class SceneContainerImpl implements SceneContainer {
     return restoreSceneStateFromStorage(this._storageKey, sceneId);
   }
 
-  /**
-   * 初始化 ResizeObserver
-   */
-  private initResizeObserver(): void {
-    if (!window.ResizeObserver) return;
 
-    let lastLayoutId = this._currentLayout?.id || null;
-
-    this._resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-
-        // 使用选择器重新计算最佳布局（支持多断点、约束等）
-        if (this._currentScene && !this._userPreferredLayout) {
-          const newLayoutId = this.resolveLayout(this._currentScene);
-          if (newLayoutId !== lastLayoutId) {
-            lastLayoutId = newLayoutId;
-            this.debounceLayoutSwitch(newLayoutId);
-          }
-        }
-
-        // 通知布局
-        this._currentLayout?.handleResize(width, height);
-
-        // 回调
-        this._onResize?.(width, height);
-      }
-    });
-
-    this._resizeObserver.observe(this.container);
-  }
-
-  private _layoutSwitchTimer: ReturnType<typeof setTimeout> | null = null;
-
-  /**
-   * 防抖处理布局切换
-   * @param targetLayoutId - 目标布局 ID（由选择器解析得出）
-   */
-  private debounceLayoutSwitch(targetLayoutId: string): void {
-    if (this._layoutSwitchTimer) {
-      clearTimeout(this._layoutSwitchTimer);
-    }
-    this._layoutSwitchTimer = setTimeout(() => {
-      if (targetLayoutId !== this._currentLayout?.id) {
-        this.switchLayout(targetLayoutId, { animate: false });
-      }
-    }, 300);
-  }
 
 /**
    * 添加事件监听
@@ -617,11 +570,7 @@ export class SceneContainerImpl implements SceneContainer {
    * 销毁容器
    */
   dispose(): void {
-    // 清除布局切换防抖定时器
-    if (this._layoutSwitchTimer) {
-      clearTimeout(this._layoutSwitchTimer);
-      this._layoutSwitchTimer = null;
-    }
+    this._disposed = true;
 
     // 卸载场景
     this.unmountCurrentScene();
@@ -630,9 +579,8 @@ export class SceneContainerImpl implements SceneContainer {
     this._currentLayout?.unmount();
     this._currentLayout = null;
 
-    // 断开 ResizeObserver
-    this._resizeObserver?.disconnect();
-    this._resizeObserver = null;
+    // 停止 ResizeObserver
+    this._resizeObserver.stop();
 
     // 清空容器
     this.container.replaceChildren();

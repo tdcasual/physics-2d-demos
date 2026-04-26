@@ -78,8 +78,6 @@ export abstract class DesktopSplitLayout<
   protected controlSlot: HTMLElement | null = null;
   protected stageToolbar: HTMLElement | null = null;
   protected stageFrame: HTMLElement | null = null;
-  protected stageSlot: HTMLElement | null = null;
-  protected stageCanvas: HTMLCanvasElement | null = null;
   private debugOverlay: HTMLElement | null = null;
   private debugInterval: number | null = null;
   protected header: HTMLElement | null = null;
@@ -102,9 +100,9 @@ export abstract class DesktopSplitLayout<
   protected floatingControls: FloatingControls | null = null;
 
   // 事件清理
-  protected eventCleanups: (() => void)[] = [];
+  protected eventAbortController = new AbortController();
 
-  constructor(container: HTMLElement, config: TConfig = {} as TConfig) {
+  constructor(container: HTMLElement, config?: TConfig) {
     super(container, config);
     const cfg = this.config;
     this.leftRatio = cfg.defaultLeftRatio ?? 0.35;
@@ -113,6 +111,10 @@ export abstract class DesktopSplitLayout<
   // ========================================================================
   // 类名生成（子类可覆盖以处理特殊映射）
   // ========================================================================
+
+  protected getCanvasClassName(): string {
+    return this.getClassName('stage-canvas');
+  }
 
   protected getClassName(base: string): string {
     return `${this.cssPrefix}-${base}`;
@@ -384,8 +386,8 @@ export abstract class DesktopSplitLayout<
   // ========================================================================
 
   protected bindCommonEvents(): void {
-    this.eventCleanups.forEach((cleanup) => cleanup());
-    this.eventCleanups = [];
+    this.eventAbortController.abort();
+    this.eventAbortController = new AbortController();
 
     this.bindResizerEvents();
     this.bindSidebarToggleEvents();
@@ -400,44 +402,30 @@ export abstract class DesktopSplitLayout<
     const onMouseDown = (e: MouseEvent) => {
       this.resizerBehavior!.onMouseDown(e, this.isCompactViewport);
     };
-    this.resizer.addEventListener('mousedown', onMouseDown);
-    this.eventCleanups.push(() =>
-      this.resizer?.removeEventListener('mousedown', onMouseDown)
-    );
+    this.resizer.addEventListener('mousedown', onMouseDown, { signal: this.eventAbortController.signal });
   }
 
   private bindSidebarToggleEvents(): void {
     if (!this.sidebarToggle) return;
     const onToggleSidebar = this.toggleSidebar.bind(this);
-    this.sidebarToggle.addEventListener('click', onToggleSidebar);
-    this.eventCleanups.push(() =>
-      this.sidebarToggle?.removeEventListener('click', onToggleSidebar)
-    );
+    this.sidebarToggle.addEventListener('click', onToggleSidebar, { signal: this.eventAbortController.signal });
   }
 
   private bindReadoutToggleEvents(): void {
     if (!this.readoutManager) return;
     const panel = this.readoutManager.getPanel();
+    const selectors = ['readout-toggle', 'readout-resize-toggle'];
 
-    const toggleSelector = `.${this.getClassName('readout-toggle')}`;
-    const toggleBtn = panel.querySelector(toggleSelector) as HTMLButtonElement | null;
-    if (toggleBtn) {
+    selectors.forEach((name) => {
+      const selector = `.${this.getClassName(name)}`;
+      const btn = panel.querySelector(selector) as HTMLButtonElement | null;
+      if (!btn) return;
       const onToggle = () => this.readoutManager?.toggle();
-      toggleBtn.addEventListener('click', onToggle);
-      this.eventCleanups.push(() => toggleBtn.removeEventListener('click', onToggle));
-    }
-
-    const resizeSelector = `.${this.getClassName('readout-resize-toggle')}`;
-    const resizeToggleBtn = panel.querySelector(resizeSelector) as HTMLButtonElement | null;
-    if (resizeToggleBtn) {
-      const onToggle = () => this.readoutManager?.toggle();
-      resizeToggleBtn.addEventListener('click', onToggle);
-      this.eventCleanups.push(() => resizeToggleBtn.removeEventListener('click', onToggle));
-    }
+      btn.addEventListener('click', onToggle, { signal: this.eventAbortController.signal });
+    });
   }
 
   private bindSectionToggleEvents(): void {
-    const handlers: { btn: Element; handler: (e: Event) => void }[] = [];
     const selector = `.${this.getClassName('section-toggle')}`;
     this.container.querySelectorAll(selector).forEach((btn) => {
       const handler = (e: Event) => {
@@ -445,11 +433,7 @@ export abstract class DesktopSplitLayout<
         if (target === 'control') this.toggleControlSection();
         else if (target === 'graph') this.toggleGraphSection();
       };
-      btn.addEventListener('click', handler);
-      handlers.push({ btn, handler });
-    });
-    this.eventCleanups.push(() => {
-      handlers.forEach(({ btn, handler }) => btn.removeEventListener('click', handler));
+      btn.addEventListener('click', handler, { signal: this.eventAbortController.signal });
     });
   }
 
@@ -465,10 +449,7 @@ export abstract class DesktopSplitLayout<
         })
       );
     };
-    this.themeButton.addEventListener('click', onThemeClick);
-    this.eventCleanups.push(() =>
-      this.themeButton?.removeEventListener('click', onThemeClick)
-    );
+    this.themeButton.addEventListener('click', onThemeClick, { signal: this.eventAbortController.signal });
   }
 
   private bindModeToggleEvents(): void {
@@ -483,15 +464,22 @@ export abstract class DesktopSplitLayout<
         })
       );
     };
-    this.modeButton.addEventListener('click', onModeClick);
-    this.eventCleanups.push(() =>
-      this.modeButton?.removeEventListener('click', onModeClick)
-    );
+    this.modeButton.addEventListener('click', onModeClick, { signal: this.eventAbortController.signal });
   }
 
   // ========================================================================
   // 侧边栏折叠
   // ========================================================================
+
+  private computeSidebarWidth(): number {
+    const cfg = this.config;
+    const minWidth = cfg.leftMinWidth ?? 260;
+    const maxWidth = cfg.leftMaxWidth ?? 960;
+    return Math.max(
+      minWidth,
+      Math.min(maxWidth, this.container.clientWidth * this.leftRatio)
+    );
+  }
 
   protected toggleSidebar(): void {
     this.sidebarHidden = !this.sidebarHidden;
@@ -502,13 +490,7 @@ export abstract class DesktopSplitLayout<
         this.leftPanel.style.display = 'none';
       }
     } else {
-      const cfg = this.config;
-      const minWidth = cfg.leftMinWidth ?? 260;
-      const maxWidth = cfg.leftMaxWidth ?? 960;
-      const width = Math.max(
-        minWidth,
-        Math.min(maxWidth, this.container.clientWidth * this.leftRatio)
-      );
+      const width = this.computeSidebarWidth();
       this.container.style.gridTemplateColumns = `${width}px 8px 1fr`;
       if (this.leftPanel) {
         this.leftPanel.style.display = 'flex';
@@ -525,13 +507,7 @@ export abstract class DesktopSplitLayout<
   protected showSidebar(): void {
     if (!this.sidebarHidden) return;
     this.sidebarHidden = false;
-    const cfg = this.config;
-    const minWidth = cfg.leftMinWidth ?? 260;
-    const maxWidth = cfg.leftMaxWidth ?? 960;
-    const width = Math.max(
-      minWidth,
-      Math.min(maxWidth, this.container.clientWidth * this.leftRatio)
-    );
+    const width = this.computeSidebarWidth();
     this.container.style.gridTemplateColumns = `${width}px 8px 1fr`;
     if (this.leftPanel) {
       this.leftPanel.style.display = 'flex';
@@ -702,6 +678,10 @@ export abstract class DesktopSplitLayout<
 
   private initDebugOverlay(): void {
     if (!this.container) return;
+    if (this.debugInterval) {
+      window.clearInterval(this.debugInterval);
+      this.debugInterval = null;
+    }
     this.debugOverlay = document.createElement('div');
     this.debugOverlay.style.cssText = `
       position: absolute; left: 8px; bottom: 8px; z-index: 9999;
@@ -713,7 +693,7 @@ export abstract class DesktopSplitLayout<
     this.container.appendChild(this.debugOverlay);
 
     this.debugInterval = window.setInterval(() => {
-      const pm = (window as unknown as Record<string, { getRecommendedFps?(): number }>).__perfMonitor;
+      const pm = (window as Window & { __perfMonitor?: { getRecommendedFps?(): number } }).__perfMonitor;
       const fps = pm?.getRecommendedFps?.() ?? '--';
       if (this.debugOverlay) {
         this.debugOverlay.textContent = `FPS: ${fps}`;
@@ -931,20 +911,7 @@ export abstract class DesktopSplitLayout<
   /**
    * 替换区域槽位中的元素（布局切换时复用 canvas）
    */
-  replaceSlotElement(slot: SlotName, element: HTMLElement): HTMLElement | null {
-    if (slot === 'animation' && this.stageCanvas && element instanceof HTMLCanvasElement) {
-      const old = this.stageCanvas;
-      if (old.parentElement) {
-        old.parentElement.replaceChild(element, old);
-      } else if (this.stageSlot) {
-        this.stageSlot.appendChild(element);
-      }
-      element.className = this.getClassName('stage-canvas');
-      this.stageCanvas = element as HTMLCanvasElement;
-      return old;
-    }
-    return null;
-  }
+
 
   getLayoutState(): Record<string, unknown> {
     return {
@@ -977,10 +944,7 @@ export abstract class DesktopSplitLayout<
     this.leftRatio = Math.max(minRatio, Math.min(maxRatio, ratio));
 
     if (!this.isCompactViewport && this.leftPanel) {
-      const leftWidth = Math.max(
-        minWidth,
-        Math.min(maxWidth, containerWidth * this.leftRatio)
-      );
+      const leftWidth = this.computeSidebarWidth();
       this.container.style.gridTemplateColumns = `${leftWidth}px 8px 1fr`;
     }
   }
@@ -1028,8 +992,7 @@ export abstract class DesktopSplitLayout<
   // ========================================================================
 
   async unmount(): Promise<void> {
-    this.eventCleanups.forEach((cleanup) => cleanup());
-    this.eventCleanups = [];
+    this.eventAbortController.abort();
 
     if (this.floatingControls) {
       (this.floatingControls as { dispose?: () => void }).dispose?.();

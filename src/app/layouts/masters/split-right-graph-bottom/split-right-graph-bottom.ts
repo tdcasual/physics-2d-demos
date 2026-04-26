@@ -134,10 +134,7 @@ export class SplitRightGraphBottomLayout extends DesktopSplitLayout<SplitRightGr
         if (this.isCompactViewport) return;
         this.onResizerHMouseDown(e);
       };
-      this.resizerH.addEventListener('mousedown', onMouseDown);
-      this.eventCleanups.push(() =>
-        this.resizerH?.removeEventListener('mousedown', onMouseDown)
-      );
+      this.resizerH.addEventListener('mousedown', onMouseDown, { signal: this.eventAbortController.signal });
     }
   }
 

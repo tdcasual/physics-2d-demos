@@ -44,6 +44,10 @@ export class TransportBarManager {
     );
   }
 
+  getBar(): HTMLElement {
+    return this.bar;
+  }
+
   render(config: ControlButtonConfig, callbacks: TransportCallbacks): void {
     this.bar.replaceChildren();
     this.playBtn = null;

@@ -55,14 +55,22 @@ export abstract class BaseLayout<TConfig extends LayoutConfig = LayoutConfig>
   /** 动画中断控制器 */
   private animationAbortController: AbortController | null = null;
 
-  constructor(container: HTMLElement, config: TConfig = {} as TConfig) {
+  /** 动画区域槽位 */
+  protected stageSlot: HTMLElement | null = null;
+
+  /** 动画画布 */
+  protected stageCanvas: HTMLCanvasElement | null = null;
+
+  /** 默认布局配置 */
+  protected static readonly defaultConfig: LayoutConfig = {
+    theme: 'light',
+    mobileBreakpoint: 768,
+    tabletBreakpoint: 1024
+  };
+
+  constructor(container: HTMLElement, config?: TConfig) {
     this.container = container;
-    this.config = {
-      theme: 'light',
-      mobileBreakpoint: 768,
-      tabletBreakpoint: 1024,
-      ...config
-    } as TConfig;
+    this.config = { ...BaseLayout.defaultConfig, ...config } as TConfig;
     this.currentTheme = this.config.theme || 'light';
   }
 
@@ -123,10 +131,8 @@ export abstract class BaseLayout<TConfig extends LayoutConfig = LayoutConfig>
    * 处理尺寸变化
    * 子类可覆盖以实现响应式逻辑
    */
-  handleResize(width: number, height: number): void {
+  handleResize(_width: number, _height: number): void {
     // 子类实现
-    void width;
-    void height;
   }
 
   /**
@@ -289,9 +295,6 @@ export abstract class BaseLayout<TConfig extends LayoutConfig = LayoutConfig>
   /**
    * 应用演示配置（子类必须实现）
    */
-  /**
-   * 应用演示配置（子类必须实现）
-   */
   abstract applyDemoProfile(profile: SceneDemoProfile): void;
 
   /**
@@ -304,6 +307,29 @@ export abstract class BaseLayout<TConfig extends LayoutConfig = LayoutConfig>
    * @param name - 区域名称
    * @param className - 附加类名
    */
+  /**
+   * 获取画布 CSS 类名（子类覆盖）
+   */
+  protected abstract getCanvasClassName(): string;
+
+  /**
+   * 替换区域槽位中的某个元素（用于布局切换时复用 canvas）
+   */
+  replaceSlotElement(slot: SlotName, element: HTMLElement): HTMLElement | null {
+    if (slot === 'animation' && this.stageCanvas && element instanceof HTMLCanvasElement) {
+      const old = this.stageCanvas;
+      if (old.parentElement) {
+        old.parentElement.replaceChild(element, old);
+      } else if (this.stageSlot) {
+        this.stageSlot.appendChild(element);
+      }
+      element.className = this.getCanvasClassName();
+      this.stageCanvas = element;
+      return old;
+    }
+    return null;
+  }
+
   protected createSlot(name: SlotName, className?: string): HTMLElement {
     const element = document.createElement('div');
     element.className = `layout-region ${className || ''}`.trim();

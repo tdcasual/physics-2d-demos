@@ -24,6 +24,7 @@ export class ReadoutPanelManager {
   private resizeObserver: ResizeObserver | null = null;
   private dragCleanup: (() => void) | null = null;
   private resizeHandle: HTMLElement | null = null;
+  private resizeHandleAbortController: AbortController | null = null;
   private isResizing = false;
 
   constructor(options: ReadoutPanelOptions) {
@@ -43,18 +44,7 @@ export class ReadoutPanelManager {
 
   /** 切换折叠状态 */
   toggle(): void {
-    this.collapsed = !this.collapsed;
-    this.panel.classList.toggle('teaching-is-collapsed', this.collapsed);
-
-    // 动态查找当前 toggle 按钮（支持 DOM 替换场景）
-    const btn = this.panel.querySelector(
-      '.teaching-readout-toggle'
-    ) as HTMLButtonElement | null;
-    if (btn) {
-      btn.textContent = this.collapsed ? '展开' : '折叠';
-      btn.setAttribute('aria-label', this.collapsed ? '展开' : '折叠');
-    }
-    this.toggleBtn = btn;
+    this.setCollapsed(!this.collapsed);
   }
 
   /** 获取当前折叠状态 */
@@ -136,6 +126,10 @@ export class ReadoutPanelManager {
   setCollapsed(collapsed: boolean): void {
     this.collapsed = collapsed;
     this.panel.classList.toggle('teaching-is-collapsed', collapsed);
+    this._updateToggleButton(collapsed);
+  }
+
+  private _updateToggleButton(collapsed: boolean): void {
     const btn = this.panel.querySelector(
       '.teaching-readout-toggle'
     ) as HTMLButtonElement | null;
@@ -169,15 +163,11 @@ export class ReadoutPanelManager {
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
 
-    // 先移除 resizeHandle 的事件监听器，再移除 DOM（防止闭包泄漏）
-    if (this.resizeHandle) {
-      // 由于监听器是箭头函数且未保存引用，直接克隆替换节点是最稳妥的方式
-      const parent = this.resizeHandle.parentNode;
-      if (parent) {
-        parent.removeChild(this.resizeHandle);
-      }
-      this.resizeHandle = null;
-    }
+    this.resizeHandleAbortController?.abort();
+    this.resizeHandleAbortController = null;
+
+    this.resizeHandle?.remove();
+    this.resizeHandle = null;
   }
 
   // -----------------------------------------------------------------------
@@ -220,6 +210,9 @@ export class ReadoutPanelManager {
   }
 
   private initResizeHandle(): void {
+    this.resizeHandleAbortController = new AbortController();
+    const signal = this.resizeHandleAbortController.signal;
+
     this.resizeHandle = document.createElement('div');
     this.resizeHandle.className = 'readout-resize-handle';
     this.resizeHandle.setAttribute('tabindex', '-1');
@@ -238,13 +231,13 @@ export class ReadoutPanelManager {
 
     this.resizeHandle.addEventListener('mouseenter', () => {
       this.resizeHandle!.style.opacity = '1';
-    });
+    }, { signal });
 
     this.resizeHandle.addEventListener('mouseleave', () => {
       if (!this.isResizing) {
         this.resizeHandle!.style.opacity = '0.5';
       }
-    });
+    }, { signal });
 
     this.resizeHandle.addEventListener('mousedown', (e) => {
       this.isResizing = true;
