@@ -47,6 +47,29 @@ export interface CanvasSizingResult {
 }
 
 /**
+ * 计算带下限的响应式尺寸值
+ *
+ * 将基准值按 responsiveScale 缩放，同时确保不低于最小可读尺寸。
+ * 用于字体、边距、标记半径等绘制元素。
+ *
+ * @param base 基准尺寸（responsiveScale=1 时的值）
+ * @param responsiveScale 当前画布响应式缩放因子
+ * @param min 最小允许值（默认 8px，适合最小可读字体）
+ * @returns Math.max(min, base * responsiveScale)
+ *
+ * @example
+ * const fontSize = scaledSize(10, responsiveScale, 9);  // 最小 9px
+ * const margin = scaledSize(20, responsiveScale, 12);   // 最小 12px
+ */
+export function scaledSize(
+  base: number,
+  responsiveScale: number,
+  min = 8
+): number {
+  return Math.max(min, base * responsiveScale);
+}
+
+/**
  * 计算响应式缩放因子
  *
  * 基于 canvas 短边与参考尺寸的比例，返回一个 clamp 后的 scale 值。
@@ -216,12 +239,10 @@ export function applyCanvasSize(
   sizing: CanvasSizingResult
 ): CanvasRenderingContext2D {
   // 设置 CSS 尺寸
-  canvas.style.width = `${sizing.cssWidth}px`;
-  canvas.style.height = `${sizing.cssHeight}px`;
-
-  // 设置内部像素尺寸
-  canvas.width = sizing.width;
-  canvas.height = sizing.height;
+  const cssW = `${sizing.cssWidth}px`;
+  const cssH = `${sizing.cssHeight}px`;
+  if (canvas.style.width !== cssW) canvas.style.width = cssW;
+  if (canvas.style.height !== cssH) canvas.style.height = cssH;
 
   // 暴露响应式缩放因子，供场景绘制代码读取
   if (canvas.dataset) {
@@ -231,6 +252,13 @@ export function applyCanvasSize(
   const ctx = canvas.getContext('2d');
   if (!ctx) {
     throw new Error('Failed to get 2D context');
+  }
+
+  // 只在内部像素尺寸真正变化时才赋值，避免 Canvas API 强制清空画布
+  const sizeChanged = canvas.width !== sizing.width || canvas.height !== sizing.height;
+  if (sizeChanged) {
+    canvas.width = sizing.width;
+    canvas.height = sizing.height;
   }
 
   // 重置 transform 并应用 DPR 缩放

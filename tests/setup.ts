@@ -113,7 +113,13 @@ beforeAll(() => {
     proto._originalGetContext = proto.getContext;
     proto.getContext = function (type: string, _attrs?: unknown) {
       if (type === '2d') {
-        return new MockCanvasRenderingContext2D() as unknown as CanvasRenderingContext2D;
+        // Cache the mock context on the canvas element so that
+        // renderer internals and test spies reference the same instance.
+        const el = this as unknown as { __mockCtx2d?: unknown };
+        if (!el.__mockCtx2d) {
+          el.__mockCtx2d = new MockCanvasRenderingContext2D() as unknown as CanvasRenderingContext2D;
+        }
+        return el.__mockCtx2d as CanvasRenderingContext2D;
       }
       return (this._originalGetContext as (t: string, a?: unknown) => unknown)(
         type,
