@@ -4,7 +4,6 @@
 
 import type { SceneMeta } from '../types';
 
-import type { SceneMeta } from '../types';
 import type { SceneDemoProfile } from '../../app/demo-profile';
 
 export const demoProfile: SceneDemoProfile = {

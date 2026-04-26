@@ -5,7 +5,7 @@
  * 独立图表画布：各观察点的振动历史 X-t 曲线
  */
 
-import type { WaveState, WaveParams, ObserverData } from './scene.sim';
+import type { WaveState, WaveParams } from './scene.sim';
 import { WAVE_SPEED, DOMAIN_MAX, computeInterference } from './scene.sim';
 import { sizeCanvasToFill } from '../../core/canvas-sizing';
 export { createXtGraphRenderer, type XtGraphRenderer } from './xt-graph-renderer';

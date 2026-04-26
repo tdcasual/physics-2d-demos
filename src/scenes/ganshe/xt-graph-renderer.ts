@@ -61,7 +61,7 @@ export function createXtGraphRenderer(
           }
         })
       : null;
-  if (resizeObserver) {
+  if (resizeObserver && canvas.parentElement) {
     resizeObserver.observe(canvas.parentElement);
   }
 

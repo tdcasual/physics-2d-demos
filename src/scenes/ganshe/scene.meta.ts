@@ -38,7 +38,6 @@ export const gansheMeta: SceneMeta = {
     amp2: 5,
     phaseDiff: 0,
     observerX: 15,
-    observers: []
   },
   demoProfile
 };

@@ -4,7 +4,6 @@
  */
 
 import { createControlCard } from '../../ui/components/ControlCard';
-import { createMiniSlider } from './mini-slider';
 import { renderOscillatorItem } from './oscillator-item';
 import type { SpringOscillatorScene } from './scene.entry';
 

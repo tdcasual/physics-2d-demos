@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createWaveInterferenceSim, computeInterference, WAVE_SPEED } from '../../src/scenes/ganshe/scene.sim';
+import { createWaveInterferenceSim, computeInterference } from '../../src/scenes/ganshe/scene.sim';
 
 describe('ganshe wave interference sim', () => {
   it('initializes with default parameters', () => {
@@ -69,7 +69,8 @@ describe('ganshe wave interference sim', () => {
       showWave2: true,
       showInterference: true,
       isPulseMode: false,
-      playbackSpeed: 1
+      playbackSpeed: 1,
+      observers: []
     };
     const interference = computeInterference(params, 15, 0);
     // At t=0, x=15 in head-on mode with identical sources:
@@ -92,7 +93,8 @@ describe('ganshe wave interference sim', () => {
       showWave2: true,
       showInterference: true,
       isPulseMode: false,
-      playbackSpeed: 1
+      playbackSpeed: 1,
+      observers: []
     };
     const interference = computeInterference(params, 15, 0);
     expect(interference.dphaseDeg).toBeCloseTo(180, 1);

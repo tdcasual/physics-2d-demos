@@ -52,7 +52,7 @@ function formatReadout(state: WaveState): Array<{
   layout?: 'half' | 'full';
 }> {
   const p = state.interference;
-  const items = [
+  const items: Array<{ label: string; value: string | number; layout?: 'half' | 'full' }> = [
     { label: '时间 t', value: `${state.time.toFixed(2)} s` },
     { label: '观察点 x', value: `${state.params.observerX.toFixed(2)} m` },
     { label: '相对相位差', value: `${p.dphaseDeg.toFixed(0)}°` },
@@ -188,7 +188,7 @@ export function createGansheScene(
     // Additional observer graphs
     state.allObservers.forEach((obs, i) => {
       const cell = createGraphCell(obs, i + 1);
-      graphContainer.appendChild(cell.wrapper);
+      graphContainer!.appendChild(cell.wrapper);
       graphCells.push(cell);
     });
 
