@@ -205,6 +205,26 @@ export interface LayoutMaster {
    * 获取所有已渲染的区域槽位
    */
   getSlots?(): Partial<LayoutSlots>;
+
+  /**
+   * 替换区域槽位中的某个元素（用于布局切换时复用 canvas）
+   * @param slot - 区域名称
+   * @param element - 新元素
+   * @returns 被替换出的旧元素，或 null
+   */
+  replaceSlotElement?(slot: SlotName, element: HTMLElement): HTMLElement | null;
+
+  /**
+   * 获取布局状态快照（用于持久化）
+   * @returns 布局状态对象
+   */
+  getLayoutState?(): Record<string, unknown>;
+
+  /**
+   * 恢复布局状态快照
+   * @param state - 布局状态对象
+   */
+  restoreLayoutState?(state: Record<string, unknown>): void;
 }
 
 /** 布局母版构造函数 */

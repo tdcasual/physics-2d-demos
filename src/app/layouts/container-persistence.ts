@@ -79,3 +79,41 @@ export function restoreSceneState(
   }
   return null;
 }
+
+export function saveLayoutState(
+  storageKey: string,
+  layoutId: string,
+  state: Record<string, unknown>
+): void {
+  try {
+    const key = `${storageKey}-layout-${layoutId}`;
+    localStorage.setItem(
+      key,
+      JSON.stringify({
+        v: 1,
+        state,
+        timestamp: Date.now()
+      })
+    );
+  } catch {
+    // 忽略
+  }
+}
+
+export function restoreLayoutState(
+  storageKey: string,
+  layoutId: string
+): Record<string, unknown> | null {
+  try {
+    const key = `${storageKey}-layout-${layoutId}`;
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      const data = JSON.parse(saved);
+      if (data.v !== 1) return null;
+      return data.state;
+    }
+  } catch {
+    // 忽略
+  }
+  return null;
+}

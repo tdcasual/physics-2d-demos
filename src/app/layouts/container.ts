@@ -19,6 +19,8 @@ import {
   persistState as persistStateToStorage,
   restorePersistedState as restorePersistedStateFromStorage,
   saveSceneState as saveSceneStateToStorage,
+  saveLayoutState as saveLayoutStateToStorage,
+  restoreLayoutState as restoreLayoutStateFromStorage,
   restoreSceneState as restoreSceneStateFromStorage
 } from './container-persistence';
 import type {
@@ -52,6 +54,7 @@ export class SceneContainerImpl implements SceneContainer {
   private _layoutConfig?: Record<string, unknown>;
   private _transportBridge = new TransportBridge();
   private _sceneUnsubscribers: (() => void)[] = [];
+  private _lowPowerMode = false;
   private _layoutThemeHandler?: (e: Event) => void;
   private _layoutModeHandler?: (e: Event) => void;
   private _emitter: EventEmitter<SceneContainerEvents>;
@@ -77,6 +80,30 @@ export class SceneContainerImpl implements SceneContainer {
 
     // 尝试恢复持久化状态
     this.restorePersistedState();
+
+    // 初始化电量/网络感知（异步，不阻塞）
+    this.initPowerAwareness();
+  }
+
+  private async initPowerAwareness(): Promise<void> {
+    try {
+      // 低电量检测
+      if ('getBattery' in navigator) {
+        const battery = await (navigator as unknown as { getBattery(): Promise<{ charging: boolean; level: number }> }).getBattery();
+        if (!battery.charging && battery.level < 0.2) {
+          this._lowPowerMode = true;
+        }
+      }
+      // 弱网/省流量检测
+      if ('connection' in navigator) {
+        const conn = (navigator as unknown as { connection: { saveData?: boolean; effectiveType?: string } }).connection;
+        if (conn.saveData || /2g|slow-2g/.test(conn.effectiveType || '')) {
+          this._lowPowerMode = true;
+        }
+      }
+    } catch {
+      // API 不可用，忽略
+    }
   }
 
   // Getters
@@ -92,6 +119,19 @@ export class SceneContainerImpl implements SceneContainer {
    * 解析当前场景应使用的布局
    * 使用布局选择器，支持策略插件化
    */
+  private satisfiesConstraints(
+    meta: import('./registry').LayoutMetadata,
+    viewport: { width: number; height: number },
+    orientation: 'portrait' | 'landscape'
+  ): boolean {
+    const c = meta.constraints;
+    if (!c) return true;
+    if (c.minWidth !== undefined && viewport.width < c.minWidth) return false;
+    if (c.maxWidth !== undefined && viewport.width > c.maxWidth) return false;
+    if (c.orientation && c.orientation !== 'any' && c.orientation !== orientation) return false;
+    return true;
+  }
+
   private resolveLayout(scene: Scene): string {
     const width = this.container.clientWidth;
     const height = this.container.clientHeight;
@@ -108,7 +148,17 @@ export class SceneContainerImpl implements SceneContainer {
       availableLayouts: layoutRegistry.getAllMetadata()
     };
 
-    return layoutSelector.select(ctx);
+    const selected = layoutSelector.select(ctx);
+
+    // 低功耗/弱网模式下，优先选择渲染负担最小的 mobile-stack
+    if (this._lowPowerMode && selected !== 'mobile-stack') {
+      const mobileMeta = ctx.availableLayouts.find((l) => l.id === 'mobile-stack');
+      if (mobileMeta && this.satisfiesConstraints(mobileMeta, ctx.viewport, ctx.orientation)) {
+        return 'mobile-stack';
+      }
+    }
+
+    return selected;
   }
 
   /**
@@ -352,6 +402,18 @@ export class SceneContainerImpl implements SceneContainer {
       await this._currentScene.onLayoutWillChange(fromId || '', layoutId);
     }
 
+    // 保存旧 canvas，以便布局切换时复用，避免闪烁和内容丢失
+    const preservedCanvas = fromLayout?.getSlots?.()?.animation
+      ?.querySelector('canvas') as HTMLCanvasElement | null;
+
+    // 保存旧布局状态（侧边栏比例、读数面板折叠等）
+    if (fromLayout?.id) {
+      const layoutState = fromLayout.getLayoutState?.();
+      if (layoutState) {
+        saveLayoutStateToStorage(this._storageKey, fromLayout.id, layoutState);
+      }
+    }
+
     // 退出当前布局动画
     if (fromLayout && animate) {
       await fromLayout.exit(transition);
@@ -373,6 +435,20 @@ export class SceneContainerImpl implements SceneContainer {
 
     await newLayout.mount();
     newLayout.setTheme(this._currentTheme);
+
+    // 恢复新布局的持久化状态（侧边栏比例等）
+    const savedLayoutState = restoreLayoutStateFromStorage(this._storageKey, layoutId);
+    if (savedLayoutState) {
+      newLayout.restoreLayoutState?.(savedLayoutState);
+    }
+
+    // 将旧 canvas 注入新布局，消除 DOM 重建导致的闪烁
+    if (preservedCanvas && newLayout.replaceSlotElement) {
+      const replaced = newLayout.replaceSlotElement('animation', preservedCanvas);
+      if (replaced) {
+        replaced.remove();
+      }
+    }
 
     // 如果有场景，重新渲染到新的布局
     if (this._currentScene) {

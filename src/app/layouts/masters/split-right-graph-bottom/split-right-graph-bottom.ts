@@ -44,6 +44,7 @@ export class SplitRightGraphBottomLayout extends DesktopSplitLayout {
   private resizerH: HTMLElement | null = null;
   private graphSection: HTMLElement | null = null;
   private _graphSlot: HTMLElement | null = null;
+  private _graphObserver: MutationObserver | null = null;
 
   // 状态
   private graphHeight = 220;
@@ -110,6 +111,14 @@ export class SplitRightGraphBottomLayout extends DesktopSplitLayout {
     this._graphSlot.setAttribute('data-columns', String(graphColumns));
     this.graphSection.appendChild(this._graphSlot);
     rightPanel.appendChild(this.graphSection);
+
+    // 自动根据子元素数量调整列数（场景可放入多个 canvas）
+    this._graphObserver = new MutationObserver(() => {
+      const count = this._graphSlot!.children.length;
+      const cols = Math.max(1, Math.min(4, count));
+      this._graphSlot!.setAttribute('data-columns', String(cols));
+    });
+    this._graphObserver.observe(this._graphSlot, { childList: true });
   };
 
   // ========================================================================
@@ -252,6 +261,8 @@ export class SplitRightGraphBottomLayout extends DesktopSplitLayout {
   protected onBeforeUnmount = (): void => {
     this.resizerH = null;
     this.graphSection = null;
+    this._graphObserver?.disconnect();
+    this._graphObserver = null;
     this._graphSlot = null;
   };
 }

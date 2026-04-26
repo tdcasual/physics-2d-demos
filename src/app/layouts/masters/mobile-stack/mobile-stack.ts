@@ -480,6 +480,18 @@ export class MobileStackLayout extends BaseLayout {
     }
   }
 
+  replaceSlotElement(slot: SlotName, element: HTMLElement): HTMLElement | null {
+    if (slot === 'animation' && this.stageCanvas && element instanceof HTMLCanvasElement) {
+      const old = this.stageCanvas;
+      if (old.parentElement) {
+        old.parentElement.replaceChild(element, old);
+      }
+      this.stageCanvas = element as HTMLCanvasElement;
+      return old;
+    }
+    return null;
+  }
+
   resetDemoProfile(): void {
     if (this.controlSection) {
       this.controlSection.style.display = '';

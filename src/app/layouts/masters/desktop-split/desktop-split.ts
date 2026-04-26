@@ -78,6 +78,8 @@ export abstract class DesktopSplitLayout extends BaseLayout {
   protected stageFrame: HTMLElement | null = null;
   protected stageSlot: HTMLElement | null = null;
   protected stageCanvas: HTMLCanvasElement | null = null;
+  private debugOverlay: HTMLElement | null = null;
+  private debugInterval: ReturnType<typeof setInterval> | null = null;
   protected header: HTMLElement | null = null;
   protected themeButton: HTMLButtonElement | null = null;
   protected modeButton: HTMLButtonElement | null = null;
@@ -691,6 +693,34 @@ export abstract class DesktopSplitLayout extends BaseLayout {
   // 尺寸响应
   // ========================================================================
 
+  async mount(): Promise<void> {
+    await super.mount();
+    if (this.config.enableDebugPanel) {
+      this.initDebugOverlay();
+    }
+  }
+
+  private initDebugOverlay(): void {
+    if (!this.container) return;
+    this.debugOverlay = document.createElement('div');
+    this.debugOverlay.style.cssText = `
+      position: absolute; left: 8px; bottom: 8px; z-index: 9999;
+      background: rgba(0,0,0,0.7); color: #0f0; font-family: monospace;
+      font-size: 12px; padding: 6px 10px; border-radius: 4px;
+      pointer-events: none; line-height: 1.5;
+    `;
+    this.debugOverlay.textContent = 'FPS: --';
+    this.container.appendChild(this.debugOverlay);
+
+    this.debugInterval = window.setInterval(() => {
+      const pm = (window as unknown as Record<string, { getRecommendedFps?(): number }>).__perfMonitor;
+      const fps = pm?.getRecommendedFps?.() ?? '--';
+      if (this.debugOverlay) {
+        this.debugOverlay.textContent = `FPS: ${fps}`;
+      }
+    }, 1000);
+  }
+
   handleResize(width: number): void {
     const mobileBreakpoint = this.config.mobileBreakpoint || 768;
     const tabletBreakpoint = this.config.tabletBreakpoint || 1024;
@@ -709,7 +739,9 @@ export abstract class DesktopSplitLayout extends BaseLayout {
         this.resizer.style.display = 'none';
       }
     } else if (width < tabletBreakpoint) {
-      this.container.style.gridTemplateColumns = '280px 8px 1fr';
+      // Tablet 区间动态侧边栏：小平板 240px，大平板 280px
+      const sidebarWidth = width < 900 ? 240 : 280;
+      this.container.style.gridTemplateColumns = `${sidebarWidth}px 8px 1fr`;
       if (this.leftPanel) {
         this.leftPanel.style.maxHeight = '';
         this.leftPanel.style.borderRight = '1px solid var(--color-border-color)';
@@ -896,6 +928,38 @@ export abstract class DesktopSplitLayout extends BaseLayout {
     return this.modeButton;
   }
 
+  /**
+   * 替换区域槽位中的元素（布局切换时复用 canvas）
+   */
+  replaceSlotElement(slot: SlotName, element: HTMLElement): HTMLElement | null {
+    if (slot === 'animation' && this.stageCanvas && element instanceof HTMLCanvasElement) {
+      const old = this.stageCanvas;
+      if (old.parentElement) {
+        old.parentElement.replaceChild(element, old);
+      }
+      this.stageCanvas = element as HTMLCanvasElement;
+      return old;
+    }
+    return null;
+  }
+
+  getLayoutState(): Record<string, unknown> {
+    return {
+      leftRatio: this.leftRatio,
+      readoutCollapsed: this.readoutManager?.isCollapsed ?? true
+    };
+  }
+
+  restoreLayoutState(state: Record<string, unknown>): void {
+    if (typeof state.leftRatio === 'number') {
+      this.leftRatio = Math.max(0.2, Math.min(0.5, state.leftRatio));
+      this.handleResize(this.container.clientWidth);
+    }
+    if (typeof state.readoutCollapsed === 'boolean' && this.readoutManager) {
+      this.readoutManager.setCollapsed(state.readoutCollapsed);
+    }
+  }
+
   getCanvas(): HTMLCanvasElement | null {
     return this.stageCanvas;
   }
@@ -984,6 +1048,12 @@ export abstract class DesktopSplitLayout extends BaseLayout {
     this.stageToolbar = null;
     this.stageFrame = null;
     this.stageSlot = null;
+    if (this.debugInterval) {
+      window.clearInterval(this.debugInterval);
+      this.debugInterval = null;
+    }
+    this.debugOverlay?.remove();
+    this.debugOverlay = null;
     this.stageCanvas = null;
     this.header = null;
     this.themeButton = null;
