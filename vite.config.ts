@@ -61,14 +61,14 @@ export default defineConfig({
         'src/**/*.d.ts',
         '**/*.config.*',
         'src/scenes/*/page.ts',
-        'src/scenes/*/scene.view.ts',
+        // Note: scene.view.ts files are now tested via Canvas mock tests
         'src/scenes/*/scene.meta.ts'
       ],
       thresholds: {
-        lines: 25,
-        functions: 50,
-        branches: 40,
-        statements: 25
+        lines: 40,
+        functions: 60,
+        branches: 45,
+        statements: 40
       }
     }
   },
