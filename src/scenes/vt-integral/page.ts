@@ -12,9 +12,7 @@ import { createSceneListener } from '../../app/scene-listener';
 function sceneLabel(scene: VtIntegralSnapshot['params']['scene']): string {
   if (scene === 'scene1') return '场景一：v-t积分';
   if (scene === 'scene2') return '场景二：曲线长度';
-  if (scene === 'scene3') return '场景三：圆周逼近';
-  if (scene === 'scene4') return '场景四：球棱锥体积';
-  return '场景五：球体体积';
+  return '场景三：圆周逼近';
 }
 
 function modeLabel(mode: TeachingMode): string {

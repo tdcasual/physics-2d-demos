@@ -1,0 +1,21 @@
+/**
+ * Teaching Shell — CSS entry point
+ *
+ * Imports all layout, capability, and shared styles in cascade order.
+ * The original single-file teaching-shell.css has been split for ownership clarity:
+ *
+ *   base/          — Tailwind config, theme tokens, CSS variables
+ *   layout/        — Layout-specific DOM structure (split-right, srgb, mobile)
+ *   capability/    — Self-contained capability styles (readout, buttons)
+ *   shared/        — Cross-cutting concerns (responsive, demo mode)
+ *   scene/         — Per-scene styles imported by scene entry files
+ */
+
+@import './base/theme.css';
+@import './shared/split-layout-common.css';
+@import './layout/split-right.css';
+@import './capability/readout-panel.css';
+@import './shared/responsive-demo.css';
+@import './layout/srgb.css';
+@import './capability/buttons.css';
+@import './layout/mobile-stack.css';

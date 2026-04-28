@@ -22,6 +22,7 @@ describe('ContainerResizeObserver', () => {
       getCurrentLayoutId: () => null,
       resolveLayout: () => 'desktop',
       switchLayout: vi.fn(),
+      getSwitching: () => false,
       notifyLayoutResize: vi.fn(),
       onResize: vi.fn()
     };

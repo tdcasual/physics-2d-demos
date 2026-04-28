@@ -8,7 +8,7 @@ function read(relativePath: string): string {
 
 describe('theme entry architecture', () => {
   it('keeps one shell-level theme入口 and modern pages use shell theme toggle', () => {
-    const shell = read('src/app/layouts/masters/split-right/split-right.ts');
+    const shell = read('src/app/layouts/_shared/split-helpers.ts');
     const pages = [
       read('src/scenes/projectile/page.ts'),
       read('src/scenes/chase-meet/page.ts'),

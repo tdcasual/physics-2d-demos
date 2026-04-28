@@ -15,7 +15,7 @@ export function createFloatingControls(options: {
   const container = document.createElement(
     'div'
   ) as unknown as FloatingControls;
-  container.className = 'stage-floating-controls';
+  container.className = 'teaching-stage-floating-controls';
   container.style.cssText = `
     position: absolute;
     top: 12px;
@@ -180,10 +180,7 @@ export function createFloatingControls(options: {
 
   updatePlayPauseBtn();
 
-  const intervalId = setInterval(updatePlayPauseBtn, 200);
-
   container.dispose = () => {
-    clearInterval(intervalId);
     cleanupDrag();
   };
 

@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, afterEach } from 'vitest';
-import type { LayoutMasterConstructor } from '../../src/app/layouts/types';
+import type { ILayoutConstructor } from '../../src/app/layouts/types';
 import {
   layoutRegistry,
   registerLayout,
@@ -10,7 +10,7 @@ import { registerAllLayouts } from '../../src/app/layouts/auto-register';
 
 const FakeLayout = class {
   constructor() {}
-} as unknown as LayoutMasterConstructor;
+} as unknown as ILayoutConstructor;
 
 const fakeMeta = {
   name: 'Test',
@@ -51,7 +51,7 @@ describe('layoutRegistry', () => {
     expect(() =>
       layoutRegistry.register(
         'bad',
-        null as unknown as LayoutMasterConstructor,
+        null as unknown as ILayoutConstructor,
         fakeMeta
       )
     ).toThrow('Layout constructor for "bad" must be a valid class/function');

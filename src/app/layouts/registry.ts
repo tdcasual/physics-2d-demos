@@ -7,12 +7,8 @@
  * @version 0.1.0
  */
 
-import type {
-  LayoutMaster,
-  LayoutMasterConstructor,
-  LayoutConfig,
-  SlotName
-} from './types';
+import type { ILayout, ILayoutConstructor, LayoutConfig, SlotName } from './core/types';
+
 
 /** 布局元数据 */
 export interface LayoutMetadata {
@@ -45,8 +41,9 @@ export interface LayoutMetadata {
 
 /** 布局注册表 */
 class LayoutRegistry {
-  private layouts = new Map<string, LayoutMasterConstructor>();
+  private layouts = new Map<string, ILayoutConstructor>();
   private metadata = new Map<string, LayoutMetadata>();
+  private pool = new Map<string, ILayout>();
 
   /**
    * 注册布局母版
@@ -56,7 +53,7 @@ class LayoutRegistry {
    */
   register(
     id: string,
-    ctor: LayoutMasterConstructor,
+    ctor: ILayoutConstructor,
     metadata: Omit<LayoutMetadata, 'id'>
   ): void {
     if (!id || typeof id !== 'string') {
@@ -80,7 +77,7 @@ class LayoutRegistry {
   }
 
   /**
-   * 创建布局实例
+   * 创建布局实例（优先从实例池复用）
    * @param id - 布局ID
    * @param container - 容器元素
    * @param config - 布局配置
@@ -90,12 +87,20 @@ class LayoutRegistry {
     id: string,
     container: HTMLElement,
     config?: LayoutConfig
-  ): LayoutMaster {
+  ): ILayout {
     if (!id || typeof id !== 'string') {
       throw new Error('Layout id must be a non-empty string');
     }
     if (!container || !(container instanceof HTMLElement)) {
       throw new Error('Layout container must be a valid HTMLElement');
+    }
+
+    // Check instance pool first
+    const cached = this.pool.get(id);
+    if (cached) {
+      this.pool.delete(id);
+      cached._updateConfig?.(config);
+      return cached;
     }
 
     const LayoutClass = this.layouts.get(id);
@@ -109,6 +114,21 @@ class LayoutRegistry {
     }
 
     return new LayoutClass(container, config);
+  }
+
+  /**
+   * 将布局实例放回池中以备复用。
+   * 调用方负责确保实例已 unmount。
+   */
+  returnInstance(id: string, instance: ILayout): void {
+    this.pool.set(id, instance);
+  }
+
+  /**
+   * 清空实例池（dispose 时使用）
+   */
+  clearPool(): void {
+    this.pool.clear();
   }
 
   /**
@@ -165,6 +185,7 @@ class LayoutRegistry {
   clear(): void {
     this.layouts.clear();
     this.metadata.clear();
+    this.pool.clear();
   }
 }
 
@@ -174,7 +195,7 @@ export const layoutRegistry = new LayoutRegistry();
 // 导出便捷的注册函数
 export function registerLayout(
   id: string,
-  ctor: LayoutMasterConstructor,
+  ctor: ILayoutConstructor,
   metadata: Omit<LayoutMetadata, 'id'>
 ): void {
   layoutRegistry.register(id, ctor, metadata);

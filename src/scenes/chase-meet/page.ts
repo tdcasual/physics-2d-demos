@@ -1,3 +1,4 @@
+import '../../styles/scene/chase-modern.css';
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import type { ReadoutItem } from '../../app/layouts/types';
 import type { TeachingMode } from '../../platform/standards';

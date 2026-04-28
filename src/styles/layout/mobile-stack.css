@@ -1,0 +1,127 @@
+/* ========================================
+   Mobile Stack 布局样式
+   ======================================== */
+
+.mobile-stack-layout {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--color-bg-primary);
+}
+
+.mobile-scroll-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobile-animation-section {
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+  overflow: hidden;
+  background: var(--color-stage-bg);
+  border-bottom: 1px solid var(--color-border-color);
+}
+
+.mobile-animation-section.auto-height {
+  flex: 1;
+  min-height: 300px;
+}
+
+.mobile-stage-slot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.mobile-stage-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  touch-action: manipulation;
+}
+
+.mobile-graph-section {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 140px;
+  border-bottom: 1px solid var(--color-border-color);
+  background: var(--color-bg-primary);
+}
+
+.mobile-graph-section[data-collapsed='true'] .mobile-graph-slot {
+  display: none;
+}
+
+.mobile-section-title {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-border-color);
+  background: var(--color-bg-secondary);
+}
+
+.mobile-graph-slot {
+  position: relative;
+  min-height: 0;
+  flex: 1;
+}
+
+.mobile-graph-slot canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.mobile-control-section {
+  flex-shrink: 0;
+  padding: 0.75rem;
+  background: var(--color-bg-card);
+}
+
+.mobile-control-header {
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.mobile-control-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mobile-readout-slot {
+  margin-top: 0.75rem;
+  padding: 0.25rem 0;
+  border-top: 1px solid var(--color-border-color);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.mobile-readout-slot--adaptive {
+  display: grid;
+  gap: 4px;
+}
+
+.mobile-readout-slot--1col { grid-template-columns: 1fr; }
+.mobile-readout-slot--auto { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+.mobile-readout-slot--2col { grid-template-columns: repeat(2, 1fr); }
+.mobile-readout-slot--3col { grid-template-columns: repeat(3, 1fr); }

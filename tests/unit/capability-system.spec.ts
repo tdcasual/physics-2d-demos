@@ -1,0 +1,503 @@
+/**
+ * Capability 系统完整测试
+ *
+ * 覆盖：10 个 Capability 单测 + v2 布局 + 容器集成
+ */
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { capabilityFactories } from '../../src/app/layouts/capabilities';
+import { SplitRightLayoutV2 } from '../../src/app/layouts/layouts/split-right/split-right-v2';
+import { MobileStackLayoutV2 } from '../../src/app/layouts/layouts/mobile-stack/mobile-stack-v2';
+import { SplitRightGraphBottomLayoutV2 } from '../../src/app/layouts/layouts/split-right-graph-bottom/split-right-graph-bottom-v2';
+import { SceneContainerImpl } from '../../src/app/layouts/container';
+import type {
+  CapabilityContext,
+  CapabilityId
+} from '../../src/app/layouts/core/types';
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+function createTestContext(overrides: Partial<CapabilityContext> = {}): CapabilityContext {
+  let theme: 'light' | 'dark' = 'light';
+  let mode: 'normal' | 'presentation' = 'normal';
+  const listeners: Map<string, Set<(payload: unknown) => void>> = new Map();
+
+  return {
+    container: document.createElement('div'),
+    getTheme: () => theme,
+    setTheme: (t) => {
+      theme = t;
+      listeners.get('themechange')?.forEach((h) => h({ theme: t }));
+    },
+    getMode: () => mode,
+    setMode: (m) => {
+      mode = m;
+      listeners.get('modechange')?.forEach((h) => h({ mode: m }));
+    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    on: ((event: string, handler: (payload: unknown) => void): (() => void) => {
+      if (!listeners.has(event)) listeners.set(event, new Set());
+      listeners.get(event)!.add(handler);
+      return () => { listeners.get(event)?.delete(handler); };
+    }) as CapabilityContext['on'],
+    ...overrides
+  };
+}
+
+// ============================================================================
+// 1. Capability Factory Registry
+// ============================================================================
+
+describe('Capability factory registry', () => {
+  const expectedIds: CapabilityId[] = [
+    'transport-bar', 'readout-panel', 'demo-profile',
+    'theme-toggle', 'mode-toggle', 'sidebar-toggle',
+    'resizer', 'debug-overlay'
+  ];
+
+  it('has all 8 factories registered', () => {
+    for (const id of expectedIds) {
+      expect(capabilityFactories[id]).toBeDefined();
+    }
+  });
+
+  it('each factory returns definition with correct id', () => {
+    for (const id of expectedIds) {
+      const def = capabilityFactories[id]({});
+      expect(def.id).toBe(id);
+      expect(typeof def.mount).toBe('function');
+    }
+  });
+});
+
+// ============================================================================
+// 2. theme-toggle Capability
+// ============================================================================
+
+describe('theme-toggle capability', () => {
+  it('mounts and creates a button when none exists', () => {
+    const ctx = createTestContext();
+    const instance = capabilityFactories['theme-toggle']({}).mount(
+      { control: document.createElement('div'), animation: document.createElement('div') }, {}, ctx
+    );
+    expect(ctx.container.querySelector('.theme-toggle-btn')).toBeTruthy();
+    instance.dispose();
+  });
+
+  it('click toggles theme from light to dark', () => {
+    const ctx = createTestContext();
+    const instance = capabilityFactories['theme-toggle']({}).mount(
+      { control: document.createElement('div'), animation: document.createElement('div') }, {}, ctx
+    );
+
+    const btn = ctx.container.querySelector('.theme-toggle-btn') as HTMLButtonElement;
+    btn.click();
+    expect(ctx.getTheme()).toBe('dark');
+
+    btn.click();
+    expect(ctx.getTheme()).toBe('light');
+    instance.dispose();
+  });
+
+  it('reuses existing button matching selector', () => {
+    const ctx = createTestContext();
+    const preBtn = document.createElement('button');
+    preBtn.className = 'my-theme-btn';
+    ctx.container.appendChild(preBtn);
+
+    const instance = capabilityFactories['theme-toggle']({ selector: '.my-theme-btn' }).mount(
+      { control: document.createElement('div'), animation: document.createElement('div') }, {}, ctx
+    );
+
+    preBtn.click();
+    expect(ctx.getTheme()).toBe('dark');
+    instance.dispose();
+  });
+
+  it('dispose removes click listener', () => {
+    const ctx = createTestContext();
+    const instance = capabilityFactories['theme-toggle']({}).mount(
+      { control: document.createElement('div'), animation: document.createElement('div') }, {}, ctx
+    );
+
+    const btn = ctx.container.querySelector('.theme-toggle-btn') as HTMLButtonElement;
+    instance.dispose();
+    btn.click();
+    expect(ctx.getTheme()).toBe('light');
+  });
+});
+
+// ============================================================================
+// 3. mode-toggle Capability
+// ============================================================================
+
+describe('mode-toggle capability', () => {
+  it('click toggles mode normal ↔ presentation', () => {
+    const ctx = createTestContext();
+    const instance = capabilityFactories['mode-toggle']({}).mount(
+      { control: document.createElement('div'), animation: document.createElement('div') }, {}, ctx
+    );
+
+    const btn = ctx.container.querySelector('.mode-toggle-btn') as HTMLButtonElement;
+    expect(btn.textContent).toBe('演示');
+
+    btn.click();
+    expect(ctx.getMode()).toBe('presentation');
+    expect(btn.textContent).toBe('标准');
+
+    btn.click();
+    expect(ctx.getMode()).toBe('normal');
+    expect(btn.textContent).toBe('演示');
+    instance.dispose();
+  });
+
+  it('dispose removes created button from DOM', () => {
+    const ctx = createTestContext();
+    const instance = capabilityFactories['mode-toggle']({}).mount(
+      { control: document.createElement('div'), animation: document.createElement('div') }, {}, ctx
+    );
+
+    instance.dispose();
+    const btn = ctx.container.querySelector('.mode-toggle-btn');
+    expect(btn).toBeNull();
+  });
+});
+
+// ============================================================================
+// 4. sidebar-toggle Capability
+// ============================================================================
+
+describe('sidebar-toggle capability', () => {
+  it('click hides and shows sidebar', () => {
+    const ctx = createTestContext();
+    ctx.container.style.gridTemplateColumns = '280px 8px 1fr';
+
+    const sidebar = document.createElement('aside');
+    sidebar.className = 'layout-left-panel';
+    ctx.container.appendChild(sidebar);
+
+    ctx.container.appendChild(document.createElement('div')); // resizer placeholder
+
+    const instance = capabilityFactories['sidebar-toggle']({}).mount(
+      { control: document.createElement('div'), animation: document.createElement('div') }, {}, ctx
+    );
+
+    const btn = ctx.container.querySelector('.sidebar-toggle-btn') as HTMLButtonElement;
+    expect(btn.textContent).toBe('隐藏控制面板');
+
+    // Click to hide
+    btn.click();
+    expect(ctx.container.style.gridTemplateColumns).toBe('0px 8px 1fr');
+    expect(btn.textContent).toBe('显示控制面板');
+
+    // Click to show
+    btn.click();
+    expect(ctx.container.style.gridTemplateColumns).toBe('280px 8px 1fr');
+    expect(btn.textContent).toBe('隐藏控制面板');
+    instance.dispose();
+  });
+
+  it('creates button when none exists', () => {
+    const ctx = createTestContext();
+    const instance = capabilityFactories['sidebar-toggle']({}).mount(
+      { control: document.createElement('div'), animation: document.createElement('div') }, {}, ctx
+    );
+
+    expect(ctx.container.querySelector('.sidebar-toggle-btn')).toBeTruthy();
+    instance.dispose();
+  });
+});
+
+
+// ============================================================================
+// 7. debug-overlay Capability
+// ============================================================================
+
+describe('debug-overlay capability', () => {
+  it('creates FPS overlay element', () => {
+    const ctx = createTestContext();
+    const instance = capabilityFactories['debug-overlay']({ intervalMs: 100 }).mount(
+      { control: document.createElement('div'), animation: document.createElement('div') }, {}, ctx
+    );
+
+    const overlay = ctx.container.querySelector('div[style]');
+    expect(overlay).toBeTruthy();
+    expect(overlay?.textContent).toContain('FPS');
+    instance.dispose();
+  });
+
+  it('dispose removes overlay element and clears interval', () => {
+    const ctx = createTestContext();
+    const instance = capabilityFactories['debug-overlay']({ intervalMs: 100 }).mount(
+      { control: document.createElement('div'), animation: document.createElement('div') }, {}, ctx
+    );
+
+    instance.dispose();
+    const overlay = ctx.container.querySelector('div[style]');
+    expect(overlay).toBeNull();
+  });
+
+});
+
+// ============================================================================
+// 8. resizer Capability
+// ============================================================================
+
+describe('resizer capability', () => {
+  it('mounts without error', () => {
+    const ctx = createTestContext();
+    ctx.container.style.gridTemplateColumns = '280px 8px 1fr';
+
+    const resizerEl = document.createElement('div');
+    resizerEl.className = 'layout-resizer-v';
+    ctx.container.appendChild(resizerEl);
+
+    const instance = capabilityFactories.resizer({
+      direction: 'vertical',
+      targetSelector: '.layout-left-panel'
+    }).mount(
+      { control: document.createElement('div'), animation: document.createElement('div') }, {}, ctx
+    );
+
+    expect(instance).toBeDefined();
+    expect(typeof instance.dispose).toBe('function');
+    instance.dispose();
+  });
+});
+
+// ============================================================================
+// 9. Container + ILayout Integration (wireCapabilities path)
+// ============================================================================
+
+vi.mock('../../src/app/layouts/registry', () => {
+  const mockLayout = {
+    id: 'split-right',
+    name: 'Test Layout',
+    description: 'mock',
+    supportedSlots: ['control', 'animation'],
+    capabilities: [],
+    getSlots: () => ({ control: document.createElement('div'), animation: document.createElement('div') }),
+    mount: vi.fn().mockResolvedValue(undefined),
+    unmount: vi.fn().mockResolvedValue(undefined),
+    setTheme: vi.fn(),
+    handleResize: vi.fn(),
+    getLayoutState: vi.fn(() => ({})),
+    restoreLayoutState: vi.fn(),
+    replaceSlotElement: vi.fn(() => null)
+  };
+
+  return {
+    layoutRegistry: {
+      has: vi.fn(() => true),
+      create: vi.fn(() => ({ ...mockLayout, capabilities: [] as Array<{id: string; config?: unknown}> })),
+      getAllMetadata: vi.fn(() => []),
+      returnInstance: vi.fn(),
+      clearPool: vi.fn()
+    },
+    saveLayoutPreference: vi.fn(),
+    getDefaultLayoutId: vi.fn(() => null)
+  };
+});
+
+vi.mock('../../src/app/layouts/selector', () => ({
+  layoutSelector: { select: vi.fn(() => 'split-right') }
+}));
+
+describe('SceneContainerImpl with ILayout', () => {
+  let mount: HTMLElement;
+
+  beforeEach(() => {
+    mount = document.createElement('div');
+    mount.style.cssText = 'width: 1200px; height: 800px;';
+    document.body.appendChild(mount);
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    mount.remove();
+    vi.clearAllMocks();
+  });
+
+  it('creates container with default state', () => {
+    const container = new SceneContainerImpl({ mount });
+    expect(container.currentLayout).toBeNull();
+    expect(container.currentScene).toBeNull();
+    expect(container.getTheme()).toBe('light');
+    container.dispose();
+  });
+
+  it('setTheme applies to document.documentElement', () => {
+    const container = new SceneContainerImpl({ mount });
+    container.setTheme('dark');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    container.dispose();
+  });
+
+  it('dispose cleans without error', () => {
+    const container = new SceneContainerImpl({ mount });
+    expect(() => container.dispose()).not.toThrow();
+  });
+
+  it('event on/off works', () => {
+    const container = new SceneContainerImpl({ mount });
+    const spy = vi.fn();
+    const unsub = container.on('theme:change', spy);
+    container.setTheme('dark');
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    unsub();
+    container.setTheme('light');
+    expect(spy).toHaveBeenCalledTimes(1);
+    container.dispose();
+  });
+});
+
+// ============================================================================
+// 10. v2 Layout class integrity
+// ============================================================================
+
+describe('SplitRightLayoutV2', () => {
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    container.style.cssText = 'width: 1200px; height: 800px;';
+  });
+
+  it('implements ILayout shape', () => {
+    const layout = new SplitRightLayoutV2(container);
+    expect(layout.id).toBe('split-right');
+    expect(Array.isArray(layout.capabilities)).toBe(true);
+    expect(layout.capabilities!.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it('mount produces DOM with expected structure', async () => {
+    const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+    const slots = await layout.mount();
+
+    expect(slots.control).toBeInstanceOf(HTMLElement);
+    expect(slots.animation).toBeInstanceOf(HTMLElement);
+    expect(container.querySelector('.teaching-stage-canvas')).toBeTruthy();
+  });
+
+  it('mount includes header when not hidden', async () => {
+    const layout = new SplitRightLayoutV2(container, { title: 'Physics' });
+    const slots = await layout.mount();
+    expect(slots.header).toBeInstanceOf(HTMLElement);
+  });
+
+  it('setTheme syncs to document', async () => {
+    const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+    await layout.mount();
+    layout.setTheme('dark');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+  });
+
+  it('getLayoutState / restoreLayoutState round-trip', async () => {
+    const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+    await layout.mount();
+
+    layout.restoreLayoutState({ leftRatio: 0.25 });
+    expect(layout.getLayoutState().leftRatio).toBe(0.25);
+  });
+
+  it('handleResize switches to single-column on mobile', async () => {
+    const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+    await layout.mount();
+
+    layout.handleResize(400, 800);
+    expect(container.style.gridTemplateColumns).toBe('1fr');
+  });
+
+  it('unmount clears container', async () => {
+    const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+    await layout.mount();
+    expect(container.children.length).toBeGreaterThan(0);
+
+    await layout.unmount();
+    expect(container.children.length).toBe(0);
+  });
+});
+
+describe('MobileStackLayoutV2', () => {
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    container.style.cssText = 'width: 375px; height: 812px;';
+  });
+
+  it('mount produces scroll container with all slots', async () => {
+    const layout = new MobileStackLayoutV2(container);
+    const slots = await layout.mount();
+
+    expect(slots.control).toBeInstanceOf(HTMLElement);
+    expect(slots.animation).toBeInstanceOf(HTMLElement);
+    expect(slots.graph).toBeInstanceOf(HTMLElement);
+    expect(slots.readout).toBeInstanceOf(HTMLElement);
+  });
+
+  it('mount omits graph when hasGraph is false', async () => {
+    const layout = new MobileStackLayoutV2(container, { hasGraph: false });
+    const slots = await layout.mount();
+    expect(slots.graph).toBeUndefined();
+  });
+
+  it('declares mobile-appropriate capabilities (no resizer)', () => {
+    const layout = new MobileStackLayoutV2(container);
+    const ids = layout.capabilities!.map(c => c.id);
+    expect(ids).not.toContain('resizer');
+    expect(ids).not.toContain('sidebar-toggle');
+    expect(ids).toContain('transport-bar');
+    expect(ids).toContain('readout-panel');
+  });
+
+  it('handleResize toggles is-landscape class', async () => {
+    const layout = new MobileStackLayoutV2(container);
+    await layout.mount();
+
+    layout.handleResize(800, 600);
+    expect(container.classList.contains('is-landscape')).toBe(true);
+
+    layout.handleResize(375, 812);
+    expect(container.classList.contains('is-landscape')).toBe(false);
+  });
+});
+
+describe('SplitRightGraphBottomLayoutV2', () => {
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    container.style.cssText = 'width: 1200px; height: 800px;';
+  });
+
+  it('mount creates graph section with configurable columns', async () => {
+    const layout = new SplitRightGraphBottomLayoutV2(container, {
+      hideHeader: true,
+      graphColumns: 2
+    });
+    const slots = await layout.mount();
+
+    expect(slots.graph).toBeInstanceOf(HTMLElement);
+    expect(slots.graph!.getAttribute('data-columns')).toBe('2');
+  });
+
+  it('mount creates horizontal resizer', async () => {
+    const layout = new SplitRightGraphBottomLayoutV2(container, { hideHeader: true });
+    await layout.mount();
+
+    const hResizer = container.querySelector('[aria-orientation="horizontal"]');
+    expect(hResizer).toBeTruthy();
+    expect(hResizer!.getAttribute('role')).toBe('separator');
+  });
+
+  it('getLayoutState / restoreLayoutState preserves graphHeight', async () => {
+    const layout = new SplitRightGraphBottomLayoutV2(container, { hideHeader: true });
+    await layout.mount();
+
+    layout.restoreLayoutState({ graphHeight: 350 });
+    expect(layout.getLayoutState().graphHeight).toBe(350);
+  });
+});

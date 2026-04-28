@@ -438,7 +438,7 @@ describe('bootScenePage', () => {
         },
         createScene: () => createMockScene() as never
       })
-    ).toThrow('Missing #app container');
+    ).toThrow('Missing mount container: #app');
   });
 
   it('should create scene container with injected meta.title', () => {

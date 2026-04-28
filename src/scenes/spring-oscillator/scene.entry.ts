@@ -1,13 +1,14 @@
 import { createSpringOscillatorSim, type OscillatorParams } from './scene.sim';
 import { createSpringOscillatorView, type SpringOscillatorViewOptions } from './scene.view';
 
-import type { TeachingMode } from '../../platform/standards';
+import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 
 export type CreateSpringOscillatorSceneOptions = {
   graphCanvas?: HTMLCanvasElement;
   stageCanvas?: HTMLCanvasElement;
   mode?: TeachingMode;
+  theme?: TeachingTheme;
   demoHints?: DemoRenderHints;
 };
 
@@ -78,6 +79,7 @@ export function createSpringOscillatorScene(options: CreateSpringOscillatorScene
     stageCanvas: options.stageCanvas,
     sim,
     mode: options.mode ?? 'normal',
+    theme: options.theme,
     demoHints: options.demoHints,
     onToggleOscillator: handleToggleOscillator
   };

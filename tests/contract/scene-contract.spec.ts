@@ -1,95 +1,138 @@
+/**
+ * 场景契约测试 — 动态发现
+ *
+ * 使用 import.meta.glob 自动发现所有 scene.entry.ts，
+ * 新增场景无需手动注册即可纳入契约验证。
+ *
+ * 约定：每个场景目录下的 scene.entry.ts 必须导出一个
+ * 名为 createXxxScene 的工厂函数。
+ */
+
 import { describe, expect, it } from 'vitest';
-import { createChaseMeetScene } from '../../src/scenes/chase-meet/scene.entry';
-import { createElectrificationScene } from '../../src/scenes/electrification/scene.entry';
-import { createEmfAnalogyScene } from '../../src/scenes/emf-analogy/scene.entry';
-import { createFieldLinesScene } from '../../src/scenes/field-lines/scene.entry';
-import { createProjectileScene } from '../../src/scenes/projectile/scene.entry';
-import { createSpringOscillatorScene } from '../../src/scenes/spring-oscillator/scene.entry';
-import { createVtIntegralScene } from '../../src/scenes/vt-integral/scene.entry';
 
-const mockCtx = {
-  setTransform: () => {},
-  scale: () => {},
-  clearRect: () => {},
-  save: () => {},
-  restore: () => {},
-  beginPath: () => {},
-  moveTo: () => {},
-  lineTo: () => {},
-  stroke: () => {},
-  fill: () => {},
-  fillText: () => {},
-  strokeText: () => {},
-  arc: () => {},
-  rect: () => {},
-  fillRect: () => {},
-  strokeRect: () => {},
-  closePath: () => {},
-  clip: () => {},
-  measureText: () => ({ width: 0 })
-} as unknown as CanvasRenderingContext2D;
+// ---------------------------------------------------------------------------
+// 动态发现所有场景入口
+// ---------------------------------------------------------------------------
 
-const mockCanvas = {
-  getContext: () => mockCtx,
-  width: 800,
-  height: 600,
-  style: {},
-  getBoundingClientRect: () => ({ width: 800, height: 600 }),
-  addEventListener: () => {},
-  removeEventListener: () => {}
-} as unknown as HTMLCanvasElement;
+const sceneModules = import.meta.glob<Record<string, unknown>>(
+  '../../src/scenes/*/scene.entry.ts',
+  { eager: true }
+);
 
-const scenes = [
-  { name: 'projectile', create: () => createProjectileScene({ canvas: mockCanvas }) },
-  { name: 'chase-meet', create: createChaseMeetScene },
-  { name: 'field-lines', create: createFieldLinesScene },
-  { name: 'emf-analogy', create: createEmfAnalogyScene },
-  { name: 'electrification', create: createElectrificationScene },
-  { name: 'vt-integral', create: createVtIntegralScene },
-  { name: 'spring-oscillator', create: createSpringOscillatorScene }
-];
+interface DiscoveredScene {
+  name: string;
+  create: () => Record<string, unknown>;
+}
 
-describe('scene contract', () => {
-  it.each(scenes)('$name implements required lifecycle methods', ({ create }) => {
-    const scene = create();
-    expect(typeof scene.init).toBe('function');
-    expect(typeof scene.reset).toBe('function');
-    expect(typeof scene.step).toBe('function');
-    expect(typeof scene.render).toBe('function');
-    expect(typeof scene.dispose).toBe('function');
-    scene.dispose();
+const scenes: DiscoveredScene[] = [];
+
+for (const [path, mod] of Object.entries(sceneModules)) {
+  const dirName = path.split('/').slice(-2, -1)[0];
+
+  // 查找导出的 createXxxScene 函数
+  const createFn = Object.entries(mod).find(
+    ([key, val]) =>
+      key.startsWith('create') && key.endsWith('Scene') && typeof val === 'function'
+  )?.[1] as ((opts?: Record<string, unknown>) => Record<string, unknown>) | undefined;
+
+  if (createFn) {
+    scenes.push({
+      name: dirName,
+      create: () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 800;
+        canvas.height = 600;
+        return createFn({ canvas });
+      }
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 契约测试
+// ---------------------------------------------------------------------------
+
+describe('scene contract (dynamic discovery)', () => {
+  it('discovers all 8 scenes', () => {
+    expect(scenes).toHaveLength(8);
+    const names = scenes.map(s => s.name).sort();
+    expect(names).toEqual([
+      'chase-meet',
+      'electrification',
+      'emf-analogy',
+      'field-lines',
+      'ganshe',
+      'projectile',
+      'spring-oscillator',
+      'vt-integral'
+    ]);
   });
 
-  it('projectile: render before init does not throw', () => {
-    const scene = createProjectileScene({ canvas: mockCanvas });
-    expect(() => scene.render()).not.toThrow();
-    scene.dispose();
+  describe('required lifecycle methods', () => {
+    it.each(scenes)('$name: init, reset, step, render, dispose', ({ create }) => {
+      const scene = create();
+      expect(typeof scene.init).toBe('function');
+      expect(typeof scene.reset).toBe('function');
+      expect(typeof scene.step).toBe('function');
+      expect(typeof scene.render).toBe('function');
+      expect(typeof scene.dispose).toBe('function');
+      (scene as { dispose?: () => void }).dispose?.();
+    });
   });
 
-  it('projectile: dispose is idempotent', () => {
-    const scene = createProjectileScene({ canvas: mockCanvas });
-    scene.init();
-    expect(() => {
-      scene.dispose();
-      scene.dispose();
-    }).not.toThrow();
+  describe('render before init', () => {
+    it.each(scenes)('$name: does not throw', ({ create }) => {
+      const scene = create();
+      expect(() => (scene as { render: () => void }).render()).not.toThrow();
+      (scene as { dispose?: () => void }).dispose?.();
+    });
   });
 
-  it('projectile: getState returns a plain object', () => {
-    const scene = createProjectileScene({ canvas: mockCanvas });
-    scene.init();
-    const state = (scene as unknown as { getState(): object }).getState?.();
-    if (state !== undefined) {
-      expect(Object.getPrototypeOf(state)).toBe(Object.prototype);
-    }
-    scene.dispose();
+  describe('dispose idempotency', () => {
+    it.each(scenes)('$name: dispose twice does not throw', ({ create }) => {
+      const scene = create();
+      const s = scene as { init?: () => void; dispose: () => void };
+      s.init?.();
+      expect(() => {
+        s.dispose();
+        s.dispose();
+      }).not.toThrow();
+    });
   });
 
-  it('projectile: step returns void or state', () => {
-    const scene = createProjectileScene({ canvas: mockCanvas });
-    scene.init();
-    const result = scene.step(1 / 60);
-    expect(result === undefined || typeof result === 'object').toBe(true);
-    scene.dispose();
+  describe('step return type', () => {
+    it.each(scenes)('$name: returns void or object', ({ create }) => {
+      const scene = create();
+      const s = scene as { init?: () => void; step: (dt: number) => unknown };
+      s.init?.();
+      const result = s.step(1 / 60);
+      expect(result === undefined || typeof result === 'object').toBe(true);
+      (scene as { dispose?: () => void }).dispose?.();
+    });
+  });
+
+  describe('setMode toggling', () => {
+    it.each(scenes)('$name: does not throw', ({ create }) => {
+      const scene = create();
+      const s = scene as { setMode: (m: string) => void };
+      if (typeof s.setMode === 'function') {
+        expect(() => s.setMode('presentation')).not.toThrow();
+        expect(() => s.setMode('normal')).not.toThrow();
+      }
+      (scene as { dispose?: () => void }).dispose?.();
+    });
+  });
+
+  describe('getSnapshot', () => {
+    it.each(scenes)('$name: returns truthy value', ({ create }) => {
+      const scene = create();
+      const s = scene as { init?: () => void; getSnapshot: () => unknown };
+      s.init?.();
+      if (typeof s.getSnapshot === 'function') {
+        const snap = s.getSnapshot();
+        expect(snap).toBeTruthy();
+      }
+      (scene as { dispose?: () => void }).dispose?.();
+    });
   });
 });

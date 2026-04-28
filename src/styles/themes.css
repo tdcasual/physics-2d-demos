@@ -91,25 +91,26 @@
   /* 主色 */
   --accent-primary: var(--token-color-coral);
   --accent-secondary: var(--token-color-mint);
-  
-  /* 背景色 */
+
+  /* 背景色 — 与 base/theme.css 对齐 */
   --bg-primary: #faf8f5;
-  --bg-secondary: #ffffff;
-  --bg-card: #ffffff;
+  --bg-secondary: rgba(255, 255, 255, 0.6);
+  --bg-card: rgba(255, 255, 255, 0.6);
   --bg-hover: #f5f3f0;
-  
+
   /* 卡片背景（别名，用于浮动控制等） */
   --card-bg: rgba(255, 255, 255, 0.85);
 
   /* 文字色 */
   --text-primary: #1a1a1a;
-  --text-secondary: #666666;
-  --text-muted: #999999;
+  --text-secondary: #555555;
+  --text-muted: #888888;
+  --text-tertiary: #999999;
   --text-inverse: #ffffff;
 
   /* 边框色 */
-  --border-light: #e8e6e3;
-  --border-medium: #d4d2cf;
+  --border-light: rgba(0, 0, 0, 0.08);
+  --border-medium: rgba(0, 0, 0, 0.08);
   --border-strong: #a8a6a3;
   --border-color: var(--border-medium);
 
@@ -124,26 +125,27 @@
   /* 主色 */
   --accent-primary: var(--token-color-coral);
   --accent-secondary: var(--token-color-mint);
-  
-  /* 背景色 */
-  --bg-primary: #0a0a0a;
-  --bg-secondary: #1a1a1a;
-  --bg-card: #1f1f1f;
-  --bg-hover: #2a2a2a;
-  
+
+  /* 背景色 — 与 base/theme.css 对齐 */
+  --bg-primary: #0f172a;
+  --bg-secondary: rgba(30, 41, 59, 0.6);
+  --bg-card: rgba(30, 41, 59, 0.8);
+  --bg-hover: rgba(255, 255, 255, 0.1);
+
   /* 卡片背景（别名，用于浮动控制等） */
   --card-bg: rgba(30, 30, 30, 0.85);
 
   /* 文字色 */
-  --text-primary: #f5f5f5;
-  --text-secondary: #a0a0a0;
+  --text-primary: #fafafa;
+  --text-secondary: #b0b8c4;
   --text-muted: #666666;
+  --text-tertiary: #555555;
   --text-inverse: #0a0a0a;
 
   /* 边框色 */
-  --border-light: #2a2a2a;
-  --border-medium: #3a3a3a;
-  --border-strong: #555555;
+  --border-light: rgba(255, 255, 255, 0.08);
+  --border-medium: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.2);
   --border-color: var(--border-medium);
 
   /* 阴影 */

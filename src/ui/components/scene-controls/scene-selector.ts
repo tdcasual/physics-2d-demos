@@ -20,7 +20,7 @@ export function createSceneSelector(
   const buttons = new Map<string, HTMLButtonElement>();
 
   const container = document.createElement('div');
-  container.className = 'flex flex-col gap-1.5';
+  container.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 6px;';
 
   function updateStyles() {
     buttons.forEach((btn, id) => {

@@ -36,6 +36,20 @@ export type SceneInstance = {
   [key: string]: unknown;
 };
 
+/**
+ * 场景创建标准参数契约
+ *
+ * 所有 createScene 回调都会收到这些参数。每个场景的 entry 工厂函数
+ * 必须能接受此类型（或兼容的超集），否则在类型测试中会报错。
+ */
+export type StandardSceneCreateParams = {
+  canvas: HTMLCanvasElement;
+  slots: LayoutSlots;
+  theme: Theme;
+  mode: 'normal' | 'presentation';
+  demoHints?: DemoRenderHints;
+};
+
 /** 场景页面配置选项 */
 export type ScenePageOptions<TScene extends SceneInstance = SceneInstance> = {
   /** 场景元数据 */
@@ -47,13 +61,7 @@ export type ScenePageOptions<TScene extends SceneInstance = SceneInstance> = {
   /** 演示配置（默认从 meta.demoProfile 读取） */
   demoProfile?: SceneDemoProfile;
   /** 创建场景实例 */
-  createScene: (opts: {
-    canvas: HTMLCanvasElement;
-    slots: LayoutSlots;
-    theme: Theme;
-    mode: 'normal' | 'presentation';
-    demoHints?: DemoRenderHints;
-  }) => TScene;
+  createScene: (opts: StandardSceneCreateParams) => TScene;
   /** 创建控制面板（可选） */
   createControls?: (opts: {
     mount: HTMLElement;

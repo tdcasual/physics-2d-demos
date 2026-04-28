@@ -1,0 +1,110 @@
+/* ========================================
+   响应式布局
+   ======================================== */
+
+/* 平板 */
+@media (max-width: 1024px) {
+  .teaching-demo.v2-layout {
+    grid-template-columns: 280px 8px 1fr;
+  }
+}
+
+/* 手机 */
+@media (max-width: 768px) {
+  .teaching-demo.v2-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  .teaching-left-panel {
+    @apply max-h-[50vh] border-r-0 border-b;
+    border-color: var(--color-border-color);
+  }
+
+  .teaching-panel-resizer {
+    @apply hidden;
+  }
+
+  .teaching-readout-panel {
+    @apply fixed bottom-4 right-4 left-4 top-auto max-w-none;
+  }
+}
+
+/* ========================================
+   演示模式
+   ======================================== */
+.teaching-demo[data-mode='presentation'] .teaching-stage-toolbar {
+  @apply absolute right-0 top-0 z-50 border-0 bg-transparent p-0;
+  width: auto;
+}
+
+.teaching-demo[data-mode='presentation'] .teaching-stage-toolbar .teaching-sidebar-toggle,
+.teaching-demo[data-mode='presentation'] .teaching-stage-toolbar .shell-theme-toggle {
+  @apply hidden;
+}
+
+.teaching-demo[data-mode='presentation'] .teaching-stage-floating-controls {
+  @apply left-4 top-4;
+}
+
+.teaching-demo[data-mode='presentation'] .teaching-readout-panel {
+  @apply right-4 top-4;
+}
+
+/* 读数面板 dock/叠加/放大 — teaching + srgb 共享 */
+:is(.teaching-readout-panel, .srgb-readout-panel):is(.teaching-is-docked-bottom, .srgb-is-docked-bottom) {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: auto;
+  max-width: none;
+  width: 100%;
+  border-radius: 0;
+}
+
+:is(.teaching-readout-panel, .srgb-readout-panel):is(.teaching-is-docked-top, .srgb-is-docked-top) {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: auto;
+  max-width: none;
+  width: 100%;
+  border-radius: 0;
+}
+
+:is(.teaching-readout-panel, .srgb-readout-panel):is(.teaching-is-overlay, .srgb-is-overlay) {
+  backdrop-filter: blur(8px);
+  background: var(--color-bg-primary);
+}
+
+[data-theme='dark'] :is(.teaching-readout-panel, .srgb-readout-panel):is(.teaching-is-overlay, .srgb-is-overlay) {
+  background: rgba(0, 0, 0, 0.75);
+}
+
+:is(.teaching-readout-panel, .srgb-readout-panel):is(.teaching-readout-enlarged, .srgb-readout-enlarged) :is(.teaching-readout-label, .srgb-readout-label) {
+  font-size: 1.1rem;
+}
+:is(.teaching-readout-panel, .srgb-readout-panel):is(.teaching-readout-enlarged, .srgb-readout-enlarged) :is(.teaching-readout-value, .srgb-readout-value) {
+  font-size: 1.25rem;
+}
+
+/* 触摸优化 */
+.teaching-demo-touch-optimized .teaching-section-toggle,
+.teaching-demo-touch-optimized .teaching-sidebar-toggle {
+  min-width: var(--demo-touch-min, 48px);
+  min-height: var(--demo-touch-min, 48px);
+}
+
+/* 演示模式：侧边栏和图表面板最小化 */
+.layout-left-panel.is-collapsed-demo {
+  max-height: 3rem;
+  overflow: hidden;
+}
+.graph-section.is-collapsed-demo,
+.layout-graph-section.is-collapsed-demo {
+  max-height: 3rem;
+  overflow: hidden;
+}
+

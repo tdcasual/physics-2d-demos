@@ -1,0 +1,118 @@
+/**
+ * Chase-meet 场景 CSS
+ *
+ * 隔离约定：所有选择器使用 .chase-modern-* 前缀避免冲突。
+ * 全局 CSS 变量（--bg-card、--border-color 等）由布局系统提供。
+ */
+
+/* Root stage — fills the animation slot */
+.chase-modern-stage {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 6px;
+  padding: 4px;
+}
+
+/* Card wrapper */
+.chase-modern-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.chase-modern-card--motion {
+  flex: 3;
+  min-height: 0;
+}
+
+.chase-modern-card--graphs {
+  flex: 2;
+  min-height: 0;
+}
+
+/* Card header row: title + tag */
+.chase-modern-card-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 6px 10px 3px;
+}
+
+.chase-modern-card-title {
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.chase-modern-card-tag {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--btn-bg);
+  padding: 1px 8px;
+  border-radius: 999px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+/* Motion canvas — fills card body */
+.chase-modern-motion-canvas {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: block;
+}
+
+/* Plots layout */
+.chase-modern-plots {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  padding: 4px 6px 6px;
+}
+
+.chase-modern-plot {
+  flex: 1 1 50%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.chase-modern-plot-title {
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0 2px 2px;
+}
+
+.chase-modern-plot canvas,
+.chase-modern-x-canvas,
+.chase-modern-v-canvas {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: block;
+}
+
+/* Narrow viewport — stack vertically */
+.chase-modern-stage.is-narrow {
+  gap: 4px;
+}
+
+.chase-modern-stage.is-narrow .chase-modern-card--motion {
+  flex: 2;
+}
+
+.chase-modern-stage.is-narrow .chase-modern-card--graphs {
+  flex: 1;
+}
+
+.chase-modern-stage.is-narrow .chase-modern-plots {
+  flex-direction: column;
+}

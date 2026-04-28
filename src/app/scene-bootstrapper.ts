@@ -4,7 +4,7 @@
  * 将场景 page.ts 从 ~200 行缩减到 ~30 行。
  */
 
-import '../styles/teaching-shell.css';
+import '../styles/index.css';
 
 import { createSceneContainer } from './layouts/container';
 import { registerAllLayouts } from './layouts/auto-register';
@@ -17,23 +17,16 @@ export { SceneAdapter } from './scene-adapter';
 /**
  * 统一启动场景页面
  *
- * 使用方式：
- * ```ts
- * bootScenePage({
- *   meta: projectileMeta,
- *   createScene: ({ canvas, theme, mode }) => createProjectileScene({ canvas, theme, mode }),
- *   createControls: ({ mount, scene }) => createProjectileControls({ mount, scene }),
- *   preferredLayout: 'split-right',
- *   layoutConfig: { hasGraph: false, defaultLeftRatio: 0.32 }
- * });
- * ```
+ * @param options - 场景配置
+ * @param mountSelector - 挂载目标选择器，默认 '#app'
  */
 export function bootScenePage<TScene extends SceneInstance>(
-  options: ScenePageOptions<TScene>
+  options: ScenePageOptions<TScene>,
+  mountSelector: string = '#app'
 ): void {
-  const mount = document.getElementById('app');
+  const mount = document.querySelector(mountSelector) as HTMLElement | null;
   if (!mount) {
-    throw new Error('Missing #app container');
+    throw new Error(`Missing mount container: ${mountSelector}`);
   }
 
   // 统一注册所有布局（幂等）

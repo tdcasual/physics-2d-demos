@@ -36,8 +36,8 @@ export function restorePersistedState(
       }
       return result;
     }
-  } catch {
-    // localStorage 不可用或数据损坏，忽略
+  } catch (err) {
+    console.warn('[persistence] Failed to restore state:', err instanceof Error ? err.message : err);
   }
   return null;
 }
@@ -57,8 +57,8 @@ export function saveSceneState(
         timestamp: Date.now()
       })
     );
-  } catch {
-    // 忽略
+  } catch (err) {
+    console.warn('[persistence] Failed to save state:', err instanceof Error ? err.message : err);
   }
 }
 
@@ -74,8 +74,8 @@ export function restoreSceneState(
       if (data.v !== 1) return null;
       return data.state;
     }
-  } catch {
-    // 忽略
+  } catch (err) {
+    console.warn('[persistence] Failed to restore scene state:', err instanceof Error ? err.message : err);
   }
   return null;
 }
@@ -95,8 +95,8 @@ export function saveLayoutState(
         timestamp: Date.now()
       })
     );
-  } catch {
-    // 忽略
+  } catch (err) {
+    console.warn('[persistence] Failed to save state:', err instanceof Error ? err.message : err);
   }
 }
 
@@ -112,8 +112,8 @@ export function restoreLayoutState(
       if (data.v !== 1) return null;
       return data.state;
     }
-  } catch {
-    // 忽略
+  } catch (err) {
+    console.warn('[persistence] Failed to restore layout state:', err instanceof Error ? err.message : err);
   }
   return null;
 }

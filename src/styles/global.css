@@ -244,3 +244,15 @@ body {
   outline: 2px solid var(--text-primary);
   outline-offset: 2px;
 }
+
+/* Focus-visible styles for interactive layout elements */
+[role="separator"]:focus-visible {
+  outline: 2px solid var(--accent-color, #4ecdc4);
+  outline-offset: 2px;
+}
+
+button:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--accent-color, #4ecdc4);
+  outline-offset: 2px;
+}

@@ -1,158 +1,115 @@
 # CSS 架构规范
 
+## 文件结构
+
+```
+src/styles/
+  index.css                    # 入口：@import 所有文件（cascade 顺序）
+  global.css                   # 全局 reset / base
+  design-tokens.css            # 设计令牌原始值
+  layout-tokens.css            # 布局令牌
+  themes.css                   # 主题变量映射
+  base/
+    theme.css                  # Tailwind 配置 + @theme + CSS 变量 + 暗色主题
+  layout/
+    split-right.css            # teaching 布局（grid、面板、控制区、图表、动画区）
+    srgb.css                   # srgb 布局 + 底部图表
+    mobile-stack.css           # mobile-stack 布局 + mobile readout
+  capability/
+    readout-panel.css          # 数据区浮动面板（teaching + srgb 已用 :is() 统一）
+    buttons.css                # 通用 capability 按钮（兜底样式）
+  shared/
+    responsive-demo.css        # 响应式断点 + 演示模式
+  scene/
+    chase-modern.css           # chase-meet 场景样式（class 前缀隔离）
+```
+
 ## 核心原则
 
-1. **单一职责**: 每个CSS文件只负责一个明确的职责
-2. **分层管理**: 按层级组织，下层不依赖上层
-3. **无重复定义**: 每个变量只定义一次
-4. **显式依赖**: 通过CSS @import 显式声明依赖关系
+1. **单一职责**: 每个 CSS 文件只负责一个明确的职责（布局 / capability / 场景）
+2. **分层管理**: base → layout → capability/shared → scene，下层不依赖上层
+3. **无重复定义**: 通用样式用 `:is()` 选择器合并前缀变体
+4. **显式依赖**: 通过 CSS `@import` 在 `index.css` 中按 cascade 顺序导入
 
-## 架构层级
+## 层级关系
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  Layer 4: 组件层 (Components)                                │
-│  - teaching-demo-v2.css                                     │
-│  - teaching-demo-controls.css                               │
-│  - 只包含组件特定样式，不定义CSS变量                          │
-└─────────────────────────────────────────────────────────────┘
-                              ▲
-                              │ @import
-┌─────────────────────────────────────────────────────────────┐
-│  Layer 3: 主题层 (Themes)                                    │
-│  - themes.css                                               │
-│  - 定义深色/浅色模式的CSS变量映射                              │
-│  - 仅此文件定义[data-theme]选择器                             │
-└─────────────────────────────────────────────────────────────┘
-                              ▲
-                              │ @import
-┌─────────────────────────────────────────────────────────────┐
-│  Layer 2: 设计令牌 (Design Tokens)                           │
-│  - design-tokens.css                                        │
-│  - 定义原始值（颜色、间距、字体等）                            │
-│  - 不定义CSS变量，只定义CSS自定义属性                          │
-└─────────────────────────────────────────────────────────────┘
-                              ▲
-                              │ @import
-┌─────────────────────────────────────────────────────────────┐
-│  Layer 1: 基础层 (Base)                                      │
-│  - reset/normalize                                          │
-│  - 字体加载                                                  │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│  scene/             场景 CSS              │
+│  使用 class 前缀隔离，消费布局 CSS 变量     │
+└──────────────────────────────────────────┘
+                    ▲
+┌──────────────────────────────────────────┐
+│  capability/ + shared/  能力 + 共享样式   │
+│  自包含，可被任意布局引用                  │
+└──────────────────────────────────────────┘
+                    ▲
+┌──────────────────────────────────────────┐
+│  layout/            布局结构样式           │
+│  每个布局一个文件，定义 grid 和 slot       │
+└──────────────────────────────────────────┘
+                    ▲
+┌──────────────────────────────────────────┐
+│  base/              基础层                │
+│  Tailwind 配置 + CSS 变量 + 主题          │
+└──────────────────────────────────────────┘
 ```
 
-## 文件职责
+## 场景 CSS 隔离约定
 
-### design-tokens.css
-- **职责**: 定义设计系统的原始值
-- **内容**: 颜色、间距、字体、圆角、阴影等基础值
-- **规则**: 
-  - 使用CSS自定义属性 (--token-*)
-  - 不定义[data-theme]选择器
-  - 值是原始值，不随主题变化
+场景样式必须自隔离，避免污染其他场景或布局：
 
-### themes.css
-- **职责**: 定义主题变量映射
-- **内容**: 
-  - `[data-theme="dark"]` 深色主题变量
-  - `[data-theme="light"]` 浅色主题变量
-- **规则**:
-  - 仅此文件定义主题选择器
-  - 将设计令牌映射到语义化变量 (--bg-primary, --text-primary等)
-  - 变量命名遵循语义化规范
+**规则:**
+- 场景自建 CSS 文件，放在 `src/styles/scene/` 下
+- 所有选择器使用场景专属 class 前缀（如 `.chase-modern-*`）
+- 场景 CSS 不定义 CSS 变量，只消费布局层提供的变量（`--bg-card`、`--border-color`、`--text-primary` 等）
+- 场景 page.ts 在文件顶部 `import '../../styles/scene/<name>.css'`
 
-### 组件文件 (teaching-demo-v2.css, teaching-demo-controls.css)
-- **职责**: 组件特定样式
-- **规则**:
-  - 只使用主题变量，不直接使用设计令牌
-  - 不定义任何CSS变量
-  - 通过 @import 引入主题层
+**示例 (chase-modern.css):**
+```css
+/* ✅ 正确：class 前缀隔离 */
+.chase-modern-stage { ... }
+.chase-modern-card { ... }
+.chase-modern-card--motion { ... }
+
+/* ✅ 正确：消费布局变量 */
+.chase-modern-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+}
+
+/* ❌ 错误：不要在场景 CSS 中定义变量 */
+.chase-modern-card {
+  --my-color: #ff0000;
+}
+```
+
+## 添加新布局 CSS
+
+1. 在 `src/styles/layout/` 下创建 `<layout-name>.css`
+2. 在 `src/styles/index.css` 中按 cascade 顺序添加 `@import`
+3. 布局 CSS 只定义 grid 结构、slot 定位，功能样式由 capability CSS 提供
+
+## 添加新 capability CSS
+
+1. 在 `src/styles/capability/` 下创建 `<capability-name>.css`
+2. 如果 capability 被多个布局使用且样式完全相同，用 `:is()` 选择器合并前缀
+3. 在 `index.css` 中添加 `@import`
 
 ## 变量命名规范
 
-### 设计令牌 (design-tokens.css)
-```css
---token-color-coral: #FF6B6B;
---token-color-mint: #4ECDC4;
---token-space-4: 1rem;
---token-font-size-sm: 0.875rem;
-```
-
-### 主题变量 (themes.css)
-```css
-/* 背景 */
---bg-primary: ...;      /* 主背景 */
---bg-secondary: ...;    /* 次级背景 */
---bg-tertiary: ...;     /* 三级背景 */
---bg-hover: ...;        /* 悬停背景 */
-
-/* 文字 */
---text-primary: ...;    /* 主文字 */
---text-secondary: ...;  /* 次级文字 */
---text-tertiary: ...;   /* 三级文字 */
---text-muted: ...;      /* 弱化文字 */
-
-/* 边框 */
---border-color: ...;    /* 边框颜色 */
---border-width: ...;    /* 边框宽度 */
-
-/* 强调色 */
---accent-color: ...;    /* 主强调色 */
---primary-color: ...;   /* 主色 */
---secondary-color: ...; /* 辅色 */
-
-/* 组件特定 */
---card-bg: ...;
---card-header-bg: ...;
---btn-bg: ...;
---btn-hover-bg: ...;
---input-bg: ...;
---sidebar-bg: ...;
---stage-bg: ...;
-```
-
-## 依赖规则
-
-1. **下层不依赖上层**: design-tokens.css 不导入任何文件
-2. **上层显式导入**: 组件文件必须显式导入 themes.css
-3. **禁止循环依赖**: A导入B，则B不能导入A
-4. **禁止重复导入**: 每个文件只导入一次
-
-## 重构步骤
-
-1. 备份现有CSS文件
-2. 重构 design-tokens.css - 提取所有原始值
-3. 重构 themes.css - 统一定义所有主题变量
-4. 重构 teaching-demo-v2.css - 移除变量定义，只保留组件样式
-5. 重构 teaching-demo-controls.css - 移除变量定义，只保留组件样式
-6. 更新组件文件导入关系
-7. 测试所有场景
+- 设计令牌: `--color-*`、`--shadow-*`、`--font-*`
+- 语义变量: `--bg-*`、`--text-*`、`--border-*`、`--btn-*`、`--accent-*`
+- 组件变量: `--<component>-<property>`
 
 ## 常见错误
 
 ❌ **不要这样做**:
-```css
-/* 在组件文件中定义变量 */
-.teaching-demo {
-  --bg-primary: #0f172a;  /* 错误！ */
-}
-
-/* 重复定义主题 */
-[data-theme="dark"] {
-  --text-primary: #fff;  /* 错误！已在themes.css定义 */
-}
-
-/* 跨层引用 */
-.teaching-demo {
-  color: var(--token-color-coral);  /* 错误！应使用 --accent-color */
-}
-```
+- 在场景/布局 CSS 中定义新的 CSS 变量
+- 使用过于宽泛的选择器（如 `button`、`div`）
+- 在 capability CSS 中硬编码布局相关的尺寸
 
 ✅ **正确做法**:
-```css
-/* 只使用主题变量 */
-.teaching-demo {
-  background: var(--bg-primary);
-  color: var(--text-primary);
-}
-```
+- 场景 CSS 用 class 前缀隔离
+- 布局 CSS 只定义 grid 结构
+- 所有颜色/间距使用语义化 CSS 变量

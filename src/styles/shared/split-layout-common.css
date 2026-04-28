@@ -1,0 +1,229 @@
+/* ========================================
+   Split Layout 共享结构
+
+   左右分栏布局的共同 CSS 骨架，teaching- 和 srgb- 布局共用。
+   使用 :is() 选择器消除前缀差异，避免维护两份副本。
+   ======================================== */
+
+/* ---- Left panel ---- */
+:is(.teaching-left-panel, .srgb-left-panel) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid var(--color-border-color);
+  background: var(--color-sidebar-bg);
+}
+
+/* ---- Header ---- */
+:is(.teaching-header, .srgb-header) {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--color-border-color);
+  background: var(--color-bg-secondary);
+  padding: 1rem;
+}
+
+:is(.teaching-title, .srgb-title) {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+:is(.teaching-subtitle, .srgb-subtitle) {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+/* ---- Control section ---- */
+:is(.teaching-control-section, .srgb-control-section) {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border-bottom: 1px solid var(--color-border-color);
+}
+
+:is(.teaching-control-slot, .srgb-control-slot) {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  gap: calc(0.25rem * var(--ui-scale, 1));
+  padding: calc(0.375rem * var(--ui-scale, 1)) calc(0.5rem * var(--ui-scale, 1));
+}
+
+:is(.teaching-control-slot, .srgb-control-slot) > * {
+  min-width: 0;
+}
+
+/* ---- Control multi-column ---- */
+:is(.teaching-control-slot, .srgb-control-slot)[data-control-columns='auto'] {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  align-content: start;
+}
+:is(.teaching-control-slot, .srgb-control-slot)[data-control-columns='2'] {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  align-content: start;
+}
+:is(.teaching-control-slot, .srgb-control-slot)[data-control-columns='3'] {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  align-content: start;
+}
+
+/* ---- Section header / title / toggle (shared across all layouts) ---- */
+:is(.teaching-section-header, .srgb-section-header) {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-border-color);
+  background: var(--color-bg-secondary);
+  padding: 0.375rem 0.75rem;
+}
+
+:is(.teaching-section-title, .srgb-section-title) {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+:is(.teaching-section-toggle, .srgb-section-toggle) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 0.25rem;
+  border: 1px solid var(--color-border-color);
+  background: var(--color-btn-bg);
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  padding: 0;
+}
+
+:is(.teaching-section-toggle, .srgb-section-toggle):hover {
+  background: var(--color-btn-hover-bg);
+  border-color: var(--color-accent-color);
+  color: var(--color-accent-color);
+}
+
+/* Collapsed slot hiding */
+:is(.teaching-control-section, .srgb-control-section)[data-collapsed='true']
+  :is(.teaching-control-slot, .srgb-control-slot) {
+  display: none;
+}
+
+/* Collapsed section headers lose bottom border */
+[data-collapsed='true'] :is(.teaching-section-header, .srgb-section-header) {
+  border-bottom: none;
+}
+
+/* ---- Right panel ---- */
+:is(.teaching-right-panel, .srgb-right-panel) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-bg-primary);
+}
+
+/* ---- Stage toolbar ---- */
+:is(.teaching-stage-toolbar, .srgb-stage-toolbar) {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--color-border-color);
+  background: var(--color-bg-secondary);
+  padding: 0.75rem 1rem;
+}
+
+:is(.teaching-sidebar-toggle, .srgb-sidebar-toggle) {
+  cursor: pointer;
+  border-radius: 0.375rem;
+  border: 1px solid var(--color-border-color);
+  background: var(--color-btn-bg);
+  color: var(--color-text-secondary);
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  min-width: 44px;
+  min-height: 44px;
+  transition: all var(--transition-fast);
+}
+
+:is(.teaching-sidebar-toggle, .srgb-sidebar-toggle):hover {
+  background: var(--color-btn-hover-bg);
+  color: var(--color-text-primary);
+}
+
+:is(.teaching-toolbar-actions, .srgb-toolbar-actions) {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* ---- Stage frame / slot / canvas ---- */
+:is(.teaching-stage-frame, .srgb-stage-frame) {
+  position: relative;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+  padding: 0;
+  background: var(--color-stage-bg);
+}
+
+:is(.teaching-stage-slot, .srgb-stage-slot) {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+:is(.teaching-stage-canvas, .srgb-stage-canvas) {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  touch-action: manipulation;
+}
+
+/* ---- Vertical resizer ---- */
+:is(.teaching-panel-resizer, .srgb-resizer-v) {
+  position: relative;
+  z-index: 10;
+  width: 0.5rem;
+  cursor: col-resize;
+  transition: background-color var(--transition-fast);
+  background: var(--color-border-color);
+}
+
+:is(.teaching-panel-resizer, .srgb-resizer-v):hover,
+:is(.teaching-panel-resizer, .srgb-resizer-v).is-dragging {
+  background: var(--color-accent-color);
+}
+
+:is(.teaching-panel-resizer, .srgb-resizer-v)::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2px;
+  height: 2rem;
+  border-radius: var(--radius-full);
+  opacity: 0.5;
+  transform: translate(-50%, -50%);
+  background: var(--color-text-muted);
+}

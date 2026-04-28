@@ -21,7 +21,9 @@ export interface ResizeObserverCallbacks {
   /** 解析场景应使用的布局 */
   resolveLayout: (scene: Scene) => string;
   /** 执行布局切换 */
-  switchLayout: (id: string) => void;
+  switchLayout: (id: string) => Promise<void>;
+  /** 容器是否正在切换中 */
+  getSwitching: () => boolean;
   /** 通知当前布局尺寸变化 */
   notifyLayoutResize: (width: number, height: number) => void;
   /** 可选的外部 resize 回调 */
@@ -90,8 +92,13 @@ export class ContainerResizeObserver {
       clearTimeout(this._timer);
     }
     this._timer = setTimeout(() => {
+      // Skip if a manual switch is in progress, or if the user has set a
+      // preference since the debounce started.
+      if (this._callbacks.getSwitching() || this._callbacks.getUserPreferredLayout()) return;
       if (targetLayoutId !== this._callbacks.getCurrentLayoutId()) {
-        this._callbacks.switchLayout(targetLayoutId);
+        this._callbacks.switchLayout(targetLayoutId).catch((err) => {
+          console.error('[ContainerResizeObserver] Layout switch failed:', err);
+        });
       }
     }, 300);
   }

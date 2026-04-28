@@ -1,0 +1,121 @@
+/* ========================================
+   Split-Right Layout — teaching- 前缀
+   共享结构在 shared/split-layout-common.css
+   ======================================== */
+
+/* ---- Grid layout ---- */
+.teaching-demo.v2-layout {
+  display: grid;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--color-bg-primary);
+  grid-template-columns: minmax(260px, 40%) 8px 1fr;
+}
+
+/* ---- Graph visibility tied to data-has-graph ---- */
+.teaching-demo[data-has-graph='true'] .teaching-control-section {
+  max-height: 60%;
+}
+
+.teaching-demo[data-has-graph='false'] .teaching-graph-section {
+  display: none;
+}
+
+/* ---- Graph section (in left panel) ---- */
+.teaching-graph-section {
+  display: flex;
+  min-height: 140px;
+  flex: 1;
+  flex-direction: column;
+  background: var(--color-bg-primary);
+}
+
+.teaching-graph-section .teaching-section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.teaching-graph-slot {
+  position: relative;
+  min-height: 0;
+  flex: 1;
+}
+
+.teaching-graph-slot canvas {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.teaching-graph-section[data-collapsed='true'] .teaching-graph-slot {
+  display: none;
+}
+
+/* ---- Right panel grid placement ---- */
+.teaching-right-panel {
+  grid-column-start: 3;
+}
+
+/* ---- Mode toggle accent ---- */
+.teaching-mode-toggle {
+  background: var(--color-accent-color);
+  border-color: var(--color-accent-color);
+  color: var(--color-text-inverse, #1a1a1a);
+}
+
+.teaching-mode-toggle:hover {
+  transform: translateY(-1px);
+  opacity: 0.9;
+}
+
+/* ---- Stage slot child sizing ---- */
+.teaching-stage-slot > *:not(canvas):not(.teaching-stage-floating-controls):not(.teaching-readout-panel) {
+  height: 100%;
+  max-height: 100%;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* ---- Floating controls (transport bar) ---- */
+.teaching-stage-floating-controls {
+  position: absolute;
+  z-index: 50;
+  display: inline-flex;
+  border-radius: 0.375rem;
+  border: 1px solid var(--color-border-color);
+  left: calc(0.5rem * var(--ui-scale, 1));
+  top: calc(0.5rem * var(--ui-scale, 1));
+  gap: calc(0.25rem * var(--ui-scale, 1));
+  padding: calc(0.25rem * var(--ui-scale, 1));
+  background: var(--color-bg-primary);
+  box-shadow: var(--shadow-lg);
+}
+
+.teaching-stage-floating-controls button {
+  display: flex;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  border: 1px solid var(--color-border-color);
+  padding: 0;
+  transition: all var(--transition-fast);
+  min-width: 44px;
+  min-height: 44px;
+  width: calc(1.75rem * var(--ui-scale, 1));
+  height: calc(1.75rem * var(--ui-scale, 1));
+  font-size: calc(0.875rem * var(--ui-scale, 1));
+  background: var(--color-btn-bg);
+  color: var(--color-text-secondary);
+}
+
+.teaching-stage-floating-controls button:hover {
+  border-color: var(--color-accent-color);
+  background: var(--color-btn-hover-bg);
+  color: var(--color-text-primary);
+}
+
+.teaching-stage-floating-controls button:active {
+  transform: translateY(1px);
+}

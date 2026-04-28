@@ -4,6 +4,8 @@ import {
   createSceneContainer
 } from '../../src/app/layouts/container';
 import type { Scene } from '../../src/app/layouts/types';
+import { SplitRightLayoutV2 } from '../../src/app/layouts/layouts/split-right/split-right-v2';
+import { MobileStackLayoutV2 } from '../../src/app/layouts/layouts/mobile-stack/mobile-stack-v2';
 
 // Mock layout registry
 vi.mock('../../src/app/layouts/registry', () => ({
@@ -17,6 +19,7 @@ vi.mock('../../src/app/layouts/registry', () => ({
       exit: vi.fn().mockResolvedValue(undefined),
       setTheme: vi.fn(),
       handleResize: vi.fn(),
+      _updateConfig: vi.fn(),
       getSlots: vi.fn(() => ({
         header: document.createElement('div'),
         control: document.createElement('div'),
@@ -25,7 +28,9 @@ vi.mock('../../src/app/layouts/registry', () => ({
         readout: document.createElement('div')
       }))
     })),
-    getAllMetadata: vi.fn(() => [])
+    getAllMetadata: vi.fn(() => []),
+    returnInstance: vi.fn(),
+    clearPool: vi.fn()
   },
   saveLayoutPreference: vi.fn()
 }));
@@ -364,5 +369,251 @@ describe('SceneContainerImpl', () => {
     expect(restoreState).toHaveBeenCalledWith({ angle: 45 });
 
     container.dispose();
+  });
+
+  // Integration: real layouts build a canvas that renderAnimation must find.
+  // The mock-based tests above can't catch bugs where the canvas is
+  // accidentally destroyed — the mock getSlots() returns empty divs with no
+  // canvas, and the mock scene has no renderAnimation to call querySelector.
+  describe('canvas survival (real layout DOM)', () => {
+    it('should preserve canvas in animation slot after slot clearing', async () => {
+      const container = document.createElement('div');
+      container.style.width = '1200px';
+      container.style.height = '800px';
+      document.body.appendChild(container);
+
+      const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+      await layout.mount();
+
+      const slots = layout.getSlots();
+      const canvas = slots?.animation?.querySelector('canvas');
+      expect(canvas).not.toBeNull();
+
+      // This is what renderSceneToSlots does: clear control/graph/readout
+      // but NOT animation (canvas must survive)
+      if (slots?.control) slots.control.innerHTML = '';
+      if (slots?.graph) slots.graph.innerHTML = '';
+      if (slots?.readout) slots.readout.innerHTML = '';
+
+      // Animation slot must still contain the canvas
+      const canvasAfter = slots?.animation?.querySelector('canvas');
+      expect(canvasAfter).not.toBeNull();
+      expect(canvasAfter).toBe(canvas); // same element, not replaced
+
+      await layout.unmount();
+      container.remove();
+    });
+
+    it('should allow renderAnimation to find canvas via querySelector', async () => {
+      const container = document.createElement('div');
+      container.style.width = '1200px';
+      container.style.height = '800px';
+      document.body.appendChild(container);
+
+      const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+      await layout.mount();
+
+      const slots = layout.getSlots();
+      const animSlot = slots?.animation;
+      expect(animSlot).toBeDefined();
+
+      // Simulate what SceneAdapter.renderAnimation does
+      const canvas = animSlot!.querySelector('canvas');
+      expect(canvas).not.toBeNull();
+      expect(canvas).toBeInstanceOf(HTMLCanvasElement);
+
+      // Verify the canvas is a child of the animation slot
+      expect(animSlot!.contains(canvas!)).toBe(true);
+
+      await layout.unmount();
+      container.remove();
+    });
+
+    it('should work with MobileStackLayoutV2 as well', async () => {
+      const container = document.createElement('div');
+      container.style.width = '400px';
+      container.style.height = '800px';
+      document.body.appendChild(container);
+
+      const layout = new MobileStackLayoutV2(container);
+      await layout.mount();
+
+      const slots = layout.getSlots();
+      const canvas = slots?.animation?.querySelector('canvas');
+      expect(canvas).not.toBeNull();
+      expect(canvas).toBeInstanceOf(HTMLCanvasElement);
+
+      await layout.unmount();
+      container.remove();
+    });
+
+    it('should survive unmount and remount cycle', async () => {
+      const container = document.createElement('div');
+      container.style.width = '1200px';
+      container.style.height = '800px';
+      document.body.appendChild(container);
+
+      const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+      await layout.mount();
+
+      // First render
+      const slots1 = layout.getSlots();
+      const canvas1 = slots1?.animation?.querySelector('canvas');
+      expect(canvas1).not.toBeNull();
+
+      await layout.unmount();
+      container.replaceChildren();
+
+      // Second mount — fresh layout
+      const layout2 = new SplitRightLayoutV2(container, { hideHeader: true });
+      await layout2.mount();
+
+      const slots2 = layout2.getSlots();
+      const canvas2 = slots2?.animation?.querySelector('canvas');
+      expect(canvas2).not.toBeNull();
+      expect(canvas2).toBeInstanceOf(HTMLCanvasElement);
+
+      await layout2.unmount();
+      container.remove();
+    });
+
+    it('should keep canvas after multiple getSlots calls', async () => {
+      const container = document.createElement('div');
+      container.style.width = '1200px';
+      container.style.height = '800px';
+      document.body.appendChild(container);
+
+      const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+      await layout.mount();
+
+      // getSlots must be idempotent — calling it multiple times returns same canvas
+      const slots1 = layout.getSlots();
+      const canvas1 = slots1?.animation?.querySelector('canvas');
+      const slots2 = layout.getSlots();
+      const canvas2 = slots2?.animation?.querySelector('canvas');
+
+      expect(canvas1).toBe(canvas2);
+
+      await layout.unmount();
+      container.remove();
+    });
+  });
+
+  // Verifies applyResponsiveColumns doesn't overwrite sidebar-hidden state (H2 fix)
+  describe('responsive columns & sidebar hidden state', () => {
+    it('should preserve 0px first column when sidebar is hidden', async () => {
+      const container = document.createElement('div');
+      container.style.width = '1200px';
+      container.style.height = '800px';
+      document.body.appendChild(container);
+
+      const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+      await layout.mount();
+
+      // Simulate sidebar-toggle hiding the sidebar
+      container.style.gridTemplateColumns = '0px 8px 1fr';
+
+      // Trigger resize — this calls handleResize → applyResponsiveColumns
+      layout.handleResize(1100, 800);
+
+      // Sidebar should still be hidden (0px first column)
+      expect(container.style.gridTemplateColumns).toBe('0px 8px 1fr');
+
+      await layout.unmount();
+      container.remove();
+    });
+
+    it('should preserve 0px first column at tablet breakpoint', async () => {
+      const container = document.createElement('div');
+      container.style.width = '1200px';
+      container.style.height = '800px';
+      document.body.appendChild(container);
+
+      const layout = new SplitRightLayoutV2(container, {
+        hideHeader: true,
+        tabletBreakpoint: 1100
+      });
+      await layout.mount();
+
+      // Hide sidebar, then resize to tablet width
+      container.style.gridTemplateColumns = '0px 8px 1fr';
+      layout.handleResize(900, 800);
+
+      expect(container.style.gridTemplateColumns).toBe('0px 8px 1fr');
+
+      await layout.unmount();
+      container.remove();
+    });
+
+    it('should NOT preserve sidebar hidden at mobile breakpoint', async () => {
+      const container = document.createElement('div');
+      container.style.width = '1200px';
+      container.style.height = '800px';
+      document.body.appendChild(container);
+
+      const layout = new SplitRightLayoutV2(container, {
+        hideHeader: true,
+        mobileBreakpoint: 500
+      });
+      await layout.mount();
+
+      // Hide the sidebar, then resize to mobile width
+      container.style.gridTemplateColumns = '0px 8px 1fr';
+      layout.handleResize(400, 800);
+
+      // At mobile breakpoint, the layout switches to single-column
+      expect(container.style.gridTemplateColumns).toBe('1fr');
+
+      await layout.unmount();
+      container.remove();
+    });
+  });
+
+  // Verifies the stale style cleanup doesn't break container-level styles
+  describe('container style management', () => {
+    it('should preserve constructor-set styles after layout mount', async () => {
+      const container = document.createElement('div');
+      // Simulate constructor cssText
+      container.style.cssText = 'width: 100%; height: 100%; overflow: hidden; position: relative;';
+      document.body.appendChild(container);
+
+      // Simulate stale inline style cleanup (as done in _setupIncomingLayout)
+      container.style.display = '';
+      container.style.gridTemplateColumns = '';
+      container.style.gridTemplateRows = '';
+
+      const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+      await layout.mount();
+
+      // Layout sets display, height, overflow, gridTemplateColumns
+      // but must NOT clear width or position (constructor-set)
+      expect(container.style.width).toBe('100%');
+      expect(container.style.position).toBe('relative');
+      expect(container.style.display).toBe('grid');
+
+      await layout.unmount();
+      container.remove();
+    });
+
+    it('should not clear constructor height on mobile layout mount', async () => {
+      const container = document.createElement('div');
+      container.style.cssText = 'width: 100%; height: 100%; overflow: hidden; position: relative;';
+      document.body.appendChild(container);
+
+      // Simulate stale style cleanup
+      container.style.display = '';
+      container.style.gridTemplateColumns = '';
+      container.style.gridTemplateRows = '';
+
+      const layout = new MobileStackLayoutV2(container);
+      await layout.mount();
+
+      // Constructor-set properties must survive
+      expect(container.style.width).toBe('100%');
+      expect(container.style.position).toBe('relative');
+
+      await layout.unmount();
+      container.remove();
+    });
   });
 });

@@ -1,0 +1,33 @@
+/* ========================================
+   Generic capability button fallback styles
+   当 Capability 未找到布局预创建的按钮时自动创建
+   ======================================== */
+
+.theme-toggle-btn,
+.mode-toggle-btn,
+.sidebar-toggle-btn {
+  cursor: pointer;
+  border-radius: 0.375rem;
+  border: 1px solid var(--color-border-color);
+  background: var(--color-btn-bg);
+  color: var(--color-text-secondary);
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  min-width: 44px;
+  min-height: 44px;
+  transition: all var(--transition-fast);
+}
+
+.theme-toggle-btn:hover,
+.mode-toggle-btn:hover,
+.sidebar-toggle-btn:hover {
+  background: var(--color-btn-hover-bg);
+  color: var(--color-text-primary);
+}
+
+.mode-toggle-btn {
+  background: var(--color-accent-color);
+  border-color: var(--color-accent-color);
+  color: var(--color-text-inverse, #1a1a1a);
+}
+

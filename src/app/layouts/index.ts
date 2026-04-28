@@ -1,14 +1,13 @@
 /**
  * 布局母版系统 - 统一导出
- * 
- * @review-date 2026-04-02
- * @version 0.1.0
+ *
+ * @review-date 2026-04-27
+ * @version 2.0.0
  */
 
 // 类型导出
 export type {
-  LayoutMaster,
-  LayoutMasterConstructor,
+  ILayoutConstructor,
   LayoutSlots,
   SlotName,
   SlotConfig,
@@ -20,8 +19,6 @@ export type {
   SwitchOptions,
   CreateContainerOptions,
   ReadoutItem,
-  HeaderConfig,
-  CanvasConfig,
   LayoutChangeEvent,
   ThemeChangeEvent,
   SceneContainerEvents,
@@ -44,42 +41,53 @@ export {
   createSceneContainer
 } from './container';
 
-// 基类导出
-export { BaseLayout } from './masters/base-layout';
+// Capability 导出
 export {
-  DesktopSplitLayout,
-  type DesktopSplitConfig
-} from './masters/desktop-split/desktop-split';
+  createTransportBar,
+  createReadoutPanel,
+  createDemoProfile,
+  createThemeToggle,
+  createModeToggle,
+  createSidebarToggle,
+  createResizer,
+  createDebugOverlay,
+  capabilityFactories
+} from './capabilities';
+export type {
+  TransportBarConfig,
+  ReadoutPanelConfig,
+  DemoProfileConfig,
+  ThemeToggleConfig,
+  ModeToggleConfig,
+  SidebarToggleConfig,
+  ResizerConfig,
+  DebugOverlayConfig
+} from './capabilities';
 
-// 布局实现导出
-export {
-  SplitRightLayout,
-  type SplitRightConfig
-} from './masters/split-right/split-right';
+// ILayout v2 布局导出
+export { SplitRightLayoutV2 } from './layouts/split-right/split-right-v2';
+export type { SplitRightConfig } from './layouts/split-right/split-right-v2';
 
-export {
-  MobileStackLayout,
-  type MobileStackConfig
-} from './masters/mobile-stack/mobile-stack';
+export { MobileStackLayoutV2 } from './layouts/mobile-stack/mobile-stack-v2';
+export type { MobileStackConfig } from './layouts/mobile-stack/mobile-stack-v2';
 
-export {
-  SplitRightGraphBottomLayout,
-  type SplitRightGraphBottomConfig
-} from './masters/split-right-graph-bottom/split-right-graph-bottom';
+export { SplitRightGraphBottomLayoutV2 } from './layouts/split-right-graph-bottom/split-right-graph-bottom-v2';
+export type { SplitRightGraphBottomConfig } from './layouts/split-right-graph-bottom/split-right-graph-bottom-v2';
+
+// 自动注册
+export { registerAllLayouts } from './auto-register';
 
 /**
- * 布局系统导出
- * 
- * 使用方式：
+ * 布局系统使用方式（v2 Capability-based）：
  * ```ts
- * import { SplitRightLayout, registerLayout, createSceneContainer } from './layouts';
- * 
+ * import { SplitRightLayoutV2, registerLayout, createSceneContainer } from './layouts';
+ *
  * // 注册布局
- * registerLayout('split-right', SplitRightLayout, {
+ * registerLayout('split-right', SplitRightLayoutV2, {
  *   name: '左右分栏',
  *   description: '控制区在左，动画区在右'
  * });
- * 
+ *
  * // 创建容器
  * const container = createSceneContainer({
  *   mount: document.getElementById('app'),

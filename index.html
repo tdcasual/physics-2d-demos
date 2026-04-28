@@ -31,7 +31,7 @@
       
       @media (prefers-color-scheme: dark) {
         html {
-          background-color: #1a1d21;
+          background-color: #0f172a;
         }
       }
       
@@ -76,7 +76,7 @@
       /* 深色模式加载占位符 */
       @media (prefers-color-scheme: dark) {
         #loading-placeholder {
-          background: #1a1d21;
+          background: #0f172a;
         }
         
         .loading-spinner {
@@ -100,15 +100,34 @@
     <!-- React 挂载点 -->
     <div id="app"></div>
     
+    <script>
+      // 阻止 theme flash：在 JS 运行前从 localStorage 或系统偏好恢复主题
+      (function() {
+        var theme = localStorage.getItem('physics-demos-container-state');
+        if (theme) {
+          try {
+            var parsed = JSON.parse(theme);
+            if (parsed.theme) {
+              document.documentElement.setAttribute('data-theme', parsed.theme);
+              return;
+            }
+          } catch (e) {}
+        }
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      })();
+    </script>
+
     <script type="module" src="/src/app/main.tsx"></script>
-    
+
     <script>
       // 隐藏加载占位符
       window.addEventListener('load', () => {
-        const placeholder = document.getElementById('loading-placeholder');
+        var placeholder = document.getElementById('loading-placeholder');
         if (placeholder) {
           placeholder.classList.add('hidden');
-          setTimeout(() => {
+          setTimeout(function() {
             placeholder.remove();
           }, 300);
         }
