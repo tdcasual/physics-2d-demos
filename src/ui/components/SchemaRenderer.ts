@@ -32,6 +32,7 @@ export interface SchemaRendererInstance {
   setValue: (key: string, value: unknown) => void;
   getValue: <T>(key: string) => T | undefined;
   setActive: (key: string, id: string) => void;
+  dispose: () => void;
 }
 
 export function renderSchema(
@@ -77,6 +78,10 @@ export function renderSchema(
     },
     setActive(key: string, id: string) {
       activeSetters.get(key)?.(id);
+    },
+    dispose() {
+      cleanupFns.forEach((fn) => fn());
+      mount.replaceChildren();
     }
   };
 }

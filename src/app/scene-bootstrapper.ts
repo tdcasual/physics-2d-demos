@@ -49,5 +49,7 @@ export function bootScenePage<TScene extends SceneInstance>(
   );
 
   // 设置场景
-  container.setScene(adapter);
+  container.setScene(adapter).catch((err) => {
+    console.error('[bootScenePage] setScene failed:', err);
+  });
 }

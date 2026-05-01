@@ -71,6 +71,9 @@ bootScenePage({
       },
       updatePreset(preset: string) {
         renderer.setActive('preset', preset);
+      },
+      dispose() {
+        renderer.dispose();
       }
     };
   }

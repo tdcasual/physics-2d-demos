@@ -71,7 +71,7 @@ export function createSpringOscillatorView(
   let frameCount = 0;
 
   function resizeGraphCanvas(): void {
-    if (chartState.cssWidth > 0) return;
+    if (chartCanvasDisposer) return;
     if (!graphCanvas || !graphCtx) return;
     const parent = graphCanvas.parentElement;
     if (!parent) return;

@@ -34,7 +34,11 @@ export function createPageLifecycle(): PageLifecycle {
       if (disposed) return;
       disposed = true;
       for (const disposer of disposers.splice(0)) {
-        disposer();
+        try {
+          disposer();
+        } catch {
+          // continue disposing remaining resources
+        }
       }
     }
   };

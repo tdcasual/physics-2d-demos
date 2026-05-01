@@ -47,6 +47,7 @@ export class PerformanceMonitor {
   private lowFpsCount = 0;
   private highFpsCount = 0;
   private _hidden = false;
+  private _visibilityHandler: (() => void) | null = null;
 
   constructor(config?: Partial<ThrottleConfig>) {
     this.config = { ...DEFAULT_THROTTLE, ...config };
@@ -56,10 +57,10 @@ export class PerformanceMonitor {
 
   private _setupVisibilityHandler(): void {
     if (typeof document === 'undefined') return;
-    const handler = () => {
+    this._visibilityHandler = () => {
       this._hidden = document.hidden;
     };
-    document.addEventListener('visibilitychange', handler);
+    document.addEventListener('visibilitychange', this._visibilityHandler);
   }
 
   start(): void {
@@ -148,5 +149,9 @@ export class PerformanceMonitor {
     this.running = false;
     cancelAnimationFrame(this.rafId);
     this.frames = [];
+    if (this._visibilityHandler) {
+      document.removeEventListener('visibilitychange', this._visibilityHandler);
+      this._visibilityHandler = null;
+    }
   }
 }

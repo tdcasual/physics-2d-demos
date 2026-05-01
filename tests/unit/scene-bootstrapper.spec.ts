@@ -10,7 +10,7 @@ import { layoutRegistry } from '../../src/app/layouts/registry';
 // Mock createSceneContainer to avoid heavy DOM layout logic
 vi.mock('../../src/app/layouts/container', () => ({
   createSceneContainer: vi.fn(() => ({
-    setScene: vi.fn(),
+    setScene: vi.fn().mockResolvedValue(undefined),
     currentLayout: null,
     updateStatus: vi.fn()
   }))
@@ -498,7 +498,7 @@ describe('bootScenePage', () => {
   });
 
   it('should call container.setScene with adapter', () => {
-    const mockSetScene = vi.fn();
+    const mockSetScene = vi.fn().mockResolvedValue(undefined);
     const mockContainer = { setScene: mockSetScene, currentLayout: null };
     (createSceneContainer as ReturnType<typeof vi.fn>).mockReturnValue(
       mockContainer

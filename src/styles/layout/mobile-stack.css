@@ -125,3 +125,8 @@
 .mobile-readout-slot--auto { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
 .mobile-readout-slot--2col { grid-template-columns: repeat(2, 1fr); }
 .mobile-readout-slot--3col { grid-template-columns: repeat(3, 1fr); }
+
+/* Landscape: reduce animation section to use more horizontal space */
+.mobile-stack-layout.is-landscape .mobile-animation-section {
+  max-height: 55vh;
+}

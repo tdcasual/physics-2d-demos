@@ -91,8 +91,12 @@ export class SplitRightLayoutV2 implements ILayout {
   }
 
   async unmount(): Promise<void> {
+    this._container.classList.remove('teaching-demo', 'v2-layout', 'layout-master');
+    delete this._container.dataset.testid;
+    delete this._container.dataset.theme;
+    delete this._container.dataset.mode;
+    delete this._container.dataset.hasGraph;
     try {
-      this._container.classList.remove('teaching-demo', 'v2-layout', 'layout-master');
       this._container.replaceChildren();
     } catch { /* container may be detached */ }
     this.slots = {};

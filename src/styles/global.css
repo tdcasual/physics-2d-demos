@@ -214,7 +214,7 @@ body {
 }
 
 /* 响应式 */
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .container {
     padding: 0 var(--space-5);
   }

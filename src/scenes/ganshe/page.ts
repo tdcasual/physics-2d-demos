@@ -345,7 +345,12 @@ bootScenePage({
       updatePreset(preset: string) {
         renderer.setActive('preset', preset);
       },
-      refreshObservers: observerManager.refresh
+      refreshObservers: observerManager.refresh,
+      dispose() {
+        renderer.dispose();
+        waveCard.element.remove();
+        observerManager.element.remove();
+      }
     };
   }
 });

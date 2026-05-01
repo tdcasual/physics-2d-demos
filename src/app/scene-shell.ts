@@ -155,8 +155,13 @@ export function createSceneShell(options: SceneShellOptions = {}) {
       stepper.reset();
       stopFrameLoop();
     },
-    stepOnce(onStep: () => void): void {
-      onStep();
+    stepOnce(onStep?: (dt: number) => void): void {
+      const dt = options.stepSeconds ?? (1 / 60);
+      if (onStep) {
+        onStep(dt);
+      } else {
+        options.onStep?.(dt);
+      }
       options.onRender?.();
     },
     setTargetFps(fps: number): void {

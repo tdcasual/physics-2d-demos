@@ -60,8 +60,11 @@ class LayoutSelector {
       }
     }
 
-    // 兜底：返回第一个可用布局，或固定回退到 split-right
-    return ctx.availableLayouts[0]?.id || 'split-right';
+    // 兜底：返回第一个可用布局
+    const first = ctx.availableLayouts[0]?.id;
+    if (first) return first;
+
+    throw new Error('No layouts available in registry');
   }
 
   /**

@@ -100,6 +100,7 @@ export class MobileStackLayoutV2 implements ILayout {
       animationSection.style.minHeight = `${animMinH}px`;
     } else {
       animationSection.style.height = `${animVh}${vhUnit}`;
+      animationSection.style.minHeight = `${animMinH}px`;
     }
 
     this.stageSlot = document.createElement('div');
@@ -158,8 +159,13 @@ export class MobileStackLayoutV2 implements ILayout {
   }
 
   async unmount(): Promise<void> {
-    this._container.classList.remove('mobile-stack-layout', 'layout-master');
-    this._container.replaceChildren();
+    this._container.classList.remove('mobile-stack-layout', 'layout-master', 'is-landscape');
+    delete this._container.dataset.testid;
+    delete this._container.dataset.theme;
+    delete this._container.dataset.mode;
+    try {
+      this._container.replaceChildren();
+    } catch { /* container may be detached */ }
     this.slots = {};
     this.scrollContainer = null;
     this.controlSlot = null;
@@ -179,7 +185,7 @@ export class MobileStackLayoutV2 implements ILayout {
     const cfg = this.cfg;
     const animationSection = this.stageSlot?.parentElement;
     if (animationSection && !animationSection.classList.contains('auto-height')) {
-      const minH = Number.isFinite(cfg.animationMinHeight) ? cfg.animationMinHeight! : 120;
+      const minH = Number.isFinite(cfg.animationMinHeight) ? cfg.animationMinHeight! : 300;
       const maxH = Number.isFinite(cfg.animationMaxHeight) ? cfg.animationMaxHeight! : 800;
       const vhPct = Number.isFinite(cfg.animationHeightVh) ? cfg.animationHeightVh! : 60;
       const newHeight = Math.max(minH, Math.min(maxH, height * (vhPct / 100)));

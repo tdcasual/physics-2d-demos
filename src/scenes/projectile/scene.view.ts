@@ -88,6 +88,7 @@ export function createProjectileView(options: CreateProjectileViewOptions) {
     },
     dispose() {
       trail = [];
+      ctx = null;
     }
   };
 }

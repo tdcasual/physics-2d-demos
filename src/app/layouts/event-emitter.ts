@@ -44,7 +44,7 @@ export function createEventEmitter<
     emit<K extends keyof Events>(event: K, payload: Events[K]): void {
       const list = listeners[event];
       if (list) {
-        list.forEach((listener) => {
+        [...list].forEach((listener) => {
           try {
             listener(payload);
           } catch (err) {

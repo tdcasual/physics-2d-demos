@@ -63,7 +63,7 @@ export function createDemoProfile(
               case 'hidden': sidebar.style.display = 'none'; break;
               case 'collapsed':
               case 'minimal': sidebar.classList.add('is-collapsed-demo'); break;
-              case 'full': break;
+              case 'full': sidebar.classList.remove('is-collapsed-demo'); break;
             }
           }
         }

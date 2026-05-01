@@ -72,9 +72,33 @@ export function createResizer(
 
       const target = ctx.container.querySelector(targetSel) as HTMLElement | null;
 
-      // Track active drag listeners for cleanup on dispose-during-drag
-      let activeMove: ((ev: MouseEvent) => void) | null = null;
-      let activeUp: (() => void) | null = null;
+      // Cleanup function for active drag (mouse or touch)
+      let cleanupDrag: (() => void) | null = null;
+
+      function applyDrag(clientPos: number, startPos: number, startSize: number) {
+        const delta = clientPos - startPos;
+        const signedDelta = direction === 'horizontal' ? -delta : delta;
+        const newSize = Math.max(minSize, Math.min(maxSize, startSize + signedDelta));
+        const containerSize = direction === 'vertical'
+          ? ctx.container.clientWidth
+          : ctx.container.clientHeight;
+        const ratio = newSize / (containerSize || 1);
+
+        if (target) {
+          if (direction === 'vertical') {
+            const cols = ctx.container.style.gridTemplateColumns;
+            const updated = cols.replace(/^[^\s(]+(?:\([^)]*\))?/, `${newSize}px`);
+            if (updated !== cols) {
+              ctx.container.style.gridTemplateColumns = updated;
+            }
+            target.style.width = `${newSize}px`;
+          } else {
+            target.style.height = `${newSize}px`;
+          }
+        }
+
+        if (merged.onResize) merged.onResize(ratio);
+      }
 
       const onMouseDown = (e: MouseEvent) => {
         e.preventDefault();
@@ -87,49 +111,60 @@ export function createResizer(
 
         const handleMouseMove = (ev: MouseEvent) => {
           const currentPos = direction === 'vertical' ? ev.clientX : ev.clientY;
-          const delta = currentPos - startPos;
-          // Horizontal: resizer sits between animation (above) and graph (below).
-          // Dragging UP (negative delta) should increase graph height.
-          const signedDelta = direction === 'horizontal' ? -delta : delta;
-          const newSize = Math.max(minSize, Math.min(maxSize, startSize + signedDelta));
-          const containerSize = direction === 'vertical'
-            ? ctx.container.clientWidth
-            : ctx.container.clientHeight;
-          const ratio = newSize / (containerSize || 1);
-
-          if (target) {
-            if (direction === 'vertical') {
-              // Replace first column track — handles plain px,
-              // minmax(), calc(), and other CSS functions.
-              const cols = ctx.container.style.gridTemplateColumns;
-              const updated = cols.replace(/^[^\s(]+(?:\([^)]*\))?/, `${newSize}px`);
-              if (updated !== cols) {
-                ctx.container.style.gridTemplateColumns = updated;
-              }
-              target.style.width = `${newSize}px`;
-            } else {
-              target.style.height = `${newSize}px`;
-            }
-          }
-
-          if (merged.onResize) merged.onResize(ratio);
+          applyDrag(currentPos, startPos, startSize);
         };
 
         const handleMouseUp = () => {
           resizer!.classList.remove('is-dragging');
           document.removeEventListener('mousemove', handleMouseMove);
           document.removeEventListener('mouseup', handleMouseUp);
-          activeMove = null;
-          activeUp = null;
+          cleanupDrag = null;
         };
 
-        activeMove = handleMouseMove;
-        activeUp = handleMouseUp;
+        cleanupDrag = () => {
+          document.removeEventListener('mousemove', handleMouseMove);
+          document.removeEventListener('mouseup', handleMouseUp);
+        };
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
       };
 
+      const onTouchStart = (e: TouchEvent) => {
+        e.preventDefault();
+        resizer!.classList.add('is-dragging');
+
+        const touch = e.touches[0];
+        const startPos = direction === 'vertical' ? touch.clientX : touch.clientY;
+        const startSize = direction === 'vertical'
+          ? (target?.clientWidth ?? 300)
+          : (target?.clientHeight ?? 200);
+
+        const handleTouchMove = (ev: TouchEvent) => {
+          const t = ev.touches[0];
+          const currentPos = direction === 'vertical' ? t.clientX : t.clientY;
+          applyDrag(currentPos, startPos, startSize);
+        };
+
+        const handleTouchEnd = () => {
+          resizer!.classList.remove('is-dragging');
+          document.removeEventListener('touchmove', handleTouchMove);
+          document.removeEventListener('touchend', handleTouchEnd);
+          document.removeEventListener('touchcancel', handleTouchEnd);
+          cleanupDrag = null;
+        };
+
+        cleanupDrag = () => {
+          document.removeEventListener('touchmove', handleTouchMove);
+          document.removeEventListener('touchend', handleTouchEnd);
+          document.removeEventListener('touchcancel', handleTouchEnd);
+        };
+        document.addEventListener('touchmove', handleTouchMove, { passive: false });
+        document.addEventListener('touchend', handleTouchEnd);
+        document.addEventListener('touchcancel', handleTouchEnd);
+      };
+
       resizer.addEventListener('mousedown', onMouseDown);
+      resizer.addEventListener('touchstart', onTouchStart, { passive: false });
 
       const STEP_PX = 20;
 
@@ -172,12 +207,11 @@ export function createResizer(
       return {
         dispose() {
           resizer?.removeEventListener('mousedown', onMouseDown);
+          resizer?.removeEventListener('touchstart', onTouchStart);
           resizer?.removeEventListener('keydown', onKeyDown);
           // Clean up leaked listeners if dispose called during active drag
-          if (activeMove) document.removeEventListener('mousemove', activeMove);
-          if (activeUp) document.removeEventListener('mouseup', activeUp);
-          activeMove = null;
-          activeUp = null;
+          cleanupDrag?.();
+          cleanupDrag = null;
           if (created) resizer?.remove();
         }
       };

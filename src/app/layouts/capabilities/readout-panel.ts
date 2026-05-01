@@ -189,32 +189,45 @@ function initResizeHandle(panel: HTMLElement, slot: HTMLElement): { handle: HTML
     activeUp = null;
   });
 
-  handle.addEventListener('mousedown', (e) => {
+  function startResize(clientX: number, clientY: number) {
     isResizing = true;
-    e.preventDefault();
-    e.stopPropagation();
-
-    const startX = e.clientX;
-    const startY = e.clientY;
+    const startX = clientX;
+    const startY = clientY;
     const startWidth = panel.offsetWidth;
     const startHeight = panel.offsetHeight;
 
     const headerEl = panel.querySelector('[class*="-readout-header"]') as HTMLElement | null;
     const headerHeight = headerEl?.offsetHeight ?? 50;
 
+    return { startX, startY, startWidth, startHeight, headerHeight };
+  }
+
+  function applyResize(clientX: number, clientY: number, startX: number, startY: number, startWidth: number, startHeight: number, headerHeight: number) {
+    const dx = clientX - startX;
+    const dy = clientY - startY;
+    const newWidth = Math.max(180, Math.min(450, startWidth + dx));
+    const newHeight = Math.max(100, Math.min(500, startHeight + dy));
+    panel.style.width = `${newWidth}px`;
+    slot.style.maxHeight = `${newHeight - headerHeight}px`;
+  }
+
+  function endResize() {
+    isResizing = false;
+    handle.style.opacity = '0.5';
+  }
+
+  handle.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const s = startResize(e.clientX, e.clientY);
+
     const onMouseMove = (ev: MouseEvent) => {
       if (!isResizing) return;
-      const dx = ev.clientX - startX;
-      const dy = ev.clientY - startY;
-      const newWidth = Math.max(180, Math.min(450, startWidth + dx));
-      const newHeight = Math.max(100, Math.min(500, startHeight + dy));
-      panel.style.width = `${newWidth}px`;
-      slot.style.maxHeight = `${newHeight - headerHeight}px`;
+      applyResize(ev.clientX, ev.clientY, s.startX, s.startY, s.startWidth, s.startHeight, s.headerHeight);
     };
 
     const onMouseUp = () => {
-      isResizing = false;
-      handle.style.opacity = '0.5';
+      endResize();
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
       activeMove = null;
@@ -225,6 +238,29 @@ function initResizeHandle(panel: HTMLElement, slot: HTMLElement): { handle: HTML
     activeUp = onMouseUp;
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
+  });
+
+  handle.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const touch = e.touches[0];
+    const s = startResize(touch.clientX, touch.clientY);
+
+    const onTouchMove = (ev: TouchEvent) => {
+      const t = ev.touches[0];
+      applyResize(t.clientX, t.clientY, s.startX, s.startY, s.startWidth, s.startHeight, s.headerHeight);
+    };
+
+    const onTouchEnd = () => {
+      endResize();
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onTouchEnd);
+      document.removeEventListener('touchcancel', onTouchEnd);
+    };
+
+    document.addEventListener('touchmove', onTouchMove, { passive: false });
+    document.addEventListener('touchend', onTouchEnd);
+    document.addEventListener('touchcancel', onTouchEnd);
   });
 
   panel.appendChild(handle);
@@ -320,7 +356,7 @@ export function createReadoutPanel(
 
       return {
         update(data: ReadoutItem[]) {
-          if (!data?.length) return;
+          if (!data) return;
           slot.replaceChildren();
           data.forEach((item) => {
             const li = document.createElement('li');

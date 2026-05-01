@@ -80,6 +80,7 @@ bootScenePage({
       setParams(next: Partial<ChaseMeetParams>) {
         const result = originalSetParams(next);
         originalReset();
+        scene.render();
         notify();
         return result;
       },
@@ -94,6 +95,7 @@ bootScenePage({
       reset() {
         isPlaying = false;
         originalReset();
+        scene.render();
         notify();
       },
       dispose() {

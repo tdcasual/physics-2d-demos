@@ -55,6 +55,11 @@ export function makeDraggable(
 
   // 返回清理函数
   return () => {
+    if (isDragging) {
+      isDragging = false;
+      element.style.transition = '';
+      document.body.style.userSelect = '';
+    }
     dragHandle.removeEventListener('mousedown', onMouseDown);
     document.removeEventListener('mousemove', onMouseMove);
     document.removeEventListener('mouseup', onMouseUp);

@@ -10,7 +10,7 @@
 }
 
 /* 手机 */
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .teaching-demo.v2-layout {
     grid-template-columns: 1fr;
     grid-template-rows: auto 1fr;

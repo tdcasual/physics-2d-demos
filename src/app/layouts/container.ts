@@ -4,7 +4,7 @@
  * 管理场景和布局的协调，处理布局切换、主题切换、状态持久化
  *
  * @review-date 2026-04-02
- * @version 0.1.0
+ * @version 0.2.0
  */
 
 import { createEventEmitter, type EventEmitter } from './event-emitter';
@@ -26,7 +26,7 @@ import {
 import { satisfiesConstraints } from './layout-constraints';
 import { ContainerResizeObserver } from './container-resize-observer';
 import { detectLowPowerMode } from './power-awareness';
-import { capabilityFactories } from './capabilities';
+import { CapabilityOrchestrator } from './capability-orchestrator';
 import type {
   SceneContainer,
   Scene,
@@ -38,7 +38,7 @@ import type {
   CreateContainerOptions,
   SceneContainerEvents
 } from './types';
-import type { ILayout, CapabilityContext, CapabilityInstance, CapabilityEvents } from './core/types';
+import type { ILayout, CapabilityContext, CapabilityEvents } from './core/types';
 
 /** ILayout 子集：支持 enter/exit 动画钩子（旧布局兼容，无实现则为 no-op） */
 type LayoutWithAnimation = ILayout & {
@@ -62,13 +62,13 @@ export class SceneContainerImpl implements SceneContainer {
   private _onResize?: (width: number, height: number) => void;
   private _layoutConfig?: Record<string, unknown>;
 
-  private _sceneUnsubscribers: (() => void)[] = [];
   private _lowPowerMode = false;
   private _disposed = false;
   private _switching = false;
+  private _pendingScene: Scene | null = null;
   private _emitter: EventEmitter<SceneContainerEvents>;
   private _resizeObserver: ContainerResizeObserver;
-  private _capabilityInstances = new Map<string, CapabilityInstance[]>();
+  private _orchestrator = new CapabilityOrchestrator();
 
   constructor(options: CreateContainerOptions) {
     this._emitter = createEventEmitter<SceneContainerEvents>('SceneContainer');
@@ -161,22 +161,30 @@ export class SceneContainerImpl implements SceneContainer {
 
   /**
    * 设置场景
+   * 如果布局切换正在进行中，将请求排队，切换完成后自动处理。
    * @param scene - 场景实例
    */
   async setScene(scene: Scene): Promise<void> {
     if (this._disposed) return;
 
-    // 如果有旧场景，先卸载
+    // 如果布局切换正在进行中，排队等待
+    if (this._switching) {
+      this._pendingScene = scene;
+      return;
+    }
+
+    await this._doSetScene(scene);
+  }
+
+  private async _doSetScene(scene: Scene): Promise<void> {
     if (this._currentScene) {
       this.unmountCurrentScene();
     }
 
     this._currentScene = scene;
 
-    // 使用布局选择器解析最佳布局（策略插件化）
     const layoutId = this.resolveLayout(scene);
 
-    // 如果当前布局与需要的布局不同，切换布局
     if (!this._currentLayout || this._currentLayout.id !== layoutId) {
       await this.switchLayout(layoutId, { animate: false });
     } else {
@@ -191,205 +199,39 @@ export class SceneContainerImpl implements SceneContainer {
     const targetLayout = layout || this._currentLayout;
     if (!targetLayout) return;
 
-    this.cleanupSceneBindings();
     this.renderSceneToSlots(scene, targetLayout);
     this.activateSceneLifecycle(scene, targetLayout);
   }
 
-  /** 清理旧场景的订阅和事件监听，防止重复挂载累积 */
-  private cleanupSceneBindings(): void {
-    this._sceneUnsubscribers.forEach((fn) => fn());
-    this._sceneUnsubscribers = [];
-  }
+  /** Slot → Scene render method 映射表。新增 slot 类型只需在此表追加一行 */
+  private static readonly SLOT_RENDER_MAP = [
+    { slot: 'header' as const, method: 'renderHeader' as const, clear: true, passSlots: false },
+    { slot: 'control' as const, method: 'renderControl' as const, clear: true, passSlots: false },
+    { slot: 'animation' as const, method: 'renderAnimation' as const, clear: false, passSlots: true },
+    { slot: 'graph' as const, method: 'renderGraph' as const, clear: true, passSlots: false },
+    { slot: 'readout' as const, method: 'renderReadout' as const, clear: true, passSlots: false },
+  ];
 
   /** 将场景渲染到布局的各 slot 中。先清空 slot 防止旧场景 DOM 累积。 */
   private renderSceneToSlots(scene: Scene, layout: ILayout): void {
     const slots = layout.getSlots?.() || {};
 
-    // 清空 slot 再渲染：旧场景的 unmount() 可能未清理 DOM。
-    // capability 元素会在后续 wireCapabilities 中重建。
-    // 注意：不清理 animation slot —— canvas 由布局创建，必须保留
-    // 供 scene.renderAnimation() -> querySelector('canvas') 查找。
-    if (slots.header) { slots.header.innerHTML = ''; }
-    if (slots.control) { slots.control.innerHTML = ''; }
-    if (slots.graph) { slots.graph.innerHTML = ''; }
-    if (slots.readout) { slots.readout.innerHTML = ''; }
+    for (const entry of SceneContainerImpl.SLOT_RENDER_MAP) {
+      const slotEl = slots[entry.slot];
+      if (!slotEl) continue;
 
-    if (slots.header && scene.renderHeader) {
-      scene.renderHeader(slots.header);
-    }
-    if (slots.control && scene.renderControl) {
-      scene.renderControl(slots.control);
-    }
-    if (slots.animation && scene.renderAnimation) {
-      scene.renderAnimation(slots.animation, slots as LayoutSlots);
-    }
-    if (slots.graph && scene.renderGraph) {
-      scene.renderGraph(slots.graph);
-    }
-    if (slots.readout && scene.renderReadout) {
-      scene.renderReadout(slots.readout);
-    }
-  }
-
-  /** Capabilities scoped to ctx.container (not layout slots) — survive layout switches */
-  private static readonly CONTAINER_SCOPED_CAPS = new Set([
-    'theme-toggle', 'mode-toggle', 'demo-profile', 'debug-overlay'
-  ]);
-
-  /**
-   * 为 ILayout 自动装配 Capability
-   * 遍历 layout.capabilities 声明，创建实例并绑定到 scene。
-   * 容器作用域的 capability 在布局切换时保留，避免不必要的销毁+重建。
-   */
-  private wireCapabilities(layout: ILayout, scene: Scene | null, slots: Partial<LayoutSlots>): void {
-    // Preserve container-scoped instances before disposal (they survive layout switches)
-    const preserved = new Map<string, CapabilityInstance[]>();
-    for (const id of SceneContainerImpl.CONTAINER_SCOPED_CAPS) {
-      const insts = this._capabilityInstances.get(id);
-      if (insts && insts.length > 0) {
-        preserved.set(id, [...insts]);
-      }
-    }
-
-    // Dispose slot-dependent instances; keep container-scoped ones
-    this._capabilityInstances.forEach((insts, id) => {
-      if (SceneContainerImpl.CONTAINER_SCOPED_CAPS.has(id)) return;
-      insts.forEach((inst) => inst.dispose());
-    });
-    this._capabilityInstances.clear();
-
-    const ctx: CapabilityContext = {
-      container: this.container,
-      getTheme: () => this._currentTheme,
-      setTheme: (t: Theme) => this.setTheme(t),
-      getMode: () => (this.container.getAttribute('data-mode') === 'presentation' ? 'presentation' : 'normal'),
-      setMode: (m: 'normal' | 'presentation') => {
-        this.container.setAttribute('data-mode', m);
-        const profile = m === 'presentation' ? (scene?.getDemoProfile?.() || null) : null;
-        this._emitter.emit('layout:mode', { mode: m, profile });
-        this.container.dispatchEvent(
-          new CustomEvent('layout:modechange', { detail: { mode: m, profile }, bubbles: true })
-        );
-        (this._capabilityInstances.get('demo-profile') || []).forEach((inst) => {
-          inst.update?.({ mode: m, profile });
-        });
-        scene?.setMode?.(m);
-      },
-      on: <K extends keyof CapabilityEvents>(
-        event: K,
-        handler: (payload: CapabilityEvents[K]) => void
-      ) => {
-        if (event === 'modechange') {
-          return this._emitter.on(
-            'layout:mode',
-            (payload) => handler(payload as CapabilityEvents['modechange'])
-          );
-        }
-        return () => {};
-      }
-    };
-
-    const seenIds = new Set<string>();
-
-    for (const decl of layout.capabilities ?? []) {
-      const factory = capabilityFactories[decl.id];
-      if (!factory) {
-        console.warn(`[SceneContainer] Unknown capability: ${decl.id}`);
-        continue;
+      if (entry.clear) {
+        slotEl.innerHTML = '';
       }
 
-      if (seenIds.has(decl.id) && decl.id !== 'resizer') {
-        console.warn(`[SceneContainer] Duplicate capability "${decl.id}" — skipping second instance`);
-        continue;
+      const renderFn = (scene as unknown as Record<string, unknown>)[entry.method];
+      if (typeof renderFn === 'function') {
+        if (entry.passSlots) {
+          (renderFn as (el: HTMLElement, s: LayoutSlots) => void)(slotEl, slots as LayoutSlots);
+        } else {
+          (renderFn as (el: HTMLElement) => void)(slotEl);
+        }
       }
-      seenIds.add(decl.id);
-
-      // Reuse preserved container-scoped instance if available
-      if (SceneContainerImpl.CONTAINER_SCOPED_CAPS.has(decl.id) && preserved.has(decl.id)) {
-        const reused = preserved.get(decl.id)!;
-        this._capabilityInstances.set(decl.id, reused);
-        preserved.delete(decl.id); // consumed
-        if (scene) {
-          reused.forEach((inst) => this._bindCapabilityToScene(decl.id, inst, scene));
-        }
-        continue;
-      }
-
-      try {
-        const def = factory(decl.config);
-        // IMPORTANT: mount() must be atomic — if it throws after creating DOM
-        // elements, the container has no way to clean them up. Each mount()
-        // implementation is responsible for its own cleanup on failure.
-        const instance = def.mount(slots as LayoutSlots, decl.config ?? {}, ctx);
-        const existing = this._capabilityInstances.get(decl.id) || [];
-        existing.push(instance);
-        this._capabilityInstances.set(decl.id, existing);
-
-        if (scene) {
-          this._bindCapabilityToScene(decl.id, instance, scene);
-        }
-      } catch (err) {
-        console.error(`[SceneContainer] Failed to mount capability ${decl.id}:`, err);
-      }
-    }
-
-    // Dispose any preserved instances not consumed by the new layout
-    preserved.forEach((insts) => insts.forEach((inst) => inst.dispose()));
-  }
-
-  /** Bind a capability instance to the scene's data/control methods */
-  private _bindCapabilityToScene(
-    id: string,
-    instance: CapabilityInstance,
-    scene: Scene
-  ): void {
-    switch (id) {
-      case 'transport-bar':
-        // Wire scene → capability: state sync for display
-        if (scene.getTransportState && instance.update) {
-          instance.update(scene.getTransportState());
-        }
-        if (scene.subscribe) {
-          const unsub = scene.subscribe(() => {
-            if (scene.getTransportState && instance.update) {
-              instance.update(scene.getTransportState());
-            }
-          });
-          this._sceneUnsubscribers.push(unsub);
-        }
-        // Wire capability → scene: button/slider callbacks
-        if (instance.setCallbacks) {
-          instance.setCallbacks({
-            isPlaying: () => scene.getTransportState?.()?.isPlaying ?? false,
-            onTogglePlay: () => {
-              const state = scene.getTransportState?.();
-              if (state?.isPlaying) {
-                scene.pauseAll?.();
-              } else {
-                scene.startAll?.();
-              }
-            },
-            onReset: () => scene.reset?.(),
-            onSpeedChange: (speed: number) => scene.setTimeScale?.(speed),
-            getSpeed: () => scene.getTransportState?.()?.speed ?? 1
-          });
-        }
-        break;
-
-      case 'readout-panel':
-        if (scene.getReadoutItems && instance.update) {
-          instance.update(scene.getReadoutItems());
-        }
-        if (scene.subscribe) {
-          const unsub = scene.subscribe(() => {
-            if (scene.getReadoutItems && instance.update) {
-              instance.update(scene.getReadoutItems());
-            }
-          });
-          this._sceneUnsubscribers.push(unsub);
-        }
-        break;
     }
   }
 
@@ -410,18 +252,48 @@ export class SceneContainerImpl implements SceneContainer {
 
     const slots = layout.getSlots?.() || {};
 
-    // Auto-wire capabilities (all layouts are ILayout with capabilities)
-    if (this._isILayout(layout)) {
-      this.wireCapabilities(layout, scene, slots);
+    // Auto-wire capabilities
+    if (Array.isArray(layout.capabilities)) {
+      const ctx = this._buildCapabilityContext(scene);
+      this._orchestrator.wire(layout, scene, slots, ctx);
     }
 
     scene.mount?.();
     this._emitter.emit('scene:mount', { sceneId: scene.id });
   }
 
-  /** Check if a layout object has a capabilities array (v2 ILayout) */
-  private _isILayout(layout: ILayout): boolean {
-    return Array.isArray(layout.capabilities);
+  /** 构建 CapabilityContext — 桥接容器状态与 capability 运行时 */
+  private _buildCapabilityContext(scene: Scene | null): CapabilityContext {
+    return {
+      container: this.container,
+      getTheme: () => this._currentTheme,
+      setTheme: (t: Theme) => this.setTheme(t),
+      getMode: () => (this.container.getAttribute('data-mode') === 'presentation' ? 'presentation' : 'normal'),
+      setMode: (m: 'normal' | 'presentation') => {
+        this.container.setAttribute('data-mode', m);
+        const profile = m === 'presentation' ? (scene?.getDemoProfile?.() || null) : null;
+        this._emitter.emit('layout:mode', { mode: m, profile });
+        this.container.dispatchEvent(
+          new CustomEvent('layout:modechange', { detail: { mode: m, profile }, bubbles: true })
+        );
+        this._orchestrator.getInstances('demo-profile').forEach((inst) => {
+          inst.update?.({ mode: m, profile });
+        });
+        scene?.setMode?.(m);
+      },
+      on: <K extends keyof CapabilityEvents>(
+        event: K,
+        handler: (payload: CapabilityEvents[K]) => void
+      ) => {
+        if (event === 'modechange') {
+          return this._emitter.on(
+            'layout:mode',
+            (payload) => handler(payload as CapabilityEvents['modechange'])
+          );
+        }
+        return () => {};
+      }
+    };
   }
 
   /**
@@ -433,8 +305,7 @@ export class SceneContainerImpl implements SceneContainer {
     const scene = this._currentScene;
 
     // 取消场景状态订阅
-    this._sceneUnsubscribers.forEach((fn) => fn());
-    this._sceneUnsubscribers = [];
+    this._orchestrator.cleanupSceneBindings();
 
     // 保存场景状态
     try {
@@ -484,10 +355,10 @@ export class SceneContainerImpl implements SceneContainer {
 
     const SWITCH_TIMEOUT_MS = 10_000;
     const safetyTimer = setTimeout(() => {
-      if (this._switching) {
+      if (this._switching && !this._disposed) {
         console.warn('[SceneContainer] Layout switch timed out after 10s — resetting _switching');
-        this._switching = false;
       }
+      this._switching = false;
     }, SWITCH_TIMEOUT_MS);
 
     this._switching = true;
@@ -503,6 +374,7 @@ export class SceneContainerImpl implements SceneContainer {
     try {
 
       await this._notifyLayoutWillChange(fromId, layoutId);
+      if (this._disposed) return;
 
       const { preservedCanvas, layoutState } = this._captureOutgoingState(fromLayout);
       if (layoutState && fromLayout?.id) {
@@ -510,20 +382,24 @@ export class SceneContainerImpl implements SceneContainer {
       }
 
       await this._teardownOutgoingLayout(fromLayout, animate, transition);
+      if (this._disposed) return;
       this._currentLayout = null;
       if (this.container.childElementCount > 0) {
         this.container.replaceChildren();
       }
 
       const newLayout = await this._setupIncomingLayout(layoutId, preservedCanvas);
+      if (this._disposed) return;
       this._currentLayout = newLayout;
 
       await this._finalizeLayoutSwitch(newLayout, fromId, layoutId, reason, animate, transition, savePreference);
 
       // Restore focus to a similar element in the new layout
       if (focusClass) {
-        const el = this.container.querySelector(`.${focusClass.split(/\s+/).join('.')}`) as HTMLElement | null;
-        if (el && typeof el.focus === 'function') el.focus();
+        try {
+          const el = this.container.querySelector(`.${focusClass.split(/\s+/).join('.')}`) as HTMLElement | null;
+          if (el && typeof el.focus === 'function') el.focus();
+        } catch { /* invalid selector from className — non-critical */ }
       }
     } catch (err) {
       console.error('[SceneContainer] Layout switch failed:', err);
@@ -551,6 +427,15 @@ export class SceneContainerImpl implements SceneContainer {
     } finally {
       clearTimeout(safetyTimer);
       this._switching = false;
+
+      // 处理在切换期间排队的 setScene 请求
+      if (this._pendingScene && !this._disposed) {
+        const pending = this._pendingScene;
+        this._pendingScene = null;
+        this._doSetScene(pending).catch((err) => {
+          console.error('[SceneContainer] Pending setScene failed:', err);
+        });
+      }
     }
   }
 
@@ -576,7 +461,11 @@ export class SceneContainerImpl implements SceneContainer {
     transition: LayoutTransition
   ): Promise<void> {
     if (fromLayout && animate) {
-      await (fromLayout as LayoutWithAnimation).exit?.(transition);
+      try {
+        await (fromLayout as LayoutWithAnimation).exit?.(transition);
+      } catch (err) {
+        console.warn('[SceneContainer] Layout exit animation failed:', err);
+      }
     }
     if (fromLayout) {
       await fromLayout.unmount();
@@ -680,8 +569,10 @@ export class SceneContainerImpl implements SceneContainer {
     this._currentLayout?.setTheme(theme);
 
     // 通知场景更新主题（canvas 绘制依赖主题颜色，SceneAdapter.setTheme 内会触发 re-render）
-    if (this._currentScene?.setTheme) {
-      this._currentScene.setTheme(theme);
+    try {
+      this._currentScene?.setTheme?.(theme);
+    } catch (err) {
+      console.error('[SceneContainer] scene.setTheme failed:', err);
     }
 
     // 触发事件
@@ -768,17 +659,17 @@ export class SceneContainerImpl implements SceneContainer {
     } catch (err) {
       console.error('[SceneContainer] Error during layout unmount in dispose:', err);
     }
+    // 归还布局实例到池（不清理全局池，避免影响其他容器）
+    if (this._currentLayout) {
+      layoutRegistry.returnInstance(this._currentLayout.id, this._currentLayout);
+    }
     this._currentLayout = null;
 
     // 清理 Capability 实例
     try {
-      this._capabilityInstances.forEach((insts) => insts.forEach((inst) => {
-        try { inst.dispose(); } catch (err) { console.error('[SceneContainer] Capability dispose error:', err); }
-      }));
-      this._capabilityInstances.clear();
+      this._orchestrator.dispose();
     } catch (err) {
       console.error('[SceneContainer] Error during capability cleanup in dispose:', err);
-      this._capabilityInstances.clear();
     }
 
     // 停止 ResizeObserver
@@ -797,9 +688,6 @@ export class SceneContainerImpl implements SceneContainer {
 
     // 清空监听器
     this._emitter.clear();
-
-    // 清空布局实例池
-    layoutRegistry.clearPool();
   }
 }
 

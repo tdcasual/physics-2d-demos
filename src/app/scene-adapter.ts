@@ -77,6 +77,13 @@ export class SceneAdapter<
   }
 
   renderAnimation(container: HTMLElement, slots: LayoutSlots): void {
+    // Dispose old resources if called multiple times
+    if (this.scene || this.transport) {
+      this.scene?.dispose();
+      this.lifecycle.dispose();
+      this.lifecycle = createPageLifecycle();
+    }
+
     this.slots = slots;
 
     const canvas = container.querySelector('canvas');
@@ -203,7 +210,6 @@ export class SceneAdapter<
 
   private _renderGraphSlot(container: HTMLElement): void {
     if (this._graphRendered) return;
-    this._graphRendered = true;
 
     const scene = this.scene as {
       renderGraph?(container: HTMLElement): void;
@@ -211,11 +217,13 @@ export class SceneAdapter<
     } | null;
 
     if (scene && typeof scene.renderGraph === 'function') {
+      this._graphRendered = true;
       scene.renderGraph(container);
       return;
     }
 
     if (scene && typeof scene.attachGraphCanvas === 'function') {
+      this._graphRendered = true;
       const canvas = document.createElement('canvas');
       canvas.style.width = '100%';
       canvas.style.height = '100%';
@@ -235,8 +243,12 @@ export class SceneAdapter<
   }
 
   unmount(): void {
-    this.lifecycle.dispose();
     this.scene?.dispose();
+    this.lifecycle.dispose();
+    this.scene = null;
+    this._graphRendered = false;
+    this._resizeHandlerAdded = false;
+    this._deferredControlContainer = null;
   }
 
   startAll(): void {
@@ -284,19 +296,21 @@ export class SceneAdapter<
     }
 
     // Forward to scene
-    if (this.scene?.setMode) {
-      if (mode === 'presentation' && profile) {
-        const sceneWithHints = this.scene as unknown as {
-          setMode(m: 'normal' | 'presentation', hints?: DemoRenderHints): void;
-        };
-        sceneWithHints.setMode(mode, profile.renderHints);
-      } else {
-        this.scene.setMode(mode);
+    try {
+      if (this.scene?.setMode) {
+        if (mode === 'presentation' && profile) {
+          const sceneWithHints = this.scene as unknown as {
+            setMode(m: 'normal' | 'presentation', hints?: DemoRenderHints): void;
+          };
+          sceneWithHints.setMode(mode, profile.renderHints);
+        } else {
+          this.scene.setMode(mode);
+        }
       }
+    } finally {
+      this.scene?.resize();
+      this.scene?.render();
     }
-
-    this.scene?.resize();
-    this.scene?.render();
   }
 
   getDemoProfile(): import('./demo-profile').SceneDemoProfile | null {

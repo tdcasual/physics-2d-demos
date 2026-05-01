@@ -96,14 +96,14 @@ describe('LayoutSelector', () => {
     expect(layoutSelector.select(ctx)).toBe('fallback');
   });
 
-  it('should return hardcoded fallback when no layouts available', () => {
+  it('should throw when no layouts available', () => {
     layoutSelector.register(() => null);
 
     const ctx = makeCtx({ availableLayouts: [] });
-    expect(layoutSelector.select(ctx)).toBe('split-right');
+    expect(() => layoutSelector.select(ctx)).toThrow('No layouts available');
   });
 
-  it('should clear all strategies', () => {
+  it('should clear all strategies and fallback to first available', () => {
     layoutSelector.register(() => 'mobile-stack');
     layoutSelector.clear();
 

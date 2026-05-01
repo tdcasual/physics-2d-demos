@@ -12,6 +12,7 @@ export function createFloatingControls(options: {
   onSpeedChange?: (speed: number) => void;
   getSpeed?: () => number;
 }): FloatingControls {
+  const ac = new AbortController();
   const container = document.createElement(
     'div'
   ) as unknown as FloatingControls;
@@ -60,21 +61,21 @@ export function createFloatingControls(options: {
   playPauseBtn.addEventListener('click', () => {
     options.onTogglePlay?.();
     updatePlayPauseBtn();
-  });
+  }, { signal: ac.signal });
 
   playPauseBtn.addEventListener('mousedown', (e) => {
     e.stopPropagation();
-  });
+  }, { signal: ac.signal });
 
   playPauseBtn.addEventListener('mouseenter', () => {
     playPauseBtn.style.background =
       'var(--btn-hover-bg, rgba(255,255,255,0.2))';
     playPauseBtn.style.transform = 'translateY(-1px)';
-  });
+  }, { signal: ac.signal });
   playPauseBtn.addEventListener('mouseleave', () => {
     playPauseBtn.style.background = 'var(--btn-bg, rgba(255,255,255,0.1))';
     playPauseBtn.style.transform = 'none';
-  });
+  }, { signal: ac.signal });
 
   const resetBtn = document.createElement('button');
   resetBtn.type = 'button';
@@ -97,22 +98,22 @@ export function createFloatingControls(options: {
   resetBtn.addEventListener('click', () => {
     options.onReset?.();
     updatePlayPauseBtn();
-  });
+  }, { signal: ac.signal });
 
   resetBtn.addEventListener('mousedown', (e) => {
     e.stopPropagation();
-  });
+  }, { signal: ac.signal });
 
   resetBtn.addEventListener('mouseenter', () => {
     resetBtn.style.background = 'var(--btn-hover-bg, rgba(255,255,255,0.2))';
     resetBtn.style.color = 'var(--text-primary, #fff)';
     resetBtn.style.transform = 'translateY(-1px)';
-  });
+  }, { signal: ac.signal });
   resetBtn.addEventListener('mouseleave', () => {
     resetBtn.style.background = 'var(--btn-bg, rgba(255,255,255,0.1))';
     resetBtn.style.color = 'var(--text-secondary, #aaa)';
     resetBtn.style.transform = 'none';
-  });
+  }, { signal: ac.signal });
 
   const divider = document.createElement('div');
   divider.style.cssText = `
@@ -157,17 +158,17 @@ export function createFloatingControls(options: {
     const speed = parseFloat(speedSlider.value);
     speedValue.textContent = `${speed.toFixed(2)}×`;
     options.onSpeedChange?.(speed);
-  });
+  }, { signal: ac.signal });
 
   speedSlider.addEventListener('mousedown', (e) => {
     e.stopPropagation();
-  });
+  }, { signal: ac.signal });
   speedValue.addEventListener('mousedown', (e) => {
     e.stopPropagation();
-  });
+  }, { signal: ac.signal });
   speedLabel.addEventListener('mousedown', (e) => {
     e.stopPropagation();
-  });
+  }, { signal: ac.signal });
 
   container.appendChild(playPauseBtn);
   container.appendChild(resetBtn);
@@ -181,6 +182,7 @@ export function createFloatingControls(options: {
   updatePlayPauseBtn();
 
   container.dispose = () => {
+    ac.abort();
     cleanupDrag();
   };
 

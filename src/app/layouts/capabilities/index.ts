@@ -37,7 +37,7 @@ export { createDebugOverlay } from './debug-overlay';
 export type { DebugOverlayConfig } from './debug-overlay';
 
 // Capability factory registry — map of id → factory function
-import type { CapabilityId, CapabilityDefinition } from '../core/types';
+import type { CapabilityId, CapabilityDefinition, CapabilityScope } from '../core/types';
 
 import { createTransportBar } from './transport-bar';
 import { createReadoutPanel } from './readout-panel';
@@ -66,3 +66,19 @@ export const capabilityFactories: Record<CapabilityId, CapabilityFactory> = {
   resizer: createResizer as CapabilityFactory,
   'debug-overlay': createDebugOverlay as CapabilityFactory
 };
+
+/** Capability 作用域映射 — container 作用域在布局切换时保留，layout 作用域会被销毁重建 */
+export const CAPABILITY_SCOPES: Record<CapabilityId, CapabilityScope> = {
+  'transport-bar': 'layout',
+  'readout-panel': 'layout',
+  'demo-profile': 'container',
+  'theme-toggle': 'container',
+  'mode-toggle': 'container',
+  'sidebar-toggle': 'layout',
+  'resizer': 'layout',
+  'debug-overlay': 'container'
+};
+
+export function getCapabilityScope(id: CapabilityId): CapabilityScope {
+  return CAPABILITY_SCOPES[id] ?? 'layout';
+}
