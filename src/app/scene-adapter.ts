@@ -190,9 +190,8 @@ export class SceneAdapter<
       this._deferredControlContainer = null;
     }
 
-    if (slots.graph && !this._graphRendered) {
-      this._renderGraphSlot(slots.graph);
-    }
+    // Graph rendering is handled by renderSceneToSlots via the 'graph' entry
+    // in SLOT_RENDER_MAP. Do NOT render here — the slot's clear:true would wipe it.
 
     this.scene.resize();
     this.scene.render();
