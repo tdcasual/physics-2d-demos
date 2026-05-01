@@ -188,7 +188,7 @@ bootScenePage({
 
     return {
       dispose: () => {
-        mount.replaceChildren();
+        renderer.dispose();
       }
     };
   },

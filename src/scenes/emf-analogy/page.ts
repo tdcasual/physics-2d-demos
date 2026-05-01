@@ -52,7 +52,7 @@ bootScenePage({
     };
   },
   createControls: ({ mount, scene, onStatus }) => {
-    renderSchema({
+    const renderer = renderSchema({
       mount,
       schema: emfAnalogyControlsSchema,
       onChange: (key, value) => {
@@ -105,7 +105,7 @@ bootScenePage({
 
     return {
       dispose: () => {
-        mount.replaceChildren();
+        renderer.dispose();
       }
     };
   },

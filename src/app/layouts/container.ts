@@ -683,6 +683,9 @@ export class SceneContainerImpl implements SceneContainer {
     // 清空容器
     try {
       this.container.replaceChildren();
+      this.container.style.display = '';
+      this.container.style.gridTemplateColumns = '';
+      this.container.style.gridTemplateRows = '';
     } catch (err) {
       console.error('[SceneContainer] Error clearing container:', err);
     }

@@ -48,6 +48,7 @@ export function createDemoProfile(
       // clearing to ''. If the original was empty, the computed value is used.
       let savedSidebarDisplay: string | null = null;
       let savedGraphDisplay: string | null = null;
+      let savedReadoutCollapsed: boolean | null = null;
 
       const apply = (profile: SceneDemoProfile) => {
         currentProfile = profile;
@@ -93,6 +94,9 @@ export function createDemoProfile(
         if (profile.readoutPanel) {
           const rp = ctx.container.querySelector('[class*="-readout-panel"]') as HTMLElement | null;
           if (rp) {
+            if (savedReadoutCollapsed === null) {
+              savedReadoutCollapsed = rp.classList.contains('is-collapsed');
+            }
             // Derive prefix from the panel's main class (e.g. teaching-readout-panel → teaching)
             const prefix = Array.from(rp.classList)
               .find(c => c.endsWith('-readout-panel'))
@@ -164,7 +168,8 @@ export function createDemoProfile(
             .find(c => c.endsWith('-readout-panel'))
             ?.replace('-readout-panel', '');
           rp.style.display = '';
-          rp.classList.add('is-collapsed');
+          rp.classList.toggle('is-collapsed', savedReadoutCollapsed ?? true);
+          savedReadoutCollapsed = null;
           if (prefix) {
             rp.classList.remove(
               `${prefix}-is-overlay`, `${prefix}-is-docked-top`, `${prefix}-is-docked-bottom`,

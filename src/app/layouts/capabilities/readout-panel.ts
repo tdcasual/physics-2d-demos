@@ -159,6 +159,8 @@ function initResizeHandle(panel: HTMLElement, slot: HTMLElement): { handle: HTML
   // Track active document-level listeners so dispose-during-drag can clean them up
   let activeMove: ((ev: MouseEvent) => void) | null = null;
   let activeUp: (() => void) | null = null;
+  let activeTouchMove: ((ev: TouchEvent) => void) | null = null;
+  let activeTouchEnd: (() => void) | null = null;
 
   const handle = document.createElement('div');
   handle.className = 'readout-resize-handle';
@@ -185,8 +187,15 @@ function initResizeHandle(panel: HTMLElement, slot: HTMLElement): { handle: HTML
   signal.addEventListener('abort', () => {
     if (activeMove) document.removeEventListener('mousemove', activeMove);
     if (activeUp) document.removeEventListener('mouseup', activeUp);
+    if (activeTouchMove) document.removeEventListener('touchmove', activeTouchMove);
+    if (activeTouchEnd) {
+      document.removeEventListener('touchend', activeTouchEnd);
+      document.removeEventListener('touchcancel', activeTouchEnd);
+    }
     activeMove = null;
     activeUp = null;
+    activeTouchMove = null;
+    activeTouchEnd = null;
   });
 
   function startResize(clientX: number, clientY: number) {
@@ -256,8 +265,12 @@ function initResizeHandle(panel: HTMLElement, slot: HTMLElement): { handle: HTML
       document.removeEventListener('touchmove', onTouchMove);
       document.removeEventListener('touchend', onTouchEnd);
       document.removeEventListener('touchcancel', onTouchEnd);
+      activeTouchMove = null;
+      activeTouchEnd = null;
     };
 
+    activeTouchMove = onTouchMove;
+    activeTouchEnd = onTouchEnd;
     document.addEventListener('touchmove', onTouchMove, { passive: false });
     document.addEventListener('touchend', onTouchEnd);
     document.addEventListener('touchcancel', onTouchEnd);

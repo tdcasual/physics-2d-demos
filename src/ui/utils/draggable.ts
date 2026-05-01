@@ -17,6 +17,8 @@ export function makeDraggable(
   dragHandle.style.cursor = 'move';
 
   function onMouseDown(e: MouseEvent) {
+    if (e.button !== 0) return;
+    if ((e.target as HTMLElement).closest('button, a, input, select, textarea, [role="button"]')) return;
     isDragging = true;
     startX = e.clientX;
     startY = e.clientY;

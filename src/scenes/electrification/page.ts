@@ -71,7 +71,7 @@ bootScenePage({
         renderer.setActive('scene', scene);
       },
       dispose: () => {
-        mount.replaceChildren();
+        renderer.dispose();
       }
     };
   },

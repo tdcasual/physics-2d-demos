@@ -82,6 +82,8 @@ export class SceneAdapter<
       this.scene?.dispose();
       this.lifecycle.dispose();
       this.lifecycle = createPageLifecycle();
+      this._resizeHandlerAdded = false;
+      this._graphRendered = false;
     }
 
     this.slots = slots;
@@ -246,6 +248,11 @@ export class SceneAdapter<
     this.scene?.dispose();
     this.lifecycle.dispose();
     this.scene = null;
+    this.controls = null;
+    this.transport = null;
+    this.keyboard = null;
+    this.perfMonitor = null;
+    this.slots = null;
     this._graphRendered = false;
     this._resizeHandlerAdded = false;
     this._deferredControlContainer = null;
@@ -347,7 +354,7 @@ export class SceneAdapter<
     }
     const getSnapshot = (this.scene as { getSnapshot?: () => unknown }).getSnapshot;
     if (typeof getSnapshot === 'function') {
-      return getSnapshot();
+      return getSnapshot.call(this.scene);
     }
     return undefined;
   }
