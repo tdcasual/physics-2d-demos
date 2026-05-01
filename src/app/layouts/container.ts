@@ -224,12 +224,13 @@ export class SceneContainerImpl implements SceneContainer {
         slotEl.innerHTML = '';
       }
 
-      const renderFn = (scene as unknown as Record<string, unknown>)[entry.method];
-      if (typeof renderFn === 'function') {
+      const sceneAny = scene as unknown as Record<string, unknown>;
+      const method = sceneAny[entry.method];
+      if (typeof method === 'function') {
         if (entry.passSlots) {
-          (renderFn as (el: HTMLElement, s: LayoutSlots) => void)(slotEl, slots as LayoutSlots);
+          (method as (this: Scene, el: HTMLElement, s: LayoutSlots) => void).call(scene, slotEl, slots as LayoutSlots);
         } else {
-          (renderFn as (el: HTMLElement) => void)(slotEl);
+          (method as (this: Scene, el: HTMLElement) => void).call(scene, slotEl);
         }
       }
     }
