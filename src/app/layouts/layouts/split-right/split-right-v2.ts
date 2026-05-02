@@ -31,6 +31,7 @@ export interface SplitRightConfig extends LayoutConfig {
   title?: string;
   subtitle?: string;
   hasGraph?: boolean;
+  readoutLabel?: string;
 }
 
 const PREFIX: CssPrefix = 'teaching';
@@ -54,10 +55,9 @@ export class SplitRightLayoutV2 implements ILayout {
     this.leftRatio = config.defaultLeftRatio ?? 0.38;
     this._container = container;
 
-    const readoutLabel = (config as Record<string, unknown>).readoutLabel as string | undefined;
     this.capabilities = [
       { id: 'transport-bar', config: { mountSlot: 'animation' } },
-      { id: 'readout-panel', config: { position: 'top-right', collapsed: true, cssPrefix: PREFIX, label: readoutLabel ?? '数据读数' } },
+      { id: 'readout-panel', config: { position: 'top-right', collapsed: true, cssPrefix: PREFIX, label: config.readoutLabel ?? '数据读数' } },
       { id: 'theme-toggle' },
       { id: 'mode-toggle' },
       { id: 'sidebar-toggle' },

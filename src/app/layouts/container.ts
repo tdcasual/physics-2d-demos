@@ -78,10 +78,8 @@ export class SceneContainerImpl implements SceneContainer {
     this._currentTheme = options.defaultTheme || 'light';
     this._layoutConfig = options.layoutConfig;
 
-    // 设置容器样式
+    // 设置容器基础样式（尺寸由各布局自行声明）
     this.container.style.cssText = `
-      width: 100%;
-      height: 100%;
       overflow: hidden;
       position: relative;
     `;
@@ -131,8 +129,8 @@ export class SceneContainerImpl implements SceneContainer {
    * 使用布局选择器，支持策略插件化
    */
   private resolveLayout(scene: Scene): string {
-    const width = this.container.clientWidth;
-    const height = this.container.clientHeight;
+    const width = this.container.clientWidth || window.innerWidth;
+    const height = this.container.clientHeight || window.innerHeight;
     const { mobile, tablet } = getBreakpoints(this._layoutConfig);
 
     const ctx: LayoutSelectionContext = {

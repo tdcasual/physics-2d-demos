@@ -14,6 +14,114 @@
 }
 
 /* ========================================
+   Control Bar (transport + toggles)
+   ======================================== */
+
+.mobile-control-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--color-border-color);
+  background: var(--color-bg-secondary);
+  min-height: 44px;
+}
+
+.mobile-transport-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.mobile-transport-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  border: 1px solid var(--color-border-color);
+  background: var(--color-btn-bg);
+  color: var(--color-text-primary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.mobile-transport-btn:active {
+  transform: scale(0.95);
+  background: var(--color-btn-hover-bg);
+}
+
+.mobile-transport-btn.is-playing {
+  border-color: var(--color-accent-primary, #3b82f6);
+  color: var(--color-accent-primary, #3b82f6);
+}
+
+.mobile-transport-speed-label {
+  font-size: 0.6875rem;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  display: none;
+}
+
+.mobile-transport-speed-slider {
+  flex: 1;
+  min-width: 60px;
+  max-width: 120px;
+  height: 4px;
+  cursor: pointer;
+  accent-color: var(--color-accent-primary, #3b82f6);
+}
+
+.mobile-transport-speed-value {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  min-width: 32px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.mobile-transport-toggles {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.mobile-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border-color);
+  background: var(--color-btn-bg);
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  white-space: nowrap;
+}
+
+.mobile-toggle-btn:active {
+  background: var(--color-btn-hover-bg);
+  transform: scale(0.95);
+}
+
+/* ========================================
    Animation Section
    ======================================== */
 
@@ -168,27 +276,6 @@
 }
 
 /* ========================================
-   Transport bar responsive sizing
-   ======================================== */
-
-.mobile-stage-slot .teaching-stage-floating-controls {
-  --transport-btn-size: 42px;
-  --transport-icon-size: 15px;
-  --transport-font-size: 12px;
-  --transport-padding: 8px 10px;
-  --transport-gap: 8px;
-  --transport-slider-width: 64px;
-  --transport-divider-height: 24px;
-  --transport-speed-width: 40px;
-  --transport-top: 8px;
-  --transport-left: 8px;
-  --transport-radius: 8px;
-  --transport-slider-height: 14px;
-  --transport-slider-width: 80px;
-  max-width: calc(100% - 16px);
-}
-
-/* ========================================
    Readout panel (inline compact)
    ======================================== */
 
@@ -263,4 +350,11 @@
 /* Landscape: reduce animation section to use more horizontal space */
 .mobile-stack-layout.is-landscape .mobile-animation-section {
   max-height: 55vh;
+}
+
+/* Wider phones: show speed label */
+@media (min-width: 400px) {
+  .mobile-transport-speed-label {
+    display: inline;
+  }
 }
