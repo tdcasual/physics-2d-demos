@@ -63,15 +63,17 @@ export class SplitRightGraphBottomLayoutV2 implements ILayout {
     this.graphHeight = config.graphHeight ?? 220;
     this._container = container;
 
+    const readoutLabel = (config as Record<string, unknown>).readoutLabel as string | undefined;
     this.capabilities = [
       { id: 'transport-bar', config: { mountSlot: 'animation' } },
-      { id: 'readout-panel', config: { position: 'top-right', collapsed: true, cssPrefix: PREFIX } },
+      { id: 'readout-panel', config: { position: 'top-right', collapsed: true, cssPrefix: PREFIX, label: readoutLabel ?? '数据读数' } },
       { id: 'theme-toggle' },
       { id: 'mode-toggle' },
       { id: 'sidebar-toggle' },
       { id: 'resizer', config: { direction: 'vertical', targetSelector: '.srgb-left-panel', selector: '.srgb-resizer-v', onResize: (r: number) => { this.leftRatio = r; } } },
       { id: 'resizer', config: { direction: 'horizontal', targetSelector: '.srgb-graph-section', selector: '.srgb-resizer-h', minSize: 120, maxSize: 480, onResize: (r: number) => { this.graphHeight = Math.round(r * (this._container.clientHeight || window.innerHeight || 800)); } } },
-      { id: 'demo-profile' }
+      { id: 'demo-profile' },
+      { id: 'debug-overlay' }
     ];
   }
 

@@ -51,6 +51,14 @@ export function renderSchema(
       defaultCollapsed: section.collapsed ?? false
     });
 
+    // 判定此 section 是否应占满整行
+    const needsFullWidth =
+      section.span === 'full' ||
+      section.fields.some((f) => f.type === 'slider' || f.type === 'text');
+    if (needsFullWidth) {
+      card.element.dataset.span = 'full';
+    }
+
     section.fields.forEach((field) => {
       const { node, valueSetter, activeSetter, cleanup } = renderField(
         field,
@@ -82,6 +90,9 @@ export function renderSchema(
     dispose() {
       cleanupFns.forEach((fn) => fn());
       mount.replaceChildren();
+      valueSetters.clear();
+      valueGetters.clear();
+      activeSetters.clear();
     }
   };
 }
@@ -214,7 +225,8 @@ function renderField(
       });
       return {
         node: selectorContainer,
-        activeSetter: (id) => selector.setActive(id)
+        activeSetter: (id) => selector.setActive(id),
+        cleanup: () => selector.dispose()
       };
     }
 

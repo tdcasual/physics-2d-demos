@@ -7,6 +7,8 @@ export interface ControlCardOptions {
   defaultCollapsed?: boolean;
   icon?: string;
   headerActions?: HTMLElement[];
+  /** 设为 'full' 则在多列控制区布局中强制占满整行（含滑块或长文本的卡片应设置） */
+  span?: 'full';
 }
 
 export interface ControlCardInstance {
@@ -43,6 +45,10 @@ export function createControlCard(
 
   if (options?.defaultCollapsed) {
     card.classList.add('collapsed');
+  }
+
+  if (options?.span === 'full') {
+    card.dataset.span = 'full';
   }
 
   // 头部 - 极致紧凑，高分屏适配

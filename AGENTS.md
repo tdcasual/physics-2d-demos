@@ -121,6 +121,30 @@ bootScenePage({
 });
 ```
 
+### 控制区列布局范式
+
+`controlColumns: 'auto'` 启用智能分列（推荐设为默认）。每个 section（一张卡片）根据内容自动决定宽度：
+
+- **含 `slider` 或 `text` 字段** → SchemaRenderer 自动标记 `data-span="full"`，占满整行
+- **只含按钮/预设/选择器/transport** → 参与 `auto-fit` 多列并排（最小 220px）
+- **手动创建卡片** → 使用 `createControlCard('标题', { span: 'full' })` 显式声明
+
+CSS 规则：`[data-span='full'] { grid-column: 1 / -1; }`，无论当前是 1/2/3 列均生效。
+
+**DOM 顺序原则**：先排可并列的窄卡片，最后排必须全宽的卡片，让窄卡片优先在同一行并排。例如：
+
+```
+DOM: [场景选择] [预设按钮] [观察点管理] → [含滑块的参数区 全宽]
+布局: [场景] [预设] [管理]   ← 一行三列（或自动换行）
+      [参数区 ────────────]  ← 全宽
+```
+
+**Section 也可显式声明**（escape hatch，用于 `custom` 类型等）：
+
+```typescript
+{ title: '原理说明', collapsed: true, span: 'full', fields: [{ type: 'custom', ... }] }
+```
+
 ## 关键类型
 
 ### SceneMeta（scene-contract.ts）

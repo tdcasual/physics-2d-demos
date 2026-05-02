@@ -113,7 +113,7 @@ export function createFieldLinesView(
 
     // 5. 立体电荷球
     const visuals = getVisuals(getScale());
-    drawCharges(ctx, charges, visuals.chargeFontPx, s);
+    drawCharges(ctx, charges, visuals.chargeFontPx, s, isDark);
   }
 
   return {

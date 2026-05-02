@@ -62,8 +62,8 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
     const newCtx = sizeCanvasToFill(canvas);
     if (newCtx) ctx = newCtx;
     const rect = canvas.getBoundingClientRect();
-    cssWidth = Math.max(480, Math.floor(rect.width || 1280));
-    cssHeight = Math.max(280, Math.floor(rect.height || 720));
+    cssWidth = Math.max(1, Math.floor(rect.width || 1280));
+    cssHeight = Math.max(1, Math.floor(rect.height || 720));
   }
 
   function initStageSize(): void {
@@ -89,8 +89,8 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
     const trackHeight = Math.min(
       Math.round(380 * scale),
       Math.max(
-        Math.round(170 * scale),
-        stageHeight * (viewport.isNarrow ? 0.34 : 0.42)
+        Math.round(190 * scale),
+        stageHeight * (viewport.isNarrow ? 0.38 : 0.42)
       )
     );
 
@@ -104,8 +104,8 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
       graphHeight = Math.min(
         Math.round(250 * scale),
         Math.max(
-          Math.round(150 * scale),
-          stageHeight * (viewport.isNarrow ? 0.22 : 0.34)
+          Math.round(160 * scale),
+          stageHeight * (viewport.isNarrow ? 0.26 : 0.34)
         )
       );
       graphWidth = viewport.isNarrow

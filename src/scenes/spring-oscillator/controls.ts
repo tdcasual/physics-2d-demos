@@ -47,7 +47,8 @@ export function createSpringOscillatorControls(
 
   const listCard = createControlCard('振子列表', {
     defaultCollapsed: false,
-    headerActions: [addBtn]
+    headerActions: [addBtn],
+    span: 'full'
   });
 
   const listContainer = document.createElement('div');

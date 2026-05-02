@@ -43,7 +43,8 @@ export function createWaveInterferenceView(options: CreateWaveInterferenceViewOp
 
   let scaleX = 1;
   let scaleY = 1;
-  const originX = 50;
+  let viewDomainMax = DOMAIN_MAX;
+  let originX = 50;
   let originY = 0;
 
   // Observer interaction state
@@ -70,8 +71,13 @@ export function createWaveInterferenceView(options: CreateWaveInterferenceViewOp
     height = Math.max(1, Math.floor(rect.height));
     responsiveScale = parseFloat(canvas.dataset.responsiveScale || '1');
 
-    scaleX = (width - 100) / DOMAIN_MAX;
-    scaleY = (height / 2 - 30) / 16;
+    // Adaptive domain: narrow screens show fewer meters for clearer wave rendering
+    // Threshold ~1.08 corresponds to short edge ~432px (tablet portrait)
+    viewDomainMax = responsiveScale < 1.08 ? 20 : DOMAIN_MAX;
+    originX = 50 * responsiveScale;
+    scaleX = (width - originX * 2) / viewDomainMax;
+    // Reduced vertical margin to give wave more display height on mobile
+    scaleY = (height / 2 - 22 * responsiveScale) / 16;
     originY = height / 2;
   }
 
@@ -114,7 +120,7 @@ export function createWaveInterferenceView(options: CreateWaveInterferenceViewOp
     // Grid
     ctx.strokeStyle = colors.grid;
     ctx.lineWidth = 1;
-    for (let m = 0; m <= DOMAIN_MAX; m += 5) {
+    for (let m = 0; m <= viewDomainMax; m += 5) {
       const x = worldToPixelX(m);
       ctx.beginPath();
       ctx.moveTo(x, 0);
@@ -123,18 +129,19 @@ export function createWaveInterferenceView(options: CreateWaveInterferenceViewOp
     }
 
     // X-axis
+    const rightMargin = 30 * responsiveScale;
     ctx.strokeStyle = colors.axis;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2 * responsiveScale;
     ctx.beginPath();
     ctx.moveTo(originX, originY);
-    ctx.lineTo(width - 30, originY);
+    ctx.lineTo(width - rightMargin, originY);
     ctx.stroke();
 
     // Arrow
     ctx.beginPath();
-    ctx.moveTo(width - 30, originY);
-    ctx.lineTo(width - 40, originY - 5);
-    ctx.lineTo(width - 40, originY + 5);
+    ctx.moveTo(width - rightMargin, originY);
+    ctx.lineTo(width - rightMargin - 10 * responsiveScale, originY - 5 * responsiveScale);
+    ctx.lineTo(width - rightMargin - 10 * responsiveScale, originY + 5 * responsiveScale);
     ctx.closePath();
     ctx.fillStyle = colors.axis;
     ctx.fill();
@@ -143,10 +150,10 @@ export function createWaveInterferenceView(options: CreateWaveInterferenceViewOp
     ctx.fillStyle = colors.label;
     ctx.font = `${12 * responsiveScale}px sans-serif`;
     ctx.textAlign = 'left';
-    ctx.fillText('x (m)', width - 50, originY + 25 * responsiveScale);
-    for (let i = 0; i <= DOMAIN_MAX; i += 5) {
+    ctx.fillText('x (m)', width - rightMargin - 20 * responsiveScale, originY + 25 * responsiveScale);
+    for (let i = 0; i <= viewDomainMax; i += 5) {
       const x = worldToPixelX(i);
-      ctx.fillText(i.toString(), x - 5, originY + 20 * responsiveScale);
+      ctx.fillText(i.toString(), x - 5 * responsiveScale, originY + 20 * responsiveScale);
     }
 
     const phaseRad = (params.phaseDiff * Math.PI) / 180;
@@ -160,7 +167,7 @@ export function createWaveInterferenceView(options: CreateWaveInterferenceViewOp
     if (params.isPulseMode) {
       pulseCenter1 = WAVE_SPEED * (t % PULSE_PERIOD) - PULSE_WIDTH / 2;
       const t2 = (t - PULSE_DELAY + PULSE_PERIOD * 10) % PULSE_PERIOD;
-      pulseCenter2 = DOMAIN_MAX + PULSE_WIDTH / 2 - WAVE_SPEED * t2;
+      pulseCenter2 = viewDomainMax + PULSE_WIDTH / 2 - WAVE_SPEED * t2;
     }
 
     if (params.mode === 'head-on') {
@@ -169,7 +176,7 @@ export function createWaveInterferenceView(options: CreateWaveInterferenceViewOp
         ctx.strokeStyle = 'rgba(59, 130, 246, 0.5)';
         ctx.lineWidth = 3 * responsiveScale;
         ctx.setLineDash([4, 4]);
-        for (let x = 0; x <= DOMAIN_MAX; x += 0.05) {
+        for (let x = 0; x <= viewDomainMax; x += 0.05) {
           const env = params.isPulseMode ? pulseEnvelope(x, pulseCenter1!, PULSE_WIDTH) : 1;
           const y = params.amp1 * Math.sin(k1 * x - omega1 * t) * env;
           const px = worldToPixelX(x);
@@ -192,9 +199,9 @@ export function createWaveInterferenceView(options: CreateWaveInterferenceViewOp
         ctx.strokeStyle = 'rgba(239, 68, 68, 0.5)';
         ctx.lineWidth = 3 * responsiveScale;
         ctx.setLineDash([4, 4]);
-        for (let x = 0; x <= DOMAIN_MAX; x += 0.05) {
+        for (let x = 0; x <= viewDomainMax; x += 0.05) {
           const env = params.isPulseMode ? pulseEnvelope(x, pulseCenter2!, PULSE_WIDTH) : 1;
-          const y = params.amp2 * Math.sin(k2 * (DOMAIN_MAX - x) - omega2 * t + phaseRad) * env;
+          const y = params.amp2 * Math.sin(k2 * (viewDomainMax - x) - omega2 * t + phaseRad) * env;
           const px = worldToPixelX(x);
           const py = worldToPixelY(y);
           if (x === 0) ctx.moveTo(px, py);
@@ -205,20 +212,20 @@ export function createWaveInterferenceView(options: CreateWaveInterferenceViewOp
 
         ctx.fillStyle = colors.wave2;
         ctx.beginPath();
-        ctx.arc(worldToPixelX(DOMAIN_MAX), originY, 6 * responsiveScale, 0, Math.PI * 2);
+        ctx.arc(worldToPixelX(viewDomainMax), originY, 6 * responsiveScale, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillText('B', worldToPixelX(DOMAIN_MAX) - 3, originY + 20 * responsiveScale);
+        ctx.fillText('B', worldToPixelX(viewDomainMax) - 3, originY + 20 * responsiveScale);
       }
 
       if (params.showInterference) {
         ctx.beginPath();
         ctx.strokeStyle = colors.interference;
         ctx.lineWidth = 4 * responsiveScale;
-        for (let x = 0; x <= DOMAIN_MAX; x += 0.05) {
+        for (let x = 0; x <= viewDomainMax; x += 0.05) {
           const env1 = params.isPulseMode ? pulseEnvelope(x, pulseCenter1!, PULSE_WIDTH) : 1;
           const env2 = params.isPulseMode ? pulseEnvelope(x, pulseCenter2!, PULSE_WIDTH) : 1;
           const y1 = params.amp1 * Math.sin(k1 * x - omega1 * t) * env1;
-          const y2 = params.amp2 * Math.sin(k2 * (DOMAIN_MAX - x) - omega2 * t + phaseRad) * env2;
+          const y2 = params.amp2 * Math.sin(k2 * (viewDomainMax - x) - omega2 * t + phaseRad) * env2;
           const y = y1 + y2;
           const px = worldToPixelX(x);
           const py = worldToPixelY(y);
@@ -233,7 +240,7 @@ export function createWaveInterferenceView(options: CreateWaveInterferenceViewOp
         ctx.strokeStyle = 'rgba(59, 130, 246, 0.6)';
         ctx.lineWidth = 2.5 * responsiveScale;
         ctx.setLineDash([5, 5]);
-        for (let x = 0; x <= DOMAIN_MAX; x += 0.05) {
+        for (let x = 0; x <= viewDomainMax; x += 0.05) {
           const y = params.amp1 * Math.sin(k1 * x - omega1 * t);
           const px = worldToPixelX(x);
           const py = worldToPixelY(y);
@@ -249,7 +256,7 @@ export function createWaveInterferenceView(options: CreateWaveInterferenceViewOp
         ctx.strokeStyle = 'rgba(239, 68, 68, 0.6)';
         ctx.lineWidth = 2.5 * responsiveScale;
         ctx.setLineDash([5, 5]);
-        for (let x = 0; x <= DOMAIN_MAX; x += 0.05) {
+        for (let x = 0; x <= viewDomainMax; x += 0.05) {
           const y = params.amp2 * Math.sin(k2 * x - omega2 * t + phaseRad);
           const px = worldToPixelX(x);
           const py = worldToPixelY(y);
@@ -264,7 +271,7 @@ export function createWaveInterferenceView(options: CreateWaveInterferenceViewOp
         ctx.beginPath();
         ctx.strokeStyle = colors.interference;
         ctx.lineWidth = 4 * responsiveScale;
-        for (let x = 0; x <= DOMAIN_MAX; x += 0.05) {
+        for (let x = 0; x <= viewDomainMax; x += 0.05) {
           const y1 = params.amp1 * Math.sin(k1 * x - omega1 * t);
           const y2 = params.amp2 * Math.sin(k2 * x - omega2 * t + phaseRad);
           const y = y1 + y2;
@@ -309,17 +316,17 @@ export function createWaveInterferenceView(options: CreateWaveInterferenceViewOp
     ctx.lineWidth = (isActive ? 3 : 2) * responsiveScale;
     ctx.setLineDash([6, 3]);
     ctx.beginPath();
-    ctx.moveTo(obsPixelX, 10);
-    ctx.lineTo(obsPixelX, height - 10);
+    ctx.moveTo(obsPixelX, 10 * responsiveScale);
+    ctx.lineTo(obsPixelX, height - 10 * responsiveScale);
     ctx.stroke();
     ctx.setLineDash([]);
 
     // Marker
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.moveTo(obsPixelX, 15);
-    ctx.lineTo(obsPixelX - 6 * responsiveScale, 25);
-    ctx.lineTo(obsPixelX + 6 * responsiveScale, 25);
+    ctx.moveTo(obsPixelX, 15 * responsiveScale);
+    ctx.lineTo(obsPixelX - 6 * responsiveScale, 25 * responsiveScale);
+    ctx.lineTo(obsPixelX + 6 * responsiveScale, 25 * responsiveScale);
     ctx.closePath();
     ctx.fill();
 
@@ -467,14 +474,14 @@ export function createWaveInterferenceView(options: CreateWaveInterferenceViewOp
     const x = (event.clientX - rect.left) * (width / rect.width);
     const physX = pixelToWorldX(x);
 
-    if (physX >= 0 && physX <= DOMAIN_MAX) {
+    if (physX >= 0 && physX <= viewDomainMax) {
       const nearest = findNearestObserver(x);
       if (nearest.dist < 20 * responsiveScale) {
         isDragging = true;
         dragIndex = nearest.index;
         canvas.style.cursor = 'col-resize';
       } else {
-        onObserverMove?.(-1, Math.max(0, Math.min(DOMAIN_MAX, physX)));
+        onObserverMove?.(-1, Math.max(0, Math.min(viewDomainMax, physX)));
       }
     }
   }
@@ -486,7 +493,7 @@ export function createWaveInterferenceView(options: CreateWaveInterferenceViewOp
 
     if (isDragging) {
       let physX = pixelToWorldX(x);
-      physX = Math.max(0, Math.min(DOMAIN_MAX, physX));
+      physX = Math.max(0, Math.min(viewDomainMax, physX));
       onObserverMove?.(dragIndex, physX);
     } else {
       const nearest = findNearestObserver(x);
@@ -525,6 +532,7 @@ export function createWaveInterferenceView(options: CreateWaveInterferenceViewOp
       canvas.removeEventListener('pointerdown', handlePointerDown);
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
+      ctx = null;
     }
   };
 }

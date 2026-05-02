@@ -9,13 +9,15 @@ export function drawNetCharges(
   centerY: number,
   charge: number,
   spreadRadius: number,
-  isDark: boolean
+  isDark: boolean,
+  s: number
 ): void {
   const absQ = Math.abs(charge);
   if (absQ === 0) {
     // 中性：各画 2 个正负粒子示意
-    drawChargeParticle(ctx, centerX - 6, centerY, 1, isDark);
-    drawChargeParticle(ctx, centerX + 6, centerY, -1, isDark);
+    const offset = Math.max(3, 6 * s);
+    drawChargeParticle(ctx, centerX - offset, centerY, 1, isDark, s);
+    drawChargeParticle(ctx, centerX + offset, centerY, -1, isDark, s);
     return;
   }
 
@@ -28,7 +30,7 @@ export function drawNetCharges(
     const dist = spreadRadius * (0.4 + Math.random() * 0.4);
     const px = centerX + Math.cos(angle) * dist;
     const py = centerY + Math.sin(angle) * dist;
-    drawChargeParticle(ctx, px, py, isPositive ? 1 : -1, isDark);
+    drawChargeParticle(ctx, px, py, isPositive ? 1 : -1, isDark, s);
   }
 }
 
@@ -38,15 +40,16 @@ function drawChargeParticle(
   x: number,
   y: number,
   sign: number,
-  isDark: boolean
+  isDark: boolean,
+  s: number
 ): void {
   const isPositive = sign > 0;
-  const r = 5;
+  const r = Math.max(3, 5 * s);
 
   ctx.save();
 
   // 微弱 glow
-  ctx.shadowBlur = 6;
+  ctx.shadowBlur = 6 * s;
   ctx.shadowColor = isPositive
     ? isDark ? 'rgba(239,68,68,0.4)' : 'rgba(239,68,68,0.3)'
     : isDark ? 'rgba(59,130,246,0.4)' : 'rgba(59,130,246,0.3)';
@@ -63,7 +66,7 @@ function drawChargeParticle(
 
   // 符号
   ctx.fillStyle = 'white';
-  ctx.font = `bold 7px Arial, sans-serif`;
+  ctx.font = `bold ${Math.max(6, Math.round(7 * s))}px Arial, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(isPositive ? '+' : '−', x, y + 0.5);
@@ -79,7 +82,8 @@ export function drawAtomCharges(
   w: number,
   h: number,
   netCharge: number,
-  isDark: boolean
+  isDark: boolean,
+  s: number
 ): void {
   const baseCount = 4;
   const posCount = baseCount + Math.max(0, netCharge);
@@ -90,14 +94,16 @@ export function drawAtomCharges(
   const spacingX = w / (cols + 1);
   const spacingY = h / (rows + 1);
 
+  const margin = 5 * s;
+
   // 正电荷（左侧）
   for (let i = 0; i < posCount; i++) {
     const col = i % cols;
     const row = Math.floor(i / cols);
     const px = x + spacingX * (col + 0.5);
     const py = y + spacingY * (row + 0.5);
-    if (py < y + h - 5) {
-      drawChargeParticle(ctx, px, py, 1, isDark);
+    if (py < y + h - margin) {
+      drawChargeParticle(ctx, px, py, 1, isDark, s);
     }
   }
 
@@ -107,8 +113,8 @@ export function drawAtomCharges(
     const row = Math.floor(i / cols);
     const px = x + w - spacingX * (col + 0.5);
     const py = y + spacingY * (row + 0.5);
-    if (py < y + h - 5) {
-      drawChargeParticle(ctx, px, py, -1, isDark);
+    if (py < y + h - margin) {
+      drawChargeParticle(ctx, px, py, -1, isDark, s);
     }
   }
 }
@@ -120,14 +126,15 @@ export function drawTransferArrow(
   fromY: number,
   toX: number,
   toY: number,
-  isDark: boolean
+  isDark: boolean,
+  s: number
 ): void {
   ctx.save();
   ctx.strokeStyle = isDark
     ? 'rgba(250,204,21,0.7)'
     : 'rgba(202,138,4,0.7)';
-  ctx.lineWidth = 2;
-  ctx.setLineDash([6, 4]);
+  ctx.lineWidth = Math.max(1, 2 * s);
+  ctx.setLineDash([6 * s, 4 * s]);
   ctx.lineCap = 'round';
 
   ctx.beginPath();
@@ -137,7 +144,7 @@ export function drawTransferArrow(
 
   // 箭头
   const angle = Math.atan2(toY - fromY, toX - fromX);
-  const arrowLen = 10;
+  const arrowLen = Math.max(6, 10 * s);
   const arrowAngle = Math.PI / 6;
 
   ctx.setLineDash([]);
@@ -160,11 +167,11 @@ export function drawTransferArrow(
   ctx.fillStyle = isDark
     ? 'rgba(250,204,21,0.9)'
     : 'rgba(202,138,4,0.9)';
-  ctx.font = 'bold 11px "Noto Sans SC", sans-serif';
+  ctx.font = `bold ${Math.max(9, Math.round(11 * s))}px "Noto Sans SC", sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   const midX = (fromX + toX) * 0.5;
-  const midY = (fromY + toY) * 0.5 - 10;
+  const midY = (fromY + toY) * 0.5 - 10 * s;
   ctx.fillText('e⁻ 转移', midX, midY);
 
   ctx.restore();

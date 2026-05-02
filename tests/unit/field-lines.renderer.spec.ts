@@ -29,13 +29,13 @@ describe('field-lines renderer', () => {
     it('draws positive and negative charges without throwing', () => {
       const { ctx } = makeCtx();
       const charges = makePixelCharges();
-      expect(() => drawCharges(ctx, charges, 16, 1)).not.toThrow();
+      expect(() => drawCharges(ctx, charges, 16, 1, true)).not.toThrow();
     });
 
     it('draws single charge without throwing', () => {
       const { ctx } = makeCtx();
       const charges: PixelCharge[] = [{ x: 400, y: 300, q: 2, radius: 25 }];
-      expect(() => drawCharges(ctx, charges, 16, 1)).not.toThrow();
+      expect(() => drawCharges(ctx, charges, 16, 1, true)).not.toThrow();
     });
   });
 

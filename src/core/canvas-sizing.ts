@@ -77,17 +77,17 @@ export function scaledSize(
  *
  * @param canvasWidth  canvas CSS 宽度
  * @param canvasHeight canvas CSS 高度
- * @param referenceSize 参考短边尺寸（默认 600，对应桌面端典型值）
+ * @param referenceSize 参考短边尺寸（默认 400，兼顾桌面与移动端）
  * @returns 缩放因子，范围 [0.3, 1.5]
  *
  * @example
- * const scale = getResponsiveScale(width, height, 600);
+ * const scale = getResponsiveScale(width, height, 400);
  * const ballRadius = 20 * scale;
  */
 export function getResponsiveScale(
   canvasWidth: number,
   canvasHeight: number,
-  referenceSize = 600
+  referenceSize = 400
 ): number {
   const shortEdge = Math.min(canvasWidth, canvasHeight);
   return Math.max(0.3, Math.min(1.5, shortEdge / referenceSize));

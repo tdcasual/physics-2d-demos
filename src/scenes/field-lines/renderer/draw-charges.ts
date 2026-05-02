@@ -4,10 +4,11 @@ export function drawCharges(
   ctx: CanvasRenderingContext2D,
   charges: PixelCharge[],
   chargeFontPx: number,
-  responsiveScale: number
+  responsiveScale: number,
+  isDark: boolean
 ): void {
   for (const charge of charges) {
-    drawChargeBall(ctx, charge, chargeFontPx, responsiveScale);
+    drawChargeBall(ctx, charge, chargeFontPx, responsiveScale, isDark);
   }
 }
 
@@ -15,17 +16,19 @@ function drawChargeBall(
   ctx: CanvasRenderingContext2D,
   charge: PixelCharge,
   chargeFontPx: number,
-  responsiveScale: number
+  responsiveScale: number,
+  isDark: boolean
 ): void {
   const { x, y, radius, q } = charge;
   const isPositive = q > 0;
 
   ctx.save();
 
-  // 外发光
+  // 外发光（暗色背景下略微增强）
+  const glowAlpha = isDark ? 0.4 : 0.3;
   const glowColor = isPositive
-    ? 'rgba(230, 81, 0, 0.35)'
-    : 'rgba(0, 150, 136, 0.35)';
+    ? `rgba(230, 81, 0, ${glowAlpha})`
+    : `rgba(0, 150, 136, ${glowAlpha})`;
   ctx.shadowBlur = Math.round(20 * responsiveScale);
   ctx.shadowColor = glowColor;
 

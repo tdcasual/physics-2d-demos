@@ -14,40 +14,46 @@ export function drawHorizontal(
   coils: number,
   coilWidth: number,
   valueFontSize: number,
-  isDark: boolean
+  isDark: boolean,
+  s: number
 ): ClickArea {
-  const equilibriumX = centerX + 10;
+  const equilibriumX = centerX + 10 * s;
   const massX = equilibriumX + displacement;
   const fixedX = equilibriumX - springLength;
   const baseY = centerY;
+
+  const lw = Math.max(0.5, 1 * s);
 
   // 平衡位置虚线
   ctx.strokeStyle = isDark
     ? alpha(Colors.gray, 0.25)
     : alpha(Colors.grayLight, 0.4);
-  ctx.setLineDash([3, 3]);
-  ctx.lineWidth = 1;
+  ctx.setLineDash([3 * s, 3 * s]);
+  ctx.lineWidth = lw;
   ctx.beginPath();
-  ctx.moveTo(equilibriumX, baseY - 20);
-  ctx.lineTo(equilibriumX, baseY + 25);
+  ctx.moveTo(equilibriumX, baseY - 20 * s);
+  ctx.lineTo(equilibriumX, baseY + 25 * s);
   ctx.stroke();
   ctx.setLineDash([]);
 
   // 固定端（墙面）
+  const wallW = Math.max(2, 3 * s);
+  const wallH = Math.round(36 * s);
+  const wallTop = baseY - wallH / 2;
   ctx.fillStyle = isDark ? Colors.darkText : Colors.dark;
-  ctx.fillRect(fixedX - 3, baseY - 18, 3, 36);
+  ctx.fillRect(fixedX - wallW, wallTop, wallW, wallH);
   ctx.strokeStyle = isDark ? Colors.darkText : Colors.dark;
-  ctx.lineWidth = 1;
+  ctx.lineWidth = lw;
   for (let i = -2; i <= 2; i++) {
     ctx.beginPath();
-    ctx.moveTo(fixedX - 5, baseY + i * 6);
-    ctx.lineTo(fixedX - 2, baseY + i * 6 + 2);
+    ctx.moveTo(fixedX - 5 * s, baseY + i * 6 * s);
+    ctx.lineTo(fixedX - 2 * s, baseY + i * 6 * s + 2 * s);
     ctx.stroke();
   }
 
   // 弹簧
   const springEndX = massX - ballRadius;
-  if (springEndX > fixedX + 8) {
+  if (springEndX > fixedX + 8 * s) {
     drawSpring(ctx, fixedX, baseY, springEndX, baseY, coils, coilWidth, osc.color);
   }
 
@@ -70,23 +76,29 @@ export function drawHorizontal(
   ctx.fill();
 
   // 相位标记
+  const markerDist = Math.max(5, 7 * s);
+  const markerR = Math.max(2.5, 3.5 * s);
   const markerAngle = osc.state.phase;
-  const markerX = massX + Math.cos(markerAngle) * 7;
-  const markerY = baseY + Math.sin(markerAngle) * 7;
+  const markerX = massX + Math.cos(markerAngle) * markerDist;
+  const markerY = baseY + Math.sin(markerAngle) * markerDist;
   ctx.fillStyle = '#ffffff';
   ctx.beginPath();
-  ctx.arc(markerX, markerY, 3.5, 0, Math.PI * 2);
+  ctx.arc(markerX, markerY, markerR, 0, Math.PI * 2);
   ctx.fill();
 
   // 暂停状态遮罩
   if (!osc.isPlaying) {
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.fillStyle = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.2)';
     ctx.beginPath();
     ctx.arc(massX, baseY, ballRadius, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(massX - 3, baseY - 5, 2, 10);
-    ctx.fillRect(massX + 1, baseY - 5, 2, 10);
+    ctx.fillStyle = isDark ? Colors.darkText : '#fff';
+    const pw = Math.max(1.5, 2 * s);
+    const ph = Math.max(7, 10 * s);
+    const px = massX - Math.max(2, 3 * s);
+    const py = baseY - Math.max(3.5, 5 * s);
+    ctx.fillRect(px, py, pw, ph);
+    ctx.fillRect(px + Math.max(2.5, 3 * s), py, pw, ph);
   }
 
   // 位移数值
@@ -96,17 +108,17 @@ export function drawHorizontal(
   ctx.fillText(
     `${osc.state.x.toFixed(1)}m`,
     massX,
-    baseY + ballRadius + Math.max(10, Math.round(12 * (ballRadius / 22)))
+    baseY + ballRadius + Math.max(8, Math.round(10 * s))
   );
 
   // 点击区域
-  const clickPadding = 20;
+  const clickPadding = Math.max(16, 20 * s);
   return {
     id: osc.id,
     type: 'rect',
-    left: fixedX - 10,
+    left: fixedX - 10 * s,
     top: baseY - ballRadius - clickPadding,
-    right: massX + ballRadius + 10,
+    right: massX + ballRadius + 10 * s,
     bottom: baseY + ballRadius + clickPadding
   };
 }
@@ -122,38 +134,44 @@ export function drawVertical(
   coils: number,
   coilWidth: number,
   valueFontSize: number,
-  isDark: boolean
+  isDark: boolean,
+  s: number
 ): ClickArea {
   const drawCenterX = centerX;
-  const equilibriumY = centerY + 8;
+  const equilibriumY = centerY + 8 * s;
   const massY = equilibriumY - displacement;
   const fixedY = equilibriumY - springLength;
+
+  const lw = Math.max(0.5, 1 * s);
 
   // 平衡位置虚线
   ctx.strokeStyle = isDark
     ? alpha(Colors.gray, 0.25)
     : alpha(Colors.grayLight, 0.4);
-  ctx.setLineDash([3, 3]);
-  ctx.lineWidth = 1;
+  ctx.setLineDash([3 * s, 3 * s]);
+  ctx.lineWidth = lw;
+  const eqLineHalf = 25 * s;
   ctx.beginPath();
-  ctx.moveTo(drawCenterX - 25, equilibriumY);
-  ctx.lineTo(drawCenterX + 25, equilibriumY);
+  ctx.moveTo(drawCenterX - eqLineHalf, equilibriumY);
+  ctx.lineTo(drawCenterX + eqLineHalf, equilibriumY);
   ctx.stroke();
   ctx.setLineDash([]);
 
   // 天花板
+  const ceilH = Math.max(2, 3 * s);
+  const ceilHalfW = 25 * s;
   ctx.fillStyle = isDark ? Colors.darkText : Colors.dark;
-  ctx.fillRect(drawCenterX - 25, fixedY - 3, 50, 3);
+  ctx.fillRect(drawCenterX - ceilHalfW, fixedY - ceilH, ceilHalfW * 2, ceilH);
   for (let i = -2; i <= 2; i++) {
     ctx.beginPath();
-    ctx.moveTo(drawCenterX + i * 8, fixedY - 3);
-    ctx.lineTo(drawCenterX + i * 8 + 1, fixedY - 5);
+    ctx.moveTo(drawCenterX + i * 8 * s, fixedY - ceilH);
+    ctx.lineTo(drawCenterX + i * 8 * s + 1 * s, fixedY - 5 * s);
     ctx.stroke();
   }
 
   // 弹簧
   const springEndY = massY - ballRadius;
-  if (springEndY > fixedY + 8) {
+  if (springEndY > fixedY + 8 * s) {
     drawSpring(
       ctx,
       drawCenterX,
@@ -185,23 +203,29 @@ export function drawVertical(
   ctx.fill();
 
   // 相位标记
+  const markerDist = Math.max(5, 7 * s);
+  const markerR = Math.max(2.5, 3.5 * s);
   const markerAngle = osc.state.phase;
-  const markerX = drawCenterX + Math.cos(markerAngle) * 7;
-  const markerY = massY + Math.sin(markerAngle) * 7;
+  const markerX = drawCenterX + Math.cos(markerAngle) * markerDist;
+  const markerY = massY + Math.sin(markerAngle) * markerDist;
   ctx.fillStyle = '#ffffff';
   ctx.beginPath();
-  ctx.arc(markerX, markerY, 3.5, 0, Math.PI * 2);
+  ctx.arc(markerX, markerY, markerR, 0, Math.PI * 2);
   ctx.fill();
 
   // 暂停状态遮罩
   if (!osc.isPlaying) {
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.fillStyle = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.2)';
     ctx.beginPath();
     ctx.arc(drawCenterX, massY, ballRadius, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(drawCenterX - 3, massY - 5, 2, 10);
-    ctx.fillRect(drawCenterX + 1, massY - 5, 2, 10);
+    ctx.fillStyle = isDark ? Colors.darkText : '#fff';
+    const pw = Math.max(1.5, 2 * s);
+    const ph = Math.max(7, 10 * s);
+    const px = drawCenterX - Math.max(2, 3 * s);
+    const py = massY - Math.max(3.5, 5 * s);
+    ctx.fillRect(px, py, pw, ph);
+    ctx.fillRect(px + Math.max(2.5, 3 * s), py, pw, ph);
   }
 
   // 位移数值
@@ -210,18 +234,18 @@ export function drawVertical(
   ctx.textAlign = 'left';
   ctx.fillText(
     `${osc.state.x.toFixed(1)}m`,
-    drawCenterX + ballRadius + Math.max(10, Math.round(12 * (ballRadius / 22))),
-    massY + 4
+    drawCenterX + ballRadius + Math.max(8, Math.round(10 * s)),
+    massY + 4 * s
   );
 
   // 点击区域
-  const clickPadding = 20;
+  const clickPadding = Math.max(16, 20 * s);
   return {
     id: osc.id,
     type: 'rect',
     left: drawCenterX - ballRadius - clickPadding,
-    top: fixedY - 10,
+    top: fixedY - 10 * s,
     right: drawCenterX + ballRadius + clickPadding,
-    bottom: massY + ballRadius + 10
+    bottom: massY + ballRadius + 10 * s
   };
 }

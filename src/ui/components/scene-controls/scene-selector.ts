@@ -15,24 +15,25 @@ export function createSceneSelector(
     initialActive?: string;
     onSelect: (id: string) => void;
   }
-): { element: HTMLElement; setActive: (id: string) => void } {
+): { element: HTMLElement; setActive: (id: string) => void; dispose: () => void } {
   let activeId = options.initialActive ?? scenes[0]?.id ?? '';
   const buttons = new Map<string, HTMLButtonElement>();
+  const clickHandlers = new Map<string, () => void>();
 
   const container = document.createElement('div');
-  container.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 6px;';
+  container.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--scene-selector-gap, 6px);';
 
   function updateStyles() {
     buttons.forEach((btn, id) => {
       const isActive = id === activeId;
       btn.style.cssText = `
         width: 100%;
-        padding: 12px 14px;
+        padding: var(--scene-selector-padding, 12px 14px);
         background: ${isActive ? 'var(--accent-primary-light, rgba(79,70,229,0.1))' : 'var(--btn-bg, #ffffff)'};
         border: 1px solid ${isActive ? 'var(--accent-primary)' : 'var(--border-color)'};
         border-radius: 8px;
         color: var(--text-primary);
-        font-size: 13px;
+        font-size: var(--scene-selector-text-size, 13px);
         font-weight: 500;
         cursor: pointer;
         transition: all 0.2s;
@@ -46,21 +47,23 @@ export function createSceneSelector(
     const btn = document.createElement('button');
     btn.type = 'button';
     const labelSpan = document.createElement('span');
-    labelSpan.style.cssText = 'font-weight: 600; font-size: 14px;';
+    labelSpan.style.cssText = `font-weight: 600; font-size: var(--scene-selector-label-size, 14px);`;
     labelSpan.textContent = s.label;
     btn.appendChild(labelSpan);
     if (s.desc) {
       const descSpan = document.createElement('span');
       descSpan.style.cssText =
-        'display: block; font-size: 11px; margin-top: 3px; color: var(--text-secondary);';
+        'display: block; font-size: var(--scene-selector-desc-size, 11px); margin-top: 3px; color: var(--text-secondary);';
       descSpan.textContent = s.desc;
       btn.appendChild(descSpan);
     }
-    btn.addEventListener('click', () => {
+    const handler = () => {
       activeId = s.id;
       updateStyles();
       options.onSelect(s.id);
-    });
+    };
+    btn.addEventListener('click', handler);
+    clickHandlers.set(s.id, handler);
     buttons.set(s.id, btn);
     container.appendChild(btn);
   });
@@ -75,6 +78,14 @@ export function createSceneSelector(
         activeId = id;
         updateStyles();
       }
+    },
+    dispose() {
+      buttons.forEach((btn, id) => {
+        const handler = clickHandlers.get(id);
+        if (handler) btn.removeEventListener('click', handler);
+      });
+      clickHandlers.clear();
+      buttons.clear();
     }
   };
 }

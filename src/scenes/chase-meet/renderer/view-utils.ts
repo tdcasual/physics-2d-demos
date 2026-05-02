@@ -87,7 +87,7 @@ export function resizeCanvasWithDpr(
   canvas.style.height = `${cssHeight}px`;
   const scale = Math.max(
     0.3,
-    Math.min(1.5, Math.min(cssWidth, cssHeight) / 600)
+    Math.min(1.5, Math.min(cssWidth, cssHeight) / 400)
   );
   canvas.dataset.responsiveScale = String(scale);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);

@@ -40,6 +40,8 @@ export function renderOscillatorItem(
   // 参数控制区（三个滑块紧凑排列）
   const paramsContainer = document.createElement('div');
   paramsContainer.className = 'flex-1 flex items-center gap-[2px] min-w-0';
+  paramsContainer.style.flexWrap = 'wrap';
+  paramsContainer.style.rowGap = '2px';
 
   // k 滑块
   const kControl = createMiniSlider(
@@ -55,6 +57,7 @@ export function renderOscillatorItem(
       scene.render();
     }
   );
+  disposers.push(kControl.dispose);
 
   // m 滑块
   const mControl = createMiniSlider(
@@ -70,6 +73,7 @@ export function renderOscillatorItem(
       scene.render();
     }
   );
+  disposers.push(mControl.dispose);
 
   // x0 滑块
   const x0Control = createMiniSlider(
@@ -85,8 +89,9 @@ export function renderOscillatorItem(
       scene.render();
     }
   );
+  disposers.push(x0Control.dispose);
 
-  paramsContainer.append(kControl, mControl, x0Control);
+  paramsContainer.append(kControl.element, mControl.element, x0Control.element);
 
   // 方向切换按钮（点击切换）
   const isHorizontal = osc.params.orientation === 'horizontal';

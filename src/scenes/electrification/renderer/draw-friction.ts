@@ -52,16 +52,16 @@ function drawFrictionStep0(
   const objY = cy - rodH * 0.5;
 
   // 玻璃棒
-  drawGlassRod(ctx, rodX, objY, rodW, rodH, isDark);
+  drawGlassRod(ctx, rodX, objY, rodW, rodH, isDark, s);
 
   // 丝绸
-  drawSilk(ctx, silkX, objY, silkW, silkH, isDark);
+  drawSilk(ctx, silkX, objY, silkW, silkH, isDark, s);
 
   // 接触标记
   ctx.strokeStyle = isDark
     ? 'rgba(148,163,184,0.3)'
     : 'rgba(71,85,105,0.25)';
-  ctx.lineWidth = 1;
+  ctx.lineWidth = Math.max(0.5, 1 * s);
   ctx.setLineDash([4 * s, 4 * s]);
   ctx.beginPath();
   ctx.moveTo(cx, objY + rodH * 0.3);
@@ -74,12 +74,13 @@ function drawFrictionStep0(
   ctx.font = `600 ${Math.max(11, Math.round(14 * s))}px "Noto Sans SC", sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
-  ctx.fillText('玻璃棒', rodX + rodW * 0.5, objY + rodH + 10);
-  ctx.fillText('丝绸', silkX + silkW * 0.5, objY + silkH + 10);
+  const labelGap = 10 * s;
+  ctx.fillText('玻璃棒', rodX + rodW * 0.5, objY + rodH + labelGap);
+  ctx.fillText('丝绸', silkX + silkW * 0.5, objY + silkH + labelGap);
 
   // 内部电荷示意
-  drawInternalCharges(ctx, rodX + rodW * 0.5, objY + rodH * 0.5, rodW * 0.35, 0, isDark);
-  drawInternalCharges(ctx, silkX + silkW * 0.5, objY + silkH * 0.5, silkW * 0.35, 0, isDark);
+  drawInternalCharges(ctx, rodX + rodW * 0.5, objY + rodH * 0.5, rodW * 0.35, 0, isDark, s);
+  drawInternalCharges(ctx, silkX + silkW * 0.5, objY + silkH * 0.5, silkW * 0.35, 0, isDark, s);
 }
 
 /** step 1+ : 分离后带电状态 */
@@ -101,18 +102,18 @@ function drawFrictionStep1Plus(
   const objY = cy;
 
   // 玻璃棒 → 带电球
-  drawChargedSphere(ctx, leftX, objY, sphereR, state.leftCharge, isDark);
+  drawChargedSphere(ctx, leftX, objY, sphereR, state.leftCharge, isDark, s);
 
   // 丝绸 → 带电球
-  drawChargedSphere(ctx, rightX, objY, sphereR, state.rightCharge, isDark);
+  drawChargedSphere(ctx, rightX, objY, sphereR, state.rightCharge, isDark, s);
 
   // 电场线
-  drawFieldLinesFromPoint(ctx, leftX, objY, state.leftCharge, sphereR * 2.2, isDark);
-  drawFieldLinesFromPoint(ctx, rightX, objY, state.rightCharge, sphereR * 2.2, isDark);
+  drawFieldLinesFromPoint(ctx, leftX, objY, state.leftCharge, sphereR * 2.2, isDark, s);
+  drawFieldLinesFromPoint(ctx, rightX, objY, state.rightCharge, sphereR * 2.2, isDark, s);
 
   // 电子转移箭头（step 2 显示最终方向）
   if (state.stepIndex >= 2) {
-    drawTransferArrow(ctx, leftX + sphereR, objY, rightX - sphereR, objY, isDark);
+    drawTransferArrow(ctx, leftX + sphereR, objY, rightX - sphereR, objY, isDark, s);
   }
 
   // 标签
@@ -120,12 +121,13 @@ function drawFrictionStep1Plus(
   ctx.font = `600 ${Math.max(11, Math.round(14 * s))}px "Noto Sans SC", sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
-  ctx.fillText('玻璃棒', leftX, objY + sphereR + 12);
-  ctx.fillText('丝绸', rightX, objY + sphereR + 12);
+  const labelGap = 12 * s;
+  ctx.fillText('玻璃棒', leftX, objY + sphereR + labelGap);
+  ctx.fillText('丝绸', rightX, objY + sphereR + labelGap);
 
   // 净电荷粒子
-  drawNetCharges(ctx, leftX, objY, state.leftCharge, sphereR * 0.5, isDark);
-  drawNetCharges(ctx, rightX, objY, state.rightCharge, sphereR * 0.5, isDark);
+  drawNetCharges(ctx, leftX, objY, state.leftCharge, sphereR * 0.5, isDark, s);
+  drawNetCharges(ctx, rightX, objY, state.rightCharge, sphereR * 0.5, isDark, s);
 }
 
 /** 绘制物体内部的正负电荷示意 */
@@ -135,25 +137,28 @@ function drawInternalCharges(
   cy: number,
   spreadR: number,
   _netCharge: number,
-  isDark: boolean
+  isDark: boolean,
+  s: number
 ): void {
   const count = 6;
+  const r = Math.max(2, 3 * s);
+  const offset = Math.max(2, 3 * s);
   for (let i = 0; i < count; i++) {
     const angle = (i / count) * Math.PI * 2;
-    const r = spreadR * 0.6;
-    const px = cx + Math.cos(angle) * r;
-    const py = cy + Math.sin(angle) * r;
+    const dist = spreadR * 0.6;
+    const px = cx + Math.cos(angle) * dist;
+    const py = cy + Math.sin(angle) * dist;
 
     // 正电荷（红色）
     ctx.fillStyle = isDark ? 'rgba(239,68,68,0.6)' : 'rgba(220,50,50,0.5)';
     ctx.beginPath();
-    ctx.arc(px - 3, py - 3, 3, 0, Math.PI * 2);
+    ctx.arc(px - offset, py - offset, r, 0, Math.PI * 2);
     ctx.fill();
 
     // 负电荷（蓝色）
     ctx.fillStyle = isDark ? 'rgba(59,130,246,0.6)' : 'rgba(40,100,220,0.5)';
     ctx.beginPath();
-    ctx.arc(px + 3, py + 3, 3, 0, Math.PI * 2);
+    ctx.arc(px + offset, py + offset, r, 0, Math.PI * 2);
     ctx.fill();
   }
 }

@@ -280,6 +280,7 @@ export function createXtGraphRenderer(
 
   function dispose(): void {
     resizeObserver?.disconnect();
+    ctx = null;
   }
 
   resize();

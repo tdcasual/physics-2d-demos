@@ -3,6 +3,7 @@
    ======================================== */
 
 .mobile-stack-layout {
+  --ui-scale: 0.85;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -12,12 +13,9 @@
   background: var(--color-bg-primary);
 }
 
-.mobile-scroll-container {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-}
+/* ========================================
+   Animation Section
+   ======================================== */
 
 .mobile-animation-section {
   position: relative;
@@ -26,11 +24,6 @@
   overflow: hidden;
   background: var(--color-stage-bg);
   border-bottom: 1px solid var(--color-border-color);
-}
-
-.mobile-animation-section.auto-height {
-  flex: 1;
-  min-height: 300px;
 }
 
 .mobile-stage-slot {
@@ -53,31 +46,74 @@
   touch-action: manipulation;
 }
 
-.mobile-graph-section {
-  flex-shrink: 0;
+/* ========================================
+   Tab Bar
+   ======================================== */
+
+.mobile-tab-bar {
   display: flex;
-  flex-direction: column;
-  min-height: 140px;
+  flex-shrink: 0;
   border-bottom: 1px solid var(--color-border-color);
   background: var(--color-bg-primary);
 }
 
-.mobile-graph-section[data-collapsed='true'] .mobile-graph-slot {
-  display: none;
+.mobile-tab {
+  flex: 1;
+  padding: 10px 4px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  min-height: 44px;
 }
 
-.mobile-section-title {
-  margin: 0;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  border-bottom: 1px solid var(--color-border-color);
+.mobile-tab:active {
   background: var(--color-bg-secondary);
 }
 
-.mobile-graph-slot {
+.mobile-tab.active {
+  color: var(--color-accent-primary, #3b82f6);
+  border-bottom-color: var(--color-accent-primary, #3b82f6);
+  font-weight: 600;
+}
+
+/* ========================================
+   Tab Content & Panels
+   ======================================== */
+
+.mobile-tab-content {
+  flex: 1;
+  overflow: hidden;
   position: relative;
+}
+
+.mobile-tab-panel {
+  display: none;
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: 0.5rem 0.75rem;
+}
+
+.mobile-tab-panel.active {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ========================================
+   Slot internals (inside tab panels)
+   ======================================== */
+
+/* Graph slot */
+.mobile-graph-slot {
   display: flex;
   flex-direction: column;
   min-height: 120px;
@@ -90,7 +126,6 @@
   height: 100%;
 }
 
-/* Graph cells inside mobile graph slot */
 .mobile-graph-slot > .graph-cell {
   display: flex;
   flex-direction: column;
@@ -103,73 +138,121 @@
   background: var(--color-bg-secondary);
 }
 
-.mobile-control-section {
-  flex-shrink: 0;
-  padding: 0.75rem;
-  background: var(--color-bg-card);
+/* Control slot — unified font sizing */
+.mobile-control-slot [data-testid='control-card'] {
+  font-size: 0.8125rem;
 }
 
-.mobile-control-header {
-  margin-bottom: 0.5rem;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
+.mobile-control-slot button {
+  font-size: 0.75rem;
+}
+
+.mobile-control-slot .grid {
+  gap: 4px;
 }
 
 .mobile-control-slot {
+  --scene-selector-label-size: 12px;
+  --scene-selector-text-size: 11px;
+  --scene-selector-desc-size: 10px;
+  --scene-selector-padding: 8px 10px;
+  --scene-selector-gap: 4px;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
+/* Readout slot — no border (tab panel provides separation) */
 .mobile-readout-slot {
-  margin-top: 0.75rem;
   padding: 0.25rem 0;
-  border-top: 1px solid var(--color-border-color);
 }
 
-/* Inline readout panel — no header, compact grid */
+/* ========================================
+   Transport bar responsive sizing
+   ======================================== */
+
+.mobile-stage-slot .teaching-stage-floating-controls {
+  --transport-btn-size: 42px;
+  --transport-icon-size: 15px;
+  --transport-font-size: 12px;
+  --transport-padding: 8px 10px;
+  --transport-gap: 8px;
+  --transport-slider-width: 64px;
+  --transport-divider-height: 24px;
+  --transport-speed-width: 40px;
+  --transport-top: 8px;
+  --transport-left: 8px;
+  --transport-radius: 8px;
+  --transport-slider-height: 14px;
+  --transport-slider-width: 80px;
+  max-width: calc(100% - 16px);
+}
+
+/* ========================================
+   Readout panel (inline compact)
+   ======================================== */
+
+/* Inline readout panel */
 .mobile-readout-panel--inline {
   width: 100%;
   border: none;
   background: transparent;
   box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Compact inline title */
+.mobile-readout-inline-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  padding: 0 2px;
+  line-height: 1;
+  letter-spacing: 0.02em;
 }
 
 .mobile-readout-panel--inline .mobile-readout-slot {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 4px;
+  gap: 6px;
   padding: 0;
   margin: 0;
   max-height: none;
   overflow: visible;
 }
 
-/* Compact items: label above value, centered */
+/* Compact items: subtle card background */
 .mobile-readout-item--compact {
   flex-direction: column;
   align-items: flex-start;
   gap: 1px;
-  padding: 4px 6px;
+  padding: 6px 8px;
   font-size: 0.75rem;
+  background: var(--color-bg-secondary, rgba(0,0,0,0.03));
+  border-radius: var(--radius-sm, 4px);
 }
 
 .mobile-readout-item--compact .mobile-readout-label {
-  font-size: 0.65rem;
+  font-size: 0.625rem;
   margin-right: 0;
-  opacity: 0.7;
+  opacity: 0.65;
   line-height: 1.1;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .mobile-readout-item--compact .mobile-readout-value {
-  font-size: 0.85rem;
+  font-size: 0.9rem;
+  font-weight: 700;
   line-height: 1.2;
+  color: var(--color-text-primary);
 }
 
 .mobile-readout-slot--adaptive {
   display: grid;
-  gap: 4px;
+  gap: 6px;
 }
 
 .mobile-readout-slot--1col { grid-template-columns: 1fr; }
@@ -180,9 +263,4 @@
 /* Landscape: reduce animation section to use more horizontal space */
 .mobile-stack-layout.is-landscape .mobile-animation-section {
   max-height: 55vh;
-}
-
-/* Floating controls (transport bar etc.) must not overflow on narrow screens */
-.mobile-stage-slot .teaching-stage-floating-controls {
-  max-width: calc(100% - 24px);
 }

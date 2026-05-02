@@ -24,15 +24,15 @@ export function drawOscillatorCell(
   const isHorizontal = osc.params.orientation === 'horizontal';
   const { responsiveScale } = config;
 
-  // 连续响应式尺寸
-  const ballRadius = Math.max(10, Math.round(22 * responsiveScale));
-  const labelFontSize = Math.max(10, Math.round(12 * responsiveScale));
-  const paramFontSize = Math.max(8, Math.round(9 * responsiveScale));
-  const valueFontSize = Math.max(9, Math.round(11 * responsiveScale));
+  // 连续响应式尺寸（移动端下限调高，确保可读性）
+  const ballRadius = Math.max(12, Math.round(22 * responsiveScale));
+  const labelFontSize = Math.max(11, Math.round(12 * responsiveScale));
+  const paramFontSize = Math.max(9, Math.round(9 * responsiveScale));
+  const valueFontSize = Math.max(10, Math.round(11 * responsiveScale));
 
   // 边距随 scale 连续变化
-  const marginTop = Math.round(Math.max(18, 22 * responsiveScale));
-  const marginBottom = Math.round(Math.max(6, 8 * responsiveScale));
+  const marginTop = Math.round(Math.max(16, 20 * responsiveScale));
+  const marginBottom = Math.round(Math.max(5, 6 * responsiveScale));
   const marginLeft = Math.round(Math.max(6, 8 * responsiveScale));
   const marginRight = Math.round(Math.max(6, 8 * responsiveScale));
 
@@ -47,7 +47,7 @@ export function drawOscillatorCell(
   ctx.fillText(`${index + 1}.${statusText}`, cellX + marginLeft, cellY + marginTop - 4);
 
   // 参数（右上角）
-  ctx.fillStyle = Colors.gray;
+  ctx.fillStyle = isDark ? Colors.darkText : Colors.gray;
   ctx.font = `${paramFontSize}px "Noto Sans SC", sans-serif`;
   ctx.textAlign = 'right';
   ctx.fillText(
@@ -73,12 +73,12 @@ export function drawOscillatorCell(
   if (isHorizontal) {
     clickArea = drawHorizontal(
       ctx, osc, centerX, centerY, displacement, springLength, ballRadius,
-      coils, coilWidth, valueFontSize, isDark
+      coils, coilWidth, valueFontSize, isDark, responsiveScale
     );
   } else {
     clickArea = drawVertical(
       ctx, osc, centerX, centerY, displacement, springLength, ballRadius,
-      coils, coilWidth, valueFontSize, isDark
+      coils, coilWidth, valueFontSize, isDark, responsiveScale
     );
   }
 

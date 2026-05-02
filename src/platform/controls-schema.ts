@@ -88,6 +88,8 @@ export type ControlField =
 export type ControlsSection = {
   title: string;
   collapsed?: boolean;
+  /** 显式声明跨列行为。`'full'` 强制占满整行，不设则自动检测（含 slider/text → 全宽） */
+  span?: 'full';
   fields: ControlField[];
 };
 

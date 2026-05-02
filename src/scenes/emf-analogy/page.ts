@@ -119,7 +119,7 @@ bootScenePage({
   layoutConfig: {
     defaultLeftRatio: 0.3,
     hasGraph: false,
-    controlColumns: 1,
+    controlColumns: 'auto',
     readoutCollapsed: true
   }
 });

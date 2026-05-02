@@ -207,6 +207,106 @@ describe('sidebar-toggle capability', () => {
     expect(ctx.container.querySelector('.sidebar-toggle-btn')).toBeTruthy();
     instance.dispose();
   });
+
+  // Regression: display:none on grid items removes them from flow. Without
+  // grid-column-start:3 on the right panel, it collapses to column 1 (0px).
+  function createGridFixture(rightPanelClass: string) {
+    const container = document.createElement('div');
+    container.style.cssText = 'width: 1200px; height: 800px;';
+    container.style.display = 'grid';
+    container.style.gridTemplateColumns = 'minmax(260px, 40%) 8px 1fr';
+
+    const leftPanel = document.createElement('aside');
+    leftPanel.className = 'layout-left-panel';
+    container.appendChild(leftPanel);
+
+    const resizer = document.createElement('div');
+    resizer.setAttribute('role', 'separator');
+    resizer.setAttribute('aria-orientation', 'vertical');
+    container.appendChild(resizer);
+
+    const rightPanel = document.createElement('section');
+    rightPanel.className = rightPanelClass;
+    container.appendChild(rightPanel);
+
+    return { container, leftPanel, resizer, rightPanel };
+  }
+
+  it('keeps right panel visible after hiding sidebar (teaching- prefix)', () => {
+    const { container, rightPanel } = createGridFixture('teaching-right-panel');
+    document.body.appendChild(container);
+
+    const ctx = createTestContext({ container });
+    const instance = capabilityFactories['sidebar-toggle']({}).mount(
+      { control: document.createElement('div'), animation: document.createElement('div') }, {}, ctx
+    );
+
+    const btn = container.querySelector('.sidebar-toggle-btn') as HTMLButtonElement;
+    btn.click();
+
+    // Right panel must not be hidden
+    const cs = getComputedStyle(rightPanel);
+    expect(cs.display).not.toBe('none');
+
+    // Right panel must still be attached to the DOM
+    expect(container.contains(rightPanel)).toBe(true);
+
+    instance.dispose();
+    container.remove();
+  });
+
+  it('keeps right panel visible after hiding sidebar (srgb- prefix)', () => {
+    const { container, rightPanel } = createGridFixture('srgb-right-panel');
+    document.body.appendChild(container);
+
+    const ctx = createTestContext({ container });
+    const instance = capabilityFactories['sidebar-toggle']({}).mount(
+      { control: document.createElement('div'), animation: document.createElement('div') }, {}, ctx
+    );
+
+    const btn = container.querySelector('.sidebar-toggle-btn') as HTMLButtonElement;
+    btn.click();
+
+    // Right panel must not be hidden
+    const cs = getComputedStyle(rightPanel);
+    expect(cs.display).not.toBe('none');
+
+    // Right panel must still be attached to the DOM
+    expect(container.contains(rightPanel)).toBe(true);
+
+    instance.dispose();
+    container.remove();
+  });
+
+  it('saves and restores CSS-function left widths (minmax)', () => {
+    const ctx = createTestContext();
+    ctx.container.style.gridTemplateColumns = 'minmax(260px, 40%) 8px 1fr';
+
+    const sidebar = document.createElement('aside');
+    sidebar.className = 'layout-left-panel';
+    ctx.container.appendChild(sidebar);
+
+    const resizer = document.createElement('div');
+    resizer.setAttribute('role', 'separator');
+    resizer.setAttribute('aria-orientation', 'vertical');
+    ctx.container.appendChild(resizer);
+
+    const instance = capabilityFactories['sidebar-toggle']({}).mount(
+      { control: document.createElement('div'), animation: document.createElement('div') }, {}, ctx
+    );
+
+    const btn = ctx.container.querySelector('.sidebar-toggle-btn') as HTMLButtonElement;
+
+    // Hide -> must save the minmax track
+    btn.click();
+    expect(ctx.container.style.gridTemplateColumns).toBe('0px 8px 1fr');
+
+    // Show -> must restore the full minmax(260px, 40%) not a truncated string
+    btn.click();
+    expect(ctx.container.style.gridTemplateColumns).toBe('minmax(260px, 40%) 8px 1fr');
+
+    instance.dispose();
+  });
 });
 
 

@@ -24,8 +24,8 @@ describe('canvas-sizing', () => {
       expect(getResponsiveScale(100, 100, 600)).toBe(0.3);
     });
 
-    it('uses default reference size of 600', () => {
-      expect(getResponsiveScale(600, 400)).toBeCloseTo(0.67, 1);
+    it('uses default reference size of 400', () => {
+      expect(getResponsiveScale(600, 400)).toBeCloseTo(1.0, 1);
     });
   });
 

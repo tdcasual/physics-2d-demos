@@ -9,7 +9,8 @@ export function drawFieldLinesFromPoint(
   y: number,
   charge: number,
   lineLength: number,
-  isDark: boolean
+  isDark: boolean,
+  s: number
 ): void {
   const absQ = Math.abs(charge);
   if (absQ === 0) return;
@@ -25,15 +26,17 @@ export function drawFieldLinesFromPoint(
 
   ctx.save();
   ctx.strokeStyle = color;
-  ctx.lineWidth = 1;
+  ctx.lineWidth = Math.max(0.5, 1 * s);
   ctx.lineCap = 'round';
+
+  const startOffset = Math.max(4, 8 * s);
 
   for (let i = 0; i < lineCount; i++) {
     const angle = (i / lineCount) * Math.PI * 2;
     const dir = isPositive ? 1 : -1;
 
-    const startX = x + Math.cos(angle) * 8;
-    const startY = y + Math.sin(angle) * 8;
+    const startX = x + Math.cos(angle) * startOffset;
+    const startY = y + Math.sin(angle) * startOffset;
     const endX = x + Math.cos(angle) * lineLength * dir;
     const endY = y + Math.sin(angle) * lineLength * dir;
 
@@ -45,7 +48,7 @@ export function drawFieldLinesFromPoint(
 
     // 箭头（在末端）
     const arrowAngle = Math.atan2(endY - startY, endX - startX);
-    const arrowLen = 6;
+    const arrowLen = Math.max(4, 6 * s);
     const arrowSpread = Math.PI / 6;
 
     ctx.strokeStyle = arrowColor;
@@ -78,7 +81,8 @@ export function drawFieldLinesBetween(
   x2: number,
   y2: number,
   q2: number,
-  isDark: boolean
+  isDark: boolean,
+  s: number
 ): void {
   // 异号电荷之间绘制弧线连接
   if (q1 * q2 >= 0) return;
@@ -91,8 +95,8 @@ export function drawFieldLinesBetween(
   ctx.strokeStyle = isDark
     ? 'rgba(148,163,184,0.15)'
     : 'rgba(71,85,105,0.12)';
-  ctx.lineWidth = 0.5;
-  ctx.setLineDash([4, 4]);
+  ctx.lineWidth = Math.max(0.3, 0.5 * s);
+  ctx.setLineDash([4 * s, 4 * s]);
 
   // 绘制几条弧线
   for (let i = -1; i <= 1; i++) {

@@ -18,23 +18,6 @@ export const gansheControlsSchema: ControlsSchema = {
       ]
     },
     {
-      title: '观察点',
-      collapsed: false,
-      fields: [
-        {
-          type: 'slider',
-          key: 'observerX',
-          label: '位置 x',
-          min: 0,
-          max: 30,
-          step: 0.1,
-          value: 15,
-          unit: 'm'
-        }
-      ]
-    },
-
-    {
       title: '干涉预设',
       collapsed: false,
       fields: [

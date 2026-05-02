@@ -86,8 +86,9 @@ export function createSidebarToggle(
         const isMultiColumn = currentCols.includes(' ');
 
         if (sidebarHidden) {
-          // Save only the first column width — resizer drags are preserved
-          savedLeftWidth = currentCols.split(' ')[0];
+          // Save the first track including CSS functions with spaces (e.g. minmax(260px, 40%))
+          const match = currentCols.match(/^(.+?)\s+8px\s+1fr$/);
+          savedLeftWidth = match ? match[1] : currentCols.split(' ')[0];
           if (isMultiColumn) {
             ctx.container.style.gridTemplateColumns = '0px 8px 1fr';
           }
@@ -97,17 +98,19 @@ export function createSidebarToggle(
           liveRegion.textContent = '控制面板已隐藏';
         } else {
           if (isMultiColumn && savedLeftWidth) {
-            // Restore the saved width into the current grid, which may
-            // have been updated by a resize while hidden.
-            const parts = currentCols.split(' ');
-            parts[0] = savedLeftWidth;
-            ctx.container.style.gridTemplateColumns = parts.join(' ');
+            // Restore the saved first track into the current grid
+            ctx.container.style.gridTemplateColumns = `${savedLeftWidth} 8px 1fr`;
           }
           if (sidebar) { sidebar.style.display = ''; sidebar.setAttribute('aria-hidden', 'false'); }
           if (resizerEl) resizerEl.style.display = '';
           if (btn) { btn.textContent = hideLabel; btn.setAttribute('aria-expanded', 'true'); }
           liveRegion.textContent = '控制面板已显示';
         }
+
+        // Trigger scene resize after layout settles so canvas picks up new container dimensions
+        requestAnimationFrame(() => {
+          window.dispatchEvent(new Event('resize'));
+        });
       };
 
       btn.addEventListener('click', handler);

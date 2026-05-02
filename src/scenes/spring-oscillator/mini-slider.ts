@@ -10,10 +10,11 @@ export function createMiniSlider(
   step: number,
   unit: string,
   onChange: (val: number) => void
-): HTMLElement {
+): { element: HTMLElement; dispose: () => void } {
   const container = document.createElement('div');
   container.className = 'flex items-center flex-1 min-w-0';
   container.style.gap = '1px';
+  container.style.minWidth = 'calc(120px * var(--ui-scale, 1))';
 
   // 标签 - 响应式字体（k, m等增大20%）
   const labelSpan = document.createElement('span');
@@ -49,14 +50,22 @@ export function createMiniSlider(
   valueSpan.style.lineHeight = '1.1';
   valueSpan.textContent = String(value) + (unit || '');
 
-  slider.addEventListener('input', () => {
+  function onInput() {
     valueSpan.textContent = slider.value + (unit || '');
-  });
-
-  slider.addEventListener('change', () => {
+  }
+  function onSliderChange() {
     onChange(parseFloat(slider.value));
-  });
+  }
+
+  slider.addEventListener('input', onInput);
+  slider.addEventListener('change', onSliderChange);
 
   container.append(labelSpan, slider, valueSpan);
-  return container;
+  return {
+    element: container,
+    dispose() {
+      slider.removeEventListener('input', onInput);
+      slider.removeEventListener('change', onSliderChange);
+    }
+  };
 }

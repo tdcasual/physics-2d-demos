@@ -64,6 +64,10 @@
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   align-content: start;
 }
+/* Sections containing sliders or text inputs span the full row */
+:is(.teaching-control-slot, .srgb-control-slot)[data-control-columns='auto'] > [data-span='full'] {
+  grid-column: 1 / -1;
+}
 :is(.teaching-control-slot, .srgb-control-slot)[data-control-columns='2'] {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -133,6 +137,9 @@
   flex-direction: column;
   overflow: hidden;
   background: var(--color-bg-primary);
+  /* Always occupy the 3rd grid column so the right panel doesn't collapse to
+     0px when sidebar-toggle sets display:none on the first two grid items. */
+  grid-column-start: 3;
 }
 
 /* ---- Stage toolbar ---- */

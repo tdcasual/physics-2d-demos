@@ -65,76 +65,46 @@ const presets: Record<string, Partial<WaveParams>> = {
   }
 };
 
-/** 创建波源参数控制面板（2列紧凑布局） */
-function createWaveParamCard(
-  initial: WaveParams,
+/**
+ * 创建实体参数控制卡片
+ *
+ * 设计原则：按逻辑实体分组，不按参数类型分组。
+ * 内部自适应布局：≥2 个滑块时两列并排，单滑块占满整行。
+ * 当未来有其他"多实体控制"场景时，遵循同样的实体-卡片映射。
+ */
+function createWaveSourceCard(
+  title: string,
+  accentColor: string,
+  sliders: Array<{
+    key: string; label: string; min: number; max: number; step: number;
+    value: number; unit: string;
+  }>,
   onChange: (key: string, value: number) => void
 ): { element: HTMLElement; setValue: (key: string, value: number) => void } {
-  const card = createControlCard('波源参数', { defaultCollapsed: false });
+  const card = createControlCard(title, { defaultCollapsed: false, span: 'full' });
   const body = card.body;
-
-  const grid = document.createElement('div');
-  grid.style.display = 'grid';
-  grid.style.gridTemplateColumns = '1fr 1fr';
-  grid.style.gap = '4px';
-  body.appendChild(grid);
+  body.style.display = 'grid';
+  body.style.gridTemplateColumns = sliders.length >= 2 ? '1fr 1fr' : '1fr';
+  body.style.gap = '4px';
 
   const valueSetters = new Map<string, (value: number) => void>();
 
-  function makeSlider(
-    key: string,
-    label: string,
-    min: number,
-    max: number,
-    step: number,
-    value: number,
-    unit: string,
-    accentColor?: string
-  ): HTMLElement {
-    const row = createSliderRow(label, {
-      min,
-      max,
-      step,
-      value,
-      unit,
-      onChange: (val) => onChange(key, val)
+  for (const s of sliders) {
+    const row = createSliderRow(s.label, {
+      min: s.min, max: s.max, step: s.step,
+      value: s.value, unit: s.unit,
+      onChange: (val) => onChange(s.key, val)
     });
-    if (accentColor) {
-      const input = row.querySelector('input');
-      if (input) {
-        input.style.accentColor = accentColor;
-      }
-    }
     const input = row.querySelector('input');
-    valueSetters.set(key, (v) => {
-      if (input) {
+    if (input) {
+      input.style.accentColor = accentColor;
+      valueSetters.set(s.key, (v) => {
         input.value = String(v);
         input.dispatchEvent(new Event('input'));
-      }
-    });
-    return row;
+      });
+    }
+    body.appendChild(row);
   }
-
-  // Row 1: freq1 | freq2
-  grid.appendChild(
-    makeSlider('freq1', 'f₁ 频率', 0.5, 10, 0.5, initial.freq1, 'Hz', '#3b82f6')
-  );
-  grid.appendChild(
-    makeSlider('freq2', 'f₂ 频率', 0.5, 10, 0.5, initial.freq2, 'Hz', '#ef4444')
-  );
-
-  // Row 2: amp1 | amp2
-  grid.appendChild(
-    makeSlider('amp1', 'A₁ 振幅', 0.5, 10, 0.5, initial.amp1, 'cm', '#3b82f6')
-  );
-  grid.appendChild(
-    makeSlider('amp2', 'A₂ 振幅', 0.5, 10, 0.5, initial.amp2, 'cm', '#ef4444')
-  );
-
-  // Row 3: phaseDiff (full width)
-  const phaseRow = makeSlider('phaseDiff', 'Δφ 相位差', 0, 360, 5, initial.phaseDiff, '°', '#8b5cf6');
-  phaseRow.style.gridColumn = '1 / -1';
-  grid.appendChild(phaseRow);
 
   return {
     element: card.element,
@@ -317,32 +287,40 @@ bootScenePage({
       }
     });
 
-    // Insert custom wave param card after "观察点" section (before 干涉预设)
-    const initialParams = scene.getParams();
-    const waveCard = createWaveParamCard(initialParams, (key, value) => {
-      applyParam(key, value);
-      scene.render();
-    });
-
-    // Observer manager card
+    // Observer manager card (narrow — can share rows)
     const observerManager = createObserverManager(scene as ReturnType<typeof createGansheScene>, () => {
       scene.render();
     });
 
-    // Insert cards before the last card (干涉预设)
-    const lastCard = mount.lastElementChild;
-    if (lastCard) {
-      mount.insertBefore(waveCard.element, lastCard);
-      mount.insertBefore(observerManager.element, lastCard);
-    } else {
-      mount.appendChild(waveCard.element);
-      mount.appendChild(observerManager.element);
-    }
+    // Wave source cards: one per logical entity, vertically stacked
+    // Design: entity-grouped, not parameter-type-grouped
+    const initialParams = scene.getParams();
+    const sourceACard = createWaveSourceCard('波源 A (左)', '#3b82f6', [
+      { key: 'freq1', label: 'f₁ 频率', min: 0.5, max: 10, step: 0.5, value: initialParams.freq1, unit: 'Hz' },
+      { key: 'amp1',  label: 'A₁ 振幅', min: 0.5, max: 10, step: 0.5, value: initialParams.amp1,  unit: 'cm' },
+    ], (key, value) => { applyParam(key, value); scene.render(); });
+
+    const sourceBCard = createWaveSourceCard('波源 B (右)', '#ef4444', [
+      { key: 'freq2', label: 'f₂ 频率', min: 0.5, max: 10, step: 0.5, value: initialParams.freq2, unit: 'Hz' },
+      { key: 'amp2',  label: 'A₂ 振幅', min: 0.5, max: 10, step: 0.5, value: initialParams.amp2,  unit: 'cm' },
+    ], (key, value) => { applyParam(key, value); scene.render(); });
+
+    const phaseCard = createWaveSourceCard('相位差', '#8b5cf6', [
+      { key: 'phaseDiff', label: 'Δφ', min: 0, max: 360, step: 5, value: initialParams.phaseDiff, unit: '°' },
+    ], (key, value) => { applyParam(key, value); scene.render(); });
+
+    // Narrow cards first, full-width cards last
+    mount.appendChild(observerManager.element);
+    mount.appendChild(sourceACard.element);
+    mount.appendChild(sourceBCard.element);
+    mount.appendChild(phaseCard.element);
+
+    const sourceCards = [sourceACard, sourceBCard, phaseCard];
 
     return {
       setParam(key: string, value: number) {
         if (paramMapping[key]) {
-          waveCard.setValue(key, value);
+          for (const card of sourceCards) card.setValue(key, value);
         } else {
           renderer.setValue(key, value);
         }
@@ -353,8 +331,8 @@ bootScenePage({
       refreshObservers: observerManager.refresh,
       dispose() {
         renderer.dispose();
-        waveCard.element.remove();
         observerManager.element.remove();
+        for (const card of sourceCards) card.element.remove();
       }
     };
   }

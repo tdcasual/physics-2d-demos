@@ -1,7 +1,8 @@
 import type { GraphDrawContext } from './types';
 
 export function drawGraphs(context: GraphDrawContext): void {
-  const { xCtx, vCtx, xW, xH, vW, vH, visualScale, snapshot } = context;
+  const { xCtx, vCtx, xW, xH, vW, vH, visualScale, snapshot, theme } = context;
+  const isLight = theme === 'light';
 
   xCtx.clearRect(0, 0, xW, xH);
   vCtx.clearRect(0, 0, vW, vH);
@@ -11,6 +12,19 @@ export function drawGraphs(context: GraphDrawContext): void {
   const paddingTop = 10 * visualScale;
   const paddingRight = 10 * visualScale;
 
+  const axisColor = isLight
+    ? 'rgba(51,65,85,0.7)'
+    : 'rgba(148,163,184,0.8)';
+  const labelColor = isLight
+    ? 'rgba(30,41,59,0.85)'
+    : 'rgba(226,232,240,0.9)';
+  const gridColor = isLight
+    ? 'rgba(71,85,105,0.18)'
+    : 'rgba(148,163,184,0.25)';
+  const markerColor = isLight
+    ? 'rgba(30,41,59,0.55)'
+    : 'rgba(248,250,252,0.65)';
+
   const drawAxis = (
     target: CanvasRenderingContext2D,
     w: number,
@@ -18,7 +32,7 @@ export function drawGraphs(context: GraphDrawContext): void {
     yLabel: string
   ): void => {
     target.save();
-    target.strokeStyle = 'rgba(148,163,184,0.8)';
+    target.strokeStyle = axisColor;
     target.lineWidth = Math.max(2.5 * visualScale, 1.4 * visualScale);
     target.beginPath();
     target.moveTo(paddingLeft, paddingTop);
@@ -27,7 +41,7 @@ export function drawGraphs(context: GraphDrawContext): void {
     target.stroke();
 
     target.font = `${Math.max(14, Math.round(12 * visualScale))}px system-ui`;
-    target.fillStyle = 'rgba(148,163,184,0.9)';
+    target.fillStyle = labelColor;
     target.textAlign = 'left';
     target.fillText(yLabel, 6, paddingTop + 12 * visualScale);
     target.textAlign = 'right';
@@ -65,11 +79,11 @@ export function drawGraphs(context: GraphDrawContext): void {
     h: number
   ): void => {
     target.save();
-    target.strokeStyle = 'rgba(148,163,184,0.25)';
+    target.strokeStyle = gridColor;
     target.lineWidth = Math.max(2.5 * visualScale, 1.2 * visualScale);
     target.setLineDash([4 * visualScale, 4 * visualScale]);
     target.font = `${Math.max(13, Math.round(11 * visualScale))}px system-ui`;
-    target.fillStyle = 'rgba(148,163,184,0.9)';
+    target.fillStyle = labelColor;
 
     const step = Math.max(1, Math.round(snapshot.params.totalTime / 5));
     for (let tv = 0; tv <= snapshot.params.totalTime + 1e-6; tv += step) {
@@ -166,7 +180,7 @@ export function drawGraphs(context: GraphDrawContext): void {
   ): void => {
     const x = tToXpix(currentTime, w);
     target.save();
-    target.strokeStyle = 'rgba(248,250,252,0.85)';
+    target.strokeStyle = markerColor;
     target.setLineDash([6 * visualScale, 4 * visualScale]);
     target.lineWidth = Math.max(2.5 * visualScale, 1.9 * visualScale);
     target.beginPath();

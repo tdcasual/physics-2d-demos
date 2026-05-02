@@ -19,15 +19,15 @@ export function createFloatingControls(options: {
   container.className = 'teaching-stage-floating-controls';
   container.style.cssText = `
     position: absolute;
-    top: 12px;
-    left: 12px;
+    top: var(--transport-top, 12px);
+    left: var(--transport-left, 12px);
     display: inline-flex;
-    gap: 12px;
+    gap: var(--transport-gap, 12px);
     align-items: center;
     z-index: 10;
-    padding: 12px 16px;
+    padding: var(--transport-padding, 12px 16px);
     background: var(--card-bg, rgba(0,0,0,0.3));
-    border-radius: 10px;
+    border-radius: var(--transport-radius, 10px);
     border: 1px solid var(--border-color, rgba(255,255,255,0.1));
     backdrop-filter: blur(8px);
   `;
@@ -36,13 +36,13 @@ export function createFloatingControls(options: {
   playPauseBtn.type = 'button';
   playPauseBtn.title = '播放/暂停';
   playPauseBtn.style.cssText = `
-    width: 44px;
-    height: 44px;
+    width: var(--transport-btn-size, 44px);
+    height: var(--transport-btn-size, 44px);
     border-radius: 8px;
     border: 1px solid var(--border-color, rgba(255,255,255,0.15));
     background: var(--btn-bg, rgba(255,255,255,0.1));
     color: var(--text-primary, #fff);
-    font-size: 20px;
+    font-size: var(--transport-icon-size, 20px);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -82,13 +82,13 @@ export function createFloatingControls(options: {
   resetBtn.title = '重置';
   resetBtn.textContent = '↺';
   resetBtn.style.cssText = `
-    width: 44px;
-    height: 44px;
+    width: var(--transport-btn-size, 44px);
+    height: var(--transport-btn-size, 44px);
     border-radius: 8px;
     border: 1px solid var(--border-color, rgba(255,255,255,0.15));
     background: var(--btn-bg, rgba(255,255,255,0.1));
     color: var(--text-secondary, #aaa);
-    font-size: 20px;
+    font-size: var(--transport-icon-size, 20px);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -118,7 +118,7 @@ export function createFloatingControls(options: {
   const divider = document.createElement('div');
   divider.style.cssText = `
     width: 1px;
-    height: 32px;
+    height: var(--transport-divider-height, 32px);
     background: var(--border-color, rgba(255,255,255,0.15));
     margin: 0 4px;
   `;
@@ -126,7 +126,7 @@ export function createFloatingControls(options: {
   const speedLabel = document.createElement('span');
   speedLabel.textContent = '速度';
   speedLabel.style.cssText = `
-    font-size: 16px;
+    font-size: var(--transport-font-size, 16px);
     color: var(--text-secondary, #aaa);
     font-weight: 500;
     white-space: nowrap;
@@ -139,18 +139,18 @@ export function createFloatingControls(options: {
   speedSlider.step = '0.05';
   speedSlider.value = String(options.getSpeed?.() ?? 1);
   speedSlider.style.cssText = `
-    width: 100px;
-    height: 6px;
+    width: var(--transport-slider-width, 100px);
+    height: var(--transport-slider-height, 6px);
     cursor: pointer;
   `;
 
   const speedValue = document.createElement('span');
   speedValue.textContent = `${parseFloat(speedSlider.value).toFixed(2)}×`;
   speedValue.style.cssText = `
-    font-size: 16px;
+    font-size: var(--transport-font-size, 16px);
     color: var(--text-primary, #fff);
     font-weight: 600;
-    min-width: 50px;
+    min-width: var(--transport-speed-width, 50px);
     text-align: right;
   `;
 

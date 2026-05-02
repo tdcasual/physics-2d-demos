@@ -9,7 +9,8 @@ export function drawGlassRod(
   y: number,
   w: number,
   h: number,
-  isDark: boolean
+  isDark: boolean,
+  s: number
 ): void {
   ctx.save();
 
@@ -33,12 +34,13 @@ export function drawGlassRod(
   ctx.strokeStyle = isDark
     ? 'rgba(255,255,255,0.08)'
     : 'rgba(0,0,0,0.06)';
-  ctx.lineWidth = 1;
+  ctx.lineWidth = Math.max(0.5, 1 * s);
+  const pad = 4 * s;
   for (let i = 1; i < 6; i++) {
     const lx = x + (w * i) / 6;
     ctx.beginPath();
-    ctx.moveTo(lx, y + 4);
-    ctx.lineTo(lx, y + h - 4);
+    ctx.moveTo(lx, y + pad);
+    ctx.lineTo(lx, y + h - pad);
     ctx.stroke();
   }
 
@@ -46,7 +48,7 @@ export function drawGlassRod(
   ctx.strokeStyle = isDark
     ? 'rgba(200,150,80,0.5)'
     : 'rgba(160,120,60,0.4)';
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = Math.max(1, 1.5 * s);
   roundRect(ctx, x, y, w, h, Math.min(8, h * 0.1));
   ctx.stroke();
 
@@ -60,7 +62,8 @@ export function drawSilk(
   y: number,
   w: number,
   h: number,
-  isDark: boolean
+  isDark: boolean,
+  s: number
 ): void {
   ctx.save();
 
@@ -83,19 +86,20 @@ export function drawSilk(
   ctx.strokeStyle = isDark
     ? 'rgba(255,255,255,0.06)'
     : 'rgba(0,0,0,0.05)';
-  ctx.lineWidth = 1;
+  ctx.lineWidth = Math.max(0.5, 1 * s);
+  const pad = 4 * s;
   for (let i = 1; i < 5; i++) {
     const ly = y + (h * i) / 5;
     ctx.beginPath();
-    ctx.moveTo(x + 4, ly);
-    ctx.lineTo(x + w - 4, ly);
+    ctx.moveTo(x + pad, ly);
+    ctx.lineTo(x + w - pad, ly);
     ctx.stroke();
   }
 
   ctx.strokeStyle = isDark
     ? 'rgba(170,140,200,0.5)'
     : 'rgba(140,120,170,0.4)';
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = Math.max(1, 1.5 * s);
   roundRect(ctx, x, y, w, h, Math.min(8, h * 0.1));
   ctx.stroke();
 
@@ -108,7 +112,8 @@ export function drawConductor(
   x: number,
   y: number,
   r: number,
-  isDark: boolean
+  isDark: boolean,
+  s: number
 ): void {
   ctx.save();
 
@@ -133,7 +138,7 @@ export function drawConductor(
   ctx.strokeStyle = isDark
     ? 'rgba(160,170,180,0.5)'
     : 'rgba(130,135,140,0.4)';
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = Math.max(1, 1.5 * s);
   ctx.stroke();
 
   // 高光
@@ -194,7 +199,8 @@ export function drawChargedSphere(
   y: number,
   r: number,
   charge: number,
-  isDark: boolean
+  isDark: boolean,
+  s: number
 ): void {
   ctx.save();
 
@@ -226,7 +232,7 @@ export function drawChargedSphere(
   ctx.strokeStyle = isPositive
     ? isDark ? 'rgba(239,68,68,0.6)' : 'rgba(220,50,50,0.5)'
     : isDark ? 'rgba(59,130,246,0.6)' : 'rgba(40,100,220,0.5)';
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = Math.max(1, 1.5 * s);
   ctx.stroke();
 
   // 高光
@@ -236,7 +242,7 @@ export function drawChargedSphere(
   ctx.fill();
 
   // 电荷数值
-  const fontSize = Math.max(12, r * 0.5);
+  const fontSize = Math.max(10, Math.round(Math.max(12, r * 0.5) * s));
   ctx.fillStyle = 'white';
   ctx.font = `bold ${fontSize}px "Noto Sans SC", Arial, sans-serif`;
   ctx.textAlign = 'center';

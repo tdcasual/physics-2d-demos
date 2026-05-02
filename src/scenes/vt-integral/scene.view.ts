@@ -47,8 +47,8 @@ export function createVtIntegralView(
     if (!canvas) return;
     const newCtx = sizeCanvasToFill(canvas);
     ctx = newCtx;
-    canvasWidth = canvas.clientWidth;
-    canvasHeight = canvas.clientHeight;
+    canvasWidth = Math.max(1, canvas.clientWidth || 800);
+    canvasHeight = Math.max(1, canvas.clientHeight || 600);
     responsiveScale = parseFloat(canvas.dataset.responsiveScale || '1');
   }
 

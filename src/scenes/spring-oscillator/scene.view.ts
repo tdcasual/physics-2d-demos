@@ -114,12 +114,13 @@ export function createSpringOscillatorView(
     const ctx = stageCtx;
 
     if (sim.oscillators.length === 0) {
+      const s = responsiveScale;
       ctx.fillStyle = Colors.gray;
-      ctx.font = '16px "Noto Sans SC", sans-serif';
+      ctx.font = `${Math.round(16 * s)}px "Noto Sans SC", sans-serif`;
       ctx.textAlign = 'center';
-      ctx.fillText('点击"添加振子"开始演示', width / 2, height / 2 - 15);
-      ctx.font = '13px "Noto Sans SC", sans-serif';
-      ctx.fillText('点击小球可开始/暂停运动', width / 2, height / 2 + 15);
+      ctx.fillText('点击"添加振子"开始演示', width / 2, height / 2 - 15 * s);
+      ctx.font = `${Math.round(13 * s)}px "Noto Sans SC", sans-serif`;
+      ctx.fillText('点击小球可开始/暂停运动', width / 2, height / 2 + 15 * s);
       return;
     }
 
@@ -132,7 +133,7 @@ export function createSpringOscillatorView(
     ctx.strokeStyle = isDark
       ? 'rgba(128,128,128,0.15)'
       : 'rgba(128,128,128,0.25)';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1 * responsiveScale;
 
     for (let i = 1; i < layout.cols; i++) {
       ctx.beginPath();

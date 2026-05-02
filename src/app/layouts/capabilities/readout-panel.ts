@@ -322,9 +322,12 @@ export function createReadoutPanel(
 
       let toggleCleanup: (() => void) | null = null;
 
-      // Inline mode: no header/toggle, compact grid layout
+      // Inline mode: compact title + grid, no toggle
       if (isInline) {
-        panel.append(slot);
+        const inlineTitle = document.createElement('div');
+        inlineTitle.className = `${cssPrefix}-readout-inline-title`;
+        inlineTitle.textContent = label;
+        panel.append(inlineTitle, slot);
       } else {
         const header = document.createElement('div');
         header.className = `${cssPrefix}-readout-header`;

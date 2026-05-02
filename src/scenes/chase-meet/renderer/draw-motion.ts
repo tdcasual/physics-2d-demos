@@ -26,9 +26,10 @@ export function drawMotion(context: MotionDrawContext): void {
     ? 'rgba(15,23,42,0.35)'
     : 'rgba(255,255,255,0.22)';
   ctx.lineWidth = Math.max(majorStroke, 3 * visualScale);
+  const roadMargin = 20 * visualScale;
   ctx.beginPath();
-  ctx.moveTo(20, mid);
-  ctx.lineTo(cssW - 20, mid);
+  ctx.moveTo(roadMargin, mid);
+  ctx.lineTo(cssW - roadMargin, mid);
   ctx.stroke();
 
   ctx.font = `${Math.max(14, Math.round(12 * visualScale))}px system-ui`;
@@ -39,7 +40,7 @@ export function drawMotion(context: MotionDrawContext): void {
   const steps = 8;
   for (let i = 0; i <= steps; i += 1) {
     const ratio = i / steps;
-    const x = 20 + (cssW - 40) * ratio;
+    const x = roadMargin + (cssW - 2 * roadMargin) * ratio;
     const worldX =
       snapshot.bounds.minX + ratio * (snapshot.bounds.maxX - snapshot.bounds.minX);
     ctx.beginPath();
@@ -50,7 +51,7 @@ export function drawMotion(context: MotionDrawContext): void {
   }
 
   const current = nearestSample(snapshot.samples, snapshot.state.t);
-  const padding = 40;
+  const padding = 40 * visualScale;
   const usable = cssW - 2 * padding;
   const screenXA =
     padding +

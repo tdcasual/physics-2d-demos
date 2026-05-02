@@ -182,6 +182,26 @@ export class SceneAdapter<
       this.lifecycle.onDispose(() =>
         window.removeEventListener('resize', handleResize)
       );
+
+      // Observe canvas parent for size changes (sidebar toggle, layout changes, etc.)
+      // window.resize doesn't fire on internal layout changes like sidebar toggle.
+      const parent = canvas.parentElement;
+      if (parent && typeof ResizeObserver !== 'undefined') {
+        let resizing = false;
+        const observer = new ResizeObserver(() => {
+          if (resizing) return;
+          resizing = true;
+          try {
+            this.scene?.resize();
+            this.scene?.render();
+          } finally {
+            resizing = false;
+          }
+        });
+        observer.observe(parent);
+        this.lifecycle.onDispose(() => observer.disconnect());
+      }
+
       this._resizeHandlerAdded = true;
     }
 

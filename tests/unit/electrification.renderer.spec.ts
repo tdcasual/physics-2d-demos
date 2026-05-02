@@ -55,20 +55,20 @@ describe('electrification renderer', () => {
   describe('draw-objects', () => {
     it('draws glass rod without throwing', () => {
       const { ctx } = makeCtx();
-      expect(() => drawGlassRod(ctx, 100, 100, 120, 60, true)).not.toThrow();
-      expect(() => drawGlassRod(ctx, 100, 100, 120, 60, false)).not.toThrow();
+      expect(() => drawGlassRod(ctx, 100, 100, 120, 60, true, 1)).not.toThrow();
+      expect(() => drawGlassRod(ctx, 100, 100, 120, 60, false, 1)).not.toThrow();
     });
 
     it('draws silk without throwing', () => {
       const { ctx } = makeCtx();
-      expect(() => drawSilk(ctx, 250, 100, 120, 60, true)).not.toThrow();
-      expect(() => drawSilk(ctx, 250, 100, 120, 60, false)).not.toThrow();
+      expect(() => drawSilk(ctx, 250, 100, 120, 60, true, 1)).not.toThrow();
+      expect(() => drawSilk(ctx, 250, 100, 120, 60, false, 1)).not.toThrow();
     });
 
     it('draws conductor without throwing', () => {
       const { ctx } = makeCtx();
-      expect(() => drawConductor(ctx, 200, 200, 40, true)).not.toThrow();
-      expect(() => drawConductor(ctx, 200, 200, 40, false)).not.toThrow();
+      expect(() => drawConductor(ctx, 200, 200, 40, true, 1)).not.toThrow();
+      expect(() => drawConductor(ctx, 200, 200, 40, false, 1)).not.toThrow();
     });
 
     it('draws ground symbol without throwing', () => {
@@ -79,51 +79,51 @@ describe('electrification renderer', () => {
 
     it('draws charged sphere without throwing', () => {
       const { ctx } = makeCtx();
-      expect(() => drawChargedSphere(ctx, 200, 200, 35, 2, true)).not.toThrow();
-      expect(() => drawChargedSphere(ctx, 200, 200, 35, -3, false)).not.toThrow();
-      expect(() => drawChargedSphere(ctx, 200, 200, 35, 0, true)).not.toThrow();
+      expect(() => drawChargedSphere(ctx, 200, 200, 35, 2, true, 1)).not.toThrow();
+      expect(() => drawChargedSphere(ctx, 200, 200, 35, -3, false, 1)).not.toThrow();
+      expect(() => drawChargedSphere(ctx, 200, 200, 35, 0, true, 1)).not.toThrow();
     });
   });
 
   describe('draw-charges', () => {
     it('draws net charges without throwing', () => {
       const { ctx } = makeCtx();
-      expect(() => drawNetCharges(ctx, 200, 200, 2, 30, true)).not.toThrow();
-      expect(() => drawNetCharges(ctx, 200, 200, -3, 30, true)).not.toThrow();
-      expect(() => drawNetCharges(ctx, 200, 200, 0, 30, true)).not.toThrow();
+      expect(() => drawNetCharges(ctx, 200, 200, 2, 30, true, 1)).not.toThrow();
+      expect(() => drawNetCharges(ctx, 200, 200, -3, 30, true, 1)).not.toThrow();
+      expect(() => drawNetCharges(ctx, 200, 200, 0, 30, true, 1)).not.toThrow();
     });
 
     it('draws atom charges without throwing', () => {
       const { ctx } = makeCtx();
-      expect(() => drawAtomCharges(ctx, 100, 100, 120, 60, 0, true)).not.toThrow();
-      expect(() => drawAtomCharges(ctx, 100, 100, 120, 60, 2, false)).not.toThrow();
+      expect(() => drawAtomCharges(ctx, 100, 100, 120, 60, 0, true, 1)).not.toThrow();
+      expect(() => drawAtomCharges(ctx, 100, 100, 120, 60, 2, false, 1)).not.toThrow();
     });
 
     it('draws transfer arrow without throwing', () => {
       const { ctx } = makeCtx();
-      expect(() => drawTransferArrow(ctx, 100, 200, 300, 200, true)).not.toThrow();
+      expect(() => drawTransferArrow(ctx, 100, 200, 300, 200, true, 1)).not.toThrow();
     });
   });
 
   describe('draw-field-lines', () => {
     it('draws field lines from point without throwing', () => {
       const { ctx } = makeCtx();
-      expect(() => drawFieldLinesFromPoint(ctx, 200, 200, 2, 60, true)).not.toThrow();
-      expect(() => drawFieldLinesFromPoint(ctx, 200, 200, -3, 60, true)).not.toThrow();
-      expect(() => drawFieldLinesFromPoint(ctx, 200, 200, 0, 60, true)).not.toThrow();
+      expect(() => drawFieldLinesFromPoint(ctx, 200, 200, 2, 60, true, 1)).not.toThrow();
+      expect(() => drawFieldLinesFromPoint(ctx, 200, 200, -3, 60, true, 1)).not.toThrow();
+      expect(() => drawFieldLinesFromPoint(ctx, 200, 200, 0, 60, true, 1)).not.toThrow();
     });
 
     it('draws field lines between opposite charges without throwing', () => {
       const { ctx } = makeCtx();
       expect(() =>
-        drawFieldLinesBetween(ctx, 100, 200, 2, 300, 200, -2, true)
+        drawFieldLinesBetween(ctx, 100, 200, 2, 300, 200, -2, true, 1)
       ).not.toThrow();
     });
 
     it('skips same-sign charges', () => {
       const { ctx } = makeCtx();
       expect(() =>
-        drawFieldLinesBetween(ctx, 100, 200, 2, 300, 200, 2, true)
+        drawFieldLinesBetween(ctx, 100, 200, 2, 300, 200, 2, true, 1)
       ).not.toThrow();
     });
   });
