@@ -151,6 +151,7 @@ export function createProjectileScene(
     },
     dispose(): void {
       listeners.length = 0;
+      view.dispose();
     }
   };
 }

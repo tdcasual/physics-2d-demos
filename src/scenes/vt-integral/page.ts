@@ -89,6 +89,9 @@ bootScenePage({
       setTheme(t: Theme) {
         scene.setTheme(t);
         notify();
+      },
+      dispose() {
+        scene.dispose();
       }
     };
   },

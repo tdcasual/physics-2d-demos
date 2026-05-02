@@ -1,3 +1,4 @@
+import { createSceneListener } from '../../app/scene-listener';
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import type { ReadoutItem } from '../../app/layouts/types';
 import { emfAnalogyMeta } from './scene.meta';
@@ -38,6 +39,7 @@ bootScenePage({
       theme,
       onReadout: () => {}
     });
+    const { subscribe, notify } = createSceneListener();
     return {
       ...scene,
       getState() {
@@ -45,10 +47,13 @@ bootScenePage({
       },
       startAll() {
         scene.start();
+        notify();
       },
       pauseAll() {
         scene.stop();
-      }
+        notify();
+      },
+      subscribe
     };
   },
   createControls: ({ mount, scene, onStatus }) => {

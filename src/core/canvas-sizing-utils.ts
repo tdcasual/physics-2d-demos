@@ -29,17 +29,19 @@ export function createCanvasContext(canvas: HTMLCanvasElement): CanvasContext {
   const ctx = canvas.getContext('2d')!;
   const rect = canvas.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
+  const w = Math.max(1, rect.width);
+  const h = Math.max(1, rect.height);
 
   // 设置高DPI
-  canvas.width = rect.width * dpr;
-  canvas.height = rect.height * dpr;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
   ctx.scale(dpr, dpr);
 
   return {
     canvas,
     ctx,
-    width: rect.width,
-    height: rect.height,
+    width: w,
+    height: h,
     dpr
   };
 }
