@@ -78,7 +78,7 @@
 
 .mobile-graph-slot {
   position: relative;
-  min-height: 0;
+  min-height: 120px;
   flex: 1;
 }
 
@@ -111,9 +111,45 @@
   margin-top: 0.75rem;
   padding: 0.25rem 0;
   border-top: 1px solid var(--color-border-color);
-  display: flex;
-  flex-wrap: wrap;
+}
+
+/* Inline readout panel — no header, compact grid */
+.mobile-readout-panel--inline {
+  width: 100%;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.mobile-readout-panel--inline .mobile-readout-slot {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 4px;
+  padding: 0;
+  margin: 0;
+  max-height: none;
+  overflow: visible;
+}
+
+/* Compact items: label above value, centered */
+.mobile-readout-item--compact {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 4px 6px;
+  font-size: 0.75rem;
+}
+
+.mobile-readout-item--compact .mobile-readout-label {
+  font-size: 0.65rem;
+  margin-right: 0;
+  opacity: 0.7;
+  line-height: 1.1;
+}
+
+.mobile-readout-item--compact .mobile-readout-value {
+  font-size: 0.85rem;
+  line-height: 1.2;
 }
 
 .mobile-readout-slot--adaptive {

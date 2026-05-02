@@ -116,7 +116,7 @@ export class MobileStackLayoutV2 implements ILayout {
     if (cfg.hasGraph !== false) {
       const graphSection = document.createElement('section');
       graphSection.className = 'mobile-graph-section graph-section';
-      graphSection.setAttribute('data-collapsed', String(!(cfg.graphExpanded ?? false)));
+      graphSection.setAttribute('data-collapsed', String(!(cfg.graphExpanded ?? true)));
       const graphH2 = document.createElement('h2');
       graphH2.className = 'mobile-section-title';
       graphH2.textContent = '📈 数据图表';
