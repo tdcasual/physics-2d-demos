@@ -45,10 +45,10 @@ export function drawInduction(
 
   // 电荷分离可视化（step 0 和 step 1）
   if (state.stepIndex <= 1) {
-    // 左侧积累负电荷（靠近带电体）
-    drawSeparationCharges(ctx, leftX, objY, conductorR, -1, isDark);
-    // 右侧积累正电荷
+    // 左侧（远离带电体）积累正电荷（被排斥）
     drawSeparationCharges(ctx, leftX, objY, conductorR, 1, isDark);
+    // 右侧（靠近带电体）积累负电荷（被吸引）
+    drawSeparationCharges(ctx, leftX, objY, conductorR, -1, isDark);
   }
 
   // 净电荷（step 1+）

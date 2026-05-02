@@ -158,7 +158,12 @@ function createObserverManager(
   listEl.style.gap = '4px';
   body.appendChild(listEl);
 
+  let refreshAbort: AbortController | null = null;
+
   function refresh(): void {
+    refreshAbort?.abort();
+    refreshAbort = new AbortController();
+    const signal = refreshAbort.signal;
     listEl.innerHTML = '';
     const params = scene.getParams();
     const count = 1 + params.observers.length;
@@ -205,7 +210,7 @@ function createObserverManager(
         scene.removeObserver(i);
         refresh();
         onChange();
-      });
+      }, { signal });
 
       row.appendChild(label);
       row.appendChild(removeBtn);
@@ -238,7 +243,7 @@ function createObserverManager(
       scene.addObserver(newX);
       refresh();
       onChange();
-    });
+    }, { signal });
 
     addRow.appendChild(addBtn);
     listEl.appendChild(addRow);

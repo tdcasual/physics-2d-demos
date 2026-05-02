@@ -5,6 +5,7 @@
 
 import { createControlCard } from '../../ui/components/ControlCard';
 import { renderOscillatorItem } from './oscillator-item';
+import type { OscillatorItemHandle } from './oscillator-item';
 import type { SpringOscillatorScene } from './scene.entry';
 
 export interface SpringOscillatorControlsOptions {
@@ -23,6 +24,7 @@ export function createSpringOscillatorControls(
 ): SpringOscillatorControls {
   const { mount, scene, onStatus } = options;
   const cleanups: Array<() => void> = [];
+  const itemHandles: OscillatorItemHandle[] = [];
 
   mount.innerHTML = '';
 
@@ -217,6 +219,8 @@ export function createSpringOscillatorControls(
   // ===== 渲染单个振子控制行（紧凑布局 + 点击切换方向）=====
   // 渲染振子列表
   function renderOscillatorList(): void {
+    itemHandles.forEach((h) => h.dispose());
+    itemHandles.length = 0;
     listContainer.innerHTML = '';
 
     if (scene.sim.oscillators.length === 0) {
@@ -231,7 +235,9 @@ export function createSpringOscillatorControls(
     }
 
     scene.sim.oscillators.forEach((osc, index) => {
-      listContainer.appendChild(renderOscillatorItem(scene, osc, index, renderOscillatorList, onStatus));
+      const handle = renderOscillatorItem(scene, osc, index, renderOscillatorList, onStatus);
+      itemHandles.push(handle);
+      listContainer.appendChild(handle.element);
     });
   }
 
@@ -244,6 +250,8 @@ export function createSpringOscillatorControls(
     refresh: renderOscillatorList,
     dispose: () => {
       cleanups.forEach((c) => c());
+      itemHandles.forEach((h) => h.dispose());
+      itemHandles.length = 0;
       listCard.dispose();
       presetCard.dispose();
       mount.innerHTML = '';

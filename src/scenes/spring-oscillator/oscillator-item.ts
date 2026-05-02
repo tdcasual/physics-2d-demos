@@ -2,13 +2,20 @@ import type { Oscillator } from './scene.sim';
 import type { SpringOscillatorScene } from './scene.entry';
 import { createMiniSlider } from './mini-slider';
 
+export interface OscillatorItemHandle {
+  element: HTMLElement;
+  dispose: () => void;
+}
+
 export function renderOscillatorItem(
   scene: SpringOscillatorScene,
   osc: Oscillator,
   index: number,
   onUpdate: () => void,
   onStatus?: (text: string) => void
-): HTMLElement {
+): OscillatorItemHandle {
+  const disposers: Array<() => void> = [];
+
   const item = document.createElement('div');
   // 紧凑的布局：色块 | k滑块 m滑块 x0滑块 | 方向 | 删除
   item.style.cssText = `
@@ -95,16 +102,20 @@ export function renderOscillatorItem(
     background: var(--btn-bg);
     color: var(--text-primary);
   `;
-  orientBtn.addEventListener('mouseenter', () => {
+
+  const onOrientEnter = () => {
     orientBtn.style.background = 'var(--btn-hover-bg)';
-  });
-  orientBtn.addEventListener('mouseleave', () => {
+  };
+  const onOrientLeave = () => {
     orientBtn.style.background = 'var(--btn-bg)';
-  });
+  };
+  orientBtn.addEventListener('mouseenter', onOrientEnter);
+  orientBtn.addEventListener('mouseleave', onOrientLeave);
+
   orientBtn.textContent = isHorizontal ? '横' : '竖';
   orientBtn.title = '点击切换方向';
 
-  orientBtn.addEventListener('click', () => {
+  const onOrientClick = () => {
     const newOrientation = isHorizontal ? 'vertical' : 'horizontal';
     scene.updateOscillator(osc.id, { orientation: newOrientation });
     scene.resetOscillator(osc.id);
@@ -113,7 +124,14 @@ export function renderOscillatorItem(
     onStatus?.(
       `${index + 1}号${newOrientation === 'horizontal' ? '横向' : '竖向'}`
     );
-  });
+  };
+  orientBtn.addEventListener('click', onOrientClick);
+
+  disposers.push(
+    () => orientBtn.removeEventListener('mouseenter', onOrientEnter),
+    () => orientBtn.removeEventListener('mouseleave', onOrientLeave),
+    () => orientBtn.removeEventListener('click', onOrientClick)
+  );
 
   // 删除按钮
   const delBtn = document.createElement('button');
@@ -133,22 +151,40 @@ export function renderOscillatorItem(
     transition: all 0.2s;
     flex-shrink: 0;
   `;
-  delBtn.addEventListener('mouseenter', () => {
+
+  const onDelEnter = () => {
     delBtn.style.background = 'rgba(255,107,107,0.1)';
-  });
-  delBtn.addEventListener('mouseleave', () => {
+  };
+  const onDelLeave = () => {
     delBtn.style.background = 'transparent';
-  });
+  };
+  delBtn.addEventListener('mouseenter', onDelEnter);
+  delBtn.addEventListener('mouseleave', onDelLeave);
+
   delBtn.textContent = '✕';
   delBtn.title = '删除';
-  delBtn.addEventListener('click', () => {
+
+  const onDelClick = () => {
     scene.removeOscillator(osc.id);
     onUpdate();
     scene.render();
     onStatus?.(`删除振子 ${index + 1}`);
-  });
+  };
+  delBtn.addEventListener('click', onDelClick);
+
+  disposers.push(
+    () => delBtn.removeEventListener('mouseenter', onDelEnter),
+    () => delBtn.removeEventListener('mouseleave', onDelLeave),
+    () => delBtn.removeEventListener('click', onDelClick)
+  );
 
   item.append(colorDot, paramsContainer, orientBtn, delBtn);
 
-  return item;
+  return {
+    element: item,
+    dispose() {
+      disposers.forEach((fn) => fn());
+      disposers.length = 0;
+    }
+  };
 }

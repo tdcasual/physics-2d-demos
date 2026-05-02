@@ -41,9 +41,12 @@ function chargeState(scene: ElectrificationScene, stepIndex: number): { left: nu
   }
 
   if (scene === 'induction') {
-    if (stepIndex === 0) return { left: -2, right: 2 };
-    if (stepIndex === 1) return { left: -4, right: 1 };
-    return { left: -3, right: 0 };
+    // 导体靠近+2带电体：左侧(远)正电荷，右侧(近)负电荷
+    if (stepIndex === 0) return { left: 2, right: -2 };
+    // 接地后正电荷导走，保留负电荷
+    if (stepIndex === 1) return { left: 0, right: -4 };
+    // 移除带电体后净负电荷均匀分布
+    return { left: -2, right: -2 };
   }
 
   if (stepIndex === 0) return { left: 3, right: -1 };
