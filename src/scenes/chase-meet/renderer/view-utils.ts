@@ -165,7 +165,9 @@ export function createStageDom(slot: HTMLElement): StageDom {
   applyTouchInteractionMode(xCanvas, 'default');
   applyTouchInteractionMode(vCanvas, 'default');
 
-  slot.replaceChildren();
+  // Hide layout canvas instead of removing it (preserves mobile-stage-canvas)
+  const layoutCanvas = slot.querySelector('canvas');
+  if (layoutCanvas) layoutCanvas.style.display = 'none';
   slot.appendChild(root);
 
   return {

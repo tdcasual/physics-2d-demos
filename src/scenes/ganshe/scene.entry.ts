@@ -159,6 +159,9 @@ export function createGansheScene(
       color
     });
 
+    // Ensure canvas sizes after layout resolves (fixes 1x1 on mobile)
+    requestAnimationFrame(() => renderer.resize());
+
     return { canvas, renderer, wrapper, header };
   }
 
