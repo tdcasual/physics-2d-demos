@@ -34,8 +34,9 @@ export interface LayoutConfig {
   slots?: Partial<Record<SlotName, SlotConfig>>;
   mobileBreakpoint?: number;
   tabletBreakpoint?: number;
+  /** 由容器在布局切换时注入的上一布局的 canvas（避免 WebGL context 丢失） */
+  preservedCanvas?: HTMLCanvasElement | null;
   __managedByContainer?: boolean;
-  [key: string]: unknown;
 }
 
 export interface ReadoutItem {
@@ -69,7 +70,8 @@ export const CAPABILITY_IDS = [
   'mode-toggle',
   'sidebar-toggle',
   'resizer',
-  'debug-overlay'
+  'debug-overlay',
+  'layout-switch'
 ] as const;
 
 /** Capability 标识符 — 从 CAPABILITY_IDS 自动推导 */
@@ -92,6 +94,12 @@ export interface CapabilityContext {
   getMode(): 'normal' | 'presentation';
   /** 设置模式（触发 mode change 流程） */
   setMode(mode: 'normal' | 'presentation'): void;
+  /** 切换到指定布局 */
+  switchLayout(layoutId: string, savePreference?: boolean): void;
+  /** 获取当前布局 ID */
+  getCurrentLayoutId(): string;
+  /** 获取所有可用布局 */
+  getAvailableLayouts(): { id: string; name: string }[];
   /** 订阅宿主事件 */
   on<K extends keyof CapabilityEvents>(
     event: K,

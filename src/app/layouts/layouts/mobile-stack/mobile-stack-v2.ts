@@ -136,7 +136,7 @@ export class MobileStackLayoutV2 implements ILayout {
 
     this.stageSlot = document.createElement('div');
     this.stageSlot.className = 'mobile-stage-slot';
-    this.stageCanvas = (cfg as Record<string, unknown>).preservedCanvas as HTMLCanvasElement | null
+    this.stageCanvas = cfg.preservedCanvas
       ?? document.createElement('canvas');
     this.stageCanvas.className = 'mobile-stage-canvas stage-canvas';
     this.stageSlot.appendChild(this.stageCanvas);

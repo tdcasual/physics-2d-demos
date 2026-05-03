@@ -63,7 +63,7 @@ describe('SceneContainerImpl', () => {
     const container = createSceneContainer({ mount });
 
     expect(container.getTheme()).toBe('light');
-    expect(mount.style.width).toBe('100%');
+    expect(mount.style.overflow).toBe('hidden');
   });
 
   it('should create container with custom theme', () => {

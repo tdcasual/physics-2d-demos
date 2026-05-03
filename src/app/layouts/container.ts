@@ -31,6 +31,7 @@ import type {
   SceneContainer,
   Scene,
   LayoutSlots,
+  LayoutConfig,
   Theme,
   SwitchOptions,
   LayoutTransition,
@@ -280,6 +281,18 @@ export class SceneContainerImpl implements SceneContainer {
         });
         scene?.setMode?.(m);
       },
+      switchLayout: (id: string, save = true) => {
+        this.switchLayout(id, { animate: true, savePreference: save });
+      },
+      getCurrentLayoutId: () => this._currentLayout?.id ?? '',
+      getAvailableLayouts: () => {
+        const w = this.container.clientWidth || window.innerWidth;
+        const h = this.container.clientHeight || window.innerHeight;
+        const orientation: 'portrait' | 'landscape' = w >= h ? 'landscape' : 'portrait';
+        return layoutRegistry.getAllMetadata()
+          .filter((m) => satisfiesConstraints(m, { width: w, height: h }, orientation))
+          .map((m) => ({ id: m.id, name: m.name }));
+      },
       on: <K extends keyof CapabilityEvents>(
         event: K,
         handler: (payload: CapabilityEvents[K]) => void
@@ -389,7 +402,6 @@ export class SceneContainerImpl implements SceneContainer {
 
       const newLayout = await this._setupIncomingLayout(layoutId, preservedCanvas);
       if (this._disposed) return;
-      this._currentLayout = newLayout;
 
       await this._finalizeLayoutSwitch(newLayout, fromId, layoutId, reason, animate, transition, savePreference);
 
@@ -409,7 +421,7 @@ export class SceneContainerImpl implements SceneContainer {
         try {
           const recovered = layoutRegistry.create(fromId, this.container, {
             theme: this._currentTheme,
-            ...(this._layoutConfig || {})
+            ...(this._layoutConfig || {}) as LayoutConfig
           });
           await recovered.mount();
           recovered.setTheme(this._currentTheme);
@@ -488,11 +500,12 @@ export class SceneContainerImpl implements SceneContainer {
 
     const newLayout = layoutRegistry.create(layoutId, this.container, {
       theme: this._currentTheme,
-      ...(this._layoutConfig || {}),
+      ...(this._layoutConfig || {}) as LayoutConfig,
       preservedCanvas
     });
 
     await newLayout.mount();
+    this._currentLayout = newLayout;
     newLayout.setTheme(this._currentTheme);
 
     const savedLayoutState = restoreLayoutStateFromStorage(this._storageKey, layoutId);

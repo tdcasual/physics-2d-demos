@@ -5,7 +5,8 @@
 
 .theme-toggle-btn,
 .mode-toggle-btn,
-.sidebar-toggle-btn {
+.sidebar-toggle-btn,
+.layout-switch-btn {
   cursor: pointer;
   border-radius: 0.375rem;
   border: 1px solid var(--color-border-color);
@@ -20,7 +21,8 @@
 
 .theme-toggle-btn:hover,
 .mode-toggle-btn:hover,
-.sidebar-toggle-btn:hover {
+.sidebar-toggle-btn:hover,
+.layout-switch-btn:hover {
   background: var(--color-btn-hover-bg);
   color: var(--color-text-primary);
 }
@@ -29,5 +31,11 @@
   background: var(--color-accent-color);
   border-color: var(--color-accent-color);
   color: var(--color-text-inverse, #1a1a1a);
+}
+
+.layout-switch-btn {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
 }
 

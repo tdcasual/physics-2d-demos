@@ -19,6 +19,7 @@ export interface SplitConfig {
   leftMinWidth?: number;
   leftMaxWidth?: number;
   defaultLeftRatio?: number;
+  controlColumns?: string | number;
 }
 
 // === Section builders ===
@@ -119,6 +120,7 @@ export interface ToolbarElements {
   sidebarBtn: HTMLElement;
   themeBtn: HTMLElement;
   modeBtn: HTMLElement;
+  layoutBtn: HTMLElement;
 }
 
 export function buildToolbar(prefix: CssPrefix): ToolbarElements {
@@ -149,8 +151,14 @@ export function buildToolbar(prefix: CssPrefix): ToolbarElements {
   modeBtn.textContent = '演示';
   actions.appendChild(modeBtn);
 
+  const layoutBtn = document.createElement('button');
+  layoutBtn.type = 'button';
+  layoutBtn.className = 'layout-switch-btn';
+  layoutBtn.setAttribute('aria-label', '切换布局');
+  actions.appendChild(layoutBtn);
+
   toolbar.appendChild(actions);
-  return { toolbar, sidebarBtn, themeBtn, modeBtn };
+  return { toolbar, sidebarBtn, themeBtn, modeBtn, layoutBtn };
 }
 
 export interface StageElements {

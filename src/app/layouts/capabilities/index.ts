@@ -36,6 +36,9 @@ export type { ResizerConfig } from './resizer';
 export { createDebugOverlay } from './debug-overlay';
 export type { DebugOverlayConfig } from './debug-overlay';
 
+export { createLayoutSwitch } from './layout-switch';
+export type { LayoutSwitchConfig } from './layout-switch';
+
 // Capability factory registry — map of id → factory function
 import type { CapabilityId, CapabilityDefinition, CapabilityScope } from '../core/types';
 
@@ -47,6 +50,7 @@ import { createModeToggle } from './mode-toggle';
 import { createSidebarToggle } from './sidebar-toggle';
 import { createResizer } from './resizer';
 import { createDebugOverlay } from './debug-overlay';
+import { createLayoutSwitch } from './layout-switch';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type CapabilityFactory = (defaultConfig?: any) => CapabilityDefinition<any, any, any>;
@@ -64,7 +68,8 @@ export const capabilityFactories: Record<CapabilityId, CapabilityFactory> = {
   'mode-toggle': createModeToggle as CapabilityFactory,
   'sidebar-toggle': createSidebarToggle as CapabilityFactory,
   resizer: createResizer as CapabilityFactory,
-  'debug-overlay': createDebugOverlay as CapabilityFactory
+  'debug-overlay': createDebugOverlay as CapabilityFactory,
+  'layout-switch': createLayoutSwitch as CapabilityFactory
 };
 
 /** Capability 作用域映射 — container 作用域在布局切换时保留，layout 作用域会被销毁重建 */
@@ -76,7 +81,8 @@ export const CAPABILITY_SCOPES: Record<CapabilityId, CapabilityScope> = {
   'mode-toggle': 'container',
   'sidebar-toggle': 'layout',
   'resizer': 'layout',
-  'debug-overlay': 'container'
+  'debug-overlay': 'container',
+  'layout-switch': 'layout'
 };
 
 export function getCapabilityScope(id: CapabilityId): CapabilityScope {

@@ -6,16 +6,19 @@
  */
 
 import { capabilityFactories } from './capabilities';
-import type { CapabilityContext, CapabilityInstance, CapabilityId, LayoutSlots } from './core/types';
+import type { CapabilityContext, CapabilityInstance, LayoutSlots } from './core/types';
 import type { ILayout, Scene } from './types';
 
-/** 场景绑定描述符 — 新增需要场景数据的 capability 只需在此追加条目 */
-const SCENE_BINDINGS: Partial<Record<CapabilityId, {
+/** 场景绑定描述符 */
+interface SceneBinding {
   /** 检查场景是否支持此绑定（方法存在性），不满足则跳过整个绑定 */
   isSupported: (scene: Scene) => boolean;
   getData: (scene: Scene) => unknown;
   getCallbacks?: (scene: Scene) => unknown;
-}>> = {
+}
+
+/** 有场景数据绑定的 capability — 新增绑定只需在此表追加条目 */
+const SCENE_BINDINGS: Record<string, SceneBinding> = {
   'transport-bar': {
     isSupported: (scene) => typeof scene.getTransportState === 'function',
     getData: (scene) => scene.getTransportState!(),
@@ -106,7 +109,7 @@ export class CapabilityOrchestrator {
 
   /** 将一个 capability 实例绑定到场景的数据/控制方法 */
   private _bindToScene(id: string, instance: CapabilityInstance, scene: Scene): void {
-    const binding = SCENE_BINDINGS[id as CapabilityId];
+    const binding = SCENE_BINDINGS[id];
     if (!binding) return;
 
     if (!binding.isSupported(scene)) return;

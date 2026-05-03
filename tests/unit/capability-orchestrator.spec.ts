@@ -63,6 +63,9 @@ function createCtx(): CapabilityContext {
     setTheme: (t) => { theme = t; },
     getMode: () => mode,
     setMode: (m) => { mode = m; },
+    switchLayout: () => {},
+    getCurrentLayoutId: () => 'test',
+    getAvailableLayouts: () => [],
     on: () => () => {},
   };
 }

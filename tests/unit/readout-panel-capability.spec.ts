@@ -38,6 +38,9 @@ function createTestContext(overrides: Partial<CapabilityContext> = {}): Capabili
       listeners.get(event)!.add(handler);
       return () => { listeners.get(event)?.delete(handler); };
     }) as CapabilityContext['on'],
+    switchLayout: () => {},
+    getCurrentLayoutId: () => 'test',
+    getAvailableLayouts: () => [],
     ...overrides
   };
 }

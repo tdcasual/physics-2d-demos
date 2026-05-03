@@ -60,6 +60,7 @@ export class SplitRightLayoutV2 implements ILayout {
       { id: 'readout-panel', config: { position: 'top-right', collapsed: true, cssPrefix: PREFIX, label: config.readoutLabel ?? '数据读数' } },
       { id: 'theme-toggle' },
       { id: 'mode-toggle' },
+      { id: 'layout-switch' },
       { id: 'sidebar-toggle' },
       { id: 'resizer', config: { direction: 'vertical', targetSelector: '.teaching-left-panel', selector: '.teaching-panel-resizer', onResize: (r: number) => { this.leftRatio = r; } } },
       { id: 'demo-profile' },
@@ -73,7 +74,7 @@ export class SplitRightLayoutV2 implements ILayout {
 
     const { slots } = buildSplitLayoutDOM({
       container: this._container,
-      cfg: this.cfg as SplitConfig & { controlColumns?: unknown; preservedCanvas?: HTMLCanvasElement | null },
+      cfg: this.cfg,
       prefix: PREFIX,
       leftRatio: this.leftRatio,
       currentTheme: this.currentTheme,
@@ -83,7 +84,7 @@ export class SplitRightLayoutV2 implements ILayout {
       rightPanelClass: 'teaching-right-panel',
       resizerVClass: 'teaching-panel-resizer',
       hasGraphInLeft: this.cfg.hasGraph !== false,
-      existingCanvas: (this.cfg as Record<string, unknown>).preservedCanvas as HTMLCanvasElement | null | undefined
+      existingCanvas: this.cfg.preservedCanvas ?? undefined
     });
 
     this._container.dataset.hasGraph = String(this.cfg.hasGraph !== false);

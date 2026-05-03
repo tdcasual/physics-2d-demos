@@ -41,6 +41,9 @@ function createTestContext(overrides: Partial<CapabilityContext> = {}): Capabili
       listeners.get(event)!.add(handler);
       return () => { listeners.get(event)?.delete(handler); };
     }) as CapabilityContext['on'],
+    switchLayout: () => {},
+    getCurrentLayoutId: () => 'test',
+    getAvailableLayouts: () => [],
     ...overrides
   };
 }
@@ -53,7 +56,7 @@ describe('Capability factory registry', () => {
   const expectedIds: CapabilityId[] = [
     'transport-bar', 'readout-panel', 'demo-profile',
     'theme-toggle', 'mode-toggle', 'sidebar-toggle',
-    'resizer', 'debug-overlay'
+    'resizer', 'debug-overlay', 'layout-switch'
   ];
 
   it('has all 8 factories registered', () => {

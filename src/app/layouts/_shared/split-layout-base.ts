@@ -20,7 +20,7 @@ import {
 
 export interface SplitLayoutDOMOpts {
   container: HTMLElement;
-  cfg: SplitConfig & { controlColumns?: unknown };
+  cfg: SplitConfig;
   prefix: CssPrefix;
   leftRatio: number;
   currentTheme: Theme;

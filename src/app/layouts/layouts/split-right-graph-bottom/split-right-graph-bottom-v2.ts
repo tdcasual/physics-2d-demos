@@ -69,6 +69,7 @@ export class SplitRightGraphBottomLayoutV2 implements ILayout {
       { id: 'readout-panel', config: { position: 'top-right', collapsed: true, cssPrefix: PREFIX, label: config.readoutLabel ?? '数据读数' } },
       { id: 'theme-toggle' },
       { id: 'mode-toggle' },
+      { id: 'layout-switch' },
       { id: 'sidebar-toggle' },
       { id: 'resizer', config: { direction: 'vertical', targetSelector: '.srgb-left-panel', selector: '.srgb-resizer-v', onResize: (r: number) => { this.leftRatio = r; } } },
       { id: 'resizer', config: { direction: 'horizontal', targetSelector: '.srgb-graph-section', selector: '.srgb-resizer-h', minSize: 120, maxSize: 480, onResize: (r: number) => { this.graphHeight = Math.round(r * (this._container.clientHeight || window.innerHeight || 800)); } } },
@@ -89,7 +90,7 @@ export class SplitRightGraphBottomLayoutV2 implements ILayout {
 
     const { slots, rightPanel, stageSlot } = buildSplitLayoutDOM({
       container,
-      cfg: cfg as SplitConfig & { controlColumns?: unknown; preservedCanvas?: HTMLCanvasElement | null },
+      cfg,
       prefix: PREFIX,
       leftRatio: this.leftRatio,
       currentTheme: this.currentTheme,
@@ -100,7 +101,7 @@ export class SplitRightGraphBottomLayoutV2 implements ILayout {
       resizerVClass: 'srgb-resizer-v',
       hasGraphInLeft: false,
       rightPanelStyle: 'display: flex; flex-direction: column; overflow: hidden;',
-      existingCanvas: (cfg as Record<string, unknown>).preservedCanvas as HTMLCanvasElement | null | undefined
+      existingCanvas: cfg.preservedCanvas ?? undefined
     });
 
     // Make animation flex to fill available space above graph
