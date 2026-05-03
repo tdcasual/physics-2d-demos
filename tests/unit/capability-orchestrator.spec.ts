@@ -5,7 +5,13 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CapabilityOrchestrator } from '../../src/app/layouts/capability-orchestrator';
-import type { CapabilityContext, CapabilityInstance, CapabilityId, LayoutSlots } from '../../src/app/layouts/core/types';
+import type {
+  CapabilityContext,
+  CapabilityDefinition,
+  CapabilityInstance,
+  CapabilityId,
+  LayoutSlots
+} from '../../src/app/layouts/core/types';
 import type { ILayout, Scene } from '../../src/app/layouts/types';
 
 // Mock capabilities module
@@ -18,10 +24,9 @@ vi.mock('../../src/app/layouts/capabilities', () => {
     };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  type FactoryFn = (cfg?: any) => any;
+  type FactoryFn = (cfg?: unknown) => CapabilityDefinition;
 
-  const scopeMap: Record<string, 'container' | 'layout'> = {
+  const scopeMap: Record<CapabilityId, 'container' | 'layout'> = {
     'transport-bar': 'layout',
     'readout-panel': 'layout',
     'demo-profile': 'container',
@@ -30,10 +35,11 @@ vi.mock('../../src/app/layouts/capabilities', () => {
     'sidebar-toggle': 'layout',
     'resizer': 'layout',
     'debug-overlay': 'container',
+    'layout-switch': 'layout'
   };
 
-  const factories: Record<string, FactoryFn> = {};
-  for (const id of Object.keys(scopeMap)) {
+  const factories: Record<CapabilityId, FactoryFn> = {} as Record<CapabilityId, FactoryFn>;
+  for (const id of Object.keys(scopeMap) as CapabilityId[]) {
     factories[id] = () => ({
       id,
       scope: scopeMap[id],
@@ -45,7 +51,9 @@ vi.mock('../../src/app/layouts/capabilities', () => {
 
   return {
     capabilityFactories: factories,
-    getCapabilityScope: (id: string) => scopeMap[id] ?? 'layout',
+    createCapabilityDefinition: (decl: { id: CapabilityId; config?: unknown }) =>
+      factories[decl.id]?.(decl.config),
+    getCapabilityScope: (id: CapabilityId) => scopeMap[id] ?? 'layout',
     CAPABILITY_SCOPES: scopeMap,
   };
 });

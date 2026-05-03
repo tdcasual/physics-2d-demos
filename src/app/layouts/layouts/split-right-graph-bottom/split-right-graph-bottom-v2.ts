@@ -15,7 +15,6 @@ import type {
 } from '../../core/types';
 import {
   type CssPrefix,
-  type SplitConfig,
   buildGraphSection,
   buildResizer,
   applySplitTheme,

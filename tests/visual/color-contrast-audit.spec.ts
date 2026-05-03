@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
-const PORT = 5183;
+const PORT = 5177;
 const SCENES = [
   'chase-meet',
   'projectile',

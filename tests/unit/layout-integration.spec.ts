@@ -8,11 +8,12 @@
  * - Resize 后 DOM 结构被破坏
  * - Capability 在 mount 期间拿到错误的布局 ID
  */
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { SplitRightLayoutV2 } from '../../src/app/layouts/layouts/split-right/split-right-v2';
 import { MobileStackLayoutV2 } from '../../src/app/layouts/layouts/mobile-stack/mobile-stack-v2';
 import { SplitRightGraphBottomLayoutV2 } from '../../src/app/layouts/layouts/split-right-graph-bottom/split-right-graph-bottom-v2';
 import { layoutRegistry } from '../../src/app/layouts/registry';
+import type { CapabilityContext, ILayout, LayoutSlots } from '../../src/app/layouts/types';
 
 // ============================================================================
 // Helpers
@@ -52,7 +53,7 @@ function verifyCanvasReady(canvas: HTMLCanvasElement | null | undefined): void {
 /** Verify all declared slots are present in the DOM. */
 function verifySlotsInDOM(
   container: HTMLElement,
-  slots: Record<string, HTMLElement | undefined>
+  slots: Partial<LayoutSlots>
 ): void {
   for (const [name, slot] of Object.entries(slots)) {
     if (slot === undefined) continue;
@@ -233,7 +234,7 @@ describe('Slot declaration consistency', () => {
 
   const layoutFactories: Array<{
     name: string;
-    create: (c: HTMLElement) => { mount(): Promise<Record<string, HTMLElement | undefined>>; unmount(): Promise<void>; supportedSlots: string[] };
+    create: (c: HTMLElement) => ILayout;
     width: number;
     height: number;
   }> = [
@@ -573,7 +574,7 @@ describe('Layout-switch capability', () => {
   function mockCtx(overrides: {
     currentLayoutId?: string;
     availableLayouts?: { id: string; name: string }[];
-  } = {}) {
+  } = {}): CapabilityContext & { _switchCalls: string[] } {
     let currentId = overrides.currentLayoutId ?? 'split-right';
     const available = overrides.availableLayouts ?? [
       { id: 'split-right', name: '左右分栏' },
@@ -587,7 +588,7 @@ describe('Layout-switch capability', () => {
       setTheme: () => {},
       getMode: () => 'normal' as const,
       setMode: () => {},
-      on: (() => () => {}) as any,
+      on: () => () => {},
       getCurrentLayoutId: () => currentId,
       getAvailableLayouts: () => available,
       switchLayout: (id: string) => { switchCalls.push(id); currentId = id; },

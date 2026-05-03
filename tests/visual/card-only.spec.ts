@@ -9,10 +9,10 @@ test('capture vt-integral card only', async ({ page }) => {
   await page.click('button:has-text("方法")');
   await page.waitForTimeout(500);
 
-  // 找到微元法演示卡片并截图
+  // 找到微元法卡片并截图
   const card = page
     .locator('.experiment-card')
-    .filter({ hasText: '微元法演示' });
+    .filter({ hasText: '微元法' });
   await expect(card).toBeVisible();
 
   // 只截取卡片

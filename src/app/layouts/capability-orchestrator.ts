@@ -5,7 +5,7 @@
  * 从 SceneContainerImpl 中提取，降低 Container 的复杂度。
  */
 
-import { capabilityFactories } from './capabilities';
+import { capabilityFactories, createCapabilityDefinition } from './capabilities';
 import type { CapabilityContext, CapabilityInstance, LayoutSlots } from './core/types';
 import type { ILayout, Scene } from './types';
 
@@ -94,7 +94,7 @@ export class CapabilityOrchestrator {
       seenIds.add(decl.id);
 
       try {
-        const def = factory(decl.config);
+        const def = createCapabilityDefinition(decl);
         const instance = def.mount(slots as LayoutSlots, decl.config ?? {}, ctx);
         this._addInstance(decl.id, instance);
 

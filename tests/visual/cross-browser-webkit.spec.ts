@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.use({ browserName: 'webkit' });
 
-const PORT = 5183;
+const PORT = 5177;
 const SCENES = [
   'chase-meet',
   'projectile',

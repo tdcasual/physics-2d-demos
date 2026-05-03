@@ -16,7 +16,7 @@ export function createFloatingControls(options: {
   const container = document.createElement(
     'div'
   ) as unknown as FloatingControls;
-  container.className = 'teaching-stage-floating-controls';
+  container.className = 'teaching-stage-floating-controls stage-floating-controls';
   container.style.cssText = `
     position: absolute;
     top: var(--transport-top, 12px);

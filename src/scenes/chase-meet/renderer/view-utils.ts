@@ -165,9 +165,10 @@ export function createStageDom(slot: HTMLElement): StageDom {
   applyTouchInteractionMode(xCanvas, 'default');
   applyTouchInteractionMode(vCanvas, 'default');
 
-  // Hide layout canvas instead of removing it (preserves mobile-stage-canvas)
+  // The chase-meet stage owns its three explicit canvases; remove the layout
+  // placeholder so canvas audits only inspect real render targets.
   const layoutCanvas = slot.querySelector('canvas');
-  if (layoutCanvas) layoutCanvas.style.display = 'none';
+  layoutCanvas?.remove();
   slot.appendChild(root);
 
   return {

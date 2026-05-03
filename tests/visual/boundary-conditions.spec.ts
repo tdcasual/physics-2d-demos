@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const PORT = 5183;
+const PORT = 5177;
 
 /**
  * 边界条件测试：通过 JS 直接设置 slider 的极端值，

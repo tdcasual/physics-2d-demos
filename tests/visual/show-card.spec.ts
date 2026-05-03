@@ -20,13 +20,13 @@ test('show vt-integral card clearly', async ({ page }) => {
   await page.click('button:has-text("方法")');
   await page.waitForTimeout(500);
 
-  // 截图 - 应该能看到微元法演示卡片
+  // 截图 - 应该能看到微元法卡片
   await page.screenshot({ path: '/tmp/show-card.png' });
 
   // 验证卡片可见
   const card = page
     .locator('.experiment-card')
-    .filter({ hasText: '微元法演示' });
+    .filter({ hasText: '微元法' });
   await expect(card).toBeVisible();
 
   // 获取卡片文字内容

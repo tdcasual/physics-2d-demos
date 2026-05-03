@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const PORT = 5183;
+const PORT = 5177;
 const SCENES = [
   { id: 'chase-meet', name: '追击相遇' },
   { id: 'projectile', name: '抛体运动' },

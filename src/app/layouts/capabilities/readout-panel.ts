@@ -304,7 +304,7 @@ export function createReadoutPanel(
 
       // Create DOM
       const panel = document.createElement('div');
-      panel.className = `${cssPrefix}-readout-panel ${collapsed ? 'is-collapsed' : ''}`;
+      panel.className = `${cssPrefix}-readout-panel readout-panel ${collapsed ? 'is-collapsed' : ''}`;
       if (isInline) panel.classList.add(`${cssPrefix}-readout-panel--inline`);
       panel.setAttribute('role', 'region');
       panel.setAttribute('aria-label', label);
@@ -317,7 +317,7 @@ export function createReadoutPanel(
       }
 
       const slot = document.createElement('ul');
-      slot.className = `${cssPrefix}-readout-slot ${cssPrefix}-readout-slot--adaptive`;
+      slot.className = `${cssPrefix}-readout-slot readout-slot ${cssPrefix}-readout-slot--adaptive`;
       slot.setAttribute('data-columns', 'auto');
 
       let toggleCleanup: (() => void) | null = null;
@@ -325,19 +325,19 @@ export function createReadoutPanel(
       // Inline mode: compact title + grid, no toggle
       if (isInline) {
         const inlineTitle = document.createElement('div');
-        inlineTitle.className = `${cssPrefix}-readout-inline-title`;
+        inlineTitle.className = `${cssPrefix}-readout-inline-title readout-inline-title`;
         inlineTitle.textContent = label;
         panel.append(inlineTitle, slot);
       } else {
         const header = document.createElement('div');
-        header.className = `${cssPrefix}-readout-header`;
+        header.className = `${cssPrefix}-readout-header readout-header`;
         const title = document.createElement('span');
-        title.className = `${cssPrefix}-readout-title`;
+        title.className = `${cssPrefix}-readout-title readout-title`;
         title.textContent = label;
 
         const toggleBtn = document.createElement('button');
         toggleBtn.type = 'button';
-        toggleBtn.className = `${cssPrefix}-readout-toggle`;
+        toggleBtn.className = `${cssPrefix}-readout-toggle readout-toggle`;
         toggleBtn.setAttribute('aria-label', collapsed ? '展开' : '折叠');
         toggleBtn.textContent = collapsed ? '展开' : '折叠';
         header.append(title, toggleBtn);
@@ -378,13 +378,13 @@ export function createReadoutPanel(
           slot.replaceChildren();
           data.forEach((item) => {
             const li = document.createElement('li');
-            li.className = `${cssPrefix}-readout-item ${item.layout === 'half' ? `${cssPrefix}-readout-item--half` : ''}`;
+            li.className = `${cssPrefix}-readout-item readout-item ${item.layout === 'half' ? `${cssPrefix}-readout-item--half` : ''}`;
             if (isInline) li.classList.add(`${cssPrefix}-readout-item--compact`);
             const lbl = document.createElement('span');
-            lbl.className = `${cssPrefix}-readout-label`;
+            lbl.className = `${cssPrefix}-readout-label readout-label`;
             lbl.textContent = item.label;
             const val = document.createElement('strong');
-            val.className = `${cssPrefix}-readout-value`;
+            val.className = `${cssPrefix}-readout-value readout-value`;
             val.textContent = String(item.value);
             li.append(lbl, val);
             slot.appendChild(li);

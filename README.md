@@ -1,6 +1,6 @@
 # Teaching Demo Hub
 
-面向课堂演示的多学科 2D 动画静态站点。7 个交互式物理教学场景，统一的布局母版系统，支持桌面端/移动端自适应切换。
+面向课堂演示的多学科 2D 动画静态站点。8 个交互式物理教学场景，统一的布局母版系统，支持桌面端/移动端自适应切换。
 
 ## Tech Stack
 
@@ -14,35 +14,39 @@
 
 ```bash
 pnpm install
-pnpm generate:index
 pnpm dev
 ```
 
-开发后建议运行完整门禁：
+日常开发建议先运行快速门禁：
 
 ```bash
-pnpm generate:index
-pnpm lint
-pnpm typecheck
-pnpm test
-pnpm test:e2e
-pnpm build
+pnpm quality:core
+```
+
+合并或发布前运行完整门禁：
+
+```bash
+pnpm quality:full
 ```
 
 ## Scripts
 
-| 命令                      | 说明                                           |
-| ------------------------- | ---------------------------------------------- |
-| `pnpm dev`                | 本地开发（端口 5177）                          |
-| `pnpm build`              | 构建产物到 `dist/`                             |
-| `pnpm preview`            | 预览构建结果                                   |
-| `pnpm generate:index`     | 生成 `public/scene-index.json` 与导航 fallback |
-| `pnpm lint`               | ESLint 静态检查                                |
-| `pnpm typecheck`          | TypeScript 类型检查                            |
-| `pnpm test`               | Vitest 单元/契约测试                           |
-| `pnpm test:e2e`           | Playwright E2E 测试（48 个）                   |
-| `pnpm test:visual`        | Playwright 视觉回归测试                        |
-| `pnpm test:visual:update` | 更新视觉快照基线                               |
+| 命令                      | 说明                                       |
+| ------------------------- | ------------------------------------------ |
+| `pnpm dev`                | 本地开发（端口 5177）                      |
+| `pnpm build`              | 构建产物到 `dist/`                         |
+| `pnpm preview`            | 预览构建结果                               |
+| `pnpm check:scenes`       | 检查场景标准文件、控制面板形态与 HTML 入口 |
+| `pnpm check:bundle`       | 检查生产构建产物是否超过 bundle budget     |
+| `pnpm check:circular`     | 检查 `src/` 循环依赖                       |
+| `pnpm quality:core`       | 快速本地质量门禁                           |
+| `pnpm quality:full`       | 完整本地质量门禁                           |
+| `pnpm lint`               | ESLint 静态检查                            |
+| `pnpm typecheck`          | TypeScript 类型检查                        |
+| `pnpm test`               | Vitest 单元/契约测试                       |
+| `pnpm test:e2e`           | Playwright E2E 测试                        |
+| `pnpm test:visual`        | Playwright 视觉回归测试                    |
+| `pnpm test:visual:update` | 更新视觉快照基线                           |
 
 ## Project Layout
 
@@ -54,20 +58,14 @@ src/
       registry.ts              # 布局注册表
       selector.ts              # 布局选择器（策略插件化）
       container.ts             # 场景容器（生命周期 + 布局切换）
-      transport-bridge.ts      # 场景状态 → 布局同步
       auto-register.ts         # 统一注册所有内置布局
-      masters/
-        base-layout.ts         # 布局基类（共享生命周期/动画/工具方法）
-        split-right/           # 桌面端：左右分栏 + 可拖拽面板
-        mobile-stack/          # 移动端：垂直堆叠 + 手势支持
+      capabilities/            # 可装配布局能力（读数、控制条、主题、模式等）
+      layouts/                 # 具体布局实现
     main.tsx                   # React 导航首页入口
   catalog/
     scene-registry.ts          # 场景元数据注册表（单一数据源）
-    scene-index.ts             # 导航索引模型 + fallback
   core/
     fixed-step.ts              # 固定步长步进器
-    rng.ts                     # 可复现实验随机数
-    guards.ts                  # 参数守卫
     high-dpi-canvas.ts         # 高 DPI 画布缩放
   scenes/
     projectile/                # 抛体运动
@@ -178,7 +176,7 @@ bootScenePage({
 
 为避免场景扩展时引入隐式耦合，使用分层约束：
 
-- `src/scenes/**/scene.sim.ts` — 纯物理仿真，**不允许**导入 `src/app/` 与 `src/ui/`
+- `src/scenes/**` — 除 `page.ts` 与 legacy `controls.ts` 外，**不允许**导入 `src/app/` 与 `src/ui/`
 - `src/core/**` — 底层通用能力，**不允许**导入 `src/app/` 或 `src/scenes/**/page*`
 - 场景导航数据以 `src/catalog/scene-registry.ts` 作为**单一数据源**
 
@@ -189,9 +187,9 @@ bootScenePage({
 建议复制 `src/scenes/projectile` 的结构：
 
 1. 新建 `src/scenes/<scene-id>/`
-2. 拆分 `scene.meta.ts` / `scene.sim.ts` / `scene.view.ts` / `scene.entry.ts` / `controls-v4.ts`
+2. 拆分 `scene.meta.ts` / `scene.sim.ts` / `scene.view.ts` / `scene.entry.ts` / `controls-schema.ts`
 3. 新建 `src/pages/<scene-id>.html`（Vite 自动扫描，**无需**修改 `vite.config.ts`）
-4. 在 `src/catalog/scene-registry.ts` 注册元数据
+4. 无需手动注册；`src/catalog/scene-registry.ts` 通过 `import.meta.glob` 自动发现
 5. 补齐测试：
    - 至少 1 个 unit test（数值或状态）
    - 至少 1 个 E2E test（页面截图或控件交互）
@@ -208,11 +206,14 @@ GitHub Actions workflow：`.github/workflows/ci.yml`
 CI 流程：
 
 1. install
-2. generate index
-3. lint
-4. typecheck
-5. test
-6. test:e2e
-7. build
+2. scene structure check
+3. circular dependency check
+4. lint
+5. typecheck
+6. test
+7. coverage
+8. visual tests
+9. build
+10. bundle budget
 
 只有全绿才应进入发布流程。

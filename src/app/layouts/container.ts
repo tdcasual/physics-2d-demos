@@ -27,10 +27,14 @@ import { satisfiesConstraints } from './layout-constraints';
 import { ContainerResizeObserver } from './container-resize-observer';
 import { detectLowPowerMode } from './power-awareness';
 import { CapabilityOrchestrator } from './capability-orchestrator';
+import { renderSceneToSlots } from './scene-slot-renderer';
+import {
+  buildCapabilityContext,
+  updateCapabilityInstances
+} from './capability-context';
 import type {
   SceneContainer,
   Scene,
-  LayoutSlots,
   LayoutConfig,
   Theme,
   SwitchOptions,
@@ -39,7 +43,7 @@ import type {
   CreateContainerOptions,
   SceneContainerEvents
 } from './types';
-import type { ILayout, CapabilityContext, CapabilityEvents } from './core/types';
+import type { CapabilityContext, ILayout } from './core/types';
 
 /** ILayout 子集：支持 enter/exit 动画钩子（旧布局兼容，无实现则为 no-op） */
 type LayoutWithAnimation = ILayout & {
@@ -198,41 +202,8 @@ export class SceneContainerImpl implements SceneContainer {
     const targetLayout = layout || this._currentLayout;
     if (!targetLayout) return;
 
-    this.renderSceneToSlots(scene, targetLayout);
+    renderSceneToSlots(scene, targetLayout);
     this.activateSceneLifecycle(scene, targetLayout);
-  }
-
-  /** Slot → Scene render method 映射表。新增 slot 类型只需在此表追加一行 */
-  private static readonly SLOT_RENDER_MAP = [
-    { slot: 'header' as const, method: 'renderHeader' as const, clear: true, passSlots: false },
-    { slot: 'control' as const, method: 'renderControl' as const, clear: true, passSlots: false },
-    { slot: 'animation' as const, method: 'renderAnimation' as const, clear: false, passSlots: true },
-    { slot: 'graph' as const, method: 'renderGraph' as const, clear: true, passSlots: false },
-    { slot: 'readout' as const, method: 'renderReadout' as const, clear: true, passSlots: false },
-  ];
-
-  /** 将场景渲染到布局的各 slot 中。先清空 slot 防止旧场景 DOM 累积。 */
-  private renderSceneToSlots(scene: Scene, layout: ILayout): void {
-    const slots = layout.getSlots?.() || {};
-
-    for (const entry of SceneContainerImpl.SLOT_RENDER_MAP) {
-      const slotEl = slots[entry.slot];
-      if (!slotEl) continue;
-
-      if (entry.clear) {
-        slotEl.innerHTML = '';
-      }
-
-      const sceneAny = scene as unknown as Record<string, unknown>;
-      const method = sceneAny[entry.method];
-      if (typeof method === 'function') {
-        if (entry.passSlots) {
-          (method as (this: Scene, el: HTMLElement, s: LayoutSlots) => void).call(scene, slotEl, slots as LayoutSlots);
-        } else {
-          (method as (this: Scene, el: HTMLElement) => void).call(scene, slotEl);
-        }
-      }
-    }
   }
 
   /** 激活场景生命周期：状态恢复、Capability 装配、事件绑定、挂载 */
@@ -264,27 +235,15 @@ export class SceneContainerImpl implements SceneContainer {
 
   /** 构建 CapabilityContext — 桥接容器状态与 capability 运行时 */
   private _buildCapabilityContext(scene: Scene | null): CapabilityContext {
-    return {
+    return buildCapabilityContext({
       container: this.container,
+      scene,
       getTheme: () => this._currentTheme,
       setTheme: (t: Theme) => this.setTheme(t),
-      getMode: () => (this.container.getAttribute('data-mode') === 'presentation' ? 'presentation' : 'normal'),
-      setMode: (m: 'normal' | 'presentation') => {
-        this.container.setAttribute('data-mode', m);
-        const profile = m === 'presentation' ? (scene?.getDemoProfile?.() || null) : null;
-        this._emitter.emit('layout:mode', { mode: m, profile });
-        this.container.dispatchEvent(
-          new CustomEvent('layout:modechange', { detail: { mode: m, profile }, bubbles: true })
-        );
-        this._orchestrator.getInstances('demo-profile').forEach((inst) => {
-          inst.update?.({ mode: m, profile });
-        });
-        scene?.setMode?.(m);
-      },
+      getCurrentLayoutId: () => this._currentLayout?.id ?? '',
       switchLayout: (id: string, save = true) => {
         this.switchLayout(id, { animate: true, savePreference: save });
       },
-      getCurrentLayoutId: () => this._currentLayout?.id ?? '',
       getAvailableLayouts: () => {
         const w = this.container.clientWidth || window.innerWidth;
         const h = this.container.clientHeight || window.innerHeight;
@@ -293,19 +252,15 @@ export class SceneContainerImpl implements SceneContainer {
           .filter((m) => satisfiesConstraints(m, { width: w, height: h }, orientation))
           .map((m) => ({ id: m.id, name: m.name }));
       },
-      on: <K extends keyof CapabilityEvents>(
-        event: K,
-        handler: (payload: CapabilityEvents[K]) => void
-      ) => {
-        if (event === 'modechange') {
-          return this._emitter.on(
-            'layout:mode',
-            (payload) => handler(payload as CapabilityEvents['modechange'])
-          );
-        }
-        return () => {};
+      emit: (event, payload) => this._emitter.emit(event, payload),
+      on: (event, handler) => this._emitter.on(event, handler),
+      updateDemoProfileInstances: (payload) => {
+        updateCapabilityInstances(
+          this._orchestrator.getInstances('demo-profile'),
+          payload
+        );
       }
-    };
+    });
   }
 
   /**

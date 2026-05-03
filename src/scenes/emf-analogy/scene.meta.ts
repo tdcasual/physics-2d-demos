@@ -4,7 +4,7 @@
 
 import type { SceneMeta } from '../types';
 
-import type { SceneDemoProfile } from '../../app/demo-profile';
+import type { SceneDemoProfile } from '../../platform/demo-profile';
 
 export const demoProfile: SceneDemoProfile = {
   controlPanel: 'collapsed',

@@ -4,7 +4,7 @@
 
 ## 项目概述
 
-Physics-2D-Demos 是一个物理教学演示中心（Teaching Demo Hub），包含 7 个交互式 2D 物理场景（抛体运动、弹簧振子、追及相遇、静电起电、电路水流类比、电场线演化、微元法）。
+Physics-2D-Demos 是一个物理教学演示中心（Teaching Demo Hub），包含 8 个交互式 2D 物理场景（抛体运动、弹簧振子、追及相遇、静电起电、电路水流类比、电场线演化、微元法、干涉/相遇类扩展场景）。
 
 - **技术栈**: Vite 7 + TypeScript 5.9 (strict) + React 18 + Tailwind CSS v4
 - **测试**: Vitest 3.2 (单元/契约) + Playwright (E2E/视觉)
@@ -25,7 +25,7 @@ app/           — 布局系统、场景引导器、首页
                — 可依赖 platform/core/ui
 ui/            — 共享组件库（DOM widgets）
                — 可依赖 platform/core
-scenes/        — 7 个物理场景（每个: meta/sim/view/entry/controls/page）
+scenes/        — 8 个物理场景（每个: meta/sim/view/entry/controls/page）
                — 场景由 catalog/scene-registry.ts 自动发现（import.meta.glob）
                — 非 page.ts 不依赖 app/ui
 ```
@@ -48,7 +48,7 @@ src/scenes/<id>/
   scene.sim.ts       — 物理模拟逻辑
   scene.view.ts      — Canvas 渲染
   scene.entry.ts     — sim + view 组装
-  controls-schema.ts — 声明式控制面板（推荐）或 controls-v4.ts
+  controls-schema.ts — 声明式控制面板（推荐）或 controls.ts（复杂动态场景）
   page.ts            — bootScenePage({ meta, createScene, createControls })
 
 src/pages/<id>.html  — HTML 入口（vite 自动扫描）
@@ -188,7 +188,7 @@ export type SceneMeta = {
 - 单元测试放在 `tests/unit/*.spec.ts`
 - DOM 组件测试使用 `happy-dom` 环境（已全局配置）
 - E2E 测试放在 `tests/visual/*.spec.ts`
-- 覆盖率阈值: lines 10%, functions 10%, branches 5%, statements 10%
+- 覆盖率阈值以 `vite.config.ts` 为准：lines 40%, functions 60%, branches 45%, statements 40%
 
 ### 场景删除保护规则（强制）
 
@@ -204,11 +204,7 @@ export type SceneMeta = {
 ### 提交前检查
 
 ```bash
-pnpm lint        # ESLint
-pnpm typecheck   # tsc --noEmit
-pnpm test        # Vitest
-pnpm test:e2e    # Playwright
-pnpm build       # Vite
+pnpm quality:full # 完整本地质量门禁
 ```
 
 Husky pre-commit 自动运行 `lint-staged`（eslint --fix + prettier --write）。

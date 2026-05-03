@@ -40,7 +40,9 @@ const SCENE_NAMES: Record<string, string> = {
   'field-lines': '电场线',
   electrification: '静电起电',
   'vt-integral': '微元法',
-  'emf-analogy': '电路类比'
+  'emf-analogy': '电路类比',
+  'spring-oscillator': '弹簧振子',
+  ganshe: '波的干涉'
 };
 
 const BASE_URL = 'http://127.0.0.1:5177';

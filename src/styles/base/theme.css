@@ -55,6 +55,7 @@
 
   /* 强调色 */
   --color-accent-color: #4ecdc4;
+  --color-accent-contrast: #0a0a0a;
   --color-accent-primary: #ff6b6b;
 
   /* 阴影 */
@@ -134,6 +135,7 @@
     --color-btn-bg: rgba(255, 255, 255, 0.1);
     --color-btn-hover-bg: rgba(255, 255, 255, 0.15);
     --color-accent-color: #4ecdc4;
+    --color-accent-contrast: #0a0a0a;
     --color-accent-primary: #ff6b6b;
 
     /* 标准变量别名（向后兼容） */

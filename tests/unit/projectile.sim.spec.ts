@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createProjectileSim } from '../../src/scenes/projectile/scene.sim';
+import { createProjectileScene } from '../../src/scenes/projectile/scene.entry';
 
 describe('projectile sim', () => {
   it('moves x forward after one positive dt step', () => {
@@ -44,5 +45,18 @@ describe('projectile sim', () => {
     expect(state.vx).toBeGreaterThan(0);
     expect(state.vy).toBeGreaterThan(0);
     expect(sim.getParams().gravity).toBeCloseTo(3.7, 6);
+  });
+
+  it('creates the scene with non-zero launch defaults from metadata', () => {
+    const canvas = document.createElement('canvas');
+    const scene = createProjectileScene({ canvas });
+
+    expect(scene.getParams().speed).toBeGreaterThan(0);
+    expect(scene.getParams().angleDeg).toBeGreaterThan(0);
+    expect(scene.getParams().gravity).toBeGreaterThan(0);
+    expect(scene.getState().vx).toBeGreaterThan(0);
+    expect(scene.getState().vy).toBeGreaterThan(0);
+
+    scene.dispose();
   });
 });

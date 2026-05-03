@@ -11,6 +11,7 @@
 | [README.md](../README.md)                                          | 项目概览、Quick Start、架构介绍                                |
 | [AGENTS.md](../AGENTS.md)                                          | AI 协作编码约定、常见陷阱、禁止事项                            |
 | [scene-migration-requirements.md](scene-migration-requirements.md) | **新场景开发规范**：文件结构、SceneInstance 契约、控制面板约定 |
+| [quality-gates.md](quality-gates.md)                               | **质量门禁**：CI、本地验收、bundle budget、视觉快照维护流程    |
 
 ---
 
@@ -44,6 +45,7 @@
 | 文档                                                                     | 说明         |
 | ------------------------------------------------------------------------ | ------------ |
 | [color-palette.md](color-palette.md)                                     | 项目配色方案 |
+| [quality-gates.md](quality-gates.md)                                     | 质量门禁流程 |
 | [layout-proportions-analysis.md](layout-proportions-analysis.md)         | 布局比例分析 |
 | [layout-proportions-summary.md](layout-proportions-summary.md)           | 布局比例总结 |
 | [proportion-optimization-summary.md](proportion-optimization-summary.md) | 比例优化总结 |
