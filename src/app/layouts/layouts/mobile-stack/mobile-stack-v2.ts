@@ -101,13 +101,13 @@ export class MobileStackLayoutV2 implements ILayout {
 
     const themeBtn = document.createElement('button');
     themeBtn.type = 'button';
-    themeBtn.className = 'theme-toggle-btn mobile-toggle-btn';
+    themeBtn.className = 'theme-toggle-btn shell-theme-toggle mobile-toggle-btn';
     themeBtn.setAttribute('aria-label', '切换到夜间主题');
     themeBtn.textContent = '☾';
 
     const modeBtn = document.createElement('button');
     modeBtn.type = 'button';
-    modeBtn.className = 'mode-toggle-btn mobile-toggle-btn';
+    modeBtn.className = 'mode-toggle-btn mode-toggle mobile-toggle-btn';
     modeBtn.setAttribute('aria-label', '切换到演示模式');
     modeBtn.textContent = '演示';
 
@@ -186,7 +186,10 @@ export class MobileStackLayoutV2 implements ILayout {
       panel.setAttribute('role', 'tabpanel');
 
       const slot = document.createElement('div');
-      slot.className = `mobile-${tab.id}-slot`;
+      slot.className =
+        tab.id === 'control'
+          ? `mobile-${tab.id}-slot control-slot`
+          : `mobile-${tab.id}-slot`;
       panel.appendChild(slot);
       tabContent.appendChild(panel);
 

@@ -54,7 +54,7 @@ export function buildControlSection(prefix: CssPrefix): ControlSectionResult {
   const header = document.createElement('div');
   header.className = `${prefix}-section-header`;
   const h2 = document.createElement('h2');
-  h2.className = `${prefix}-section-title`;
+  h2.className = `${prefix}-section-title section-title`;
   h2.textContent = '控制区';
   header.appendChild(h2);
 
@@ -73,7 +73,7 @@ export function buildControlSection(prefix: CssPrefix): ControlSectionResult {
   section.appendChild(header);
 
   const slot = document.createElement('div');
-  slot.className = `${prefix}-control-slot`;
+  slot.className = `${prefix}-control-slot control-slot`;
   section.appendChild(slot);
   return { section, slot };
 }
@@ -91,7 +91,7 @@ export function buildGraphSection(prefix: CssPrefix, label?: string): GraphSecti
   const header = document.createElement('div');
   header.className = `${prefix}-section-header`;
   const h2 = document.createElement('h2');
-  h2.className = `${prefix}-section-title`;
+  h2.className = `${prefix}-section-title section-title`;
   h2.textContent = label ?? '图表';
   header.appendChild(h2);
 
@@ -110,7 +110,7 @@ export function buildGraphSection(prefix: CssPrefix, label?: string): GraphSecti
   section.appendChild(header);
 
   const slot = document.createElement('div');
-  slot.className = `${prefix}-graph-slot`;
+  slot.className = `${prefix}-graph-slot graph-slot`;
   section.appendChild(slot);
   return { section, slot };
 }
@@ -125,11 +125,11 @@ export interface ToolbarElements {
 
 export function buildToolbar(prefix: CssPrefix): ToolbarElements {
   const toolbar = document.createElement('div');
-  toolbar.className = `${prefix}-stage-toolbar`;
+  toolbar.className = `${prefix}-stage-toolbar stage-toolbar`;
 
   const sidebarBtn = document.createElement('button');
   sidebarBtn.type = 'button';
-  sidebarBtn.className = `${prefix}-sidebar-toggle sidebar-toggle-btn`;
+  sidebarBtn.className = `${prefix}-sidebar-toggle sidebar-toggle sidebar-toggle-btn`;
   sidebarBtn.setAttribute('aria-label', '隐藏控制面板');
   sidebarBtn.textContent = '隐藏控制面板';
   toolbar.appendChild(sidebarBtn);
@@ -146,7 +146,7 @@ export function buildToolbar(prefix: CssPrefix): ToolbarElements {
 
   const modeBtn = document.createElement('button');
   modeBtn.type = 'button';
-  modeBtn.className = `${prefix}-mode-toggle mode-toggle-btn`;
+  modeBtn.className = `${prefix}-mode-toggle mode-toggle mode-toggle-btn`;
   modeBtn.setAttribute('aria-label', '切换到演示模式');
   modeBtn.textContent = '演示';
   actions.appendChild(modeBtn);
@@ -189,7 +189,7 @@ export function buildResizer(
   label: string
 ): HTMLElement {
   const el = document.createElement('div');
-  el.className = className;
+  el.className = `${className} panel-resizer`;
   el.setAttribute('role', 'separator');
   el.setAttribute('aria-orientation', orientation);
   el.setAttribute('aria-label', label);

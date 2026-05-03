@@ -20,13 +20,5 @@ test('vt-integral test all scenes', async ({ page }) => {
   await page.waitForTimeout(1000);
   await page.screenshot({ path: '/tmp/vt-scene3.png' });
 
-  // 点击场景四按钮
-  await page.click('text=表面积');
-  await page.waitForTimeout(1000);
-  await page.screenshot({ path: '/tmp/vt-scene4.png' });
-
-  // 点击场景五按钮
-  await page.click('text=旋转体');
-  await page.waitForTimeout(1000);
-  await page.screenshot({ path: '/tmp/vt-scene5.png' });
+  // 当前微元法场景契约包含 v-t面积、曲线逼近、圆面积三个子场景。
 });

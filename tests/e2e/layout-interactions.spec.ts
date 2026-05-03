@@ -72,6 +72,11 @@ const SCENE_META: Record<
     name: '弹簧振子',
     hasGraph: true,
     canvasSelector: 'canvas.stage-canvas'
+  },
+  ganshe: {
+    name: '波的干涉',
+    hasGraph: true,
+    canvasSelector: 'canvas.stage-canvas'
   }
 };
 
@@ -153,8 +158,12 @@ test.describe('SplitRightLayout Desktop', () => {
       await gotoScene(page, sceneId);
 
       await expect(page.locator('.layout-master')).toBeVisible();
-      await expect(page.locator('.teaching-left-panel')).toBeVisible();
-      await expect(page.locator('.teaching-right-panel')).toBeVisible();
+      await expect(
+        page.locator('.teaching-left-panel, .srgb-left-panel')
+      ).toBeVisible();
+      await expect(
+        page.locator('.teaching-right-panel, .srgb-right-panel')
+      ).toBeVisible();
 
       const canvas = page.locator(meta.canvasSelector).first();
       await expect(canvas).toBeVisible();

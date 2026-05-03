@@ -59,17 +59,17 @@ export function createTransportBar(
 
         // Build transport controls DOM
         const controls = document.createElement('div');
-        controls.className = 'mobile-transport-controls';
+        controls.className = 'mobile-transport-controls mobile-speed-control';
 
         const playBtn = document.createElement('button');
         playBtn.type = 'button';
-        playBtn.className = 'mobile-transport-btn';
+        playBtn.className = 'mobile-transport-btn mobile-control-btn play-pause';
         playBtn.setAttribute('aria-label', '播放/暂停');
         playBtn.textContent = '▶';
 
         const resetBtn = document.createElement('button');
         resetBtn.type = 'button';
-        resetBtn.className = 'mobile-transport-btn';
+        resetBtn.className = 'mobile-transport-btn mobile-control-btn reset';
         resetBtn.setAttribute('aria-label', '重置');
         resetBtn.textContent = '↺';
 
@@ -86,8 +86,8 @@ export function createTransportBar(
         speedSlider.value = '1';
 
         const speedValue = document.createElement('span');
-        speedValue.className = 'mobile-transport-speed-value';
-        speedValue.textContent = '1.0×';
+        speedValue.className = 'mobile-transport-speed-value speed-value';
+        speedValue.textContent = '1.00×';
 
         controls.append(playBtn, resetBtn, speedLabel, speedSlider, speedValue);
         container.prepend(controls);
@@ -99,7 +99,7 @@ export function createTransportBar(
         resetBtn.addEventListener('mousedown', (e) => e.stopPropagation(), { signal: ac.signal });
         speedSlider.addEventListener('input', () => {
           const speed = parseFloat(speedSlider.value);
-          speedValue.textContent = `${speed.toFixed(1)}×`;
+          speedValue.textContent = `${speed.toFixed(2)}×`;
           _onSpeedChange?.(speed);
         }, { signal: ac.signal });
         speedSlider.addEventListener('mousedown', (e) => e.stopPropagation(), { signal: ac.signal });
@@ -115,7 +115,7 @@ export function createTransportBar(
             if (typeof data.isPlaying === 'boolean') updatePlayBtn(data.isPlaying);
             if (typeof data.speed === 'number') {
               speedSlider.value = String(data.speed);
-              speedValue.textContent = `${data.speed.toFixed(1)}×`;
+              speedValue.textContent = `${data.speed.toFixed(2)}×`;
             }
           },
           setCallbacks(cbs: TransportBarCallbacks) {

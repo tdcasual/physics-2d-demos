@@ -30,7 +30,7 @@
 .mode-toggle-btn {
   background: var(--color-accent-color);
   border-color: var(--color-accent-color);
-  color: var(--color-text-inverse, #1a1a1a);
+  color: var(--color-accent-contrast, #0a0a0a);
 }
 
 .layout-switch-btn {
@@ -38,4 +38,3 @@
   font-weight: 500;
   white-space: nowrap;
 }
-

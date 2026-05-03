@@ -7,7 +7,7 @@
 .srgb-mode-toggle {
   background: var(--color-accent-color);
   border-color: var(--color-accent-color);
-  color: var(--color-text-inverse, #1a1a1a);
+  color: var(--color-accent-contrast, #0a0a0a);
 }
 
 .srgb-mode-toggle:hover {

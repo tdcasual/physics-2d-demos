@@ -462,8 +462,8 @@ describe('readout-panel data update', () => {
     inst.update?.([{ label: 'A', value: '1' }]);
     expect(slots.animation.querySelectorAll('.teaching-readout-item').length).toBe(1);
 
-    // Passing undefined should be a no-op (keeps existing items)
-    inst.update?.(undefined);
+    // Runtime callers may still pass invalid data; implementation keeps it as a no-op.
+    (inst.update as ((data: unknown) => void) | undefined)?.(undefined);
     expect(slots.animation.querySelectorAll('.teaching-readout-item').length).toBe(1);
 
     inst.dispose();
@@ -474,7 +474,7 @@ describe('readout-panel data update', () => {
     const inst = def.mount(slots, {}, ctx);
 
     inst.update?.([{ label: 'A', value: '1' }]);
-    inst.update?.(null);
+    (inst.update as ((data: unknown) => void) | undefined)?.(null);
     expect(slots.animation.querySelectorAll('.teaching-readout-item').length).toBe(1);
 
     inst.dispose();

@@ -46,7 +46,13 @@ module.exports = {
       }
     },
     {
-      files: ['src/scenes/**/scene.sim.ts', 'src/scenes/**/scene.entry.ts', 'src/scenes/**/scene.view.ts'],
+      files: [
+        'src/scenes/**/scene.meta.ts',
+        'src/scenes/**/scene.sim.ts',
+        'src/scenes/**/scene.entry.ts',
+        'src/scenes/**/scene.view.ts',
+        'src/scenes/**/controls-schema.ts'
+      ],
       rules: {
         'no-restricted-imports': [
           'error',

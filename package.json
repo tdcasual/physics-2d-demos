@@ -19,7 +19,11 @@
     "test:visual:update": "playwright test --update-snapshots",
     "test:parity": "playwright test -c playwright.parity.config.ts tests/parity",
     "test:parity:chase-meet": "playwright test -c playwright.parity.config.ts tests/parity/chase-meet.parity.spec.ts",
+    "check:scenes": "tsx scripts/check-scenes.ts",
+    "check:bundle": "tsx scripts/check-bundle-budget.ts",
     "check:circular": "madge --circular --extensions ts,tsx src/",
+    "quality:core": "pnpm check:scenes && pnpm check:circular && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm check:bundle",
+    "quality:full": "pnpm check:scenes && pnpm check:circular && pnpm lint && pnpm typecheck && pnpm test && pnpm test:coverage && pnpm build && pnpm check:bundle && pnpm test:e2e && pnpm test:visual",
     "prepare": "husky"
   },
   "devDependencies": {

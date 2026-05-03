@@ -148,15 +148,14 @@ test.describe('mobile-stack readout panel', () => {
     await page.waitForTimeout(2000);
   });
 
-  test('uses mobile prefix on small viewport', async ({ page }) => {
-    // Mobile stack layout should use mobile-readout-panel
+  test('uses mobile prefix on small viewport and appears in data tab', async ({ page }) => {
+    // Mobile stack layout mounts readout inside the 数据 tab.
     const mobilePanel = page.locator('.mobile-readout-panel');
     const teachingPanel = page.locator('.teaching-readout-panel');
 
-    // At least one readout panel should be visible
-    const mobileVisible = await mobilePanel.isVisible().catch(() => false);
-    const teachingVisible = await teachingPanel.isVisible().catch(() => false);
-    expect(mobileVisible || teachingVisible).toBe(true);
+    await expect(mobilePanel.or(teachingPanel).first()).toBeAttached();
+    await page.locator('.mobile-tab', { hasText: '数据' }).click();
+    await expect(mobilePanel.or(teachingPanel).first()).toBeVisible();
   });
 });
 
