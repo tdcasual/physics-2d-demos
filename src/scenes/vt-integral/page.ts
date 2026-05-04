@@ -49,8 +49,11 @@ function formatReadout(
     return [
       { label: '场景', value: sceneLabel(snapshot.params.scene) },
       { label: '显示模式', value: modeLabel(mode) },
+      { label: '边数 n', value: String(snapshot.params.circleN) },
+      { label: '多边形周长', value: (2 * snapshot.params.circleN * Math.sin(Math.PI / snapshot.params.circleN)).toFixed(4) },
+      { label: '圆周长 (2π)', value: (2 * Math.PI).toFixed(4) },
       {
-        label: '多边形周长差',
+        label: '周长差',
         value: snapshot.metrics.circumferenceDiff.toFixed(4)
       }
     ];

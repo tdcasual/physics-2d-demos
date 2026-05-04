@@ -172,6 +172,36 @@ export function drawMotion(context: MotionDrawContext): void {
     ctx.arc(carW * 0.48, bodyY + carH * 0.25, 3 * s, 0, Math.PI * 2);
     ctx.fill();
 
+    // 速度箭头（在车上方）
+    const absV = Math.abs(velocity);
+    if (absV > 0.1) {
+      const arrowLen = Math.min(absV * 3 * s, 45 * s);
+      const arrowY = -carH * 0.9;
+      const arrowDir = facingRight ? 1 : -1;
+      ctx.strokeStyle = color.replace('1)', '0.7)');
+      ctx.fillStyle = color.replace('1)', '0.7)');
+      ctx.lineWidth = Math.max(1.5, 2 * s);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-arrowLen * 0.3 * arrowDir, arrowY);
+      ctx.lineTo(arrowLen * 0.7 * arrowDir, arrowY);
+      ctx.stroke();
+      // Arrowhead
+      const headSize = Math.max(3, 5 * s);
+      const tipX = arrowLen * 0.7 * arrowDir;
+      ctx.beginPath();
+      ctx.moveTo(tipX, arrowY);
+      ctx.lineTo(tipX - headSize * arrowDir, arrowY - headSize * 0.5);
+      ctx.lineTo(tipX - headSize * arrowDir, arrowY + headSize * 0.5);
+      ctx.closePath();
+      ctx.fill();
+      // Speed label
+      ctx.fillStyle = isLight ? 'rgba(30,41,59,0.6)' : 'rgba(226,232,240,0.6)';
+      ctx.font = `${Math.max(9, Math.round(10 * s))}px system-ui`;
+      ctx.textAlign = 'center';
+      ctx.fillText(`${absV.toFixed(1)}`, arrowLen * 0.2 * arrowDir, arrowY - 4 * s);
+    }
+
     // 标签（在车上方）
     ctx.restore();
     ctx.fillStyle = isLight ? '#111827' : '#f9fafb';
@@ -183,6 +213,26 @@ export function drawMotion(context: MotionDrawContext): void {
   drawCar(screenXA, 'rgba(96,165,250,1)', 'A', current.vA);
   drawCar(screenXB, 'rgba(248,113,113,1)', 'B', current.vB);
 
+  // Meeting glow when cars are close
+  const dist = Math.abs(current.xA - current.xB);
+  const meetThreshold = (snapshot.bounds.maxX - snapshot.bounds.minX) * 0.05;
+  if (dist < meetThreshold && dist > 0.01) {
+    const midX = (screenXA + screenXB) / 2;
+    const glowAlpha = 0.4 * (1 - dist / meetThreshold);
+    const glowR = 30 * visualScale;
+
+    ctx.save();
+    const glow = ctx.createRadialGradient(midX, mid, 0, midX, mid, glowR);
+    glow.addColorStop(0, `rgba(251,191,36,${glowAlpha})`);
+    glow.addColorStop(1, `rgba(251,191,36,0)`);
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(midX, mid, glowR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Distance indicator line
   ctx.setLineDash([6 * visualScale, 4 * visualScale]);
   ctx.strokeStyle = isLight
     ? 'rgba(30,64,175,0.7)'
@@ -193,4 +243,14 @@ export function drawMotion(context: MotionDrawContext): void {
   ctx.lineTo(screenXB, mid);
   ctx.stroke();
   ctx.setLineDash([]);
+
+  // Distance label above the line
+  const distLabelX = (screenXA + screenXB) / 2;
+  ctx.fillStyle = isLight
+    ? 'rgba(30,41,59,0.65)'
+    : 'rgba(226,232,240,0.6)';
+  ctx.font = `500 ${Math.max(10, Math.round(11 * visualScale))}px system-ui`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText(`Δx = ${dist.toFixed(1)}m`, distLabelX, mid - 6 * visualScale);
 }

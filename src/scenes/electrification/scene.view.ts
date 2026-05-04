@@ -1,5 +1,6 @@
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { sizeCanvasToFill } from '../../core/canvas-sizing';
+import { createTransitionTracker } from '../../core/transition-tracker';
 import type { ElectrificationSnapshot } from './scene.sim';
 import { drawFriction } from './renderer/draw-friction';
 import { drawInduction } from './renderer/draw-induction';
@@ -19,12 +20,12 @@ export function createElectrificationView(
 ) {
   let canvas = options.canvas ?? null;
   let ctx = canvas?.getContext('2d') ?? null;
-  // mode / demoHints reserved for future demo profile integration
   let theme: TeachingTheme = options.theme ?? 'dark';
   let snapshot: ElectrificationSnapshot | null = null;
   let cssWidth = 1280;
   let cssHeight = 720;
   let responsiveScale = 1;
+  const stepTransition = createTransitionTracker(200);
 
   function resizeCanvas(): void {
     if (!canvas) return;
@@ -59,6 +60,14 @@ export function createElectrificationView(
       responsiveScale,
     };
 
+    // Fade-in transition on step change
+    const transitionKey = `${next.state.scene}-${next.state.stepIndex}`;
+    const alpha = stepTransition.update(transitionKey);
+    if (alpha < 1) {
+      context.save();
+      context.globalAlpha = alpha;
+    }
+
     switch (next.state.scene) {
       case 'friction':
         drawFriction(drawContext, next);
@@ -69,6 +78,10 @@ export function createElectrificationView(
       case 'contact':
         drawContact(drawContext, next);
         break;
+    }
+
+    if (alpha < 1) {
+      context.restore();
     }
   }
 

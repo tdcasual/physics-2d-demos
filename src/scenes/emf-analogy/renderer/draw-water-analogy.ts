@@ -151,24 +151,28 @@ export function drawWaterAnalogy(options: WaterDrawOptions): void {
     colors
   );
 
-  // 连接弯头（简化用半圆）
+  // 连接弯头（圆弧过渡）
   ctx.strokeStyle = colors.pipeBorder;
   ctx.lineWidth = pipeWidth;
   ctx.lineCap = 'round';
 
-  // 泵入口弯头
+  const elbowR = pipeWidth * 1.2;
+
+  // 泵入口弯头（左侧 U 形）
+  const pumpElbowX = pumpX - componentSize * 0.4;
   ctx.beginPath();
-  ctx.moveTo(pumpX - componentSize * 0.4, pipeY + pipeWidth / 2);
-  ctx.lineTo(pumpX - componentSize * 0.4, pipeY);
-  ctx.lineTo(pumpX - componentSize * 0.4, pipeY - pipeWidth / 2);
+  ctx.moveTo(pumpElbowX, pipeY + pipeWidth / 2);
+  ctx.arcTo(pumpElbowX, pipeY, pumpElbowX - elbowR, pipeY, elbowR);
+  ctx.arcTo(pumpElbowX - elbowR, pipeY, pumpElbowX - elbowR, pipeY - pipeWidth / 2, elbowR);
+  ctx.lineTo(pumpElbowX, pipeY - pipeWidth / 2);
   ctx.stroke();
 
-  // 细网管出口弯头
+  // 细网管出口弯头（右侧 U 形）
+  const meshElbowX = meshX + meshW * 0.5;
   ctx.beginPath();
-  ctx.moveTo(meshX + meshW * 0.5, pipeY - pipeWidth / 2);
-  ctx.lineTo(meshX + meshW * 0.5 + componentSize * 0.2, pipeY - pipeWidth / 2);
-  ctx.lineTo(meshX + meshW * 0.5 + componentSize * 0.2, pipeY + pipeWidth / 2);
-  ctx.lineTo(meshX + meshW * 0.5, pipeY + pipeWidth / 2);
+  ctx.moveTo(meshElbowX, pipeY - pipeWidth / 2);
+  ctx.arcTo(meshElbowX + elbowR, pipeY - pipeWidth / 2, meshElbowX + elbowR, pipeY, elbowR);
+  ctx.arcTo(meshElbowX + elbowR, pipeY, meshElbowX, pipeY + pipeWidth / 2, elbowR);
   ctx.stroke();
 
   // ── 绘制元件 ──

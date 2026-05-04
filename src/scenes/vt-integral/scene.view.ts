@@ -1,6 +1,6 @@
-import type { TeachingMode } from '../../platform/standards';
-import type { TeachingTheme } from '../../platform/standards';
+import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { sizeCanvasToFill } from '../../core/canvas-sizing';
+import { createTransitionTracker } from '../../core/transition-tracker';
 import { Colors, alpha } from '../../core/colors';
 import type { VtIntegralSnapshot } from './scene.sim';
 import { drawScene1 } from './renderer/draw-scene1';
@@ -36,12 +36,12 @@ export function createVtIntegralView(
 ) {
   let canvas = options.canvas ?? null;
   let ctx = canvas?.getContext('2d') ?? null;
-  // mode / demoHints reserved for future demo profile integration
   let theme: TeachingTheme = options.theme ?? 'dark';
   let snapshot: VtIntegralSnapshot | null = null;
   let canvasWidth = 800;
   let canvasHeight = 600;
   let responsiveScale = 1;
+  const sceneTransition = createTransitionTracker(250);
 
   function resizeCanvas(): void {
     if (!canvas) return;
@@ -76,6 +76,12 @@ export function createVtIntegralView(
 
     const renderer = SCENE_RENDERERS[next.params.scene];
     if (renderer) {
+      const alpha = sceneTransition.update(next.params.scene);
+      if (alpha < 1) {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+      }
+
       renderer(
         {
           ctx,
@@ -86,6 +92,10 @@ export function createVtIntegralView(
         },
         next
       );
+
+      if (alpha < 1) {
+        ctx.restore();
+      }
     }
   }
 

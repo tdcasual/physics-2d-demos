@@ -92,7 +92,14 @@ describe('projectile renderer', () => {
       const context = makeDrawContext();
       const position: WorldPoint = { x: 10, y: 20 };
       const coords: CoordSystem = { originX: 60, originY: 550, scale: 5 };
-      expect(() => drawProjectile(context, position, coords)).not.toThrow();
+      expect(() => drawProjectile(context, position, { vx: 15, vy: 10 }, coords, false)).not.toThrow();
+    });
+
+    it('draws landed projectile without throwing', () => {
+      const context = makeDrawContext();
+      const position: WorldPoint = { x: 50, y: 0 };
+      const coords: CoordSystem = { originX: 60, originY: 550, scale: 5 };
+      expect(() => drawProjectile(context, position, { vx: 0, vy: 0 }, coords, true)).not.toThrow();
     });
   });
 

@@ -1,4 +1,5 @@
 import type { FieldLinePath } from './types';
+import { getFieldLineColors, type FieldLineColors } from './colors';
 
 /**
  * 绘制连续电场线
@@ -11,7 +12,6 @@ export function drawFieldLines(
 ): void {
   if (paths.length === 0) return;
 
-  // 计算全局最大场强用于归一化线宽
   let maxField = 0;
   for (const path of paths) {
     for (const mag of path.fieldMagnitudes) {
@@ -19,12 +19,14 @@ export function drawFieldLines(
     }
   }
 
+  const colors = getFieldLineColors(isDark);
+
   ctx.save();
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
   for (const path of paths) {
-    drawSingleFieldLine(ctx, path, maxField, responsiveScale, isDark);
+    drawSingleFieldLine(ctx, path, maxField, responsiveScale, colors);
   }
 
   ctx.restore();
@@ -35,16 +37,15 @@ function drawSingleFieldLine(
   path: FieldLinePath,
   maxField: number,
   responsiveScale: number,
-  isDark: boolean
+  colors: FieldLineColors
 ): void {
   const { points, fieldMagnitudes, direction } = path;
   if (points.length < 2) return;
 
-  // 颜色方案：正电荷方向用暖色调，负电荷方向用冷色调
   const isPositiveFlow = direction === 1;
   const baseColor = isPositiveFlow
-    ? isDark ? '255, 160, 70' : '230, 120, 40'
-    : isDark ? '70, 200, 230' : '40, 160, 200';
+    ? colors.fieldLineWarm.base
+    : colors.fieldLineCool.base;
 
   // 电场线带微妙的外发光效果
   ctx.shadowBlur = Math.round(6 * responsiveScale);

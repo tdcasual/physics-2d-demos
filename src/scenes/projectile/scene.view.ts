@@ -64,10 +64,18 @@ export function createProjectileView(options: CreateProjectileViewOptions) {
       responsiveScale
     };
 
+    const landed = state.y <= 0.01 && state.vy <= 0;
+
     drawBackground(drawContext, coords.originX, coords.originY);
     drawAxes(drawContext, coords.originX, coords.originY);
     drawTrajectory(drawContext, trail, coords);
-    drawProjectile(drawContext, { x: state.x, y: state.y }, coords);
+    drawProjectile(
+      drawContext,
+      { x: state.x, y: state.y },
+      { vx: state.vx, vy: state.vy },
+      coords,
+      landed
+    );
   }
 
   function reset(): void {

@@ -2,6 +2,13 @@
  * 电荷粒子绘制
  */
 
+// Pre-computed random offsets to avoid per-frame jitter
+const RANDOM_CACHE_SIZE = 32;
+const randomDistCache: number[] = Array.from(
+  { length: RANDOM_CACHE_SIZE },
+  () => 0.4 + Math.random() * 0.4
+);
+
 /** 在物体表面/内部绘制净电荷粒子 */
 export function drawNetCharges(
   ctx: CanvasRenderingContext2D,
@@ -14,7 +21,6 @@ export function drawNetCharges(
 ): void {
   const absQ = Math.abs(charge);
   if (absQ === 0) {
-    // 中性：各画 2 个正负粒子示意
     const offset = Math.max(3, 6 * s);
     drawChargeParticle(ctx, centerX - offset, centerY, 1, isDark, s);
     drawChargeParticle(ctx, centerX + offset, centerY, -1, isDark, s);
@@ -24,10 +30,9 @@ export function drawNetCharges(
   const count = Math.min(12, Math.max(3, absQ * 3));
   const isPositive = charge > 0;
 
-  // 在圆形区域内均匀分布
   for (let i = 0; i < count; i++) {
     const angle = (i / count) * Math.PI * 2 + (Math.PI / count);
-    const dist = spreadRadius * (0.4 + Math.random() * 0.4);
+    const dist = spreadRadius * randomDistCache[i % RANDOM_CACHE_SIZE];
     const px = centerX + Math.cos(angle) * dist;
     const py = centerY + Math.sin(angle) * dist;
     drawChargeParticle(ctx, px, py, isPositive ? 1 : -1, isDark, s);

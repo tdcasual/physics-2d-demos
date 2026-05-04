@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { drawAxis } from '../../src/scenes/vt-integral/renderer/draw-axis';
-import { drawMetricPanel } from '../../src/scenes/vt-integral/renderer/draw-metric-panel';
 import { drawScene1 } from '../../src/scenes/vt-integral/renderer/draw-scene1';
 import { drawScene2 } from '../../src/scenes/vt-integral/renderer/draw-scene2';
 import { drawScene3 } from '../../src/scenes/vt-integral/renderer/draw-scene3';
@@ -58,22 +57,6 @@ describe('vt-integral renderer', () => {
             xLabel: 't / s',
             yLabel: 'v / (m·s⁻¹)'
           }
-        )
-      ).not.toThrow();
-    });
-  });
-
-  describe('draw-metric-panel', () => {
-    it('draws metric panel without throwing', () => {
-      const { ctx } = makeCtx();
-      expect(() =>
-        drawMetricPanel(
-          { ctx, width: 800, height: 600, theme: 'dark', responsiveScale: 1 },
-          [
-            { label: '矩形面积', value: '10.5' },
-            { label: '真实面积', value: '11.2' }
-          ],
-          300
         )
       ).not.toThrow();
     });

@@ -6,7 +6,7 @@ import type { DrawContext } from './types';
  */
 export function drawScene3(context: DrawContext, snapshot: VtIntegralSnapshot): void {
   const { ctx, width, height, theme, responsiveScale } = context;
-  const { params, metrics } = snapshot;
+  const { params } = snapshot;
   const isDark = theme === 'dark';
   const s = responsiveScale;
 
@@ -100,39 +100,13 @@ export function drawScene3(context: DrawContext, snapshot: VtIntegralSnapshot): 
   ctx.arc(cx, cy, Math.max(2, 2.5 * s), 0, Math.PI * 2);
   ctx.fill();
 
-  // 右侧信息
-  const infoX = width * 0.72;
-  const infoY = height * 0.25;
-  const infoFont = Math.max(11, Math.round(14 * s));
-  const infoLineH = Math.max(24, 30 * s);
-
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-
-  ctx.font = `700 ${Math.max(13, Math.round(16 * s))}px "Noto Sans SC", system-ui, sans-serif`;
-  ctx.fillStyle = isDark ? '#e2e8f0' : '#1e293b';
-  ctx.fillText('圆内接正多边形', infoX, infoY);
-
-  ctx.font = `${infoFont}px "Noto Sans SC", system-ui, sans-serif`;
-  ctx.fillStyle = isDark ? 'rgba(226,232,240,0.7)' : 'rgba(71,85,105,0.7)';
-
-  const lines = [
-    `边数 n = ${n}`,
-    `圆周率 π ≈ 3.14159`,
-    `多边形周长 = ${(2 * n * Math.sin(Math.PI / n)).toFixed(4)}`,
-    `圆周长 = ${(2 * Math.PI).toFixed(4)}`,
-    `周长差 = ${metrics.circumferenceDiff.toFixed(4)}`
-  ];
-
-  lines.forEach((line, i) => {
-    ctx.fillText(line, infoX, infoY + infoLineH * (i + 1));
-  });
-
-  // 当 n 很大时显示提示
+  // n 很大时的视觉提示（在圆上方）
   if (n >= 50) {
     ctx.font = `italic ${Math.max(10, Math.round(12 * s))}px "Noto Sans SC", system-ui, sans-serif`;
     ctx.fillStyle = isDark ? 'rgba(74,222,128,0.7)' : 'rgba(22,163,74,0.7)';
-    ctx.fillText('多边形已非常接近圆！', infoX, infoY + infoLineH * (lines.length + 1.5));
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('多边形已非常接近圆', cx, cy - r - 10 * s);
   }
 
   ctx.restore();
