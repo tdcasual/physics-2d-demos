@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { makeDraggable } from '../../src/ui/utils/draggable';
 
+function pointerDown(el: Element, x: number, y: number) {
+  el.dispatchEvent(new PointerEvent('pointerdown', { clientX: x, clientY: y, bubbles: true, pointerId: 1 }));
+}
+
+function pointerMove(el: Element, x: number, y: number) {
+  el.dispatchEvent(new PointerEvent('pointermove', { clientX: x, clientY: y, bubbles: true, pointerId: 1 }));
+}
+
+function pointerUp(el: Element) {
+  el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1 }));
+}
+
 describe('makeDraggable', () => {
   it('should make element draggable and update position', () => {
     const element = document.createElement('div');
@@ -19,13 +31,9 @@ describe('makeDraggable', () => {
     const cleanup = makeDraggable(element);
 
     // Simulate drag: 100,100 -> 150,120 = delta 50,20
-    element.dispatchEvent(
-      new MouseEvent('mousedown', { clientX: 100, clientY: 100, bubbles: true })
-    );
-    document.dispatchEvent(
-      new MouseEvent('mousemove', { clientX: 150, clientY: 120, bubbles: true })
-    );
-    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    pointerDown(element, 100, 100);
+    pointerMove(element, 150, 120);
+    pointerUp(element);
 
     expect(element.style.left).toBe('150px');
     expect(element.style.top).toBe('120px');
@@ -51,13 +59,9 @@ describe('makeDraggable', () => {
 
     expect(handle.style.cursor).toBe('move');
 
-    handle.dispatchEvent(
-      new MouseEvent('mousedown', { clientX: 50, clientY: 50, bubbles: true })
-    );
-    document.dispatchEvent(
-      new MouseEvent('mousemove', { clientX: 70, clientY: 80, bubbles: true })
-    );
-    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    pointerDown(handle, 50, 50);
+    pointerMove(handle, 70, 80);
+    pointerUp(handle);
 
     expect(element.style.left).toBe('70px');
     expect(element.style.top).toBe('80px');
@@ -77,7 +81,7 @@ describe('makeDraggable', () => {
     element.remove();
   });
 
-  it('should not move before mousedown', () => {
+  it('should not move before pointerdown', () => {
     const element = document.createElement('div');
     element.style.position = 'absolute';
     element.style.left = '10px';
@@ -86,10 +90,8 @@ describe('makeDraggable', () => {
 
     const cleanup = makeDraggable(element);
 
-    // Mouse move without mousedown should not move element
-    document.dispatchEvent(
-      new MouseEvent('mousemove', { clientX: 100, clientY: 100, bubbles: true })
-    );
+    // Pointer move without pointerdown should not move element
+    pointerMove(element, 100, 100);
 
     expect(element.style.left).toBe('10px');
     expect(element.style.top).toBe('10px');
@@ -104,12 +106,10 @@ describe('makeDraggable', () => {
 
     const cleanup = makeDraggable(element);
 
-    element.dispatchEvent(
-      new MouseEvent('mousedown', { clientX: 0, clientY: 0, bubbles: true })
-    );
+    pointerDown(element, 0, 0);
     expect(document.body.style.userSelect).toBe('none');
 
-    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    pointerUp(element);
     expect(document.body.style.userSelect).toBe('');
 
     cleanup();

@@ -17,12 +17,16 @@ export function createSelectRow(
   row.className = 'flex items-center gap-2 py-1';
   row.dataset.testid = 'select-row';
 
-  const labelEl = document.createElement('span');
+  const selectId = `select-${label.replace(/\s+/g, '-').toLowerCase()}-${Math.random().toString(36).slice(2, 6)}`;
+
+  const labelEl = document.createElement('label');
+  labelEl.htmlFor = selectId;
   labelEl.className = 'text-[12px] font-semibold shrink-0';
   labelEl.style.color = 'var(--text-secondary)';
   labelEl.textContent = label;
 
   const select = document.createElement('select');
+  select.id = selectId;
   select.className = 'text-[11px] px-1 py-0.5 rounded flex-1 min-w-0';
   select.style.cssText = `
     border: 1px solid var(--border-color);
@@ -38,11 +42,11 @@ export function createSelectRow(
     select.appendChild(opt);
   });
 
-  select.addEventListener('change', () => {
-    options.onChange?.(select.value);
-  });
+  const onChange = () => { options.onChange?.(select.value); };
+  select.addEventListener('change', onChange);
 
   row.append(labelEl, select);
+  (row as any).dispose = () => { select.removeEventListener('change', onChange); };
   return row;
 }
 

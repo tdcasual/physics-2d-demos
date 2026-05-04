@@ -36,9 +36,9 @@ export type Oscillator = {
 
 // 配色方案（用于区分不同振子）
 export const OSCILLATOR_COLORS = [
-  '#4db0ff', // 蓝
+  '#3b82f6', // 蓝
   '#ff6b6b', // 红
-  '#51cf66', // 绿
+  '#22c55e', // 绿
   '#ffd43b', // 黄
   '#da77f2', // 紫
   '#ff922b'  // 橙

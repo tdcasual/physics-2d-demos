@@ -21,15 +21,17 @@ export function createSceneSelector(
   const clickHandlers = new Map<string, () => void>();
 
   const container = document.createElement('div');
+  container.setAttribute('role', 'radiogroup');
   container.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--scene-selector-gap, 6px);';
 
   function updateStyles() {
     buttons.forEach((btn, id) => {
       const isActive = id === activeId;
+      btn.setAttribute('aria-pressed', String(isActive));
       btn.style.cssText = `
         width: 100%;
         padding: var(--scene-selector-padding, 12px 14px);
-        background: ${isActive ? 'var(--accent-primary-light, rgba(79,70,229,0.1))' : 'var(--btn-bg, #ffffff)'};
+        background: ${isActive ? 'var(--accent-primary-light)' : 'var(--btn-bg)'};
         border: 1px solid ${isActive ? 'var(--accent-primary)' : 'var(--border-color)'};
         border-radius: 8px;
         color: var(--text-primary);
@@ -38,7 +40,7 @@ export function createSceneSelector(
         cursor: pointer;
         transition: all 0.2s;
         text-align: left;
-        box-shadow: ${isActive ? '0 1px 3px rgba(79,70,229,0.2)' : '0 1px 2px rgba(0,0,0,0.05)'};
+        box-shadow: ${isActive ? '0 1px 3px var(--shadow-color)' : '0 1px 2px var(--shadow-color)'};
       `;
     });
   }
@@ -46,6 +48,8 @@ export function createSceneSelector(
   scenes.forEach((s) => {
     const btn = document.createElement('button');
     btn.type = 'button';
+    btn.setAttribute('role', 'radio');
+    btn.setAttribute('aria-pressed', 'false');
     const labelSpan = document.createElement('span');
     labelSpan.style.cssText = `font-weight: 600; font-size: var(--scene-selector-label-size, 14px);`;
     labelSpan.textContent = s.label;

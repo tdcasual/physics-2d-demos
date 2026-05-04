@@ -12,9 +12,10 @@ export function createButtonGrid(
     onClick: () => void;
   }>,
   columns: 1 | 2 | 3 = 2
-): HTMLElement {
-  const grid = document.createElement('div');
+): HTMLElement & { dispose: () => void } {
+  const grid = document.createElement('div') as HTMLElement & { dispose: () => void };
   grid.className = `grid grid-cols-${columns} gap-2`;
+  const cleanups: Array<() => void> = [];
 
   buttons.forEach((btn) => {
     const button = document.createElement('button');
@@ -30,14 +31,16 @@ export function createButtonGrid(
       border: 1px solid var(--border-color);
     `;
 
-    button.addEventListener('mouseenter', () => {
+    const onEnter = () => {
       button.style.background = 'var(--btn-hover-bg)';
       button.style.borderColor = 'var(--accent-color)';
-    });
-    button.addEventListener('mouseleave', () => {
+    };
+    const onLeave = () => {
       button.style.background = 'var(--btn-bg)';
       button.style.borderColor = 'var(--border-color)';
-    });
+    };
+    button.addEventListener('mouseenter', onEnter);
+    button.addEventListener('mouseleave', onLeave);
 
     const labelSpan = document.createElement('span');
     labelSpan.className = 'text-xs font-semibold';
@@ -55,9 +58,15 @@ export function createButtonGrid(
     }
 
     button.addEventListener('click', btn.onClick);
+    cleanups.push(() => {
+      button.removeEventListener('mouseenter', onEnter);
+      button.removeEventListener('mouseleave', onLeave);
+      button.removeEventListener('click', btn.onClick);
+    });
     grid.appendChild(button);
   });
 
+  grid.dispose = () => cleanups.forEach((c) => c());
   return grid;
 }
 

@@ -13,9 +13,10 @@ export function createTransportRow(
     onReset?: () => void;
     onStep?: () => void;
   }
-): { element: HTMLElement } {
+): { element: HTMLElement; dispose: () => void } {
   const container = document.createElement('div');
   container.className = 'grid grid-cols-4 gap-2';
+  const cleanups: Array<() => void> = [];
 
   const buttons = [
     { icon: '▶', label: '播放', action: callbacks.onPlay },
@@ -46,18 +47,21 @@ export function createTransportRow(
     labelSpan.style.color = 'var(--text-secondary)';
     labelSpan.textContent = btn.label;
     button.append(iconSpan, labelSpan);
-    button.addEventListener('mouseenter', () => {
-      button.style.background = 'var(--btn-hover-bg)';
-    });
-    button.addEventListener('mouseleave', () => {
-      button.style.background = 'var(--btn-bg)';
-    });
+    const onEnter = () => { button.style.background = 'var(--btn-hover-bg)'; };
+    const onLeave = () => { button.style.background = 'var(--btn-bg)'; };
+    button.addEventListener('mouseenter', onEnter);
+    button.addEventListener('mouseleave', onLeave);
     button.addEventListener('click', btn.action);
+    cleanups.push(() => {
+      button.removeEventListener('mouseenter', onEnter);
+      button.removeEventListener('mouseleave', onLeave);
+      button.removeEventListener('click', btn.action);
+    });
     container.appendChild(button);
   });
 
   mount.appendChild(container);
-  return { element: container };
+  return { element: container, dispose: () => cleanups.forEach((c) => c()) };
 }
 
 /**

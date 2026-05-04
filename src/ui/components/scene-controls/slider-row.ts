@@ -43,13 +43,15 @@ export function createSliderRow(
   valueEl.style.color = 'var(--text-primary)';
   valueEl.textContent = options.value + (options.unit || '');
 
-  slider.addEventListener('input', () => {
+  const onInput = () => {
     const val = parseFloat(slider.value);
     valueEl.textContent = val + (options.unit || '');
     options.onChange?.(val);
-  });
+  };
+  slider.addEventListener('input', onInput);
 
   row.append(labelEl, slider, valueEl);
+  (row as any).dispose = () => { slider.removeEventListener('input', onInput); };
   return row;
 }
 

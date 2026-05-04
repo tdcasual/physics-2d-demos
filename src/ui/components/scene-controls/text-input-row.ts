@@ -43,19 +43,27 @@ export function createTextInputRow(
   if (options.fontFamily) {
     input.style.fontFamily = options.fontFamily;
   }
-  input.addEventListener('focus', () => {
+  const onFocus = () => {
     input.style.borderColor = 'var(--accent-primary)';
     input.style.boxShadow = '0 0 0 3px var(--accent-primary-light)';
-  });
-  input.addEventListener('blur', () => {
+  };
+  const onBlur = () => {
     input.style.borderColor = 'var(--border-color)';
     input.style.boxShadow = 'none';
-  });
-  input.addEventListener('change', () => {
+  };
+  const onChangeHandler = () => {
     onChange(input.value);
-  });
+  };
+  input.addEventListener('focus', onFocus);
+  input.addEventListener('blur', onBlur);
+  input.addEventListener('change', onChangeHandler);
 
   row.append(labelEl, input);
+  (row as any).dispose = () => {
+    input.removeEventListener('focus', onFocus);
+    input.removeEventListener('blur', onBlur);
+    input.removeEventListener('change', onChangeHandler);
+  };
   return row;
 }
 

@@ -26,10 +26,9 @@ export function createFloatingControls(options: {
     align-items: center;
     z-index: 10;
     padding: var(--transport-padding, 12px 16px);
-    background: var(--card-bg, rgba(0,0,0,0.3));
+    background: var(--card-bg);
     border-radius: var(--transport-radius, 10px);
-    border: 1px solid var(--border-color, rgba(255,255,255,0.1));
-    backdrop-filter: blur(8px);
+    border: 1px solid var(--border-color);
   `;
 
   const playPauseBtn = document.createElement('button');
@@ -39,9 +38,9 @@ export function createFloatingControls(options: {
     width: var(--transport-btn-size, 44px);
     height: var(--transport-btn-size, 44px);
     border-radius: 8px;
-    border: 1px solid var(--border-color, rgba(255,255,255,0.15));
-    background: var(--btn-bg, rgba(255,255,255,0.1));
-    color: var(--text-primary, #fff);
+    border: 1px solid var(--border-color);
+    background: var(--btn-bg);
+    color: var(--text-primary);
     font-size: var(--transport-icon-size, 20px);
     cursor: pointer;
     display: flex;
@@ -54,8 +53,8 @@ export function createFloatingControls(options: {
     const isPlaying = options.isPlaying?.() ?? false;
     playPauseBtn.textContent = isPlaying ? '⏸' : '▶';
     playPauseBtn.style.borderColor = isPlaying
-      ? 'var(--accent-color, #4db0ff)'
-      : 'var(--border-color, rgba(255,255,255,0.15))';
+      ? 'var(--accent-primary)'
+      : 'var(--border-color)';
   }
 
   playPauseBtn.addEventListener('click', () => {
@@ -68,12 +67,11 @@ export function createFloatingControls(options: {
   }, { signal: ac.signal });
 
   playPauseBtn.addEventListener('mouseenter', () => {
-    playPauseBtn.style.background =
-      'var(--btn-hover-bg, rgba(255,255,255,0.2))';
+    playPauseBtn.style.background = 'var(--btn-hover-bg)';
     playPauseBtn.style.transform = 'translateY(-1px)';
   }, { signal: ac.signal });
   playPauseBtn.addEventListener('mouseleave', () => {
-    playPauseBtn.style.background = 'var(--btn-bg, rgba(255,255,255,0.1))';
+    playPauseBtn.style.background = 'var(--btn-bg)';
     playPauseBtn.style.transform = 'none';
   }, { signal: ac.signal });
 
@@ -85,9 +83,9 @@ export function createFloatingControls(options: {
     width: var(--transport-btn-size, 44px);
     height: var(--transport-btn-size, 44px);
     border-radius: 8px;
-    border: 1px solid var(--border-color, rgba(255,255,255,0.15));
-    background: var(--btn-bg, rgba(255,255,255,0.1));
-    color: var(--text-secondary, #aaa);
+    border: 1px solid var(--border-color);
+    background: var(--btn-bg);
+    color: var(--text-secondary);
     font-size: var(--transport-icon-size, 20px);
     cursor: pointer;
     display: flex;
@@ -105,13 +103,13 @@ export function createFloatingControls(options: {
   }, { signal: ac.signal });
 
   resetBtn.addEventListener('mouseenter', () => {
-    resetBtn.style.background = 'var(--btn-hover-bg, rgba(255,255,255,0.2))';
-    resetBtn.style.color = 'var(--text-primary, #fff)';
+    resetBtn.style.background = 'var(--btn-hover-bg)';
+    resetBtn.style.color = 'var(--text-primary)';
     resetBtn.style.transform = 'translateY(-1px)';
   }, { signal: ac.signal });
   resetBtn.addEventListener('mouseleave', () => {
-    resetBtn.style.background = 'var(--btn-bg, rgba(255,255,255,0.1))';
-    resetBtn.style.color = 'var(--text-secondary, #aaa)';
+    resetBtn.style.background = 'var(--btn-bg)';
+    resetBtn.style.color = 'var(--text-secondary)';
     resetBtn.style.transform = 'none';
   }, { signal: ac.signal });
 
@@ -119,7 +117,7 @@ export function createFloatingControls(options: {
   divider.style.cssText = `
     width: 1px;
     height: var(--transport-divider-height, 32px);
-    background: var(--border-color, rgba(255,255,255,0.15));
+    background: var(--border-color);
     margin: 0 4px;
   `;
 
@@ -127,7 +125,7 @@ export function createFloatingControls(options: {
   speedLabel.textContent = '速度';
   speedLabel.style.cssText = `
     font-size: var(--transport-font-size, 16px);
-    color: var(--text-secondary, #aaa);
+    color: var(--text-secondary);
     font-weight: 500;
     white-space: nowrap;
   `;
@@ -148,7 +146,7 @@ export function createFloatingControls(options: {
   speedValue.textContent = `${parseFloat(speedSlider.value).toFixed(2)}×`;
   speedValue.style.cssText = `
     font-size: var(--transport-font-size, 16px);
-    color: var(--text-primary, #fff);
+    color: var(--text-primary);
     font-weight: 600;
     min-width: var(--transport-speed-width, 50px);
     text-align: right;
@@ -190,8 +188,8 @@ export function createFloatingControls(options: {
     if (typeof state.isPlaying === 'boolean') {
       playPauseBtn.textContent = state.isPlaying ? '⏸' : '▶';
       playPauseBtn.style.borderColor = state.isPlaying
-        ? 'var(--accent-color, #4db0ff)'
-        : 'var(--border-color, rgba(255,255,255,0.15))';
+        ? 'var(--accent-primary)'
+        : 'var(--border-color)';
     }
     if (typeof state.speed === 'number') {
       speedSlider.value = String(state.speed);
