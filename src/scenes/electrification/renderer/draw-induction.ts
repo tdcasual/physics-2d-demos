@@ -95,20 +95,6 @@ export function drawInduction(
     ctx.fillText('带电体', externalX, objY + sphereR + labelGap);
   }
 
-  // 步骤说明文字
-  const infoY = height * 0.72;
-  ctx.fillStyle = isDark ? 'rgba(226,232,240,0.6)' : 'rgba(71,85,105,0.6)';
-  ctx.font = `${Math.max(11, Math.round(13 * s))}px "Noto Sans SC", sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
-
-  const explanations = [
-    '带电体靠近 → 导体内部电荷分离',
-    '接地导走同号电荷 → 保留异号电荷',
-    '移除带电体和接地 → 导体带净电荷'
-  ];
-  ctx.fillText(explanations[state.stepIndex] || '', cx, infoY);
-
   // 步骤指示器
   drawStepIndicator(ctx, width, height, state.stepIndex, 3,
     ['靠近', '接地', '移除'], isDark, s);

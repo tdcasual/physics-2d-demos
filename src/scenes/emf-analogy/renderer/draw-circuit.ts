@@ -168,48 +168,4 @@ export function drawCircuit(options: CircuitDrawOptions): void {
     'V',
     colors
   );
-
-  // ── 底部数据面板 ──
-  const panelW = Math.min(width * 0.88, 460 * s);
-  const panelH = Math.max(40, 50 * s);
-  const panelX = cx - panelW / 2;
-  const panelY = height - panelH - Math.max(10, 14 * s);
-
-  ctx.fillStyle = colors.panelBg;
-  roundRect(ctx, panelX, panelY, panelW, panelH, 6 * s);
-  ctx.fill();
-  ctx.strokeStyle = colors.panelBorder;
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  const cols = 4;
-  const colW = panelW / cols;
-  const items = [
-    { label: '电动势 E', value: `${snapshot.state.emf.toFixed(2)} V` },
-    {
-      label: '路端电压 U',
-      value: `${snapshot.state.terminalVoltage.toFixed(2)} V`
-    },
-    {
-      label: '内阻压降 Ir',
-      value: `${snapshot.state.internalDrop.toFixed(2)} V`
-    },
-    { label: '电流 I', value: `${snapshot.state.currentI.toFixed(2)} A` }
-  ];
-
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-
-  items.forEach((item, i) => {
-    const ix = panelX + colW * i + colW / 2;
-    const iy = panelY + panelH / 2;
-
-    ctx.fillStyle = colors.textSecondary;
-    ctx.font = `500 ${Math.max(9, 11 * s)}px sans-serif`;
-    ctx.fillText(item.label, ix, iy - panelH * 0.18);
-
-    ctx.fillStyle = colors.text;
-    ctx.font = `700 ${Math.max(12, 15 * s)}px sans-serif`;
-    ctx.fillText(item.value, ix, iy + panelH * 0.18);
-  });
 }

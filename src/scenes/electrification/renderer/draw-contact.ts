@@ -74,14 +74,8 @@ function drawContactStep0(
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   const labelGap = 12 * s;
-  ctx.fillText(`Q₁ = ${state.leftCharge > 0 ? '+' : ''}${state.leftCharge}`, leftX, cy + sphereR + labelGap);
-  ctx.fillText(`Q₂ = ${state.rightCharge > 0 ? '+' : ''}${state.rightCharge}`, rightX, cy + sphereR + labelGap);
-
-  // 说明
-  const infoY = cy + sphereR + 40 * s;
-  ctx.fillStyle = isDark ? 'rgba(226,232,240,0.5)' : 'rgba(71,85,105,0.5)';
-  ctx.font = `${Math.max(11, Math.round(13 * s))}px "Noto Sans SC", sans-serif`;
-  ctx.fillText('两个导体即将接触，电荷不均', cx, infoY);
+  ctx.fillText('A', leftX, cy + sphereR + labelGap);
+  ctx.fillText('B', rightX, cy + sphereR + labelGap);
 }
 
 /** step 1: 接触后 — 电荷重新分配 */
@@ -162,12 +156,6 @@ function drawContactStep1(
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   const labelGap = 12 * s;
-  ctx.fillText(`Q₁ = ${avgCharge > 0 ? '+' : ''}${avgCharge}`, leftX, cy + sphereR + labelGap);
-  ctx.fillText(`Q₂ = ${avgCharge > 0 ? '+' : ''}${avgCharge}`, rightX, cy + sphereR + labelGap);
-
-  // 说明
-  const infoY = cy + sphereR + 40 * s;
-  ctx.fillStyle = isDark ? 'rgba(226,232,240,0.5)' : 'rgba(71,85,105,0.5)';
-  ctx.font = `${Math.max(11, Math.round(13 * s))}px "Noto Sans SC", sans-serif`;
-  ctx.fillText('接触后电荷重新分配，两导体带等量电荷', cx, infoY);
+  ctx.fillText('A', leftX, cy + sphereR + labelGap);
+  ctx.fillText('B', rightX, cy + sphereR + labelGap);
 }

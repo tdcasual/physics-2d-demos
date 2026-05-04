@@ -193,13 +193,4 @@ export function drawMotion(context: MotionDrawContext): void {
   ctx.lineTo(screenXB, mid);
   ctx.stroke();
   ctx.setLineDash([]);
-
-  ctx.fillStyle = isLight ? '#111827' : '#f9fafb';
-  ctx.font = `${Math.max(13, Math.round(13 * visualScale))}px system-ui`;
-  ctx.textAlign = 'center';
-  ctx.fillText(
-    `距离 = ${Math.abs(current.xB - current.xA).toFixed(2)} m`,
-    (screenXA + screenXB) / 2,
-    mid - 34 * visualScale
-  );
 }
