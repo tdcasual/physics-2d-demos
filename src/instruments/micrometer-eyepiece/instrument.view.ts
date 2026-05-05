@@ -326,7 +326,7 @@ export function createMicrometerEyepieceView(options: {
       <div class="case">
         <div class="lens-outer-ring">
           <div class="lens-inner-ring">
-            <div class="lens-view"></div>
+            <div class="lens-view" id="lens-view"></div>
             <div class="crosshair-system" id="crosshair-system">
               <div class="crosshair-v"></div>
               <div class="crosshair-h"></div>
@@ -360,6 +360,7 @@ export function createMicrometerEyepieceView(options: {
   const thimbleGroup = qs<HTMLDivElement>('thimble-group');
   const crosshairSystem = qs<HTMLDivElement>('crosshair-system');
   const readoutDisplay = qs<HTMLDivElement>('readout-display');
+  const lensView = qs<HTMLDivElement>('lens-view');
   const caseEl = root.querySelector('.case') as HTMLDivElement;
   const systemEl = root.querySelector('.micrometer-system') as HTMLDivElement;
 
@@ -378,6 +379,13 @@ export function createMicrometerEyepieceView(options: {
   let startReading = 0;
   let disposed = false;
   let simLastReading = config.initialReading;
+
+  let stripeState = {
+    offset: 0,
+    spacing: 50,
+    color: 'rgba(200, 80, 20, 0.4)',
+    angle: 90,
+  };
 
   // 整体仪器拖拽状态
   let sysDragging = false;
@@ -430,6 +438,24 @@ export function createMicrometerEyepieceView(options: {
       }
       thimbleStrip.appendChild(tick);
     }
+  }
+
+  // ── 更新干涉条纹 ──
+  function updateStripes() {
+    const s = stripeState;
+    const stripeW = s.spacing * 0.3;
+    const mid = s.spacing * 0.5;
+    lensView.style.backgroundImage = `repeating-linear-gradient(
+      ${s.angle}deg,
+      transparent 0px,
+      transparent ${Math.round(mid - stripeW)}px,
+      ${s.color} ${Math.round(mid - stripeW * 0.5)}px,
+      ${s.color} ${Math.round(mid)}px,
+      ${s.color} ${Math.round(mid + stripeW * 0.5)}px,
+      transparent ${Math.round(mid + stripeW)}px,
+      transparent ${Math.round(s.spacing)}px
+    )`;
+    lensView.style.backgroundPositionX = `${s.offset}px`;
   }
 
   // ── 核心物理渲染引擎 ──
@@ -560,10 +586,25 @@ export function createMicrometerEyepieceView(options: {
   systemEl.style.transform = 'translate(0px, 0px) scale(1.1)';
   initSleeve();
   initThimble();
+  updateStripes();
   renderView();
 
   return {
     render(state) {
+      const stripeChanged =
+        state.stripeOffset !== stripeState.offset ||
+        state.stripeSpacing !== stripeState.spacing ||
+        state.stripeColor !== stripeState.color ||
+        state.stripeAngle !== stripeState.angle;
+      if (stripeChanged) {
+        stripeState = {
+          offset: state.stripeOffset,
+          spacing: state.stripeSpacing,
+          color: state.stripeColor,
+          angle: state.stripeAngle,
+        };
+        updateStripes();
+      }
       if (state.currentReading !== simLastReading) {
         simLastReading = state.currentReading;
         currentReading = state.currentReading;
