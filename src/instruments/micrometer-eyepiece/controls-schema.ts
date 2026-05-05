@@ -30,10 +30,10 @@ export const micrometerEyepieceControlsSchema: ControlsSchema = {
           type: 'slider',
           key: 'stripeOffset',
           label: '十字准星偏移',
-          min: -2000,
-          max: 0,
+          min: 0,
+          max: 2000,
           step: 10,
-          value: -1200,
+          value: 1200,
           unit: 'px',
         },
         {

@@ -475,7 +475,7 @@ export function createMicrometerEyepieceView(options: {
     thimbleStrip.style.transform = `translateY(${translateY}px)`;
 
     // C. 联动干涉视场：平移十字准星
-    const viewOffset = (currentReading - config.initialReading) * config.crosshairSpeed + stripeState.offset;
+    const viewOffset = (currentReading - config.initialReading) * config.crosshairSpeed - stripeState.offset;
     crosshairSystem.style.transform = `translateX(${viewOffset}px)`;
 
     // D. 高精度数字更新
