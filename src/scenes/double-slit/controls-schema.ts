@@ -77,11 +77,11 @@ const instrumentSection = {
     {
       type: 'slider' as const,
       key: 'stripeOffset',
-      label: '条纹偏移',
-      min: -100,
-      max: 100,
+      label: '十字准星位移',
+      min: 0,
+      max: 2000,
       step: 1,
-      value: 0,
+      value: 1200,
       unit: 'px'
     }
   ]

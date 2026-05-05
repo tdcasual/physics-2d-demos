@@ -69,6 +69,7 @@ bootScenePage({
             dsScene.setParams({ activeInstrument: instrument });
             currentRenderer?.setActive(key, instrument);
             currentRenderer?.setVisible('micrometerOffset', instrument === 'micrometer');
+            currentRenderer?.setVisible('stripeOffset', instrument === 'micrometer');
           } else if (key === 'showInstrumentReadout') {
             dsScene.setParams({ showInstrumentReadout: Boolean(value) });
           } else if (key === 'micrometerOffset') {
