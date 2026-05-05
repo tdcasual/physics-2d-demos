@@ -366,8 +366,8 @@ export function createMicrometerEyepieceView(options: {
 
   const config = {
     initialReading: 0.30,
-    maxReading: 25.00,
-    tickGapX: 22,
+    maxReading: 32.00,
+    tickGapX: 11,
     tickGapY: 8,
     crosshairSpeed: 40,
   };
@@ -455,7 +455,7 @@ export function createMicrometerEyepieceView(options: {
       transparent ${Math.round(mid + stripeW)}px,
       transparent ${Math.round(s.spacing)}px
     )`;
-    lensView.style.backgroundPositionX = `${s.offset}px`;
+    lensView.style.backgroundPositionX = '0px';
   }
 
   // ── 核心物理渲染引擎 ──
@@ -475,12 +475,11 @@ export function createMicrometerEyepieceView(options: {
     thimbleStrip.style.transform = `translateY(${translateY}px)`;
 
     // C. 联动干涉视场：平移十字准星
-    const viewOffset = (currentReading - config.initialReading) * config.crosshairSpeed;
+    const viewOffset = (currentReading - config.initialReading) * config.crosshairSpeed + stripeState.offset;
     crosshairSystem.style.transform = `translateX(${viewOffset}px)`;
 
-    // D. 高精度数字更新（基准读数 + 微调读数）
-    const totalReading = stripeState.offset + currentReading;
-    readoutDisplay.innerText = totalReading.toFixed(3) + ' mm';
+    // D. 高精度数字更新
+    readoutDisplay.innerText = currentReading.toFixed(3) + ' mm';
   }
 
   // ── 统一交互事件处理 ──

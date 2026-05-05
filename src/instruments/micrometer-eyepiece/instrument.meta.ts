@@ -24,7 +24,7 @@ export const micrometerEyepieceMeta: InstrumentMeta<MicrometerEyepieceParams> = 
   description: '带光学目镜和干涉条纹的螺旋测微器，可精确到 0.01mm',
   defaultParams: {
     initialReading: 0.30,
-    stripeOffset: 30,
+    stripeOffset: -1200,
     stripeSpacing: 50,
     stripeColor: 'rgba(200, 80, 20, 0.4)',
     stripeAngle: 90,
