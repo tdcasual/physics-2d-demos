@@ -51,7 +51,9 @@ export function createSliderRow(
   slider.addEventListener('input', onInput);
 
   row.append(labelEl, slider, valueEl);
-  (row as any).dispose = () => { slider.removeEventListener('input', onInput); };
+  (row as unknown as HTMLElement & { dispose: () => void }).dispose = () => {
+    slider.removeEventListener('input', onInput);
+  };
   return row;
 }
 

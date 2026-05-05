@@ -47,6 +47,12 @@ export type ControlField =
       variant?: 'primary' | 'secondary' | 'danger';
     }
   | {
+      type: 'toggle';
+      key: string;
+      label: string;
+      value: boolean;
+    }
+  | {
       type: 'preset-group';
       key: string;
       label?: string;

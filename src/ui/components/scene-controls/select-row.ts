@@ -46,7 +46,9 @@ export function createSelectRow(
   select.addEventListener('change', onChange);
 
   row.append(labelEl, select);
-  (row as any).dispose = () => { select.removeEventListener('change', onChange); };
+  (row as unknown as HTMLElement & { dispose: () => void }).dispose = () => {
+    select.removeEventListener('change', onChange);
+  };
   return row;
 }
 

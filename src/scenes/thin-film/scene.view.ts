@@ -5,7 +5,7 @@
 import type { TeachingTheme } from '../../platform/standards';
 import { sizeCanvasToFill } from '../../core/canvas-sizing';
 import type { ThinFilmState } from './scene.sim';
-import { wavelengthToColor } from '../double-slit/scene.view';
+import { wavelengthToColor } from '../double-slit/scene.sim';
 
 export type CreateThinFilmViewOptions = {
   canvas?: HTMLCanvasElement;

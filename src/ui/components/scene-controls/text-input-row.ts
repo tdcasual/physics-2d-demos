@@ -59,7 +59,7 @@ export function createTextInputRow(
   input.addEventListener('change', onChangeHandler);
 
   row.append(labelEl, input);
-  (row as any).dispose = () => {
+  (row as unknown as HTMLElement & { dispose: () => void }).dispose = () => {
     input.removeEventListener('focus', onFocus);
     input.removeEventListener('blur', onBlur);
     input.removeEventListener('change', onChangeHandler);

@@ -14,7 +14,7 @@ export function createPresetButtonGroup(
     columns?: 2 | 3 | 4;
     onSelect: (id: string) => void;
   }
-): { element: HTMLElement; setActive: (id: string) => void } {
+): { element: HTMLElement; setActive: (id: string) => void; dispose: () => void } {
   let activeId = options.initialActive ?? presets[0]?.id ?? '';
 
   const grid = document.createElement('div');
@@ -22,6 +22,7 @@ export function createPresetButtonGroup(
   grid.className = cols === 2 ? 'grid grid-cols-2 gap-2' : cols === 3 ? 'grid grid-cols-3 gap-2' : 'grid grid-cols-4 gap-2';
 
   const buttons = new Map<string, HTMLButtonElement>();
+  const clickHandlers = new Map<string, () => void>();
 
   function updateStyles() {
     buttons.forEach((btn, id) => {
@@ -61,11 +62,13 @@ export function createPresetButtonGroup(
       btn.appendChild(labelSpan);
     }
 
-    btn.addEventListener('click', () => {
+    const onClick = () => {
       activeId = p.id;
       updateStyles();
       options.onSelect(p.id);
-    });
+    };
+    clickHandlers.set(p.id, onClick);
+    btn.addEventListener('click', onClick);
 
     buttons.set(p.id, btn);
     grid.appendChild(btn);
@@ -81,6 +84,14 @@ export function createPresetButtonGroup(
         activeId = id;
         updateStyles();
       }
+    },
+    dispose: () => {
+      buttons.forEach((btn, id) => {
+        const handler = clickHandlers.get(id);
+        if (handler) btn.removeEventListener('click', handler);
+      });
+      buttons.clear();
+      clickHandlers.clear();
     }
   };
 }

@@ -27,6 +27,7 @@ export function createTransportRow(
 
   buttons.forEach((btn) => {
     if (!btn.action) return;
+    const action = btn.action;
     const button = document.createElement('button');
     button.type = 'button';
     button.className = [
@@ -51,11 +52,11 @@ export function createTransportRow(
     const onLeave = () => { button.style.background = 'var(--btn-bg)'; };
     button.addEventListener('mouseenter', onEnter);
     button.addEventListener('mouseleave', onLeave);
-    button.addEventListener('click', btn.action);
+    button.addEventListener('click', action);
     cleanups.push(() => {
       button.removeEventListener('mouseenter', onEnter);
       button.removeEventListener('mouseleave', onLeave);
-      button.removeEventListener('click', btn.action);
+      button.removeEventListener('click', action);
     });
     container.appendChild(button);
   });

@@ -308,6 +308,10 @@ export class SceneAdapter<
     this.keyboard = null;
     this.perfMonitor = null;
     this.slots = null;
+    this.keyboardHelp = null;
+    this.currentState = null;
+    this._readoutItems = [];
+    this.listeners.length = 0;
     this._graphRendered = false;
     this._resizeHandlerAdded = false;
     this._deferredControlContainer = null;

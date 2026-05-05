@@ -231,7 +231,7 @@ export function bootInstrumentLibrary() {
       const ctx = sizeCanvasToFill(canvas);
       if (!ctx) return;
 
-      activeSim = factory.createSim(factory.meta.defaultParams);
+      activeSim = factory.createSim();
       activeView = factory.createView({ canvas, theme: currentTheme });
       activeView.resize();
 

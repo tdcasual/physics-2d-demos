@@ -1,13 +1,23 @@
 /**
  * 高精度干涉测微仪 — 渲染器（DOM 实现）
  *
- * 使用 Shadow DOM 隔离样式，在宿主 canvas 区域上叠加 DOM 层。
- * 视觉效果与原始 HTML 完全一致。
+ * 扩展接口：MeasurableInstrument + SerializableInstrument + CalibratableInstrument
  */
 
 import type { TeachingTheme } from '../../platform/standards';
-import type { InstrumentView, InstrumentViewport } from '../_contract/instrument-contract';
+import type {
+  InstrumentView,
+  InstrumentViewport,
+  MeasurableInstrument,
+  SerializableInstrument,
+  CalibratableInstrument,
+} from '../_contract/instrument-contract';
 import type { MicrometerEyepieceState } from './instrument.sim';
+
+export type MicrometerEyepieceView = InstrumentView<MicrometerEyepieceState> &
+  MeasurableInstrument &
+  SerializableInstrument &
+  CalibratableInstrument;
 
 const CSS = `
 :host {
@@ -19,7 +29,7 @@ const CSS = `
   --thimble-bevel: #e2e5e7;
   --thimble-body: #cfd3d6;
   --scale-color: #1a1c1e;
-  --tick-gap-x: 22px;
+  --tick-gap-x: 11px;
   --tick-gap-y: 8px;
 }
 
@@ -54,6 +64,11 @@ const CSS = `
   position: relative;
   z-index: 10;
   box-shadow: 10px 10px 20px rgba(0,0,0,0.15);
+  cursor: grab;
+}
+
+.case:active {
+  cursor: grabbing;
 }
 
 .lens-outer-ring {
@@ -291,8 +306,9 @@ export function createMicrometerEyepieceView(options: {
   canvas: HTMLCanvasElement;
   theme: TeachingTheme;
   viewport?: InstrumentViewport;
-}): InstrumentView<MicrometerEyepieceState> {
-  const { canvas } = options;
+  showHints?: boolean;
+}): MicrometerEyepieceView {
+  const { canvas, showHints = true } = options;
   const parent = canvas.parentElement;
   if (!parent) {
     throw new Error('MicrometerEyepieceView: canvas must have a parent element');
@@ -348,7 +364,7 @@ export function createMicrometerEyepieceView(options: {
     </div>
     <div class="dashboard">
       <div class="readout" id="readout-display">0.300 mm</div>
-      <div class="hint">↕ 上下拨动或 ↔ 左右推拉右侧测微螺杆，移动左侧准星瞄准干涉条纹</div>
+      <div class="hint" id="hint-text">↕ 上下拨动或 ↔ 左右推拉右侧测微螺杆，移动左侧准星瞄准干涉条纹</div>
     </div>
   `;
 
@@ -359,33 +375,33 @@ export function createMicrometerEyepieceView(options: {
   const thimbleStrip = qs<HTMLDivElement>('thimble-strip');
   const thimbleGroup = qs<HTMLDivElement>('thimble-group');
   const crosshairSystem = qs<HTMLDivElement>('crosshair-system');
-  const readoutDisplay = qs<HTMLDivElement>('readout-display');
   const lensView = qs<HTMLDivElement>('lens-view');
+  const readoutDisplay = qs<HTMLDivElement>('readout-display');
+  const hintEl = qs<HTMLDivElement>('hint-text');
   const caseEl = root.querySelector('.case') as HTMLDivElement;
   const systemEl = root.querySelector('.micrometer-system') as HTMLDivElement;
 
+  if (!showHints && hintEl) {
+    hintEl.style.display = 'none';
+  }
+
   const config = {
-    initialReading: 0.30,
+    initialReading: 0,
     maxReading: 32.00,
     tickGapX: 11,
     tickGapY: 8,
-    crosshairSpeed: 40,
+    crosshairSpeed: 100,
   };
 
   let currentReading = config.initialReading;
+  let zeroOffset = 0;
   let isDragging = false;
   let startX = 0;
   let startY = 0;
   let startReading = 0;
   let disposed = false;
   let simLastReading = config.initialReading;
-
-  let stripeState = {
-    offset: 0,
-    spacing: 50,
-    color: 'rgba(200, 80, 20, 0.4)',
-    angle: 90,
-  };
+  let simLastZero = 0;
 
   // 整体仪器拖拽状态
   let sysDragging = false;
@@ -394,11 +410,62 @@ export function createMicrometerEyepieceView(options: {
   let sysX = 0;
   let sysY = 0;
 
+  // 事件监听器
+  const listeners = {
+    reading: [] as Array<(reading: number) => void>,
+    align: [] as Array<() => void>,
+    limit: [] as Array<() => void>,
+  };
+
+  let wasAligned = false;
+  let wasAtLimit = false;
+
+  // ── 条纹配置 ──
+  const stripeConfig = {
+    offset: 1200,
+    spacing: 50,
+    color: 'rgba(200, 80, 20, 0.4)',
+    angle: 90,
+  };
+
+  function emitReading() {
+    const reading = currentReading + zeroOffset;
+    listeners.reading.forEach((cb) => cb(reading));
+  }
+
+  function checkAlign(viewOffset: number, spacing: number) {
+    const dist = Math.abs(((viewOffset - spacing / 2) % spacing + spacing) % spacing - spacing / 2);
+    return dist < 2;
+  }
+
+  function checkLimit(reading: number) {
+    return reading <= 0.001 || reading >= config.maxReading - 0.001;
+  }
+
+  // ── 更新干涉条纹 ──
+  function updateStripes() {
+    const s = stripeConfig;
+    const stripeW = s.spacing * 0.3;
+    const mid = s.spacing * 0.5;
+    lensView.style.backgroundImage = `repeating-linear-gradient(
+      ${s.angle}deg,
+      transparent 0px,
+      transparent ${Math.round(mid - stripeW)}px,
+      ${s.color} ${Math.round(mid - stripeW * 0.5)}px,
+      ${s.color} ${Math.round(mid)}px,
+      ${s.color} ${Math.round(mid + stripeW * 0.5)}px,
+      transparent ${Math.round(mid + stripeW)}px,
+      transparent ${Math.round(s.spacing)}px
+    )`;
+    lensView.style.backgroundPositionX = `${-stripeConfig.offset}px`;
+  }
+
   // ── 初始化主尺双刻度 ──
   function initSleeve() {
-    const totalHalfMm = config.maxReading / 0.5;
+    const totalHalfMm = Math.floor(config.maxReading / 0.5);
     const sleeveWidth = totalHalfMm * config.tickGapX + 60;
     sleeveContainer.style.width = `${sleeveWidth}px`;
+
     for (let i = 0; i <= totalHalfMm; i++) {
       const isIntegerMm = (i % 2 === 0);
       const mmValue = i * 0.5;
@@ -421,41 +488,55 @@ export function createMicrometerEyepieceView(options: {
     }
   }
 
-  // ── 初始化副尺卷轴 ──
-  function initThimble() {
-    const totalTicks = 3000;
-    for (let i = 0; i < totalTicks; i++) {
-      const val = i % 50;
-      const tick = document.createElement('div');
-      tick.className = `thimble-tick ${val % 5 === 0 ? 'major' : 'minor'}`;
-      tick.style.bottom = `${i * config.tickGapY}px`;
+  // ── 副尺卷轴对象池 ──
+  const TICK_POOL_SIZE = 40;
+  const thimbleTickPool: Array<{ tick: HTMLDivElement; num: HTMLDivElement }> = [];
 
-      if (val % 5 === 0) {
-        const num = document.createElement('div');
-        num.className = 'thimble-number';
-        num.innerText = String(val);
-        tick.appendChild(num);
-      }
+  // ── 初始化副尺卷轴（对象池，仅创建可视区域需要的 tick）──
+  function initThimble() {
+    for (let i = 0; i < TICK_POOL_SIZE; i++) {
+      const tick = document.createElement('div');
+      tick.className = 'thimble-tick';
+      tick.style.position = 'absolute';
+      tick.style.left = '0';
+
+      const num = document.createElement('div');
+      num.className = 'thimble-number';
+      tick.appendChild(num);
+
       thimbleStrip.appendChild(tick);
+      thimbleTickPool.push({ tick, num });
     }
   }
 
-  // ── 更新干涉条纹 ──
-  function updateStripes() {
-    const s = stripeState;
-    const stripeW = s.spacing * 0.3;
-    const mid = s.spacing * 0.5;
-    lensView.style.backgroundImage = `repeating-linear-gradient(
-      ${s.angle}deg,
-      transparent 0px,
-      transparent ${Math.round(mid - stripeW)}px,
-      ${s.color} ${Math.round(mid - stripeW * 0.5)}px,
-      ${s.color} ${Math.round(mid)}px,
-      ${s.color} ${Math.round(mid + stripeW * 0.5)}px,
-      transparent ${Math.round(mid + stripeW)}px,
-      transparent ${Math.round(s.spacing)}px
-    )`;
-    lensView.style.backgroundPositionX = '0px';
+  function updateThimbleTicks() {
+    const totalTicksPassed = currentReading / 0.01;
+    const centerTick = Math.round(totalTicksPassed);
+    const halfPool = Math.floor(TICK_POOL_SIZE / 2);
+
+    for (let i = 0; i < TICK_POOL_SIZE; i++) {
+      const tickIndex = centerTick - halfPool + i;
+      const { tick, num } = thimbleTickPool[i];
+
+      if (tickIndex < 0 || tickIndex >= 3000) {
+        tick.style.display = 'none';
+        continue;
+      }
+
+      const val = tickIndex % 50;
+      const isMajor = val % 5 === 0;
+
+      tick.className = `thimble-tick ${isMajor ? 'major' : 'minor'}`;
+      tick.style.bottom = `${tickIndex * config.tickGapY}px`;
+      tick.style.display = 'block';
+
+      if (isMajor) {
+        num.style.display = 'block';
+        num.innerText = String(val);
+      } else {
+        num.style.display = 'none';
+      }
+    }
   }
 
   // ── 核心物理渲染引擎 ──
@@ -474,12 +555,29 @@ export function createMicrometerEyepieceView(options: {
     const translateY = targetYFromBottom - 68;
     thimbleStrip.style.transform = `translateY(${translateY}px)`;
 
+    // B2. 更新对象池中的可见 tick
+    updateThimbleTicks();
+
     // C. 联动干涉视场：平移十字准星
-    const viewOffset = (currentReading - config.initialReading) * config.crosshairSpeed - stripeState.offset;
+    const viewOffset = (currentReading - config.initialReading) * config.crosshairSpeed;
     crosshairSystem.style.transform = `translateX(${viewOffset}px)`;
 
     // D. 高精度数字更新
-    readoutDisplay.innerText = currentReading.toFixed(3) + ' mm';
+    const totalReading = currentReading + zeroOffset;
+    readoutDisplay.innerText = totalReading.toFixed(3) + ' mm';
+
+    // E. 事件检测
+    const aligned = checkAlign(viewOffset, stripeConfig.spacing);
+    if (aligned && !wasAligned) {
+      listeners.align.forEach((cb) => cb());
+    }
+    wasAligned = aligned;
+
+    const atLimit = checkLimit(currentReading);
+    if (atLimit && !wasAtLimit) {
+      listeners.limit.forEach((cb) => cb());
+    }
+    wasAtLimit = atLimit;
   }
 
   // ── 统一交互事件处理 ──
@@ -497,8 +595,12 @@ export function createMicrometerEyepieceView(options: {
     const deltaY = clientY - startY;
     const deltaReadingX = (deltaX / config.tickGapX) * 0.5;
     const deltaReadingY = (deltaY / config.tickGapY) * 0.01;
-    currentReading = startReading + deltaReadingX + deltaReadingY;
-    renderView();
+    const newReading = Math.max(0, Math.min(startReading + deltaReadingX + deltaReadingY, config.maxReading));
+    if (newReading !== currentReading) {
+      currentReading = newReading;
+      renderView();
+      emitReading();
+    }
   };
 
   const handleDragEnd = () => {
@@ -567,8 +669,12 @@ export function createMicrometerEyepieceView(options: {
 
   const onWheel = (e: WheelEvent) => {
     e.preventDefault();
-    currentReading += (e.deltaY > 0 ? 0.01 : -0.01);
-    renderView();
+    const newReading = Math.max(0, Math.min(currentReading + (e.deltaY > 0 ? 0.01 : -0.01), config.maxReading));
+    if (newReading !== currentReading) {
+      currentReading = newReading;
+      renderView();
+      emitReading();
+    }
   };
 
   thimbleGroup.addEventListener('mousedown', onMouseDown);
@@ -592,28 +698,32 @@ export function createMicrometerEyepieceView(options: {
   return {
     render(state) {
       const stripeChanged =
-        state.stripeOffset !== stripeState.offset ||
-        state.stripeSpacing !== stripeState.spacing ||
-        state.stripeColor !== stripeState.color ||
-        state.stripeAngle !== stripeState.angle;
+        state.stripeSpacing !== stripeConfig.spacing ||
+        state.stripeColor !== stripeConfig.color ||
+        state.stripeAngle !== stripeConfig.angle;
       if (stripeChanged) {
-        stripeState = {
-          offset: state.stripeOffset,
-          spacing: state.stripeSpacing,
-          color: state.stripeColor,
-          angle: state.stripeAngle,
-        };
+        stripeConfig.spacing = state.stripeSpacing;
+        stripeConfig.color = state.stripeColor;
+        stripeConfig.angle = state.stripeAngle;
         updateStripes();
-        renderView();
       }
-      if (state.currentReading !== simLastReading) {
-        simLastReading = state.currentReading;
+
+      const needRender =
+        state.currentReading !== simLastReading ||
+        state.zeroOffset !== simLastZero ||
+        state.stripeOffset !== stripeConfig.offset;
+      if (needRender) {
         currentReading = state.currentReading;
+        zeroOffset = state.zeroOffset;
+        stripeConfig.offset = state.stripeOffset;
+        simLastReading = state.currentReading;
+        simLastZero = state.zeroOffset;
+        updateStripes();
         renderView();
       }
     },
     resize() {
-      // 原始 HTML 使用固定 scale(1.1)，不响应容器尺寸变化
+      // 原始 HTML 使用固定 scale(1.1)
     },
     setTheme(_theme: TeachingTheme) {
       // 固定工业配色
@@ -636,6 +746,83 @@ export function createMicrometerEyepieceView(options: {
         wrapper.parentElement.removeChild(wrapper);
       }
       canvas.style.display = '';
+      listeners.reading.length = 0;
+      listeners.align.length = 0;
+      listeners.limit.length = 0;
     },
-  };
+
+    // ── MeasurableInstrument ──
+    getReading() {
+      return currentReading + zeroOffset;
+    },
+    onReadingChange(callback) {
+      listeners.reading.push(callback);
+      return () => {
+        const idx = listeners.reading.indexOf(callback);
+        if (idx >= 0) listeners.reading.splice(idx, 1);
+      };
+    },
+    onAlign(callback) {
+      listeners.align.push(callback);
+      return () => {
+        const idx = listeners.align.indexOf(callback);
+        if (idx >= 0) listeners.align.splice(idx, 1);
+      };
+    },
+    onLimit(callback) {
+      listeners.limit.push(callback);
+      return () => {
+        const idx = listeners.limit.indexOf(callback);
+        if (idx >= 0) listeners.limit.splice(idx, 1);
+      };
+    },
+
+    // ── SerializableInstrument ──
+    serialize() {
+      return JSON.stringify({
+        currentReading,
+        zeroOffset,
+        stripeOffset: stripeConfig.offset,
+        stripeSpacing: stripeConfig.spacing,
+        stripeColor: stripeConfig.color,
+        stripeAngle: stripeConfig.angle,
+        sysX,
+        sysY,
+      });
+    },
+    deserialize(json) {
+      try {
+        const data = JSON.parse(json);
+        if (typeof data.currentReading === 'number') currentReading = data.currentReading;
+        if (typeof data.zeroOffset === 'number') zeroOffset = data.zeroOffset;
+        if (typeof data.stripeOffset === 'number') stripeConfig.offset = data.stripeOffset;
+        if (typeof data.stripeSpacing === 'number') stripeConfig.spacing = data.stripeSpacing;
+        if (typeof data.stripeColor === 'string') stripeConfig.color = data.stripeColor;
+        if (typeof data.stripeAngle === 'number') stripeConfig.angle = data.stripeAngle;
+        if (typeof data.sysX === 'number') sysX = data.sysX;
+        if (typeof data.sysY === 'number') sysY = data.sysY;
+        systemEl.style.transform = `translate(${sysX}px, ${sysY}px) scale(1.1)`;
+        updateStripes();
+        renderView();
+      } catch {
+        // 忽略无效的序列化数据
+      }
+    },
+
+    // ── CalibratableInstrument ──
+    setZero(val) {
+      zeroOffset = val;
+      renderView();
+    },
+    getZero() {
+      return zeroOffset;
+    },
+    getCalibrationOffset() {
+      return zeroOffset;
+    },
+
+    setReadoutVisible(visible: boolean) {
+      readoutDisplay.style.display = visible ? '' : 'none';
+    },
+  } as MicrometerEyepieceView & { setReadoutVisible(visible: boolean): void };
 }

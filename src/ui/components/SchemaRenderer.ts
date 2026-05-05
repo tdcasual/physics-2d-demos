@@ -13,12 +13,18 @@ import {
   createButtonGrid,
   createPresetButtonGroup,
   createTransportRow,
-  createSceneSelector
+  createSceneSelector,
+  createToggleRow
 } from './scene-controls';
 import type {
   ControlsSchema,
   ControlField
 } from '../../platform/controls-schema';
+
+function tryDispose(el: HTMLElement): void {
+  const d = (el as unknown as { dispose?: () => void }).dispose;
+  if (typeof d === 'function') d();
+}
 
 export interface SchemaRendererOptions {
   mount: HTMLElement;
@@ -32,6 +38,7 @@ export interface SchemaRendererInstance {
   setValue: (key: string, value: unknown) => void;
   getValue: <T>(key: string) => T | undefined;
   setActive: (key: string, id: string) => void;
+  setVisible: (key: string, visible: boolean) => void;
   dispose: () => void;
 }
 
@@ -44,6 +51,7 @@ export function renderSchema(
   const valueSetters = new Map<string, (value: unknown) => void>();
   const valueGetters = new Map<string, () => unknown>();
   const activeSetters = new Map<string, (id: string) => void>();
+  const visibleNodes = new Map<string, HTMLElement>();
   const cleanupFns: Array<() => void> = [];
 
   schema.sections.forEach((section) => {
@@ -60,15 +68,17 @@ export function renderSchema(
     }
 
     section.fields.forEach((field) => {
-      const { node, valueSetter, activeSetter, cleanup } = renderField(
+      const { node, valueSetter, valueGetter, activeSetter, cleanup } = renderField(
         field,
         onChange,
         onAction
       );
       if (node) {
         card.body.appendChild(node);
+        visibleNodes.set(field.key, node);
       }
       if (valueSetter) valueSetters.set(field.key, valueSetter);
+      if (valueGetter) valueGetters.set(field.key, valueGetter);
       if (activeSetter) activeSetters.set(field.key, activeSetter);
       if (cleanup) cleanupFns.push(cleanup);
     });
@@ -86,6 +96,12 @@ export function renderSchema(
     },
     setActive(key: string, id: string) {
       activeSetters.get(key)?.(id);
+    },
+    setVisible(key: string, visible: boolean) {
+      const node = visibleNodes.get(key);
+      if (node) {
+        node.style.display = visible ? '' : 'none';
+      }
     },
     dispose() {
       cleanupFns.forEach((fn) => fn());
@@ -129,7 +145,8 @@ function renderField(
             input.value = String(value);
             input.dispatchEvent(new Event('input'));
           }
-        }
+        },
+        cleanup: () => { tryDispose(row); }
       };
     }
 
@@ -148,7 +165,8 @@ function renderField(
       const input = row.querySelector('input');
       return {
         node: row,
-        valueGetter: () => (input ? parseFloat(input.value) : field.value)
+        valueGetter: () => (input ? parseFloat(input.value) : field.value),
+        cleanup: () => { tryDispose(row); }
       };
     }
 
@@ -161,26 +179,33 @@ function renderField(
       const input = row.querySelector('input');
       return {
         node: row,
-        valueGetter: () => (input ? input.value : field.value)
+        valueGetter: () => (input ? input.value : field.value),
+        cleanup: () => { tryDispose(row); }
       };
     }
 
-    case 'select':
+    case 'select': {
+      const row = createSelectRow(field.label, {
+        choices: field.options,
+        value: field.value,
+        onChange: (val) => onChange(field.key, val)
+      });
       return {
-        node: createSelectRow(field.label, {
-          choices: field.options,
-          value: field.value,
-          onChange: (val) => onChange(field.key, val)
-        })
+        node: row,
+        cleanup: () => { tryDispose(row); }
       };
+    }
 
-    case 'button':
+    case 'button': {
+      const grid = createButtonGrid(
+        [{ label: field.label, onClick: () => onAction(field.key) }],
+        1
+      );
       return {
-        node: createButtonGrid(
-          [{ label: field.label, onClick: () => onAction(field.key) }],
-          1
-        )
+        node: grid,
+        cleanup: () => { tryDispose(grid); }
       };
+    }
 
     case 'preset-group': {
       const presetContainer = document.createElement('div');
@@ -191,13 +216,14 @@ function renderField(
       });
       return {
         node: presetContainer,
-        activeSetter: (id) => preset.setActive(id)
+        activeSetter: (id) => preset.setActive(id),
+        cleanup: () => { (preset as unknown as { dispose?: () => void }).dispose?.(); }
       };
     }
 
     case 'transport': {
       const transportContainer = document.createElement('div');
-      createTransportRow(transportContainer, {
+      const transport = createTransportRow(transportContainer, {
         onPlay:
           field.showPlay !== false
             ? () => onAction(`${field.key}:play`)
@@ -215,7 +241,10 @@ function renderField(
             ? () => onAction(`${field.key}:step`)
             : undefined
       });
-      return { node: transportContainer };
+      return {
+        node: transportContainer,
+        cleanup: () => { transport.dispose(); }
+      };
     }
 
     case 'scene-selector': {
@@ -231,17 +260,47 @@ function renderField(
       };
     }
 
-    case 'button-grid':
+    case 'button-grid': {
+      const grid = createButtonGrid(
+        field.buttons.map((b) => ({
+          label: b.label,
+          desc: b.desc,
+          onClick: () => onAction(b.key)
+        })),
+        field.columns ?? 2
+      );
       return {
-        node: createButtonGrid(
-          field.buttons.map((b) => ({
-            label: b.label,
-            desc: b.desc,
-            onClick: () => onAction(b.key)
-          })),
-          field.columns ?? 2
-        )
+        node: grid,
+        cleanup: () => { tryDispose(grid); }
       };
+    }
+
+    case 'toggle': {
+      const row = createToggleRow(field.label, {
+        value: field.value,
+        onChange: (val) => onChange(field.key, val)
+      });
+      return {
+        node: row,
+        valueSetter: (value) => {
+          const btn = row.querySelector('button[role="switch"]');
+          if (btn) {
+            const next = Boolean(value);
+            btn.ariaChecked = String(next);
+            (btn as HTMLElement).style.backgroundColor = next
+              ? 'var(--accent-primary)'
+              : 'var(--border-color)';
+            const thumb = btn.querySelector('span');
+            if (thumb) {
+              (thumb as HTMLElement).style.transform = next
+                ? 'translateX(16px)'
+                : 'translateX(2px)';
+            }
+          }
+        },
+        cleanup: () => { tryDispose(row); }
+      };
+    }
 
     case 'custom': {
       const customContainer = document.createElement('div');

@@ -3,58 +3,75 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createDoubleSlitSim } from '../../src/scenes/double-slit/scene.sim';
+import { createDoubleSlitSim, lambdaToGap, lambdaToRgb, wavelengthToColor } from '../../src/scenes/double-slit/scene.sim';
 
 describe('double-slit simulation', () => {
-  it('computes correct fringe spacing for red light', () => {
-    const sim = createDoubleSlitSim({ lambda: 650, L: 1.0, d: 0.5, step: 'geometry' });
+  it('initializes with correct default state', () => {
+    const sim = createDoubleSlitSim({ step: 1, lambda: 532, slitDistance: 40, isPlaying: true, activeInstrument: 'caliper', showInstrumentReadout: false, micrometerOffset: 0, stripeOffset: 0 });
     const state = sim.getState();
-    // Δx = λL/d = 650e-9 * 1.0 / 0.5e-3 = 1.3e-3 m = 1.3 mm
-    expect(state.deltaX).toBeCloseTo(1.3e-3, 6);
+    expect(state.params.step).toBe(1);
+    expect(state.params.lambda).toBe(532);
+    expect(state.params.slitDistance).toBe(40);
+    expect(state.params.isPlaying).toBe(true);
+    expect(state.time).toBe(0);
   });
 
-  it('computes correct fringe spacing for green light', () => {
-    const sim = createDoubleSlitSim({ lambda: 550, L: 1.0, d: 0.5, step: 'geometry' });
-    const state = sim.getState();
-    // Δx = 550e-9 * 1.0 / 0.5e-3 = 1.1e-3 m
-    expect(state.deltaX).toBeCloseTo(1.1e-3, 6);
+  it('advances time when stepping while playing', () => {
+    const sim = createDoubleSlitSim({ step: 1, lambda: 532, slitDistance: 40, isPlaying: true, activeInstrument: 'caliper', showInstrumentReadout: false, micrometerOffset: 0, stripeOffset: 0 });
+    sim.step(16);
+    expect(sim.getState().time).toBe(1.5);
+    sim.step(16);
+    expect(sim.getState().time).toBe(3.0);
   });
 
-  it('scales linearly with L', () => {
-    const sim1 = createDoubleSlitSim({ lambda: 650, L: 1.0, d: 0.5, step: 'geometry' });
-    const sim2 = createDoubleSlitSim({ lambda: 650, L: 2.0, d: 0.5, step: 'geometry' });
-    expect(sim2.getState().deltaX).toBeCloseTo(sim1.getState().deltaX * 2, 6);
-  });
-
-  it('scales inversely with d', () => {
-    const sim1 = createDoubleSlitSim({ lambda: 650, L: 1.0, d: 0.5, step: 'geometry' });
-    const sim2 = createDoubleSlitSim({ lambda: 650, L: 1.0, d: 1.0, step: 'geometry' });
-    expect(sim2.getState().deltaX).toBeCloseTo(sim1.getState().deltaX / 2, 6);
-  });
-
-  it('generates symmetric fringe positions', () => {
-    const sim = createDoubleSlitSim({ lambda: 650, L: 1.0, d: 0.5, step: 'geometry' });
-    const { fringePositions } = sim.getState();
-    expect(fringePositions.length).toBe(21); // -10 to 10
-    expect(fringePositions[10]).toBe(0); // central fringe
-    expect(fringePositions[11]).toBeCloseTo(fringePositions[9] * -1, 10);
+  it('does not advance time when paused', () => {
+    const sim = createDoubleSlitSim({ step: 1, lambda: 532, slitDistance: 40, isPlaying: false, activeInstrument: 'caliper', showInstrumentReadout: false, micrometerOffset: 0, stripeOffset: 0 });
+    sim.step(16);
+    expect(sim.getState().time).toBe(0);
   });
 
   it('updates params via setParams', () => {
-    const sim = createDoubleSlitSim({ lambda: 650, L: 1.0, d: 0.5, step: 'geometry' });
-    sim.setParams({ lambda: 400 });
+    const sim = createDoubleSlitSim({ step: 1, lambda: 532, slitDistance: 40, isPlaying: true, activeInstrument: 'caliper', showInstrumentReadout: false, micrometerOffset: 0, stripeOffset: 0 });
+    sim.setParams({ step: 3, lambda: 650, slitDistance: 60 });
     const state = sim.getState();
-    expect(state.params.lambda).toBe(400);
-    expect(state.deltaX).toBeCloseTo(400e-9 * 1.0 / 0.5e-3, 6);
+    expect(state.params.step).toBe(3);
+    expect(state.params.lambda).toBe(650);
+    expect(state.params.slitDistance).toBe(60);
+    expect(state.params.isPlaying).toBe(true); // unchanged
   });
 
   it('resets to initial values', () => {
-    const sim = createDoubleSlitSim({ lambda: 650, L: 1.0, d: 0.5, step: 'geometry' });
-    sim.setParams({ lambda: 400, L: 2.0, d: 0.1 });
+    const sim = createDoubleSlitSim({ step: 1, lambda: 532, slitDistance: 40, isPlaying: true, activeInstrument: 'caliper', showInstrumentReadout: false, micrometerOffset: 0, stripeOffset: 0 });
+    sim.setParams({ step: 5, lambda: 450, slitDistance: 20, isPlaying: false });
+    sim.step(16);
     sim.reset();
     const state = sim.getState();
-    expect(state.params.lambda).toBe(650);
-    expect(state.params.L).toBe(1.0);
-    expect(state.params.d).toBe(0.5);
+    expect(state.params.step).toBe(1);
+    expect(state.params.lambda).toBe(532);
+    expect(state.params.slitDistance).toBe(40);
+    expect(state.params.isPlaying).toBe(true);
+    expect(state.time).toBe(0);
+  });
+
+  it('lambdaToGap scales correctly', () => {
+    expect(lambdaToGap(450)).toBeCloseTo(30, 0);
+    expect(lambdaToGap(650)).toBeCloseTo(43.3, 0);
+    expect(lambdaToGap(532)).toBeCloseTo(35.5, 0);
+  });
+
+  it('lambdaToRgb returns valid RGB for visible spectrum', () => {
+    const [r, g, b] = lambdaToRgb(532);
+    expect(r).toBeGreaterThanOrEqual(0);
+    expect(r).toBeLessThanOrEqual(255);
+    expect(g).toBeGreaterThanOrEqual(0);
+    expect(g).toBeLessThanOrEqual(255);
+    expect(b).toBeGreaterThanOrEqual(0);
+    expect(b).toBeLessThanOrEqual(255);
+  });
+
+  it('wavelengthToColor returns a string', () => {
+    const color = wavelengthToColor(532);
+    expect(typeof color).toBe('string');
+    expect(color.startsWith('rgb(')).toBe(true);
   });
 });

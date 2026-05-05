@@ -1,690 +1,459 @@
 /**
- * 双缝干涉 — Canvas 渲染
+ * 双缝干涉 — Canvas 渲染器
  *
- * 动画区以图形为主，文字极简。
- * 计算结果通过 getReadoutItems 输出到数据读数区。
+ * 6 步骤渐进式实验演示动画
+ * 逻辑画布尺寸 1000×500，通过 ctx.setTransform 响应式缩放
+ * 支持浅色/深色双模式，波色随光源波长自动匹配
  */
 
 import type { TeachingTheme } from '../../platform/standards';
 import { sizeCanvasToFill } from '../../core/canvas-sizing';
 import type { DoubleSlitState } from './scene.sim';
+import { lambdaToGap, lambdaToRgb, computeFringeSpacingPx } from './scene.sim';
 
 export type CreateDoubleSlitViewOptions = {
   canvas?: HTMLCanvasElement;
-  graphCanvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
 };
 
-/** 波长(nm) → 可见光颜色 */
-export function wavelengthToColor(lambda: number): string {
-  if (lambda < 450) return '#8b5cf6';   // 紫
-  if (lambda < 495) return '#3b82f6';   // 蓝
-  if (lambda < 570) return '#22c55e';   // 绿
-  if (lambda < 590) return '#eab308';   // 黄
-  if (lambda < 620) return '#f97316';   // 橙
-  return '#ef4444';                      // 红
+// ── 波长调色板（深色 / 浅色）──
+type WavePalette = {
+  wave: string;    // 光波描边色
+  solid: string;   // 光源实心 / 曲线描边
+  glow: string;    // 光源发光
+  screen: string;  // 条纹 RGB（无 # 前缀）
+};
+
+function getWavePalette(lambda: number, isDark: boolean): WavePalette {
+  const [r, g, b] = lambdaToRgb(lambda);
+  const base = `rgb(${r},${g},${b})`;
+  const alpha = isDark ? 0.55 : 0.45;
+  const glowAlpha = isDark ? 0.85 : 0.75;
+  return {
+    wave: `rgba(${r},${g},${b},${alpha})`,
+    solid: base,
+    glow: `rgba(${r},${g},${b},${glowAlpha})`,
+    screen: `${r},${g},${b}`,
+  };
 }
+
+// ── 场景配色（深色 / 浅色）──
+const SCENE_PALETTE = {
+  dark: {
+    bg: '#0f172a',
+    tubeBg: 'rgba(255,255,255,0.03)',
+    tubeBorder: '#334155',
+    instrument: '#94a3b8',
+    instrumentDark: '#64748b',
+    lens: '#e2e8f0',
+    text: '#e2e8f0',
+    guide: '#475569',
+    eyepiece: '#475569',
+  },
+  light: {
+    bg: '#f1f5f9',
+    tubeBg: 'rgba(0,0,0,0.02)',
+    tubeBorder: '#cbd5e1',
+    instrument: '#64748b',
+    instrumentDark: '#475569',
+    lens: '#f8fafc',
+    text: '#1e293b',
+    guide: '#94a3b8',
+    eyepiece: '#64748b',
+  },
+};
 
 export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) {
   let canvas = options.canvas ?? null;
   let ctx: CanvasRenderingContext2D | null = null;
-  let graphCanvas = options.graphCanvas ?? null;
-  let graphCtx: CanvasRenderingContext2D | null = null;
   let theme: TeachingTheme = options.theme ?? 'dark';
-  let state: DoubleSlitState | null = null;
-  let cssWidth = 800;
-  let cssHeight = 600;
   let scale = 1;
 
   function resizeCanvas(): void {
     if (!canvas) return;
     const newCtx = sizeCanvasToFill(canvas);
     if (newCtx) ctx = newCtx;
-    const rect = canvas.getBoundingClientRect();
-    cssWidth = Math.max(200, Math.floor(rect.width || 800));
-    cssHeight = Math.max(150, Math.floor(rect.height || 600));
     scale = parseFloat(canvas.dataset.responsiveScale || '1');
   }
 
-  function resizeGraphCanvas(): void {
-    if (!graphCanvas) return;
-    const newCtx = sizeCanvasToFill(graphCanvas);
-    if (newCtx) graphCtx = newCtx;
-  }
+  // ── 绘图辅助函数（逻辑坐标 1000×500，无手动 scale）──
+
+  const drawSpectrumBar = (
+    c: CanvasRenderingContext2D,
+    lambda: number,
+    isDark: boolean
+  ) => {
+    const barX = 20;
+    const barY = 15;
+    const barW = 200;
+    const barH = 12;
+
+    // 色带背景/边框
+    c.fillStyle = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)';
+    c.fillRect(barX - 1, barY - 1, barW + 2, barH + 2);
+
+    // 连续光谱渐变
+    for (let i = 0; i < barW; i++) {
+      const wl = 400 + (i / barW) * 300; // 400~700nm
+      const [r, g, b] = lambdaToRgb(wl);
+      c.fillStyle = `rgb(${r},${g},${b})`;
+      c.fillRect(barX + i, barY, 1, barH);
+    }
+
+    // 当前波长标记（白色小三角）
+    const markerX = barX + ((lambda - 400) / 300) * barW;
+    c.fillStyle = isDark ? '#fff' : '#1e293b';
+    c.beginPath();
+    c.moveTo(markerX, barY - 5);
+    c.lineTo(markerX - 4, barY - 1);
+    c.lineTo(markerX + 4, barY - 1);
+    c.closePath();
+    c.fill();
+
+    // 波长数值
+    c.fillStyle = isDark ? '#e2e8f0' : '#1e293b';
+    c.font = '11px sans-serif';
+    c.textAlign = 'left';
+    c.fillText(`${Math.round(lambda)} nm`, barX + barW + 8, barY + 9);
+  };
+
+  const drawWaves = (
+    c: CanvasRenderingContext2D,
+    cx: number,
+    cy: number,
+    maxR: number,
+    color: string,
+    gap: number,
+    time: number
+  ) => {
+    c.strokeStyle = color;
+    c.lineWidth = 3;
+    const numWaves = Math.floor(maxR / gap) + 2;
+    for (let i = 0; i < numWaves; i++) {
+      const r = (time % gap) + i * gap;
+      if (r > 0 && r < maxR) {
+        c.beginPath();
+        const spreadAngle = Math.PI / 2.2;
+        c.arc(cx, cy, r, -spreadAngle, spreadAngle);
+        c.stroke();
+      }
+    }
+  };
+
+  const drawInstruments = (
+    c: CanvasRenderingContext2D,
+    POS: Record<string, number>,
+    CY: number,
+    d: number,
+    palette: WavePalette,
+    scene: typeof SCENE_PALETTE['dark']
+  ) => {
+    const drawLabel = (x: number, y: number, text: string) => {
+      c.fillStyle = scene.text;
+      c.font = '14px sans-serif';
+      c.textAlign = 'center';
+      c.fillText(text, x, y);
+    };
+
+    // 遮光筒底色
+    c.fillStyle = scene.tubeBg;
+    c.fillRect(POS.doubleSlit, CY - 100, POS.screen - POS.doubleSlit, 200);
+    c.strokeStyle = scene.tubeBorder;
+    c.lineWidth = 2;
+    c.strokeRect(POS.doubleSlit, CY - 100, POS.screen - POS.doubleSlit, 200);
+
+    c.fillStyle = scene.instrument;
+
+    // 光源
+    c.beginPath();
+    c.arc(POS.light, CY, 15, 0, Math.PI * 2);
+    c.fillStyle = scene.instrument;
+    c.fill();
+
+    // 发光核心（与波色严格对应）
+    c.fillStyle = palette.glow;
+    c.shadowBlur = 15;
+    c.shadowColor = palette.glow;
+    c.fill();
+    c.shadowBlur = 0;
+    drawLabel(POS.light, CY - 25, '光源');
+
+    // 透镜
+    c.beginPath();
+    c.ellipse(POS.lens, CY, 8, 40, 0, 0, Math.PI * 2);
+    c.fillStyle = scene.lens;
+    c.fill();
+    c.strokeStyle = scene.instrument;
+    c.stroke();
+    drawLabel(POS.lens, CY - 50, '透镜');
+
+    // 单缝挡板
+    c.fillStyle = scene.instrumentDark;
+    c.fillRect(POS.singleSlit - 4, CY - 80, 8, 78);
+    c.fillRect(POS.singleSlit - 4, CY + 2, 8, 78);
+    drawLabel(POS.singleSlit, CY - 90, '单缝');
+
+    // 双缝挡板
+    const slitWidth = 4;
+    c.fillRect(POS.doubleSlit - 4, CY - 80, 8, 80 - d / 2 - slitWidth / 2);
+    c.fillRect(POS.doubleSlit - 4, CY - d / 2 + slitWidth / 2, 8, d - slitWidth);
+    c.fillRect(POS.doubleSlit - 4, CY + d / 2 + slitWidth / 2, 8, 80 - d / 2 - slitWidth / 2);
+    drawLabel(POS.doubleSlit, CY - 90, '双缝');
+
+    // 毛玻璃屏幕
+    c.fillStyle = scene.instrument;
+    c.fillRect(POS.screen - 2, CY - 120, 4, 240);
+    drawLabel(POS.screen, CY - 130, '毛玻璃');
+
+    // 目镜
+    c.fillStyle = scene.eyepiece;
+    c.fillRect(POS.eyepiece - 10, CY - 20, 20, 40);
+    c.beginPath();
+    c.moveTo(POS.eyepiece - 10, CY - 20);
+    c.lineTo(POS.eyepiece - 30, CY - 30);
+    c.lineTo(POS.eyepiece - 30, CY + 30);
+    c.lineTo(POS.eyepiece - 10, CY + 20);
+    c.fill();
+    drawLabel(POS.eyepiece, CY - 40, '目镜');
+  };
+
+  const drawInterferencePattern = (
+    c: CanvasRenderingContext2D,
+    startX: number,
+    CY: number,
+    d: number,
+    gap: number,
+    palette: WavePalette,
+    L: number,
+    scene: typeof SCENE_PALETTE['dark']
+  ) => {
+    const lambdaPx = gap * 0.35; // 等比例缩短，使屏幕上波峰更密集清晰
+    const slitWidthA = d / 3.5;
+
+    c.beginPath();
+    c.strokeStyle = palette.solid;
+    c.lineWidth = 3.5;
+
+    for (let y = -120; y <= 120; y++) {
+      const py = CY + y;
+      const delta = (y * d) / L;
+      const phase = (Math.PI * delta) / lambdaPx;
+      const cos2 = Math.pow(Math.cos(phase), 2);
+
+      const alpha = (Math.PI * (y * slitWidthA) / L) / lambdaPx;
+      const sinc = alpha === 0 ? 1 : Math.sin(alpha) / alpha;
+      const sinc2 = Math.pow(sinc, 2);
+
+      const intensity = cos2 * sinc2;
+      const px = startX + 10 + intensity * 35;
+
+      if (y === -120) c.moveTo(px, py);
+      else c.lineTo(px, py);
+
+      // 毛玻璃上的条纹（颜色与波色严格对应）
+      c.fillStyle = `rgba(${palette.screen}, ${intensity * 0.9})`;
+      c.fillRect(startX - 2, py, 4, 1);
+    }
+    c.stroke();
+
+    // 辅助线
+    c.setLineDash([4, 4]);
+    c.strokeStyle = scene.guide;
+    c.beginPath();
+    c.moveTo(startX, CY);
+    c.lineTo(startX + 50, CY);
+    c.stroke();
+    c.setLineDash([]);
+  };
+
+  // ── 步骤6：大干涉图样（占满上半部分）──
+  const drawStep6Pattern = (
+    c: CanvasRenderingContext2D,
+    W: number,
+    H: number,
+    lambda: number,
+    slitDistance: number,
+    palette: WavePalette,
+    scene: typeof SCENE_PALETTE['dark'],
+    isDark: boolean
+  ) => {
+    const topH = H * 0.35;
+    const patternX = W * 0.15;
+    const patternW = W * 0.55;
+    const patternY = 12;
+    const patternH = topH - 24;
+    const centerY = patternY + patternH * 0.5;
+
+    // 物理条纹间距（px）
+    const fringeSpacingPx = computeFringeSpacingPx(lambda, slitDistance);
+
+    // 衍射包络宽度（单缝衍射，假设单缝宽度 a = d/4）
+    const envelopeSpacingPx = fringeSpacingPx * 4;
+
+    // 干涉图样背景
+    c.fillStyle = isDark ? 'rgba(148,163,184,0.06)' : 'rgba(100,116,139,0.04)';
+    c.fillRect(patternX, patternY, patternW, patternH);
+    c.strokeStyle = scene.instrument;
+    c.lineWidth = 1;
+    c.strokeRect(patternX, patternY, patternW, patternH);
+
+    // 标签
+    c.fillStyle = scene.text;
+    c.font = '13px sans-serif';
+    c.textAlign = 'left';
+    c.fillText('干涉条纹', patternX, patternY - 6);
+
+    // 物理参数标注
+    c.font = '11px sans-serif';
+    c.fillStyle = scene.guide;
+    const deltaXmm = (fringeSpacingPx * 0.01).toFixed(3);
+    c.fillText(`Δx ≈ ${deltaXmm} mm`, patternX + patternW - 120, patternY - 6);
+
+    // 预计算光强数组（沿 x 方向，用于竖直条纹）
+    const n = Math.ceil(patternW * 0.5);
+    const intensities: number[] = [];
+    for (let x = -n; x <= n; x++) {
+      const phase = (Math.PI * x) / fringeSpacingPx;
+      const cos2 = Math.pow(Math.cos(phase), 2);
+
+      const beta = (Math.PI * x) / envelopeSpacingPx;
+      const sinc = Math.abs(beta) < 1e-6 ? 1 : Math.sin(beta) / beta;
+      const sinc2 = Math.pow(sinc, 2);
+
+      intensities.push(cos2 * sinc2);
+    }
+
+    // 绘制竖直条纹（明显的明暗相间）
+    const maxIntensity = Math.max(...intensities, 1e-6);
+    for (let i = 0; i < intensities.length; i++) {
+      const x = i - n;
+      const px = patternX + patternW * 0.5 + x;
+      if (px < patternX + 1 || px > patternX + patternW - 1) continue;
+      const intensity = intensities[i] / maxIntensity;
+      const alpha = Math.min(intensity * 0.95, 0.95);
+      c.fillStyle = `rgba(${palette.screen}, ${alpha})`;
+      c.fillRect(px, patternY + 2, 1, patternH - 4);
+    }
+
+    // 辅助虚线（分隔上下区域）
+    c.setLineDash([6, 6]);
+    c.strokeStyle = scene.guide;
+    c.lineWidth = 1;
+    c.beginPath();
+    c.moveTo(0, topH);
+    c.lineTo(W, topH);
+    c.stroke();
+    c.setLineDash([]);
+
+    // 下方区域标签
+    c.fillStyle = scene.text;
+    c.font = '12px sans-serif';
+    c.textAlign = 'center';
+    c.fillText('↓ 测量仪器区 ↓', W * 0.5, topH + 18);
+  };
+
+  // ── 主渲染 ──
 
   function drawScene(next: DoubleSlitState): void {
     const c = ctx;
-    if (!c) return;
-    const w = cssWidth;
-    const h = cssHeight;
+    if (!c || !canvas) return;
+
     const isDark = theme === 'dark';
-    const text = isDark ? '#e2e8f0' : '#1e293b';
-    const dim = isDark ? '#94a3b8' : '#64748b';
-    const accent = wavelengthToColor(next.params.lambda);
-
-    c.clearRect(0, 0, w, h);
-    c.fillStyle = isDark ? '#0f172a' : '#f8fafc';
-    c.fillRect(0, 0, w, h);
-
+    const time = next.time;
     const step = next.params.step;
-    const plateX = w * 0.14;
-    const screenX = w * 0.86;
-    const centerY = h * 0.44;
-    const slitGap = 50 * scale;
-    const slitTop = centerY - slitGap / 2;
-    const slitBot = centerY + slitGap / 2;
-    const screenTop = h * 0.04;
-    const screenBot = h * 0.84;
-    const pY = screenTop + (screenBot - screenTop) * 0.25;
+    const lambda = next.params.lambda;
+    const palette = getWavePalette(lambda, isDark);
+    const scene = SCENE_PALETTE[isDark ? 'dark' : 'light'];
+    const d = next.params.slitDistance;
+    const gap = lambdaToGap(lambda);
 
-    // ── 公共几何结构 ──
-    drawGeometryBase(c, {
-      text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, screenTop, screenBot, pY, scale
-    });
+    const W = 1000;
+    const H = 500;
 
-    // ── 阶段特定内容（极简文字）──
-    if (step === 'geometry') {
-      drawGeometryPhase(c, {
-        w, h, text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, pY, scale,
-        params: next.params
-      });
-    } else if (step === 'path-diff') {
-      drawPathDiffPhase(c, {
-        w, h, text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, pY, scale,
-        params: next.params, deltaX: next.deltaX
-      });
-    } else if (step === 'small-angle') {
-      drawSmallAnglePhase(c, {
-        w, h, text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, screenTop, screenBot, pY, scale,
-        params: next.params, deltaX: next.deltaX
-      });
-    } else if (step === 'result') {
-      drawResultPhase(c, {
-        w, h, text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, pY, scale,
-        params: next.params, deltaX: next.deltaX
-      });
-    }
+    // 使用 setTransform 一次性缩放
+    c.setTransform(scale, 0, 0, scale, 0, 0);
 
-    // ── 图表区：干涉条纹始终显示 ──
-    drawFringeGraph(next);
-  }
+    // 背景
+    c.fillStyle = scene.bg;
+    c.fillRect(0, 0, W, H);
 
-  // ── 图表区条纹绘制（常驻）──
-  function drawFringeGraph(next: DoubleSlitState): void {
-    const gc = graphCtx;
-    const gCanvas = graphCanvas;
-    if (!gc || !gCanvas) return;
+    // 光谱色带（左上角）
+    drawSpectrumBar(c, lambda, isDark);
 
-    const rect = gCanvas.getBoundingClientRect();
-    const gw = Math.max(200, Math.floor(rect.width || 400));
-    const gh = Math.max(100, Math.floor(rect.height || 200));
-    const gScale = parseFloat(gCanvas.dataset.responsiveScale || '1');
-    const isDark = theme === 'dark';
-    const text = isDark ? '#e2e8f0' : '#1e293b';
-    const dim = isDark ? '#94a3b8' : '#64748b';
-    const accent = wavelengthToColor(next.params.lambda);
+    const CY = H * 0.5;
+    const POS = {
+      light: 80,
+      lens: 180,
+      singleSlit: 280,
+      doubleSlit: 400,
+      screen: 800,
+      eyepiece: 920
+    };
 
-    gc.clearRect(0, 0, gw, gh);
-    gc.fillStyle = isDark ? '#0f172a' : '#f8fafc';
-    gc.fillRect(0, 0, gw, gh);
-
-    const { params, deltaX } = next;
-    const lambdaM = params.lambda * 1e-9;
-    const dM = params.d * 1e-3;
-
-    const margin = 16 * gScale;
-    const stripeX = margin;
-    const stripeY = margin + 20 * gScale;
-    const stripeW = gw - margin * 2;
-    const stripeH = gh - stripeY - margin - 30 * gScale;
-
-    if (stripeW > 10 && stripeH > 10) {
-      gc.strokeStyle = text;
-      gc.lineWidth = 1.5 * gScale;
-      gc.strokeRect(stripeX, stripeY, stripeW, stripeH);
-
-      const range = 5 * deltaX;
-      const stripeCenterX = stripeX + stripeW / 2;
-      const stepPx = Math.max(1, gScale);
-
-      for (let px = 0; px < stripeW; px += stepPx) {
-        const xPhysical = ((px - stripeW / 2) / (stripeW / 2)) * range;
-        const phase = (Math.PI * dM * xPhysical) / (lambdaM * params.L);
-        const intensity = Math.cos(phase) ** 2;
-
-        const r = parseInt(accent.slice(1, 3), 16);
-        const gVal = parseInt(accent.slice(3, 5), 16);
-        const b = parseInt(accent.slice(5, 7), 16);
-        const bgR = isDark ? 15 : 248;
-        const bgG = isDark ? 23 : 250;
-        const bgB = isDark ? 42 : 252;
-        const rr = Math.round(bgR + (r - bgR) * intensity);
-        const rg = Math.round(bgG + (gVal - bgG) * intensity);
-        const rb = Math.round(bgB + (b - bgB) * intensity);
-        gc.fillStyle = `rgb(${rr},${rg},${rb})`;
-        gc.fillRect(stripeX + px, stripeY, stepPx, stripeH);
+    // 步骤6：上方大干涉图样，下方由仪器组件接管
+    if (step === 6) {
+      drawStep6Pattern(c, W, H, lambda, d, palette, scene, isDark);
+    } else {
+      // 步骤 1–5：完整光路 + 仪器
+      if (step >= 1) {
+        c.strokeStyle = palette.wave;
+        c.lineWidth = 2.5;
+        c.setLineDash([10, 10]);
+        c.lineDashOffset = -time;
+        for (let angle = -0.3; angle <= 0.3; angle += 0.1) {
+          c.beginPath();
+          c.moveTo(POS.light, CY);
+          c.lineTo(POS.lens, CY + Math.tan(angle) * (POS.lens - POS.light));
+          c.stroke();
+        }
+        for (let yOffset = -20; yOffset <= 20; yOffset += 10) {
+          c.beginPath();
+          c.moveTo(POS.lens, CY + yOffset);
+          c.lineTo(POS.singleSlit, CY + yOffset * 0.2);
+          c.stroke();
+        }
+        c.setLineDash([]);
       }
 
-      // 中央亮纹
-      gc.fillStyle = text;
-      gc.textAlign = 'center';
-      gc.font = `${Math.max(10, 12 * gScale)}px sans-serif`;
-      gc.fillText('中央亮纹', stripeCenterX, stripeY + stripeH + 14 * gScale);
+      if (step >= 2) {
+        drawWaves(c, POS.singleSlit, CY, POS.doubleSlit - POS.singleSlit, palette.wave, gap, time);
+      }
 
-      // m=1 标注
-      const firstStripeX = stripeCenterX + (stripeW / 2) * (deltaX / range);
-      gc.strokeStyle = dim;
-      gc.lineWidth = 1 * gScale;
-      gc.setLineDash([3 * gScale, 3 * gScale]);
-      gc.beginPath();
-      gc.moveTo(firstStripeX, stripeY - 4 * gScale);
-      gc.lineTo(firstStripeX, stripeY + stripeH + 4 * gScale);
-      gc.stroke();
-      gc.setLineDash([]);
-      gc.fillStyle = dim;
-      gc.fillText('m=1', firstStripeX, stripeY - 8 * gScale);
+      if (step >= 3) {
+        const maxRadius = step >= 4 ? (POS.screen - POS.doubleSlit + 50) : 60;
+        drawWaves(c, POS.doubleSlit, CY - d / 2, maxRadius, palette.wave, gap, time);
+        drawWaves(c, POS.doubleSlit, CY + d / 2, maxRadius, palette.wave, gap, time);
+      }
 
-      // Δx 标注
-      gc.strokeStyle = accent;
-      gc.lineWidth = 1.5 * gScale;
-      const ay = stripeY + stripeH + 26 * gScale;
-      drawArrowLine(gc, stripeCenterX, ay, firstStripeX, ay, gScale);
-      gc.fillStyle = accent;
-      gc.font = `${Math.max(10, 12 * gScale)}px sans-serif`;
-      gc.fillText(`Δx = ${(deltaX * 1e3).toFixed(2)} mm`, (stripeCenterX + firstStripeX) / 2, ay + 12 * gScale);
+      // 绘制仪器
+      drawInstruments(c, POS, CY, d, palette, scene);
+
+      // 干涉条纹与光强曲线
+      if (step >= 5) {
+        drawInterferencePattern(c, POS.screen, CY, d, gap, palette, POS.screen - POS.doubleSlit, scene);
+      }
     }
-
-    // 标题
-    gc.fillStyle = text;
-    gc.font = `bold ${Math.max(11, 13 * gScale)}px sans-serif`;
-    gc.textAlign = 'left';
-    gc.fillText(`λ = ${params.lambda} nm`, margin, margin + 4 * gScale);
   }
+
+  // ── 初始化 ──
+  if (canvas) resizeCanvas();
 
   return {
-    render(next: DoubleSlitState): void {
-      state = next;
-      drawScene(next);
+    render(state: DoubleSlitState) {
+      drawScene(state);
     },
-    resize(): void {
+    resize() {
       resizeCanvas();
-      resizeGraphCanvas();
-      if (state) drawScene(state);
     },
-    setMode(): void {
-      if (state) drawScene(state);
+    setTheme(t: TeachingTheme) {
+      theme = t;
     },
-    setTheme(next: TeachingTheme): void {
-      theme = next;
-      if (state) drawScene(state);
+    setMode() {
+      // 无特殊模式处理
     },
-    attachGraphCanvas(canvas: HTMLCanvasElement): void {
-      graphCanvas = canvas;
-      graphCtx = canvas.getContext('2d');
-      resizeGraphCanvas();
-      if (state) drawScene(state);
-    },
-    dispose(): void {
-      state = null;
+    dispose() {
       canvas = null;
       ctx = null;
-      graphCanvas = null;
-      graphCtx = null;
     }
   };
-}
-
-// ═══════════════════════════════════════════════════════════════
-// 绘制辅助函数
-// ═══════════════════════════════════════════════════════════════
-
-type GeoBase = {
-  text: string; dim: string; accent: string;
-  plateX: number; screenX: number; centerY: number;
-  slitTop: number; slitBot: number;
-  screenTop: number; screenBot: number; pY: number; scale: number;
-};
-
-type GeoBaseLite = {
-  text: string; dim: string; accent: string;
-  plateX: number; screenX: number; centerY: number;
-  slitTop: number; slitBot: number; pY: number; scale: number;
-};
-
-function drawGeometryBase(
-  c: CanvasRenderingContext2D,
-  g: GeoBase
-): void {
-  const { text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, screenTop, screenBot, pY, scale } = g;
-
-  c.save();
-  c.lineWidth = 2 * scale;
-  c.font = `${Math.max(10, 14 * scale)}px sans-serif`;
-
-  // 双缝板
-  c.strokeStyle = text;
-  c.beginPath();
-  c.moveTo(plateX, screenTop);
-  c.lineTo(plateX, slitTop - 6 * scale);
-  c.moveTo(plateX, slitTop + 6 * scale);
-  c.lineTo(plateX, slitBot - 6 * scale);
-  c.moveTo(plateX, slitBot + 6 * scale);
-  c.lineTo(plateX, screenBot);
-  c.stroke();
-
-  // 缝口
-  c.fillStyle = accent;
-  c.beginPath();
-  c.arc(plateX, slitTop, 3 * scale, 0, Math.PI * 2);
-  c.fill();
-  c.beginPath();
-  c.arc(plateX, slitBot, 3 * scale, 0, Math.PI * 2);
-  c.fill();
-
-  // 屏幕
-  c.strokeStyle = text;
-  c.lineWidth = 2.5 * scale;
-  c.beginPath();
-  c.moveTo(screenX, screenTop);
-  c.lineTo(screenX, screenBot);
-  c.stroke();
-
-  // 屏幕中心标记
-  c.strokeStyle = dim;
-  c.lineWidth = 1 * scale;
-  c.setLineDash([4 * scale, 4 * scale]);
-  c.beginPath();
-  c.moveTo(screenX - 8 * scale, centerY);
-  c.lineTo(screenX + 8 * scale, centerY);
-  c.stroke();
-  c.setLineDash([]);
-
-  // P 点
-  c.fillStyle = accent;
-  c.beginPath();
-  c.arc(screenX, pY, 4 * scale, 0, Math.PI * 2);
-  c.fill();
-  c.fillStyle = text;
-  c.textAlign = 'left';
-  c.fillText('P', screenX + 8 * scale, pY + 4 * scale);
-
-  // 光线
-  c.strokeStyle = accent;
-  c.lineWidth = 1.5 * scale;
-  c.globalAlpha = 0.6;
-  c.beginPath();
-  c.moveTo(plateX, slitTop);
-  c.lineTo(screenX, pY);
-  c.stroke();
-  c.beginPath();
-  c.moveTo(plateX, slitBot);
-  c.lineTo(screenX, pY);
-  c.stroke();
-  c.globalAlpha = 1;
-
-  c.restore();
-}
-
-// ── geometry 阶段 ── 只标注几何量，无文字说明
-
-type GeoPhase = GeoBaseLite & { w: number; h: number; params: { lambda: number; L: number; d: number } };
-
-function drawGeometryPhase(c: CanvasRenderingContext2D, g: GeoPhase): void {
-  const { text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, pY, scale, params } = g;
-
-  c.save();
-  c.font = `${Math.max(10, 13 * scale)}px sans-serif`;
-
-  // L
-  const ly = screenX - plateX > 60 * scale ? plateX + (screenX - plateX) * 0.5 : (plateX + screenX) / 2;
-  c.strokeStyle = dim;
-  c.lineWidth = 1 * scale;
-  drawArrowLine(c, plateX, centerY + 50 * scale, screenX, centerY + 50 * scale, scale);
-  c.fillStyle = text;
-  c.textAlign = 'center';
-  c.fillText(`L = ${params.L.toFixed(1)} m`, ly, centerY + 66 * scale);
-
-  // d
-  const dx = plateX - 28 * scale;
-  drawArrowLine(c, dx, slitTop, dx, slitBot, scale);
-  c.textAlign = 'right';
-  c.fillText(`d = ${params.d.toFixed(1)} mm`, dx - 6 * scale, (slitTop + slitBot) / 2 + 4 * scale);
-
-  // x
-  c.textAlign = 'left';
-  const xx = screenX + 16 * scale;
-  drawArrowLine(c, xx, centerY, xx, pY, scale);
-  c.fillText('x', xx + 6 * scale, (centerY + pY) / 2 + 4 * scale);
-
-  // θ（在 P 点处标注光线与水平方向夹角）
-  c.strokeStyle = dim;
-  c.lineWidth = 1 * scale;
-  const thetaR = 22 * scale;
-  c.beginPath();
-  c.arc(screenX, pY, thetaR, Math.PI, Math.PI + Math.atan2(centerY - pY, screenX - plateX) * 0.8);
-  c.stroke();
-  c.fillStyle = dim;
-  c.fillText('θ', screenX - 34 * scale, pY + 4 * scale);
-
-  c.restore();
-}
-
-// ── path-diff 阶段 ── 只画辅助线和核心公式
-
-type PathDiffPhase = GeoPhase & { deltaX: number };
-
-type SmallAnglePhase = GeoBase & { w: number; h: number; params: { lambda: number; L: number; d: number }; deltaX: number };
-
-function drawPathDiffPhase(c: CanvasRenderingContext2D, g: PathDiffPhase): void {
-  const { w, h, text, dim, accent, plateX, screenX, slitTop, slitBot, pY, scale, params } = g;
-
-  c.save();
-  c.font = `${Math.max(10, 13 * scale)}px sans-serif`;
-
-  // 几何量
-  const r1 = Math.hypot(screenX - plateX, pY - slitTop); // 上缝→P（较短）
-  const r2 = Math.hypot(screenX - plateX, pY - slitBot); // 下缝→P（较长）
-
-  // ── 1. 以 P 为圆心，r1 为半径画虚线圆弧 ──
-  // 圆弧覆盖 P→slitBot 到 P→slitTop 的角度范围
-  const angleToBot = Math.atan2(slitBot - pY, plateX - screenX);
-  const angleToTop = Math.atan2(slitTop - pY, plateX - screenX);
-
-  c.strokeStyle = dim;
-  c.lineWidth = 1 * scale;
-  c.setLineDash([3 * scale, 3 * scale]);
-  c.beginPath();
-  c.arc(screenX, pY, r1, angleToBot, angleToTop);
-  c.stroke();
-  c.setLineDash([]);
-
-  // ── 2. 圆弧与下缝光线交点 Q ──
-  // Q 在下缝光线上，且 PQ = r1
-  const qx = screenX + Math.cos(angleToBot) * r1;
-  const qy = pY + Math.sin(angleToBot) * r1;
-
-  c.fillStyle = accent;
-  c.beginPath();
-  c.arc(qx, qy, 3 * scale, 0, Math.PI * 2);
-  c.fill();
-
-  // ── 3. 从上缝 slitTop 向下缝光线引垂线，垂足 H ──
-  // 下缝光线方向（slitBot → P）
-  const dx = screenX - plateX;
-  const dy = pY - slitBot;
-  const r2Inv = 1 / r2;
-  const duX = dx * r2Inv;
-  const duY = dy * r2Inv;
-  // slitTop 相对于 slitBot 的向量在 d 上的投影 = Δr
-  const deltaR = (slitTop - slitBot) * dy * r2Inv; // = gap * sinθ
-  const hx = plateX + duX * deltaR;
-  const hy = slitBot + duY * deltaR;
-
-  c.strokeStyle = accent;
-  c.lineWidth = 1.5 * scale;
-  c.setLineDash([3 * scale, 3 * scale]);
-  c.beginPath();
-  c.moveTo(plateX, slitTop);
-  c.lineTo(hx, hy);
-  c.stroke();
-  c.setLineDash([]);
-
-  // 垂足标记
-  c.fillStyle = accent;
-  c.beginPath();
-  c.arc(hx, hy, 2.5 * scale, 0, Math.PI * 2);
-  c.fill();
-
-  // ── 4. 标注 Δr ──
-  // 在下缝光线上 slitBot 与 Q（或 H）之间标注
-  c.fillStyle = accent;
-  c.textAlign = 'center';
-  c.font = `italic ${Math.max(10, 13 * scale)}px sans-serif`;
-  const midX = (plateX + qx) / 2;
-  const midY = (slitBot + qy) / 2;
-  c.fillText('Δr', midX - 8 * scale, midY - 6 * scale);
-
-  // ── 5. 标注 r₁ = r₂（等长关系）──
-  c.fillStyle = dim;
-  c.font = `${Math.max(9, 11 * scale)}px sans-serif`;
-  c.fillText('r₁ = r₂ − Δr', screenX + 10 * scale, pY - r1 * 0.5);
-
-  // 核心公式
-  const fy = h * 0.90;
-  c.fillStyle = text;
-  c.font = `${Math.max(12, 16 * scale)}px sans-serif`;
-  c.textAlign = 'center';
-  c.fillText('Δr = d·sinθ = mλ', w / 2, fy);
-
-  c.restore();
-}
-
-// ── small-angle 阶段 ── 修正辅助三角形，仅保留关键公式
-
-function drawSmallAnglePhase(c: CanvasRenderingContext2D, g: SmallAnglePhase): void {
-  const { w, h, text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, pY, scale } = g;
-
-  c.save();
-  c.font = `${Math.max(10, 13 * scale)}px sans-serif`;
-
-  // 直接在主几何图上叠加直角三角形：双缝中心 → 屏幕中心 → P 点
-  // A = 双缝中心(plateX, centerY), B = 屏幕中心(screenX, centerY), C = P点(screenX, pY)
-  const ax = plateX;
-  const ay = centerY;
-  const bx = screenX;
-  const by = centerY;
-  const cx = screenX;
-  const cy = pY;
-
-  // 1. 水平边 L（双缝中心 → 屏幕中心，虚线）
-  c.strokeStyle = dim;
-  c.lineWidth = 1.5 * scale;
-  c.setLineDash([4 * scale, 3 * scale]);
-  c.beginPath();
-  c.moveTo(ax, ay);
-  c.lineTo(bx, by);
-  c.stroke();
-
-  // 2. 竖直边 x（屏幕中心 → P 点，实线）
-  c.setLineDash([]);
-  c.strokeStyle = accent;
-  c.lineWidth = 1.5 * scale;
-  c.beginPath();
-  c.moveTo(bx, by);
-  c.lineTo(cx, cy);
-  c.stroke();
-
-  // 3. 斜边 r（双缝中心 → P 点，虚线）
-  c.strokeStyle = dim;
-  c.lineWidth = 1.5 * scale;
-  c.setLineDash([4 * scale, 3 * scale]);
-  c.beginPath();
-  c.moveTo(ax, ay);
-  c.lineTo(cx, cy);
-  c.stroke();
-  c.setLineDash([]);
-
-  // 4. 直角标记（在屏幕中心 B）
-  c.strokeStyle = text;
-  c.lineWidth = 1 * scale;
-  const rc = 7 * scale;
-  const rightDir = cy < by ? -1 : 1; // P 点在中心上方还是下方
-  c.beginPath();
-  c.moveTo(bx - rc, by);
-  c.lineTo(bx - rc, by + rc * rightDir);
-  c.lineTo(bx, by + rc * rightDir);
-  c.stroke();
-
-  // 5. 标注 L / x / r
-  c.fillStyle = text;
-  c.textAlign = 'center';
-  c.font = `${Math.max(10, 13 * scale)}px sans-serif`;
-  // L 标在水平边下方
-  c.fillText('L', (ax + bx) / 2, ay + 16 * scale);
-  // x 标在竖直边右侧
-  c.textAlign = 'left';
-  c.fillText('x', bx + 8 * scale, (by + cy) / 2);
-  // r 标在斜边旁边
-  c.textAlign = 'center';
-  c.fillStyle = dim;
-  c.fillText('r', (ax + cx) / 2 - 10 * scale, (ay + cy) / 2);
-
-  // 6. θ 标注在双缝中心 A
-  const thetaAngle = Math.atan2(Math.abs(cy - ay), cx - ax); // 实际角度（正值）
-  const thetaR = 18 * scale;
-  c.strokeStyle = text;
-  c.lineWidth = 1 * scale;
-  c.beginPath();
-  // P 在上方 → 逆时针从 0 画到 -thetaAngle；P 在下方 → 顺时针从 0 画到 +thetaAngle
-  if (cy < by) {
-    c.arc(ax, ay, thetaR, 0, -thetaAngle * 0.85, true);
-  } else {
-    c.arc(ax, ay, thetaR, 0, thetaAngle * 0.85, false);
-  }
-  c.stroke();
-  c.fillStyle = text;
-  c.font = `italic ${Math.max(11, 14 * scale)}px sans-serif`;
-  c.fillText('θ', ax + thetaR + 8 * scale, ay - 4 * scale);
-
-  // 7. 公式（仅一行）
-  const fy = h * 0.90;
-  c.fillStyle = accent;
-  c.font = `${Math.max(12, 16 * scale)}px sans-serif`;
-  c.textAlign = 'center';
-  c.fillText('sinθ ≈ tanθ = x/L  →  Δr ≈ d·x/L = mλ', w / 2, fy);
-
-  c.restore();
-}
-
-// ── result 阶段 ── 展示相邻亮纹 + Δx 测量 + 反推波长
-
-function drawResultPhase(c: CanvasRenderingContext2D, g: {
-  w: number; h: number; text: string; dim: string; accent: string;
-  plateX: number; screenX: number; centerY: number; slitTop: number; slitBot: number; pY: number;
-  params: { lambda: number; L: number; d: number }; deltaX: number; scale: number;
-}): void {
-  const { w, h, text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, pY, params, deltaX, scale } = g;
-
-  c.save();
-  c.font = `${Math.max(10, 13 * scale)}px sans-serif`;
-
-  const brightR = 6.5 * scale;
-
-  // 1. 额外光线：从双缝到中央亮纹（虚线，表示这也是一条光路）
-  c.strokeStyle = accent;
-  c.lineWidth = 1.5 * scale;
-  c.setLineDash([4 * scale, 3 * scale]);
-  c.globalAlpha = 0.5;
-  c.beginPath();
-  c.moveTo(plateX, slitTop);
-  c.lineTo(screenX, centerY);
-  c.stroke();
-  c.beginPath();
-  c.moveTo(plateX, slitBot);
-  c.lineTo(screenX, centerY);
-  c.stroke();
-  c.setLineDash([]);
-  c.globalAlpha = 1;
-
-  // 2. 中央亮纹（大圆点 + 边框）
-  c.fillStyle = accent;
-  c.beginPath();
-  c.arc(screenX, centerY, brightR, 0, Math.PI * 2);
-  c.fill();
-  c.strokeStyle = text;
-  c.lineWidth = 1.5 * scale;
-  c.stroke();
-
-  // 3. 第一级亮纹（P 点位置，重画更大 + 边框）
-  c.fillStyle = accent;
-  c.beginPath();
-  c.arc(screenX, pY, brightR, 0, Math.PI * 2);
-  c.fill();
-  c.strokeStyle = text;
-  c.lineWidth = 1.5 * scale;
-  c.stroke();
-
-  // 4. 亮纹标注（与 P 标签错开，避免重叠）
-  c.fillStyle = text;
-  c.font = `${Math.max(9, 11 * scale)}px sans-serif`;
-  c.textAlign = 'left';
-  c.fillText('中央亮纹', screenX + 16 * scale, centerY + 16 * scale);
-  c.fillText('相邻亮纹', screenX + 16 * scale, pY + 16 * scale);
-
-  // 5. Δx 双向箭头标注
-  const arrowX = screenX + 55 * scale;
-  const ah = 4 * scale;
-  c.strokeStyle = text;
-  c.lineWidth = 1.2 * scale;
-  c.beginPath();
-  c.moveTo(arrowX, centerY);
-  c.lineTo(arrowX, pY);
-  c.stroke();
-  // 上箭头（指向 centerY）
-  c.beginPath();
-  c.moveTo(arrowX - ah, centerY + ah);
-  c.lineTo(arrowX, centerY);
-  c.lineTo(arrowX + ah, centerY + ah);
-  c.stroke();
-  // 下箭头（指向 pY）
-  c.beginPath();
-  c.moveTo(arrowX - ah, pY - ah);
-  c.lineTo(arrowX, pY);
-  c.lineTo(arrowX + ah, pY - ah);
-  c.stroke();
-
-  // Δx 文字
-  c.fillStyle = accent;
-  c.font = `bold ${Math.max(11, 14 * scale)}px sans-serif`;
-  c.textAlign = 'left';
-  c.fillText('Δx', arrowX + 10 * scale, (centerY + pY) / 2 + 4 * scale);
-
-  // 6. 底部公式
-  const fy = h * 0.88;
-  c.fillStyle = accent;
-  c.font = `bold ${Math.max(16, 24 * scale)}px sans-serif`;
-  c.textAlign = 'center';
-  c.fillText('Δx = λL / d', w / 2, fy);
-
-  c.fillStyle = text;
-  c.font = `${Math.max(11, 14 * scale)}px sans-serif`;
-  c.fillText(`= ${(deltaX * 1e3).toFixed(2)} mm`, w / 2, fy + 24 * scale);
-
-  // 反推公式（强调测量应用）
-  c.fillStyle = dim;
-  c.font = `${Math.max(10, 13 * scale)}px sans-serif`;
-  c.fillText(`→ 测得 Δx，反推波长  λ = d·Δx / L`, w / 2, fy + 46 * scale);
-
-  c.restore();
-}
-
-// ═══════════════════════════════════════════════════════════════
-// 通用工具
-// ═══════════════════════════════════════════════════════════════
-
-function drawArrowLine(
-  c: CanvasRenderingContext2D,
-  x1: number, y1: number,
-  x2: number, y2: number,
-  scale: number
-): void {
-  c.beginPath();
-  c.moveTo(x1, y1);
-  c.lineTo(x2, y2);
-  c.stroke();
-
-  const arrowSize = 5 * scale;
-  const angle = Math.atan2(y2 - y1, x2 - x1);
-  c.beginPath();
-  c.moveTo(x1, y1);
-  c.lineTo(x1 + arrowSize * Math.cos(angle + Math.PI / 6), y1 + arrowSize * Math.sin(angle + Math.PI / 6));
-  c.moveTo(x1, y1);
-  c.lineTo(x1 + arrowSize * Math.cos(angle - Math.PI / 6), y1 + arrowSize * Math.sin(angle - Math.PI / 6));
-  c.stroke();
-  c.beginPath();
-  c.moveTo(x2, y2);
-  c.lineTo(x2 - arrowSize * Math.cos(angle + Math.PI / 6), y2 - arrowSize * Math.sin(angle + Math.PI / 6));
-  c.moveTo(x2, y2);
-  c.lineTo(x2 - arrowSize * Math.cos(angle - Math.PI / 6), y2 - arrowSize * Math.sin(angle - Math.PI / 6));
-  c.stroke();
 }

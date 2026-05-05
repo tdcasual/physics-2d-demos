@@ -8,7 +8,7 @@ import { thinFilmMeta } from './scene.meta';
 import { createThinFilmScene } from './scene.entry';
 import { thinFilmControlsSchema } from './controls-schema';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { wavelengthToColor } from '../double-slit/scene.view';
+import { wavelengthToColor } from '../double-slit/scene.sim';
 import type { ThinFilmStep } from './scene.sim';
 
 function updateLambdaSliderColor(mount: HTMLElement, lambda: number): void {

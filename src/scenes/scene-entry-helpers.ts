@@ -94,7 +94,7 @@ export function createStandardSceneEntry<
   notify(): void;
 } {
   const { sim, view, getState, onReadout } = options;
-  const { subscribe, notify } = createNotifySystem();
+  const { subscribe, notify, clear } = createNotifySystem();
 
   function renderAndEmit(): void {
     const state = getState();
@@ -135,6 +135,7 @@ export function createStandardSceneEntry<
     },
     dispose(): void {
       view.dispose();
+      clear();
     },
     renderAndEmit,
     subscribe,

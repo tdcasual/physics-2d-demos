@@ -7,6 +7,7 @@ import type { MicrometerEyepieceParams } from './instrument.meta';
 
 export interface MicrometerEyepieceState extends InstrumentState {
   currentReading: number;
+  zeroOffset: number;
   stripeOffset: number;
   stripeSpacing: number;
   stripeColor: string;
@@ -18,6 +19,7 @@ export function createMicrometerEyepieceSim(
 ): InstrumentSim<MicrometerEyepieceState, MicrometerEyepieceParams> {
   let state: MicrometerEyepieceState = {
     currentReading: initial.initialReading,
+    zeroOffset: initial.zeroOffset,
     stripeOffset: initial.stripeOffset,
     stripeSpacing: initial.stripeSpacing,
     stripeColor: initial.stripeColor,
@@ -31,6 +33,9 @@ export function createMicrometerEyepieceSim(
     setParams(params) {
       if (params.initialReading !== undefined) {
         state.currentReading = params.initialReading;
+      }
+      if (params.zeroOffset !== undefined) {
+        state.zeroOffset = params.zeroOffset;
       }
       if (params.stripeOffset !== undefined) {
         state.stripeOffset = params.stripeOffset;
@@ -50,6 +55,7 @@ export function createMicrometerEyepieceSim(
     },
     reset() {
       state.currentReading = initial.initialReading;
+      state.zeroOffset = initial.zeroOffset;
       state.stripeOffset = initial.stripeOffset;
       state.stripeSpacing = initial.stripeSpacing;
       state.stripeColor = initial.stripeColor;

@@ -1,0 +1,766 @@
+/**
+ * 干涉读数游标卡尺（双缝干涉测量）— 渲染器（DOM 实现）
+ */
+
+import type { TeachingTheme } from '../../platform/standards';
+import type {
+  InstrumentView,
+  InstrumentViewport,
+  MeasurableInstrument,
+  SerializableInstrument,
+  CalibratableInstrument,
+} from '../_contract/instrument-contract';
+import type { InterferenceVernierCaliperState } from './instrument.sim';
+
+export type InterferenceVernierCaliperView = InstrumentView<InterferenceVernierCaliperState> &
+  MeasurableInstrument &
+  SerializableInstrument &
+  CalibratableInstrument;
+
+const CSS = `
+:host {
+  --bg-color: #e8eaec;
+  --main-ruler-bg: #c5c7cb;
+  --main-ruler-dark: #a0a2a6;
+  --vernier-bg-top: #f8f9fa;
+  --vernier-bg-bottom: #dce0e3;
+  --slider-bg: #5f6267;
+  --lens-border-outer: #3d4044;
+  --lens-border-inner: #808489;
+  --lens-orange-center: #ffce99;
+  --lens-orange-edge: #f58f29;
+  --tick-color: #222;
+}
+
+.microscope-root {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  background: #f5f5f7;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  user-select: none;
+  overflow: hidden;
+}
+
+.header-panel {
+  padding: 20px;
+  text-align: center;
+  z-index: 10;
+}
+
+.readout-display {
+  font-size: 28px;
+  font-weight: bold;
+  font-family: monospace;
+  background: #fff;
+  color: #1565c0;
+  border: 2px solid #ddd;
+  padding: 10px 20px;
+  border-radius: 6px;
+  border: 2px solid #ddd;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08), inset 0 0 10px rgba(21,101,192,0.08);
+  letter-spacing: 2px;
+  display: inline-block;
+}
+
+.tips {
+  font-size: 14px;
+  color: #555;
+  margin-top: 10px;
+  line-height: 1.5;
+}
+
+.scroll-wrapper {
+  flex: 1;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 860px) {
+  .scroll-wrapper {
+    justify-content: flex-start;
+  }
+}
+
+.instrument-container {
+  position: relative;
+  width: 820px;
+  height: 420px;
+  background-color: var(--bg-color);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15), inset 0 0 2px rgba(0,0,0,0.05);
+  overflow: visible;
+  flex-shrink: 0;
+  border-radius: 4px;
+}
+
+.main-ruler {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  width: 100%;
+  height: 75px;
+  background: linear-gradient(to bottom, var(--main-ruler-bg) 0%, var(--main-ruler-bg) 80%, var(--main-ruler-dark) 100%);
+  border-bottom: 2px solid #111;
+  box-shadow: inset 0 2px 5px rgba(255,255,255,0.8);
+}
+
+.ticks-container {
+  position: absolute;
+  bottom: 0;
+  left: 50px;
+  width: 750px;
+  height: 100%;
+}
+
+.tick {
+  position: absolute;
+  bottom: 0;
+  width: 1px;
+  background-color: var(--tick-color);
+  transform: translateX(-50%);
+}
+
+.tick-label {
+  position: absolute;
+  bottom: 28px;
+  transform: translateX(-50%);
+  font-size: 18px;
+  color: #111;
+  font-weight: 500;
+}
+
+.slider-assembly {
+  position: absolute;
+  top: 115px;
+  left: 0;
+  width: 590px;
+  height: 240px;
+  will-change: transform;
+  cursor: grab;
+  touch-action: none;
+}
+.slider-assembly:active {
+  cursor: grabbing;
+}
+
+.vernier-ruler {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 35px;
+  background: linear-gradient(to bottom, var(--vernier-bg-top), var(--vernier-bg-bottom));
+  clip-path: polygon(15px 0, 575px 0, 100% 100%, 0 100%);
+  border-bottom: 1px solid #999;
+}
+
+.vernier-ticks-container {
+  position: absolute;
+  top: 0;
+  left: 50px;
+  width: 500px;
+  height: 100%;
+}
+
+.vernier-tick {
+  position: absolute;
+  top: 0;
+  width: 1px;
+  background-color: var(--tick-color);
+  transform: translateX(-50%);
+}
+
+.vernier-tick-label {
+  position: absolute;
+  top: 16px;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: #222;
+  font-weight: 500;
+}
+
+.slider-body {
+  position: absolute;
+  top: 35px;
+  left: 0;
+  width: 100%;
+  height: 205px;
+  background: linear-gradient(to bottom, #696c71, var(--slider-bg));
+  box-shadow: 5px 10px 15px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.2);
+  border-top: 1px solid #444;
+}
+
+.lens-assembly {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+  background-color: var(--lens-border-outer);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255,255,255,0.1);
+  border: 1px solid #222;
+}
+
+.lens-glass {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 40%, var(--lens-orange-center), var(--lens-orange-edge));
+  border: 4px solid var(--lens-border-inner);
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
+}
+
+.pattern-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 800px;
+  height: 800px;
+  margin-top: -400px;
+  margin-left: -400px;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.crosshair-v {
+  position: absolute;
+  top: 0;
+  left: calc(50% - 1px);
+  width: 2px;
+  height: 100%;
+  background-color: rgba(20, 20, 20, 0.9);
+  box-shadow: 1px 0 1px rgba(255,255,255,0.3);
+}
+
+.crosshair-h {
+  position: absolute;
+  top: calc(50% - 1px);
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: rgba(20, 20, 20, 0.9);
+  box-shadow: 0 1px 1px rgba(255,255,255,0.3);
+}
+
+.screw-assembly {
+  position: absolute;
+  top: 130px;
+  right: -110px;
+  width: 110px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+}
+
+.screw-thread {
+  width: 70px;
+  height: 16px;
+  background: repeating-linear-gradient(to right, #999 0px, #999 2px, #ccc 3px, #777 4px);
+  border-radius: 2px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  border-top: 1px solid #fff;
+  border-bottom: 1px solid #333;
+}
+
+.knob {
+  width: 24px;
+  height: 46px;
+  background: linear-gradient(to bottom, #666, #aaa, #444);
+  border-radius: 3px;
+  position: relative;
+  cursor: ew-resize;
+  box-shadow: 2px 5px 8px rgba(0,0,0,0.6), inset 1px 0 2px rgba(255,255,255,0.5);
+  border: 1px solid #222;
+  touch-action: none;
+}
+
+.knob::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(to bottom, transparent 0px, transparent 3px, rgba(0,0,0,0.4) 4px, rgba(0,0,0,0.4) 5px);
+  border-radius: 3px;
+}
+
+.knob:hover {
+  filter: brightness(1.1);
+}
+`;
+
+// ── 物理与像素常量 ──
+const UNIT_PX = 100;              // 1 cm = 100 px
+const MAIN_SUB_TICK_PX = 10;      // 0.1 cm = 10 px
+const VERNIER_DIVISIONS = 50;     // 50 分度游标
+const VERNIER_LENGTH_UNITS = 4.9; // 游标尺总长 4.9 cm
+const VERNIER_LENGTH_PX = VERNIER_LENGTH_UNITS * UNIT_PX; // 490 px
+const VERNIER_SUB_TICK_PX = VERNIER_LENGTH_PX / VERNIER_DIVISIONS; // 9.8 px
+const LEAST_COUNT = 0.002;        // 最小读数精度 0.002 cm
+const LEAST_COUNT_PX = 0.2;       // 最小移动像素步长
+const MAX_CM = 2.1;               // 量程上限 2.1 cm
+const MAX_X = MAX_CM * UNIT_PX;   // 210 px
+const PATTERN_CENTER_CM = 1.5;    // 干涉图样中心固定位置
+const PATTERN_ABSOLUTE_X = PATTERN_CENTER_CM * UNIT_PX; // 150 px
+const LENS_OFFSET_FROM_VERNIER = 245; // 视场中心相对游标 0 刻度
+
+export function createInterferenceVernierCaliperView(options: {
+  canvas: HTMLCanvasElement;
+  theme: TeachingTheme;
+  viewport?: InstrumentViewport;
+  showHints?: boolean;
+}): InterferenceVernierCaliperView {
+  const { canvas, showHints = true } = options;
+  const parent = canvas.parentElement;
+  if (!parent) {
+    throw new Error('InterferenceVernierCaliperView: canvas must have a parent element');
+  }
+
+  canvas.style.display = 'none';
+
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = `
+    position: absolute;
+    left: 0; top: 0;
+    width: 100%; height: 100%;
+    overflow: hidden;
+  `;
+  parent.style.position = 'relative';
+  parent.appendChild(wrapper);
+
+  const shadow = wrapper.attachShadow({ mode: 'open' });
+
+  const styleEl = document.createElement('style');
+  styleEl.textContent = CSS;
+  shadow.appendChild(styleEl);
+
+  const root = document.createElement('div');
+  root.className = 'microscope-root';
+  shadow.appendChild(root);
+
+  // ── DOM 结构 ──
+  root.innerHTML = `
+    <div class="header-panel">
+      <div class="readout-display" id="readout">0.840 cm</div>
+      <div class="tips" id="tips-text">
+        <strong>操作说明：</strong> 拖动中间滑块进行粗调，横向拖动右侧旋钮进行精确微调。<br>
+        <i>*若屏幕较窄导致两侧不可见，可在黑色背景处滑动平移。</i>
+      </div>
+    </div>
+    <div class="scroll-wrapper">
+      <div class="instrument-container" id="instrument">
+        <div class="main-ruler">
+          <div class="ticks-container" id="main-ticks"></div>
+        </div>
+        <div class="slider-assembly" id="slider">
+          <div class="vernier-ruler">
+            <div class="vernier-ticks-container" id="vernier-ticks"></div>
+          </div>
+          <div class="slider-body">
+            <div class="lens-assembly">
+              <div class="lens-glass">
+                <div class="pattern-container" id="pattern">
+                  <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                      <filter id="blurFilter">
+                        <feGaussianBlur stdDeviation="1.5"/>
+                      </filter>
+                    </defs>
+                    <g id="interference-pattern" filter="url(#blurFilter)"></g>
+                  </svg>
+                </div>
+                <div class="crosshair-v"></div>
+                <div class="crosshair-h"></div>
+              </div>
+            </div>
+          </div>
+          <div class="screw-assembly">
+            <div class="screw-thread"></div>
+            <div class="knob" id="knob" title="水平拖动旋钮以微调"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const qs = <T extends Element>(id: string) => shadow.getElementById(id) as unknown as T;
+
+  const mainTicksContainer = qs<HTMLDivElement>('main-ticks');
+  const vernierTicksContainer = qs<HTMLDivElement>('vernier-ticks');
+  const patternGroup = qs<SVGGElement>('interference-pattern');
+  const slider = qs<HTMLDivElement>('slider');
+  const pattern = qs<HTMLDivElement>('pattern');
+  const readoutDisplay = qs<HTMLDivElement>('readout');
+  const tipsEl = qs<HTMLDivElement>('tips-text');
+  const knob = qs<HTMLDivElement>('knob');
+
+  if (!showHints && tipsEl) {
+    tipsEl.style.display = 'none';
+  }
+
+  // ── 状态 ──
+  let currentReadingCm = 1.400;
+  let zeroOffset = 0;
+  let disposed = false;
+  let simLastReading = 1.400;
+  let simLastZero = 0;
+
+  const listeners = {
+    reading: [] as Array<(reading: number) => void>,
+    align: [] as Array<() => void>,
+    limit: [] as Array<() => void>,
+  };
+
+  let wasAtLimit = false;
+
+  // ── 条纹配置 ──
+  let fringeConfig = {
+    spacing: 16,
+    blur: 1.5,
+    opacity: 0.85,
+    envelopeWidth: 320,
+    color: 'rgba(30,15,0,0.85)',
+  };
+
+  // ── 生成主尺刻度 ──
+  function initMainRuler() {
+    for (let i = 0; i <= 70; i++) {
+      const tick = document.createElement('div');
+      tick.className = 'tick';
+      tick.style.left = `${i * MAIN_SUB_TICK_PX}px`;
+      if (i % 10 === 0) {
+        tick.style.height = '24px';
+        const label = document.createElement('div');
+        label.className = 'tick-label';
+        label.style.left = `${i * MAIN_SUB_TICK_PX}px`;
+        label.innerText = String(i / 10);
+        mainTicksContainer.appendChild(label);
+      } else if (i % 5 === 0) {
+        tick.style.height = '16px';
+      } else {
+        tick.style.height = '10px';
+      }
+      mainTicksContainer.appendChild(tick);
+    }
+  }
+
+  // ── 生成游标刻度 ──
+  function initVernier() {
+    for (let i = 0; i <= VERNIER_DIVISIONS; i++) {
+      const tick = document.createElement('div');
+      tick.className = 'vernier-tick';
+      tick.style.left = `${i * VERNIER_SUB_TICK_PX}px`;
+      if (i % 5 === 0) {
+        tick.style.height = '15px';
+        const label = document.createElement('div');
+        label.className = 'vernier-tick-label';
+        label.style.left = `${i * VERNIER_SUB_TICK_PX}px`;
+        let num = i / 5;
+        if (num === 10) num = 0;
+        label.innerText = String(num);
+        vernierTicksContainer.appendChild(label);
+      } else {
+        tick.style.height = '8px';
+      }
+      vernierTicksContainer.appendChild(tick);
+    }
+  }
+
+  // ── 生成干涉条纹 ──
+  function updatePattern() {
+    // 清空旧条纹
+    while (patternGroup.firstChild) {
+      patternGroup.removeChild(patternGroup.firstChild);
+    }
+
+    const { spacing, blur, opacity: baseOpacity, envelopeWidth } = fringeConfig;
+    const patternCenter = 400; // 800px 容器的绝对中心
+
+    // 更新模糊滤镜
+    const blurFilter = shadow.querySelector('#blurFilter feGaussianBlur') as SVGFEGaussianBlurElement | null;
+    if (blurFilter) {
+      blurFilter.setAttribute('stdDeviation', String(blur));
+    }
+
+    for (let m = 0; m <= 30; m++) {
+      const offset = (m + 0.5) * spacing;
+      const envelope = Math.max(0, Math.cos((offset / envelopeWidth) * (Math.PI / 2)));
+      const opacity = Math.max(0.05, baseOpacity * Math.pow(envelope, 1.5));
+      const thickness = Math.max(2, 6 * envelope);
+
+      const lineL = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      lineL.setAttribute('x1', String(patternCenter - offset));
+      lineL.setAttribute('y1', '0');
+      lineL.setAttribute('x2', String(patternCenter - offset));
+      lineL.setAttribute('y2', '800');
+      lineL.setAttribute('stroke', fringeConfig.color.replace(/[\d.]+\)$/, `${opacity})`));
+      lineL.setAttribute('stroke-width', String(thickness));
+      patternGroup.appendChild(lineL);
+
+      const lineR = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      lineR.setAttribute('x1', String(patternCenter + offset));
+      lineR.setAttribute('y1', '0');
+      lineR.setAttribute('x2', String(patternCenter + offset));
+      lineR.setAttribute('y2', '800');
+      lineR.setAttribute('stroke', fringeConfig.color.replace(/[\d.]+\)$/, `${opacity})`));
+      lineR.setAttribute('stroke-width', String(thickness));
+      patternGroup.appendChild(lineR);
+    }
+  }
+
+  // ── 核心渲染 ──
+  function renderView() {
+    if (disposed) return;
+
+    // 吸附到精度
+    let snappedX = Math.round((currentReadingCm * UNIT_PX) / LEAST_COUNT_PX) * LEAST_COUNT_PX;
+    if (snappedX < 0) snappedX = 0;
+    if (snappedX > MAX_X) snappedX = MAX_X;
+    currentReadingCm = snappedX / UNIT_PX;
+
+    // 1. 移动滑块
+    slider.style.transform = `translateX(${snappedX}px)`;
+
+    // 2. 逆向移动干涉图样
+    const patternTranslateX = PATTERN_ABSOLUTE_X - (snappedX + LENS_OFFSET_FROM_VERNIER);
+    pattern.style.transform = `translate(${patternTranslateX}px, 0)`;
+
+    // 3. 更新读数
+    const totalReading = currentReadingCm + zeroOffset;
+    readoutDisplay.innerText = `${totalReading.toFixed(3)} cm`;
+
+    // 4. 边界检测
+    const atLimit = currentReadingCm <= 0.001 || currentReadingCm >= MAX_CM - 0.001;
+    if (atLimit && !wasAtLimit) {
+      listeners.limit.forEach((cb) => cb());
+    }
+    wasAtLimit = atLimit;
+  }
+
+  // ── 交互事件 ──
+  let isDragging = false;
+  let dragMode: 'slider' | 'knob' | null = null;
+  let startPointerX = 0;
+  let startReadingCm = 0;
+
+  function getPointerX(e: MouseEvent | TouchEvent): number {
+    if ('touches' in e && e.touches.length > 0) {
+      return e.touches[0].clientX;
+    }
+    return (e as MouseEvent).clientX;
+  }
+
+  function handleDragStart(e: MouseEvent | TouchEvent, mode: 'slider' | 'knob') {
+    if (mode === 'slider') {
+      const target = e.target as HTMLElement;
+      if (target.id === 'knob' || target.closest('#knob')) return;
+    }
+    isDragging = true;
+    dragMode = mode;
+    startPointerX = getPointerX(e);
+    startReadingCm = currentReadingCm;
+  }
+
+  function handleDragMove(e: MouseEvent | TouchEvent) {
+    if (!isDragging) return;
+    if ('touches' in e && e.cancelable) {
+      e.preventDefault();
+    }
+    const deltaX = getPointerX(e) - startPointerX;
+    if (dragMode === 'slider') {
+      currentReadingCm = startReadingCm + deltaX / UNIT_PX;
+    } else if (dragMode === 'knob') {
+      currentReadingCm = startReadingCm + (deltaX / UNIT_PX) * 0.1;
+    }
+    renderView();
+    emitReading();
+  }
+
+  function handleDragEnd() {
+    isDragging = false;
+    dragMode = null;
+  }
+
+  function emitReading() {
+    const reading = currentReadingCm + zeroOffset;
+    listeners.reading.forEach((cb) => cb(reading));
+  }
+
+  const onSliderMouseDown = (e: MouseEvent) => handleDragStart(e, 'slider');
+  const onSliderTouchStart = (e: TouchEvent) => handleDragStart(e, 'slider');
+  const onKnobMouseDown = (e: MouseEvent) => {
+    e.stopPropagation();
+    handleDragStart(e, 'knob');
+  };
+  const onKnobTouchStart = (e: TouchEvent) => {
+    e.stopPropagation();
+    handleDragStart(e, 'knob');
+  };
+  const onDocMouseMove = (e: MouseEvent) => handleDragMove(e);
+  const onDocTouchMove = (e: TouchEvent) => handleDragMove(e);
+  const onDocMouseUp = () => handleDragEnd();
+  const onDocTouchEnd = () => handleDragEnd();
+  const onDocTouchCancel = () => handleDragEnd();
+
+  slider.addEventListener('mousedown', onSliderMouseDown);
+  slider.addEventListener('touchstart', onSliderTouchStart, { passive: false });
+  knob.addEventListener('mousedown', onKnobMouseDown);
+  knob.addEventListener('touchstart', onKnobTouchStart, { passive: false });
+  document.addEventListener('mousemove', onDocMouseMove);
+  document.addEventListener('touchmove', onDocTouchMove, { passive: false });
+  document.addEventListener('mouseup', onDocMouseUp);
+  document.addEventListener('touchend', onDocTouchEnd);
+  document.addEventListener('touchcancel', onDocTouchCancel);
+
+  // ── 启动 ──
+  initMainRuler();
+  initVernier();
+  updatePattern();
+  renderView();
+
+  return {
+    render(state: InterferenceVernierCaliperState) {
+      const fringeChanged =
+        state.fringeSpacing !== fringeConfig.spacing ||
+        state.fringeBlur !== fringeConfig.blur ||
+        state.fringeOpacity !== fringeConfig.opacity ||
+        state.fringeEnvelopeWidth !== fringeConfig.envelopeWidth ||
+        state.fringeColor !== fringeConfig.color;
+      if (fringeChanged) {
+        fringeConfig.spacing = state.fringeSpacing;
+        fringeConfig.blur = state.fringeBlur;
+        fringeConfig.opacity = state.fringeOpacity;
+        fringeConfig.envelopeWidth = state.fringeEnvelopeWidth;
+        fringeConfig.color = state.fringeColor;
+        updatePattern();
+      }
+
+      const needRender =
+        state.currentReading !== simLastReading ||
+        state.zeroOffset !== simLastZero;
+      if (needRender) {
+        currentReadingCm = state.currentReading;
+        zeroOffset = state.zeroOffset;
+        simLastReading = state.currentReading;
+        simLastZero = state.zeroOffset;
+        renderView();
+      }
+    },
+    resize() {
+      // 固定 820×420 尺寸，内部使用 overflow-x: auto 处理窄屏
+    },
+    setTheme() {
+      // 固定配色
+    },
+    setViewport() {
+      // 内部布局已固定
+    },
+    dispose() {
+      disposed = true;
+      slider.removeEventListener('mousedown', onSliderMouseDown);
+      slider.removeEventListener('touchstart', onSliderTouchStart);
+      knob.removeEventListener('mousedown', onKnobMouseDown);
+      knob.removeEventListener('touchstart', onKnobTouchStart);
+      document.removeEventListener('mousemove', onDocMouseMove);
+      document.removeEventListener('touchmove', onDocTouchMove);
+      document.removeEventListener('mouseup', onDocMouseUp);
+      document.removeEventListener('touchend', onDocTouchEnd);
+      document.removeEventListener('touchcancel', onDocTouchCancel);
+      if (wrapper.parentElement) {
+        wrapper.parentElement.removeChild(wrapper);
+      }
+      canvas.style.display = '';
+      listeners.reading.length = 0;
+      listeners.align.length = 0;
+      listeners.limit.length = 0;
+    },
+
+    // ── MeasurableInstrument ──
+    getReading() {
+      return currentReadingCm + zeroOffset;
+    },
+    onReadingChange(callback) {
+      listeners.reading.push(callback);
+      return () => {
+        const idx = listeners.reading.indexOf(callback);
+        if (idx >= 0) listeners.reading.splice(idx, 1);
+      };
+    },
+    onAlign(callback) {
+      listeners.align.push(callback);
+      return () => {
+        const idx = listeners.align.indexOf(callback);
+        if (idx >= 0) listeners.align.splice(idx, 1);
+      };
+    },
+    onLimit(callback) {
+      listeners.limit.push(callback);
+      return () => {
+        const idx = listeners.limit.indexOf(callback);
+        if (idx >= 0) listeners.limit.splice(idx, 1);
+      };
+    },
+
+    // ── SerializableInstrument ──
+    serialize() {
+      return JSON.stringify({
+        currentReading: currentReadingCm,
+        zeroOffset,
+        fringeSpacing: fringeConfig.spacing,
+        fringeBlur: fringeConfig.blur,
+        fringeOpacity: fringeConfig.opacity,
+        fringeEnvelopeWidth: fringeConfig.envelopeWidth,
+        fringeColor: fringeConfig.color,
+      });
+    },
+    deserialize(json) {
+      try {
+        const data = JSON.parse(json);
+        if (typeof data.currentReading === 'number') currentReadingCm = data.currentReading;
+        if (typeof data.zeroOffset === 'number') zeroOffset = data.zeroOffset;
+        if (typeof data.fringeSpacing === 'number') fringeConfig.spacing = data.fringeSpacing;
+        if (typeof data.fringeBlur === 'number') fringeConfig.blur = data.fringeBlur;
+        if (typeof data.fringeOpacity === 'number') fringeConfig.opacity = data.fringeOpacity;
+        if (typeof data.fringeEnvelopeWidth === 'number') fringeConfig.envelopeWidth = data.fringeEnvelopeWidth;
+        if (typeof data.fringeColor === 'string') fringeConfig.color = data.fringeColor;
+        updatePattern();
+        renderView();
+      } catch {
+        // 忽略无效序列化数据
+      }
+    },
+
+    // ── CalibratableInstrument ──
+    setZero(val) {
+      zeroOffset = val;
+      renderView();
+    },
+    getZero() {
+      return zeroOffset;
+    },
+    getCalibrationOffset() {
+      return zeroOffset;
+    },
+
+    setReadoutVisible(visible: boolean) {
+      readoutDisplay.style.display = visible ? '' : 'none';
+    },
+  } as InterferenceVernierCaliperView & { setReadoutVisible(visible: boolean): void };
+}

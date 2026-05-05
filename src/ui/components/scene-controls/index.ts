@@ -20,3 +20,4 @@ export { createSceneSelector } from './scene-selector';
 export { createNumberInputRow } from './number-input-row';
 export { createTextInputRow } from './text-input-row';
 export { createDeleteButton } from './delete-button';
+export { createToggleRow } from './toggle-row';

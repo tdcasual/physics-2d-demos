@@ -13,7 +13,7 @@ export function createButtonGrid(
   }>,
   columns: 1 | 2 | 3 = 2
 ): HTMLElement & { dispose: () => void } {
-  const grid = document.createElement('div') as HTMLElement & { dispose: () => void };
+  const grid = document.createElement('div') as unknown as HTMLElement & { dispose: () => void };
   grid.className = `grid grid-cols-${columns} gap-2`;
   const cleanups: Array<() => void> = [];
 
