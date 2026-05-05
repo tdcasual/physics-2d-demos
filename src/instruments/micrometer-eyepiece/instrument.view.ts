@@ -457,7 +457,7 @@ export function createMicrometerEyepieceView(options: {
       transparent ${Math.round(mid + stripeW)}px,
       transparent ${Math.round(s.spacing)}px
     )`;
-    lensView.style.backgroundPositionX = `${-stripeConfig.offset}px`;
+    lensView.style.backgroundPositionX = '0px';
   }
 
   // ── 初始化主尺双刻度 ──
@@ -558,8 +558,8 @@ export function createMicrometerEyepieceView(options: {
     // B2. 更新对象池中的可见 tick
     updateThimbleTicks();
 
-    // C. 联动干涉视场：平移十字准星
-    const viewOffset = (currentReading - config.initialReading) * config.crosshairSpeed;
+    // C. 联动干涉视场：平移十字准星（stripeOffset 控制光标偏移）
+    const viewOffset = (currentReading - config.initialReading) * config.crosshairSpeed - stripeConfig.offset;
     crosshairSystem.style.transform = `translateX(${viewOffset}px)`;
 
     // D. 高精度数字更新
