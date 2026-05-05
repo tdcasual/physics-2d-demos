@@ -29,12 +29,12 @@ export const micrometerEyepieceControlsSchema: ControlsSchema = {
         {
           type: 'slider',
           key: 'stripeOffset',
-          label: '条纹初始偏移',
-          min: -200,
-          max: 200,
+          label: '基准读数',
+          min: 0,
+          max: 50,
           step: 1,
           value: 0,
-          unit: 'px',
+          unit: 'mm',
         },
         {
           type: 'slider',

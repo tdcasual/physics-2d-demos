@@ -478,8 +478,9 @@ export function createMicrometerEyepieceView(options: {
     const viewOffset = (currentReading - config.initialReading) * config.crosshairSpeed;
     crosshairSystem.style.transform = `translateX(${viewOffset}px)`;
 
-    // D. 高精度数字更新
-    readoutDisplay.innerText = currentReading.toFixed(3) + ' mm';
+    // D. 高精度数字更新（基准读数 + 微调读数）
+    const totalReading = stripeState.offset + currentReading;
+    readoutDisplay.innerText = totalReading.toFixed(3) + ' mm';
   }
 
   // ── 统一交互事件处理 ──
@@ -604,6 +605,7 @@ export function createMicrometerEyepieceView(options: {
           angle: state.stripeAngle,
         };
         updateStripes();
+        renderView();
       }
       if (state.currentReading !== simLastReading) {
         simLastReading = state.currentReading;
