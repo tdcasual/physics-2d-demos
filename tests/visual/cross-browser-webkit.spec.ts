@@ -22,7 +22,7 @@ for (const scene of SCENES) {
     page.on('pageerror', (err) => errors.push(`[pageerror] ${err.message}`));
 
     await page.goto(`http://127.0.0.1:${PORT}/src/pages/${scene}.html`, {
-      waitUntil: 'networkidle'
+      waitUntil: 'domcontentloaded'
     });
     await page.waitForTimeout(2000);
 

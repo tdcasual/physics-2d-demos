@@ -1,4 +1,5 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
+import { readSceneParams, writeSceneParams } from '../../app/url-sync';
 import { createProjectileScene } from './scene.entry';
 import { projectileMeta } from './scene.meta';
 import { projectileControlsSchema } from './controls-schema';
@@ -55,15 +56,33 @@ bootScenePage({
         if (key === 'preset') {
           if (applyPreset(String(value))) {
             renderer.setActive(key, String(value));
+            writeSceneParams({ [key]: value });
           }
         } else {
           applyParam(key, value);
+          writeSceneParams({ [key]: value });
         }
       },
       onAction: () => {
         // No action buttons in this schema
       }
     });
+
+    // Apply URL params after controls are created
+    const urlParams = readSceneParams(projectileMeta);
+    for (const [key, value] of Object.entries(urlParams)) {
+      if (key === 'preset') {
+        if (applyPreset(String(value))) {
+          renderer.setActive(key, String(value));
+        }
+      } else {
+        renderer.setValue(key, value);
+        applyParam(key, value);
+      }
+    }
+    if (Object.keys(urlParams).length > 0) {
+      scene.render();
+    }
 
     return {
       setParam(key: string, value: number) {

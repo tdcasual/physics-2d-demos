@@ -5,6 +5,7 @@
 
 import type { SceneLifecycle } from '../types';
 import type { DemoRenderHints } from '../../platform/demo-profile';
+import { createNotifySystem } from '../scene-entry-helpers';
 import { projectileMeta } from './scene.meta';
 import {
   createProjectileSim,
@@ -87,17 +88,7 @@ export function createProjectileScene(
     demoHints: options.demoHints
   });
 
-  const listeners: (() => void)[] = [];
-
-  function notify(): void {
-    listeners.forEach((fn) => {
-      try {
-        fn();
-      } catch {
-        /* ignore */
-      }
-    });
-  }
+  const { notify, subscribe, clear } = createNotifySystem();
 
   return {
     init(): void {
@@ -149,15 +140,9 @@ export function createProjectileScene(
     }> {
       return formatReadout(sim.getState(), sim.getParams());
     },
-    subscribe(listener: () => void): () => void {
-      listeners.push(listener);
-      return () => {
-        const idx = listeners.indexOf(listener);
-        if (idx > -1) listeners.splice(idx, 1);
-      };
-    },
+    subscribe,
     dispose(): void {
-      listeners.length = 0;
+      clear();
       view.dispose();
     }
   };

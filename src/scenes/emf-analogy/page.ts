@@ -1,34 +1,10 @@
-import { createSceneListener } from '../../app/scene-listener';
 import { bootScenePage } from '../../app/scene-bootstrapper';
+import { readSceneParams, writeSceneParams } from '../../app/url-sync';
 import type { ReadoutItem } from '../../app/layouts/types';
 import { emfAnalogyMeta } from './scene.meta';
 import { createEmfAnalogyScene } from './scene.entry';
 import { emfAnalogyControlsSchema } from './controls-schema';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
-import type { EmfAnalogySnapshot } from './scene.sim';
-
-function formatReadout(snapshot: EmfAnalogySnapshot): ReadoutItem[] {
-  return [
-    { label: '系统状态', value: snapshot.state.isSystemOn ? '通路' : '断路' },
-    {
-      label: '外电阻 R',
-      value:
-        snapshot.state.externalR === Infinity
-          ? '∞ Ω'
-          : `${snapshot.state.externalR.toFixed(1)} Ω`
-    },
-    { label: '电流 I', value: `${snapshot.state.currentI.toFixed(2)} A` },
-    {
-      label: '内阻压降 Ir',
-      value: `${snapshot.state.internalDrop.toFixed(2)} V`
-    },
-    {
-      label: '路端电压 U',
-      value: `${snapshot.state.terminalVoltage.toFixed(2)} V`
-    }
-  ];
-}
-
 bootScenePage({
   meta: emfAnalogyMeta,
   createScene: ({ canvas, theme, mode, demoHints }) => {
@@ -39,21 +15,11 @@ bootScenePage({
       theme,
       onReadout: () => {}
     });
-    const { subscribe, notify } = createSceneListener();
     return {
       ...scene,
       getState() {
         return scene.getSnapshot();
-      },
-      startAll() {
-        scene.start();
-        notify();
-      },
-      pauseAll() {
-        scene.stop();
-        notify();
-      },
-      subscribe
+      }
     };
   },
   createControls: ({ mount, scene, onStatus }) => {
@@ -65,14 +31,16 @@ bootScenePage({
           scene.setTapOpening(value as number);
           scene.render();
           scene.startAll?.();
-          const snapshot = scene.getSnapshot?.() as EmfAnalogySnapshot;
+          const snapshot = scene.getSnapshot?.();
           const rText =
             snapshot?.state.externalR === Infinity
               ? '∞'
               : snapshot?.state.externalR.toFixed(1);
           onStatus?.(`外电阻 R=${rText}Ω`);
+          writeSceneParams({ [key]: value });
         } else if (key === 'speed') {
           onStatus?.(`播放速度: ${value}x`);
+          writeSceneParams({ [key]: value });
         }
       },
       onAction: (key) => {
@@ -108,13 +76,27 @@ bootScenePage({
       }
     });
 
+    // Apply URL params
+    const urlParams = readSceneParams(emfAnalogyMeta);
+    for (const [key, value] of Object.entries(urlParams)) {
+      if (key === 'tap' || key === 'speed') {
+        renderer.setValue(key, value);
+        if (key === 'tap') {
+          scene.setTapOpening(value as number);
+        }
+      }
+    }
+    if (Object.keys(urlParams).length > 0) {
+      scene.render();
+    }
+
     return {
       dispose: () => {
         renderer.dispose();
       }
     };
   },
-  formatReadout: (state) => formatReadout(state as EmfAnalogySnapshot),
+
   preferredLayout: 'split-right',
   layoutConfig: {
     defaultLeftRatio: 0.3,

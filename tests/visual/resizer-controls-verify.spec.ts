@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test';
 test.describe('resizer drag fix', () => {
   test('spring-oscillator grid-template-columns updated during drag', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto('/src/pages/spring-oscillator.html', { waitUntil: 'networkidle' });
+    await page.goto('/src/pages/spring-oscillator.html', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(2000);
 
     const container = page.locator('[data-testid="split-right-layout"]');
@@ -29,7 +29,7 @@ test.describe('resizer drag fix', () => {
 
   test('ganshe grid-template-columns updated during drag', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto('/src/pages/ganshe.html', { waitUntil: 'networkidle' });
+    await page.goto('/src/pages/ganshe.html', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(2000);
 
     const container = page.locator('[data-testid="split-right-graph-bottom-layout"]');
@@ -54,7 +54,7 @@ test.describe('resizer drag fix', () => {
 test.describe('controlColumns', () => {
   test('ganshe control slot has data-control-columns attribute', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto('/src/pages/ganshe.html', { waitUntil: 'networkidle' });
+    await page.goto('/src/pages/ganshe.html', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(2000);
 
     const controlSlot = page.locator('.srgb-control-slot');
@@ -64,7 +64,7 @@ test.describe('controlColumns', () => {
 
   test('ganshe control cards display in grid layout', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto('/src/pages/ganshe.html', { waitUntil: 'networkidle' });
+    await page.goto('/src/pages/ganshe.html', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(2000);
 
     const controlSlot = page.locator('.srgb-control-slot');

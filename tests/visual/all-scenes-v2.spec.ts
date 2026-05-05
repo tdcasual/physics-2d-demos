@@ -13,7 +13,7 @@ for (const scene of scenes) {
   test(`${scene.name} V2 layout`, async ({ page }) => {
     await page.setViewportSize({ width: 1400, height: 900 });
     await page.goto(`http://localhost:5177/src/pages/${scene.id}.html`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     await page.screenshot({
       path: `/tmp/v2-${scene.id}.png`,

@@ -22,7 +22,7 @@ for (const scene of SCENES) {
   test.describe(`${scene.name} (${scene.prefix}) readout panel`, () => {
     test.beforeEach(async ({ page }) => {
       await page.setViewportSize({ width: 1440, height: 900 });
-      await page.goto(`/src/pages/${scene.id}.html`, { waitUntil: 'networkidle' });
+      await page.goto(`/src/pages/${scene.id}.html`, { waitUntil: 'domcontentloaded' });
       await page.waitForTimeout(2000);
     });
 
@@ -144,7 +144,7 @@ for (const scene of SCENES) {
 test.describe('mobile-stack readout panel', () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('/src/pages/spring-oscillator.html', { waitUntil: 'networkidle' });
+    await page.goto('/src/pages/spring-oscillator.html', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(2000);
   });
 
@@ -177,7 +177,7 @@ test.describe('all split-right scenes have functional readout', () => {
   for (const sceneId of SPLIT_RIGHT_SCENES) {
     test(`${sceneId} readout toggle works`, async ({ page }) => {
       await page.setViewportSize({ width: 1440, height: 900 });
-      await page.goto(`/src/pages/${sceneId}.html`, { waitUntil: 'networkidle' });
+      await page.goto(`/src/pages/${sceneId}.html`, { waitUntil: 'domcontentloaded' });
       await page.waitForTimeout(2000);
 
       // Find the readout toggle button (either prefix)

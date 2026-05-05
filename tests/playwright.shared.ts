@@ -6,10 +6,16 @@
  */
 
 export const sharedConfig = {
+  retries: process.env.CI ? 2 : 0,
+  expect: {
+    timeout: 10_000
+  },
   use: {
     baseURL: 'http://127.0.0.1:5177',
     locale: 'zh-CN',
-    timezoneId: 'Asia/Shanghai'
+    timezoneId: 'Asia/Shanghai',
+    actionTimeout: 5_000,
+    navigationTimeout: 15_000
   },
   webServer: {
     command: 'pnpm build && pnpm preview --host 127.0.0.1 --port 5177',

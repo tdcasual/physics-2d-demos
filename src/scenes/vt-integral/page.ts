@@ -72,26 +72,10 @@ bootScenePage({
       onReadout: () => {}
     });
 
-    let currentMode = mode;
-    const { subscribe, notify } = createSceneListener();
-
     return {
       ...scene,
       getState() {
         return scene.getSnapshot();
-      },
-      getReadoutItems() {
-        return formatReadout(scene.getSnapshot(), currentMode);
-      },
-      subscribe,
-      setMode(m: 'normal' | 'presentation', hints?: unknown) {
-        currentMode = m;
-        scene.setMode(m, hints as Parameters<typeof scene.setMode>[1]);
-        notify();
-      },
-      setTheme(t: Theme) {
-        scene.setTheme(t);
-        notify();
       },
       dispose() {
         scene.dispose();

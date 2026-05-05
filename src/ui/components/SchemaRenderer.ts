@@ -121,6 +121,7 @@ function renderField(
         onChange: (val) => onChange(field.key, val)
       });
       const input = row.querySelector('input');
+      if (input) input.dataset.key = field.key;
       return {
         node: row,
         valueSetter: (value) => {

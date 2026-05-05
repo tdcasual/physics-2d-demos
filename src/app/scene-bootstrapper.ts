@@ -9,6 +9,7 @@ import '../styles/index.css';
 import { createSceneContainer } from './layouts/container';
 import { registerAllLayouts } from './layouts/auto-register';
 import { SceneAdapter } from './scene-adapter';
+import { restoreSceneParams, persistSceneParams } from './url-sync';
 import type { SceneInstance, ScenePageOptions } from './scene-bootstrapper-types';
 
 export type { SceneInstance, ScenePageOptions } from './scene-bootstrapper-types';
@@ -24,6 +25,9 @@ export function bootScenePage<TScene extends SceneInstance>(
   options: ScenePageOptions<TScene>,
   mountSelector: string = '#app'
 ): void {
+  // 恢复之前保存的参数（URL 无参数时）
+  restoreSceneParams(options.meta.id);
+
   const mount = document.querySelector(mountSelector) as HTMLElement | null;
   if (!mount) {
     throw new Error(`Missing mount container: ${mountSelector}`);
@@ -52,4 +56,13 @@ export function bootScenePage<TScene extends SceneInstance>(
   container.setScene(adapter).catch((err) => {
     console.error('[bootScenePage] setScene failed:', err);
   });
+
+  // 页面离开前持久化参数
+  window.addEventListener(
+    'beforeunload',
+    () => {
+      persistSceneParams(options.meta.id);
+    },
+    { once: true }
+  );
 }

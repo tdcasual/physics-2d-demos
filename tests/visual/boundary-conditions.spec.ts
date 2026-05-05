@@ -15,7 +15,7 @@ test('projectile extreme parameters', async ({ page }) => {
   page.on('pageerror', (err) => errors.push(`[pageerror] ${err.message}`));
 
   await page.goto(`http://127.0.0.1:${PORT}/src/pages/projectile.html`, {
-    waitUntil: 'networkidle'
+    waitUntil: 'domcontentloaded'
   });
   await page.waitForTimeout(1500);
 
@@ -55,7 +55,7 @@ test('chase-meet extreme parameters', async ({ page }) => {
   page.on('pageerror', (err) => errors.push(`[pageerror] ${err.message}`));
 
   await page.goto(`http://127.0.0.1:${PORT}/src/pages/chase-meet.html`, {
-    waitUntil: 'networkidle'
+    waitUntil: 'domcontentloaded'
   });
   await page.waitForTimeout(1500);
 
@@ -83,7 +83,7 @@ test('vt-integral extreme parameters', async ({ page }) => {
   page.on('pageerror', (err) => errors.push(`[pageerror] ${err.message}`));
 
   await page.goto(`http://127.0.0.1:${PORT}/src/pages/vt-integral.html`, {
-    waitUntil: 'networkidle'
+    waitUntil: 'domcontentloaded'
   });
   await page.waitForTimeout(1500);
 

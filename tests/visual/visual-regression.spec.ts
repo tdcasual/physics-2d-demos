@@ -17,7 +17,7 @@ for (const scene of SCENES) {
   test(`desktop ${scene.id}`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(`http://127.0.0.1:${PORT}/src/pages/${scene.id}.html`, {
-      waitUntil: 'networkidle'
+      waitUntil: 'domcontentloaded'
     });
     await page.waitForTimeout(2000);
     await expect(page).toHaveScreenshot(`${scene.id}-desktop.png`, {
@@ -29,7 +29,7 @@ for (const scene of SCENES) {
   test(`mobile ${scene.id}`, async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto(`http://127.0.0.1:${PORT}/src/pages/${scene.id}.html`, {
-      waitUntil: 'networkidle'
+      waitUntil: 'domcontentloaded'
     });
     await page.waitForTimeout(2000);
     await expect(page).toHaveScreenshot(`${scene.id}-mobile.png`, {

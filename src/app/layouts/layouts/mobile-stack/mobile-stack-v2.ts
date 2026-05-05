@@ -65,7 +65,7 @@ export class MobileStackLayoutV2 implements ILayout {
     this._container = container;
 
     this.capabilities = [
-      { id: 'transport-bar', config: {} },
+      ...(config.hideTransport ? [] : [{ id: 'transport-bar' as const, config: {} }]),
       { id: 'readout-panel', config: { position: 'inline', collapsed: false, cssPrefix: 'mobile', label: config.readoutLabel ?? '数据读数' } },
       { id: 'theme-toggle' },
       { id: 'mode-toggle' },

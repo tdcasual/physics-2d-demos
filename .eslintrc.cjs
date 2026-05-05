@@ -72,6 +72,30 @@ module.exports = {
       }
     },
     {
+      files: ['src/instruments/**/*.ts'],
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            patterns: [
+              {
+                group: ['../app/*', '../app/**', '../../app/*', '../../app/**'],
+                message: 'Instruments layer must stay independent from app layer.'
+              },
+              {
+                group: ['../ui/*', '../ui/**', '../../ui/*', '../../ui/**'],
+                message: 'Instruments layer must stay independent from ui layer.'
+              },
+              {
+                group: ['../scenes/*', '../scenes/**', '../../scenes/*', '../../scenes/**'],
+                message: 'Instruments layer must stay independent from scenes layer.'
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       files: ['src/platform/**/*.ts'],
       rules: {
         'no-restricted-imports': [

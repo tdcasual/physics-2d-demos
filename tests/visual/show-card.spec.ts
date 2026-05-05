@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test('show vt-integral card clearly', async ({ page }) => {
   await page.setViewportSize({ width: 1400, height: 900 });
   await page.goto('http://localhost:5177/');
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 
   // 找到实验区域
   const experimentsSection = await page.locator('#experiments');

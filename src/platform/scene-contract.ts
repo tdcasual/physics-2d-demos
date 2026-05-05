@@ -25,6 +25,8 @@ export type SceneMeta = ScenePlacardMeta & {
   icon?: string;
   category?: 'mechanics' | 'electromagnetism' | 'method';
   featured?: boolean;
+  /** 额外允许通过 URL query string 同步的参数（不在 defaultParams 中） */
+  urlSyncKeys?: string[];
   /** 演示模式配置（可选，未配置则走旧逻辑） */
   demoProfile?: SceneDemoProfile;
 };

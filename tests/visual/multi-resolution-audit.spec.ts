@@ -35,7 +35,7 @@ for (const vp of VIEWPORTS) {
 
     for (const scene of SCENES) {
       await page.goto(`http://127.0.0.1:${PORT}/src/pages/${scene}.html`, {
-        waitUntil: 'networkidle'
+        waitUntil: 'domcontentloaded'
       });
       await page.waitForTimeout(1500);
 

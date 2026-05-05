@@ -36,6 +36,8 @@ export interface LayoutConfig {
   tabletBreakpoint?: number;
   /** 由容器在布局切换时注入的上一布局的 canvas（避免 WebGL context 丢失） */
   preservedCanvas?: HTMLCanvasElement | null;
+  /** 隐藏 transport 浮动控制条（适用于静态推导类场景） */
+  hideTransport?: boolean;
   __managedByContainer?: boolean;
 }
 

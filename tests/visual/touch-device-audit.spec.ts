@@ -14,7 +14,7 @@ for (const scene of SCENES) {
   test(`touch policy on ${scene}`, async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto(`http://127.0.0.1:${PORT}/src/pages/${scene}.html`, {
-      waitUntil: 'networkidle'
+      waitUntil: 'domcontentloaded'
     });
     await page.waitForTimeout(1500);
 
@@ -37,7 +37,7 @@ for (const scene of SCENES) {
   test(`viewport resilience on ${scene}`, async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto(`http://127.0.0.1:${PORT}/src/pages/${scene}.html`, {
-      waitUntil: 'networkidle'
+      waitUntil: 'domcontentloaded'
     });
     await page.waitForTimeout(1500);
 

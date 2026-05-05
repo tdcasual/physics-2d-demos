@@ -21,7 +21,7 @@ for (const scene of SCENES) {
     page.on('pageerror', (err) => errors.push(`[pageerror] ${err.message}`));
 
     await page.goto(`http://127.0.0.1:${PORT}/src/pages/${scene.id}.html`, {
-      waitUntil: 'networkidle'
+      waitUntil: 'domcontentloaded'
     });
     await page.waitForTimeout(2000);
 
@@ -102,7 +102,7 @@ for (const scene of SCENES) {
     page.on('pageerror', (err) => errors.push(`[pageerror] ${err.message}`));
 
     await page.goto(`http://127.0.0.1:${PORT}/src/pages/${scene.id}.html`, {
-      waitUntil: 'networkidle'
+      waitUntil: 'domcontentloaded'
     });
     await page.waitForTimeout(2000);
 
@@ -179,7 +179,7 @@ for (const scene of SCENES) {
 test('vt-integral scene switching', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`http://127.0.0.1:${PORT}/src/pages/vt-integral.html`, {
-    waitUntil: 'networkidle'
+    waitUntil: 'domcontentloaded'
   });
   await page.waitForTimeout(2000);
 
@@ -201,7 +201,7 @@ test('vt-integral scene switching', async ({ page }) => {
 test('field-lines touch interaction', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto(`http://127.0.0.1:${PORT}/src/pages/field-lines.html`, {
-    waitUntil: 'networkidle'
+    waitUntil: 'domcontentloaded'
   });
   await page.waitForTimeout(2000);
 
@@ -223,7 +223,7 @@ test('field-lines touch interaction', async ({ page }) => {
 test('chase-meet mobile graphs visible', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto(`http://127.0.0.1:${PORT}/src/pages/chase-meet.html`, {
-    waitUntil: 'networkidle'
+    waitUntil: 'domcontentloaded'
   });
   await page.waitForTimeout(2500);
 

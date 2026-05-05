@@ -10,7 +10,7 @@ const PORT = 5177;
 test('projectile maintains FPS above 25 during animation', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`http://127.0.0.1:${PORT}/src/pages/projectile.html`, {
-    waitUntil: 'networkidle'
+    waitUntil: 'domcontentloaded'
   });
   await page.waitForTimeout(1500);
 
@@ -57,7 +57,7 @@ test('projectile maintains FPS above 25 during animation', async ({ page }) => {
 test('chase-meet maintains FPS above 25 during animation', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`http://127.0.0.1:${PORT}/src/pages/chase-meet.html`, {
-    waitUntil: 'networkidle'
+    waitUntil: 'domcontentloaded'
   });
   await page.waitForTimeout(1500);
 

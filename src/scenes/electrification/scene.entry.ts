@@ -2,6 +2,7 @@ import type { TeachingMode } from '../../platform/standards';
 import type { TeachingTheme } from '../../platform/standards';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { SceneLifecycle } from '../types';
+import { createStandardSceneEntry } from '../scene-entry-helpers';
 import {
   createElectrificationSim,
   type ElectrificationScene,
@@ -35,51 +36,26 @@ export function createElectrificationScene(
     theme: options.theme ?? 'dark'
   });
 
-  function renderAndEmit(): void {
-    const snapshot = sim.getSnapshot();
-    view.render(snapshot);
-    options.onReadout?.(snapshot);
-  }
+  const base = createStandardSceneEntry({
+    sim,
+    view,
+    getState: () => sim.getSnapshot(),
+    onReadout: options.onReadout
+  });
 
   return {
-    init(): void {
-      sim.reset();
-      renderAndEmit();
-    },
-    reset(): void {
-      sim.reset();
-      renderAndEmit();
-    },
-    step(dt: number): void {
-      sim.step(dt);
-    },
-    render(): void {
-      renderAndEmit();
-    },
-    resize(): void {
-      view.resize();
-      renderAndEmit();
-    },
-    setMode(mode: TeachingMode, hints?: DemoRenderHints): void {
-      view.setMode(mode, hints);
-      renderAndEmit();
-    },
-    setTheme(theme: TeachingTheme): void {
-      view.setTheme(theme);
-      renderAndEmit();
-    },
+    ...base,
     setScene(scene: ElectrificationScene): void {
       sim.setScene(scene);
-      renderAndEmit();
+      base.renderAndEmit();
+      base.notify();
     },
     runSceneAction(): void {
       sim.runSceneAction();
+      base.notify();
     },
     getSnapshot(): ElectrificationSnapshot {
       return sim.getSnapshot();
-    },
-    dispose(): void {
-      view.dispose();
     }
   };
 }

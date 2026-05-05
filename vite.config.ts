@@ -100,6 +100,19 @@ export default defineConfig({
           if (id.includes('/src/core/') || id.includes('/src/platform/')) {
             return 'core';
           }
+          // Instrument library infrastructure
+          if (id.includes('/src/instruments/_')) {
+            return 'instruments-core';
+          }
+          // Individual instrument chunks — each instrument is its own chunk
+          // This enables on-demand loading: only the clicked instrument is fetched
+          const instrumentMatch = id.match(/\/src\/instruments\/([^/]+)\//);
+          if (instrumentMatch) {
+            const instrumentId = instrumentMatch[1];
+            if (!instrumentId.startsWith('_')) {
+              return `instrument-${instrumentId}`;
+            }
+          }
           // Scene metadata shared across entries
           if (id.includes('/scene.meta.')) {
             return 'scene-meta';

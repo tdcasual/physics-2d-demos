@@ -4,7 +4,7 @@ test('final verification with cache bypass', async ({ page }) => {
   // 禁用缓存并刷新
   await page.route('**/*', (route) => route.continue());
 
-  await page.goto('http://localhost:5177/', { waitUntil: 'networkidle' });
+  await page.goto('http://localhost:5177/', { waitUntil: 'domcontentloaded' });
 
   // 滚动到实验区域
   await page.evaluate(() => {

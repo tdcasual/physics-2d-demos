@@ -286,7 +286,13 @@ async function expandControlCards(page: Page) {
         (toggle as HTMLElement)?.click();
       });
   });
-  await page.waitForTimeout(400);
+  await page.waitForFunction(
+    () =>
+      document.querySelectorAll(
+        '.control-slot .collapsed, .mobile-control-slot .collapsed'
+      ).length === 0,
+    { timeout: 5000 }
+  );
 }
 
 // ── Per-Category Response Verification ──────────────────────────────────
@@ -317,8 +323,14 @@ async function anySliderResponds(
     await locator.evaluate((el: HTMLInputElement) =>
       el.dispatchEvent(new Event('change', { bubbles: true }))
     );
-    await page.waitForTimeout(500);
-    const after = await captureSceneState(page);
+
+    let after = before;
+    const start = Date.now();
+    while (Date.now() - start < 3000) {
+      after = await captureSceneState(page);
+      if (stateChanged(before, after)) break;
+      await page.waitForTimeout(50);
+    }
 
     if (stateChanged(before, after)) {
       return {
@@ -350,8 +362,15 @@ async function anyButtonResponds(
 
     const before = await captureSceneState(page);
     await locator.click();
-    await page.waitForTimeout(btn.classification === 'step' ? 800 : 600);
-    const after = await captureSceneState(page);
+
+    let after = before;
+    const start = Date.now();
+    const maxWait = btn.classification === 'step' ? 3000 : 2000;
+    while (Date.now() - start < maxWait) {
+      after = await captureSceneState(page);
+      if (stateChanged(before, after)) break;
+      await page.waitForTimeout(50);
+    }
 
     if (stateChanged(before, after)) {
       return {
@@ -380,8 +399,14 @@ async function anyCheckboxResponds(
 
     const before = await captureSceneState(page);
     await locator.click();
-    await page.waitForTimeout(500);
-    const after = await captureSceneState(page);
+
+    let after = before;
+    const start = Date.now();
+    while (Date.now() - start < 2000) {
+      after = await captureSceneState(page);
+      if (stateChanged(before, after)) break;
+      await page.waitForTimeout(50);
+    }
     const changed = stateChanged(before, after);
     await locator.click(); // restore
     await page.waitForTimeout(200);

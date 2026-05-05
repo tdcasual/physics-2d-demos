@@ -40,7 +40,7 @@ const ANIMATED_SCENES = ['chase-meet', 'emf-analogy'] as const;
 
 const SCENE_META: Record<
   string,
-  { name: string; hasGraph: boolean; canvasSelector: string }
+  { name: string; hasGraph: boolean; canvasSelector: string; hasTransport?: boolean }
 > = {
   projectile: {
     name: '抛体运动',
@@ -77,6 +77,12 @@ const SCENE_META: Record<
     name: '波的干涉',
     hasGraph: true,
     canvasSelector: 'canvas.stage-canvas'
+  },
+  'double-slit': {
+    name: '双缝干涉',
+    hasGraph: true,
+    canvasSelector: 'canvas.stage-canvas',
+    hasTransport: false
   }
 };
 
@@ -90,7 +96,35 @@ async function gotoScene(page: Page, sceneId: string) {
     state: 'visible',
     timeout: 10000
   });
-  await page.waitForTimeout(800);
+  // Wait for canvas to have rendered content (replaces fixed 800ms delay)
+  await page.waitForFunction(
+    () => {
+      const canvas = document.querySelector('canvas');
+      if (!canvas) return false;
+      const ctx = (canvas as HTMLCanvasElement).getContext('2d');
+      if (!ctx) return false;
+      const w = (canvas as HTMLCanvasElement).width;
+      const h = (canvas as HTMLCanvasElement).height;
+      if (w === 0 || h === 0) return false;
+      try {
+        const data = ctx.getImageData(0, 0, w, h).data;
+        for (let i = 0; i < data.length; i += 16) {
+          if (
+            data[i] < 250 ||
+            data[i + 1] < 250 ||
+            data[i + 2] < 250 ||
+            data[i + 3] < 255
+          ) {
+            return true;
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+      return false;
+    },
+    { timeout: 10000 }
+  );
 }
 
 /** Read current readout values as label→value map (supports both desktop and mobile) */
@@ -107,12 +141,16 @@ async function getReadoutMap(page: Page): Promise<Record<string, string>> {
   });
 }
 
-/** Read the floating play/pause button state */
+/** Read the floating play/pause button state (supports both desktop and mobile) */
 async function getFloatingPlayState(
   page: Page
 ): Promise<{ text: string; isPlaying: boolean }> {
-  const btn = page.locator('.stage-floating-controls button').first();
-  const text = (await btn.textContent()) ?? '';
+  const text = await page.evaluate(() => {
+    const desktop = document.querySelector('.stage-floating-controls button');
+    const mobile = document.querySelector('.mobile-control-btn.play-pause');
+    const btn = desktop || mobile;
+    return btn?.textContent?.trim() ?? '';
+  });
   return { text, isPlaying: text.includes('⏸') };
 }
 
@@ -181,12 +219,14 @@ test.describe('SplitRightLayout Desktop', () => {
         `${meta.name} canvas should have rendered content`
       ).toBe(true);
 
-      // Floating controls
-      const floatingButtons = page.locator('.stage-floating-controls button');
-      await expect(floatingButtons).toHaveCount(2);
-      await expect(
-        page.locator('.stage-floating-controls input[type="range"]')
-      ).toBeVisible();
+      // Floating controls (skip for scenes without transport)
+      if (meta.hasTransport !== false) {
+        const floatingButtons = page.locator('.stage-floating-controls button');
+        await expect(floatingButtons).toHaveCount(2);
+        await expect(
+          page.locator('.stage-floating-controls input[type="range"]')
+        ).toBeVisible();
+      }
 
       // Toolbar
       await expect(
@@ -216,19 +256,19 @@ test.describe('SplitRightLayout Desktop', () => {
     const before = await getReadoutMap(page);
 
     await playPauseBtn.click();
-    await page.waitForTimeout(300);
 
-    const afterPlay = await getFloatingPlayState(page);
-    expect(afterPlay.isPlaying).toBe(true);
+    await expect
+      .poll(async () => (await getFloatingPlayState(page)).isPlaying)
+      .toBe(true);
 
-    await page.waitForTimeout(600);
-
-    const during = await getReadoutMap(page);
-    const hasChanged = Object.keys(before).some((k) => before[k] !== during[k]);
-    expect(hasChanged, 'readout should change after play').toBe(true);
+    await expect
+      .poll(async () => {
+        const current = await getReadoutMap(page);
+        return Object.keys(before).some((k) => before[k] !== current[k]);
+      })
+      .toBe(true);
 
     await playPauseBtn.click();
-    await page.waitForTimeout(200);
 
     const afterPause = await getFloatingPlayState(page);
     expect(afterPause.isPlaying).toBe(false);
@@ -250,17 +290,12 @@ test.describe('SplitRightLayout Desktop', () => {
     const midReadout = await getReadoutMap(page);
 
     await resetBtn.click();
-    await page.waitForTimeout(400);
-
-    const afterReset = await getReadoutMap(page);
-
-    const resetChanged = Object.keys(midReadout).some(
-      (k) => midReadout[k] !== afterReset[k]
-    );
-    expect(
-      resetChanged,
-      'reset should change readout back toward initial'
-    ).toBe(true);
+    await expect
+      .poll(async () => {
+        const current = await getReadoutMap(page);
+        return Object.keys(midReadout).some((k) => midReadout[k] !== current[k]);
+      })
+      .toBe(true);
 
     const state = await getFloatingPlayState(page);
     expect(state.isPlaying).toBe(false);
@@ -277,19 +312,13 @@ test.describe('SplitRightLayout Desktop', () => {
     expect(defaultVal).toContain('1.00');
 
     await slider.fill('3');
-    await page.waitForTimeout(200);
-
-    const fastVal = await speedValue.textContent();
-    expect(fastVal).toContain('3.00');
+    await expect(speedValue).toContainText('3.00');
 
     await slider.fill('0.05');
-    await page.waitForTimeout(200);
-
-    const slowVal = await speedValue.textContent();
-    expect(slowVal).toContain('0.05');
+    await expect(speedValue).toContainText('0.05');
 
     await slider.fill('1');
-    await page.waitForTimeout(100);
+    await expect(speedValue).toContainText('1.00');
   });
 
   // ── 5. Sidebar toggle ──
@@ -302,16 +331,9 @@ test.describe('SplitRightLayout Desktop', () => {
     await expect(leftPanel).toBeVisible();
 
     await toggle.click();
-    await page.waitForTimeout(300);
-
-    const isHidden = await leftPanel.evaluate((el: HTMLElement) => {
-      const style = window.getComputedStyle(el);
-      return style.display === 'none' || el.hidden;
-    });
-    expect(isHidden).toBe(true);
+    await expect(leftPanel).toBeHidden();
 
     await toggle.click();
-    await page.waitForTimeout(300);
     await expect(leftPanel).toBeVisible();
   });
 
@@ -333,8 +355,6 @@ test.describe('SplitRightLayout Desktop', () => {
       ) as HTMLButtonElement;
       btn?.click();
     });
-    await page.waitForTimeout(200);
-
     await expect(container).toHaveAttribute('data-mode', 'presentation');
 
     // Click back to normal
@@ -344,8 +364,6 @@ test.describe('SplitRightLayout Desktop', () => {
       ) as HTMLButtonElement;
       btn?.click();
     });
-    await page.waitForTimeout(200);
-
     await expect(container).toHaveAttribute('data-mode', 'normal');
   });
 
@@ -360,15 +378,10 @@ test.describe('SplitRightLayout Desktop', () => {
     expect(initialText).toBe('夜间');
 
     await themeBtn.click();
-    await page.waitForTimeout(200);
-
     await expect(html).toHaveAttribute('data-theme', 'dark');
-    const darkText = await themeBtn.textContent();
-    expect(darkText).toBe('白天');
+    await expect(themeBtn).toHaveText('白天');
 
     await themeBtn.click();
-    await page.waitForTimeout(200);
-
     await expect(html).toHaveAttribute('data-theme', 'light');
   });
 
@@ -384,20 +397,18 @@ test.describe('SplitRightLayout Desktop', () => {
     );
 
     await toggle.click();
-    await page.waitForTimeout(200);
-
-    const isCollapsedAfterClick = await panel.evaluate((el) =>
-      el.classList.contains('is-collapsed')
-    );
-    expect(isCollapsedAfterClick).toBe(!wasCollapsed);
+    await expect
+      .poll(async () =>
+        panel.evaluate((el) => el.classList.contains('is-collapsed'))
+      )
+      .toBe(!wasCollapsed);
 
     await toggle.click();
-    await page.waitForTimeout(200);
-
-    const isCollapsedAfterSecond = await panel.evaluate((el) =>
-      el.classList.contains('is-collapsed')
-    );
-    expect(isCollapsedAfterSecond).toBe(wasCollapsed);
+    await expect
+      .poll(async () =>
+        panel.evaluate((el) => el.classList.contains('is-collapsed'))
+      )
+      .toBe(wasCollapsed);
   });
 
   // ── 9. Resizer drag ──
@@ -424,12 +435,12 @@ test.describe('SplitRightLayout Desktop', () => {
       resizerBox!.y + resizerBox!.height / 2
     );
     await page.mouse.up();
-    await page.waitForTimeout(300);
 
-    const newWidth = await leftPanel.evaluate(
-      (el) => el.getBoundingClientRect().width
-    );
-    expect(newWidth).toBeGreaterThan(initialWidth + 50);
+    await expect
+      .poll(async () =>
+        leftPanel.evaluate((el) => el.getBoundingClientRect().width)
+      )
+      .toBeGreaterThan(initialWidth + 50);
   });
 
   // ── 10. Animation produces visible readout changes (projectile only) ──
@@ -444,7 +455,9 @@ test.describe('SplitRightLayout Desktop', () => {
     const resetBtn = page.locator('.stage-floating-controls button').nth(1);
 
     await resetBtn.click();
-    await page.waitForTimeout(300);
+    await expect
+      .poll(async () => Object.keys(await getReadoutMap(page)).length)
+      .toBeGreaterThan(0);
 
     const t0 = await getReadoutMap(page);
 
@@ -464,7 +477,9 @@ test.describe('SplitRightLayout Desktop', () => {
     ).toBeGreaterThan(0);
 
     await resetBtn.click();
-    await page.waitForTimeout(300);
+    await expect
+      .poll(async () => Object.keys(await getReadoutMap(page)).length)
+      .toBeGreaterThan(0);
     const t2 = await getReadoutMap(page);
 
     let restoredCount = 0;
@@ -502,18 +517,20 @@ test.describe('MobileStackLayout Mobile', () => {
     const playBtn = page.locator('.mobile-control-btn.play-pause');
 
     await playBtn.click();
-    await page.waitForTimeout(300);
+    await expect
+      .poll(async () => (await getFloatingPlayState(page)).isPlaying)
+      .toBe(true);
 
     // Verify animation is playing by checking readout changes
     const before = await getReadoutMap(page);
-    await page.waitForTimeout(600);
-    const during = await getReadoutMap(page);
-
-    const hasChanged = Object.keys(before).some((k) => before[k] !== during[k]);
-    expect(hasChanged).toBe(true);
+    await expect
+      .poll(async () => {
+        const current = await getReadoutMap(page);
+        return Object.keys(before).some((k) => before[k] !== current[k]);
+      })
+      .toBe(true);
 
     await playBtn.click();
-    await page.waitForTimeout(200);
   });
 
   test('mobile reset restores scene', async ({ page }) => {
@@ -523,17 +540,20 @@ test.describe('MobileStackLayout Mobile', () => {
     const resetBtn = page.locator('.mobile-control-btn.reset');
 
     await playBtn.click();
-    await page.waitForTimeout(600);
+    await expect
+      .poll(async () => (await getFloatingPlayState(page)).isPlaying)
+      .toBe(true);
     await playBtn.click();
 
     const mid = await getReadoutMap(page);
 
     await resetBtn.click();
-    await page.waitForTimeout(300);
-
-    const after = await getReadoutMap(page);
-    const changed = Object.keys(mid).some((k) => mid[k] !== after[k]);
-    expect(changed).toBe(true);
+    await expect
+      .poll(async () => {
+        const current = await getReadoutMap(page);
+        return Object.keys(mid).some((k) => mid[k] !== current[k]);
+      })
+      .toBe(true);
   });
 
   test('mobile speed slider changes speed', async ({ page }) => {
@@ -546,10 +566,7 @@ test.describe('MobileStackLayout Mobile', () => {
     expect(defaultText).toContain('1.00');
 
     await slider.fill('2');
-    await page.waitForTimeout(200);
-
-    const newText = await speedValue.textContent();
-    expect(newText).toContain('2.00');
+    await expect(speedValue).toContainText('2.00');
   });
 });
 
@@ -591,6 +608,8 @@ test.describe('All scenes transport and playback', () => {
 
   for (const sceneId of ALL_SCENE_IDS) {
     const meta = SCENE_META[sceneId];
+    // Skip scenes without transport controls
+    if (meta.hasTransport === false) continue;
     test(`${meta.name} play/pause/reset controls work`, async ({ page }) => {
       await gotoScene(page, sceneId);
 
@@ -605,24 +624,21 @@ test.describe('All scenes transport and playback', () => {
 
       // Play
       await playPauseBtn.click();
-      await page.waitForTimeout(300);
-
-      const playing = await getFloatingPlayState(page);
-      expect(playing.isPlaying).toBe(true);
+      await expect
+        .poll(async () => (await getFloatingPlayState(page)).isPlaying)
+        .toBe(true);
 
       // Pause
       await playPauseBtn.click();
-      await page.waitForTimeout(200);
-
-      const paused = await getFloatingPlayState(page);
-      expect(paused.isPlaying).toBe(false);
+      await expect
+        .poll(async () => (await getFloatingPlayState(page)).isPlaying)
+        .toBe(false);
 
       // Reset should not crash and restore paused state
       await resetBtn.click();
-      await page.waitForTimeout(300);
-
-      const afterReset = await getFloatingPlayState(page);
-      expect(afterReset.isPlaying).toBe(false);
+      await expect
+        .poll(async () => (await getFloatingPlayState(page)).isPlaying)
+        .toBe(false);
     });
   }
 
@@ -637,7 +653,9 @@ test.describe('All scenes transport and playback', () => {
       const resetBtn = page.locator('.stage-floating-controls button').nth(1);
 
       await resetBtn.click();
-      await page.waitForTimeout(300);
+      await expect
+        .poll(async () => Object.keys(await getReadoutMap(page)).length)
+        .toBeGreaterThan(0);
 
       const before = await getReadoutMap(page);
 
@@ -664,7 +682,9 @@ test.describe('All scenes transport and playback', () => {
       const resetBtn = page.locator('.stage-floating-controls button').nth(1);
 
       await resetBtn.click();
-      await page.waitForTimeout(300);
+      await expect
+        .poll(async () => Object.keys(await getReadoutMap(page)).length)
+        .toBeGreaterThan(0);
 
       await playPauseBtn.click();
       await page.waitForTimeout(1200);

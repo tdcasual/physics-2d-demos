@@ -64,7 +64,7 @@ export class SplitRightGraphBottomLayoutV2 implements ILayout {
     this._container = container;
 
     this.capabilities = [
-      { id: 'transport-bar', config: { mountSlot: 'animation' } },
+      ...(config.hideTransport ? [] : [{ id: 'transport-bar' as const, config: { mountSlot: 'animation' as const } }]),
       { id: 'readout-panel', config: { position: 'top-right', collapsed: true, cssPrefix: PREFIX, label: config.readoutLabel ?? '数据读数' } },
       { id: 'theme-toggle' },
       { id: 'mode-toggle' },

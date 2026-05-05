@@ -91,9 +91,29 @@ export function createSceneShell(options: SceneShellOptions = {}) {
   let previousTimeMs = frameDriver.now();
   let targetFps = options.targetFps ?? 60;
   let lastRenderTimeMs = 0;
+  let wasPlayingBeforeHidden = false;
 
   function requestNextFrame(): void {
     frameHandle = frameDriver.requestFrame(loop);
+  }
+
+  function handleVisibilityChange(): void {
+    if (typeof document === 'undefined') return;
+    if (document.hidden) {
+      wasPlayingBeforeHidden = transport.isPlaying;
+      if (transport.isPlaying) {
+        stopFrameLoop();
+        // Keep isPlaying = true so we know to resume when visible again
+      }
+    } else if (wasPlayingBeforeHidden && transport.isPlaying) {
+      previousTimeMs = frameDriver.now();
+      requestNextFrame();
+      wasPlayingBeforeHidden = false;
+    }
+  }
+
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', handleVisibilityChange);
   }
 
   function loop(timestampMs: number): void {
@@ -174,6 +194,9 @@ export function createSceneShell(options: SceneShellOptions = {}) {
       transport.isPlaying = false;
       stepper.reset();
       stopFrameLoop();
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      }
     }
   };
 }

@@ -14,7 +14,7 @@ for (const scene of SCENES) {
   test(`keyboard navigation: ${scene}`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(`http://127.0.0.1:${PORT}/src/pages/${scene}.html`, {
-      waitUntil: 'networkidle'
+      waitUntil: 'domcontentloaded'
     });
     await page.waitForTimeout(1500);
 
@@ -52,7 +52,7 @@ for (const scene of SCENES) {
   test(`aria labels: ${scene}`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(`http://127.0.0.1:${PORT}/src/pages/${scene}.html`, {
-      waitUntil: 'networkidle'
+      waitUntil: 'domcontentloaded'
     });
     await page.waitForTimeout(1500);
 

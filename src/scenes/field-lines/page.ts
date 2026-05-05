@@ -2,50 +2,17 @@ import { bootScenePage } from '../../app/scene-bootstrapper';
 import type { ReadoutItem, Theme } from '../../app/layouts/types';
 import type { TeachingMode } from '../../platform/standards';
 import { applyTouchInteractionMode } from '../../platform/input/touch';
-import { createSceneListener } from '../../app/scene-listener';
 import { fieldLinesMeta } from './scene.meta';
 import { createFieldLinesScene } from './scene.entry';
 import { fieldLinesControlsSchema } from './controls-schema';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
-import type { FieldLinesSnapshot, FieldLinesScene } from './scene.sim';
+import type { FieldLinesScene } from './scene.sim';
 
-function sceneLabel(scene: FieldLinesSnapshot['params']['scene']): string {
+function sceneLabel(scene: FieldLinesScene): string {
   if (scene === 'single') return '单个电荷';
   if (scene === 'like') return '同种电荷';
   if (scene === 'unlike') return '异种电荷';
   return '自定义双电荷';
-}
-
-function themeLabel(theme: Theme): string {
-  return theme === 'dark' ? '夜间' : '白天';
-}
-
-function modeLabel(mode: TeachingMode): string {
-  return mode === 'presentation' ? '演示模式' : '标准模式';
-}
-
-function formatReadout(
-  snapshot: FieldLinesSnapshot,
-  mode: TeachingMode,
-  theme: Theme
-): ReadoutItem[] {
-  return [
-    { label: '场景', value: sceneLabel(snapshot.params.scene) },
-    { label: '主题', value: themeLabel(theme) },
-    { label: '显示模式', value: modeLabel(mode) },
-    { label: '矢量密度', value: String(Math.round(snapshot.params.density)) },
-    { label: '电荷数量', value: String(snapshot.charges.length) },
-    {
-      label: '电荷1',
-      value: snapshot.charges[0]
-        ? `${snapshot.charges[0].q > 0 ? '+' : ''}${snapshot.charges[0].q.toFixed(1)}`
-        : '--'
-    },
-    {
-      label: '电荷2',
-      value: `${snapshot.params.q2 > 0 ? '+' : ''}${snapshot.params.q2.toFixed(1)}`
-    }
-  ];
 }
 
 bootScenePage({
@@ -60,9 +27,6 @@ bootScenePage({
       theme,
       onReadout: () => {}
     });
-
-    let currentMode = mode;
-    let currentTheme = theme as Theme;
 
     // 拖拽交互
     let draggingIndex: number | null = null;
@@ -105,26 +69,11 @@ bootScenePage({
     canvas.addEventListener('pointercancel', onPointerUp);
 
     const originalDispose = scene.dispose.bind(scene);
-    const { subscribe, notify } = createSceneListener();
 
     return {
       ...scene,
       getState() {
         return scene.getSnapshot();
-      },
-      getReadoutItems() {
-        return formatReadout(scene.getSnapshot(), currentMode, currentTheme);
-      },
-      subscribe,
-      setMode(m: 'normal' | 'presentation', hints?: unknown) {
-        currentMode = m;
-        scene.setMode(m, hints as Parameters<typeof scene.setMode>[1]);
-        notify();
-      },
-      setTheme(t: Theme) {
-        currentTheme = t;
-        scene.setTheme(t);
-        notify();
       },
       dispose() {
         canvas.removeEventListener('pointerdown', onPointerDown);
@@ -157,7 +106,7 @@ bootScenePage({
           scene.setScene(key as FieldLinesScene);
           scene.render();
           onStatus?.(
-            sceneLabel(key as FieldLinesSnapshot['params']['scene']) + '电场'
+            sceneLabel(key as FieldLinesScene) + '电场'
           );
         } else if (key === 'add-positive') {
           scene.addCharge(1);

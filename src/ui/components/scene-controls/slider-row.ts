@@ -21,7 +21,7 @@ export function createSliderRow(
   row.dataset.testid = 'slider-row';
 
   const labelEl = document.createElement('span');
-  labelEl.className = 'text-[12px] font-semibold w-6 shrink-0';
+  labelEl.className = 'text-[12px] font-semibold w-16 shrink-0';
   labelEl.style.color = 'var(--text-secondary)';
   labelEl.textContent = label;
 

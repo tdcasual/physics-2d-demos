@@ -2,6 +2,7 @@ import type { TeachingMode } from '../../platform/standards';
 import type { TeachingTheme } from '../../platform/standards';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { SceneLifecycle } from '../types';
+import { createStandardSceneEntry } from '../scene-entry-helpers';
 import { createEmfAnalogySim, type EmfAnalogySnapshot } from './scene.sim';
 import { createEmfAnalogyView, type EmfViewMode } from './scene.view';
 
@@ -12,6 +13,28 @@ export type CreateEmfAnalogySceneOptions = {
   theme?: TeachingTheme;
   onReadout?: (snapshot: EmfAnalogySnapshot) => void;
 };
+
+function formatReadout(snapshot: EmfAnalogySnapshot): Array<{ label: string; value: string }> {
+  return [
+    { label: '系统状态', value: snapshot.state.isSystemOn ? '通路' : '断路' },
+    {
+      label: '外电阻 R',
+      value:
+        snapshot.state.externalR === Infinity
+          ? '∞ Ω'
+          : `${snapshot.state.externalR.toFixed(1)} Ω`
+    },
+    { label: '电流 I', value: `${snapshot.state.currentI.toFixed(2)} A` },
+    {
+      label: '内阻压降 Ir',
+      value: `${snapshot.state.internalDrop.toFixed(2)} V`
+    },
+    {
+      label: '路端电压 U',
+      value: `${snapshot.state.terminalVoltage.toFixed(2)} V`
+    }
+  ];
+}
 
 export function createEmfAnalogyScene(
   options: CreateEmfAnalogySceneOptions = {}
@@ -25,8 +48,11 @@ export function createEmfAnalogyScene(
   setView(view: EmfViewMode): void;
   getView(): EmfViewMode;
   getSnapshot(): EmfAnalogySnapshot;
+  getReadoutItems(): Array<{ label: string; value: string }>;
   start(): void;
   stop(): void;
+  startAll(): void;
+  pauseAll(): void;
 } {
   const sim = createEmfAnalogySim();
   const view = createEmfAnalogyView({
@@ -36,51 +62,31 @@ export function createEmfAnalogyScene(
     theme: options.theme ?? 'dark'
   });
 
-  function renderAndEmit(): void {
-    const snapshot = sim.getSnapshot();
-    view.render(snapshot);
-    options.onReadout?.(snapshot);
-  }
+  const base = createStandardSceneEntry({
+    sim,
+    view,
+    getState: () => sim.getSnapshot(),
+    onReadout: options.onReadout
+  });
 
   return {
-    init(): void {
-      sim.reset();
-      renderAndEmit();
-    },
-    reset(): void {
-      sim.reset();
-      renderAndEmit();
-    },
-    step(dt: number): void {
-      sim.step(dt);
-    },
-    render(): void {
-      renderAndEmit();
-    },
-    resize(): void {
-      view.resize();
-      renderAndEmit();
-    },
-    setMode(mode: TeachingMode, hints?: DemoRenderHints): void {
-      view.setMode(mode, hints);
-      renderAndEmit();
-    },
-    setTheme(theme: TeachingTheme): void {
-      view.setTheme(theme);
-      renderAndEmit();
-    },
+    ...base,
     setSystemOn(on: boolean): void {
       sim.setSystemOn(on);
+      base.notify();
     },
     setTapOpening(opening: number): void {
       sim.setTapOpening(opening);
+      base.notify();
     },
     incrementOpening(step = 0.05): void {
       sim.incrementOpening(step);
+      base.notify();
     },
     setView(viewMode: EmfViewMode): void {
       view.setView(viewMode);
-      renderAndEmit();
+      base.renderAndEmit();
+      base.notify();
     },
     getView(): EmfViewMode {
       return view.getView();
@@ -88,14 +94,22 @@ export function createEmfAnalogyScene(
     getSnapshot(): EmfAnalogySnapshot {
       return sim.getSnapshot();
     },
+    getReadoutItems() {
+      return formatReadout(sim.getSnapshot());
+    },
     start(): void {
       (view as { start?(): void }).start?.();
     },
     stop(): void {
       (view as { stop?(): void }).stop?.();
     },
-    dispose(): void {
-      view.dispose();
+    startAll(): void {
+      (view as { start?(): void }).start?.();
+      base.notify();
+    },
+    pauseAll(): void {
+      (view as { stop?(): void }).stop?.();
+      base.notify();
     }
   };
 }

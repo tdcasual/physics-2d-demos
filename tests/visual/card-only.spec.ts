@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test('capture vt-integral card only', async ({ page }) => {
   await page.setViewportSize({ width: 1400, height: 900 });
   await page.goto('http://localhost:5177/');
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 
   // 点击"方法"筛选
   await page.click('button:has-text("方法")');

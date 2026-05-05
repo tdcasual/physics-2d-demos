@@ -1,0 +1,74 @@
+{
+  "name": "物理实验室 - 交互式教学演示",
+  "short_name": "物理实验室",
+  "description": "交互式物理教学演示平台 - 力学、电磁学、方法",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#faf8f5",
+  "theme_color": "#faf8f5",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "抛体运动",
+      "short_name": "抛体运动",
+      "description": "斜抛运动的轨迹与射程分析",
+      "url": "/src/pages/projectile.html",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "追及相遇",
+      "short_name": "追及相遇",
+      "description": "变速直线运动的追及与相遇问题",
+      "url": "/src/pages/chase-meet.html",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "电场线",
+      "short_name": "电场线",
+      "description": "点电荷电场线的分布与演化",
+      "url": "/src/pages/field-lines.html",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "静电起电",
+      "short_name": "静电起电",
+      "description": "摩擦、感应、接触三种起电方式",
+      "url": "/src/pages/electrification.html",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "电路类比",
+      "short_name": "电路类比",
+      "description": "电路与水流类比演示",
+      "url": "/src/pages/emf-analogy.html",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "微元法",
+      "short_name": "微元法",
+      "description": "v-t积分、曲线长度、圆周逼近",
+      "url": "/src/pages/vt-integral.html",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "弹簧振子",
+      "short_name": "弹簧振子",
+      "description": "简谐运动的位移、速度与能量",
+      "url": "/src/pages/spring-oscillator.html",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "波的干涉",
+      "short_name": "波的干涉",
+      "description": "两列波的叠加与干涉图样",
+      "url": "/src/pages/ganshe.html",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    }
+  ]
+}

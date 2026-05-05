@@ -2,6 +2,7 @@ import type { TeachingMode } from '../../platform/standards';
 import type { TeachingTheme } from '../../platform/standards';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { SceneLifecycle } from '../types';
+import { createStandardSceneEntry } from '../scene-entry-helpers';
 import {
   createFieldLinesSim,
   type FieldLinesScene,
@@ -17,6 +18,21 @@ export type CreateFieldLinesSceneOptions = {
   onReadout?: (snapshot: FieldLinesSnapshot) => void;
 };
 
+function sceneLabel(scene: FieldLinesScene): string {
+  if (scene === 'single') return '单个电荷';
+  if (scene === 'like') return '同种电荷';
+  if (scene === 'unlike') return '异种电荷';
+  return '自定义双电荷';
+}
+
+function themeLabel(theme: TeachingTheme): string {
+  return theme === 'dark' ? '夜间' : '白天';
+}
+
+function modeLabel(mode: TeachingMode): string {
+  return mode === 'presentation' ? '演示模式' : '标准模式';
+}
+
 export function createFieldLinesScene(
   options: CreateFieldLinesSceneOptions = {}
 ): SceneLifecycle & {
@@ -31,6 +47,7 @@ export function createFieldLinesScene(
   addCharge(q: number): void;
   removeCharge(index: number): void;
   getSnapshot(): FieldLinesSnapshot;
+  getReadoutItems(): Array<{ label: string; value: string }>;
 } {
   const sim = createFieldLinesSim({
     scene: 'single',
@@ -45,38 +62,46 @@ export function createFieldLinesScene(
     theme: options.theme ?? 'dark'
   });
 
-  function renderAndEmit(): void {
+  let currentMode: TeachingMode = options.mode ?? 'normal';
+  let currentTheme: TeachingTheme = options.theme ?? 'dark';
+
+  const base = createStandardSceneEntry({
+    sim,
+    view,
+    getState: () => sim.getSnapshot(),
+    onReadout: options.onReadout
+  });
+
+  function getReadoutItems(): Array<{ label: string; value: string }> {
     const snapshot = sim.getSnapshot();
-    view.render(snapshot);
-    options.onReadout?.(snapshot);
+    return [
+      { label: '场景', value: sceneLabel(snapshot.params.scene) },
+      { label: '主题', value: themeLabel(currentTheme) },
+      { label: '显示模式', value: modeLabel(currentMode) },
+      { label: '矢量密度', value: String(Math.round(snapshot.params.density)) },
+      { label: '电荷数量', value: String(snapshot.charges.length) },
+      {
+        label: '电荷1',
+        value: snapshot.charges[0]
+          ? `${snapshot.charges[0].q > 0 ? '+' : ''}${snapshot.charges[0].q.toFixed(1)}`
+          : '--'
+      },
+      {
+        label: '电荷2',
+        value: `${snapshot.params.q2 > 0 ? '+' : ''}${snapshot.params.q2.toFixed(1)}`
+      }
+    ];
   }
 
   return {
-    init(): void {
-      sim.reset();
-      renderAndEmit();
-    },
-    reset(): void {
-      sim.reset();
-      renderAndEmit();
-    },
-    step(dt: number): void {
-      sim.step(dt);
-    },
-    render(): void {
-      renderAndEmit();
-    },
-    resize(): void {
-      view.resize();
-      renderAndEmit();
-    },
+    ...base,
     setMode(mode: TeachingMode, hints?: DemoRenderHints): void {
-      view.setMode(mode, hints);
-      renderAndEmit();
+      currentMode = mode;
+      base.setMode(mode, hints);
     },
     setTheme(theme: TeachingTheme): void {
-      view.setTheme(theme);
-      renderAndEmit();
+      currentTheme = theme;
+      base.setTheme(theme);
     },
     setScene(scene: FieldLinesScene): void {
       sim.setScene(scene);
@@ -102,8 +127,6 @@ export function createFieldLinesScene(
     getSnapshot(): FieldLinesSnapshot {
       return sim.getSnapshot();
     },
-    dispose(): void {
-      view.dispose();
-    }
+    getReadoutItems
   };
 }

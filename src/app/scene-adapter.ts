@@ -21,6 +21,8 @@ import { createSceneShell } from './scene-shell';
 import { KeyboardShortcutManager } from '../platform/input/keyboard-shortcuts';
 import { PerformanceMonitor } from '../core/performance-monitor';
 import { createPageLifecycle } from './page-lifecycle';
+import { createKeyboardHelpOverlay } from '../ui/components/KeyboardHelp';
+import type { KeyboardHelpOverlay } from '../ui/components/KeyboardHelp';
 import type { SceneInstance, ScenePageOptions } from './scene-bootstrapper-types';
 
 export class SceneAdapter<
@@ -35,6 +37,7 @@ export class SceneAdapter<
   private transport: ReturnType<typeof createSceneShell> | null = null;
   private keyboard: KeyboardShortcutManager | null = null;
   private perfMonitor: PerformanceMonitor | null = null;
+  private keyboardHelp: KeyboardHelpOverlay | null = null;
   private slots: LayoutSlots | null = null;
   private currentState: unknown = null;
   private _readoutItems: ReadoutItem[] = [];
@@ -123,6 +126,9 @@ export class SceneAdapter<
     this.lifecycle.onDispose(() => this.transport?.dispose());
 
     this.keyboard = new KeyboardShortcutManager();
+    this.keyboardHelp = createKeyboardHelpOverlay();
+    this.lifecycle.onDispose(() => this.keyboardHelp?.dispose());
+
     this.keyboard.registerMultiple({
       ' ': () => {
         if (this.transport?.transport.isPlaying) {
@@ -150,6 +156,28 @@ export class SceneAdapter<
       d: () => {
         const next = Math.max(0.25, (this.scene?.getTimeScale?.() ?? 1) - 0.25);
         this.scene?.setTimeScale?.(next);
+      },
+      f: () => {
+        if (document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {});
+        } else {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+      },
+      l: () => {
+        document
+          .querySelector('.layout-switch-btn')
+          ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      },
+      '?': () => {
+        this.keyboardHelp?.toggle();
+      },
+      escape: () => {
+        this.keyboardHelp?.hide();
+        const layoutEl = document.querySelector('.layout-master');
+        if (layoutEl?.getAttribute('data-mode') === 'presentation') {
+          this.setMode('normal');
+        }
       }
     });
     this.keyboard.init();
@@ -222,6 +250,14 @@ export class SceneAdapter<
         this.notifyListeners();
       });
       this.lifecycle.onDispose(() => unsubscribe());
+    } else if (this.scene.getReadoutItems) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[scene-adapter] Scene "${this.options.meta.id}" exposes getReadoutItems but not subscribe. ` +
+          `Readout panel will not update automatically. ` +
+          `If using createStandardSceneEntry, you now get subscribe/notify for free. ` +
+          `Otherwise use createNotifySystem() or createSceneListener() in your scene.entry.ts.`
+      );
     }
   }
 
