@@ -27,6 +27,7 @@ export function createElectrificationScene(
   setScene(scene: ElectrificationScene): void;
   runSceneAction(): void;
   getSnapshot(): ElectrificationSnapshot;
+  subscribe(listener: () => void): () => void;
 } {
   const sim = createElectrificationSim();
   const view = createElectrificationView({
@@ -52,6 +53,7 @@ export function createElectrificationScene(
     },
     runSceneAction(): void {
       sim.runSceneAction();
+      base.renderAndEmit();
       base.notify();
     },
     getSnapshot(): ElectrificationSnapshot {

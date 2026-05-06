@@ -24,6 +24,7 @@ export function createMicrometerScene(
   getState(): MicrometerState;
   setParams(params: Partial<MicrometerParams>): MicrometerParams;
   getReadoutItems(): Array<{ label: string; value: string }>;
+  subscribe(listener: () => void): () => void;
 } {
   const sim = createMicrometerSim({
     reading: 4.593
@@ -58,6 +59,7 @@ export function createMicrometerScene(
     },
     setParams(params: Partial<MicrometerParams>): MicrometerParams {
       const result = sim.setParams(params);
+      base.renderAndEmit();
       base.notify();
       return result;
     },

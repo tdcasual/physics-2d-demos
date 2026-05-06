@@ -24,6 +24,7 @@ export function createVernierCaliperScene(
   getState(): CaliperState;
   setParams(params: Partial<CaliperParams>): CaliperParams;
   getReadoutItems(): Array<{ label: string; value: string }>;
+  subscribe(listener: () => void): () => void;
 } {
   const sim = createVernierCaliperSim({
     precision: 0.02,
@@ -61,6 +62,7 @@ export function createVernierCaliperScene(
     },
     setParams(params: Partial<CaliperParams>): CaliperParams {
       const result = sim.setParams(params);
+      base.renderAndEmit();
       base.notify();
       return result;
     },

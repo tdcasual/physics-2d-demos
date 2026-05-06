@@ -48,6 +48,7 @@ export function createFieldLinesScene(
   removeCharge(index: number): void;
   getSnapshot(): FieldLinesSnapshot;
   getReadoutItems(): Array<{ label: string; value: string }>;
+  subscribe(listener: () => void): () => void;
 } {
   const sim = createFieldLinesSim({
     scene: 'single',
@@ -105,24 +106,36 @@ export function createFieldLinesScene(
     },
     setScene(scene: FieldLinesScene): void {
       sim.setScene(scene);
+      base.renderAndEmit();
+      base.notify();
     },
     setDensity(value: number): void {
       sim.setDensity(value);
+      base.renderAndEmit();
+      base.notify();
     },
     setCustomCharges(q1: number, q2: number): void {
       sim.setCustomCharges(q1, q2);
+      base.renderAndEmit();
+      base.notify();
     },
     pickCharge(normX: number, normY: number): number | null {
       return sim.pickCharge(normX, normY);
     },
     moveCharge(index: number, normX: number, normY: number): void {
       sim.setChargePosition(index, normX, normY);
+      base.renderAndEmit();
+      base.notify();
     },
     addCharge(q: number): void {
       sim.addCharge(q);
+      base.renderAndEmit();
+      base.notify();
     },
     removeCharge(index: number): void {
       sim.removeCharge(index);
+      base.renderAndEmit();
+      base.notify();
     },
     getSnapshot(): FieldLinesSnapshot {
       return sim.getSnapshot();

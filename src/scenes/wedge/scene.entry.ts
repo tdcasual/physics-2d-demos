@@ -27,6 +27,7 @@ export function createWedgeScene(
   setCursorX(x: number): void;
   attachGraphCanvas(canvas: HTMLCanvasElement): void;
   getReadoutItems(): Array<{ label: string; value: string }>;
+  subscribe(listener: () => void): () => void;
 } {
   const sim = createWedgeSim({
     lambda: 650,
@@ -71,11 +72,13 @@ export function createWedgeScene(
     },
     setParams(params: Partial<WedgeParams>): WedgeParams {
       const result = sim.setParams(params);
+      base.renderAndEmit();
       base.notify();
       return result;
     },
     setCursorX(x: number): void {
       sim.setCursorX(x);
+      base.renderAndEmit();
       base.notify();
     },
     attachGraphCanvas(canvas: HTMLCanvasElement): void {

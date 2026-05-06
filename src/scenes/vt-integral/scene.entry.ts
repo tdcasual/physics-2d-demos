@@ -43,6 +43,7 @@ export function createVtIntegralScene(
   setCircleN(value: number): void;
   getSnapshot(): VtIntegralSnapshot;
   getReadoutItems(): Array<{ label: string; value: string }>;
+  subscribe(listener: () => void): () => void;
 } {
   const sim = createVtIntegralSim();
   const view = createVtIntegralView({
@@ -101,21 +102,33 @@ export function createVtIntegralScene(
     },
     setScene(scene: VtScene): void {
       sim.setScene(scene);
+      base.renderAndEmit();
+      base.notify();
     },
     setRects(value: number): void {
       sim.setRects(value);
+      base.renderAndEmit();
+      base.notify();
     },
     setTime(value: number): void {
       sim.setTime(value);
+      base.renderAndEmit();
+      base.notify();
     },
     setMethod(value: VtMethod): void {
       sim.setMethod(value);
+      base.renderAndEmit();
+      base.notify();
     },
     setCurveAmplitude(value: number): void {
       sim.setCurveAmplitude(value);
+      base.renderAndEmit();
+      base.notify();
     },
     setCircleN(value: number): void {
       sim.setCircleN(value);
+      base.renderAndEmit();
+      base.notify();
     },
     getSnapshot(): VtIntegralSnapshot {
       return sim.getSnapshot();

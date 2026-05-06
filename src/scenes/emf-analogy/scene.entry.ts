@@ -53,6 +53,7 @@ export function createEmfAnalogyScene(
   stop(): void;
   startAll(): void;
   pauseAll(): void;
+  subscribe(listener: () => void): () => void;
 } {
   const sim = createEmfAnalogySim();
   const view = createEmfAnalogyView({
@@ -73,14 +74,17 @@ export function createEmfAnalogyScene(
     ...base,
     setSystemOn(on: boolean): void {
       sim.setSystemOn(on);
+      base.renderAndEmit();
       base.notify();
     },
     setTapOpening(opening: number): void {
       sim.setTapOpening(opening);
+      base.renderAndEmit();
       base.notify();
     },
     incrementOpening(step = 0.05): void {
       sim.incrementOpening(step);
+      base.renderAndEmit();
       base.notify();
     },
     setView(viewMode: EmfViewMode): void {
@@ -105,10 +109,12 @@ export function createEmfAnalogyScene(
     },
     startAll(): void {
       (view as { start?(): void }).start?.();
+      base.renderAndEmit();
       base.notify();
     },
     pauseAll(): void {
       (view as { stop?(): void }).stop?.();
+      base.renderAndEmit();
       base.notify();
     }
   };

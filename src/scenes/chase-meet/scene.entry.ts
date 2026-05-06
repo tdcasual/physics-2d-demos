@@ -40,6 +40,7 @@ export function createChaseMeetScene(
   getParams(): ResolvedChaseMeetParams;
   setParams(next: Partial<ChaseMeetParams>): ResolvedChaseMeetParams;
   getSnapshot(): ChaseMeetSnapshot;
+  subscribe(listener: () => void): () => void;
 } {
   const sim = createChaseMeetSim(DEFAULT_PARAMS);
   const view = createChaseMeetView({
@@ -55,6 +56,14 @@ export function createChaseMeetScene(
     const snapshot = sim.getSnapshot();
     view.render(snapshot);
     options.onReadout?.(snapshot);
+  }
+
+  const listeners: (() => void)[] = [];
+
+  function notify(): void {
+    for (const fn of listeners) {
+      try { fn(); } catch { /* ignore */ }
+    }
   }
 
   return {
@@ -90,13 +99,24 @@ export function createChaseMeetScene(
       return sim.getParams();
     },
     setParams(next: Partial<ChaseMeetParams>): ResolvedChaseMeetParams {
-      return sim.setParams(next);
+      const result = sim.setParams(next);
+      renderAndEmit();
+      notify();
+      return result;
     },
     getSnapshot(): ChaseMeetSnapshot {
       return sim.getSnapshot();
     },
+    subscribe(listener: () => void): () => void {
+      listeners.push(listener);
+      return () => {
+        const idx = listeners.indexOf(listener);
+        if (idx > -1) listeners.splice(idx, 1);
+      };
+    },
     dispose(): void {
       view.dispose();
+      listeners.length = 0;
     }
   };
 }
