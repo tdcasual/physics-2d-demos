@@ -62,9 +62,12 @@ export function createInterferenceFormulaView(options: CreateInterferenceFormula
     const dim = isDark ? '#94a3b8' : '#64748b';
     const accent = wavelengthToColor(next.params.lambda);
 
-    c.clearRect(0, 0, w, h);
+    // DPR-aware clear: pixel-space fillRect before setTransform
+    const dpr = c.canvas ? c.canvas.width / Math.max(1, w) : 1;
+    c.clearRect(0, 0, c.canvas?.width ?? w, c.canvas?.height ?? h);
     c.fillStyle = isDark ? '#0f172a' : '#f8fafc';
-    c.fillRect(0, 0, w, h);
+    c.fillRect(0, 0, c.canvas?.width ?? w, c.canvas?.height ?? h);
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     const step = next.params.step;
     const plateX = w * 0.14;
@@ -124,9 +127,12 @@ export function createInterferenceFormulaView(options: CreateInterferenceFormula
     const dim = isDark ? '#94a3b8' : '#64748b';
     const accent = wavelengthToColor(next.params.lambda);
 
-    gc.clearRect(0, 0, gw, gh);
+    // DPR-aware clear: pixel-space fillRect before setTransform
+    const gDpr = gCanvas ? gCanvas.width / Math.max(1, gw) : 1;
+    gc.clearRect(0, 0, gCanvas?.width ?? gw, gCanvas?.height ?? gh);
     gc.fillStyle = isDark ? '#0f172a' : '#f8fafc';
-    gc.fillRect(0, 0, gw, gh);
+    gc.fillRect(0, 0, gCanvas?.width ?? gw, gCanvas?.height ?? gh);
+    gc.setTransform(gDpr, 0, 0, gDpr, 0, 0);
 
     const { params, deltaX } = next;
     const lambdaM = params.lambda * 1e-9;

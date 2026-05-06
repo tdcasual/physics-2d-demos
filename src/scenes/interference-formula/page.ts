@@ -33,8 +33,8 @@ bootScenePage({
     hasGraph: true,
     graphHeight: 0.4,
   },
-  createScene: ({ canvas, graphCanvas, theme }) => {
-    return createInterferenceFormulaScene({ canvas, graphCanvas, theme });
+  createScene: ({ canvas, theme }) => {
+    return createInterferenceFormulaScene({ canvas, theme });
   },
   createControls: ({ mount, scene }) => {
     const ifScene = scene as ReturnType<typeof createInterferenceFormulaScene>;

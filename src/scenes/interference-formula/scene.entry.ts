@@ -11,7 +11,6 @@ import { createInterferenceFormulaView } from './scene.view';
 
 export type CreateInterferenceFormulaSceneOptions = {
   canvas?: HTMLCanvasElement;
-  graphCanvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
   onReadout?: (state: InterferenceFormulaState) => void;
 };
@@ -37,7 +36,6 @@ export function createInterferenceFormulaScene(
 
   const view = createInterferenceFormulaView({
     canvas: options.canvas,
-    graphCanvas: options.graphCanvas,
     theme: options.theme ?? 'dark',
   });
 
