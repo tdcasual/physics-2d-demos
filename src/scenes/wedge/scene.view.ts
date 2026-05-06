@@ -14,7 +14,7 @@ export type CreateWedgeViewOptions = {
 };
 
 export function createWedgeView(options: CreateWedgeViewOptions = {}) {
-  let canvas = options.canvas ?? null;
+  const canvas = options.canvas ?? null;
   let ctx: CanvasRenderingContext2D | null = null;
   let graphCanvas = options.graphCanvas ?? null;
   let graphCtx: CanvasRenderingContext2D | null = null;
@@ -233,7 +233,6 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
     const c = ctx;
     if (!c) return;
     const { text, dim, accent, leftX, rightX, botY, scale } = g;
-    const w = cssWidth;
     const h = cssHeight;
 
     const curveTop = botY + 20 * scale;
@@ -568,7 +567,7 @@ function drawPathDiffPhase(
   c: CanvasRenderingContext2D,
   g: { w: number; h: number; text: string; dim: string; accent: string; px: number; py: number; botY: number; leftX: number; rightX: number; scale: number; state: WedgeState }
 ): void {
-  const { text, dim, accent, px, py, botY, scale, state } = g;
+  const { text, dim, accent, px, py, botY, scale } = g;
   c.save();
   c.font = `${Math.max(10, 13 * scale)}px sans-serif`;
 

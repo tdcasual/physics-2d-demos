@@ -16,7 +16,7 @@ export type CreateThinFilmViewOptions = {
 const DEG_TO_RAD = Math.PI / 180;
 
 export function createThinFilmView(options: CreateThinFilmViewOptions = {}) {
-  let canvas = options.canvas ?? null;
+  const canvas = options.canvas ?? null;
   let ctx: CanvasRenderingContext2D | null = null;
   let graphCanvas = options.graphCanvas ?? null;
   let graphCtx: CanvasRenderingContext2D | null = null;
@@ -507,7 +507,7 @@ function drawHalfWavePhase(
   c: CanvasRenderingContext2D,
   g: { w: number; h: number; text: string; dim: string; accent: string; scale: number; modeScale: number; state: ThinFilmState }
 ): void {
-  const { text, dim, accent, scale, modeScale, state } = g;
+  const { text, dim, accent, scale, modeScale } = g;
   c.save();
 
   c.fillStyle = text;
