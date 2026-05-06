@@ -47,46 +47,7 @@ export function lambdaToGap(lambda: number): number {
   return lambda / 15;
 }
 
-/** 波长(nm) → [R, G, B] */
-export function lambdaToRgb(lambda: number): [number, number, number] {
-  let r: number, g: number, b: number;
-  if (lambda < 440) {
-    r = 120 + (lambda - 400) * 3.375;
-    g = 0;
-    b = 255;
-  } else if (lambda < 490) {
-    r = 0;
-    g = (lambda - 440) * 5.1;
-    b = 255;
-  } else if (lambda < 510) {
-    r = 0;
-    g = 255;
-    b = 255 - (lambda - 490) * 12.75;
-  } else if (lambda < 570) {
-    r = (lambda - 510) * 4.25;
-    g = 255;
-    b = 0;
-  } else if (lambda < 590) {
-    r = 255;
-    g = 255;
-    b = (lambda - 570) * 12.75;
-  } else if (lambda < 620) {
-    r = 255;
-    g = 255 - (lambda - 590) * 8.5;
-    b = 0;
-  } else {
-    r = 255;
-    g = 0;
-    b = 0;
-  }
-  return [Math.round(Math.max(0, Math.min(255, r))), Math.round(Math.max(0, Math.min(255, g))), Math.round(Math.max(0, Math.min(255, b)))];
-}
-
-/** 波长(nm) → hex 颜色 */
-export function wavelengthToColor(lambda: number): string {
-  const [r, g, b] = lambdaToRgb(lambda);
-  return `rgb(${r},${g},${b})`;
-}
+export { lambdaToRgb, wavelengthToColor } from '../../core/wavelength';
 
 export const STEPS = [
   { id: 1, title: '光源与透镜', desc: '光源发出特定波长的光，为了提高穿过狭缝的光强，使用凸透镜将光线汇聚，使其尽可能多地集中打在单缝上。' },

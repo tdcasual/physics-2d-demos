@@ -8,7 +8,7 @@ import { wedgeMeta } from './scene.meta';
 import { createWedgeScene } from './scene.entry';
 import { wedgeControlsSchema } from './controls-schema';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { wavelengthToColor } from '../double-slit/scene.sim';
+import { wavelengthToColor } from '../../core/wavelength';
 import type { WedgeStep } from './scene.sim';
 
 function updateLambdaSliderColor(mount: HTMLElement, lambda: number): void {

@@ -5,7 +5,7 @@
 import type { TeachingTheme } from '../../platform/standards';
 import { sizeCanvasToFill } from '../../core/canvas-sizing';
 import type { WedgeState } from './scene.sim';
-import { wavelengthToColor } from '../double-slit/scene.sim';
+import { wavelengthToColor } from '../../core/wavelength';
 
 export type CreateWedgeViewOptions = {
   canvas?: HTMLCanvasElement;

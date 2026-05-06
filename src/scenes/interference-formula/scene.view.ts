@@ -5,9 +5,12 @@
  * 计算结果通过 getReadoutItems 输出到数据读数区。
  */
 
-import type { TeachingTheme } from '../../platform/standards';
+import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { sizeCanvasToFill } from '../../core/canvas-sizing';
+import { wavelengthToColor, lambdaToRgb } from '../../core/wavelength';
 import type { InterferenceFormulaState } from './scene.sim';
+
+export { wavelengthToColor };
 
 export type CreateInterferenceFormulaViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -15,22 +18,13 @@ export type CreateInterferenceFormulaViewOptions = {
   theme?: TeachingTheme;
 };
 
-/** 波长(nm) → 可见光颜色 */
-export function wavelengthToColor(lambda: number): string {
-  if (lambda < 450) return '#8b5cf6';   // 紫
-  if (lambda < 495) return '#3b82f6';   // 蓝
-  if (lambda < 570) return '#22c55e';   // 绿
-  if (lambda < 590) return '#eab308';   // 黄
-  if (lambda < 620) return '#f97316';   // 橙
-  return '#ef4444';                      // 红
-}
-
 export function createInterferenceFormulaView(options: CreateInterferenceFormulaViewOptions = {}) {
   let canvas = options.canvas ?? null;
   let ctx: CanvasRenderingContext2D | null = null;
   let graphCanvas = options.graphCanvas ?? null;
   let graphCtx: CanvasRenderingContext2D | null = null;
   let theme: TeachingTheme = options.theme ?? 'dark';
+  let mode: TeachingMode = 'normal';
   let state: InterferenceFormulaState | null = null;
   let cssWidth = 800;
   let cssHeight = 600;
@@ -57,6 +51,7 @@ export function createInterferenceFormulaView(options: CreateInterferenceFormula
     if (!c) return;
     const w = cssWidth;
     const h = cssHeight;
+    const modeScale = mode === 'presentation' ? 1.5 : 1.0;
     const isDark = theme === 'dark';
     const text = isDark ? '#e2e8f0' : '#1e293b';
     const dim = isDark ? '#94a3b8' : '#64748b';
@@ -70,50 +65,64 @@ export function createInterferenceFormulaView(options: CreateInterferenceFormula
     c.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     const step = next.params.step;
-    const plateX = w * 0.14;
     const screenX = w * 0.86;
     const centerY = h * 0.44;
-    const slitGap = 50 * scale;
-    const slitTop = centerY - slitGap / 2;
-    const slitBot = centerY + slitGap / 2;
     const screenTop = h * 0.04;
     const screenBot = h * 0.84;
-    const pY = screenTop + (screenBot - screenTop) * 0.25;
+
+    // L → plateX: larger L pushes slit plate left, filling the canvas
+    const { L, d } = next.params;
+    const lNorm = Math.max(0, Math.min(1, (L - 0.5) / 2.5));
+    const minX = w * 0.06;
+    const maxX = screenX - 60 * scale;
+    const plateX = maxX - lNorm * (maxX - minX);
+
+    // d → slitGap: larger d widens the gap
+    const dNorm = Math.max(0, Math.min(1, (d - 0.1) / 0.9));
+    const slitGap = (20 + 60 * dNorm) * scale;
+    const slitTop = centerY - slitGap / 2;
+    const slitBot = centerY + slitGap / 2;
+
+    // Δx → pY: larger Δx moves P further from center
+    const defaultDeltaX = (650e-9 * 1.0) / 0.5e-3;
+    const screenRange = (screenBot - screenTop) * 0.35;
+    const pOffset = Math.min(1, next.deltaX / (3 * defaultDeltaX)) * screenRange;
+    const pY = centerY - pOffset;
 
     // ── 公共几何结构 ──
     drawGeometryBase(c, {
-      text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, screenTop, screenBot, pY, scale
+      text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, screenTop, screenBot, pY, scale, modeScale
     });
 
     // ── 阶段特定内容（极简文字）──
     if (step === 'geometry') {
       drawGeometryPhase(c, {
-        w, h, text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, pY, scale,
+        w, h, text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, pY, scale, modeScale,
         params: next.params
       });
     } else if (step === 'path-diff') {
       drawPathDiffPhase(c, {
-        w, h, text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, pY, scale,
+        w, h, text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, pY, scale, modeScale,
         params: next.params, deltaX: next.deltaX
       });
     } else if (step === 'small-angle') {
       drawSmallAnglePhase(c, {
-        w, h, text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, screenTop, screenBot, pY, scale,
+        w, h, text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, screenTop, screenBot, pY, scale, modeScale,
         params: next.params, deltaX: next.deltaX
       });
     } else if (step === 'result') {
       drawResultPhase(c, {
-        w, h, text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, pY, scale,
+        w, h, text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, pY, scale, modeScale,
         params: next.params, deltaX: next.deltaX
       });
     }
 
     // ── 图表区：干涉条纹始终显示 ──
-    drawFringeGraph(next);
+    drawFringeGraph(next, modeScale);
   }
 
   // ── 图表区条纹绘制（常驻）──
-  function drawFringeGraph(next: InterferenceFormulaState): void {
+  function drawFringeGraph(next: InterferenceFormulaState, modeScale: number): void {
     const gc = graphCtx;
     const gCanvas = graphCanvas;
     if (!gc || !gCanvas) return;
@@ -149,24 +158,24 @@ export function createInterferenceFormulaView(options: CreateInterferenceFormula
       gc.lineWidth = 1.5 * gScale;
       gc.strokeRect(stripeX, stripeY, stripeW, stripeH);
 
-      const range = 5 * deltaX;
+      // Fixed physical range so fringe pattern changes visibly with λ/d
+      const defaultDeltaX = (650e-9 * 1.0) / 0.5e-3; // Δx at defaults: 1.3mm
+      const range = 6 * defaultDeltaX;
       const stripeCenterX = stripeX + stripeW / 2;
       const stepPx = Math.max(1, gScale);
+
+      const [cr, cg, cb] = lambdaToRgb(next.params.lambda);
+      const bgR = isDark ? 15 : 248;
+      const bgG = isDark ? 23 : 250;
+      const bgB = isDark ? 42 : 252;
 
       for (let px = 0; px < stripeW; px += stepPx) {
         const xPhysical = ((px - stripeW / 2) / (stripeW / 2)) * range;
         const phase = (Math.PI * dM * xPhysical) / (lambdaM * params.L);
         const intensity = Math.cos(phase) ** 2;
-
-        const r = parseInt(accent.slice(1, 3), 16);
-        const gVal = parseInt(accent.slice(3, 5), 16);
-        const b = parseInt(accent.slice(5, 7), 16);
-        const bgR = isDark ? 15 : 248;
-        const bgG = isDark ? 23 : 250;
-        const bgB = isDark ? 42 : 252;
-        const rr = Math.round(bgR + (r - bgR) * intensity);
-        const rg = Math.round(bgG + (gVal - bgG) * intensity);
-        const rb = Math.round(bgB + (b - bgB) * intensity);
+        const rr = Math.round(bgR + (cr - bgR) * intensity);
+        const rg = Math.round(bgG + (cg - bgG) * intensity);
+        const rb = Math.round(bgB + (cb - bgB) * intensity);
         gc.fillStyle = `rgb(${rr},${rg},${rb})`;
         gc.fillRect(stripeX + px, stripeY, stepPx, stripeH);
       }
@@ -202,9 +211,9 @@ export function createInterferenceFormulaView(options: CreateInterferenceFormula
 
     // 标题
     gc.fillStyle = text;
-    gc.font = `bold ${Math.max(11, 13 * gScale)}px sans-serif`;
+    gc.font = `bold ${Math.max(11, 13 * gScale * modeScale)}px sans-serif`;
     gc.textAlign = 'left';
-    gc.fillText(`λ = ${params.lambda} nm`, margin, margin + 4 * gScale);
+    gc.fillText(`λ=${params.lambda}nm  L=${params.L.toFixed(1)}m  d=${params.d.toFixed(1)}mm`, margin, margin + 4 * gScale);
   }
 
   return {
@@ -217,7 +226,8 @@ export function createInterferenceFormulaView(options: CreateInterferenceFormula
       resizeGraphCanvas();
       if (state) drawScene(state);
     },
-    setMode(): void {
+    setMode(next: TeachingMode): void {
+      mode = next;
       if (state) drawScene(state);
     },
     setTheme(next: TeachingTheme): void {
@@ -248,24 +258,24 @@ type GeoBase = {
   text: string; dim: string; accent: string;
   plateX: number; screenX: number; centerY: number;
   slitTop: number; slitBot: number;
-  screenTop: number; screenBot: number; pY: number; scale: number;
+  screenTop: number; screenBot: number; pY: number; scale: number; modeScale: number;
 };
 
 type GeoBaseLite = {
   text: string; dim: string; accent: string;
   plateX: number; screenX: number; centerY: number;
-  slitTop: number; slitBot: number; pY: number; scale: number;
+  slitTop: number; slitBot: number; pY: number; scale: number; modeScale: number;
 };
 
 function drawGeometryBase(
   c: CanvasRenderingContext2D,
   g: GeoBase
 ): void {
-  const { text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, screenTop, screenBot, pY, scale } = g;
+  const { text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, screenTop, screenBot, pY, scale, modeScale } = g;
 
   c.save();
   c.lineWidth = 2 * scale;
-  c.font = `${Math.max(10, 14 * scale)}px sans-serif`;
+  c.font = `${Math.max(10, 14 * scale * modeScale)}px sans-serif`;
 
   // 双缝板
   c.strokeStyle = text;
@@ -335,11 +345,15 @@ function drawGeometryBase(
 
 type GeoPhase = GeoBaseLite & { w: number; h: number; params: { lambda: number; L: number; d: number } };
 
+type PathDiffPhase = GeoPhase & { deltaX: number };
+
+type SmallAnglePhase = GeoBase & { w: number; h: number; params: { lambda: number; L: number; d: number }; deltaX: number };
+
 function drawGeometryPhase(c: CanvasRenderingContext2D, g: GeoPhase): void {
-  const { text, dim, plateX, screenX, centerY, slitTop, slitBot, pY, scale, params } = g;
+  const { text, dim, plateX, screenX, centerY, slitTop, slitBot, pY, scale, modeScale, params } = g;
 
   c.save();
-  c.font = `${Math.max(10, 13 * scale)}px sans-serif`;
+  c.font = `${Math.max(10, 13 * scale * modeScale)}px sans-serif`;
 
   // L
   const ly = screenX - plateX > 60 * scale ? plateX + (screenX - plateX) * 0.5 : (plateX + screenX) / 2;
@@ -377,15 +391,11 @@ function drawGeometryPhase(c: CanvasRenderingContext2D, g: GeoPhase): void {
 
 // ── path-diff 阶段 ── 只画辅助线和核心公式
 
-type PathDiffPhase = GeoPhase & { deltaX: number };
-
-type SmallAnglePhase = GeoBase & { w: number; h: number; params: { lambda: number; L: number; d: number }; deltaX: number };
-
 function drawPathDiffPhase(c: CanvasRenderingContext2D, g: PathDiffPhase): void {
-  const { w, h, text, dim, accent, plateX, screenX, slitTop, slitBot, pY, scale } = g;
+  const { w, h, text, dim, accent, plateX, screenX, slitTop, slitBot, pY, scale, modeScale } = g;
 
   c.save();
-  c.font = `${Math.max(10, 13 * scale)}px sans-serif`;
+  c.font = `${Math.max(10, 13 * scale * modeScale)}px sans-serif`;
 
   // 几何量
   const r1 = Math.hypot(screenX - plateX, pY - slitTop); // 上缝→P（较短）
@@ -445,20 +455,23 @@ function drawPathDiffPhase(c: CanvasRenderingContext2D, g: PathDiffPhase): void 
   // 在下缝光线上 slitBot 与 Q（或 H）之间标注
   c.fillStyle = accent;
   c.textAlign = 'center';
-  c.font = `italic ${Math.max(10, 13 * scale)}px sans-serif`;
+  c.font = `italic ${Math.max(10, 13 * scale * modeScale)}px sans-serif`;
   const midX = (plateX + qx) / 2;
   const midY = (slitBot + qy) / 2;
-  c.fillText('Δr', midX - 8 * scale, midY - 6 * scale);
+  c.fillText(`|Δr|`, midX - 8 * scale, midY - 6 * scale);
 
-  // ── 5. 标注 r₁ = r₂（等长关系）──
+  // ── 5. 标注 r₁ 与 r₂ 的关系 ──
   c.fillStyle = dim;
-  c.font = `${Math.max(9, 11 * scale)}px sans-serif`;
-  c.fillText('r₁ = r₂ − Δr', screenX + 10 * scale, pY - r1 * 0.5);
+  c.font = `${Math.max(9, 11 * scale * modeScale)}px sans-serif`;
+  const rRelation = pY < (slitTop + slitBot) / 2
+    ? `r₁ = r₂ − |Δr|`
+    : `r₂ = r₁ − |Δr|`;
+  c.fillText(rRelation, screenX + 10 * scale, pY - r1 * 0.5);
 
   // 核心公式
   const fy = h * 0.90;
   c.fillStyle = text;
-  c.font = `${Math.max(12, 16 * scale)}px sans-serif`;
+  c.font = `${Math.max(12, 16 * scale * modeScale)}px sans-serif`;
   c.textAlign = 'center';
   c.fillText('Δr = d·sinθ = mλ', w / 2, fy);
 
@@ -468,10 +481,10 @@ function drawPathDiffPhase(c: CanvasRenderingContext2D, g: PathDiffPhase): void 
 // ── small-angle 阶段 ── 修正辅助三角形，仅保留关键公式
 
 function drawSmallAnglePhase(c: CanvasRenderingContext2D, g: SmallAnglePhase): void {
-  const { w, h, text, dim, accent, plateX, screenX, centerY, pY, scale } = g;
+  const { w, h, text, dim, accent, plateX, screenX, centerY, pY, scale, modeScale } = g;
 
   c.save();
-  c.font = `${Math.max(10, 13 * scale)}px sans-serif`;
+  c.font = `${Math.max(10, 13 * scale * modeScale)}px sans-serif`;
 
   // 直接在主几何图上叠加直角三角形：双缝中心 → 屏幕中心 → P 点
   // A = 双缝中心(plateX, centerY), B = 屏幕中心(screenX, centerY), C = P点(screenX, pY)
@@ -524,7 +537,7 @@ function drawSmallAnglePhase(c: CanvasRenderingContext2D, g: SmallAnglePhase): v
   // 5. 标注 L / x / r
   c.fillStyle = text;
   c.textAlign = 'center';
-  c.font = `${Math.max(10, 13 * scale)}px sans-serif`;
+  c.font = `${Math.max(10, 13 * scale * modeScale)}px sans-serif`;
   // L 标在水平边下方
   c.fillText('L', (ax + bx) / 2, ay + 16 * scale);
   // x 标在竖直边右侧
@@ -549,13 +562,13 @@ function drawSmallAnglePhase(c: CanvasRenderingContext2D, g: SmallAnglePhase): v
   }
   c.stroke();
   c.fillStyle = text;
-  c.font = `italic ${Math.max(11, 14 * scale)}px sans-serif`;
+  c.font = `italic ${Math.max(11, 14 * scale * modeScale)}px sans-serif`;
   c.fillText('θ', ax + thetaR + 8 * scale, ay - 4 * scale);
 
   // 7. 公式（仅一行）
   const fy = h * 0.90;
   c.fillStyle = accent;
-  c.font = `${Math.max(12, 16 * scale)}px sans-serif`;
+  c.font = `${Math.max(12, 16 * scale * modeScale)}px sans-serif`;
   c.textAlign = 'center';
   c.fillText('sinθ ≈ tanθ = x/L  →  Δr ≈ d·x/L = mλ', w / 2, fy);
 
@@ -567,12 +580,12 @@ function drawSmallAnglePhase(c: CanvasRenderingContext2D, g: SmallAnglePhase): v
 function drawResultPhase(c: CanvasRenderingContext2D, g: {
   w: number; h: number; text: string; dim: string; accent: string;
   plateX: number; screenX: number; centerY: number; slitTop: number; slitBot: number; pY: number;
-  params: { lambda: number; L: number; d: number }; deltaX: number; scale: number;
+  params: { lambda: number; L: number; d: number }; deltaX: number; scale: number; modeScale: number;
 }): void {
-  const { w, h, text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, pY, deltaX, scale } = g;
+  const { w, h, text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, pY, deltaX, scale, modeScale } = g;
 
   c.save();
-  c.font = `${Math.max(10, 13 * scale)}px sans-serif`;
+  c.font = `${Math.max(10, 13 * scale * modeScale)}px sans-serif`;
 
   const brightR = 6.5 * scale;
 
@@ -612,7 +625,7 @@ function drawResultPhase(c: CanvasRenderingContext2D, g: {
 
   // 4. 亮纹标注（与 P 标签错开，避免重叠）
   c.fillStyle = text;
-  c.font = `${Math.max(9, 11 * scale)}px sans-serif`;
+  c.font = `${Math.max(9, 11 * scale * modeScale)}px sans-serif`;
   c.textAlign = 'left';
   c.fillText('中央亮纹', screenX + 16 * scale, centerY + 16 * scale);
   c.fillText('相邻亮纹', screenX + 16 * scale, pY + 16 * scale);
@@ -641,24 +654,24 @@ function drawResultPhase(c: CanvasRenderingContext2D, g: {
 
   // Δx 文字
   c.fillStyle = accent;
-  c.font = `bold ${Math.max(11, 14 * scale)}px sans-serif`;
+  c.font = `bold ${Math.max(11, 14 * scale * modeScale)}px sans-serif`;
   c.textAlign = 'left';
   c.fillText('Δx', arrowX + 10 * scale, (centerY + pY) / 2 + 4 * scale);
 
   // 6. 底部公式
   const fy = h * 0.88;
   c.fillStyle = accent;
-  c.font = `bold ${Math.max(16, 24 * scale)}px sans-serif`;
+  c.font = `bold ${Math.max(16, 24 * scale * modeScale)}px sans-serif`;
   c.textAlign = 'center';
   c.fillText('Δx = λL / d', w / 2, fy);
 
   c.fillStyle = text;
-  c.font = `${Math.max(11, 14 * scale)}px sans-serif`;
+  c.font = `${Math.max(11, 14 * scale * modeScale)}px sans-serif`;
   c.fillText(`= ${(deltaX * 1e3).toFixed(2)} mm`, w / 2, fy + 24 * scale);
 
   // 反推公式（强调测量应用）
   c.fillStyle = dim;
-  c.font = `${Math.max(10, 13 * scale)}px sans-serif`;
+  c.font = `${Math.max(10, 13 * scale * modeScale)}px sans-serif`;
   c.fillText(`→ 测得 Δx，反推波长  λ = d·Δx / L`, w / 2, fy + 46 * scale);
 
   c.restore();

@@ -45,16 +45,13 @@ bootScenePage({
       onChange: (key, value) => {
         if (key === 'step') {
           ifScene.setParams({ step: String(value) as InterferenceFormulaStep });
-          ifScene.render();
           renderer.setActive(key, String(value));
         } else if (key === 'lambda') {
           const num = Number(value);
           ifScene.setParams({ lambda: num });
           updateLambdaSliderColor(mount, num);
-          ifScene.render();
         } else {
           ifScene.setParams({ [key]: Number(value) } as Record<string, number>);
-          ifScene.render();
         }
         writeSceneParams({ [key]: value });
       },
@@ -81,9 +78,6 @@ bootScenePage({
         ifScene.setParams({ [key]: num } as Record<string, number>);
         renderer.setValue(key, num);
       }
-    }
-    if (Object.keys(urlParams).length > 0) {
-      ifScene.render();
     }
 
     // 初始颜色
