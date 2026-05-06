@@ -557,8 +557,8 @@ export function createMicrometerEyepieceView(options: {
     // B2. 更新对象池中的可见 tick
     updateThimbleTicks();
 
-    // C. 联动干涉视场：平移十字准星（stripeOffset 控制光标偏移）
-    const viewOffset = (currentReading - config.initialReading) * config.crosshairSpeed - stripeConfig.offset;
+    // C. 联动干涉视场：平移十字准星（stripeOffset 单位 mm，转换为 px）
+    const viewOffset = (currentReading - config.initialReading - stripeConfig.offset) * config.crosshairSpeed;
     crosshairSystem.style.transform = `translateX(${viewOffset}px)`;
 
     // D. 高精度数字更新

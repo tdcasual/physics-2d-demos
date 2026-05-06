@@ -12,7 +12,7 @@ export type DoubleSlitParams = {
   activeInstrument: 'caliper' | 'micrometer'; // 步骤6当前高亮仪器
   showInstrumentReadout: boolean; // 步骤6是否显示仪器读数
   micrometerOffset: number; // 螺旋测微仪零位偏移 (mm)
-  stripeOffset: number; // 螺旋测微仪十字准星位移 (px)
+  stripeOffset: number; // 螺旋测微仪十字准星位移 (mm)
 };
 
 export type DoubleSlitState = {

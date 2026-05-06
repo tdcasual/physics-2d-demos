@@ -40,7 +40,7 @@ export function createDoubleSlitScene(
     activeInstrument: 'caliper',
     showInstrumentReadout: false,
     micrometerOffset: 0,
-    stripeOffset: 1200,
+    stripeOffset: 12,
   });
 
   const view = createDoubleSlitView({

@@ -66,23 +66,13 @@ const instrumentSection = {
     },
     {
       type: 'slider' as const,
-      key: 'micrometerOffset',
-      label: '零位偏移',
-      min: -0.05,
-      max: 0.05,
-      step: 0.001,
-      value: 0,
-      unit: 'mm'
-    },
-    {
-      type: 'slider' as const,
       key: 'stripeOffset',
       label: '十字准星位移',
       min: 0,
-      max: 2000,
-      step: 1,
-      value: 1200,
-      unit: 'px'
+      max: 32,
+      step: 0.01,
+      value: 12,
+      unit: 'mm'
     }
   ]
 };

@@ -43,8 +43,6 @@ bootScenePage({
       if (state.params.step === 6) {
         currentRenderer?.setActive('activeInstrument', state.params.activeInstrument);
         currentRenderer?.setValue('showInstrumentReadout', state.params.showInstrumentReadout);
-        currentRenderer?.setValue('micrometerOffset', state.params.micrometerOffset);
-        currentRenderer?.setVisible('micrometerOffset', state.params.activeInstrument === 'micrometer');
         currentRenderer?.setValue('stripeOffset', state.params.stripeOffset);
         currentRenderer?.setVisible('stripeOffset', state.params.activeInstrument === 'micrometer');
       }
@@ -72,8 +70,6 @@ bootScenePage({
             currentRenderer?.setVisible('stripeOffset', instrument === 'micrometer');
           } else if (key === 'showInstrumentReadout') {
             dsScene.setParams({ showInstrumentReadout: Boolean(value) });
-          } else if (key === 'micrometerOffset') {
-            dsScene.setParams({ micrometerOffset: Number(value) });
           } else if (key === 'stripeOffset') {
             dsScene.setParams({ stripeOffset: Number(value) });
           }

@@ -9,7 +9,7 @@ export interface MicrometerEyepieceParams extends InstrumentParams {
   initialReading: number;
   /** 零位偏移（mm）— 校准后的基准 */
   zeroOffset: number;
-  /** 十字准星像素偏移（正值=向左） */
+  /** 十字准星位移（mm，正值=向左） */
   stripeOffset: number;
   /** 干涉条纹间距（px） */
   stripeSpacing: number;
@@ -27,7 +27,7 @@ export const micrometerEyepieceMeta: InstrumentMeta<MicrometerEyepieceParams> = 
   defaultParams: {
     initialReading: 0,
     zeroOffset: 0,
-    stripeOffset: 0,
+    stripeOffset: 12,
     stripeSpacing: 50,
     stripeColor: 'rgba(200, 80, 20, 0.4)',
     stripeAngle: 90,
