@@ -287,8 +287,8 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
     // 物理条纹间距（px）
     const fringeSpacingPx = computeFringeSpacingPx(lambda, slitDistance);
 
-    // 衍射包络宽度（单缝衍射，假设单缝宽度 a = d/8）
-    const envelopeSpacingPx = fringeSpacingPx * 8;
+    // 衍射包络宽度（单缝衍射，假设单缝宽度 a = d/12）
+    const envelopeSpacingPx = fringeSpacingPx * 12;
 
     // 干涉图样背景
     c.fillStyle = isDark ? 'rgba(148,163,184,0.06)' : 'rgba(100,116,139,0.04)';
