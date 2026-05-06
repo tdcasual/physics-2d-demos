@@ -26,6 +26,7 @@ export function createThinFilmScene(
   setParams(params: Partial<ThinFilmParams>): ThinFilmParams;
   attachGraphCanvas(canvas: HTMLCanvasElement): void;
   getReadoutItems(): Array<{ label: string; value: string }>;
+  subscribe(listener: () => void): () => void;
 } {
   const sim = createThinFilmSim({
     lambda: 650,
@@ -71,6 +72,7 @@ export function createThinFilmScene(
     },
     setParams(params: Partial<ThinFilmParams>): ThinFilmParams {
       const result = sim.setParams(params);
+      base.renderAndEmit();
       base.notify();
       return result;
     },

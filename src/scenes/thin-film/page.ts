@@ -8,7 +8,7 @@ import { thinFilmMeta } from './scene.meta';
 import { createThinFilmScene } from './scene.entry';
 import { thinFilmControlsSchema } from './controls-schema';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { wavelengthToColor } from '../double-slit/scene.sim';
+import { wavelengthToColor } from '../../core/wavelength';
 import type { ThinFilmStep } from './scene.sim';
 
 function updateLambdaSliderColor(mount: HTMLElement, lambda: number): void {
@@ -45,16 +45,13 @@ bootScenePage({
       onChange: (key, value) => {
         if (key === 'step') {
           filmScene.setParams({ step: String(value) as ThinFilmStep });
-          filmScene.render();
           renderer.setActive(key, String(value));
         } else if (key === 'lambda') {
           const num = Number(value);
           filmScene.setParams({ lambda: num });
           updateLambdaSliderColor(mount, num);
-          filmScene.render();
         } else {
           filmScene.setParams({ [key]: Number(value) } as Record<string, number>);
-          filmScene.render();
         }
         writeSceneParams({ [key]: value });
       },
@@ -79,9 +76,6 @@ bootScenePage({
         filmScene.setParams({ [key]: num } as Record<string, number>);
         renderer.setValue(key, num);
       }
-    }
-    if (Object.keys(urlParams).length > 0) {
-      filmScene.render();
     }
 
     // 初始颜色

@@ -2,10 +2,10 @@
  * 薄膜干涉 — Canvas 渲染
  */
 
-import type { TeachingTheme } from '../../platform/standards';
+import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { sizeCanvasToFill } from '../../core/canvas-sizing';
 import type { ThinFilmState } from './scene.sim';
-import { wavelengthToColor } from '../double-slit/scene.sim';
+import { wavelengthToColor } from '../../core/wavelength';
 
 export type CreateThinFilmViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -21,6 +21,7 @@ export function createThinFilmView(options: CreateThinFilmViewOptions = {}) {
   let graphCanvas = options.graphCanvas ?? null;
   let graphCtx: CanvasRenderingContext2D | null = null;
   let theme: TeachingTheme = options.theme ?? 'dark';
+  let mode: TeachingMode = 'normal';
   let cssWidth = 800;
   let cssHeight = 600;
   let scale = 1;
@@ -46,15 +47,18 @@ export function createThinFilmView(options: CreateThinFilmViewOptions = {}) {
     if (!c) return;
     const w = cssWidth;
     const h = cssHeight;
+    const modeScale = mode === 'presentation' ? 1.5 : 1.0;
     const isDark = theme === 'dark';
     const text = isDark ? '#e2e8f0' : '#1e293b';
     const dim = isDark ? '#94a3b8' : '#64748b';
     const accent = wavelengthToColor(next.params.lambda);
-    const bg = isDark ? '#0f172a' : '#f8fafc';
 
-    c.clearRect(0, 0, w, h);
-    c.fillStyle = bg;
-    c.fillRect(0, 0, w, h);
+    // DPR-aware clear
+    const dpr = c.canvas ? c.canvas.width / Math.max(1, w) : 1;
+    c.clearRect(0, 0, c.canvas?.width ?? w, c.canvas?.height ?? h);
+    c.fillStyle = isDark ? '#0f172a' : '#f8fafc';
+    c.fillRect(0, 0, c.canvas?.width ?? w, c.canvas?.height ?? h);
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     const step = next.params.step;
     const incidence = next.params.incidence;
@@ -62,20 +66,23 @@ export function createThinFilmView(options: CreateThinFilmViewOptions = {}) {
     const iRad = incidence * DEG_TO_RAD;
     const rRad = refraction * DEG_TO_RAD;
 
-    // 几何基线
+    // 几何基线 — d 影响薄膜视觉厚度
     const filmX = w * 0.35;
     const filmW = w * 0.45;
-    const filmTopY = h * 0.42;
-    const filmBotY = h * 0.58;
-    const d = filmBotY - filmTopY;
+    const filmCenterY = h * 0.50;
+    const dNorm = Math.max(0, Math.min(1, (next.params.d - 100) / 1900));
+    const filmHalfH = (15 + 55 * dNorm) * scale;
+    const filmTopY = filmCenterY - filmHalfH;
+    const filmBotY = filmCenterY + filmHalfH;
+    const filmVisualH = filmBotY - filmTopY;
 
     c.save();
     c.lineWidth = 2 * scale;
-    c.font = `${Math.max(10, 13 * scale)}px sans-serif`;
+    c.font = `${Math.max(10, 13 * scale * modeScale)}px sans-serif`;
 
     // 薄膜填充
     c.fillStyle = isDark ? 'rgba(56,189,248,0.10)' : 'rgba(56,189,248,0.15)';
-    c.fillRect(filmX, filmTopY, filmW, d);
+    c.fillRect(filmX, filmTopY, filmW, filmVisualH);
 
     // 上表面
     c.strokeStyle = text;
@@ -94,14 +101,15 @@ export function createThinFilmView(options: CreateThinFilmViewOptions = {}) {
     // 空气区标签
     c.fillStyle = dim;
     c.textAlign = 'center';
-    c.font = `${Math.max(9, 11 * scale)}px sans-serif`;
+    c.font = `${Math.max(9, 11 * scale * modeScale)}px sans-serif`;
     c.fillText('空气 n=1', filmX + filmW / 2, filmTopY - 30 * scale);
-    c.fillText(`薄膜 n=${next.params.n.toFixed(2)}`, filmX + filmW / 2, (filmTopY + filmBotY) / 2 + 4 * scale);
+    c.fillText(`薄膜 n=${next.params.n.toFixed(2)}`, filmX + filmW / 2, filmCenterY + 4 * scale);
     c.fillText('玻璃/基底', filmX + filmW / 2, filmBotY + 18 * scale);
 
     // 入射点（上表面）
     const incidentX = filmX + filmW * 0.35;
     const incidentLen = h * 0.28;
+    const refractLen = filmVisualH / Math.max(0.01, Math.cos(rRad));
 
     // 入射光线
     c.strokeStyle = accent;
@@ -122,7 +130,6 @@ export function createThinFilmView(options: CreateThinFilmViewOptions = {}) {
     c.globalAlpha = 1;
 
     // 折射光线（进入薄膜）
-    const refractLen = incidentLen * 0.6;
     const refractX = incidentX + refractLen * Math.sin(rRad);
     const refractY = filmTopY + refractLen * Math.cos(rRad);
     c.strokeStyle = accent;
@@ -164,6 +171,7 @@ export function createThinFilmView(options: CreateThinFilmViewOptions = {}) {
       c.stroke();
       c.fillStyle = text;
       c.textAlign = 'left';
+      c.font = `${Math.max(10, 13 * scale * modeScale)}px sans-serif`;
       c.fillText('i', incidentX + 8 * scale, filmTopY - arcR - 4 * scale);
     }
 
@@ -177,6 +185,7 @@ export function createThinFilmView(options: CreateThinFilmViewOptions = {}) {
       c.stroke();
       c.fillStyle = text;
       c.textAlign = 'left';
+      c.font = `${Math.max(10, 13 * scale * modeScale)}px sans-serif`;
       c.fillText('r', incidentX + 8 * scale, filmTopY + arcR2 + 12 * scale);
     }
 
@@ -191,24 +200,24 @@ export function createThinFilmView(options: CreateThinFilmViewOptions = {}) {
       c.stroke();
       c.fillStyle = text;
       c.textAlign = 'left';
-      c.font = `italic ${Math.max(10, 12 * scale)}px sans-serif`;
-      c.fillText('d', dx + 6 * scale, (filmTopY + filmBotY) / 2 + 3 * scale);
+      c.font = `italic ${Math.max(10, 12 * scale * modeScale)}px sans-serif`;
+      c.fillText('d', dx + 6 * scale, filmCenterY + 3 * scale);
     }
 
     // 阶段特定内容
     if (step === 'path-diff') {
-      drawPathDiffPhase(c, { w, h, text, dim, accent, filmX, filmTopY, filmBotY, incidentX, scale, state: next });
+      drawPathDiffPhase(c, { w, h, text, dim, accent, filmX, filmTopY, filmBotY, incidentX, scale, modeScale, state: next });
     } else if (step === 'half-wave') {
-      drawHalfWavePhase(c, { w, h, text, dim, accent, scale, state: next });
+      drawHalfWavePhase(c, { w, h, text, dim, accent, scale, modeScale, state: next });
     } else if (step === 'result') {
-      drawResultPhase(c, { w, h, text, dim, accent, scale, state: next });
+      drawResultPhase(c, { w, h, text, dim, accent, scale, modeScale, state: next });
     }
 
     // 底部公式
     if (step === 'geometry') {
       const fy = h * 0.90;
       c.fillStyle = dim;
-      c.font = `${Math.max(11, 14 * scale)}px sans-serif`;
+      c.font = `${Math.max(11, 14 * scale * modeScale)}px sans-serif`;
       c.textAlign = 'center';
       c.fillText('sin i = n·sin r', w / 2, fy);
     }
@@ -228,22 +237,26 @@ export function createThinFilmView(options: CreateThinFilmViewOptions = {}) {
     const gw = Math.max(200, Math.floor(rect.width || 400));
     const gh = Math.max(100, Math.floor(rect.height || 200));
     const gScale = parseFloat(gCanvas.dataset.responsiveScale || '1');
+    const modeScale = mode === 'presentation' ? 1.5 : 1.0;
     const isDark = theme === 'dark';
     const text = isDark ? '#e2e8f0' : '#1e293b';
     const dim = isDark ? '#94a3b8' : '#64748b';
     const accent = wavelengthToColor(next.params.lambda);
 
-    gc.clearRect(0, 0, gw, gh);
+    // DPR-aware clear
+    const gDpr = gCanvas.width / Math.max(1, gw);
+    gc.clearRect(0, 0, gCanvas.width, gCanvas.height);
     gc.fillStyle = isDark ? '#0f172a' : '#f8fafc';
-    gc.fillRect(0, 0, gw, gh);
+    gc.fillRect(0, 0, gCanvas.width, gCanvas.height);
+    gc.setTransform(gDpr, 0, 0, gDpr, 0, 0);
 
     gc.save();
-    gc.font = `${Math.max(10, 12 * gScale)}px sans-serif`;
+    gc.font = `${Math.max(10, 12 * gScale * modeScale)}px sans-serif`;
 
     // 标题
     gc.fillStyle = text;
     gc.textAlign = 'left';
-    gc.fillText(`d = ${next.params.d} nm  n = ${next.params.n.toFixed(2)}  i = ${next.params.incidence}°`, 8 * gScale, 18 * gScale);
+    gc.fillText(`λ=${next.params.lambda}nm  d=${next.params.d}nm  n=${next.params.n.toFixed(2)}  i=${next.params.incidence}°`, 8 * gScale, 18 * gScale);
 
     // 反射光强随波长曲线
     const d = next.params.d;
@@ -458,7 +471,9 @@ export function createThinFilmView(options: CreateThinFilmViewOptions = {}) {
     setTheme(t: TeachingTheme): void {
       theme = t;
     },
-    setMode(): void {},
+    setMode(next: TeachingMode): void {
+      mode = next;
+    },
     attachGraphCanvas(canvas: HTMLCanvasElement): void {
       graphCanvas = canvas;
       resizeGraphCanvas();
@@ -470,20 +485,18 @@ export function createThinFilmView(options: CreateThinFilmViewOptions = {}) {
 // ── path-diff 阶段 ──
 function drawPathDiffPhase(
   c: CanvasRenderingContext2D,
-  g: { w: number; h: number; text: string; dim: string; accent: string; filmX: number; filmTopY: number; filmBotY: number; incidentX: number; scale: number; state: ThinFilmState }
+  g: { w: number; h: number; text: string; dim: string; accent: string; filmX: number; filmTopY: number; filmBotY: number; incidentX: number; scale: number; modeScale: number; state: ThinFilmState }
 ): void {
-  const { text, dim, accent, filmX, filmTopY, filmBotY, incidentX, scale, state } = g;
+  const { text, dim, scale, modeScale, state } = g;
   c.save();
-  c.font = `${Math.max(10, 13 * scale)}px sans-serif`;
 
-  // 光程差路径标注
   c.fillStyle = text;
   c.textAlign = 'center';
-  c.font = `${Math.max(11, 14 * scale)}px sans-serif`;
+  c.font = `${Math.max(11, 14 * scale * modeScale)}px sans-serif`;
   c.fillText('Δ = 2nd·cos r', g.w / 2, g.h * 0.88);
 
   c.fillStyle = dim;
-  c.font = `${Math.max(9, 11 * scale)}px sans-serif`;
+  c.font = `${Math.max(9, 11 * scale * modeScale)}px sans-serif`;
   c.fillText(`n = ${state.params.n.toFixed(2)}   d = ${state.params.d} nm   r = ${state.refraction.toFixed(1)}°`, g.w / 2, g.h * 0.93);
 
   c.restore();
@@ -492,22 +505,24 @@ function drawPathDiffPhase(
 // ── half-wave 阶段 ──
 function drawHalfWavePhase(
   c: CanvasRenderingContext2D,
-  g: { w: number; h: number; text: string; dim: string; accent: string; scale: number; state: ThinFilmState }
+  g: { w: number; h: number; text: string; dim: string; accent: string; scale: number; modeScale: number; state: ThinFilmState }
 ): void {
-  const { text, dim, accent, scale, state } = g;
+  const { text, dim, accent, scale, modeScale, state } = g;
   c.save();
-  c.font = `${Math.max(10, 13 * scale)}px sans-serif`;
 
-  // 半波损失说明
   c.fillStyle = text;
   c.textAlign = 'center';
-  c.font = `${Math.max(11, 14 * scale)}px sans-serif`;
-  c.fillText('上表面（空气→薄膜）：光密→光疏，无半波损失', g.w / 2, g.h * 0.84);
-  c.fillText('下表面（薄膜→基底）：光疏→光密，有 λ/2 附加光程差', g.w / 2, g.h * 0.89);
+  c.font = `${Math.max(11, 14 * scale * modeScale)}px sans-serif`;
+  c.fillText('上表面（空气→薄膜）：n↑，反射有半波损失 λ/2', g.w / 2, g.h * 0.84);
+  c.fillText('下表面（薄膜→基底）：n↑，反射也有半波损失 λ/2', g.w / 2, g.h * 0.89);
+
+  c.fillStyle = dim;
+  c.font = `${Math.max(9, 11 * scale * modeScale)}px sans-serif`;
+  c.fillText('两次半波损失相互抵消，净效果 = 一次 λ/2 附加光程差', g.w / 2, g.h * 0.92);
 
   c.fillStyle = accent;
-  c.font = `bold ${Math.max(12, 16 * scale)}px sans-serif`;
-  c.fillText('总光程差  Δ = 2nd·cos r + λ/2', g.w / 2, g.h * 0.94);
+  c.font = `bold ${Math.max(12, 16 * scale * modeScale)}px sans-serif`;
+  c.fillText('总光程差  Δ = 2nd·cos r + λ/2', g.w / 2, g.h * 0.97);
 
   c.restore();
 }
@@ -515,25 +530,25 @@ function drawHalfWavePhase(
 // ── result 阶段 ──
 function drawResultPhase(
   c: CanvasRenderingContext2D,
-  g: { w: number; h: number; text: string; dim: string; accent: string; scale: number; state: ThinFilmState }
+  g: { w: number; h: number; text: string; dim: string; accent: string; scale: number; modeScale: number; state: ThinFilmState }
 ): void {
-  const { text, accent, dim, scale, state } = g;
+  const { text, accent, dim, scale, modeScale, state } = g;
   c.save();
 
   const fy = g.h * 0.86;
   const result = state.isConstructive ? '相长干涉（增强）' : '相消干涉（减弱）';
 
   c.fillStyle = state.isConstructive ? '#22c55e' : accent;
-  c.font = `bold ${Math.max(14, 20 * scale)}px sans-serif`;
+  c.font = `bold ${Math.max(14, 20 * scale * modeScale)}px sans-serif`;
   c.textAlign = 'center';
   c.fillText(result, g.w / 2, fy);
 
   c.fillStyle = text;
-  c.font = `${Math.max(10, 13 * scale)}px sans-serif`;
+  c.font = `${Math.max(10, 13 * scale * modeScale)}px sans-serif`;
   c.fillText(`增强：2nd·cos r = (m+1/2)λ    相消：2nd·cos r = mλ`, g.w / 2, fy + 26 * scale);
 
   c.fillStyle = dim;
-  c.font = `${Math.max(9, 11 * scale)}px sans-serif`;
+  c.font = `${Math.max(9, 11 * scale * modeScale)}px sans-serif`;
   c.fillText(`Δ = ${(state.pathDiff / 1e3).toFixed(2)} μm   m ≈ ${state.order.toFixed(1)}   R = ${(state.reflectivity * 100).toFixed(1)}%`, g.w / 2, fy + 46 * scale);
 
   c.restore();
