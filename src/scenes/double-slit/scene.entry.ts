@@ -75,7 +75,7 @@ export function createDoubleSlitScene(
     // 左容器：游标卡尺
     leftContainer = document.createElement('div');
     leftContainer.style.cssText =
-      'width:50%;height:50%;position:relative;pointer-events:auto;border-radius:4px;overflow:visible;transform:scale(2);transform-origin:top left;';
+      'width:100%;height:100%;min-height:560px;position:relative;pointer-events:auto;border-radius:4px;overflow:visible;transform:scale(2);transform-origin:top left;margin-top:-300px;';
     instrumentWrap.appendChild(leftContainer);
 
     const leftCanvas = document.createElement('canvas');
