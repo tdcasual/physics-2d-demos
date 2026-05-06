@@ -69,13 +69,13 @@ export function createDoubleSlitScene(
     instrumentWrap.style.cssText =
       'position:absolute;bottom:0;left:0;width:100%;height:65%;' +
       'display:flex;gap:8px;padding:8px;box-sizing:border-box;' +
-      'pointer-events:none;z-index:10';
+      'pointer-events:none;z-index:10;overflow:auto;';
     parent.appendChild(instrumentWrap);
 
     // 左容器：游标卡尺
     leftContainer = document.createElement('div');
     leftContainer.style.cssText =
-      'flex:1;height:100%;position:relative;pointer-events:auto;border-radius:4px;overflow:hidden;';
+      'width:50%;height:50%;position:relative;pointer-events:auto;border-radius:4px;overflow:visible;transform:scale(2);transform-origin:top left;';
     instrumentWrap.appendChild(leftContainer);
 
     const leftCanvas = document.createElement('canvas');
@@ -154,7 +154,6 @@ export function createDoubleSlitScene(
     const active = sim.getState().params.activeInstrument;
     if (leftContainer) {
       leftContainer.style.display = active === 'caliper' ? 'block' : 'none';
-      leftContainer.style.flex = active === 'caliper' ? '1' : 'none';
     }
     if (rightContainer) {
       rightContainer.style.display = active === 'micrometer' ? 'block' : 'none';
