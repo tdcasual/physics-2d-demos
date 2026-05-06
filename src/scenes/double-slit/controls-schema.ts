@@ -58,12 +58,7 @@ const instrumentSection = {
       ],
       initialActive: 'caliper'
     },
-    {
-      type: 'toggle' as const,
-      key: 'showInstrumentReadout',
-      label: '显示仪器读数',
-      value: false
-    },
+
     {
       type: 'slider' as const,
       key: 'stripeOffset',

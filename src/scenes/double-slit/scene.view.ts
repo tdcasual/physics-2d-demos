@@ -68,12 +68,19 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
   let ctx: CanvasRenderingContext2D | null = null;
   let theme: TeachingTheme = options.theme ?? 'dark';
   let scale = 1;
+  let dpr = 1;
 
   function resizeCanvas(): void {
     if (!canvas) return;
     const newCtx = sizeCanvasToFill(canvas);
     if (newCtx) ctx = newCtx;
-    scale = parseFloat(canvas.dataset.responsiveScale || '1');
+    const rawScale = parseFloat(canvas.dataset.responsiveScale || '1');
+    const cssW = parseFloat(canvas.style.width || '1000');
+    const cssH = parseFloat(canvas.style.height || '500');
+    dpr = canvas.width / cssW;
+    // 限制 scale 使 1000×500 逻辑画布始终能 fit 进 CSS 容器，再乘 dpr 利用高分辨率
+    const fitScale = Math.min(cssW / 1000, cssH / 500);
+    scale = Math.min(rawScale, fitScale);
   }
 
   // ── 绘图辅助函数（逻辑坐标 1000×500，无手动 scale）──
@@ -127,8 +134,10 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
     time: number
   ) => {
     c.strokeStyle = color;
-    c.lineWidth = 3;
-    const numWaves = Math.floor(maxR / gap) + 2;
+    c.lineWidth = Math.max(2, 3 * Math.min(scale, 1.5));
+    // 高分辨率下增加波纹环数，增强视觉丰富度
+    const extraWaves = Math.floor(Math.max(0, scale - 0.8) * 2);
+    const numWaves = Math.floor(maxR / gap) + 2 + extraWaves;
     for (let i = 0; i < numWaves; i++) {
       const r = (time % gap) + i * gap;
       if (r > 0 && r < maxR) {
@@ -146,21 +155,25 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
     CY: number,
     d: number,
     palette: WavePalette,
-    scene: typeof SCENE_PALETTE['dark']
+    scene: typeof SCENE_PALETTE['dark'],
+    skipTube = false
   ) => {
     const drawLabel = (x: number, y: number, text: string) => {
       c.fillStyle = scene.text;
-      c.font = '14px sans-serif';
+      const fontSize = Math.max(12, 14 * Math.min(scale, 1.5));
+      c.font = `${fontSize}px sans-serif`;
       c.textAlign = 'center';
       c.fillText(text, x, y);
     };
 
-    // 遮光筒底色
-    c.fillStyle = scene.tubeBg;
-    c.fillRect(POS.doubleSlit, CY - 100, POS.screen - POS.doubleSlit, 200);
-    c.strokeStyle = scene.tubeBorder;
-    c.lineWidth = 2;
-    c.strokeRect(POS.doubleSlit, CY - 100, POS.screen - POS.doubleSlit, 200);
+    if (!skipTube) {
+      // 遮光筒底色
+      c.fillStyle = scene.tubeBg;
+      c.fillRect(POS.doubleSlit, CY - 100, POS.screen - POS.doubleSlit, 200);
+      c.strokeStyle = scene.tubeBorder;
+      c.lineWidth = 2;
+      c.strokeRect(POS.doubleSlit, CY - 100, POS.screen - POS.doubleSlit, 200);
+    }
 
     c.fillStyle = scene.instrument;
 
@@ -217,6 +230,51 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
     drawLabel(POS.eyepiece, CY - 40, '目镜');
   };
 
+  const drawInterferenceOverlay = (
+    c: CanvasRenderingContext2D,
+    startX: number,
+    endX: number,
+    CY: number,
+    d: number,
+    gap: number,
+    palette: WavePalette,
+    L: number,
+    isDark: boolean
+  ) => {
+    const lambdaPx = gap * 0.35;
+    const slitWidthA = d / 3.5;
+    const regionTop = CY - 130;
+    const regionBottom = CY + 130;
+    // 动态脉动效果，增强"动态响应"感
+    const pulse = 0.85 + 0.15 * Math.sin(Date.now() / 400);
+    const baseAlpha = isDark ? 0.22 * pulse : 0.14 * pulse;
+    const stepY = scale > 1.2 ? 2 : 3;
+
+    for (let y = regionTop; y <= regionBottom; y += stepY) {
+      const dy = y - CY;
+      const delta = (dy * d) / L;
+      const phase = (Math.PI * delta) / lambdaPx;
+      const cos2 = Math.pow(Math.cos(phase), 2);
+
+      const alpha = (Math.PI * (dy * slitWidthA) / L) / lambdaPx;
+      const sinc = alpha === 0 ? 1 : Math.sin(alpha) / alpha;
+      const sinc2 = Math.pow(sinc, 2);
+
+      const intensity = cos2 * sinc2;
+      c.fillStyle = `rgba(${palette.screen}, ${intensity * baseAlpha})`;
+      c.fillRect(startX, y, endX - startX, stepY);
+    }
+
+    // 叠加原理标注
+    c.fillStyle = isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)';
+    const labelSize = Math.max(10, 11 * Math.min(scale, 1.5));
+    c.font = `${labelSize}px sans-serif`;
+    c.textAlign = 'center';
+    const midX = startX + (endX - startX) * 0.5;
+    c.fillText('波峰 + 波峰 → 加强（亮带）', midX, regionTop - 10);
+    c.fillText('波峰 + 波谷 → 抵消（暗带）', midX, regionBottom + 18);
+  };
+
   const drawInterferencePattern = (
     c: CanvasRenderingContext2D,
     startX: number,
@@ -232,9 +290,11 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
 
     c.beginPath();
     c.strokeStyle = palette.solid;
-    c.lineWidth = 3.5;
+    c.lineWidth = Math.max(2.5, 3.5 * Math.min(scale, 1.5));
 
-    for (let y = -120; y <= 120; y++) {
+    // 高分辨率下提高采样密度
+    const sampleStep = scale > 1.2 ? 1 : 2;
+    for (let y = -120; y <= 120; y += sampleStep) {
       const py = CY + y;
       const delta = (y * d) / L;
       const phase = (Math.PI * delta) / lambdaPx;
@@ -252,7 +312,7 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
 
       // 毛玻璃上的条纹（颜色与波色严格对应）
       c.fillStyle = `rgba(${palette.screen}, ${intensity * 0.9})`;
-      c.fillRect(startX - 2, py, 4, 1);
+      c.fillRect(startX - 2, py, 4, sampleStep);
     }
     c.stroke();
 
@@ -282,7 +342,7 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
     const patternW = W * 0.55;
     const patternY = 12;
     const patternH = topH - 24;
-    const centerY = patternY + patternH * 0.5;
+    // const centerY = patternY + patternH * 0.5;
 
     // 物理条纹间距（px）
     const fringeSpacingPx = computeFringeSpacingPx(lambda, slitDistance);
@@ -345,11 +405,7 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
     c.stroke();
     c.setLineDash([]);
 
-    // 下方区域标签
-    c.fillStyle = scene.text;
-    c.font = '12px sans-serif';
-    c.textAlign = 'center';
-    c.fillText('↓ 测量仪器区 ↓', W * 0.5, topH + 18);
+    // （下方仪器区标签已移除，节省视觉空间）
   };
 
   // ── 主渲染 ──
@@ -370,10 +426,15 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
     const W = 1000;
     const H = 500;
 
-    // 使用 setTransform 一次性缩放
-    c.setTransform(scale, 0, 0, scale, 0, 0);
+    // 先以像素坐标清除整个 canvas，彻底消除盲区残留
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.fillStyle = scene.bg;
+    c.fillRect(0, 0, canvas.width, canvas.height);
 
-    // 背景
+    // 再设置逻辑坐标变换，乘 dpr 以充分利用高分辨率屏幕
+    c.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+
+    // 逻辑画布背景（与上方清除色一致，确保逻辑区域内背景正确）
     c.fillStyle = scene.bg;
     c.fillRect(0, 0, W, H);
 
@@ -425,8 +486,20 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
         drawWaves(c, POS.doubleSlit, CY + d / 2, maxRadius, palette.wave, gap, time);
       }
 
+      // 步骤4：空间干涉与叠加可视化
+      if (step === 4) {
+        // 先画遮光筒底色
+        c.fillStyle = scene.tubeBg;
+        c.fillRect(POS.doubleSlit, CY - 100, POS.screen - POS.doubleSlit, 200);
+        c.strokeStyle = scene.tubeBorder;
+        c.lineWidth = 2;
+        c.strokeRect(POS.doubleSlit, CY - 100, POS.screen - POS.doubleSlit, 200);
+        // 叠加明暗带
+        drawInterferenceOverlay(c, POS.doubleSlit, POS.screen, CY, d, gap, palette, POS.screen - POS.doubleSlit, isDark);
+      }
+
       // 绘制仪器
-      drawInstruments(c, POS, CY, d, palette, scene);
+      drawInstruments(c, POS, CY, d, palette, scene, step === 4);
 
       // 干涉条纹与光强曲线
       if (step >= 5) {

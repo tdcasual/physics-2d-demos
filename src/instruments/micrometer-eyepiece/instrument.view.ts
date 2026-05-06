@@ -363,7 +363,6 @@ export function createMicrometerEyepieceView(options: {
       </div>
     </div>
     <div class="dashboard">
-      <div class="readout" id="readout-display">0.300 mm</div>
       <div class="hint" id="hint-text">↕ 上下拨动或 ↔ 左右推拉右侧测微螺杆，移动左侧准星瞄准干涉条纹</div>
     </div>
   `;
@@ -376,7 +375,7 @@ export function createMicrometerEyepieceView(options: {
   const thimbleGroup = qs<HTMLDivElement>('thimble-group');
   const crosshairSystem = qs<HTMLDivElement>('crosshair-system');
   const lensView = qs<HTMLDivElement>('lens-view');
-  const readoutDisplay = qs<HTMLDivElement>('readout-display');
+  const readoutDisplay = shadow.getElementById('readout-display') as HTMLDivElement | null;
   const hintEl = qs<HTMLDivElement>('hint-text');
   const caseEl = root.querySelector('.case') as HTMLDivElement;
   const systemEl = root.querySelector('.micrometer-system') as HTMLDivElement;
@@ -407,7 +406,7 @@ export function createMicrometerEyepieceView(options: {
   let sysDragging = false;
   let sysStartX = 0;
   let sysStartY = 0;
-  let sysX = 0;
+  let sysX = -250;
   let sysY = 0;
 
   // 事件监听器
@@ -563,7 +562,7 @@ export function createMicrometerEyepieceView(options: {
 
     // D. 高精度数字更新
     const totalReading = currentReading + zeroOffset;
-    readoutDisplay.innerText = totalReading.toFixed(3) + ' mm';
+    if (readoutDisplay) readoutDisplay.innerText = totalReading.toFixed(3) + ' mm';
 
     // E. 事件检测
     const aligned = checkAlign(viewOffset, stripeConfig.spacing);
@@ -621,7 +620,7 @@ export function createMicrometerEyepieceView(options: {
     sysY += clientY - sysStartY;
     sysStartX = clientX;
     sysStartY = clientY;
-    systemEl.style.transform = `translate(${sysX}px, ${sysY}px) scale(1.1)`;
+    systemEl.style.transform = `translate(${sysX}px, ${sysY}px) scale(1.5)`;
   };
 
   const handleSysDragEnd = () => {
@@ -688,7 +687,7 @@ export function createMicrometerEyepieceView(options: {
 
   // ── 启动引擎 ──
   caseEl.style.cursor = 'grab';
-  systemEl.style.transform = 'translate(0px, 0px) scale(1.1)';
+  systemEl.style.transform = 'translate(-250px, 0px) scale(1.5)';
   initSleeve();
   initThimble();
   updateStripes();
@@ -800,7 +799,7 @@ export function createMicrometerEyepieceView(options: {
         if (typeof data.stripeAngle === 'number') stripeConfig.angle = data.stripeAngle;
         if (typeof data.sysX === 'number') sysX = data.sysX;
         if (typeof data.sysY === 'number') sysY = data.sysY;
-        systemEl.style.transform = `translate(${sysX}px, ${sysY}px) scale(1.1)`;
+        systemEl.style.transform = `translate(${sysX}px, ${sysY}px) scale(1.5)`;
         updateStripes();
         renderView();
       } catch {
@@ -821,7 +820,7 @@ export function createMicrometerEyepieceView(options: {
     },
 
     setReadoutVisible(visible: boolean) {
-      readoutDisplay.style.display = visible ? '' : 'none';
+      if (readoutDisplay) readoutDisplay.style.display = visible ? '' : 'none';
     },
   } as MicrometerEyepieceView & { setReadoutVisible(visible: boolean): void };
 }

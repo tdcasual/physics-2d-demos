@@ -9,7 +9,7 @@ import type { SceneLifecycle } from '../../platform/scene-contract';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 
 import { createStandardSceneEntry } from '../scene-entry-helpers';
-import { createDoubleSlitSim, type DoubleSlitParams, type DoubleSlitState, STEPS, computeFringeSpacingPx, lambdaToRgb, PHYSICAL_L } from './scene.sim';
+import { createDoubleSlitSim, type DoubleSlitParams, type DoubleSlitState, STEPS, computeFringeSpacingPx, lambdaToRgb } from './scene.sim';
 import { createDoubleSlitView } from './scene.view';
 import { createInterferenceVernierCaliper } from '../../instruments/interference-vernier-caliper/instrument.entry';
 import { createMicrometerEyepiece } from '../../instruments/micrometer-eyepiece/instrument.entry';
@@ -57,6 +57,7 @@ export function createDoubleSlitScene(
   let lastStep = -1;
   let parentOriginalPosition: string | null = null;
   const instrumentStateCache = new Map<string, Record<string, unknown>>();
+  let instrumentUnsubscribers: Array<() => void> = [];
 
   function ensureInstrumentCanvases(): void {
     if (instrumentWrap) return;
@@ -75,7 +76,7 @@ export function createDoubleSlitScene(
     // 左容器：游标卡尺
     leftContainer = document.createElement('div');
     leftContainer.style.cssText =
-      'width:50%;height:100%;min-height:540px;position:relative;pointer-events:auto;border-radius:4px;overflow:visible;transform:scale(1.8);transform-origin:top left;margin-top:-250px;';
+      'width:50%;height:100%;min-height:540px;position:relative;pointer-events:auto;border-radius:4px;overflow:visible;transform:scale(1.8);transform-origin:top center;margin-top:-250px;';
     instrumentWrap.appendChild(leftContainer);
 
     const leftCanvas = document.createElement('canvas');
@@ -111,6 +112,11 @@ export function createDoubleSlitScene(
       });
       const cached = instrumentStateCache.get('caliper');
       if (cached) leftInstrument.sim.setParams(cached);
+      // 订阅读数变化，同步到实验状态区
+      const caliperView = leftInstrument.view as unknown as { onReadingChange?: (cb: () => void) => () => void };
+      if (caliperView.onReadingChange) {
+        instrumentUnsubscribers.push(caliperView.onReadingChange(() => base.notify()));
+      }
     }
 
     if (!rightInstrument) {
@@ -121,10 +127,17 @@ export function createDoubleSlitScene(
       });
       const cached = instrumentStateCache.get('micrometer');
       if (cached) rightInstrument.sim.setParams(cached);
+      // 订阅读数变化，同步到实验状态区
+      const micrometerView = rightInstrument.view as unknown as { onReadingChange?: (cb: () => void) => () => void };
+      if (micrometerView.onReadingChange) {
+        instrumentUnsubscribers.push(micrometerView.onReadingChange(() => base.notify()));
+      }
     }
   }
 
   function disposeInstruments(): void {
+    instrumentUnsubscribers.forEach((unsub) => unsub());
+    instrumentUnsubscribers = [];
     if (leftInstrument) {
       instrumentStateCache.set('caliper', { ...leftInstrument.sim.getState() });
       leftInstrument.view.dispose();
@@ -154,6 +167,7 @@ export function createDoubleSlitScene(
     const active = sim.getState().params.activeInstrument;
     if (leftContainer) {
       leftContainer.style.display = active === 'caliper' ? 'block' : 'none';
+      leftContainer.style.width = active === 'caliper' ? '100%' : '50%';
     }
     if (rightContainer) {
       rightContainer.style.display = active === 'micrometer' ? 'block' : 'none';
@@ -182,9 +196,9 @@ export function createDoubleSlitScene(
   }
 
   function syncInstrumentReadout(): void {
-    const show = sim.getState().params.showInstrumentReadout;
-    (leftInstrument?.view as unknown as { setReadoutVisible?: (v: boolean) => void })?.setReadoutVisible?.(show);
-    (rightInstrument?.view as unknown as { setReadoutVisible?: (v: boolean) => void })?.setReadoutVisible?.(show);
+    // 读数统一显示在实验状态区，仪器内部读数始终隐藏
+    (leftInstrument?.view as unknown as { setReadoutVisible?: (v: boolean) => void })?.setReadoutVisible?.(false);
+    (rightInstrument?.view as unknown as { setReadoutVisible?: (v: boolean) => void })?.setReadoutVisible?.(false);
   }
 
   function syncInstruments(): void {
@@ -215,22 +229,31 @@ export function createDoubleSlitScene(
 
   function getReadoutItems(): Array<{ label: string; value: string }> {
     const s = sim.getState();
-    const lambda = s.params.lambda;
     const d = s.params.slitDistance;
     const step = s.params.step;
     const dMm = (d * 0.01).toFixed(2);
     const items = [
       { label: '当前步骤', value: `${step} / 6` },
-      { label: '波长', value: `${lambda} nm` },
       { label: '双缝间距 d', value: `${dMm} mm` },
     ];
     if (step === 6) {
       const instrumentName = s.params.activeInstrument === 'caliper' ? '干涉读数游标卡尺' : '高精度干涉测微仪';
       items.push({ label: '当前仪器', value: instrumentName });
-      const fringeSpacingPx = computeFringeSpacingPx(lambda, d);
-      items.push({ label: '双缝到屏距离 L', value: `${PHYSICAL_L.toFixed(3)} m` });
+      const fringeSpacingPx = computeFringeSpacingPx(s.params.lambda, d);
       items.push({ label: '条纹间距 Δx', value: `${(fringeSpacingPx * 0.01).toFixed(3)} mm` });
-      items.push({ label: '波长公式', value: 'λ = Δx·d / L' });
+      // 从当前激活仪器获取读数，统一显示在实验状态区
+      const active = s.params.activeInstrument;
+      if (active === 'caliper' && leftInstrument) {
+        const reading = (leftInstrument.view as unknown as { getReading?: () => number }).getReading?.();
+        if (reading !== undefined) {
+          items.push({ label: '游标卡尺读数', value: `${reading.toFixed(3)} cm` });
+        }
+      } else if (active === 'micrometer' && rightInstrument) {
+        const reading = (rightInstrument.view as unknown as { getReading?: () => number }).getReading?.();
+        if (reading !== undefined) {
+          items.push({ label: '螺旋测微仪读数', value: `${reading.toFixed(3)} mm` });
+        }
+      }
     }
     return items;
   }

@@ -35,7 +35,7 @@ const CSS = `
 .microscope-root {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
   width: 100%;
   height: 100%;
@@ -43,26 +43,29 @@ const CSS = `
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   user-select: none;
   overflow: hidden;
+  position: relative;
 }
 
 .header-panel {
-  padding: 20px;
-  text-align: center;
-  z-index: 10;
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  z-index: 20;
+  padding: 0;
+  text-align: right;
 }
 
 .readout-display {
-  font-size: 28px;
+  font-size: 18px;
   font-weight: bold;
   font-family: monospace;
   background: #fff;
   color: #1565c0;
   border: 2px solid #ddd;
-  padding: 10px 20px;
+  padding: 5px 12px;
   border-radius: 6px;
-  border: 2px solid #ddd;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08), inset 0 0 10px rgba(21,101,192,0.08);
-  letter-spacing: 2px;
+  letter-spacing: 1px;
   display: inline-block;
 }
 
@@ -81,7 +84,7 @@ const CSS = `
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 40px 20px;
+  padding: 10px;
   box-sizing: border-box;
 }
 
@@ -93,7 +96,7 @@ const CSS = `
 
 .instrument-container {
   position: relative;
-  width: 820px;
+  width: 724px;
   height: 420px;
   background-color: var(--bg-color);
   box-shadow: 0 10px 30px rgba(0,0,0,0.15), inset 0 0 2px rgba(0,0,0,0.05);
@@ -116,8 +119,8 @@ const CSS = `
 .ticks-container {
   position: absolute;
   bottom: 0;
-  left: 50px;
-  width: 750px;
+  left: 24px;
+  width: 700px;
   height: 100%;
 }
 
@@ -166,7 +169,7 @@ const CSS = `
 .vernier-ticks-container {
   position: absolute;
   top: 0;
-  left: 50px;
+  left: 24px;
   width: 500px;
   height: 100%;
 }
@@ -309,7 +312,7 @@ const VERNIER_DIVISIONS = 50;     // 50 分度游标
 const VERNIER_LENGTH_UNITS = 4.9; // 游标尺总长 4.9 cm
 const VERNIER_LENGTH_PX = VERNIER_LENGTH_UNITS * UNIT_PX; // 490 px
 const VERNIER_SUB_TICK_PX = VERNIER_LENGTH_PX / VERNIER_DIVISIONS; // 9.8 px
-const LEAST_COUNT = 0.002;        // 最小读数精度 0.002 cm
+// const LEAST_COUNT = 0.002;        // 最小读数精度 0.002 cm
 const LEAST_COUNT_PX = 0.2;       // 最小移动像素步长
 const MAX_CM = 2.1;               // 量程上限 2.1 cm
 const MAX_X = MAX_CM * UNIT_PX;   // 210 px
@@ -396,9 +399,19 @@ export function createInterferenceVernierCaliperView(options: {
   const readoutDisplay = qs<HTMLDivElement>('readout');
   const tipsEl = qs<HTMLDivElement>('tips-text');
   const knob = qs<HTMLDivElement>('knob');
+  // const instrumentEl = qs<HTMLDivElement>('instrument');
+  const headerPanel = root.querySelector('.header-panel') as HTMLElement;
 
   if (!showHints && tipsEl) {
     tipsEl.style.display = 'none';
+  }
+
+  // 读数统一显示在场景实验状态区，仪器内部不显示独立读数框
+  if (readoutDisplay) {
+    readoutDisplay.style.display = 'none';
+  }
+  if (headerPanel) {
+    headerPanel.style.display = 'none';
   }
 
   // ── 状态 ──
@@ -417,7 +430,7 @@ export function createInterferenceVernierCaliperView(options: {
   let wasAtLimit = false;
 
   // ── 条纹配置 ──
-  let fringeConfig = {
+  const fringeConfig = {
     spacing: 16,
     blur: 1.5,
     opacity: 0.85,
