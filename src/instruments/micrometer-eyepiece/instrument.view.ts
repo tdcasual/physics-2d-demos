@@ -97,16 +97,14 @@ const CSS = `
   height: 100%;
   background: radial-gradient(circle at 40% 40%, #ffffff 0%, #fbd1a6 60%, #e09854 100%);
   position: absolute;
-  background-image: repeating-linear-gradient(
-    90deg,
-    transparent 0px,
-    transparent 15px,
-    rgba(200, 80, 20, 0.2) 22px,
-    rgba(200, 80, 20, 0.4) 25px,
-    rgba(200, 80, 20, 0.2) 28px,
-    transparent 35px,
-    transparent 50px
-  );
+}
+
+.stripe-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .crosshair-system {
@@ -342,7 +340,11 @@ export function createMicrometerEyepieceView(options: {
       <div class="case">
         <div class="lens-outer-ring">
           <div class="lens-inner-ring">
-            <div class="lens-view" id="lens-view"></div>
+            <div class="lens-view" id="lens-view">
+              <svg class="stripe-svg" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                <g id="stripe-group"></g>
+              </svg>
+            </div>
             <div class="crosshair-system" id="crosshair-system">
               <div class="crosshair-v"></div>
               <div class="crosshair-h"></div>
@@ -376,6 +378,7 @@ export function createMicrometerEyepieceView(options: {
   const thimbleGroup = qs<HTMLDivElement>('thimble-group');
   const crosshairSystem = qs<HTMLDivElement>('crosshair-system');
   const lensView = qs<HTMLDivElement>('lens-view');
+  const stripeGroup = qs<SVGGElement>('stripe-group');
   const readoutDisplay = qs<HTMLDivElement>('readout-display');
   const hintEl = qs<HTMLDivElement>('hint-text');
   const caseEl = root.querySelector('.case') as HTMLDivElement;
@@ -445,19 +448,56 @@ export function createMicrometerEyepieceView(options: {
   // ── 更新干涉条纹 ──
   function updateStripes() {
     const s = stripeConfig;
-    const stripeW = s.spacing * 0.3;
-    const mid = s.spacing * 0.5;
-    lensView.style.backgroundImage = `repeating-linear-gradient(
-      ${s.angle}deg,
-      transparent 0px,
-      transparent ${Math.round(mid - stripeW)}px,
-      ${s.color} ${Math.round(mid - stripeW * 0.5)}px,
-      ${s.color} ${Math.round(mid)}px,
-      ${s.color} ${Math.round(mid + stripeW * 0.5)}px,
-      transparent ${Math.round(mid + stripeW)}px,
-      transparent ${Math.round(s.spacing)}px
-    )`;
-    lensView.style.backgroundPositionX = '0px';
+    const spacing = s.spacing;
+    const envelopeSpacing = spacing * 8;
+
+    // 清空旧条纹
+    while (stripeGroup.firstChild) {
+      stripeGroup.removeChild(stripeGroup.firstChild);
+    }
+
+    // 解析颜色
+    const rgbMatch = s.color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    const baseR = rgbMatch ? parseInt(rgbMatch[1]) : 200;
+    const baseG = rgbMatch ? parseInt(rgbMatch[2]) : 80;
+    const baseB = rgbMatch ? parseInt(rgbMatch[3]) : 20;
+
+    // lens-inner-ring 直径 176px，中心 88px
+    const center = 88;
+    const maxLines = Math.ceil(center / spacing) + 2;
+
+    for (let m = 0; m <= maxLines; m++) {
+      const offset = m * spacing;
+      const beta = (Math.PI * offset) / envelopeSpacing;
+      const sinc = Math.abs(beta) < 1e-6 ? 1 : Math.sin(beta) / beta;
+      const envelope = Math.pow(sinc, 2);
+      const alpha = Math.max(0.05, 0.85 * envelope);
+      const thickness = Math.max(0.5, 2.5 * envelope);
+
+      // 右侧条纹
+      if (center + offset <= 176) {
+        const lineR = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        lineR.setAttribute('x1', String(center + offset));
+        lineR.setAttribute('y1', '0');
+        lineR.setAttribute('x2', String(center + offset));
+        lineR.setAttribute('y2', '176');
+        lineR.setAttribute('stroke', `rgba(${baseR},${baseG},${baseB},${alpha})`);
+        lineR.setAttribute('stroke-width', String(thickness));
+        stripeGroup.appendChild(lineR);
+      }
+
+      // 左侧条纹（m=0 跳过中心线避免重复）
+      if (m > 0 && center - offset >= 0) {
+        const lineL = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        lineL.setAttribute('x1', String(center - offset));
+        lineL.setAttribute('y1', '0');
+        lineL.setAttribute('x2', String(center - offset));
+        lineL.setAttribute('y2', '176');
+        lineL.setAttribute('stroke', `rgba(${baseR},${baseG},${baseB},${alpha})`);
+        lineL.setAttribute('stroke-width', String(thickness));
+        stripeGroup.appendChild(lineL);
+      }
+    }
   }
 
   // ── 初始化主尺双刻度 ──

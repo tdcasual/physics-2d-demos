@@ -167,7 +167,11 @@ export function createDoubleSlitScene(
     const fringeSpacingPx = computeFringeSpacingPx(lambda, slitDistance);
     const [r, g, b] = lambdaToRgb(lambda);
     const fringeColor = `rgba(${r},${g},${b},0.85)`;
-    leftInstrument?.sim.setParams({ fringeSpacing: fringeSpacingPx, fringeColor });
+    leftInstrument?.sim.setParams({
+      fringeSpacing: fringeSpacingPx,
+      fringeColor,
+      fringeEnvelopeWidth: fringeSpacingPx * 8,
+    });
     rightInstrument?.sim.setParams({
       stripeSpacing: fringeSpacingPx,
       stripeColor: `rgb(${r},${g},${b})`,

@@ -501,9 +501,11 @@ export function createInterferenceVernierCaliperView(options: {
 
     for (let m = 0; m <= 30; m++) {
       const offset = (m + 0.5) * spacing;
-      const envelope = Math.max(0, Math.cos((offset / envelopeWidth) * (Math.PI / 2)));
-      const opacity = Math.max(0.05, baseOpacity * Math.pow(envelope, 1.5));
-      const thickness = Math.max(2, 6 * envelope);
+      const beta = (Math.PI * offset) / envelopeWidth;
+      const sinc = Math.abs(beta) < 1e-6 ? 1 : Math.sin(beta) / beta;
+      const envelope = Math.pow(sinc, 2);
+      const opacity = Math.max(0.05, baseOpacity * envelope);
+      const thickness = Math.max(1, 4 * envelope);
 
       const lineL = document.createElementNS('http://www.w3.org/2000/svg', 'line');
       lineL.setAttribute('x1', String(patternCenter - offset));
