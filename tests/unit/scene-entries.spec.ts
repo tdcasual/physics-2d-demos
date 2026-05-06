@@ -53,8 +53,8 @@ for (const [path, mod] of Object.entries(sceneModules)) {
 }
 
 // 确保没有场景被遗漏
-if (discovered.length !== 13) {
+if (discovered.length !== 14) {
   throw new Error(
-    `Expected 13 scenes but discovered ${discovered.length}: ${discovered.join(', ')}`
+    `Expected 14 scenes but discovered ${discovered.length}: ${discovered.join(', ')}`
   );
 }
