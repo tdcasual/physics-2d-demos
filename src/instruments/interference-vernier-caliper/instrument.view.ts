@@ -219,23 +219,19 @@ const CSS = `
   width: 140px;
   height: 140px;
   border-radius: 50%;
-  background: radial-gradient(circle at 40% 40%, var(--lens-orange-center), var(--lens-orange-edge));
+  background: radial-gradient(circle at 40% 40%, #ffffff 0%, #fbd1a6 60%, #e09854 100%);
   border: 4px solid var(--lens-border-inner);
   position: relative;
   overflow: hidden;
   box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
 }
 
-.pattern-container {
+.stripe-layer {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 800px;
-  height: 800px;
-  margin-top: -400px;
-  margin-left: -400px;
-  pointer-events: none;
-  will-change: transform;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .crosshair-v {
@@ -376,16 +372,7 @@ export function createInterferenceVernierCaliperView(options: {
           <div class="slider-body">
             <div class="lens-assembly">
               <div class="lens-glass">
-                <div class="pattern-container" id="pattern">
-                  <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                      <filter id="blurFilter">
-                        <feGaussianBlur stdDeviation="1.5"/>
-                      </filter>
-                    </defs>
-                    <g id="interference-pattern" filter="url(#blurFilter)"></g>
-                  </svg>
-                </div>
+                <div class="stripe-layer" id="stripe-layer"></div>
                 <div class="crosshair-v"></div>
                 <div class="crosshair-h"></div>
               </div>
@@ -404,9 +391,8 @@ export function createInterferenceVernierCaliperView(options: {
 
   const mainTicksContainer = qs<HTMLDivElement>('main-ticks');
   const vernierTicksContainer = qs<HTMLDivElement>('vernier-ticks');
-  const patternGroup = qs<SVGGElement>('interference-pattern');
   const slider = qs<HTMLDivElement>('slider');
-  const pattern = qs<HTMLDivElement>('pattern');
+  const stripeLayer = qs<HTMLDivElement>('stripe-layer');
   const readoutDisplay = qs<HTMLDivElement>('readout');
   const tipsEl = qs<HTMLDivElement>('tips-text');
   const knob = qs<HTMLDivElement>('knob');
@@ -483,45 +469,21 @@ export function createInterferenceVernierCaliperView(options: {
     }
   }
 
-  // ── 生成干涉条纹 ──
+  // ── 生成干涉条纹（CSS gradient，与螺旋测微仪一致）──
   function updatePattern() {
-    // 清空旧条纹
-    while (patternGroup.firstChild) {
-      patternGroup.removeChild(patternGroup.firstChild);
-    }
-
-    const { spacing, blur, opacity: baseOpacity, envelopeWidth } = fringeConfig;
-    const patternCenter = 400; // 800px 容器的绝对中心
-
-    // 更新模糊滤镜
-    const blurFilter = shadow.querySelector('#blurFilter feGaussianBlur') as SVGFEGaussianBlurElement | null;
-    if (blurFilter) {
-      blurFilter.setAttribute('stdDeviation', String(blur));
-    }
-
-    for (let m = 0; m <= 30; m++) {
-      const offset = (m + 0.5) * spacing;
-      const opacity = baseOpacity;
-      const thickness = 2;
-
-      const lineL = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      lineL.setAttribute('x1', String(patternCenter - offset));
-      lineL.setAttribute('y1', '0');
-      lineL.setAttribute('x2', String(patternCenter - offset));
-      lineL.setAttribute('y2', '800');
-      lineL.setAttribute('stroke', fringeConfig.color.replace(/[\d.]+\)$/, `${opacity})`));
-      lineL.setAttribute('stroke-width', String(thickness));
-      patternGroup.appendChild(lineL);
-
-      const lineR = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      lineR.setAttribute('x1', String(patternCenter + offset));
-      lineR.setAttribute('y1', '0');
-      lineR.setAttribute('x2', String(patternCenter + offset));
-      lineR.setAttribute('y2', '800');
-      lineR.setAttribute('stroke', fringeConfig.color.replace(/[\d.]+\)$/, `${opacity})`));
-      lineR.setAttribute('stroke-width', String(thickness));
-      patternGroup.appendChild(lineR);
-    }
+    const { spacing, color } = fringeConfig;
+    const stripeW = spacing * 0.3;
+    const mid = spacing * 0.5;
+    stripeLayer.style.backgroundImage = `repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      transparent ${Math.round(mid - stripeW)}px,
+      ${color} ${Math.round(mid - stripeW * 0.5)}px,
+      ${color} ${Math.round(mid)}px,
+      ${color} ${Math.round(mid + stripeW * 0.5)}px,
+      transparent ${Math.round(mid + stripeW)}px,
+      transparent ${Math.round(spacing)}px
+    )`;
   }
 
   // ── 核心渲染 ──
@@ -537,9 +499,9 @@ export function createInterferenceVernierCaliperView(options: {
     // 1. 移动滑块
     slider.style.transform = `translateX(${snappedX}px)`;
 
-    // 2. 逆向移动干涉图样
+    // 2. 逆向移动干涉条纹
     const patternTranslateX = PATTERN_ABSOLUTE_X - (snappedX + LENS_OFFSET_FROM_VERNIER);
-    pattern.style.transform = `translate(${patternTranslateX}px, 0)`;
+    stripeLayer.style.backgroundPositionX = `${-patternTranslateX}px`;
 
     // 3. 更新读数
     const totalReading = currentReadingCm + zeroOffset;
