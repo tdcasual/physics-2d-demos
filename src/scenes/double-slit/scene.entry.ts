@@ -9,7 +9,7 @@ import type { SceneLifecycle } from '../../platform/scene-contract';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 
 import { createStandardSceneEntry } from '../scene-entry-helpers';
-import { createDoubleSlitSim, type DoubleSlitParams, type DoubleSlitState, STEPS, computeFringeSpacingPx, lambdaToRgb } from './scene.sim';
+import { createDoubleSlitSim, type DoubleSlitParams, type DoubleSlitState, STEPS, computeFringeSpacingPx, lambdaToRgb, PHYSICAL_L } from './scene.sim';
 import { createDoubleSlitView } from './scene.view';
 import { createInterferenceVernierCaliper } from '../../instruments/interference-vernier-caliper/instrument.entry';
 import { createMicrometerEyepiece } from '../../instruments/micrometer-eyepiece/instrument.entry';
@@ -167,10 +167,11 @@ export function createDoubleSlitScene(
     const fringeSpacingPx = computeFringeSpacingPx(lambda, slitDistance);
     const [r, g, b] = lambdaToRgb(lambda);
     const fringeColor = `rgba(${r},${g},${b},0.85)`;
+    // 游标卡尺坐标系 1px = 0.1mm，为主图的 10 倍，条纹间距需缩放以保持物理准确
     leftInstrument?.sim.setParams({
-      fringeSpacing: fringeSpacingPx,
+      fringeSpacing: fringeSpacingPx / 10,
       fringeColor,
-      fringeEnvelopeWidth: fringeSpacingPx * 8,
+      fringeEnvelopeWidth: (fringeSpacingPx / 10) * 8,
     });
     rightInstrument?.sim.setParams({
       stripeSpacing: fringeSpacingPx,
@@ -228,7 +229,9 @@ export function createDoubleSlitScene(
       const instrumentName = s.params.activeInstrument === 'caliper' ? '干涉读数游标卡尺' : '高精度干涉测微仪';
       items.push({ label: '当前仪器', value: instrumentName });
       const fringeSpacingPx = computeFringeSpacingPx(lambda, d);
+      items.push({ label: '双缝到屏距离 L', value: `${PHYSICAL_L.toFixed(3)} m` });
       items.push({ label: '条纹间距 Δx', value: `${(fringeSpacingPx * 0.01).toFixed(3)} mm` });
+      items.push({ label: '波长公式', value: 'λ = Δx·d / L' });
     }
     return items;
   }
