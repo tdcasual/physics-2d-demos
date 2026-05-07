@@ -79,9 +79,9 @@ export function createDoubleSlitSim(initial: DoubleSlitParams) {
     time = 0;
   }
 
-  function step(_dt: number): void {
+  function step(dt: number): void {
     if (params.isPlaying) {
-      time += 1.5;
+      time += dt * 0.09;
     }
   }
 

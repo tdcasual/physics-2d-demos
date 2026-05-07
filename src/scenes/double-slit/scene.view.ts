@@ -69,6 +69,7 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
   let theme: TeachingTheme = options.theme ?? 'dark';
   let scale = 1;
   let dpr = 1;
+  let modeScale = 1;
 
   function resizeCanvas(): void {
     if (!canvas) return;
@@ -119,7 +120,7 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
 
     // 波长数值
     c.fillStyle = isDark ? '#e2e8f0' : '#1e293b';
-    c.font = '11px sans-serif';
+    c.font = `${11 * modeScale}px sans-serif`;
     c.textAlign = 'left';
     c.fillText(`${Math.round(lambda)} nm`, barX + barW + 8, barY + 9);
   };
@@ -160,7 +161,7 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
   ) => {
     const drawLabel = (x: number, y: number, text: string) => {
       c.fillStyle = scene.text;
-      const fontSize = Math.max(12, 14 * Math.min(scale, 1.5));
+      const fontSize = Math.max(12, 14 * Math.min(scale, 1.5) * modeScale);
       c.font = `${fontSize}px sans-serif`;
       c.textAlign = 'center';
       c.fillText(text, x, y);
@@ -239,14 +240,15 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
     gap: number,
     palette: WavePalette,
     L: number,
-    isDark: boolean
+    isDark: boolean,
+    time: number
   ) => {
     const lambdaPx = gap * 0.35;
     const slitWidthA = d / 3.5;
     const regionTop = CY - 130;
     const regionBottom = CY + 130;
     // 动态脉动效果，增强"动态响应"感
-    const pulse = 0.85 + 0.15 * Math.sin(Date.now() / 400);
+    const pulse = 0.85 + 0.15 * Math.sin(time * 0.04);
     const baseAlpha = isDark ? 0.22 * pulse : 0.14 * pulse;
     const stepY = scale > 1.2 ? 2 : 3;
 
@@ -267,7 +269,7 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
 
     // 叠加原理标注
     c.fillStyle = isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)';
-    const labelSize = Math.max(10, 11 * Math.min(scale, 1.5));
+    const labelSize = Math.max(10, 11 * Math.min(scale, 1.5) * modeScale);
     c.font = `${labelSize}px sans-serif`;
     c.textAlign = 'center';
     const midX = startX + (endX - startX) * 0.5;
@@ -337,7 +339,7 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
     scene: typeof SCENE_PALETTE['dark'],
     isDark: boolean
   ) => {
-    const topH = H * 0.35;
+    const topH = H * 0.23;
     const patternX = W * 0.15;
     const patternW = W * 0.55;
     const patternY = 12;
@@ -359,12 +361,12 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
 
     // 标签
     c.fillStyle = scene.text;
-    c.font = '13px sans-serif';
+    c.font = `${13 * modeScale}px sans-serif`;
     c.textAlign = 'left';
     c.fillText('干涉条纹', patternX, patternY - 6);
 
     // 物理参数标注
-    c.font = '11px sans-serif';
+    c.font = `${11 * modeScale}px sans-serif`;
     c.fillStyle = scene.guide;
     const deltaXmm = (fringeSpacingPx * 0.01).toFixed(3);
     c.fillText(`Δx ≈ ${deltaXmm} mm`, patternX + patternW - 120, patternY - 6);
@@ -495,7 +497,7 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
         c.lineWidth = 2;
         c.strokeRect(POS.doubleSlit, CY - 100, POS.screen - POS.doubleSlit, 200);
         // 叠加明暗带
-        drawInterferenceOverlay(c, POS.doubleSlit, POS.screen, CY, d, gap, palette, POS.screen - POS.doubleSlit, isDark);
+        drawInterferenceOverlay(c, POS.doubleSlit, POS.screen, CY, d, gap, palette, POS.screen - POS.doubleSlit, isDark, time);
       }
 
       // 绘制仪器
@@ -521,8 +523,8 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
     setTheme(t: TeachingTheme) {
       theme = t;
     },
-    setMode() {
-      // 无特殊模式处理
+    setMode(mode: string) {
+      modeScale = mode === 'presentation' ? 1.5 : 1;
     },
     dispose() {
       canvas = null;
