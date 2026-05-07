@@ -3,7 +3,7 @@
  */
 
 import type { InstrumentSim, InstrumentState } from '../_contract/instrument-contract';
-import type { MicrometerEyepieceParams } from './instrument.meta';
+import type { MicrometerEyepieceParams, ViewMode } from './instrument.meta';
 
 export interface MicrometerEyepieceState extends InstrumentState {
   currentReading: number;
@@ -12,6 +12,7 @@ export interface MicrometerEyepieceState extends InstrumentState {
   stripeSpacing: number;
   stripeColor: string;
   stripeAngle: number;
+  viewMode: ViewMode;
 }
 
 export function createMicrometerEyepieceSim(
@@ -24,6 +25,7 @@ export function createMicrometerEyepieceSim(
     stripeSpacing: initial.stripeSpacing,
     stripeColor: initial.stripeColor,
     stripeAngle: initial.stripeAngle,
+    viewMode: initial.viewMode,
   };
 
   return {
@@ -49,6 +51,9 @@ export function createMicrometerEyepieceSim(
       if (params.stripeAngle !== undefined) {
         state.stripeAngle = params.stripeAngle;
       }
+      if (params.viewMode !== undefined) {
+        state.viewMode = params.viewMode;
+      }
     },
     step() {
       // 纯交互式仪器，无自动步进
@@ -60,6 +65,7 @@ export function createMicrometerEyepieceSim(
       state.stripeSpacing = initial.stripeSpacing;
       state.stripeColor = initial.stripeColor;
       state.stripeAngle = initial.stripeAngle;
+      state.viewMode = initial.viewMode;
     },
   };
 }

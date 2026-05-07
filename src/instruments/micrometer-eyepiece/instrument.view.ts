@@ -363,7 +363,7 @@ export function createMicrometerEyepieceView(options: {
       </div>
     </div>
     <div class="dashboard">
-      <div class="hint" id="hint-text">↕ 上下拨动或 ↔ 左右推拉右侧测微螺杆，移动左侧准星瞄准干涉条纹</div>
+      <div class="hint" id="hint-text"></div>
     </div>
   `;
 
@@ -373,11 +373,19 @@ export function createMicrometerEyepieceView(options: {
   const sleeveScales = qs<HTMLDivElement>('sleeve-scales');
   const thimbleStrip = qs<HTMLDivElement>('thimble-strip');
   const thimbleGroup = qs<HTMLDivElement>('thimble-group');
+  const crosshairSystem = qs<HTMLDivElement>('crosshair-system');
   const lensView = qs<HTMLDivElement>('lens-view');
   const readoutDisplay = shadow.getElementById('readout-display') as HTMLDivElement | null;
   const hintEl = qs<HTMLDivElement>('hint-text');
   const caseEl = root.querySelector('.case') as HTMLDivElement;
   const systemEl = root.querySelector('.micrometer-system') as HTMLDivElement;
+
+  function updateHint() {
+    if (!hintEl) return;
+    hintEl.textContent = viewMode === 'crosshair'
+      ? '↕ 上下拨动或 ↔ 左右推拉右侧测微螺杆，移动准星瞄准条纹'
+      : '↕ 上下拨动或 ↔ 左右推拉右侧测微螺杆，移动条纹对准准星';
+  }
 
   if (!showHints && hintEl) {
     hintEl.style.display = 'none';
@@ -393,6 +401,7 @@ export function createMicrometerEyepieceView(options: {
 
   let currentReading = config.initialReading;
   let zeroOffset = 0;
+  let viewMode: 'crosshair' | 'fringe' = 'crosshair';
   let isDragging = false;
   let startX = 0;
   let startY = 0;
@@ -400,6 +409,7 @@ export function createMicrometerEyepieceView(options: {
   let disposed = false;
   let simLastReading = config.initialReading;
   let simLastZero = 0;
+  let simLastViewMode: 'crosshair' | 'fringe' = 'crosshair';
 
   // 整体仪器拖拽状态
   let sysDragging = false;
@@ -443,17 +453,21 @@ export function createMicrometerEyepieceView(options: {
   // ── 更新干涉条纹 ──
   function updateStripes() {
     const s = stripeConfig;
-    const stripeW = s.spacing * 0.3;
-    const mid = s.spacing * 0.5;
+    const gap = Math.round(s.spacing * 0.3);
+    const fadeInEnd = Math.round(s.spacing * 0.4);
+    const fadeOutStart = Math.round(s.spacing * 0.6);
+    const fadeOutEnd = Math.round(s.spacing * 0.7);
+    const fadeColor = `color-mix(in srgb, transparent 50%, ${s.color})`;
+    // 间隙 → 渐变淡入 → 实心 → 渐变淡出 → 间隙（循环边界无缝）
     lensView.style.backgroundImage = `repeating-linear-gradient(
       ${s.angle}deg,
       transparent 0px,
-      transparent ${Math.round(mid - stripeW)}px,
-      ${s.color} ${Math.round(mid - stripeW * 0.5)}px,
-      ${s.color} ${Math.round(mid)}px,
-      ${s.color} ${Math.round(mid + stripeW * 0.5)}px,
-      transparent ${Math.round(mid + stripeW)}px,
-      transparent ${Math.round(s.spacing)}px
+      transparent ${gap}px,
+      ${fadeColor} ${fadeInEnd}px,
+      ${s.color} ${Math.round(s.spacing * 0.5)}px,
+      ${s.color} ${fadeOutStart}px,
+      ${fadeColor} ${fadeOutEnd}px,
+      transparent ${s.spacing}px
     )`;
   }
 
@@ -555,9 +569,17 @@ export function createMicrometerEyepieceView(options: {
     // B2. 更新对象池中的可见 tick
     updateThimbleTicks();
 
-    // C. 联动干涉视场：准星固定，平移干涉条纹（条纹附着在样品台上）
+    // C. 联动干涉视场
     const viewOffset = (currentReading - config.initialReading - stripeConfig.offset) * config.crosshairSpeed;
-    lensView.style.backgroundPositionX = `${-viewOffset}px`;
+    if (viewMode === 'fringe') {
+      // 条纹移动模式：准星固定，条纹随样品台移动
+      crosshairSystem.style.transform = 'translateX(0)';
+      lensView.style.backgroundPositionX = `${Math.round(-viewOffset)}px`;
+    } else {
+      // 准星移动模式（默认）：条纹固定，准星随螺杆移动
+      lensView.style.backgroundPositionX = '0px';
+      crosshairSystem.style.transform = `translateX(${Math.round(viewOffset)}px)`;
+    }
 
     // D. 高精度数字更新
     const totalReading = currentReading + zeroOffset;
@@ -690,6 +712,7 @@ export function createMicrometerEyepieceView(options: {
   initSleeve();
   initThimble();
   updateStripes();
+  updateHint();
   renderView();
 
   return {
@@ -708,14 +731,18 @@ export function createMicrometerEyepieceView(options: {
       const needRender =
         state.currentReading !== simLastReading ||
         state.zeroOffset !== simLastZero ||
-        state.stripeOffset !== stripeConfig.offset;
+        state.stripeOffset !== stripeConfig.offset ||
+        state.viewMode !== simLastViewMode;
       if (needRender) {
         currentReading = state.currentReading;
         zeroOffset = state.zeroOffset;
         stripeConfig.offset = state.stripeOffset;
+        viewMode = state.viewMode;
         simLastReading = state.currentReading;
         simLastZero = state.zeroOffset;
+        simLastViewMode = state.viewMode;
         updateStripes();
+        updateHint();
         renderView();
       }
     },

@@ -4,6 +4,8 @@
 
 import type { InstrumentMeta, InstrumentParams } from '../_contract/instrument-contract';
 
+export type ViewMode = 'crosshair' | 'fringe';
+
 export interface MicrometerEyepieceParams extends InstrumentParams {
   /** 螺旋测微仪读数 */
   initialReading: number;
@@ -17,6 +19,8 @@ export interface MicrometerEyepieceParams extends InstrumentParams {
   stripeColor: string;
   /** 干涉条纹角度（deg） */
   stripeAngle: number;
+  /** 视场模式：crosshair=准星移动，fringe=条纹移动 */
+  viewMode: ViewMode;
 }
 
 export const micrometerEyepieceMeta: InstrumentMeta<MicrometerEyepieceParams> = {
@@ -31,6 +35,7 @@ export const micrometerEyepieceMeta: InstrumentMeta<MicrometerEyepieceParams> = 
     stripeSpacing: 50,
     stripeColor: 'rgba(200, 80, 20, 0.4)',
     stripeAngle: 90,
+    viewMode: 'crosshair',
   },
   unit: 'mm',
   precision: 0.01,

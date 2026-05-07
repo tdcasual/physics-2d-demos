@@ -30,6 +30,23 @@ export const micrometerEyepieceControlsSchema: ControlsSchema = {
       ],
     },
     {
+      title: '视场模式',
+      collapsed: false,
+      span: 'full',
+      fields: [
+        {
+          type: 'select',
+          key: 'viewMode',
+          label: '移动对象',
+          value: 'crosshair',
+          options: [
+            { label: '准星移动（默认）', value: 'crosshair' },
+            { label: '条纹移动', value: 'fringe' },
+          ],
+        },
+      ],
+    },
+    {
       title: '干涉条纹',
       collapsed: true,
       span: 'full',
