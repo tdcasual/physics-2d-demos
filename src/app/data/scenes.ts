@@ -25,9 +25,17 @@ export const categoryInfo: Record<
   string,
   { label: string; color: string; icon: string }
 > = {
-  mechanics: { label: '力学', color: '#74b9ff', icon: '⚙️' },
-  electromagnetism: { label: '电磁学', color: '#fdcb6e', icon: '⚡' },
-  method: { label: '方法', color: '#a29bfe', icon: '📐' }
+  mechanics: {
+    label: '力学',
+    color: 'var(--category-mechanics)',
+    icon: '⚙️'
+  },
+  electromagnetism: {
+    label: '电磁学',
+    color: 'var(--category-electromagnetism)',
+    icon: '⚡'
+  },
+  method: { label: '方法', color: 'var(--category-method)', icon: '📐' }
 };
 
 export const getDifficultyLabel = (difficulty: number): string => {

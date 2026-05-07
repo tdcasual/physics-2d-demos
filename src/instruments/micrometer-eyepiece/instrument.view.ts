@@ -373,7 +373,6 @@ export function createMicrometerEyepieceView(options: {
   const sleeveScales = qs<HTMLDivElement>('sleeve-scales');
   const thimbleStrip = qs<HTMLDivElement>('thimble-strip');
   const thimbleGroup = qs<HTMLDivElement>('thimble-group');
-  const crosshairSystem = qs<HTMLDivElement>('crosshair-system');
   const lensView = qs<HTMLDivElement>('lens-view');
   const readoutDisplay = shadow.getElementById('readout-display') as HTMLDivElement | null;
   const hintEl = qs<HTMLDivElement>('hint-text');
@@ -556,9 +555,9 @@ export function createMicrometerEyepieceView(options: {
     // B2. 更新对象池中的可见 tick
     updateThimbleTicks();
 
-    // C. 联动干涉视场：平移十字准星（stripeOffset 单位 mm，转换为 px）
+    // C. 联动干涉视场：准星固定，平移干涉条纹（条纹附着在样品台上）
     const viewOffset = (currentReading - config.initialReading - stripeConfig.offset) * config.crosshairSpeed;
-    crosshairSystem.style.transform = `translateX(${viewOffset}px)`;
+    lensView.style.backgroundPositionX = `${-viewOffset}px`;
 
     // D. 高精度数字更新
     const totalReading = currentReading + zeroOffset;

@@ -33,4 +33,13 @@ describe('App', () => {
     expect(toggle).toBeTruthy();
     cleanup();
   });
+
+  it('should not inject page-scoped style tags at runtime', async () => {
+    const { cleanup } = render(<App />);
+    await waitFor(() => {
+      expect(document.querySelector('#experiments')).toBeTruthy();
+    });
+    expect(document.querySelectorAll('style')).toHaveLength(0);
+    cleanup();
+  });
 });

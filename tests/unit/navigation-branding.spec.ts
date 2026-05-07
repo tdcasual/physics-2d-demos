@@ -27,9 +27,16 @@ describe('navigation branding', () => {
     }
   });
 
-  it('keeps the navigation page aligned with the teaching demo typography', () => {
-    const css = readFileSync(resolve(process.cwd(), 'src/styles/global.css'), 'utf8');
-    expect(css.includes('satoshi')).toBe(true);
-    expect(css.includes('clash-display')).toBe(true);
+  it('keeps the navigation page aligned with the shared typography tokens', () => {
+    const tokens = readFileSync(
+      resolve(process.cwd(), 'src/styles/design-tokens.css'),
+      'utf8'
+    );
+    const globalCss = readFileSync(resolve(process.cwd(), 'src/styles/global.css'), 'utf8');
+
+    expect(tokens).toContain("'Satoshi'");
+    expect(tokens).toContain("'Clash Display'");
+    expect(globalCss).toContain('font-family: var(--font-body);');
+    expect(globalCss).toContain('font-family: var(--font-display);');
   });
 });

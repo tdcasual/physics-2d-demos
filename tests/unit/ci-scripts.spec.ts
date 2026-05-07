@@ -51,4 +51,32 @@ describe('ci scripts and workflow', () => {
     expect(ci).toContain('pnpm check:circular');
     expect(ci).not.toContain('pnpm generate:index');
   });
+
+  it('keeps coverage reporters aligned with codecov upload', () => {
+    const viteConfig = readFileSync('vite.config.ts', 'utf8');
+    const ci = readFileSync('.github/workflows/ci.yml', 'utf8');
+
+    expect(viteConfig).toContain("reporter: ['text', 'html', 'json', 'lcov']");
+    expect(ci).toContain('files: ./coverage/lcov.info');
+  });
+
+  it('keeps package and docs aligned with the current scene inventory', () => {
+    const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as {
+      name?: string;
+    };
+    const readme = readFileSync('README.md', 'utf8');
+    const agents = readFileSync('AGENTS.md', 'utf8');
+
+    expect(pkg.name).toBe('physics-2d-demos');
+    expect(readme).not.toContain('8 个交互式物理教学场景');
+    expect(agents).not.toContain('包含 8 个交互式 2D 物理场景');
+    expect(agents).not.toContain('scenes/        — 8 个物理场景');
+  });
+
+  it('keeps global fonts local-first without remote CSS imports', () => {
+    const globalCss = readFileSync('src/styles/global.css', 'utf8');
+
+    expect(globalCss).not.toContain('api.fontshare.com');
+    expect(globalCss).not.toContain("@import url('https://");
+  });
 });

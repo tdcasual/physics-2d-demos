@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { getDifficultyLabel, featuredScenes } from '../../src/app/data/scenes';
+import {
+  categoryInfo,
+  getDifficultyLabel,
+  featuredScenes
+} from '../../src/app/data/scenes';
 
 describe('scenes data', () => {
   it('getDifficultyLabel should map 1-3 to labels', () => {
@@ -16,5 +20,13 @@ describe('scenes data', () => {
   it('featuredScenes should be non-empty array', () => {
     expect(Array.isArray(featuredScenes)).toBe(true);
     expect(featuredScenes.length).toBeGreaterThan(0);
+  });
+
+  it('category colors should come from semantic CSS variables', () => {
+    expect(categoryInfo.mechanics.color).toBe('var(--category-mechanics)');
+    expect(categoryInfo.electromagnetism.color).toBe(
+      'var(--category-electromagnetism)'
+    );
+    expect(categoryInfo.method.color).toBe('var(--category-method)');
   });
 });

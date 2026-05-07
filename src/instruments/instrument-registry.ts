@@ -79,9 +79,19 @@ export function buildInstrumentRegistry(): RegistryEntry[] {
   }
 
   // 按分类分组，同一分类内按标题排序
-  const categoryOrder = ['measurement', 'electronics', 'optics', 'mechanics'];
+  const categoryOrder = [
+    'measurement',
+    'timing',
+    'optical',
+    'electrical',
+    'mechanical'
+  ];
   return entries.sort((a, b) => {
-    const catDiff = categoryOrder.indexOf(a.category) - categoryOrder.indexOf(b.category);
+    const aIndex = categoryOrder.indexOf(a.category);
+    const bIndex = categoryOrder.indexOf(b.category);
+    const normalizedAIndex = aIndex === -1 ? Number.MAX_SAFE_INTEGER : aIndex;
+    const normalizedBIndex = bIndex === -1 ? Number.MAX_SAFE_INTEGER : bIndex;
+    const catDiff = normalizedAIndex - normalizedBIndex;
     if (catDiff !== 0) return catDiff;
     return a.title.localeCompare(b.title, 'zh-CN');
   });
@@ -101,9 +111,10 @@ export function buildRegistryByCategory(): Record<string, RegistryEntry[]> {
 
 const categoryLabels: Record<string, string> = {
   measurement: '测量仪器',
-  electronics: '电子仪器',
-  optics: '光学仪器',
-  mechanics: '力学仪器'
+  timing: '计时仪器',
+  optical: '光学仪器',
+  electrical: '电子仪器',
+  mechanical: '力学仪器'
 };
 
 export function getCategoryLabel(category: string): string {
