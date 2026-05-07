@@ -239,7 +239,7 @@ export function bootInstrumentLibrary() {
       renderParams(entry, activeSim);
 
       let lastTime = performance.now();
-      function loop() {
+      const loop = () => {
         if (activeSim && activeView) {
           const now = performance.now();
           const dt = now - lastTime;
@@ -248,7 +248,7 @@ export function bootInstrumentLibrary() {
           activeView.render(activeSim.getState());
         }
         rafId = requestAnimationFrame(loop);
-      }
+      };
       rafId = requestAnimationFrame(loop);
     } catch (err) {
       loadingEl.remove();
@@ -364,11 +364,11 @@ export function bootInstrumentLibrary() {
         num.step = String(step);
         num.value = String(defaultValue);
 
-        function update(value: number) {
+        const update = (value: number) => {
           range.value = String(value);
           num.value = String(value);
           sim.setParams({ [key]: value } as Partial<InstrumentParams>);
-        }
+        };
 
         range.addEventListener('input', () => update(parseFloat(range.value)));
         num.addEventListener('change', () => update(parseFloat(num.value)));

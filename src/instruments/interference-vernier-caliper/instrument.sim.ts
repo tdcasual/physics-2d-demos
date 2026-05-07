@@ -18,7 +18,7 @@ export interface InterferenceVernierCaliperState extends InstrumentState {
 export function createInterferenceVernierCaliperSim(
   initial: InterferenceVernierCaliperParams,
 ): InstrumentSim<InterferenceVernierCaliperState, InterferenceVernierCaliperParams> {
-  let state: InterferenceVernierCaliperState = {
+  const state: InterferenceVernierCaliperState = {
     currentReading: initial.initialReading,
     zeroOffset: initial.zeroOffset,
     fringeSpacing: initial.fringeSpacing,

@@ -1,9 +1,5 @@
 import type {
   InstrumentFactory,
-  InstrumentView,
-  MeasurableInstrument,
-  SerializableInstrument,
-  CalibratableInstrument,
 } from '../_contract/instrument-contract';
 import type { TeachingTheme } from '../../platform/standards';
 import type { InstrumentViewport } from '../_contract/instrument-contract';

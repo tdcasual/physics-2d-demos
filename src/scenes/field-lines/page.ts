@@ -1,6 +1,4 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
-import type { ReadoutItem, Theme } from '../../app/layouts/types';
-import type { TeachingMode } from '../../platform/standards';
 import { applyTouchInteractionMode } from '../../platform/input/touch';
 import { fieldLinesMeta } from './scene.meta';
 import { createFieldLinesScene } from './scene.entry';

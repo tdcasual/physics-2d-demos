@@ -18,7 +18,7 @@ export type CreateMicrometerViewOptions = {
 };
 
 export function createMicrometerView(options: CreateMicrometerViewOptions = {}) {
-  let canvas = options.canvas ?? null;
+  const canvas = options.canvas ?? null;
   let ctx: CanvasRenderingContext2D | null = null;
   let theme: TeachingTheme = options.theme ?? 'dark';
   let cssWidth = 800;

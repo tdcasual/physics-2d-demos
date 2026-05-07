@@ -616,7 +616,7 @@ function drawEqualThicknessPhase(
   c: CanvasRenderingContext2D,
   g: { w: number; h: number; text: string; dim: string; accent: string; leftX: number; rightX: number; botY: number; topY: number; scale: number; state: WedgeState }
 ): void {
-  const { text, dim, accent, leftX, rightX, botY, topY, scale, state } = g;
+  const { text, dim, leftX, rightX, botY, topY, scale, state } = g;
   c.save();
   c.font = `${Math.max(10, 13 * scale)}px sans-serif`;
 

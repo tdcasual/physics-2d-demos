@@ -2,7 +2,7 @@ import type { DrawContext, WorldPoint } from './types';
 import type { CoordSystem } from './types';
 import { worldToScreen } from './coords';
 import { drawBall } from '../../../core/unified-canvas';
-import { Colors, getThemeColors } from '../../../core/colors';
+import { Colors } from '../../../core/colors';
 
 export function drawProjectile(
   context: DrawContext,
@@ -11,12 +11,11 @@ export function drawProjectile(
   coords: CoordSystem,
   landed: boolean
 ): void {
-  const { ctx, responsiveScale, theme, width, height } = context;
+  const { ctx, responsiveScale, theme } = context;
   const isDark = theme === 'dark';
   const s = responsiveScale;
   const pos = worldToScreen(position, coords);
   const ballRadius = Math.max(3, 8 * s);
-  const colors = getThemeColors(theme);
 
   // Dashed guide lines from ball to axes
   ctx.save();

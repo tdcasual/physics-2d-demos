@@ -20,7 +20,7 @@ export type CreateCaliperViewOptions = {
 };
 
 export function createVernierCaliperView(options: CreateCaliperViewOptions = {}) {
-  let canvas = options.canvas ?? null;
+  const canvas = options.canvas ?? null;
   let ctx: CanvasRenderingContext2D | null = null;
   let theme: TeachingTheme = options.theme ?? 'dark';
   let cssWidth = 800;

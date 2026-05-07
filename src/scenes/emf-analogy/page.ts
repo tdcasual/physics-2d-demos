@@ -1,6 +1,5 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { readSceneParams, writeSceneParams } from '../../app/url-sync';
-import type { ReadoutItem } from '../../app/layouts/types';
 import { emfAnalogyMeta } from './scene.meta';
 import { createEmfAnalogyScene } from './scene.entry';
 import { emfAnalogyControlsSchema } from './controls-schema';

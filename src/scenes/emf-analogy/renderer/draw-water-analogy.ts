@@ -89,7 +89,6 @@ export function drawWaterAnalogy(options: WaterDrawOptions): void {
   ctx.fillRect(0, 0, width, height);
 
   // 布局计算
-  const cx = width / 2;
   const cy = height / 2;
   const pipeY = cy;
 

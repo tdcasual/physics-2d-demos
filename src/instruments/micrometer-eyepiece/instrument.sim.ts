@@ -17,7 +17,7 @@ export interface MicrometerEyepieceState extends InstrumentState {
 export function createMicrometerEyepieceSim(
   initial: MicrometerEyepieceParams,
 ): InstrumentSim<MicrometerEyepieceState, MicrometerEyepieceParams> {
-  let state: MicrometerEyepieceState = {
+  const state: MicrometerEyepieceState = {
     currentReading: initial.initialReading,
     zeroOffset: initial.zeroOffset,
     stripeOffset: initial.stripeOffset,

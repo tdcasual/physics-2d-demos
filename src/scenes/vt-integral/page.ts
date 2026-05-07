@@ -1,65 +1,9 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
-import type { ReadoutItem, Theme } from '../../app/layouts/types';
-import type { TeachingMode } from '../../platform/standards';
 import { vtIntegralMeta } from './scene.meta';
 import { createVtIntegralScene } from './scene.entry';
 import { vtIntegralControlsSchema } from './controls-schema';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
-import type { VtIntegralSnapshot } from './scene.sim';
 import { isValidVtScene } from './scene-values';
-import { createSceneListener } from '../../app/scene-listener';
-
-function sceneLabel(scene: VtIntegralSnapshot['params']['scene']): string {
-  if (scene === 'scene1') return '场景一：v-t积分';
-  if (scene === 'scene2') return '场景二：曲线长度';
-  return '场景三：圆周逼近';
-}
-
-function modeLabel(mode: TeachingMode): string {
-  return mode === 'presentation' ? '演示模式' : '标准模式';
-}
-
-function formatReadout(
-  snapshot: VtIntegralSnapshot,
-  mode: TeachingMode
-): ReadoutItem[] {
-  if (snapshot.params.scene === 'scene1') {
-    return [
-      { label: '场景', value: sceneLabel(snapshot.params.scene) },
-      { label: '显示模式', value: modeLabel(mode) },
-      { label: '矩形总面积', value: snapshot.metrics.rectArea.toFixed(4) },
-      { label: '积分面积', value: snapshot.metrics.trueArea.toFixed(4) },
-      { label: '绝对误差', value: snapshot.metrics.absErr.toFixed(4) },
-      {
-        label: '相对误差',
-        value: `${(snapshot.metrics.relErr * 100).toFixed(2)}%`
-      }
-    ];
-  }
-  if (snapshot.params.scene === 'scene2') {
-    return [
-      { label: '场景', value: sceneLabel(snapshot.params.scene) },
-      { label: '显示模式', value: modeLabel(mode) },
-      { label: '曲线振幅', value: snapshot.params.curveAmplitude.toFixed(2) },
-      { label: '曲线长度', value: snapshot.metrics.curveLength.toFixed(3) },
-      { label: '直线距离', value: snapshot.metrics.lineDistance.toFixed(3) }
-    ];
-  }
-  if (snapshot.params.scene === 'scene3') {
-    return [
-      { label: '场景', value: sceneLabel(snapshot.params.scene) },
-      { label: '显示模式', value: modeLabel(mode) },
-      { label: '边数 n', value: String(snapshot.params.circleN) },
-      { label: '多边形周长', value: (2 * snapshot.params.circleN * Math.sin(Math.PI / snapshot.params.circleN)).toFixed(4) },
-      { label: '圆周长 (2π)', value: (2 * Math.PI).toFixed(4) },
-      {
-        label: '周长差',
-        value: snapshot.metrics.circumferenceDiff.toFixed(4)
-      }
-    ];
-  }
-  return [];
-}
 
 bootScenePage({
   meta: vtIntegralMeta,
