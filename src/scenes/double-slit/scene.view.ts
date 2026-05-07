@@ -339,11 +339,11 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
     scene: typeof SCENE_PALETTE['dark'],
     isDark: boolean
   ) => {
-    const topH = H * 0.23;
+    const topH = H * 0.30;
     const patternX = W * 0.15;
     const patternW = W * 0.55;
-    const patternY = 12;
-    const patternH = topH - 24;
+    const patternH = topH - 30;
+    const patternY = (topH - patternH) / 2;
     // const centerY = patternY + patternH * 0.5;
 
     // 物理条纹间距（px）

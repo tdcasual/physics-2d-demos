@@ -83,7 +83,7 @@ const CSS = `
   overflow-y: hidden;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   padding: 10px;
   box-sizing: border-box;
 }

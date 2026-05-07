@@ -36,10 +36,12 @@ const CSS = `
 .micrometer-root {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
   width: 100%;
   height: 100%;
+  padding-top: 15px;
+  box-sizing: border-box;
   background: #e9ecef;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   user-select: none;
