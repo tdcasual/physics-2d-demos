@@ -43,6 +43,16 @@ describe('micrometer sim', () => {
       const sim = createMicrometerSim({ reading: 4.5 });
       expect(sim.getState().hasHalfMm).toBe(true);
     });
+
+    it('hasHalfMm is false at exact integer', () => {
+      const sim = createMicrometerSim({ reading: 3.0 });
+      expect(sim.getState().hasHalfMm).toBe(false);
+    });
+
+    it('hasHalfMm is false when remainder < 0.5', () => {
+      const sim = createMicrometerSim({ reading: 4.3 });
+      expect(sim.getState().hasHalfMm).toBe(false);
+    });
   });
 
   describe('known values', () => {

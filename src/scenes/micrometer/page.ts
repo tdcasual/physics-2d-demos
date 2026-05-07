@@ -48,17 +48,18 @@ bootScenePage({
 
     // 自定义 preset 处理：preset 按钮设置 reading 值
     const presetContainer = mount.querySelector('[data-field="preset"]');
+    const onPresetClick = (e: Event) => {
+      const btn = (e.target as HTMLElement).closest('[data-preset-id]');
+      if (btn) {
+        const val = parseFloat((btn as HTMLElement).dataset.presetId || '4.593');
+        microScene.setParams({ reading: val });
+        renderer.setValue('reading', val);
+        microScene.render();
+        writeSceneParams({ reading: val });
+      }
+    };
     if (presetContainer) {
-      presetContainer.addEventListener('click', (e) => {
-        const btn = (e.target as HTMLElement).closest('[data-preset-id]');
-        if (btn) {
-          const val = parseFloat((btn as HTMLElement).dataset.presetId || '4.593');
-          microScene.setParams({ reading: val });
-          renderer.setValue('reading', val);
-          microScene.render();
-          writeSceneParams({ reading: val });
-        }
-      });
+      presetContainer.addEventListener('click', onPresetClick);
     }
 
     // Apply URL params
@@ -86,6 +87,9 @@ bootScenePage({
         renderer.setActive(key, value);
       },
       dispose() {
+        if (presetContainer) {
+          presetContainer.removeEventListener('click', onPresetClick);
+        }
         renderer.dispose();
       }
     };

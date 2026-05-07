@@ -39,10 +39,10 @@ const CSS = `
   align-items: center;
   width: 100%;
   height: 100%;
-  background: #f5f5f7;
+  background: transparent;
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   user-select: none;
-  overflow: hidden;
+  overflow: visible;
   position: relative;
 }
 
@@ -79,8 +79,7 @@ const CSS = `
 .scroll-wrapper {
   flex: 1;
   width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: visible;
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -96,31 +95,34 @@ const CSS = `
 
 .instrument-container {
   position: relative;
-  width: 724px;
-  height: 420px;
-  background-color: var(--bg-color);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.15), inset 0 0 2px rgba(0,0,0,0.05);
+  width: 695px;
+  height: 250px;
+  background-color: transparent;
   overflow: visible;
   flex-shrink: 0;
-  border-radius: 4px;
+  transform-origin: top left;
 }
 
 .main-ruler {
   position: absolute;
-  top: 40px;
+  top: 5px;
   left: 0;
   width: 100%;
-  height: 75px;
+  height: 55px;
   background: linear-gradient(to bottom, var(--main-ruler-bg) 0%, var(--main-ruler-bg) 80%, var(--main-ruler-dark) 100%);
   border-bottom: 2px solid #111;
   box-shadow: inset 0 2px 5px rgba(255,255,255,0.8);
+  cursor: grab;
+}
+.main-ruler:active {
+  cursor: grabbing;
 }
 
 .ticks-container {
   position: absolute;
   bottom: 0;
-  left: 24px;
-  width: 700px;
+  left: 29px;
+  width: 672px;
   height: 100%;
 }
 
@@ -134,7 +136,7 @@ const CSS = `
 
 .tick-label {
   position: absolute;
-  bottom: 28px;
+  bottom: 20px;
   transform: translateX(-50%);
   font-size: 18px;
   color: #111;
@@ -143,10 +145,10 @@ const CSS = `
 
 .slider-assembly {
   position: absolute;
-  top: 115px;
+  top: 60px;
   left: 0;
-  width: 590px;
-  height: 240px;
+  width: 566px;
+  height: 189px;
   will-change: transform;
   cursor: grab;
   touch-action: none;
@@ -160,17 +162,17 @@ const CSS = `
   top: 0;
   left: 0;
   width: 100%;
-  height: 35px;
+  height: 25px;
   background: linear-gradient(to bottom, var(--vernier-bg-top), var(--vernier-bg-bottom));
-  clip-path: polygon(15px 0, 575px 0, 100% 100%, 0 100%);
+  clip-path: polygon(14px 0, 552px 0, 100% 100%, 0 100%);
   border-bottom: 1px solid #999;
 }
 
 .vernier-ticks-container {
   position: absolute;
   top: 0;
-  left: 24px;
-  width: 500px;
+  left: 29px;
+  width: 470px;
   height: 100%;
 }
 
@@ -184,7 +186,7 @@ const CSS = `
 
 .vernier-tick-label {
   position: absolute;
-  top: 16px;
+  top: 10px;
   transform: translateX(-50%);
   font-size: 11px;
   color: #222;
@@ -193,10 +195,10 @@ const CSS = `
 
 .slider-body {
   position: absolute;
-  top: 35px;
+  top: 25px;
   left: 0;
   width: 100%;
-  height: 205px;
+  height: 164px;
   background: linear-gradient(to bottom, #696c71, var(--slider-bg));
   box-shadow: 5px 10px 15px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.2);
   border-top: 1px solid #444;
@@ -207,8 +209,8 @@ const CSS = `
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 170px;
-  height: 170px;
+  width: 163px;
+  height: 163px;
   border-radius: 50%;
   background-color: var(--lens-border-outer);
   display: flex;
@@ -219,8 +221,8 @@ const CSS = `
 }
 
 .lens-glass {
-  width: 140px;
-  height: 140px;
+  width: 134px;
+  height: 134px;
   border-radius: 50%;
   background: radial-gradient(circle at 40% 40%, #ffffff 0%, #fbd1a6 60%, #e09854 100%);
   border: 4px solid var(--lens-border-inner);
@@ -259,16 +261,16 @@ const CSS = `
 
 .screw-assembly {
   position: absolute;
-  top: 130px;
-  right: -110px;
-  width: 110px;
+  top: 82px;
+  right: -88px;
+  width: 88px;
   height: 50px;
   display: flex;
   align-items: center;
 }
 
 .screw-thread {
-  width: 70px;
+  width: 56px;
   height: 16px;
   background: repeating-linear-gradient(to right, #999 0px, #999 2px, #ccc 3px, #777 4px);
   border-radius: 2px;
@@ -279,7 +281,7 @@ const CSS = `
 
 .knob {
   width: 24px;
-  height: 46px;
+  height: 37px;
   background: linear-gradient(to bottom, #666, #aaa, #444);
   border-radius: 3px;
   position: relative;
@@ -306,19 +308,19 @@ const CSS = `
 `;
 
 // ── 物理与像素常量 ──
-const UNIT_PX = 100;              // 1 cm = 100 px
-const MAIN_SUB_TICK_PX = 10;      // 0.1 cm = 10 px
+const UNIT_PX = 96;               // 1 cm = 96 px
+const MAIN_SUB_TICK_PX = 9.6;     // 0.1 cm = 9.6 px
 const VERNIER_DIVISIONS = 50;     // 50 分度游标
 const VERNIER_LENGTH_UNITS = 4.9; // 游标尺总长 4.9 cm
-const VERNIER_LENGTH_PX = VERNIER_LENGTH_UNITS * UNIT_PX; // 490 px
-const VERNIER_SUB_TICK_PX = VERNIER_LENGTH_PX / VERNIER_DIVISIONS; // 9.8 px
-// const LEAST_COUNT = 0.002;        // 最小读数精度 0.002 cm
-const LEAST_COUNT_PX = 0.2;       // 最小移动像素步长
+const VERNIER_LENGTH_PX = VERNIER_LENGTH_UNITS * UNIT_PX; // 470.4 px
+const VERNIER_SUB_TICK_PX = VERNIER_LENGTH_PX / VERNIER_DIVISIONS; // 9.408 px
+const LEAST_COUNT_PX = 0.192;     // 最小移动像素步长
 const MAX_CM = 2.1;               // 量程上限 2.1 cm
-const MAX_X = MAX_CM * UNIT_PX;   // 210 px
+const MAX_X = MAX_CM * UNIT_PX;   // 201.6 px
 const PATTERN_CENTER_CM = 1.5;    // 干涉图样中心固定位置
-const PATTERN_ABSOLUTE_X = PATTERN_CENTER_CM * UNIT_PX; // 150 px
-const LENS_OFFSET_FROM_VERNIER = 245; // 视场中心相对游标 0 刻度
+const PATTERN_ABSOLUTE_X = PATTERN_CENTER_CM * UNIT_PX; // 144 px
+const LENS_OFFSET_FROM_VERNIER = 235; // 视场中心相对游标 0 刻度
+const LENS_VISUAL_SCALE = 1.2;    // 目镜内容视觉放大系数
 
 export function createInterferenceVernierCaliperView(options: {
   canvas: HTMLCanvasElement;
@@ -339,7 +341,7 @@ export function createInterferenceVernierCaliperView(options: {
     position: absolute;
     left: 0; top: 0;
     width: 100%; height: 100%;
-    overflow: hidden;
+    overflow: visible;
   `;
   parent.style.position = 'relative';
   parent.appendChild(wrapper);
@@ -399,7 +401,8 @@ export function createInterferenceVernierCaliperView(options: {
   const readoutDisplay = qs<HTMLDivElement>('readout');
   const tipsEl = qs<HTMLDivElement>('tips-text');
   const knob = qs<HTMLDivElement>('knob');
-  // const instrumentEl = qs<HTMLDivElement>('instrument');
+  const instrumentEl = qs<HTMLDivElement>('instrument');
+  const mainRuler = root.querySelector('.main-ruler') as HTMLElement;
   const headerPanel = root.querySelector('.header-panel') as HTMLElement;
 
   if (!showHints && tipsEl) {
@@ -437,6 +440,7 @@ export function createInterferenceVernierCaliperView(options: {
     envelopeWidth: 320,
     color: 'rgba(30,15,0,0.85)',
   };
+  let rawSpacing = 0;
 
   // ── 生成主尺刻度 ──
   function initMainRuler() {
@@ -445,16 +449,16 @@ export function createInterferenceVernierCaliperView(options: {
       tick.className = 'tick';
       tick.style.left = `${i * MAIN_SUB_TICK_PX}px`;
       if (i % 10 === 0) {
-        tick.style.height = '24px';
+        tick.style.height = '18px';
         const label = document.createElement('div');
         label.className = 'tick-label';
         label.style.left = `${i * MAIN_SUB_TICK_PX}px`;
         label.innerText = String(i / 10);
         mainTicksContainer.appendChild(label);
       } else if (i % 5 === 0) {
-        tick.style.height = '16px';
+        tick.style.height = '12px';
       } else {
-        tick.style.height = '10px';
+        tick.style.height = '7px';
       }
       mainTicksContainer.appendChild(tick);
     }
@@ -467,7 +471,7 @@ export function createInterferenceVernierCaliperView(options: {
       tick.className = 'vernier-tick';
       tick.style.left = `${i * VERNIER_SUB_TICK_PX}px`;
       if (i % 5 === 0) {
-        tick.style.height = '15px';
+        tick.style.height = '12px';
         const label = document.createElement('div');
         label.className = 'vernier-tick-label';
         label.style.left = `${i * VERNIER_SUB_TICK_PX}px`;
@@ -476,7 +480,7 @@ export function createInterferenceVernierCaliperView(options: {
         label.innerText = String(num);
         vernierTicksContainer.appendChild(label);
       } else {
-        tick.style.height = '8px';
+        tick.style.height = '6px';
       }
       vernierTicksContainer.appendChild(tick);
     }
@@ -484,18 +488,22 @@ export function createInterferenceVernierCaliperView(options: {
 
   // ── 生成干涉条纹（CSS gradient，与螺旋测微仪一致）──
   function updatePattern() {
-    const { spacing, color } = fringeConfig;
-    const stripeW = spacing * 0.3;
-    const mid = spacing * 0.5;
+    const s = fringeConfig.spacing;
+    const { color } = fringeConfig;
+    const gap = Math.round(s * 0.3);
+    const fadeInEnd = Math.round(s * 0.4);
+    const fadeOutStart = Math.round(s * 0.6);
+    const fadeOutEnd = Math.round(s * 0.7);
+    const fadeColor = `color-mix(in srgb, transparent 50%, ${color})`;
     stripeLayer.style.backgroundImage = `repeating-linear-gradient(
       90deg,
       transparent 0px,
-      transparent ${Math.round(mid - stripeW)}px,
-      ${color} ${Math.round(mid - stripeW * 0.5)}px,
-      ${color} ${Math.round(mid)}px,
-      ${color} ${Math.round(mid + stripeW * 0.5)}px,
-      transparent ${Math.round(mid + stripeW)}px,
-      transparent ${Math.round(spacing)}px
+      transparent ${gap}px,
+      ${fadeColor} ${fadeInEnd}px,
+      ${color} ${Math.round(s * 0.5)}px,
+      ${color} ${fadeOutStart}px,
+      ${fadeColor} ${fadeOutEnd}px,
+      transparent ${s}px
     )`;
   }
 
@@ -512,9 +520,12 @@ export function createInterferenceVernierCaliperView(options: {
     // 1. 移动滑块
     slider.style.transform = `translateX(${snappedX}px)`;
 
-    // 2. 逆向移动干涉条纹
+    // 2. 逆向移动干涉条纹（滑块右移→条纹左移，模拟目镜向右扫描）
     const patternTranslateX = PATTERN_ABSOLUTE_X - (snappedX + LENS_OFFSET_FROM_VERNIER);
-    stripeLayer.style.backgroundPositionX = `${-patternTranslateX}px`;
+    const rawOffset = patternTranslateX * LENS_VISUAL_SCALE;
+    const period = fringeConfig.spacing;
+    const normOffset = ((rawOffset % period) + period) % period;
+    stripeLayer.style.backgroundPositionX = `${normOffset}px`;
 
     // 3. 更新读数
     const totalReading = currentReadingCm + zeroOffset;
@@ -533,6 +544,16 @@ export function createInterferenceVernierCaliperView(options: {
   let dragMode: 'slider' | 'knob' | null = null;
   let startPointerX = 0;
   let startReadingCm = 0;
+
+  // ── 整体仪器拖拽（拖动主刻度尺）──
+  let sysDragging = false;
+  let sysStartX = 0;
+  let sysStartY = 0;
+  const parentRect = parent.getBoundingClientRect();
+  const scaledW = 695 * 2;
+  const scaledH = 250 * 2;
+  let sysX = parentRect.width > 100 ? Math.round((parentRect.width - scaledW) / 2) : -100;
+  let sysY = parentRect.height > 100 ? Math.max(0, Math.round((parentRect.height - scaledH) / 2)) : 0;
 
   function getPointerX(e: MouseEvent | TouchEvent): number {
     if ('touches' in e && e.touches.length > 0) {
@@ -587,23 +608,89 @@ export function createInterferenceVernierCaliperView(options: {
     e.stopPropagation();
     handleDragStart(e, 'knob');
   };
-  const onDocMouseMove = (e: MouseEvent) => handleDragMove(e);
-  const onDocTouchMove = (e: TouchEvent) => handleDragMove(e);
-  const onDocMouseUp = () => handleDragEnd();
-  const onDocTouchEnd = () => handleDragEnd();
-  const onDocTouchCancel = () => handleDragEnd();
+
+  const handleSysDragStart = (clientX: number, clientY: number) => {
+    sysDragging = true;
+    sysStartX = clientX;
+    sysStartY = clientY;
+  };
+  const handleSysDragMove = (clientX: number, clientY: number) => {
+    if (!sysDragging) return;
+    sysX += clientX - sysStartX;
+    sysY += clientY - sysStartY;
+    sysStartX = clientX;
+    sysStartY = clientY;
+    instrumentEl.style.transform = `translate(${sysX}px, ${sysY}px) scale(2)`;
+  };
+  const handleSysDragEnd = () => {
+    sysDragging = false;
+  };
+
+  const onRulerMouseDown = (e: MouseEvent) => {
+    e.stopPropagation();
+    handleSysDragStart(e.clientX, e.clientY);
+  };
+  const onRulerTouchStart = (e: TouchEvent) => {
+    e.stopPropagation();
+    handleSysDragStart(e.touches[0].clientX, e.touches[0].clientY);
+  };
+
+  const onDocMouseMove = (e: MouseEvent) => {
+    if (isDragging) handleDragMove(e);
+    if (sysDragging) handleSysDragMove(e.clientX, e.clientY);
+  };
+  const onDocTouchMove = (e: TouchEvent) => {
+    if (isDragging) handleDragMove(e);
+    if (sysDragging) {
+      if (e.cancelable) e.preventDefault();
+      handleSysDragMove(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  };
+  const onDocMouseUp = () => {
+    handleDragEnd();
+    handleSysDragEnd();
+  };
+  const onDocTouchEnd = () => {
+    handleDragEnd();
+    handleSysDragEnd();
+  };
+  const onDocTouchCancel = () => {
+    handleDragEnd();
+    handleSysDragEnd();
+  };
 
   slider.addEventListener('mousedown', onSliderMouseDown);
   slider.addEventListener('touchstart', onSliderTouchStart, { passive: false });
   knob.addEventListener('mousedown', onKnobMouseDown);
   knob.addEventListener('touchstart', onKnobTouchStart, { passive: false });
+  mainRuler.addEventListener('mousedown', onRulerMouseDown);
+  mainRuler.addEventListener('touchstart', onRulerTouchStart, { passive: false });
   document.addEventListener('mousemove', onDocMouseMove);
   document.addEventListener('touchmove', onDocTouchMove, { passive: false });
   document.addEventListener('mouseup', onDocMouseUp);
   document.addEventListener('touchend', onDocTouchEnd);
   document.addEventListener('touchcancel', onDocTouchCancel);
 
+  // ── 键盘可访问性 ──
+  mainRuler.tabIndex = 0;
+  mainRuler.setAttribute('role', 'button');
+  mainRuler.setAttribute('aria-label', '主刻度尺，拖动可移动整个仪器');
+  const onRulerKeyDown = (e: KeyboardEvent) => {
+    const step = 30;
+    switch (e.key) {
+      case 'ArrowRight': sysX += step; break;
+      case 'ArrowLeft':  sysX -= step; break;
+      case 'ArrowUp':    sysY -= step; break;
+      case 'ArrowDown':  sysY += step; break;
+      default: return;
+    }
+    e.preventDefault();
+    instrumentEl.style.transform = `translate(${sysX}px, ${sysY}px) scale(2)`;
+  };
+  mainRuler.addEventListener('keydown', onRulerKeyDown);
+
   // ── 启动 ──
+  instrumentEl.style.transform = `translate(${sysX}px, ${sysY}px) scale(2)`;
   initMainRuler();
   initVernier();
   updatePattern();
@@ -612,13 +699,14 @@ export function createInterferenceVernierCaliperView(options: {
   return {
     render(state: InterferenceVernierCaliperState) {
       const fringeChanged =
-        state.fringeSpacing !== fringeConfig.spacing ||
+        state.fringeSpacing !== rawSpacing ||
         state.fringeBlur !== fringeConfig.blur ||
         state.fringeOpacity !== fringeConfig.opacity ||
         state.fringeEnvelopeWidth !== fringeConfig.envelopeWidth ||
         state.fringeColor !== fringeConfig.color;
       if (fringeChanged) {
-        fringeConfig.spacing = state.fringeSpacing;
+        rawSpacing = state.fringeSpacing;
+        fringeConfig.spacing = state.fringeSpacing * LENS_VISUAL_SCALE;
         fringeConfig.blur = state.fringeBlur;
         fringeConfig.opacity = state.fringeOpacity;
         fringeConfig.envelopeWidth = state.fringeEnvelopeWidth;
@@ -652,6 +740,9 @@ export function createInterferenceVernierCaliperView(options: {
       slider.removeEventListener('touchstart', onSliderTouchStart);
       knob.removeEventListener('mousedown', onKnobMouseDown);
       knob.removeEventListener('touchstart', onKnobTouchStart);
+      mainRuler.removeEventListener('mousedown', onRulerMouseDown);
+      mainRuler.removeEventListener('touchstart', onRulerTouchStart);
+      mainRuler.removeEventListener('keydown', onRulerKeyDown);
       document.removeEventListener('mousemove', onDocMouseMove);
       document.removeEventListener('touchmove', onDocTouchMove);
       document.removeEventListener('mouseup', onDocMouseUp);
@@ -702,18 +793,27 @@ export function createInterferenceVernierCaliperView(options: {
         fringeOpacity: fringeConfig.opacity,
         fringeEnvelopeWidth: fringeConfig.envelopeWidth,
         fringeColor: fringeConfig.color,
+        sysX,
+        sysY,
       });
     },
     deserialize(json) {
       try {
         const data = JSON.parse(json);
-        if (typeof data.currentReading === 'number') currentReadingCm = data.currentReading;
-        if (typeof data.zeroOffset === 'number') zeroOffset = data.zeroOffset;
-        if (typeof data.fringeSpacing === 'number') fringeConfig.spacing = data.fringeSpacing;
-        if (typeof data.fringeBlur === 'number') fringeConfig.blur = data.fringeBlur;
-        if (typeof data.fringeOpacity === 'number') fringeConfig.opacity = data.fringeOpacity;
-        if (typeof data.fringeEnvelopeWidth === 'number') fringeConfig.envelopeWidth = data.fringeEnvelopeWidth;
+        if (typeof data.currentReading === 'number') {
+          currentReadingCm = Math.max(0, Math.min(data.currentReading, MAX_CM));
+        }
+        if (typeof data.zeroOffset === 'number') {
+          zeroOffset = Math.max(-0.5, Math.min(data.zeroOffset, 0.5));
+        }
+        if (typeof data.fringeSpacing === 'number') fringeConfig.spacing = Math.max(5, data.fringeSpacing);
+        if (typeof data.fringeBlur === 'number') fringeConfig.blur = Math.max(0, data.fringeBlur);
+        if (typeof data.fringeOpacity === 'number') fringeConfig.opacity = Math.max(0, Math.min(data.fringeOpacity, 1));
+        if (typeof data.fringeEnvelopeWidth === 'number') fringeConfig.envelopeWidth = Math.max(50, data.fringeEnvelopeWidth);
         if (typeof data.fringeColor === 'string') fringeConfig.color = data.fringeColor;
+        if (typeof data.sysX === 'number') sysX = data.sysX;
+        if (typeof data.sysY === 'number') sysY = data.sysY;
+        instrumentEl.style.transform = `translate(${sysX}px, ${sysY}px) scale(2)`;
         updatePattern();
         renderView();
       } catch {

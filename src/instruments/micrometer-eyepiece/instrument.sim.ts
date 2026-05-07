@@ -13,6 +13,8 @@ export interface MicrometerEyepieceState extends InstrumentState {
   stripeColor: string;
   stripeAngle: number;
   viewMode: ViewMode;
+  crosshairSpeed: number;
+  scaleInverted: boolean;
 }
 
 export function createMicrometerEyepieceSim(
@@ -26,6 +28,8 @@ export function createMicrometerEyepieceSim(
     stripeColor: initial.stripeColor,
     stripeAngle: initial.stripeAngle,
     viewMode: initial.viewMode,
+    crosshairSpeed: initial.crosshairSpeed ?? 100,
+    scaleInverted: initial.scaleInverted ?? false,
   };
 
   return {
@@ -53,6 +57,12 @@ export function createMicrometerEyepieceSim(
       }
       if (params.viewMode !== undefined) {
         state.viewMode = params.viewMode;
+      }
+      if (params.crosshairSpeed !== undefined) {
+        state.crosshairSpeed = params.crosshairSpeed;
+      }
+      if (params.scaleInverted !== undefined) {
+        state.scaleInverted = params.scaleInverted;
       }
     },
     step() {

@@ -29,8 +29,9 @@ function computeState(params: MicrometerParams): MicrometerState {
   // 固定刻度读数：0.5mm 的整数倍
   const mainScaleReading = Math.floor(reading / 0.5) * 0.5;
 
-  // 半毫米线是否露出
-  const hasHalfMm = reading % 1 >= 0.5 || reading % 1 === 0;
+  // 半毫米线是否露出：仅当小数部分 ≥ 0.5 且 < 1.0（排除整数情况）
+  const frac = reading - Math.floor(reading);
+  const hasHalfMm = frac >= 0.5 - 1e-9 && frac < 1.0 - 1e-9;
 
   // 微分筒读数：(reading - 主尺读数) / 0.01
   const remainder = reading - mainScaleReading;

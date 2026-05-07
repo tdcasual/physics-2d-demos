@@ -100,11 +100,17 @@ export const micrometerEyepieceControlsSchema: ControlsSchema = {
           label: '',
           render(mount: HTMLElement) {
             mount.className = 'text-sm text-[#555]';
-            mount.innerHTML =
-              '<p>• 拖动右侧测微螺杆（或鼠标滚轮）旋转副尺</p>' +
-              '<p>• 拖动左侧目镜壳体可整体移动仪器位置</p>' +
-              '<p>• 十字准星对准干涉条纹中心时触发对齐事件</p>' +
-              '<p>• 使用「零位修正」校准仪器系统误差</p>';
+            const lines = [
+              '• 拖动右侧测微螺杆（或鼠标滚轮）旋转副尺',
+              '• 拖动左侧目镜壳体可整体移动仪器位置',
+              '• 十字准星对准干涉条纹中心时触发对齐事件',
+              '• 使用「零位修正」校准仪器系统误差',
+            ];
+            lines.forEach((text) => {
+              const p = document.createElement('p');
+              p.textContent = text;
+              mount.appendChild(p);
+            });
           },
         },
       ],

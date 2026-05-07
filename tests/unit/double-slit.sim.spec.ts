@@ -99,8 +99,8 @@ describe('double-slit simulation', () => {
 describe('computeFringeSpacingPx', () => {
   it('returns correct value for default params (λ=532, d=40)', () => {
     const px = computeFringeSpacingPx(532, 40);
-    // Δx = λL/d = 532e-9 * 0.2 / (40 * 1e-5) = 2.66e-4 m = 26.6 px
-    expect(px).toBeCloseTo(26.6, 0);
+    // Δx = λL/d = 532e-9 * 0.7 / (40 * 1e-5) = 9.31e-4 m = 93.1 px
+    expect(px).toBeCloseTo(93.1, 0);
   });
 
   it('proportional to lambda', () => {

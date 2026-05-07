@@ -26,11 +26,11 @@ const paramsSection = {
       type: 'slider' as const,
       key: 'slitDistance',
       label: '双缝间距 (d)',
-      min: 20,
-      max: 60,
+      min: 10,
+      max: 50,
       step: 1,
-      value: 40,
-      unit: 'px'
+      value: 20,
+      unit: '0.01mm'
     }
   ]
 };

@@ -8,6 +8,7 @@ import type { DemoRenderHints } from '../../platform/demo-profile';
 import { createStandardSceneEntry } from '../scene-entry-helpers';
 import { createMicrometerSim, type MicrometerParams, type MicrometerState } from './scene.sim';
 import { createMicrometerView } from './scene.view';
+import { micrometerMeta } from './scene.meta';
 
 export type CreateMicrometerSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -27,7 +28,7 @@ export function createMicrometerScene(
   subscribe(listener: () => void): () => void;
 } {
   const sim = createMicrometerSim({
-    reading: 4.593
+    reading: micrometerMeta.defaultParams.reading
   });
 
   const view = createMicrometerView({

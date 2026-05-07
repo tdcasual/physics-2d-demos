@@ -1,4 +1,5 @@
 import type { ControlsSchema } from '../../platform/controls-schema';
+import { micrometerMeta } from './scene.meta';
 
 export const micrometerControlsSchema: ControlsSchema = {
   sections: [
@@ -13,7 +14,7 @@ export const micrometerControlsSchema: ControlsSchema = {
           min: 0,
           max: 10,
           step: 0.001,
-          value: 4.25,
+          value: micrometerMeta.defaultParams.reading,
           unit: 'mm'
         }
       ]

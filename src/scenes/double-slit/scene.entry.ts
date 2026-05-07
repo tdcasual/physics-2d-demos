@@ -9,7 +9,7 @@ import type { SceneLifecycle } from '../../platform/scene-contract';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 
 import { createStandardSceneEntry } from '../scene-entry-helpers';
-import { createDoubleSlitSim, type DoubleSlitParams, type DoubleSlitState, STEPS, computeFringeSpacingPx, lambdaToRgb } from './scene.sim';
+import { createDoubleSlitSim, type DoubleSlitParams, type DoubleSlitState, STEPS, computeRealDeltaXmm, computeMicrometerSpeed, computeCaliperFringePx, lambdaToRgb } from './scene.sim';
 import { createDoubleSlitView } from './scene.view';
 import { createInterferenceVernierCaliper } from '../../instruments/interference-vernier-caliper/instrument.entry';
 import { createMicrometerEyepiece } from '../../instruments/micrometer-eyepiece/instrument.entry';
@@ -35,7 +35,7 @@ export function createDoubleSlitScene(
   const sim = createDoubleSlitSim({
     step: 1,
     lambda: 532,
-    slitDistance: 40,
+    slitDistance: 20,
     isPlaying: true,
     activeInstrument: 'caliper',
     showInstrumentReadout: false,
@@ -68,15 +68,15 @@ export function createDoubleSlitScene(
     parent.style.position = 'relative';
     instrumentWrap = document.createElement('div');
     instrumentWrap.style.cssText =
-      'position:absolute;bottom:0;left:0;width:100%;height:65%;' +
+      'position:absolute;top:30%;left:0;width:100%;height:70%;' +
       'display:flex;gap:8px;padding:8px;box-sizing:border-box;' +
-      'pointer-events:none;z-index:10;overflow:auto;';
+      'pointer-events:none;z-index:10;overflow:visible;';
     parent.appendChild(instrumentWrap);
 
     // 左容器：游标卡尺
     leftContainer = document.createElement('div');
     leftContainer.style.cssText =
-      'width:50%;height:100%;min-height:540px;position:relative;pointer-events:auto;border-radius:4px;overflow:visible;transform:scale(1.8);transform-origin:top center;margin-top:-250px;';
+      'width:50%;height:100%;position:relative;pointer-events:auto;border-radius:4px;overflow:visible;';
     instrumentWrap.appendChild(leftContainer);
 
     const leftCanvas = document.createElement('canvas');
@@ -86,7 +86,7 @@ export function createDoubleSlitScene(
     // 右容器：测微仪
     rightContainer = document.createElement('div');
     rightContainer.style.cssText =
-      'flex:1;height:100%;position:relative;pointer-events:auto;border-radius:4px;overflow:hidden;';
+      'flex:1;height:100%;position:relative;pointer-events:auto;border-radius:4px;overflow:visible;';
     instrumentWrap.appendChild(rightContainer);
 
     const rightCanvas = document.createElement('canvas');
@@ -163,6 +163,8 @@ export function createDoubleSlitScene(
     }
   }
 
+  let lastActiveInstrument = '';
+
   function syncActiveInstrumentLayout(): void {
     const active = sim.getState().params.activeInstrument;
     if (leftContainer) {
@@ -177,21 +179,25 @@ export function createDoubleSlitScene(
 
   function syncInstrumentParams(): void {
     const { lambda, slitDistance, micrometerOffset, stripeOffset } = sim.getState().params;
-    const fringeSpacingPx = computeFringeSpacingPx(lambda, slitDistance);
     const [r, g, b] = lambdaToRgb(lambda);
     const fringeColor = `rgba(${r},${g},${b},0.85)`;
-    // 游标卡尺坐标系 1px = 0.1mm，为主图的 10 倍，条纹间距需缩放以保持物理准确
+    const realDeltaXmm = computeRealDeltaXmm(lambda, slitDistance);
+    const caliperFringePx = computeCaliperFringePx(realDeltaXmm);
+    const micrometerSpeed = computeMicrometerSpeed(realDeltaXmm);
+
     leftInstrument?.sim.setParams({
-      fringeSpacing: fringeSpacingPx / 10,
+      fringeSpacing: caliperFringePx,
       fringeColor,
-      fringeEnvelopeWidth: (fringeSpacingPx / 10) * 8,
+      fringeEnvelopeWidth: caliperFringePx * 8,
     });
     rightInstrument?.sim.setParams({
-      stripeSpacing: fringeSpacingPx,
+      stripeSpacing: 30,
       stripeColor: `rgb(${r},${g},${b})`,
       zeroOffset: micrometerOffset,
       stripeAngle: 90,
-      stripeOffset
+      stripeOffset,
+      crosshairSpeed: micrometerSpeed,
+      scaleInverted: true,
     });
   }
 
@@ -206,13 +212,28 @@ export function createDoubleSlitScene(
     if (state.params.step === 6) {
       if (lastStep !== 6) {
         ensureInstrumentCanvases();
+        syncActiveInstrumentLayout();
         initInstruments(options.theme ?? 'dark');
+        lastActiveInstrument = '';
       }
       syncActiveInstrumentLayout();
       syncInstrumentParams();
       syncInstrumentReadout();
+
+      // display:none → block 切换后需要强制渲染，绕过 view 内部的 needRender 守卫
+      const active = state.params.activeInstrument;
+      const switched = active !== lastActiveInstrument;
+      lastActiveInstrument = active;
+
       leftInstrument?.view.render(leftInstrument.sim.getState());
       rightInstrument?.view.render(rightInstrument.sim.getState());
+
+      if (switched) {
+        // 激活的仪器从 display:none 恢复为 block 后，DOM 布局需要刷新
+        // 通过调用 resize() 触发完整的重排和重绘
+        if (active === 'micrometer') rightInstrument?.view.resize();
+        else leftInstrument?.view.resize();
+      }
     } else if (lastStep === 6) {
       disposeInstruments();
     }
@@ -235,12 +256,13 @@ export function createDoubleSlitScene(
     const items = [
       { label: '当前步骤', value: `${step} / 6` },
       { label: '双缝间距 d', value: `${dMm} mm` },
+      { label: '缝屏距 L', value: '70 cm' },
     ];
     if (step === 6) {
       const instrumentName = s.params.activeInstrument === 'caliper' ? '干涉读数游标卡尺' : '高精度干涉测微仪';
       items.push({ label: '当前仪器', value: instrumentName });
-      const fringeSpacingPx = computeFringeSpacingPx(s.params.lambda, d);
-      items.push({ label: '条纹间距 Δx', value: `${(fringeSpacingPx * 0.01).toFixed(3)} mm` });
+      const realDeltaXmm = computeRealDeltaXmm(s.params.lambda, d);
+      items.push({ label: '条纹间距 Δx', value: `${realDeltaXmm.toFixed(3)} mm` });
       // 从当前激活仪器获取读数，统一显示在实验状态区
       const active = s.params.activeInstrument;
       if (active === 'caliper' && leftInstrument) {

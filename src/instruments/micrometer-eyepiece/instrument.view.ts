@@ -42,16 +42,17 @@ const CSS = `
   height: 100%;
   padding-top: 15px;
   box-sizing: border-box;
-  background: #e9ecef;
+  background: transparent;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   user-select: none;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .micrometer-system {
   display: flex;
   align-items: center;
   position: relative;
+  transform-origin: top left;
 }
 
 .case {
@@ -197,6 +198,22 @@ const CSS = `
   color: var(--scale-color);
 }
 
+/* 反转模式：mm 刻度在基准线下方，0.5mm 刻度在上方 */
+.sleeve-container.scale-inverted .sleeve-tick.major {
+  top: 50%;
+  bottom: auto;
+}
+
+.sleeve-container.scale-inverted .sleeve-tick.minor {
+  bottom: 50%;
+  top: auto;
+}
+
+.sleeve-container.scale-inverted .sleeve-number {
+  top: 22px;
+  bottom: auto;
+}
+
 .thimble-group {
   position: absolute;
   left: 280px;
@@ -280,11 +297,8 @@ const CSS = `
 
 .dashboard {
   margin-top: 50px;
-  background: #fff;
+  background: transparent;
   padding: 15px 30px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-  border: 2px solid #e0e0e0;
   text-align: center;
   z-index: 20;
 }
@@ -323,7 +337,7 @@ export function createMicrometerEyepieceView(options: {
     position: absolute;
     left: 0; top: 0;
     width: 100%; height: 100%;
-    overflow: hidden;
+    overflow: visible;
   `;
   parent.style.position = 'relative';
   parent.appendChild(wrapper);
@@ -396,10 +410,11 @@ export function createMicrometerEyepieceView(options: {
   const config = {
     initialReading: 0,
     maxReading: 32.00,
-    tickGapX: 11,
+    tickGapX: 10,
     tickGapY: 8,
-    crosshairSpeed: 100,
   };
+
+  let crosshairSpeed = 100;
 
   let currentReading = config.initialReading;
   let zeroOffset = 0;
@@ -412,13 +427,18 @@ export function createMicrometerEyepieceView(options: {
   let simLastReading = config.initialReading;
   let simLastZero = 0;
   let simLastViewMode: 'crosshair' | 'fringe' = 'crosshair';
+  let simLastSpeed = 100;
+  let simLastScaleInverted = false;
 
   // 整体仪器拖拽状态
   let sysDragging = false;
   let sysStartX = 0;
   let sysStartY = 0;
-  let sysX = -250;
-  let sysY = 0;
+  const parentRect = parent.getBoundingClientRect();
+  const scaledW = 915 * 1.5;
+  const scaledH = 450 * 1.5;
+  let sysX = parentRect.width > 100 ? Math.round((parentRect.width - scaledW) / 2) : -100;
+  let sysY = parentRect.height > 100 ? Math.max(0, Math.round((parentRect.height - scaledH) / 2)) : 0;
 
   // 事件监听器
   const listeners = {
@@ -572,7 +592,7 @@ export function createMicrometerEyepieceView(options: {
     updateThimbleTicks();
 
     // C. 联动干涉视场
-    const viewOffset = (currentReading - config.initialReading - stripeConfig.offset) * config.crosshairSpeed;
+    const viewOffset = (currentReading - config.initialReading - stripeConfig.offset) * crosshairSpeed;
     if (viewMode === 'fringe') {
       // 条纹移动模式：准星固定，条纹随样品台移动
       crosshairSystem.style.transform = 'translateX(0)';
@@ -651,10 +671,13 @@ export function createMicrometerEyepieceView(options: {
     caseEl.style.cursor = 'grab';
   };
 
-  const onMouseDown = (e: MouseEvent) => handleDragStart(e.clientX, e.clientY);
+  const onMouseDown = (e: MouseEvent) => {
+    e.stopPropagation();
+    handleDragStart(e.clientX, e.clientY);
+  };
   const onMouseMove = (e: MouseEvent) => {
-    handleDragMove(e.clientX, e.clientY);
-    handleSysDragMove(e.clientX, e.clientY);
+    if (isDragging) handleDragMove(e.clientX, e.clientY);
+    if (sysDragging) handleSysDragMove(e.clientX, e.clientY);
   };
   const onMouseUp = () => {
     handleDragEnd();
@@ -671,6 +694,7 @@ export function createMicrometerEyepieceView(options: {
   };
 
   const onTouchStart = (e: TouchEvent) => {
+    e.stopPropagation();
     handleDragStart(e.touches[0].clientX, e.touches[0].clientY);
   };
   const onTouchMove = (e: TouchEvent) => {
@@ -710,7 +734,57 @@ export function createMicrometerEyepieceView(options: {
 
   // ── 启动引擎 ──
   caseEl.style.cursor = 'grab';
-  systemEl.style.transform = 'translate(-250px, 0px) scale(1.5)';
+  caseEl.setAttribute('role', 'button');
+  caseEl.setAttribute('aria-label', '目镜壳体，拖动可移动整个仪器');
+  caseEl.tabIndex = 0;
+  systemEl.style.transform = `translate(${sysX}px, ${sysY}px) scale(1.5)`;
+
+  // ── 副尺键盘操作 ──
+  thimbleGroup.tabIndex = 0;
+  thimbleGroup.setAttribute('role', 'slider');
+  thimbleGroup.setAttribute('aria-label', '测微螺杆');
+  thimbleGroup.setAttribute('aria-valuemin', '0');
+  thimbleGroup.setAttribute('aria-valuemax', String(config.maxReading));
+  thimbleGroup.setAttribute('aria-valuenow', currentReading.toFixed(3));
+  thimbleGroup.setAttribute('aria-valuetext', `${currentReading.toFixed(3)} mm`);
+
+  const onThimbleKeyDown = (e: KeyboardEvent) => {
+    let delta = 0;
+    switch (e.key) {
+      case 'ArrowRight': case 'ArrowUp': delta = 0.01; break;
+      case 'ArrowLeft':  case 'ArrowDown': delta = -0.01; break;
+      case 'PageUp':   delta = 0.1; break;
+      case 'PageDown': delta = -0.1; break;
+      case 'Home': delta = -currentReading; break;
+      case 'End':  delta = config.maxReading - currentReading; break;
+      default: return;
+    }
+    e.preventDefault();
+    const next = Math.max(0, Math.min(currentReading + delta, config.maxReading));
+    if (next !== currentReading) {
+      currentReading = next;
+      renderView();
+      emitReading();
+      thimbleGroup.setAttribute('aria-valuenow', currentReading.toFixed(3));
+      thimbleGroup.setAttribute('aria-valuetext', `${currentReading.toFixed(3)} mm`);
+    }
+  };
+
+  const onCaseKeyDown = (e: KeyboardEvent) => {
+    const step2 = 30;
+    switch (e.key) {
+      case 'ArrowRight': sysX += step2; break;
+      case 'ArrowLeft':  sysX -= step2; break;
+      case 'ArrowUp':    sysY -= step2; break;
+      case 'ArrowDown':  sysY += step2; break;
+      default: return;
+    }
+    e.preventDefault();
+    systemEl.style.transform = `translate(${sysX}px, ${sysY}px) scale(1.5)`;
+  };
+
+  thimbleGroup.addEventListener('keydown', onThimbleKeyDown);
+  caseEl.addEventListener('keydown', onCaseKeyDown);
   initSleeve();
   initThimble();
   updateStripes();
@@ -719,6 +793,13 @@ export function createMicrometerEyepieceView(options: {
 
   return {
     render(state) {
+      crosshairSpeed = state.crosshairSpeed;
+
+      if (state.scaleInverted !== simLastScaleInverted) {
+        simLastScaleInverted = state.scaleInverted;
+        sleeveContainer.classList.toggle('scale-inverted', state.scaleInverted);
+      }
+
       const stripeChanged =
         state.stripeSpacing !== stripeConfig.spacing ||
         state.stripeColor !== stripeConfig.color ||
@@ -734,7 +815,8 @@ export function createMicrometerEyepieceView(options: {
         state.currentReading !== simLastReading ||
         state.zeroOffset !== simLastZero ||
         state.stripeOffset !== stripeConfig.offset ||
-        state.viewMode !== simLastViewMode;
+        state.viewMode !== simLastViewMode ||
+        state.crosshairSpeed !== simLastSpeed;
       if (needRender) {
         currentReading = state.currentReading;
         zeroOffset = state.zeroOffset;
@@ -743,13 +825,19 @@ export function createMicrometerEyepieceView(options: {
         simLastReading = state.currentReading;
         simLastZero = state.zeroOffset;
         simLastViewMode = state.viewMode;
+        simLastSpeed = state.crosshairSpeed;
         updateStripes();
         updateHint();
         renderView();
       }
     },
     resize() {
-      // 原始 HTML 使用固定 scale(1.1)
+      const rect = parent.getBoundingClientRect();
+      const scaleX = rect.width / 700;
+      const scaleY = rect.height / 450;
+      const s = Math.min(scaleX, scaleY, 2.0);
+      root.style.transform = `scale(${s})`;
+      root.style.transformOrigin = 'top center';
     },
     setTheme(_theme: TeachingTheme) {
       // 固定工业配色
@@ -768,6 +856,8 @@ export function createMicrometerEyepieceView(options: {
       document.removeEventListener('touchmove', onTouchMove);
       document.removeEventListener('touchend', onTouchEnd);
       thimbleGroup.removeEventListener('wheel', onWheel);
+      thimbleGroup.removeEventListener('keydown', onThimbleKeyDown);
+      caseEl.removeEventListener('keydown', onCaseKeyDown);
       if (wrapper.parentElement) {
         wrapper.parentElement.removeChild(wrapper);
       }
@@ -819,12 +909,24 @@ export function createMicrometerEyepieceView(options: {
     deserialize(json) {
       try {
         const data = JSON.parse(json);
-        if (typeof data.currentReading === 'number') currentReading = data.currentReading;
-        if (typeof data.zeroOffset === 'number') zeroOffset = data.zeroOffset;
-        if (typeof data.stripeOffset === 'number') stripeConfig.offset = data.stripeOffset;
-        if (typeof data.stripeSpacing === 'number') stripeConfig.spacing = data.stripeSpacing;
-        if (typeof data.stripeColor === 'string') stripeConfig.color = data.stripeColor;
-        if (typeof data.stripeAngle === 'number') stripeConfig.angle = data.stripeAngle;
+        if (typeof data.currentReading === 'number') {
+          currentReading = Math.max(0, Math.min(data.currentReading, config.maxReading));
+        }
+        if (typeof data.zeroOffset === 'number') {
+          zeroOffset = Math.max(-0.5, Math.min(data.zeroOffset, 0.5));
+        }
+        if (typeof data.stripeOffset === 'number') {
+          stripeConfig.offset = Math.max(0, Math.min(data.stripeOffset, 2000));
+        }
+        if (typeof data.stripeSpacing === 'number') {
+          stripeConfig.spacing = Math.max(20, Math.min(data.stripeSpacing, 100));
+        }
+        if (typeof data.stripeColor === 'string') {
+          stripeConfig.color = data.stripeColor;
+        }
+        if (typeof data.stripeAngle === 'number') {
+          stripeConfig.angle = Math.max(0, Math.min(data.stripeAngle, 180));
+        }
         if (typeof data.sysX === 'number') sysX = data.sysX;
         if (typeof data.sysY === 'number') sysY = data.sysY;
         systemEl.style.transform = `translate(${sysX}px, ${sysY}px) scale(1.5)`;

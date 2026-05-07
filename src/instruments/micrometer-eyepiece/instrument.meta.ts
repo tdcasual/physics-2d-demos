@@ -21,6 +21,10 @@ export interface MicrometerEyepieceParams extends InstrumentParams {
   stripeAngle: number;
   /** 视场模式：crosshair=准星移动，fringe=条纹移动 */
   viewMode: ViewMode;
+  /** 每 mm 读数对应的十字准星像素位移 */
+  crosshairSpeed?: number;
+  /** 主尺刻度反转：mm 刻度在基准线下方，0.5mm 刻度在上方 */
+  scaleInverted?: boolean;
 }
 
 export const micrometerEyepieceMeta: InstrumentMeta<MicrometerEyepieceParams> = {

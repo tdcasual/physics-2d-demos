@@ -46,6 +46,7 @@ export function createMicrometerView(options: CreateMicrometerViewOptions = {}) 
     const bg = isDark ? '#0f172a' : '#f8fafc';
     const accent = isDark ? '#38bdf8' : '#0284c7';
     const alignColor = '#ef4444';
+    const fontStack = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 
     c.clearRect(0, 0, w, h);
     c.fillStyle = bg;
@@ -83,7 +84,7 @@ export function createMicrometerView(options: CreateMicrometerViewOptions = {}) 
     // 套筒刻度
     c.fillStyle = text;
     c.textAlign = 'center';
-    c.font = `bold ${Math.max(12, 16 * scale)}px sans-serif`;
+    c.font = `bold ${Math.max(12, 16 * scale)}px ${fontStack}`;
     const tickLong = 20 * scale;
     const tickShort = 14 * scale;
 
@@ -200,10 +201,10 @@ export function createMicrometerView(options: CreateMicrometerViewOptions = {}) 
       if (isAligned || k % 5 === 0) {
         if (isAligned) {
           c.fillStyle = alignColor;
-          c.font = `bold ${Math.max(12, 16 * scale)}px sans-serif`;
+          c.font = `bold ${Math.max(12, 16 * scale)}px ${fontStack}`;
         } else {
           c.fillStyle = text;
-          c.font = `${Math.max(10, 13 * scale)}px sans-serif`;
+          c.font = `${Math.max(10, 13 * scale)}px ${fontStack}`;
         }
         c.textAlign = 'center';
         // 数字放在刻度线上方或下方，避免重叠
@@ -221,12 +222,12 @@ export function createMicrometerView(options: CreateMicrometerViewOptions = {}) 
     // ============================================================
     const readoutY = h * 0.72;
     c.fillStyle = accent;
-    c.font = `bold ${Math.max(24, 40 * scale)}px sans-serif`;
+    c.font = `bold ${Math.max(24, 40 * scale)}px ${fontStack}`;
     c.textAlign = 'center';
     c.fillText(`${reading.toFixed(3)} mm`, w / 2, readoutY);
 
     c.fillStyle = dim;
-    c.font = `${Math.max(12, 16 * scale)}px sans-serif`;
+    c.font = `${Math.max(12, 16 * scale)}px ${fontStack}`;
     const drumInt2 = Math.floor(drumReading);
     const drumEst = (drumReading - drumInt2).toFixed(1).replace(/^0/, '');
     c.fillText(
@@ -250,6 +251,8 @@ export function createMicrometerView(options: CreateMicrometerViewOptions = {}) 
       theme = t;
     },
     setMode(): void {},
-    dispose(): void {}
+    dispose(): void {
+      ctx = null;
+    }
   };
 }

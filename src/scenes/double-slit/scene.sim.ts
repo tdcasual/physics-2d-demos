@@ -21,23 +21,51 @@ export type DoubleSlitState = {
 };
 
 /** 物理常数：双缝到屏幕距离 (m) */
-export const PHYSICAL_L = 0.2;
+export const PHYSICAL_L = 0.7;
 
 /** 物理常数：slitDistance 每单位对应的物理米数 (1单位 = 0.01mm) */
 export const PHYSICAL_D_SCALE = 0.01e-3;
 
-/** 像素比例：1px = 0.01mm */
+/**
+ * 计算真实条纹间距 (mm)
+ * Δx = λL/d
+ */
+export function computeRealDeltaXmm(lambda: number, slitDistance: number): number {
+  const d = slitDistance * PHYSICAL_D_SCALE;
+  const lambdaM = lambda * 1e-9;
+  return (lambdaM * PHYSICAL_L) / d * 1000;
+}
+
+/** 主画布像素比例：1px = 0.01mm */
 export const PIXEL_TO_MM = 0.01;
 
 /**
- * 严格物理公式计算屏幕上条纹间距（像素）
- * Δx = λL/d
+ * 条纹间距（主画布像素）
+ * 用于 scene.view.ts 绘制干涉图样
  */
 export function computeFringeSpacingPx(lambda: number, slitDistance: number): number {
-  const d = slitDistance * PHYSICAL_D_SCALE;    // 双缝间距 (m)
-  const lambdaM = lambda * 1e-9;                // 波长 (m)
-  const deltaXM = (lambdaM * PHYSICAL_L) / d;   // 条纹间距 (m)
-  return deltaXM / (PIXEL_TO_MM * 1e-3);        // 转换为像素
+  return computeRealDeltaXmm(lambda, slitDistance) / PIXEL_TO_MM;
+}
+
+/** 螺旋测微仪目镜中每条纹的视觉像素间距 */
+export const MICROMETER_STRIPE_PX = 30;
+/** 游标卡尺目镜中条纹视觉缩放基数 (1cm读数对应像素) */
+export const CALIPER_UNIT_PX = 96;
+
+/**
+ * 根据物理条纹间距计算螺旋测微仪的 crosshairSpeed
+ * crosshairSpeed = stripeSpacingVisual / realDeltaXmm
+ */
+export function computeMicrometerSpeed(realDeltaXmm: number): number {
+  return MICROMETER_STRIPE_PX / realDeltaXmm;
+}
+
+/**
+ * 根据物理条纹间距计算游标卡尺目镜中的条纹像素间距
+ * fringeSpacingVisual = realDeltaXcm * UNIT_PX
+ */
+export function computeCaliperFringePx(realDeltaXmm: number): number {
+  return (realDeltaXmm / 10) * CALIPER_UNIT_PX;
 }
 
 /** 波长(nm) → 波纹像素间距
