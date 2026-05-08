@@ -1,3 +1,7 @@
+/**
+ * 薄膜干涉 — 控制面板
+ */
+
 import type { ControlsSchema } from '../../platform/controls-schema';
 
 export const thinFilmControlsSchema: ControlsSchema = {
@@ -13,8 +17,14 @@ export const thinFilmControlsSchema: ControlsSchema = {
           min: 400,
           max: 700,
           step: 1,
-          value: 650,
+          value: 550,
           unit: 'nm'
+        },
+        {
+          type: 'toggle',
+          key: 'whiteLight',
+          label: '白光模式',
+          value: false
         }
       ]
     },
@@ -24,12 +34,22 @@ export const thinFilmControlsSchema: ControlsSchema = {
       fields: [
         {
           type: 'slider',
-          key: 'd',
-          label: '薄膜厚度 d',
+          key: 'dTop',
+          label: '顶部厚度 d_top',
+          min: 50,
+          max: 1000,
+          step: 10,
+          value: 100,
+          unit: 'nm'
+        },
+        {
+          type: 'slider',
+          key: 'dBottom',
+          label: '底部厚度 d_bottom',
           min: 100,
           max: 2000,
           step: 10,
-          value: 500,
+          value: 800,
           unit: 'nm'
         },
         {
@@ -39,18 +59,24 @@ export const thinFilmControlsSchema: ControlsSchema = {
           min: 1.0,
           max: 2.5,
           step: 0.05,
-          value: 1.5,
+          value: 1.33,
           unit: ''
-        },
+        }
+      ]
+    },
+    {
+      title: '观察点',
+      collapsed: false,
+      fields: [
         {
           type: 'slider',
-          key: 'incidence',
-          label: '入射角 i',
+          key: 'cursorY',
+          label: '观察点位置',
           min: 0,
-          max: 60,
+          max: 100,
           step: 1,
-          value: 30,
-          unit: '°'
+          value: 50,
+          unit: '%'
         }
       ]
     },

@@ -56,50 +56,29 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
 
     const step = next.params.step;
 
-    // 几何基线（紧凑布局）— 劈尖角 θ 均匀映射到可视化高度
+    // 几何基线 — 劈尖角 θ 映射到可视化高度（缩小比例，更接近真实视觉）
     const leftX = w * 0.12;
     const rightX = w * 0.88;
     const botY = h * 0.36;
 
-    const thetaRad = next.params.theta * (Math.PI / 180);
-    // slider 范围 [0.001°, 1.0°] 线性映射到可视化高度 [6%, 30%]
-    // 避免 tan(θ) 放大导致小角度就触顶
+    // slider 范围 [0.001°, 1.0°] 线性映射到可视化高度 [2%, 12%]
     const minTheta = 0.001;
     const maxTheta = 1.0;
-    const minWedgeH = h * 0.06;
-    const maxWedgeH = h * 0.30;
+    const minWedgeH = h * 0.02;
+    const maxWedgeH = h * 0.12;
     const t = Math.max(0, Math.min(1, (next.params.theta - minTheta) / (maxTheta - minTheta)));
     const wedgeH = minWedgeH + t * (maxWedgeH - minWedgeH);
     const topY = botY - wedgeH;
+
+    // 玻璃板厚度（远大于空气膜）
+    const glassH = 24 * scale;
 
     c.save();
     c.lineWidth = 2 * scale;
     c.font = `${Math.max(10, 13 * scale)}px sans-serif`;
 
-    // 下玻璃板（水平）
-    c.strokeStyle = text;
-    c.lineWidth = 2.5 * scale;
-    c.beginPath();
-    c.moveTo(leftX - 10 * scale, botY);
-    c.lineTo(rightX + 10 * scale, botY);
-    c.stroke();
-
-    // 上玻璃板（倾斜）
-    c.beginPath();
-    c.moveTo(leftX, botY);
-    c.lineTo(rightX, topY);
-    c.stroke();
-
-    // 左端面（玻璃）
-    c.strokeStyle = dim;
-    c.lineWidth = 1 * scale;
-    c.beginPath();
-    c.moveTo(leftX, botY - 25 * scale);
-    c.lineTo(leftX, botY + 8 * scale);
-    c.stroke();
-
-    // 空气层填充（半透明）
-    c.fillStyle = isDark ? 'rgba(56,189,248,0.08)' : 'rgba(56,189,248,0.12)';
+    // 空气层填充（半透明，先画在玻璃板下面）
+    c.fillStyle = isDark ? 'rgba(56,189,248,0.10)' : 'rgba(56,189,248,0.15)';
     c.beginPath();
     c.moveTo(leftX, botY);
     c.lineTo(rightX, topY);
@@ -107,15 +86,47 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
     c.closePath();
     c.fill();
 
+    // 下玻璃板（水平厚矩形）
+    const glassGrad1 = c.createLinearGradient(0, botY, 0, botY + glassH);
+    glassGrad1.addColorStop(0, isDark ? 'rgba(148,163,184,0.35)' : 'rgba(100,116,139,0.25)');
+    glassGrad1.addColorStop(1, isDark ? 'rgba(148,163,184,0.15)' : 'rgba(100,116,139,0.10)');
+    c.fillStyle = glassGrad1;
+    c.fillRect(leftX - 10 * scale, botY, rightX - leftX + 20 * scale, glassH);
+    c.strokeStyle = text;
+    c.lineWidth = 1.5 * scale;
+    c.strokeRect(leftX - 10 * scale, botY, rightX - leftX + 20 * scale, glassH);
+
+    // 上玻璃板（倾斜平行四边形）
+    const glassGrad2 = c.createLinearGradient(0, topY - glassH, 0, topY);
+    glassGrad2.addColorStop(0, isDark ? 'rgba(148,163,184,0.15)' : 'rgba(100,116,139,0.10)');
+    glassGrad2.addColorStop(1, isDark ? 'rgba(148,163,184,0.35)' : 'rgba(100,116,139,0.25)');
+    c.fillStyle = glassGrad2;
+    c.beginPath();
+    c.moveTo(leftX, botY);
+    c.lineTo(rightX, topY);
+    c.lineTo(rightX, topY - glassH);
+    c.lineTo(leftX, botY - glassH);
+    c.closePath();
+    c.fill();
+    c.strokeStyle = text;
+    c.lineWidth = 1.5 * scale;
+    c.stroke();
+
+    // 左端接触点标记
+    c.fillStyle = accent;
+    c.beginPath();
+    c.arc(leftX, botY, 3 * scale, 0, Math.PI * 2);
+    c.fill();
+
     // 玻璃板标签
     c.fillStyle = dim;
     c.textAlign = 'center';
     c.font = `${Math.max(9, 11 * scale)}px sans-serif`;
-    c.fillText('玻璃板', rightX + 30 * scale, topY + 8 * scale);
-    c.fillText('玻璃板', rightX + 30 * scale, botY + 16 * scale);
-    c.fillText('空气劈尖', (leftX + rightX) / 2, (botY + topY) / 2 + 10 * scale);
+    c.fillText('玻璃板', rightX + 30 * scale, topY - glassH / 2);
+    c.fillText('玻璃板', rightX + 30 * scale, botY + glassH / 2 + 4 * scale);
+    c.fillText('空气劈尖', (leftX + rightX) / 2, (botY + topY) / 2 + 6 * scale);
 
-    // 入射光线（多条垂直箭头）
+    // 入射光线（穿过上玻璃板，到达空气膜表面）
     const rayCount = 5;
     const rayStartY = h * 0.03;
     c.strokeStyle = accent;
@@ -123,14 +134,21 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
     c.globalAlpha = 0.5;
     for (let i = 0; i < rayCount; i++) {
       const rx = leftX + (rightX - leftX) * (0.15 + i * 0.18);
-      // 找到上板对应的 y 坐标
+      // 上板表面 y 坐标
       const plateY = botY - (rx - leftX) / (rightX - leftX) * wedgeH;
+      // 入射光：从顶部到上板顶面
       c.beginPath();
       c.moveTo(rx, rayStartY);
-      c.lineTo(rx, plateY - 5 * scale);
+      c.lineTo(rx, plateY - glassH);
       c.stroke();
-      // 箭头
-      drawArrow(c, rx, rayStartY, rx, plateY - 8 * scale, 4 * scale);
+      drawArrow(c, rx, rayStartY, rx, plateY - glassH, 4 * scale);
+      // 穿过上玻璃板（玻璃内部半透明线）
+      c.globalAlpha = 0.25;
+      c.beginPath();
+      c.moveTo(rx, plateY - glassH);
+      c.lineTo(rx, plateY);
+      c.stroke();
+      c.globalAlpha = 0.5;
     }
     c.globalAlpha = 1;
 
@@ -183,17 +201,18 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
       c.fillText('x', (leftX + px) / 2, botY + 38 * scale);
     }
 
-    // 劈尖角 θ（用真实物理角度绘制弧线）
+    // 劈尖角 θ（用视觉角度绘制弧线，物理角太小看不到）
     if (step !== 'geometry') {
       const thetaR = 18 * scale;
+      const visualAngle = Math.atan2(wedgeH, rightX - leftX);
       c.strokeStyle = dim;
       c.lineWidth = 1 * scale;
       c.beginPath();
-      c.arc(leftX, botY, thetaR, -thetaRad * 0.9, 0);
+      c.arc(leftX, botY, thetaR, -visualAngle * 0.9, 0);
       c.stroke();
       c.fillStyle = text;
       c.textAlign = 'left';
-      c.fillText('θ', leftX + thetaR + 4 * scale, botY - thetaR * 0.3);
+      c.fillText('θ', leftX + thetaR * Math.cos(-visualAngle * 0.5) + 4 * scale, botY + thetaR * Math.sin(-visualAngle * 0.5) - 2 * scale);
     }
 
     // 阶段特定内容
@@ -320,9 +339,18 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
     const lambda = next.params.lambda;
     const thetaRad = next.params.theta * (Math.PI / 180);
     const fringeSpacing = (lambda * 1e-6) / (2 * Math.sin(thetaRad)); // mm
+    const L = next.params.L * 10; // cm -> mm
 
-    // 固定显示范围 2 mm，让 θ 变化时条纹密度在视觉上明显变化
-    const displayL = 2.0; // mm
+    // 自适应显示范围：保证约 6~15 条亮纹可见
+    const rawFringes = L / fringeSpacing;
+    let displayL: number;
+    if (rawFringes < 6) {
+      displayL = fringeSpacing * 8;
+    } else if (rawFringes > 15) {
+      displayL = fringeSpacing * 12;
+    } else {
+      displayL = L;
+    }
     const color = hexToRgb(accent);
 
     // 绘制竖直条纹（水平方向对应位置 x，垂直方向为条纹高度）

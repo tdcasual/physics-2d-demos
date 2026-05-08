@@ -50,9 +50,17 @@ bootScenePage({
           const num = Number(value);
           filmScene.setParams({ lambda: num });
           updateLambdaSliderColor(mount, num);
+        } else if (key === 'whiteLight') {
+          filmScene.setParams({ whiteLight: Boolean(value) });
+          // 白光模式下灰化波长滑块
+          const lambdaSlider = mount.querySelector('input[type="range"][data-key="lambda"]') as HTMLInputElement | null;
+          if (lambdaSlider) lambdaSlider.disabled = Boolean(value);
+        } else if (key === 'cursorY') {
+          filmScene.setCursorY(Number(value) / 100);
         } else {
           filmScene.setParams({ [key]: Number(value) } as Record<string, number>);
         }
+        filmScene.render();
         writeSceneParams({ [key]: value });
       },
       onAction: () => {}
@@ -69,18 +77,31 @@ bootScenePage({
         filmScene.setParams({ lambda: num });
         renderer.setValue(key, num);
         updateLambdaSliderColor(mount, num);
+      } else if (key === 'whiteLight') {
+        filmScene.setParams({ whiteLight: value === 'true' });
+        renderer.setValue(key, value === 'true');
+      } else if (key === 'cursorY') {
+        const num = parseInt(String(value), 10);
+        filmScene.setCursorY(num / 100);
+        renderer.setValue(key, num);
       } else if (key in thinFilmMeta.defaultParams) {
-        const num = Number.isInteger(thinFilmMeta.defaultParams[key])
+        const num = Number.isInteger(thinFilmMeta.defaultParams[key as keyof typeof thinFilmMeta.defaultParams])
           ? parseInt(String(value), 10)
           : parseFloat(String(value));
         filmScene.setParams({ [key]: num } as Record<string, number>);
         renderer.setValue(key, num);
       }
     }
+    if (Object.keys(urlParams).length > 0) {
+      filmScene.render();
+    }
 
-    // 初始颜色
+    // 初始颜色和滑块状态
     const initialLambda = filmScene.getState().params.lambda;
     updateLambdaSliderColor(mount, initialLambda);
+    const initialWhiteLight = filmScene.getState().params.whiteLight;
+    const lambdaSlider = mount.querySelector('input[type="range"][data-key="lambda"]') as HTMLInputElement | null;
+    if (lambdaSlider && initialWhiteLight) lambdaSlider.disabled = true;
 
     return {
       setValue(key: string, value: number | string) {
