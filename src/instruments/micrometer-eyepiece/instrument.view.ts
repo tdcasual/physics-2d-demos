@@ -264,7 +264,7 @@ const CSS = `
 }
 
 .thimble-tick.major { width: 15px; }
-.thimble-tick.minor { width: 8px; }
+.thimble-tick.minor { width: 10px; }
 
 .thimble-number {
   position: absolute;
