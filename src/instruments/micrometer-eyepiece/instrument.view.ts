@@ -429,6 +429,7 @@ export function createMicrometerEyepieceView(options: {
   let simLastViewMode: 'crosshair' | 'fringe' = 'crosshair';
   let simLastSpeed = 100;
   let simLastScaleInverted = false;
+  let simLastCrosshairAngle = 0;
 
   // 整体仪器拖拽状态
   let sysDragging = false;
@@ -593,14 +594,15 @@ export function createMicrometerEyepieceView(options: {
 
     // C. 联动干涉视场
     const viewOffset = (currentReading - config.initialReading - stripeConfig.offset) * crosshairSpeed;
+    const angle = simLastCrosshairAngle;
     if (viewMode === 'fringe') {
       // 条纹移动模式：准星固定，条纹随样品台移动
-      crosshairSystem.style.transform = 'translateX(0)';
+      crosshairSystem.style.transform = `translateX(0) rotate(${angle}deg)`;
       lensView.style.backgroundPositionX = `${Math.round(-viewOffset)}px`;
     } else {
       // 准星移动模式（默认）：条纹固定，准星随螺杆移动
       lensView.style.backgroundPositionX = '0px';
-      crosshairSystem.style.transform = `translateX(${Math.round(viewOffset)}px)`;
+      crosshairSystem.style.transform = `translateX(${Math.round(viewOffset)}px) rotate(${angle}deg)`;
     }
 
     // D. 高精度数字更新
@@ -816,7 +818,8 @@ export function createMicrometerEyepieceView(options: {
         state.zeroOffset !== simLastZero ||
         state.stripeOffset !== stripeConfig.offset ||
         state.viewMode !== simLastViewMode ||
-        state.crosshairSpeed !== simLastSpeed;
+        state.crosshairSpeed !== simLastSpeed ||
+        state.crosshairAngle !== simLastCrosshairAngle;
       if (needRender) {
         currentReading = state.currentReading;
         zeroOffset = state.zeroOffset;
@@ -826,6 +829,7 @@ export function createMicrometerEyepieceView(options: {
         simLastZero = state.zeroOffset;
         simLastViewMode = state.viewMode;
         simLastSpeed = state.crosshairSpeed;
+        simLastCrosshairAngle = state.crosshairAngle;
         updateStripes();
         updateHint();
         renderView();

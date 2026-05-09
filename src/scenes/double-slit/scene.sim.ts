@@ -13,6 +13,8 @@ export type DoubleSlitParams = {
   showInstrumentReadout: boolean; // 步骤6是否显示仪器读数
   micrometerOffset: number; // 螺旋测微仪零位偏移 (mm)
   stripeOffset: number; // 螺旋测微仪十字准星位移 (mm)
+  crosshairAngle?: number; // 分划板旋转角度 (0-90)
+  L?: number; // 缝屏距离 (m), 默认 0.7
 };
 
 export type DoubleSlitState = {
@@ -20,8 +22,8 @@ export type DoubleSlitState = {
   time: number;
 };
 
-/** 物理常数：双缝到屏幕距离 (m) */
-export const PHYSICAL_L = 0.7;
+/** 物理常数：双缝到屏幕距离默认值 (m) */
+export const DEFAULT_L = 0.7;
 
 /** 物理常数：slitDistance 每单位对应的物理米数 (1单位 = 0.01mm) */
 export const PHYSICAL_D_SCALE = 0.01e-3;
@@ -30,10 +32,10 @@ export const PHYSICAL_D_SCALE = 0.01e-3;
  * 计算真实条纹间距 (mm)
  * Δx = λL/d
  */
-export function computeRealDeltaXmm(lambda: number, slitDistance: number): number {
+export function computeRealDeltaXmm(lambda: number, slitDistance: number, L: number = DEFAULT_L): number {
   const d = slitDistance * PHYSICAL_D_SCALE;
   const lambdaM = lambda * 1e-9;
-  return (lambdaM * PHYSICAL_L) / d * 1000;
+  return (lambdaM * L) / d * 1000;
 }
 
 /** 主画布像素比例：1px = 0.01mm */
@@ -43,8 +45,8 @@ export const PIXEL_TO_MM = 0.01;
  * 条纹间距（主画布像素）
  * 用于 scene.view.ts 绘制干涉图样
  */
-export function computeFringeSpacingPx(lambda: number, slitDistance: number): number {
-  return computeRealDeltaXmm(lambda, slitDistance) / PIXEL_TO_MM;
+export function computeFringeSpacingPx(lambda: number, slitDistance: number, L: number = DEFAULT_L): number {
+  return computeRealDeltaXmm(lambda, slitDistance, L) / PIXEL_TO_MM;
 }
 
 /** 螺旋测微仪目镜条纹缩放：每 mm 物理条纹间距对应的视觉像素 */

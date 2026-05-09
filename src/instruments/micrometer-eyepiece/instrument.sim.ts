@@ -15,6 +15,7 @@ export interface MicrometerEyepieceState extends InstrumentState {
   viewMode: ViewMode;
   crosshairSpeed: number;
   scaleInverted: boolean;
+  crosshairAngle: number;
 }
 
 export function createMicrometerEyepieceSim(
@@ -30,6 +31,7 @@ export function createMicrometerEyepieceSim(
     viewMode: initial.viewMode,
     crosshairSpeed: initial.crosshairSpeed ?? 100,
     scaleInverted: initial.scaleInverted ?? false,
+    crosshairAngle: initial.crosshairAngle ?? 0,
   };
 
   return {
@@ -63,6 +65,9 @@ export function createMicrometerEyepieceSim(
       }
       if (params.scaleInverted !== undefined) {
         state.scaleInverted = params.scaleInverted;
+      }
+      if (params.crosshairAngle !== undefined) {
+        state.crosshairAngle = params.crosshairAngle;
       }
     },
     step() {

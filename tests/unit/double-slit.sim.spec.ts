@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createDoubleSlitSim, lambdaToGap, lambdaToRgb, wavelengthToColor, computeFringeSpacingPx, PHYSICAL_L, PHYSICAL_D_SCALE, PIXEL_TO_MM } from '../../src/scenes/double-slit/scene.sim';
+import { createDoubleSlitSim, lambdaToGap, lambdaToRgb, wavelengthToColor, computeFringeSpacingPx, DEFAULT_L, PHYSICAL_D_SCALE, PIXEL_TO_MM } from '../../src/scenes/double-slit/scene.sim';
 
 const defaultParams = {
   step: 1 as const,
@@ -121,7 +121,7 @@ describe('computeFringeSpacingPx', () => {
     const px = computeFringeSpacingPx(lambda, d);
     const lambdaM = lambda * 1e-9;
     const dM = d * PHYSICAL_D_SCALE;
-    const deltaXM = (lambdaM * PHYSICAL_L) / dM;
+    const deltaXM = (lambdaM * DEFAULT_L) / dM;
     const expected = deltaXM / (PIXEL_TO_MM * 1e-3);
     expect(px).toBeCloseTo(expected, 6);
   });

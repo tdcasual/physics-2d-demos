@@ -239,6 +239,14 @@ const CSS = `
   height: 100%;
 }
 
+.crosshair-system {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  left: 0;
+  top: 0;
+}
+
 .crosshair-v {
   position: absolute;
   top: 0;
@@ -378,8 +386,10 @@ export function createInterferenceVernierCaliperView(options: {
             <div class="lens-assembly">
               <div class="lens-glass">
                 <div class="stripe-layer" id="stripe-layer"></div>
-                <div class="crosshair-v"></div>
-                <div class="crosshair-h"></div>
+                <div class="crosshair-system" id="crosshair-system">
+                  <div class="crosshair-v"></div>
+                  <div class="crosshair-h"></div>
+                </div>
               </div>
             </div>
           </div>
@@ -398,6 +408,7 @@ export function createInterferenceVernierCaliperView(options: {
   const vernierTicksContainer = qs<HTMLDivElement>('vernier-ticks');
   const slider = qs<HTMLDivElement>('slider');
   const stripeLayer = qs<HTMLDivElement>('stripe-layer');
+  const crosshairSystem = qs<HTMLDivElement>('crosshair-system');
   const readoutDisplay = qs<HTMLDivElement>('readout');
   const tipsEl = qs<HTMLDivElement>('tips-text');
   const knob = qs<HTMLDivElement>('knob');
@@ -423,6 +434,7 @@ export function createInterferenceVernierCaliperView(options: {
   let disposed = false;
   let simLastReading = 1.400;
   let simLastZero = 0;
+  let simLastCrosshairAngle = 0;
 
   const listeners = {
     reading: [] as Array<(reading: number) => void>,
@@ -526,6 +538,9 @@ export function createInterferenceVernierCaliperView(options: {
     const period = fringeConfig.spacing;
     const normOffset = ((rawOffset % period) + period) % period;
     stripeLayer.style.backgroundPositionX = `${normOffset}px`;
+
+    // 2b. 分划板旋转
+    crosshairSystem.style.transform = `rotate(${simLastCrosshairAngle}deg)`;
 
     // 3. 更新读数
     const totalReading = currentReadingCm + zeroOffset;
@@ -716,8 +731,10 @@ export function createInterferenceVernierCaliperView(options: {
 
       const needRender =
         state.currentReading !== simLastReading ||
-        state.zeroOffset !== simLastZero;
+        state.zeroOffset !== simLastZero ||
+        state.crosshairAngle !== simLastCrosshairAngle;
       if (needRender) {
+        simLastCrosshairAngle = state.crosshairAngle;
         currentReadingCm = state.currentReading;
         zeroOffset = state.zeroOffset;
         simLastReading = state.currentReading;

@@ -31,6 +31,16 @@ const paramsSection = {
       step: 1,
       value: 20,
       unit: '0.01mm'
+    },
+    {
+      type: 'slider' as const,
+      key: 'L',
+      label: '缝屏距 (L)',
+      min: 30,
+      max: 200,
+      step: 1,
+      value: 70,
+      unit: 'cm'
     }
   ]
 };
@@ -57,6 +67,17 @@ const instrumentSection = {
         { id: 'micrometer', label: '高精度干涉测微仪' }
       ],
       initialActive: 'caliper'
+    },
+
+    {
+      type: 'slider' as const,
+      key: 'crosshairAngle',
+      label: '分划板角度',
+      min: 0,
+      max: 90,
+      step: 1,
+      value: 0,
+      unit: '°'
     },
 
     {

@@ -9,7 +9,7 @@ import type { SceneLifecycle } from '../../platform/scene-contract';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 
 import { createStandardSceneEntry } from '../scene-entry-helpers';
-import { createDoubleSlitSim, type DoubleSlitParams, type DoubleSlitState, STEPS, computeRealDeltaXmm, computeMicrometerStripePx, computeMicrometerSpeed, computeCaliperFringePx, lambdaToRgb } from './scene.sim';
+import { createDoubleSlitSim, type DoubleSlitParams, type DoubleSlitState, STEPS, DEFAULT_L, computeRealDeltaXmm, computeMicrometerStripePx, computeMicrometerSpeed, computeCaliperFringePx, lambdaToRgb } from './scene.sim';
 import { createDoubleSlitView } from './scene.view';
 import { createInterferenceVernierCaliper } from '../../instruments/interference-vernier-caliper/instrument.entry';
 import { createMicrometerEyepiece } from '../../instruments/micrometer-eyepiece/instrument.entry';
@@ -41,6 +41,8 @@ export function createDoubleSlitScene(
     showInstrumentReadout: false,
     micrometerOffset: 0,
     stripeOffset: 12,
+    crosshairAngle: 0,
+    L: DEFAULT_L,
   });
 
   const view = createDoubleSlitView({
@@ -179,9 +181,11 @@ export function createDoubleSlitScene(
 
   function syncInstrumentParams(): void {
     const { lambda, slitDistance, micrometerOffset, stripeOffset } = sim.getState().params;
+    const L = sim.getState().params.L ?? DEFAULT_L;
+    const crosshairAngle = sim.getState().params.crosshairAngle ?? 0;
     const [r, g, b] = lambdaToRgb(lambda);
     const fringeColor = `rgba(${r},${g},${b},0.85)`;
-    const realDeltaXmm = computeRealDeltaXmm(lambda, slitDistance);
+    const realDeltaXmm = computeRealDeltaXmm(lambda, slitDistance, L);
     const caliperFringePx = computeCaliperFringePx(realDeltaXmm);
     const micrometerStripePx = computeMicrometerStripePx(realDeltaXmm);
     const micrometerSpeed = computeMicrometerSpeed(realDeltaXmm);
@@ -190,6 +194,7 @@ export function createDoubleSlitScene(
       fringeSpacing: caliperFringePx,
       fringeColor,
       fringeEnvelopeWidth: caliperFringePx * 8,
+      crosshairAngle,
     });
     rightInstrument?.sim.setParams({
       stripeSpacing: micrometerStripePx,
@@ -199,6 +204,7 @@ export function createDoubleSlitScene(
       stripeOffset,
       crosshairSpeed: micrometerSpeed,
       scaleInverted: true,
+      crosshairAngle,
     });
   }
 
@@ -257,12 +263,12 @@ export function createDoubleSlitScene(
     const items = [
       { label: '当前步骤', value: `${step} / 6` },
       { label: '双缝间距 d', value: `${dMm} mm` },
-      { label: '缝屏距 L', value: '70 cm' },
+      { label: '缝屏距 L', value: `${((s.params.L ?? DEFAULT_L) * 100).toFixed(0)} cm` },
     ];
     if (step === 6) {
       const instrumentName = s.params.activeInstrument === 'caliper' ? '干涉读数游标卡尺' : '高精度干涉测微仪';
       items.push({ label: '当前仪器', value: instrumentName });
-      const realDeltaXmm = computeRealDeltaXmm(s.params.lambda, d);
+      const realDeltaXmm = computeRealDeltaXmm(s.params.lambda, d, s.params.L ?? DEFAULT_L);
       items.push({ label: '条纹间距 Δx', value: `${realDeltaXmm.toFixed(3)} mm` });
       // 从当前激活仪器获取读数，统一显示在实验状态区
       const active = s.params.activeInstrument;

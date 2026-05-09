@@ -9,7 +9,7 @@
 import type { TeachingTheme } from '../../platform/standards';
 import { sizeCanvasToFill } from '../../core/canvas-sizing';
 import type { DoubleSlitState } from './scene.sim';
-import { lambdaToGap, lambdaToRgb, computeFringeSpacingPx } from './scene.sim';
+import { lambdaToGap, lambdaToRgb, computeFringeSpacingPx, DEFAULT_L } from './scene.sim';
 
 export type CreateDoubleSlitViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -337,7 +337,8 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
     slitDistance: number,
     palette: WavePalette,
     scene: typeof SCENE_PALETTE['dark'],
-    isDark: boolean
+    isDark: boolean,
+    L: number
   ) => {
     const topH = H * 0.30;
     const patternX = W * 0.15;
@@ -347,7 +348,7 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
     // const centerY = patternY + patternH * 0.5;
 
     // 物理条纹间距（px）
-    const fringeSpacingPx = computeFringeSpacingPx(lambda, slitDistance);
+    const fringeSpacingPx = computeFringeSpacingPx(lambda, slitDistance, L);
 
     // 视觉压缩：让条纹在有限区域显示更多明暗周期，不影响物理读数
     const visualFringePx = fringeSpacingPx * 0.35;
@@ -426,6 +427,7 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
     const palette = getWavePalette(lambda, isDark);
     const scene = SCENE_PALETTE[isDark ? 'dark' : 'light'];
     const d = next.params.slitDistance;
+    const L = next.params.L ?? DEFAULT_L;
     const gap = lambdaToGap(lambda);
 
     const W = 1000;
@@ -458,7 +460,7 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
 
     // 步骤6：上方大干涉图样，下方由仪器组件接管
     if (step === 6) {
-      drawStep6Pattern(c, W, H, lambda, d, palette, scene, isDark);
+      drawStep6Pattern(c, W, H, lambda, d, palette, scene, isDark, L);
     } else {
       // 步骤 1–5：完整光路 + 仪器
       if (step >= 1) {

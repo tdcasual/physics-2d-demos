@@ -25,6 +25,8 @@ export interface MicrometerEyepieceParams extends InstrumentParams {
   crosshairSpeed?: number;
   /** 主尺刻度反转：mm 刻度在基准线下方，0.5mm 刻度在上方 */
   scaleInverted?: boolean;
+  /** 分划板旋转角度（0=竖直, 90=水平） */
+  crosshairAngle?: number;
 }
 
 export const micrometerEyepieceMeta: InstrumentMeta<MicrometerEyepieceParams> = {

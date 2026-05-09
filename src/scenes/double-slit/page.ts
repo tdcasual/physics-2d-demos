@@ -40,9 +40,11 @@ bootScenePage({
       currentRenderer?.setActive('step', String(state.params.step));
       currentRenderer?.setValue('lambda', state.params.lambda);
       currentRenderer?.setValue('slitDistance', state.params.slitDistance);
+      currentRenderer?.setValue('L', (state.params.L ?? 0.7) * 100);
       if (state.params.step === 6) {
         currentRenderer?.setActive('activeInstrument', state.params.activeInstrument);
         currentRenderer?.setValue('stripeOffset', state.params.stripeOffset);
+        currentRenderer?.setValue('crosshairAngle', state.params.crosshairAngle);
         currentRenderer?.setVisible('stripeOffset', state.params.activeInstrument === 'micrometer');
       }
     }
@@ -61,6 +63,8 @@ bootScenePage({
             dsScene.setParams({ lambda: Number(value) });
           } else if (key === 'slitDistance') {
             dsScene.setParams({ slitDistance: Number(value) });
+          } else if (key === 'L') {
+            dsScene.setParams({ L: Number(value) / 100 });
           } else if (key === 'activeInstrument') {
             const instrument = String(value) as 'caliper' | 'micrometer';
             dsScene.setParams({ activeInstrument: instrument });
@@ -69,6 +73,8 @@ bootScenePage({
             currentRenderer?.setVisible('stripeOffset', instrument === 'micrometer');
           } else if (key === 'stripeOffset') {
             dsScene.setParams({ stripeOffset: Number(value) });
+          } else if (key === 'crosshairAngle') {
+            dsScene.setParams({ crosshairAngle: Number(value) });
           }
           dsScene.render();
           writeSceneParams({ [key]: value });
