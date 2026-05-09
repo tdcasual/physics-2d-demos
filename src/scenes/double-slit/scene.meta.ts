@@ -23,7 +23,7 @@ export const doubleSlitMeta: SceneMeta = {
   defaultParams: {
     step: 1,
     lambda: 532,
-    slitDistance: 40,
+    slitDistance: 20,
   },
   urlSyncKeys: ['step', 'activeInstrument']
 };

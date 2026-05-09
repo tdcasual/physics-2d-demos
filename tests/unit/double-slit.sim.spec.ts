@@ -111,8 +111,8 @@ describe('computeFringeSpacingPx', () => {
 
   it('inversely proportional to slitDistance', () => {
     const px20 = computeFringeSpacingPx(532, 20);
-    const px60 = computeFringeSpacingPx(532, 60);
-    expect(px20 / px60).toBeCloseTo(60 / 20, 2);
+    const px60 = computeFringeSpacingPx(532, 43);
+    expect(px20 / px60).toBeCloseTo(43 / 20, 2);
   });
 
   it('matches formula Δx = λL/d', () => {
@@ -179,8 +179,8 @@ describe('boundary values', () => {
     expect(sim.getState().params.slitDistance).toBe(20);
   });
 
-  it('slitDistance=60', () => {
-    const sim = createDoubleSlitSim({ ...defaultParams, slitDistance: 60 });
-    expect(sim.getState().params.slitDistance).toBe(60);
+  it('slitDistance=43', () => {
+    const sim = createDoubleSlitSim({ ...defaultParams, slitDistance: 43 });
+    expect(sim.getState().params.slitDistance).toBe(43);
   });
 });

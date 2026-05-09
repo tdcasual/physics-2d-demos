@@ -26,8 +26,8 @@ const paramsSection = {
       type: 'slider' as const,
       key: 'slitDistance',
       label: '双缝间距 (d)',
-      min: 10,
-      max: 50,
+      min: 16,
+      max: 43,
       step: 1,
       value: 20,
       unit: '0.01mm'

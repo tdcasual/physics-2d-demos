@@ -349,8 +349,11 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
     // 物理条纹间距（px）
     const fringeSpacingPx = computeFringeSpacingPx(lambda, slitDistance);
 
+    // 视觉压缩：让条纹在有限区域显示更多明暗周期，不影响物理读数
+    const visualFringePx = fringeSpacingPx * 0.35;
+
     // 衍射包络宽度（单缝衍射，假设单缝宽度 a = d/12）
-    const envelopeSpacingPx = fringeSpacingPx * 12;
+    const envelopeSpacingPx = visualFringePx * 12;
 
     // 干涉图样背景
     c.fillStyle = isDark ? 'rgba(148,163,184,0.06)' : 'rgba(100,116,139,0.04)';
@@ -375,7 +378,7 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
     const n = Math.ceil(patternW * 0.5);
     const intensities: number[] = [];
     for (let x = -n; x <= n; x++) {
-      const phase = (Math.PI * x) / fringeSpacingPx;
+      const phase = (Math.PI * x) / visualFringePx;
       const cos2 = Math.pow(Math.cos(phase), 2);
 
       const beta = (Math.PI * x) / envelopeSpacingPx;

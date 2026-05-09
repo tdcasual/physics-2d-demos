@@ -9,7 +9,7 @@ import type { SceneLifecycle } from '../../platform/scene-contract';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 
 import { createStandardSceneEntry } from '../scene-entry-helpers';
-import { createDoubleSlitSim, type DoubleSlitParams, type DoubleSlitState, STEPS, computeRealDeltaXmm, computeMicrometerSpeed, computeCaliperFringePx, lambdaToRgb } from './scene.sim';
+import { createDoubleSlitSim, type DoubleSlitParams, type DoubleSlitState, STEPS, computeRealDeltaXmm, computeMicrometerStripePx, computeMicrometerSpeed, computeCaliperFringePx, lambdaToRgb } from './scene.sim';
 import { createDoubleSlitView } from './scene.view';
 import { createInterferenceVernierCaliper } from '../../instruments/interference-vernier-caliper/instrument.entry';
 import { createMicrometerEyepiece } from '../../instruments/micrometer-eyepiece/instrument.entry';
@@ -183,6 +183,7 @@ export function createDoubleSlitScene(
     const fringeColor = `rgba(${r},${g},${b},0.85)`;
     const realDeltaXmm = computeRealDeltaXmm(lambda, slitDistance);
     const caliperFringePx = computeCaliperFringePx(realDeltaXmm);
+    const micrometerStripePx = computeMicrometerStripePx(realDeltaXmm);
     const micrometerSpeed = computeMicrometerSpeed(realDeltaXmm);
 
     leftInstrument?.sim.setParams({
@@ -191,7 +192,7 @@ export function createDoubleSlitScene(
       fringeEnvelopeWidth: caliperFringePx * 8,
     });
     rightInstrument?.sim.setParams({
-      stripeSpacing: 30,
+      stripeSpacing: micrometerStripePx,
       stripeColor: `rgb(${r},${g},${b})`,
       zeroOffset: micrometerOffset,
       stripeAngle: 90,
@@ -268,7 +269,7 @@ export function createDoubleSlitScene(
       if (active === 'caliper' && leftInstrument) {
         const reading = (leftInstrument.view as unknown as { getReading?: () => number }).getReading?.();
         if (reading !== undefined) {
-          items.push({ label: '游标卡尺读数', value: `${reading.toFixed(3)} cm` });
+          items.push({ label: '游标卡尺读数', value: `${(reading * 10).toFixed(3)} mm` });
         }
       } else if (active === 'micrometer' && rightInstrument) {
         const reading = (rightInstrument.view as unknown as { getReading?: () => number }).getReading?.();

@@ -53,17 +53,19 @@ for (const [path, mod] of Object.entries(sceneModules)) {
 // ---------------------------------------------------------------------------
 
 describe('scene contract (dynamic discovery)', () => {
-  it('discovers all 14 scenes', () => {
-    expect(scenes).toHaveLength(14);
+  it('discovers all 16 scenes', () => {
+    expect(scenes).toHaveLength(16);
     const names = scenes.map(s => s.name).sort();
     expect(names).toEqual([
       'chase-meet',
+      'doppler-effect',
       'double-slit',
       'electrification',
       'emf-analogy',
       'field-lines',
       'ganshe',
       'interference-formula',
+      'mechanical-wave',
       'micrometer',
       'projectile',
       'spring-oscillator',

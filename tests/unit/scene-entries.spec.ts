@@ -38,7 +38,7 @@ for (const [path, mod] of Object.entries(sceneModules)) {
   const needsCanvas = true;
 
   // 根据场景的实际接口能力设置选项
-  const hasGetState = ['projectile', 'chase-meet', 'ganshe'].includes(dirName);
+  const hasGetState = ['projectile', 'chase-meet', 'ganshe', 'doppler-effect', 'mechanical-wave'].includes(dirName);
   const hasGetSnapshot = ['chase-meet', 'electrification', 'emf-analogy', 'field-lines', 'vt-integral'].includes(dirName);
   const hasTransport = ['spring-oscillator', 'chase-meet', 'projectile'].includes(dirName);
 
@@ -53,8 +53,8 @@ for (const [path, mod] of Object.entries(sceneModules)) {
 }
 
 // 确保没有场景被遗漏
-if (discovered.length !== 14) {
+if (discovered.length !== 16) {
   throw new Error(
-    `Expected 14 scenes but discovered ${discovered.length}: ${discovered.join(', ')}`
+    `Expected 16 scenes but discovered ${discovered.length}: ${discovered.join(', ')}`
   );
 }

@@ -141,7 +141,7 @@ const CSS = `
 .sleeve-container {
   position: absolute;
   left: 215px;
-  height: 110px;
+  height: 165px;
   width: 250px;
   background: linear-gradient(to bottom, #e8eaec 0%, var(--sleeve-bg) 30%, var(--sleeve-bg) 70%, #b8bcbf 100%);
   border-top: 4px solid var(--border-dark);
@@ -230,7 +230,7 @@ const CSS = `
 
 .thimble-bevel {
   width: 35px;
-  height: 136px;
+  height: 180px;
   background: linear-gradient(to bottom, #f0f2f3 0%, var(--thimble-bevel) 20%, var(--thimble-bevel) 80%, #c4c8cb 100%);
   border: 4px solid var(--border-dark);
   border-right: none;
@@ -280,7 +280,7 @@ const CSS = `
 
 .thimble-body {
   width: 100px;
-  height: 136px;
+  height: 180px;
   background: linear-gradient(to bottom, #f4f5f6 0%, var(--thimble-body) 20%, var(--thimble-body) 80%, #b5b9bc 100%);
   border: 4px solid var(--border-dark);
   border-left: 1px solid rgba(0,0,0,0.3);
@@ -288,7 +288,7 @@ const CSS = `
 
 .ratchet {
   width: 45px;
-  height: 90px;
+  height: 120px;
   background: linear-gradient(to bottom, #eff1f2 0%, #c8cccf 20%, #c8cccf 80%, #a2a6a9 100%);
   border: 4px solid var(--border-dark);
   border-left: none;
@@ -411,7 +411,7 @@ export function createMicrometerEyepieceView(options: {
     initialReading: 0,
     maxReading: 32.00,
     tickGapX: 10,
-    tickGapY: 8,
+    tickGapY: 12,
   };
 
   let crosshairSpeed = 100;
@@ -585,7 +585,7 @@ export function createMicrometerEyepieceView(options: {
     // B. 副尺刻度垂直滚动匹配
     const totalTicksPassed = currentReading / 0.01;
     const targetYFromBottom = totalTicksPassed * config.tickGapY;
-    const translateY = targetYFromBottom - 68;
+    const translateY = targetYFromBottom - 90;
     thimbleStrip.style.transform = `translateY(${translateY}px)`;
 
     // B2. 更新对象池中的可见 tick

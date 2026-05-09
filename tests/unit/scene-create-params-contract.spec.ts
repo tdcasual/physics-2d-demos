@@ -95,13 +95,13 @@ describe('Scene factory param contract', () => {
     });
   }
 
-  it('exactly 14 scenes discovered', () => {
+  it('exactly 16 scenes discovered', () => {
     const count = Object.entries(sceneModules).filter(([, mod]) => {
       return Object.entries(mod).some(
         ([key, val]) =>
           key.startsWith('create') && key.endsWith('Scene') && typeof val === 'function'
       );
     }).length;
-    expect(count).toBe(14);
+    expect(count).toBe(16);
   });
 });

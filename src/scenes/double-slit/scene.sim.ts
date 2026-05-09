@@ -7,7 +7,7 @@
 export type DoubleSlitParams = {
   step: number;           // 1–6
   lambda: number;         // 波长 400–700 nm
-  slitDistance: number;   // 20–60 (px)
+  slitDistance: number;   // 16–43 (px)
   isPlaying: boolean;
   activeInstrument: 'caliper' | 'micrometer'; // 步骤6当前高亮仪器
   showInstrumentReadout: boolean; // 步骤6是否显示仪器读数
@@ -47,17 +47,25 @@ export function computeFringeSpacingPx(lambda: number, slitDistance: number): nu
   return computeRealDeltaXmm(lambda, slitDistance) / PIXEL_TO_MM;
 }
 
-/** 螺旋测微仪目镜中每条纹的视觉像素间距 */
-export const MICROMETER_STRIPE_PX = 30;
+/** 螺旋测微仪目镜条纹缩放：每 mm 物理条纹间距对应的视觉像素 */
+export const MICROMETER_STRIPE_SCALE = 31;
 /** 游标卡尺目镜中条纹视觉缩放基数 (1cm读数对应像素) */
 export const CALIPER_UNIT_PX = 96;
 
 /**
- * 根据物理条纹间距计算螺旋测微仪的 crosshairSpeed
- * crosshairSpeed = stripeSpacingVisual / realDeltaXmm
+ * 根据物理条纹间距计算螺旋测微仪目镜中的条纹像素间距
+ * stripeSpacingVisual = realDeltaXmm * SCALE
  */
-export function computeMicrometerSpeed(realDeltaXmm: number): number {
-  return MICROMETER_STRIPE_PX / realDeltaXmm;
+export function computeMicrometerStripePx(realDeltaXmm: number): number {
+  return realDeltaXmm * MICROMETER_STRIPE_SCALE;
+}
+
+/**
+ * 根据物理条纹间距计算螺旋测微仪的 crosshairSpeed
+ * crosshairSpeed = stripeSpacingVisual / realDeltaXmm = SCALE (常数)
+ */
+export function computeMicrometerSpeed(_realDeltaXmm: number): number {
+  return MICROMETER_STRIPE_SCALE;
 }
 
 /**
