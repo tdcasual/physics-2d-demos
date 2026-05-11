@@ -475,25 +475,77 @@ export function createMicrometerEyepieceView(options: {
     return reading <= 0.001 || reading >= config.maxReading - 0.001;
   }
 
-  // ── 更新干涉条纹 ──
+  // ── 解析任意 CSS 颜色为 rgba ──
+  function parseRgba(color: string): { r: number; g: number; b: number; a: number } {
+    const el = document.createElement('div');
+    el.style.color = color;
+    el.style.position = 'absolute';
+    el.style.visibility = 'hidden';
+    document.body.appendChild(el);
+    const computed = getComputedStyle(el).color;
+    el.remove();
+    const m = computed.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+    if (m) {
+      return { r: +m[1], g: +m[2], b: +m[3], a: m[4] ? +m[4] : 1 };
+    }
+    return { r: 0, g: 0, b: 0, a: 1 };
+  }
+
+  // ── 预渲染一个周期的条纹瓷砖（90deg 时用 Canvas 位图平铺，比 gradient 快）──
+  function buildStripeTile(period: number, color: string): string {
+    const c = parseRgba(color);
+    const gap = Math.round(period * 0.3);
+    const fadeInEnd = Math.round(period * 0.4);
+    const fadeOutStart = Math.round(period * 0.6);
+    const fadeOutEnd = Math.round(period * 0.7);
+
+    const cvs = document.createElement('canvas');
+    cvs.width = period;
+    cvs.height = 1;
+    const ctx = cvs.getContext('2d')!;
+    const grad = ctx.createLinearGradient(0, 0, period, 0);
+
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(gap / period, 'rgba(0,0,0,0)');
+    grad.addColorStop(fadeInEnd / period, `rgba(${c.r},${c.g},${c.b},${c.a * 0.5})`);
+    grad.addColorStop(0.5, `rgba(${c.r},${c.g},${c.b},${c.a})`);
+    grad.addColorStop(fadeOutStart / period, `rgba(${c.r},${c.g},${c.b},${c.a})`);
+    grad.addColorStop(fadeOutEnd / period, `rgba(${c.r},${c.g},${c.b},${c.a * 0.5})`);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, period, 1);
+    return cvs.toDataURL('image/png');
+  }
+
+  let _stripeTileUrl = '';
+
   function updateStripes() {
     const s = stripeConfig;
-    const gap = Math.round(s.spacing * 0.3);
-    const fadeInEnd = Math.round(s.spacing * 0.4);
-    const fadeOutStart = Math.round(s.spacing * 0.6);
-    const fadeOutEnd = Math.round(s.spacing * 0.7);
-    const fadeColor = `color-mix(in srgb, transparent 50%, ${s.color})`;
-    // 间隙 → 渐变淡入 → 实心 → 渐变淡出 → 间隙（循环边界无缝）
-    lensView.style.backgroundImage = `repeating-linear-gradient(
-      ${s.angle}deg,
-      transparent 0px,
-      transparent ${gap}px,
-      ${fadeColor} ${fadeInEnd}px,
-      ${s.color} ${Math.round(s.spacing * 0.5)}px,
-      ${s.color} ${fadeOutStart}px,
-      ${fadeColor} ${fadeOutEnd}px,
-      transparent ${s.spacing}px
-    )`;
+    if (s.angle === 90) {
+      // 垂直条纹：Canvas 位图 + repeat 平铺（GPU 加速，无需取模）
+      _stripeTileUrl = buildStripeTile(s.spacing, s.color);
+      lensView.style.backgroundImage = `url(${_stripeTileUrl})`;
+      lensView.style.backgroundRepeat = 'repeat';
+    } else {
+      // 非垂直角度：回退到 CSS gradient（倾斜条纹无缝瓷砖较复杂）
+      const gap = Math.round(s.spacing * 0.3);
+      const fadeInEnd = Math.round(s.spacing * 0.4);
+      const fadeOutStart = Math.round(s.spacing * 0.6);
+      const fadeOutEnd = Math.round(s.spacing * 0.7);
+      const fadeColor = `color-mix(in srgb, transparent 50%, ${s.color})`;
+      lensView.style.backgroundImage = `repeating-linear-gradient(
+        ${s.angle}deg,
+        transparent 0px,
+        transparent ${gap}px,
+        ${fadeColor} ${fadeInEnd}px,
+        ${s.color} ${Math.round(s.spacing * 0.5)}px,
+        ${s.color} ${fadeOutStart}px,
+        ${fadeColor} ${fadeOutEnd}px,
+        transparent ${s.spacing}px
+      )`;
+      lensView.style.backgroundRepeat = '';
+    }
   }
 
   // ── 初始化主尺双刻度 ──
@@ -605,7 +657,8 @@ export function createMicrometerEyepieceView(options: {
     if (viewMode === 'fringe') {
       // 准星不动模式：准星固定居中，条纹随读数滚动
       crosshairSystem.style.transform = `translateX(0) rotate(${angle}deg)`;
-      lensView.style.backgroundPositionX = `${Math.round(-viewOffset)}px`;
+      // background-repeat:repeat 自动处理周期，无需取模或 round
+      lensView.style.backgroundPositionX = `${-viewOffset}px`;
     } else {
       // 准星移动模式：条纹固定，准星用相同 viewOffset 做线性位移
       lensView.style.backgroundPositionX = '0px';

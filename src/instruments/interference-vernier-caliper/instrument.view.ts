@@ -504,25 +504,56 @@ export function createInterferenceVernierCaliperView(options: {
     }
   }
 
-  // ── 生成干涉条纹（CSS gradient，与螺旋测微仪一致）──
+  // ── 解析任意 CSS 颜色为 rgba ──
+  function parseRgba(color: string): { r: number; g: number; b: number; a: number } {
+    const el = document.createElement('div');
+    el.style.color = color;
+    el.style.position = 'absolute';
+    el.style.visibility = 'hidden';
+    document.body.appendChild(el);
+    const computed = getComputedStyle(el).color;
+    el.remove();
+    const m = computed.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+    if (m) {
+      return { r: +m[1], g: +m[2], b: +m[3], a: m[4] ? +m[4] : 1 };
+    }
+    return { r: 0, g: 0, b: 0, a: 1 };
+  }
+
+  // ── 预渲染一个周期的条纹瓷砖（Canvas → dataURL，GPU 平铺比 gradient 快）──
+  function buildStripeTile(period: number, color: string): string {
+    const c = parseRgba(color);
+    const gap = Math.round(period * 0.3);
+    const fadeInEnd = Math.round(period * 0.4);
+    const fadeOutStart = Math.round(period * 0.6);
+    const fadeOutEnd = Math.round(period * 0.7);
+
+    const cvs = document.createElement('canvas');
+    cvs.width = period;
+    cvs.height = 1;
+    const ctx = cvs.getContext('2d')!;
+    const grad = ctx.createLinearGradient(0, 0, period, 0);
+
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(gap / period, 'rgba(0,0,0,0)');
+    grad.addColorStop(fadeInEnd / period, `rgba(${c.r},${c.g},${c.b},${c.a * 0.5})`);
+    grad.addColorStop(0.5, `rgba(${c.r},${c.g},${c.b},${c.a})`);
+    grad.addColorStop(fadeOutStart / period, `rgba(${c.r},${c.g},${c.b},${c.a})`);
+    grad.addColorStop(fadeOutEnd / period, `rgba(${c.r},${c.g},${c.b},${c.a * 0.5})`);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, period, 1);
+    return cvs.toDataURL('image/png');
+  }
+
+  let _stripeTileUrl = '';
+
   function updatePattern() {
     const s = fringeConfig.spacing;
-    const { color } = fringeConfig;
-    const gap = Math.round(s * 0.3);
-    const fadeInEnd = Math.round(s * 0.4);
-    const fadeOutStart = Math.round(s * 0.6);
-    const fadeOutEnd = Math.round(s * 0.7);
-    const fadeColor = `color-mix(in srgb, transparent 50%, ${color})`;
-    stripeLayer.style.backgroundImage = `repeating-linear-gradient(
-      90deg,
-      transparent 0px,
-      transparent ${gap}px,
-      ${fadeColor} ${fadeInEnd}px,
-      ${color} ${Math.round(s * 0.5)}px,
-      ${color} ${fadeOutStart}px,
-      ${fadeColor} ${fadeOutEnd}px,
-      transparent ${s}px
-    )`;
+    _stripeTileUrl = buildStripeTile(s, fringeConfig.color);
+    stripeLayer.style.backgroundImage = `url(${_stripeTileUrl})`;
+    stripeLayer.style.backgroundRepeat = 'repeat';
   }
 
   // ── 核心渲染 ──
@@ -540,9 +571,7 @@ export function createInterferenceVernierCaliperView(options: {
 
     // 2. 根据视场模式切换分划板/条纹运动
     const patternTranslateX = PATTERN_ABSOLUTE_X - (snappedX + LENS_OFFSET_FROM_VERNIER);
-    const rawOffset = patternTranslateX * LENS_VISUAL_SCALE;
-    const period = fringeConfig.spacing;
-    const normOffset = ((Math.round(rawOffset) % period) + period) % period;
+    const rawOffset = Math.round(patternTranslateX * LENS_VISUAL_SCALE);
 
     if (viewMode === 'crosshair') {
       // 准星移动模式：条纹固定，准星从切换位置开始线性移动
@@ -551,7 +580,8 @@ export function createInterferenceVernierCaliperView(options: {
       crosshairSystem.style.transform = `translateX(${Math.round(vo)}px) rotate(${simLastCrosshairAngle}deg)`;
     } else {
       // 准星不动模式（默认）：准星固定居中，条纹随滑块逆向移动
-      stripeLayer.style.backgroundPositionX = `${normOffset}px`;
+      // background-repeat:repeat 自动处理周期，无需取模
+      stripeLayer.style.backgroundPositionX = `${rawOffset}px`;
       crosshairSystem.style.transform = `rotate(${simLastCrosshairAngle}deg)`;
     }
 
