@@ -754,15 +754,17 @@ export function createInterferenceVernierCaliperView(options: {
         stripeOffsetMm = state.stripeOffset;
       }
 
+      const stripeOffsetChanged = state.stripeOffset !== undefined && state.stripeOffset !== stripeOffsetMm;
       const needRender =
         state.zeroOffset !== simLastZero ||
         state.crosshairAngle !== simLastCrosshairAngle ||
         viewModeChanged ||
-        state.stripeOffset !== undefined;
+        stripeOffsetChanged;
       if (needRender) {
         simLastCrosshairAngle = state.crosshairAngle;
         zeroOffset = state.zeroOffset;
         simLastZero = state.zeroOffset;
+        if (stripeOffsetChanged && state.stripeOffset !== undefined) stripeOffsetMm = state.stripeOffset;
         renderView();
       }
     },

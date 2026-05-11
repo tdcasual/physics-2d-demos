@@ -542,7 +542,13 @@ export function createMicrometerEyepieceView(options: {
     }
   }
 
+  let _lastTickReading = -1;
+
   function updateThimbleTicks() {
+    // 脏检查：变化小于半个最小刻度（0.005 mm）时跳过
+    if (Math.abs(currentReading - _lastTickReading) < 0.005) return;
+    _lastTickReading = currentReading;
+
     const totalTicksPassed = currentReading / 0.01;
     const centerTick = Math.round(totalTicksPassed);
     const halfPool = Math.floor(TICK_POOL_SIZE / 2);

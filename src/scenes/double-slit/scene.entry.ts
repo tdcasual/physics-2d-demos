@@ -176,14 +176,19 @@ export function createDoubleSlitScene(
 
   function syncActiveInstrumentLayout(): void {
     const active = sim.getState().params.activeInstrument;
-    if (leftContainer) {
-      leftContainer.style.display = active === 'caliper' ? 'block' : 'none';
-      leftContainer.style.width = active === 'caliper' ? '100%' : '50%';
-    }
-    if (rightContainer) {
-      rightContainer.style.display = active === 'micrometer' ? 'block' : 'none';
-      rightContainer.style.flex = active === 'micrometer' ? '1' : 'none';
-    }
+    if (!leftContainer || !rightContainer) return;
+
+    const leftShouldShow = active === 'caliper';
+    const rightShouldShow = active === 'micrometer';
+    const leftVisible = leftContainer.style.display !== 'none';
+    const rightVisible = rightContainer.style.display !== 'none';
+
+    if (leftVisible === leftShouldShow && rightVisible === rightShouldShow) return;
+
+    leftContainer.style.display = leftShouldShow ? 'block' : 'none';
+    leftContainer.style.width = leftShouldShow ? '100%' : '50%';
+    rightContainer.style.display = rightShouldShow ? 'block' : 'none';
+    rightContainer.style.flex = rightShouldShow ? '1' : 'none';
   }
 
   let _lastInstrKey = '';

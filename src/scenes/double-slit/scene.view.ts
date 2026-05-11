@@ -341,8 +341,8 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
     const stepY = scale > 1.2 ? 3 : 4;
     const regionW = endX - startX;
 
-    // offscreen 缓存（步骤4精度降低：stepY 3-4，脉冲量化8级）
-    const key = `${d}_${gap}_${palette.screen}_${L}_${isDark ? 1 : 0}_${pulseQ}`;
+    // offscreen 缓存（key 不含 pulseQ，避免每帧失效；脉冲通过 globalAlpha 叠加）
+    const key = `${d}_${gap}_${palette.screen}_${L}_${isDark ? 1 : 0}`;
     if (!_step4Cvs || _step4Key !== key) {
       const cw = Math.ceil(regionW);
       const ch = regionH;
@@ -366,12 +366,14 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
         const a = (Math.PI * (dy * slitWidthA) / L) / lambdaPx;
         const sinc = a === 0 ? 1 : Math.sin(a) / a;
         const intensity = cos2 * sinc * sinc;
-        fc.fillStyle = `rgba(${palette.screen}, ${intensity * baseAlpha})`;
+        fc.fillStyle = `rgba(${palette.screen}, ${intensity})`;
         fc.fillRect(0, py, cw, stepY);
       }
       _step4Key = key;
     }
+    c.globalAlpha = baseAlpha;
     c.drawImage(_step4Cvs, startX, regionTop);
+    c.globalAlpha = 1.0;
 
     // 叠加原理标注
     c.fillStyle = isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)';
