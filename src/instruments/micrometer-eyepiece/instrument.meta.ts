@@ -41,7 +41,7 @@ export const micrometerEyepieceMeta: InstrumentMeta<MicrometerEyepieceParams> = 
     stripeSpacing: 50,
     stripeColor: 'rgba(200, 80, 20, 0.4)',
     stripeAngle: 90,
-    viewMode: 'crosshair',
+    viewMode: 'fringe',
   },
   unit: 'mm',
   precision: 0.01,

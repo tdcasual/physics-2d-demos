@@ -2,8 +2,8 @@
  * 波长 → 颜色转换（连续可见光谱）
  */
 
-/** 波长(nm) → RGB 分量 */
-export function lambdaToRgb(lambda: number): [number, number, number] {
+/** 波长(nm) → RGB 分量（原始计算） */
+function computeLambdaToRgb(lambda: number): [number, number, number] {
   let r: number, g: number, b: number;
   if (lambda < 440) {
     r = 120 + (lambda - 400) * 3.375;
@@ -35,6 +35,17 @@ export function lambdaToRgb(lambda: number): [number, number, number] {
     b = 0;
   }
   return [Math.round(Math.max(0, Math.min(255, r))), Math.round(Math.max(0, Math.min(255, g))), Math.round(Math.max(0, Math.min(255, b)))];
+}
+
+/** 预计算 400-700nm 查找表 */
+const _rgbLUT: [number, number, number][] = [];
+for (let w = 400; w <= 700; w++) _rgbLUT.push(computeLambdaToRgb(w));
+
+/** 波长(nm) → RGB 分量（LUT 加速） */
+export function lambdaToRgb(lambda: number): [number, number, number] {
+  const idx = Math.round(lambda) - 400;
+  if (idx >= 0 && idx < _rgbLUT.length) return _rgbLUT[idx];
+  return computeLambdaToRgb(lambda);
 }
 
 /** 波长(nm) → CSS 颜色字符串 */

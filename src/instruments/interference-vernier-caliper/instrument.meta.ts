@@ -21,6 +21,8 @@ export interface InterferenceVernierCaliperParams extends InstrumentParams {
   fringeColor: string;
   /** 分划板旋转角度（0=竖直, 90=水平） */
   crosshairAngle?: number;
+  /** 视场模式：crosshair=分划板移动，fringe=条纹移动 */
+  viewMode?: 'crosshair' | 'fringe';
 }
 
 export const interferenceVernierCaliperMeta: InstrumentMeta<InterferenceVernierCaliperParams> = {

@@ -4,6 +4,10 @@
  * 管理实验状态：步骤、波长、双缝间距、播放状态、动画时间
  */
 
+export type LightMode = 'mono' | 'white';
+export type FilterColor = 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'violet';
+export type ViewMode = 'crosshair' | 'fringe';
+
 export type DoubleSlitParams = {
   step: number;           // 1–6
   lambda: number;         // 波长 400–700 nm
@@ -14,7 +18,10 @@ export type DoubleSlitParams = {
   micrometerOffset: number; // 螺旋测微仪零位偏移 (mm)
   stripeOffset: number; // 螺旋测微仪十字准星位移 (mm)
   crosshairAngle?: number; // 分划板旋转角度 (0-90)
+  viewMode?: ViewMode; // 目镜观测模式：crosshair=分划板移动，fringe=条纹移动
   L?: number; // 缝屏距离 (m), 默认 0.7
+  lightMode?: LightMode;  // 光源模式，默认 'mono'
+  filterColor?: FilterColor | null; // 滤光片颜色，默认 null
 };
 
 export type DoubleSlitState = {
@@ -79,10 +86,48 @@ export function computeCaliperFringePx(realDeltaXmm: number): number {
 }
 
 /** 波长(nm) → 波纹像素间距
- *  按固定比例放大：gap = lambda / 15，使短波长（紫色）区域不再密集眼花
+ *  gap = lambda / 28，控制波纹密度：约 10 条波前可见
  */
 export function lambdaToGap(lambda: number): number {
-  return lambda / 15;
+  return lambda / 14;
+}
+
+// ── 白光与滤光片 ──
+
+export const FILTERS: Record<FilterColor, { label: string; center: number; range: [number, number] }> = {
+  red:    { label: '红', center: 660, range: [620, 700] },
+  orange: { label: '橙', center: 600, range: [590, 620] },
+  yellow: { label: '黄', center: 580, range: [570, 590] },
+  green:  { label: '绿', center: 530, range: [500, 560] },
+  blue:   { label: '蓝', center: 470, range: [430, 500] },
+  violet: { label: '紫', center: 415, range: [400, 430] },
+};
+
+export const WHITE_LAMBDAS = [430, 500, 550, 600, 660];
+
+export function isWhiteLight(params: DoubleSlitParams): boolean {
+  return params.lightMode === 'white';
+}
+
+export function hasFilter(params: DoubleSlitParams): boolean {
+  return isWhiteLight(params) && params.filterColor != null;
+}
+
+export function getActiveWavelengths(params: DoubleSlitParams): number[] {
+  if (params.lightMode !== 'white') return [params.lambda];
+  if (params.filterColor && FILTERS[params.filterColor]) {
+    const f = FILTERS[params.filterColor];
+    const lambdas: number[] = [];
+    for (let l = f.range[0]; l <= f.range[1]; l += 10) lambdas.push(l);
+    return lambdas.length ? lambdas : [f.center];
+  }
+  return WHITE_LAMBDAS;
+}
+
+export function getEffectiveLambda(params: DoubleSlitParams): number {
+  if (params.lightMode !== 'white') return params.lambda;
+  if (params.filterColor && FILTERS[params.filterColor]) return FILTERS[params.filterColor].center;
+  return 550;
 }
 
 export { lambdaToRgb, wavelengthToColor } from '../../core/wavelength';
@@ -97,29 +142,35 @@ export const STEPS = [
 ];
 
 export function createDoubleSlitSim(initial: DoubleSlitParams) {
-  let params: DoubleSlitParams = { ...initial };
+  let params: DoubleSlitParams = { lightMode: 'mono', filterColor: null, ...initial };
   let time = 0;
+  let _stateCache: DoubleSlitState | null = null;
 
   function getState(): DoubleSlitState {
-    return {
+    if (_stateCache) return _stateCache;
+    _stateCache = {
       params: { ...params },
       time
     };
+    return _stateCache;
   }
 
   function setParams(next: Partial<DoubleSlitParams>): DoubleSlitParams {
     params = { ...params, ...next };
+    _stateCache = null;
     return params;
   }
 
   function reset(): void {
     params = { ...initial };
     time = 0;
+    _stateCache = null;
   }
 
   function step(dt: number): void {
     if (params.isPlaying) {
-      time += dt * 0.09;
+      time += dt * 12.0;
+      _stateCache = null;
     }
   }
 

@@ -81,7 +81,7 @@ const CSS = `
   width: 100%;
   overflow: visible;
   display: flex;
-  justify-content: center;
+  justify-content: var(--instrument-justify, center);
   align-items: flex-start;
   padding: 10px;
   box-sizing: border-box;
@@ -98,6 +98,7 @@ const CSS = `
   width: 695px;
   height: 250px;
   background-color: transparent;
+  margin-left: var(--instrument-offset, 0px);
   overflow: visible;
   flex-shrink: 0;
   transform-origin: top left;
@@ -432,9 +433,11 @@ export function createInterferenceVernierCaliperView(options: {
   let currentReadingCm = 1.400;
   let zeroOffset = 0;
   let disposed = false;
-  let simLastReading = 1.400;
   let simLastZero = 0;
   let simLastCrosshairAngle = 0;
+  let viewMode: 'crosshair' | 'fringe' = 'fringe';
+  let simLastViewMode: 'crosshair' | 'fringe' = 'fringe';
+  let crosshairRefCm = currentReadingCm;
 
   const listeners = {
     reading: [] as Array<(reading: number) => void>,
@@ -532,15 +535,22 @@ export function createInterferenceVernierCaliperView(options: {
     // 1. 移动滑块
     slider.style.transform = `translateX(${snappedX}px)`;
 
-    // 2. 逆向移动干涉条纹（滑块右移→条纹左移，模拟目镜向右扫描）
+    // 2. 根据视场模式切换分划板/条纹运动
     const patternTranslateX = PATTERN_ABSOLUTE_X - (snappedX + LENS_OFFSET_FROM_VERNIER);
     const rawOffset = patternTranslateX * LENS_VISUAL_SCALE;
     const period = fringeConfig.spacing;
     const normOffset = ((rawOffset % period) + period) % period;
-    stripeLayer.style.backgroundPositionX = `${normOffset}px`;
 
-    // 2b. 分划板旋转
-    crosshairSystem.style.transform = `rotate(${simLastCrosshairAngle}deg)`;
+    if (viewMode === 'crosshair') {
+      // 准星移动模式：条纹固定，准星从切换位置开始线性移动
+      stripeLayer.style.backgroundPositionX = '0px';
+      const vo = (currentReadingCm - crosshairRefCm) * UNIT_PX * LENS_VISUAL_SCALE;
+      crosshairSystem.style.transform = `translateX(${Math.round(vo)}px) rotate(${simLastCrosshairAngle}deg)`;
+    } else {
+      // 准星不动模式（默认）：准星固定居中，条纹随滑块逆向移动
+      stripeLayer.style.backgroundPositionX = `${normOffset}px`;
+      crosshairSystem.style.transform = `rotate(${simLastCrosshairAngle}deg)`;
+    }
 
     // 3. 更新读数
     const totalReading = currentReadingCm + zeroOffset;
@@ -729,15 +739,23 @@ export function createInterferenceVernierCaliperView(options: {
         updatePattern();
       }
 
+      const viewModeChanged = state.viewMode !== simLastViewMode;
+      if (viewModeChanged) {
+        if (state.viewMode === 'crosshair') {
+          // 切换到准星移动模式时，快照视图当前读数（非 sim 值）作为参考零点
+          crosshairRefCm = currentReadingCm;
+        }
+        viewMode = state.viewMode;
+        simLastViewMode = state.viewMode;
+      }
+
       const needRender =
-        state.currentReading !== simLastReading ||
         state.zeroOffset !== simLastZero ||
-        state.crosshairAngle !== simLastCrosshairAngle;
+        state.crosshairAngle !== simLastCrosshairAngle ||
+        viewModeChanged;
       if (needRender) {
         simLastCrosshairAngle = state.crosshairAngle;
-        currentReadingCm = state.currentReading;
         zeroOffset = state.zeroOffset;
-        simLastReading = state.currentReading;
         simLastZero = state.zeroOffset;
         renderView();
       }

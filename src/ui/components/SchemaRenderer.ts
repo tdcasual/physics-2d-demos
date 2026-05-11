@@ -59,6 +59,11 @@ export function renderSchema(
       defaultCollapsed: section.collapsed ?? false
     });
 
+    // 按标题注册 section 卡片，支持 setVisible 隐藏整个 section
+    if (section.title) {
+      visibleNodes.set(section.title, card.element);
+    }
+
     // 判定此 section 是否应占满整行
     const needsFullWidth =
       section.span === 'full' ||

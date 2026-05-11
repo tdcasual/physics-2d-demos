@@ -14,6 +14,7 @@ export interface InterferenceVernierCaliperState extends InstrumentState {
   fringeEnvelopeWidth: number;
   fringeColor: string;
   crosshairAngle: number;
+  viewMode: 'crosshair' | 'fringe';
 }
 
 export function createInterferenceVernierCaliperSim(
@@ -28,6 +29,7 @@ export function createInterferenceVernierCaliperSim(
     fringeEnvelopeWidth: initial.fringeEnvelopeWidth,
     fringeColor: initial.fringeColor,
     crosshairAngle: initial.crosshairAngle ?? 0,
+    viewMode: initial.viewMode ?? 'fringe',
   };
 
   return {
@@ -59,6 +61,9 @@ export function createInterferenceVernierCaliperSim(
       if (params.crosshairAngle !== undefined) {
         state.crosshairAngle = params.crosshairAngle;
       }
+      if (params.viewMode !== undefined) {
+        state.viewMode = params.viewMode;
+      }
     },
     step() {
       // 纯交互式仪器，无自动步进
@@ -72,6 +77,7 @@ export function createInterferenceVernierCaliperSim(
       state.fringeEnvelopeWidth = initial.fringeEnvelopeWidth;
       state.fringeColor = initial.fringeColor;
       state.crosshairAngle = 0;
+      state.viewMode = initial.viewMode ?? 'fringe';
     },
   };
 }

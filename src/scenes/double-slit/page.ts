@@ -13,6 +13,7 @@ import { renderSchema, type SchemaRendererInstance } from '../../ui/components/S
 
 bootScenePage({
   meta: doubleSlitMeta,
+  autoPlay: true,
   preferredLayout: 'split-right',
   layoutConfig: {
     defaultLeftRatio: 0.35,
@@ -41,6 +42,10 @@ bootScenePage({
       currentRenderer?.setValue('lambda', state.params.lambda);
       currentRenderer?.setValue('slitDistance', state.params.slitDistance);
       currentRenderer?.setValue('L', (state.params.L ?? 0.7) * 100);
+      // 根据光源模式控制 section 可见性
+      const isMono = state.params.lightMode === 'mono';
+      currentRenderer?.setVisible('滤光片', !isMono);
+      currentRenderer?.setVisible('光源', isMono);
       if (state.params.step === 6) {
         currentRenderer?.setActive('activeInstrument', state.params.activeInstrument);
         currentRenderer?.setValue('stripeOffset', state.params.stripeOffset);
@@ -75,6 +80,21 @@ bootScenePage({
             dsScene.setParams({ stripeOffset: Number(value) });
           } else if (key === 'crosshairAngle') {
             dsScene.setParams({ crosshairAngle: Number(value) });
+          } else if (key === 'lightMode') {
+            const mode = String(value) as 'mono' | 'white';
+            dsScene.setParams({ lightMode: mode, filterColor: null });
+            currentRenderer?.setActive(key, mode);
+            // 切换光源模式时重置滤光片选择
+            currentRenderer?.setActive('filterColor', 'none');
+            // 单色光：显示波长滑条，隐藏滤光片
+            // 白光：显示滤光片，隐藏波长滑条
+            currentRenderer?.setVisible('滤光片', mode === 'white');
+            currentRenderer?.setVisible('光源', mode === 'mono');
+          } else if (key === 'filterColor') {
+            const fc = String(value);
+            const filterVal = fc === 'none' ? null : fc as 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'violet';
+            dsScene.setParams({ filterColor: filterVal });
+            currentRenderer?.setActive(key, fc);
           }
           dsScene.render();
           writeSceneParams({ [key]: value });

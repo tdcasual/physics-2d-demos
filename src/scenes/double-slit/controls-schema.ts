@@ -1,5 +1,46 @@
 import type { ControlsSchema } from '../../platform/controls-schema';
 
+const lightModeSection = {
+  title: '光源模式',
+  collapsed: false,
+  span: 'full' as const,
+  fields: [
+    {
+      type: 'preset-group' as const,
+      key: 'lightMode',
+      columns: 2 as const,
+      presets: [
+        { id: 'mono', label: '单色光' },
+        { id: 'white', label: '白光' }
+      ],
+      initialActive: 'mono'
+    }
+  ]
+};
+
+const filterSection = {
+  title: '滤光片',
+  collapsed: false,
+  span: 'full' as const,
+  fields: [
+    {
+      type: 'preset-group' as const,
+      key: 'filterColor',
+      columns: 3 as const,
+      presets: [
+        { id: 'none', label: '无滤光片' },
+        { id: 'red', label: '🔴 红' },
+        { id: 'orange', label: '🟠 橙' },
+        { id: 'yellow', label: '🟡 黄' },
+        { id: 'green', label: '🟢 绿' },
+        { id: 'blue', label: '🔵 蓝' },
+        { id: 'violet', label: '🟣 紫' }
+      ],
+      initialActive: 'none'
+    }
+  ]
+};
+
 const lightSourceSection = {
   title: '光源',
   collapsed: false,
@@ -70,6 +111,17 @@ const instrumentSection = {
     },
 
     {
+      type: 'preset-group' as const,
+      key: 'viewMode',
+      columns: 2 as const,
+      presets: [
+        { id: 'fringe', label: '准星不动' },
+        { id: 'crosshair', label: '准星移动' }
+      ],
+      initialActive: 'fringe'
+    },
+
+    {
       type: 'slider' as const,
       key: 'crosshairAngle',
       label: '分划板角度',
@@ -96,6 +148,8 @@ const instrumentSection = {
 // 步骤 1–5 的 schema
 export const doubleSlitControlsSchema: ControlsSchema = {
   sections: [
+    lightModeSection,
+    filterSection,
     lightSourceSection,
     paramsSection,
     {
@@ -117,6 +171,8 @@ export const doubleSlitControlsSchema: ControlsSchema = {
 // 步骤 6 的 schema（新增仪器选择）
 export const doubleSlitStep6ControlsSchema: ControlsSchema = {
   sections: [
+    lightModeSection,
+    filterSection,
     lightSourceSection,
     paramsSection,
     {

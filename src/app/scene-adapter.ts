@@ -244,6 +244,11 @@ export class SceneAdapter<
     this.scene.resize();
     this.scene.render();
 
+    // 自动播放：场景挂载后立即启动动画循环
+    if (this.options.autoPlay) {
+      this.transport?.play();
+    }
+
     if (this.scene.subscribe) {
       const unsubscribe = this.scene.subscribe(() => {
         this.refreshReadout();

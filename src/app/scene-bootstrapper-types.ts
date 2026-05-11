@@ -74,4 +74,6 @@ export type ScenePageOptions<TScene extends SceneInstance = SceneInstance> = {
   stepSeconds?: number;
   /** 最大子步数，默认 5 */
   maxSubSteps?: number;
+  /** 场景挂载后自动播放动画，默认 false */
+  autoPlay?: boolean;
 };

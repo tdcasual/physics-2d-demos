@@ -37,7 +37,7 @@ const CSS = `
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  align-items: center;
+  align-items: var(--instrument-align, center);
   width: 100%;
   height: 100%;
   padding-top: 15px;
@@ -53,6 +53,7 @@ const CSS = `
   align-items: center;
   position: relative;
   transform-origin: top left;
+  margin-left: var(--instrument-offset, 0px);
 }
 
 .case {
@@ -418,19 +419,17 @@ export function createMicrometerEyepieceView(options: {
 
   let currentReading = config.initialReading;
   let zeroOffset = 0;
-  let viewMode: 'crosshair' | 'fringe' = 'crosshair';
+  let viewMode: 'crosshair' | 'fringe' = 'fringe';
   let isDragging = false;
   let startX = 0;
   let startY = 0;
   let startReading = 0;
   let disposed = false;
-  let simLastReading = config.initialReading;
   let simLastZero = 0;
-  let simLastViewMode: 'crosshair' | 'fringe' = 'crosshair';
+  let simLastViewMode: 'crosshair' | 'fringe' = 'fringe';
   let simLastSpeed = 100;
   let simLastScaleInverted = false;
   let simLastCrosshairAngle = 0;
-
   // 整体仪器拖拽状态
   let sysDragging = false;
   let sysStartX = 0;
@@ -596,11 +595,11 @@ export function createMicrometerEyepieceView(options: {
     const viewOffset = (currentReading - config.initialReading - stripeConfig.offset) * crosshairSpeed;
     const angle = simLastCrosshairAngle;
     if (viewMode === 'fringe') {
-      // 条纹移动模式：准星固定，条纹随样品台移动
+      // 准星不动模式：准星固定居中，条纹随读数滚动
       crosshairSystem.style.transform = `translateX(0) rotate(${angle}deg)`;
       lensView.style.backgroundPositionX = `${Math.round(-viewOffset)}px`;
     } else {
-      // 准星移动模式（默认）：条纹固定，准星随螺杆移动
+      // 准星移动模式：条纹固定，准星用相同 viewOffset 做线性位移
       lensView.style.backgroundPositionX = '0px';
       crosshairSystem.style.transform = `translateX(${Math.round(viewOffset)}px) rotate(${angle}deg)`;
     }
@@ -814,18 +813,15 @@ export function createMicrometerEyepieceView(options: {
       }
 
       const needRender =
-        state.currentReading !== simLastReading ||
         state.zeroOffset !== simLastZero ||
         state.stripeOffset !== stripeConfig.offset ||
         state.viewMode !== simLastViewMode ||
         state.crosshairSpeed !== simLastSpeed ||
         state.crosshairAngle !== simLastCrosshairAngle;
       if (needRender) {
-        currentReading = state.currentReading;
         zeroOffset = state.zeroOffset;
         stripeConfig.offset = state.stripeOffset;
         viewMode = state.viewMode;
-        simLastReading = state.currentReading;
         simLastZero = state.zeroOffset;
         simLastViewMode = state.viewMode;
         simLastSpeed = state.crosshairSpeed;
