@@ -372,22 +372,57 @@ export function createReadoutPanel(
       const resizeObserver = initAdaptiveColumns(slot, panel, cssPrefix);
       const resizeResult = isInline ? { handle: null, abort: new AbortController() } : initResizeHandle(panel, slot);
 
+      // 对象池：复用 li 节点，避免每帧 destroy/create
+      const itemPool: Array<{
+        li: HTMLLIElement;
+        lbl: HTMLSpanElement;
+        val: HTMLElement;
+      }> = [];
+      let _lastDataKey = '';
+
       return {
         update(data: ReadoutItem[]) {
           if (!data) return;
-          slot.replaceChildren();
-          data.forEach((item) => {
-            const li = document.createElement('li');
-            li.className = `${cssPrefix}-readout-item readout-item ${item.layout === 'half' ? `${cssPrefix}-readout-item--half` : ''}`;
-            if (isInline) li.classList.add(`${cssPrefix}-readout-item--compact`);
-            const lbl = document.createElement('span');
-            lbl.className = `${cssPrefix}-readout-label readout-label`;
-            lbl.textContent = item.label;
-            const val = document.createElement('strong');
-            val.className = `${cssPrefix}-readout-value readout-value`;
-            val.textContent = String(item.value);
-            li.append(lbl, val);
-            slot.appendChild(li);
+          // 脏检查：数据未变化时跳过 DOM 操作
+          const dataKey = data.map((d) => `${d.label}=${d.value}`).join('|');
+          if (dataKey === _lastDataKey) return;
+          _lastDataKey = dataKey;
+
+          // 复用或创建 li 节点
+          const needed = data.length;
+          const existing = itemPool.length;
+
+          // 移除多余节点
+          for (let i = needed; i < existing; i++) {
+            itemPool[i].li.remove();
+          }
+          itemPool.length = needed;
+
+          data.forEach((item, i) => {
+            let poolItem = itemPool[i];
+            if (!poolItem) {
+              const li = document.createElement('li');
+              const lbl = document.createElement('span');
+              const val = document.createElement('strong');
+              lbl.className = `${cssPrefix}-readout-label readout-label`;
+              val.className = `${cssPrefix}-readout-value readout-value`;
+              li.append(lbl, val);
+              slot.appendChild(li);
+              poolItem = { li, lbl, val };
+              itemPool[i] = poolItem;
+            }
+            const halfClass = `${cssPrefix}-readout-item--half`;
+            const compactClass = `${cssPrefix}-readout-item--compact`;
+            poolItem.li.className = `${cssPrefix}-readout-item readout-item ${item.layout === 'half' ? halfClass : ''}`;
+            if (isInline) poolItem.li.classList.add(compactClass);
+            else poolItem.li.classList.remove(compactClass);
+            if (poolItem.lbl.textContent !== item.label) {
+              poolItem.lbl.textContent = item.label;
+            }
+            const v = String(item.value);
+            if (poolItem.val.textContent !== v) {
+              poolItem.val.textContent = v;
+            }
           });
         },
         dispose() {
