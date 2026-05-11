@@ -238,6 +238,7 @@ const CSS = `
   left: 0;
   width: 100%;
   height: 100%;
+  will-change: transform;
 }
 
 .crosshair-system {
@@ -246,6 +247,7 @@ const CSS = `
   height: 100%;
   left: 0;
   top: 0;
+  will-change: transform;
 }
 
 .crosshair-v {
@@ -540,7 +542,7 @@ export function createInterferenceVernierCaliperView(options: {
     const patternTranslateX = PATTERN_ABSOLUTE_X - (snappedX + LENS_OFFSET_FROM_VERNIER);
     const rawOffset = patternTranslateX * LENS_VISUAL_SCALE;
     const period = fringeConfig.spacing;
-    const normOffset = ((rawOffset % period) + period) % period;
+    const normOffset = ((Math.round(rawOffset) % period) + period) % period;
 
     if (viewMode === 'crosshair') {
       // 准星移动模式：条纹固定，准星从切换位置开始线性移动
@@ -606,9 +608,9 @@ export function createInterferenceVernierCaliperView(options: {
     }
     const deltaX = getPointerX(e) - startPointerX;
     if (dragMode === 'slider') {
-      currentReadingCm = startReadingCm + deltaX / UNIT_PX;
+      currentReadingCm = startReadingCm + (deltaX / 2) / UNIT_PX;
     } else if (dragMode === 'knob') {
-      currentReadingCm = startReadingCm + (deltaX / UNIT_PX) * 0.1;
+      currentReadingCm = startReadingCm + (deltaX / 2 / UNIT_PX) * 0.1;
     }
     renderView();
     emitReading();
@@ -732,7 +734,7 @@ export function createInterferenceVernierCaliperView(options: {
         state.fringeColor !== fringeConfig.color;
       if (fringeChanged) {
         rawSpacing = state.fringeSpacing;
-        fringeConfig.spacing = state.fringeSpacing * LENS_VISUAL_SCALE;
+        fringeConfig.spacing = Math.round(state.fringeSpacing * LENS_VISUAL_SCALE);
         fringeConfig.blur = state.fringeBlur;
         fringeConfig.opacity = state.fringeOpacity;
         fringeConfig.envelopeWidth = state.fringeEnvelopeWidth;

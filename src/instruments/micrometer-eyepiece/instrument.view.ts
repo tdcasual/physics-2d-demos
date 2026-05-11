@@ -101,6 +101,7 @@ const CSS = `
   height: 100%;
   background: radial-gradient(circle at 40% 40%, #ffffff 0%, #fbd1a6 60%, #e09854 100%);
   position: absolute;
+  will-change: transform;
   background-image: repeating-linear-gradient(
     90deg,
     transparent 0px,
@@ -119,6 +120,7 @@ const CSS = `
   height: 100%;
   left: 0;
   top: 0;
+  will-change: transform;
 }
 
 .crosshair-v {
@@ -217,12 +219,13 @@ const CSS = `
 
 .thimble-group {
   position: absolute;
-  left: 280px;
+  left: 245px;
   display: flex;
   align-items: center;
   z-index: 8;
   cursor: grab;
   filter: drop-shadow(-4px 0px 6px rgba(0,0,0,0.2));
+  will-change: transform;
 }
 
 .thimble-group:active {
@@ -583,10 +586,9 @@ export function createMicrometerEyepieceView(options: {
     if (disposed) return;
     currentReading = Math.max(0, Math.min(currentReading, config.maxReading));
 
-    // A. 测微筒水平位移
-    const baseLeftX = 215 + 30;
+    // A. 测微筒水平位移（transform 避免每帧触发 layout）
     const moveX = (currentReading / 0.5) * config.tickGapX;
-    thimbleGroup.style.left = `${baseLeftX + moveX}px`;
+    thimbleGroup.style.transform = `translateX(${moveX}px)`;
 
     // B. 副尺刻度垂直滚动匹配
     const totalTicksPassed = currentReading / 0.01;
@@ -641,8 +643,8 @@ export function createMicrometerEyepieceView(options: {
     if (!isDragging) return;
     const deltaX = clientX - startX;
     const deltaY = clientY - startY;
-    const deltaReadingX = (deltaX / config.tickGapX) * 0.5;
-    const deltaReadingY = (deltaY / config.tickGapY) * 0.01;
+    const deltaReadingX = (deltaX / 1.8 / config.tickGapX) * 0.5;
+    const deltaReadingY = (deltaY / 1.8 / config.tickGapY) * 0.01;
     const newReading = Math.max(0, Math.min(startReading + deltaReadingX + deltaReadingY, config.maxReading));
     if (newReading !== currentReading) {
       currentReading = newReading;
@@ -812,7 +814,7 @@ export function createMicrometerEyepieceView(options: {
         state.stripeColor !== stripeConfig.color ||
         state.stripeAngle !== stripeConfig.angle;
       if (stripeChanged) {
-        stripeConfig.spacing = state.stripeSpacing;
+        stripeConfig.spacing = Math.round(state.stripeSpacing);
         stripeConfig.color = state.stripeColor;
         stripeConfig.angle = state.stripeAngle;
         updateStripes();
