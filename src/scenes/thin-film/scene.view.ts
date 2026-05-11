@@ -31,6 +31,7 @@ export function createThinFilmView(options: CreateThinFilmViewOptions = {}) {
   let offCtx: CanvasRenderingContext2D | null = null;
   let offW = 0;
   let offH = 0;
+  let _offKey = ''; // 缓存 key：参数未变时跳过重绘
 
   function resizeCanvas(): void {
     if (!canvas) return;
@@ -95,28 +96,33 @@ export function createThinFilmView(options: CreateThinFilmViewOptions = {}) {
       }
       const oc = offCtx!;
 
-      if (whiteLight) {
-        // 白光模式：光谱颜色
-        for (let py = 0; py < filmPixH; py++) {
-          const y = py / filmPixH;
-          const d = thicknessAtY(dTop, dBottom, y);
-          const [cr, cg, cb] = whiteLightFilmColor(d, n);
-          oc.fillStyle = `rgb(${cr},${cg},${cb})`;
-          oc.fillRect(0, py, filmPixW, 1);
-        }
-      } else {
-        // 单色模式：明暗条纹
-        const [cr, cg, cb] = lambdaToRgb(lambda);
-        for (let py = 0; py < filmPixH; py++) {
-          const y = py / filmPixH;
-          const d = thicknessAtY(dTop, dBottom, y);
-          const delta = (4 * Math.PI * n * d) / lambda;
-          const R = Math.sin(delta / 2) ** 2;
-          const rr = Math.round(bgR + (cr - bgR) * R);
-          const rg = Math.round(bgG + (cg - bgG) * R);
-          const rb = Math.round(bgB + (cb - bgB) * R);
-          oc.fillStyle = `rgb(${rr},${rg},${rb})`;
-          oc.fillRect(0, py, filmPixW, 1);
+      // 缓存 key：参数+尺寸+主题未变时跳过重绘
+      const offKey = `${dTop}_${dBottom}_${n}_${lambda}_${whiteLight ? 1 : 0}_${filmPixW}_${filmPixH}_${isDark ? 1 : 0}`;
+      if (_offKey !== offKey) {
+        _offKey = offKey;
+        if (whiteLight) {
+          // 白光模式：光谱颜色
+          for (let py = 0; py < filmPixH; py++) {
+            const y = py / filmPixH;
+            const d = thicknessAtY(dTop, dBottom, y);
+            const [cr, cg, cb] = whiteLightFilmColor(d, n);
+            oc.fillStyle = `rgb(${cr},${cg},${cb})`;
+            oc.fillRect(0, py, filmPixW, 1);
+          }
+        } else {
+          // 单色模式：明暗条纹
+          const [cr, cg, cb] = lambdaToRgb(lambda);
+          for (let py = 0; py < filmPixH; py++) {
+            const y = py / filmPixH;
+            const d = thicknessAtY(dTop, dBottom, y);
+            const delta = (4 * Math.PI * n * d) / lambda;
+            const R = Math.sin(delta / 2) ** 2;
+            const rr = Math.round(bgR + (cr - bgR) * R);
+            const rg = Math.round(bgG + (cg - bgG) * R);
+            const rb = Math.round(bgB + (cb - bgB) * R);
+            oc.fillStyle = `rgb(${rr},${rg},${rb})`;
+            oc.fillRect(0, py, filmPixW, 1);
+          }
         }
       }
 
@@ -487,6 +493,7 @@ export function createThinFilmView(options: CreateThinFilmViewOptions = {}) {
     },
     setTheme(t: TeachingTheme): void {
       theme = t;
+      _offKey = ''; // 主题改变背景色，需重绘
     },
     setMode(next: TeachingMode): void {
       mode = next;
