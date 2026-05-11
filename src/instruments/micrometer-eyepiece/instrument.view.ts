@@ -452,7 +452,7 @@ export function createMicrometerEyepieceView(options: {
 
   // ── 条纹配置 ──
   const stripeConfig = {
-    offset: 1200,
+    offset: 12,
     spacing: 50,
     color: 'rgba(200, 80, 20, 0.4)',
     angle: 90,

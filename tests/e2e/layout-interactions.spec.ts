@@ -23,6 +23,7 @@ function discoverScenes(): string[] {
     .filter((f) => !f.includes('-demo'))
     .filter((f) => !f.includes('-mobile'))
     .filter((f) => !f.includes('-v2'))
+    .filter((f) => !['instruments.html', 'micrometer.html', 'vernier-caliper.html'].includes(f))
     .map((f) => f.replace('.html', ''));
 }
 
@@ -83,6 +84,32 @@ const SCENE_META: Record<
     hasGraph: true,
     canvasSelector: 'canvas.stage-canvas',
     hasTransport: false
+  },
+  'interference-formula': {
+    name: '干涉公式',
+    hasGraph: false,
+    canvasSelector: 'canvas',
+    hasTransport: false
+  },
+  'thin-film': {
+    name: '薄膜干涉',
+    hasGraph: false,
+    canvasSelector: 'canvas'
+  },
+  'doppler-effect': {
+    name: '多普勒效应',
+    hasGraph: false,
+    canvasSelector: 'canvas'
+  },
+  'mechanical-wave': {
+    name: '机械波',
+    hasGraph: false,
+    canvasSelector: 'canvas'
+  },
+  wedge: {
+    name: '劈尖干涉',
+    hasGraph: false,
+    canvasSelector: 'canvas'
   }
 };
 

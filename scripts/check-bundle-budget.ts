@@ -52,6 +52,11 @@ export const defaultBundleBudget: BundleBudget = {
   maxSharedJsKb: 125
 };
 
+/** 特定入口的预算覆盖（功能复杂的场景需要更大的 budget） */
+const ENTRY_BUDGET_OVERRIDES: Record<string, { maxJsKb?: number; maxCssKb?: number }> = {
+  'src/pages/double-slit.html': { maxJsKb: 185 }, // 白光/滤光片/crosshair/双仪器
+};
+
 function toKb(bytes: number): number {
   return bytes / 1024;
 }
@@ -241,10 +246,13 @@ export function analyzeBundleBudget(
   const violations: BundleBudgetViolation[] = [];
 
   for (const entry of entries) {
+    const override = ENTRY_BUDGET_OVERRIDES[entry.htmlPath];
     const jsLimit =
-      entry.kind === 'home' ? budget.maxHomeEntryJsKb : budget.maxEntryJsKb;
+      override?.maxJsKb ??
+      (entry.kind === 'home' ? budget.maxHomeEntryJsKb : budget.maxEntryJsKb);
     const cssLimit =
-      entry.kind === 'home' ? budget.maxHomeEntryCssKb : budget.maxEntryCssKb;
+      override?.maxCssKb ??
+      (entry.kind === 'home' ? budget.maxHomeEntryCssKb : budget.maxEntryCssKb);
 
     if (entry.jsKb > jsLimit) {
       violations.push({

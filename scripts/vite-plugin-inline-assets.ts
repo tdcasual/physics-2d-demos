@@ -16,7 +16,19 @@ import {
 import { join, extname, basename } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import type { Plugin, OutputBundle, OutputChunk } from 'vite';
+import type { Plugin } from 'vite';
+
+/** 内联类型：避免依赖未显式安装的 rollup 包 */
+type OutputChunk = {
+  type: 'chunk';
+  fileName: string;
+  imports: string[];
+  isEntry?: boolean;
+  code: string;
+  facadeModuleId?: string | null;
+};
+
+type OutputBundle = Record<string, OutputChunk | { type: 'asset' }>;
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 

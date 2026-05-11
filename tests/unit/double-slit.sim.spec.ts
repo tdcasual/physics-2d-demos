@@ -31,9 +31,9 @@ describe('double-slit simulation', () => {
     it('advances time proportionally to dt', () => {
       const sim = createDoubleSlitSim(defaultParams);
       sim.step(16);
-      expect(sim.getState().time).toBeCloseTo(16 * 0.09, 6);
+      expect(sim.getState().time).toBeCloseTo(16 * 12.0, 6);
       sim.step(16);
-      expect(sim.getState().time).toBeCloseTo(32 * 0.09, 6);
+      expect(sim.getState().time).toBeCloseTo(32 * 12.0, 6);
     });
 
     it('does not advance time when paused', () => {
@@ -46,7 +46,7 @@ describe('double-slit simulation', () => {
       const sim = createDoubleSlitSim(defaultParams);
       sim.step(10);
       sim.step(20);
-      expect(sim.getState().time).toBeCloseTo(30 * 0.09, 6);
+      expect(sim.getState().time).toBeCloseTo(30 * 12.0, 6);
     });
   });
 
@@ -74,9 +74,9 @@ describe('double-slit simulation', () => {
   });
 
   it('lambdaToGap scales correctly', () => {
-    expect(lambdaToGap(450)).toBeCloseTo(30, 0);
-    expect(lambdaToGap(650)).toBeCloseTo(43.3, 0);
-    expect(lambdaToGap(532)).toBeCloseTo(35.5, 0);
+    expect(lambdaToGap(450)).toBeCloseTo(32.1, 0);
+    expect(lambdaToGap(650)).toBeCloseTo(46.4, 0);
+    expect(lambdaToGap(532)).toBeCloseTo(38.0, 0);
   });
 
   it('lambdaToRgb returns valid RGB for visible spectrum', () => {

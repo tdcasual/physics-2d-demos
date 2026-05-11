@@ -592,8 +592,6 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
   ) => {
     c.lineWidth = Math.max(2, 3 * Math.min(scale, 1.5));
     const spreadAngle = Math.PI / 2.2;
-    const extra = Math.floor(Math.max(0, scale - 0.8) * 2);
-
     const hasFC = filterColor && FILTERS[filterColor as keyof typeof FILTERS];
     const lambdas = hasFC
       ? [FILTERS[filterColor as keyof typeof FILTERS].center]

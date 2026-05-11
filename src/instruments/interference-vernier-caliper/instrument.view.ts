@@ -438,6 +438,7 @@ export function createInterferenceVernierCaliperView(options: {
   let viewMode: 'crosshair' | 'fringe' = 'fringe';
   let simLastViewMode: 'crosshair' | 'fringe' = 'fringe';
   let crosshairRefCm = currentReadingCm;
+  let stripeOffsetMm = 12;
 
   const listeners = {
     reading: [] as Array<(reading: number) => void>,
@@ -544,7 +545,7 @@ export function createInterferenceVernierCaliperView(options: {
     if (viewMode === 'crosshair') {
       // 准星移动模式：条纹固定，准星从切换位置开始线性移动
       stripeLayer.style.backgroundPositionX = '0px';
-      const vo = (currentReadingCm - crosshairRefCm) * UNIT_PX * LENS_VISUAL_SCALE;
+      const vo = (currentReadingCm * 10 - crosshairRefCm * 10 - stripeOffsetMm) * (UNIT_PX * LENS_VISUAL_SCALE / 10);
       crosshairSystem.style.transform = `translateX(${Math.round(vo)}px) rotate(${simLastCrosshairAngle}deg)`;
     } else {
       // 准星不动模式（默认）：准星固定居中，条纹随滑块逆向移动
@@ -749,10 +750,15 @@ export function createInterferenceVernierCaliperView(options: {
         simLastViewMode = state.viewMode;
       }
 
+      if (state.stripeOffset !== undefined) {
+        stripeOffsetMm = state.stripeOffset;
+      }
+
       const needRender =
         state.zeroOffset !== simLastZero ||
         state.crosshairAngle !== simLastCrosshairAngle ||
-        viewModeChanged;
+        viewModeChanged ||
+        state.stripeOffset !== undefined;
       if (needRender) {
         simLastCrosshairAngle = state.crosshairAngle;
         zeroOffset = state.zeroOffset;

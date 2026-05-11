@@ -9,7 +9,7 @@ import type { SceneLifecycle } from '../../platform/scene-contract';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 
 import { createStandardSceneEntry } from '../scene-entry-helpers';
-import { createDoubleSlitSim, type DoubleSlitParams, type DoubleSlitState, STEPS, DEFAULT_L, computeRealDeltaXmm, computeMicrometerStripePx, computeMicrometerSpeed, computeCaliperFringePx, lambdaToRgb, isWhiteLight, hasFilter, getActiveWavelengths, getEffectiveLambda, FILTERS } from './scene.sim';
+import { createDoubleSlitSim, type DoubleSlitParams, type DoubleSlitState, STEPS, DEFAULT_L, computeRealDeltaXmm, computeMicrometerStripePx, computeMicrometerSpeed, computeCaliperFringePx, lambdaToRgb, isWhiteLight, getEffectiveLambda, FILTERS } from './scene.sim';
 import { createDoubleSlitView } from './scene.view';
 import { createInterferenceVernierCaliper } from '../../instruments/interference-vernier-caliper/instrument.entry';
 import { createMicrometerEyepiece } from '../../instruments/micrometer-eyepiece/instrument.entry';
@@ -207,7 +207,6 @@ export function createDoubleSlitScene(
     const caliperFringePx = computeCaliperFringePx(realDeltaXmm);
     const micrometerStripePx = computeMicrometerStripePx(realDeltaXmm);
     const micrometerSpeed = computeMicrometerSpeed(realDeltaXmm);
-
     leftInstrument?.sim.setParams({
       fringeSpacing: caliperFringePx,
       fringeColor,

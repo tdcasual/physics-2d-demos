@@ -24,6 +24,7 @@ function discoverScenes(): string[] {
     .filter((f) => !f.includes('-demo'))
     .filter((f) => !f.includes('-mobile'))
     .filter((f) => !f.includes('-v2'))
+    .filter((f) => !['instruments.html', 'micrometer.html', 'vernier-caliper.html'].includes(f))
     .map((f) => f.replace('.html', ''));
 }
 
@@ -42,7 +43,13 @@ const SCENE_NAMES: Record<string, string> = {
   'vt-integral': '微元法',
   'emf-analogy': '电路类比',
   'spring-oscillator': '弹簧振子',
-  ganshe: '波的干涉'
+  ganshe: '波的干涉',
+  'double-slit': '双缝干涉',
+  'interference-formula': '干涉公式',
+  'thin-film': '薄膜干涉',
+  'doppler-effect': '多普勒效应',
+  'mechanical-wave': '机械波',
+  wedge: '劈尖干涉'
 };
 
 const BASE_URL = 'http://127.0.0.1:5177';

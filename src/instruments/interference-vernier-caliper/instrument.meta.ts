@@ -23,6 +23,8 @@ export interface InterferenceVernierCaliperParams extends InstrumentParams {
   crosshairAngle?: number;
   /** 视场模式：crosshair=分划板移动，fringe=条纹移动 */
   viewMode?: 'crosshair' | 'fringe';
+  /** 十字准星位移偏移（mm） */
+  stripeOffset?: number;
 }
 
 export const interferenceVernierCaliperMeta: InstrumentMeta<InterferenceVernierCaliperParams> = {

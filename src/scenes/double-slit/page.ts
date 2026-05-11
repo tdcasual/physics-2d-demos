@@ -48,9 +48,9 @@ bootScenePage({
       currentRenderer?.setVisible('光源', isMono);
       if (state.params.step === 6) {
         currentRenderer?.setActive('activeInstrument', state.params.activeInstrument);
+        currentRenderer?.setActive('viewMode', state.params.viewMode ?? 'fringe');
         currentRenderer?.setValue('stripeOffset', state.params.stripeOffset);
         currentRenderer?.setValue('crosshairAngle', state.params.crosshairAngle);
-        currentRenderer?.setVisible('stripeOffset', state.params.activeInstrument === 'micrometer');
       }
     }
 
@@ -75,11 +75,12 @@ bootScenePage({
             dsScene.setParams({ activeInstrument: instrument });
             currentRenderer?.setActive(key, instrument);
             currentRenderer?.setVisible('micrometerOffset', instrument === 'micrometer');
-            currentRenderer?.setVisible('stripeOffset', instrument === 'micrometer');
           } else if (key === 'stripeOffset') {
             dsScene.setParams({ stripeOffset: Number(value) });
           } else if (key === 'crosshairAngle') {
             dsScene.setParams({ crosshairAngle: Number(value) });
+          } else if (key === 'viewMode') {
+            dsScene.setParams({ viewMode: String(value) as 'crosshair' | 'fringe' });
           } else if (key === 'lightMode') {
             const mode = String(value) as 'mono' | 'white';
             dsScene.setParams({ lightMode: mode, filterColor: null });

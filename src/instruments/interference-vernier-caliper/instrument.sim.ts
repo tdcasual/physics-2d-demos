@@ -15,6 +15,7 @@ export interface InterferenceVernierCaliperState extends InstrumentState {
   fringeColor: string;
   crosshairAngle: number;
   viewMode: 'crosshair' | 'fringe';
+  stripeOffset?: number;
 }
 
 export function createInterferenceVernierCaliperSim(
