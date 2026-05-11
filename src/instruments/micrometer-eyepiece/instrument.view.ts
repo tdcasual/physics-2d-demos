@@ -494,10 +494,10 @@ export function createMicrometerEyepieceView(options: {
   // ── 预渲染一个周期的条纹瓷砖（90deg 时用 Canvas 位图平铺，比 gradient 快）──
   function buildStripeTile(period: number, color: string): string {
     const c = parseRgba(color);
-    const gap = Math.round(period * 0.3);
-    const fadeInEnd = Math.round(period * 0.4);
-    const fadeOutStart = Math.round(period * 0.6);
-    const fadeOutEnd = Math.round(period * 0.7);
+    const gap = Math.round(period * 0.2);
+    const fadeInEnd = Math.round(period * 0.3);
+    const fadeOutStart = Math.round(period * 0.7);
+    const fadeOutEnd = Math.round(period * 0.8);
 
     const cvs = document.createElement('canvas');
     cvs.width = period;
@@ -529,10 +529,10 @@ export function createMicrometerEyepieceView(options: {
       lensView.style.backgroundRepeat = 'repeat';
     } else {
       // 非垂直角度：回退到 CSS gradient（倾斜条纹无缝瓷砖较复杂）
-      const gap = Math.round(s.spacing * 0.3);
-      const fadeInEnd = Math.round(s.spacing * 0.4);
-      const fadeOutStart = Math.round(s.spacing * 0.6);
-      const fadeOutEnd = Math.round(s.spacing * 0.7);
+      const gap = Math.round(s.spacing * 0.2);
+      const fadeInEnd = Math.round(s.spacing * 0.3);
+      const fadeOutStart = Math.round(s.spacing * 0.7);
+      const fadeOutEnd = Math.round(s.spacing * 0.8);
       const fadeColor = `color-mix(in srgb, transparent 50%, ${s.color})`;
       lensView.style.backgroundImage = `repeating-linear-gradient(
         ${s.angle}deg,

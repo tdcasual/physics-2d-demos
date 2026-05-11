@@ -523,10 +523,10 @@ export function createInterferenceVernierCaliperView(options: {
   // ── 预渲染一个周期的条纹瓷砖（Canvas → dataURL，GPU 平铺比 gradient 快）──
   function buildStripeTile(period: number, color: string): string {
     const c = parseRgba(color);
-    const gap = Math.round(period * 0.3);
-    const fadeInEnd = Math.round(period * 0.4);
-    const fadeOutStart = Math.round(period * 0.6);
-    const fadeOutEnd = Math.round(period * 0.7);
+    const gap = Math.round(period * 0.2);
+    const fadeInEnd = Math.round(period * 0.3);
+    const fadeOutStart = Math.round(period * 0.7);
+    const fadeOutEnd = Math.round(period * 0.8);
 
     const cvs = document.createElement('canvas');
     cvs.width = period;
