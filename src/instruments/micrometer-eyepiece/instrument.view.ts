@@ -859,9 +859,9 @@ export function createMicrometerEyepieceView(options: {
       caseEl.removeEventListener('mousedown', onCaseMouseDown);
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
-      thimbleGroup.removeEventListener('touchstart', onTouchStart);
-      caseEl.removeEventListener('touchstart', onCaseTouchStart);
-      document.removeEventListener('touchmove', onTouchMove);
+      thimbleGroup.removeEventListener('touchstart', onTouchStart, { passive: false } as EventListenerOptions);
+      caseEl.removeEventListener('touchstart', onCaseTouchStart, { passive: false } as EventListenerOptions);
+      document.removeEventListener('touchmove', onTouchMove, { passive: false } as EventListenerOptions);
       document.removeEventListener('touchend', onTouchEnd);
       thimbleGroup.removeEventListener('wheel', onWheel);
       thimbleGroup.removeEventListener('keydown', onThimbleKeyDown);

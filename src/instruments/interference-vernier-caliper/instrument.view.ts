@@ -782,14 +782,14 @@ export function createInterferenceVernierCaliperView(options: {
     dispose() {
       disposed = true;
       slider.removeEventListener('mousedown', onSliderMouseDown);
-      slider.removeEventListener('touchstart', onSliderTouchStart);
+      slider.removeEventListener('touchstart', onSliderTouchStart, { passive: false } as EventListenerOptions);
       knob.removeEventListener('mousedown', onKnobMouseDown);
-      knob.removeEventListener('touchstart', onKnobTouchStart);
+      knob.removeEventListener('touchstart', onKnobTouchStart, { passive: false } as EventListenerOptions);
       mainRuler.removeEventListener('mousedown', onRulerMouseDown);
-      mainRuler.removeEventListener('touchstart', onRulerTouchStart);
+      mainRuler.removeEventListener('touchstart', onRulerTouchStart, { passive: false } as EventListenerOptions);
       mainRuler.removeEventListener('keydown', onRulerKeyDown);
       document.removeEventListener('mousemove', onDocMouseMove);
-      document.removeEventListener('touchmove', onDocTouchMove);
+      document.removeEventListener('touchmove', onDocTouchMove, { passive: false } as EventListenerOptions);
       document.removeEventListener('mouseup', onDocMouseUp);
       document.removeEventListener('touchend', onDocTouchEnd);
       document.removeEventListener('touchcancel', onDocTouchCancel);
