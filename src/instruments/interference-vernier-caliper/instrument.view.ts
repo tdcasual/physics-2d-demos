@@ -801,7 +801,17 @@ export function createInterferenceVernierCaliperView(options: {
       }
     },
     resize() {
-      // 固定 820×420 尺寸，内部使用 overflow-x: auto 处理窄屏
+      const rect = parent.getBoundingClientRect();
+      const scaleX = rect.width / (695 * 2);
+      const scaleY = rect.height / (250 * 2);
+      const s = Math.min(scaleX, scaleY, 1.0);
+      if (s < 1.0) {
+        root.style.transform = `scale(${s})`;
+        root.style.transformOrigin = 'top center';
+      } else {
+        root.style.transform = '';
+        root.style.transformOrigin = '';
+      }
     },
     setTheme() {
       // 固定配色
