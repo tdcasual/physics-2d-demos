@@ -1,7 +1,7 @@
 /**
  * Split layout DOM builder helpers
  *
- * Shared between SplitRightLayoutV2 and SplitRightGraphBottomLayoutV2.
+ * Shared between SplitRightLayout and SplitRightGraphBottomLayout.
  * CSS class prefix ('teaching' | 'srgb') is the only config difference.
  */
 

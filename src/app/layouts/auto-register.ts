@@ -10,9 +10,9 @@
 import { layoutRegistry, registerLayout } from './registry';
 import { registerDefaultStrategies } from './default-strategies';
 import type { ILayoutConstructor } from './types';
-import { SplitRightLayoutV2 } from './layouts/split-right/split-right-v2';
-import { MobileStackLayoutV2 } from './layouts/mobile-stack/mobile-stack-v2';
-import { SplitRightGraphBottomLayoutV2 } from './layouts/split-right-graph-bottom/split-right-graph-bottom-v2';
+import { SplitRightLayout } from './layouts/split-right/split-right';
+import { MobileStackLayout } from './layouts/mobile-stack/mobile-stack';
+import { SplitRightGraphBottomLayout } from './layouts/split-right-graph-bottom/split-right-graph-bottom';
 
 /**
  * 注册所有内置布局母版。
@@ -22,7 +22,7 @@ export function registerAllLayouts(): void {
   registerDefaultStrategies();
 
   if (!layoutRegistry.has('split-right')) {
-    registerLayout('split-right', SplitRightLayoutV2 as ILayoutConstructor, {
+    registerLayout('split-right', SplitRightLayout as ILayoutConstructor, {
       name: '左右分栏',
       description: '控制区在左，动画区在右（Capability-based）',
       tags: ['desktop'],
@@ -35,7 +35,7 @@ export function registerAllLayouts(): void {
   }
 
   if (!layoutRegistry.has('mobile-stack')) {
-    registerLayout('mobile-stack', MobileStackLayoutV2 as ILayoutConstructor, {
+    registerLayout('mobile-stack', MobileStackLayout as ILayoutConstructor, {
       name: '移动端堆叠',
       description: '适合手机的垂直堆叠布局（Capability-based）',
       tags: ['mobile'],
@@ -50,7 +50,7 @@ export function registerAllLayouts(): void {
   if (!layoutRegistry.has('split-right-graph-bottom')) {
     registerLayout(
       'split-right-graph-bottom',
-      SplitRightGraphBottomLayoutV2 as ILayoutConstructor,
+      SplitRightGraphBottomLayout as ILayoutConstructor,
       {
         name: '左右分栏+底部图表',
         description: '控制区在左，动画区在右上方，图表网格在右下方',

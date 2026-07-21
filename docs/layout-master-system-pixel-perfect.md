@@ -22,7 +22,7 @@
 
 ### 1. 完全复刻 DOM 结构
 ```html
-.teaching-demo.v2-layout
+.teaching-demo.split-right-shell
 ├── .teaching-left-panel
 │   ├── .teaching-header (可选)
 │   ├── .control-section

@@ -9,9 +9,9 @@
  * - Capability 在 mount 期间拿到错误的布局 ID
  */
 import { describe, it, expect, afterEach } from 'vitest';
-import { SplitRightLayoutV2 } from '../../src/app/layouts/layouts/split-right/split-right-v2';
-import { MobileStackLayoutV2 } from '../../src/app/layouts/layouts/mobile-stack/mobile-stack-v2';
-import { SplitRightGraphBottomLayoutV2 } from '../../src/app/layouts/layouts/split-right-graph-bottom/split-right-graph-bottom-v2';
+import { SplitRightLayout } from '../../src/app/layouts/layouts/split-right/split-right';
+import { MobileStackLayout } from '../../src/app/layouts/layouts/mobile-stack/mobile-stack';
+import { SplitRightGraphBottomLayout } from '../../src/app/layouts/layouts/split-right-graph-bottom/split-right-graph-bottom';
 import { layoutRegistry } from '../../src/app/layouts/registry';
 import type { CapabilityContext, ILayout, LayoutSlots } from '../../src/app/layouts/types';
 
@@ -73,7 +73,7 @@ describe('Canvas rendering', () => {
 
   it('split-right: canvas is renderable after mount', async () => {
     const container = createContainer();
-    const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+    const layout = new SplitRightLayout(container, { hideHeader: true });
     const slots = await layout.mount();
 
     verifyCanvasReady(slots.animation.querySelector('canvas'));
@@ -84,7 +84,7 @@ describe('Canvas rendering', () => {
 
   it('split-right-graph-bottom: canvas is renderable after mount', async () => {
     const container = createContainer();
-    const layout = new SplitRightGraphBottomLayoutV2(container, { hideHeader: true });
+    const layout = new SplitRightGraphBottomLayout(container, { hideHeader: true });
     const slots = await layout.mount();
 
     verifyCanvasReady(slots.animation.querySelector('canvas'));
@@ -95,7 +95,7 @@ describe('Canvas rendering', () => {
 
   it('mobile-stack: canvas is renderable after mount', async () => {
     const container = createContainer(375, 812);
-    const layout = new MobileStackLayoutV2(container);
+    const layout = new MobileStackLayout(container);
     const slots = await layout.mount();
 
     verifyCanvasReady(slots.animation.querySelector('canvas'));
@@ -106,7 +106,7 @@ describe('Canvas rendering', () => {
 
   it('canvas reuses existing canvas on layout switch', async () => {
     const container = createContainer();
-    const layout1 = new SplitRightLayoutV2(container, { hideHeader: true });
+    const layout1 = new SplitRightLayout(container, { hideHeader: true });
     const slots1 = await layout1.mount();
     const originalCanvas = slots1.animation.querySelector('canvas')!;
     expect(originalCanvas).not.toBeNull();
@@ -115,7 +115,7 @@ describe('Canvas rendering', () => {
     await layout1.unmount();
     container.replaceChildren();
 
-    const layout2 = new SplitRightLayoutV2(container, {
+    const layout2 = new SplitRightLayout(container, {
       hideHeader: true,
       preservedCanvas: originalCanvas
     });
@@ -142,7 +142,7 @@ describe('Graph slot completeness', () => {
 
   it('split-right: graph slot exists in left panel when hasGraph=true', async () => {
     const container = createContainer();
-    const layout = new SplitRightLayoutV2(container, { hideHeader: true, hasGraph: true });
+    const layout = new SplitRightLayout(container, { hideHeader: true, hasGraph: true });
     const slots = await layout.mount();
 
     expect(slots.graph).toBeDefined();
@@ -157,7 +157,7 @@ describe('Graph slot completeness', () => {
 
   it('split-right: graph slot absent when hasGraph=false', async () => {
     const container = createContainer();
-    const layout = new SplitRightLayoutV2(container, { hideHeader: true, hasGraph: false });
+    const layout = new SplitRightLayout(container, { hideHeader: true, hasGraph: false });
     const slots = await layout.mount();
 
     expect(slots.graph).toBeUndefined();
@@ -168,7 +168,7 @@ describe('Graph slot completeness', () => {
 
   it('split-right-graph-bottom: graph section has non-zero height', async () => {
     const container = createContainer();
-    const layout = new SplitRightGraphBottomLayoutV2(container, { hideHeader: true });
+    const layout = new SplitRightGraphBottomLayout(container, { hideHeader: true });
     const slots = await layout.mount();
 
     expect(slots.graph).toBeDefined();
@@ -185,7 +185,7 @@ describe('Graph slot completeness', () => {
 
   it('split-right-graph-bottom: graph slot has data-columns attribute', async () => {
     const container = createContainer();
-    const layout = new SplitRightGraphBottomLayoutV2(container, {
+    const layout = new SplitRightGraphBottomLayout(container, {
       hideHeader: true,
       graphColumns: 4
     });
@@ -199,7 +199,7 @@ describe('Graph slot completeness', () => {
 
   it('split-right-graph-bottom: horizontal resizer exists between animation and graph', async () => {
     const container = createContainer();
-    const layout = new SplitRightGraphBottomLayoutV2(container, { hideHeader: true });
+    const layout = new SplitRightGraphBottomLayout(container, { hideHeader: true });
     await layout.mount();
 
     const resizer = container.querySelector('[aria-orientation="horizontal"]');
@@ -212,7 +212,7 @@ describe('Graph slot completeness', () => {
 
   it('mobile-stack: graph slot present by default', async () => {
     const container = createContainer(375, 812);
-    const layout = new MobileStackLayoutV2(container);
+    const layout = new MobileStackLayout(container);
     const slots = await layout.mount();
 
     expect(slots.graph).toBeDefined();
@@ -240,17 +240,17 @@ describe('Slot declaration consistency', () => {
   }> = [
     {
       name: 'split-right',
-      create: (c) => new SplitRightLayoutV2(c, { hideHeader: true }),
+      create: (c) => new SplitRightLayout(c, { hideHeader: true }),
       width: 1200, height: 800
     },
     {
       name: 'split-right-graph-bottom',
-      create: (c) => new SplitRightGraphBottomLayoutV2(c, { hideHeader: true }),
+      create: (c) => new SplitRightGraphBottomLayout(c, { hideHeader: true }),
       width: 1200, height: 800
     },
     {
       name: 'mobile-stack',
-      create: (c) => new MobileStackLayoutV2(c),
+      create: (c) => new MobileStackLayout(c),
       width: 375, height: 812
     }
   ];
@@ -301,7 +301,7 @@ describe('Layout switching', () => {
   it('split-right → split-right-graph-bottom: canvas survives', async () => {
     const container = createContainer();
 
-    const layout1 = new SplitRightLayoutV2(container, { hideHeader: true });
+    const layout1 = new SplitRightLayout(container, { hideHeader: true });
     const slots1 = await layout1.mount();
     const canvas1 = slots1.animation.querySelector('canvas')!;
     verifyCanvasReady(canvas1);
@@ -311,7 +311,7 @@ describe('Layout switching', () => {
     await layout1.unmount();
     container.replaceChildren();
 
-    const layout2 = new SplitRightGraphBottomLayoutV2(container, {
+    const layout2 = new SplitRightGraphBottomLayout(container, {
       hideHeader: true,
       preservedCanvas
     });
@@ -333,7 +333,7 @@ describe('Layout switching', () => {
   it('split-right-graph-bottom → split-right: graph disappears, canvas survives', async () => {
     const container = createContainer();
 
-    const layout1 = new SplitRightGraphBottomLayoutV2(container, { hideHeader: true });
+    const layout1 = new SplitRightGraphBottomLayout(container, { hideHeader: true });
     const slots1 = await layout1.mount();
     const canvas1 = slots1.animation.querySelector('canvas')!;
     verifyCanvasReady(canvas1);
@@ -342,7 +342,7 @@ describe('Layout switching', () => {
     await layout1.unmount();
     container.replaceChildren();
 
-    const layout2 = new SplitRightLayoutV2(container, {
+    const layout2 = new SplitRightLayout(container, {
       hideHeader: true,
       preservedCanvas
     });
@@ -365,7 +365,7 @@ describe('Layout switching', () => {
     let preservedCanvas: HTMLCanvasElement | null = null;
 
     // Mount split-right
-    const lr1 = new SplitRightLayoutV2(container, { hideHeader: true });
+    const lr1 = new SplitRightLayout(container, { hideHeader: true });
     const s1 = await lr1.mount();
     preservedCanvas = s1.animation.querySelector('canvas');
     verifyCanvasReady(preservedCanvas);
@@ -373,7 +373,7 @@ describe('Layout switching', () => {
     container.replaceChildren();
 
     // Mount graph-bottom
-    const gb1 = new SplitRightGraphBottomLayoutV2(container, {
+    const gb1 = new SplitRightGraphBottomLayout(container, {
       hideHeader: true,
       preservedCanvas
     });
@@ -384,7 +384,7 @@ describe('Layout switching', () => {
     container.replaceChildren();
 
     // Mount split-right again
-    const lr2 = new SplitRightLayoutV2(container, {
+    const lr2 = new SplitRightLayout(container, {
       hideHeader: true,
       preservedCanvas
     });
@@ -409,7 +409,7 @@ describe('Responsive resize', () => {
 
   it('split-right: resize to mobile preserves canvas in DOM', async () => {
     const container = createContainer();
-    const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+    const layout = new SplitRightLayout(container, { hideHeader: true });
     await layout.mount();
 
     const canvas = container.querySelector('canvas');
@@ -429,7 +429,7 @@ describe('Responsive resize', () => {
 
   it('split-right: resize to tablet preserves canvas', async () => {
     const container = createContainer();
-    const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+    const layout = new SplitRightLayout(container, { hideHeader: true });
     await layout.mount();
 
     const canvas = container.querySelector('canvas')!;
@@ -445,7 +445,7 @@ describe('Responsive resize', () => {
 
   it('split-right: resize back from mobile restores grid columns', async () => {
     const container = createContainer();
-    const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+    const layout = new SplitRightLayout(container, { hideHeader: true });
     await layout.mount();
 
     layout.handleResize(400, 800);
@@ -461,7 +461,7 @@ describe('Responsive resize', () => {
 
   it('split-right-graph-bottom: mobile resize hides horizontal resizer', async () => {
     const container = createContainer();
-    const layout = new SplitRightGraphBottomLayoutV2(container, { hideHeader: true });
+    const layout = new SplitRightGraphBottomLayout(container, { hideHeader: true });
     await layout.mount();
 
     const resizerH = container.querySelector('[aria-orientation="horizontal"]') as HTMLElement;
@@ -480,7 +480,7 @@ describe('Responsive resize', () => {
 
   it('split-right-graph-bottom: resize back to desktop shows resizer', async () => {
     const container = createContainer();
-    const layout = new SplitRightGraphBottomLayoutV2(container, { hideHeader: true });
+    const layout = new SplitRightGraphBottomLayout(container, { hideHeader: true });
     await layout.mount();
 
     const resizerH = container.querySelector('[aria-orientation="horizontal"]') as HTMLElement;
@@ -497,7 +497,7 @@ describe('Responsive resize', () => {
 
   it('mobile-stack: resize to landscape adds is-landscape class', async () => {
     const container = createContainer(375, 812);
-    const layout = new MobileStackLayoutV2(container);
+    const layout = new MobileStackLayout(container);
     await layout.mount();
 
     layout.handleResize(812, 375);
@@ -522,7 +522,7 @@ describe('Toolbar buttons', () => {
 
   it('split-right toolbar has all expected buttons', async () => {
     const container = createContainer();
-    const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+    const layout = new SplitRightLayout(container, { hideHeader: true });
     await layout.mount();
 
     expect(container.querySelector('.sidebar-toggle-btn')).not.toBeNull();
@@ -536,7 +536,7 @@ describe('Toolbar buttons', () => {
 
   it('split-right-graph-bottom toolbar has all expected buttons', async () => {
     const container = createContainer();
-    const layout = new SplitRightGraphBottomLayoutV2(container, { hideHeader: true });
+    const layout = new SplitRightGraphBottomLayout(container, { hideHeader: true });
     await layout.mount();
 
     expect(container.querySelector('.sidebar-toggle-btn')).not.toBeNull();
@@ -550,7 +550,7 @@ describe('Toolbar buttons', () => {
 
   it('mobile-stack does NOT have layout-switch button', async () => {
     const container = createContainer(375, 812);
-    const layout = new MobileStackLayoutV2(container);
+    const layout = new MobileStackLayout(container);
     await layout.mount();
 
     // Mobile layout should not have layout-switch or sidebar-toggle
@@ -709,7 +709,7 @@ describe('Double mount guard', () => {
 
   it('split-right: double mount returns same slots', async () => {
     const container = createContainer();
-    const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+    const layout = new SplitRightLayout(container, { hideHeader: true });
 
     const slots1 = await layout.mount();
     const slots2 = await layout.mount();
@@ -723,7 +723,7 @@ describe('Double mount guard', () => {
 
   it('split-right-graph-bottom: double mount returns same slots', async () => {
     const container = createContainer();
-    const layout = new SplitRightGraphBottomLayoutV2(container, { hideHeader: true });
+    const layout = new SplitRightGraphBottomLayout(container, { hideHeader: true });
 
     const slots1 = await layout.mount();
     const slots2 = await layout.mount();
@@ -737,7 +737,7 @@ describe('Double mount guard', () => {
 
   it('mobile-stack: double mount returns same slots', async () => {
     const container = createContainer(375, 812);
-    const layout = new MobileStackLayoutV2(container);
+    const layout = new MobileStackLayout(container);
 
     const slots1 = await layout.mount();
     const slots2 = await layout.mount();
@@ -760,7 +760,7 @@ describe('Unmount cleanup', () => {
 
   it('split-right: unmount removes all children', async () => {
     const container = createContainer();
-    const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+    const layout = new SplitRightLayout(container, { hideHeader: true });
     await layout.mount();
 
     expect(container.children.length).toBeGreaterThan(0);
@@ -773,7 +773,7 @@ describe('Unmount cleanup', () => {
 
   it('split-right-graph-bottom: unmount removes all children', async () => {
     const container = createContainer();
-    const layout = new SplitRightGraphBottomLayoutV2(container, { hideHeader: true });
+    const layout = new SplitRightGraphBottomLayout(container, { hideHeader: true });
     await layout.mount();
 
     expect(container.children.length).toBeGreaterThan(0);
@@ -784,7 +784,7 @@ describe('Unmount cleanup', () => {
 
   it('mobile-stack: unmount removes all children', async () => {
     const container = createContainer(375, 812);
-    const layout = new MobileStackLayoutV2(container);
+    const layout = new MobileStackLayout(container);
     await layout.mount();
 
     expect(container.children.length).toBeGreaterThan(0);
@@ -795,7 +795,7 @@ describe('Unmount cleanup', () => {
 
   it('unmount then mount produces fresh DOM', async () => {
     const container = createContainer();
-    const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+    const layout = new SplitRightLayout(container, { hideHeader: true });
 
     await layout.mount();
     const firstCanvas = container.querySelector('canvas');
@@ -805,7 +805,7 @@ describe('Unmount cleanup', () => {
     expect(container.querySelector('canvas')).toBeNull();
 
     // Fresh mount should create new canvas
-    const layout2 = new SplitRightLayoutV2(container, { hideHeader: true });
+    const layout2 = new SplitRightLayout(container, { hideHeader: true });
     await layout2.mount();
     const secondCanvas = container.querySelector('canvas');
     expect(secondCanvas).not.toBeNull();
@@ -827,7 +827,7 @@ describe('Layout state persistence', () => {
 
   it('split-right: getLayoutState returns leftRatio', async () => {
     const container = createContainer();
-    const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+    const layout = new SplitRightLayout(container, { hideHeader: true });
     await layout.mount();
 
     const state = layout.getLayoutState();
@@ -840,7 +840,7 @@ describe('Layout state persistence', () => {
 
   it('split-right: restoreLayoutState updates leftRatio', async () => {
     const container = createContainer();
-    const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+    const layout = new SplitRightLayout(container, { hideHeader: true });
     await layout.mount();
 
     layout.restoreLayoutState({ leftRatio: 0.4 });
@@ -852,7 +852,7 @@ describe('Layout state persistence', () => {
 
   it('split-right-graph-bottom: getLayoutState includes graphHeight', async () => {
     const container = createContainer();
-    const layout = new SplitRightGraphBottomLayoutV2(container, { hideHeader: true });
+    const layout = new SplitRightGraphBottomLayout(container, { hideHeader: true });
     await layout.mount();
 
     const state = layout.getLayoutState();
@@ -865,7 +865,7 @@ describe('Layout state persistence', () => {
 
   it('split-right-graph-bottom: restoreLayoutState restores graphHeight', async () => {
     const container = createContainer();
-    const layout = new SplitRightGraphBottomLayoutV2(container, { hideHeader: true });
+    const layout = new SplitRightGraphBottomLayout(container, { hideHeader: true });
     await layout.mount();
 
     layout.restoreLayoutState({ graphHeight: 350 });
@@ -878,7 +878,7 @@ describe('Layout state persistence', () => {
 
   it('split-right: restoreLayoutState clamps leftRatio to valid range', async () => {
     const container = createContainer();
-    const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+    const layout = new SplitRightLayout(container, { hideHeader: true });
     await layout.mount();
 
     layout.restoreLayoutState({ leftRatio: 0.9 }); // too high

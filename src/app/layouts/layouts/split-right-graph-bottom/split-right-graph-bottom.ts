@@ -1,8 +1,6 @@
 /**
- * SplitRightGraphBottomLayout v2 — 纯 ILayout 实现，左右分栏 + 底部图表
- *
- * @review-date 2026-04-27
- * @version 2.2.0
+ * SplitRightGraphBottomLayout — 左右分栏 + 底部图表布局
+ * （控制区在左，动画区在右上方，图表网格在右下方）
  */
 
 import type {
@@ -42,7 +40,7 @@ export interface SplitRightGraphBottomConfig extends LayoutConfig {
 
 const PREFIX: CssPrefix = 'srgb';
 
-export class SplitRightGraphBottomLayoutV2 implements ILayout {
+export class SplitRightGraphBottomLayout implements ILayout {
   readonly id = 'split-right-graph-bottom';
   readonly name = '左右分栏+底部图表';
   readonly description = '控制区在左，动画区在右上方，图表网格在右下方';

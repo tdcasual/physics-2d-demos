@@ -4,7 +4,7 @@
    ======================================== */
 
 /* ---- Grid layout ---- */
-.teaching-demo.v2-layout {
+.teaching-demo.split-right-shell {
   display: grid;
   height: 100dvh;
   overflow: hidden;

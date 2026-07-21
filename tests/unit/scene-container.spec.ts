@@ -4,8 +4,8 @@ import {
   createSceneContainer
 } from '../../src/app/layouts/container';
 import type { Scene } from '../../src/app/layouts/types';
-import { SplitRightLayoutV2 } from '../../src/app/layouts/layouts/split-right/split-right-v2';
-import { MobileStackLayoutV2 } from '../../src/app/layouts/layouts/mobile-stack/mobile-stack-v2';
+import { SplitRightLayout } from '../../src/app/layouts/layouts/split-right/split-right';
+import { MobileStackLayout } from '../../src/app/layouts/layouts/mobile-stack/mobile-stack';
 
 // Mock layout registry
 vi.mock('../../src/app/layouts/registry', () => ({
@@ -383,7 +383,7 @@ describe('SceneContainerImpl', () => {
       container.style.height = '800px';
       document.body.appendChild(container);
 
-      const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+      const layout = new SplitRightLayout(container, { hideHeader: true });
       await layout.mount();
 
       const slots = layout.getSlots();
@@ -411,7 +411,7 @@ describe('SceneContainerImpl', () => {
       container.style.height = '800px';
       document.body.appendChild(container);
 
-      const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+      const layout = new SplitRightLayout(container, { hideHeader: true });
       await layout.mount();
 
       const slots = layout.getSlots();
@@ -430,13 +430,13 @@ describe('SceneContainerImpl', () => {
       container.remove();
     });
 
-    it('should work with MobileStackLayoutV2 as well', async () => {
+    it('should work with MobileStackLayout as well', async () => {
       const container = document.createElement('div');
       container.style.width = '400px';
       container.style.height = '800px';
       document.body.appendChild(container);
 
-      const layout = new MobileStackLayoutV2(container);
+      const layout = new MobileStackLayout(container);
       await layout.mount();
 
       const slots = layout.getSlots();
@@ -454,7 +454,7 @@ describe('SceneContainerImpl', () => {
       container.style.height = '800px';
       document.body.appendChild(container);
 
-      const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+      const layout = new SplitRightLayout(container, { hideHeader: true });
       await layout.mount();
 
       // First render
@@ -466,7 +466,7 @@ describe('SceneContainerImpl', () => {
       container.replaceChildren();
 
       // Second mount — fresh layout
-      const layout2 = new SplitRightLayoutV2(container, { hideHeader: true });
+      const layout2 = new SplitRightLayout(container, { hideHeader: true });
       await layout2.mount();
 
       const slots2 = layout2.getSlots();
@@ -484,7 +484,7 @@ describe('SceneContainerImpl', () => {
       container.style.height = '800px';
       document.body.appendChild(container);
 
-      const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+      const layout = new SplitRightLayout(container, { hideHeader: true });
       await layout.mount();
 
       // getSlots must be idempotent — calling it multiple times returns same canvas
@@ -508,7 +508,7 @@ describe('SceneContainerImpl', () => {
       container.style.height = '800px';
       document.body.appendChild(container);
 
-      const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+      const layout = new SplitRightLayout(container, { hideHeader: true });
       await layout.mount();
 
       // Simulate sidebar-toggle hiding the sidebar
@@ -530,7 +530,7 @@ describe('SceneContainerImpl', () => {
       container.style.height = '800px';
       document.body.appendChild(container);
 
-      const layout = new SplitRightLayoutV2(container, {
+      const layout = new SplitRightLayout(container, {
         hideHeader: true,
         tabletBreakpoint: 1100
       });
@@ -552,7 +552,7 @@ describe('SceneContainerImpl', () => {
       container.style.height = '800px';
       document.body.appendChild(container);
 
-      const layout = new SplitRightLayoutV2(container, {
+      const layout = new SplitRightLayout(container, {
         hideHeader: true,
         mobileBreakpoint: 500
       });
@@ -584,7 +584,7 @@ describe('SceneContainerImpl', () => {
       container.style.gridTemplateColumns = '';
       container.style.gridTemplateRows = '';
 
-      const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+      const layout = new SplitRightLayout(container, { hideHeader: true });
       await layout.mount();
 
       // Layout sets display, height, overflow, gridTemplateColumns
@@ -608,7 +608,7 @@ describe('SceneContainerImpl', () => {
       container.style.gridTemplateColumns = '';
       container.style.gridTemplateRows = '';
 
-      const layout = new MobileStackLayoutV2(container);
+      const layout = new MobileStackLayout(container);
       await layout.mount();
 
       // Constructor-set properties must survive

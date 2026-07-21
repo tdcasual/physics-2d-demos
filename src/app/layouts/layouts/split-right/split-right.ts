@@ -1,8 +1,5 @@
 /**
- * SplitRightLayout v2 — 纯 ILayout 实现，左右分栏布局
- *
- * @review-date 2026-04-27
- * @version 2.2.0
+ * SplitRightLayout — 左右分栏布局（控制区在左，动画区在右）
  */
 
 import type {
@@ -38,7 +35,7 @@ export interface SplitRightConfig extends LayoutConfig {
 
 const PREFIX: CssPrefix = 'teaching';
 
-export class SplitRightLayoutV2 implements ILayout {
+export class SplitRightLayout implements ILayout {
   readonly id = 'split-right';
   readonly name = '左右分栏';
   readonly description = '控制区在左，动画区在右';
@@ -111,7 +108,7 @@ export class SplitRightLayoutV2 implements ILayout {
       prefix: PREFIX,
       leftRatio: this.leftRatio,
       currentTheme: this.currentTheme,
-      containerClass: 'teaching-demo v2-layout layout-master',
+      containerClass: 'teaching-demo split-right-shell layout-master',
       testId: 'split-right-layout',
       leftPanelClass: 'teaching-left-panel layout-left-panel',
       rightPanelClass: 'teaching-right-panel',
@@ -128,7 +125,7 @@ export class SplitRightLayoutV2 implements ILayout {
   async unmount(): Promise<void> {
     this._container.classList.remove(
       'teaching-demo',
-      'v2-layout',
+      'split-right-shell',
       'layout-master'
     );
     delete this._container.dataset.testid;

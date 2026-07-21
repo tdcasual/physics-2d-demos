@@ -1,11 +1,8 @@
 /**
- * MobileStackLayout v2 — 纯 ILayout 实现，移动端 Tab 切换布局
+ * MobileStackLayout — 移动端 Tab 切换布局
  *
  * 只定义 DOM 结构 + Capability 声明，所有功能由 Capability 提供。
  * 顶部动画区始终可见，下方 Tab 栏切换图表/控制/数据三个面板。
- *
- * @review-date 2026-05-02
- * @version 2.1.0
  */
 
 import type {
@@ -27,7 +24,7 @@ export interface MobileStackConfig extends LayoutConfig {
   readoutLabel?: string;
 }
 
-export class MobileStackLayoutV2 implements ILayout {
+export class MobileStackLayout implements ILayout {
   readonly id = 'mobile-stack';
   readonly name = '移动端堆叠';
   readonly description = '适合手机的 Tab 切换布局';
@@ -150,7 +147,7 @@ export class MobileStackLayoutV2 implements ILayout {
         ? 'dvh'
         : 'vh';
 
-    const D = MobileStackLayoutV2.DEFAULTS;
+    const D = MobileStackLayout.DEFAULTS;
     const animMinH = Number.isFinite(cfg.animationMinHeight)
       ? cfg.animationMinHeight!
       : D.animMinHeight;
@@ -303,7 +300,7 @@ export class MobileStackLayoutV2 implements ILayout {
   }
 
   handleResize(width: number, height: number): void {
-    const D = MobileStackLayoutV2.DEFAULTS;
+    const D = MobileStackLayout.DEFAULTS;
     const cfg = this.cfg;
     const animationSection = this.stageSlot?.parentElement;
     if (animationSection) {

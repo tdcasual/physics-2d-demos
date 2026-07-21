@@ -5,7 +5,7 @@ import {
   buildResizer,
   buildToolbar
 } from '../../src/app/layouts/_shared/split-helpers';
-import { MobileStackLayoutV2 } from '../../src/app/layouts/layouts/mobile-stack/mobile-stack-v2';
+import { MobileStackLayout } from '../../src/app/layouts/layouts/mobile-stack/mobile-stack';
 import { createReadoutPanel } from '../../src/app/layouts/capabilities/readout-panel';
 import type { CapabilityContext } from '../../src/app/layouts/types';
 import { createFloatingControls } from '../../src/ui/floating-controls-legacy';
@@ -84,7 +84,7 @@ describe('layout DOM compatibility contracts', () => {
 
   it('exposes a stable control-slot alias in mobile stack layouts', async () => {
     const container = document.createElement('div');
-    const layout = new MobileStackLayoutV2(container);
+    const layout = new MobileStackLayout(container);
 
     const slots = await layout.mount();
 

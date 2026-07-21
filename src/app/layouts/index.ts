@@ -61,26 +61,26 @@ export type {
   DebugOverlayConfig
 } from './capabilities';
 
-// ILayout v2 布局导出
-export { SplitRightLayoutV2 } from './layouts/split-right/split-right-v2';
-export type { SplitRightConfig } from './layouts/split-right/split-right-v2';
+// 布局导出
+export { SplitRightLayout } from './layouts/split-right/split-right';
+export type { SplitRightConfig } from './layouts/split-right/split-right';
 
-export { MobileStackLayoutV2 } from './layouts/mobile-stack/mobile-stack-v2';
-export type { MobileStackConfig } from './layouts/mobile-stack/mobile-stack-v2';
+export { MobileStackLayout } from './layouts/mobile-stack/mobile-stack';
+export type { MobileStackConfig } from './layouts/mobile-stack/mobile-stack';
 
-export { SplitRightGraphBottomLayoutV2 } from './layouts/split-right-graph-bottom/split-right-graph-bottom-v2';
-export type { SplitRightGraphBottomConfig } from './layouts/split-right-graph-bottom/split-right-graph-bottom-v2';
+export { SplitRightGraphBottomLayout } from './layouts/split-right-graph-bottom/split-right-graph-bottom';
+export type { SplitRightGraphBottomConfig } from './layouts/split-right-graph-bottom/split-right-graph-bottom';
 
 // 自动注册
 export { registerAllLayouts } from './auto-register';
 
 /**
- * 布局系统使用方式（v2 Capability-based）：
+ * 布局系统使用方式（Capability-based）：
  * ```ts
- * import { SplitRightLayoutV2, registerLayout, createSceneContainer } from './layouts';
+ * import { SplitRightLayout, registerLayout, createSceneContainer } from './layouts';
  *
  * // 注册布局
- * registerLayout('split-right', SplitRightLayoutV2, {
+ * registerLayout('split-right', SplitRightLayout, {
  *   name: '左右分栏',
  *   description: '控制区在左，动画区在右'
  * });

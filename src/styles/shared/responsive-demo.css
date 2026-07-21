@@ -4,14 +4,14 @@
 
 /* 平板 */
 @media (max-width: 1024px) {
-  .teaching-demo.v2-layout {
+  .teaching-demo.split-right-shell {
     grid-template-columns: 280px 8px 1fr;
   }
 }
 
 /* 手机 */
 @media (max-width: 767px) {
-  .teaching-demo.v2-layout {
+  .teaching-demo.split-right-shell {
     grid-template-columns: 1fr;
     grid-template-rows: auto 1fr;
   }

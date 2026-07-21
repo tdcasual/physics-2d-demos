@@ -1,8 +1,8 @@
 /**
  * Split Layout DOM Factory
  *
- * Builds the common DOM scaffold shared by SplitRightLayoutV2 and
- * SplitRightGraphBottomLayoutV2.  Each layout calls this factory then
+ * Builds the common DOM scaffold shared by SplitRightLayout and
+ * SplitRightGraphBottomLayout.  Each layout calls this factory then
  * attaches its own variant-specific sections (graph position, extra resizers).
  */
 

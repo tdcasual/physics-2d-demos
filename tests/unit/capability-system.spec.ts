@@ -5,9 +5,9 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { capabilityFactories } from '../../src/app/layouts/capabilities';
-import { SplitRightLayoutV2 } from '../../src/app/layouts/layouts/split-right/split-right-v2';
-import { MobileStackLayoutV2 } from '../../src/app/layouts/layouts/mobile-stack/mobile-stack-v2';
-import { SplitRightGraphBottomLayoutV2 } from '../../src/app/layouts/layouts/split-right-graph-bottom/split-right-graph-bottom-v2';
+import { SplitRightLayout } from '../../src/app/layouts/layouts/split-right/split-right';
+import { MobileStackLayout } from '../../src/app/layouts/layouts/mobile-stack/mobile-stack';
+import { SplitRightGraphBottomLayout } from '../../src/app/layouts/layouts/split-right-graph-bottom/split-right-graph-bottom';
 import { SceneContainerImpl } from '../../src/app/layouts/container';
 import type {
   CapabilityContext,
@@ -568,7 +568,7 @@ describe('SceneContainerImpl with ILayout', () => {
 // 10. v2 Layout class integrity
 // ============================================================================
 
-describe('SplitRightLayoutV2', () => {
+describe('SplitRightLayout', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
@@ -577,14 +577,14 @@ describe('SplitRightLayoutV2', () => {
   });
 
   it('implements ILayout shape', () => {
-    const layout = new SplitRightLayoutV2(container);
+    const layout = new SplitRightLayout(container);
     expect(layout.id).toBe('split-right');
     expect(Array.isArray(layout.capabilities)).toBe(true);
     expect(layout.capabilities!.length).toBeGreaterThanOrEqual(8);
   });
 
   it('mount produces DOM with expected structure', async () => {
-    const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+    const layout = new SplitRightLayout(container, { hideHeader: true });
     const slots = await layout.mount();
 
     expect(slots.control).toBeInstanceOf(HTMLElement);
@@ -593,20 +593,20 @@ describe('SplitRightLayoutV2', () => {
   });
 
   it('mount includes header when not hidden', async () => {
-    const layout = new SplitRightLayoutV2(container, { title: 'Physics' });
+    const layout = new SplitRightLayout(container, { title: 'Physics' });
     const slots = await layout.mount();
     expect(slots.header).toBeInstanceOf(HTMLElement);
   });
 
   it('setTheme syncs to document', async () => {
-    const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+    const layout = new SplitRightLayout(container, { hideHeader: true });
     await layout.mount();
     layout.setTheme('dark');
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
   });
 
   it('getLayoutState / restoreLayoutState round-trip', async () => {
-    const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+    const layout = new SplitRightLayout(container, { hideHeader: true });
     await layout.mount();
 
     layout.restoreLayoutState({ leftRatio: 0.25 });
@@ -614,7 +614,7 @@ describe('SplitRightLayoutV2', () => {
   });
 
   it('handleResize switches to single-column on mobile', async () => {
-    const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+    const layout = new SplitRightLayout(container, { hideHeader: true });
     await layout.mount();
 
     layout.handleResize(400, 800);
@@ -622,7 +622,7 @@ describe('SplitRightLayoutV2', () => {
   });
 
   it('unmount clears container', async () => {
-    const layout = new SplitRightLayoutV2(container, { hideHeader: true });
+    const layout = new SplitRightLayout(container, { hideHeader: true });
     await layout.mount();
     expect(container.children.length).toBeGreaterThan(0);
 
@@ -631,7 +631,7 @@ describe('SplitRightLayoutV2', () => {
   });
 });
 
-describe('MobileStackLayoutV2', () => {
+describe('MobileStackLayout', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
@@ -640,7 +640,7 @@ describe('MobileStackLayoutV2', () => {
   });
 
   it('mount produces scroll container with all slots', async () => {
-    const layout = new MobileStackLayoutV2(container);
+    const layout = new MobileStackLayout(container);
     const slots = await layout.mount();
 
     expect(slots.control).toBeInstanceOf(HTMLElement);
@@ -650,13 +650,13 @@ describe('MobileStackLayoutV2', () => {
   });
 
   it('mount omits graph when hasGraph is false', async () => {
-    const layout = new MobileStackLayoutV2(container, { hasGraph: false });
+    const layout = new MobileStackLayout(container, { hasGraph: false });
     const slots = await layout.mount();
     expect(slots.graph).toBeUndefined();
   });
 
   it('declares mobile-appropriate capabilities (no resizer)', () => {
-    const layout = new MobileStackLayoutV2(container);
+    const layout = new MobileStackLayout(container);
     const ids = layout.capabilities!.map((c) => c.id);
     expect(ids).not.toContain('resizer');
     expect(ids).not.toContain('sidebar-toggle');
@@ -665,7 +665,7 @@ describe('MobileStackLayoutV2', () => {
   });
 
   it('handleResize toggles is-landscape class', async () => {
-    const layout = new MobileStackLayoutV2(container);
+    const layout = new MobileStackLayout(container);
     await layout.mount();
 
     layout.handleResize(800, 600);
@@ -676,7 +676,7 @@ describe('MobileStackLayoutV2', () => {
   });
 });
 
-describe('SplitRightGraphBottomLayoutV2', () => {
+describe('SplitRightGraphBottomLayout', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
@@ -685,7 +685,7 @@ describe('SplitRightGraphBottomLayoutV2', () => {
   });
 
   it('mount creates graph section with configurable columns', async () => {
-    const layout = new SplitRightGraphBottomLayoutV2(container, {
+    const layout = new SplitRightGraphBottomLayout(container, {
       hideHeader: true,
       graphColumns: 2
     });
@@ -696,7 +696,7 @@ describe('SplitRightGraphBottomLayoutV2', () => {
   });
 
   it('mount creates horizontal resizer', async () => {
-    const layout = new SplitRightGraphBottomLayoutV2(container, {
+    const layout = new SplitRightGraphBottomLayout(container, {
       hideHeader: true
     });
     await layout.mount();
@@ -707,7 +707,7 @@ describe('SplitRightGraphBottomLayoutV2', () => {
   });
 
   it('getLayoutState / restoreLayoutState preserves graphHeight', async () => {
-    const layout = new SplitRightGraphBottomLayoutV2(container, {
+    const layout = new SplitRightGraphBottomLayout(container, {
       hideHeader: true
     });
     await layout.mount();
