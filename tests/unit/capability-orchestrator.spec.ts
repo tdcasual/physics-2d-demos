@@ -11,7 +11,7 @@ import type {
   CapabilityInstance,
   CapabilityId,
   LayoutSlots
-} from '../../src/app/layouts/core/types';
+} from '../../src/app/layouts/types';
 import type { ILayout, Scene } from '../../src/app/layouts/types';
 
 // Mock capabilities module

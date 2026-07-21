@@ -9,7 +9,7 @@
 
 import { layoutRegistry, registerLayout } from './registry';
 import { registerDefaultStrategies } from './default-strategies';
-import type { ILayoutConstructor } from './core/types';
+import type { ILayoutConstructor } from './types';
 import { SplitRightLayoutV2 } from './layouts/split-right/split-right-v2';
 import { MobileStackLayoutV2 } from './layouts/mobile-stack/mobile-stack-v2';
 import { SplitRightGraphBottomLayoutV2 } from './layouts/split-right-graph-bottom/split-right-graph-bottom-v2';

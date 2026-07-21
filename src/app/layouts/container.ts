@@ -41,9 +41,10 @@ import type {
   LayoutTransition,
   LayoutChangeEvent,
   CreateContainerOptions,
-  SceneContainerEvents
+  SceneContainerEvents,
+  CapabilityContext,
+  ILayout
 } from './types';
-import type { CapabilityContext, ILayout } from './core/types';
 
 /** ILayout 子集：支持 enter/exit 动画钩子（旧布局兼容，无实现则为 no-op） */
 type LayoutWithAnimation = ILayout & {

@@ -11,7 +11,7 @@ import type {
   CapabilityContext,
   LayoutSlots,
   ReadoutItem
-} from '../core/types';
+} from '../types';
 
 export interface ReadoutPanelConfig {
   position?: 'top-right' | 'inline' | 'overlay' | 'docked-top' | 'docked-bottom';

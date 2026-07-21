@@ -9,7 +9,7 @@ import type {
   CapabilityInstance,
   CapabilityContext,
   LayoutSlots
-} from '../core/types';
+} from '../types';
 
 export interface DebugOverlayConfig {
   intervalMs?: number;

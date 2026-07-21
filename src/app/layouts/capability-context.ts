@@ -2,9 +2,10 @@ import type {
   CapabilityContext,
   CapabilityEvents,
   CapabilityInstance,
-  Scene
-} from './core/types';
-import type { Theme, SceneContainerEvents } from './types';
+  Scene,
+  Theme,
+  SceneContainerEvents
+} from './types';
 
 type Mode = 'normal' | 'presentation';
 type DemoProfileUpdate = CapabilityEvents['modechange'];

@@ -15,7 +15,7 @@ import type {
   LayoutConfig,
   Theme,
   SlotName
-} from '../../core/types';
+} from '../../types';
 
 export interface MobileStackConfig extends LayoutConfig {
   animationHeightVh?: number;

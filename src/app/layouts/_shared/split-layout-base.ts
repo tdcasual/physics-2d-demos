@@ -6,7 +6,7 @@
  * attaches its own variant-specific sections (graph position, extra resizers).
  */
 
-import type { Theme } from '../core/types';
+import type { Theme } from '../types';
 import {
   type CssPrefix,
   type SplitConfig,

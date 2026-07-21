@@ -11,7 +11,7 @@ import type {
   CapabilityInstance,
   CapabilityContext,
   LayoutSlots
-} from '../core/types';
+} from '../types';
 
 export interface ResizerConfig {
   direction?: 'vertical' | 'horizontal';

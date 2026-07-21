@@ -10,7 +10,7 @@ import type {
   CapabilityContext,
   LayoutSlots,
   Theme
-} from '../core/types';
+} from '../types';
 
 export interface ThemeToggleConfig {
   /** 按钮挂载到的 CSS 选择器（相对于 layout container） */

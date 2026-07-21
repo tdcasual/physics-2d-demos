@@ -10,7 +10,7 @@ import type {
   CapabilityInstance,
   CapabilityContext,
   LayoutSlots
-} from '../core/types';
+} from '../types';
 import type { SceneDemoProfile } from '../../demo-profile';
 
 export interface DemoProfileUpdateData {

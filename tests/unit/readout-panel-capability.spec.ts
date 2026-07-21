@@ -9,7 +9,7 @@ import { capabilityFactories } from '../../src/app/layouts/capabilities';
 import type {
   CapabilityContext,
   LayoutSlots
-} from '../../src/app/layouts/core/types';
+} from '../../src/app/layouts/types';
 
 // ============================================================================
 // Helpers

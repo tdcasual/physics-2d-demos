@@ -7,7 +7,7 @@
  * @version 0.1.0
  */
 
-import type { ILayout, ILayoutConstructor, LayoutConfig, SlotName } from './core/types';
+import type { ILayout, ILayoutConstructor, LayoutConfig, SlotName } from './types';
 
 
 /** 布局元数据 */

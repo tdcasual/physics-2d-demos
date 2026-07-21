@@ -47,7 +47,7 @@ import type {
   CapabilityScope,
   ReadoutItem,
   TransportState
-} from '../core/types';
+} from '../types';
 import type { TransportBarCallbacks, TransportBarConfig } from './transport-bar';
 import type { ReadoutPanelConfig } from './readout-panel';
 import type { DemoProfileConfig, DemoProfileUpdateData } from './demo-profile';

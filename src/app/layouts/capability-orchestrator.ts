@@ -6,8 +6,13 @@
  */
 
 import { capabilityFactories, createCapabilityDefinition } from './capabilities';
-import type { CapabilityContext, CapabilityInstance, LayoutSlots } from './core/types';
-import type { ILayout, Scene } from './types';
+import type {
+  CapabilityContext,
+  CapabilityInstance,
+  LayoutSlots,
+  ILayout,
+  Scene
+} from './types';
 
 /** 场景绑定描述符 */
 interface SceneBinding {

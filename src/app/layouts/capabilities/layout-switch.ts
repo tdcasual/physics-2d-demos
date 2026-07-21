@@ -10,7 +10,7 @@ import type {
   CapabilityInstance,
   CapabilityContext,
   LayoutSlots
-} from '../core/types';
+} from '../types';
 
 export interface LayoutSwitchConfig {
   selector?: string;

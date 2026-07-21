@@ -11,7 +11,7 @@ import type {
   CapabilityContext,
   LayoutSlots,
   TransportState
-} from '../core/types';
+} from '../types';
 import {
   createFloatingControls,
   type FloatingControls

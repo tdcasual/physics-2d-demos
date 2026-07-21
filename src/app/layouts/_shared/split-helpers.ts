@@ -5,7 +5,7 @@
  * CSS class prefix ('teaching' | 'srgb') is the only config difference.
  */
 
-import type { Theme } from '../core/types';
+import type { Theme } from '../types';
 
 export type CssPrefix = 'teaching' | 'srgb';
 

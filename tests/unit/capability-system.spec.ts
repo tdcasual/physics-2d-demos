@@ -12,7 +12,7 @@ import { SceneContainerImpl } from '../../src/app/layouts/container';
 import type {
   CapabilityContext,
   CapabilityId
-} from '../../src/app/layouts/core/types';
+} from '../../src/app/layouts/types';
 
 // ============================================================================
 // Helpers

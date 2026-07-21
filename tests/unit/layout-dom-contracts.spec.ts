@@ -7,7 +7,7 @@ import {
 } from '../../src/app/layouts/_shared/split-helpers';
 import { MobileStackLayoutV2 } from '../../src/app/layouts/layouts/mobile-stack/mobile-stack-v2';
 import { createReadoutPanel } from '../../src/app/layouts/capabilities/readout-panel';
-import type { CapabilityContext } from '../../src/app/layouts/core/types';
+import type { CapabilityContext } from '../../src/app/layouts/types';
 import { createFloatingControls } from '../../src/ui/floating-controls-legacy';
 import { createStageDom } from '../../src/scenes/chase-meet/renderer/view-utils';
 

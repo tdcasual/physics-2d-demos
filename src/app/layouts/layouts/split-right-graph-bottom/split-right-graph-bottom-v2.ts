@@ -12,7 +12,7 @@ import type {
   LayoutConfig,
   Theme,
   SlotName
-} from '../../core/types';
+} from '../../types';
 import {
   type CssPrefix,
   buildGraphSection,
