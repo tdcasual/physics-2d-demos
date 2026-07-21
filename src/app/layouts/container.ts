@@ -226,11 +226,9 @@ export class SceneContainerImpl implements SceneContainer {
 
     const slots = layout.getSlots?.() || {};
 
-    // Auto-wire capabilities
-    if (Array.isArray(layout.capabilities)) {
-      const ctx = this._buildCapabilityContext(scene);
-      this._orchestrator.wire(layout, scene, slots, ctx);
-    }
+    // 装配布局声明的 capabilities（ILayout 约定 capabilities 必填）
+    const ctx = this._buildCapabilityContext(scene);
+    this._orchestrator.wire(layout, scene, slots, ctx);
 
     scene.mount?.();
     this._emitter.emit('scene:mount', { sceneId: scene.id });

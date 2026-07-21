@@ -102,7 +102,7 @@ export class CapabilityOrchestrator {
 
     const seenIds = new Set<string>();
 
-    for (const decl of layout.capabilities ?? []) {
+    for (const decl of layout.capabilities) {
       const factory = capabilityFactories[decl.id];
       if (!factory) {
         console.warn(`[CapabilityOrchestrator] Unknown capability: ${decl.id}`);

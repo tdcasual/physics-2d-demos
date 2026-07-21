@@ -157,8 +157,8 @@ export interface ILayout {
   readonly description: string;
   readonly supportedSlots: SlotName[];
 
-  /** 声明式能力列表 — 容器据此自动装配。旧 LayoutMaster 实现无此字段时走 legacy 路径。 */
-  readonly capabilities?: CapabilityDeclaration[];
+  /** 声明式能力列表 — 容器据此自动装配读数面板、运输控制等可插拔能力。 */
+  readonly capabilities: CapabilityDeclaration[];
 
   mount(): Promise<LayoutSlots>;
   unmount(): Promise<void>;

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { renderSceneToSlots } from '../../src/app/layouts/scene-slot-renderer';
-import type { ILayout, LayoutSlots, Scene, Theme } from '../../src/app/layouts/types';
+import type {
+  ILayout,
+  LayoutSlots,
+  Scene,
+  Theme
+} from '../../src/app/layouts/types';
 
 function createLayout(slots: Partial<LayoutSlots>): ILayout {
   return {
@@ -8,6 +13,7 @@ function createLayout(slots: Partial<LayoutSlots>): ILayout {
     name: 'Test Layout',
     description: 'Test layout',
     supportedSlots: ['header', 'control', 'animation', 'graph', 'readout'],
+    capabilities: [],
     async mount() {
       return slots as LayoutSlots;
     },

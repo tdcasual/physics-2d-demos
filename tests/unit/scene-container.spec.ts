@@ -13,6 +13,7 @@ vi.mock('../../src/app/layouts/registry', () => ({
     has: vi.fn(() => true),
     create: vi.fn((id: string) => ({
       id,
+      capabilities: [],
       mount: vi.fn().mockResolvedValue(undefined),
       unmount: vi.fn().mockResolvedValue(undefined),
       enter: vi.fn().mockResolvedValue(undefined),
@@ -574,7 +575,8 @@ describe('SceneContainerImpl', () => {
     it('should preserve constructor-set styles after layout mount', async () => {
       const container = document.createElement('div');
       // Simulate constructor cssText
-      container.style.cssText = 'width: 100%; height: 100%; overflow: hidden; position: relative;';
+      container.style.cssText =
+        'width: 100%; height: 100%; overflow: hidden; position: relative;';
       document.body.appendChild(container);
 
       // Simulate stale inline style cleanup (as done in _setupIncomingLayout)
@@ -597,7 +599,8 @@ describe('SceneContainerImpl', () => {
 
     it('should not clear constructor height on mobile layout mount', async () => {
       const container = document.createElement('div');
-      container.style.cssText = 'width: 100%; height: 100%; overflow: hidden; position: relative;';
+      container.style.cssText =
+        'width: 100%; height: 100%; overflow: hidden; position: relative;';
       document.body.appendChild(container);
 
       // Simulate stale style cleanup
