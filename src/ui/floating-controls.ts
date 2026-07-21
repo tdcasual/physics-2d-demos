@@ -1,3 +1,11 @@
+/**
+ * 浮动运输控制条（桌面端）
+ *
+ * 悬浮在动画区左上角、可拖拽的播放/暂停/重置/速度控制条。
+ * 由 transport-bar capability 装配（桌面布局的默认运输控制形态）；
+ * 移动端紧凑形态则由 transport-bar 内联渲染，不复用此组件。
+ */
+
 import { makeDraggable } from './utils/draggable';
 
 export interface FloatingControls extends HTMLElement {

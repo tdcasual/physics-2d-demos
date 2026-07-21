@@ -8,7 +8,7 @@ import {
 import { MobileStackLayout } from '../../src/app/layouts/layouts/mobile-stack/mobile-stack';
 import { createReadoutPanel } from '../../src/app/layouts/capabilities/readout-panel';
 import type { CapabilityContext } from '../../src/app/layouts/types';
-import { createFloatingControls } from '../../src/ui/floating-controls-legacy';
+import { createFloatingControls } from '../../src/ui/floating-controls';
 import { createStageDom } from '../../src/scenes/chase-meet/renderer/view-utils';
 
 describe('layout DOM compatibility contracts', () => {

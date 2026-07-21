@@ -15,7 +15,7 @@ import type {
 import {
   createFloatingControls,
   type FloatingControls
-} from '../../../ui/floating-controls-legacy';
+} from '../../../ui/floating-controls';
 
 export interface TransportBarConfig {
   /** 挂载目标 slot（默认 animation） */
