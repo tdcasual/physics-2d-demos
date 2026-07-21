@@ -1,6 +1,6 @@
 # Teaching Demo Hub
 
-面向课堂演示的多学科 2D 动画静态站点。当前收录 14 个交互式物理教学场景与 2 个仪器组件演示，统一的布局母版系统，支持桌面端/移动端自适应切换。
+面向课堂演示的多学科 2D 动画静态站点。当前收录 16 个交互式物理教学场景与 2 个仪器组件演示，统一的布局母版系统，支持桌面端/移动端自适应切换。
 
 ## Tech Stack
 
@@ -78,7 +78,8 @@ src/
   pages/
     *.html                     # 场景页面入口（Vite 自动扫描，无需手动注册）
   ui/
-    control-layout.ts          # 浮动控制条组件
+    floating-controls.ts       # 浮动运输控制条（桌面端，可拖拽）
+    components/                # 共享 DOM 组件（SchemaRenderer / ControlCard / scene-controls/*）
 scripts/
   generate-scene-index.ts      # 生成导航索引
   generate-nav-fallback.ts     # 生成导航 fallback JS
@@ -98,11 +99,21 @@ docs/
 - `/`：React 导航首页（读取 `scene-index.json`，支持搜索）
 - `/src/pages/projectile.html`：抛体运动
 - `/src/pages/chase-meet.html`：追及相遇
-- `/src/pages/field-lines.html`：电场线
-- `/src/pages/emf-analogy.html`：电路水流类比
-- `/src/pages/electrification.html`：起电方式
-- `/src/pages/vt-integral.html`：微元法
 - `/src/pages/spring-oscillator.html`：弹簧振子
+- `/src/pages/ganshe.html`：波的干涉
+- `/src/pages/mechanical-wave.html`：机械波
+- `/src/pages/doppler-effect.html`：多普勒效应
+- `/src/pages/field-lines.html`：电场线演化
+- `/src/pages/emf-analogy.html`：电磁感应-水路类比
+- `/src/pages/electrification.html`：静电起电
+- `/src/pages/vt-integral.html`：微元法
+- `/src/pages/double-slit.html`：双缝干涉
+- `/src/pages/interference-formula.html`：双缝干涉公式推导
+- `/src/pages/thin-film.html`：薄膜干涉
+- `/src/pages/wedge.html`：劈尖干涉
+- `/src/pages/vernier-caliper.html`：游标卡尺
+- `/src/pages/micrometer.html`：螺旋测微仪
+- `/src/pages/instruments.html`：仪器组件库（干涉读数游标卡尺、高精度干涉测微仪）
 
 ## Architecture
 

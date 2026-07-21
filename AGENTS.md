@@ -4,11 +4,11 @@
 
 ## 项目概述
 
-Physics-2D-Demos 是一个物理教学演示中心（Teaching Demo Hub），当前包含 14 个交互式 2D 物理场景，以及 2 个可按需加载的仪器组件演示页面。
+Physics-2D-Demos 是一个物理教学演示中心（Teaching Demo Hub），当前包含 16 个交互式 2D 物理场景，以及 2 个可按需加载的仪器组件演示页面。
 
 - **技术栈**: Vite 7 + TypeScript 5.9 (strict) + React 18 + Tailwind CSS v4
 - **测试**: Vitest 3.2 (单元/契约) + Playwright (E2E/视觉)
-- **构建产物**: ~784KB，22 个 JS chunk
+- **构建产物**: ~560KB JS（32 个 chunk），完整 dist（含 18 个 HTML 入口与 CSS）约 1.1MB
 - **Runtime 依赖**: 仅 4 个（React 生态）
 
 ## 架构分层
@@ -25,7 +25,7 @@ app/           — 布局系统、场景引导器、首页
                — 可依赖 platform/core/ui
 ui/            — 共享组件库（DOM widgets）
                — 可依赖 platform/core
-scenes/        — 14 个物理场景（每个: meta/sim/view/entry/controls/page）
+scenes/        — 16 个物理场景（每个: meta/sim/view/entry/controls/page）
                — 场景由 catalog/scene-registry.ts 自动发现（import.meta.glob）
                — 非 page.ts 不依赖 app/ui
 ```
@@ -270,5 +270,4 @@ function resize() {
 ## 已知限制
 
 - `spring-oscillator` 使用 imperative `controls.ts`（动态增删振子），已通过 `custom` 字段兼容 controls-schema 系统
-- `ui/control-layout.ts` 有未使用的 legacy 代码（预留未来布局重构）
 - E2E 中 35 个测试不稳定（超时/元素定位），与 schema 迁移无关
