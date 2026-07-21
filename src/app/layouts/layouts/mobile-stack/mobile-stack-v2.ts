@@ -13,9 +13,11 @@ import type {
   CapabilityDeclaration,
   LayoutSlots,
   LayoutConfig,
+  LayoutTransition,
   Theme,
   SlotName
 } from '../../types';
+import { enterLayout, exitLayout } from '../../_shared/layout-transition';
 
 export interface MobileStackConfig extends LayoutConfig {
   animationHeightVh?: number;
@@ -318,6 +320,14 @@ export class MobileStackLayoutV2 implements ILayout {
       animationSection.style.height = `${newHeight}px`;
     }
     this._container.classList.toggle('is-landscape', width > height);
+  }
+
+  enter(transition: LayoutTransition): Promise<void> {
+    return enterLayout(this._container, transition);
+  }
+
+  exit(transition: LayoutTransition): Promise<void> {
+    return exitLayout(this._container, transition);
   }
 
   getSlots(): Partial<LayoutSlots> {

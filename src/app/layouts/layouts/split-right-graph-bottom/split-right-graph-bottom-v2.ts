@@ -10,6 +10,7 @@ import type {
   CapabilityDeclaration,
   LayoutSlots,
   LayoutConfig,
+  LayoutTransition,
   Theme,
   SlotName
 } from '../../types';
@@ -23,6 +24,7 @@ import {
   applyResponsiveColumns
 } from '../../_shared/split-helpers';
 import { buildSplitLayoutDOM } from '../../_shared/split-layout-base';
+import { enterLayout, exitLayout } from '../../_shared/layout-transition';
 
 export interface SplitRightGraphBottomConfig extends LayoutConfig {
   defaultLeftRatio?: number;
@@ -223,6 +225,14 @@ export class SplitRightGraphBottomLayoutV2 implements ILayout {
 
   getSlots(): Partial<LayoutSlots> {
     return this.slots;
+  }
+
+  enter(transition: LayoutTransition): Promise<void> {
+    return enterLayout(this._container, transition);
+  }
+
+  exit(transition: LayoutTransition): Promise<void> {
+    return exitLayout(this._container, transition);
   }
 
   getLayoutState(): Record<string, unknown> {

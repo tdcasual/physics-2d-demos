@@ -10,6 +10,7 @@ import type {
   CapabilityDeclaration,
   LayoutSlots,
   LayoutConfig,
+  LayoutTransition,
   Theme,
   SlotName
 } from '../../types';
@@ -21,6 +22,7 @@ import {
   applyResponsiveColumns
 } from '../../_shared/split-helpers';
 import { buildSplitLayoutDOM } from '../../_shared/split-layout-base';
+import { enterLayout, exitLayout } from '../../_shared/layout-transition';
 
 export interface SplitRightConfig extends LayoutConfig {
   defaultLeftRatio?: number;
@@ -148,6 +150,14 @@ export class SplitRightLayoutV2 implements ILayout {
 
   handleResize(width: number, _height: number): void {
     applyResponsiveColumns(this._container, width, this.cfg, this.leftRatio);
+  }
+
+  enter(transition: LayoutTransition): Promise<void> {
+    return enterLayout(this._container, transition);
+  }
+
+  exit(transition: LayoutTransition): Promise<void> {
+    return exitLayout(this._container, transition);
   }
 
   getSlots(): Partial<LayoutSlots> {

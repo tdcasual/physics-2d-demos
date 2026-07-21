@@ -44,12 +44,6 @@ import type {
   ILayout
 } from './types';
 
-/** ILayout 子集：支持 enter/exit 动画钩子（旧布局兼容，无实现则为 no-op） */
-type LayoutWithAnimation = ILayout & {
-  enter?(transition: LayoutTransition): Promise<void>;
-  exit?(transition: LayoutTransition): Promise<void>;
-};
-
 /**
  * 场景容器实现类
  *
@@ -472,7 +466,7 @@ export class SceneContainerImpl implements SceneContainer {
   ): Promise<void> {
     if (fromLayout && animate) {
       try {
-        await (fromLayout as LayoutWithAnimation).exit?.(transition);
+        await fromLayout.exit?.(transition);
       } catch (err) {
         console.warn('[SceneContainer] Layout exit animation failed:', err);
       }
@@ -534,7 +528,7 @@ export class SceneContainerImpl implements SceneContainer {
   ): Promise<void> {
     if (animate) {
       try {
-        await (newLayout as LayoutWithAnimation).enter?.({
+        await newLayout.enter?.({
           ...transition,
           easing: 'ease-out'
         });

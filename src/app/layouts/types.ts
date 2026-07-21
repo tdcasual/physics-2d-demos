@@ -164,6 +164,16 @@ export interface ILayout {
   unmount(): Promise<void>;
   setTheme(theme: Theme): void;
   handleResize(width: number, height: number): void;
+  /**
+   * 布局切换进入动画。由容器在 switchLayout 装配新布局后调用。
+   * 未实现则视为无动画（no-op）。
+   */
+  enter?(transition: LayoutTransition): Promise<void>;
+  /**
+   * 布局切换退出动画。由容器在 switchLayout 拆卸旧布局前调用。
+   * 未实现则视为无动画（no-op）。
+   */
+  exit?(transition: LayoutTransition): Promise<void>;
   getSlots?(): Partial<LayoutSlots>;
   getLayoutState?(): Record<string, unknown>;
   restoreLayoutState?(state: Record<string, unknown>): void;
