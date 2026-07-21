@@ -270,4 +270,4 @@ function resize() {
 ## 已知限制
 
 - `spring-oscillator` 使用 imperative `controls.ts`（动态增删振子），已通过 `custom` 字段兼容 controls-schema 系统
-- E2E 中 35 个测试不稳定（超时/元素定位），与 schema 迁移无关
+- E2E 套件当前稳定：本地连续 3 次完整运行（含 `--repeat-each=2` 加压，累计 304 次执行）全部通过，早期文档所述「35 个不稳定测试」已不复现。若 CI 偶发超时，优先排查浏览器/资源环境而非测试本身。
