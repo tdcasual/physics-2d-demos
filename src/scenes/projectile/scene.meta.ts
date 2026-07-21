@@ -34,8 +34,10 @@ export const projectileMeta: SceneMeta = {
   featured: true,
   defaultParams: {
     v0: 20,
-    angle: 45,
-    g: 9.8
+    theta: 45,
+    h0: 0,
+    g: 9.8,
+    c: 0
   },
   demoProfile
 };

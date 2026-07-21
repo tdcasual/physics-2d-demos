@@ -16,19 +16,12 @@ import {
 import { createProjectileView } from './scene.view';
 
 const defaultParams: ProjectileParams = {
-  speed: projectileMeta.defaultParams.speed ?? projectileMeta.defaultParams.v0 ?? 30,
-  angleDeg:
-    projectileMeta.defaultParams.angleDeg ??
-    projectileMeta.defaultParams.angle ??
-    45,
-  gravity:
-    projectileMeta.defaultParams.gravity ?? projectileMeta.defaultParams.g ?? 9.8,
-  initialHeight:
-    projectileMeta.defaultParams.initialHeight ??
-    projectileMeta.defaultParams.h0 ??
-    0,
+  speed: projectileMeta.defaultParams.v0 ?? 30,
+  angleDeg: projectileMeta.defaultParams.theta ?? 45,
+  gravity: projectileMeta.defaultParams.g ?? 9.8,
+  initialHeight: projectileMeta.defaultParams.h0 ?? 0,
   windAccel: projectileMeta.defaultParams.windAccel ?? 0,
-  drag: projectileMeta.defaultParams.drag ?? projectileMeta.defaultParams.c ?? 0
+  drag: projectileMeta.defaultParams.c ?? 0
 };
 
 export type CreateProjectileSceneOptions = {
