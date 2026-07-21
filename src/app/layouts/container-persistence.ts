@@ -37,7 +37,10 @@ export function restorePersistedState(
       return result;
     }
   } catch (err) {
-    console.warn('[persistence] Failed to restore state:', err instanceof Error ? err.message : err);
+    console.warn(
+      '[persistence] Failed to restore state:',
+      err instanceof Error ? err.message : err
+    );
   }
   return null;
 }
@@ -58,7 +61,10 @@ export function saveSceneState(
       })
     );
   } catch (err) {
-    console.warn('[persistence] Failed to save state:', err instanceof Error ? err.message : err);
+    console.warn(
+      '[persistence] Failed to save state:',
+      err instanceof Error ? err.message : err
+    );
   }
 }
 
@@ -75,7 +81,10 @@ export function restoreSceneState(
       return data.state;
     }
   } catch (err) {
-    console.warn('[persistence] Failed to restore scene state:', err instanceof Error ? err.message : err);
+    console.warn(
+      '[persistence] Failed to restore scene state:',
+      err instanceof Error ? err.message : err
+    );
   }
   return null;
 }
@@ -96,7 +105,10 @@ export function saveLayoutState(
       })
     );
   } catch (err) {
-    console.warn('[persistence] Failed to save state:', err instanceof Error ? err.message : err);
+    console.warn(
+      '[persistence] Failed to save state:',
+      err instanceof Error ? err.message : err
+    );
   }
 }
 
@@ -113,7 +125,10 @@ export function restoreLayoutState(
       return data.state;
     }
   } catch (err) {
-    console.warn('[persistence] Failed to restore layout state:', err instanceof Error ? err.message : err);
+    console.warn(
+      '[persistence] Failed to restore layout state:',
+      err instanceof Error ? err.message : err
+    );
   }
   return null;
 }

@@ -59,7 +59,8 @@ export function createModeToggle(
       };
 
       handler = () => {
-        const next = ctx.getMode() === 'presentation' ? 'normal' : 'presentation';
+        const next =
+          ctx.getMode() === 'presentation' ? 'normal' : 'presentation';
         ctx.setMode(next);
         updateLabel(next);
       };

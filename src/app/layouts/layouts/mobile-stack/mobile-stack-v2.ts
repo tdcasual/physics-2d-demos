@@ -30,7 +30,11 @@ export class MobileStackLayoutV2 implements ILayout {
   readonly name = '移动端堆叠';
   readonly description = '适合手机的 Tab 切换布局';
   readonly supportedSlots: SlotName[] = [
-    'header', 'control', 'animation', 'graph', 'readout'
+    'header',
+    'control',
+    'animation',
+    'graph',
+    'readout'
   ];
 
   readonly capabilities: CapabilityDeclaration[];
@@ -65,8 +69,18 @@ export class MobileStackLayoutV2 implements ILayout {
     this._container = container;
 
     this.capabilities = [
-      ...(config.hideTransport ? [] : [{ id: 'transport-bar' as const, config: {} }]),
-      { id: 'readout-panel', config: { position: 'inline', collapsed: false, cssPrefix: 'mobile', label: config.readoutLabel ?? '数据读数' } },
+      ...(config.hideTransport
+        ? []
+        : [{ id: 'transport-bar' as const, config: {} }]),
+      {
+        id: 'readout-panel',
+        config: {
+          position: 'inline',
+          collapsed: false,
+          cssPrefix: 'mobile',
+          label: config.readoutLabel ?? '数据读数'
+        }
+      },
       { id: 'theme-toggle' },
       { id: 'mode-toggle' },
       { id: 'demo-profile' }
@@ -101,7 +115,8 @@ export class MobileStackLayoutV2 implements ILayout {
 
     const themeBtn = document.createElement('button');
     themeBtn.type = 'button';
-    themeBtn.className = 'theme-toggle-btn shell-theme-toggle mobile-toggle-btn';
+    themeBtn.className =
+      'theme-toggle-btn shell-theme-toggle mobile-toggle-btn';
     themeBtn.setAttribute('aria-label', '切换到夜间主题');
     themeBtn.textContent = '☾';
 
@@ -116,18 +131,30 @@ export class MobileStackLayoutV2 implements ILayout {
     container.appendChild(controlBar);
 
     // Inject controlBar reference for transport-bar compact mode
-    const transportCap = this.capabilities.find((c) => c.id === 'transport-bar');
+    const transportCap = this.capabilities.find(
+      (c) => c.id === 'transport-bar'
+    );
     if (transportCap) {
-      transportCap.config = { ...(transportCap.config ?? {}), container: controlBar };
+      transportCap.config = {
+        ...(transportCap.config ?? {}),
+        container: controlBar
+      };
     }
 
     // ---- Animation section (always visible at top) ----
 
-    const vhUnit = typeof CSS !== 'undefined' && CSS.supports?.('height', '1dvh') ? 'dvh' : 'vh';
+    const vhUnit =
+      typeof CSS !== 'undefined' && CSS.supports?.('height', '1dvh')
+        ? 'dvh'
+        : 'vh';
 
     const D = MobileStackLayoutV2.DEFAULTS;
-    const animMinH = Number.isFinite(cfg.animationMinHeight) ? cfg.animationMinHeight! : D.animMinHeight;
-    const animVh = Number.isFinite(cfg.animationHeightVh) ? cfg.animationHeightVh! : D.animVh;
+    const animMinH = Number.isFinite(cfg.animationMinHeight)
+      ? cfg.animationMinHeight!
+      : D.animMinHeight;
+    const animVh = Number.isFinite(cfg.animationHeightVh)
+      ? cfg.animationHeightVh!
+      : D.animVh;
 
     const animationSection = document.createElement('div');
     animationSection.className = 'mobile-animation-section';
@@ -136,8 +163,7 @@ export class MobileStackLayoutV2 implements ILayout {
 
     this.stageSlot = document.createElement('div');
     this.stageSlot.className = 'mobile-stage-slot';
-    this.stageCanvas = cfg.preservedCanvas
-      ?? document.createElement('canvas');
+    this.stageCanvas = cfg.preservedCanvas ?? document.createElement('canvas');
     this.stageCanvas.className = 'mobile-stage-canvas stage-canvas';
     this.stageSlot.appendChild(this.stageCanvas);
     animationSection.appendChild(this.stageSlot);
@@ -145,7 +171,11 @@ export class MobileStackLayoutV2 implements ILayout {
 
     // ---- Tab system ----
 
-    interface TabDef { id: string; label: string; slotKey: keyof LayoutSlots; }
+    interface TabDef {
+      id: string;
+      label: string;
+      slotKey: keyof LayoutSlots;
+    }
     const tabs: TabDef[] = [];
     if (cfg.hasGraph !== false) {
       tabs.push({ id: 'graph', label: '📈 图表', slotKey: 'graph' });
@@ -165,7 +195,7 @@ export class MobileStackLayoutV2 implements ILayout {
     tabContent.className = 'mobile-tab-content';
 
     this._tabPanels.clear();
-    this._tabAllIds = tabs.map(t => t.id);
+    this._tabAllIds = tabs.map((t) => t.id);
 
     for (const tab of tabs) {
       // Tab button
@@ -176,7 +206,9 @@ export class MobileStackLayoutV2 implements ILayout {
       btn.setAttribute('aria-controls', `mobile-panel-${tab.id}`);
       btn.dataset.tab = tab.id;
       btn.textContent = tab.label;
-      btn.addEventListener('click', () => this._switchTab(tab.id), { signal: this._abortCtl.signal });
+      btn.addEventListener('click', () => this._switchTab(tab.id), {
+        signal: this._abortCtl.signal
+      });
       this.tabBar.appendChild(btn);
 
       // Tab panel
@@ -202,7 +234,9 @@ export class MobileStackLayoutV2 implements ILayout {
     }
 
     // Activate saved or default tab
-    const defaultTab = this._tabAllIds.includes(this._activeTabId) ? this._activeTabId : 'control';
+    const defaultTab = this._tabAllIds.includes(this._activeTabId)
+      ? this._activeTabId
+      : 'control';
     this._switchTab(defaultTab);
 
     container.appendChild(this.tabBar);
@@ -236,13 +270,19 @@ export class MobileStackLayoutV2 implements ILayout {
   async unmount(): Promise<void> {
     this._abortCtl.abort();
     this._abortCtl = new AbortController();
-    this._container.classList.remove('mobile-stack-layout', 'layout-master', 'is-landscape');
+    this._container.classList.remove(
+      'mobile-stack-layout',
+      'layout-master',
+      'is-landscape'
+    );
     delete this._container.dataset.testid;
     delete this._container.dataset.theme;
     delete this._container.dataset.mode;
     try {
       this._container.replaceChildren();
-    } catch { /* container may be detached */ }
+    } catch {
+      /* container may be detached */
+    }
     this.slots = {};
     this.stageSlot = null;
     this.stageCanvas = null;
@@ -265,9 +305,15 @@ export class MobileStackLayoutV2 implements ILayout {
     const cfg = this.cfg;
     const animationSection = this.stageSlot?.parentElement;
     if (animationSection) {
-      const minH = Number.isFinite(cfg.animationMinHeight) ? cfg.animationMinHeight! : D.animMinHeight;
-      const maxH = Number.isFinite(cfg.animationMaxHeight) ? cfg.animationMaxHeight! : D.animMaxHeight;
-      const vhPct = Number.isFinite(cfg.animationHeightVh) ? cfg.animationHeightVh! : D.animVh;
+      const minH = Number.isFinite(cfg.animationMinHeight)
+        ? cfg.animationMinHeight!
+        : D.animMinHeight;
+      const maxH = Number.isFinite(cfg.animationMaxHeight)
+        ? cfg.animationMaxHeight!
+        : D.animMaxHeight;
+      const vhPct = Number.isFinite(cfg.animationHeightVh)
+        ? cfg.animationHeightVh!
+        : D.animVh;
       const newHeight = Math.max(minH, Math.min(maxH, height * (vhPct / 100)));
       animationSection.style.height = `${newHeight}px`;
     }
@@ -283,7 +329,10 @@ export class MobileStackLayoutV2 implements ILayout {
   }
 
   restoreLayoutState(state: Record<string, unknown>): void {
-    if (typeof state.activeTab === 'string' && this._tabAllIds.includes(state.activeTab)) {
+    if (
+      typeof state.activeTab === 'string' &&
+      this._tabAllIds.includes(state.activeTab)
+    ) {
       this._switchTab(state.activeTab);
     }
   }

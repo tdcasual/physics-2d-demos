@@ -36,10 +36,7 @@ export {
 } from './registry';
 
 // 容器导出
-export {
-  SceneContainerImpl,
-  createSceneContainer
-} from './container';
+export { SceneContainerImpl, createSceneContainer } from './container';
 
 // Capability 导出
 export {

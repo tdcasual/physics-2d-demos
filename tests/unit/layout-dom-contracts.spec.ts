@@ -97,7 +97,9 @@ describe('layout DOM compatibility contracts', () => {
   it('exposes the legacy floating-control selector without changing buttons', () => {
     const controls = createFloatingControls({});
 
-    expect(controls.classList.contains('teaching-stage-floating-controls')).toBe(true);
+    expect(
+      controls.classList.contains('teaching-stage-floating-controls')
+    ).toBe(true);
     expect(controls.classList.contains('stage-floating-controls')).toBe(true);
     expect(controls.querySelectorAll('button')).toHaveLength(2);
 

@@ -8,9 +8,7 @@
  */
 
 import { createEventEmitter, type EventEmitter } from './event-emitter';
-import {
-  getBreakpoints
-} from './viewport-detection';
+import { getBreakpoints } from './viewport-detection';
 import { layoutRegistry, saveLayoutPreference } from './registry';
 
 import { layoutSelector } from './selector';
@@ -60,7 +58,7 @@ type LayoutWithAnimation = ILayout & {
 export class SceneContainerImpl implements SceneContainer {
   readonly container: HTMLElement;
 
-  private _currentLayout: (ILayout) | null = null;
+  private _currentLayout: ILayout | null = null;
   private _currentScene: Scene | null = null;
   private _currentTheme: Theme = 'light';
   private _userPreferredLayout: string | null = null;
@@ -98,7 +96,8 @@ export class SceneContainerImpl implements SceneContainer {
       resolveLayout: (scene) => this.resolveLayout(scene),
       switchLayout: (id) => this.switchLayout(id, { animate: false }),
       getSwitching: () => this._switching,
-      notifyLayoutResize: (width, height) => this._currentLayout?.handleResize(width, height),
+      notifyLayoutResize: (width, height) =>
+        this._currentLayout?.handleResize(width, height),
       onResize: options.onResize
     });
     this._resizeObserver.start();
@@ -153,9 +152,18 @@ export class SceneContainerImpl implements SceneContainer {
     const selected = layoutSelector.select(ctx);
 
     // 低功耗/弱网模式下，若用户未指定偏好，优先选择渲染负担最小的 mobile-stack
-    if (this._lowPowerMode && !this._userPreferredLayout && selected !== 'mobile-stack') {
-      const mobileMeta = ctx.availableLayouts.find((l) => l.id === 'mobile-stack');
-      if (mobileMeta && satisfiesConstraints(mobileMeta, ctx.viewport, ctx.orientation)) {
+    if (
+      this._lowPowerMode &&
+      !this._userPreferredLayout &&
+      selected !== 'mobile-stack'
+    ) {
+      const mobileMeta = ctx.availableLayouts.find(
+        (l) => l.id === 'mobile-stack'
+      );
+      if (
+        mobileMeta &&
+        satisfiesConstraints(mobileMeta, ctx.viewport, ctx.orientation)
+      ) {
         return 'mobile-stack';
       }
     }
@@ -248,9 +256,13 @@ export class SceneContainerImpl implements SceneContainer {
       getAvailableLayouts: () => {
         const w = this.container.clientWidth || window.innerWidth;
         const h = this.container.clientHeight || window.innerHeight;
-        const orientation: 'portrait' | 'landscape' = w >= h ? 'landscape' : 'portrait';
-        return layoutRegistry.getAllMetadata()
-          .filter((m) => satisfiesConstraints(m, { width: w, height: h }, orientation))
+        const orientation: 'portrait' | 'landscape' =
+          w >= h ? 'landscape' : 'portrait';
+        return layoutRegistry
+          .getAllMetadata()
+          .filter((m) =>
+            satisfiesConstraints(m, { width: w, height: h }, orientation)
+          )
           .map((m) => ({ id: m.id, name: m.name }));
       },
       emit: (event, payload) => this._emitter.emit(event, payload),
@@ -282,7 +294,10 @@ export class SceneContainerImpl implements SceneContainer {
         this.saveSceneState(scene.id, state);
       }
     } catch (err) {
-      console.error(`[SceneContainer] Failed to save state for scene ${scene.id}:`, err);
+      console.error(
+        `[SceneContainer] Failed to save state for scene ${scene.id}:`,
+        err
+      );
     }
 
     // 调用场景卸载生命周期 — 必须在 null 赋值前确保执行
@@ -295,7 +310,9 @@ export class SceneContainerImpl implements SceneContainer {
     // 触发事件
     try {
       this._emitter.emit('scene:unmount', { sceneId: scene.id });
-    } catch { /* emitter error non-fatal */ }
+    } catch {
+      /* emitter error non-fatal */
+    }
 
     this._currentScene = null;
   }
@@ -324,7 +341,9 @@ export class SceneContainerImpl implements SceneContainer {
     const SWITCH_TIMEOUT_MS = 10_000;
     const safetyTimer = setTimeout(() => {
       if (this._switching && !this._disposed) {
-        console.warn('[SceneContainer] Layout switch timed out after 10s — resetting _switching');
+        console.warn(
+          '[SceneContainer] Layout switch timed out after 10s — resetting _switching'
+        );
       }
       this._switching = false;
     }, SWITCH_TIMEOUT_MS);
@@ -335,16 +354,15 @@ export class SceneContainerImpl implements SceneContainer {
 
     // Save focused element before tearing down DOM (avoid focus loss to <body>)
     const activeEl = document.activeElement as HTMLElement | null;
-    const focusClass = activeEl && this.container.contains(activeEl)
-      ? activeEl.className
-      : null;
+    const focusClass =
+      activeEl && this.container.contains(activeEl) ? activeEl.className : null;
 
     try {
-
       await this._notifyLayoutWillChange(fromId, layoutId);
       if (this._disposed) return;
 
-      const { preservedCanvas, layoutState } = this._captureOutgoingState(fromLayout);
+      const { preservedCanvas, layoutState } =
+        this._captureOutgoingState(fromLayout);
       if (layoutState && fromLayout?.id) {
         saveLayoutStateToStorage(this._storageKey, fromLayout.id, layoutState);
       }
@@ -356,17 +374,32 @@ export class SceneContainerImpl implements SceneContainer {
         this.container.replaceChildren();
       }
 
-      const newLayout = await this._setupIncomingLayout(layoutId, preservedCanvas);
+      const newLayout = await this._setupIncomingLayout(
+        layoutId,
+        preservedCanvas
+      );
       if (this._disposed) return;
 
-      await this._finalizeLayoutSwitch(newLayout, fromId, layoutId, reason, animate, transition, savePreference);
+      await this._finalizeLayoutSwitch(
+        newLayout,
+        fromId,
+        layoutId,
+        reason,
+        animate,
+        transition,
+        savePreference
+      );
 
       // Restore focus to a similar element in the new layout
       if (focusClass) {
         try {
-          const el = this.container.querySelector(`.${focusClass.split(/\s+/).join('.')}`) as HTMLElement | null;
+          const el = this.container.querySelector(
+            `.${focusClass.split(/\s+/).join('.')}`
+          ) as HTMLElement | null;
           if (el && typeof el.focus === 'function') el.focus();
-        } catch { /* invalid selector from className — non-critical */ }
+        } catch {
+          /* invalid selector from className — non-critical */
+        }
       }
     } catch (err) {
       console.error('[SceneContainer] Layout switch failed:', err);
@@ -377,7 +410,7 @@ export class SceneContainerImpl implements SceneContainer {
         try {
           const recovered = layoutRegistry.create(fromId, this.container, {
             theme: this._currentTheme,
-            ...(this._layoutConfig || {}) as LayoutConfig
+            ...((this._layoutConfig || {}) as LayoutConfig)
           });
           await recovered.mount();
           recovered.setTheme(this._currentTheme);
@@ -385,9 +418,14 @@ export class SceneContainerImpl implements SceneContainer {
             this.mountScene(this._currentScene, recovered);
           }
           this._currentLayout = recovered;
-          console.warn(`[SceneContainer] Recovered layout "${fromId}" after switch failure`);
+          console.warn(
+            `[SceneContainer] Recovered layout "${fromId}" after switch failure`
+          );
         } catch (recoveryErr) {
-          console.error('[SceneContainer] Recovery also failed, container is empty:', recoveryErr);
+          console.error(
+            '[SceneContainer] Recovery also failed, container is empty:',
+            recoveryErr
+          );
           this.container.replaceChildren();
         }
       }
@@ -406,24 +444,29 @@ export class SceneContainerImpl implements SceneContainer {
     }
   }
 
-  private async _notifyLayoutWillChange(fromId: string | null, toId: string): Promise<void> {
+  private async _notifyLayoutWillChange(
+    fromId: string | null,
+    toId: string
+  ): Promise<void> {
     if (this._currentScene?.onLayoutWillChange) {
       await this._currentScene.onLayoutWillChange(fromId || '', toId);
     }
   }
 
-  private _captureOutgoingState(fromLayout: (ILayout) | null): {
+  private _captureOutgoingState(fromLayout: ILayout | null): {
     preservedCanvas: HTMLCanvasElement | null;
     layoutState: Record<string, unknown> | undefined;
   } {
-    const preservedCanvas = fromLayout?.getSlots?.()?.animation
-      ?.querySelector<HTMLCanvasElement>('canvas') ?? null;
+    const preservedCanvas =
+      fromLayout
+        ?.getSlots?.()
+        ?.animation?.querySelector<HTMLCanvasElement>('canvas') ?? null;
     const layoutState = fromLayout?.getLayoutState?.();
     return { preservedCanvas, layoutState };
   }
 
   private async _teardownOutgoingLayout(
-    fromLayout: (ILayout) | null,
+    fromLayout: ILayout | null,
     animate: boolean,
     transition: LayoutTransition
   ): Promise<void> {
@@ -444,7 +487,8 @@ export class SceneContainerImpl implements SceneContainer {
     layoutId: string,
     preservedCanvas: HTMLCanvasElement | null
   ): Promise<ILayout> {
-    if (this._disposed) throw new Error('Container disposed before layout setup');
+    if (this._disposed)
+      throw new Error('Container disposed before layout setup');
 
     // Reset grid-specific inline styles from previous layout to prevent
     // grid styles from a split layout corrupting e.g. mobile-stack.
@@ -456,7 +500,7 @@ export class SceneContainerImpl implements SceneContainer {
 
     const newLayout = layoutRegistry.create(layoutId, this.container, {
       theme: this._currentTheme,
-      ...(this._layoutConfig || {}) as LayoutConfig,
+      ...((this._layoutConfig || {}) as LayoutConfig),
       preservedCanvas
     });
 
@@ -464,7 +508,10 @@ export class SceneContainerImpl implements SceneContainer {
     this._currentLayout = newLayout;
     newLayout.setTheme(this._currentTheme);
 
-    const savedLayoutState = restoreLayoutStateFromStorage(this._storageKey, layoutId);
+    const savedLayoutState = restoreLayoutStateFromStorage(
+      this._storageKey,
+      layoutId
+    );
     if (savedLayoutState) {
       newLayout.restoreLayoutState?.(savedLayoutState);
     }
@@ -487,7 +534,10 @@ export class SceneContainerImpl implements SceneContainer {
   ): Promise<void> {
     if (animate) {
       try {
-        await (newLayout as LayoutWithAnimation).enter?.({ ...transition, easing: 'ease-out' });
+        await (newLayout as LayoutWithAnimation).enter?.({
+          ...transition,
+          easing: 'ease-out'
+        });
       } catch {
         // 动画被中断或失败，布局本身已可用
       }
@@ -595,9 +645,7 @@ export class SceneContainerImpl implements SceneContainer {
     return restoreSceneStateFromStorage(this._storageKey, sceneId);
   }
 
-
-
-/**
+  /**
    * 添加事件监听
    */
   on<K extends keyof SceneContainerEvents>(
@@ -617,7 +665,10 @@ export class SceneContainerImpl implements SceneContainer {
     try {
       this.unmountCurrentScene();
     } catch (err) {
-      console.error('[SceneContainer] Error during scene unmount in dispose:', err);
+      console.error(
+        '[SceneContainer] Error during scene unmount in dispose:',
+        err
+      );
       this._currentScene = null;
     }
 
@@ -625,11 +676,17 @@ export class SceneContainerImpl implements SceneContainer {
     try {
       this._currentLayout?.unmount();
     } catch (err) {
-      console.error('[SceneContainer] Error during layout unmount in dispose:', err);
+      console.error(
+        '[SceneContainer] Error during layout unmount in dispose:',
+        err
+      );
     }
     // 归还布局实例到池（不清理全局池，避免影响其他容器）
     if (this._currentLayout) {
-      layoutRegistry.returnInstance(this._currentLayout.id, this._currentLayout);
+      layoutRegistry.returnInstance(
+        this._currentLayout.id,
+        this._currentLayout
+      );
     }
     this._currentLayout = null;
 
@@ -637,7 +694,10 @@ export class SceneContainerImpl implements SceneContainer {
     try {
       this._orchestrator.dispose();
     } catch (err) {
-      console.error('[SceneContainer] Error during capability cleanup in dispose:', err);
+      console.error(
+        '[SceneContainer] Error during capability cleanup in dispose:',
+        err
+      );
     }
 
     // 停止 ResizeObserver

@@ -38,7 +38,9 @@ export function createSidebarToggle(
     ): CapabilityInstance {
       const merged = { ...cfg, ...config };
       const sidebarSel = merged.sidebarSelector ?? '.layout-left-panel';
-      const resizerSel = merged.resizerSelector ?? '[role="separator"][aria-orientation="vertical"]';
+      const resizerSel =
+        merged.resizerSelector ??
+        '[role="separator"][aria-orientation="vertical"]';
       const showLabel = merged.showLabel ?? '显示控制面板';
       const hideLabel = merged.hideLabel ?? '隐藏控制面板';
 
@@ -51,10 +53,16 @@ export function createSidebarToggle(
       // grid while the sidebar is hidden.
       let savedLeftWidth: string | null = null;
 
-      const sidebar = ctx.container.querySelector(sidebarSel) as HTMLElement | null;
-      const resizerEl = ctx.container.querySelector(resizerSel) as HTMLElement | null;
+      const sidebar = ctx.container.querySelector(
+        sidebarSel
+      ) as HTMLElement | null;
+      const resizerEl = ctx.container.querySelector(
+        resizerSel
+      ) as HTMLElement | null;
 
-      btn = ctx.container.querySelector('.sidebar-toggle-btn') as HTMLButtonElement | null;
+      btn = ctx.container.querySelector(
+        '.sidebar-toggle-btn'
+      ) as HTMLButtonElement | null;
       if (!btn) {
         btn = document.createElement('button');
         btn.type = 'button';
@@ -73,7 +81,8 @@ export function createSidebarToggle(
       liveRegion.setAttribute('aria-live', 'polite');
       liveRegion.setAttribute('aria-atomic', 'true');
       liveRegion.className = 'sr-only';
-      liveRegion.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0';
+      liveRegion.style.cssText =
+        'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0';
       ctx.container.appendChild(liveRegion);
 
       handler = () => {
@@ -92,18 +101,30 @@ export function createSidebarToggle(
           if (isMultiColumn) {
             ctx.container.style.gridTemplateColumns = '0px 8px 1fr';
           }
-          if (sidebar) { sidebar.style.display = 'none'; sidebar.setAttribute('aria-hidden', 'true'); }
+          if (sidebar) {
+            sidebar.style.display = 'none';
+            sidebar.setAttribute('aria-hidden', 'true');
+          }
           if (resizerEl) resizerEl.style.display = 'none';
-          if (btn) { btn.textContent = showLabel; btn.setAttribute('aria-expanded', 'false'); }
+          if (btn) {
+            btn.textContent = showLabel;
+            btn.setAttribute('aria-expanded', 'false');
+          }
           liveRegion.textContent = '控制面板已隐藏';
         } else {
           if (isMultiColumn && savedLeftWidth) {
             // Restore the saved first track into the current grid
             ctx.container.style.gridTemplateColumns = `${savedLeftWidth} 8px 1fr`;
           }
-          if (sidebar) { sidebar.style.display = ''; sidebar.setAttribute('aria-hidden', 'false'); }
+          if (sidebar) {
+            sidebar.style.display = '';
+            sidebar.setAttribute('aria-hidden', 'false');
+          }
           if (resizerEl) resizerEl.style.display = '';
-          if (btn) { btn.textContent = hideLabel; btn.setAttribute('aria-expanded', 'true'); }
+          if (btn) {
+            btn.textContent = hideLabel;
+            btn.setAttribute('aria-expanded', 'true');
+          }
           liveRegion.textContent = '控制面板已显示';
         }
 

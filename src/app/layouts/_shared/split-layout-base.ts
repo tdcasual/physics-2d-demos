@@ -60,18 +60,36 @@ export interface SplitLayoutDOMResult {
  * Returns the common slots and panel elements so the caller can attach
  * layout-specific sections (e.g. graph below animation, horizontal resizer).
  */
-export function buildSplitLayoutDOM(opts: SplitLayoutDOMOpts): SplitLayoutDOMResult {
+export function buildSplitLayoutDOM(
+  opts: SplitLayoutDOMOpts
+): SplitLayoutDOMResult {
   const {
-    container, cfg, prefix, leftRatio, currentTheme,
-    containerClass, testId, leftPanelClass, rightPanelClass,
-    resizerVClass, hasGraphInLeft, rightPanelStyle
+    container,
+    cfg,
+    prefix,
+    leftRatio,
+    currentTheme,
+    containerClass,
+    testId,
+    leftPanelClass,
+    rightPanelClass,
+    resizerVClass,
+    hasGraphInLeft,
+    rightPanelStyle
   } = opts;
 
-  const leftMinWidth = Number.isFinite(cfg.leftMinWidth) ? cfg.leftMinWidth! : 260;
-  const leftMaxWidth = Number.isFinite(cfg.leftMaxWidth) ? cfg.leftMaxWidth! : 960;
+  const leftMinWidth = Number.isFinite(cfg.leftMinWidth)
+    ? cfg.leftMinWidth!
+    : 260;
+  const leftMaxWidth = Number.isFinite(cfg.leftMaxWidth)
+    ? cfg.leftMaxWidth!
+    : 960;
   const containerWidth = container.clientWidth || window.innerWidth || 1024;
   const validRatio = Number.isFinite(leftRatio) ? leftRatio : 0.35;
-  const leftWidth = Math.max(leftMinWidth, Math.min(leftMaxWidth, containerWidth * validRatio));
+  const leftWidth = Math.max(
+    leftMinWidth,
+    Math.min(leftMaxWidth, containerWidth * validRatio)
+  );
 
   // --- Container ---
   container.classList.add(...containerClass.split(/\s+/));
@@ -97,7 +115,10 @@ export function buildSplitLayoutDOM(opts: SplitLayoutDOMOpts): SplitLayoutDOMRes
   leftPanel.appendChild(ctrl.section);
   const controlSlot = ctrl.slot;
   if (cfg.controlColumns !== undefined) {
-    controlSlot.setAttribute('data-control-columns', String(cfg.controlColumns));
+    controlSlot.setAttribute(
+      'data-control-columns',
+      String(cfg.controlColumns)
+    );
   }
 
   let graphSlot: HTMLElement | undefined;
@@ -123,13 +144,21 @@ export function buildSplitLayoutDOM(opts: SplitLayoutDOMOpts): SplitLayoutDOMRes
   const { toolbar } = buildToolbar(prefix);
   rightPanel.appendChild(toolbar);
 
-  const { stageFrame: stageFrameEl, stageSlot } = buildStage(prefix, opts.existingCanvas);
+  const { stageFrame: stageFrameEl, stageSlot } = buildStage(
+    prefix,
+    opts.existingCanvas
+  );
   rightPanel.appendChild(stageFrameEl);
 
   container.appendChild(rightPanel);
 
   return {
-    slots: { header: headerSlot, control: controlSlot, animation: stageSlot, graph: graphSlot },
+    slots: {
+      header: headerSlot,
+      control: controlSlot,
+      animation: stageSlot,
+      graph: graphSlot
+    },
     leftPanel,
     rightPanel,
     stageSlot

@@ -40,7 +40,13 @@ export class SplitRightLayoutV2 implements ILayout {
   readonly id = 'split-right';
   readonly name = '左右分栏';
   readonly description = '控制区在左，动画区在右';
-  readonly supportedSlots: SlotName[] = ['header', 'control', 'animation', 'graph', 'readout'];
+  readonly supportedSlots: SlotName[] = [
+    'header',
+    'control',
+    'animation',
+    'graph',
+    'readout'
+  ];
 
   readonly capabilities: CapabilityDeclaration[];
 
@@ -56,13 +62,38 @@ export class SplitRightLayoutV2 implements ILayout {
     this._container = container;
 
     this.capabilities = [
-      ...(config.hideTransport ? [] : [{ id: 'transport-bar' as const, config: { mountSlot: 'animation' as const } }]),
-      { id: 'readout-panel', config: { position: 'top-right', collapsed: config.readoutCollapsed ?? true, cssPrefix: PREFIX, label: config.readoutLabel ?? '数据读数' } },
+      ...(config.hideTransport
+        ? []
+        : [
+            {
+              id: 'transport-bar' as const,
+              config: { mountSlot: 'animation' as const }
+            }
+          ]),
+      {
+        id: 'readout-panel',
+        config: {
+          position: 'top-right',
+          collapsed: config.readoutCollapsed ?? true,
+          cssPrefix: PREFIX,
+          label: config.readoutLabel ?? '数据读数'
+        }
+      },
       { id: 'theme-toggle' },
       { id: 'mode-toggle' },
       { id: 'layout-switch' },
       { id: 'sidebar-toggle' },
-      { id: 'resizer', config: { direction: 'vertical', targetSelector: '.teaching-left-panel', selector: '.teaching-panel-resizer', onResize: (r: number) => { this.leftRatio = r; } } },
+      {
+        id: 'resizer',
+        config: {
+          direction: 'vertical',
+          targetSelector: '.teaching-left-panel',
+          selector: '.teaching-panel-resizer',
+          onResize: (r: number) => {
+            this.leftRatio = r;
+          }
+        }
+      },
       { id: 'demo-profile' },
       { id: 'debug-overlay' }
     ];
@@ -93,14 +124,20 @@ export class SplitRightLayoutV2 implements ILayout {
   }
 
   async unmount(): Promise<void> {
-    this._container.classList.remove('teaching-demo', 'v2-layout', 'layout-master');
+    this._container.classList.remove(
+      'teaching-demo',
+      'v2-layout',
+      'layout-master'
+    );
     delete this._container.dataset.testid;
     delete this._container.dataset.theme;
     delete this._container.dataset.mode;
     delete this._container.dataset.hasGraph;
     try {
       this._container.replaceChildren();
-    } catch { /* container may be detached */ }
+    } catch {
+      /* container may be detached */
+    }
     this.slots = {};
   }
 
@@ -122,7 +159,9 @@ export class SplitRightLayoutV2 implements ILayout {
   }
 
   restoreLayoutState(state: Record<string, unknown>): void {
-    restoreSplitLayoutState(state, (r) => { this.leftRatio = r; });
+    restoreSplitLayoutState(state, (r) => {
+      this.leftRatio = r;
+    });
   }
 
   _updateConfig(config?: SplitRightConfig): void {

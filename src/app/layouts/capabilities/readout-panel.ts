@@ -14,7 +14,12 @@ import type {
 } from '../types';
 
 export interface ReadoutPanelConfig {
-  position?: 'top-right' | 'inline' | 'overlay' | 'docked-top' | 'docked-bottom';
+  position?:
+    | 'top-right'
+    | 'inline'
+    | 'overlay'
+    | 'docked-top'
+    | 'docked-bottom';
   collapsed?: boolean;
   label?: string;
   width?: number;
@@ -42,7 +47,12 @@ function makeDraggable(
   const onMouseDown = (e: MouseEvent) => {
     if (e.button !== 0) return;
     // 不拦截交互子元素（按钮、链接等）的点击
-    if ((e.target as HTMLElement).closest('button, a, input, select, textarea, [role="button"]')) return;
+    if (
+      (e.target as HTMLElement).closest(
+        'button, a, input, select, textarea, [role="button"]'
+      )
+    )
+      return;
     isDragging = true;
     startX = e.clientX;
     startY = e.clientY;
@@ -86,8 +96,14 @@ function makeDraggable(
     if (parent) {
       const parentRect = parent.getBoundingClientRect();
       const elemRect = element.getBoundingClientRect();
-      nextLeft = Math.max(0, Math.min(nextLeft, parentRect.width - elemRect.width));
-      nextTop = Math.max(0, Math.min(nextTop, parentRect.height - elemRect.height));
+      nextLeft = Math.max(
+        0,
+        Math.min(nextLeft, parentRect.width - elemRect.width)
+      );
+      nextTop = Math.max(
+        0,
+        Math.min(nextTop, parentRect.height - elemRect.height)
+      );
     }
     element.style.left = `${nextLeft}px`;
     element.style.top = `${nextTop}px`;
@@ -121,7 +137,11 @@ function makeDraggable(
   };
 }
 
-function initAdaptiveColumns(slot: HTMLElement, panel: HTMLElement, cssPrefix: string): ResizeObserver {
+function initAdaptiveColumns(
+  slot: HTMLElement,
+  panel: HTMLElement,
+  cssPrefix: string
+): ResizeObserver {
   const p = cssPrefix;
   const observer = new ResizeObserver((entries) => {
     for (const entry of entries) {
@@ -151,7 +171,10 @@ function initAdaptiveColumns(slot: HTMLElement, panel: HTMLElement, cssPrefix: s
   return observer;
 }
 
-function initResizeHandle(panel: HTMLElement, slot: HTMLElement): { handle: HTMLElement; abort: AbortController } {
+function initResizeHandle(
+  panel: HTMLElement,
+  slot: HTMLElement
+): { handle: HTMLElement; abort: AbortController } {
   const abort = new AbortController();
   const signal = abort.signal;
   let isResizing = false;
@@ -178,16 +201,27 @@ function initResizeHandle(panel: HTMLElement, slot: HTMLElement): { handle: HTML
     transition: opacity 0.2s;
   `;
 
-  handle.addEventListener('mouseenter', () => { handle.style.opacity = '1'; }, { signal });
-  handle.addEventListener('mouseleave', () => {
-    if (!isResizing) handle.style.opacity = '0.5';
-  }, { signal });
+  handle.addEventListener(
+    'mouseenter',
+    () => {
+      handle.style.opacity = '1';
+    },
+    { signal }
+  );
+  handle.addEventListener(
+    'mouseleave',
+    () => {
+      if (!isResizing) handle.style.opacity = '0.5';
+    },
+    { signal }
+  );
 
   // Clean up leaked document listeners on abort (dispose-during-drag)
   signal.addEventListener('abort', () => {
     if (activeMove) document.removeEventListener('mousemove', activeMove);
     if (activeUp) document.removeEventListener('mouseup', activeUp);
-    if (activeTouchMove) document.removeEventListener('touchmove', activeTouchMove);
+    if (activeTouchMove)
+      document.removeEventListener('touchmove', activeTouchMove);
     if (activeTouchEnd) {
       document.removeEventListener('touchend', activeTouchEnd);
       document.removeEventListener('touchcancel', activeTouchEnd);
@@ -205,13 +239,23 @@ function initResizeHandle(panel: HTMLElement, slot: HTMLElement): { handle: HTML
     const startWidth = panel.offsetWidth;
     const startHeight = panel.offsetHeight;
 
-    const headerEl = panel.querySelector('[class*="-readout-header"]') as HTMLElement | null;
+    const headerEl = panel.querySelector(
+      '[class*="-readout-header"]'
+    ) as HTMLElement | null;
     const headerHeight = headerEl?.offsetHeight ?? 50;
 
     return { startX, startY, startWidth, startHeight, headerHeight };
   }
 
-  function applyResize(clientX: number, clientY: number, startX: number, startY: number, startWidth: number, startHeight: number, headerHeight: number) {
+  function applyResize(
+    clientX: number,
+    clientY: number,
+    startX: number,
+    startY: number,
+    startWidth: number,
+    startHeight: number,
+    headerHeight: number
+  ) {
     const dx = clientX - startX;
     const dy = clientY - startY;
     const newWidth = Math.max(180, Math.min(450, startWidth + dx));
@@ -232,7 +276,15 @@ function initResizeHandle(panel: HTMLElement, slot: HTMLElement): { handle: HTML
 
     const onMouseMove = (ev: MouseEvent) => {
       if (!isResizing) return;
-      applyResize(ev.clientX, ev.clientY, s.startX, s.startY, s.startWidth, s.startHeight, s.headerHeight);
+      applyResize(
+        ev.clientX,
+        ev.clientY,
+        s.startX,
+        s.startY,
+        s.startWidth,
+        s.startHeight,
+        s.headerHeight
+      );
     };
 
     const onMouseUp = () => {
@@ -257,7 +309,15 @@ function initResizeHandle(panel: HTMLElement, slot: HTMLElement): { handle: HTML
 
     const onTouchMove = (ev: TouchEvent) => {
       const t = ev.touches[0];
-      applyResize(t.clientX, t.clientY, s.startX, s.startY, s.startWidth, s.startHeight, s.headerHeight);
+      applyResize(
+        t.clientX,
+        t.clientY,
+        s.startX,
+        s.startY,
+        s.startWidth,
+        s.startHeight,
+        s.headerHeight
+      );
     };
 
     const onTouchEnd = () => {
@@ -368,9 +428,16 @@ export function createReadoutPanel(
       }
 
       // Features: only for floating panels
-      const dragCleanup = isInline ? () => {} : makeDraggable(panel, panel.querySelector(`.${cssPrefix}-readout-header`));
+      const dragCleanup = isInline
+        ? () => {}
+        : makeDraggable(
+            panel,
+            panel.querySelector(`.${cssPrefix}-readout-header`)
+          );
       const resizeObserver = initAdaptiveColumns(slot, panel, cssPrefix);
-      const resizeResult = isInline ? { handle: null, abort: new AbortController() } : initResizeHandle(panel, slot);
+      const resizeResult = isInline
+        ? { handle: null, abort: new AbortController() }
+        : initResizeHandle(panel, slot);
 
       // 对象池：复用 li 节点，避免每帧 destroy/create
       const itemPool: Array<{

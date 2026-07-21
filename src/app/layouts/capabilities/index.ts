@@ -13,7 +13,10 @@
  */
 
 export { createTransportBar } from './transport-bar';
-export type { TransportBarCallbacks, TransportBarConfig } from './transport-bar';
+export type {
+  TransportBarCallbacks,
+  TransportBarConfig
+} from './transport-bar';
 
 export { createReadoutPanel } from './readout-panel';
 export type { ReadoutPanelConfig } from './readout-panel';
@@ -48,7 +51,10 @@ import type {
   ReadoutItem,
   TransportState
 } from '../types';
-import type { TransportBarCallbacks, TransportBarConfig } from './transport-bar';
+import type {
+  TransportBarCallbacks,
+  TransportBarConfig
+} from './transport-bar';
 import type { ReadoutPanelConfig } from './readout-panel';
 import type { DemoProfileConfig, DemoProfileUpdateData } from './demo-profile';
 import type { ThemeToggleConfig } from './theme-toggle';
@@ -166,7 +172,7 @@ export const CAPABILITY_SCOPES: Record<CapabilityId, CapabilityScope> = {
   'theme-toggle': 'container',
   'mode-toggle': 'container',
   'sidebar-toggle': 'layout',
-  'resizer': 'layout',
+  resizer: 'layout',
   'debug-overlay': 'container',
   'layout-switch': 'layout'
 };

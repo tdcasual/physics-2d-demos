@@ -4,12 +4,22 @@
  * 检测低电量和弱网/省流量模式，用于自动降级到轻量布局。
  */
 
-function isBatteryNavigator(nav: Navigator): nav is Navigator & { getBattery(): Promise<{ charging: boolean; level: number }> } {
-  return 'getBattery' in nav && typeof (nav as Record<string, unknown>).getBattery === 'function';
+function isBatteryNavigator(nav: Navigator): nav is Navigator & {
+  getBattery(): Promise<{ charging: boolean; level: number }>;
+} {
+  return (
+    'getBattery' in nav &&
+    typeof (nav as Record<string, unknown>).getBattery === 'function'
+  );
 }
 
-function isConnectionNavigator(nav: Navigator): nav is Navigator & { connection: { saveData?: boolean; effectiveType?: string } } {
-  return 'connection' in nav && (nav as Record<string, unknown>).connection !== undefined;
+function isConnectionNavigator(nav: Navigator): nav is Navigator & {
+  connection: { saveData?: boolean; effectiveType?: string };
+} {
+  return (
+    'connection' in nav &&
+    (nav as Record<string, unknown>).connection !== undefined
+  );
 }
 
 /**

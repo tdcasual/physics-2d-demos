@@ -15,7 +15,9 @@ import type {
 // Helpers
 // ============================================================================
 
-function createTestContext(overrides: Partial<CapabilityContext> = {}): CapabilityContext {
+function createTestContext(
+  overrides: Partial<CapabilityContext> = {}
+): CapabilityContext {
   let theme: 'light' | 'dark' = 'light';
   let mode: 'normal' | 'presentation' = 'normal';
   const listeners: Map<string, Set<(payload: unknown) => void>> = new Map();
@@ -36,7 +38,9 @@ function createTestContext(overrides: Partial<CapabilityContext> = {}): Capabili
     on: ((event: string, handler: (payload: unknown) => void): (() => void) => {
       if (!listeners.has(event)) listeners.set(event, new Set());
       listeners.get(event)!.add(handler);
-      return () => { listeners.get(event)?.delete(handler); };
+      return () => {
+        listeners.get(event)?.delete(handler);
+      };
     }) as CapabilityContext['on'],
     switchLayout: () => {},
     getCurrentLayoutId: () => 'test',
@@ -84,9 +88,13 @@ describe('readout-panel mount', () => {
 
     const header = slots.animation.querySelector('.teaching-readout-header');
     expect(header).toBeTruthy();
-    expect(header!.querySelector('.teaching-readout-title')?.textContent).toBe('数据读数');
+    expect(header!.querySelector('.teaching-readout-title')?.textContent).toBe(
+      '数据读数'
+    );
 
-    const toggle = header!.querySelector('.teaching-readout-toggle') as HTMLButtonElement;
+    const toggle = header!.querySelector(
+      '.teaching-readout-toggle'
+    ) as HTMLButtonElement;
     expect(toggle).toBeTruthy();
     expect(toggle.textContent).toBe('展开');
     expect(toggle.getAttribute('aria-label')).toBe('展开');
@@ -100,7 +108,9 @@ describe('readout-panel mount', () => {
 
     const slotList = slots.animation.querySelector('.teaching-readout-slot');
     expect(slotList).toBeTruthy();
-    expect(slotList!.classList.contains('teaching-readout-slot--adaptive')).toBe(true);
+    expect(
+      slotList!.classList.contains('teaching-readout-slot--adaptive')
+    ).toBe(true);
     expect(slotList!.getAttribute('data-columns')).toBe('auto');
 
     inst.dispose();
@@ -135,7 +145,9 @@ describe('readout-panel mount', () => {
     const panel = slots.animation.querySelector('.teaching-readout-panel');
     expect(panel!.classList.contains('is-collapsed')).toBe(false);
 
-    const toggle = slots.animation.querySelector('.teaching-readout-toggle') as HTMLButtonElement;
+    const toggle = slots.animation.querySelector(
+      '.teaching-readout-toggle'
+    ) as HTMLButtonElement;
     expect(toggle.textContent).toBe('折叠');
 
     inst.dispose();
@@ -154,7 +166,10 @@ describe('readout-panel mount', () => {
   });
 
   it('falls back to container when no animation slot', () => {
-    const emptySlots = { control: document.createElement('div'), animation: null as unknown as HTMLElement };
+    const emptySlots = {
+      control: document.createElement('div'),
+      animation: null as unknown as HTMLElement
+    };
     const def = capabilityFactories['readout-panel']({});
     const inst = def.mount(emptySlots, {}, ctx);
 
@@ -167,7 +182,9 @@ describe('readout-panel mount', () => {
     const def = capabilityFactories['readout-panel']({});
     const inst = def.mount(slots, {}, ctx);
 
-    const panel = slots.animation.querySelector('.teaching-readout-panel') as HTMLElement;
+    const panel = slots.animation.querySelector(
+      '.teaching-readout-panel'
+    ) as HTMLElement;
     expect(panel.style.position).toBe('absolute');
     expect(panel.style.right).toBe('12px');
     expect(panel.style.top).toBe('60px');
@@ -180,7 +197,9 @@ describe('readout-panel mount', () => {
     const def = capabilityFactories['readout-panel']({});
     const inst = def.mount(slots, { position: 'inline' }, ctx);
 
-    const panel = slots.readout!.querySelector('.teaching-readout-panel') as HTMLElement;
+    const panel = slots.readout!.querySelector(
+      '.teaching-readout-panel'
+    ) as HTMLElement;
     expect(panel.style.position).toBe('');
 
     inst.dispose();
@@ -204,8 +223,12 @@ describe('readout-panel toggle', () => {
     const def = capabilityFactories['readout-panel']({});
     const inst = def.mount(slots, {}, ctx);
 
-    const panel = slots.animation.querySelector('.teaching-readout-panel') as HTMLElement;
-    const toggle = slots.animation.querySelector('.teaching-readout-toggle') as HTMLButtonElement;
+    const panel = slots.animation.querySelector(
+      '.teaching-readout-panel'
+    ) as HTMLElement;
+    const toggle = slots.animation.querySelector(
+      '.teaching-readout-toggle'
+    ) as HTMLButtonElement;
 
     toggle.click();
     expect(panel.classList.contains('is-collapsed')).toBe(false);
@@ -219,8 +242,12 @@ describe('readout-panel toggle', () => {
     const def = capabilityFactories['readout-panel']({});
     const inst = def.mount(slots, {}, ctx);
 
-    const panel = slots.animation.querySelector('.teaching-readout-panel') as HTMLElement;
-    const toggle = slots.animation.querySelector('.teaching-readout-toggle') as HTMLButtonElement;
+    const panel = slots.animation.querySelector(
+      '.teaching-readout-panel'
+    ) as HTMLElement;
+    const toggle = slots.animation.querySelector(
+      '.teaching-readout-toggle'
+    ) as HTMLButtonElement;
 
     // First click → expand
     toggle.click();
@@ -238,8 +265,12 @@ describe('readout-panel toggle', () => {
     const def = capabilityFactories['readout-panel']({ collapsed: false });
     const inst = def.mount(slots, {}, ctx);
 
-    const panel = slots.animation.querySelector('.teaching-readout-panel') as HTMLElement;
-    const toggle = slots.animation.querySelector('.teaching-readout-toggle') as HTMLButtonElement;
+    const panel = slots.animation.querySelector(
+      '.teaching-readout-panel'
+    ) as HTMLElement;
+    const toggle = slots.animation.querySelector(
+      '.teaching-readout-toggle'
+    ) as HTMLButtonElement;
 
     expect(panel.classList.contains('is-collapsed')).toBe(false);
 
@@ -254,8 +285,12 @@ describe('readout-panel toggle', () => {
     const def = capabilityFactories['readout-panel']({});
     const inst = def.mount(slots, {}, ctx);
 
-    const panel = slots.animation.querySelector('.teaching-readout-panel') as HTMLElement;
-    const toggle = slots.animation.querySelector('.teaching-readout-toggle') as HTMLButtonElement;
+    const panel = slots.animation.querySelector(
+      '.teaching-readout-panel'
+    ) as HTMLElement;
+    const toggle = slots.animation.querySelector(
+      '.teaching-readout-toggle'
+    ) as HTMLButtonElement;
 
     inst.dispose();
 
@@ -297,15 +332,21 @@ describe('readout-panel drag', () => {
 
   it('sets cursor: move on header for drag affordance', () => {
     const inst = mountPanel();
-    const header = slots.animation.querySelector('.teaching-readout-header') as HTMLElement;
+    const header = slots.animation.querySelector(
+      '.teaching-readout-header'
+    ) as HTMLElement;
     expect(header.style.cursor).toBe('move');
     inst.dispose();
   });
 
   it('skips drag initiation when clicking the toggle button', () => {
     const inst = mountPanel();
-    const panel = slots.animation.querySelector('.teaching-readout-panel') as HTMLElement;
-    const toggle = slots.animation.querySelector('.teaching-readout-toggle') as HTMLButtonElement;
+    const panel = slots.animation.querySelector(
+      '.teaching-readout-panel'
+    ) as HTMLElement;
+    const toggle = slots.animation.querySelector(
+      '.teaching-readout-toggle'
+    ) as HTMLButtonElement;
 
     // Set initial position
     panel.style.position = 'absolute';
@@ -333,8 +374,12 @@ describe('readout-panel drag', () => {
 
   it('moves panel on header mousedown + mousemove', () => {
     const inst = mountPanel();
-    const panel = slots.animation.querySelector('.teaching-readout-panel') as HTMLElement;
-    const header = slots.animation.querySelector('.teaching-readout-header') as HTMLElement;
+    const panel = slots.animation.querySelector(
+      '.teaching-readout-panel'
+    ) as HTMLElement;
+    const header = slots.animation.querySelector(
+      '.teaching-readout-header'
+    ) as HTMLElement;
 
     // Set known position — offsetParent for the panel is slots.animation since panel is appended there
     panel.style.position = 'absolute';
@@ -359,7 +404,9 @@ describe('readout-panel drag', () => {
 
   it('sets user-select: none during drag', () => {
     const inst = mountPanel();
-    const header = slots.animation.querySelector('.teaching-readout-header') as HTMLElement;
+    const header = slots.animation.querySelector(
+      '.teaching-readout-header'
+    ) as HTMLElement;
 
     header.dispatchEvent(
       new MouseEvent('mousedown', { clientX: 100, clientY: 100, bubbles: true })
@@ -374,7 +421,9 @@ describe('readout-panel drag', () => {
 
   it('does not move without mousedown', () => {
     const inst = mountPanel();
-    const panel = slots.animation.querySelector('.teaching-readout-panel') as HTMLElement;
+    const panel = slots.animation.querySelector(
+      '.teaching-readout-panel'
+    ) as HTMLElement;
 
     panel.style.position = 'absolute';
     panel.style.left = '50px';
@@ -417,11 +466,19 @@ describe('readout-panel data update', () => {
     const items = slots.animation.querySelectorAll('.teaching-readout-item');
     expect(items.length).toBe(2);
 
-    expect(items[0].querySelector('.teaching-readout-label')?.textContent).toBe('全局时间');
-    expect(items[0].querySelector('.teaching-readout-value')?.textContent).toBe('1.50 s');
+    expect(items[0].querySelector('.teaching-readout-label')?.textContent).toBe(
+      '全局时间'
+    );
+    expect(items[0].querySelector('.teaching-readout-value')?.textContent).toBe(
+      '1.50 s'
+    );
 
-    expect(items[1].querySelector('.teaching-readout-label')?.textContent).toBe('振子数量');
-    expect(items[1].querySelector('.teaching-readout-value')?.textContent).toBe('2');
+    expect(items[1].querySelector('.teaching-readout-label')?.textContent).toBe(
+      '振子数量'
+    );
+    expect(items[1].querySelector('.teaching-readout-value')?.textContent).toBe(
+      '2'
+    );
 
     inst.dispose();
   });
@@ -431,10 +488,17 @@ describe('readout-panel data update', () => {
     const inst = def.mount(slots, {}, ctx);
 
     inst.update?.([{ label: 'A', value: '1' }]);
-    expect(slots.animation.querySelectorAll('.teaching-readout-item').length).toBe(1);
+    expect(
+      slots.animation.querySelectorAll('.teaching-readout-item').length
+    ).toBe(1);
 
-    inst.update?.([{ label: 'X', value: '10' }, { label: 'Y', value: '20' }]);
-    expect(slots.animation.querySelectorAll('.teaching-readout-item').length).toBe(2);
+    inst.update?.([
+      { label: 'X', value: '10' },
+      { label: 'Y', value: '20' }
+    ]);
+    expect(
+      slots.animation.querySelectorAll('.teaching-readout-item').length
+    ).toBe(2);
 
     inst.dispose();
   });
@@ -449,8 +513,12 @@ describe('readout-panel data update', () => {
     ]);
 
     const items = slots.animation.querySelectorAll('.teaching-readout-item');
-    expect(items[0].classList.contains('teaching-readout-item--half')).toBe(false);
-    expect(items[1].classList.contains('teaching-readout-item--half')).toBe(true);
+    expect(items[0].classList.contains('teaching-readout-item--half')).toBe(
+      false
+    );
+    expect(items[1].classList.contains('teaching-readout-item--half')).toBe(
+      true
+    );
 
     inst.dispose();
   });
@@ -460,11 +528,15 @@ describe('readout-panel data update', () => {
     const inst = def.mount(slots, {}, ctx);
 
     inst.update?.([{ label: 'A', value: '1' }]);
-    expect(slots.animation.querySelectorAll('.teaching-readout-item').length).toBe(1);
+    expect(
+      slots.animation.querySelectorAll('.teaching-readout-item').length
+    ).toBe(1);
 
     // Runtime callers may still pass invalid data; implementation keeps it as a no-op.
     (inst.update as ((data: unknown) => void) | undefined)?.(undefined);
-    expect(slots.animation.querySelectorAll('.teaching-readout-item').length).toBe(1);
+    expect(
+      slots.animation.querySelectorAll('.teaching-readout-item').length
+    ).toBe(1);
 
     inst.dispose();
   });
@@ -475,7 +547,9 @@ describe('readout-panel data update', () => {
 
     inst.update?.([{ label: 'A', value: '1' }]);
     (inst.update as ((data: unknown) => void) | undefined)?.(null);
-    expect(slots.animation.querySelectorAll('.teaching-readout-item').length).toBe(1);
+    expect(
+      slots.animation.querySelectorAll('.teaching-readout-item').length
+    ).toBe(1);
 
     inst.dispose();
   });
@@ -498,7 +572,9 @@ describe('readout-panel resize handle', () => {
     const def = capabilityFactories['readout-panel']({});
     const inst = def.mount(slots, {}, ctx);
 
-    const handle = slots.animation.querySelector('.readout-resize-handle') as HTMLElement;
+    const handle = slots.animation.querySelector(
+      '.readout-resize-handle'
+    ) as HTMLElement;
     expect(handle).toBeTruthy();
     expect(handle.style.cursor).toBe('nwse-resize');
 
@@ -539,15 +615,21 @@ describe('readout-panel adaptive columns', () => {
     let sizeCallback: ((width: number) => void) | null = null;
 
     class MockResizeObserver {
-      constructor(callback: (entries: Array<{ contentRect: { width: number } }>) => void) {
-        sizeCallback = (width: number) => callback([{ contentRect: { width } }]);
+      constructor(
+        callback: (entries: Array<{ contentRect: { width: number } }>) => void
+      ) {
+        sizeCallback = (width: number) =>
+          callback([{ contentRect: { width } }]);
       }
-      observe(el: Element) { observedElement = el; }
+      observe(el: Element) {
+        observedElement = el;
+      }
       unobserve() {}
       disconnect() {}
     }
 
-    globalThis.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
+    globalThis.ResizeObserver =
+      MockResizeObserver as unknown as typeof ResizeObserver;
 
     const def = capabilityFactories['readout-panel']({});
     const inst = def.mount(slots, {}, ctx);
@@ -559,19 +641,27 @@ describe('readout-panel adaptive columns', () => {
 
     // Simulate narrow width → 1 column
     sizeCallback!(200);
-    expect(slotList.classList.contains('teaching-readout-slot--1col')).toBe(true);
+    expect(slotList.classList.contains('teaching-readout-slot--1col')).toBe(
+      true
+    );
 
     // Simulate medium width → auto
     sizeCallback!(250);
-    expect(slotList.classList.contains('teaching-readout-slot--auto')).toBe(true);
+    expect(slotList.classList.contains('teaching-readout-slot--auto')).toBe(
+      true
+    );
 
     // Simulate wider → 2 columns
     sizeCallback!(350);
-    expect(slotList.classList.contains('teaching-readout-slot--2col')).toBe(true);
+    expect(slotList.classList.contains('teaching-readout-slot--2col')).toBe(
+      true
+    );
 
     // Simulate wide → 3 columns
     sizeCallback!(500);
-    expect(slotList.classList.contains('teaching-readout-slot--3col')).toBe(true);
+    expect(slotList.classList.contains('teaching-readout-slot--3col')).toBe(
+      true
+    );
 
     inst.dispose();
   });
@@ -582,10 +672,13 @@ describe('readout-panel adaptive columns', () => {
       constructor(_callback: unknown) {}
       observe() {}
       unobserve() {}
-      disconnect() { disconnected = true; }
+      disconnect() {
+        disconnected = true;
+      }
     }
 
-    globalThis.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
+    globalThis.ResizeObserver =
+      MockResizeObserver as unknown as typeof ResizeObserver;
 
     const def = capabilityFactories['readout-panel']({});
     const inst = def.mount(slots, {}, ctx);
@@ -613,12 +706,16 @@ describe('readout-panel full lifecycle', () => {
     const def = capabilityFactories['readout-panel']({});
     const inst = def.mount(slots, {}, ctx);
 
-    const panel = slots.animation.querySelector('.teaching-readout-panel') as HTMLElement;
+    const panel = slots.animation.querySelector(
+      '.teaching-readout-panel'
+    ) as HTMLElement;
     expect(panel).toBeTruthy();
     expect(panel.classList.contains('is-collapsed')).toBe(true);
 
     // 2. Toggle to expand
-    const toggle = slots.animation.querySelector('.teaching-readout-toggle') as HTMLButtonElement;
+    const toggle = slots.animation.querySelector(
+      '.teaching-readout-toggle'
+    ) as HTMLButtonElement;
     toggle.click();
     expect(panel.classList.contains('is-collapsed')).toBe(false);
 
@@ -631,7 +728,9 @@ describe('readout-panel full lifecycle', () => {
 
     const items = slots.animation.querySelectorAll('.teaching-readout-item');
     expect(items.length).toBe(3);
-    expect(items[0].querySelector('.teaching-readout-value')?.textContent).toBe('3.14 s');
+    expect(items[0].querySelector('.teaching-readout-value')?.textContent).toBe(
+      '3.14 s'
+    );
 
     // 4. Toggle back to collapse
     toggle.click();

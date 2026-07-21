@@ -34,7 +34,11 @@ export interface TransportBarCallbacks {
 
 export function createTransportBar(
   cfg: TransportBarConfig = {}
-): CapabilityDefinition<TransportBarConfig, TransportState, TransportBarCallbacks> {
+): CapabilityDefinition<
+  TransportBarConfig,
+  TransportState,
+  TransportBarCallbacks
+> {
   return {
     id: 'transport-bar',
 
@@ -63,7 +67,8 @@ export function createTransportBar(
 
         const playBtn = document.createElement('button');
         playBtn.type = 'button';
-        playBtn.className = 'mobile-transport-btn mobile-control-btn play-pause';
+        playBtn.className =
+          'mobile-transport-btn mobile-control-btn play-pause';
         playBtn.setAttribute('aria-label', '播放/暂停');
         playBtn.textContent = '▶';
 
@@ -93,16 +98,30 @@ export function createTransportBar(
         container.prepend(controls);
 
         // Wire events
-        playBtn.addEventListener('click', () => _onTogglePlay?.(), { signal: ac.signal });
-        playBtn.addEventListener('mousedown', (e) => e.stopPropagation(), { signal: ac.signal });
-        resetBtn.addEventListener('click', () => _onReset?.(), { signal: ac.signal });
-        resetBtn.addEventListener('mousedown', (e) => e.stopPropagation(), { signal: ac.signal });
-        speedSlider.addEventListener('input', () => {
-          const speed = parseFloat(speedSlider.value);
-          speedValue.textContent = `${speed.toFixed(2)}×`;
-          _onSpeedChange?.(speed);
-        }, { signal: ac.signal });
-        speedSlider.addEventListener('mousedown', (e) => e.stopPropagation(), { signal: ac.signal });
+        playBtn.addEventListener('click', () => _onTogglePlay?.(), {
+          signal: ac.signal
+        });
+        playBtn.addEventListener('mousedown', (e) => e.stopPropagation(), {
+          signal: ac.signal
+        });
+        resetBtn.addEventListener('click', () => _onReset?.(), {
+          signal: ac.signal
+        });
+        resetBtn.addEventListener('mousedown', (e) => e.stopPropagation(), {
+          signal: ac.signal
+        });
+        speedSlider.addEventListener(
+          'input',
+          () => {
+            const speed = parseFloat(speedSlider.value);
+            speedValue.textContent = `${speed.toFixed(2)}×`;
+            _onSpeedChange?.(speed);
+          },
+          { signal: ac.signal }
+        );
+        speedSlider.addEventListener('mousedown', (e) => e.stopPropagation(), {
+          signal: ac.signal
+        });
 
         const updatePlayBtn = (isPlaying: boolean) => {
           playBtn.textContent = isPlaying ? '⏸' : '▶';
@@ -112,7 +131,8 @@ export function createTransportBar(
         return {
           update(data: TransportState) {
             if (!data) return;
-            if (typeof data.isPlaying === 'boolean') updatePlayBtn(data.isPlaying);
+            if (typeof data.isPlaying === 'boolean')
+              updatePlayBtn(data.isPlaying);
             if (typeof data.speed === 'number') {
               speedSlider.value = String(data.speed);
               speedValue.textContent = `${data.speed.toFixed(2)}×`;

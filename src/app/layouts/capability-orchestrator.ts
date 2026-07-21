@@ -5,7 +5,10 @@
  * 从 SceneContainerImpl 中提取，降低 Container 的复杂度。
  */
 
-import { capabilityFactories, createCapabilityDefinition } from './capabilities';
+import {
+  capabilityFactories,
+  createCapabilityDefinition
+} from './capabilities';
 import type {
   CapabilityContext,
   CapabilityInstance,
@@ -31,8 +34,11 @@ const SCENE_BINDINGS: Record<string, SceneBinding> = {
       isPlaying: () => scene.getTransportState?.()?.isPlaying ?? false,
       onTogglePlay: () => {
         const state = scene.getTransportState?.();
-        if (state?.isPlaying) { scene.pauseAll?.(); }
-        else { scene.startAll?.(); }
+        if (state?.isPlaying) {
+          scene.pauseAll?.();
+        } else {
+          scene.startAll?.();
+        }
       },
       onReset: () => scene.reset?.(),
       onSpeedChange: (speed: number) => scene.setTimeScale?.(speed),
@@ -71,16 +77,27 @@ export class CapabilityOrchestrator {
    * 因为 container.replaceChildren() 会清除容器级 capability 的 DOM 元素，
    * 保留引用脱离文档的旧实例无意义。
    */
-  wire(layout: ILayout, scene: Scene | null, slots: Partial<LayoutSlots>, ctx: CapabilityContext): void {
+  wire(
+    layout: ILayout,
+    scene: Scene | null,
+    slots: Partial<LayoutSlots>,
+    ctx: CapabilityContext
+  ): void {
     if (this._disposed) return;
 
     // 清理旧场景绑定
     this.cleanupSceneBindings();
 
     // Dispose all existing instances
-    this._instances.forEach((insts) => insts.forEach((inst) => {
-      try { inst.dispose(); } catch { /* best-effort */ }
-    }));
+    this._instances.forEach((insts) =>
+      insts.forEach((inst) => {
+        try {
+          inst.dispose();
+        } catch {
+          /* best-effort */
+        }
+      })
+    );
     this._instances.clear();
 
     const seenIds = new Set<string>();
@@ -93,27 +110,40 @@ export class CapabilityOrchestrator {
       }
 
       if (seenIds.has(decl.id) && decl.id !== 'resizer') {
-        console.warn(`[CapabilityOrchestrator] Duplicate capability "${decl.id}" — skipping second instance`);
+        console.warn(
+          `[CapabilityOrchestrator] Duplicate capability "${decl.id}" — skipping second instance`
+        );
         continue;
       }
       seenIds.add(decl.id);
 
       try {
         const def = createCapabilityDefinition(decl);
-        const instance = def.mount(slots as LayoutSlots, decl.config ?? {}, ctx);
+        const instance = def.mount(
+          slots as LayoutSlots,
+          decl.config ?? {},
+          ctx
+        );
         this._addInstance(decl.id, instance);
 
         if (scene) {
           this._bindToScene(decl.id, instance, scene);
         }
       } catch (err) {
-        console.error(`[CapabilityOrchestrator] Failed to mount capability ${decl.id}:`, err);
+        console.error(
+          `[CapabilityOrchestrator] Failed to mount capability ${decl.id}:`,
+          err
+        );
       }
     }
   }
 
   /** 将一个 capability 实例绑定到场景的数据/控制方法 */
-  private _bindToScene(id: string, instance: CapabilityInstance, scene: Scene): void {
+  private _bindToScene(
+    id: string,
+    instance: CapabilityInstance,
+    scene: Scene
+  ): void {
     const binding = SCENE_BINDINGS[id];
     if (!binding) return;
 
@@ -134,7 +164,10 @@ export class CapabilityOrchestrator {
         });
         this._sceneUnsubscribers.push(unsub);
       } catch (err) {
-        console.error(`[CapabilityOrchestrator] subscribe failed for ${id}:`, err);
+        console.error(
+          `[CapabilityOrchestrator] subscribe failed for ${id}:`,
+          err
+        );
       }
     }
 
@@ -148,9 +181,15 @@ export class CapabilityOrchestrator {
     if (this._disposed) return;
     this._disposed = true;
 
-    this._instances.forEach((insts) => insts.forEach((inst) => {
-      try { inst.dispose(); } catch (err) { console.error('[CapabilityOrchestrator] dispose error:', err); }
-    }));
+    this._instances.forEach((insts) =>
+      insts.forEach((inst) => {
+        try {
+          inst.dispose();
+        } catch (err) {
+          console.error('[CapabilityOrchestrator] dispose error:', err);
+        }
+      })
+    );
     this._instances.clear();
     this.cleanupSceneBindings();
   }

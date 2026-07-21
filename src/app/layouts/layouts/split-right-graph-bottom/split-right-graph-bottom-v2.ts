@@ -44,7 +44,13 @@ export class SplitRightGraphBottomLayoutV2 implements ILayout {
   readonly id = 'split-right-graph-bottom';
   readonly name = '左右分栏+底部图表';
   readonly description = '控制区在左，动画区在右上方，图表网格在右下方';
-  readonly supportedSlots: SlotName[] = ['header', 'control', 'animation', 'graph', 'readout'];
+  readonly supportedSlots: SlotName[] = [
+    'header',
+    'control',
+    'animation',
+    'graph',
+    'readout'
+  ];
 
   readonly capabilities: CapabilityDeclaration[];
 
@@ -57,21 +63,63 @@ export class SplitRightGraphBottomLayoutV2 implements ILayout {
   private graphSection: HTMLElement | null = null;
   private resizerH: HTMLElement | null = null;
 
-  constructor(container: HTMLElement, config: SplitRightGraphBottomConfig = {}) {
+  constructor(
+    container: HTMLElement,
+    config: SplitRightGraphBottomConfig = {}
+  ) {
     this.cfg = config;
     this.leftRatio = config.defaultLeftRatio ?? 0.35;
     this.graphHeight = config.graphHeight ?? 220;
     this._container = container;
 
     this.capabilities = [
-      ...(config.hideTransport ? [] : [{ id: 'transport-bar' as const, config: { mountSlot: 'animation' as const } }]),
-      { id: 'readout-panel', config: { position: 'top-right', collapsed: true, cssPrefix: PREFIX, label: config.readoutLabel ?? '数据读数' } },
+      ...(config.hideTransport
+        ? []
+        : [
+            {
+              id: 'transport-bar' as const,
+              config: { mountSlot: 'animation' as const }
+            }
+          ]),
+      {
+        id: 'readout-panel',
+        config: {
+          position: 'top-right',
+          collapsed: true,
+          cssPrefix: PREFIX,
+          label: config.readoutLabel ?? '数据读数'
+        }
+      },
       { id: 'theme-toggle' },
       { id: 'mode-toggle' },
       { id: 'layout-switch' },
       { id: 'sidebar-toggle' },
-      { id: 'resizer', config: { direction: 'vertical', targetSelector: '.srgb-left-panel', selector: '.srgb-resizer-v', onResize: (r: number) => { this.leftRatio = r; } } },
-      { id: 'resizer', config: { direction: 'horizontal', targetSelector: '.srgb-graph-section', selector: '.srgb-resizer-h', minSize: 120, maxSize: 480, onResize: (r: number) => { this.graphHeight = Math.round(r * (this._container.clientHeight || window.innerHeight || 800)); } } },
+      {
+        id: 'resizer',
+        config: {
+          direction: 'vertical',
+          targetSelector: '.srgb-left-panel',
+          selector: '.srgb-resizer-v',
+          onResize: (r: number) => {
+            this.leftRatio = r;
+          }
+        }
+      },
+      {
+        id: 'resizer',
+        config: {
+          direction: 'horizontal',
+          targetSelector: '.srgb-graph-section',
+          selector: '.srgb-resizer-h',
+          minSize: 120,
+          maxSize: 480,
+          onResize: (r: number) => {
+            this.graphHeight = Math.round(
+              r * (this._container.clientHeight || window.innerHeight || 800)
+            );
+          }
+        }
+      },
       { id: 'demo-profile' },
       { id: 'debug-overlay' }
     ];
@@ -99,17 +147,23 @@ export class SplitRightGraphBottomLayoutV2 implements ILayout {
       rightPanelClass: 'srgb-right-panel',
       resizerVClass: 'srgb-resizer-v',
       hasGraphInLeft: false,
-      rightPanelStyle: 'display: flex; flex-direction: column; overflow: hidden;',
+      rightPanelStyle:
+        'display: flex; flex-direction: column; overflow: hidden;',
       existingCanvas: cfg.preservedCanvas ?? undefined
     });
 
     // Make animation flex to fill available space above graph
-    stageSlot.parentElement!.style.cssText = 'flex: 1; overflow: hidden; position: relative;';
+    stageSlot.parentElement!.style.cssText =
+      'flex: 1; overflow: hidden; position: relative;';
 
     container.dataset.graphCollapsed = 'false';
 
     // Horizontal resizer between animation and graph
-    this.resizerH = buildResizer('srgb-resizer-h', 'horizontal', '调整图表区高度');
+    this.resizerH = buildResizer(
+      'srgb-resizer-h',
+      'horizontal',
+      '调整图表区高度'
+    );
     rightPanel.appendChild(this.resizerH);
 
     // Graph section below horizontal resizer
@@ -128,14 +182,19 @@ export class SplitRightGraphBottomLayoutV2 implements ILayout {
   }
 
   async unmount(): Promise<void> {
-    this._container.classList.remove('layout-srgb-graph-bottom', 'layout-master');
+    this._container.classList.remove(
+      'layout-srgb-graph-bottom',
+      'layout-master'
+    );
     delete this._container.dataset.testid;
     delete this._container.dataset.theme;
     delete this._container.dataset.mode;
     delete this._container.dataset.graphCollapsed;
     try {
       this._container.replaceChildren();
-    } catch { /* container may be detached */ }
+    } catch {
+      /* container may be detached */
+    }
     this.slots = {};
     this.graphSection = null;
     this.resizerH = null;
@@ -177,13 +236,19 @@ export class SplitRightGraphBottomLayoutV2 implements ILayout {
   }
 
   restoreLayoutState(state: Record<string, unknown>): void {
-    restoreSplitLayoutState(state, (r) => { this.leftRatio = r; }, (s) => {
-      if (typeof s.graphHeight === 'number') {
-        this.graphHeight = s.graphHeight;
-        if (this.graphSection) {
-          this.graphSection.style.height = `${this.graphHeight}px`;
+    restoreSplitLayoutState(
+      state,
+      (r) => {
+        this.leftRatio = r;
+      },
+      (s) => {
+        if (typeof s.graphHeight === 'number') {
+          this.graphHeight = s.graphHeight;
+          if (this.graphSection) {
+            this.graphSection.style.height = `${this.graphHeight}px`;
+          }
         }
       }
-    });
+    );
   }
 }

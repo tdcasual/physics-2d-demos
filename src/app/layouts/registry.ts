@@ -7,8 +7,12 @@
  * @version 0.1.0
  */
 
-import type { ILayout, ILayoutConstructor, LayoutConfig, SlotName } from './types';
-
+import type {
+  ILayout,
+  ILayoutConstructor,
+  LayoutConfig,
+  SlotName
+} from './types';
 
 /** 布局元数据 */
 export interface LayoutMetadata {
@@ -83,11 +87,7 @@ class LayoutRegistry {
    * @param config - 布局配置
    * @returns 布局实例
    */
-  create(
-    id: string,
-    container: HTMLElement,
-    config?: LayoutConfig
-  ): ILayout {
+  create(id: string, container: HTMLElement, config?: LayoutConfig): ILayout {
     if (!id || typeof id !== 'string') {
       throw new Error('Layout id must be a non-empty string');
     }

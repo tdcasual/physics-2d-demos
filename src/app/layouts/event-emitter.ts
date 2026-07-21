@@ -13,9 +13,9 @@ export interface EventEmitter<Events extends Record<string, unknown>> {
   clear(): void;
 }
 
-export function createEventEmitter<
-  Events extends Record<string, unknown>
->(prefix?: string): EventEmitter<Events> {
+export function createEventEmitter<Events extends Record<string, unknown>>(
+  prefix?: string
+): EventEmitter<Events> {
   const listeners: {
     [K in keyof Events]?: EventListener<Events[K]>[];
   } = {};
@@ -49,9 +49,9 @@ export function createEventEmitter<
             listener(payload);
           } catch (err) {
             console.error(
-            `[${prefix || 'EventEmitter'}] Event handler error for ${String(event)}:`,
-            err
-          );
+              `[${prefix || 'EventEmitter'}] Event handler error for ${String(event)}:`,
+              err
+            );
           }
         });
       }

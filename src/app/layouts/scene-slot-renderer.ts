@@ -1,11 +1,36 @@
 import type { ILayout, LayoutSlots, Scene } from './types';
 
 const SLOT_RENDER_MAP = [
-  { slot: 'header' as const, method: 'renderHeader' as const, clear: true, passSlots: false },
-  { slot: 'control' as const, method: 'renderControl' as const, clear: true, passSlots: false },
-  { slot: 'animation' as const, method: 'renderAnimation' as const, clear: false, passSlots: true },
-  { slot: 'graph' as const, method: 'renderGraph' as const, clear: true, passSlots: false },
-  { slot: 'readout' as const, method: 'renderReadout' as const, clear: true, passSlots: false }
+  {
+    slot: 'header' as const,
+    method: 'renderHeader' as const,
+    clear: true,
+    passSlots: false
+  },
+  {
+    slot: 'control' as const,
+    method: 'renderControl' as const,
+    clear: true,
+    passSlots: false
+  },
+  {
+    slot: 'animation' as const,
+    method: 'renderAnimation' as const,
+    clear: false,
+    passSlots: true
+  },
+  {
+    slot: 'graph' as const,
+    method: 'renderGraph' as const,
+    clear: true,
+    passSlots: false
+  },
+  {
+    slot: 'readout' as const,
+    method: 'renderReadout' as const,
+    clear: true,
+    passSlots: false
+  }
 ];
 
 export function renderSceneToSlots(scene: Scene, layout: ILayout): void {

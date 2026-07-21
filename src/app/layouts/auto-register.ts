@@ -22,37 +22,29 @@ export function registerAllLayouts(): void {
   registerDefaultStrategies();
 
   if (!layoutRegistry.has('split-right')) {
-    registerLayout(
-      'split-right',
-      SplitRightLayoutV2 as ILayoutConstructor,
-      {
-        name: '左右分栏',
-        description: '控制区在左，动画区在右（Capability-based）',
-        tags: ['desktop'],
-        supportsMobile: false,
-        supportedSlots: ['header', 'control', 'animation', 'graph', 'readout'],
-        constraints: { minWidth: 768, orientation: 'any' },
-        priority: 100,
-        autoSelectable: true
-      }
-    );
+    registerLayout('split-right', SplitRightLayoutV2 as ILayoutConstructor, {
+      name: '左右分栏',
+      description: '控制区在左，动画区在右（Capability-based）',
+      tags: ['desktop'],
+      supportsMobile: false,
+      supportedSlots: ['header', 'control', 'animation', 'graph', 'readout'],
+      constraints: { minWidth: 768, orientation: 'any' },
+      priority: 100,
+      autoSelectable: true
+    });
   }
 
   if (!layoutRegistry.has('mobile-stack')) {
-    registerLayout(
-      'mobile-stack',
-      MobileStackLayoutV2 as ILayoutConstructor,
-      {
-        name: '移动端堆叠',
-        description: '适合手机的垂直堆叠布局（Capability-based）',
-        tags: ['mobile'],
-        supportsMobile: true,
-        supportedSlots: ['header', 'control', 'animation', 'graph', 'readout'],
-        constraints: { maxWidth: 768, orientation: 'any' },
-        priority: 100,
-        autoSelectable: true
-      }
-    );
+    registerLayout('mobile-stack', MobileStackLayoutV2 as ILayoutConstructor, {
+      name: '移动端堆叠',
+      description: '适合手机的垂直堆叠布局（Capability-based）',
+      tags: ['mobile'],
+      supportsMobile: true,
+      supportedSlots: ['header', 'control', 'animation', 'graph', 'readout'],
+      constraints: { maxWidth: 768, orientation: 'any' },
+      priority: 100,
+      autoSelectable: true
+    });
   }
 
   if (!layoutRegistry.has('split-right-graph-bottom')) {

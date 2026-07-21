@@ -24,7 +24,10 @@ export interface SplitConfig {
 
 // === Section builders ===
 
-export function buildHeader(prefix: CssPrefix, cfg: SplitConfig): { element: HTMLElement | null; slot: HTMLElement | undefined } {
+export function buildHeader(
+  prefix: CssPrefix,
+  cfg: SplitConfig
+): { element: HTMLElement | null; slot: HTMLElement | undefined } {
   if (cfg.hideHeader) return { element: null, slot: undefined };
   const header = document.createElement('header');
   header.className = `${prefix}-header`;
@@ -83,7 +86,10 @@ export interface GraphSectionResult {
   slot: HTMLElement;
 }
 
-export function buildGraphSection(prefix: CssPrefix, label?: string): GraphSectionResult {
+export function buildGraphSection(
+  prefix: CssPrefix,
+  label?: string
+): GraphSectionResult {
   const section = document.createElement('section');
   section.className = `${prefix}-graph-section graph-section`;
   section.setAttribute('data-collapsed', 'false');
@@ -167,7 +173,10 @@ export interface StageElements {
   canvas: HTMLCanvasElement;
 }
 
-export function buildStage(prefix: CssPrefix, existingCanvas?: HTMLCanvasElement | null): StageElements {
+export function buildStage(
+  prefix: CssPrefix,
+  existingCanvas?: HTMLCanvasElement | null
+): StageElements {
   const stageFrame = document.createElement('div');
   stageFrame.className = `${prefix}-stage-frame`;
 
@@ -204,7 +213,10 @@ export function applySplitTheme(container: HTMLElement, theme: Theme): void {
   document.documentElement.setAttribute('data-theme', theme);
 }
 
-export function getSplitLayoutState(leftRatio: number, extra?: Record<string, unknown>): Record<string, unknown> {
+export function getSplitLayoutState(
+  leftRatio: number,
+  extra?: Record<string, unknown>
+): Record<string, unknown> {
   return { leftRatio, ...extra };
 }
 
@@ -259,7 +271,10 @@ export function applyResponsiveColumns(
     } else {
       const leftMinWidth = cfg.leftMinWidth ?? 260;
       const leftMaxWidth = Math.min(cfg.leftMaxWidth ?? 960, width * 0.5);
-      const leftWidth = Math.max(leftMinWidth, Math.min(leftMaxWidth, width * leftRatio));
+      const leftWidth = Math.max(
+        leftMinWidth,
+        Math.min(leftMaxWidth, width * leftRatio)
+      );
       container.style.gridTemplateColumns = `${leftWidth}px 8px 1fr`;
     }
     container.style.gridTemplateRows = '';

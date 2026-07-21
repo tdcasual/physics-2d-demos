@@ -40,7 +40,9 @@ export function createDebugOverlay(
 
       const interval = window.setInterval(() => {
         const pm = (
-          window as Window & { __perfMonitor?: { getRecommendedFps?(): number } }
+          window as Window & {
+            __perfMonitor?: { getRecommendedFps?(): number };
+          }
         ).__perfMonitor;
         el.textContent = `FPS: ${pm?.getRecommendedFps?.() ?? '--'}`;
       }, intervalMs);

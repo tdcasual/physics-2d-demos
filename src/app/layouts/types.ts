@@ -85,7 +85,10 @@ export type CapabilityId = (typeof CAPABILITY_IDS)[number];
 
 /** Capability 上下文事件 */
 export interface CapabilityEvents {
-  modechange: { mode: 'normal' | 'presentation'; profile?: import('../demo-profile').SceneDemoProfile | null };
+  modechange: {
+    mode: 'normal' | 'presentation';
+    profile?: import('../demo-profile').SceneDemoProfile | null;
+  };
 }
 
 /** Capability 挂载上下文 — 提供能力运行所需的宿主信息 */
@@ -124,7 +127,11 @@ export interface CapabilityInstance<TData = unknown, TCallbacks = unknown> {
 }
 
 /** Capability 定义 — 自包含的功能模块构造函数 */
-export interface CapabilityDefinition<TConfig = unknown, TData = unknown, TCallbacks = unknown> {
+export interface CapabilityDefinition<
+  TConfig = unknown,
+  TData = unknown,
+  TCallbacks = unknown
+> {
   readonly id: CapabilityId;
 
   /**
@@ -269,7 +276,10 @@ export type SceneContainerEvents = {
   'scene:mount': { sceneId: string };
   'scene:unmount': { sceneId: string };
   'scene:state': { scene: string; state: unknown };
-  'layout:mode': { mode: string; profile?: import('../demo-profile').SceneDemoProfile | null };
+  'layout:mode': {
+    mode: string;
+    profile?: import('../demo-profile').SceneDemoProfile | null;
+  };
   'slot:toggle': { slot: SlotName; collapsed: boolean };
 };
 

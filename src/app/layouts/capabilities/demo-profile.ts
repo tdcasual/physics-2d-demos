@@ -40,7 +40,8 @@ export function createDemoProfile(
     ): CapabilityInstance<DemoProfileUpdateData> {
       const merged = { ...cfg, ...config };
       const sidebarSel = merged.sidebarSelector ?? '.layout-left-panel';
-      const graphSel = merged.graphSectionSelector ?? '.graph-section, .layout-graph-section';
+      const graphSel =
+        merged.graphSectionSelector ?? '.graph-section, .layout-graph-section';
 
       let currentProfile: SceneDemoProfile | null = null;
       // Save original display values that other capabilities may have set
@@ -55,29 +56,44 @@ export function createDemoProfile(
 
         // 侧边栏
         if (profile.controlPanel) {
-          const sidebar = ctx.container.querySelector(sidebarSel) as HTMLElement | null;
+          const sidebar = ctx.container.querySelector(
+            sidebarSel
+          ) as HTMLElement | null;
           if (sidebar) {
             if (savedSidebarDisplay === null) {
-              savedSidebarDisplay = sidebar.style.display || window.getComputedStyle(sidebar).display;
+              savedSidebarDisplay =
+                sidebar.style.display ||
+                window.getComputedStyle(sidebar).display;
             }
             switch (profile.controlPanel) {
-              case 'hidden': sidebar.style.display = 'none'; break;
+              case 'hidden':
+                sidebar.style.display = 'none';
+                break;
               case 'collapsed':
-              case 'minimal': sidebar.classList.add('is-collapsed-demo'); break;
-              case 'full': sidebar.classList.remove('is-collapsed-demo'); break;
+              case 'minimal':
+                sidebar.classList.add('is-collapsed-demo');
+                break;
+              case 'full':
+                sidebar.classList.remove('is-collapsed-demo');
+                break;
             }
           }
         }
 
         // 图表区
         if (profile.graphPanel) {
-          const graph = ctx.container.querySelector(graphSel) as HTMLElement | null;
+          const graph = ctx.container.querySelector(
+            graphSel
+          ) as HTMLElement | null;
           if (graph) {
             if (savedGraphDisplay === null) {
-              savedGraphDisplay = graph.style.display || window.getComputedStyle(graph).display;
+              savedGraphDisplay =
+                graph.style.display || window.getComputedStyle(graph).display;
             }
             switch (profile.graphPanel) {
-              case 'hidden': graph.style.display = 'none'; break;
+              case 'hidden':
+                graph.style.display = 'none';
+                break;
               case 'collapsed':
                 graph.setAttribute('data-collapsed', 'true');
                 graph.classList.add('is-collapsed-demo');
@@ -92,14 +108,16 @@ export function createDemoProfile(
 
         // 读数面板 — 直接 DOM 操作，不依赖外部 readoutPanel 引用
         if (profile.readoutPanel) {
-          const rp = ctx.container.querySelector('[class*="-readout-panel"]') as HTMLElement | null;
+          const rp = ctx.container.querySelector(
+            '[class*="-readout-panel"]'
+          ) as HTMLElement | null;
           if (rp) {
             if (savedReadoutCollapsed === null) {
               savedReadoutCollapsed = rp.classList.contains('is-collapsed');
             }
             // Derive prefix from the panel's main class (e.g. teaching-readout-panel → teaching)
             const prefix = Array.from(rp.classList)
-              .find(c => c.endsWith('-readout-panel'))
+              .find((c) => c.endsWith('-readout-panel'))
               ?.replace('-readout-panel', '');
             switch (profile.readoutPanel) {
               case 'hidden':
@@ -110,7 +128,10 @@ export function createDemoProfile(
                 rp.classList.remove('is-collapsed');
                 if (prefix) {
                   rp.classList.add(`${prefix}-is-overlay`);
-                  rp.classList.remove(`${prefix}-is-docked-top`, `${prefix}-is-docked-bottom`);
+                  rp.classList.remove(
+                    `${prefix}-is-docked-top`,
+                    `${prefix}-is-docked-bottom`
+                  );
                   rp.classList.add(`${prefix}-readout-enlarged`);
                 }
                 break;
@@ -119,7 +140,10 @@ export function createDemoProfile(
                 rp.classList.remove('is-collapsed');
                 if (prefix) {
                   rp.classList.add(`${prefix}-is-docked-top`);
-                  rp.classList.remove(`${prefix}-is-overlay`, `${prefix}-is-docked-bottom`);
+                  rp.classList.remove(
+                    `${prefix}-is-overlay`,
+                    `${prefix}-is-docked-bottom`
+                  );
                 }
                 break;
               case 'docked-bottom':
@@ -127,7 +151,10 @@ export function createDemoProfile(
                 rp.classList.remove('is-collapsed');
                 if (prefix) {
                   rp.classList.add(`${prefix}-is-docked-bottom`);
-                  rp.classList.remove(`${prefix}-is-overlay`, `${prefix}-is-docked-top`);
+                  rp.classList.remove(
+                    `${prefix}-is-overlay`,
+                    `${prefix}-is-docked-top`
+                  );
                 }
                 break;
             }
@@ -147,14 +174,18 @@ export function createDemoProfile(
       const reset = () => {
         currentProfile = null;
 
-        const sidebar = ctx.container.querySelector(sidebarSel) as HTMLElement | null;
+        const sidebar = ctx.container.querySelector(
+          sidebarSel
+        ) as HTMLElement | null;
         if (sidebar) {
           sidebar.style.display = savedSidebarDisplay ?? '';
           savedSidebarDisplay = null;
           sidebar.classList.remove('is-collapsed-demo');
         }
 
-        const graph = ctx.container.querySelector(graphSel) as HTMLElement | null;
+        const graph = ctx.container.querySelector(
+          graphSel
+        ) as HTMLElement | null;
         if (graph) {
           graph.style.display = savedGraphDisplay ?? '';
           savedGraphDisplay = null;
@@ -162,17 +193,21 @@ export function createDemoProfile(
           graph.classList.remove('is-collapsed-demo');
         }
 
-        const rp = ctx.container.querySelector('[class*="-readout-panel"]') as HTMLElement | null;
+        const rp = ctx.container.querySelector(
+          '[class*="-readout-panel"]'
+        ) as HTMLElement | null;
         if (rp) {
           const prefix = Array.from(rp.classList)
-            .find(c => c.endsWith('-readout-panel'))
+            .find((c) => c.endsWith('-readout-panel'))
             ?.replace('-readout-panel', '');
           rp.style.display = '';
           rp.classList.toggle('is-collapsed', savedReadoutCollapsed ?? true);
           savedReadoutCollapsed = null;
           if (prefix) {
             rp.classList.remove(
-              `${prefix}-is-overlay`, `${prefix}-is-docked-top`, `${prefix}-is-docked-bottom`,
+              `${prefix}-is-overlay`,
+              `${prefix}-is-docked-top`,
+              `${prefix}-is-docked-bottom`,
               `${prefix}-readout-enlarged`
             );
           }

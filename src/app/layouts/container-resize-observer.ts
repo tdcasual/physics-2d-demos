@@ -94,18 +94,27 @@ export class ContainerResizeObserver {
     this._timer = setTimeout(() => {
       // Skip if a manual switch is in progress, or if the user has set a
       // preference since the debounce started.
-      if (this._callbacks.getSwitching() || this._callbacks.getUserPreferredLayout()) {
+      if (
+        this._callbacks.getSwitching() ||
+        this._callbacks.getUserPreferredLayout()
+      ) {
         // Reset so the next resize cycle re-evaluates from scratch
         this._lastLayoutId = null;
         return;
       }
       if (targetLayoutId !== this._callbacks.getCurrentLayoutId()) {
-        this._callbacks.switchLayout(targetLayoutId).catch((err) => {
-          console.error('[ContainerResizeObserver] Layout switch failed:', err);
-        }).finally(() => {
-          // Reset so the next resize cycle re-evaluates from the actual current layout
-          this._lastLayoutId = this._callbacks.getCurrentLayoutId();
-        });
+        this._callbacks
+          .switchLayout(targetLayoutId)
+          .catch((err) => {
+            console.error(
+              '[ContainerResizeObserver] Layout switch failed:',
+              err
+            );
+          })
+          .finally(() => {
+            // Reset so the next resize cycle re-evaluates from the actual current layout
+            this._lastLayoutId = this._callbacks.getCurrentLayoutId();
+          });
       }
     }, 300);
   }
