@@ -13,7 +13,11 @@ import { SplitRightLayout } from '../../src/app/layouts/layouts/split-right/spli
 import { MobileStackLayout } from '../../src/app/layouts/layouts/mobile-stack/mobile-stack';
 import { SplitRightGraphBottomLayout } from '../../src/app/layouts/layouts/split-right-graph-bottom/split-right-graph-bottom';
 import { layoutRegistry } from '../../src/app/layouts/registry';
-import type { CapabilityContext, ILayout, LayoutSlots } from '../../src/app/layouts/types';
+import type {
+  CapabilityContext,
+  ILayout,
+  LayoutSlots
+} from '../../src/app/layouts/types';
 
 // ============================================================================
 // Helpers
@@ -58,7 +62,10 @@ function verifySlotsInDOM(
   for (const [name, slot] of Object.entries(slots)) {
     if (slot === undefined) continue;
     expect(slot, `slot "${name}" should be defined`).toBeDefined();
-    expect(container.contains(slot), `slot "${name}" should be in container DOM`).toBe(true);
+    expect(
+      container.contains(slot),
+      `slot "${name}" should be in container DOM`
+    ).toBe(true);
   }
 }
 
@@ -84,7 +91,9 @@ describe('Canvas rendering', () => {
 
   it('split-right-graph-bottom: canvas is renderable after mount', async () => {
     const container = createContainer();
-    const layout = new SplitRightGraphBottomLayout(container, { hideHeader: true });
+    const layout = new SplitRightGraphBottomLayout(container, {
+      hideHeader: true
+    });
     const slots = await layout.mount();
 
     verifyCanvasReady(slots.animation.querySelector('canvas'));
@@ -142,7 +151,10 @@ describe('Graph slot completeness', () => {
 
   it('split-right: graph slot exists in left panel when hasGraph=true', async () => {
     const container = createContainer();
-    const layout = new SplitRightLayout(container, { hideHeader: true, hasGraph: true });
+    const layout = new SplitRightLayout(container, {
+      hideHeader: true,
+      hasGraph: true
+    });
     const slots = await layout.mount();
 
     expect(slots.graph).toBeDefined();
@@ -157,7 +169,10 @@ describe('Graph slot completeness', () => {
 
   it('split-right: graph slot absent when hasGraph=false', async () => {
     const container = createContainer();
-    const layout = new SplitRightLayout(container, { hideHeader: true, hasGraph: false });
+    const layout = new SplitRightLayout(container, {
+      hideHeader: true,
+      hasGraph: false
+    });
     const slots = await layout.mount();
 
     expect(slots.graph).toBeUndefined();
@@ -168,13 +183,17 @@ describe('Graph slot completeness', () => {
 
   it('split-right-graph-bottom: graph section has non-zero height', async () => {
     const container = createContainer();
-    const layout = new SplitRightGraphBottomLayout(container, { hideHeader: true });
+    const layout = new SplitRightGraphBottomLayout(container, {
+      hideHeader: true
+    });
     const slots = await layout.mount();
 
     expect(slots.graph).toBeDefined();
 
     // Graph section (parent of graph slot) should have explicit height
-    const graphSection = container.querySelector('.srgb-graph-section') as HTMLElement;
+    const graphSection = container.querySelector(
+      '.srgb-graph-section'
+    ) as HTMLElement;
     expect(graphSection).not.toBeNull();
     expect(graphSection.style.height).toBeTruthy();
     expect(graphSection.style.minHeight).toBeTruthy();
@@ -199,7 +218,9 @@ describe('Graph slot completeness', () => {
 
   it('split-right-graph-bottom: horizontal resizer exists between animation and graph', async () => {
     const container = createContainer();
-    const layout = new SplitRightGraphBottomLayout(container, { hideHeader: true });
+    const layout = new SplitRightGraphBottomLayout(container, {
+      hideHeader: true
+    });
     await layout.mount();
 
     const resizer = container.querySelector('[aria-orientation="horizontal"]');
@@ -241,17 +262,20 @@ describe('Slot declaration consistency', () => {
     {
       name: 'split-right',
       create: (c) => new SplitRightLayout(c, { hideHeader: true }),
-      width: 1200, height: 800
+      width: 1200,
+      height: 800
     },
     {
       name: 'split-right-graph-bottom',
       create: (c) => new SplitRightGraphBottomLayout(c, { hideHeader: true }),
-      width: 1200, height: 800
+      width: 1200,
+      height: 800
     },
     {
       name: 'mobile-stack',
       create: (c) => new MobileStackLayout(c),
-      width: 375, height: 812
+      width: 375,
+      height: 812
     }
   ];
 
@@ -333,7 +357,9 @@ describe('Layout switching', () => {
   it('split-right-graph-bottom → split-right: graph disappears, canvas survives', async () => {
     const container = createContainer();
 
-    const layout1 = new SplitRightGraphBottomLayout(container, { hideHeader: true });
+    const layout1 = new SplitRightGraphBottomLayout(container, {
+      hideHeader: true
+    });
     const slots1 = await layout1.mount();
     const canvas1 = slots1.animation.querySelector('canvas')!;
     verifyCanvasReady(canvas1);
@@ -461,10 +487,14 @@ describe('Responsive resize', () => {
 
   it('split-right-graph-bottom: mobile resize hides horizontal resizer', async () => {
     const container = createContainer();
-    const layout = new SplitRightGraphBottomLayout(container, { hideHeader: true });
+    const layout = new SplitRightGraphBottomLayout(container, {
+      hideHeader: true
+    });
     await layout.mount();
 
-    const resizerH = container.querySelector('[aria-orientation="horizontal"]') as HTMLElement;
+    const resizerH = container.querySelector(
+      '[aria-orientation="horizontal"]'
+    ) as HTMLElement;
     expect(resizerH).not.toBeNull();
 
     layout.handleResize(400, 800);
@@ -480,10 +510,14 @@ describe('Responsive resize', () => {
 
   it('split-right-graph-bottom: resize back to desktop shows resizer', async () => {
     const container = createContainer();
-    const layout = new SplitRightGraphBottomLayout(container, { hideHeader: true });
+    const layout = new SplitRightGraphBottomLayout(container, {
+      hideHeader: true
+    });
     await layout.mount();
 
-    const resizerH = container.querySelector('[aria-orientation="horizontal"]') as HTMLElement;
+    const resizerH = container.querySelector(
+      '[aria-orientation="horizontal"]'
+    ) as HTMLElement;
 
     layout.handleResize(400, 800);
     expect(resizerH.style.display).toBe('none');
@@ -536,7 +570,9 @@ describe('Toolbar buttons', () => {
 
   it('split-right-graph-bottom toolbar has all expected buttons', async () => {
     const container = createContainer();
-    const layout = new SplitRightGraphBottomLayout(container, { hideHeader: true });
+    const layout = new SplitRightGraphBottomLayout(container, {
+      hideHeader: true
+    });
     await layout.mount();
 
     expect(container.querySelector('.sidebar-toggle-btn')).not.toBeNull();
@@ -554,8 +590,12 @@ describe('Toolbar buttons', () => {
     await layout.mount();
 
     // Mobile layout should not have layout-switch or sidebar-toggle
-    expect(layout.capabilities!.some(c => c.id === 'layout-switch')).toBe(false);
-    expect(layout.capabilities!.some(c => c.id === 'sidebar-toggle')).toBe(false);
+    expect(layout.capabilities!.some((c) => c.id === 'layout-switch')).toBe(
+      false
+    );
+    expect(layout.capabilities!.some((c) => c.id === 'sidebar-toggle')).toBe(
+      false
+    );
 
     await layout.unmount();
     container.remove();
@@ -571,10 +611,12 @@ describe('Layout-switch capability', () => {
     document.body.innerHTML = '';
   });
 
-  function mockCtx(overrides: {
-    currentLayoutId?: string;
-    availableLayouts?: { id: string; name: string }[];
-  } = {}): CapabilityContext & { _switchCalls: string[] } {
+  function mockCtx(
+    overrides: {
+      currentLayoutId?: string;
+      availableLayouts?: { id: string; name: string }[];
+    } = {}
+  ): CapabilityContext & { _switchCalls: string[] } {
     let currentId = overrides.currentLayoutId ?? 'split-right';
     const available = overrides.availableLayouts ?? [
       { id: 'split-right', name: '左右分栏' },
@@ -591,25 +633,34 @@ describe('Layout-switch capability', () => {
       on: () => () => {},
       getCurrentLayoutId: () => currentId,
       getAvailableLayouts: () => available,
-      switchLayout: (id: string) => { switchCalls.push(id); currentId = id; },
+      switchLayout: (id: string) => {
+        switchCalls.push(id);
+        currentId = id;
+      },
       _switchCalls: switchCalls
     };
   }
 
   it('button shows NEXT layout name, not current', async () => {
-    const { capabilityFactories } = await import('../../src/app/layouts/capabilities');
+    const { capabilityFactories } =
+      await import('../../src/app/layouts/capabilities');
     const ctx = mockCtx({ currentLayoutId: 'split-right' });
 
     const instance = capabilityFactories['layout-switch']({}).mount(
-      { control: document.createElement('div'), animation: document.createElement('div') },
+      {
+        control: document.createElement('div'),
+        animation: document.createElement('div')
+      },
       {},
       ctx
     );
 
     // Flush microtask so updateLabel runs after mount
-    await new Promise(r => setTimeout(r, 10));
+    await new Promise((r) => setTimeout(r, 10));
 
-    const btn = ctx.container.querySelector('.layout-switch-btn') as HTMLButtonElement;
+    const btn = ctx.container.querySelector(
+      '.layout-switch-btn'
+    ) as HTMLButtonElement;
     expect(btn).not.toBeNull();
     expect(btn.textContent).toBe('左右分栏+底部图表');
     expect(btn.getAttribute('aria-label')).toBe('切换到左右分栏+底部图表');
@@ -619,18 +670,24 @@ describe('Layout-switch capability', () => {
   });
 
   it('button wraps around to first layout from last', async () => {
-    const { capabilityFactories } = await import('../../src/app/layouts/capabilities');
+    const { capabilityFactories } =
+      await import('../../src/app/layouts/capabilities');
     const ctx = mockCtx({ currentLayoutId: 'split-right-graph-bottom' });
 
     const instance = capabilityFactories['layout-switch']({}).mount(
-      { control: document.createElement('div'), animation: document.createElement('div') },
+      {
+        control: document.createElement('div'),
+        animation: document.createElement('div')
+      },
       {},
       ctx
     );
 
-    await new Promise(r => setTimeout(r, 10));
+    await new Promise((r) => setTimeout(r, 10));
 
-    const btn = ctx.container.querySelector('.layout-switch-btn') as HTMLButtonElement;
+    const btn = ctx.container.querySelector(
+      '.layout-switch-btn'
+    ) as HTMLButtonElement;
     expect(btn.textContent).toBe('左右分栏');
 
     instance.dispose();
@@ -638,21 +695,27 @@ describe('Layout-switch capability', () => {
   });
 
   it('button hidden when only one layout available', async () => {
-    const { capabilityFactories } = await import('../../src/app/layouts/capabilities');
+    const { capabilityFactories } =
+      await import('../../src/app/layouts/capabilities');
     const ctx = mockCtx({
       currentLayoutId: 'split-right',
       availableLayouts: [{ id: 'split-right', name: '左右分栏' }]
     });
 
     const instance = capabilityFactories['layout-switch']({}).mount(
-      { control: document.createElement('div'), animation: document.createElement('div') },
+      {
+        control: document.createElement('div'),
+        animation: document.createElement('div')
+      },
       {},
       ctx
     );
 
-    await new Promise(r => setTimeout(r, 10));
+    await new Promise((r) => setTimeout(r, 10));
 
-    const btn = ctx.container.querySelector('.layout-switch-btn') as HTMLButtonElement;
+    const btn = ctx.container.querySelector(
+      '.layout-switch-btn'
+    ) as HTMLButtonElement;
     expect(btn.style.display).toBe('none');
 
     instance.dispose();
@@ -660,18 +723,24 @@ describe('Layout-switch capability', () => {
   });
 
   it('click calls switchLayout with next layout ID', async () => {
-    const { capabilityFactories } = await import('../../src/app/layouts/capabilities');
+    const { capabilityFactories } =
+      await import('../../src/app/layouts/capabilities');
     const ctx = mockCtx({ currentLayoutId: 'split-right' });
 
     const instance = capabilityFactories['layout-switch']({}).mount(
-      { control: document.createElement('div'), animation: document.createElement('div') },
+      {
+        control: document.createElement('div'),
+        animation: document.createElement('div')
+      },
       {},
       ctx
     );
 
-    await new Promise(r => setTimeout(r, 10));
+    await new Promise((r) => setTimeout(r, 10));
 
-    const btn = ctx.container.querySelector('.layout-switch-btn') as HTMLButtonElement;
+    const btn = ctx.container.querySelector(
+      '.layout-switch-btn'
+    ) as HTMLButtonElement;
     btn.click();
 
     expect(ctx._switchCalls).toEqual(['split-right-graph-bottom']);
@@ -681,16 +750,22 @@ describe('Layout-switch capability', () => {
   });
 
   it('dispose removes click listener', async () => {
-    const { capabilityFactories } = await import('../../src/app/layouts/capabilities');
+    const { capabilityFactories } =
+      await import('../../src/app/layouts/capabilities');
     const ctx = mockCtx({ currentLayoutId: 'split-right' });
 
     const instance = capabilityFactories['layout-switch']({}).mount(
-      { control: document.createElement('div'), animation: document.createElement('div') },
+      {
+        control: document.createElement('div'),
+        animation: document.createElement('div')
+      },
       {},
       ctx
     );
 
-    const btn = ctx.container.querySelector('.layout-switch-btn') as HTMLButtonElement;
+    const btn = ctx.container.querySelector(
+      '.layout-switch-btn'
+    ) as HTMLButtonElement;
     instance.dispose();
 
     btn.click();
@@ -723,7 +798,9 @@ describe('Double mount guard', () => {
 
   it('split-right-graph-bottom: double mount returns same slots', async () => {
     const container = createContainer();
-    const layout = new SplitRightGraphBottomLayout(container, { hideHeader: true });
+    const layout = new SplitRightGraphBottomLayout(container, {
+      hideHeader: true
+    });
 
     const slots1 = await layout.mount();
     const slots2 = await layout.mount();
@@ -773,7 +850,9 @@ describe('Unmount cleanup', () => {
 
   it('split-right-graph-bottom: unmount removes all children', async () => {
     const container = createContainer();
-    const layout = new SplitRightGraphBottomLayout(container, { hideHeader: true });
+    const layout = new SplitRightGraphBottomLayout(container, {
+      hideHeader: true
+    });
     await layout.mount();
 
     expect(container.children.length).toBeGreaterThan(0);
@@ -852,7 +931,9 @@ describe('Layout state persistence', () => {
 
   it('split-right-graph-bottom: getLayoutState includes graphHeight', async () => {
     const container = createContainer();
-    const layout = new SplitRightGraphBottomLayout(container, { hideHeader: true });
+    const layout = new SplitRightGraphBottomLayout(container, {
+      hideHeader: true
+    });
     await layout.mount();
 
     const state = layout.getLayoutState();
@@ -865,11 +946,15 @@ describe('Layout state persistence', () => {
 
   it('split-right-graph-bottom: restoreLayoutState restores graphHeight', async () => {
     const container = createContainer();
-    const layout = new SplitRightGraphBottomLayout(container, { hideHeader: true });
+    const layout = new SplitRightGraphBottomLayout(container, {
+      hideHeader: true
+    });
     await layout.mount();
 
     layout.restoreLayoutState({ graphHeight: 350 });
-    const graphSection = container.querySelector('.srgb-graph-section') as HTMLElement;
+    const graphSection = container.querySelector(
+      '.srgb-graph-section'
+    ) as HTMLElement;
     expect(graphSection.style.height).toBe('350px');
 
     await layout.unmount();
