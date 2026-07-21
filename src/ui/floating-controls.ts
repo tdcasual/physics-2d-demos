@@ -24,7 +24,8 @@ export function createFloatingControls(options: {
   const container = document.createElement(
     'div'
   ) as unknown as FloatingControls;
-  container.className = 'teaching-stage-floating-controls stage-floating-controls';
+  container.className =
+    'teaching-stage-floating-controls stage-floating-controls';
   container.style.cssText = `
     position: absolute;
     top: var(--transport-top, 12px);
@@ -65,23 +66,39 @@ export function createFloatingControls(options: {
       : 'var(--border-color)';
   }
 
-  playPauseBtn.addEventListener('click', () => {
-    options.onTogglePlay?.();
-    updatePlayPauseBtn();
-  }, { signal: ac.signal });
+  playPauseBtn.addEventListener(
+    'click',
+    () => {
+      options.onTogglePlay?.();
+      updatePlayPauseBtn();
+    },
+    { signal: ac.signal }
+  );
 
-  playPauseBtn.addEventListener('mousedown', (e) => {
-    e.stopPropagation();
-  }, { signal: ac.signal });
+  playPauseBtn.addEventListener(
+    'mousedown',
+    (e) => {
+      e.stopPropagation();
+    },
+    { signal: ac.signal }
+  );
 
-  playPauseBtn.addEventListener('mouseenter', () => {
-    playPauseBtn.style.background = 'var(--btn-hover-bg)';
-    playPauseBtn.style.transform = 'translateY(-1px)';
-  }, { signal: ac.signal });
-  playPauseBtn.addEventListener('mouseleave', () => {
-    playPauseBtn.style.background = 'var(--btn-bg)';
-    playPauseBtn.style.transform = 'none';
-  }, { signal: ac.signal });
+  playPauseBtn.addEventListener(
+    'mouseenter',
+    () => {
+      playPauseBtn.style.background = 'var(--btn-hover-bg)';
+      playPauseBtn.style.transform = 'translateY(-1px)';
+    },
+    { signal: ac.signal }
+  );
+  playPauseBtn.addEventListener(
+    'mouseleave',
+    () => {
+      playPauseBtn.style.background = 'var(--btn-bg)';
+      playPauseBtn.style.transform = 'none';
+    },
+    { signal: ac.signal }
+  );
 
   const resetBtn = document.createElement('button');
   resetBtn.type = 'button';
@@ -101,25 +118,41 @@ export function createFloatingControls(options: {
     justify-content: center;
     transition: all 0.2s ease;
   `;
-  resetBtn.addEventListener('click', () => {
-    options.onReset?.();
-    updatePlayPauseBtn();
-  }, { signal: ac.signal });
+  resetBtn.addEventListener(
+    'click',
+    () => {
+      options.onReset?.();
+      updatePlayPauseBtn();
+    },
+    { signal: ac.signal }
+  );
 
-  resetBtn.addEventListener('mousedown', (e) => {
-    e.stopPropagation();
-  }, { signal: ac.signal });
+  resetBtn.addEventListener(
+    'mousedown',
+    (e) => {
+      e.stopPropagation();
+    },
+    { signal: ac.signal }
+  );
 
-  resetBtn.addEventListener('mouseenter', () => {
-    resetBtn.style.background = 'var(--btn-hover-bg)';
-    resetBtn.style.color = 'var(--text-primary)';
-    resetBtn.style.transform = 'translateY(-1px)';
-  }, { signal: ac.signal });
-  resetBtn.addEventListener('mouseleave', () => {
-    resetBtn.style.background = 'var(--btn-bg)';
-    resetBtn.style.color = 'var(--text-secondary)';
-    resetBtn.style.transform = 'none';
-  }, { signal: ac.signal });
+  resetBtn.addEventListener(
+    'mouseenter',
+    () => {
+      resetBtn.style.background = 'var(--btn-hover-bg)';
+      resetBtn.style.color = 'var(--text-primary)';
+      resetBtn.style.transform = 'translateY(-1px)';
+    },
+    { signal: ac.signal }
+  );
+  resetBtn.addEventListener(
+    'mouseleave',
+    () => {
+      resetBtn.style.background = 'var(--btn-bg)';
+      resetBtn.style.color = 'var(--text-secondary)';
+      resetBtn.style.transform = 'none';
+    },
+    { signal: ac.signal }
+  );
 
   const divider = document.createElement('div');
   divider.style.cssText = `
@@ -160,21 +193,37 @@ export function createFloatingControls(options: {
     text-align: right;
   `;
 
-  speedSlider.addEventListener('input', () => {
-    const speed = parseFloat(speedSlider.value);
-    speedValue.textContent = `${speed.toFixed(2)}×`;
-    options.onSpeedChange?.(speed);
-  }, { signal: ac.signal });
+  speedSlider.addEventListener(
+    'input',
+    () => {
+      const speed = parseFloat(speedSlider.value);
+      speedValue.textContent = `${speed.toFixed(2)}×`;
+      options.onSpeedChange?.(speed);
+    },
+    { signal: ac.signal }
+  );
 
-  speedSlider.addEventListener('mousedown', (e) => {
-    e.stopPropagation();
-  }, { signal: ac.signal });
-  speedValue.addEventListener('mousedown', (e) => {
-    e.stopPropagation();
-  }, { signal: ac.signal });
-  speedLabel.addEventListener('mousedown', (e) => {
-    e.stopPropagation();
-  }, { signal: ac.signal });
+  speedSlider.addEventListener(
+    'mousedown',
+    (e) => {
+      e.stopPropagation();
+    },
+    { signal: ac.signal }
+  );
+  speedValue.addEventListener(
+    'mousedown',
+    (e) => {
+      e.stopPropagation();
+    },
+    { signal: ac.signal }
+  );
+  speedLabel.addEventListener(
+    'mousedown',
+    (e) => {
+      e.stopPropagation();
+    },
+    { signal: ac.signal }
+  );
 
   container.appendChild(playPauseBtn);
   container.appendChild(resetBtn);
