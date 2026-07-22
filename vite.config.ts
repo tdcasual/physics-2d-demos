@@ -65,10 +65,10 @@ export default defineConfig({
         'src/scenes/*/scene.meta.ts'
       ],
       thresholds: {
-        lines: 40,
-        functions: 60,
-        branches: 45,
-        statements: 40
+        lines: 65,
+        functions: 65,
+        branches: 70,
+        statements: 65
       }
     }
   },
