@@ -269,6 +269,25 @@ test.describe('SplitRightLayout Desktop', () => {
     });
   }
 
+  // CSS 类重命名（v2-layout → split-right-shell）回归守卫：
+  // 断言布局壳使用新类名、旧类名无残留、且为 grid 布局。
+  // 仅断言 DOM 类名与计算样式，平台无关（非像素快照）。
+  test('layout shell uses split-right-shell class (rename regression guard)', async ({
+    page
+  }) => {
+    await gotoScene(page, 'projectile');
+
+    const shell = page.locator('.teaching-demo.split-right-shell');
+    await expect(shell).toBeVisible();
+
+    // 旧类名不应残留
+    expect(await page.locator('.v2-layout').count()).toBe(0);
+
+    // 布局壳为 grid（来自 .teaching-demo.split-right-shell CSS 或内联样式）
+    const display = await shell.evaluate((el) => getComputedStyle(el).display);
+    expect(display).toBe('grid');
+  });
+
   // ── 2. Play / Pause toggle ──
   test('play/pause toggles animation state', async ({ page }) => {
     await gotoScene(page, 'projectile');
