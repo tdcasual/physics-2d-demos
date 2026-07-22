@@ -57,6 +57,8 @@ export function createDoubleSlitScene(
   let instrumentWrap: HTMLDivElement | null = null;
   let leftContainer: HTMLDivElement | null = null;
   let rightContainer: HTMLDivElement | null = null;
+  let leftCanvas: HTMLCanvasElement | null = null;
+  let rightCanvas: HTMLCanvasElement | null = null;
   let leftInstrument: ReturnType<typeof createInterferenceVernierCaliper> | null = null;
   let rightInstrument: ReturnType<typeof createMicrometerEyepiece> | null = null;
   let lastStep = -1;
@@ -88,7 +90,7 @@ export function createDoubleSlitScene(
       'width:50%;height:100%;position:relative;pointer-events:auto;border-radius:4px;overflow:visible;';
     instrumentWrap.appendChild(leftContainer);
 
-    const leftCanvas = document.createElement('canvas');
+    leftCanvas = document.createElement('canvas');
     leftCanvas.style.cssText = 'width:100%;height:100%;display:block;';
     leftContainer.appendChild(leftCanvas);
 
@@ -98,20 +100,13 @@ export function createDoubleSlitScene(
       'flex:1;height:100%;position:relative;pointer-events:auto;border-radius:4px;overflow:visible;';
     instrumentWrap.appendChild(rightContainer);
 
-    const rightCanvas = document.createElement('canvas');
+    rightCanvas = document.createElement('canvas');
     rightCanvas.style.cssText = 'width:100%;height:100%;display:block;';
     rightContainer.appendChild(rightCanvas);
-
-    // 保存 canvas 引用供后续仪器创建使用
-    (leftContainer as unknown as Record<string, HTMLCanvasElement | undefined>).__canvas = leftCanvas;
-    (rightContainer as unknown as Record<string, HTMLCanvasElement | undefined>).__canvas = rightCanvas;
   }
 
   function initInstruments(theme: TeachingTheme): void {
-    if (!leftContainer || !rightContainer) return;
-
-    const leftCanvas = (leftContainer as unknown as Record<string, HTMLCanvasElement | undefined>).__canvas as HTMLCanvasElement;
-    const rightCanvas = (rightContainer as unknown as Record<string, HTMLCanvasElement | undefined>).__canvas as HTMLCanvasElement;
+    if (!leftContainer || !rightContainer || !leftCanvas || !rightCanvas) return;
 
     if (!leftInstrument) {
       leftInstrument = createInterferenceVernierCaliper({
@@ -122,10 +117,9 @@ export function createDoubleSlitScene(
       const cached = instrumentStateCache.get('caliper');
       if (cached) leftInstrument.sim.setParams(cached);
       // 订阅读数变化，同步到实验状态区
-      const caliperView = leftInstrument.view as unknown as { onReadingChange?: (cb: () => void) => () => void };
-      if (caliperView.onReadingChange) {
-        instrumentUnsubscribers.push(caliperView.onReadingChange(() => base.notify()));
-      }
+      instrumentUnsubscribers.push(
+        leftInstrument.view.onReadingChange(() => base.notify())
+      );
     }
 
     if (!rightInstrument) {
@@ -137,10 +131,9 @@ export function createDoubleSlitScene(
       const cached = instrumentStateCache.get('micrometer');
       if (cached) rightInstrument.sim.setParams(cached);
       // 订阅读数变化，同步到实验状态区
-      const micrometerView = rightInstrument.view as unknown as { onReadingChange?: (cb: () => void) => () => void };
-      if (micrometerView.onReadingChange) {
-        instrumentUnsubscribers.push(micrometerView.onReadingChange(() => base.notify()));
-      }
+      instrumentUnsubscribers.push(
+        rightInstrument.view.onReadingChange(() => base.notify())
+      );
     }
   }
 
@@ -164,6 +157,8 @@ export function createDoubleSlitScene(
     instrumentWrap = null;
     leftContainer = null;
     rightContainer = null;
+    leftCanvas = null;
+    rightCanvas = null;
 
     const parent = options.canvas?.parentElement;
     if (parent && parentOriginalPosition !== null) {
@@ -234,8 +229,8 @@ export function createDoubleSlitScene(
 
   function syncInstrumentReadout(): void {
     // 读数统一显示在实验状态区，仪器内部读数始终隐藏
-    (leftInstrument?.view as unknown as { setReadoutVisible?: (v: boolean) => void })?.setReadoutVisible?.(false);
-    (rightInstrument?.view as unknown as { setReadoutVisible?: (v: boolean) => void })?.setReadoutVisible?.(false);
+    leftInstrument?.view.setReadoutVisible(false);
+    rightInstrument?.view.setReadoutVisible(false);
   }
 
   function syncInstruments(): void {
@@ -303,15 +298,11 @@ export function createDoubleSlitScene(
       // 从当前激活仪器获取读数，统一显示在实验状态区
       const active = s.params.activeInstrument;
       if (active === 'caliper' && leftInstrument) {
-        const reading = (leftInstrument.view as unknown as { getReading?: () => number }).getReading?.();
-        if (reading !== undefined) {
-          items.push({ label: '游标卡尺读数', value: `${(reading * 10).toFixed(3)} mm` });
-        }
+        const reading = leftInstrument.view.getReading();
+        items.push({ label: '游标卡尺读数', value: `${(reading * 10).toFixed(3)} mm` });
       } else if (active === 'micrometer' && rightInstrument) {
-        const reading = (rightInstrument.view as unknown as { getReading?: () => number }).getReading?.();
-        if (reading !== undefined) {
-          items.push({ label: '螺旋测微仪读数', value: `${reading.toFixed(3)} mm` });
-        }
+        const reading = rightInstrument.view.getReading();
+        items.push({ label: '螺旋测微仪读数', value: `${reading.toFixed(3)} mm` });
       }
     }
     return items;

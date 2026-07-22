@@ -17,7 +17,10 @@ import type { MicrometerEyepieceState } from './instrument.sim';
 export type MicrometerEyepieceView = InstrumentView<MicrometerEyepieceState> &
   MeasurableInstrument &
   SerializableInstrument &
-  CalibratableInstrument;
+  CalibratableInstrument & {
+    /** 显示/隐藏仪器内部读数浮层（宿主场景统一在外部显示读数时可隐藏） */
+    setReadoutVisible(visible: boolean): void;
+  };
 
 const CSS = `
 :host {
