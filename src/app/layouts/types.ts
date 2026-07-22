@@ -87,7 +87,7 @@ export type CapabilityId = (typeof CAPABILITY_IDS)[number];
 export interface CapabilityEvents {
   modechange: {
     mode: 'normal' | 'presentation';
-    profile?: import('../demo-profile').SceneDemoProfile | null;
+    profile?: import('../../platform/demo-profile').SceneDemoProfile | null;
   };
 }
 
@@ -214,7 +214,7 @@ export interface Scene {
   getTransportState?(): TransportState;
   getReadoutItems?(): ReadoutItem[];
   subscribe?(listener: SceneStateListener): () => void;
-  getDemoProfile?(): import('../demo-profile').SceneDemoProfile | null;
+  getDemoProfile?(): import('../../platform/demo-profile').SceneDemoProfile | null;
 }
 
 // ============================================================================
@@ -288,7 +288,7 @@ export type SceneContainerEvents = {
   'scene:state': { scene: string; state: unknown };
   'layout:mode': {
     mode: string;
-    profile?: import('../demo-profile').SceneDemoProfile | null;
+    profile?: import('../../platform/demo-profile').SceneDemoProfile | null;
   };
   'slot:toggle': { slot: SlotName; collapsed: boolean };
 };

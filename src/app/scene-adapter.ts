@@ -16,7 +16,7 @@ import type {
   ReadoutItem,
   TransportState
 } from './layouts/types';
-import type { DemoRenderHints } from './demo-profile';
+import type { DemoRenderHints } from '../platform/demo-profile';
 import { createSceneShell } from './scene-shell';
 import { KeyboardShortcutManager } from '../platform/input/keyboard-shortcuts';
 import { PerformanceMonitor } from '../core/performance-monitor';
@@ -384,7 +384,7 @@ export class SceneAdapter<
     }
   }
 
-  getDemoProfile(): import('./demo-profile').SceneDemoProfile | null {
+  getDemoProfile(): import('../platform/demo-profile').SceneDemoProfile | null {
     return this.options.demoProfile ?? this.options.meta.demoProfile ?? null;
   }
 

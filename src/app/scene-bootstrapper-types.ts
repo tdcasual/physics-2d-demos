@@ -12,7 +12,7 @@ import type {
   TransportState
 } from './layouts/types';
 import type { SceneMeta } from '../platform/scene-contract';
-import type { DemoRenderHints, SceneDemoProfile } from './demo-profile';
+import type { DemoRenderHints, SceneDemoProfile } from '../platform/demo-profile';
 
 /** 场景实例接口（场景实现方提供） */
 export type SceneInstance = {

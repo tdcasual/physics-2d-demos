@@ -3,15 +3,17 @@ import {
   createCanvasContext,
   getOptimalCanvasSize,
   setCanvasSize,
-  fitCanvasToContainer,
+  fitCanvasToContainer
+} from '../../src/core/canvas-sizing-utils';
+import {
   drawGrid,
   drawDataPanel,
   drawTrail,
   drawBall,
   drawVector
-} from '../../src/core/unified-canvas';
+} from '../../src/core/draw-primitives';
 
-describe('unified-canvas', () => {
+describe('core canvas utils (canvas-sizing-utils + draw-primitives)', () => {
   let canvas: HTMLCanvasElement;
 
   beforeEach(() => {

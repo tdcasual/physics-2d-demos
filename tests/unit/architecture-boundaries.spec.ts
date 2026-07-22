@@ -58,7 +58,8 @@ describe('architecture boundaries', () => {
     const coreFiles = [
       'src/core/fixed-step.ts',
       'src/core/high-dpi-canvas.ts',
-      'src/core/unified-canvas.ts',
+      'src/core/canvas-sizing-utils.ts',
+      'src/core/draw-primitives.ts',
       'src/core/colors.ts'
     ];
 

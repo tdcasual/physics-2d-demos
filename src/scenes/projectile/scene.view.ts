@@ -5,8 +5,6 @@
 
 import type { ProjectileState } from './scene.sim';
 import { sizeCanvasToFill } from '../../core/canvas-sizing';
-// keep unified-canvas import for right-stage-readability contract
-// drawGrid reserved for future grid background feature
 import { buildCoordSystem, computeWorldBounds } from './renderer/coords';
 import { drawBackground } from './renderer/draw-background';
 import { drawAxes } from './renderer/draw-axes';

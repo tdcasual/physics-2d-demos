@@ -11,7 +11,7 @@ import type {
   CapabilityContext,
   LayoutSlots
 } from '../types';
-import type { SceneDemoProfile } from '../../demo-profile';
+import type { SceneDemoProfile } from '../../../platform/demo-profile';
 
 export interface DemoProfileUpdateData {
   mode: 'normal' | 'presentation';

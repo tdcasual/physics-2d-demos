@@ -46,22 +46,6 @@ const BASE_TOKENS: Omit<TeachingStandards, 'viewport'> = {
   }
 };
 
-/** 兼容旧接口：保留原始 presentation tokens（无 scale 参数时使用） */
-const LEGACY_PRESENTATION_TOKENS: Omit<TeachingStandards, 'viewport'> = {
-  bodyFontPx: 42,
-  controlFontPx: 38,
-  headingFontPx: 64,
-  strokePx: 9,
-  pointRadiusPx: 16,
-  rightStage: {
-    primaryFontPx: 56,
-    secondaryFontPx: 46,
-    majorStrokePx: 11,
-    minorStrokePx: 9,
-    markerRadiusPx: 20
-  }
-};
-
 /**
  * 根据缩放倍率生成渲染标准
  * @param scale - 缩放倍率（1.0 = 标准模式）
@@ -89,23 +73,3 @@ export function getRenderTokens(scale: number = 1.0): TeachingStandards {
   };
 }
 
-/**
- * 兼容旧接口：根据模式获取教学标准
- * @param mode - 演示模式
- * @param scale - 可选自定义缩放倍率（presentation 模式下生效）
- * @deprecated 新场景建议使用 getRenderTokens(scale)
- */
-export function getTeachingStandards(
-  mode: TeachingMode,
-  scale?: number
-): TeachingStandards {
-  if (mode === 'presentation' && scale === undefined) {
-    // 无 scale 参数时保留旧行为（兼容未改造场景和测试）
-    return {
-      viewport: BASE_VIEWPORT,
-      ...LEGACY_PRESENTATION_TOKENS
-    };
-  }
-  const effectiveScale = mode === 'presentation' ? (scale ?? 1.5) : 1.0;
-  return getRenderTokens(effectiveScale);
-}

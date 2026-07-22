@@ -8,7 +8,7 @@
  * 4. 防止"变形"：确保 canvas.width/height 始终与 CSS 显示尺寸保持 DPR 比例
  */
 
-import { setCanvasSize } from '../unified-canvas';
+import { setCanvasSize } from '../canvas-sizing-utils';
 
 export interface ChartCanvasOptions {
   container: HTMLElement;

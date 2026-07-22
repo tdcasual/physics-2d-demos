@@ -1,7 +1,7 @@
 import type { DrawContext, WorldPoint } from './types';
 import type { CoordSystem } from './types';
 import { worldToScreen } from './coords';
-import { drawBall } from '../../../core/unified-canvas';
+import { drawBall } from '../../../core/draw-primitives';
 import { Colors } from '../../../core/colors';
 
 export function drawProjectile(

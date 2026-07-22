@@ -1,6 +1,6 @@
 import type { DrawContext } from './types';
 import { getThemeColors } from '../../../core/colors';
-import { drawGrid } from '../../../core/unified-canvas';
+import { drawGrid } from '../../../core/draw-primitives';
 
 export function drawBackground(
   context: DrawContext,

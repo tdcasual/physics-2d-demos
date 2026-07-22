@@ -1,7 +1,7 @@
 import type { SpringOscillatorSim } from './scene.sim';
 import type { TeachingMode } from '../../platform/standards';
 import type { TeachingTheme } from '../../platform/standards';
-import { setCanvasSize } from '../../core/unified-canvas';
+import { setCanvasSize } from '../../core/canvas-sizing-utils';
 import { sizeCanvasToFill } from '../../core/canvas-sizing';
 import { Colors } from '../../core/colors';
 import { drawOscillatorCell } from './renderer/draw-oscillator';
