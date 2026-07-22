@@ -29,14 +29,15 @@
 
 ## 场景与迁移
 
-| 文档                                                               | 说明                       |
-| ------------------------------------------------------------------ | -------------------------- |
-| [scene-migration-requirements.md](scene-migration-requirements.md) | 新场景开发规范（当前有效） |
-| [scene-analysis.md](scene-analysis.md)                             | 场景功能分析与分类         |
-| [scene-design-proposal.md](scene-design-proposal.md)               | 场景设计提案模板           |
-| [scene-layout-configs.md](scene-layout-configs.md)                 | 各场景布局配置汇总         |
-| [projectile-migration-review.md](projectile-migration-review.md)   | 抛体运动迁移评审           |
-| [projectile-migration-summary.md](projectile-migration-summary.md) | 抛体运动迁移总结           |
+| 文档                                                               | 说明                                                           |
+| ------------------------------------------------------------------ | -------------------------------------------------------------- |
+| [scene-migration-requirements.md](scene-migration-requirements.md) | 新场景开发规范（当前有效）                                     |
+| [scene-modernization-guide.md](scene-modernization-guide.md)       | **场景现代化指南**：当前标准、可复用基建、安全重写流程、脚手架 |
+| [scene-analysis.md](scene-analysis.md)                             | 场景功能分析与分类                                             |
+| [scene-design-proposal.md](scene-design-proposal.md)               | 场景设计提案模板                                               |
+| [scene-layout-configs.md](scene-layout-configs.md)                 | 各场景布局配置汇总                                             |
+| [projectile-migration-review.md](projectile-migration-review.md)   | 抛体运动迁移评审                                               |
+| [projectile-migration-summary.md](projectile-migration-summary.md) | 抛体运动迁移总结                                               |
 
 ---
 
