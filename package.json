@@ -22,6 +22,7 @@
     "check:scenes": "tsx scripts/check-scenes.ts",
     "check:bundle": "tsx scripts/check-bundle-budget.ts",
     "check:circular": "madge --circular --extensions ts,tsx src/",
+    "new:scene": "tsx scripts/new-scene.ts",
     "quality:core": "pnpm check:scenes && pnpm check:circular && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm check:bundle",
     "export:standalone": "vite build --config vite.config.standalone.ts",
     "quality:full": "pnpm check:scenes && pnpm check:circular && pnpm lint && pnpm typecheck && pnpm test && pnpm test:coverage && pnpm build && pnpm check:bundle && pnpm test:e2e && pnpm test:visual",
