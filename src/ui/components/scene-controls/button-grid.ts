@@ -5,6 +5,8 @@
  * @param columns - 网格列数（默认 2）
  * @returns 按钮网格 DOM 元素
  */
+import { withDispose, type DisposableElement } from './types';
+
 export function createButtonGrid(
   buttons: Array<{
     label: string;
@@ -12,8 +14,8 @@ export function createButtonGrid(
     onClick: () => void;
   }>,
   columns: 1 | 2 | 3 = 2
-): HTMLElement & { dispose: () => void } {
-  const grid = document.createElement('div') as unknown as HTMLElement & { dispose: () => void };
+): DisposableElement {
+  const grid = document.createElement('div');
   grid.className = `grid grid-cols-${columns} gap-2`;
   const cleanups: Array<() => void> = [];
 
@@ -66,8 +68,7 @@ export function createButtonGrid(
     grid.appendChild(button);
   });
 
-  grid.dispose = () => cleanups.forEach((c) => c());
-  return grid;
+  return withDispose(grid, () => cleanups.forEach((c) => c()));
 }
 
 /**

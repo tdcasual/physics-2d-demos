@@ -7,8 +7,10 @@
 export type {
   ControlItem,
   SceneControlsOptions,
-  SceneControlsInstance
+  SceneControlsInstance,
+  DisposableElement
 } from './types';
+export { withDispose } from './types';
 
 export { createSceneControls } from './scene-controls';
 export { createSliderRow } from './slider-row';

@@ -5,6 +5,8 @@
  * @param options - 滑块配置（min/max/step/value/unit/onChange）
  * @returns 包含标签、滑块和数值显示的 DOM 行元素
  */
+import { withDispose, type DisposableElement } from './types';
+
 export function createSliderRow(
   label: string,
   options: {
@@ -15,7 +17,7 @@ export function createSliderRow(
     unit?: string;
     onChange?: (value: number) => void;
   }
-): HTMLElement {
+): DisposableElement {
   const row = document.createElement('div');
   row.className = 'flex items-center gap-2 py-1';
   row.dataset.testid = 'slider-row';
@@ -51,10 +53,9 @@ export function createSliderRow(
   slider.addEventListener('input', onInput);
 
   row.append(labelEl, slider, valueEl);
-  (row as unknown as HTMLElement & { dispose: () => void }).dispose = () => {
+  return withDispose(row, () => {
     slider.removeEventListener('input', onInput);
-  };
-  return row;
+  });
 }
 
 /**

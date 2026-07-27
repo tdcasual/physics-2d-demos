@@ -6,6 +6,8 @@
  * @param onChange - 文本变化回调
  * @returns 包含标签和文本输入框的 DOM 行元素
  */
+import { withDispose, type DisposableElement } from './types';
+
 export function createTextInputRow(
   label: string,
   options: {
@@ -14,7 +16,7 @@ export function createTextInputRow(
     fontFamily?: string;
   },
   onChange: (value: string) => void
-): HTMLElement {
+): DisposableElement {
   const row = document.createElement('div');
   row.className = 'flex flex-col gap-1 py-1';
 
@@ -59,12 +61,11 @@ export function createTextInputRow(
   input.addEventListener('change', onChangeHandler);
 
   row.append(labelEl, input);
-  (row as unknown as HTMLElement & { dispose: () => void }).dispose = () => {
+  return withDispose(row, () => {
     input.removeEventListener('focus', onFocus);
     input.removeEventListener('blur', onBlur);
     input.removeEventListener('change', onChangeHandler);
-  };
-  return row;
+  });
 }
 
 /**

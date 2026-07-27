@@ -16,13 +16,14 @@ import {
   createSceneSelector,
   createToggleRow
 } from './scene-controls';
+import type { DisposableElement } from './scene-controls';
 import type {
   ControlsSchema,
   ControlField
 } from '../../platform/controls-schema';
 
 function tryDispose(el: HTMLElement): void {
-  const d = (el as unknown as { dispose?: () => void }).dispose;
+  const d = (el as Partial<DisposableElement>).dispose;
   if (typeof d === 'function') d();
 }
 
@@ -222,7 +223,7 @@ function renderField(
       return {
         node: presetContainer,
         activeSetter: (id) => preset.setActive(id),
-        cleanup: () => { (preset as unknown as { dispose?: () => void }).dispose?.(); }
+        cleanup: () => { (preset as Partial<DisposableElement>).dispose?.(); }
       };
     }
 

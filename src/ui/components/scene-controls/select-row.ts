@@ -5,6 +5,8 @@
  * @param options - 选择配置（choices/value/onChange）
  * @returns 包含标签和下拉选择框的 DOM 行元素
  */
+import { withDispose, type DisposableElement } from './types';
+
 export function createSelectRow(
   label: string,
   options: {
@@ -12,7 +14,7 @@ export function createSelectRow(
     value: string;
     onChange?: (value: string) => void;
   }
-): HTMLElement {
+): DisposableElement {
   const row = document.createElement('div');
   row.className = 'flex items-center gap-2 py-1';
   row.dataset.testid = 'select-row';
@@ -46,10 +48,9 @@ export function createSelectRow(
   select.addEventListener('change', onChange);
 
   row.append(labelEl, select);
-  (row as unknown as HTMLElement & { dispose: () => void }).dispose = () => {
+  return withDispose(row, () => {
     select.removeEventListener('change', onChange);
-  };
-  return row;
+  });
 }
 
 /**

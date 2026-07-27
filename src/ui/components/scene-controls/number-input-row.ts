@@ -6,6 +6,8 @@
  * @param onChange - 数值变化回调
  * @returns 包含标签、数字输入框和数值显示的 DOM 行元素
  */
+import { withDispose, type DisposableElement } from './types';
+
 export function createNumberInputRow(
   label: string,
   options: {
@@ -17,7 +19,7 @@ export function createNumberInputRow(
     role?: string;
   },
   onChange: (value: number) => void
-): HTMLElement {
+): DisposableElement {
   const row = document.createElement('div');
   row.className = 'flex items-center gap-2 py-1';
 
@@ -61,11 +63,6 @@ export function createNumberInputRow(
   input.addEventListener('change', onChangeHandler);
 
   row.append(labelEl, input);
-  (row as unknown as HTMLElement & { dispose: () => void }).dispose = () => {
-    input.removeEventListener('focus', onFocus);
-    input.removeEventListener('blur', onBlur);
-    input.removeEventListener('change', onChangeHandler);
-  };
 
   if (options.unit) {
     const unitEl = document.createElement('span');
@@ -75,7 +72,11 @@ export function createNumberInputRow(
     row.appendChild(unitEl);
   }
 
-  return row;
+  return withDispose(row, () => {
+    input.removeEventListener('focus', onFocus);
+    input.removeEventListener('blur', onBlur);
+    input.removeEventListener('change', onChangeHandler);
+  });
 }
 
 /**

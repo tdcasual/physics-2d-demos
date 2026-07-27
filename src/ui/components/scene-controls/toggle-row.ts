@@ -5,13 +5,15 @@
  * @param options - 开关配置（value/onChange）
  * @returns 包含标签和开关的 DOM 行元素
  */
+import { withDispose, type DisposableElement } from './types';
+
 export function createToggleRow(
   label: string,
   options: {
     value: boolean;
     onChange?: (value: boolean) => void;
   }
-): HTMLElement {
+): DisposableElement {
   const row = document.createElement('div');
   row.className = 'flex items-center justify-between gap-2 py-1';
   row.dataset.testid = 'toggle-row';
@@ -51,12 +53,10 @@ export function createToggleRow(
 
   track.addEventListener('click', onClick);
 
-  (row as unknown as { dispose?: () => void }).dispose = () => {
-    track.removeEventListener('click', onClick);
-  };
-
   row.appendChild(labelEl);
   row.appendChild(track);
 
-  return row;
+  return withDispose(row, () => {
+    track.removeEventListener('click', onClick);
+  });
 }
