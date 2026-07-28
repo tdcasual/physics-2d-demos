@@ -20,6 +20,7 @@ import type { DemoRenderHints } from '../platform/demo-profile';
 import { createSceneShell } from './scene-shell';
 import { KeyboardShortcutManager } from '../platform/input/keyboard-shortcuts';
 import { PerformanceMonitor } from '../core/performance-monitor';
+import { createAdaptiveFpsController } from './adaptive-fps';
 import { createPageLifecycle } from './page-lifecycle';
 import { createKeyboardHelpOverlay } from '../ui/components/KeyboardHelp';
 import type { KeyboardHelpOverlay } from '../ui/components/KeyboardHelp';
@@ -199,15 +200,13 @@ export class SceneAdapter<
       delete (window as unknown as Record<string, unknown>).__perfMonitor;
     });
 
-    const fpsCheckInterval = window.setInterval(() => {
-      if (!this.transport || !this.perfMonitor) return;
-      const recommended = this.perfMonitor.getRecommendedFps();
-      const current = this.transport.getTargetFps();
-      if (Math.abs(recommended - current) >= 5) {
-        this.transport.setTargetFps(recommended);
-      }
-    }, 2000);
-    this.lifecycle.onDispose(() => window.clearInterval(fpsCheckInterval));
+    const adaptiveFps = createAdaptiveFpsController({
+      getRecommendedFps: () => this.perfMonitor?.getRecommendedFps() ?? 60,
+      getTargetFps: () => this.transport?.getTargetFps() ?? 60,
+      setTargetFps: (fps) => this.transport?.setTargetFps(fps)
+    });
+    adaptiveFps.start();
+    this.lifecycle.onDispose(() => adaptiveFps.dispose());
 
     if (!this._resizeHandlerAdded) {
       const handleResize = () => {
