@@ -43,7 +43,7 @@ describe('transport-bar capability (compact mode)', () => {
 
   it('invokes onTogglePlay when play button is clicked', () => {
     const onTogglePlay = vi.fn();
-    instance.setCallbacks({
+    instance.setCallbacks?.({
       isPlaying: () => false,
       onTogglePlay,
       onReset: vi.fn(),
@@ -58,7 +58,7 @@ describe('transport-bar capability (compact mode)', () => {
 
   it('invokes onReset when reset button is clicked', () => {
     const onReset = vi.fn();
-    instance.setCallbacks({
+    instance.setCallbacks?.({
       isPlaying: () => false,
       onTogglePlay: vi.fn(),
       onReset,
@@ -73,7 +73,7 @@ describe('transport-bar capability (compact mode)', () => {
 
   it('invokes onSpeedChange and updates label when slider moves', () => {
     const onSpeedChange = vi.fn();
-    instance.setCallbacks({
+    instance.setCallbacks?.({
       isPlaying: () => false,
       onTogglePlay: vi.fn(),
       onReset: vi.fn(),
@@ -91,17 +91,17 @@ describe('transport-bar capability (compact mode)', () => {
 
   it('update({isPlaying}) toggles play button glyph and class', () => {
     const playBtn = container.querySelector('.play-pause') as HTMLElement;
-    instance.update({ isPlaying: true } as TransportState);
+    instance.update?.({ isPlaying: true } as TransportState);
     expect(playBtn.textContent).toBe('⏸');
     expect(playBtn.classList.contains('is-playing')).toBe(true);
 
-    instance.update({ isPlaying: false } as TransportState);
+    instance.update?.({ isPlaying: false } as TransportState);
     expect(playBtn.textContent).toBe('▶');
     expect(playBtn.classList.contains('is-playing')).toBe(false);
   });
 
   it('update({speed}) syncs slider value and label', () => {
-    instance.update({ isPlaying: false, speed: 1.5 } as TransportState);
+    instance.update?.({ isPlaying: false, speed: 1.5 } as TransportState);
     const slider = container.querySelector(
       '.mobile-transport-speed-slider'
     ) as HTMLInputElement;
@@ -111,7 +111,7 @@ describe('transport-bar capability (compact mode)', () => {
 
   it('dispose aborts listeners so clicks no longer fire callbacks', () => {
     const onTogglePlay = vi.fn();
-    instance.setCallbacks({
+    instance.setCallbacks?.({
       isPlaying: () => false,
       onTogglePlay,
       onReset: vi.fn(),
@@ -143,7 +143,7 @@ describe('transport-bar capability (floating mode)', () => {
     const def = createTransportBar();
     const instance = def.mount(slots, {}, ctx);
     expect(() =>
-      instance.update({ isPlaying: true, speed: 2 } as TransportState)
+      instance.update?.({ isPlaying: true, speed: 2 } as TransportState)
     ).not.toThrow();
     instance.dispose();
   });
