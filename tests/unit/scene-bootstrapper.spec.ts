@@ -5,6 +5,7 @@ import {
   type ScenePageOptions
 } from '../../src/app/scene-bootstrapper';
 import type { LayoutSlots } from '../../src/app/layouts/types';
+import type { StandardSceneCreateParams } from '../../src/app/scene-bootstrapper-types';
 import { layoutRegistry } from '../../src/app/layouts/registry';
 
 // Mock createSceneContainer to avoid heavy DOM layout logic
@@ -97,8 +98,13 @@ describe('SceneAdapter', () => {
     expect(container.querySelector('.stage-canvas')).toBe(canvas);
   });
 
-  it('renderAnimation should log error when canvas not found', () => {
-    const adapter = createAdapter();
+  it('renderAnimation supports a non-canvas render surface (no canvas → uses container)', () => {
+    let received: StandardSceneCreateParams | undefined;
+    const createScene = vi.fn((params: StandardSceneCreateParams) => {
+      received = params;
+      return createMockScene() as never;
+    });
+    const adapter = createAdapter({ createScene } as Partial<ScenePageOptions>);
     const container = document.createElement('div');
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -107,9 +113,13 @@ describe('SceneAdapter', () => {
       control: container
     } as LayoutSlots);
 
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Canvas not found')
-    );
+    // 不再因缺少 canvas 报错，而是把容器作为渲染面创建场景
+    expect(consoleSpy).not.toHaveBeenCalled();
+    expect(createScene).toHaveBeenCalledTimes(1);
+    expect(received?.container).toBe(container);
+    expect(received?.canvas).toBeUndefined();
+    // 非 canvas 渲染面被标注为图像
+    expect(container.getAttribute('role')).toBe('img');
     consoleSpy.mockRestore();
   });
 

@@ -35,6 +35,7 @@ function formatReadout(
 bootScenePage({
   meta: chaseMeetMeta,
   createScene: ({ canvas, slots, theme, mode, demoHints }) => {
+    if (!canvas) throw new Error('chase-meet requires a canvas render surface');
     const stageSlot = canvas.parentElement;
     if (!stageSlot) {
       throw new Error('Missing animation container for chase-meet');

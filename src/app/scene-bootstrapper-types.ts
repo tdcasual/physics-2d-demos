@@ -43,7 +43,10 @@ export type SceneInstance = {
  * 必须能接受此类型（或兼容的超集），否则在类型测试中会报错。
  */
 export type StandardSceneCreateParams = {
-  canvas: HTMLCanvasElement;
+  /** 动画区容器（渲染面）。非 canvas 渲染（SVG/DOM/WebGL 等）直接渲染到此容器。 */
+  container: HTMLElement;
+  /** 动画区内的 canvas（canvas 类场景使用）；非 canvas 渲染时为 undefined。 */
+  canvas?: HTMLCanvasElement;
   slots: LayoutSlots;
   theme: Theme;
   mode: 'normal' | 'presentation';

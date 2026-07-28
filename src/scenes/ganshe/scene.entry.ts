@@ -39,7 +39,7 @@ const defaultParams: WaveParams = {
 };
 
 export type CreateGansheSceneOptions = {
-  canvas: HTMLCanvasElement;
+  canvas?: HTMLCanvasElement;
   theme?: 'light' | 'dark';
   mode?: 'normal' | 'presentation';
   demoHints?: DemoRenderHints;
@@ -106,7 +106,7 @@ export function createGansheScene(
 } {
   const sim = createWaveInterferenceSim(defaultParams);
   const view = createWaveInterferenceView({
-    canvas: options.canvas,
+    canvas: options.canvas ?? document.createElement('canvas'),
     theme: options.theme ?? 'light',
     mode: options.mode ?? 'normal',
     demoHints: options.demoHints

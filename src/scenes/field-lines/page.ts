@@ -16,6 +16,7 @@ function sceneLabel(scene: FieldLinesScene): string {
 bootScenePage({
   meta: fieldLinesMeta,
   createScene: ({ canvas, theme, mode, demoHints }) => {
+    if (!canvas) throw new Error('field-lines requires a canvas render surface');
     applyTouchInteractionMode(canvas, 'drag');
 
     const scene = createFieldLinesScene({

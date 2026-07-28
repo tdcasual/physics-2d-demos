@@ -14,7 +14,7 @@ import { drawProjectile } from './renderer/draw-projectile';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 
 export type CreateProjectileViewOptions = {
-  canvas: HTMLCanvasElement;
+  canvas?: HTMLCanvasElement;
   theme?: 'light' | 'dark';
   mode?: 'normal' | 'presentation';
   demoHints?: DemoRenderHints;

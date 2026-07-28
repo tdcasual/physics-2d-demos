@@ -55,6 +55,7 @@ type _K16 = AssertHasKey<CreateVtIntegralSceneOptions, 'mode'>;
 
 describe('Scene factory param contract', () => {
   const stdParams: StandardSceneCreateParams = {
+    container: document.createElement('div'),
     canvas: document.createElement('canvas'),
     slots: {
       animation: document.createElement('div'),

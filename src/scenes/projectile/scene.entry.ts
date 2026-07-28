@@ -25,7 +25,7 @@ const defaultParams: ProjectileParams = {
 };
 
 export type CreateProjectileSceneOptions = {
-  canvas: HTMLCanvasElement;
+  canvas?: HTMLCanvasElement;
   theme?: 'light' | 'dark';
   mode?: 'normal' | 'presentation';
   demoHints?: DemoRenderHints;

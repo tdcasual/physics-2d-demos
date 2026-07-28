@@ -91,14 +91,15 @@ export class SceneAdapter<
 
     this.slots = slots;
 
-    const canvas = container.querySelector('canvas');
-    if (!canvas) {
-      console.error('[SceneAdapter] Canvas not found in animation slot');
-      return;
+    // 渲染面 = 动画区容器；canvas 供 canvas 类场景使用，非 canvas 渲染时为空
+    const canvas = container.querySelector('canvas') ?? undefined;
+    if (canvas) {
+      canvas.setAttribute('role', 'img');
+      canvas.setAttribute('aria-label', `${this.options.meta.title}演示图`);
+    } else {
+      container.setAttribute('role', 'img');
+      container.setAttribute('aria-label', `${this.options.meta.title}演示区`);
     }
-
-    canvas.setAttribute('role', 'img');
-    canvas.setAttribute('aria-label', `${this.options.meta.title}演示图`);
 
     const theme =
       (container.closest('[data-theme]')?.getAttribute('data-theme') as Theme) ||
@@ -113,7 +114,14 @@ export class SceneAdapter<
       mode === 'presentation'
         ? (this.options.demoProfile ?? this.options.meta.demoProfile)?.renderHints
         : undefined;
-    this.scene = this.options.createScene({ canvas, slots, theme, mode, demoHints });
+    this.scene = this.options.createScene({
+      canvas,
+      container,
+      slots,
+      theme,
+      mode,
+      demoHints
+    });
 
     this.scene.init();
 
@@ -211,9 +219,10 @@ export class SceneAdapter<
         window.removeEventListener('resize', handleResize)
       );
 
-      // Observe canvas parent for size changes (sidebar toggle, layout changes, etc.)
+      // Observe render surface for size changes (sidebar toggle, layout changes, etc.)
       // window.resize doesn't fire on internal layout changes like sidebar toggle.
-      const parent = canvas.parentElement;
+      // canvas 类场景观察 canvas 父级；非 canvas 渲染回退到动画区容器。
+      const parent = canvas?.parentElement ?? container;
       if (parent && typeof ResizeObserver !== 'undefined') {
         let resizing = false;
         const observer = new ResizeObserver(() => {
