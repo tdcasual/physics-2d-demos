@@ -23,12 +23,14 @@ export type CreateProjectileViewOptions = {
 export function createProjectileView(options: CreateProjectileViewOptions) {
   const canvas = options.canvas ?? document.createElement('canvas');
   let theme: 'light' | 'dark' = options.theme ?? 'dark';
-  // mode / demoHints reserved for future demo profile integration
+  let mode: 'normal' | 'presentation' = options.mode ?? 'normal';
+  let demoHints: DemoRenderHints | undefined = options.demoHints;
   let ctx: CanvasRenderingContext2D | null = null;
   let width = 0;
   let height = 0;
   let responsiveScale = 1;
   let trail: Array<{ x: number; y: number }> = [];
+  let lastState: ProjectileState | null = null;
 
   function resize(): void {
     const newCtx = sizeCanvasToFill(canvas);
@@ -45,6 +47,7 @@ export function createProjectileView(options: CreateProjectileViewOptions) {
       resize();
       if (!ctx || width === 0 || height === 0) return;
     }
+    lastState = state;
 
     trail.push({ x: state.x, y: state.y });
     if (trail.length > 800) {
@@ -54,12 +57,16 @@ export function createProjectileView(options: CreateProjectileViewOptions) {
     const { maxX, maxY } = computeWorldBounds(state, trail);
     const coords = buildCoordSystem(width, height, responsiveScale, maxX, maxY);
 
+    const contentScale =
+      mode === 'presentation' ? (demoHints?.contentScale ?? 1.5) : 1;
+
     const drawContext = {
       ctx,
       width,
       height,
       theme,
-      responsiveScale
+      responsiveScale,
+      contentScale
     };
 
     const landed = state.y <= 0.01 && state.vy <= 0;
@@ -88,13 +95,17 @@ export function createProjectileView(options: CreateProjectileViewOptions) {
     resize,
     setTheme(newTheme: 'light' | 'dark') {
       theme = newTheme;
+      if (lastState) render(lastState);
     },
-    setMode(_newMode: 'normal' | 'presentation', _hints?: DemoRenderHints) {
-      // no-op for now
+    setMode(newMode: 'normal' | 'presentation', hints?: DemoRenderHints) {
+      mode = newMode;
+      demoHints = hints;
+      if (lastState) render(lastState);
     },
     dispose() {
       trail = [];
       ctx = null;
+      lastState = null;
     }
   };
 }

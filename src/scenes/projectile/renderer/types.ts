@@ -5,6 +5,8 @@ export type DrawContext = {
   height: number;
   theme: 'light' | 'dark';
   responsiveScale: number;
+  /** 演示模式内容放大系数（normal=1） */
+  contentScale: number;
 };
 
 export type CoordSystem = {

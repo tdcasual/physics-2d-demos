@@ -21,7 +21,7 @@ function makeCtx(): { ctx: CanvasRenderingContext2D; canvas: HTMLCanvasElement }
 
 function makeDrawContext() {
   const { ctx } = makeCtx();
-  return { ctx, width: 800, height: 600, theme: 'dark' as const, responsiveScale: 1 };
+  return { ctx, width: 800, height: 600, theme: 'dark' as const, responsiveScale: 1, contentScale: 1 };
 }
 
 describe('projectile renderer', () => {

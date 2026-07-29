@@ -11,9 +11,9 @@ export function drawProjectile(
   coords: CoordSystem,
   landed: boolean
 ): void {
-  const { ctx, responsiveScale, theme } = context;
+  const { ctx, responsiveScale, contentScale, theme } = context;
   const isDark = theme === 'dark';
-  const s = responsiveScale;
+  const s = responsiveScale * contentScale;
   const pos = worldToScreen(position, coords);
   const ballRadius = Math.max(3, 8 * s);
 
@@ -39,6 +39,13 @@ export function drawProjectile(
     ctx.stroke();
   }
   ctx.setLineDash([]);
+  ctx.restore();
+
+  // Ball (画在速度矢量之下，使分解箭头保持可见)
+  ctx.save();
+  ctx.shadowColor = isDark ? 'rgba(255,107,107,0.5)' : 'rgba(239,83,80,0.4)';
+  ctx.shadowBlur = 6 * s;
+  drawBall(ctx, pos.x, pos.y, ballRadius * Math.max(0.8, s), Colors.coral);
   ctx.restore();
 
   // Velocity vector
@@ -114,9 +121,6 @@ export function drawProjectile(
     ctx.textBaseline = 'top';
     ctx.fillText(`${position.x.toFixed(1)}m`, landScreen.x, landScreen.y + 8 * s);
   }
-
-  // Ball (drawn last, on top)
-  drawBall(ctx, pos.x, pos.y, ballRadius * Math.max(0.8, s), Colors.coral);
 }
 
 function drawArrow(

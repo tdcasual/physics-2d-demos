@@ -11,9 +11,14 @@ export function drawTrajectory(
 ): void {
   if (trail.length < 2) return;
 
-  const { ctx, responsiveScale } = context;
+  const { ctx, responsiveScale, contentScale, theme } = context;
+  const isDark = theme === 'dark';
   const points = trail.map((p) => worldToScreen(p, coords));
-  const trailWidth = Math.max(1.5, 3 * responsiveScale);
+  const trailWidth = Math.max(1.5, 3 * responsiveScale * contentScale);
 
+  ctx.save();
+  ctx.shadowColor = isDark ? 'rgba(255,107,107,0.5)' : 'rgba(239,83,80,0.35)';
+  ctx.shadowBlur = 6 * responsiveScale * contentScale;
   drawTrail(ctx, points, Colors.coral, trailWidth);
+  ctx.restore();
 }

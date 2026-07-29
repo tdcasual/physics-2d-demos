@@ -6,9 +6,10 @@ export function drawAxes(
   originX: number,
   originY: number
 ): void {
-  const { ctx, width, theme, responsiveScale } = context;
+  const { ctx, width, theme, responsiveScale, contentScale } = context;
   const colors = getThemeColors(theme);
-  const s = responsiveScale;
+  // 演示模式放大可读元素（线宽/字号/箭头），几何位置仍由坐标系统决定
+  const s = responsiveScale * contentScale;
 
   const lineWidth = Math.max(1.5, 2 * s);
   const fontSize = Math.max(10, Math.round(12 * s));
