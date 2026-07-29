@@ -45,7 +45,6 @@ const PRESENTATION_EXEMPT = [
   'double-slit',
   'interference-formula',
   'mechanical-wave',
-  'micrometer',
   'thin-film',
   'vernier-caliper',
   'wedge'

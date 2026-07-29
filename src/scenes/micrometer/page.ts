@@ -23,8 +23,8 @@ bootScenePage({
     readoutLabel: '测量读数',
     hideTransport: false
   },
-  createScene: ({ canvas, theme }) => {
-    return createMicrometerScene({ canvas, theme });
+  createScene: ({ canvas, theme, mode, demoHints }) => {
+    return createMicrometerScene({ canvas, theme, mode, demoHints });
   },
   createControls: ({ mount, scene }) => {
     const microScene = scene as ReturnType<typeof createMicrometerScene>;

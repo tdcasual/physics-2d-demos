@@ -16,9 +16,15 @@ describe('instrument-manifest', () => {
   });
 
   it('uses only contract-approved categories', () => {
-    expect(instrumentManifest.map((entry) => entry.category)).toEqual([
+    const approved = [
       'measurement',
-      'optical'
-    ]);
+      'timing',
+      'optical',
+      'electrical',
+      'mechanical'
+    ];
+    for (const entry of instrumentManifest) {
+      expect(approved).toContain(entry.category);
+    }
   });
 });

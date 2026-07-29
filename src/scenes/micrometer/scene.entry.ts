@@ -13,6 +13,8 @@ import { micrometerMeta } from './scene.meta';
 export type CreateMicrometerSceneOptions = {
   canvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
+  mode?: TeachingMode;
+  demoHints?: DemoRenderHints;
   onReadout?: (state: MicrometerState) => void;
 };
 
@@ -33,7 +35,9 @@ export function createMicrometerScene(
 
   const view = createMicrometerView({
     canvas: options.canvas,
-    theme: options.theme ?? 'dark'
+    theme: options.theme ?? 'dark',
+    mode: options.mode,
+    demoHints: options.demoHints
   });
 
   const base = createStandardSceneEntry({
