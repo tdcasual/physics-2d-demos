@@ -12,7 +12,7 @@ export function drawMotion(context: MotionDrawContext): void {
     grad.addColorStop(0, '#e5f0ff');
     grad.addColorStop(1, '#d1d5db');
   } else {
-    grad.addColorStop(0, '#020617');
+    grad.addColorStop(0, '#0f172a');
     grad.addColorStop(1, '#020617');
   }
   ctx.fillStyle = grad;
@@ -22,6 +22,10 @@ export function drawMotion(context: MotionDrawContext): void {
   const majorStroke = Math.max(2, 2 * visualScale);
   const minorStroke = Math.max(1.5, 1.5 * visualScale);
 
+  // 路面（带柔光，增加纵深）
+  ctx.save();
+  ctx.shadowColor = isLight ? 'rgba(59,130,246,0.22)' : 'rgba(96,165,250,0.28)';
+  ctx.shadowBlur = 8 * visualScale;
   ctx.strokeStyle = isLight
     ? 'rgba(15,23,42,0.35)'
     : 'rgba(255,255,255,0.22)';
@@ -31,6 +35,7 @@ export function drawMotion(context: MotionDrawContext): void {
   ctx.moveTo(roadMargin, mid);
   ctx.lineTo(cssW - roadMargin, mid);
   ctx.stroke();
+  ctx.restore();
 
   ctx.font = `${Math.max(14, Math.round(12 * visualScale))}px system-ui`;
   ctx.fillStyle = isLight
