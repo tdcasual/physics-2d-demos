@@ -24,9 +24,9 @@ export const vtIntegralControlsSchema: ControlsSchema = {
           type: 'scene-selector',
           key: 'scene',
           scenes: [
-            { id: 'scene1', label: 'v-t面积', desc: '速度时间图面积' },
-            { id: 'scene2', label: '曲线逼近', desc: '用矩形逼近曲线下面积' },
-            { id: 'scene3', label: '圆面积', desc: '圆面积微元法' }
+            { id: 'scene1', label: 'v-t面积', desc: '矩形逼近 v-t 图面积（以直代曲）' },
+            { id: 'scene2', label: '化曲为直', desc: '折线逼近曲线弧长' },
+            { id: 'scene3', label: '割圆术', desc: '内接多边形逼近圆周' }
           ]
         }
       ]

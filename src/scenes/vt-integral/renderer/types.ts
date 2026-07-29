@@ -6,6 +6,8 @@ export type DrawContext = {
   height: number;
   theme: 'dark' | 'light';
   responsiveScale: number;
+  /** 演示模式内容放大系数（normal=1，presentation=renderHints.contentScale） */
+  contentScale: number;
 };
 
 export type SceneRenderer = (

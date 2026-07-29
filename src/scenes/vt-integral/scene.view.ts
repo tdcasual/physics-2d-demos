@@ -3,6 +3,7 @@ import { sizeCanvasToFill } from '../../core/canvas-sizing';
 import { createTransitionTracker } from '../../core/transition-tracker';
 import { Colors, alpha } from '../../core/colors';
 import type { VtIntegralSnapshot } from './scene.sim';
+import type { DrawContext } from './renderer/types';
 import { drawScene1 } from './renderer/draw-scene1';
 import { drawScene2 } from './renderer/draw-scene2';
 import { drawScene3 } from './renderer/draw-scene3';
@@ -18,13 +19,7 @@ export type CreateVtIntegralViewOptions = {
 
 const SCENE_RENDERERS: Record<
   VtIntegralSnapshot['params']['scene'],
-  (ctx: {
-    ctx: CanvasRenderingContext2D;
-    width: number;
-    height: number;
-    theme: 'dark' | 'light';
-    responsiveScale: number;
-  }, snapshot: VtIntegralSnapshot) => void
+  (ctx: DrawContext, snapshot: VtIntegralSnapshot) => void
 > = {
   scene1: drawScene1,
   scene2: drawScene2,
@@ -37,11 +32,15 @@ export function createVtIntegralView(
   let canvas = options.canvas ?? null;
   let ctx = canvas?.getContext('2d') ?? null;
   let theme: TeachingTheme = options.theme ?? 'dark';
+  let mode: TeachingMode = options.mode ?? 'normal';
+  let hints: DemoRenderHints | undefined = options.demoHints;
   let snapshot: VtIntegralSnapshot | null = null;
   let canvasWidth = 800;
   let canvasHeight = 600;
   let responsiveScale = 1;
   const sceneTransition = createTransitionTracker(250);
+  // 自驱动补帧：暂停/静态场景下也推进过渡动画至 alpha=1，避免画面停在淡化中途帧
+  let transitionRaf: number | null = null;
 
   function resizeCanvas(): void {
     if (!canvas) return;
@@ -82,13 +81,17 @@ export function createVtIntegralView(
         ctx.globalAlpha = alpha;
       }
 
+      const contentScale =
+        mode === 'presentation' ? (hints?.contentScale ?? 1.5) : 1;
+
       renderer(
         {
           ctx,
           width: canvasWidth,
           height: canvasHeight,
           theme: theme === 'dark' ? 'dark' : 'light',
-          responsiveScale
+          responsiveScale,
+          contentScale
         },
         next
       );
@@ -96,7 +99,18 @@ export function createVtIntegralView(
       if (alpha < 1) {
         ctx.restore();
       }
+
+      if (sceneTransition.isTransitioning) driveTransition();
     }
+  }
+
+  function driveTransition(): void {
+    if (transitionRaf !== null) return;
+    if (typeof requestAnimationFrame === 'undefined') return;
+    transitionRaf = requestAnimationFrame(() => {
+      transitionRaf = null;
+      if (snapshot && sceneTransition.isTransitioning) draw(snapshot);
+    });
   }
 
   return {
@@ -108,7 +122,9 @@ export function createVtIntegralView(
       resizeCanvas();
       if (snapshot) draw(snapshot);
     },
-    setMode(_nextMode: TeachingMode, _hints?: DemoRenderHints): void {
+    setMode(nextMode: TeachingMode, nextHints?: DemoRenderHints): void {
+      mode = nextMode;
+      hints = nextHints;
       if (snapshot) draw(snapshot);
     },
     setTheme(nextTheme: TeachingTheme): void {
@@ -116,6 +132,10 @@ export function createVtIntegralView(
       if (snapshot) draw(snapshot);
     },
     dispose(): void {
+      if (transitionRaf !== null && typeof cancelAnimationFrame !== 'undefined') {
+        cancelAnimationFrame(transitionRaf);
+        transitionRaf = null;
+      }
       snapshot = null;
       canvas = null;
       ctx = null;

@@ -14,10 +14,13 @@ export function drawAxis(context: DrawContext, config: AxisConfig): void {
   const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
 
   const s = responsiveScale;
-  const lineWidth = Math.max(1, 1.5 * s);
-  const tickLength = Math.max(4, 6 * s);
-  const fontSize = Math.max(9, Math.round(11 * s));
-  const arrowSize = Math.max(5, 8 * s);
+  // 演示模式放大：线宽/刻度放大幅度更柔和，字体足量放大保证投影可读
+  const cs = Math.min(context.contentScale, 1.6);
+  const fs = s * context.contentScale;
+  const lineWidth = Math.max(1, 1.5 * s * cs);
+  const tickLength = Math.max(4, 6 * s * cs);
+  const fontSize = Math.max(9, Math.round(11 * fs));
+  const arrowSize = Math.max(5, 8 * s * cs);
 
   ctx.save();
 
@@ -118,7 +121,7 @@ export function drawAxis(context: DrawContext, config: AxisConfig): void {
   // 轴标签
   if (xLabel) {
     ctx.fillStyle = textColor;
-    ctx.font = `600 ${Math.max(10, Math.round(12 * s))}px "Noto Sans SC", system-ui, sans-serif`;
+    ctx.font = `600 ${Math.max(10, Math.round(12 * fs))}px "Noto Sans SC", system-ui, sans-serif`;
     ctx.textAlign = 'right';
     ctx.textBaseline = 'top';
     ctx.fillText(xLabel, x + width, y + tickLength + fontSize + 4);
@@ -126,7 +129,7 @@ export function drawAxis(context: DrawContext, config: AxisConfig): void {
 
   if (yLabel) {
     ctx.fillStyle = textColor;
-    ctx.font = `600 ${Math.max(10, Math.round(12 * s))}px "Noto Sans SC", system-ui, sans-serif`;
+    ctx.font = `600 ${Math.max(10, Math.round(12 * fs))}px "Noto Sans SC", system-ui, sans-serif`;
     ctx.textAlign = 'right';
     ctx.textBaseline = 'bottom';
     ctx.fillText(yLabel, x - tickLength - 3, y - height);

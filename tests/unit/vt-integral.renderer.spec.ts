@@ -44,7 +44,7 @@ describe('vt-integral renderer', () => {
       const { ctx } = makeCtx();
       expect(() =>
         drawAxis(
-          { ctx, width: 800, height: 600, theme: 'dark', responsiveScale: 1 },
+          { ctx, width: 800, height: 600, theme: 'dark', responsiveScale: 1, contentScale: 1 },
           {
             x: 60,
             y: 60,
@@ -74,7 +74,15 @@ describe('vt-integral renderer', () => {
         const { ctx } = makeCtx();
         const snapshot = createSnapshot(scene);
         expect(() =>
-          fn({ ctx, width: 800, height: 600, theme: 'dark', responsiveScale: 1 }, snapshot)
+          fn({ ctx, width: 800, height: 600, theme: 'dark', responsiveScale: 1, contentScale: 1 }, snapshot)
+        ).not.toThrow();
+      });
+
+      it(`draws ${name} in presentation mode (contentScale) without throwing`, () => {
+        const { ctx } = makeCtx();
+        const snapshot = createSnapshot(scene);
+        expect(() =>
+          fn({ ctx, width: 800, height: 600, theme: 'light', responsiveScale: 0.6, contentScale: 1.7 }, snapshot)
         ).not.toThrow();
       });
     }
