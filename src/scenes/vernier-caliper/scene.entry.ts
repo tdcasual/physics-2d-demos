@@ -12,6 +12,8 @@ import { createVernierCaliperView } from './scene.view';
 export type CreateCaliperSceneOptions = {
   canvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
+  mode?: TeachingMode;
+  demoHints?: DemoRenderHints;
   onReadout?: (state: CaliperState) => void;
 };
 
@@ -33,7 +35,9 @@ export function createVernierCaliperScene(
 
   const view = createVernierCaliperView({
     canvas: options.canvas,
-    theme: options.theme ?? 'dark'
+    theme: options.theme ?? 'dark',
+    mode: options.mode,
+    demoHints: options.demoHints
   });
 
   const base = createStandardSceneEntry({

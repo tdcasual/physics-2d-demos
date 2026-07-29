@@ -46,7 +46,6 @@ const PRESENTATION_EXEMPT = [
   'interference-formula',
   'mechanical-wave',
   'thin-film',
-  'vernier-caliper',
   'wedge'
 ];
 

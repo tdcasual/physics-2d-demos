@@ -23,8 +23,8 @@ bootScenePage({
     readoutLabel: '测量读数',
     hideTransport: false
   },
-  createScene: ({ canvas, theme }) => {
-    return createVernierCaliperScene({ canvas, theme });
+  createScene: ({ canvas, theme, mode, demoHints }) => {
+    return createVernierCaliperScene({ canvas, theme, mode, demoHints });
   },
   createControls: ({ mount, scene }) => {
     const caliperScene = scene as ReturnType<typeof createVernierCaliperScene>;

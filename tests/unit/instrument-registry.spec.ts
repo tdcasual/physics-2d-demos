@@ -14,7 +14,8 @@ describe('instrument-registry', () => {
     expect(entries.map((entry) => entry.id).sort()).toEqual([
       'interference-vernier-caliper',
       'micrometer-eyepiece',
-      'spiral-micrometer'
+      'spiral-micrometer',
+      'vernier-caliper'
     ]);
 
     const spiral = entries.find((entry) => entry.id === 'spiral-micrometer')!;
@@ -31,13 +32,16 @@ describe('instrument-registry', () => {
     expect(entries.map((entry) => entry.category)).toEqual([
       'measurement',
       'measurement',
+      'measurement',
       'optical'
     ]);
     const measurementTitles = entries
       .filter((entry) => entry.category === 'measurement')
       .map((entry) => entry.title)
       .sort();
-    expect(measurementTitles).toEqual(['螺旋测微器', '高精度干涉测微仪'].sort());
+    expect(measurementTitles).toEqual(
+      ['游标卡尺', '螺旋测微器', '高精度干涉测微仪'].sort()
+    );
     expect(entries.find((entry) => entry.category === 'optical')?.title).toBe(
       '干涉读数游标卡尺'
     );
@@ -49,7 +53,8 @@ describe('instrument-registry', () => {
     expect(Object.keys(grouped).sort()).toEqual(['measurement', 'optical']);
     expect(grouped.measurement?.map((entry) => entry.id).sort()).toEqual([
       'micrometer-eyepiece',
-      'spiral-micrometer'
+      'spiral-micrometer',
+      'vernier-caliper'
     ]);
     expect(grouped.optical?.map((entry) => entry.id)).toEqual([
       'interference-vernier-caliper'
@@ -67,7 +72,8 @@ describe('instrument-registry', () => {
     expect(getManifest().map((entry) => entry.modulePath).sort()).toEqual([
       '/src/instruments/interference-vernier-caliper/index.ts',
       '/src/instruments/micrometer-eyepiece/index.ts',
-      '/src/instruments/spiral-micrometer/index.ts'
+      '/src/instruments/spiral-micrometer/index.ts',
+      '/src/instruments/vernier-caliper/index.ts'
     ]);
     expect(validateManifest()).toEqual({ ok: true, errors: [] });
   });
