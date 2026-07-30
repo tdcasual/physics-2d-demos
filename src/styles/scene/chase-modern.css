@@ -105,19 +105,23 @@
   display: block;
 }
 
-/* Narrow viewport — motion 充满，图表移至 graph 插槽 */
+/* Narrow viewport — stage 可滚动，运动与图表按自然高度堆叠，避免被裁切 */
 .chase-modern-stage.is-narrow {
-  gap: 4px;
+  gap: 6px;
   padding: 2px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
-.chase-modern-stage.is-narrow .chase-modern-card--motion {
-  flex: 1 1 auto;
-  min-height: 220px;
+.chase-modern-stage.is-narrow .chase-modern-card {
+  flex: 0 0 auto;
 }
 
-.chase-modern-stage.is-narrow .chase-modern-card--graphs {
-  flex: 1;
+/* 画布用 JS 设定的高度（flex-basis auto），避免在 auto 高度卡片里塌缩 */
+.chase-modern-stage.is-narrow .chase-modern-motion-canvas,
+.chase-modern-stage.is-narrow .chase-modern-x-canvas,
+.chase-modern-stage.is-narrow .chase-modern-v-canvas {
+  flex: 0 0 auto;
 }
 
 .chase-modern-stage.is-narrow .chase-modern-card-header {
@@ -126,4 +130,5 @@
 
 .chase-modern-stage.is-narrow .chase-modern-plots {
   flex-direction: column;
+  gap: 6px;
 }

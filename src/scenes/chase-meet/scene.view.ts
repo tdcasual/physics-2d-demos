@@ -86,13 +86,14 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
       1,
       Math.floor(dom.root.getBoundingClientRect().height || viewport.height)
     );
-    const trackHeight = Math.min(
-      Math.round(380 * scale),
-      Math.max(
-        Math.round(190 * scale),
-        stageHeight * (viewport.isNarrow ? 0.38 : 0.42)
-      )
-    );
+    // 移动端：运动/图表用按宽度的合理高度，配合 CSS 让 stage 可滚动，
+    // 避免挤在不可滚动的动画区被裁切；桌面端沿用按 stage 高度的比例。
+    const trackHeight = viewport.isNarrow
+      ? Math.max(200, Math.min(300, Math.round(totalWidth * 0.52)))
+      : Math.min(
+          Math.round(380 * scale),
+          Math.max(Math.round(190 * scale), stageHeight * 0.42)
+        );
 
     let graphHeight: number;
     let graphWidth: number;
@@ -100,17 +101,15 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
       const gRect = graphSlot.getBoundingClientRect();
       graphWidth = Math.max(1, Math.floor((gRect.width || totalWidth) / 2 - 4));
       graphHeight = Math.max(120, Math.floor(gRect.height || 300));
+    } else if (viewport.isNarrow) {
+      graphWidth = totalWidth;
+      graphHeight = Math.max(130, Math.min(200, Math.round(totalWidth * 0.42)));
     } else {
       graphHeight = Math.min(
         Math.round(250 * scale),
-        Math.max(
-          Math.round(160 * scale),
-          stageHeight * (viewport.isNarrow ? 0.26 : 0.34)
-        )
+        Math.max(Math.round(160 * scale), stageHeight * 0.34)
       );
-      graphWidth = viewport.isNarrow
-        ? totalWidth
-        : Math.max(180, totalWidth / 2 - 8);
+      graphWidth = Math.max(180, totalWidth / 2 - 8);
     }
 
     const dpr = Math.min(
