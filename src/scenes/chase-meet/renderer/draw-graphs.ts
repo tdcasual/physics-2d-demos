@@ -125,6 +125,9 @@ export function drawGraphs(context: GraphDrawContext): void {
     target.strokeStyle = grad;
     target.beginPath();
     let first = true;
+    let lastX = 0;
+    let lastY = 0;
+    let drew = false;
     for (const s of snapshot.samples) {
       if (s.t > maxTime) break;
       const xPix = tToXpix(s.t, w);
@@ -139,8 +142,21 @@ export function drawGraphs(context: GraphDrawContext): void {
       } else {
         target.lineTo(xPix, yPix);
       }
+      lastX = xPix;
+      lastY = yPix;
+      drew = true;
     }
     target.stroke();
+    // 当前时刻点（活的反馈）
+    if (drew) {
+      target.fillStyle = colorA;
+      target.beginPath();
+      target.arc(lastX, lastY, Math.max(3, 4 * visualScale), 0, Math.PI * 2);
+      target.fill();
+      target.strokeStyle = isLight ? '#ffffff' : '#0f172a';
+      target.lineWidth = Math.max(1.5, 2 * visualScale);
+      target.stroke();
+    }
     target.restore();
   };
 

@@ -22,8 +22,9 @@
   flex-direction: column;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 16px;
   overflow: hidden;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
 }
 
 .chase-modern-card--motion {
@@ -41,13 +42,15 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  padding: 6px 10px 3px;
+  padding: 8px 12px 5px;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .chase-modern-card-title {
   color: var(--text-primary);
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
 }
 
 .chase-modern-card-tag {
@@ -102,17 +105,23 @@
   display: block;
 }
 
-/* Narrow viewport — stack vertically */
+/* Narrow viewport — motion 充满，图表移至 graph 插槽 */
 .chase-modern-stage.is-narrow {
   gap: 4px;
+  padding: 2px;
 }
 
 .chase-modern-stage.is-narrow .chase-modern-card--motion {
-  flex: 2;
+  flex: 1 1 auto;
+  min-height: 220px;
 }
 
 .chase-modern-stage.is-narrow .chase-modern-card--graphs {
   flex: 1;
+}
+
+.chase-modern-stage.is-narrow .chase-modern-card-header {
+  padding: 6px 10px 4px;
 }
 
 .chase-modern-stage.is-narrow .chase-modern-plots {

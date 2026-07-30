@@ -33,6 +33,9 @@ class MockCanvasRenderingContext2D {
   arcTo = vi.fn();
   ellipse = vi.fn();
   roundRect = vi.fn();
+  quadraticCurveTo = vi.fn();
+  bezierCurveTo = vi.fn();
+  lineDashOffset = 0;
   setLineDash = vi.fn();
   getLineDash = vi.fn(() => []);
   fillText = vi.fn();

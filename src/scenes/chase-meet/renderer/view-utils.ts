@@ -98,23 +98,14 @@ export function createStageDom(slot: HTMLElement): StageDom {
   const root = document.createElement('div');
   root.className = 'chase-modern-stage';
 
-  // Motion section
+  // Motion section（标题画进画布天空，避免与浮动运输条撞车）
   const motionSection = document.createElement('section');
   motionSection.className = 'chase-modern-card chase-modern-card--motion';
-  const motionHeader = document.createElement('div');
-  motionHeader.className = 'chase-modern-card-header';
-  const motionTitle = document.createElement('div');
-  motionTitle.className = 'chase-modern-card-title';
-  motionTitle.textContent = '空间位置动画';
-  const motionTag = document.createElement('div');
-  motionTag.className = 'chase-modern-card-tag';
-  motionTag.textContent = 'A / B 一维追及';
-  motionHeader.append(motionTitle, motionTag);
   const motionCanvas = document.createElement('canvas');
   motionCanvas.className = 'chase-modern-motion-canvas';
   motionCanvas.setAttribute('role', 'img');
-  motionCanvas.setAttribute('aria-label', '空间位置动画：A/B 一维追及');
-  motionSection.append(motionHeader, motionCanvas);
+  motionCanvas.setAttribute('aria-label', '追及大冒险：A/B 一维追及卡通动画');
+  motionSection.appendChild(motionCanvas);
   root.appendChild(motionSection);
 
   // Graphs section
