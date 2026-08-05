@@ -3,6 +3,20 @@
  */
 
 import type { SceneMeta } from '../../platform/scene-contract';
+import type { SceneDemoProfile } from '../../platform/demo-profile';
+
+const demoProfile: SceneDemoProfile = {
+  controlPanel: 'minimal',
+  readoutPanel: 'overlay',
+  graphPanel: 'visible',
+  renderHints: {
+    contentScale: 1.5
+  },
+  interactionHints: {
+    touchTargetMinSize: 48,
+    visibleControlKeys: ['step', 'lambda']
+  }
+};
 
 export const interferenceFormulaMeta: SceneMeta = {
   id: 'interference-formula',
@@ -21,7 +35,8 @@ export const interferenceFormulaMeta: SceneMeta = {
   defaultParams: {
     lambda: 650,
     L: 1.0,
-    d: 0.5,
+    d: 0.5
   },
   urlSyncKeys: ['step'],
+  demoProfile
 };

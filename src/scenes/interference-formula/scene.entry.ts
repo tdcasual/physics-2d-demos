@@ -6,12 +6,18 @@ import type { TeachingTheme, TeachingMode } from '../../platform/standards';
 import type { SceneLifecycle } from '../../platform/scene-contract';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import { createStandardSceneEntry } from '../scene-entry-helpers';
-import { createInterferenceFormulaSim, type InterferenceFormulaParams, type InterferenceFormulaState } from './scene.sim';
+import {
+  createInterferenceFormulaSim,
+  type InterferenceFormulaParams,
+  type InterferenceFormulaState
+} from './scene.sim';
 import { createInterferenceFormulaView } from './scene.view';
 
 export type CreateInterferenceFormulaSceneOptions = {
   canvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
+  mode?: TeachingMode;
+  demoHints?: DemoRenderHints;
   onReadout?: (state: InterferenceFormulaState) => void;
 };
 
@@ -22,7 +28,9 @@ export function createInterferenceFormulaScene(
   setTheme(theme: TeachingTheme): void;
   setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
   getState(): InterferenceFormulaState;
-  setParams(params: Partial<InterferenceFormulaParams>): InterferenceFormulaParams;
+  setParams(
+    params: Partial<InterferenceFormulaParams>
+  ): InterferenceFormulaParams;
   attachGraphCanvas(canvas: HTMLCanvasElement): void;
   getReadoutItems(): Array<{ label: string; value: string }>;
   subscribe(listener: () => void): () => void;
@@ -31,19 +39,21 @@ export function createInterferenceFormulaScene(
     lambda: 650,
     L: 1.0,
     d: 0.5,
-    step: 'geometry',
+    step: 'geometry'
   });
 
   const view = createInterferenceFormulaView({
     canvas: options.canvas,
     theme: options.theme ?? 'dark',
+    mode: options.mode,
+    demoHints: options.demoHints
   });
 
   const base = createStandardSceneEntry({
     sim,
     view,
     getState: () => sim.getState(),
-    onReadout: options.onReadout,
+    onReadout: options.onReadout
   });
 
   function getReadoutItems(): Array<{ label: string; value: string }> {
@@ -63,7 +73,7 @@ export function createInterferenceFormulaScene(
       { label: 'θ', value: `${((thetaRad * 180) / Math.PI).toFixed(4)}°` },
       { label: 'sinθ', value: sinTheta.toExponential(4) },
       { label: 'tanθ = x/L', value: tanTheta.toExponential(4) },
-      { label: '相对误差', value: relErr.toExponential(2) },
+      { label: '相对误差', value: relErr.toExponential(2) }
     ];
   }
 
@@ -72,7 +82,9 @@ export function createInterferenceFormulaScene(
     getState() {
       return sim.getState();
     },
-    setParams(params: Partial<InterferenceFormulaParams>): InterferenceFormulaParams {
+    setParams(
+      params: Partial<InterferenceFormulaParams>
+    ): InterferenceFormulaParams {
       const result = sim.setParams(params);
       base.renderAndEmit();
       base.notify();
@@ -81,6 +93,6 @@ export function createInterferenceFormulaScene(
     attachGraphCanvas(canvas: HTMLCanvasElement): void {
       view.attachGraphCanvas(canvas);
     },
-    getReadoutItems,
+    getReadoutItems
   };
 }

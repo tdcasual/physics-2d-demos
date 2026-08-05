@@ -6,6 +6,7 @@
  */
 
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
+import type { DemoRenderHints } from '../../platform/demo-profile';
 import { sizeCanvasToFill } from '../../core/canvas-sizing';
 import { wavelengthToColor, lambdaToRgb } from '../../core/wavelength';
 import type { InterferenceFormulaState } from './scene.sim';
@@ -16,15 +17,20 @@ export type CreateInterferenceFormulaViewOptions = {
   canvas?: HTMLCanvasElement;
   graphCanvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
+  mode?: TeachingMode;
+  demoHints?: DemoRenderHints;
 };
 
-export function createInterferenceFormulaView(options: CreateInterferenceFormulaViewOptions = {}) {
+export function createInterferenceFormulaView(
+  options: CreateInterferenceFormulaViewOptions = {}
+) {
   let canvas = options.canvas ?? null;
   let ctx: CanvasRenderingContext2D | null = null;
   let graphCanvas = options.graphCanvas ?? null;
   let graphCtx: CanvasRenderingContext2D | null = null;
   let theme: TeachingTheme = options.theme ?? 'dark';
-  let mode: TeachingMode = 'normal';
+  let mode: TeachingMode = options.mode ?? 'normal';
+  let demoHints: DemoRenderHints | undefined = options.demoHints;
   let state: InterferenceFormulaState | null = null;
   let cssWidth = 800;
   let cssHeight = 600;
@@ -51,7 +57,9 @@ export function createInterferenceFormulaView(options: CreateInterferenceFormula
     if (!c) return;
     const w = cssWidth;
     const h = cssHeight;
-    const modeScale = mode === 'presentation' ? 1.5 : 1.0;
+    // 演示模式内容放大系数（normal=1，presentation=renderHints.contentScale）
+    const modeScale =
+      mode === 'presentation' ? (demoHints?.contentScale ?? 1.5) : 1.0;
     const isDark = theme === 'dark';
     const text = isDark ? '#e2e8f0' : '#1e293b';
     const dim = isDark ? '#94a3b8' : '#64748b';
@@ -86,34 +94,100 @@ export function createInterferenceFormulaView(options: CreateInterferenceFormula
     // Δx → pY: larger Δx moves P further from center
     const defaultDeltaX = (650e-9 * 1.0) / 0.5e-3;
     const screenRange = (screenBot - screenTop) * 0.35;
-    const pOffset = Math.min(1, next.deltaX / (3 * defaultDeltaX)) * screenRange;
+    const pOffset =
+      Math.min(1, next.deltaX / (3 * defaultDeltaX)) * screenRange;
     const pY = centerY - pOffset;
 
     // ── 公共几何结构 ──
     drawGeometryBase(c, {
-      text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, screenTop, screenBot, pY, scale, modeScale
+      text,
+      dim,
+      accent,
+      plateX,
+      screenX,
+      centerY,
+      slitTop,
+      slitBot,
+      screenTop,
+      screenBot,
+      pY,
+      scale,
+      modeScale
     });
 
     // ── 阶段特定内容（极简文字）──
     if (step === 'geometry') {
       drawGeometryPhase(c, {
-        w, h, text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, pY, scale, modeScale,
+        w,
+        h,
+        text,
+        dim,
+        accent,
+        plateX,
+        screenX,
+        centerY,
+        slitTop,
+        slitBot,
+        pY,
+        scale,
+        modeScale,
         params: next.params
       });
     } else if (step === 'path-diff') {
       drawPathDiffPhase(c, {
-        w, h, text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, pY, scale, modeScale,
-        params: next.params, deltaX: next.deltaX
+        w,
+        h,
+        text,
+        dim,
+        accent,
+        plateX,
+        screenX,
+        centerY,
+        slitTop,
+        slitBot,
+        pY,
+        scale,
+        modeScale,
+        params: next.params,
+        deltaX: next.deltaX
       });
     } else if (step === 'small-angle') {
       drawSmallAnglePhase(c, {
-        w, h, text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, screenTop, screenBot, pY, scale, modeScale,
-        params: next.params, deltaX: next.deltaX
+        w,
+        h,
+        text,
+        dim,
+        accent,
+        plateX,
+        screenX,
+        centerY,
+        slitTop,
+        slitBot,
+        screenTop,
+        screenBot,
+        pY,
+        scale,
+        modeScale,
+        params: next.params,
+        deltaX: next.deltaX
       });
     } else if (step === 'result') {
       drawResultPhase(c, {
-        w, h, text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, pY, scale, modeScale,
-        params: next.params, deltaX: next.deltaX
+        w,
+        h,
+        text,
+        dim,
+        accent,
+        plateX,
+        screenX,
+        centerY,
+        slitTop,
+        slitBot,
+        pY,
+        scale,
+        modeScale,
+        params: next.params,
+        deltaX: next.deltaX
       });
     }
 
@@ -122,7 +196,10 @@ export function createInterferenceFormulaView(options: CreateInterferenceFormula
   }
 
   // ── 图表区条纹绘制（常驻）──
-  function drawFringeGraph(next: InterferenceFormulaState, modeScale: number): void {
+  function drawFringeGraph(
+    next: InterferenceFormulaState,
+    modeScale: number
+  ): void {
     const gc = graphCtx;
     const gCanvas = graphCanvas;
     if (!gc || !gCanvas) return;
@@ -206,14 +283,22 @@ export function createInterferenceFormulaView(options: CreateInterferenceFormula
       drawArrowLine(gc, stripeCenterX, ay, firstStripeX, ay, gScale);
       gc.fillStyle = accent;
       gc.font = `${Math.max(10, 12 * gScale)}px sans-serif`;
-      gc.fillText(`Δx = ${(deltaX * 1e3).toFixed(2)} mm`, (stripeCenterX + firstStripeX) / 2, ay + 12 * gScale);
+      gc.fillText(
+        `Δx = ${(deltaX * 1e3).toFixed(2)} mm`,
+        (stripeCenterX + firstStripeX) / 2,
+        ay + 12 * gScale
+      );
     }
 
     // 标题
     gc.fillStyle = text;
     gc.font = `bold ${Math.max(11, 13 * gScale * modeScale)}px sans-serif`;
     gc.textAlign = 'left';
-    gc.fillText(`λ=${params.lambda}nm  L=${params.L.toFixed(1)}m  d=${params.d.toFixed(1)}mm`, margin, margin + 4 * gScale);
+    gc.fillText(
+      `λ=${params.lambda}nm  L=${params.L.toFixed(1)}m  d=${params.d.toFixed(1)}mm`,
+      margin,
+      margin + 4 * gScale
+    );
   }
 
   return {
@@ -226,8 +311,9 @@ export function createInterferenceFormulaView(options: CreateInterferenceFormula
       resizeGraphCanvas();
       if (state) drawScene(state);
     },
-    setMode(next: TeachingMode): void {
+    setMode(next: TeachingMode, hints?: DemoRenderHints): void {
       mode = next;
+      demoHints = hints;
       if (state) drawScene(state);
     },
     setTheme(next: TeachingTheme): void {
@@ -255,26 +341,54 @@ export function createInterferenceFormulaView(options: CreateInterferenceFormula
 // ═══════════════════════════════════════════════════════════════
 
 type GeoBase = {
-  text: string; dim: string; accent: string;
-  plateX: number; screenX: number; centerY: number;
-  slitTop: number; slitBot: number;
-  screenTop: number; screenBot: number; pY: number; scale: number; modeScale: number;
+  text: string;
+  dim: string;
+  accent: string;
+  plateX: number;
+  screenX: number;
+  centerY: number;
+  slitTop: number;
+  slitBot: number;
+  screenTop: number;
+  screenBot: number;
+  pY: number;
+  scale: number;
+  modeScale: number;
 };
 
 type GeoBaseLite = {
-  text: string; dim: string; accent: string;
-  plateX: number; screenX: number; centerY: number;
-  slitTop: number; slitBot: number; pY: number; scale: number; modeScale: number;
+  text: string;
+  dim: string;
+  accent: string;
+  plateX: number;
+  screenX: number;
+  centerY: number;
+  slitTop: number;
+  slitBot: number;
+  pY: number;
+  scale: number;
+  modeScale: number;
 };
 
-function drawGeometryBase(
-  c: CanvasRenderingContext2D,
-  g: GeoBase
-): void {
-  const { text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, screenTop, screenBot, pY, scale, modeScale } = g;
+function drawGeometryBase(c: CanvasRenderingContext2D, g: GeoBase): void {
+  const {
+    text,
+    dim,
+    accent,
+    plateX,
+    screenX,
+    centerY,
+    slitTop,
+    slitBot,
+    screenTop,
+    screenBot,
+    pY,
+    scale,
+    modeScale
+  } = g;
 
   c.save();
-  c.lineWidth = 2 * scale;
+  c.lineWidth = 2 * scale * modeScale;
   c.font = `${Math.max(10, 14 * scale * modeScale)}px sans-serif`;
 
   // 双缝板
@@ -291,15 +405,15 @@ function drawGeometryBase(
   // 缝口
   c.fillStyle = accent;
   c.beginPath();
-  c.arc(plateX, slitTop, 3 * scale, 0, Math.PI * 2);
+  c.arc(plateX, slitTop, 3 * scale * modeScale, 0, Math.PI * 2);
   c.fill();
   c.beginPath();
-  c.arc(plateX, slitBot, 3 * scale, 0, Math.PI * 2);
+  c.arc(plateX, slitBot, 3 * scale * modeScale, 0, Math.PI * 2);
   c.fill();
 
   // 屏幕
   c.strokeStyle = text;
-  c.lineWidth = 2.5 * scale;
+  c.lineWidth = 2.5 * scale * modeScale;
   c.beginPath();
   c.moveTo(screenX, screenTop);
   c.lineTo(screenX, screenBot);
@@ -318,7 +432,7 @@ function drawGeometryBase(
   // P 点
   c.fillStyle = accent;
   c.beginPath();
-  c.arc(screenX, pY, 4 * scale, 0, Math.PI * 2);
+  c.arc(screenX, pY, 4 * scale * modeScale, 0, Math.PI * 2);
   c.fill();
   c.fillStyle = text;
   c.textAlign = 'left';
@@ -343,23 +457,54 @@ function drawGeometryBase(
 
 // ── geometry 阶段 ── 只标注几何量，无文字说明
 
-type GeoPhase = GeoBaseLite & { w: number; h: number; params: { lambda: number; L: number; d: number } };
+type GeoPhase = GeoBaseLite & {
+  w: number;
+  h: number;
+  params: { lambda: number; L: number; d: number };
+};
 
 type PathDiffPhase = GeoPhase & { deltaX: number };
 
-type SmallAnglePhase = GeoBase & { w: number; h: number; params: { lambda: number; L: number; d: number }; deltaX: number };
+type SmallAnglePhase = GeoBase & {
+  w: number;
+  h: number;
+  params: { lambda: number; L: number; d: number };
+  deltaX: number;
+};
 
 function drawGeometryPhase(c: CanvasRenderingContext2D, g: GeoPhase): void {
-  const { text, dim, plateX, screenX, centerY, slitTop, slitBot, pY, scale, modeScale, params } = g;
+  const {
+    text,
+    dim,
+    plateX,
+    screenX,
+    centerY,
+    slitTop,
+    slitBot,
+    pY,
+    scale,
+    modeScale,
+    params
+  } = g;
 
   c.save();
   c.font = `${Math.max(10, 13 * scale * modeScale)}px sans-serif`;
 
   // L
-  const ly = screenX - plateX > 60 * scale ? plateX + (screenX - plateX) * 0.5 : (plateX + screenX) / 2;
+  const ly =
+    screenX - plateX > 60 * scale
+      ? plateX + (screenX - plateX) * 0.5
+      : (plateX + screenX) / 2;
   c.strokeStyle = dim;
   c.lineWidth = 1 * scale;
-  drawArrowLine(c, plateX, centerY + 50 * scale, screenX, centerY + 50 * scale, scale);
+  drawArrowLine(
+    c,
+    plateX,
+    centerY + 50 * scale,
+    screenX,
+    centerY + 50 * scale,
+    scale
+  );
   c.fillStyle = text;
   c.textAlign = 'center';
   c.fillText(`L = ${params.L.toFixed(1)} m`, ly, centerY + 66 * scale);
@@ -368,7 +513,11 @@ function drawGeometryPhase(c: CanvasRenderingContext2D, g: GeoPhase): void {
   const dx = plateX - 28 * scale;
   drawArrowLine(c, dx, slitTop, dx, slitBot, scale);
   c.textAlign = 'right';
-  c.fillText(`d = ${params.d.toFixed(1)} mm`, dx - 6 * scale, (slitTop + slitBot) / 2 + 4 * scale);
+  c.fillText(
+    `d = ${params.d.toFixed(1)} mm`,
+    dx - 6 * scale,
+    (slitTop + slitBot) / 2 + 4 * scale
+  );
 
   // x
   c.textAlign = 'left';
@@ -381,7 +530,13 @@ function drawGeometryPhase(c: CanvasRenderingContext2D, g: GeoPhase): void {
   c.lineWidth = 1 * scale;
   const thetaR = 22 * scale;
   c.beginPath();
-  c.arc(screenX, pY, thetaR, Math.PI, Math.PI + Math.atan2(centerY - pY, screenX - plateX) * 0.8);
+  c.arc(
+    screenX,
+    pY,
+    thetaR,
+    Math.PI,
+    Math.PI + Math.atan2(centerY - pY, screenX - plateX) * 0.8
+  );
   c.stroke();
   c.fillStyle = dim;
   c.fillText('θ', screenX - 34 * scale, pY + 4 * scale);
@@ -391,8 +546,24 @@ function drawGeometryPhase(c: CanvasRenderingContext2D, g: GeoPhase): void {
 
 // ── path-diff 阶段 ── 只画辅助线和核心公式
 
-function drawPathDiffPhase(c: CanvasRenderingContext2D, g: PathDiffPhase): void {
-  const { w, h, text, dim, accent, plateX, screenX, slitTop, slitBot, pY, scale, modeScale } = g;
+function drawPathDiffPhase(
+  c: CanvasRenderingContext2D,
+  g: PathDiffPhase
+): void {
+  const {
+    w,
+    h,
+    text,
+    dim,
+    accent,
+    plateX,
+    screenX,
+    slitTop,
+    slitBot,
+    pY,
+    scale,
+    modeScale
+  } = g;
 
   c.save();
   c.font = `${Math.max(10, 13 * scale * modeScale)}px sans-serif`;
@@ -463,13 +634,12 @@ function drawPathDiffPhase(c: CanvasRenderingContext2D, g: PathDiffPhase): void 
   // ── 5. 标注 r₁ 与 r₂ 的关系 ──
   c.fillStyle = dim;
   c.font = `${Math.max(9, 11 * scale * modeScale)}px sans-serif`;
-  const rRelation = pY < (slitTop + slitBot) / 2
-    ? `r₁ = r₂ − |Δr|`
-    : `r₂ = r₁ − |Δr|`;
+  const rRelation =
+    pY < (slitTop + slitBot) / 2 ? `r₁ = r₂ − |Δr|` : `r₂ = r₁ − |Δr|`;
   c.fillText(rRelation, screenX + 10 * scale, pY - r1 * 0.5);
 
   // 核心公式
-  const fy = h * 0.90;
+  const fy = h * 0.9;
   c.fillStyle = text;
   c.font = `${Math.max(12, 16 * scale * modeScale)}px sans-serif`;
   c.textAlign = 'center';
@@ -480,8 +650,23 @@ function drawPathDiffPhase(c: CanvasRenderingContext2D, g: PathDiffPhase): void 
 
 // ── small-angle 阶段 ── 修正辅助三角形，仅保留关键公式
 
-function drawSmallAnglePhase(c: CanvasRenderingContext2D, g: SmallAnglePhase): void {
-  const { w, h, text, dim, accent, plateX, screenX, centerY, pY, scale, modeScale } = g;
+function drawSmallAnglePhase(
+  c: CanvasRenderingContext2D,
+  g: SmallAnglePhase
+): void {
+  const {
+    w,
+    h,
+    text,
+    dim,
+    accent,
+    plateX,
+    screenX,
+    centerY,
+    pY,
+    scale,
+    modeScale
+  } = g;
 
   c.save();
   c.font = `${Math.max(10, 13 * scale * modeScale)}px sans-serif`;
@@ -566,7 +751,7 @@ function drawSmallAnglePhase(c: CanvasRenderingContext2D, g: SmallAnglePhase): v
   c.fillText('θ', ax + thetaR + 8 * scale, ay - 4 * scale);
 
   // 7. 公式（仅一行）
-  const fy = h * 0.90;
+  const fy = h * 0.9;
   c.fillStyle = accent;
   c.font = `${Math.max(12, 16 * scale * modeScale)}px sans-serif`;
   c.textAlign = 'center';
@@ -577,17 +762,47 @@ function drawSmallAnglePhase(c: CanvasRenderingContext2D, g: SmallAnglePhase): v
 
 // ── result 阶段 ── 展示相邻亮纹 + Δx 测量 + 反推波长
 
-function drawResultPhase(c: CanvasRenderingContext2D, g: {
-  w: number; h: number; text: string; dim: string; accent: string;
-  plateX: number; screenX: number; centerY: number; slitTop: number; slitBot: number; pY: number;
-  params: { lambda: number; L: number; d: number }; deltaX: number; scale: number; modeScale: number;
-}): void {
-  const { w, h, text, dim, accent, plateX, screenX, centerY, slitTop, slitBot, pY, deltaX, scale, modeScale } = g;
+function drawResultPhase(
+  c: CanvasRenderingContext2D,
+  g: {
+    w: number;
+    h: number;
+    text: string;
+    dim: string;
+    accent: string;
+    plateX: number;
+    screenX: number;
+    centerY: number;
+    slitTop: number;
+    slitBot: number;
+    pY: number;
+    params: { lambda: number; L: number; d: number };
+    deltaX: number;
+    scale: number;
+    modeScale: number;
+  }
+): void {
+  const {
+    w,
+    h,
+    text,
+    dim,
+    accent,
+    plateX,
+    screenX,
+    centerY,
+    slitTop,
+    slitBot,
+    pY,
+    deltaX,
+    scale,
+    modeScale
+  } = g;
 
   c.save();
   c.font = `${Math.max(10, 13 * scale * modeScale)}px sans-serif`;
 
-  const brightR = 6.5 * scale;
+  const brightR = 6.5 * scale * modeScale;
 
   // 1. 额外光线：从双缝到中央亮纹（虚线，表示这也是一条光路）
   c.strokeStyle = accent;
@@ -683,8 +898,10 @@ function drawResultPhase(c: CanvasRenderingContext2D, g: {
 
 function drawArrowLine(
   c: CanvasRenderingContext2D,
-  x1: number, y1: number,
-  x2: number, y2: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
   scale: number
 ): void {
   c.beginPath();
@@ -696,14 +913,26 @@ function drawArrowLine(
   const angle = Math.atan2(y2 - y1, x2 - x1);
   c.beginPath();
   c.moveTo(x1, y1);
-  c.lineTo(x1 + arrowSize * Math.cos(angle + Math.PI / 6), y1 + arrowSize * Math.sin(angle + Math.PI / 6));
+  c.lineTo(
+    x1 + arrowSize * Math.cos(angle + Math.PI / 6),
+    y1 + arrowSize * Math.sin(angle + Math.PI / 6)
+  );
   c.moveTo(x1, y1);
-  c.lineTo(x1 + arrowSize * Math.cos(angle - Math.PI / 6), y1 + arrowSize * Math.sin(angle - Math.PI / 6));
+  c.lineTo(
+    x1 + arrowSize * Math.cos(angle - Math.PI / 6),
+    y1 + arrowSize * Math.sin(angle - Math.PI / 6)
+  );
   c.stroke();
   c.beginPath();
   c.moveTo(x2, y2);
-  c.lineTo(x2 - arrowSize * Math.cos(angle + Math.PI / 6), y2 - arrowSize * Math.sin(angle + Math.PI / 6));
+  c.lineTo(
+    x2 - arrowSize * Math.cos(angle + Math.PI / 6),
+    y2 - arrowSize * Math.sin(angle + Math.PI / 6)
+  );
   c.moveTo(x2, y2);
-  c.lineTo(x2 - arrowSize * Math.cos(angle - Math.PI / 6), y2 - arrowSize * Math.sin(angle - Math.PI / 6));
+  c.lineTo(
+    x2 - arrowSize * Math.cos(angle - Math.PI / 6),
+    y2 - arrowSize * Math.sin(angle - Math.PI / 6)
+  );
   c.stroke();
 }

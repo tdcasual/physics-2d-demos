@@ -12,7 +12,9 @@ import { wavelengthToColor } from './scene.view';
 import type { InterferenceFormulaStep } from './scene.sim';
 
 function updateLambdaSliderColor(mount: HTMLElement, lambda: number): void {
-  const slider = mount.querySelector('input[type="range"][data-key="lambda"]') as HTMLInputElement | null;
+  const slider = mount.querySelector(
+    'input[type="range"][data-key="lambda"]'
+  ) as HTMLInputElement | null;
   if (slider) {
     slider.style.accentColor = wavelengthToColor(lambda);
   }
@@ -31,10 +33,10 @@ bootScenePage({
     readoutLabel: '数据读数',
     hideTransport: true,
     hasGraph: true,
-    graphHeight: 0.4,
+    graphHeight: 0.4
   },
-  createScene: ({ canvas, theme }) => {
-    return createInterferenceFormulaScene({ canvas, theme });
+  createScene: ({ canvas, theme, mode, demoHints }) => {
+    return createInterferenceFormulaScene({ canvas, theme, mode, demoHints });
   },
   createControls: ({ mount, scene }) => {
     const ifScene = scene as ReturnType<typeof createInterferenceFormulaScene>;
@@ -57,7 +59,7 @@ bootScenePage({
       },
       onAction: () => {
         // 无 action 按钮
-      },
+      }
     });
 
     // Apply URL params
@@ -94,7 +96,7 @@ bootScenePage({
       },
       dispose() {
         renderer.dispose();
-      },
+      }
     };
-  },
+  }
 });
