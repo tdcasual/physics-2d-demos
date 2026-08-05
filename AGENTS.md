@@ -10,6 +10,17 @@ Physics-2D-Demos 是一个物理教学演示中心（Teaching Demo Hub），当�
 - **测试**: Vitest 3.2 (单元/契约) + Playwright (E2E/视觉)
 - **构建产物**: ~560KB JS（32 个 chunk），完整 dist（含 18 个 HTML 入口与 CSS）约 1.1MB
 - **Runtime 依赖**: 仅 4 个（React 生态）
+- **线上地址**: <https://x.infinitas.fun>
+
+## 部署
+
+**<https://x.infinitas.fun> 即本仓库的线上部署**。部署是**自动**的：推送到 GitHub（`origin/main`）后通常**几分钟内**完成，无需手动操作。
+
+对 AI 助手的含义：
+
+- 改动合并/推送到 `main` 即视为即将上线，提交前务必跑 `pnpm quality:core`。
+- 推送后如需验证线上效果，等待几分钟再访问 <https://x.infinitas.fun>。
+- 不要在本仓库内寻找或修改部署脚本/CI 发布配置——发布由仓库之外的自动化流程完成。
 
 ## 架构分层
 
