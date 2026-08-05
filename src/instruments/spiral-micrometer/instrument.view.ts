@@ -9,7 +9,10 @@
  */
 
 import type { TeachingTheme } from '../../platform/standards';
-import type { InstrumentView, InstrumentViewport } from '../_contract/instrument-contract';
+import type {
+  InstrumentView,
+  InstrumentViewport
+} from '../_contract/instrument-contract';
 import type { SpiralMicrometerState } from './instrument.sim';
 
 type Pal = {
@@ -102,7 +105,6 @@ export function drawSpiralMicrometer(o: SpiralMicrometerDrawOptions): void {
   const oy = region.y;
 
   const centerY = oy + h * (showReading ? 0.4 : 0.5);
-  const mmToPx = 58 * s;
 
   const { reading, mainScaleReading, drumReading } = state;
 
@@ -116,9 +118,19 @@ export function drawSpiralMicrometer(o: SpiralMicrometerDrawOptions): void {
   const windowStartMm = Math.max(0, windowCenterMm - 2);
   const windowEndMm = windowCenterMm + 3;
   const windowLenMm = windowEndMm - windowStartMm;
+
+  // 微分筒尺寸提前算，以便"整机"（套筒+微分筒）适配画布宽度，
+  // 避免移动端右侧出界
+  const thimbleExtra = 15 * s;
+  const thimbleW = 120 * s;
+  const thimbleOverlap = 12 * s;
+  const margin = Math.max(8, 12 * s);
+  const fitMmToPx = (w - 2 * margin - thimbleW + thimbleOverlap) / windowLenMm;
+  const mmToPx = Math.max(20 * s, Math.min(58 * s, fitMmToPx));
   const sleeveW = windowLenMm * mmToPx;
   const sleeveH = 60 * s;
-  const sleeveX = ox + (w - sleeveW) / 2;
+  const fullW = sleeveW + thimbleW - thimbleOverlap;
+  const sleeveX = ox + Math.max(margin, (w - fullW) / 2);
   const sleeveY = centerY - sleeveH / 2;
 
   // 套筒金属渐变
@@ -173,10 +185,8 @@ export function drawSpiralMicrometer(o: SpiralMicrometerDrawOptions): void {
   ctx.stroke();
 
   // 微分筒（金属圆筒侧视，右端半圆）
-  const thimbleExtra = 15 * s;
-  const thimbleW = 120 * s;
   const thimbleH = sleeveH + thimbleExtra * 2;
-  const thimbleX = sleeveX + sleeveW - 12 * s;
+  const thimbleX = sleeveX + sleeveW - thimbleOverlap;
   const thimbleY = centerY - thimbleH / 2;
 
   const thGrad = ctx.createLinearGradient(0, thimbleY, 0, thimbleY + thimbleH);
@@ -189,7 +199,13 @@ export function drawSpiralMicrometer(o: SpiralMicrometerDrawOptions): void {
   ctx.beginPath();
   ctx.moveTo(thimbleX, thimbleY);
   ctx.lineTo(thimbleX + thimbleW, thimbleY);
-  ctx.arc(thimbleX + thimbleW, centerY, thimbleH / 2, -Math.PI / 2, Math.PI / 2);
+  ctx.arc(
+    thimbleX + thimbleW,
+    centerY,
+    thimbleH / 2,
+    -Math.PI / 2,
+    Math.PI / 2
+  );
   ctx.lineTo(thimbleX, thimbleY + thimbleH);
   ctx.closePath();
   ctx.fill();
@@ -238,7 +254,10 @@ export function drawSpiralMicrometer(o: SpiralMicrometerDrawOptions): void {
       ctx.font = `${isAligned ? 700 : 400} ${Math.max(10, (isAligned ? 15 : 12) * fs)}px ${FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = offset <= 0 ? 'bottom' : 'top';
-      const ly = offset <= 0 ? centerY - tickLen / 2 - 4 * s : centerY + tickLen / 2 + 4 * s;
+      const ly =
+        offset <= 0
+          ? centerY - tickLen / 2 - 4 * s
+          : centerY + tickLen / 2 + 4 * s;
       ctx.fillText(String(k), x, ly);
     }
   }
@@ -307,17 +326,28 @@ export function createSpiralMicrometerView(
 
   function regionOf(): { x: number; y: number; w: number; h: number } {
     if (viewport) {
-      return { x: viewport.x, y: viewport.y, w: viewport.width, h: viewport.height };
+      return {
+        x: viewport.x,
+        y: viewport.y,
+        w: viewport.width,
+        h: viewport.height
+      };
     }
     return { x: 0, y: 0, w: cssW, h: cssH };
   }
 
   function resize(): void {
-    const dpr = Math.min(2, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
+    const dpr = Math.min(
+      2,
+      typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
+    );
     const rect = canvas.getBoundingClientRect();
     cssW = Math.max(1, Math.floor(rect.width || 800));
     cssH = Math.max(1, Math.floor(rect.height || 600));
-    if (canvas.width !== Math.floor(cssW * dpr) || canvas.height !== Math.floor(cssH * dpr)) {
+    if (
+      canvas.width !== Math.floor(cssW * dpr) ||
+      canvas.height !== Math.floor(cssH * dpr)
+    ) {
       canvas.width = Math.floor(cssW * dpr);
       canvas.height = Math.floor(cssH * dpr);
     }
