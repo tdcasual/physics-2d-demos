@@ -40,7 +40,7 @@ const PRESENTATION_PATTERN = /getRenderTokens|demoHints/;
  * 当某个场景完成 presentation 模式改造后，从本数组删除它；
  * 若它已采用标准机制却仍在清单中，测试会失败提醒你删除。
  */
-const PRESENTATION_EXEMPT = ['thin-film', 'wedge'];
+const PRESENTATION_EXEMPT = ['wedge'];
 
 function listSceneIds(): string[] {
   return readdirSync(scenesDir)

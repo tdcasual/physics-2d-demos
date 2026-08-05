@@ -3,6 +3,20 @@
  */
 
 import type { SceneMeta } from '../../platform/scene-contract';
+import type { SceneDemoProfile } from '../../platform/demo-profile';
+
+const demoProfile: SceneDemoProfile = {
+  controlPanel: 'minimal',
+  readoutPanel: 'overlay',
+  graphPanel: 'visible',
+  renderHints: {
+    contentScale: 1.5
+  },
+  interactionHints: {
+    touchTargetMinSize: 48,
+    visibleControlKeys: ['step', 'lambda', 'whiteLight']
+  }
+};
 
 export const thinFilmMeta: SceneMeta = {
   id: 'thin-film',
@@ -24,5 +38,6 @@ export const thinFilmMeta: SceneMeta = {
     dBottom: 800,
     n: 1.33
   },
-  urlSyncKeys: ['step']
+  urlSyncKeys: ['step'],
+  demoProfile
 };

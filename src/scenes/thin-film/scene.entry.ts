@@ -6,13 +6,19 @@ import type { TeachingTheme, TeachingMode } from '../../platform/standards';
 import type { SceneLifecycle } from '../../platform/scene-contract';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import { createStandardSceneEntry } from '../scene-entry-helpers';
-import { createThinFilmSim, type ThinFilmParams, type ThinFilmState } from './scene.sim';
+import {
+  createThinFilmSim,
+  type ThinFilmParams,
+  type ThinFilmState
+} from './scene.sim';
 import { createThinFilmView } from './scene.view';
 
 export type CreateThinFilmSceneOptions = {
   canvas?: HTMLCanvasElement;
   graphCanvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
+  mode?: TeachingMode;
+  demoHints?: DemoRenderHints;
   onReadout?: (state: ThinFilmState) => void;
 };
 
@@ -41,7 +47,9 @@ export function createThinFilmScene(
   const view = createThinFilmView({
     canvas: options.canvas,
     graphCanvas: options.graphCanvas,
-    theme: options.theme ?? 'dark'
+    theme: options.theme ?? 'dark',
+    mode: options.mode,
+    demoHints: options.demoHints
   });
 
   const base = createStandardSceneEntry({
@@ -62,7 +70,10 @@ export function createThinFilmScene(
       { label: '观察点厚度 d', value: `${s.localThickness.toFixed(0)} nm` },
       { label: '光程差 Δ', value: `${(s.pathDiff / 1e3).toFixed(2)} μm` },
       { label: '级次 m', value: s.order.toFixed(1) },
-      { label: '干涉结果', value: s.isConstructive ? '相长（增强）' : '相消（减弱）' },
+      {
+        label: '干涉结果',
+        value: s.isConstructive ? '相长（增强）' : '相消（减弱）'
+      },
       { label: '反射率 R', value: `${(s.reflectivity * 100).toFixed(1)}%` }
     ];
   }

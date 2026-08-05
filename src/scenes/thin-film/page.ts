@@ -12,7 +12,9 @@ import { wavelengthToColor } from '../../core/wavelength';
 import type { ThinFilmStep } from './scene.sim';
 
 function updateLambdaSliderColor(mount: HTMLElement, lambda: number): void {
-  const slider = mount.querySelector('input[type="range"][data-key="lambda"]') as HTMLInputElement | null;
+  const slider = mount.querySelector(
+    'input[type="range"][data-key="lambda"]'
+  ) as HTMLInputElement | null;
   if (slider) {
     slider.style.accentColor = wavelengthToColor(lambda);
   }
@@ -33,8 +35,8 @@ bootScenePage({
     readoutLabel: '数据读数',
     hideTransport: false
   },
-  createScene: ({ canvas, theme }) => {
-    return createThinFilmScene({ canvas, theme });
+  createScene: ({ canvas, theme, mode, demoHints }) => {
+    return createThinFilmScene({ canvas, theme, mode, demoHints });
   },
   createControls: ({ mount, scene }) => {
     const filmScene = scene as ReturnType<typeof createThinFilmScene>;
@@ -53,12 +55,17 @@ bootScenePage({
         } else if (key === 'whiteLight') {
           filmScene.setParams({ whiteLight: Boolean(value) });
           // 白光模式下灰化波长滑块
-          const lambdaSlider = mount.querySelector('input[type="range"][data-key="lambda"]') as HTMLInputElement | null;
+          const lambdaSlider = mount.querySelector(
+            'input[type="range"][data-key="lambda"]'
+          ) as HTMLInputElement | null;
           if (lambdaSlider) lambdaSlider.disabled = Boolean(value);
         } else if (key === 'cursorY') {
           filmScene.setCursorY(Number(value) / 100);
         } else {
-          filmScene.setParams({ [key]: Number(value) } as Record<string, number>);
+          filmScene.setParams({ [key]: Number(value) } as Record<
+            string,
+            number
+          >);
         }
         filmScene.render();
         writeSceneParams({ [key]: value });
@@ -85,7 +92,11 @@ bootScenePage({
         filmScene.setCursorY(num / 100);
         renderer.setValue(key, num);
       } else if (key in thinFilmMeta.defaultParams) {
-        const num = Number.isInteger(thinFilmMeta.defaultParams[key as keyof typeof thinFilmMeta.defaultParams])
+        const num = Number.isInteger(
+          thinFilmMeta.defaultParams[
+            key as keyof typeof thinFilmMeta.defaultParams
+          ]
+        )
           ? parseInt(String(value), 10)
           : parseFloat(String(value));
         filmScene.setParams({ [key]: num } as Record<string, number>);
@@ -100,7 +111,9 @@ bootScenePage({
     const initialLambda = filmScene.getState().params.lambda;
     updateLambdaSliderColor(mount, initialLambda);
     const initialWhiteLight = filmScene.getState().params.whiteLight;
-    const lambdaSlider = mount.querySelector('input[type="range"][data-key="lambda"]') as HTMLInputElement | null;
+    const lambdaSlider = mount.querySelector(
+      'input[type="range"][data-key="lambda"]'
+    ) as HTMLInputElement | null;
     if (lambdaSlider && initialWhiteLight) lambdaSlider.disabled = true;
 
     return {
