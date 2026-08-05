@@ -3,6 +3,20 @@
  */
 
 import type { SceneMeta } from '../../platform/scene-contract';
+import type { SceneDemoProfile } from '../../platform/demo-profile';
+
+const demoProfile: SceneDemoProfile = {
+  controlPanel: 'minimal',
+  readoutPanel: 'overlay',
+  graphPanel: 'visible',
+  renderHints: {
+    contentScale: 1.5
+  },
+  interactionHints: {
+    touchTargetMinSize: 48,
+    visibleControlKeys: ['step', 'lambda', 'theta']
+  }
+};
 
 export const wedgeMeta: SceneMeta = {
   id: 'wedge',
@@ -23,5 +37,6 @@ export const wedgeMeta: SceneMeta = {
     theta: 0.05,
     L: 5.0
   },
-  urlSyncKeys: ['step']
+  urlSyncKeys: ['step'],
+  demoProfile
 };

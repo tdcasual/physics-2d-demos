@@ -2,7 +2,8 @@
  * 劈尖干涉 — Canvas 渲染
  */
 
-import type { TeachingTheme } from '../../platform/standards';
+import type { TeachingTheme, TeachingMode } from '../../platform/standards';
+import type { DemoRenderHints } from '../../platform/demo-profile';
 import { sizeCanvasToFill } from '../../core/canvas-sizing';
 import type { WedgeState } from './scene.sim';
 import { wavelengthToColor } from '../../core/wavelength';
@@ -11,6 +12,8 @@ export type CreateWedgeViewOptions = {
   canvas?: HTMLCanvasElement;
   graphCanvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
+  mode?: TeachingMode;
+  demoHints?: DemoRenderHints;
 };
 
 export function createWedgeView(options: CreateWedgeViewOptions = {}) {
@@ -19,6 +22,8 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
   let graphCanvas = options.graphCanvas ?? null;
   let graphCtx: CanvasRenderingContext2D | null = null;
   let theme: TeachingTheme = options.theme ?? 'dark';
+  let mode: TeachingMode = options.mode ?? 'normal';
+  let demoHints: DemoRenderHints | undefined = options.demoHints;
   let cssWidth = 800;
   let cssHeight = 600;
   let scale = 1;
@@ -44,6 +49,9 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
     if (!c) return;
     const w = cssWidth;
     const h = cssHeight;
+    // 演示模式内容放大系数（normal=1，presentation=renderHints.contentScale）
+    const modeScale =
+      mode === 'presentation' ? (demoHints?.contentScale ?? 1.5) : 1.0;
     const isDark = theme === 'dark';
     const text = isDark ? '#e2e8f0' : '#1e293b';
     const dim = isDark ? '#94a3b8' : '#64748b';
@@ -66,7 +74,10 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
     const maxTheta = 1.0;
     const minWedgeH = h * 0.02;
     const maxWedgeH = h * 0.12;
-    const t = Math.max(0, Math.min(1, (next.params.theta - minTheta) / (maxTheta - minTheta)));
+    const t = Math.max(
+      0,
+      Math.min(1, (next.params.theta - minTheta) / (maxTheta - minTheta))
+    );
     const wedgeH = minWedgeH + t * (maxWedgeH - minWedgeH);
     const topY = botY - wedgeH;
 
@@ -75,7 +86,7 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
 
     c.save();
     c.lineWidth = 2 * scale;
-    c.font = `${Math.max(10, 13 * scale)}px sans-serif`;
+    c.font = `${Math.max(10, 13 * scale * modeScale)}px sans-serif`;
 
     // 空气层填充（半透明，先画在玻璃板下面）
     c.fillStyle = isDark ? 'rgba(56,189,248,0.10)' : 'rgba(56,189,248,0.15)';
@@ -88,8 +99,14 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
 
     // 下玻璃板（水平厚矩形）
     const glassGrad1 = c.createLinearGradient(0, botY, 0, botY + glassH);
-    glassGrad1.addColorStop(0, isDark ? 'rgba(148,163,184,0.35)' : 'rgba(100,116,139,0.25)');
-    glassGrad1.addColorStop(1, isDark ? 'rgba(148,163,184,0.15)' : 'rgba(100,116,139,0.10)');
+    glassGrad1.addColorStop(
+      0,
+      isDark ? 'rgba(148,163,184,0.35)' : 'rgba(100,116,139,0.25)'
+    );
+    glassGrad1.addColorStop(
+      1,
+      isDark ? 'rgba(148,163,184,0.15)' : 'rgba(100,116,139,0.10)'
+    );
     c.fillStyle = glassGrad1;
     c.fillRect(leftX - 10 * scale, botY, rightX - leftX + 20 * scale, glassH);
     c.strokeStyle = text;
@@ -98,8 +115,14 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
 
     // 上玻璃板（倾斜平行四边形）
     const glassGrad2 = c.createLinearGradient(0, topY - glassH, 0, topY);
-    glassGrad2.addColorStop(0, isDark ? 'rgba(148,163,184,0.15)' : 'rgba(100,116,139,0.10)');
-    glassGrad2.addColorStop(1, isDark ? 'rgba(148,163,184,0.35)' : 'rgba(100,116,139,0.25)');
+    glassGrad2.addColorStop(
+      0,
+      isDark ? 'rgba(148,163,184,0.15)' : 'rgba(100,116,139,0.10)'
+    );
+    glassGrad2.addColorStop(
+      1,
+      isDark ? 'rgba(148,163,184,0.35)' : 'rgba(100,116,139,0.25)'
+    );
     c.fillStyle = glassGrad2;
     c.beginPath();
     c.moveTo(leftX, botY);
@@ -115,13 +138,13 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
     // 左端接触点标记
     c.fillStyle = accent;
     c.beginPath();
-    c.arc(leftX, botY, 3 * scale, 0, Math.PI * 2);
+    c.arc(leftX, botY, 3 * scale * modeScale, 0, Math.PI * 2);
     c.fill();
 
     // 玻璃板标签
     c.fillStyle = dim;
     c.textAlign = 'center';
-    c.font = `${Math.max(9, 11 * scale)}px sans-serif`;
+    c.font = `${Math.max(9, 11 * scale * modeScale)}px sans-serif`;
     c.fillText('玻璃板', rightX + 30 * scale, topY - glassH / 2);
     c.fillText('玻璃板', rightX + 30 * scale, botY + glassH / 2 + 4 * scale);
     c.fillText('空气劈尖', (leftX + rightX) / 2, (botY + topY) / 2 + 6 * scale);
@@ -130,18 +153,18 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
     const rayCount = 5;
     const rayStartY = h * 0.03;
     c.strokeStyle = accent;
-    c.lineWidth = 1.5 * scale;
+    c.lineWidth = 1.5 * scale * modeScale;
     c.globalAlpha = 0.5;
     for (let i = 0; i < rayCount; i++) {
       const rx = leftX + (rightX - leftX) * (0.15 + i * 0.18);
       // 上板表面 y 坐标
-      const plateY = botY - (rx - leftX) / (rightX - leftX) * wedgeH;
+      const plateY = botY - ((rx - leftX) / (rightX - leftX)) * wedgeH;
       // 入射光：从顶部到上板顶面
       c.beginPath();
       c.moveTo(rx, rayStartY);
       c.lineTo(rx, plateY - glassH);
       c.stroke();
-      drawArrow(c, rx, rayStartY, rx, plateY - glassH, 4 * scale);
+      drawArrow(c, rx, rayStartY, rx, plateY - glassH, 4 * scale * modeScale);
       // 穿过上玻璃板（玻璃内部半透明线）
       c.globalAlpha = 0.25;
       c.beginPath();
@@ -154,9 +177,9 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
 
     // 光标 P（可移动竖线）
     const px = leftX + (rightX - leftX) * next.cursorX;
-    const py = botY - (px - leftX) / (rightX - leftX) * wedgeH;
+    const py = botY - ((px - leftX) / (rightX - leftX)) * wedgeH;
     c.strokeStyle = accent;
-    c.lineWidth = 1.5 * scale;
+    c.lineWidth = 1.5 * scale * modeScale;
     c.setLineDash([3 * scale, 2 * scale]);
     c.beginPath();
     c.moveTo(px, botY + 15 * scale);
@@ -167,7 +190,7 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
     // P 点
     c.fillStyle = accent;
     c.beginPath();
-    c.arc(px, py, 4 * scale, 0, Math.PI * 2);
+    c.arc(px, py, 4 * scale * modeScale, 0, Math.PI * 2);
     c.fill();
     c.fillStyle = text;
     c.textAlign = 'left';
@@ -183,7 +206,7 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
       c.stroke();
       c.fillStyle = text;
       c.textAlign = 'left';
-      c.font = `italic ${Math.max(10, 12 * scale)}px sans-serif`;
+      c.font = `italic ${Math.max(10, 12 * scale * modeScale)}px sans-serif`;
       c.fillText('d', px + 16 * scale, (botY + py) / 2 + 3 * scale);
     }
 
@@ -197,7 +220,7 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
       c.stroke();
       c.fillStyle = text;
       c.textAlign = 'center';
-      c.font = `${Math.max(10, 12 * scale)}px sans-serif`;
+      c.font = `${Math.max(10, 12 * scale * modeScale)}px sans-serif`;
       c.fillText('x', (leftX + px) / 2, botY + 38 * scale);
     }
 
@@ -212,23 +235,67 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
       c.stroke();
       c.fillStyle = text;
       c.textAlign = 'left';
-      c.fillText('θ', leftX + thetaR * Math.cos(-visualAngle * 0.5) + 4 * scale, botY + thetaR * Math.sin(-visualAngle * 0.5) - 2 * scale);
+      c.fillText(
+        'θ',
+        leftX + thetaR * Math.cos(-visualAngle * 0.5) + 4 * scale,
+        botY + thetaR * Math.sin(-visualAngle * 0.5) - 2 * scale
+      );
     }
 
     // 阶段特定内容
     if (step === 'path-diff') {
-      drawPathDiffPhase(c, { w, h, text, dim, accent, px, py, botY, leftX, rightX, scale, state: next });
+      drawPathDiffPhase(c, {
+        w,
+        h,
+        text,
+        dim,
+        accent,
+        px,
+        py,
+        botY,
+        leftX,
+        rightX,
+        scale,
+        modeScale,
+        state: next
+      });
     } else if (step === 'equal-thickness') {
-      drawEqualThicknessPhase(c, { w, h, text, dim, accent, leftX, rightX, botY, topY, scale, state: next });
+      drawEqualThicknessPhase(c, {
+        w,
+        h,
+        text,
+        dim,
+        accent,
+        leftX,
+        rightX,
+        botY,
+        topY,
+        scale,
+        modeScale,
+        state: next
+      });
     } else if (step === 'result') {
-      drawResultPhase(c, { w, h, text, dim, accent, leftX, rightX, botY, topY, scale, state: next });
+      drawResultPhase(c, {
+        w,
+        h,
+        text,
+        dim,
+        accent,
+        leftX,
+        rightX,
+        botY,
+        topY,
+        scale,
+        modeScale,
+        state: next
+      });
     }
 
     // 底部公式（放在几何图和曲线之间）
     if (step === 'geometry') {
       const fy = botY + 18 * scale;
       c.fillStyle = dim;
-      c.font = `${Math.max(11, 14 * scale)}px sans-serif`;
+      c.font = `${Math.max(11, 14 * scale * modeScale)}px sans-serif`;
       c.textAlign = 'center';
       c.fillText('d = x·tanθ', w / 2, fy);
     }
@@ -236,10 +303,28 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
     c.restore();
 
     // 光强曲线（几何图下方，紧凑）
-    drawIntensityCurve(next, { text, dim, accent, bg, leftX, rightX, botY, scale });
+    drawIntensityCurve(next, {
+      text,
+      dim,
+      accent,
+      bg,
+      leftX,
+      rightX,
+      botY,
+      scale,
+      modeScale
+    });
 
     // 干涉条纹（主 canvas 底部）
-    drawFringeOnMainCanvas(next, { text, dim, accent, leftX, rightX, scale });
+    drawFringeOnMainCanvas(next, {
+      text,
+      dim,
+      accent,
+      leftX,
+      rightX,
+      scale,
+      modeScale
+    });
 
     // 图表区（右侧，仅波叠加）
     drawWaveSuperpositionGraph(next);
@@ -247,11 +332,21 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
 
   function drawIntensityCurve(
     state: WedgeState,
-    g: { text: string; dim: string; accent: string; bg: string; leftX: number; rightX: number; botY: number; scale: number }
+    g: {
+      text: string;
+      dim: string;
+      accent: string;
+      bg: string;
+      leftX: number;
+      rightX: number;
+      botY: number;
+      scale: number;
+      modeScale: number;
+    }
   ): void {
     const c = ctx;
     if (!c) return;
-    const { text, dim, accent, leftX, rightX, botY, scale } = g;
+    const { text, dim, accent, leftX, rightX, botY, scale, modeScale } = g;
     const h = cssHeight;
 
     const curveTop = botY + 20 * scale;
@@ -274,7 +369,7 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
 
     // 光强曲线
     c.strokeStyle = accent;
-    c.lineWidth = 1.5 * scale;
+    c.lineWidth = 1.5 * scale * modeScale;
     c.beginPath();
     const lambda = state.params.lambda;
     const thetaRad = state.params.theta * (Math.PI / 180);
@@ -304,7 +399,7 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
 
     // 标签
     c.fillStyle = text;
-    c.font = `${Math.max(9, 11 * scale)}px sans-serif`;
+    c.font = `${Math.max(9, 11 * scale * modeScale)}px sans-serif`;
     c.textAlign = 'center';
     c.fillText('x', (leftX + rightX) / 2, curveBot + 14 * scale);
     c.textAlign = 'right';
@@ -316,14 +411,22 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
   // ── 在主 canvas 底部绘制竖直干涉条纹 ──
   function drawFringeOnMainCanvas(
     next: WedgeState,
-    g: { text: string; dim: string; accent: string; leftX: number; rightX: number; scale: number }
+    g: {
+      text: string;
+      dim: string;
+      accent: string;
+      leftX: number;
+      rightX: number;
+      scale: number;
+      modeScale: number;
+    }
   ): void {
     const c = ctx;
     if (!c) return;
-    const { text, accent, leftX, rightX, scale } = g;
+    const { text, accent, leftX, rightX, scale, modeScale } = g;
     const h = cssHeight;
 
-    const stripeTop = h * 0.60;
+    const stripeTop = h * 0.6;
     const stripeH = h * 0.18;
     const stripeW = rightX - leftX;
 
@@ -331,7 +434,7 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
 
     // 标题
     c.fillStyle = text;
-    c.font = `${Math.max(9, 11 * scale)}px sans-serif`;
+    c.font = `${Math.max(9, 11 * scale * modeScale)}px sans-serif`;
     c.textAlign = 'left';
     c.fillText('干涉条纹（等厚线）', leftX, stripeTop - 6 * scale);
 
@@ -377,8 +480,15 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
     // 级次标注（竖直条纹：m 标注在条纹下方，密度自适应）
     c.fillStyle = text;
     c.textAlign = 'center';
-    c.font = `${Math.max(8, 10 * scale)}px sans-serif`;
-    const labelStep = fringeSpacing < 0.02 ? 10 : fringeSpacing < 0.05 ? 5 : fringeSpacing < 0.15 ? 2 : 1;
+    c.font = `${Math.max(8, 10 * scale * modeScale)}px sans-serif`;
+    const labelStep =
+      fringeSpacing < 0.02
+        ? 10
+        : fringeSpacing < 0.05
+          ? 5
+          : fringeSpacing < 0.15
+            ? 2
+            : 1;
     for (let m = 0; m < 100; m++) {
       const xPos = m * fringeSpacing;
       if (xPos > displayL) break;
@@ -389,9 +499,13 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
 
     // 条纹间距标注
     c.fillStyle = text;
-    c.font = `${Math.max(9, 11 * scale)}px sans-serif`;
+    c.font = `${Math.max(9, 11 * scale * modeScale)}px sans-serif`;
     c.textAlign = 'left';
-    c.fillText(`显示范围: 0 ~ ${displayL.toFixed(2)} mm   条纹间距 l = ${fringeSpacing.toFixed(3)} mm`, leftX, stripeTop + stripeH + 26 * scale);
+    c.fillText(
+      `显示范围: 0 ~ ${displayL.toFixed(2)} mm   条纹间距 l = ${fringeSpacing.toFixed(3)} mm`,
+      leftX,
+      stripeTop + stripeH + 26 * scale
+    );
 
     c.restore();
   }
@@ -416,14 +530,30 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
 
     gc.save();
     // 波叠加占满整个 graphCanvas（全高）
-    drawWaveSuperposition(gc, next, { gw, gh, gScale, text, dim, waveTop: gh * 0.06, waveBot: gh * 0.92 });
+    drawWaveSuperposition(gc, next, {
+      gw,
+      gh,
+      gScale,
+      text,
+      dim,
+      waveTop: gh * 0.06,
+      waveBot: gh * 0.92
+    });
     gc.restore();
   }
 
   function drawWaveSuperposition(
     gc: CanvasRenderingContext2D,
     state: WedgeState,
-    g: { gw: number; gh: number; gScale: number; text: string; dim: string; waveTop?: number; waveBot?: number }
+    g: {
+      gw: number;
+      gh: number;
+      gScale: number;
+      text: string;
+      dim: string;
+      waveTop?: number;
+      waveBot?: number;
+    }
   ): void {
     const { gw, gh, gScale, text, dim } = g;
 
@@ -474,7 +604,7 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
     const plotLeft = 52 * gScale;
     const plotRight = gw - 15 * gScale;
     const plotW = plotRight - plotLeft;
-    const amp = waveH * 0.30;
+    const amp = waveH * 0.3;
 
     const t = state.time;
     const delta = state.phaseDiff;
@@ -545,26 +675,51 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
     gc.fillStyle = text;
     gc.font = `${Math.max(9, 11 * gScale)}px sans-serif`;
     gc.textAlign = 'left';
-    const deg = ((delta * 180 / Math.PI) % 360 + 360) % 360;
+    const deg = ((((delta * 180) / Math.PI) % 360) + 360) % 360;
     gc.fillText(`δ = ${deg.toFixed(0)}°`, plotLeft, waveBot + 14 * gScale);
-    gc.fillText(`I = ${(intensity * 100).toFixed(0)}%`, plotLeft + 70 * gScale, waveBot + 14 * gScale);
-    gc.fillText(state.intensity > 0.5 ? '明纹' : '暗纹', plotLeft + 140 * gScale, waveBot + 14 * gScale);
+    gc.fillText(
+      `I = ${(intensity * 100).toFixed(0)}%`,
+      plotLeft + 70 * gScale,
+      waveBot + 14 * gScale
+    );
+    gc.fillText(
+      state.intensity > 0.5 ? '明纹' : '暗纹',
+      plotLeft + 140 * gScale,
+      waveBot + 14 * gScale
+    );
   }
 
-  function drawArrow(c: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number, size: number): void {
+  function drawArrow(
+    c: CanvasRenderingContext2D,
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    size: number
+  ): void {
     const angle = Math.atan2(y2 - y1, x2 - x1);
     c.beginPath();
     c.moveTo(x2, y2);
-    c.lineTo(x2 - size * Math.cos(angle - Math.PI / 6), y2 - size * Math.sin(angle - Math.PI / 6));
+    c.lineTo(
+      x2 - size * Math.cos(angle - Math.PI / 6),
+      y2 - size * Math.sin(angle - Math.PI / 6)
+    );
     c.moveTo(x2, y2);
-    c.lineTo(x2 - size * Math.cos(angle + Math.PI / 6), y2 - size * Math.sin(angle + Math.PI / 6));
+    c.lineTo(
+      x2 - size * Math.cos(angle + Math.PI / 6),
+      y2 - size * Math.sin(angle + Math.PI / 6)
+    );
     c.stroke();
   }
 
   function hexToRgb(hex: string): { r: number; g: number; b: number } {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result
-      ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) }
+      ? {
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16)
+        }
       : { r: 200, g: 200, b: 200 };
   }
 
@@ -581,7 +736,10 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
     setTheme(t: TeachingTheme): void {
       theme = t;
     },
-    setMode(): void {},
+    setMode(next: TeachingMode, hints?: DemoRenderHints): void {
+      mode = next;
+      demoHints = hints;
+    },
     attachGraphCanvas(canvas: HTMLCanvasElement): void {
       graphCanvas = canvas;
       resizeGraphCanvas();
@@ -593,16 +751,30 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
 // ── path-diff 阶段 ──
 function drawPathDiffPhase(
   c: CanvasRenderingContext2D,
-  g: { w: number; h: number; text: string; dim: string; accent: string; px: number; py: number; botY: number; leftX: number; rightX: number; scale: number; state: WedgeState }
+  g: {
+    w: number;
+    h: number;
+    text: string;
+    dim: string;
+    accent: string;
+    px: number;
+    py: number;
+    botY: number;
+    leftX: number;
+    rightX: number;
+    scale: number;
+    modeScale: number;
+    state: WedgeState;
+  }
 ): void {
-  const { text, dim, accent, px, py, botY, scale } = g;
+  const { text, dim, accent, px, py, botY, scale, modeScale } = g;
   c.save();
-  c.font = `${Math.max(10, 13 * scale)}px sans-serif`;
+  c.font = `${Math.max(10, 13 * scale * modeScale)}px sans-serif`;
 
   // 两束反射光示意（在 P 点上方）
   const rayY = py - 40 * scale;
   c.strokeStyle = accent;
-  c.lineWidth = 1.5 * scale;
+  c.lineWidth = 1.5 * scale * modeScale;
   c.globalAlpha = 0.6;
 
   // 第一束：上表面反射（直接从 P 点向上）
@@ -628,12 +800,12 @@ function drawPathDiffPhase(
   // 光程差标注
   c.fillStyle = text;
   c.textAlign = 'center';
-  c.font = `${Math.max(11, 14 * scale)}px sans-serif`;
+  c.font = `${Math.max(11, 14 * scale * modeScale)}px sans-serif`;
   c.fillText('Δ = 2d + λ/2', g.w / 2, g.h * 0.88);
 
   // 半波损失标注
   c.fillStyle = dim;
-  c.font = `${Math.max(9, 11 * scale)}px sans-serif`;
+  c.font = `${Math.max(9, 11 * scale * modeScale)}px sans-serif`;
   c.fillText('下表面反射有 λ/2 附加光程差（半波损失）', g.w / 2, g.h * 0.93);
 
   c.restore();
@@ -642,11 +814,24 @@ function drawPathDiffPhase(
 // ── equal-thickness 阶段 ──
 function drawEqualThicknessPhase(
   c: CanvasRenderingContext2D,
-  g: { w: number; h: number; text: string; dim: string; accent: string; leftX: number; rightX: number; botY: number; topY: number; scale: number; state: WedgeState }
+  g: {
+    w: number;
+    h: number;
+    text: string;
+    dim: string;
+    accent: string;
+    leftX: number;
+    rightX: number;
+    botY: number;
+    topY: number;
+    scale: number;
+    modeScale: number;
+    state: WedgeState;
+  }
 ): void {
-  const { text, dim, leftX, rightX, botY, topY, scale, state } = g;
+  const { text, dim, leftX, rightX, botY, topY, scale, modeScale, state } = g;
   c.save();
-  c.font = `${Math.max(10, 13 * scale)}px sans-serif`;
+  c.font = `${Math.max(10, 13 * scale * modeScale)}px sans-serif`;
 
   const lambda = state.params.lambda;
   const thetaRad = state.params.theta * (Math.PI / 180);
@@ -659,7 +844,7 @@ function drawEqualThicknessPhase(
 
   for (let m = 0; m < 8; m++) {
     // 暗纹位置：d = mλ/2 → x = mλ/(2tanθ)
-    const xPos = (m * lambda / 2) / (Math.tan(thetaRad) * 1e6); // mm
+    const xPos = (m * lambda) / 2 / (Math.tan(thetaRad) * 1e6); // mm
     if (xPos > L) break;
     const px = leftX + (xPos / L) * (rightX - leftX);
     c.beginPath();
@@ -669,14 +854,14 @@ function drawEqualThicknessPhase(
 
     c.fillStyle = dim;
     c.textAlign = 'center';
-    c.font = `${Math.max(8, 10 * scale)}px sans-serif`;
+    c.font = `${Math.max(8, 10 * scale * modeScale)}px sans-serif`;
     c.fillText(`m=${m}`, px, topY - 14 * scale);
   }
   c.setLineDash([]);
 
   // 公式
   c.fillStyle = text;
-  c.font = `${Math.max(11, 14 * scale)}px sans-serif`;
+  c.font = `${Math.max(11, 14 * scale * modeScale)}px sans-serif`;
   c.textAlign = 'center';
   c.fillText('暗纹：2d = mλ   明纹：2d = (m+1/2)λ', g.w / 2, g.h * 0.88);
 
@@ -686,24 +871,45 @@ function drawEqualThicknessPhase(
 // ── result 阶段 ──
 function drawResultPhase(
   c: CanvasRenderingContext2D,
-  g: { w: number; h: number; text: string; dim: string; accent: string; leftX: number; rightX: number; botY: number; topY: number; scale: number; state: WedgeState }
+  g: {
+    w: number;
+    h: number;
+    text: string;
+    dim: string;
+    accent: string;
+    leftX: number;
+    rightX: number;
+    botY: number;
+    topY: number;
+    scale: number;
+    modeScale: number;
+    state: WedgeState;
+  }
 ): void {
-  const { text, accent, scale, state } = g;
+  const { text, accent, scale, modeScale, state } = g;
   c.save();
 
   const fy = g.h * 0.88;
   c.fillStyle = accent;
-  c.font = `bold ${Math.max(14, 20 * scale)}px sans-serif`;
+  c.font = `bold ${Math.max(14, 20 * scale * modeScale)}px sans-serif`;
   c.textAlign = 'center';
   c.fillText('l = λ / (2 sin θ) ≈ λ / (2θ)', g.w / 2, fy);
 
   c.fillStyle = text;
-  c.font = `${Math.max(10, 13 * scale)}px sans-serif`;
-  c.fillText(`= ${state.fringeSpacing.toFixed(3)} mm = ${(state.fringeSpacing * 1e3).toFixed(1)} μm`, g.w / 2, fy + 24 * scale);
+  c.font = `${Math.max(10, 13 * scale * modeScale)}px sans-serif`;
+  c.fillText(
+    `= ${state.fringeSpacing.toFixed(3)} mm = ${(state.fringeSpacing * 1e3).toFixed(1)} μm`,
+    g.w / 2,
+    fy + 24 * scale
+  );
 
   c.fillStyle = g.dim;
-  c.font = `${Math.max(9, 11 * scale)}px sans-serif`;
-  c.fillText(`λ = ${state.params.lambda} nm   θ = ${state.params.theta.toFixed(3)}°`, g.w / 2, fy + 44 * scale);
+  c.font = `${Math.max(9, 11 * scale * modeScale)}px sans-serif`;
+  c.fillText(
+    `λ = ${state.params.lambda} nm   θ = ${state.params.theta.toFixed(3)}°`,
+    g.w / 2,
+    fy + 44 * scale
+  );
 
   c.restore();
 }

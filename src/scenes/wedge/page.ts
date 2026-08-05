@@ -12,7 +12,9 @@ import { wavelengthToColor } from '../../core/wavelength';
 import type { WedgeStep } from './scene.sim';
 
 function updateLambdaSliderColor(mount: HTMLElement, lambda: number): void {
-  const slider = mount.querySelector('input[type="range"][data-key="lambda"]') as HTMLInputElement | null;
+  const slider = mount.querySelector(
+    'input[type="range"][data-key="lambda"]'
+  ) as HTMLInputElement | null;
   if (slider) {
     slider.style.accentColor = wavelengthToColor(lambda);
   }
@@ -33,8 +35,8 @@ bootScenePage({
     readoutLabel: '数据读数',
     hideTransport: false
   },
-  createScene: ({ canvas, theme }) => {
-    return createWedgeScene({ canvas, theme });
+  createScene: ({ canvas, theme, mode, demoHints }) => {
+    return createWedgeScene({ canvas, theme, mode, demoHints });
   },
   createControls: ({ mount, scene }) => {
     const wedgeScene = scene as ReturnType<typeof createWedgeScene>;
@@ -56,7 +58,10 @@ bootScenePage({
           wedgeScene.setCursorX(Number(value) / 100);
           wedgeScene.render();
         } else {
-          wedgeScene.setParams({ [key]: Number(value) } as Record<string, number>);
+          wedgeScene.setParams({ [key]: Number(value) } as Record<
+            string,
+            number
+          >);
           wedgeScene.render();
         }
         writeSceneParams({ [key]: value });

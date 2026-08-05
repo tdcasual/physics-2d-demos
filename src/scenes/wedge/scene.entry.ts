@@ -13,6 +13,8 @@ export type CreateWedgeSceneOptions = {
   canvas?: HTMLCanvasElement;
   graphCanvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
+  mode?: TeachingMode;
+  demoHints?: DemoRenderHints;
   onReadout?: (state: WedgeState) => void;
 };
 
@@ -39,7 +41,9 @@ export function createWedgeScene(
   const view = createWedgeView({
     canvas: options.canvas,
     graphCanvas: options.graphCanvas,
-    theme: options.theme ?? 'dark'
+    theme: options.theme ?? 'dark',
+    mode: options.mode,
+    demoHints: options.demoHints
   });
 
   const base = createStandardSceneEntry({
