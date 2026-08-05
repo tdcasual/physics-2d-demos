@@ -6,12 +6,19 @@ import type { TeachingTheme, TeachingMode } from '../../platform/standards';
 import type { SceneLifecycle } from '../../platform/scene-contract';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import { createStandardSceneEntry } from '../scene-entry-helpers';
-import { createMechanicalWaveSim, type MechanicalWaveParams, type MechanicalWaveState, type ConstraintInfo } from './scene.sim';
+import {
+  createMechanicalWaveSim,
+  type MechanicalWaveParams,
+  type MechanicalWaveState,
+  type ConstraintInfo
+} from './scene.sim';
 import { createMechanicalWaveView } from './scene.view';
 
 export type CreateMechanicalWaveSceneOptions = {
   canvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
+  mode?: TeachingMode;
+  demoHints?: DemoRenderHints;
   onReadout?: (state: MechanicalWaveState) => void;
 };
 
@@ -29,7 +36,12 @@ export function createMechanicalWaveScene(
   subscribe(listener: () => void): () => void;
 } {
   const sim = createMechanicalWaveSim();
-  const view = createMechanicalWaveView({ canvas: options.canvas, theme: options.theme ?? 'dark' });
+  const view = createMechanicalWaveView({
+    canvas: options.canvas,
+    theme: options.theme ?? 'dark',
+    mode: options.mode,
+    demoHints: options.demoHints
+  });
 
   view.setOnPointSelect((x) => {
     sim.setPointP(x);
@@ -41,7 +53,7 @@ export function createMechanicalWaveScene(
     sim,
     view,
     getState: () => sim.getState(),
-    onReadout: options.onReadout,
+    onReadout: options.onReadout
   });
 
   function setParam(key: string, value: number | string): MechanicalWaveParams {
@@ -57,7 +69,11 @@ export function createMechanicalWaveScene(
     base.notify();
   }
 
-  const dirLabels: Record<string, string> = { up: '↑ 向上', down: '↓ 向下', zero: '○ 零' };
+  const dirLabels: Record<string, string> = {
+    up: '↑ 向上',
+    down: '↓ 向下',
+    zero: '○ 零'
+  };
 
   function getReadoutItems(): Array<{ label: string; value: string }> {
     const s = sim.getState();
@@ -66,7 +82,7 @@ export function createMechanicalWaveScene(
       { label: '当前时刻 t', value: `${s.time.toFixed(2)} s` },
       { label: 'P 点位移', value: `${s.pointPY.toFixed(2)} cm` },
       { label: 'P 点速度方向', value: dirLabels[s.velocityDirection] },
-      { label: 'P 点加速度方向', value: dirLabels[s.accelerationDirection] },
+      { label: 'P 点加速度方向', value: dirLabels[s.accelerationDirection] }
     ];
   }
 
@@ -76,10 +92,12 @@ export function createMechanicalWaveScene(
 
   return {
     ...base,
-    getState() { return sim.getState(); },
+    getState() {
+      return sim.getState();
+    },
     setParam,
     setPointP,
     getReadoutItems,
-    getConstraintInfo,
+    getConstraintInfo
   };
 }

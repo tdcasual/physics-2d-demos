@@ -4,7 +4,8 @@
  * 绘制横波波形、质点、速度/加速度矢量、观测点 P
  */
 
-import type { TeachingTheme } from '../../platform/standards';
+import type { TeachingTheme, TeachingMode } from '../../platform/standards';
+import type { DemoRenderHints } from '../../platform/demo-profile';
 import { sizeCanvasToFill } from '../../core/canvas-sizing';
 import type { MechanicalWaveState } from './scene.sim';
 import { waveY, waveVelocity, waveAcceleration } from './scene.sim';
@@ -12,6 +13,8 @@ import { waveY, waveVelocity, waveAcceleration } from './scene.sim';
 export type CreateMechanicalWaveViewOptions = {
   canvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
+  mode?: TeachingMode;
+  demoHints?: DemoRenderHints;
 };
 
 const PALETTE = {
@@ -27,7 +30,7 @@ const PALETTE = {
     velocity: '#10b981',
     accel: '#ef4444',
     pointP: '#f59e0b',
-    pointPDash: '#f59e0b',
+    pointPDash: '#f59e0b'
   },
   light: {
     bg: '#f8fafc',
@@ -41,15 +44,18 @@ const PALETTE = {
     velocity: '#10b981',
     accel: '#ef4444',
     pointP: '#f59e0b',
-    pointPDash: '#f59e0b',
-  },
+    pointPDash: '#f59e0b'
+  }
 };
 
-export function createMechanicalWaveView(options: CreateMechanicalWaveViewOptions = {}) {
+export function createMechanicalWaveView(
+  options: CreateMechanicalWaveViewOptions = {}
+) {
   let canvas = options.canvas ?? null;
   let ctx: CanvasRenderingContext2D | null = null;
   let theme: TeachingTheme = options.theme ?? 'dark';
-  let modeScale = 1;
+  let mode: TeachingMode = options.mode ?? 'normal';
+  let demoHints: DemoRenderHints | undefined = options.demoHints;
   let cssW = 800;
   let cssH = 400;
   let responsiveScale = 1;
@@ -79,7 +85,9 @@ export function createMechanicalWaveView(options: CreateMechanicalWaveViewOption
 
   function worldToPixelX(x: number): number {
     const drawW = cssW - MARGIN_LEFT - MARGIN_RIGHT;
-    return MARGIN_LEFT + ((x - WORLD_X_MIN) / (WORLD_X_MAX - WORLD_X_MIN)) * drawW;
+    return (
+      MARGIN_LEFT + ((x - WORLD_X_MIN) / (WORLD_X_MAX - WORLD_X_MIN)) * drawW
+    );
   }
 
   function worldToPixelY(y: number): number {
@@ -90,17 +98,27 @@ export function createMechanicalWaveView(options: CreateMechanicalWaveViewOption
 
   function pixelToWorldX(px: number): number {
     const drawW = cssW - MARGIN_LEFT - MARGIN_RIGHT;
-    return WORLD_X_MIN + ((px - MARGIN_LEFT) / drawW) * (WORLD_X_MAX - WORLD_X_MIN);
+    return (
+      WORLD_X_MIN + ((px - MARGIN_LEFT) / drawW) * (WORLD_X_MAX - WORLD_X_MIN)
+    );
+  }
+
+  /** 演示模式内容放大系数（normal=1，presentation=renderHints.contentScale） */
+  function getContentScale(): number {
+    return mode === 'presentation' ? (demoHints?.contentScale ?? 1.5) : 1;
   }
 
   function drawScene(state: MechanicalWaveState): void {
     const c = ctx;
     if (!c || !canvas) return;
     const p = PALETTE[theme === 'dark' ? 'dark' : 'light'];
-    const { amplitude, wavelength, period, direction, showMicroShift } = state.params;
+    const { amplitude, wavelength, period, direction, showMicroShift } =
+      state.params;
     const dir = direction === 'right' ? 1 : -1;
     const t = state.time;
-    const fs = Math.max(11, 12 * responsiveScale * modeScale);
+    // 演示模式：几何坐标不变，字号/线宽/关键点按 contentScale 放大
+    const cs = getContentScale();
+    const fs = Math.max(11, 12 * responsiveScale * cs);
 
     c.clearRect(0, 0, cssW, cssH);
     c.fillStyle = p.bg;
@@ -126,7 +144,7 @@ export function createMechanicalWaveView(options: CreateMechanicalWaveViewOption
 
     // X 轴
     c.strokeStyle = p.axis;
-    c.lineWidth = 2;
+    c.lineWidth = 2 * cs;
     c.beginPath();
     c.moveTo(originPx, originPy);
     c.lineTo(axisEndX + 10, originPy);
@@ -135,8 +153,8 @@ export function createMechanicalWaveView(options: CreateMechanicalWaveViewOption
     c.fillStyle = p.axis;
     c.beginPath();
     c.moveTo(axisEndX + 10, originPy);
-    c.lineTo(axisEndX + 2, originPy - 4);
-    c.lineTo(axisEndX + 2, originPy + 4);
+    c.lineTo(axisEndX + 2, originPy - 4 * cs);
+    c.lineTo(axisEndX + 2, originPy + 4 * cs);
     c.closePath();
     c.fill();
 
@@ -147,8 +165,8 @@ export function createMechanicalWaveView(options: CreateMechanicalWaveViewOption
     c.stroke();
     c.beginPath();
     c.moveTo(originPx, axisTopY - 5);
-    c.lineTo(originPx - 4, axisTopY + 3);
-    c.lineTo(originPx + 4, axisTopY + 3);
+    c.lineTo(originPx - 4 * cs, axisTopY + 3);
+    c.lineTo(originPx + 4 * cs, axisTopY + 3);
     c.closePath();
     c.fill();
 
@@ -198,7 +216,7 @@ export function createMechanicalWaveView(options: CreateMechanicalWaveViewOption
     // 主波形
     c.beginPath();
     c.strokeStyle = p.wave;
-    c.lineWidth = Math.max(2.5, 3 * responsiveScale);
+    c.lineWidth = Math.max(2.5, 3 * responsiveScale * cs);
     for (let x = WORLD_X_MIN; x <= WORLD_X_MAX; x += 0.01) {
       const y = waveY(x, t, amplitude, wavelength, period, dir);
       const px = worldToPixelX(x);
@@ -212,7 +230,7 @@ export function createMechanicalWaveView(options: CreateMechanicalWaveViewOption
     const particlePositions = [0, 1, 2, 2.5, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
     const vScale = 0.15;
     const aScale = 0.02;
-    const dotR = Math.max(3, 4 * responsiveScale);
+    const dotR = Math.max(3, 4 * responsiveScale * cs);
 
     for (const x of particlePositions) {
       const y = waveY(x, t, amplitude, wavelength, period, dir);
@@ -226,16 +244,16 @@ export function createMechanicalWaveView(options: CreateMechanicalWaveViewOption
 
       // 速度矢量（绿色）
       const v = waveVelocity(x, t, amplitude, wavelength, period, dir);
-      const vLen = v * vScale * responsiveScale;
+      const vLen = v * vScale * responsiveScale * cs;
       if (Math.abs(vLen) > 0.5) {
-        drawArrow(c, px, py, px, py - vLen, p.velocity, 2);
+        drawArrow(c, px, py, px, py - vLen, p.velocity, 2 * cs);
       }
 
       // 加速度矢量（红色）
       const a = waveAcceleration(y, period);
-      const aLen = a * aScale * responsiveScale;
+      const aLen = a * aScale * responsiveScale * cs;
       if (Math.abs(aLen) > 0.5) {
-        drawArrow(c, px, py, px, py - aLen, p.accel, 2);
+        drawArrow(c, px, py, px, py - aLen, p.accel, 2 * cs);
       }
     }
 
@@ -255,9 +273,9 @@ export function createMechanicalWaveView(options: CreateMechanicalWaveViewOption
 
     // P 点圆圈
     c.beginPath();
-    c.arc(pPx, pPy, Math.max(5, 7 * responsiveScale), 0, Math.PI * 2);
+    c.arc(pPx, pPy, Math.max(5, 7 * responsiveScale * cs), 0, Math.PI * 2);
     c.strokeStyle = p.pointP;
-    c.lineWidth = Math.max(2, 2.5 * responsiveScale);
+    c.lineWidth = Math.max(2, 2.5 * responsiveScale * cs);
     c.stroke();
 
     // P 标签
@@ -268,7 +286,7 @@ export function createMechanicalWaveView(options: CreateMechanicalWaveViewOption
 
     // 图例
     const legendY = axisBotY + 22;
-    c.font = `${Math.max(10, 11 * responsiveScale)}px sans-serif`;
+    c.font = `${Math.max(10, 11 * responsiveScale * cs)}px sans-serif`;
     c.textAlign = 'left';
     c.fillStyle = p.velocity;
     c.fillText('→ 振动速度', MARGIN_LEFT, legendY);
@@ -282,9 +300,12 @@ export function createMechanicalWaveView(options: CreateMechanicalWaveViewOption
 
   function drawArrow(
     c: CanvasRenderingContext2D,
-    x1: number, y1: number,
-    x2: number, y2: number,
-    color: string, width: number
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    color: string,
+    width: number
   ): void {
     const headLen = 6;
     const angle = Math.atan2(y2 - y1, x2 - x1);
@@ -297,8 +318,14 @@ export function createMechanicalWaveView(options: CreateMechanicalWaveViewOption
     c.stroke();
     c.beginPath();
     c.moveTo(x2, y2);
-    c.lineTo(x2 - headLen * Math.cos(angle - Math.PI / 6), y2 - headLen * Math.sin(angle - Math.PI / 6));
-    c.lineTo(x2 - headLen * Math.cos(angle + Math.PI / 6), y2 - headLen * Math.sin(angle + Math.PI / 6));
+    c.lineTo(
+      x2 - headLen * Math.cos(angle - Math.PI / 6),
+      y2 - headLen * Math.sin(angle - Math.PI / 6)
+    );
+    c.lineTo(
+      x2 - headLen * Math.cos(angle + Math.PI / 6),
+      y2 - headLen * Math.sin(angle + Math.PI / 6)
+    );
     c.closePath();
     c.fill();
   }
@@ -341,8 +368,9 @@ export function createMechanicalWaveView(options: CreateMechanicalWaveViewOption
     setTheme(t: TeachingTheme): void {
       theme = t;
     },
-    setMode(m: string): void {
-      modeScale = m === 'presentation' ? 1.4 : 1;
+    setMode(m: TeachingMode, hints?: DemoRenderHints): void {
+      mode = m;
+      demoHints = hints;
     },
     setOnPointSelect(cb: (x: number) => void): void {
       onPointSelectCallback = cb;
@@ -351,6 +379,6 @@ export function createMechanicalWaveView(options: CreateMechanicalWaveViewOption
       detachEvents();
       canvas = null;
       ctx = null;
-    },
+    }
   };
 }

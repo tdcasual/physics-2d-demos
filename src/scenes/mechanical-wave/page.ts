@@ -21,10 +21,10 @@ bootScenePage({
     readoutCollapsed: false,
     hideHeader: true,
     readoutLabel: '数据读数',
-    hideTransport: false,
+    hideTransport: false
   },
-  createScene: ({ canvas, theme }) => {
-    return createMechanicalWaveScene({ canvas, theme });
+  createScene: ({ canvas, theme, mode, demoHints }) => {
+    return createMechanicalWaveScene({ canvas, theme, mode, demoHints });
   },
   createControls: ({ mount, scene }) => {
     const mwScene = scene as ReturnType<typeof createMechanicalWaveScene>;
@@ -36,7 +36,13 @@ bootScenePage({
       onChange: (key, value) => {
         if (isUpdatingFromSim) return;
 
-        if (key === 'waveSpeed' || key === 'wavelength' || key === 'period' || key === 'amplitude' || key === 'playbackSpeed') {
+        if (
+          key === 'waveSpeed' ||
+          key === 'wavelength' ||
+          key === 'period' ||
+          key === 'amplitude' ||
+          key === 'playbackSpeed'
+        ) {
           mwScene.setParam(key, Number(value));
           // 约束系统可能修改了另一个参数，回读并更新
           syncWaveParams();
@@ -49,7 +55,7 @@ bootScenePage({
         mwScene.render();
         writeSceneParams({ [key]: value });
       },
-      onAction: () => {},
+      onAction: () => {}
     });
 
     function syncWaveParams(): void {
@@ -78,7 +84,13 @@ bootScenePage({
 
     // 应用 URL 参数
     const urlParams = readSceneParams(mechanicalWaveMeta);
-    const waveParamKeys = ['waveSpeed', 'wavelength', 'period', 'amplitude', 'playbackSpeed'];
+    const waveParamKeys = [
+      'waveSpeed',
+      'wavelength',
+      'period',
+      'amplitude',
+      'playbackSpeed'
+    ];
     for (const [key, value] of Object.entries(urlParams)) {
       if (key === 'direction') {
         mwScene.setParam('direction', String(value));
@@ -100,7 +112,7 @@ bootScenePage({
       },
       dispose() {
         renderer.dispose();
-      },
+      }
     };
-  },
+  }
 });

@@ -3,6 +3,19 @@
  */
 
 import type { SceneMeta } from '../../platform/scene-contract';
+import type { SceneDemoProfile } from '../../platform/demo-profile';
+
+const demoProfile: SceneDemoProfile = {
+  controlPanel: 'minimal',
+  readoutPanel: 'overlay',
+  renderHints: {
+    contentScale: 1.5
+  },
+  interactionHints: {
+    touchTargetMinSize: 48,
+    visibleControlKeys: ['wavelength', 'amplitude', 'direction']
+  }
+};
 
 export const mechanicalWaveMeta: SceneMeta = {
   id: 'mechanical-wave',
@@ -22,7 +35,8 @@ export const mechanicalWaveMeta: SceneMeta = {
     waveSpeed: 2,
     wavelength: 4,
     period: 2,
-    amplitude: 5,
+    amplitude: 5
   },
   urlSyncKeys: ['waveSpeed', 'wavelength', 'period', 'amplitude', 'direction'],
+  demoProfile
 };
