@@ -3,6 +3,19 @@
  */
 
 import type { SceneMeta } from '../../platform/scene-contract';
+import type { SceneDemoProfile } from '../../platform/demo-profile';
+
+const demoProfile: SceneDemoProfile = {
+  controlPanel: 'minimal',
+  readoutPanel: 'overlay',
+  renderHints: {
+    contentScale: 1.5
+  },
+  interactionHints: {
+    touchTargetMinSize: 48,
+    visibleControlKeys: ['preset', 'sourceSpeed', 'observerSpeed', 'mode']
+  }
+};
 
 export const dopplerEffectMeta: SceneMeta = {
   id: 'doppler-effect',
@@ -21,7 +34,8 @@ export const dopplerEffectMeta: SceneMeta = {
   defaultParams: {
     sourceSpeed: 0,
     observerSpeed: 0,
-    emitFrequency: 3,
+    emitFrequency: 3
   },
   urlSyncKeys: ['sourceSpeed', 'observerSpeed', 'emitFrequency', 'mode'],
+  demoProfile
 };

@@ -6,12 +6,18 @@ import type { TeachingTheme, TeachingMode } from '../../platform/standards';
 import type { SceneLifecycle } from '../../platform/scene-contract';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import { createStandardSceneEntry } from '../scene-entry-helpers';
-import { createDopplerSim, type DopplerParams, type DopplerState } from './scene.sim';
+import {
+  createDopplerSim,
+  type DopplerParams,
+  type DopplerState
+} from './scene.sim';
 import { createDopplerView } from './scene.view';
 
 export type CreateDopplerSceneOptions = {
   canvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
+  mode?: TeachingMode;
+  demoHints?: DemoRenderHints;
   onReadout?: (state: DopplerState) => void;
 };
 
@@ -30,7 +36,12 @@ export function createDopplerScene(
   subscribe(listener: () => void): () => void;
 } {
   const sim = createDopplerSim();
-  const view = createDopplerView({ canvas: options.canvas, theme: options.theme ?? 'dark' });
+  const view = createDopplerView({
+    canvas: options.canvas,
+    theme: options.theme ?? 'dark',
+    mode: options.mode,
+    demoHints: options.demoHints
+  });
 
   // 连接 view 拖拽回调
   view.setOnDrag((entity, x) => {
@@ -49,7 +60,7 @@ export function createDopplerScene(
     sim,
     view,
     getState: () => sim.getState(),
-    onReadout: options.onReadout,
+    onReadout: options.onReadout
   });
 
   function setParams(params: Partial<DopplerParams>): DopplerParams {
@@ -64,11 +75,14 @@ export function createDopplerScene(
     return [
       { label: '发射频率', value: `${s.params.emitFrequency.toFixed(1)} Hz` },
       { label: '接收频率', value: `${s.receivedFrequency.toFixed(2)} Hz` },
-      { label: '频率变化', value: `${s.frequencyChangePct >= 0 ? '+' : ''}${s.frequencyChangePct.toFixed(0)}%` },
+      {
+        label: '频率变化',
+        value: `${s.frequencyChangePct >= 0 ? '+' : ''}${s.frequencyChangePct.toFixed(0)}%`
+      },
       { label: '标准波长 λ₀', value: `${s.wavelengthStandard.toFixed(2)} m` },
       { label: '前方波长', value: `${s.wavelengthFront.toFixed(2)} m` },
       { label: '后方波长', value: `${s.wavelengthBack.toFixed(2)} m` },
-      { label: '马赫数', value: `${s.machNumber.toFixed(2)}` },
+      { label: '马赫数', value: `${s.machNumber.toFixed(2)}` }
     ];
   }
 
@@ -90,11 +104,13 @@ export function createDopplerScene(
 
   return {
     ...base,
-    getState() { return sim.getState(); },
+    getState() {
+      return sim.getState();
+    },
     setParams,
     enableAudio,
     disableAudio,
     setVolume,
-    getReadoutItems,
+    getReadoutItems
   };
 }
