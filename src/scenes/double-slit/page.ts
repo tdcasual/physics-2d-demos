@@ -8,8 +8,14 @@ import { bootScenePage } from '../../app/scene-bootstrapper';
 import { readSceneParams, writeSceneParams } from '../../app/url-sync';
 import { doubleSlitMeta } from './scene.meta';
 import { createDoubleSlitScene } from './scene.entry';
-import { doubleSlitControlsSchema, doubleSlitStep6ControlsSchema } from './controls-schema';
-import { renderSchema, type SchemaRendererInstance } from '../../ui/components/SchemaRenderer';
+import {
+  doubleSlitControlsSchema,
+  doubleSlitStep6ControlsSchema
+} from './controls-schema';
+import {
+  renderSchema,
+  type SchemaRendererInstance
+} from '../../ui/components/SchemaRenderer';
 
 bootScenePage({
   meta: doubleSlitMeta,
@@ -26,8 +32,8 @@ bootScenePage({
     hideTransport: true,
     hasGraph: false
   },
-  createScene: ({ canvas, theme }) => {
-    return createDoubleSlitScene({ canvas, theme });
+  createScene: ({ canvas, theme, mode, demoHints }) => {
+    return createDoubleSlitScene({ canvas, theme, mode, demoHints });
   },
   createControls: ({ mount, scene }) => {
     const dsScene = scene as ReturnType<typeof createDoubleSlitScene>;
@@ -47,14 +53,26 @@ bootScenePage({
       currentRenderer?.setVisible('滤光片', !isMono);
       currentRenderer?.setVisible('光源', isMono);
       if (state.params.step === 6) {
-        currentRenderer?.setActive('activeInstrument', state.params.activeInstrument);
-        currentRenderer?.setActive('viewMode', state.params.viewMode ?? 'fringe');
+        currentRenderer?.setActive(
+          'activeInstrument',
+          state.params.activeInstrument
+        );
+        currentRenderer?.setActive(
+          'viewMode',
+          state.params.viewMode ?? 'fringe'
+        );
         currentRenderer?.setValue('stripeOffset', state.params.stripeOffset);
-        currentRenderer?.setValue('crosshairAngle', state.params.crosshairAngle);
+        currentRenderer?.setValue(
+          'crosshairAngle',
+          state.params.crosshairAngle
+        );
       }
     }
 
-    function buildSchema(schema: typeof doubleSlitControlsSchema, schemaId: 'default' | 'step6') {
+    function buildSchema(
+      schema: typeof doubleSlitControlsSchema,
+      schemaId: 'default' | 'step6'
+    ) {
       currentRenderer?.dispose();
       currentRenderer = renderSchema({
         mount,
@@ -74,13 +92,18 @@ bootScenePage({
             const instrument = String(value) as 'caliper' | 'micrometer';
             dsScene.setParams({ activeInstrument: instrument });
             currentRenderer?.setActive(key, instrument);
-            currentRenderer?.setVisible('micrometerOffset', instrument === 'micrometer');
+            currentRenderer?.setVisible(
+              'micrometerOffset',
+              instrument === 'micrometer'
+            );
           } else if (key === 'stripeOffset') {
             dsScene.setParams({ stripeOffset: Number(value) });
           } else if (key === 'crosshairAngle') {
             dsScene.setParams({ crosshairAngle: Number(value) });
           } else if (key === 'viewMode') {
-            dsScene.setParams({ viewMode: String(value) as 'crosshair' | 'fringe' });
+            dsScene.setParams({
+              viewMode: String(value) as 'crosshair' | 'fringe'
+            });
           } else if (key === 'lightMode') {
             const mode = String(value) as 'mono' | 'white';
             dsScene.setParams({ lightMode: mode, filterColor: null });
@@ -93,7 +116,16 @@ bootScenePage({
             currentRenderer?.setVisible('光源', mode === 'mono');
           } else if (key === 'filterColor') {
             const fc = String(value);
-            const filterVal = fc === 'none' ? null : fc as 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'violet';
+            const filterVal =
+              fc === 'none'
+                ? null
+                : (fc as
+                    | 'red'
+                    | 'orange'
+                    | 'yellow'
+                    | 'green'
+                    | 'blue'
+                    | 'violet');
             dsScene.setParams({ filterColor: filterVal });
             currentRenderer?.setActive(key, fc);
           }
@@ -114,16 +146,23 @@ bootScenePage({
       : dsScene.getState().params.step;
 
     // 直接构建正确的 schema（仅一次，避免竞态重建）
-    const initialSchema = targetStep === 6 ? doubleSlitStep6ControlsSchema : doubleSlitControlsSchema;
+    const initialSchema =
+      targetStep === 6
+        ? doubleSlitStep6ControlsSchema
+        : doubleSlitControlsSchema;
     const initialSchemaId = targetStep === 6 ? 'step6' : 'default';
     buildSchema(initialSchema, initialSchemaId);
 
     // ── 批量应用 URL 参数到场景（不触发中间 notify 导致的 schema 重建）──
     const batchParams: Record<string, number | string> = {};
-    if (urlParams.step !== undefined) batchParams.step = parseInt(String(urlParams.step), 10);
-    if (urlParams.lambda !== undefined) batchParams.lambda = parseFloat(String(urlParams.lambda));
-    if (urlParams.slitDistance !== undefined) batchParams.slitDistance = parseFloat(String(urlParams.slitDistance));
-    if (urlParams.activeInstrument !== undefined) batchParams.activeInstrument = String(urlParams.activeInstrument);
+    if (urlParams.step !== undefined)
+      batchParams.step = parseInt(String(urlParams.step), 10);
+    if (urlParams.lambda !== undefined)
+      batchParams.lambda = parseFloat(String(urlParams.lambda));
+    if (urlParams.slitDistance !== undefined)
+      batchParams.slitDistance = parseFloat(String(urlParams.slitDistance));
+    if (urlParams.activeInstrument !== undefined)
+      batchParams.activeInstrument = String(urlParams.activeInstrument);
 
     if (Object.keys(batchParams).length > 0) {
       dsScene.setParams(batchParams);

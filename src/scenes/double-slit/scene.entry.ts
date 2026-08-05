@@ -9,7 +9,21 @@ import type { SceneLifecycle } from '../../platform/scene-contract';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 
 import { createStandardSceneEntry } from '../scene-entry-helpers';
-import { createDoubleSlitSim, type DoubleSlitParams, type DoubleSlitState, STEPS, DEFAULT_L, computeRealDeltaXmm, computeMicrometerStripePx, computeMicrometerSpeed, computeCaliperFringePx, lambdaToRgb, isWhiteLight, getEffectiveLambda, FILTERS } from './scene.sim';
+import {
+  createDoubleSlitSim,
+  type DoubleSlitParams,
+  type DoubleSlitState,
+  STEPS,
+  DEFAULT_L,
+  computeRealDeltaXmm,
+  computeMicrometerStripePx,
+  computeMicrometerSpeed,
+  computeCaliperFringePx,
+  lambdaToRgb,
+  isWhiteLight,
+  getEffectiveLambda,
+  FILTERS
+} from './scene.sim';
 import { createDoubleSlitView } from './scene.view';
 import { createInterferenceVernierCaliper } from '../../instruments/interference-vernier-caliper/instrument.entry';
 import { createMicrometerEyepiece } from '../../instruments/micrometer-eyepiece/instrument.entry';
@@ -17,6 +31,8 @@ import { createMicrometerEyepiece } from '../../instruments/micrometer-eyepiece/
 export type CreateDoubleSlitSceneOptions = {
   canvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
+  mode?: TeachingMode;
+  demoHints?: DemoRenderHints;
   onReadout?: (state: DoubleSlitState) => void;
 };
 
@@ -45,12 +61,14 @@ export function createDoubleSlitScene(
     viewMode: 'fringe',
     L: DEFAULT_L,
     lightMode: 'mono',
-    filterColor: null,
+    filterColor: null
   });
 
   const view = createDoubleSlitView({
     canvas: options.canvas,
-    theme: options.theme ?? 'dark'
+    theme: options.theme ?? 'dark',
+    mode: options.mode,
+    demoHints: options.demoHints
   });
 
   // ── 仪器实例管理 ──
@@ -59,8 +77,11 @@ export function createDoubleSlitScene(
   let rightContainer: HTMLDivElement | null = null;
   let leftCanvas: HTMLCanvasElement | null = null;
   let rightCanvas: HTMLCanvasElement | null = null;
-  let leftInstrument: ReturnType<typeof createInterferenceVernierCaliper> | null = null;
-  let rightInstrument: ReturnType<typeof createMicrometerEyepiece> | null = null;
+  let leftInstrument: ReturnType<
+    typeof createInterferenceVernierCaliper
+  > | null = null;
+  let rightInstrument: ReturnType<typeof createMicrometerEyepiece> | null =
+    null;
   let lastStep = -1;
   let parentOriginalPosition: string | null = null;
   const instrumentStateCache = new Map<string, Record<string, unknown>>();
@@ -106,7 +127,8 @@ export function createDoubleSlitScene(
   }
 
   function initInstruments(theme: TeachingTheme): void {
-    if (!leftContainer || !rightContainer || !leftCanvas || !rightCanvas) return;
+    if (!leftContainer || !rightContainer || !leftCanvas || !rightCanvas)
+      return;
 
     if (!leftInstrument) {
       leftInstrument = createInterferenceVernierCaliper({
@@ -145,7 +167,9 @@ export function createDoubleSlitScene(
       leftInstrument.view.dispose();
     }
     if (rightInstrument) {
-      instrumentStateCache.set('micrometer', { ...rightInstrument.sim.getState() });
+      instrumentStateCache.set('micrometer', {
+        ...rightInstrument.sim.getState()
+      });
       rightInstrument.view.dispose();
     }
     leftInstrument = null;
@@ -178,7 +202,8 @@ export function createDoubleSlitScene(
     const leftVisible = leftContainer.style.display !== 'none';
     const rightVisible = rightContainer.style.display !== 'none';
 
-    if (leftVisible === leftShouldShow && rightVisible === rightShouldShow) return;
+    if (leftVisible === leftShouldShow && rightVisible === rightShouldShow)
+      return;
 
     leftContainer.style.display = leftShouldShow ? 'block' : 'none';
     leftContainer.style.width = leftShouldShow ? '100%' : '50%';
@@ -212,7 +237,7 @@ export function createDoubleSlitScene(
       fringeColor,
       fringeEnvelopeWidth: caliperFringePx * 8,
       crosshairAngle,
-      viewMode,
+      viewMode
     });
     rightInstrument?.sim.setParams({
       stripeSpacing: micrometerStripePx,
@@ -223,7 +248,7 @@ export function createDoubleSlitScene(
       crosshairSpeed: micrometerSpeed,
       scaleInverted: true,
       crosshairAngle,
-      viewMode,
+      viewMode
     });
   }
 
@@ -281,28 +306,50 @@ export function createDoubleSlitScene(
     const dMm = (d * 0.01).toFixed(2);
     const white = isWhiteLight(s.params);
     const lightLabel = white
-      ? ('白光' + (s.params.filterColor ? ` · ${FILTERS[s.params.filterColor].label}色滤光片` : '（无滤光片）'))
+      ? '白光' +
+        (s.params.filterColor
+          ? ` · ${FILTERS[s.params.filterColor].label}色滤光片`
+          : '（无滤光片）')
       : `单色光 ${s.params.lambda} nm`;
     const items = [
       { label: '当前步骤', value: `${step} / 6` },
       { label: '光源', value: lightLabel },
       { label: '双缝间距 d', value: `${dMm} mm` },
-      { label: '缝屏距 L', value: `${((s.params.L ?? DEFAULT_L) * 100).toFixed(0)} cm` },
+      {
+        label: '缝屏距 L',
+        value: `${((s.params.L ?? DEFAULT_L) * 100).toFixed(0)} cm`
+      }
     ];
     if (step === 6) {
-      const instrumentName = s.params.activeInstrument === 'caliper' ? '干涉读数游标卡尺' : '高精度干涉测微仪';
+      const instrumentName =
+        s.params.activeInstrument === 'caliper'
+          ? '干涉读数游标卡尺'
+          : '高精度干涉测微仪';
       items.push({ label: '当前仪器', value: instrumentName });
       const effectiveLambda = getEffectiveLambda(s.params);
-      const realDeltaXmm = computeRealDeltaXmm(effectiveLambda, d, s.params.L ?? DEFAULT_L);
-      items.push({ label: '条纹间距 Δx', value: `${realDeltaXmm.toFixed(3)} mm` });
+      const realDeltaXmm = computeRealDeltaXmm(
+        effectiveLambda,
+        d,
+        s.params.L ?? DEFAULT_L
+      );
+      items.push({
+        label: '条纹间距 Δx',
+        value: `${realDeltaXmm.toFixed(3)} mm`
+      });
       // 从当前激活仪器获取读数，统一显示在实验状态区
       const active = s.params.activeInstrument;
       if (active === 'caliper' && leftInstrument) {
         const reading = leftInstrument.view.getReading();
-        items.push({ label: '游标卡尺读数', value: `${(reading * 10).toFixed(3)} mm` });
+        items.push({
+          label: '游标卡尺读数',
+          value: `${(reading * 10).toFixed(3)} mm`
+        });
       } else if (active === 'micrometer' && rightInstrument) {
         const reading = rightInstrument.view.getReading();
-        items.push({ label: '螺旋测微仪读数', value: `${reading.toFixed(3)} mm` });
+        items.push({
+          label: '螺旋测微仪读数',
+          value: `${reading.toFixed(3)} mm`
+        });
       }
     }
     return items;
@@ -353,6 +400,6 @@ export function createDoubleSlitScene(
       base.dispose();
     },
     getReadoutItems,
-    getStepInfo,
+    getStepInfo
   };
 }

@@ -41,7 +41,6 @@ const PRESENTATION_PATTERN = /getRenderTokens|demoHints/;
  * 若它已采用标准机制却仍在清单中，测试会失败提醒你删除。
  */
 const PRESENTATION_EXEMPT = [
-  'double-slit',
   'interference-formula',
   'mechanical-wave',
   'thin-film',

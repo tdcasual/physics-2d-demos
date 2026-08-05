@@ -6,22 +6,35 @@
  * 支持浅色/深色双模式，波色随光源波长自动匹配
  */
 
-import type { TeachingTheme } from '../../platform/standards';
+import type { TeachingTheme, TeachingMode } from '../../platform/standards';
+import type { DemoRenderHints } from '../../platform/demo-profile';
 import { sizeCanvasToFill } from '../../core/canvas-sizing';
 import type { DoubleSlitState } from './scene.sim';
-import { lambdaToGap, lambdaToRgb, computeFringeSpacingPx, DEFAULT_L, FILTERS, WHITE_LAMBDAS, isWhiteLight, getActiveWavelengths, getEffectiveLambda } from './scene.sim';
+import {
+  lambdaToGap,
+  lambdaToRgb,
+  computeFringeSpacingPx,
+  DEFAULT_L,
+  FILTERS,
+  WHITE_LAMBDAS,
+  isWhiteLight,
+  getActiveWavelengths,
+  getEffectiveLambda
+} from './scene.sim';
 
 export type CreateDoubleSlitViewOptions = {
   canvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
+  mode?: TeachingMode;
+  demoHints?: DemoRenderHints;
 };
 
 // ── 波长调色板（深色 / 浅色）──
 type WavePalette = {
-  wave: string;    // 光波描边色
-  solid: string;   // 光源实心 / 曲线描边
-  glow: string;    // 光源发光
-  screen: string;  // 条纹 RGB（无 # 前缀）
+  wave: string; // 光波描边色
+  solid: string; // 光源实心 / 曲线描边
+  glow: string; // 光源发光
+  screen: string; // 条纹 RGB（无 # 前缀）
 };
 
 function getWavePalette(lambda: number, isDark: boolean): WavePalette {
@@ -33,7 +46,7 @@ function getWavePalette(lambda: number, isDark: boolean): WavePalette {
     wave: `rgba(${r},${g},${b},${alpha})`,
     solid: base,
     glow: `rgba(${r},${g},${b},${glowAlpha})`,
-    screen: `${r},${g},${b}`,
+    screen: `${r},${g},${b}`
   };
 }
 
@@ -48,7 +61,7 @@ const SCENE_PALETTE = {
     lens: '#e2e8f0',
     text: '#e2e8f0',
     guide: '#475569',
-    eyepiece: '#475569',
+    eyepiece: '#475569'
   },
   light: {
     bg: '#f1f5f9',
@@ -59,18 +72,26 @@ const SCENE_PALETTE = {
     lens: '#f8fafc',
     text: '#1e293b',
     guide: '#94a3b8',
-    eyepiece: '#64748b',
-  },
+    eyepiece: '#64748b'
+  }
 };
 
 // ── 模块级常量 ──
-const POS = { light: 80, lens: 180, filter: 230, singleSlit: 280, doubleSlit: 400, screen: 800, eyepiece: 920 } as const;
+const POS = {
+  light: 80,
+  lens: 180,
+  filter: 230,
+  singleSlit: 280,
+  doubleSlit: 400,
+  screen: 800,
+  eyepiece: 920
+} as const;
 
 // ── 模块级缓存 ──
 let _paletteKey = '';
 let _cachedPalette: WavePalette | null = null;
 let _sceneKey = '';
-let _cachedScene: typeof SCENE_PALETTE['dark'] | null = null;
+let _cachedScene: (typeof SCENE_PALETTE)['dark'] | null = null;
 let _wlKey = '';
 let _cachedWl: number[] = [];
 
@@ -95,13 +116,21 @@ let _glowCvs: HTMLCanvasElement | null = null;
 let _glowCtx: CanvasRenderingContext2D | null = null;
 let _glowKey = '';
 
-export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) {
+export function createDoubleSlitView(
+  options: CreateDoubleSlitViewOptions = {}
+) {
   let canvas = options.canvas ?? null;
   let ctx: CanvasRenderingContext2D | null = null;
   let theme: TeachingTheme = options.theme ?? 'dark';
   let scale = 1;
   let dpr = 1;
-  let modeScale = 1;
+  let mode: TeachingMode = options.mode ?? 'normal';
+  let demoHints: DemoRenderHints | undefined = options.demoHints;
+
+  /** 演示模式内容放大系数（normal=1，presentation=renderHints.contentScale） */
+  function getContentScale(): number {
+    return mode === 'presentation' ? (demoHints?.contentScale ?? 1.5) : 1;
+  }
 
   function resizeCanvas(): void {
     if (!canvas) return;
@@ -164,7 +193,7 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
 
     // 波长数值
     c.fillStyle = isDark ? '#e2e8f0' : '#1e293b';
-    c.font = `${11 * modeScale}px sans-serif`;
+    c.font = `${11 * getContentScale()}px sans-serif`;
     c.textAlign = 'left';
     c.fillText(`${Math.round(lambda)} nm`, barX + barW + 8, barY + 9);
   };
@@ -179,7 +208,7 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
     time: number
   ) => {
     c.strokeStyle = color;
-    c.lineWidth = Math.max(2, 3 * Math.min(scale, 1.5));
+    c.lineWidth = Math.max(2, 3 * Math.min(scale, 1.5) * getContentScale());
     // 高分辨率下增加波纹环数，增强视觉丰富度
     const extraWaves = Math.floor(Math.max(0, scale - 0.8) * 2);
     const numWaves = Math.floor(maxR / gap) + 2 + extraWaves;
@@ -200,14 +229,17 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
     CY: number,
     d: number,
     palette: WavePalette,
-    scene: typeof SCENE_PALETTE['dark'],
+    scene: (typeof SCENE_PALETTE)['dark'],
     skipTube = false,
     white = false,
     filterColor?: string | null
   ) => {
     const drawLabel = (x: number, y: number, text: string) => {
       c.fillStyle = scene.text;
-      const fontSize = Math.max(12, 14 * Math.min(scale, 1.5) * modeScale);
+      const fontSize = Math.max(
+        12,
+        14 * Math.min(scale, 1.5) * getContentScale()
+      );
       c.font = `${fontSize}px sans-serif`;
       c.textAlign = 'center';
       c.fillText(text, x, y);
@@ -297,8 +329,18 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
     // 双缝挡板
     const slitWidth = 4;
     c.fillRect(POS.doubleSlit - 4, CY - 80, 8, 80 - d / 2 - slitWidth / 2);
-    c.fillRect(POS.doubleSlit - 4, CY - d / 2 + slitWidth / 2, 8, d - slitWidth);
-    c.fillRect(POS.doubleSlit - 4, CY + d / 2 + slitWidth / 2, 8, 80 - d / 2 - slitWidth / 2);
+    c.fillRect(
+      POS.doubleSlit - 4,
+      CY - d / 2 + slitWidth / 2,
+      8,
+      d - slitWidth
+    );
+    c.fillRect(
+      POS.doubleSlit - 4,
+      CY + d / 2 + slitWidth / 2,
+      8,
+      80 - d / 2 - slitWidth / 2
+    );
     drawLabel(POS.doubleSlit, CY - 90, '双缝');
 
     // 毛玻璃屏幕
@@ -363,7 +405,7 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
         const delta = (dy * d) / L;
         const phase = (Math.PI * delta) / lambdaPx;
         const cos2 = Math.cos(phase) * Math.cos(phase);
-        const a = (Math.PI * (dy * slitWidthA) / L) / lambdaPx;
+        const a = (Math.PI * (dy * slitWidthA)) / L / lambdaPx;
         const sinc = a === 0 ? 1 : Math.sin(a) / a;
         const intensity = cos2 * sinc * sinc;
         fc.fillStyle = `rgba(${palette.screen}, ${intensity})`;
@@ -377,7 +419,10 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
 
     // 叠加原理标注
     c.fillStyle = isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)';
-    const labelSize = Math.max(10, 11 * Math.min(scale, 1.5) * modeScale);
+    const labelSize = Math.max(
+      10,
+      11 * Math.min(scale, 1.5) * getContentScale()
+    );
     c.font = `${labelSize}px sans-serif`;
     c.textAlign = 'center';
     const midX = startX + regionW * 0.5;
@@ -393,13 +438,13 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
     gap: number,
     palette: WavePalette,
     L: number,
-    scene: typeof SCENE_PALETTE['dark']
+    scene: (typeof SCENE_PALETTE)['dark']
   ) => {
     const lambdaPx = gap * 0.35;
     const slitWidthA = d / 3.5;
 
     // offscreen 缓存（步骤5精度降低：sample step 2-3）
-    const key = `${d}_${gap}_${palette.screen}_${L}`;
+    const key = `${d}_${gap}_${palette.screen}_${L}_${getContentScale()}`;
     if (!_step5Cvs || _step5Key !== key) {
       const cw = 60;
       const ch = 250;
@@ -415,13 +460,16 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
       const sampleStep = scale > 1.2 ? 2 : 3;
       fc.beginPath();
       fc.strokeStyle = palette.solid;
-      fc.lineWidth = Math.max(2.5, 3.5 * Math.min(scale, 1.5));
+      fc.lineWidth = Math.max(
+        2.5,
+        3.5 * Math.min(scale, 1.5) * getContentScale()
+      );
       for (let y = -120; y <= 120; y += sampleStep) {
         const py = 125 + y;
         const delta = (y * d) / L;
         const phase = (Math.PI * delta) / lambdaPx;
         const cos2 = Math.cos(phase) * Math.cos(phase);
-        const a = (Math.PI * (y * slitWidthA) / L) / lambdaPx;
+        const a = (Math.PI * (y * slitWidthA)) / L / lambdaPx;
         const sinc = a === 0 ? 1 : Math.sin(a) / a;
         const intensity = cos2 * sinc * sinc;
         const px = 12 + intensity * 35;
@@ -453,11 +501,11 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
     lambda: number,
     slitDistance: number,
     palette: WavePalette,
-    scene: typeof SCENE_PALETTE['dark'],
+    scene: (typeof SCENE_PALETTE)['dark'],
     isDark: boolean,
     L: number
   ) => {
-    const topH = H * 0.30;
+    const topH = H * 0.3;
     const patternX = W * 0.15;
     const patternW = W * 0.55;
     const patternH = topH - 30;
@@ -515,12 +563,12 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
 
     // 标签
     c.fillStyle = scene.text;
-    c.font = `${13 * modeScale}px sans-serif`;
+    c.font = `${13 * getContentScale()}px sans-serif`;
     c.textAlign = 'left';
     c.fillText('干涉条纹', patternX, patternY - 6);
 
     // 物理参数标注
-    c.font = `${11 * modeScale}px sans-serif`;
+    c.font = `${11 * getContentScale()}px sans-serif`;
     c.fillStyle = scene.guide;
     const deltaXmm = (fringeSpacingPx * 0.01).toFixed(3);
     c.fillText(`Δx ≈ ${deltaXmm} mm`, patternX + patternW - 120, patternY - 6);
@@ -545,7 +593,7 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
     time: number,
     filterColor: string | null | undefined
   ) => {
-    c.lineWidth = 2.5;
+    c.lineWidth = 2.5 * getContentScale();
     c.setLineDash([10, 10]);
     c.lineDashOffset = -time;
 
@@ -562,20 +610,26 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
     for (let y = -20; y <= 20; y += 10) {
       c.beginPath();
       c.moveTo(POS.lens, CY + y);
-      c.lineTo(POS.filter, CY + y * (POS.filter - POS.lens) / (POS.singleSlit - POS.lens));
+      c.lineTo(
+        POS.filter,
+        CY + (y * (POS.filter - POS.lens)) / (POS.singleSlit - POS.lens)
+      );
       c.stroke();
     }
 
     // 滤光片→单缝：白光经过滤光片后变色，无滤光片时保持白色
     const hasFC = filterColor && FILTERS[filterColor as keyof typeof FILTERS];
     if (hasFC) {
-      const [cr, cg, cb] = lambdaToRgb(FILTERS[filterColor as keyof typeof FILTERS].center);
+      const [cr, cg, cb] = lambdaToRgb(
+        FILTERS[filterColor as keyof typeof FILTERS].center
+      );
       c.strokeStyle = `rgba(${cr},${cg},${cb},0.5)`;
     } else {
       c.strokeStyle = 'rgba(220,225,235,0.5)';
     }
     for (let y = -20; y <= 20; y += 10) {
-      const yAtFilter = CY + y * (POS.filter - POS.lens) / (POS.singleSlit - POS.lens);
+      const yAtFilter =
+        CY + (y * (POS.filter - POS.lens)) / (POS.singleSlit - POS.lens);
       c.beginPath();
       c.moveTo(POS.filter, yAtFilter);
       c.lineTo(POS.singleSlit, CY + y * 0.2);
@@ -592,7 +646,7 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
     time: number,
     filterColor: string | null | undefined
   ) => {
-    c.lineWidth = Math.max(2, 3 * Math.min(scale, 1.5));
+    c.lineWidth = Math.max(2, 3 * Math.min(scale, 1.5) * getContentScale());
     const spreadAngle = Math.PI / 2.2;
     const hasFC = filterColor && FILTERS[filterColor as keyof typeof FILTERS];
     const lambdas = hasFC
@@ -633,18 +687,26 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
       c.lineWidth = 1.5;
       c.strokeRect(x - 4, CY - filterH, 8, filterH * 2);
       c.fillStyle = isDark ? '#e2e8f0' : '#1e293b';
-      const fontSize = Math.max(11, 13 * Math.min(scale, 1.5) * modeScale);
+      const fontSize = Math.max(
+        11,
+        13 * Math.min(scale, 1.5) * getContentScale()
+      );
       c.font = `${fontSize}px sans-serif`;
       c.textAlign = 'center';
       c.fillText(`${f.label}色滤光片`, x, CY - filterH - 6);
     } else {
-      c.strokeStyle = isDark ? 'rgba(148,163,184,0.4)' : 'rgba(100,116,139,0.4)';
+      c.strokeStyle = isDark
+        ? 'rgba(148,163,184,0.4)'
+        : 'rgba(100,116,139,0.4)';
       c.lineWidth = 1;
       c.setLineDash([3, 3]);
       c.strokeRect(x - 4, CY - filterH, 8, filterH * 2);
       c.setLineDash([]);
       c.fillStyle = isDark ? '#475569' : '#94a3b8';
-      const fontSize = Math.max(10, 12 * Math.min(scale, 1.5) * modeScale);
+      const fontSize = Math.max(
+        10,
+        12 * Math.min(scale, 1.5) * getContentScale()
+      );
       c.font = `${fontSize}px sans-serif`;
       c.textAlign = 'center';
       c.fillText('（可选滤光片）', x, CY - filterH - 6);
@@ -669,33 +731,38 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
     const baseAlpha = isDark ? 0.22 * pulse : 0.14 * pulse;
     const slitWidthA = d / 3.5;
     // 预计算波长数据
-    const wlData = wavelengths.map(wl => {
+    const wlData = wavelengths.map((wl) => {
       const [r, g, b] = lambdaToRgb(wl);
       return { r, g, b, lambdaPx: lambdaToGap(wl) * 0.35 };
     });
 
     for (let y = regionTop; y <= regionBottom; y += stepY) {
       const dy = y - CY;
-      let rr = 0, gg = 0, bb = 0;
+      let rr = 0,
+        gg = 0,
+        bb = 0;
       for (const wd of wlData) {
         const delta = (dy * d) / L;
         const phase = (Math.PI * delta) / wd.lambdaPx;
         const cos2 = Math.cos(phase) * Math.cos(phase);
-        const a = (Math.PI * (dy * slitWidthA) / L) / wd.lambdaPx;
+        const a = (Math.PI * (dy * slitWidthA)) / L / wd.lambdaPx;
         const sinc = a === 0 ? 1 : Math.sin(a) / a;
         const intensity = cos2 * sinc * sinc;
-        rr += wd.r * intensity / 255;
-        gg += wd.g * intensity / 255;
-        bb += wd.b * intensity / 255;
+        rr += (wd.r * intensity) / 255;
+        gg += (wd.g * intensity) / 255;
+        bb += (wd.b * intensity) / 255;
       }
       const maxC = Math.max(rr, gg, bb, 0.001);
       const alpha = Math.min(0.85, maxC * baseAlpha * 3);
-      c.fillStyle = `rgba(${Math.min(255, Math.round(rr / maxC * 255))},${Math.min(255, Math.round(gg / maxC * 255))},${Math.min(255, Math.round(bb / maxC * 255))},${alpha.toFixed(3)})`;
+      c.fillStyle = `rgba(${Math.min(255, Math.round((rr / maxC) * 255))},${Math.min(255, Math.round((gg / maxC) * 255))},${Math.min(255, Math.round((bb / maxC) * 255))},${alpha.toFixed(3)})`;
       c.fillRect(startX, y, endX - startX, stepY);
     }
 
     c.fillStyle = isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)';
-    const labelSize = Math.max(10, 11 * Math.min(scale, 1.5) * modeScale);
+    const labelSize = Math.max(
+      10,
+      11 * Math.min(scale, 1.5) * getContentScale()
+    );
     c.font = `${labelSize}px sans-serif`;
     c.textAlign = 'center';
     const midX = startX + (endX - startX) * 0.5;
@@ -710,38 +777,41 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
     d: number,
     L: number,
     wavelengths: number[],
-    scene: typeof SCENE_PALETTE['dark'],
+    scene: (typeof SCENE_PALETTE)['dark'],
     isDark: boolean
   ) => {
     const slitWidthA = d / 3.5;
     c.beginPath();
-    c.lineWidth = Math.max(2.5, 3.5 * Math.min(scale, 1.5));
+    c.lineWidth = Math.max(2.5, 3.5 * Math.min(scale, 1.5) * getContentScale());
     const ss = scale > 1.2 ? 2 : 3;
     // 预计算波长数据
-    const wlData = wavelengths.map(wl => {
+    const wlData = wavelengths.map((wl) => {
       const [r, g, b] = lambdaToRgb(wl);
       return { r, g, b, lambdaPx: lambdaToGap(wl) * 0.35 };
     });
 
     for (let y = -120; y <= 120; y += ss) {
-      let rr = 0, gg = 0, bb = 0;
+      let rr = 0,
+        gg = 0,
+        bb = 0;
       for (const wd of wlData) {
         const delta = (y * d) / L;
         const phase = (Math.PI * delta) / wd.lambdaPx;
         const cos2 = Math.cos(phase) * Math.cos(phase);
-        const a = (Math.PI * (y * slitWidthA) / L) / wd.lambdaPx;
+        const a = (Math.PI * (y * slitWidthA)) / L / wd.lambdaPx;
         const sinc = a === 0 ? 1 : Math.sin(a) / a;
         const intensity = cos2 * sinc * sinc;
-        rr += wd.r * intensity / 255;
-        gg += wd.g * intensity / 255;
-        bb += wd.b * intensity / 255;
+        rr += (wd.r * intensity) / 255;
+        gg += (wd.g * intensity) / 255;
+        bb += (wd.b * intensity) / 255;
       }
       const maxC = Math.max(rr, gg, bb, 0.01);
       const py = CY + y;
       const total = (rr + gg + bb) / 3;
       const px = startX + 10 + total * 35;
-      if (y === -120) c.moveTo(px, py); else c.lineTo(px, py);
-      c.fillStyle = `rgb(${Math.min(255, Math.round(rr / maxC * 255))},${Math.min(255, Math.round(gg / maxC * 255))},${Math.min(255, Math.round(bb / maxC * 255))})`;
+      if (y === -120) c.moveTo(px, py);
+      else c.lineTo(px, py);
+      c.fillStyle = `rgb(${Math.min(255, Math.round((rr / maxC) * 255))},${Math.min(255, Math.round((gg / maxC) * 255))},${Math.min(255, Math.round((bb / maxC) * 255))})`;
       c.fillRect(startX - 2, py, 4, ss);
     }
     c.strokeStyle = isDark ? 'rgba(200,200,200,0.6)' : 'rgba(120,120,120,0.6)';
@@ -771,7 +841,7 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
     W: number,
     H: number
   ) => {
-    const key = `white:${filterColor || 'none'},${slitDistance},${L},${isDark ? 1 : 0}`;
+    const key = `white:${filterColor || 'none'},${slitDistance},${L},${isDark ? 1 : 0},${getContentScale()}`;
     if (!_whiteFringeCvs || _whiteFringeKey !== key) {
       if (!_whiteFringeCvs) {
         _whiteFringeCvs = document.createElement('canvas');
@@ -782,7 +852,10 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
         _whiteFringeCtx!.clearRect(0, 0, 382, 155);
       }
       const fc = _whiteFringeCtx!;
-      const panelX = 1, panelW = 380, panelH = 135, panelY = 18;
+      const panelX = 1,
+        panelW = 380,
+        panelH = 135,
+        panelY = 18;
       const scene = SCENE_PALETTE[isDark ? 'dark' : 'light'];
 
       fc.fillStyle = isDark ? 'rgba(15,23,42,0.92)' : 'rgba(255,255,255,0.92)';
@@ -791,11 +864,12 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
       fc.lineWidth = 1.5;
       fc.strokeRect(panelX, panelY - 16, panelW, panelH + 20);
 
-      const modeLabel = filterColor && FILTERS[filterColor as keyof typeof FILTERS]
-        ? `${FILTERS[filterColor as keyof typeof FILTERS].label}色滤光片`
-        : '白光（无滤光片）';
+      const modeLabel =
+        filterColor && FILTERS[filterColor as keyof typeof FILTERS]
+          ? `${FILTERS[filterColor as keyof typeof FILTERS].label}色滤光片`
+          : '白光（无滤光片）';
       fc.fillStyle = scene.text;
-      fc.font = '12px sans-serif';
+      fc.font = `${12 * getContentScale()}px sans-serif`;
       fc.textAlign = 'left';
       fc.fillText(`干涉条纹（${modeLabel}）`, panelX + 6, panelY - 4);
 
@@ -815,9 +889,9 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
           const sinc = Math.abs(beta) < 1e-6 ? 1 : Math.sin(beta) / beta;
           const intensity = cos2 * sinc * sinc;
           const off = (x + n) * 3;
-          rgbBuf[off]     += wr * intensity / 255;
-          rgbBuf[off + 1] += wg * intensity / 255;
-          rgbBuf[off + 2] += wb * intensity / 255;
+          rgbBuf[off] += (wr * intensity) / 255;
+          rgbBuf[off + 1] += (wg * intensity) / 255;
+          rgbBuf[off + 2] += (wb * intensity) / 255;
         }
       }
 
@@ -906,7 +980,7 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
           drawWhiteLightRays(c, POS, CY, time, next.params.filterColor);
         } else {
           c.strokeStyle = palette.wave;
-          c.lineWidth = 2.5;
+          c.lineWidth = 2.5 * getContentScale();
           c.setLineDash([10, 10]);
           c.lineDashOffset = -time;
           for (let angle = -0.3; angle <= 0.3; angle += 0.1) {
@@ -927,20 +1001,65 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
 
       if (step >= 2) {
         if (white) {
-          drawWhiteWaves(c, POS.singleSlit, CY, POS.doubleSlit - POS.singleSlit, time, next.params.filterColor);
+          drawWhiteWaves(
+            c,
+            POS.singleSlit,
+            CY,
+            POS.doubleSlit - POS.singleSlit,
+            time,
+            next.params.filterColor
+          );
         } else {
-          drawWaves(c, POS.singleSlit, CY, POS.doubleSlit - POS.singleSlit, palette.wave, gap, time);
+          drawWaves(
+            c,
+            POS.singleSlit,
+            CY,
+            POS.doubleSlit - POS.singleSlit,
+            palette.wave,
+            gap,
+            time
+          );
         }
       }
 
       if (step >= 3) {
-        const maxRadius = step >= 4 ? (POS.screen - POS.doubleSlit + 50) : 60;
+        const maxRadius = step >= 4 ? POS.screen - POS.doubleSlit + 50 : 60;
         if (white) {
-          drawWhiteWaves(c, POS.doubleSlit, CY - d / 2, maxRadius, time, next.params.filterColor);
-          drawWhiteWaves(c, POS.doubleSlit, CY + d / 2, maxRadius, time, next.params.filterColor);
+          drawWhiteWaves(
+            c,
+            POS.doubleSlit,
+            CY - d / 2,
+            maxRadius,
+            time,
+            next.params.filterColor
+          );
+          drawWhiteWaves(
+            c,
+            POS.doubleSlit,
+            CY + d / 2,
+            maxRadius,
+            time,
+            next.params.filterColor
+          );
         } else {
-          drawWaves(c, POS.doubleSlit, CY - d / 2, maxRadius, palette.wave, gap, time);
-          drawWaves(c, POS.doubleSlit, CY + d / 2, maxRadius, palette.wave, gap, time);
+          drawWaves(
+            c,
+            POS.doubleSlit,
+            CY - d / 2,
+            maxRadius,
+            palette.wave,
+            gap,
+            time
+          );
+          drawWaves(
+            c,
+            POS.doubleSlit,
+            CY + d / 2,
+            maxRadius,
+            palette.wave,
+            gap,
+            time
+          );
         }
       }
 
@@ -951,25 +1070,88 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
         c.fillRect(POS.doubleSlit, CY - 100, POS.screen - POS.doubleSlit, 200);
         c.strokeStyle = scene.tubeBorder;
         c.lineWidth = 2;
-        c.strokeRect(POS.doubleSlit, CY - 100, POS.screen - POS.doubleSlit, 200);
+        c.strokeRect(
+          POS.doubleSlit,
+          CY - 100,
+          POS.screen - POS.doubleSlit,
+          200
+        );
         // 叠加明暗带
         if (white) {
-          drawWhiteInterferenceOverlay(c, POS.doubleSlit, POS.screen, CY, d, POS.screen - POS.doubleSlit, time, wavelengths, isDark);
+          drawWhiteInterferenceOverlay(
+            c,
+            POS.doubleSlit,
+            POS.screen,
+            CY,
+            d,
+            POS.screen - POS.doubleSlit,
+            time,
+            wavelengths,
+            isDark
+          );
         } else {
-          drawInterferenceOverlay(c, POS.doubleSlit, POS.screen, CY, d, gap, palette, POS.screen - POS.doubleSlit, isDark, time);
+          drawInterferenceOverlay(
+            c,
+            POS.doubleSlit,
+            POS.screen,
+            CY,
+            d,
+            gap,
+            palette,
+            POS.screen - POS.doubleSlit,
+            isDark,
+            time
+          );
         }
       }
 
       // 绘制仪器
-      drawInstruments(c, POS, CY, d, palette, scene, step === 4, white, next.params.filterColor);
+      drawInstruments(
+        c,
+        POS,
+        CY,
+        d,
+        palette,
+        scene,
+        step === 4,
+        white,
+        next.params.filterColor
+      );
 
       // 干涉条纹与光强曲线
       if (step >= 5) {
         if (white) {
-          drawWhiteInterferencePattern(c, POS.screen, CY, d, POS.screen - POS.doubleSlit, wavelengths, scene, isDark);
-          drawWhiteFringeDisplay(c, d, L, wavelengths, next.params.filterColor, isDark, W, H);
+          drawWhiteInterferencePattern(
+            c,
+            POS.screen,
+            CY,
+            d,
+            POS.screen - POS.doubleSlit,
+            wavelengths,
+            scene,
+            isDark
+          );
+          drawWhiteFringeDisplay(
+            c,
+            d,
+            L,
+            wavelengths,
+            next.params.filterColor,
+            isDark,
+            W,
+            H
+          );
         } else {
-          drawInterferencePattern(c, POS.screen, CY, d, gap, palette, POS.screen - POS.doubleSlit, scene);
+          drawInterferencePattern(
+            c,
+            POS.screen,
+            CY,
+            d,
+            gap,
+            palette,
+            POS.screen - POS.doubleSlit,
+            scene
+          );
         }
       }
     }
@@ -988,22 +1170,32 @@ export function createDoubleSlitView(options: CreateDoubleSlitViewOptions = {}) 
     setTheme(t: TeachingTheme) {
       theme = t;
     },
-    setMode(mode: string) {
-      modeScale = mode === 'presentation' ? 1.5 : 1;
+    setMode(newMode: TeachingMode, hints?: DemoRenderHints) {
+      mode = newMode;
+      demoHints = hints;
     },
     dispose() {
       canvas = null;
       ctx = null;
       // 释放 offscreen 缓存
-      _spectrumCvs = _spectrumCtx = null; _spectrumKey = '';
-      _step6Cvs = _step6Ctx = null; _step6Key = '';
-      _step5Cvs = _step5Ctx = null; _step5Key = '';
-      _step4Cvs = _step4Ctx = null; _step4Key = '';
-      _glowCvs = _glowCtx = null; _glowKey = '';
-      _whiteFringeCvs = _whiteFringeCtx = null; _whiteFringeKey = '';
-      _paletteKey = ''; _cachedPalette = null;
-      _sceneKey = ''; _cachedScene = null;
-      _wlKey = ''; _cachedWl = [];
+      _spectrumCvs = _spectrumCtx = null;
+      _spectrumKey = '';
+      _step6Cvs = _step6Ctx = null;
+      _step6Key = '';
+      _step5Cvs = _step5Ctx = null;
+      _step5Key = '';
+      _step4Cvs = _step4Ctx = null;
+      _step4Key = '';
+      _glowCvs = _glowCtx = null;
+      _glowKey = '';
+      _whiteFringeCvs = _whiteFringeCtx = null;
+      _whiteFringeKey = '';
+      _paletteKey = '';
+      _cachedPalette = null;
+      _sceneKey = '';
+      _cachedScene = null;
+      _wlKey = '';
+      _cachedWl = [];
     }
   };
 }
