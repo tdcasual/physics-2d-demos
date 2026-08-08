@@ -103,7 +103,7 @@ export function createControlCard(
         font-size: calc(12px * var(--ui-scale, 1));
         font-weight: 500;
         background: var(--accent-primary);
-        color: var(--text-inverse);
+        color: var(--accent-contrast);
         border: none;
         border-radius: 20px;
         cursor: pointer;
@@ -111,8 +111,12 @@ export function createControlCard(
         box-shadow: var(--shadow-sm);
         min-height: calc(28px * var(--ui-scale, 1));
       `;
-      const onEnter = () => { btn.style.filter = 'brightness(1.1)'; };
-      const onLeave = () => { btn.style.filter = 'none'; };
+      const onEnter = () => {
+        btn.style.filter = 'brightness(1.1)';
+      };
+      const onLeave = () => {
+        btn.style.filter = 'none';
+      };
       btn.addEventListener('mouseenter', onEnter);
       btn.addEventListener('mouseleave', onLeave);
       cleanups.push(() => {
@@ -146,8 +150,12 @@ export function createControlCard(
     'aria-label',
     options?.defaultCollapsed ? '展开' : '折叠'
   );
-  const onToggleEnter = () => { toggle.style.background = 'var(--border-light)'; };
-  const onToggleLeave = () => { toggle.style.background = 'transparent'; };
+  const onToggleEnter = () => {
+    toggle.style.background = 'var(--border-light)';
+  };
+  const onToggleLeave = () => {
+    toggle.style.background = 'transparent';
+  };
   toggle.addEventListener('mouseenter', onToggleEnter);
   toggle.addEventListener('mouseleave', onToggleLeave);
   cleanups.push(() => {
@@ -189,5 +197,11 @@ export function createControlCard(
     body.style.display = collapsed ? 'none' : 'flex';
   }
 
-  return { element: card, body, header, setCollapsed, dispose: () => cleanups.forEach((c) => c()) };
+  return {
+    element: card,
+    body,
+    header,
+    setCollapsed,
+    dispose: () => cleanups.forEach((c) => c())
+  };
 }

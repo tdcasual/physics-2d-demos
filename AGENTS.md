@@ -4,7 +4,7 @@
 
 ## 项目概述
 
-Physics-2D-Demos 是一个物理教学演示中心（Teaching Demo Hub），当前包含 16 个交互式 2D 物理场景，以及 2 个可按需加载的仪器组件演示页面。
+Physics-2D-Demos 是一个物理教学演示中心（Teaching Demo Hub），当前包含 16 个交互式 2D 物理场景，以及 4 个可按需加载的仪器组件。
 
 - **技术栈**: Vite 7 + TypeScript 5.9 (strict) + React 18 + Tailwind CSS v4
 - **测试**: Vitest 3.2 (单元/契约) + Playwright (E2E/视觉)

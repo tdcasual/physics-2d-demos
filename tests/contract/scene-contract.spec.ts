@@ -9,6 +9,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { sceneRegistry } from '../../src/catalog/scene-registry';
 
 // ---------------------------------------------------------------------------
 // 动态发现所有场景入口
@@ -32,8 +33,12 @@ for (const [path, mod] of Object.entries(sceneModules)) {
   // 查找导出的 createXxxScene 函数
   const createFn = Object.entries(mod).find(
     ([key, val]) =>
-      key.startsWith('create') && key.endsWith('Scene') && typeof val === 'function'
-  )?.[1] as ((opts?: Record<string, unknown>) => Record<string, unknown>) | undefined;
+      key.startsWith('create') &&
+      key.endsWith('Scene') &&
+      typeof val === 'function'
+  )?.[1] as
+    | ((opts?: Record<string, unknown>) => Record<string, unknown>)
+    | undefined;
 
   if (createFn) {
     scenes.push({
@@ -53,39 +58,25 @@ for (const [path, mod] of Object.entries(sceneModules)) {
 // ---------------------------------------------------------------------------
 
 describe('scene contract (dynamic discovery)', () => {
-  it('discovers all 16 scenes', () => {
-    expect(scenes).toHaveLength(16);
-    const names = scenes.map(s => s.name).sort();
-    expect(names).toEqual([
-      'chase-meet',
-      'doppler-effect',
-      'double-slit',
-      'electrification',
-      'emf-analogy',
-      'field-lines',
-      'ganshe',
-      'interference-formula',
-      'mechanical-wave',
-      'micrometer',
-      'projectile',
-      'spring-oscillator',
-      'thin-film',
-      'vernier-caliper',
-      'vt-integral',
-      'wedge'
-    ]);
+  it('discovers every scene in the catalog', () => {
+    expect(scenes).toHaveLength(sceneRegistry.length);
+    const names = scenes.map((s) => s.name).sort();
+    expect(names).toEqual(sceneRegistry.map((scene) => scene.id).sort());
   });
 
   describe('required lifecycle methods', () => {
-    it.each(scenes)('$name: init, reset, step, render, dispose', ({ create }) => {
-      const scene = create();
-      expect(typeof scene.init).toBe('function');
-      expect(typeof scene.reset).toBe('function');
-      expect(typeof scene.step).toBe('function');
-      expect(typeof scene.render).toBe('function');
-      expect(typeof scene.dispose).toBe('function');
-      (scene as { dispose?: () => void }).dispose?.();
-    });
+    it.each(scenes)(
+      '$name: init, reset, step, render, dispose',
+      ({ create }) => {
+        const scene = create();
+        expect(typeof scene.init).toBe('function');
+        expect(typeof scene.reset).toBe('function');
+        expect(typeof scene.step).toBe('function');
+        expect(typeof scene.render).toBe('function');
+        expect(typeof scene.dispose).toBe('function');
+        (scene as { dispose?: () => void }).dispose?.();
+      }
+    );
   });
 
   describe('render before init', () => {

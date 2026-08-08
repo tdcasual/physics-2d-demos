@@ -9,14 +9,13 @@ import { featuredScenes } from './data/scenes';
 
 const ExperimentsSection = lazy(() => import('./sections/ExperimentsSection'));
 
-import '../styles/design-tokens.css';
-import '../styles/themes.css';
 import '../styles/global.css';
 import '../styles/app/home.css';
 
 const App: React.FC = () => {
   const { resolvedTheme, toggleTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -44,10 +43,28 @@ const App: React.FC = () => {
           <a href="/" className="logo">
             物理实验室
           </a>
-          <nav className="nav">
-            <a href="#experiments">实验</a>
-            <a href="/src/pages/instruments.html">组件库</a>
-            <a href="#about">关于</a>
+          <button
+            type="button"
+            className="nav-toggle"
+            aria-label={navOpen ? '关闭导航菜单' : '打开导航菜单'}
+            aria-expanded={navOpen}
+            onClick={() => setNavOpen((open) => !open)}
+          >
+            {navOpen ? '×' : '☰'}
+          </button>
+          <nav className={`nav${navOpen ? ' is-open' : ''}`}>
+            <a href="#experiments" onClick={() => setNavOpen(false)}>
+              实验
+            </a>
+            <a
+              href="/src/pages/instruments.html"
+              onClick={() => setNavOpen(false)}
+            >
+              组件库
+            </a>
+            <a href="#about" onClick={() => setNavOpen(false)}>
+              关于
+            </a>
           </nav>
           <button
             type="button"

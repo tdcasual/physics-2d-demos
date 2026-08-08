@@ -11,6 +11,8 @@
  *   scene/         — Per-scene styles imported by scene entry files
  */
 
+@import './design-tokens.css';
+@import './themes.css';
 @import './base/theme.css';
 @import './shared/split-layout-common.css';
 @import './layout/split-right.css';

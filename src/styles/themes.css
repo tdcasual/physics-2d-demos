@@ -21,10 +21,10 @@
   --text-lg: var(--token-font-size-lg);
   --text-xl: var(--token-font-size-xl);
   --text-2xl: var(--token-font-size-2xl);
-  --text-3xl: 1.875rem;   /* 30px */
-  --text-4xl: 2.25rem;    /* 36px */
-  --text-5xl: 3rem;       /* 48px */
-  --text-6xl: 3.75rem;    /* 60px */
+  --text-3xl: 1.875rem; /* 30px */
+  --text-4xl: 2.25rem; /* 36px */
+  --text-5xl: 3rem; /* 48px */
+  --text-6xl: 3.75rem; /* 60px */
 
   /* 字体粗细 */
   --font-normal: var(--token-font-weight-normal);
@@ -55,9 +55,9 @@
   --space-10: var(--token-space-10);
   --space-12: var(--token-space-12);
   --space-16: var(--token-space-16);
-  --space-20: 5rem;      /* 80px */
-  --space-24: 6rem;      /* 96px */
-  --space-32: 8rem;      /* 128px */
+  --space-20: 5rem; /* 80px */
+  --space-24: 6rem; /* 96px */
+  --space-32: 8rem; /* 128px */
 
   /* 圆角 */
   --radius-sm: var(--token-radius-sm);
@@ -87,7 +87,7 @@
    浅色主题（默认）
    ======================================== */
 :root,
-[data-theme="light"] {
+[data-theme='light'] {
   /* 主色 */
   --accent-primary: var(--token-color-coral);
   --accent-secondary: var(--token-color-mint);
@@ -103,9 +103,9 @@
 
   /* 文字色 */
   --text-primary: #1a1a1a;
-  --text-secondary: #555555;
-  --text-muted: #888888;
-  --text-tertiary: #999999;
+  --text-secondary: #444444;
+  --text-muted: #4b4b4b;
+  --text-tertiary: #4b4b4b;
   --text-inverse: #ffffff;
 
   /* 边框色 */
@@ -113,6 +113,16 @@
   --border-medium: rgba(0, 0, 0, 0.08);
   --border-strong: #a8a6a3;
   --border-color: var(--border-medium);
+
+  /* 布局与 DOM 组件别名 */
+  --sidebar-bg: var(--bg-hover);
+  --stage-bg: var(--bg-primary);
+  --btn-bg: rgba(0, 0, 0, 0.05);
+  --btn-hover-bg: rgba(0, 0, 0, 0.1);
+  --accent-color: var(--accent-secondary);
+  --accent-contrast: #0a0a0a;
+  --accent-primary-light: rgba(255, 107, 107, 0.1);
+  --accent-link: #b42318;
 
   /* 阴影 */
   --shadow-color: rgba(0, 0, 0, 0.1);
@@ -132,7 +142,7 @@
 /* ========================================
    深色主题
    ======================================== */
-[data-theme="dark"] {
+[data-theme='dark'] {
   /* 主色 */
   --accent-primary: var(--token-color-coral);
   --accent-secondary: var(--token-color-mint);
@@ -158,6 +168,16 @@
   --border-medium: rgba(255, 255, 255, 0.1);
   --border-strong: rgba(255, 255, 255, 0.2);
   --border-color: var(--border-medium);
+
+  /* 布局与 DOM 组件别名 */
+  --sidebar-bg: #0a0f1a;
+  --stage-bg: var(--bg-primary);
+  --btn-bg: rgba(255, 255, 255, 0.1);
+  --btn-hover-bg: rgba(255, 255, 255, 0.15);
+  --accent-color: var(--accent-secondary);
+  --accent-contrast: #0a0a0a;
+  --accent-primary-light: rgba(255, 107, 107, 0.15);
+  --accent-link: #ff9b91;
 
   /* 阴影 */
   --shadow-color: rgba(0, 0, 0, 0.3);

@@ -15,18 +15,18 @@
      ======================================== */
 
   /* 主色调 - 珊瑚橙 */
-  --token-color-coral: #FF6B6B;
-  --token-color-coral-light: #FF8E72;
-  --token-color-coral-dark: #E85D5D;
+  --token-color-coral: #ff6b6b;
+  --token-color-coral-light: #ff8e72;
+  --token-color-coral-dark: #e85d5d;
 
   /* 辅助色 - 薄荷青 */
-  --token-color-mint: #4ECDC4;
-  --token-color-mint-light: #95E1D3;
-  --token-color-mint-dark: #3DBDB5;
+  --token-color-mint: #4ecdc4;
+  --token-color-mint-light: #95e1d3;
+  --token-color-mint-dark: #3dbdb5;
 
   /* 点缀色 */
-  --token-color-yellow: #FFE66D;
-  --token-color-salmon: #FFA07A;
+  --token-color-yellow: #ffe66d;
+  --token-color-salmon: #ffa07a;
 
   /* 深色模式色系 */
   --token-color-slate-900: #0f172a;
@@ -43,31 +43,34 @@
   /* ========================================
      间距令牌 - Space Tokens
      ======================================== */
-  --token-space-1: 0.25rem;   /* 4px */
-  --token-space-2: 0.5rem;    /* 8px */
-  --token-space-3: 0.75rem;   /* 12px */
-  --token-space-4: 1rem;      /* 16px */
-  --token-space-5: 1.25rem;   /* 20px */
-  --token-space-6: 1.5rem;    /* 24px */
-  --token-space-8: 2rem;      /* 32px */
-  --token-space-10: 2.5rem;   /* 40px */
-  --token-space-12: 3rem;     /* 48px */
-  --token-space-16: 4rem;     /* 64px */
+  --token-space-1: 0.25rem; /* 4px */
+  --token-space-2: 0.5rem; /* 8px */
+  --token-space-3: 0.75rem; /* 12px */
+  --token-space-4: 1rem; /* 16px */
+  --token-space-5: 1.25rem; /* 20px */
+  --token-space-6: 1.5rem; /* 24px */
+  --token-space-8: 2rem; /* 32px */
+  --token-space-10: 2.5rem; /* 40px */
+  --token-space-12: 3rem; /* 48px */
+  --token-space-16: 4rem; /* 64px */
 
   /* ========================================
      字体令牌 - Typography Tokens
      ======================================== */
-  --token-font-family-sans: 'Satoshi', 'Noto Sans SC', system-ui, sans-serif;
-  --token-font-family-display: 'Clash Display', system-ui, sans-serif;
+  /* Self-contained system stacks: no undeclared web-font dependency. */
+  --token-font-family-sans:
+    'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --token-font-family-display:
+    'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
   --token-font-family-mono: 'SF Mono', Monaco, monospace;
 
   /* 字体大小 */
-  --token-font-size-xs: 0.75rem;    /* 12px */
-  --token-font-size-sm: 0.875rem;   /* 14px */
-  --token-font-size-base: 1rem;     /* 16px */
-  --token-font-size-lg: 1.125rem;   /* 18px */
-  --token-font-size-xl: 1.25rem;    /* 20px */
-  --token-font-size-2xl: 1.5rem;    /* 24px */
+  --token-font-size-xs: 0.75rem; /* 12px */
+  --token-font-size-sm: 0.875rem; /* 14px */
+  --token-font-size-base: 1rem; /* 16px */
+  --token-font-size-lg: 1.125rem; /* 18px */
+  --token-font-size-xl: 1.25rem; /* 20px */
+  --token-font-size-2xl: 1.5rem; /* 24px */
 
   /* 字体粗细 */
   --token-font-weight-normal: 400;

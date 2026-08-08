@@ -9,6 +9,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import type { StandardSceneCreateParams } from '../../src/app/scene-bootstrapper-types';
+import { sceneRegistry } from '../../src/catalog/scene-registry';
 
 // ============================================================================
 // Import scene option types for compile-time key checks
@@ -75,8 +76,12 @@ describe('Scene factory param contract', () => {
 
     const createFn = Object.entries(mod).find(
       ([key, val]) =>
-        key.startsWith('create') && key.endsWith('Scene') && typeof val === 'function'
-    )?.[1] as ((opts?: Record<string, unknown>) => Record<string, unknown>) | undefined;
+        key.startsWith('create') &&
+        key.endsWith('Scene') &&
+        typeof val === 'function'
+    )?.[1] as
+      | ((opts?: Record<string, unknown>) => Record<string, unknown>)
+      | undefined;
 
     if (!createFn) continue;
 
@@ -96,13 +101,15 @@ describe('Scene factory param contract', () => {
     });
   }
 
-  it('exactly 16 scenes discovered', () => {
+  it('all catalog scenes expose a factory', () => {
     const count = Object.entries(sceneModules).filter(([, mod]) => {
       return Object.entries(mod).some(
         ([key, val]) =>
-          key.startsWith('create') && key.endsWith('Scene') && typeof val === 'function'
+          key.startsWith('create') &&
+          key.endsWith('Scene') &&
+          typeof val === 'function'
       );
     }).length;
-    expect(count).toBe(16);
+    expect(count).toBe(sceneRegistry.length);
   });
 });

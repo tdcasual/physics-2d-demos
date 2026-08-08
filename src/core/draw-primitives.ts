@@ -138,12 +138,12 @@ export function drawDataPanel(
     const itemY = y + padding + index * lineHeight + lineHeight / 2;
 
     // 标签
-    ctx.font = '500 14px Satoshi, Noto Sans SC, sans-serif';
+    ctx.font = '500 14px "Noto Sans SC", system-ui, sans-serif';
     ctx.fillStyle = isDark ? Colors.gray : Colors.gray;
     ctx.fillText(item.label, x + padding, itemY);
 
     // 值
-    ctx.font = '600 14px Satoshi, Noto Sans SC, sans-serif';
+    ctx.font = '600 14px "Noto Sans SC", system-ui, sans-serif';
     ctx.fillStyle = Colors.coral;
     ctx.fillText(item.value, x + padding + maxLabelWidth + 16, itemY);
   });

@@ -76,12 +76,20 @@ function createWaveSourceCard(
   title: string,
   accentColor: string,
   sliders: Array<{
-    key: string; label: string; min: number; max: number; step: number;
-    value: number; unit: string;
+    key: string;
+    label: string;
+    min: number;
+    max: number;
+    step: number;
+    value: number;
+    unit: string;
   }>,
   onChange: (key: string, value: number) => void
 ): { element: HTMLElement; setValue: (key: string, value: number) => void } {
-  const card = createControlCard(title, { defaultCollapsed: false, span: 'full' });
+  const card = createControlCard(title, {
+    defaultCollapsed: false,
+    span: 'full'
+  });
   const body = card.body;
   body.style.display = 'grid';
   body.style.gridTemplateColumns = sliders.length >= 2 ? '1fr 1fr' : '1fr';
@@ -91,8 +99,11 @@ function createWaveSourceCard(
 
   for (const s of sliders) {
     const row = createSliderRow(s.label, {
-      min: s.min, max: s.max, step: s.step,
-      value: s.value, unit: s.unit,
+      min: s.min,
+      max: s.max,
+      step: s.step,
+      value: s.value,
+      unit: s.unit,
       onChange: (val) => onChange(s.key, val)
     });
     const input = row.querySelector('input');
@@ -147,7 +158,7 @@ function createObserverManager(
     primary.style.borderRadius = '4px';
     primary.style.background = 'var(--color-bg-secondary, rgba(0,0,0,0.03))';
     primary.innerHTML = `
-      <span style="font-size:0.8rem"><span style="color:${getObserverColor(0)};">●</span> 观察点1 x=${params.observerX.toFixed(2)}m</span>
+      <span style="font-size:0.8rem;color:var(--text-primary)"><span style="color:${getObserverColor(0)};">●</span> 观察点1 x=${params.observerX.toFixed(2)}m</span>
       <span style="font-size:0.7rem;color:var(--color-text-muted)">主观察点</span>
     `;
     listEl.appendChild(primary);
@@ -176,11 +187,15 @@ function createObserverManager(
       removeBtn.style.borderRadius = '4px';
       removeBtn.style.background = 'var(--color-btn-bg)';
       removeBtn.style.cursor = 'pointer';
-      removeBtn.addEventListener('click', () => {
-        scene.removeObserver(i);
-        refresh();
-        onChange();
-      }, { signal });
+      removeBtn.addEventListener(
+        'click',
+        () => {
+          scene.removeObserver(i);
+          refresh();
+          onChange();
+        },
+        { signal }
+      );
 
       row.appendChild(label);
       row.appendChild(removeBtn);
@@ -207,13 +222,17 @@ function createObserverManager(
     addBtn.disabled = count >= 6;
     addBtn.style.opacity = count >= 6 ? '0.5' : '1';
 
-    addBtn.addEventListener('click', () => {
-      if (count >= 6) return;
-      const newX = Math.round((Math.random() * 20 + 5) * 10) / 10;
-      scene.addObserver(newX);
-      refresh();
-      onChange();
-    }, { signal });
+    addBtn.addEventListener(
+      'click',
+      () => {
+        if (count >= 6) return;
+        const newX = Math.round((Math.random() * 20 + 5) * 10) / 10;
+        scene.addObserver(newX);
+        refresh();
+        onChange();
+      },
+      { signal }
+    );
 
     addRow.appendChild(addBtn);
     listEl.appendChild(addRow);
@@ -242,12 +261,9 @@ bootScenePage({
     return createGansheScene({ canvas, theme, mode, demoHints });
   },
   createControls: ({ mount, scene }) => {
-    const applyParam = createParamMapper<WaveParams>(
-      paramMapping,
-      (params) => {
-        scene.setParams(params);
-      }
-    );
+    const applyParam = createParamMapper<WaveParams>(paramMapping, (params) => {
+      scene.setParams(params);
+    });
 
     const applyPreset = createPresetApplier<WaveParams>(
       presets,
@@ -288,26 +304,93 @@ bootScenePage({
     });
 
     // Observer manager card (narrow — can share rows)
-    const observerManager = createObserverManager(scene as ReturnType<typeof createGansheScene>, () => {
-      scene.render();
-    });
+    const observerManager = createObserverManager(
+      scene as ReturnType<typeof createGansheScene>,
+      () => {
+        scene.render();
+      }
+    );
 
     // Wave source cards: one per logical entity, vertically stacked
     // Design: entity-grouped, not parameter-type-grouped
     const initialParams = scene.getParams();
-    const sourceACard = createWaveSourceCard('波源 A (左)', '#3b82f6', [
-      { key: 'freq1', label: 'f₁ 频率', min: 0.5, max: 10, step: 0.5, value: initialParams.freq1, unit: 'Hz' },
-      { key: 'amp1',  label: 'A₁ 振幅', min: 0.5, max: 10, step: 0.5, value: initialParams.amp1,  unit: 'cm' },
-    ], (key, value) => { applyParam(key, value); scene.render(); });
+    const sourceACard = createWaveSourceCard(
+      '波源 A (左)',
+      '#3b82f6',
+      [
+        {
+          key: 'freq1',
+          label: 'f₁ 频率',
+          min: 0.5,
+          max: 10,
+          step: 0.5,
+          value: initialParams.freq1,
+          unit: 'Hz'
+        },
+        {
+          key: 'amp1',
+          label: 'A₁ 振幅',
+          min: 0.5,
+          max: 10,
+          step: 0.5,
+          value: initialParams.amp1,
+          unit: 'cm'
+        }
+      ],
+      (key, value) => {
+        applyParam(key, value);
+        scene.render();
+      }
+    );
 
-    const sourceBCard = createWaveSourceCard('波源 B (右)', '#ef4444', [
-      { key: 'freq2', label: 'f₂ 频率', min: 0.5, max: 10, step: 0.5, value: initialParams.freq2, unit: 'Hz' },
-      { key: 'amp2',  label: 'A₂ 振幅', min: 0.5, max: 10, step: 0.5, value: initialParams.amp2,  unit: 'cm' },
-    ], (key, value) => { applyParam(key, value); scene.render(); });
+    const sourceBCard = createWaveSourceCard(
+      '波源 B (右)',
+      '#ef4444',
+      [
+        {
+          key: 'freq2',
+          label: 'f₂ 频率',
+          min: 0.5,
+          max: 10,
+          step: 0.5,
+          value: initialParams.freq2,
+          unit: 'Hz'
+        },
+        {
+          key: 'amp2',
+          label: 'A₂ 振幅',
+          min: 0.5,
+          max: 10,
+          step: 0.5,
+          value: initialParams.amp2,
+          unit: 'cm'
+        }
+      ],
+      (key, value) => {
+        applyParam(key, value);
+        scene.render();
+      }
+    );
 
-    const phaseCard = createWaveSourceCard('相位差', '#8b5cf6', [
-      { key: 'phaseDiff', label: 'Δφ', min: 0, max: 360, step: 5, value: initialParams.phaseDiff, unit: '°' },
-    ], (key, value) => { applyParam(key, value); scene.render(); });
+    const phaseCard = createWaveSourceCard(
+      '相位差',
+      '#8b5cf6',
+      [
+        {
+          key: 'phaseDiff',
+          label: 'Δφ',
+          min: 0,
+          max: 360,
+          step: 5,
+          value: initialParams.phaseDiff,
+          unit: '°'
+        }
+      ],
+      (key, value) => {
+        applyParam(key, value);
+        scene.render();
+      }
+    );
 
     // Narrow cards first, full-width cards last
     mount.appendChild(observerManager.element);

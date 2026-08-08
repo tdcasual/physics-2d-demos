@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 
 const PORT = 5177;
 const SCENES = [
@@ -7,8 +8,20 @@ const SCENES = [
   'emf-analogy',
   'field-lines',
   'electrification',
-  'vt-integral'
+  'vt-integral',
+  'doppler-effect',
+  'double-slit',
+  'ganshe',
+  'interference-formula',
+  'mechanical-wave',
+  'micrometer',
+  'spring-oscillator',
+  'thin-film',
+  'vernier-caliper',
+  'wedge'
 ];
+
+const PAGE_PATHS = ['/', '/src/pages/instruments.html'];
 
 for (const scene of SCENES) {
   test(`keyboard navigation: ${scene}`, async ({ page }) => {
@@ -72,5 +85,28 @@ for (const scene of SCENES) {
         `${scene}: canvas should have aria-label, role, or title`
       ).toBe(true);
     }
+  });
+}
+
+for (const path of PAGE_PATHS) {
+  test(`critical accessibility violations: ${path}`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`http://127.0.0.1:${PORT}${path}`, {
+      waitUntil: 'domcontentloaded'
+    });
+    await page.waitForTimeout(1800);
+
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa'])
+      .analyze();
+    const severe = results.violations.filter(
+      (violation) =>
+        violation.impact === 'critical' || violation.impact === 'serious'
+    );
+
+    expect(
+      severe,
+      `${path} should have no critical or serious WCAG violations`
+    ).toEqual([]);
   });
 }

@@ -9,6 +9,7 @@
  */
 
 import { testSceneSmoke } from '../helpers/scene-smoke';
+import { sceneRegistry } from '../../src/catalog/scene-registry';
 
 // ---------------------------------------------------------------------------
 // 动态发现
@@ -26,8 +27,12 @@ for (const [path, mod] of Object.entries(sceneModules)) {
 
   const createFn = Object.entries(mod).find(
     ([key, val]) =>
-      key.startsWith('create') && key.endsWith('Scene') && typeof val === 'function'
-  )?.[1] as ((opts?: Record<string, unknown>) => Record<string, unknown>) | undefined;
+      key.startsWith('create') &&
+      key.endsWith('Scene') &&
+      typeof val === 'function'
+  )?.[1] as
+    | ((opts?: Record<string, unknown>) => Record<string, unknown>)
+    | undefined;
 
   if (!createFn) continue;
 
@@ -38,9 +43,25 @@ for (const [path, mod] of Object.entries(sceneModules)) {
   const needsCanvas = true;
 
   // 根据场景的实际接口能力设置选项
-  const hasGetState = ['projectile', 'chase-meet', 'ganshe', 'doppler-effect', 'mechanical-wave'].includes(dirName);
-  const hasGetSnapshot = ['chase-meet', 'electrification', 'emf-analogy', 'field-lines', 'vt-integral'].includes(dirName);
-  const hasTransport = ['spring-oscillator', 'chase-meet', 'projectile'].includes(dirName);
+  const hasGetState = [
+    'projectile',
+    'chase-meet',
+    'ganshe',
+    'doppler-effect',
+    'mechanical-wave'
+  ].includes(dirName);
+  const hasGetSnapshot = [
+    'chase-meet',
+    'electrification',
+    'emf-analogy',
+    'field-lines',
+    'vt-integral'
+  ].includes(dirName);
+  const hasTransport = [
+    'spring-oscillator',
+    'chase-meet',
+    'projectile'
+  ].includes(dirName);
 
   testSceneSmoke(dirName, (opts) => createFn(opts), {
     needsCanvas,
@@ -53,8 +74,8 @@ for (const [path, mod] of Object.entries(sceneModules)) {
 }
 
 // 确保没有场景被遗漏
-if (discovered.length !== 16) {
+if (discovered.length !== sceneRegistry.length) {
   throw new Error(
-    `Expected 16 scenes but discovered ${discovered.length}: ${discovered.join(', ')}`
+    `Expected ${sceneRegistry.length} catalog scenes but discovered ${discovered.length}: ${discovered.join(', ')}`
   );
 }

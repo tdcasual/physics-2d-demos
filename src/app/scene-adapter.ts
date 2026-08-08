@@ -24,7 +24,10 @@ import { createAdaptiveFpsController } from './adaptive-fps';
 import { createPageLifecycle } from './page-lifecycle';
 import { createKeyboardHelpOverlay } from '../ui/components/KeyboardHelp';
 import type { KeyboardHelpOverlay } from '../ui/components/KeyboardHelp';
-import type { SceneInstance, ScenePageOptions } from './scene-bootstrapper-types';
+import type {
+  SceneInstance,
+  ScenePageOptions
+} from './scene-bootstrapper-types';
 
 export class SceneAdapter<
   TScene extends SceneInstance = SceneInstance
@@ -103,7 +106,9 @@ export class SceneAdapter<
     }
 
     const theme =
-      (container.closest('[data-theme]')?.getAttribute('data-theme') as Theme) ||
+      (container
+        .closest('[data-theme]')
+        ?.getAttribute('data-theme') as Theme) ||
       (document.documentElement.getAttribute('data-theme') as Theme) ||
       'light';
     const mode =
@@ -113,7 +118,8 @@ export class SceneAdapter<
 
     const demoHints =
       mode === 'presentation'
-        ? (this.options.demoProfile ?? this.options.meta.demoProfile)?.renderHints
+        ? (this.options.demoProfile ?? this.options.meta.demoProfile)
+            ?.renderHints
         : undefined;
     this.scene = this.options.createScene({
       canvas,
@@ -125,6 +131,38 @@ export class SceneAdapter<
     });
 
     this.scene.init();
+
+    const canvases = new Set<HTMLCanvasElement>([
+      ...container.querySelectorAll('canvas'),
+      ...Object.values(this.slots ?? {}).flatMap((slot) =>
+        slot instanceof HTMLElement
+          ? Array.from(slot.querySelectorAll<HTMLCanvasElement>('canvas'))
+          : []
+      )
+    ]);
+    let canvasIndex = 0;
+    const labelCanvases = () => {
+      document.querySelectorAll<HTMLCanvasElement>('canvas').forEach((node) => {
+        node.setAttribute('role', 'img');
+        if (!node.getAttribute('aria-label')) {
+          node.setAttribute('aria-label', `${this.options.meta.title}演示图`);
+        }
+      });
+    };
+    canvases.forEach((node) => {
+      node.setAttribute('role', 'img');
+      if (!node.getAttribute('aria-label')) {
+        node.setAttribute(
+          'aria-label',
+          `${this.options.meta.title}演示图${canvasIndex > 0 ? ` ${canvasIndex + 1}` : ''}`
+        );
+      }
+      canvasIndex += 1;
+    });
+    labelCanvases();
+    const canvasObserver = new MutationObserver(labelCanvases);
+    canvasObserver.observe(document.body, { childList: true, subtree: true });
+    this.lifecycle.onDispose(() => canvasObserver.disconnect());
 
     this.transport = createSceneShell({
       stepSeconds: this.options.stepSeconds ?? 1 / 60,
@@ -194,7 +232,8 @@ export class SceneAdapter<
 
     this.perfMonitor = new PerformanceMonitor();
     this.perfMonitor.start();
-    (window as unknown as Record<string, unknown>).__perfMonitor = this.perfMonitor;
+    (window as unknown as Record<string, unknown>).__perfMonitor =
+      this.perfMonitor;
     this.lifecycle.onDispose(() => {
       this.perfMonitor?.stop();
       delete (window as unknown as Record<string, unknown>).__perfMonitor;
@@ -379,7 +418,10 @@ export class SceneAdapter<
       if (this.scene?.setMode) {
         if (mode === 'presentation' && profile) {
           const sceneWithHints = this.scene as unknown as {
-            setMode(m: 'normal' | 'presentation', hints?: DemoRenderHints): void;
+            setMode(
+              m: 'normal' | 'presentation',
+              hints?: DemoRenderHints
+            ): void;
           };
           sceneWithHints.setMode(mode, profile.renderHints);
         } else {
@@ -424,7 +466,8 @@ export class SceneAdapter<
     if (this.scene.getState) {
       return this.scene.getState();
     }
-    const getSnapshot = (this.scene as { getSnapshot?: () => unknown }).getSnapshot;
+    const getSnapshot = (this.scene as { getSnapshot?: () => unknown })
+      .getSnapshot;
     if (typeof getSnapshot === 'function') {
       return getSnapshot.call(this.scene);
     }

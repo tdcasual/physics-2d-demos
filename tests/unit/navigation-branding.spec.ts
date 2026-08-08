@@ -32,10 +32,15 @@ describe('navigation branding', () => {
       resolve(process.cwd(), 'src/styles/design-tokens.css'),
       'utf8'
     );
-    const globalCss = readFileSync(resolve(process.cwd(), 'src/styles/global.css'), 'utf8');
+    const globalCss = readFileSync(
+      resolve(process.cwd(), 'src/styles/global.css'),
+      'utf8'
+    );
 
-    expect(tokens).toContain("'Satoshi'");
-    expect(tokens).toContain("'Clash Display'");
+    expect(tokens).toContain("'Noto Sans SC'");
+    expect(tokens).toContain("'PingFang SC'");
+    expect(tokens).not.toContain("'Satoshi'");
+    expect(tokens).not.toContain("'Clash Display'");
     expect(globalCss).toContain('font-family: var(--font-body);');
     expect(globalCss).toContain('font-family: var(--font-display);');
   });

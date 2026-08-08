@@ -87,23 +87,21 @@ test.describe('responsive overflow guardrails', () => {
   });
 });
 
-test('stage toolbar buttons have touch-safe CSS properties', async ({
+test('interactive buttons have touch-safe rendered dimensions', async ({
   page
 }) => {
   for (const path of modernPages) {
     await page.goto(path);
     const hasTouchSafeStyles = await page
-      .locator('.stage-toolbar button')
-      .evaluateAll((nodes) => {
-        for (const node of nodes) {
-          const style = window.getComputedStyle(node);
-          const minW = parseInt(style.minWidth, 10);
-          const minH = parseInt(style.minHeight, 10);
-          if (minW > 0 && minW < 44) return false;
-          if (minH > 0 && minH < 44) return false;
-        }
-        return true;
-      });
+      .locator(
+        '.stage-toolbar button, .mobile-control-bar button, .mobile-tab-bar button'
+      )
+      .evaluateAll((nodes) =>
+        nodes.every((node) => {
+          const rect = node.getBoundingClientRect();
+          return rect.width >= 44 && rect.height >= 44;
+        })
+      );
     expect(
       hasTouchSafeStyles,
       `${path} toolbar buttons should have touch-safe min dimensions`
@@ -145,4 +143,22 @@ test('touch interaction policy is configured on canvas', async ({ page }) => {
     .locator('canvas.stage-canvas')
     .evaluate((node) => getComputedStyle(node).touchAction);
   expect(fieldLinesTouchAction).not.toBe('');
+});
+
+test.describe('mobile home navigation', () => {
+  test.use(iPhone12Use);
+
+  test('keeps the instrument library reachable', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: '打开导航菜单' }).click();
+    await expect(page.getByRole('link', { name: '组件库' })).toBeVisible();
+  });
+});
+
+test('production debug overlay is opt-in', async ({ page }) => {
+  await page.goto('/src/pages/projectile.html');
+  await expect(page.getByText(/^FPS:/)).toHaveCount(0);
+
+  await page.goto('/src/pages/projectile.html?debug=1');
+  await expect(page.getByText(/^FPS:/)).toBeVisible();
 });

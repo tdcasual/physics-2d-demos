@@ -52,7 +52,7 @@ export function drawAxes(
   ctx.fill();
 
   // 标签
-  ctx.font = `500 ${fontSize}px Satoshi, "Noto Sans SC", sans-serif`;
+  ctx.font = `500 ${fontSize}px "Noto Sans SC", system-ui, sans-serif`;
   ctx.fillStyle = colors.text;
   ctx.textAlign = 'center';
   ctx.fillText('x', xArrowX, originY + labelOffset);

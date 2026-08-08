@@ -14,7 +14,8 @@ for (const scene of SCENES) {
   // emf-analogy 有粒子动画，diff 阈值需要更高
   const isDynamic = scene.id === 'emf-analogy';
 
-  test(`desktop ${scene.id}`, async ({ page }) => {
+  test(`desktop ${scene.id}`, async ({ page }, testInfo) => {
+    testInfo.snapshotSuffix = '';
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(`http://127.0.0.1:${PORT}/src/pages/${scene.id}.html`, {
       waitUntil: 'domcontentloaded'
@@ -26,7 +27,8 @@ for (const scene of SCENES) {
     });
   });
 
-  test(`mobile ${scene.id}`, async ({ page }) => {
+  test(`mobile ${scene.id}`, async ({ page }, testInfo) => {
+    testInfo.snapshotSuffix = '';
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto(`http://127.0.0.1:${PORT}/src/pages/${scene.id}.html`, {
       waitUntil: 'domcontentloaded'

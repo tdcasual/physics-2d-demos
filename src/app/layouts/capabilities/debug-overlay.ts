@@ -15,6 +15,13 @@ export interface DebugOverlayConfig {
   intervalMs?: number;
 }
 
+/** Debug UI is opt-in in production; development builds keep the overlay handy. */
+export function shouldEnableDebugOverlay(): boolean {
+  if (import.meta.env.DEV) return true;
+  const value = new URLSearchParams(window.location.search).get('debug');
+  return value === '1' || value === 'true' || value === 'fps';
+}
+
 export function createDebugOverlay(
   cfg: DebugOverlayConfig = {}
 ): CapabilityDefinition<DebugOverlayConfig> {

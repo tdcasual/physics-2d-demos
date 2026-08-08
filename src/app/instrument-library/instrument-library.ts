@@ -4,9 +4,19 @@
  * 内部开发工具，用于预览和调试所有已注册的仪器组件。
  */
 
-import { buildInstrumentRegistry, buildRegistryByCategory, getCategoryLabel } from '../../instruments/instrument-registry';
+import {
+  buildInstrumentRegistry,
+  buildRegistryByCategory,
+  getCategoryLabel
+} from '../../instruments/instrument-registry';
 import type { RegistryEntry } from '../../instruments/instrument-registry';
-import type { InstrumentSim, InstrumentView, InstrumentState, InstrumentParams, InstrumentMeta } from '../../instruments/_contract/instrument-contract';
+import type {
+  InstrumentSim,
+  InstrumentView,
+  InstrumentState,
+  InstrumentParams,
+  InstrumentMeta
+} from '../../instruments/_contract/instrument-contract';
 import type { TeachingTheme } from '../../platform/standards';
 import { sizeCanvasToFill } from '../../core/canvas-sizing';
 
@@ -45,7 +55,7 @@ export function bootInstrumentLibrary() {
       <span style="font-size:var(--text-lg);font-weight:var(--font-medium);">仪器组件库</span>
       <span style="font-size:var(--text-xs);padding:2px 10px;border-radius:999px;background:var(--bg-secondary);color:var(--text-muted);">${registry.length} 个组件</span>
     </div>
-    <a href="/" style="font-size:var(--text-sm);color:var(--accent-primary);text-decoration:none;">← 返回首页</a>
+    <a href="/" style="font-size:var(--text-sm);color:var(--accent-link);text-decoration:none;">← 返回首页</a>
   `;
   container.appendChild(header);
 
@@ -66,12 +76,14 @@ export function bootInstrumentLibrary() {
 
   // ── 右侧主区域 ──
   const main = document.createElement('main');
-  main.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
+  main.style.cssText =
+    'flex:1;display:flex;flex-direction:column;overflow:hidden;';
   body.appendChild(main);
 
   // 预览区（Canvas）
   const previewWrap = document.createElement('div');
-  previewWrap.style.cssText = 'flex:1;position:relative;background:var(--bg-secondary);';
+  previewWrap.style.cssText =
+    'flex:1;position:relative;background:var(--bg-secondary);';
   main.appendChild(previewWrap);
 
   const canvas = document.createElement('canvas');
@@ -115,7 +127,8 @@ export function bootInstrumentLibrary() {
   function detectTheme(): TeachingTheme {
     const htmlTheme = document.documentElement.getAttribute('data-theme');
     if (htmlTheme === 'dark' || htmlTheme === 'light') return htmlTheme;
-    if (window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches)
+      return 'dark';
     return 'light';
   }
   const currentTheme = detectTheme();
@@ -186,7 +199,10 @@ export function bootInstrumentLibrary() {
   }
 
   // ── 选择仪器 ──
-  async function selectInstrument(entry: RegistryEntry, btn: HTMLButtonElement) {
+  async function selectInstrument(
+    entry: RegistryEntry,
+    btn: HTMLButtonElement
+  ) {
     if (isLoading) return;
     isLoading = true;
 
@@ -202,7 +218,7 @@ export function bootInstrumentLibrary() {
       b.style.fontWeight = 'var(--font-normal)';
     });
     btn.style.background = 'var(--bg-secondary)';
-    btn.style.color = 'var(--accent-primary)';
+    btn.style.color = 'var(--accent-link)';
     btn.style.fontWeight = 'var(--font-medium)';
 
     // 显示加载中（不移除 canvas，只叠加 loading 层）
@@ -274,14 +290,17 @@ export function bootInstrumentLibrary() {
   }
 
   // ── 渲染元数据 ──
-  function renderMeta(entry: RegistryEntry, meta: InstrumentMeta<Record<string, unknown>>) {
+  function renderMeta(
+    entry: RegistryEntry,
+    meta: InstrumentMeta<Record<string, unknown>>
+  ) {
     metaWrap.innerHTML = '';
 
     const rows: [string, string][] = [
       ['ID', meta.id],
       ['名称', meta.title],
       ['分类', getCategoryLabel(meta.category)],
-      ['描述', meta.description],
+      ['描述', meta.description]
     ];
     if (meta.unit) rows.push(['单位', meta.unit]);
     if (meta.precision) rows.push(['精度', String(meta.precision)]);
@@ -298,7 +317,10 @@ export function bootInstrumentLibrary() {
   }
 
   // ── 渲染参数编辑器 ──
-  function renderParams(entry: RegistryEntry, sim: InstrumentSim<InstrumentState, InstrumentParams>) {
+  function renderParams(
+    entry: RegistryEntry,
+    sim: InstrumentSim<InstrumentState, InstrumentParams>
+  ) {
     paramsWrap.innerHTML = '';
 
     const defaults = entry.defaultParams;
@@ -322,7 +344,8 @@ export function bootInstrumentLibrary() {
     paramsWrap.appendChild(title);
 
     const grid = document.createElement('div');
-    grid.style.cssText = 'display:grid;grid-template-columns:repeat(2,1fr);gap:12px;';
+    grid.style.cssText =
+      'display:grid;grid-template-columns:repeat(2,1fr);gap:12px;';
     paramsWrap.appendChild(grid);
 
     for (const key of keys) {
@@ -331,7 +354,8 @@ export function bootInstrumentLibrary() {
 
       if (typeof defaultValue === 'number') {
         const label = document.createElement('label');
-        label.style.cssText = 'display:block;font-size:var(--text-xs);color:var(--text-muted);margin-bottom:4px;';
+        label.style.cssText =
+          'display:block;font-size:var(--text-xs);color:var(--text-muted);margin-bottom:4px;';
         label.textContent = key;
         wrap.appendChild(label);
 
@@ -378,7 +402,8 @@ export function bootInstrumentLibrary() {
         wrap.appendChild(row);
       } else {
         const label = document.createElement('label');
-        label.style.cssText = 'display:block;font-size:var(--text-xs);color:var(--text-muted);margin-bottom:4px;';
+        label.style.cssText =
+          'display:block;font-size:var(--text-xs);color:var(--text-muted);margin-bottom:4px;';
         label.textContent = key;
         wrap.appendChild(label);
 

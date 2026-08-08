@@ -20,11 +20,14 @@ function listSourceFiles(dir: string): string[] {
   });
 }
 
-function expectNoImports(source: string, forbidden: string[], file: string): void {
+function expectNoImports(
+  source: string,
+  forbidden: string[],
+  file: string
+): void {
   for (const target of forbidden) {
     expect(
-      source.includes(`'${target}`) || source.includes(`"${target}`)
-      ,
+      source.includes(`'${target}`) || source.includes(`"${target}`),
       `${file} must not import ${target}`
     ).toBe(false);
   }
@@ -55,18 +58,59 @@ describe('architecture boundaries', () => {
   });
 
   it('core modules do not import app layer', () => {
-    const coreFiles = [
-      'src/core/fixed-step.ts',
-      'src/core/high-dpi-canvas.ts',
-      'src/core/canvas-sizing-utils.ts',
-      'src/core/draw-primitives.ts',
-      'src/core/colors.ts'
-    ];
+    const coreFiles = listSourceFiles('src/core');
 
     for (const file of coreFiles) {
       const source = readSource(file);
-      expect(source.includes('../app/')).toBe(false);
-      expect(source.includes('../../app/')).toBe(false);
+      expectNoImports(
+        source,
+        [
+          '../app/',
+          '../../app/',
+          '../ui/',
+          '../../ui/',
+          '../scenes/',
+          '../../scenes/',
+          '../platform/',
+          '../../platform/',
+          '../catalog/',
+          '../../catalog/'
+        ],
+        file
+      );
+    }
+  });
+
+  it('ui and catalog modules respect their declared dependencies', () => {
+    for (const file of listSourceFiles('src/ui')) {
+      expectNoImports(
+        readSource(file),
+        [
+          '../app/',
+          '../../app/',
+          '../scenes/',
+          '../../scenes/',
+          '../catalog/',
+          '../../catalog/',
+          '../instruments/',
+          '../../instruments/'
+        ],
+        file
+      );
+    }
+    for (const file of listSourceFiles('src/catalog')) {
+      expectNoImports(
+        readSource(file),
+        [
+          '../app/',
+          '../../app/',
+          '../ui/',
+          '../../ui/',
+          '../scenes/',
+          '../../scenes/'
+        ],
+        file
+      );
     }
   });
 });

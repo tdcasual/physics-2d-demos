@@ -53,8 +53,11 @@ export const defaultBundleBudget: BundleBudget = {
 };
 
 /** 特定入口的预算覆盖（功能复杂的场景需要更大的 budget） */
-const ENTRY_BUDGET_OVERRIDES: Record<string, { maxJsKb?: number; maxCssKb?: number }> = {
-  'src/pages/double-slit.html': { maxJsKb: 185 }, // 白光/滤光片/crosshair/双仪器
+const ENTRY_BUDGET_OVERRIDES: Record<
+  string,
+  { maxJsKb?: number; maxCssKb?: number }
+> = {
+  'src/pages/double-slit.html': { maxJsKb: 185 } // 白光/滤光片/crosshair/双仪器
 };
 
 function toKb(bytes: number): number {
@@ -145,8 +148,7 @@ function collectHtmlAssetRefs(html: string): { css: string[]; js: string[] } {
   const jsRefs = new Set<string>();
   const cssRefs = new Set<string>();
 
-  const scriptRegex =
-    /<script\b[^>]*\bsrc="([^"]+)"[^>]*><\/script>/gi;
+  const scriptRegex = /<script\b[^>]*\bsrc="([^"]+)"[^>]*><\/script>/gi;
   const preloadRegex =
     /<link\b[^>]*\brel="modulepreload"[^>]*\bhref="([^"]+)"[^>]*>/gi;
   const stylesheetRegex =
@@ -178,8 +180,14 @@ function collectHtmlAssetRefs(html: string): { css: string[]; js: string[] } {
   };
 }
 
-function sumAssetSizes(paths: string[], assetMap: Map<string, BundleAsset>): number {
-  return paths.reduce((total, path) => total + (assetMap.get(path)?.kb ?? 0), 0);
+function sumAssetSizes(
+  paths: string[],
+  assetMap: Map<string, BundleAsset>
+): number {
+  return paths.reduce(
+    (total, path) => total + (assetMap.get(path)?.kb ?? 0),
+    0
+  );
 }
 
 function computeSharedJsKb(
@@ -204,12 +212,19 @@ function computeSharedJsKb(
   return sharedJsKb;
 }
 
-function computeVendorJsKb(assetMap: Map<string, BundleAsset>, entries: BundleEntryReport[]): number {
+function computeVendorJsKb(
+  assetMap: Map<string, BundleAsset>,
+  entries: BundleEntryReport[]
+): number {
   const referenced = new Set(entries.flatMap((entry) => entry.jsAssets));
 
   let vendorJsKb = 0;
   for (const [path, asset] of assetMap) {
-    if (asset.type === 'js' && referenced.has(path) && path.includes('vendor-')) {
+    if (
+      asset.type === 'js' &&
+      referenced.has(path) &&
+      path.includes('vendor-')
+    ) {
       vendorJsKb += asset.kb;
     }
   }
@@ -318,14 +333,17 @@ export function formatBundleBudgetReport(report: BundleBudgetReport): string {
   ];
 
   for (const entry of report.entries) {
+    const override = ENTRY_BUDGET_OVERRIDES[entry.htmlPath];
     const jsLimit =
-      entry.kind === 'home'
+      override?.maxJsKb ??
+      (entry.kind === 'home'
         ? report.budget.maxHomeEntryJsKb
-        : report.budget.maxEntryJsKb;
+        : report.budget.maxEntryJsKb);
     const cssLimit =
-      entry.kind === 'home'
+      override?.maxCssKb ??
+      (entry.kind === 'home'
         ? report.budget.maxHomeEntryCssKb
-        : report.budget.maxEntryCssKb;
+        : report.budget.maxEntryCssKb);
     lines.push(
       `Entry ${entry.htmlPath}: JS ${formatKb(entry.jsKb)} / ${formatKb(
         jsLimit
@@ -335,7 +353,9 @@ export function formatBundleBudgetReport(report: BundleBudgetReport): string {
 
   if (report.violations.length > 0) {
     lines.push('Violations:');
-    lines.push(...report.violations.map((violation) => `- ${violation.message}`));
+    lines.push(
+      ...report.violations.map((violation) => `- ${violation.message}`)
+    );
   }
 
   return lines.join('\n');

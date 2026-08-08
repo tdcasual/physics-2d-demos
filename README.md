@@ -1,6 +1,6 @@
 # Teaching Demo Hub
 
-面向课堂演示的多学科 2D 动画静态站点。当前收录 16 个交互式物理教学场景与 2 个仪器组件演示，统一的布局母版系统，支持桌面端/移动端自适应切换。
+面向课堂演示的多学科 2D 动画静态站点。当前收录 16 个交互式物理教学场景与 4 个仪器组件，统一的布局母版系统，支持桌面端/移动端自适应切换。
 
 ## Tech Stack
 
@@ -113,7 +113,7 @@ docs/
 - `/src/pages/wedge.html`：劈尖干涉
 - `/src/pages/vernier-caliper.html`：游标卡尺
 - `/src/pages/micrometer.html`：螺旋测微仪
-- `/src/pages/instruments.html`：仪器组件库（干涉读数游标卡尺、高精度干涉测微仪）
+- `/src/pages/instruments.html`：仪器组件库（螺旋测微器、游标卡尺、干涉读数游标卡尺、高精度干涉测微仪）
 
 ## Architecture
 

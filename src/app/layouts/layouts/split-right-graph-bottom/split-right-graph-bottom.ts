@@ -23,6 +23,7 @@ import {
 } from '../../_shared/split-helpers';
 import { buildSplitLayoutDOM } from '../../_shared/split-layout-base';
 import { enterLayout, exitLayout } from '../../_shared/layout-transition';
+import { shouldEnableDebugOverlay } from '../../capabilities/debug-overlay';
 
 export interface SplitRightGraphBottomConfig extends LayoutConfig {
   defaultLeftRatio?: number;
@@ -121,7 +122,7 @@ export class SplitRightGraphBottomLayout implements ILayout {
         }
       },
       { id: 'demo-profile' },
-      { id: 'debug-overlay' }
+      ...(shouldEnableDebugOverlay() ? [{ id: 'debug-overlay' as const }] : [])
     ];
   }
 

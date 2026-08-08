@@ -8,7 +8,10 @@
  * - 新增仪器时必须在此文件中注册，否则无法被发现
  */
 
-import type { InstrumentCategory, InstrumentMeta } from '../_contract/instrument-contract';
+import type {
+  InstrumentCategory,
+  InstrumentMeta
+} from '../_contract/instrument-contract';
 
 export type InstrumentManifestEntry = {
   /** 唯一标识，kebab-case */
@@ -35,7 +38,8 @@ export type InstrumentManifestEntry = {
 /**
  * 仪器清单。
  *
- * 当前为空，后续每添加一个仪器，在此数组中追加一条记录。
+ * 每条记录的默认参数必须与对应 instrument.meta.ts 完全一致；
+ * 一致性由 instrument-manifest.spec.ts 在测试中校验。
  * 不按字母序排列 — 由注册表在运行时排序。
  */
 export const instrumentManifest: InstrumentManifestEntry[] = [
@@ -47,7 +51,7 @@ export const instrumentManifest: InstrumentManifestEntry[] = [
     defaultParams: { reading: 6.725 },
     unit: 'mm',
     precision: 0.001,
-    modulePath: '/src/instruments/spiral-micrometer/index.ts',
+    modulePath: '/src/instruments/spiral-micrometer/index.ts'
   },
   {
     id: 'vernier-caliper',
@@ -57,26 +61,42 @@ export const instrumentManifest: InstrumentManifestEntry[] = [
     defaultParams: { precision: 0.02, objectType: 0 },
     unit: 'mm',
     precision: 0.02,
-    modulePath: '/src/instruments/vernier-caliper/index.ts',
+    modulePath: '/src/instruments/vernier-caliper/index.ts'
   },
   {
     id: 'micrometer-eyepiece',
     title: '高精度干涉测微仪',
     category: 'measurement',
     description: '带光学目镜和干涉条纹的螺旋测微器，可精确到 0.01mm',
-    defaultParams: { initialReading: 0.30, zeroOffset: 0, stripeOffset: 1200, stripeSpacing: 50, stripeColor: 'rgba(200, 80, 20, 0.4)', stripeAngle: 90 },
+    defaultParams: {
+      initialReading: 0,
+      zeroOffset: 0,
+      stripeOffset: 12,
+      stripeSpacing: 50,
+      stripeColor: 'rgba(200, 80, 20, 0.4)',
+      stripeAngle: 90,
+      viewMode: 'fringe'
+    },
     unit: 'mm',
     precision: 0.01,
-    modulePath: '/src/instruments/micrometer-eyepiece/index.ts',
+    modulePath: '/src/instruments/micrometer-eyepiece/index.ts'
   },
   {
     id: 'interference-vernier-caliper',
     title: '干涉读数游标卡尺',
     category: 'optical',
     description: '带双缝干涉条纹的干涉读数游标卡尺，50分度游标精度0.002cm',
-    defaultParams: { initialReading: 1.400, zeroOffset: 0, fringeSpacing: 16, fringeBlur: 1.5, fringeOpacity: 0.85, fringeEnvelopeWidth: 320 },
+    defaultParams: {
+      initialReading: 1.4,
+      zeroOffset: 0,
+      fringeSpacing: 16,
+      fringeBlur: 1.5,
+      fringeOpacity: 0.85,
+      fringeEnvelopeWidth: 320,
+      fringeColor: 'rgba(30,15,0,0.85)'
+    },
     unit: 'cm',
     precision: 0.002,
-    modulePath: '/src/instruments/interference-vernier-caliper/index.ts',
-  },
+    modulePath: '/src/instruments/interference-vernier-caliper/index.ts'
+  }
 ];

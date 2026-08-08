@@ -8,7 +8,17 @@ const SCENES = [
   'emf-analogy',
   'field-lines',
   'electrification',
-  'vt-integral'
+  'vt-integral',
+  'doppler-effect',
+  'double-slit',
+  'ganshe',
+  'interference-formula',
+  'mechanical-wave',
+  'micrometer',
+  'spring-oscillator',
+  'thin-film',
+  'vernier-caliper',
+  'wedge'
 ];
 
 /**

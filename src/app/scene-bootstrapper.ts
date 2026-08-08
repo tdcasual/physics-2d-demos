@@ -10,9 +10,15 @@ import { createSceneContainer } from './layouts/container';
 import { registerAllLayouts } from './layouts/auto-register';
 import { SceneAdapter } from './scene-adapter';
 import { restoreSceneParams, persistSceneParams } from './url-sync';
-import type { SceneInstance, ScenePageOptions } from './scene-bootstrapper-types';
+import type {
+  SceneInstance,
+  ScenePageOptions
+} from './scene-bootstrapper-types';
 
-export type { SceneInstance, ScenePageOptions } from './scene-bootstrapper-types';
+export type {
+  SceneInstance,
+  ScenePageOptions
+} from './scene-bootstrapper-types';
 export { SceneAdapter } from './scene-adapter';
 
 /**
@@ -25,6 +31,15 @@ export function bootScenePage<TScene extends SceneInstance>(
   options: ScenePageOptions<TScene>,
   mountSelector: string = '#app'
 ): void {
+  const requestedTheme = new URLSearchParams(window.location.search).get(
+    'theme'
+  );
+  const defaultTheme =
+    requestedTheme === 'dark' || requestedTheme === 'light'
+      ? requestedTheme
+      : 'light';
+  document.documentElement.setAttribute('data-theme', defaultTheme);
+
   // 恢复之前保存的参数（URL 无参数时）
   restoreSceneParams(options.meta.id);
 
@@ -40,7 +55,7 @@ export function bootScenePage<TScene extends SceneInstance>(
   const container = createSceneContainer({
     mount,
     defaultLayout: options.preferredLayout ?? 'split-right',
-    defaultTheme: 'light',
+    defaultTheme,
     layoutConfig: {
       ...options.layoutConfig,
       title: options.meta.title

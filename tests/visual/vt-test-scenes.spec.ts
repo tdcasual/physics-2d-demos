@@ -11,7 +11,7 @@ test('vt-integral test all scenes', async ({ page }) => {
   await page.screenshot({ path: '/tmp/vt-scene1.png' });
 
   // 点击场景二按钮
-  await page.click('text=曲线逼近');
+  await page.getByRole('button', { name: '化曲为直' }).click();
   await page.waitForTimeout(1000);
   await page.screenshot({ path: '/tmp/vt-scene2.png' });
 

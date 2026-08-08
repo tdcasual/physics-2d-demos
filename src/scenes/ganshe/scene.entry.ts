@@ -52,7 +52,11 @@ function formatReadout(state: WaveState): Array<{
   layout?: 'half' | 'full';
 }> {
   const p = state.interference;
-  const items: Array<{ label: string; value: string | number; layout?: 'half' | 'full' }> = [
+  const items: Array<{
+    label: string;
+    value: string | number;
+    layout?: 'half' | 'full';
+  }> = [
     { label: '时间 t', value: `${state.time.toFixed(2)} s` },
     { label: '观察点 x', value: `${state.params.observerX.toFixed(2)} m` },
     { label: '相对相位差', value: `${p.dphaseDeg.toFixed(0)}°` },
@@ -95,7 +99,11 @@ export function createGansheScene(
   getState(): WaveState;
   getParams(): WaveParams;
   setParams(next: Partial<WaveParams>): WaveParams;
-  getReadoutItems(): Array<{ label: string; value: string | number; layout?: 'half' | 'full' }>;
+  getReadoutItems(): Array<{
+    label: string;
+    value: string | number;
+    layout?: 'half' | 'full';
+  }>;
   setTimeScale(scale: number): void;
   getTimeScale(): number;
   subscribe(listener: () => void): () => void;
@@ -116,7 +124,12 @@ export function createGansheScene(
 
   // Multi-graph management
   let graphContainer: HTMLElement | null = null;
-  const graphCells: { canvas: HTMLCanvasElement; renderer: XtGraphRenderer; wrapper: HTMLElement; header: HTMLElement }[] = [];
+  const graphCells: {
+    canvas: HTMLCanvasElement;
+    renderer: XtGraphRenderer;
+    wrapper: HTMLElement;
+    header: HTMLElement;
+  }[] = [];
   let currentTheme: 'light' | 'dark' = options.theme ?? 'light';
 
   function notify(): void {
@@ -136,14 +149,22 @@ export function createGansheScene(
     graphContainer.setAttribute('data-columns', String(cols));
   }
 
-  function createGraphCell(observer: ObserverData, index: number): { canvas: HTMLCanvasElement; renderer: XtGraphRenderer; wrapper: HTMLElement; header: HTMLElement } {
+  function createGraphCell(
+    observer: ObserverData,
+    index: number
+  ): {
+    canvas: HTMLCanvasElement;
+    renderer: XtGraphRenderer;
+    wrapper: HTMLElement;
+    header: HTMLElement;
+  } {
     const wrapper = document.createElement('div');
     wrapper.className = 'graph-cell';
 
     const header = document.createElement('div');
     header.className = 'graph-cell-header';
     const color = getObserverColor(index);
-    header.innerHTML = `<span style="color:${color}">●</span> <span class="graph-cell-title">观察点${index + 1}</span> <span class="graph-cell-coord">x=${observer.x.toFixed(2)}m</span>`;
+    header.innerHTML = `<span aria-hidden="true" style="color:${color}">●</span> <span class="graph-cell-title">观察点${index + 1}</span> <span class="graph-cell-coord">x=${observer.x.toFixed(2)}m</span>`;
     wrapper.appendChild(header);
 
     const body = document.createElement('div');
@@ -219,9 +240,14 @@ export function createGansheScene(
     }
 
     // Additional
-    for (let i = 0; i < state.allObservers.length && i + 1 < graphCells.length; i++) {
+    for (
+      let i = 0;
+      i < state.allObservers.length && i + 1 < graphCells.length;
+      i++
+    ) {
       const obs = state.allObservers[i];
-      const coordSpan = graphCells[i + 1].header.querySelector('.graph-cell-coord');
+      const coordSpan =
+        graphCells[i + 1].header.querySelector('.graph-cell-coord');
       if (coordSpan) {
         coordSpan.textContent = `x=${obs.x.toFixed(2)}m`;
       }
