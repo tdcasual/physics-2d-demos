@@ -38,6 +38,8 @@ export interface LayoutConfig {
   slots?: Partial<Record<SlotName, SlotConfig>>;
   mobileBreakpoint?: number;
   tabletBreakpoint?: number;
+  /** 按布局 ID 覆盖共享配置，例如仅在 mobile-stack 中启用图表。 */
+  layoutOverrides?: Record<string, Record<string, unknown>>;
   /** 由容器在布局切换时注入的上一布局的 canvas（避免 WebGL context 丢失） */
   preservedCanvas?: HTMLCanvasElement | null;
   /** 隐藏 transport 浮动控制条（适用于静态推导类场景） */
@@ -214,7 +216,9 @@ export interface Scene {
   getTransportState?(): TransportState;
   getReadoutItems?(): ReadoutItem[];
   subscribe?(listener: SceneStateListener): () => void;
-  getDemoProfile?(): import('../../platform/demo-profile').SceneDemoProfile | null;
+  getDemoProfile?():
+    | import('../../platform/demo-profile').SceneDemoProfile
+    | null;
 }
 
 // ============================================================================

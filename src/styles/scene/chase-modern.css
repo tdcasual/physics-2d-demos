@@ -132,3 +132,22 @@
   flex-direction: column;
   gap: 6px;
 }
+
+/* mobile-stack 会把图表卡片移出 stage，图表标签内仍保持单列。 */
+.mobile-graph-slot > .chase-modern-card--graphs {
+  flex: 0 0 auto;
+  width: 100%;
+}
+
+.mobile-graph-slot .chase-modern-plots {
+  flex: 0 0 auto;
+  flex-direction: column;
+  height: auto;
+  gap: 6px;
+  box-sizing: border-box;
+}
+
+.mobile-graph-slot .chase-modern-plot {
+  flex: 0 0 auto;
+  width: 100%;
+}

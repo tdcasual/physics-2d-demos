@@ -41,12 +41,13 @@ bootScenePage({
       throw new Error('Missing animation container for chase-meet');
     }
 
-    // 检测是否为移动端布局：mobile-stack 提供 graph slot
-    const isMobileStack = !!slots.graph;
+    const mobileGraphSlot = slots.graph?.classList.contains('mobile-graph-slot')
+      ? slots.graph
+      : undefined;
 
     const scene = createChaseMeetScene({
       stageSlot,
-      graphSlot: isMobileStack ? slots.graph : undefined,
+      graphSlot: mobileGraphSlot,
       mode,
       demoHints,
       theme,
@@ -156,6 +157,9 @@ bootScenePage({
   layoutConfig: {
     defaultLeftRatio: 0.32,
     hasGraph: false,
+    layoutOverrides: {
+      'mobile-stack': { hasGraph: true }
+    },
     controlColumns: 'auto',
     readoutCollapsed: true
   }

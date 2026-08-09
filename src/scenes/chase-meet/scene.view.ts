@@ -38,23 +38,51 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
   let snapshot: ChaseMeetSnapshot | null = null;
   let cssWidth = 1280;
   let cssHeight = 720;
+  let graphResizeObserver: ResizeObserver | null = null;
+  let lastGraphSlotSize = '';
+
+  function observeGraphSlot(): void {
+    if (
+      !graphSlot ||
+      graphResizeObserver ||
+      typeof ResizeObserver === 'undefined'
+    ) {
+      return;
+    }
+
+    graphResizeObserver = new ResizeObserver(() => {
+      if (!graphSlot) return;
+      const rect = graphSlot.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
+
+      const nextSize = `${Math.round(rect.width)}x${Math.round(rect.height)}`;
+      if (nextSize === lastGraphSlotSize) return;
+      lastGraphSlotSize = nextSize;
+      initStageSize();
+      if (snapshot) draw(snapshot);
+    });
+    graphResizeObserver.observe(graphSlot);
+  }
 
   function ensureStageDom(): StageDom | null {
     if (!stageSlot) return null;
     if (!stageDom) {
       stageDom = createStageDom(stageSlot);
-      if (graphSlot && stageDom) {
-        const graphsSection = stageDom.root.querySelector(
-          '.chase-modern-card--graphs'
-        );
-        if (graphsSection) {
-          stageDom.root.removeChild(graphsSection);
-          graphSlot.replaceChildren();
-          graphSlot.appendChild(graphsSection);
-        }
-      }
     }
     return stageDom;
+  }
+
+  function attachGraphSlot(nextSlot: HTMLElement): void {
+    graphSlot = nextSlot;
+    const dom = ensureStageDom();
+    const graphsSection = dom?.root.querySelector('.chase-modern-card--graphs');
+    if (!graphsSection) return;
+
+    graphSlot.replaceChildren();
+    graphSlot.appendChild(graphsSection);
+    observeGraphSlot();
+    initStageSize();
+    if (snapshot) draw(snapshot);
   }
 
   function resizeFallbackCanvas(): void {
@@ -73,10 +101,11 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
       return;
     }
 
-    const scale = demoHints?.contentScale ?? (mode === 'presentation' ? 1.5 : 1.0);
+    const scale =
+      demoHints?.contentScale ?? (mode === 'presentation' ? 1.5 : 1.0);
     const viewport = getResponsiveViewport(960);
     const totalWidth = resolveResponsiveStageWidth(dom.root, {
-      minWidthPx: 320,
+      minWidthPx: 1,
       horizontalPaddingPx: 16,
       narrowBreakpointPx: 960
     });
@@ -86,10 +115,14 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
       1,
       Math.floor(dom.root.getBoundingClientRect().height || viewport.height)
     );
+    const hasMobileGraphSlot =
+      graphSlot?.classList.contains('mobile-graph-slot') ?? false;
     // 移动端：运动/图表用按宽度的合理高度，配合 CSS 让 stage 可滚动，
     // 避免挤在不可滚动的动画区被裁切；桌面端沿用按 stage 高度的比例。
     const trackHeight = viewport.isNarrow
-      ? Math.max(200, Math.min(300, Math.round(totalWidth * 0.52)))
+      ? hasMobileGraphSlot
+        ? Math.max(180, stageHeight - 4)
+        : Math.max(200, Math.min(300, Math.round(totalWidth * 0.52)))
       : Math.min(
           Math.round(380 * scale),
           Math.max(Math.round(190 * scale), stageHeight * 0.42)
@@ -99,8 +132,26 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
     let graphWidth: number;
     if (graphSlot) {
       const gRect = graphSlot.getBoundingClientRect();
-      graphWidth = Math.max(1, Math.floor((gRect.width || totalWidth) / 2 - 4));
-      graphHeight = Math.max(120, Math.floor(gRect.height || 300));
+      if (hasMobileGraphSlot) {
+        const plotWidth =
+          dom.xCanvas.parentElement?.getBoundingClientRect().width ?? 0;
+        const availableHeight = gRect.height
+          ? Math.floor((gRect.height - 84) / 2)
+          : Math.round(totalWidth * 0.44);
+        graphWidth = Math.max(
+          1,
+          Math.floor(
+            plotWidth || (gRect.width > 0 ? gRect.width - 14 : totalWidth - 16)
+          )
+        );
+        graphHeight = Math.max(140, Math.min(220, availableHeight));
+      } else {
+        graphWidth = Math.max(
+          1,
+          Math.floor((gRect.width || totalWidth) / 2 - 4)
+        );
+        graphHeight = Math.max(120, Math.floor(gRect.height || 300));
+      }
     } else if (viewport.isNarrow) {
       graphWidth = totalWidth;
       graphHeight = Math.max(130, Math.min(200, Math.round(totalWidth * 0.42)));
@@ -197,6 +248,7 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
         draw(snapshot);
       }
     },
+    attachGraphSlot,
     resize(): void {
       initStageSize();
       if (snapshot) {
@@ -221,6 +273,9 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
     },
     dispose(): void {
       snapshot = null;
+      graphResizeObserver?.disconnect();
+      graphResizeObserver = null;
+      lastGraphSlotSize = '';
       if (stageSlot) {
         stageSlot.replaceChildren();
       }

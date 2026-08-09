@@ -402,7 +402,7 @@ export class SceneContainerImpl implements SceneContainer {
         try {
           const recovered = layoutRegistry.create(fromId, this.container, {
             theme: this._currentTheme,
-            ...((this._layoutConfig || {}) as LayoutConfig)
+            ...this._resolveLayoutConfig(fromId)
           });
           await recovered.mount();
           recovered.setTheme(this._currentTheme);
@@ -492,7 +492,7 @@ export class SceneContainerImpl implements SceneContainer {
 
     const newLayout = layoutRegistry.create(layoutId, this.container, {
       theme: this._currentTheme,
-      ...((this._layoutConfig || {}) as LayoutConfig),
+      ...this._resolveLayoutConfig(layoutId),
       preservedCanvas
     });
 
@@ -513,6 +513,29 @@ export class SceneContainerImpl implements SceneContainer {
     }
 
     return newLayout;
+  }
+
+  private _resolveLayoutConfig(layoutId: string): LayoutConfig {
+    const resolved: Record<string, unknown> = { ...(this._layoutConfig ?? {}) };
+    const overrides = resolved.layoutOverrides;
+    delete resolved.layoutOverrides;
+
+    if (
+      overrides &&
+      typeof overrides === 'object' &&
+      !Array.isArray(overrides)
+    ) {
+      const override = (overrides as Record<string, unknown>)[layoutId];
+      if (
+        override &&
+        typeof override === 'object' &&
+        !Array.isArray(override)
+      ) {
+        Object.assign(resolved, override);
+      }
+    }
+
+    return resolved as LayoutConfig;
   }
 
   private async _finalizeLayoutSwitch(

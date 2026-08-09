@@ -164,6 +164,42 @@ describe('SceneContainerImpl', () => {
     );
   });
 
+  it('should merge config overrides only for the selected layout', async () => {
+    const { layoutRegistry } = await import('../../src/app/layouts/registry');
+    const container = createSceneContainer({
+      mount,
+      layoutConfig: {
+        hasGraph: false,
+        readoutCollapsed: true,
+        layoutOverrides: {
+          'mobile-stack': { hasGraph: true }
+        }
+      }
+    });
+
+    await container.switchLayout('split-right', { animate: false });
+    expect(layoutRegistry.create).toHaveBeenLastCalledWith(
+      'split-right',
+      mount,
+      expect.objectContaining({
+        hasGraph: false,
+        readoutCollapsed: true
+      })
+    );
+
+    await container.switchLayout('mobile-stack', { animate: false });
+    const mobileConfig = vi
+      .mocked(layoutRegistry.create)
+      .mock.calls.at(-1)?.[2];
+    expect(mobileConfig).toEqual(
+      expect.objectContaining({
+        hasGraph: true,
+        readoutCollapsed: true
+      })
+    );
+    expect(mobileConfig).not.toHaveProperty('layoutOverrides');
+  });
+
   it('should throw when switching to unknown layout', async () => {
     const { layoutRegistry } = await import('../../src/app/layouts/registry');
     vi.mocked(layoutRegistry.has).mockReturnValueOnce(false);

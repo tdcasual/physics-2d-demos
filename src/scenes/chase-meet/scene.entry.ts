@@ -40,6 +40,7 @@ export function createChaseMeetScene(
   getParams(): ResolvedChaseMeetParams;
   setParams(next: Partial<ChaseMeetParams>): ResolvedChaseMeetParams;
   getSnapshot(): ChaseMeetSnapshot;
+  renderGraph(container: HTMLElement): void;
   subscribe(listener: () => void): () => void;
 } {
   const sim = createChaseMeetSim(DEFAULT_PARAMS);
@@ -62,7 +63,11 @@ export function createChaseMeetScene(
 
   function notify(): void {
     for (const fn of listeners) {
-      try { fn(); } catch { /* ignore */ }
+      try {
+        fn();
+      } catch {
+        /* ignore */
+      }
     }
   }
 
@@ -106,6 +111,9 @@ export function createChaseMeetScene(
     },
     getSnapshot(): ChaseMeetSnapshot {
       return sim.getSnapshot();
+    },
+    renderGraph(container: HTMLElement): void {
+      view.attachGraphSlot(container);
     },
     subscribe(listener: () => void): () => void {
       listeners.push(listener);

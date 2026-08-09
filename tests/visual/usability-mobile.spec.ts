@@ -9,6 +9,25 @@ const modernPages = [
   '/src/pages/vt-integral.html?renderer=experimental'
 ] as const;
 
+const allScenePages = [
+  { path: '/src/pages/chase-meet.html', hasGraph: true },
+  { path: '/src/pages/doppler-effect.html', hasGraph: false },
+  { path: '/src/pages/double-slit.html', hasGraph: false },
+  { path: '/src/pages/electrification.html', hasGraph: false },
+  { path: '/src/pages/emf-analogy.html', hasGraph: false },
+  { path: '/src/pages/field-lines.html', hasGraph: false },
+  { path: '/src/pages/ganshe.html', hasGraph: true },
+  { path: '/src/pages/interference-formula.html', hasGraph: true },
+  { path: '/src/pages/mechanical-wave.html', hasGraph: false },
+  { path: '/src/pages/micrometer.html', hasGraph: false },
+  { path: '/src/pages/projectile.html', hasGraph: false },
+  { path: '/src/pages/spring-oscillator.html', hasGraph: true },
+  { path: '/src/pages/thin-film.html', hasGraph: true },
+  { path: '/src/pages/vernier-caliper.html', hasGraph: false },
+  { path: '/src/pages/vt-integral.html', hasGraph: false },
+  { path: '/src/pages/wedge.html', hasGraph: true }
+] as const;
+
 const iPhone12Use = {
   viewport: devices['iPhone 12'].viewport,
   userAgent: devices['iPhone 12'].userAgent,
@@ -85,6 +104,69 @@ test.describe('responsive overflow guardrails', () => {
       }
     });
   });
+});
+
+test('all scenes keep mobile canvases contained and graph tabs populated', async ({
+  page
+}) => {
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 320, height: 568 });
+
+  for (const scene of allScenePages) {
+    await page.goto(scene.path, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30_000
+    });
+    await expect(page.locator('.mobile-animation-section')).toBeVisible();
+
+    const stageCanvasesContained = await page
+      .locator('.mobile-stage-slot canvas')
+      .evaluateAll((canvases) => {
+        const stage = document.querySelector('.mobile-animation-section');
+        if (!stage) return false;
+        const bounds = stage.getBoundingClientRect();
+        return canvases.every((canvas) => {
+          const rect = canvas.getBoundingClientRect();
+          return (
+            rect.x >= bounds.x - 1 &&
+            rect.y >= bounds.y - 1 &&
+            rect.right <= bounds.right + 1 &&
+            rect.bottom <= bounds.bottom + 1
+          );
+        });
+      });
+    expect(
+      stageCanvasesContained,
+      `${scene.path} stage canvases should stay inside the mobile animation surface`
+    ).toBe(true);
+
+    const graphTab = page.locator('.mobile-tab', { hasText: '图表' });
+    if (!scene.hasGraph) {
+      await expect(graphTab).toHaveCount(0);
+      continue;
+    }
+
+    await expect(graphTab).toBeVisible();
+    await graphTab.click();
+    const graphSlot = page.locator('.mobile-graph-slot');
+    await expect(graphSlot.locator(':scope > *').first()).toBeVisible();
+
+    const graphCanvasesContained = await graphSlot
+      .locator('canvas')
+      .evaluateAll((canvases) => {
+        const panel = document.querySelector('#mobile-panel-graph');
+        if (!panel || canvases.length === 0) return false;
+        const bounds = panel.getBoundingClientRect();
+        return canvases.every((canvas) => {
+          const rect = canvas.getBoundingClientRect();
+          return rect.x >= bounds.x - 1 && rect.right <= bounds.right + 1;
+        });
+      });
+    expect(
+      graphCanvasesContained,
+      `${scene.path} graph canvases should not be clipped horizontally`
+    ).toBe(true);
+  }
 });
 
 test('interactive buttons have touch-safe rendered dimensions', async ({
