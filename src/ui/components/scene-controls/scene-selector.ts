@@ -15,19 +15,29 @@ export function createSceneSelector(
     initialActive?: string;
     onSelect: (id: string) => void;
   }
-): { element: HTMLElement; setActive: (id: string) => void; dispose: () => void } {
-  let activeId = options.initialActive ?? scenes[0]?.id ?? '';
+): {
+  element: HTMLElement;
+  setActive: (id: string) => void;
+  dispose: () => void;
+} {
+  let activeId = scenes.some((scene) => scene.id === options.initialActive)
+    ? (options.initialActive as string)
+    : (scenes[0]?.id ?? '');
   const buttons = new Map<string, HTMLButtonElement>();
   const clickHandlers = new Map<string, () => void>();
+  const keyHandlers = new Map<string, (event: KeyboardEvent) => void>();
 
   const container = document.createElement('div');
   container.setAttribute('role', 'radiogroup');
-  container.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--scene-selector-gap, 6px);';
+  container.setAttribute('aria-label', '场景选择');
+  container.style.cssText =
+    'display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--scene-selector-gap, 6px);';
 
   function updateStyles() {
     buttons.forEach((btn, id) => {
       const isActive = id === activeId;
-      btn.setAttribute('aria-pressed', String(isActive));
+      btn.setAttribute('aria-checked', String(isActive));
+      btn.tabIndex = isActive ? 0 : -1;
       btn.style.cssText = `
         width: 100%;
         padding: var(--scene-selector-padding, 12px 14px);
@@ -49,7 +59,7 @@ export function createSceneSelector(
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.setAttribute('role', 'radio');
-    btn.setAttribute('aria-pressed', 'false');
+    btn.setAttribute('aria-checked', String(s.id === activeId));
     const labelSpan = document.createElement('span');
     labelSpan.style.cssText = `font-weight: 600; font-size: var(--scene-selector-label-size, 14px);`;
     labelSpan.textContent = s.label;
@@ -66,8 +76,42 @@ export function createSceneSelector(
       updateStyles();
       options.onSelect(s.id);
     };
+    const keyHandler = (event: KeyboardEvent) => {
+      const index = scenes.findIndex((scene) => scene.id === s.id);
+      if (index < 0) return;
+
+      let nextIndex: number | null = null;
+      switch (event.key) {
+        case 'ArrowRight':
+        case 'ArrowDown':
+          nextIndex = (index + 1) % scenes.length;
+          break;
+        case 'ArrowLeft':
+        case 'ArrowUp':
+          nextIndex = (index - 1 + scenes.length) % scenes.length;
+          break;
+        case 'Home':
+          nextIndex = 0;
+          break;
+        case 'End':
+          nextIndex = scenes.length - 1;
+          break;
+        default:
+          return;
+      }
+
+      event.preventDefault();
+      const next = scenes[nextIndex];
+      if (!next) return;
+      activeId = next.id;
+      updateStyles();
+      buttons.get(next.id)?.focus();
+      options.onSelect(next.id);
+    };
     btn.addEventListener('click', handler);
+    btn.addEventListener('keydown', keyHandler);
     clickHandlers.set(s.id, handler);
+    keyHandlers.set(s.id, keyHandler);
     buttons.set(s.id, btn);
     container.appendChild(btn);
   });
@@ -87,8 +131,11 @@ export function createSceneSelector(
       buttons.forEach((btn, id) => {
         const handler = clickHandlers.get(id);
         if (handler) btn.removeEventListener('click', handler);
+        const keyHandler = keyHandlers.get(id);
+        if (keyHandler) btn.removeEventListener('keydown', keyHandler);
       });
       clickHandlers.clear();
+      keyHandlers.clear();
       buttons.clear();
     }
   };

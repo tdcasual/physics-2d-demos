@@ -113,13 +113,20 @@ for (const scene of SCENES) {
     expect(hOverflow).toBeLessThanOrEqual(2);
 
     // 2. Canvas visible
+    // Canvases inside inactive mobile tab panels are display:none by design
+    // (e.g. chase-meet graph canvases behind the graph tab), so exclude them.
     const canvasInfo = await page.evaluate(() => {
       const canvases = document.querySelectorAll('canvas');
-      return Array.from(canvases).map((c) => ({
-        w: c.clientWidth,
-        h: c.clientHeight,
-        visible: c.clientWidth > 100 && c.clientHeight > 80
-      }));
+      return Array.from(canvases)
+        .filter((c) => {
+          const panel = c.closest('.mobile-tab-panel');
+          return !panel || panel.classList.contains('active');
+        })
+        .map((c) => ({
+          w: c.clientWidth,
+          h: c.clientHeight,
+          visible: c.clientWidth > 100 && c.clientHeight > 80
+        }));
     });
     expect(canvasInfo.length).toBeGreaterThan(0);
     for (const c of canvasInfo) {
@@ -161,10 +168,15 @@ for (const scene of SCENES) {
     await page.waitForTimeout(500);
     const afterResize = await page.evaluate(() => {
       const canvases = document.querySelectorAll('canvas');
-      return Array.from(canvases).map((c) => ({
-        w: c.clientWidth,
-        h: c.clientHeight
-      }));
+      return Array.from(canvases)
+        .filter((c) => {
+          const panel = c.closest('.mobile-tab-panel');
+          return !panel || panel.classList.contains('active');
+        })
+        .map((c) => ({
+          w: c.clientWidth,
+          h: c.clientHeight
+        }));
     });
     for (const c of afterResize) {
       expect(c.w).toBeGreaterThan(100);
@@ -230,7 +242,17 @@ test('chase-meet mobile graphs visible', async ({ page }) => {
   const canvases = await page.locator('canvas').all();
   expect(canvases.length).toBeGreaterThanOrEqual(3);
 
-  for (const c of canvases) {
+  // Graph canvases live behind the graph tab (inactive tab panels are
+  // display:none), so switch to it before measuring.
+  await page.locator('.mobile-tab', { hasText: '图表' }).click();
+  await page.waitForTimeout(600);
+
+  const visibleCanvases = await page
+    .locator('.mobile-stage-slot canvas, #mobile-panel-graph canvas')
+    .all();
+  expect(visibleCanvases.length).toBeGreaterThanOrEqual(3);
+
+  for (const c of visibleCanvases) {
     const box = await c.boundingBox();
     expect(box?.width).toBeGreaterThan(100);
     expect(box?.height).toBeGreaterThan(50);

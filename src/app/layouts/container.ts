@@ -497,6 +497,7 @@ export class SceneContainerImpl implements SceneContainer {
     });
 
     await newLayout.mount();
+    this.container.dataset.layoutId = layoutId;
     this._currentLayout = newLayout;
     newLayout.setTheme(this._currentTheme);
 
@@ -704,6 +705,7 @@ export class SceneContainerImpl implements SceneContainer {
       );
     }
     this._currentLayout = null;
+    delete this.container.dataset.layoutId;
 
     // 清理 Capability 实例
     try {

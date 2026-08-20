@@ -201,6 +201,23 @@ export type SceneMeta = {
 - E2E 测试放在 `tests/visual/*.spec.ts`
 - 覆盖率阈值以 `vite.config.ts` 为准：lines 40%, functions 60%, branches 45%, statements 40%
 
+### 视觉回归基线规则（强制）
+
+`visual-regression.spec.ts` 的截图基线**按平台分文件**：`*-darwin.png`（Mac）与
+`*-linux.png`（CI / ubuntu 容器）。像素级截图无法跨平台复现（CJK 字体光栅化
+不同），**禁止**把两套基线合并成单一"平台中立"文件。
+
+- 改动 UI 后基线过期：Linux 基线用 `scripts/visual-linux-container.sh update`
+  （CI 同构 ubuntu 容器）或 CI 重生成（ci.yml 的
+  `workflow_dispatch → update_snapshots`，下载 artifact 后提交）；Mac 基线在
+  Mac 上 `pnpm test:visual:update`。
+- Linux 基线的权威校验同样在容器内进行：`scripts/visual-linux-container.sh`。
+  宿主机直接跑 visual-regression 会因字体/光栅化环境漂移而仅供参考。
+- Linux 基线必须在装有 `fonts-noto-cjk` 的 ubuntu 环境生成，保证渲染字体为
+  `Noto Sans CJK SC`（见 `design-tokens.css` 字体栈与 ci.yml 的字体安装步骤）。
+- 移动端断言遍历 canvas 时必须跳过非激活 tab 面板（`.mobile-tab-panel:not(.active)`
+  内的 canvas 是 display:none，尺寸为 0 属设计如此），或先切换到目标 tab 再断言。
+
 ### 场景删除保护规则（强制）
 
 **任何涉及 `src/scenes/*` 目录或 `src/pages/*.html` 的删除操作，必须经过双重确认：**
@@ -277,6 +294,20 @@ function resize() {
 - [ ] `scene.view.ts` 中没有大于 50 的裸数字用于元素尺寸
 - [ ] 使用了 `canvas.dataset.responsiveScale` 或 `getResponsiveScale`
 - [ ] Playwright 移动端截图通过审查（无元素遮挡、无过度拥挤）
+
+## 布局扩展规范（强制）
+
+场景不得假设 `mobile-stack` 是唯一移动布局。布局由 `src/app/layouts/registry.ts` 动态注册，测试通过 `LayoutMetadata.layoutTestProfile` 识别其交互模型。
+
+- 新布局必须声明 `supportedSlots`、约束和 `layoutTestProfile`。
+- `autoSelectable: true` 的布局没有 profile 会在注册阶段失败；实验布局必须显式设置 `autoSelectable: false`。
+- `layoutTestProfile.interactionModel` 只能描述实际模型：`tabs`、`split`、`stack`、`fullscreen` 或 `custom`。
+- `control` 与 `animation` 是核心 slot；`header`、`graph`、`readout` 按能力兼容，不得要求每个场景填充所有 slot。
+- 不得在视觉测试中新增固定布局 id 数组。布局矩阵从 registry 自动发现，模型特有断言放在对应适配器中。
+- 新布局至少要用一个无 graph 场景、一个有 graph 场景和一个带控件/读数的场景验证，并覆盖 profile 声明的 viewport。
+- 可使用 `?layout=<registered-id>` 强制浏览器测试某个已注册布局；未知 id 必须回退到页面默认布局。
+
+详细的代理工作流、允许修改范围和失败报告格式见 [`docs/new-scene-agent-contract.md`](docs/new-scene-agent-contract.md)。
 
 ## 已知限制
 

@@ -13,7 +13,7 @@ export const demoProfile: SceneDemoProfile = {
   },
   interactionHints: {
     touchTargetMinSize: 48,
-    visibleControlKeys: ['freq1', 'freq2', 'phaseDiff', 'observerX', 'preset']
+    visibleControlKeys: ['mode', 'preset']
   }
 };
 
@@ -37,7 +37,7 @@ export const gansheMeta: SceneMeta = {
     amp1: 5,
     amp2: 5,
     phaseDiff: 0,
-    observerX: 15,
+    observerX: 15
   },
   demoProfile
 };

@@ -216,7 +216,58 @@ describe('mode-toggle capability', () => {
 });
 
 // ============================================================================
-// 4. sidebar-toggle Capability
+// 4. demo-profile Capability
+// ============================================================================
+
+describe('demo-profile capability', () => {
+  it('filters minimal controls and restores them when leaving presentation mode', () => {
+    const container = document.createElement('div');
+    const sidebar = document.createElement('aside');
+    sidebar.className = 'layout-left-panel';
+    const visibleSection = document.createElement('section');
+    visibleSection.dataset.controlSection = '参数';
+    const visibleField = document.createElement('div');
+    visibleField.dataset.controlKey = 'speed';
+    visibleSection.appendChild(visibleField);
+    const hiddenSection = document.createElement('section');
+    hiddenSection.dataset.controlSection = '高级';
+    const hiddenField = document.createElement('div');
+    hiddenField.dataset.controlKey = 'debug';
+    hiddenSection.appendChild(hiddenField);
+    sidebar.append(visibleSection, hiddenSection);
+    container.appendChild(sidebar);
+
+    const ctx = createTestContext({ container });
+    const instance = capabilityFactories['demo-profile']({}).mount(
+      { control: sidebar, animation: document.createElement('div') },
+      {},
+      ctx
+    );
+
+    instance.update?.({
+      mode: 'presentation',
+      profile: {
+        controlPanel: 'minimal',
+        readoutPanel: 'hidden',
+        renderHints: { contentScale: 1 },
+        interactionHints: { visibleControlKeys: ['speed'] }
+      }
+    });
+
+    expect(visibleField.style.display).toBe('');
+    expect(hiddenField.style.display).toBe('none');
+    expect(hiddenSection.style.display).toBe('none');
+    expect(sidebar.classList.contains('is-collapsed-demo')).toBe(false);
+
+    instance.update?.({ mode: 'normal', profile: null });
+    expect(hiddenField.style.display).toBe('');
+    expect(hiddenSection.style.display).toBe('');
+    instance.dispose();
+  });
+});
+
+// ============================================================================
+// 5. sidebar-toggle Capability
 // ============================================================================
 
 describe('sidebar-toggle capability', () => {

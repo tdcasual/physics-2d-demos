@@ -151,20 +151,35 @@ test('all scenes keep mobile canvases contained and graph tabs populated', async
     const graphSlot = page.locator('.mobile-graph-slot');
     await expect(graphSlot.locator(':scope > *').first()).toBeVisible();
 
-    const graphCanvasesContained = await graphSlot
-      .locator('canvas')
-      .evaluateAll((canvases) => {
+    const graphCanvases = graphSlot.locator('canvas');
+    const canvasCount = await graphCanvases.count();
+    expect(
+      canvasCount,
+      `${scene.path} graph tab should render a canvas`
+    ).toBeGreaterThan(0);
+    await expect(graphCanvases.first()).toBeVisible();
+
+    const graphCanvasesContained = await graphCanvases.evaluateAll(
+      (canvases) => {
         const panel = document.querySelector('#mobile-panel-graph');
         if (!panel || canvases.length === 0) return false;
         const bounds = panel.getBoundingClientRect();
         return canvases.every((canvas) => {
           const rect = canvas.getBoundingClientRect();
-          return rect.x >= bounds.x - 1 && rect.right <= bounds.right + 1;
+          return (
+            rect.width > 50 &&
+            rect.height > 50 &&
+            rect.x >= bounds.x - 1 &&
+            rect.right <= bounds.right + 1 &&
+            rect.y >= bounds.y - 1 &&
+            rect.bottom <= bounds.bottom + 1
+          );
         });
-      });
+      }
+    );
     expect(
       graphCanvasesContained,
-      `${scene.path} graph canvases should not be clipped horizontally`
+      `${scene.path} graph canvases should stay visible inside the graph panel`
     ).toBe(true);
   }
 });

@@ -57,7 +57,9 @@ const ENTRY_BUDGET_OVERRIDES: Record<
   string,
   { maxJsKb?: number; maxCssKb?: number }
 > = {
-  'src/pages/double-slit.html': { maxJsKb: 185 } // 白光/滤光片/crosshair/双仪器
+  // 白光/滤光片/crosshair/双仪器。186：全员补齐 demoProfile 后共享
+  // scene-meta chunk 增长 ~0.35 kB（2026-08 审计整改），此前为 185。
+  'src/pages/double-slit.html': { maxJsKb: 186 }
 };
 
 function toKb(bytes: number): number {

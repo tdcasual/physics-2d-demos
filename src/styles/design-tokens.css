@@ -57,11 +57,15 @@
   /* ========================================
      字体令牌 - Typography Tokens
      ======================================== */
-  /* Self-contained system stacks: no undeclared web-font dependency. */
+  /* Self-contained system stacks: no undeclared web-font dependency.
+     'Noto Sans CJK SC' 覆盖只装了 Noto CJK 合集包（无独立 Noto Sans SC）
+     的 Linux 环境，避免跌到文泉驿等备选字体导致截图对比漂移。 */
   --token-font-family-sans:
-    'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+    'Noto Sans SC', 'Noto Sans CJK SC', 'PingFang SC', 'Microsoft YaHei',
+    system-ui, sans-serif;
   --token-font-family-display:
-    'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+    'Noto Sans SC', 'Noto Sans CJK SC', 'PingFang SC', 'Microsoft YaHei',
+    system-ui, sans-serif;
   --token-font-family-mono: 'SF Mono', Monaco, monospace;
 
   /* 字体大小 */

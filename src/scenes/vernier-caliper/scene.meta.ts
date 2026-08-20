@@ -3,6 +3,19 @@
  */
 
 import type { SceneMeta } from '../../platform/scene-contract';
+import type { SceneDemoProfile } from '../../platform/demo-profile';
+
+const demoProfile: SceneDemoProfile = {
+  controlPanel: 'minimal',
+  readoutPanel: 'overlay',
+  renderHints: {
+    contentScale: 1.5
+  },
+  interactionHints: {
+    touchTargetMinSize: 48,
+    visibleControlKeys: ['objectType', 'precision']
+  }
+};
 
 export const vernierCaliperMeta: SceneMeta = {
   id: 'vernier-caliper',
@@ -21,5 +34,6 @@ export const vernierCaliperMeta: SceneMeta = {
   defaultParams: {
     precision: 0.02,
     objectType: 0
-  }
+  },
+  demoProfile
 };

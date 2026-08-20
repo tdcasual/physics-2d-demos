@@ -8,6 +8,7 @@ import '../styles/index.css';
 
 import { createSceneContainer } from './layouts/container';
 import { registerAllLayouts } from './layouts/auto-register';
+import { layoutRegistry } from './layouts/registry';
 import { SceneAdapter } from './scene-adapter';
 import { restoreSceneParams, persistSceneParams } from './url-sync';
 import type {
@@ -51,10 +52,19 @@ export function bootScenePage<TScene extends SceneInstance>(
   // 统一注册所有布局（幂等）
   registerAllLayouts();
 
+  // Test and debugging entry point: only registered layouts are accepted.
+  const requestedLayout = new URLSearchParams(window.location.search).get(
+    'layout'
+  );
+  const preferredLayout =
+    requestedLayout && layoutRegistry.has(requestedLayout)
+      ? requestedLayout
+      : options.preferredLayout;
+
   // 创建场景容器
   const container = createSceneContainer({
     mount,
-    defaultLayout: options.preferredLayout ?? 'split-right',
+    defaultLayout: preferredLayout ?? 'split-right',
     defaultTheme,
     layoutConfig: {
       ...options.layoutConfig,
@@ -63,8 +73,9 @@ export function bootScenePage<TScene extends SceneInstance>(
   });
 
   // 创建场景适配器
-  const adapter = new SceneAdapter<TScene>(options, (text) =>
-    container.currentLayout?.updateStatus?.(text)
+  const adapter = new SceneAdapter<TScene>(
+    { ...options, preferredLayout },
+    (text) => container.currentLayout?.updateStatus?.(text)
   );
 
   // 设置场景

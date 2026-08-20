@@ -26,6 +26,33 @@ describe('SchemaRenderer', () => {
     expect(headers.length).toBeGreaterThanOrEqual(2);
   });
 
+  it('marks control sections and fields for demo-profile filtering', () => {
+    const mount = createMount();
+    const schema: ControlsSchema = {
+      sections: [
+        {
+          title: '参数',
+          fields: [
+            {
+              type: 'slider',
+              key: 'speed',
+              label: '速度',
+              min: 0,
+              max: 10,
+              step: 1,
+              value: 5
+            }
+          ]
+        }
+      ]
+    };
+
+    renderSchema({ mount, schema, onChange: vi.fn(), onAction: vi.fn() });
+
+    expect(mount.querySelector('[data-control-section="参数"]')).not.toBeNull();
+    expect(mount.querySelector('[data-control-key="speed"]')).not.toBeNull();
+  });
+
   it('should render slider and call onChange', () => {
     const mount = createMount();
     const onChange = vi.fn();

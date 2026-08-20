@@ -12,12 +12,14 @@ describe('ci scripts and workflow', () => {
     expect(pkg.scripts?.['test:visual']).toBeTypeOf('string');
     expect(pkg.scripts?.build).toBeTypeOf('string');
     expect(pkg.scripts?.['check:scenes']).toBe('tsx scripts/check-scenes.ts');
+    expect(pkg.scripts?.['check:layouts']).toBe('tsx scripts/check-layouts.ts');
     expect(pkg.scripts?.['check:bundle']).toBe(
       'tsx scripts/check-bundle-budget.ts'
     );
     expect(pkg.scripts?.['quality:core']).toBe(
       [
         'pnpm check:scenes',
+        'pnpm check:layouts',
         'pnpm check:circular',
         'pnpm lint',
         'pnpm typecheck',
@@ -29,6 +31,7 @@ describe('ci scripts and workflow', () => {
     expect(pkg.scripts?.['quality:full']).toBe(
       [
         'pnpm check:scenes',
+        'pnpm check:layouts',
         'pnpm check:circular',
         'pnpm lint',
         'pnpm typecheck',
@@ -43,10 +46,12 @@ describe('ci scripts and workflow', () => {
 
     expect(existsSync('.github/workflows/ci.yml')).toBe(true);
     expect(existsSync('scripts/check-scenes.ts')).toBe(true);
+    expect(existsSync('scripts/check-layouts.ts')).toBe(true);
     expect(existsSync('scripts/check-bundle-budget.ts')).toBe(true);
 
     const ci = readFileSync('.github/workflows/ci.yml', 'utf8');
     expect(ci).toContain('pnpm check:scenes');
+    expect(ci).toContain('pnpm check:layouts');
     expect(ci).toContain('pnpm check:bundle');
     expect(ci).toContain('pnpm check:circular');
     expect(ci).not.toContain('pnpm generate:index');

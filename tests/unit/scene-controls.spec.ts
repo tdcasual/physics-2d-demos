@@ -238,5 +238,36 @@ describe('SceneControls', () => {
       selector.setActive('s2');
       expect(buttons[1].style.borderColor).toContain('var(--accent-primary)');
     });
+
+    it('supports radio keyboard navigation with roving tabindex', () => {
+      const onSelect = vi.fn();
+      const mount = document.createElement('div');
+      createSceneSelector(
+        mount,
+        [
+          { id: 's1', label: '场景1' },
+          { id: 's2', label: '场景2' },
+          { id: 's3', label: '场景3' }
+        ],
+        { initialActive: 's1', onSelect }
+      );
+
+      const buttons = Array.from(mount.querySelectorAll('button'));
+      expect(buttons.map((button) => button.tabIndex)).toEqual([0, -1, -1]);
+      expect(buttons[0]?.getAttribute('aria-checked')).toBe('true');
+
+      buttons[0]?.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })
+      );
+      expect(onSelect).toHaveBeenLastCalledWith('s2');
+      expect(buttons.map((button) => button.tabIndex)).toEqual([-1, 0, -1]);
+      expect(buttons[1]?.getAttribute('aria-checked')).toBe('true');
+
+      buttons[1]?.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'End', bubbles: true })
+      );
+      expect(onSelect).toHaveBeenLastCalledWith('s3');
+      expect(buttons.map((button) => button.tabIndex)).toEqual([-1, -1, 0]);
+    });
   });
 });

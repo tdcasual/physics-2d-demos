@@ -507,6 +507,58 @@ describe('bootScenePage', () => {
     );
   });
 
+  it('should accept a registered layout override from the URL', () => {
+    window.history.replaceState({}, '', '?layout=mobile-stack');
+
+    bootScenePage({
+      meta: {
+        id: 'test',
+        title: '测试',
+        category: 'mechanics',
+        subject: 'test',
+        concept: 'test',
+        subConcepts: ['a', 'b'] as [string, string],
+        keywords: [],
+        objective: '',
+        defaultParams: {},
+        path: '/test'
+      },
+      createScene: () => createMockScene() as never,
+      preferredLayout: 'split-right'
+    });
+
+    expect(createSceneContainer).toHaveBeenCalledWith(
+      expect.objectContaining({ defaultLayout: 'mobile-stack' })
+    );
+    window.history.replaceState({}, '', '/');
+  });
+
+  it('should ignore an unregistered layout override', () => {
+    window.history.replaceState({}, '', '?layout=not-a-layout');
+
+    bootScenePage({
+      meta: {
+        id: 'test',
+        title: '测试',
+        category: 'mechanics',
+        subject: 'test',
+        concept: 'test',
+        subConcepts: ['a', 'b'] as [string, string],
+        keywords: [],
+        objective: '',
+        defaultParams: {},
+        path: '/test'
+      },
+      createScene: () => createMockScene() as never,
+      preferredLayout: 'split-right'
+    });
+
+    expect(createSceneContainer).toHaveBeenCalledWith(
+      expect.objectContaining({ defaultLayout: 'split-right' })
+    );
+    window.history.replaceState({}, '', '/');
+  });
+
   it('should call container.setScene with adapter', () => {
     const mockSetScene = vi.fn().mockResolvedValue(undefined);
     const mockContainer = { setScene: mockSetScene, currentLayout: null };

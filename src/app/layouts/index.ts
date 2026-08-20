@@ -23,7 +23,10 @@ export type {
   ThemeChangeEvent,
   SceneContainerEvents,
   TransportState,
-  SceneStateListener
+  SceneStateListener,
+  LayoutInteractionModel,
+  LayoutTestViewport,
+  LayoutTestProfile
 } from './types';
 
 // 注册表导出
@@ -32,6 +35,7 @@ export {
   registerLayout,
   getDefaultLayoutId,
   saveLayoutPreference,
+  validateLayoutTestProfile,
   type LayoutMetadata
 } from './registry';
 

@@ -63,6 +63,7 @@ export function renderSchema(
     // 按标题注册 section 卡片，支持 setVisible 隐藏整个 section
     if (section.title) {
       visibleNodes.set(section.title, card.element);
+      card.element.dataset.controlSection = section.title;
     }
 
     // 判定此 section 是否应占满整行
@@ -74,12 +75,10 @@ export function renderSchema(
     }
 
     section.fields.forEach((field) => {
-      const { node, valueSetter, valueGetter, activeSetter, cleanup } = renderField(
-        field,
-        onChange,
-        onAction
-      );
+      const { node, valueSetter, valueGetter, activeSetter, cleanup } =
+        renderField(field, onChange, onAction);
       if (node) {
+        node.dataset.controlKey = field.key;
         card.body.appendChild(node);
         visibleNodes.set(field.key, node);
       }
@@ -152,7 +151,9 @@ function renderField(
             input.dispatchEvent(new Event('input'));
           }
         },
-        cleanup: () => { tryDispose(row); }
+        cleanup: () => {
+          tryDispose(row);
+        }
       };
     }
 
@@ -172,7 +173,9 @@ function renderField(
       return {
         node: row,
         valueGetter: () => (input ? parseFloat(input.value) : field.value),
-        cleanup: () => { tryDispose(row); }
+        cleanup: () => {
+          tryDispose(row);
+        }
       };
     }
 
@@ -186,7 +189,9 @@ function renderField(
       return {
         node: row,
         valueGetter: () => (input ? input.value : field.value),
-        cleanup: () => { tryDispose(row); }
+        cleanup: () => {
+          tryDispose(row);
+        }
       };
     }
 
@@ -198,7 +203,9 @@ function renderField(
       });
       return {
         node: row,
-        cleanup: () => { tryDispose(row); }
+        cleanup: () => {
+          tryDispose(row);
+        }
       };
     }
 
@@ -209,7 +216,9 @@ function renderField(
       );
       return {
         node: grid,
-        cleanup: () => { tryDispose(grid); }
+        cleanup: () => {
+          tryDispose(grid);
+        }
       };
     }
 
@@ -223,7 +232,9 @@ function renderField(
       return {
         node: presetContainer,
         activeSetter: (id) => preset.setActive(id),
-        cleanup: () => { (preset as Partial<DisposableElement>).dispose?.(); }
+        cleanup: () => {
+          (preset as Partial<DisposableElement>).dispose?.();
+        }
       };
     }
 
@@ -249,7 +260,9 @@ function renderField(
       });
       return {
         node: transportContainer,
-        cleanup: () => { transport.dispose(); }
+        cleanup: () => {
+          transport.dispose();
+        }
       };
     }
 
@@ -277,7 +290,9 @@ function renderField(
       );
       return {
         node: grid,
-        cleanup: () => { tryDispose(grid); }
+        cleanup: () => {
+          tryDispose(grid);
+        }
       };
     }
 
@@ -304,7 +319,9 @@ function renderField(
             }
           }
         },
-        cleanup: () => { tryDispose(row); }
+        cleanup: () => {
+          tryDispose(row);
+        }
       };
     }
 

@@ -67,6 +67,27 @@ describe('layoutRegistry', () => {
     ).toThrow('Layout metadata for "bad" must be a valid object');
   });
 
+  it('should require a test profile for auto-selectable layouts', () => {
+    expect(() =>
+      layoutRegistry.register('auto-layout', FakeLayout, {
+        ...fakeMeta,
+        autoSelectable: true
+      })
+    ).toThrow('must define layoutTestProfile');
+  });
+
+  it('should reject malformed test profiles', () => {
+    expect(() =>
+      layoutRegistry.register('bad-profile', FakeLayout, {
+        ...fakeMeta,
+        layoutTestProfile: {
+          viewports: [],
+          interactionModel: 'custom'
+        }
+      })
+    ).toThrow('must define viewports');
+  });
+
   it('should throw for invalid container', () => {
     layoutRegistry.register('test-layout', FakeLayout, fakeMeta);
     expect(() =>
@@ -164,6 +185,22 @@ describe('registerAllLayouts', () => {
     registerAllLayouts();
     expect(layoutRegistry.list()).toContain('split-right');
     expect(layoutRegistry.list()).toContain('mobile-stack');
+  });
+
+  it('should provide a valid profile for every auto-selectable layout', () => {
+    registerAllLayouts();
+
+    for (const meta of layoutRegistry.getAllMetadata()) {
+      if (!meta.autoSelectable) continue;
+      expect(meta.layoutTestProfile).toBeDefined();
+      expect(meta.layoutTestProfile!.viewports.length).toBeGreaterThan(0);
+      expect(['tabs', 'split', 'stack', 'fullscreen', 'custom']).toContain(
+        meta.layoutTestProfile!.interactionModel
+      );
+      expect(meta.supportedSlots).toEqual(
+        expect.arrayContaining(['control', 'animation'])
+      );
+    }
   });
 
   it('should be idempotent', () => {

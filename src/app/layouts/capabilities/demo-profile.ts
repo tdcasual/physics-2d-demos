@@ -50,6 +50,52 @@ export function createDemoProfile(
       let savedSidebarDisplay: string | null = null;
       let savedGraphDisplay: string | null = null;
       let savedReadoutCollapsed: boolean | null = null;
+      const savedControlDisplays = new Map<HTMLElement, string>();
+      const savedControlSectionDisplays = new Map<HTMLElement, string>();
+
+      const resetMinimalControls = () => {
+        savedControlDisplays.forEach((display, node) => {
+          node.style.display = display;
+        });
+        savedControlDisplays.clear();
+        savedControlSectionDisplays.forEach((display, node) => {
+          node.style.display = display;
+        });
+        savedControlSectionDisplays.clear();
+      };
+
+      const applyMinimalControls = (root: HTMLElement, keys: string[]) => {
+        const visibleKeys = new Set(keys);
+        const fields = Array.from(
+          root.querySelectorAll<HTMLElement>('[data-control-key]')
+        );
+        const sections = Array.from(
+          root.querySelectorAll<HTMLElement>('[data-control-section]')
+        );
+
+        fields.forEach((field) => {
+          if (!savedControlDisplays.has(field)) {
+            savedControlDisplays.set(field, field.style.display);
+          }
+          field.style.display = visibleKeys.has(field.dataset.controlKey ?? '')
+            ? (savedControlDisplays.get(field) ?? '')
+            : 'none';
+        });
+
+        sections.forEach((section) => {
+          if (!savedControlSectionDisplays.has(section)) {
+            savedControlSectionDisplays.set(section, section.style.display);
+          }
+          const hasVisibleField = fields.some(
+            (field) =>
+              field.closest('[data-control-section]') === section &&
+              field.style.display !== 'none'
+          );
+          section.style.display = hasVisibleField
+            ? (savedControlSectionDisplays.get(section) ?? '')
+            : 'none';
+        });
+      };
 
       const apply = (profile: SceneDemoProfile) => {
         currentProfile = profile;
@@ -67,16 +113,38 @@ export function createDemoProfile(
             }
             switch (profile.controlPanel) {
               case 'hidden':
+                resetMinimalControls();
                 sidebar.style.display = 'none';
                 break;
               case 'collapsed':
-              case 'minimal':
+                resetMinimalControls();
                 sidebar.classList.add('is-collapsed-demo');
                 break;
+              case 'minimal':
+                sidebar.classList.remove('is-collapsed-demo');
+                if (profile.interactionHints?.visibleControlKeys?.length) {
+                  applyMinimalControls(
+                    sidebar,
+                    profile.interactionHints.visibleControlKeys
+                  );
+                } else {
+                  resetMinimalControls();
+                }
+                break;
               case 'full':
+                resetMinimalControls();
                 sidebar.classList.remove('is-collapsed-demo');
                 break;
             }
+          } else if (
+            profile.controlPanel === 'minimal' &&
+            profile.interactionHints?.visibleControlKeys?.length &&
+            _slots.control
+          ) {
+            applyMinimalControls(
+              _slots.control,
+              profile.interactionHints.visibleControlKeys
+            );
           }
         }
 
@@ -182,6 +250,7 @@ export function createDemoProfile(
           savedSidebarDisplay = null;
           sidebar.classList.remove('is-collapsed-demo');
         }
+        resetMinimalControls();
 
         const graph = ctx.container.querySelector(
           graphSel

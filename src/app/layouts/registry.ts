@@ -11,6 +11,7 @@ import type {
   ILayout,
   ILayoutConstructor,
   LayoutConfig,
+  LayoutTestProfile,
   SlotName
 } from './types';
 
@@ -41,6 +42,59 @@ export interface LayoutMetadata {
 
   /** 是否允许自动选择（false 则只能用户手动切换或场景主动指定） */
   autoSelectable?: boolean;
+  /** Layout-agnostic and interaction-model-specific test capabilities. */
+  layoutTestProfile?: LayoutTestProfile;
+}
+
+const LAYOUT_INTERACTION_MODELS = new Set([
+  'tabs',
+  'split',
+  'stack',
+  'fullscreen',
+  'custom'
+]);
+
+/** Validate a layout's declarative test capabilities before registration. */
+export function validateLayoutTestProfile(
+  id: string,
+  profile: LayoutTestProfile | undefined,
+  supportedSlots: SlotName[]
+): void {
+  if (!profile) return;
+  if (!Array.isArray(profile.viewports) || profile.viewports.length === 0) {
+    throw new Error(`Layout test profile for "${id}" must define viewports`);
+  }
+  if (!LAYOUT_INTERACTION_MODELS.has(profile.interactionModel)) {
+    throw new Error(
+      `Layout test profile for "${id}" has an invalid interactionModel`
+    );
+  }
+  for (const viewport of profile.viewports) {
+    if (
+      !Number.isFinite(viewport.width) ||
+      !Number.isFinite(viewport.height) ||
+      viewport.width <= 0 ||
+      viewport.height <= 0
+    ) {
+      throw new Error(
+        `Layout test profile for "${id}" contains an invalid viewport`
+      );
+    }
+  }
+  for (const key of ['minCanvasWidth', 'minCanvasHeight'] as const) {
+    const value = profile[key];
+    if (value !== undefined && (!Number.isFinite(value) || value <= 0)) {
+      throw new Error(`Layout test profile for "${id}" has an invalid ${key}`);
+    }
+  }
+  if (
+    !supportedSlots.includes('control') ||
+    !supportedSlots.includes('animation')
+  ) {
+    throw new Error(
+      `Layout "${id}" must support control and animation slots before it can be tested`
+    );
+  }
 }
 
 /** 布局注册表 */
@@ -71,6 +125,16 @@ class LayoutRegistry {
     if (!metadata || typeof metadata !== 'object') {
       throw new Error(`Layout metadata for "${id}" must be a valid object`);
     }
+    if (metadata.autoSelectable === true && !metadata.layoutTestProfile) {
+      throw new Error(
+        `Layout "${id}" must define layoutTestProfile when autoSelectable is true`
+      );
+    }
+    validateLayoutTestProfile(
+      id,
+      metadata.layoutTestProfile,
+      metadata.supportedSlots
+    );
 
     // Overwrite existing layout if same id
 

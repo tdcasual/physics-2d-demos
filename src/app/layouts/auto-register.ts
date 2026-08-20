@@ -30,7 +30,16 @@ export function registerAllLayouts(): void {
       supportedSlots: ['header', 'control', 'animation', 'graph', 'readout'],
       constraints: { minWidth: 768, orientation: 'any' },
       priority: 100,
-      autoSelectable: true
+      autoSelectable: true,
+      layoutTestProfile: {
+        viewports: [
+          { width: 1280, height: 720 },
+          { width: 768, height: 900 }
+        ],
+        interactionModel: 'split',
+        minCanvasWidth: 120,
+        minCanvasHeight: 100
+      }
     });
   }
 
@@ -43,7 +52,17 @@ export function registerAllLayouts(): void {
       supportedSlots: ['header', 'control', 'animation', 'graph', 'readout'],
       constraints: { maxWidth: 768, orientation: 'any' },
       priority: 100,
-      autoSelectable: true
+      autoSelectable: true,
+      layoutTestProfile: {
+        viewports: [
+          { width: 320, height: 568 },
+          { width: 375, height: 812 }
+        ],
+        interactionModel: 'tabs',
+        requiresGraphActivation: true,
+        minCanvasWidth: 120,
+        minCanvasHeight: 100
+      }
     });
   }
 
@@ -59,7 +78,17 @@ export function registerAllLayouts(): void {
         supportedSlots: ['header', 'control', 'animation', 'graph', 'readout'],
         constraints: { minWidth: 900, orientation: 'any' },
         priority: 90,
-        autoSelectable: true
+        autoSelectable: true,
+        layoutTestProfile: {
+          viewports: [
+            { width: 1280, height: 720 },
+            { width: 1024, height: 900 }
+          ],
+          interactionModel: 'split',
+          requiresGraphActivation: false,
+          minCanvasWidth: 120,
+          minCanvasHeight: 50
+        }
       }
     );
   }

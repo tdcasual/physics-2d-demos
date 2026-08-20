@@ -1,17 +1,22 @@
 /**
  * 场景值单一数据源
- * UI 和 sim 层都从此文件导入，确保一致性
+ * 场景 id 的合法性校验以此为准；UI 展示标签在 controls-schema.ts，
+ * 两处标签需保持同步。
  */
 
 import type { VtScene } from './scene.sim';
 
 export const VT_SCENES: { value: VtScene; label: string; desc: string }[] = [
-  { value: 'scene1', label: 'v-t面积', desc: '速度时间图面积' },
-  { value: 'scene2', label: '曲线逼近', desc: '用矩形逼近曲线下面积' },
-  { value: 'scene3', label: '圆面积', desc: '圆面积微元法' }
+  {
+    value: 'scene1',
+    label: 'v-t面积',
+    desc: '矩形逼近 v-t 图面积（以直代曲）'
+  },
+  { value: 'scene2', label: '化曲为直', desc: '折线逼近曲线弧长' },
+  { value: 'scene3', label: '割圆术', desc: '内接多边形逼近圆周' }
 ] as const;
 
 // 类型守卫：运行时验证场景值
 export function isValidVtScene(value: string): value is VtScene {
-  return VT_SCENES.some(s => s.value === value);
+  return VT_SCENES.some((s) => s.value === value);
 }

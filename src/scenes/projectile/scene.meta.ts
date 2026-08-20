@@ -14,7 +14,7 @@ export const demoProfile: SceneDemoProfile = {
   },
   interactionHints: {
     touchTargetMinSize: 48,
-    visibleControlKeys: ['v0', 'angle', 'preset']
+    visibleControlKeys: ['v0', 'theta', 'preset']
   }
 };
 

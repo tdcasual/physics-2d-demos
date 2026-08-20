@@ -49,16 +49,23 @@ for (const vp of VIEWPORTS) {
       ).toBeLessThanOrEqual(2);
 
       // 2. Canvas 可见且尺寸合理
+      // 移动端非激活 tab 面板内的 canvas 是 display:none（设计如此，
+      // 例如 chase-meet 的图表 canvas 位于图表 tab），不计入检查。
       const canvasInfo = await page.evaluate(() => {
         const canvases = document.querySelectorAll('canvas');
-        return Array.from(canvases).map((c) => ({
-          w: c.clientWidth,
-          h: c.clientHeight,
-          hasScale: c.dataset.responsiveScale !== undefined,
-          scale: c.dataset.responsiveScale
-            ? parseFloat(c.dataset.responsiveScale)
-            : null
-        }));
+        return Array.from(canvases)
+          .filter((c) => {
+            const panel = c.closest('.mobile-tab-panel');
+            return !panel || panel.classList.contains('active');
+          })
+          .map((c) => ({
+            w: c.clientWidth,
+            h: c.clientHeight,
+            hasScale: c.dataset.responsiveScale !== undefined,
+            scale: c.dataset.responsiveScale
+              ? parseFloat(c.dataset.responsiveScale)
+              : null
+          }));
       });
 
       expect(

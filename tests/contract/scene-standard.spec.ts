@@ -10,7 +10,7 @@
  * - tests/contract/scene-contract  → 运行时生命周期契约（方法存在、可安全调用）
  * - 本测试                          → 渲染质量标准（响应式缩放 / 演示模式机制）
  *
- * 两项标准：
+ * 三项标准：
  * 1. 响应式缩放（强制，全员）：渲染代码必须经由 core 的响应式机制
  *    （responsiveScale / getResponsiveScale / scaledSize / sizeCanvasTo*），
  *    禁止裸写固定像素导致移动端过大/过小。
@@ -19,6 +19,10 @@
  *    模式。尚未改造的历史场景列于 PRESENTATION_EXEMPT；该清单只允许缩小：
  *    - 非豁免场景必须已采用标准机制；
  *    - 豁免场景一旦采用，测试会失败并提示「从豁免清单移除」，防止清单膨胀。
+ * 3. 演示配置声明（强制，全员）：scene.meta.ts 必须声明并挂载
+ *    demoProfile（SceneDemoProfile）。只查 view 层 demoHints 不够——
+ *    meta 缺 demoProfile 时布局层不会执行面板策略（隐藏/折叠/overlay），
+ *    演示模式只剩内容缩放，形同半残。
  */
 
 import { describe, expect, it } from 'vitest';
@@ -66,6 +70,37 @@ const sceneIds = listSceneIds();
 const sceneSources = new Map(
   sceneIds.map((id) => [id, collectSceneSource(id)])
 );
+const sceneMetaModules = import.meta.glob('../../src/scenes/*/scene.meta.ts', {
+  eager: true,
+  import: '*'
+}) as Record<string, Record<string, unknown>>;
+
+function findSceneMeta(id: string): {
+  id: string;
+  demoProfile?: {
+    controlPanel: string;
+    readoutPanel: string;
+    renderHints: unknown;
+  };
+} | null {
+  for (const module of Object.values(sceneMetaModules)) {
+    const candidate = Object.values(module).find(
+      (value): value is { id?: unknown } =>
+        typeof value === 'object' && value !== null && 'id' in value
+    );
+    if (candidate?.id === id) {
+      return candidate as {
+        id: string;
+        demoProfile?: {
+          controlPanel: string;
+          readoutPanel: string;
+          renderHints: unknown;
+        };
+      };
+    }
+  }
+  return null;
+}
 
 describe('scene modernization standard (anti-drift ratchet)', () => {
   it('discovers all scenes', () => {
@@ -118,6 +153,26 @@ describe('scene modernization standard (anti-drift ratchet)', () => {
         unknown,
         `PRESENTATION_EXEMPT 含不存在的场景：${unknown.join(', ')}`
       ).toEqual([]);
+    });
+  });
+
+  describe('演示配置声明（强制，全员）', () => {
+    it.each(sceneIds)('%s: scene.meta.ts 声明并挂载 demoProfile', (id) => {
+      const meta = findSceneMeta(id);
+      expect(
+        meta,
+        `场景 "${id}" 未找到可运行的 SceneMeta 导出。`
+      ).not.toBeNull();
+      expect(
+        meta?.demoProfile,
+        `场景 "${id}" 的 SceneMeta 未挂载 demoProfile。` +
+          `缺少时演示模式不会应用面板策略（controlPanel/readoutPanel）。` +
+          `参考 src/scenes/wedge/scene.meta.ts。`
+      ).toMatchObject({
+        controlPanel: expect.any(String),
+        readoutPanel: expect.any(String),
+        renderHints: expect.any(Object)
+      });
     });
   });
 });

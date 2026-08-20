@@ -38,11 +38,36 @@
 
 .teaching-graph-slot {
   position: relative;
-  min-height: 0;
+  min-height: 120px;
   flex: 1;
+  height: 100%;
 }
 
 .teaching-graph-slot canvas {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+/* Scene-level multi-graph cells must fill the graph slot in this layout too. */
+.teaching-graph-slot > .graph-cell {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.teaching-graph-slot .graph-cell-body {
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.teaching-graph-slot .graph-cell-body canvas {
   display: block;
   height: 100%;
   width: 100%;
@@ -65,7 +90,10 @@
 }
 
 /* ---- Stage slot child sizing ---- */
-.teaching-stage-slot > *:not(canvas):not(.teaching-stage-floating-controls):not(.teaching-readout-panel) {
+.teaching-stage-slot
+  > *:not(canvas):not(.teaching-stage-floating-controls):not(
+    .teaching-readout-panel
+  ) {
   height: 100%;
   max-height: 100%;
   width: 100%;

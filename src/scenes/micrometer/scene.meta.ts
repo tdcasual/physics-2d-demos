@@ -3,6 +3,19 @@
  */
 
 import type { SceneMeta } from '../../platform/scene-contract';
+import type { SceneDemoProfile } from '../../platform/demo-profile';
+
+const demoProfile: SceneDemoProfile = {
+  controlPanel: 'minimal',
+  readoutPanel: 'overlay',
+  renderHints: {
+    contentScale: 1.5
+  },
+  interactionHints: {
+    touchTargetMinSize: 48,
+    visibleControlKeys: ['preset', 'reading']
+  }
+};
 
 export const micrometerMeta: SceneMeta = {
   id: 'micrometer',
@@ -20,5 +33,6 @@ export const micrometerMeta: SceneMeta = {
   featured: false,
   defaultParams: {
     reading: 4.593
-  }
+  },
+  demoProfile
 };

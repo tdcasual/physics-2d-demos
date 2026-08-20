@@ -17,6 +17,29 @@ export type Theme = 'light' | 'dark';
 
 export type SlotName = 'header' | 'control' | 'animation' | 'graph' | 'readout';
 
+/** Layout interaction model used by generic and capability-specific tests. */
+export type LayoutInteractionModel =
+  | 'tabs'
+  | 'split'
+  | 'stack'
+  | 'fullscreen'
+  | 'custom';
+
+export interface LayoutTestViewport {
+  width: number;
+  height: number;
+}
+
+/** Declarative test capabilities for a registered layout. */
+export interface LayoutTestProfile {
+  viewports: LayoutTestViewport[];
+  interactionModel: LayoutInteractionModel;
+  /** Whether graph content must be activated before it can be asserted. */
+  requiresGraphActivation?: boolean;
+  minCanvasWidth?: number;
+  minCanvasHeight?: number;
+}
+
 export interface LayoutSlots {
   header?: HTMLElement;
   control: HTMLElement;
