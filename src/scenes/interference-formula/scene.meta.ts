@@ -38,5 +38,10 @@ export const interferenceFormulaMeta: SceneMeta = {
     d: 0.5
   },
   urlSyncKeys: ['step'],
+  testProfile: {
+    hasGraph: true,
+    hasTransport: false,
+    supportsPresentation: true
+  },
   demoProfile
 };

@@ -1,5 +1,6 @@
 export type {
   SceneLifecycle,
   SceneMeta,
-  ScenePlacardMeta
+  ScenePlacardMeta,
+  SceneTestProfile
 } from '../platform/scene-contract';

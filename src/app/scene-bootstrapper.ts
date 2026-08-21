@@ -61,6 +61,11 @@ export function bootScenePage<TScene extends SceneInstance>(
       ? requestedLayout
       : options.preferredLayout;
 
+  mount.dataset.sceneId = options.meta.id;
+  mount.dataset.sceneHasGraph = String(
+    options.meta.testProfile?.hasGraph ?? false
+  );
+
   // 创建场景容器
   const container = createSceneContainer({
     mount,

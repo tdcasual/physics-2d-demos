@@ -37,5 +37,10 @@ export const springOscillatorMeta: SceneMeta = {
     m: 1,
     A: 5
   },
+  testProfile: {
+    hasGraph: true,
+    hasTransport: true,
+    supportsPresentation: true
+  },
   demoProfile
 };

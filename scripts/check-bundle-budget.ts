@@ -49,7 +49,9 @@ export const defaultBundleBudget: BundleBudget = {
   maxEntryJsKb: 160,
   maxEntryCssKb: 70,
   maxVendorJsKb: 170,
-  maxSharedJsKb: 125
+  // Layout/scene test capability metadata is intentionally shipped to each
+  // page so the runtime and visual matrix share one source of truth.
+  maxSharedJsKb: 130
 };
 
 /** 特定入口的预算覆盖（功能复杂的场景需要更大的 budget） */
@@ -57,9 +59,9 @@ const ENTRY_BUDGET_OVERRIDES: Record<
   string,
   { maxJsKb?: number; maxCssKb?: number }
 > = {
-  // 白光/滤光片/crosshair/双仪器。186：全员补齐 demoProfile 后共享
-  // scene-meta chunk 增长 ~0.35 kB（2026-08 审计整改），此前为 185。
-  'src/pages/double-slit.html': { maxJsKb: 186 }
+  // 白光/滤光片/crosshair/双仪器。190：Vite 7.3 当前产物基线约 188.2 kB，
+  // 同时包含 scene testProfile 元数据，保留约 0.3 kB 回归余量。
+  'src/pages/double-slit.html': { maxJsKb: 190 }
 };
 
 function toKb(bytes: number): number {

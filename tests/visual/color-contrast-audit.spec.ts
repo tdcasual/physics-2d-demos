@@ -1,35 +1,18 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { sceneIds, scenePage } from './scene-pages';
 
 const PORT = 5177;
-const SCENES = [
-  'chase-meet',
-  'projectile',
-  'emf-analogy',
-  'field-lines',
-  'electrification',
-  'vt-integral',
-  'doppler-effect',
-  'double-slit',
-  'ganshe',
-  'interference-formula',
-  'mechanical-wave',
-  'micrometer',
-  'spring-oscillator',
-  'thin-film',
-  'vernier-caliper',
-  'wedge'
-];
 
 /**
  * 颜色对比度审计（WCAG 2.1 AA）
  *
  * 使用 axe-core 自动检测文本/背景对比度不足的问题。
  */
-for (const scene of SCENES) {
+for (const scene of sceneIds) {
   test(`color contrast (light theme): ${scene}`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto(`http://127.0.0.1:${PORT}/src/pages/${scene}.html`, {
+    await page.goto(`http://127.0.0.1:${PORT}${scenePage(scene)}`, {
       waitUntil: 'domcontentloaded'
     });
     await page.waitForTimeout(1500);
@@ -68,7 +51,7 @@ for (const scene of SCENES) {
   test(`color contrast (dark theme): ${scene}`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(
-      `http://127.0.0.1:${PORT}/src/pages/${scene}.html?theme=dark`,
+      `http://127.0.0.1:${PORT}${scenePage(scene, '?theme=dark')}`,
       { waitUntil: 'domcontentloaded' }
     );
     await page.waitForTimeout(1500);

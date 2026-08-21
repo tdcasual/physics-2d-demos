@@ -40,5 +40,10 @@ export const chaseMeetMeta: SceneMeta = {
     x0A: 0,
     x0B: 10
   },
+  testProfile: {
+    hasGraph: true,
+    hasTransport: true,
+    supportsPresentation: true
+  },
   demoProfile
 };

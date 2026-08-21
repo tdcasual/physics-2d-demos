@@ -85,6 +85,11 @@ export const __CAMEL__Meta: SceneMeta = {
   defaultParams: {
     speed: 1
   },
+  testProfile: {
+    hasGraph: false,
+    hasTransport: true,
+    supportsPresentation: true
+  },
   demoProfile
 };
 `;

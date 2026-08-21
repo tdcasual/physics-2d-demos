@@ -1,14 +1,8 @@
 import { test, expect } from '@playwright/test';
+import { sceneIds, scenePage } from './scene-pages';
 
 const PORT = 5177;
-const SCENES = [
-  { id: 'chase-meet', name: '追击相遇' },
-  { id: 'projectile', name: '抛体运动' },
-  { id: 'emf-analogy', name: '电路水流类比' },
-  { id: 'field-lines', name: '电场线' },
-  { id: 'electrification', name: '摩擦起电' },
-  { id: 'vt-integral', name: 'v-t积分' }
-];
+const SCENES = sceneIds.map((id) => ({ id, name: id }));
 
 for (const scene of SCENES) {
   // emf-analogy 有粒子动画，diff 阈值需要更高
@@ -16,7 +10,7 @@ for (const scene of SCENES) {
 
   test(`desktop ${scene.id}`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto(`http://127.0.0.1:${PORT}/src/pages/${scene.id}.html`, {
+    await page.goto(`http://127.0.0.1:${PORT}${scenePage(scene.id)}`, {
       waitUntil: 'domcontentloaded'
     });
     await page.waitForTimeout(2000);
@@ -28,7 +22,7 @@ for (const scene of SCENES) {
 
   test(`mobile ${scene.id}`, async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto(`http://127.0.0.1:${PORT}/src/pages/${scene.id}.html`, {
+    await page.goto(`http://127.0.0.1:${PORT}${scenePage(scene.id)}`, {
       waitUntil: 'domcontentloaded'
     });
     await page.waitForTimeout(2000);

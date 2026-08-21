@@ -58,7 +58,12 @@ function checkScene(id: string): SceneCheckResult {
   if (existsSync(metaPath)) {
     const source = read(metaPath);
     if (source.includes('../../app/') || source.includes('../../ui/')) {
-      errors.push('scene.meta.ts must import shared contracts from platform/core, not app/ui');
+      errors.push(
+        'scene.meta.ts must import shared contracts from platform/core, not app/ui'
+      );
+    }
+    if (!source.includes('testProfile:')) {
+      errors.push('scene.meta.ts must declare testProfile');
     }
   }
 

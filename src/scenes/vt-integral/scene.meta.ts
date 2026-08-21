@@ -35,5 +35,10 @@ export const vtIntegralMeta: SceneMeta = {
     n: 10,
     scene: 1
   },
+  testProfile: {
+    hasGraph: false,
+    hasTransport: true,
+    supportsPresentation: true
+  },
   demoProfile
 };

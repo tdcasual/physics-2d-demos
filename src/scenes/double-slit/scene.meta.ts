@@ -50,5 +50,10 @@ export const doubleSlitMeta: SceneMeta = {
     slitDistance: 20
   },
   urlSyncKeys: ['step', 'activeInstrument'],
+  testProfile: {
+    hasGraph: false,
+    hasTransport: false,
+    supportsPresentation: true
+  },
   demoProfile
 };

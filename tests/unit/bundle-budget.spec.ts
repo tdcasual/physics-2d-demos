@@ -10,7 +10,11 @@ import {
 
 const tempDirs: string[] = [];
 
-function writeDistFile(root: string, relativePath: string, contents: string): void {
+function writeDistFile(
+  root: string,
+  relativePath: string,
+  contents: string
+): void {
   const fullPath = join(root, relativePath);
   const dir = fullPath.slice(0, fullPath.lastIndexOf('/'));
   mkdirSync(dir, { recursive: true });
@@ -41,16 +45,10 @@ function htmlWithAssets(options: {
   stylesheets?: string[];
 }): string {
   const preloads = (options.preloads ?? [])
-    .map(
-      (href) =>
-        `  <link rel="modulepreload" crossorigin href="${href}">`
-    )
+    .map((href) => `  <link rel="modulepreload" crossorigin href="${href}">`)
     .join('\n');
   const stylesheets = (options.stylesheets ?? [])
-    .map(
-      (href) =>
-        `  <link rel="stylesheet" crossorigin href="${href}">`
-    )
+    .map((href) => `  <link rel="stylesheet" crossorigin href="${href}">`)
     .join('\n');
 
   return [
@@ -187,7 +185,7 @@ describe('bundle budget check', () => {
       maxEntryJsKb: 160,
       maxEntryCssKb: 70,
       maxVendorJsKb: 170,
-      maxSharedJsKb: 125
+      maxSharedJsKb: 130
     });
   });
 });

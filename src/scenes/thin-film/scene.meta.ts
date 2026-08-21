@@ -39,5 +39,10 @@ export const thinFilmMeta: SceneMeta = {
     n: 1.33
   },
   urlSyncKeys: ['step'],
+  testProfile: {
+    hasGraph: true,
+    hasTransport: true,
+    supportsPresentation: true
+  },
   demoProfile
 };

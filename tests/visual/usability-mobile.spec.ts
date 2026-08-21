@@ -1,32 +1,7 @@
 import { devices, expect, test, type Page } from '@playwright/test';
+import { sceneIds, scenePage } from './scene-pages';
 
-const modernPages = [
-  '/src/pages/projectile.html',
-  '/src/pages/chase-meet.html',
-  '/src/pages/field-lines.html',
-  '/src/pages/electrification.html',
-  '/src/pages/emf-analogy.html',
-  '/src/pages/vt-integral.html?renderer=experimental'
-] as const;
-
-const allScenePages = [
-  { path: '/src/pages/chase-meet.html', hasGraph: true },
-  { path: '/src/pages/doppler-effect.html', hasGraph: false },
-  { path: '/src/pages/double-slit.html', hasGraph: false },
-  { path: '/src/pages/electrification.html', hasGraph: false },
-  { path: '/src/pages/emf-analogy.html', hasGraph: false },
-  { path: '/src/pages/field-lines.html', hasGraph: false },
-  { path: '/src/pages/ganshe.html', hasGraph: true },
-  { path: '/src/pages/interference-formula.html', hasGraph: true },
-  { path: '/src/pages/mechanical-wave.html', hasGraph: false },
-  { path: '/src/pages/micrometer.html', hasGraph: false },
-  { path: '/src/pages/projectile.html', hasGraph: false },
-  { path: '/src/pages/spring-oscillator.html', hasGraph: true },
-  { path: '/src/pages/thin-film.html', hasGraph: true },
-  { path: '/src/pages/vernier-caliper.html', hasGraph: false },
-  { path: '/src/pages/vt-integral.html', hasGraph: false },
-  { path: '/src/pages/wedge.html', hasGraph: true }
-] as const;
+const modernPages = sceneIds.map((id) => scenePage(id));
 
 const iPhone12Use = {
   viewport: devices['iPhone 12'].viewport,
@@ -112,8 +87,9 @@ test('all scenes keep mobile canvases contained and graph tabs populated', async
   test.setTimeout(60_000);
   await page.setViewportSize({ width: 320, height: 568 });
 
-  for (const scene of allScenePages) {
-    await page.goto(scene.path, {
+  for (const scene of sceneIds) {
+    const path = scenePage(scene);
+    await page.goto(path, {
       waitUntil: 'domcontentloaded',
       timeout: 30_000
     });
@@ -137,11 +113,13 @@ test('all scenes keep mobile canvases contained and graph tabs populated', async
       });
     expect(
       stageCanvasesContained,
-      `${scene.path} stage canvases should stay inside the mobile animation surface`
+      `${path} stage canvases should stay inside the mobile animation surface`
     ).toBe(true);
 
     const graphTab = page.locator('.mobile-tab', { hasText: '图表' });
-    if (!scene.hasGraph) {
+    const hasGraph =
+      (await page.locator('[data-scene-has-graph="true"]').count()) > 0;
+    if (!hasGraph) {
       await expect(graphTab).toHaveCount(0);
       continue;
     }
@@ -155,7 +133,7 @@ test('all scenes keep mobile canvases contained and graph tabs populated', async
     const canvasCount = await graphCanvases.count();
     expect(
       canvasCount,
-      `${scene.path} graph tab should render a canvas`
+      `${path} graph tab should render a canvas`
     ).toBeGreaterThan(0);
     await expect(graphCanvases.first()).toBeVisible();
 
@@ -179,7 +157,7 @@ test('all scenes keep mobile canvases contained and graph tabs populated', async
     );
     expect(
       graphCanvasesContained,
-      `${scene.path} graph canvases should stay visible inside the graph panel`
+      `${path} graph canvases should stay visible inside the graph panel`
     ).toBe(true);
   }
 });

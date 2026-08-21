@@ -1,14 +1,7 @@
 import { test, expect } from '@playwright/test';
+import { sceneIds, scenePage } from './scene-pages';
 
 const PORT = 5177;
-const SCENES = [
-  'chase-meet',
-  'projectile',
-  'emf-analogy',
-  'field-lines',
-  'electrification',
-  'vt-integral'
-];
 
 /**
  * Canvas 响应式缩放审计
@@ -16,10 +9,10 @@ const SCENES = [
  * 验证所有场景在移动端是否正确设置了 responsiveScale，
  * 防止新场景使用裸数字导致元素过大。
  */
-for (const scene of SCENES) {
+for (const scene of sceneIds) {
   test(`canvas responsive scale audit: ${scene}`, async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto(`http://127.0.0.1:${PORT}/src/pages/${scene}.html`, {
+    await page.goto(`http://127.0.0.1:${PORT}${scenePage(scene)}`, {
       waitUntil: 'domcontentloaded'
     });
     await page.waitForTimeout(2000);

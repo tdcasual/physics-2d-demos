@@ -54,6 +54,24 @@ const LAYOUT_INTERACTION_MODELS = new Set([
   'custom'
 ]);
 
+/**
+ * Custom layout interaction adapters are registered alongside the layout.
+ * Keeping this registry explicit prevents a misspelled adapter id from
+ * silently reducing a layout to a mount-only smoke test.
+ */
+const layoutTestAdapters = new Set<string>();
+
+export function registerLayoutTestAdapter(id: string): void {
+  if (!id || typeof id !== 'string') {
+    throw new Error('Layout test adapter id must be a non-empty string');
+  }
+  layoutTestAdapters.add(id);
+}
+
+export function hasLayoutTestAdapter(id: string): boolean {
+  return layoutTestAdapters.has(id);
+}
+
 /** Validate a layout's declarative test capabilities before registration. */
 export function validateLayoutTestProfile(
   id: string,
@@ -69,6 +87,18 @@ export function validateLayoutTestProfile(
       `Layout test profile for "${id}" has an invalid interactionModel`
     );
   }
+  if (profile.interactionModel === 'custom') {
+    if (!profile.adapter) {
+      throw new Error(
+        `Layout test profile for "${id}" must define adapter for custom interactionModel`
+      );
+    }
+    if (!hasLayoutTestAdapter(profile.adapter)) {
+      throw new Error(
+        `Layout test adapter "${profile.adapter}" for "${id}" is not registered`
+      );
+    }
+  }
   for (const viewport of profile.viewports) {
     if (
       !Number.isFinite(viewport.width) ||
@@ -81,7 +111,12 @@ export function validateLayoutTestProfile(
       );
     }
   }
-  for (const key of ['minCanvasWidth', 'minCanvasHeight'] as const) {
+  for (const key of [
+    'minStageWidth',
+    'minStageHeight',
+    'minGraphWidth',
+    'minGraphHeight'
+  ] as const) {
     const value = profile[key];
     if (value !== undefined && (!Number.isFinite(value) || value <= 0)) {
       throw new Error(`Layout test profile for "${id}" has an invalid ${key}`);

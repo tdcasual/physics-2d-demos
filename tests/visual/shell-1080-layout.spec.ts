@@ -1,13 +1,7 @@
 import { expect, test } from '@playwright/test';
+import { sceneIds, scenePage } from './scene-pages';
 
-const modernPages = [
-  '/src/pages/projectile.html',
-  '/src/pages/chase-meet.html',
-  '/src/pages/field-lines.html',
-  '/src/pages/electrification.html',
-  '/src/pages/emf-analogy.html',
-  '/src/pages/vt-integral.html?renderer=experimental'
-] as const;
+const modernPages = sceneIds.map((id) => scenePage(id));
 
 test.use({ viewport: { width: 1920, height: 1080 } });
 

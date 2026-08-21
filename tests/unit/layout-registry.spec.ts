@@ -3,6 +3,7 @@ import type { ILayoutConstructor } from '../../src/app/layouts/types';
 import {
   layoutRegistry,
   registerLayout,
+  registerLayoutTestAdapter,
   getDefaultLayoutId,
   saveLayoutPreference
 } from '../../src/app/layouts/registry';
@@ -86,6 +87,47 @@ describe('layoutRegistry', () => {
         }
       })
     ).toThrow('must define viewports');
+  });
+
+  it('should require an adapter for custom interaction models', () => {
+    expect(() =>
+      layoutRegistry.register('custom-layout', FakeLayout, {
+        ...fakeMeta,
+        supportedSlots: ['control', 'animation'],
+        layoutTestProfile: {
+          viewports: [{ width: 800, height: 600 }],
+          interactionModel: 'custom'
+        }
+      })
+    ).toThrow('must define adapter');
+  });
+
+  it('should reject an unregistered custom adapter', () => {
+    expect(() =>
+      layoutRegistry.register('custom-layout', FakeLayout, {
+        ...fakeMeta,
+        layoutTestProfile: {
+          viewports: [{ width: 800, height: 600 }],
+          interactionModel: 'custom',
+          adapter: 'missing-adapter'
+        }
+      })
+    ).toThrow('is not registered');
+  });
+
+  it('should accept a registered custom adapter', () => {
+    registerLayoutTestAdapter('registered-adapter');
+    expect(() =>
+      layoutRegistry.register('custom-layout', FakeLayout, {
+        ...fakeMeta,
+        supportedSlots: ['control', 'animation'],
+        layoutTestProfile: {
+          viewports: [{ width: 800, height: 600 }],
+          interactionModel: 'custom',
+          adapter: 'registered-adapter'
+        }
+      })
+    ).not.toThrow();
   });
 
   it('should throw for invalid container', () => {

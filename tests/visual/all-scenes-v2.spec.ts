@@ -1,31 +1,23 @@
 import { test, expect } from '@playwright/test';
+import { sceneIds, scenePage } from './scene-pages';
 
-const scenes = [
-  { id: 'projectile', name: '抛体运动' },
-  { id: 'chase-meet', name: '追及相遇' },
-  { id: 'field-lines', name: '电场线' },
-  { id: 'electrification', name: '静电起电' },
-  { id: 'vt-integral', name: '微元法' },
-  { id: 'emf-analogy', name: '电路类比' }
-];
-
-for (const scene of scenes) {
-  test(`${scene.name} V2 layout`, async ({ page }) => {
+for (const scene of sceneIds) {
+  test(`${scene} V2 layout`, async ({ page }) => {
     await page.setViewportSize({ width: 1400, height: 900 });
-    await page.goto(`http://localhost:5177/src/pages/${scene.id}.html`);
+    await page.goto(scenePage(scene));
     await page.waitForLoadState('domcontentloaded');
 
     await page.screenshot({
-      path: `/tmp/v2-${scene.id}.png`,
+      path: `/tmp/v2-${scene}.png`,
       fullPage: false
     });
 
-    // 验证基本结构
-    const leftPanel = await page.locator('.teaching-left-panel');
-    const rightPanel = await page.locator('.teaching-right-panel');
-    await expect(leftPanel).toBeVisible();
-    await expect(rightPanel).toBeVisible();
-
-    console.log(`✅ ${scene.name} OK`);
+    await expect(page.locator('[data-scene-id]')).toHaveAttribute(
+      'data-scene-id',
+      scene
+    );
+    await expect(page.locator('[data-layout-id]')).toBeVisible();
+    await expect(page.locator('.control-slot').first()).toBeAttached();
+    await expect(page.locator('canvas, [role="img"]').first()).toBeAttached();
   });
 }

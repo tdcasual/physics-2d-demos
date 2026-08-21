@@ -37,5 +37,10 @@ export const fieldLinesMeta: SceneMeta = {
     q1: 1,
     q2: -1
   },
+  testProfile: {
+    hasGraph: false,
+    hasTransport: true,
+    supportsPresentation: true
+  },
   demoProfile
 };

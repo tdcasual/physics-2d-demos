@@ -33,6 +33,8 @@ export type {
 export {
   layoutRegistry,
   registerLayout,
+  registerLayoutTestAdapter,
+  hasLayoutTestAdapter,
   getDefaultLayoutId,
   saveLayoutPreference,
   validateLayoutTestProfile,

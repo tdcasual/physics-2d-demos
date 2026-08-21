@@ -1,14 +1,8 @@
 import { test, expect } from '@playwright/test';
+import { sceneIds, scenePage } from './scene-pages';
 
 const PORT = 5177;
-const SCENES = [
-  { id: 'chase-meet', hasTheme: true, hasPlay: true },
-  { id: 'projectile', hasTheme: true, hasPlay: true },
-  { id: 'emf-analogy', hasTheme: true, hasPlay: true },
-  { id: 'field-lines', hasTheme: true, hasPlay: false },
-  { id: 'electrification', hasTheme: true, hasPlay: true },
-  { id: 'vt-integral', hasTheme: true, hasPlay: false }
-];
+const SCENES = sceneIds.map((id) => ({ id, hasTheme: true, hasPlay: true }));
 
 // ========== DESKTOP AUDIT ==========
 for (const scene of SCENES) {
@@ -20,7 +14,7 @@ for (const scene of SCENES) {
     });
     page.on('pageerror', (err) => errors.push(`[pageerror] ${err.message}`));
 
-    await page.goto(`http://127.0.0.1:${PORT}/src/pages/${scene.id}.html`, {
+    await page.goto(`http://127.0.0.1:${PORT}${scenePage(scene.id)}`, {
       waitUntil: 'domcontentloaded'
     });
     await page.waitForTimeout(2000);

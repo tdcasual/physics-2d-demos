@@ -39,5 +39,10 @@ export const projectileMeta: SceneMeta = {
     g: 9.8,
     c: 0
   },
+  testProfile: {
+    hasGraph: false,
+    hasTransport: true,
+    supportsPresentation: true
+  },
   demoProfile
 };

@@ -34,5 +34,10 @@ export const micrometerMeta: SceneMeta = {
   defaultParams: {
     reading: 4.593
   },
+  testProfile: {
+    hasGraph: false,
+    hasTransport: true,
+    supportsPresentation: true
+  },
   demoProfile
 };

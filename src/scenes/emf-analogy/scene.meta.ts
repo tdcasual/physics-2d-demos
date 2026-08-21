@@ -36,5 +36,10 @@ export const emfAnalogyMeta: SceneMeta = {
     v: 2,
     L: 1
   },
+  testProfile: {
+    hasGraph: false,
+    hasTransport: true,
+    supportsPresentation: true
+  },
   demoProfile
 };

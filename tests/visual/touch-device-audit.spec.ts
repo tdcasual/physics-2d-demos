@@ -1,19 +1,12 @@
 import { test, expect } from '@playwright/test';
+import { sceneIds, scenePage } from './scene-pages';
 
 const PORT = 5177;
-const SCENES = [
-  'chase-meet',
-  'projectile',
-  'emf-analogy',
-  'field-lines',
-  'electrification',
-  'vt-integral'
-];
 
-for (const scene of SCENES) {
+for (const scene of sceneIds) {
   test(`touch policy on ${scene}`, async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto(`http://127.0.0.1:${PORT}/src/pages/${scene}.html`, {
+    await page.goto(`http://127.0.0.1:${PORT}${scenePage(scene)}`, {
       waitUntil: 'domcontentloaded'
     });
     await page.waitForTimeout(1500);

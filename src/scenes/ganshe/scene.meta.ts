@@ -39,5 +39,10 @@ export const gansheMeta: SceneMeta = {
     phaseDiff: 0,
     observerX: 15
   },
+  testProfile: {
+    hasGraph: true,
+    hasTransport: true,
+    supportsPresentation: true
+  },
   demoProfile
 };

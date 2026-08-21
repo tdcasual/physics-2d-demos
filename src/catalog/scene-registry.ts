@@ -1,5 +1,9 @@
 /// <reference types="vite/client" />
-import type { SceneMeta, ScenePlacardMeta } from '../platform/scene-contract';
+import type {
+  SceneMeta,
+  ScenePlacardMeta,
+  SceneTestProfile
+} from '../platform/scene-contract';
 
 export type SceneRegistrySource = 'modern';
 export type SceneRegistryDimension = '2d' | '3d';
@@ -17,6 +21,7 @@ export type SceneRegistryEntry = ScenePlacardMeta & {
   featured: boolean;
   source: SceneRegistrySource;
   dimension: SceneRegistryDimension;
+  testProfile?: SceneTestProfile;
 };
 
 const SUBJECT_TO_CATEGORY: Record<string, { category: string; label: string }> =
@@ -62,7 +67,8 @@ export const sceneRegistry: SceneRegistryEntry[] = Object.values(modules)
       categoryLabel: mapped.label,
       featured: meta.featured ?? false,
       source: 'modern' as const,
-      dimension: '2d' as const
+      dimension: '2d' as const,
+      testProfile: meta.testProfile
     };
   })
   .sort((a, b) => a.title.localeCompare(b.title, 'zh-CN'));

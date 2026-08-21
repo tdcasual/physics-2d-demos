@@ -1,18 +1,11 @@
 import { test, expect } from '@playwright/test';
+import { sceneIds, scenePage } from './scene-pages';
 
 test.use({ browserName: 'firefox' });
 
 const PORT = 5177;
-const SCENES = [
-  'chase-meet',
-  'projectile',
-  'emf-analogy',
-  'field-lines',
-  'electrification',
-  'vt-integral'
-];
 
-for (const scene of SCENES) {
+for (const scene of sceneIds) {
   test(`firefox loads ${scene}`, async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     const errors: string[] = [];
@@ -21,7 +14,7 @@ for (const scene of SCENES) {
     });
     page.on('pageerror', (err) => errors.push(`[pageerror] ${err.message}`));
 
-    await page.goto(`http://127.0.0.1:${PORT}/src/pages/${scene}.html`, {
+    await page.goto(`http://127.0.0.1:${PORT}${scenePage(scene)}`, {
       waitUntil: 'domcontentloaded'
     });
     await page.waitForTimeout(2000);

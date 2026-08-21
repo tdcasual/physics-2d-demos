@@ -35,5 +35,10 @@ export const vernierCaliperMeta: SceneMeta = {
     precision: 0.02,
     objectType: 0
   },
+  testProfile: {
+    hasGraph: false,
+    hasTransport: true,
+    supportsPresentation: true
+  },
   demoProfile
 };

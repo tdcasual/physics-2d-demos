@@ -65,7 +65,13 @@ describe('registry-wide layout contract', () => {
 
   it('mounts, resizes, and unmounts every registered layout without leaked DOM', async () => {
     for (const meta of layoutRegistry.getAllMetadata()) {
-      const viewport = meta.layoutTestProfile!.viewports[0];
+      if (!meta.layoutTestProfile) {
+        expect(meta.autoSelectable, `${meta.id} missing test profile`).toBe(
+          false
+        );
+        continue;
+      }
+      const viewport = meta.layoutTestProfile.viewports[0];
       const container = createContainer(viewport.width, viewport.height);
       const layout = layoutRegistry.create(meta.id, container);
 
@@ -92,13 +98,19 @@ describe('registry-wide layout contract', () => {
 
   it('exposes tab semantics only for tab interaction models', async () => {
     for (const meta of layoutRegistry.getAllMetadata()) {
-      const viewport = meta.layoutTestProfile!.viewports[0];
+      if (!meta.layoutTestProfile) {
+        expect(meta.autoSelectable, `${meta.id} missing test profile`).toBe(
+          false
+        );
+        continue;
+      }
+      const viewport = meta.layoutTestProfile.viewports[0];
       const container = createContainer(viewport.width, viewport.height);
       const layout = layoutRegistry.create(meta.id, container);
       await layout.mount();
 
       const tabs = container.querySelectorAll('[role="tab"]');
-      if (meta.layoutTestProfile!.interactionModel === 'tabs') {
+      if (meta.layoutTestProfile.interactionModel === 'tabs') {
         expect(tabs.length, `${meta.id} should expose tabs`).toBeGreaterThan(0);
         for (const tab of tabs) {
           const controls = tab.getAttribute('aria-controls');

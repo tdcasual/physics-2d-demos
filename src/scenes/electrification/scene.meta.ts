@@ -34,5 +34,10 @@ export const electrificationMeta: SceneMeta = {
   defaultParams: {
     step: 0
   },
+  testProfile: {
+    hasGraph: false,
+    hasTransport: true,
+    supportsPresentation: true
+  },
   demoProfile
 };

@@ -38,5 +38,10 @@ export const wedgeMeta: SceneMeta = {
     L: 5.0
   },
   urlSyncKeys: ['step'],
+  testProfile: {
+    hasGraph: true,
+    hasTransport: true,
+    supportsPresentation: true
+  },
   demoProfile
 };

@@ -36,6 +36,9 @@ const scenesDir = resolve(process.cwd(), 'src/scenes');
 const RESPONSIVE_PATTERN =
   /responsiveScale|getResponsiveScale|scaledSize|sizeCanvasTo/;
 
+/** Graph-capable scenes must expose a standard graph mounting entry point. */
+const GRAPH_ENTRY_PATTERN = /\b(?:renderGraph|attachGraphCanvas)\s*\(/;
+
 /** 是否采用演示模式标准机制 */
 const PRESENTATION_PATTERN = /getRenderTokens|demoHints/;
 
@@ -82,6 +85,11 @@ function findSceneMeta(id: string): {
     readoutPanel: string;
     renderHints: unknown;
   };
+  testProfile?: {
+    hasGraph: boolean;
+    hasTransport: boolean;
+    supportsPresentation: boolean;
+  };
 } | null {
   for (const module of Object.values(sceneMetaModules)) {
     const candidate = Object.values(module).find(
@@ -95,6 +103,11 @@ function findSceneMeta(id: string): {
           controlPanel: string;
           readoutPanel: string;
           renderHints: unknown;
+        };
+        testProfile?: {
+          hasGraph: boolean;
+          hasTransport: boolean;
+          supportsPresentation: boolean;
         };
       };
     }
@@ -174,5 +187,33 @@ describe('scene modernization standard (anti-drift ratchet)', () => {
         renderHints: expect.any(Object)
       });
     });
+  });
+
+  describe('场景测试能力声明（强制，全员）', () => {
+    it.each(sceneIds)(
+      '%s: declares a layout-independent test profile',
+      (id) => {
+        const meta = findSceneMeta(id);
+        expect(meta?.testProfile, `${id} missing testProfile`).toMatchObject({
+          hasGraph: expect.any(Boolean),
+          hasTransport: expect.any(Boolean),
+          supportsPresentation: expect.any(Boolean)
+        });
+      }
+    );
+
+    it.each(sceneIds)(
+      '%s: graph capability matches a renderable graph entry point',
+      (id) => {
+        const meta = findSceneMeta(id);
+        const source = sceneSources.get(id)!;
+        if (meta?.testProfile?.hasGraph) {
+          expect(
+            GRAPH_ENTRY_PATTERN.test(source),
+            `${id} declares hasGraph=true but exposes neither renderGraph nor attachGraphCanvas`
+          ).toBe(true);
+        }
+      }
+    );
   });
 });

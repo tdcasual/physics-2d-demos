@@ -37,8 +37,10 @@ export function registerAllLayouts(): void {
           { width: 768, height: 900 }
         ],
         interactionModel: 'split',
-        minCanvasWidth: 120,
-        minCanvasHeight: 100
+        minStageWidth: 120,
+        minStageHeight: 100,
+        minGraphWidth: 80,
+        minGraphHeight: 40
       }
     });
   }
@@ -60,8 +62,10 @@ export function registerAllLayouts(): void {
         ],
         interactionModel: 'tabs',
         requiresGraphActivation: true,
-        minCanvasWidth: 120,
-        minCanvasHeight: 100
+        minStageWidth: 120,
+        minStageHeight: 100,
+        minGraphWidth: 120,
+        minGraphHeight: 100
       }
     });
   }
@@ -86,8 +90,10 @@ export function registerAllLayouts(): void {
           ],
           interactionModel: 'split',
           requiresGraphActivation: false,
-          minCanvasWidth: 120,
-          minCanvasHeight: 50
+          minStageWidth: 120,
+          minStageHeight: 100,
+          minGraphWidth: 80,
+          minGraphHeight: 40
         }
       }
     );

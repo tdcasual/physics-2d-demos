@@ -37,5 +37,10 @@ export const dopplerEffectMeta: SceneMeta = {
     emitFrequency: 3
   },
   urlSyncKeys: ['sourceSpeed', 'observerSpeed', 'emitFrequency', 'mode'],
+  testProfile: {
+    hasGraph: false,
+    hasTransport: true,
+    supportsPresentation: true
+  },
   demoProfile
 };

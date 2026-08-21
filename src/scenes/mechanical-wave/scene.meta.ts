@@ -38,5 +38,10 @@ export const mechanicalWaveMeta: SceneMeta = {
     amplitude: 5
   },
   urlSyncKeys: ['waveSpeed', 'wavelength', 'period', 'amplitude', 'direction'],
+  testProfile: {
+    hasGraph: false,
+    hasTransport: true,
+    supportsPresentation: true
+  },
   demoProfile
 };

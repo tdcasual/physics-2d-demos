@@ -34,10 +34,14 @@ export interface LayoutTestViewport {
 export interface LayoutTestProfile {
   viewports: LayoutTestViewport[];
   interactionModel: LayoutInteractionModel;
+  /** Adapter id used by custom interaction models. */
+  adapter?: string;
   /** Whether graph content must be activated before it can be asserted. */
   requiresGraphActivation?: boolean;
-  minCanvasWidth?: number;
-  minCanvasHeight?: number;
+  minStageWidth?: number;
+  minStageHeight?: number;
+  minGraphWidth?: number;
+  minGraphHeight?: number;
 }
 
 export interface LayoutSlots {

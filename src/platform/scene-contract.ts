@@ -12,6 +12,13 @@ export type ScenePlacardMeta = {
 
 import type { SceneDemoProfile } from './demo-profile';
 
+/** Test capabilities declared by the scene, independent of any layout. */
+export type SceneTestProfile = {
+  hasGraph: boolean;
+  hasTransport: boolean;
+  supportsPresentation: boolean;
+};
+
 /** 场景完整元数据（注册表使用） */
 export type SceneMeta = ScenePlacardMeta & {
   id: string;
@@ -29,6 +36,8 @@ export type SceneMeta = ScenePlacardMeta & {
   urlSyncKeys?: string[];
   /** 演示模式配置（可选，未配置则走旧逻辑） */
   demoProfile?: SceneDemoProfile;
+  /** 场景测试能力；真实场景由契约测试强制声明。 */
+  testProfile?: SceneTestProfile;
 };
 
 /** 场景生命周期接口 */
