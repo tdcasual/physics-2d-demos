@@ -44,7 +44,7 @@ pnpm build
 pnpm check:bundle
 ```
 
-若环境允许浏览器运行，再执行 `pnpm test:e2e` 和 `pnpm test:visual`。视觉失败不能直接更新 snapshot；先确认 viewport、字体、布局和实际 DOM。移动 tab 的非激活 panel 中 canvas 可以是 `display:none`，断言前必须激活目标 tab 或过滤非激活 panel。
+若环境允许浏览器运行，再执行 `pnpm test:e2e`、`pnpm exec playwright test tests/visual/layout-matrix.spec.ts` 和 `pnpm test:visual`。布局矩阵会自动遍历全部场景与已注册布局，是新增场景的强制结构门禁。像素回归只覆盖 `tests/visual/visual-regression.spec.ts` 中明确列出的代表场景；新增场景默认不加入像素清单，除非同时审查并生成 Darwin/Linux 两套基线。视觉失败不能直接更新 snapshot；先确认 viewport、字体、布局和实际 DOM。移动 tab 的非激活 panel 中 canvas 可以是 `display:none`，断言前必须激活目标 tab 或过滤非激活 panel。
 
 ## 失败报告格式
 

@@ -45,7 +45,10 @@ function createAdapter(options?: Partial<ScenePageOptions>): SceneAdapter {
   } as ScenePageOptions);
 }
 
-function mountAdapter(adapter: SceneAdapter): { container: HTMLDivElement; canvas: HTMLCanvasElement } {
+function mountAdapter(adapter: SceneAdapter): {
+  container: HTMLDivElement;
+  canvas: HTMLCanvasElement;
+} {
   const container = document.createElement('div');
   const canvas = document.createElement('canvas');
   canvas.className = 'stage-canvas';
@@ -174,6 +177,57 @@ describe('SceneAdapter edge cases', () => {
     expect(() => adapter.renderGraph(container)).not.toThrow();
     // Should not render anything without a scene
     expect(container.innerHTML).toBe('');
+  });
+
+  it('resizes attached graph canvases when a hidden graph slot becomes visible', () => {
+    const originalResizeObserver = globalThis.ResizeObserver;
+    const callbacks: ResizeObserverCallback[] = [];
+    const observed: Element[] = [];
+    const disconnect = vi.fn();
+
+    globalThis.ResizeObserver = class ResizeObserverMock {
+      constructor(callback: ResizeObserverCallback) {
+        callbacks.push(callback);
+      }
+
+      observe(target: Element): void {
+        observed.push(target);
+      }
+      unobserve(): void {}
+      disconnect(): void {
+        disconnect();
+      }
+    };
+
+    try {
+      const scene = {
+        ...createMockScene(),
+        attachGraphCanvas: vi.fn()
+      };
+      const adapter = createAdapter({ createScene: () => scene as never });
+      mountAdapter(adapter);
+      const graphContainer = document.createElement('div');
+
+      adapter.renderGraph(graphContainer);
+      expect(observed).toContain(graphContainer);
+      scene.resize.mockClear();
+      scene.render.mockClear();
+
+      const graphObserver = callbacks.at(-1);
+      expect(graphObserver).toBeDefined();
+      graphObserver?.(
+        [{ contentRect: { width: 300, height: 120 } } as ResizeObserverEntry],
+        {} as ResizeObserver
+      );
+
+      expect(scene.resize).toHaveBeenCalledOnce();
+      expect(scene.render).toHaveBeenCalledOnce();
+
+      adapter.unmount();
+      expect(disconnect).toHaveBeenCalled();
+    } finally {
+      globalThis.ResizeObserver = originalResizeObserver;
+    }
   });
 
   it('renderControl before renderAnimation should defer', () => {

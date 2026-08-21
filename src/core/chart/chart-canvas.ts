@@ -8,6 +8,7 @@
  * 4. 防止"变形"：确保 canvas.width/height 始终与 CSS 显示尺寸保持 DPR 比例
  */
 
+import { getResponsiveScale } from '../canvas-sizing';
 import { setCanvasSize } from '../canvas-sizing-utils';
 
 export interface ChartCanvasOptions {
@@ -57,7 +58,9 @@ export function createChartCanvas(
   } else {
     const existing = container.querySelector('canvas');
     if (!existing) {
-      throw new Error('[ChartCanvas] No canvas found in container and autoCreate is false');
+      throw new Error(
+        '[ChartCanvas] No canvas found in container and autoCreate is false'
+      );
     }
     canvas = existing as HTMLCanvasElement;
   }
@@ -80,6 +83,9 @@ export function createChartCanvas(
       cssWidth = newWidth;
       cssHeight = newHeight;
       setCanvasSize(canvas, cssWidth, cssHeight, false);
+      canvas.dataset.responsiveScale = String(
+        getResponsiveScale(cssWidth, cssHeight)
+      );
       dpr = window.devicePixelRatio || 1;
       onResize?.(getState());
     }

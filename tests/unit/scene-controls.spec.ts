@@ -166,6 +166,11 @@ describe('SceneControls', () => {
 
       const buttons = mount.querySelectorAll('button');
       expect(buttons.length).toBe(2);
+      expect(mount.querySelector('[role="radiogroup"]')).not.toBeNull();
+      expect(buttons[0].getAttribute('role')).toBe('radio');
+      expect(buttons[0].getAttribute('aria-checked')).toBe('true');
+      expect(buttons[0].dataset.presetId).toBe('earth');
+      expect(buttons[1].getAttribute('aria-checked')).toBe('false');
       const labelSpan = buttons[0].querySelector('span') as HTMLElement;
       expect(labelSpan.style.color).toContain('var(--text-primary)');
     });
@@ -185,6 +190,8 @@ describe('SceneControls', () => {
       const buttons = mount.querySelectorAll('button');
       buttons[1].click();
       expect(onSelect).toHaveBeenCalledWith('b');
+      expect(buttons[0].getAttribute('aria-checked')).toBe('false');
+      expect(buttons[1].getAttribute('aria-checked')).toBe('true');
 
       preset.setActive('b');
       const labelSpan = buttons[1].querySelector('span') as HTMLElement;

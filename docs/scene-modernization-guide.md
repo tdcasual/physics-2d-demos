@@ -189,7 +189,7 @@ createControls: ({ mount, scene }) => {
 重写老场景（尤其是换绘制方式）时，用以下流程保证行为不退化：
 
 1. **保留 sim**：物理逻辑通常是对的且有单测，尽量只重写 view。
-2. **写/补 parity 测试**：`tests/parity/` 用于对比新旧实现的一致性（像素或关键数值）。重写前先确认老行为基线，重写后断言一致。
+2. **写/补行为测试**：legacy 路由已从产品中移除，不再为不存在的 renderer 维护 parity runner。使用 `tests/unit`、`tests/contract` 和 `tests/visual/layout-matrix.spec.ts` 覆盖模拟、生命周期与布局；只有在确实存在两个可运行实现时，才在迁移分支中临时建立对比测试。
 3. **补/更新单测**：`tests/unit/<id>.sim.spec.ts`（数值/状态）、`<id>.renderer.spec.ts`（渲染）。
 4. **过质量门禁**：
 

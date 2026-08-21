@@ -1,8 +1,12 @@
 # Legacy -> Modern Parity Checklist
 
 > 用于逐场景验证“modern 版本与 legacy 演示一致”。
-**迁移实施前请阅读：[场景迁移到统一框架的要求规范](../scene-migration-requirements.md)**
+> **迁移实施前请阅读：[场景迁移到统一框架的要求规范](../scene-migration-requirements.md)**
 
+> **归档说明（2026-08）**：legacy 页面和 `renderer` 查询路由已经从产品中移除，
+> `tests/parity/` 及其 Playwright 配置也已删除。本文件只保留迁移历史记录，
+> 不再是新增场景的测试要求。当前场景请使用 `tests/contract`、
+> `tests/e2e` 与 `tests/visual/layout-matrix.spec.ts`。
 
 ## Global Rules
 

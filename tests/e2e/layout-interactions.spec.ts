@@ -7,27 +7,8 @@
  */
 
 import { test, expect, type Page } from '@playwright/test';
-import { readdirSync } from 'fs';
-import { resolve } from 'path';
-import { fileURLToPath } from 'url';
-
-// ── Auto-discover scenes from src/pages/ ────────────────────────────────
-
-function discoverScenes(): string[] {
-  const __dirname = fileURLToPath(new URL('.', import.meta.url));
-  const pagesDir = resolve(__dirname, '../../src/pages');
-  return readdirSync(pagesDir)
-    .filter((f) => f.endsWith('.html'))
-    .filter((f) => !f.startsWith('index'))
-    .filter((f) => !f.includes('-legacy'))
-    .filter((f) => !f.includes('-demo'))
-    .filter((f) => !f.includes('-mobile'))
-    .filter((f) => !f.includes('-v2'))
-    .filter((f) => !['instruments.html', 'micrometer.html', 'vernier-caliper.html'].includes(f))
-    .map((f) => f.replace('.html', ''));
-}
-
-const ALL_SCENE_IDS = discoverScenes();
+import { scenePage } from '../visual/scene-pages';
+import { getSceneProfile, sceneProfiles } from '../helpers/scene-profile';
 
 // ── Constants ───────────────────────────────────────────────────────────
 
@@ -39,86 +20,10 @@ const AUTO_READOUT_SCENES = ['projectile'] as const;
 /** Scenes with continuous animation (readout may not auto-update during playback) */
 const ANIMATED_SCENES = ['chase-meet', 'emf-analogy'] as const;
 
-const SCENE_META: Record<
-  string,
-  { name: string; hasGraph: boolean; canvasSelector: string; hasTransport?: boolean }
-> = {
-  projectile: {
-    name: '抛体运动',
-    hasGraph: false,
-    canvasSelector: 'canvas.stage-canvas'
-  },
-  'chase-meet': { name: '追及相遇', hasGraph: false, canvasSelector: 'canvas' },
-  'field-lines': {
-    name: '电场线',
-    hasGraph: false,
-    canvasSelector: 'canvas.stage-canvas'
-  },
-  electrification: {
-    name: '静电起电',
-    hasGraph: false,
-    canvasSelector: 'canvas.stage-canvas'
-  },
-  'vt-integral': {
-    name: '微元法',
-    hasGraph: false,
-    canvasSelector: 'canvas.stage-canvas'
-  },
-  'emf-analogy': {
-    name: '电路类比',
-    hasGraph: false,
-    canvasSelector: 'canvas.stage-canvas'
-  },
-  'spring-oscillator': {
-    name: '弹簧振子',
-    hasGraph: true,
-    canvasSelector: 'canvas.stage-canvas'
-  },
-  ganshe: {
-    name: '波的干涉',
-    hasGraph: true,
-    canvasSelector: 'canvas.stage-canvas'
-  },
-  'double-slit': {
-    name: '双缝干涉',
-    hasGraph: true,
-    canvasSelector: 'canvas.stage-canvas',
-    hasTransport: false
-  },
-  'interference-formula': {
-    name: '干涉公式',
-    hasGraph: false,
-    canvasSelector: 'canvas',
-    hasTransport: false
-  },
-  'thin-film': {
-    name: '薄膜干涉',
-    hasGraph: false,
-    canvasSelector: 'canvas'
-  },
-  'doppler-effect': {
-    name: '多普勒效应',
-    hasGraph: false,
-    canvasSelector: 'canvas'
-  },
-  'mechanical-wave': {
-    name: '机械波',
-    hasGraph: false,
-    canvasSelector: 'canvas'
-  },
-  wedge: {
-    name: '劈尖干涉',
-    hasGraph: false,
-    canvasSelector: 'canvas'
-  }
-};
-
-const BASE_URL = 'http://127.0.0.1:5177';
-
 // ── Helpers ─────────────────────────────────────────────────────────────
 
 async function gotoScene(page: Page, sceneId: string) {
-  await page.goto(`${BASE_URL}/src/pages/${sceneId}.html`);
+  await page.goto(scenePage(sceneId));
   await page.waitForSelector('.layout-master', {
     state: 'visible',
     timeout: 10000
@@ -217,9 +122,9 @@ test.describe('SplitRightLayout Desktop', () => {
   test.use({ viewport: DESKTOP_VP });
 
   // ── 1. Page load verification (all scenes) ──
-  for (const sceneId of ALL_SCENE_IDS) {
-    const meta = SCENE_META[sceneId];
-    test(`${meta.name} loads with correct structure`, async ({ page }) => {
+  for (const scene of sceneProfiles) {
+    const { id: sceneId, profile } = scene;
+    test(`${sceneId} loads with correct structure`, async ({ page }) => {
       await gotoScene(page, sceneId);
 
       await expect(page.locator('.layout-master')).toBeVisible();
@@ -230,7 +135,7 @@ test.describe('SplitRightLayout Desktop', () => {
         page.locator('.teaching-right-panel, .srgb-right-panel')
       ).toBeVisible();
 
-      const canvas = page.locator(meta.canvasSelector).first();
+      const canvas = page.locator(profile.canvasSelector).first();
       await expect(canvas).toBeVisible();
       const size = await canvas.evaluate((c: HTMLCanvasElement) => ({
         w: c.clientWidth,
@@ -240,14 +145,13 @@ test.describe('SplitRightLayout Desktop', () => {
       expect(size.h).toBeGreaterThan(100);
 
       // Canvas should have content (not blank)
-      const hasContent = await canvasHasContent(page, meta.canvasSelector);
-      expect(
-        hasContent,
-        `${meta.name} canvas should have rendered content`
-      ).toBe(true);
+      const hasContent = await canvasHasContent(page, profile.canvasSelector);
+      expect(hasContent, `${sceneId} canvas should have rendered content`).toBe(
+        true
+      );
 
       // Floating controls (skip for scenes without transport)
-      if (meta.hasTransport !== false) {
+      if (profile.hasTransport) {
         const floatingButtons = page.locator('.stage-floating-controls button');
         await expect(floatingButtons).toHaveCount(2);
         await expect(
@@ -339,7 +243,9 @@ test.describe('SplitRightLayout Desktop', () => {
     await expect
       .poll(async () => {
         const current = await getReadoutMap(page);
-        return Object.keys(midReadout).some((k) => midReadout[k] !== current[k]);
+        return Object.keys(midReadout).some(
+          (k) => midReadout[k] !== current[k]
+        );
       })
       .toBe(true);
 
@@ -652,11 +558,11 @@ test.describe('Layout Auto-Switch on Resize', () => {
 test.describe('All scenes transport and playback', () => {
   test.use({ viewport: DESKTOP_VP });
 
-  for (const sceneId of ALL_SCENE_IDS) {
-    const meta = SCENE_META[sceneId];
+  for (const scene of sceneProfiles) {
+    const { id: sceneId, profile } = scene;
     // Skip scenes without transport controls
-    if (meta.hasTransport === false) continue;
-    test(`${meta.name} play/pause/reset controls work`, async ({ page }) => {
+    if (!profile.hasTransport) continue;
+    test(`${sceneId} play/pause/reset controls work`, async ({ page }) => {
       await gotoScene(page, sceneId);
 
       const playPauseBtn = page
@@ -689,8 +595,7 @@ test.describe('All scenes transport and playback', () => {
   }
 
   for (const sceneId of AUTO_READOUT_SCENES) {
-    const meta = SCENE_META[sceneId];
-    test(`${meta.name} readout updates during playback`, async ({ page }) => {
+    test(`${sceneId} readout updates during playback`, async ({ page }) => {
       await gotoScene(page, sceneId);
 
       const playPauseBtn = page
@@ -711,15 +616,15 @@ test.describe('All scenes transport and playback', () => {
 
       const after = await getReadoutMap(page);
       const changed = Object.keys(before).some((k) => before[k] !== after[k]);
-      expect(changed, `${meta.name}: readout should change after playing`).toBe(
+      expect(changed, `${sceneId}: readout should change after playing`).toBe(
         true
       );
     });
   }
 
   for (const sceneId of ANIMATED_SCENES) {
-    const meta = SCENE_META[sceneId];
-    test(`${meta.name} canvas changes during playback`, async ({ page }) => {
+    const profile = getSceneProfile(sceneId);
+    test(`${sceneId} canvas changes during playback`, async ({ page }) => {
       await gotoScene(page, sceneId);
 
       const playPauseBtn = page
@@ -737,10 +642,13 @@ test.describe('All scenes transport and playback', () => {
       await playPauseBtn.click();
 
       // Canvas checksum should differ after animation (or at least canvas should still have content)
-      const hasContentAfter = await canvasHasContent(page, meta.canvasSelector);
+      const hasContentAfter = await canvasHasContent(
+        page,
+        profile.canvasSelector
+      );
       expect(
         hasContentAfter,
-        `${meta.name} canvas should have content after playback`
+        `${sceneId} canvas should have content after playback`
       ).toBe(true);
 
       // For scenes where readout auto-updates, also check that

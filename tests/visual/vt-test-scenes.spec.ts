@@ -2,26 +2,24 @@ import { test, expect } from '@playwright/test';
 
 test('vt-integral test all scenes', async ({ page }) => {
   await page.setViewportSize({ width: 1400, height: 900 });
-
-  // 访问页面
-  await page.goto('http://localhost:5177/src/pages/vt-integral.html');
-  await page.waitForTimeout(1500);
+  await page.goto('/src/pages/vt-integral.html');
 
   // scene-selector 渲染为 role="radio" 的按钮组
-  await expect(page.getByRole('radio')).toHaveCount(3);
+  const radios = page.getByRole('radio');
+  await expect(radios).toHaveCount(3);
+  await expect(radios.first()).toHaveAttribute('aria-checked', 'true');
+  const canvas = page.locator('canvas.stage-canvas');
+  await expect(canvas).toBeVisible();
 
-  // 截图 scene1 (默认)
-  await page.screenshot({ path: '/tmp/vt-scene1.png' });
+  const scene2 = page.getByRole('radio', { name: '化曲为直' });
+  await scene2.click();
+  await expect(scene2).toHaveAttribute('aria-checked', 'true');
 
-  // 点击场景二按钮
-  await page.getByRole('radio', { name: '化曲为直' }).click();
-  await page.waitForTimeout(1000);
-  await page.screenshot({ path: '/tmp/vt-scene2.png' });
+  const scene3 = page.getByRole('radio', { name: '割圆术' });
+  await scene3.click();
+  await expect(scene3).toHaveAttribute('aria-checked', 'true');
 
-  // 点击场景三按钮
-  await page.getByRole('radio', { name: '割圆术' }).click();
-  await page.waitForTimeout(1000);
-  await page.screenshot({ path: '/tmp/vt-scene3.png' });
-
-  // 当前微元法场景契约包含 v-t面积、化曲为直、割圆术三个子场景。
+  const box = await canvas.boundingBox();
+  expect(box?.width).toBeGreaterThan(500);
+  expect(box?.height).toBeGreaterThan(300);
 });

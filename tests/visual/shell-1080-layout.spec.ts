@@ -1,16 +1,13 @@
 import { expect, test } from '@playwright/test';
 import { sceneIds, scenePage } from './scene-pages';
 
-const modernPages = sceneIds.map((id) => scenePage(id));
-
 test.use({ viewport: { width: 1920, height: 1080 } });
 
-test('1080p layout keeps full content in viewport for all modern pages', async ({
-  page
-}) => {
-  for (const path of modernPages) {
+for (const scene of sceneIds) {
+  test(`1080p layout keeps ${scene} in the viewport`, async ({ page }) => {
+    const path = scenePage(scene);
     await page.goto(path);
-    await expect(page.locator('.teaching-demo')).toBeVisible();
+    await expect(page.locator('[data-layout-id]')).toBeVisible();
 
     const metrics = await page.evaluate(() => {
       const doc = document.documentElement;
@@ -30,8 +27,8 @@ test('1080p layout keeps full content in viewport for all modern pages', async (
       metrics.scrollWidth - metrics.innerWidth,
       `${path} has horizontal overflow: ${metrics.scrollWidth}px > ${metrics.innerWidth}px`
     ).toBeLessThanOrEqual(1);
-  }
-});
+  });
+}
 
 test('mode and theme toggles are rendered in the stage corner toolbar', async ({
   page
@@ -48,10 +45,11 @@ test('mode and theme toggles are rendered in the stage corner toolbar', async ({
   ).toHaveCount(0);
 });
 
-test('desktop layout avoids duplicate sidebar toggle affordances', async ({
-  page
-}) => {
-  for (const path of modernPages) {
+for (const scene of sceneIds) {
+  test(`${scene} avoids duplicate desktop sidebar toggles`, async ({
+    page
+  }) => {
+    const path = scenePage(scene);
     await page.goto(path);
     const visibleSidebarToggles = await page
       .locator('.sidebar-toggle')
@@ -73,5 +71,5 @@ test('desktop layout avoids duplicate sidebar toggle affordances', async ({
       visibleSidebarToggles,
       `${path} should expose exactly one sidebar toggle on desktop`
     ).toBe(1);
-  }
-});
+  });
+}

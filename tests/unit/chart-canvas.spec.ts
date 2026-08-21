@@ -17,6 +17,9 @@ describe('chart-canvas', () => {
     expect(state.cssHeight).toBeGreaterThan(0);
     expect(state.dpr).toBeGreaterThanOrEqual(1);
     expect(state.hairlineWidth).toBeGreaterThan(0);
+    const responsiveScale = Number(state.canvas.dataset.responsiveScale);
+    expect(responsiveScale).toBeGreaterThanOrEqual(0.3);
+    expect(responsiveScale).toBeLessThanOrEqual(1.5);
 
     dispose();
     document.body.removeChild(container);

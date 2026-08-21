@@ -134,8 +134,8 @@ type SceneTestProfile = {
 - `src/platform/scene-contract.ts`
 - `src/catalog/scene-registry.ts`
 - `tests/visual/usability-mobile.spec.ts`
-- `tests/visual/comprehensive-audit.spec.ts`
-- `tests/visual/multi-resolution-audit.spec.ts`
+- `tests/visual/layout-matrix.spec.ts`
+- `tests/helpers/scene-profile.ts`
 - `tests/visual/visual-regression.spec.ts`
 - `tests/visual/a11y-audit.spec.ts`
 - `tests/visual/cross-browser-firefox.spec.ts`

@@ -8,51 +8,13 @@
  */
 
 import { test, expect, type Page } from '@playwright/test';
-import { readdirSync } from 'fs';
-import { resolve } from 'path';
-import { fileURLToPath } from 'url';
-
-// ── Auto-discover scenes from src/pages/ ────────────────────────────────
-
-function discoverScenes(): string[] {
-  const __dirname = fileURLToPath(new URL('.', import.meta.url));
-  const pagesDir = resolve(__dirname, '../../src/pages');
-  return readdirSync(pagesDir)
-    .filter((f) => f.endsWith('.html'))
-    .filter((f) => !f.startsWith('index'))
-    .filter((f) => !f.includes('-legacy'))
-    .filter((f) => !f.includes('-demo'))
-    .filter((f) => !f.includes('-mobile'))
-    .filter((f) => !f.includes('-v2'))
-    .filter((f) => !['instruments.html', 'micrometer.html', 'vernier-caliper.html'].includes(f))
-    .map((f) => f.replace('.html', ''));
-}
-
-const ALL_SCENE_IDS = discoverScenes();
+import { scenePage } from '../visual/scene-pages';
+import { sceneProfiles } from '../helpers/scene-profile';
 
 // ── Constants ───────────────────────────────────────────────────────────
 
 const DESKTOP_VP = { width: 1400, height: 900 } as const;
 const MOBILE_VP = { width: 375, height: 812 } as const;
-
-const SCENE_NAMES: Record<string, string> = {
-  projectile: '抛体运动',
-  'chase-meet': '追及相遇',
-  'field-lines': '电场线',
-  electrification: '静电起电',
-  'vt-integral': '微元法',
-  'emf-analogy': '电路类比',
-  'spring-oscillator': '弹簧振子',
-  ganshe: '波的干涉',
-  'double-slit': '双缝干涉',
-  'interference-formula': '干涉公式',
-  'thin-film': '薄膜干涉',
-  'doppler-effect': '多普勒效应',
-  'mechanical-wave': '机械波',
-  wedge: '劈尖干涉'
-};
-
-const BASE_URL = 'http://127.0.0.1:5177';
 
 // ── Scene State Capture ─────────────────────────────────────────────────
 
@@ -60,10 +22,11 @@ interface SceneState {
   readout: Record<string, string>;
   transport: { isPlaying: boolean };
   canvasChecksum: number;
+  controlSignature: string;
 }
 
 async function gotoScene(page: Page, sceneId: string) {
-  await page.goto(`${BASE_URL}/src/pages/${sceneId}.html`);
+  await page.goto(scenePage(sceneId));
   await page.waitForSelector('.layout-master', {
     state: 'visible',
     timeout: 10000
@@ -128,16 +91,43 @@ async function getCanvasChecksum(page: Page): Promise<number> {
 }
 
 async function captureSceneState(page: Page): Promise<SceneState> {
-  const [readout, transport, canvasChecksum] = await Promise.all([
-    getReadoutMap(page),
-    getTransportState(page),
-    getCanvasChecksum(page)
-  ]);
-  return { readout, transport, canvasChecksum };
+  const [readout, transport, canvasChecksum, controlSignature] =
+    await Promise.all([
+      getReadoutMap(page),
+      getTransportState(page),
+      getCanvasChecksum(page),
+      page.evaluate(() =>
+        Array.from(
+          document.querySelectorAll(
+            '.control-slot button, .mobile-control-slot button, .control-slot input, .mobile-control-slot input, .control-slot select, .mobile-control-slot select'
+          )
+        )
+          .filter((element) => {
+            const node = element as HTMLElement;
+            return node.offsetParent !== null;
+          })
+          .map((element) => {
+            const node = element as HTMLElement;
+            const form = element as HTMLInputElement | HTMLSelectElement;
+            return [
+              node.getAttribute('aria-checked'),
+              node.getAttribute('aria-pressed'),
+              node.getAttribute('aria-selected'),
+              node.dataset.active,
+              node.className,
+              'value' in form ? form.value : '',
+              'checked' in form ? String(form.checked) : ''
+            ].join('|');
+          })
+          .join('\n')
+      )
+    ]);
+  return { readout, transport, canvasChecksum, controlSignature };
 }
 
 function stateChanged(before: SceneState, after: SceneState): boolean {
   if (before.transport.isPlaying !== after.transport.isPlaying) return true;
+  if (before.controlSignature !== after.controlSignature) return true;
   const allKeys = new Set([
     ...Object.keys(before.readout),
     ...Object.keys(after.readout)
@@ -439,8 +429,9 @@ async function anyCheckboxResponds(
 test.describe('Generic Control Response (Desktop)', () => {
   test.use({ viewport: DESKTOP_VP });
 
-  for (const sceneId of ALL_SCENE_IDS) {
-    test(`${SCENE_NAMES[sceneId]}: at least one control per category responds`, async ({
+  for (const scene of sceneProfiles) {
+    const { id: sceneId } = scene;
+    test(`${sceneId}: every present control category responds`, async ({
       page
     }) => {
       await gotoScene(page, sceneId);
@@ -473,7 +464,6 @@ test.describe('Generic Control Response (Desktop)', () => {
         `  → checkboxes: ${cbResult.ok ? 'PASS' : 'FAIL'} — ${cbResult.detail}`
       );
 
-      // PASS if at least one category responded (or category doesn't exist)
       const hasSliders = raw.sliders.length > 0;
       const hasButtons =
         buttons.filter(
@@ -481,19 +471,14 @@ test.describe('Generic Control Response (Desktop)', () => {
         ).length > 0;
       const hasCheckboxes = raw.checkboxes.length > 0;
 
-      const passedCategories = [
-        !hasSliders || sliderResult.ok,
-        !hasButtons || btnResult.ok,
-        !hasCheckboxes || cbResult.ok
-      ].filter(Boolean).length;
-      const totalCategories = [hasSliders, hasButtons, hasCheckboxes].filter(
-        Boolean
-      ).length;
-
       expect(
-        passedCategories,
-        `${SCENE_NAMES[sceneId]}: at least one control category should respond (passed ${passedCategories}/${totalCategories})`
-      ).toBeGreaterThanOrEqual(1);
+        [
+          hasSliders && !sliderResult.ok ? sliderResult.detail : null,
+          hasButtons && !btnResult.ok ? btnResult.detail : null,
+          hasCheckboxes && !cbResult.ok ? cbResult.detail : null
+        ].filter(Boolean),
+        `${sceneId}: every present control category must expose a response`
+      ).toEqual([]);
     });
   }
 });
@@ -503,10 +488,9 @@ test.describe('Generic Control Response (Desktop)', () => {
 test.describe('Generic Control Response (Mobile)', () => {
   test.use({ viewport: MOBILE_VP });
 
-  for (const sceneId of ALL_SCENE_IDS) {
-    test(`${SCENE_NAMES[sceneId]}: mobile controls respond`, async ({
-      page
-    }) => {
+  for (const scene of sceneProfiles) {
+    const { id: sceneId } = scene;
+    test(`${sceneId}: mobile controls respond`, async ({ page }) => {
       await gotoScene(page, sceneId);
       await expandControlCards(page);
 
@@ -544,19 +528,14 @@ test.describe('Generic Control Response (Mobile)', () => {
         ).length > 0;
       const hasCheckboxes = raw.checkboxes.length > 0;
 
-      const passedCategories = [
-        !hasSliders || sliderResult.ok,
-        !hasButtons || btnResult.ok,
-        !hasCheckboxes || cbResult.ok
-      ].filter(Boolean).length;
-      const totalCategories = [hasSliders, hasButtons, hasCheckboxes].filter(
-        Boolean
-      ).length;
-
       expect(
-        passedCategories,
-        `${SCENE_NAMES[sceneId]} mobile: at least one control category should respond (passed ${passedCategories}/${totalCategories})`
-      ).toBeGreaterThanOrEqual(1);
+        [
+          hasSliders && !sliderResult.ok ? sliderResult.detail : null,
+          hasButtons && !btnResult.ok ? btnResult.detail : null,
+          hasCheckboxes && !cbResult.ok ? cbResult.detail : null
+        ].filter(Boolean),
+        `${sceneId} mobile: every present control category must expose a response`
+      ).toEqual([]);
     });
   }
 });

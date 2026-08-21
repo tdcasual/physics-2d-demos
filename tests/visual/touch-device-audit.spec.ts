@@ -11,13 +11,12 @@ for (const scene of sceneIds) {
     });
     await page.waitForTimeout(1500);
 
-    // 验证 canvas 有正确的 touch-action
-    const touchActions = await page.evaluate(() => {
-      const canvases = document.querySelectorAll('canvas');
-      return Array.from(canvases).map(
-        (c) => window.getComputedStyle(c).touchAction
-      );
-    });
+    // 图表 canvas 可以保留浏览器默认手势；交互舞台必须显式声明策略。
+    const stageCanvases = page.locator('.mobile-stage-slot canvas');
+    await expect(stageCanvases.first()).toBeVisible();
+    const touchActions = await stageCanvases.evaluateAll((canvases) =>
+      canvases.map((canvas) => getComputedStyle(canvas).touchAction)
+    );
 
     for (const ta of touchActions) {
       expect(

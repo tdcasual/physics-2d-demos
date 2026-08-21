@@ -14,12 +14,22 @@ export function createPresetButtonGroup(
     columns?: 2 | 3 | 4;
     onSelect: (id: string) => void;
   }
-): { element: HTMLElement; setActive: (id: string) => void; dispose: () => void } {
+): {
+  element: HTMLElement;
+  setActive: (id: string) => void;
+  dispose: () => void;
+} {
   let activeId = options.initialActive ?? presets[0]?.id ?? '';
 
   const grid = document.createElement('div');
   const cols = options.columns ?? 4;
-  grid.className = cols === 2 ? 'grid grid-cols-2 gap-2' : cols === 3 ? 'grid grid-cols-3 gap-2' : 'grid grid-cols-4 gap-2';
+  grid.className =
+    cols === 2
+      ? 'grid grid-cols-2 gap-2'
+      : cols === 3
+        ? 'grid grid-cols-3 gap-2'
+        : 'grid grid-cols-4 gap-2';
+  grid.setAttribute('role', 'radiogroup');
 
   const buttons = new Map<string, HTMLButtonElement>();
   const clickHandlers = new Map<string, () => void>();
@@ -27,6 +37,8 @@ export function createPresetButtonGroup(
   function updateStyles() {
     buttons.forEach((btn, id) => {
       const isActive = id === activeId;
+      btn.setAttribute('aria-checked', String(isActive));
+      btn.tabIndex = isActive ? 0 : -1;
       const labelSpan = btn.querySelector('span:first-child') as HTMLElement;
       if (labelSpan) {
         labelSpan.style.color = 'var(--text-primary)';
@@ -41,6 +53,8 @@ export function createPresetButtonGroup(
   presets.forEach((p) => {
     const btn = document.createElement('button');
     btn.type = 'button';
+    btn.setAttribute('role', 'radio');
+    btn.dataset.presetId = p.id;
     btn.className = [
       'flex flex-col items-center justify-center',
       'px-2 py-2',

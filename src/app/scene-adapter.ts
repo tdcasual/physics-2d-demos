@@ -48,6 +48,7 @@ export class SceneAdapter<
   private listeners: (() => void)[] = [];
   private _deferredControlContainer: HTMLElement | null = null;
   private _resizeHandlerAdded = false;
+  private _ro: ResizeObserver | null = null;
   private _graphRendered = false;
 
   constructor(
@@ -263,7 +264,7 @@ export class SceneAdapter<
       const parent = canvas?.parentElement ?? container;
       if (parent && typeof ResizeObserver !== 'undefined') {
         let resizing = false;
-        const observer = new ResizeObserver(() => {
+        this._ro = new ResizeObserver(() => {
           if (resizing) return;
           resizing = true;
           try {
@@ -273,8 +274,11 @@ export class SceneAdapter<
             resizing = false;
           }
         });
-        observer.observe(parent);
-        this.lifecycle.onDispose(() => observer.disconnect());
+        this._ro.observe(parent);
+        this.lifecycle.onDispose(() => {
+          this._ro?.disconnect();
+          this._ro = null;
+        });
       }
 
       this._resizeHandlerAdded = true;
@@ -340,6 +344,8 @@ export class SceneAdapter<
       container.replaceChildren();
       container.appendChild(canvas);
       scene.attachGraphCanvas(canvas);
+      // Hidden mobile graph tabs are remeasured when they become visible.
+      this._ro?.observe(container);
     }
   }
 

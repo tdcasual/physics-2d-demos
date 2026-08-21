@@ -134,11 +134,10 @@ src/ui/control-layout.ts (1)
 
 **潜在 flaky 测试**（固定等待时间）：
 
-- `tests/visual/audit-homepage.spec.ts` — 多处 500ms 等待
-- `tests/visual/card-only.spec.ts` — 2000ms 等待
-- `tests/parity/*.spec.ts` — 400-500ms 等待
-
-**建议**: 将固定等待改为条件等待（`waitForSelector`, `waitForFunction`）。
+- 本节记录的是历史审计快照；其中提到的 `audit-homepage`、`card-only` 和
+  `tests/parity` 已在后续测试清理中移除。
+- 当前仍存在的固定等待应逐步替换为条件等待（`waitForSelector`,
+  `waitForFunction` 或 `expect.poll`）。
 
 ---
 
