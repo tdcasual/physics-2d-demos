@@ -2,13 +2,19 @@
  * Registry-wide layout contract.
  *
  * This suite intentionally discovers layouts from the registry instead of
- * maintaining a second list. New auto-selectable layouts enter this contract
- * as soon as they are registered with a valid LayoutTestProfile.
+ * maintaining a second list. Every product layout enters this contract as soon
+ * as it is registered by registerAllLayouts().
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { registerAllLayouts } from '../../src/app/layouts/auto-register';
-import { layoutRegistry } from '../../src/app/layouts/registry';
-import type { LayoutSlots } from '../../src/app/layouts/types';
+import {
+  layoutRegistry,
+  type LayoutMetadata
+} from '../../src/app/layouts/registry';
+import type {
+  LayoutSlots,
+  LayoutTestProfile
+} from '../../src/app/layouts/types';
 
 function createContainer(width: number, height: number): HTMLDivElement {
   const container = document.createElement('div');
@@ -36,6 +42,13 @@ function expectSlotsInContainer(
   }
 }
 
+function requireTestProfile(meta: LayoutMetadata): LayoutTestProfile {
+  if (!meta.layoutTestProfile) {
+    throw new Error(`${meta.id} missing test profile`);
+  }
+  return meta.layoutTestProfile;
+}
+
 describe('registry-wide layout contract', () => {
   beforeEach(() => {
     layoutRegistry.clear();
@@ -47,11 +60,10 @@ describe('registry-wide layout contract', () => {
     document.body.innerHTML = '';
   });
 
-  it('provides a profile for every auto-selectable registered layout', () => {
+  it('provides a profile for every registered product layout', () => {
     const metadata = layoutRegistry.getAllMetadata();
     expect(metadata.length).toBeGreaterThan(0);
     for (const meta of metadata) {
-      if (!meta.autoSelectable) continue;
       expect(
         meta.layoutTestProfile,
         `${meta.id} has no test profile`
@@ -65,13 +77,8 @@ describe('registry-wide layout contract', () => {
 
   it('mounts, resizes, and unmounts every registered layout without leaked DOM', async () => {
     for (const meta of layoutRegistry.getAllMetadata()) {
-      if (!meta.layoutTestProfile) {
-        expect(meta.autoSelectable, `${meta.id} missing test profile`).toBe(
-          false
-        );
-        continue;
-      }
-      const viewport = meta.layoutTestProfile.viewports[0];
+      const profile = requireTestProfile(meta);
+      const viewport = profile.viewports[0];
       const container = createContainer(viewport.width, viewport.height);
       const layout = layoutRegistry.create(meta.id, container);
 
@@ -98,19 +105,14 @@ describe('registry-wide layout contract', () => {
 
   it('exposes tab semantics only for tab interaction models', async () => {
     for (const meta of layoutRegistry.getAllMetadata()) {
-      if (!meta.layoutTestProfile) {
-        expect(meta.autoSelectable, `${meta.id} missing test profile`).toBe(
-          false
-        );
-        continue;
-      }
-      const viewport = meta.layoutTestProfile.viewports[0];
+      const profile = requireTestProfile(meta);
+      const viewport = profile.viewports[0];
       const container = createContainer(viewport.width, viewport.height);
       const layout = layoutRegistry.create(meta.id, container);
       await layout.mount();
 
       const tabs = container.querySelectorAll('[role="tab"]');
-      if (meta.layoutTestProfile.interactionModel === 'tabs') {
+      if (profile.interactionModel === 'tabs') {
         expect(tabs.length, `${meta.id} should expose tabs`).toBeGreaterThan(0);
         for (const tab of tabs) {
           const controls = tab.getAttribute('aria-controls');

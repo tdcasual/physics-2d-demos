@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { sceneIds, scenePage } from './scene-pages';
 
-test.use({ browserName: 'webkit' });
+test.use({ browserName: 'webkit', launchOptions: {} });
 
 const PORT = 5177;
 

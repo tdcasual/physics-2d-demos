@@ -100,12 +100,18 @@ class MockLayout {
   }
 
   async unmount() {
-    try { this._container.replaceChildren(); } catch { /* detached */ }
+    try {
+      this._container.replaceChildren();
+    } catch {
+      /* detached */
+    }
   }
 
   setTheme() {}
   handleResize() {}
-  getSlots() { return this._slots; }
+  getSlots() {
+    return this._slots;
+  }
 }
 
 describe('Race condition stress tests', () => {
@@ -116,17 +122,17 @@ describe('Race condition stress tests', () => {
     appDiv.id = 'app';
     document.body.appendChild(appDiv);
     layoutRegistry.clear();
-    layoutRegistry.register(
-      'mock-layout',
-      MockLayout as never,
-      {
-        name: 'Mock',
-        description: 'Test',
-        tags: [],
-        supportsMobile: true,
-        supportedSlots: ['control', 'animation']
+    layoutRegistry.register('mock-layout', MockLayout as never, {
+      name: 'Mock',
+      description: 'Test',
+      tags: [],
+      supportsMobile: true,
+      supportedSlots: ['control', 'animation'],
+      layoutTestProfile: {
+        viewports: [{ width: 800, height: 600 }],
+        interactionModel: 'split'
       }
-    );
+    });
   });
 
   afterEach(() => {
@@ -136,7 +142,9 @@ describe('Race condition stress tests', () => {
   });
 
   it('rapid setScene × 10 should not leak scenes', async () => {
-    const scenes = Array.from({ length: 10 }, (_, i) => createMockScene(`scene-${i}`));
+    const scenes = Array.from({ length: 10 }, (_, i) =>
+      createMockScene(`scene-${i}`)
+    );
     const container = createSceneContainer({ mount: appDiv });
 
     // Fire all setScene rapidly
@@ -163,7 +171,9 @@ describe('Race condition stress tests', () => {
   });
 
   it('interleaved setScene + setTheme should not crash', async () => {
-    const scenes = Array.from({ length: 5 }, (_, i) => createMockScene(`scene-${i}`));
+    const scenes = Array.from({ length: 5 }, (_, i) =>
+      createMockScene(`scene-${i}`)
+    );
     const container = createSceneContainer({ mount: appDiv });
 
     // Interleave setScene and setTheme calls

@@ -22,19 +22,27 @@ function createMockState(
 }
 
 describe('line-chart', () => {
-  it('should return early for empty series', () => {
+  it('should render an empty chart frame when no series are available', () => {
     const state = createMockState();
     const ctx = state.ctx as MockCtx;
     const clearRectSpy = vi.spyOn(ctx, 'clearRect');
+    const fillRectSpy = vi.spyOn(ctx, 'fillRect');
+    const strokeSpy = vi.spyOn(ctx, 'stroke');
 
     renderLineChart({
       state,
       theme: getChartTheme('light'),
-      series: []
+      series: [],
+      xLabel: 't (s)',
+      yLabel: 'x (m)'
     });
 
-    expect(clearRectSpy).not.toHaveBeenCalled();
+    expect(clearRectSpy).toHaveBeenCalled();
+    expect(fillRectSpy).toHaveBeenCalled();
+    expect(strokeSpy).toHaveBeenCalled();
     clearRectSpy.mockRestore();
+    fillRectSpy.mockRestore();
+    strokeSpy.mockRestore();
   });
 
   it('should clear canvas and fill background', () => {

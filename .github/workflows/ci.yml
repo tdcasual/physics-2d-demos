@@ -49,10 +49,7 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Unit tests
-        run: pnpm test
-
-      - name: Coverage
+      - name: Unit and contract tests with coverage
         run: pnpm test:coverage
 
       - name: Upload coverage to Codecov
@@ -70,13 +67,22 @@ jobs:
       - name: Install CJK fonts
         run: sudo apt-get update && sudo apt-get install -y fonts-noto-cjk
 
+      - name: Build
+        run: pnpm build
+
+      - name: Bundle budget
+        run: pnpm check:bundle
+
+      - name: End-to-end behavior tests
+        run: PLAYWRIGHT_SKIP_BUILD=1 pnpm test:e2e
+
       - name: Visual tests
         if: ${{ !inputs.update_snapshots }}
-        run: pnpm test:visual
+        run: PLAYWRIGHT_SKIP_BUILD=1 pnpm test:visual
 
       - name: Regenerate Linux visual baselines
         if: ${{ inputs.update_snapshots }}
-        run: pnpm exec playwright test tests/visual/visual-regression.spec.ts --update-snapshots
+        run: PLAYWRIGHT_SKIP_BUILD=1 pnpm exec playwright test tests/visual/visual-regression.spec.ts --update-snapshots
 
       - name: Upload regenerated baselines
         if: ${{ inputs.update_snapshots }}
@@ -84,9 +90,3 @@ jobs:
         with:
           name: visual-baselines-linux
           path: tests/visual/visual-regression.spec.ts-snapshots/*-linux.png
-
-      - name: Build
-        run: pnpm build
-
-      - name: Bundle budget
-        run: pnpm check:bundle

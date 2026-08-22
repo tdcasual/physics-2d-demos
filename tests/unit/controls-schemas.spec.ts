@@ -1,29 +1,43 @@
 import { describe, it, expect } from 'vitest';
-import { chaseMeetControlsSchema } from '../../src/scenes/chase-meet/controls-schema';
-import { projectileControlsSchema } from '../../src/scenes/projectile/controls-schema';
-import { emfAnalogyControlsSchema } from '../../src/scenes/emf-analogy/controls-schema';
-import { fieldLinesControlsSchema } from '../../src/scenes/field-lines/controls-schema';
-import { electrificationControlsSchema } from '../../src/scenes/electrification/controls-schema';
-import { vtIntegralControlsSchema } from '../../src/scenes/vt-integral/controls-schema';
+import type { ControlsSchema } from '../../src/platform/controls-schema';
 
-const schemas = [
-  { id: 'chase-meet', schema: chaseMeetControlsSchema },
-  { id: 'projectile', schema: projectileControlsSchema },
-  { id: 'emf-analogy', schema: emfAnalogyControlsSchema },
-  { id: 'field-lines', schema: fieldLinesControlsSchema },
-  { id: 'electrification', schema: electrificationControlsSchema },
-  { id: 'vt-integral', schema: vtIntegralControlsSchema }
-];
+const schemaModules = import.meta.glob<Record<string, unknown>>(
+  '../../src/scenes/*/controls-schema.ts',
+  { eager: true }
+);
+
+const schemas = Object.entries(schemaModules)
+  .map(([path, module]) => {
+    const schema = Object.values(module).find(
+      (value): value is ControlsSchema =>
+        typeof value === 'object' &&
+        value !== null &&
+        'sections' in value &&
+        Array.isArray((value as { sections?: unknown }).sections)
+    );
+    return { id: path.split('/').slice(-2, -1)[0], schema };
+  })
+  .sort((a, b) => a.id.localeCompare(b.id));
 
 describe('Controls schemas', () => {
+  it('discovers every declarative controls schema', () => {
+    expect(schemas).toHaveLength(Object.keys(schemaModules).length);
+    for (const entry of schemas) {
+      expect(
+        entry.schema,
+        `${entry.id} has no exported ControlsSchema`
+      ).toBeDefined();
+    }
+  });
+
   for (const { id, schema } of schemas) {
     describe(`${id} controls schema`, () => {
       it('should have at least one section', () => {
-        expect(schema.sections.length).toBeGreaterThan(0);
+        expect(schema!.sections.length).toBeGreaterThan(0);
       });
 
       it('should have valid section titles', () => {
-        for (const section of schema.sections) {
+        for (const section of schema!.sections) {
           expect(typeof section.title).toBe('string');
           expect(section.title.length).toBeGreaterThan(0);
         }
@@ -31,7 +45,7 @@ describe('Controls schemas', () => {
 
       it('should have valid fields with unique keys', () => {
         const keys = new Set<string>();
-        for (const section of schema.sections) {
+        for (const section of schema!.sections) {
           expect(section.fields.length).toBeGreaterThan(0);
           for (const field of section.fields) {
             expect(typeof field.key).toBe('string');
@@ -49,13 +63,14 @@ describe('Controls schemas', () => {
           'text',
           'select',
           'button',
+          'toggle',
           'preset-group',
           'transport',
           'scene-selector',
           'button-grid',
           'custom'
         ];
-        for (const section of schema.sections) {
+        for (const section of schema!.sections) {
           for (const field of section.fields) {
             expect(validTypes).toContain(field.type);
           }
@@ -63,7 +78,7 @@ describe('Controls schemas', () => {
       });
 
       it('should have slider fields with valid numeric bounds', () => {
-        for (const section of schema.sections) {
+        for (const section of schema!.sections) {
           for (const field of section.fields) {
             if (field.type === 'slider') {
               expect(typeof field.min).toBe('number');
@@ -80,7 +95,7 @@ describe('Controls schemas', () => {
       });
 
       it('should have number fields with valid bounds if present', () => {
-        for (const section of schema.sections) {
+        for (const section of schema!.sections) {
           for (const field of section.fields) {
             if (field.type === 'number') {
               expect(typeof field.value).toBe('number');
@@ -97,8 +112,18 @@ describe('Controls schemas', () => {
         }
       });
 
+      it('should have toggle fields with boolean values', () => {
+        for (const section of schema!.sections) {
+          for (const field of section.fields) {
+            if (field.type === 'toggle') {
+              expect(typeof field.value).toBe('boolean');
+            }
+          }
+        }
+      });
+
       it('should have preset-group with valid columns and presets', () => {
-        for (const section of schema.sections) {
+        for (const section of schema!.sections) {
           for (const field of section.fields) {
             if (field.type === 'preset-group') {
               expect(field.presets.length).toBeGreaterThan(0);
@@ -119,7 +144,7 @@ describe('Controls schemas', () => {
       });
 
       it('should have button-grid with valid columns and buttons', () => {
-        for (const section of schema.sections) {
+        for (const section of schema!.sections) {
           for (const field of section.fields) {
             if (field.type === 'button-grid') {
               expect(field.buttons.length).toBeGreaterThan(0);
@@ -139,7 +164,7 @@ describe('Controls schemas', () => {
       });
 
       it('should have scene-selector with valid scenes if present', () => {
-        for (const section of schema.sections) {
+        for (const section of schema!.sections) {
           for (const field of section.fields) {
             if (field.type === 'scene-selector') {
               expect(field.scenes.length).toBeGreaterThan(0);
@@ -153,7 +178,7 @@ describe('Controls schemas', () => {
       });
 
       it('should have text fields with string value', () => {
-        for (const section of schema.sections) {
+        for (const section of schema!.sections) {
           for (const field of section.fields) {
             if (field.type === 'text') {
               expect(typeof field.value).toBe('string');
@@ -163,7 +188,7 @@ describe('Controls schemas', () => {
       });
 
       it('should have select fields with options', () => {
-        for (const section of schema.sections) {
+        for (const section of schema!.sections) {
           for (const field of section.fields) {
             if (field.type === 'select') {
               expect(field.options.length).toBeGreaterThan(0);

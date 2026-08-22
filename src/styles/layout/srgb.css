@@ -87,8 +87,15 @@
   display: block;
   width: 100%;
   height: 100%;
+  max-width: 100%;
+  max-height: 100%;
   min-width: 0;
   min-height: 0;
+}
+
+.srgb-graph-grid > canvas:only-child,
+.srgb-graph-grid > .graph-cell:only-child {
+  grid-column: 1 / -1;
 }
 
 /* ---- Graph cell (scene-level custom container) ---- */

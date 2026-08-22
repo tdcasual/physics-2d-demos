@@ -24,7 +24,7 @@
     "new:scene": "tsx scripts/new-scene.ts",
     "quality:core": "pnpm check:scenes && pnpm check:layouts && pnpm check:circular && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm check:bundle",
     "export:standalone": "vite build --config vite.config.standalone.ts",
-    "quality:full": "pnpm check:scenes && pnpm check:layouts && pnpm check:circular && pnpm lint && pnpm typecheck && pnpm test && pnpm test:coverage && pnpm build && pnpm check:bundle && pnpm test:e2e && pnpm test:visual",
+    "quality:full": "pnpm check:scenes && pnpm check:layouts && pnpm check:circular && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm build && pnpm check:bundle && PLAYWRIGHT_SKIP_BUILD=1 pnpm test:e2e && PLAYWRIGHT_SKIP_BUILD=1 pnpm test:visual",
     "prepare": "husky"
   },
   "devDependencies": {

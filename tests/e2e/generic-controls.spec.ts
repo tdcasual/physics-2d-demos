@@ -241,7 +241,10 @@ async function discoverControls(page: Page) {
           label,
           min: parseFloat(input.min) || 0,
           max: parseFloat(input.max) || 100,
-          value: parseFloat(input.value) || 0
+          value: parseFloat(input.value) || 0,
+          step: Number.isFinite(parseFloat(input.step))
+            ? parseFloat(input.step)
+            : 1
         });
       });
 
@@ -294,13 +297,14 @@ async function expandControlCards(page: Page) {
 
 // ── Per-Category Response Verification ──────────────────────────────────
 
-async function anySliderResponds(
+async function allSlidersRespond(
   page: Page,
   sliders: DiscoveredSlider[],
   area: string
 ): Promise<{ ok: boolean; detail: string }> {
   if (sliders.length === 0) return { ok: true, detail: 'no sliders' };
-  for (const slider of sliders.slice(0, 3)) {
+  const failures: string[] = [];
+  for (const slider of sliders) {
     const locator = page.locator(
       `${area} input[type="range"] >> nth=${slider.nth}`
     );
@@ -311,10 +315,17 @@ async function anySliderResponds(
       slider.value < (slider.min + slider.max) / 2
         ? Math.min(slider.max, slider.value + (slider.max - slider.min) * 0.3)
         : Math.max(slider.min, slider.value - (slider.max - slider.min) * 0.3);
-    // Round to valid step (range inputs reject non-step-multiples)
+    // Range steps are anchored at min, not at zero.
     const step = slider.step || 1;
-    testValue = Math.round(testValue / step) * step;
+    testValue = slider.min + Math.round((testValue - slider.min) / step) * step;
     testValue = Math.max(slider.min, Math.min(slider.max, testValue));
+    testValue = Number(testValue.toFixed(12));
+    if (testValue === slider.value) {
+      testValue =
+        slider.value + step <= slider.max
+          ? slider.value + step
+          : slider.value - step;
+    }
     await locator.fill(String(testValue));
     // Some sliders listen to 'change' instead of 'input' — dispatch both
     await locator.evaluate((el: HTMLInputElement) =>
@@ -330,16 +341,15 @@ async function anySliderResponds(
     }
 
     if (stateChanged(before, after)) {
-      return {
-        ok: true,
-        detail: `slider "${slider.label}" responded (${slider.value}→${testValue.toFixed(1)})`
-      };
+      continue;
     }
+    failures.push(
+      `"${slider.label}" (${slider.value}→${testValue.toFixed(1)})`
+    );
   }
-  return {
-    ok: false,
-    detail: `tested ${Math.min(sliders.length, 3)} sliders, none responded`
-  };
+  return failures.length === 0
+    ? { ok: true, detail: `all ${sliders.length} sliders responded` }
+    : { ok: false, detail: `unresponsive sliders: ${failures.join(', ')}` };
 }
 
 async function anyButtonResponds(
@@ -395,7 +405,9 @@ async function anyCheckboxResponds(
     if (!(await locator.isVisible().catch(() => false))) continue;
 
     const before = await captureSceneState(page);
+    const checkedBefore = await locator.isChecked();
     await locator.click();
+    const checkedAfter = await locator.isChecked();
 
     let after = before;
     const start = Date.now();
@@ -411,12 +423,9 @@ async function anyCheckboxResponds(
     if (changed) {
       return { ok: true, detail: `checkbox "${cb.label}" responded` };
     }
-    // If state didn't change but checkbox toggled successfully, that's acceptable
-    // (visual toggles may not affect readout/canvas directly)
-    return {
-      ok: true,
-      detail: `checkbox "${cb.label}" toggled (visual-only control)`
-    };
+    if (checkedBefore !== checkedAfter) {
+      return { ok: true, detail: `checkbox "${cb.label}" toggled` };
+    }
   }
   return {
     ok: false,
@@ -449,7 +458,11 @@ test.describe('Generic Control Response (Desktop)', () => {
 
       const area = '.control-slot';
 
-      const sliderResult = await anySliderResponds(page, raw.sliders, area);
+      expect(
+        raw.sliders.length + buttons.length + raw.checkboxes.length,
+        `${sceneId}: control panel must not be empty`
+      ).toBeGreaterThan(0);
+      const sliderResult = await allSlidersRespond(page, raw.sliders, area);
       console.log(
         `  → sliders: ${sliderResult.ok ? 'PASS' : 'FAIL'} — ${sliderResult.detail}`
       );
@@ -506,7 +519,11 @@ test.describe('Generic Control Response (Mobile)', () => {
 
       const area = '.mobile-control-slot';
 
-      const sliderResult = await anySliderResponds(page, raw.sliders, area);
+      expect(
+        raw.sliders.length + buttons.length + raw.checkboxes.length,
+        `${sceneId} mobile: control panel must not be empty`
+      ).toBeGreaterThan(0);
+      const sliderResult = await allSlidersRespond(page, raw.sliders, area);
       console.log(
         `  → sliders: ${sliderResult.ok ? 'PASS' : 'FAIL'} — ${sliderResult.detail}`
       );

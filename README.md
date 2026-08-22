@@ -218,13 +218,13 @@ CI 流程：
 
 1. install
 2. scene structure check
-3. circular dependency check
-4. lint
-5. typecheck
-6. test
-7. coverage
-8. visual tests
-9. build
-10. bundle budget
+3. layout contract check
+4. circular dependency check
+5. lint + typecheck
+6. unit and contract tests with coverage
+7. install Playwright browsers and CJK fonts
+8. build + bundle budget
+9. E2E behavior tests
+10. visual, layout, accessibility and cross-browser tests
 
 只有全绿才应进入发布流程。

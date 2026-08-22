@@ -20,6 +20,16 @@ pnpm quality:full
 `quality:core` 已按该顺序编排：结构检查、依赖检查、静态检查、单元测试、构建、bundle budget。
 `quality:full` 已按该顺序编排：结构检查、依赖检查、静态检查、单元/覆盖率、构建、bundle budget、E2E、视觉测试。
 
+Vitest 覆盖率阈值以 `vite.config.ts` 为唯一事实来源：lines 65%、functions 65%、branches 70%、statements 65%。`quality:full` 只执行一次带覆盖率的 Vitest，随后只构建一次；E2E 与 visual 共用该 `dist/`，避免重复工作掩盖真实失败。
+
+Playwright 分工如下：
+
+- `tests/e2e/`：通用控件、布局切换、transport 等行为契约。
+- `tests/visual/`：布局矩阵、无障碍、跨浏览器、视觉快照及专项回归。
+- `layout-matrix.spec.ts`：自动遍历全部场景与全部注册布局，验证 profile 视口、无横向溢出、活跃 Canvas 尺寸/边界/响应式比例/非空像素，以及 graph 激活。
+
+浏览器门禁是合并前要求。若本机浏览器环境被明确阻断，应记录命令和错误并由 CI 补跑；不能因环境问题删除测试、增加 skip 或声称完整门禁已通过。
+
 ## Bundle Budget
 
 预算脚本：`scripts/check-bundle-budget.ts`
@@ -68,4 +78,4 @@ pnpm test:visual
 
 ## CI 顺序
 
-CI 先跑结构、类型、单测和视觉，再构建并检查 bundle budget。这样可以把“代码不合法”和“产物超预算”分开定位。
+CI 依次运行场景/布局结构检查、循环依赖、lint、类型检查、带覆盖率的单元与契约测试、浏览器与 CJK 字体安装、单次构建、bundle budget、E2E 和 visual。手动更新 Linux 快照时仍执行 E2E，但 visual 阶段只重生成权威 Linux 基线并上传 artifact。

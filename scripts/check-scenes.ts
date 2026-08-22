@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import ts from 'typescript';
 
 const root = process.cwd();
 const scenesDir = join(root, 'src/scenes');
@@ -20,6 +21,38 @@ type SceneCheckResult = {
 
 function read(path: string): string {
   return readFileSync(path, 'utf8');
+}
+
+function readStringProperty(
+  source: string,
+  fileName: string,
+  propertyName: string
+): string | null {
+  const sourceFile = ts.createSourceFile(
+    fileName,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS
+  );
+  let value: string | null = null;
+
+  const visit = (node: ts.Node): void => {
+    if (
+      value === null &&
+      ts.isPropertyAssignment(node) &&
+      ((ts.isIdentifier(node.name) && node.name.text === propertyName) ||
+        (ts.isStringLiteral(node.name) && node.name.text === propertyName)) &&
+      ts.isStringLiteralLike(node.initializer)
+    ) {
+      value = node.initializer.text;
+      return;
+    }
+    ts.forEachChild(node, visit);
+  };
+
+  visit(sourceFile);
+  return value;
 }
 
 function listSceneIds(): string[] {
@@ -62,7 +95,20 @@ function checkScene(id: string): SceneCheckResult {
         'scene.meta.ts must import shared contracts from platform/core, not app/ui'
       );
     }
-    if (!source.includes('testProfile:')) {
+    const metaId = readStringProperty(source, metaPath, 'id');
+    const metaPagePath = readStringProperty(source, metaPath, 'path');
+    if (metaId !== id) {
+      errors.push(
+        `SceneMeta.id must be "${id}", got ${JSON.stringify(metaId)}`
+      );
+    }
+    const expectedPagePath = `/src/pages/${id}.html`;
+    if (metaPagePath !== expectedPagePath) {
+      errors.push(
+        `SceneMeta.path must be "${expectedPagePath}", got ${JSON.stringify(metaPagePath)}`
+      );
+    }
+    if (!/\btestProfile\s*:/.test(source)) {
       errors.push('scene.meta.ts must declare testProfile');
     }
   }

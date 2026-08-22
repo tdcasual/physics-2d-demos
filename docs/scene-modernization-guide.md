@@ -233,6 +233,6 @@ pnpm new:scene <id> [标题]     # 例：pnpm new:scene pendulum 单摆
 - [ ] 实现了 `setMode` 的 presentation 缩放（`getRenderTokens` / `demoHints`），或确认仍在豁免清单
 - [ ] `meta.defaultParams` 键与控制面板字段键一致（URL 往返正确）
 - [ ] 主题切换（light/dark）下渲染正常
-- [ ] 单测（sim + renderer）与 parity 测试通过
+- [ ] 单测（sim + renderer）、场景契约与布局矩阵通过
 - [ ] `pnpm quality:core` 全绿；涉及视觉时 `pnpm test:visual` 通过
 - [ ] 移动端截图无元素遮挡/过度拥挤

@@ -4,57 +4,80 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('resizer drag fix', () => {
-  test('spring-oscillator grid-template-columns updated during drag', async ({ page }) => {
+  test('spring-oscillator grid-template-columns updated during drag', async ({
+    page
+  }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto('/src/pages/spring-oscillator.html', { waitUntil: 'domcontentloaded' });
+    await page.goto('/src/pages/spring-oscillator.html', {
+      waitUntil: 'domcontentloaded'
+    });
     await page.waitForTimeout(2000);
 
     const container = page.locator('[data-testid="split-right-layout"]');
-    const initialGrid = await container.evaluate(el => (el as HTMLElement).style.gridTemplateColumns);
+    const initialGrid = await container.evaluate(
+      (el) => (el as HTMLElement).style.gridTemplateColumns
+    );
 
     // Simulate drag on resizer
     const resizer = container.locator('.teaching-panel-resizer');
     const box = await resizer.boundingBox();
-    if (box) {
-      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-      await page.mouse.down();
-      await page.mouse.move(box.x + 100, box.y + box.height / 2, { steps: 5 });
-      await page.mouse.up();
-      await page.waitForTimeout(300);
+    expect(box, 'spring-oscillator resizer must be visible').not.toBeNull();
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box!.x + 100, box!.y + box!.height / 2, { steps: 5 });
+    await page.mouse.up();
 
-      const newGrid = await container.evaluate(el => (el as HTMLElement).style.gridTemplateColumns);
-      expect(newGrid).not.toBe(initialGrid);
-    }
+    await expect
+      .poll(async () => {
+        const newGrid = await container.evaluate(
+          (el) => (el as HTMLElement).style.gridTemplateColumns
+        );
+        return newGrid;
+      })
+      .not.toBe(initialGrid);
   });
 
   test('ganshe grid-template-columns updated during drag', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto('/src/pages/ganshe.html', { waitUntil: 'domcontentloaded' });
+    await page.goto('/src/pages/ganshe.html', {
+      waitUntil: 'domcontentloaded'
+    });
     await page.waitForTimeout(2000);
 
-    const container = page.locator('[data-testid="split-right-graph-bottom-layout"]');
-    const initialGrid = await container.evaluate(el => (el as HTMLElement).style.gridTemplateColumns);
+    const container = page.locator(
+      '[data-testid="split-right-graph-bottom-layout"]'
+    );
+    const initialGrid = await container.evaluate(
+      (el) => (el as HTMLElement).style.gridTemplateColumns
+    );
 
     const resizer = container.locator('.srgb-resizer-v');
     const box = await resizer.boundingBox();
-    if (box) {
-      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-      await page.mouse.down();
-      await page.mouse.move(box.x + 100, box.y + box.height / 2, { steps: 5 });
-      await page.mouse.up();
-      await page.waitForTimeout(300);
+    expect(box, 'ganshe resizer must be visible').not.toBeNull();
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box!.x + 100, box!.y + box!.height / 2, { steps: 5 });
+    await page.mouse.up();
 
-      const newGrid = await container.evaluate(el => (el as HTMLElement).style.gridTemplateColumns);
-      // After drag, the first column should be larger
-      expect(newGrid).not.toBe(initialGrid);
-    }
+    await expect
+      .poll(async () => {
+        const newGrid = await container.evaluate(
+          (el) => (el as HTMLElement).style.gridTemplateColumns
+        );
+        return newGrid;
+      })
+      .not.toBe(initialGrid);
   });
 });
 
 test.describe('controlColumns', () => {
-  test('ganshe control slot has data-control-columns attribute', async ({ page }) => {
+  test('ganshe control slot has data-control-columns attribute', async ({
+    page
+  }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto('/src/pages/ganshe.html', { waitUntil: 'domcontentloaded' });
+    await page.goto('/src/pages/ganshe.html', {
+      waitUntil: 'domcontentloaded'
+    });
     await page.waitForTimeout(2000);
 
     const controlSlot = page.locator('.srgb-control-slot');
@@ -64,11 +87,15 @@ test.describe('controlColumns', () => {
 
   test('ganshe control cards display in grid layout', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto('/src/pages/ganshe.html', { waitUntil: 'domcontentloaded' });
+    await page.goto('/src/pages/ganshe.html', {
+      waitUntil: 'domcontentloaded'
+    });
     await page.waitForTimeout(2000);
 
     const controlSlot = page.locator('.srgb-control-slot');
-    const display = await controlSlot.evaluate(el => getComputedStyle(el).display);
+    const display = await controlSlot.evaluate(
+      (el) => getComputedStyle(el).display
+    );
     // Should be 'grid' not 'flex'
     expect(display).toBe('grid');
   });

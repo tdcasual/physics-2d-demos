@@ -107,12 +107,18 @@ class MockLayout {
   }
 
   async unmount() {
-    try { this._container.replaceChildren(); } catch { /* detached */ }
+    try {
+      this._container.replaceChildren();
+    } catch {
+      /* detached */
+    }
   }
 
   setTheme() {}
   handleResize() {}
-  getSlots() { return this._slots; }
+  getSlots() {
+    return this._slots;
+  }
 }
 
 describe('Container edge cases', () => {
@@ -124,17 +130,17 @@ describe('Container edge cases', () => {
     document.body.appendChild(appDiv);
 
     layoutRegistry.clear();
-    layoutRegistry.register(
-      'mock-layout',
-      MockLayout as never,
-      {
-        name: 'Mock',
-        description: 'Test',
-        tags: [],
-        supportsMobile: true,
-        supportedSlots: ['control', 'animation']
+    layoutRegistry.register('mock-layout', MockLayout as never, {
+      name: 'Mock',
+      description: 'Test',
+      tags: [],
+      supportsMobile: true,
+      supportedSlots: ['control', 'animation'],
+      layoutTestProfile: {
+        viewports: [{ width: 800, height: 600 }],
+        interactionModel: 'split'
       }
-    );
+    });
   });
 
   afterEach(() => {
@@ -145,7 +151,9 @@ describe('Container edge cases', () => {
 
   it('scene.unmount() throw should not prevent container from setting new scene', async () => {
     const badScene = createMockScene({
-      unmount: vi.fn(() => { throw new Error('unmount boom'); })
+      unmount: vi.fn(() => {
+        throw new Error('unmount boom');
+      })
     });
     const goodScene = createMockScene();
 
@@ -157,7 +165,9 @@ describe('Container edge cases', () => {
 
   it('scene.setTheme() throw should not crash container.setTheme', async () => {
     const scene = createMockScene({
-      setTheme: vi.fn(() => { throw new Error('theme boom'); })
+      setTheme: vi.fn(() => {
+        throw new Error('theme boom');
+      })
     });
 
     const container = createSceneContainer({ mount: appDiv });
@@ -236,14 +246,16 @@ describe('Container edge cases', () => {
     const container = createSceneContainer({ mount: appDiv });
     await container.setScene(scene as never);
 
-    await expect(
-      container.switchLayout('nonexistent-layout')
-    ).rejects.toThrow('not found');
+    await expect(container.switchLayout('nonexistent-layout')).rejects.toThrow(
+      'not found'
+    );
   });
 
   it('scene.saveState() throw should not prevent scene switch', async () => {
     const badScene = createMockScene({
-      saveState: vi.fn(() => { throw new Error('save boom'); })
+      saveState: vi.fn(() => {
+        throw new Error('save boom');
+      })
     });
     const goodScene = createMockScene();
 

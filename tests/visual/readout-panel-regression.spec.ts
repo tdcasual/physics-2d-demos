@@ -8,6 +8,7 @@
  *  - teaching/srgb 前缀使用统一 CSS
  */
 import { test, expect } from '@playwright/test';
+import { sceneIds, scenePage } from './scene-pages';
 
 const SCENES = [
   { id: 'spring-oscillator', prefix: 'teaching', name: '弹簧振子' },
@@ -22,7 +23,9 @@ for (const scene of SCENES) {
   test.describe(`${scene.name} (${scene.prefix}) readout panel`, () => {
     test.beforeEach(async ({ page }) => {
       await page.setViewportSize({ width: 1440, height: 900 });
-      await page.goto(`/src/pages/${scene.id}.html`, { waitUntil: 'domcontentloaded' });
+      await page.goto(`/src/pages/${scene.id}.html`, {
+        waitUntil: 'domcontentloaded'
+      });
       await page.waitForTimeout(2000);
     });
 
@@ -40,7 +43,9 @@ for (const scene of SCENES) {
 
     test('panel floats with absolute positioning', async ({ page }) => {
       const panel = page.locator(`.${scene.prefix}-readout-panel`);
-      const position = await panel.evaluate(el => getComputedStyle(el).position);
+      const position = await panel.evaluate(
+        (el) => getComputedStyle(el).position
+      );
       expect(position).toBe('absolute');
     });
 
@@ -51,7 +56,7 @@ for (const scene of SCENES) {
       const panel = page.locator(`.${scene.prefix}-readout-panel`);
 
       // Panel z-index should be high (float above content)
-      const zIndex = await panel.evaluate(el => getComputedStyle(el).zIndex);
+      const zIndex = await panel.evaluate((el) => getComputedStyle(el).zIndex);
       expect(zIndex).toBe('100');
     });
 
@@ -89,13 +94,17 @@ for (const scene of SCENES) {
 
       // Each item should have a label and value
       const firstItem = items.first();
-      await expect(firstItem.locator(`.${scene.prefix}-readout-label`)).toBeVisible();
-      await expect(firstItem.locator(`.${scene.prefix}-readout-value`)).toBeVisible();
+      await expect(
+        firstItem.locator(`.${scene.prefix}-readout-label`)
+      ).toBeVisible();
+      await expect(
+        firstItem.locator(`.${scene.prefix}-readout-value`)
+      ).toBeVisible();
     });
 
     test('collapsed panel hides readout slot', async ({ page }) => {
       const slot = page.locator(`.${scene.prefix}-readout-slot`);
-      const isHidden = await slot.evaluate(el => {
+      const isHidden = await slot.evaluate((el) => {
         const cs = getComputedStyle(el);
         return cs.display === 'none';
       });
@@ -106,7 +115,7 @@ for (const scene of SCENES) {
 
     test('header shows drag cursor', async ({ page }) => {
       const header = page.locator(`.${scene.prefix}-readout-header`);
-      const cursor = await header.evaluate(el => getComputedStyle(el).cursor);
+      const cursor = await header.evaluate((el) => getComputedStyle(el).cursor);
       expect(cursor).toBe('move');
     });
 
@@ -130,7 +139,9 @@ for (const scene of SCENES) {
       await expect(panel).toBeVisible();
 
       // Verify background is dark (not white)
-      const bg = await panel.evaluate(el => getComputedStyle(el).backgroundColor);
+      const bg = await panel.evaluate(
+        (el) => getComputedStyle(el).backgroundColor
+      );
       // Dark background should not be white or near-white
       expect(bg).not.toBe('rgb(255, 255, 255)');
     });
@@ -144,11 +155,15 @@ for (const scene of SCENES) {
 test.describe('mobile-stack readout panel', () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('/src/pages/spring-oscillator.html', { waitUntil: 'domcontentloaded' });
+    await page.goto('/src/pages/spring-oscillator.html', {
+      waitUntil: 'domcontentloaded'
+    });
     await page.waitForTimeout(2000);
   });
 
-  test('uses mobile prefix on small viewport and appears in data tab', async ({ page }) => {
+  test('uses mobile prefix on small viewport and appears in data tab', async ({
+    page
+  }) => {
     // Mobile stack layout mounts readout inside the 数据 tab.
     const mobilePanel = page.locator('.mobile-readout-panel');
     const teachingPanel = page.locator('.teaching-readout-panel');
@@ -163,37 +178,20 @@ test.describe('mobile-stack readout panel', () => {
 // Cross-scene consistency: all split-right scenes
 // ============================================================================
 
-const SPLIT_RIGHT_SCENES = [
-  'spring-oscillator',
-  'chase-meet',
-  'projectile',
-  'electrification',
-  'emf-analogy',
-  'field-lines',
-  'vt-integral'
-];
-
-test.describe('all split-right scenes have functional readout', () => {
-  for (const sceneId of SPLIT_RIGHT_SCENES) {
+test.describe('all scenes have functional desktop readout', () => {
+  for (const sceneId of sceneIds) {
     test(`${sceneId} readout toggle works`, async ({ page }) => {
       await page.setViewportSize({ width: 1440, height: 900 });
-      await page.goto(`/src/pages/${sceneId}.html`, { waitUntil: 'domcontentloaded' });
-      await page.waitForTimeout(2000);
+      await page.goto(scenePage(sceneId), { waitUntil: 'domcontentloaded' });
 
-      // Find the readout toggle button (either prefix)
       const toggle = page.locator('[class*="-readout-toggle"]').first();
-      if (await toggle.isVisible().catch(() => false)) {
-        // Should show "展开" (expand) when collapsed
-        const text = await toggle.textContent();
-        expect(text).toMatch(/展开|折叠/);
+      await expect(toggle, `${sceneId}: readout toggle missing`).toBeVisible();
+      const text = await toggle.textContent();
+      expect(text).toMatch(/展开|折叠/);
 
-        // Click should change text
-        await toggle.click();
-        await page.waitForTimeout(300);
-        const newText = await toggle.textContent();
-        expect(newText).toMatch(/展开|折叠/);
-        expect(newText).not.toBe(text);
-      }
+      await toggle.click();
+      await expect(toggle).not.toHaveText(text ?? '');
+      await expect(toggle).toHaveText(/展开|折叠/);
     });
   }
 });

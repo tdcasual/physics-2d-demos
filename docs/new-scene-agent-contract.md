@@ -18,8 +18,9 @@
 2. `SceneMeta.id`、目录名、HTML 文件名和 `path` 必须一致。
 3. controls 优先使用 `controls-schema.ts` 和共享 `SchemaRenderer`；使用 imperative `controls.ts` 时说明原因。
 4. `scene.view.ts` 使用标准 canvas sizing 和 `responsiveScale`，不要用固定裸数字决定移动端元素尺寸。
-5. 场景只声明自身能力：是否有 graph、transport、readout、presentation；不要把 `mobile-stack`、tab id 或某个布局的 CSS selector 写入场景 profile。
+5. `testProfile` 只声明自身能力：`hasGraph`、`hasTransport`、`supportsPresentation`；不要把 `mobile-stack`、tab id 或某个布局的 CSS selector 写入场景 profile。
 6. graph 场景必须实现 `renderGraph` 或 `attachGraphCanvas`，并在每种兼容交互模型下产生实际 render surface。
+7. 新场景的 Canvas 空间参数和尺寸变量中，大于 50 的字面量必须由 `responsiveScale`、viewport 尺寸或标准 token 推导；不得把新场景加入历史豁免清单。
 
 ## 布局交付要求
 
@@ -28,7 +29,7 @@
 - 通过 `registerLayout` 注册，不在测试文件中复制布局列表。
 - 提供 `supportedSlots` 和 `layoutTestProfile`。
 - `interactionModel: 'tabs'` 才需要 tab/panel ARIA 和激活状态；split、fullscreen、custom 使用自己的适配器契约。
-- `autoSelectable: true` 必须有 profile；profile 的 viewport 必须覆盖布局实际支持的设备尺寸。
+- 每个注册布局都必须有 profile，包括 `autoSelectable: false` 的手动或实验布局；profile 的 viewport 必须满足布局自身约束。
 - 至少验证无 graph、含 graph、含 controls/readout 的真实场景，并验证布局切换后的 DOM 清理。
 
 ## 必跑命令
@@ -44,7 +45,9 @@ pnpm build
 pnpm check:bundle
 ```
 
-若环境允许浏览器运行，再执行 `pnpm test:e2e`、`pnpm exec playwright test tests/visual/layout-matrix.spec.ts` 和 `pnpm test:visual`。布局矩阵会自动遍历全部场景与已注册布局，是新增场景的强制结构门禁。像素回归只覆盖 `tests/visual/visual-regression.spec.ts` 中明确列出的代表场景；新增场景默认不加入像素清单，除非同时审查并生成 Darwin/Linux 两套基线。视觉失败不能直接更新 snapshot；先确认 viewport、字体、布局和实际 DOM。移动 tab 的非激活 panel 中 canvas 可以是 `display:none`，断言前必须激活目标 tab 或过滤非激活 panel。
+浏览器门禁也是必跑项：执行 `pnpm test:e2e` 和 `pnpm test:visual`。`quality:full` 会在一次构建后复用 `dist/` 执行这两套测试；`tests/visual/layout-matrix.spec.ts` 已包含在 visual 套件中，也可单独运行以快速定位布局问题。只有浏览器安装或执行环境存在明确、可复现的阻断时才可暂时缺跑，最终报告必须写出失败命令、错误和待补验证，且不能把任务报告为可合并完成。
+
+布局矩阵自动遍历全部场景、全部注册布局及 profile 视口，并检查页面无横向溢出、活跃 Canvas 尺寸、slot 水平边界、`responsiveScale` 范围与缩略像素内容非空；graph 会在需要时先激活对应 tab。像素回归只覆盖 `tests/visual/visual-regression.spec.ts` 中明确列出的代表场景；新增场景默认不加入像素清单，除非同时审查并生成 Darwin/Linux 两套基线。视觉失败不能直接更新 snapshot；先确认 viewport、字体、布局和实际 DOM。移动 tab 的非激活 panel 中 canvas 可以是 `display:none`，断言前必须激活目标 tab 或过滤非激活 panel。
 
 ## 失败报告格式
 

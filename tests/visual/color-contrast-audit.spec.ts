@@ -15,7 +15,7 @@ for (const scene of sceneIds) {
     await page.goto(`http://127.0.0.1:${PORT}${scenePage(scene)}`, {
       waitUntil: 'domcontentloaded'
     });
-    await page.waitForTimeout(1500);
+    await expect(page.locator('[data-layout-id]')).toBeVisible();
 
     const accessibilityScanResults = await new AxeBuilder({ page })
       .withTags(['wcag2aa'])
@@ -23,6 +23,10 @@ for (const scene of sceneIds) {
 
     const contrastViolations = accessibilityScanResults.violations.filter(
       (v) => v.id === 'color-contrast'
+    );
+    const severeViolations = accessibilityScanResults.violations.filter(
+      (violation) =>
+        violation.impact === 'critical' || violation.impact === 'serious'
     );
 
     if (contrastViolations.length > 0) {
@@ -46,6 +50,10 @@ for (const scene of sceneIds) {
       contrastViolations.length,
       `${scene} (light): should have 0 color-contrast violations`
     ).toBe(0);
+    expect(
+      severeViolations,
+      `${scene} (light): should have no serious or critical WCAG violations`
+    ).toEqual([]);
   });
 
   test(`color contrast (dark theme): ${scene}`, async ({ page }) => {
@@ -54,7 +62,7 @@ for (const scene of sceneIds) {
       `http://127.0.0.1:${PORT}${scenePage(scene, '?theme=dark')}`,
       { waitUntil: 'domcontentloaded' }
     );
-    await page.waitForTimeout(1500);
+    await expect(page.locator('[data-layout-id]')).toBeVisible();
 
     // 确保 dark theme 已生效
     const htmlTheme = await page.evaluate(() =>
@@ -72,6 +80,10 @@ for (const scene of sceneIds) {
 
     const contrastViolations = accessibilityScanResults.violations.filter(
       (v) => v.id === 'color-contrast'
+    );
+    const severeViolations = accessibilityScanResults.violations.filter(
+      (violation) =>
+        violation.impact === 'critical' || violation.impact === 'serious'
     );
 
     if (contrastViolations.length > 0) {
@@ -95,5 +107,9 @@ for (const scene of sceneIds) {
       contrastViolations.length,
       `${scene} (dark): should have 0 color-contrast violations`
     ).toBe(0);
+    expect(
+      severeViolations,
+      `${scene} (dark): should have no serious or critical WCAG violations`
+    ).toEqual([]);
   });
 }

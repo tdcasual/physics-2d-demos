@@ -28,13 +28,10 @@
 import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import ts from 'typescript';
 
 // vitest 的 cwd 为项目根目录（与 scripts/check-scenes.ts 一致）
 const scenesDir = resolve(process.cwd(), 'src/scenes');
-
-/** 渲染代码是否经由响应式缩放机制 */
-const RESPONSIVE_PATTERN =
-  /responsiveScale|getResponsiveScale|scaledSize|sizeCanvasTo/;
 
 /** Graph-capable scenes must expose a standard graph mounting entry point. */
 const GRAPH_ENTRY_PATTERN = /\b(?:renderGraph|attachGraphCanvas)\s*\(/;
@@ -48,6 +45,55 @@ const PRESENTATION_PATTERN = /getRenderTokens|demoHints/;
  * 若它已采用标准机制却仍在清单中，测试会失败提醒你删除。
  */
 const PRESENTATION_EXEMPT: string[] = [];
+
+/**
+ * Historical renderers predate the strict large-literal rule. Keep this list
+ * frozen and shrink it when a renderer is modernized; new scenes are checked
+ * automatically because their id is absent from the list.
+ */
+const LARGE_RENDER_LITERAL_EXEMPT = new Set([
+  'chase-meet',
+  'doppler-effect',
+  'double-slit',
+  'electrification',
+  'emf-analogy',
+  'field-lines',
+  'ganshe',
+  'interference-formula',
+  'mechanical-wave',
+  'micrometer',
+  'projectile',
+  'spring-oscillator',
+  'thin-film',
+  'vernier-caliper',
+  'vt-integral',
+  'wedge'
+]);
+
+const CANVAS_SPATIAL_METHODS = new Set([
+  'arc',
+  'ellipse',
+  'fillRect',
+  'strokeRect',
+  'clearRect',
+  'rect',
+  'roundRect',
+  'fillText',
+  'strokeText',
+  'drawImage',
+  'moveTo',
+  'lineTo',
+  'bezierCurveTo',
+  'quadraticCurveTo',
+  'translate'
+]);
+
+const DIMENSION_NAME_PATTERN =
+  /(?:width|height|size|radius|diameter|offset|padding|margin|gap|font|stroke|line)/i;
+const REFERENCE_DIMENSION_PATTERN =
+  /(?:reference|design|base).*(?:width|height|size)/i;
+const RESPONSIVE_FACTOR_PATTERN =
+  /(?:scale|token|width|height|canvas|viewport)/i;
 
 function listSceneIds(): string[] {
   return readdirSync(scenesDir)
@@ -69,10 +115,181 @@ function collectSceneSource(id: string): string {
   return parts.join('\n');
 }
 
+function collectSceneRenderSource(id: string): string {
+  const parts: string[] = [];
+  const walk = (dir: string): void => {
+    for (const entry of readdirSync(dir)) {
+      const full = join(dir, entry);
+      if (statSync(full).isDirectory()) {
+        walk(full);
+      } else if (
+        entry.endsWith('.ts') &&
+        (entry === 'scene.view.ts' || full.includes(`${join('', 'renderer')}/`))
+      ) {
+        parts.push(readFileSync(full, 'utf8'));
+      }
+    }
+  };
+  walk(resolve(scenesDir, id));
+  return parts.join('\n');
+}
+
 const sceneIds = listSceneIds();
 const sceneSources = new Map(
   sceneIds.map((id) => [id, collectSceneSource(id)])
 );
+const sceneRenderSources = new Map(
+  sceneIds.map((id) => [id, collectSceneRenderSource(id)])
+);
+
+function expressionContainsResponsiveFactor(node: ts.Node): boolean {
+  let found = false;
+  const visit = (child: ts.Node): void => {
+    if (ts.isIdentifier(child) && RESPONSIVE_FACTOR_PATTERN.test(child.text)) {
+      found = true;
+      return;
+    }
+    if (!found) ts.forEachChild(child, visit);
+  };
+  visit(node);
+  return found;
+}
+
+function isScaledLiteral(node: ts.NumericLiteral): boolean {
+  let current: ts.Node | undefined = node.parent;
+  while (current && !ts.isStatement(current)) {
+    if (
+      ts.isCallExpression(current) &&
+      ts.isIdentifier(current.expression) &&
+      current.expression.text === 'scaledSize'
+    ) {
+      return true;
+    }
+    if (
+      ts.isBinaryExpression(current) &&
+      (current.operatorToken.kind === ts.SyntaxKind.AsteriskToken ||
+        current.operatorToken.kind === ts.SyntaxKind.SlashToken) &&
+      expressionContainsResponsiveFactor(current)
+    ) {
+      return true;
+    }
+    current = current.parent;
+  }
+  return false;
+}
+
+function containingDimensionName(node: ts.Node): string | null {
+  let current: ts.Node | undefined = node.parent;
+  while (current && !ts.isStatement(current)) {
+    if (ts.isVariableDeclaration(current) && ts.isIdentifier(current.name)) {
+      return current.name.text;
+    }
+    if (
+      ts.isBinaryExpression(current) &&
+      current.operatorToken.kind === ts.SyntaxKind.EqualsToken
+    ) {
+      const left = current.left;
+      if (ts.isIdentifier(left)) return left.text;
+      if (ts.isPropertyAccessExpression(left)) return left.name.text;
+    }
+    current = current.parent;
+  }
+  return null;
+}
+
+function isCanvasSpatialArgument(node: ts.Node): boolean {
+  let current: ts.Node | undefined = node.parent;
+  while (current && !ts.isStatement(current)) {
+    if (ts.isCallExpression(current)) {
+      const expression = current.expression;
+      return (
+        ts.isPropertyAccessExpression(expression) &&
+        CANVAS_SPATIAL_METHODS.has(expression.name.text)
+      );
+    }
+    current = current.parent;
+  }
+  return false;
+}
+
+function findUnscaledLargeRenderLiterals(id: string, source: string): string[] {
+  const sourceFile = ts.createSourceFile(
+    `${id}.render.ts`,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS
+  );
+  const violations: string[] = [];
+
+  const visit = (node: ts.Node): void => {
+    if (ts.isNumericLiteral(node) && Number(node.text) > 50) {
+      const dimensionName = containingDimensionName(node);
+      const isDimension =
+        dimensionName !== null &&
+        DIMENSION_NAME_PATTERN.test(dimensionName) &&
+        !REFERENCE_DIMENSION_PATTERN.test(dimensionName);
+      if (
+        (isDimension || isCanvasSpatialArgument(node)) &&
+        !isScaledLiteral(node)
+      ) {
+        const position = sourceFile.getLineAndCharacterOfPosition(
+          node.getStart()
+        );
+        violations.push(
+          `${position.line + 1}:${position.character + 1} (${node.text})`
+        );
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return violations;
+}
+
+function usesResponsiveSizing(id: string, source: string): boolean {
+  const sourceFile = ts.createSourceFile(
+    `${id}.ts`,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS
+  );
+  let found = false;
+  const responsiveCalls = new Set([
+    'getResponsiveScale',
+    'scaledSize',
+    'sizeCanvasToFill',
+    'sizeCanvasToParent'
+  ]);
+
+  const visit = (node: ts.Node): void => {
+    if (found) return;
+    if (
+      ts.isPropertyAccessExpression(node) &&
+      node.name.text === 'responsiveScale'
+    ) {
+      found = true;
+      return;
+    }
+    if (ts.isCallExpression(node)) {
+      const expression = node.expression;
+      const name = ts.isIdentifier(expression)
+        ? expression.text
+        : ts.isPropertyAccessExpression(expression)
+          ? expression.name.text
+          : '';
+      if (responsiveCalls.has(name) || name.startsWith('sizeCanvasTo')) {
+        found = true;
+        return;
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+
+  visit(sourceFile);
+  return found;
+}
 const sceneMetaModules = import.meta.glob('../../src/scenes/*/scene.meta.ts', {
   eager: true,
   import: '*'
@@ -124,11 +341,43 @@ describe('scene modernization standard (anti-drift ratchet)', () => {
     it.each(sceneIds)('%s: 渲染代码经由响应式缩放机制', (id) => {
       const source = sceneSources.get(id)!;
       expect(
-        RESPONSIVE_PATTERN.test(source),
+        usesResponsiveSizing(id, source),
         `场景 "${id}" 未使用响应式缩放机制（responsiveScale / getResponsiveScale / ` +
           `scaledSize / sizeCanvasTo*）。移动端可能出现元素过大/过小。` +
           `参考 src/core/canvas-sizing.ts 与 projectile 场景。`
       ).toBe(true);
+    });
+
+    it('detects unscaled large Canvas dimensions without rejecting scaled values', () => {
+      const violations = findUnscaledLargeRenderLiterals(
+        'fixture',
+        `function draw(ctx: CanvasRenderingContext2D, responsiveScale: number) {
+          const labelOffset = 64;
+          ctx.arc(100, 100, 60, 0, Math.PI * 2);
+          ctx.arc(100 * responsiveScale, 100 * responsiveScale, 60 * responsiveScale, 0, Math.PI * 2);
+        }`
+      );
+      expect(violations).toHaveLength(4);
+    });
+
+    it('future scenes contain no unscaled large Canvas dimensions', () => {
+      const violations = sceneIds
+        .filter((id) => !LARGE_RENDER_LITERAL_EXEMPT.has(id))
+        .flatMap((id) =>
+          findUnscaledLargeRenderLiterals(id, sceneRenderSources.get(id)!).map(
+            (violation) => `${id}:${violation}`
+          )
+        );
+      expect(
+        violations,
+        'Large Canvas dimensions must be derived from responsiveScale, dimensions, or standard tokens'
+      ).toEqual([]);
+    });
+
+    it('large-render-literal exemption list contains only known scenes', () => {
+      expect(
+        [...LARGE_RENDER_LITERAL_EXEMPT].filter((id) => !sceneIds.includes(id))
+      ).toEqual([]);
     });
   });
 

@@ -1,16 +1,15 @@
 import { registerAllLayouts } from '../src/app/layouts/auto-register';
+import { satisfiesConstraints } from '../src/app/layouts/layout-constraints';
 import { layoutRegistry } from '../src/app/layouts/registry';
 
 registerAllLayouts();
 
 const errors: string[] = [];
 for (const metadata of layoutRegistry.getAllMetadata()) {
-  if (!metadata.autoSelectable) continue;
-
   const profile = metadata.layoutTestProfile;
   if (!profile) {
     errors.push(
-      `${metadata.id}: auto-selectable layout is missing layoutTestProfile`
+      `${metadata.id}: registered layout is missing layoutTestProfile`
     );
     continue;
   }
@@ -22,6 +21,15 @@ for (const metadata of layoutRegistry.getAllMetadata()) {
   }
   if (profile.viewports.length === 0) {
     errors.push(`${metadata.id}: layoutTestProfile must define a viewport`);
+  }
+  for (const viewport of profile.viewports) {
+    const orientation =
+      viewport.width >= viewport.height ? 'landscape' : 'portrait';
+    if (!satisfiesConstraints(metadata, viewport, orientation)) {
+      errors.push(
+        `${metadata.id}: test viewport ${viewport.width}x${viewport.height} does not satisfy layout constraints`
+      );
+    }
   }
 }
 

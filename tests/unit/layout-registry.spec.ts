@@ -18,10 +18,19 @@ const fakeMeta = {
   description: 'Test layout',
   tags: ['test'],
   supportsMobile: false,
-  supportedSlots: ['header', 'control'] as Array<
+  supportedSlots: ['header', 'control', 'animation'] as Array<
     'header' | 'control' | 'animation' | 'graph' | 'readout'
-  >
+  >,
+  layoutTestProfile: {
+    viewports: [{ width: 800, height: 600 }],
+    interactionModel: 'custom' as const,
+    adapter: 'fake-adapter'
+  }
 };
+
+beforeEach(() => {
+  registerLayoutTestAdapter('fake-adapter');
+});
 
 describe('layoutRegistry', () => {
   beforeEach(() => {
@@ -68,11 +77,11 @@ describe('layoutRegistry', () => {
     ).toThrow('Layout metadata for "bad" must be a valid object');
   });
 
-  it('should require a test profile for auto-selectable layouts', () => {
+  it('should require a test profile for every registered layout', () => {
     expect(() =>
       layoutRegistry.register('auto-layout', FakeLayout, {
         ...fakeMeta,
-        autoSelectable: true
+        layoutTestProfile: undefined
       })
     ).toThrow('must define layoutTestProfile');
   });
@@ -229,11 +238,10 @@ describe('registerAllLayouts', () => {
     expect(layoutRegistry.list()).toContain('mobile-stack');
   });
 
-  it('should provide a valid profile for every auto-selectable layout', () => {
+  it('should provide a valid profile for every registered layout', () => {
     registerAllLayouts();
 
     for (const meta of layoutRegistry.getAllMetadata()) {
-      if (!meta.autoSelectable) continue;
       expect(meta.layoutTestProfile).toBeDefined();
       expect(meta.layoutTestProfile!.viewports.length).toBeGreaterThan(0);
       expect(['tabs', 'split', 'stack', 'fullscreen', 'custom']).toContain(

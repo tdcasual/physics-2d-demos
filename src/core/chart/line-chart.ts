@@ -73,7 +73,11 @@ function niceNumber(range: number, round: boolean): number {
   return niceFraction * Math.pow(10, exponent);
 }
 
-function calculateTicks(min: number, max: number, maxTicks: number = 5): { min: number; max: number; step: number; values: number[] } {
+function calculateTicks(
+  min: number,
+  max: number,
+  maxTicks: number = 5
+): { min: number; max: number; step: number; values: number[] } {
   const range = niceNumber(max - min, false);
   const step = niceNumber(range / (maxTicks - 1), true);
   const graphMin = Math.floor(min / step) * step;
@@ -86,10 +90,17 @@ function calculateTicks(min: number, max: number, maxTicks: number = 5): { min: 
 }
 
 export function renderLineChart(options: LineChartOptions): void {
-  const { state, theme, series, margin, xLabel, yLabel, showGrid = true, yBaseLine = 0 } = options;
+  const {
+    state,
+    theme,
+    series,
+    margin,
+    xLabel,
+    yLabel,
+    showGrid = true,
+    yBaseLine = 0
+  } = options;
   const { ctx, cssWidth: width, cssHeight: height, hairlineWidth } = state;
-
-  if (!series.length) return;
 
   // 自适应边距
   const m = margin ?? {
@@ -122,11 +133,23 @@ export function renderLineChart(options: LineChartOptions): void {
     }
   }
 
-  if (!isFinite(xMin)) { xMin = 0; xMax = 1; }
-  if (!isFinite(yMin)) { yMin = 0; yMax = 1; }
+  if (!isFinite(xMin)) {
+    xMin = 0;
+    xMax = 1;
+  }
+  if (!isFinite(yMin)) {
+    yMin = 0;
+    yMax = 1;
+  }
 
-  const finalXDomain: [number, number] = options.xDomain ?? [xMin, xMax || xMin + 1];
-  let finalYDomain: [number, number] = options.yDomain ?? [yMin, yMax || yMin + 1];
+  const finalXDomain: [number, number] = options.xDomain ?? [
+    xMin,
+    xMax || xMin + 1
+  ];
+  let finalYDomain: [number, number] = options.yDomain ?? [
+    yMin,
+    yMax || yMin + 1
+  ];
 
   // 如果Y域很窄，给一个最小范围避免扁平
   if (finalYDomain[1] - finalYDomain[0] < 0.001) {
@@ -235,7 +258,11 @@ export function renderLineChart(options: LineChartOptions): void {
     ctx.font = `bold ${height < 250 ? 10 : 11}px "Noto Sans SC", sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
-    ctx.fillText(xLabel, m.left + chartWidth - 20, m.top + chartHeight / 2 + 14);
+    ctx.fillText(
+      xLabel,
+      m.left + chartWidth - 20,
+      m.top + chartHeight / 2 + 14
+    );
   }
 
   if (yLabel) {

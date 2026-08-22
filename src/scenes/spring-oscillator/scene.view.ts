@@ -203,32 +203,40 @@ export function createSpringOscillatorView(
 
   bindEvents();
 
+  function drawChart(): void {
+    const ctx = chartState.ctx || graphCtx;
+    const cssWidth = chartState.cssWidth || graphWidth;
+    const cssHeight = chartState.cssHeight || graphHeight;
+    if (!ctx || cssWidth <= 0 || cssHeight <= 0 || !sim) return;
+
+    drawGraph(
+      ctx,
+      sim,
+      history,
+      theme,
+      cssWidth,
+      cssHeight,
+      chartState.dpr || 1,
+      chartState.hairlineWidth || 1,
+      chartState.canvas || graphCanvas!
+    );
+  }
+
   return {
     render(): void {
       const currentSim = sim;
       if (currentSim) {
         const deviceType = getDeviceType(responsiveScale);
-        const result = updateHistory(currentSim, history, deviceType, frameCount);
+        const result = updateHistory(
+          currentSim,
+          history,
+          deviceType,
+          frameCount
+        );
         frameCount = result.newFrameCount;
       }
 
-      // 绘制图表
-      const ctx = chartState.ctx || graphCtx;
-      const cssWidth = chartState.cssWidth || graphWidth;
-      const cssHeight = chartState.cssHeight || graphHeight;
-      if (ctx && cssWidth > 0 && cssHeight > 0 && sim) {
-        drawGraph(
-          ctx,
-          sim,
-          history,
-          theme,
-          cssWidth,
-          cssHeight,
-          chartState.dpr || 1,
-          chartState.hairlineWidth || 1,
-          chartState.canvas || graphCanvas!
-        );
-      }
+      drawChart();
 
       drawStage();
     },
@@ -252,12 +260,14 @@ export function createSpringOscillatorView(
       if (parent) {
         const { state, dispose } = createGraphCanvas(parent, (s) => {
           chartState = s;
+          drawChart();
         });
         chartCanvasDisposer = dispose;
         chartState = state;
       } else {
         resizeGraphCanvas();
       }
+      drawChart();
     },
 
     attachStageCanvas(canvas: HTMLCanvasElement): void {

@@ -8,7 +8,7 @@ registerAllLayouts();
 
 const layouts = layoutRegistry
   .getAllMetadata()
-  .filter((metadata) => metadata.autoSelectable && metadata.layoutTestProfile);
+  .filter((metadata) => metadata.layoutTestProfile);
 
 const GRAPH_SURFACE_SELECTOR =
   '.graph-slot canvas, [class*="graph-slot"] canvas, .graph-cell canvas, [class*="graph-grid"] canvas, .chase-modern-card--graphs canvas';
@@ -62,14 +62,48 @@ for (const layout of layouts) {
                   .closest('.mobile-tab-panel')
                   ?.classList.contains('active')
             );
-            return {
-              overflow:
-                document.documentElement.scrollWidth - window.innerWidth,
-              shellWidth: shell?.getBoundingClientRect().width ?? 0,
-              shellHeight: shell?.getBoundingClientRect().height ?? 0,
-              canvases: activeCanvases.map((canvas) => ({
-                width: canvas.getBoundingClientRect().width,
-                height: canvas.getBoundingClientRect().height,
+            const inspectCanvas = (canvas: HTMLCanvasElement) => {
+              const rect = canvas.getBoundingClientRect();
+              const slot = canvas.closest(
+                '.animation-slot, .graph-slot, .mobile-stage-slot, .mobile-graph-slot, [class*="stage-slot"], [class*="graph-slot"], [class*="graph-grid"]'
+              );
+              const slotRect = slot?.getBoundingClientRect();
+              let pixelColors = 0;
+              try {
+                const sample = document.createElement('canvas');
+                sample.width = 48;
+                sample.height = 36;
+                const context = sample.getContext('2d', {
+                  willReadFrequently: true
+                });
+                context?.drawImage(canvas, 0, 0, sample.width, sample.height);
+                const pixels = context?.getImageData(
+                  0,
+                  0,
+                  sample.width,
+                  sample.height
+                ).data;
+                if (pixels) {
+                  const colors = new Set<string>();
+                  for (let index = 0; index < pixels.length; index += 4) {
+                    colors.add(
+                      `${pixels[index] >> 4},${pixels[index + 1] >> 4},${pixels[index + 2] >> 4},${pixels[index + 3] >> 4}`
+                    );
+                    if (colors.size >= 3) break;
+                  }
+                  pixelColors = colors.size;
+                }
+              } catch {
+                pixelColors = 0;
+              }
+              return {
+                width: rect.width,
+                height: rect.height,
+                pixelColors,
+                containedHorizontally:
+                  !slotRect ||
+                  (rect.left >= slotRect.left - 2 &&
+                    rect.right <= slotRect.right + 2),
                 responsiveScale: canvas.dataset.responsiveScale
                   ? Number(canvas.dataset.responsiveScale)
                   : null,
@@ -81,7 +115,14 @@ for (const layout of layouts) {
                   Boolean(canvas.closest('.chase-modern-card--graphs')),
                 className: canvas.className,
                 parentClass: canvas.parentElement?.className ?? ''
-              }))
+              };
+            };
+            return {
+              overflow:
+                document.documentElement.scrollWidth - window.innerWidth,
+              shellWidth: shell?.getBoundingClientRect().width ?? 0,
+              shellHeight: shell?.getBoundingClientRect().height ?? 0,
+              canvases: activeCanvases.map(inspectCanvas)
             };
           });
 
@@ -91,6 +132,19 @@ for (const layout of layouts) {
             intervals: [100, 250, 500]
           })
           .toBeGreaterThan(0);
+        await expect
+          .poll(
+            async () =>
+              (await readDimensions()).canvases.every(
+                (canvas) => canvas.pixelColors >= 2
+              ),
+            {
+              message: `${scene}/${layout.id}: active canvas stayed blank`,
+              timeout: 10_000,
+              intervals: [100, 250, 500]
+            }
+          )
+          .toBe(true);
         const dimensions = await readDimensions();
         const label = `${scene}/${layout.id}/${viewport.width}x${viewport.height}`;
 
@@ -119,6 +173,10 @@ for (const layout of layouts) {
                   : (profile.minStageHeight ?? 50))
           ),
           `${label}: active canvas is too small ${JSON.stringify(dimensions.canvases)}`
+        ).toBe(true);
+        expect(
+          dimensions.canvases.every((canvas) => canvas.containedHorizontally),
+          `${label}: canvas escapes its layout slot ${JSON.stringify(dimensions.canvases)}`
         ).toBe(true);
         expect(
           dimensions.canvases.every(
@@ -174,7 +232,9 @@ for (const layout of layouts) {
                       canvas.height >= (profile.minGraphHeight ?? 40) &&
                       canvas.responsiveScale !== null &&
                       canvas.responsiveScale >= 0.3 &&
-                      canvas.responsiveScale <= 1.5
+                      canvas.responsiveScale <= 1.5 &&
+                      canvas.pixelColors >= 2 &&
+                      canvas.containedHorizontally
                   )
                 );
               },

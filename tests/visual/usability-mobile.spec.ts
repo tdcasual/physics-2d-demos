@@ -99,16 +99,19 @@ for (const scene of sceneIds) {
 for (const path of modernPages) {
   test(`${path} has touch-safe interactive buttons`, async ({ page }) => {
     await page.goto(path);
-    const hasTouchSafeStyles = await page
-      .locator(
-        '.stage-toolbar button, .mobile-control-bar button, .mobile-tab-bar button'
-      )
-      .evaluateAll((nodes) =>
-        nodes.every((node) => {
-          const rect = node.getBoundingClientRect();
-          return rect.width >= 44 && rect.height >= 44;
-        })
-      );
+    const buttons = page.locator(
+      '.stage-toolbar button, .mobile-control-bar button, .mobile-tab-bar button'
+    );
+    await expect(
+      buttons.first(),
+      `${path}: mobile toolbar missing`
+    ).toBeVisible();
+    const hasTouchSafeStyles = await buttons.evaluateAll((nodes) =>
+      nodes.every((node) => {
+        const rect = node.getBoundingClientRect();
+        return rect.width >= 44 && rect.height >= 44;
+      })
+    );
     expect(
       hasTouchSafeStyles,
       `${path} toolbar buttons should have touch-safe min dimensions`

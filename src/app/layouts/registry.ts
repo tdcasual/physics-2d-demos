@@ -160,10 +160,8 @@ class LayoutRegistry {
     if (!metadata || typeof metadata !== 'object') {
       throw new Error(`Layout metadata for "${id}" must be a valid object`);
     }
-    if (metadata.autoSelectable === true && !metadata.layoutTestProfile) {
-      throw new Error(
-        `Layout "${id}" must define layoutTestProfile when autoSelectable is true`
-      );
+    if (!metadata.layoutTestProfile) {
+      throw new Error(`Layout "${id}" must define layoutTestProfile`);
     }
     validateLayoutTestProfile(
       id,

@@ -35,12 +35,11 @@ describe('ci scripts and workflow', () => {
         'pnpm check:circular',
         'pnpm lint',
         'pnpm typecheck',
-        'pnpm test',
         'pnpm test:coverage',
         'pnpm build',
         'pnpm check:bundle',
-        'pnpm test:e2e',
-        'pnpm test:visual'
+        'PLAYWRIGHT_SKIP_BUILD=1 pnpm test:e2e',
+        'PLAYWRIGHT_SKIP_BUILD=1 pnpm test:visual'
       ].join(' && ')
     );
 
@@ -54,7 +53,10 @@ describe('ci scripts and workflow', () => {
     expect(ci).toContain('pnpm check:layouts');
     expect(ci).toContain('pnpm check:bundle');
     expect(ci).toContain('pnpm check:circular');
+    expect(ci).toContain('PLAYWRIGHT_SKIP_BUILD=1 pnpm test:e2e');
+    expect(ci).toContain('PLAYWRIGHT_SKIP_BUILD=1 pnpm test:visual');
     expect(ci).not.toContain('pnpm generate:index');
+    expect(ci).not.toContain('run: pnpm test\n');
   });
 
   it('keeps coverage reporters aligned with codecov upload', () => {

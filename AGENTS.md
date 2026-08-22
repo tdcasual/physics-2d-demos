@@ -178,7 +178,7 @@ export type SceneMeta = {
 
 ### ControlField（controls-schema.ts）
 
-支持 10 种字段类型：`slider` | `number` | `text` | `select` | `button` | `preset-group` | `transport` | `scene-selector` | `button-grid` | `custom`
+支持 11 种字段类型：`slider` | `number` | `text` | `select` | `button` | `toggle` | `preset-group` | `transport` | `scene-selector` | `button-grid` | `custom`
 
 ## 编码规范
 
@@ -198,8 +198,8 @@ export type SceneMeta = {
 
 - 单元测试放在 `tests/unit/*.spec.ts`
 - DOM 组件测试使用 `happy-dom` 环境（已全局配置）
-- E2E 测试放在 `tests/visual/*.spec.ts`
-- 覆盖率阈值以 `vite.config.ts` 为准：lines 40%, functions 60%, branches 45%, statements 40%
+- Playwright 行为测试放在 `tests/e2e/*.spec.ts`，布局、无障碍、视觉与跨浏览器测试放在 `tests/visual/*.spec.ts`
+- 覆盖率阈值以 `vite.config.ts` 为准：lines 65%, functions 65%, branches 70%, statements 65%
 
 ### 视觉回归基线规则（强制）
 
@@ -295,17 +295,20 @@ function resize() {
 - [ ] 使用了 `canvas.dataset.responsiveScale` 或 `getResponsiveScale`
 - [ ] Playwright 移动端截图通过审查（无元素遮挡、无过度拥挤）
 
+`scene-standard.spec.ts` 对未来新增场景实施 AST 棘轮：Canvas 空间参数和尺寸变量中大于 50 的数值必须由 scale、viewport 尺寸或标准 token 推导。现有历史场景使用冻结豁免清单，禁止把新场景加入该清单来绕过失败。
+
 ## 布局扩展规范（强制）
 
 场景不得假设 `mobile-stack` 是唯一移动布局。布局由 `src/app/layouts/registry.ts` 动态注册，测试通过 `LayoutMetadata.layoutTestProfile` 识别其交互模型。
 
 - 新布局必须声明 `supportedSlots`、约束和 `layoutTestProfile`。
-- `autoSelectable: true` 的布局没有 profile 会在注册阶段失败；实验布局必须显式设置 `autoSelectable: false`。
+- 所有注册布局都必须声明 `layoutTestProfile`，无论 `autoSelectable` 是否为 `true`；手动或实验布局不能绕过布局矩阵。
 - `layoutTestProfile.interactionModel` 只能描述实际模型：`tabs`、`split`、`stack`、`fullscreen` 或 `custom`。
 - `control` 与 `animation` 是核心 slot；`header`、`graph`、`readout` 按能力兼容，不得要求每个场景填充所有 slot。
 - 不得在视觉测试中新增固定布局 id 数组。布局矩阵从 registry 自动发现，模型特有断言放在对应适配器中。
 - 新布局至少要用一个无 graph 场景、一个有 graph 场景和一个带控件/读数的场景验证，并覆盖 profile 声明的 viewport。
 - 可使用 `?layout=<registered-id>` 强制浏览器测试某个已注册布局；未知 id 必须回退到页面默认布局。
+- 布局矩阵会自动检查活跃 Canvas 非空、尺寸达标、处于 slot 水平边界内且 `responsiveScale` 在 `[0.3, 1.5]`；tab 布局会先激活对应面板再检查 graph。
 
 详细的代理工作流、允许修改范围和失败报告格式见 [`docs/new-scene-agent-contract.md`](docs/new-scene-agent-contract.md)。
 
