@@ -10,7 +10,7 @@ const defaultParams: WedgeParams = {
   lambda: 650,
   theta: 0.05,
   L: 5.0,
-  step: 'geometry',
+  step: 'geometry'
 };
 
 describe('wedge sim', () => {
@@ -37,7 +37,9 @@ describe('wedge sim', () => {
       const sim2 = createWedgeSim({ ...defaultParams, theta: 0.08 });
       sim1.setCursorX(0.5);
       sim2.setCursorX(0.5);
-      expect(sim2.getState().thickness).toBeGreaterThan(sim1.getState().thickness);
+      expect(sim2.getState().thickness).toBeGreaterThan(
+        sim1.getState().thickness
+      );
     });
   });
 
@@ -45,7 +47,10 @@ describe('wedge sim', () => {
     it('equals 2 * thickness + λ/2', () => {
       const sim = createWedgeSim(defaultParams);
       const s = sim.getState();
-      expect(s.pathDiff).toBeCloseTo(2 * s.thickness + defaultParams.lambda / 2, 0);
+      expect(s.pathDiff).toBeCloseTo(
+        2 * s.thickness + defaultParams.lambda / 2,
+        0
+      );
     });
 
     it('λ/2 offset at zero thickness', () => {
@@ -60,20 +65,26 @@ describe('wedge sim', () => {
     it('equals λ / (2 sin θ) in mm', () => {
       const sim = createWedgeSim(defaultParams);
       const s = sim.getState();
-      const expected = (defaultParams.lambda * 1e-6) / (2 * Math.sin(defaultParams.theta * DEG_TO_RAD));
+      const expected =
+        (defaultParams.lambda * 1e-6) /
+        (2 * Math.sin(defaultParams.theta * DEG_TO_RAD));
       expect(s.fringeSpacing).toBeCloseTo(expected, 6);
     });
 
     it('inversely proportional to theta', () => {
       const sim1 = createWedgeSim({ ...defaultParams, theta: 0.03 });
       const sim2 = createWedgeSim({ ...defaultParams, theta: 0.06 });
-      expect(sim1.getState().fringeSpacing).toBeGreaterThan(sim2.getState().fringeSpacing);
+      expect(sim1.getState().fringeSpacing).toBeGreaterThan(
+        sim2.getState().fringeSpacing
+      );
     });
 
     it('proportional to lambda', () => {
       const sim1 = createWedgeSim({ ...defaultParams, lambda: 400 });
       const sim2 = createWedgeSim({ ...defaultParams, lambda: 700 });
-      expect(sim2.getState().fringeSpacing).toBeGreaterThan(sim1.getState().fringeSpacing);
+      expect(sim2.getState().fringeSpacing).toBeGreaterThan(
+        sim1.getState().fringeSpacing
+      );
     });
   });
 

@@ -3,7 +3,7 @@
  *
  * @param mount - 挂载容器
  * @param presets - 预设列表（id/label/desc）
- * @param options - 配置（initialActive/columns/onSelect）
+ * @param options - 配置（initialActive/columns/label/onSelect）
  * @returns 包含元素引用和 setActive 方法的控制器
  */
 export function createPresetButtonGroup(
@@ -12,6 +12,8 @@ export function createPresetButtonGroup(
   options: {
     initialActive?: string;
     columns?: 2 | 3 | 4;
+    /** radiogroup 的无障碍名称，通常取自字段/卡片标题 */
+    label?: string;
     onSelect: (id: string) => void;
   }
 ): {
@@ -30,9 +32,11 @@ export function createPresetButtonGroup(
         ? 'grid grid-cols-3 gap-2'
         : 'grid grid-cols-4 gap-2';
   grid.setAttribute('role', 'radiogroup');
+  grid.setAttribute('aria-label', options.label ?? '预设选项');
 
   const buttons = new Map<string, HTMLButtonElement>();
   const clickHandlers = new Map<string, () => void>();
+  const keyHandlers = new Map<string, (event: KeyboardEvent) => void>();
 
   function updateStyles() {
     buttons.forEach((btn, id) => {
@@ -81,8 +85,42 @@ export function createPresetButtonGroup(
       updateStyles();
       options.onSelect(p.id);
     };
+    const onKeydown = (event: KeyboardEvent) => {
+      const index = presets.findIndex((preset) => preset.id === p.id);
+      if (index < 0) return;
+
+      let nextIndex: number | null = null;
+      switch (event.key) {
+        case 'ArrowRight':
+        case 'ArrowDown':
+          nextIndex = (index + 1) % presets.length;
+          break;
+        case 'ArrowLeft':
+        case 'ArrowUp':
+          nextIndex = (index - 1 + presets.length) % presets.length;
+          break;
+        case 'Home':
+          nextIndex = 0;
+          break;
+        case 'End':
+          nextIndex = presets.length - 1;
+          break;
+        default:
+          return;
+      }
+
+      event.preventDefault();
+      const next = presets[nextIndex];
+      if (!next) return;
+      activeId = next.id;
+      updateStyles();
+      buttons.get(next.id)?.focus();
+      options.onSelect(next.id);
+    };
     clickHandlers.set(p.id, onClick);
+    keyHandlers.set(p.id, onKeydown);
     btn.addEventListener('click', onClick);
+    btn.addEventListener('keydown', onKeydown);
 
     buttons.set(p.id, btn);
     grid.appendChild(btn);
@@ -103,9 +141,12 @@ export function createPresetButtonGroup(
       buttons.forEach((btn, id) => {
         const handler = clickHandlers.get(id);
         if (handler) btn.removeEventListener('click', handler);
+        const keyHandler = keyHandlers.get(id);
+        if (keyHandler) btn.removeEventListener('keydown', keyHandler);
       });
       buttons.clear();
       clickHandlers.clear();
+      keyHandlers.clear();
     }
   };
 }

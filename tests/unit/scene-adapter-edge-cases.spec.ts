@@ -179,7 +179,7 @@ describe('SceneAdapter edge cases', () => {
     expect(container.innerHTML).toBe('');
   });
 
-  it('resizes attached graph canvases when a hidden graph slot becomes visible', () => {
+  it('resizes attached graph canvases when a hidden graph slot becomes visible', async () => {
     const originalResizeObserver = globalThis.ResizeObserver;
     const callbacks: ResizeObserverCallback[] = [];
     const observed: Element[] = [];
@@ -219,6 +219,12 @@ describe('SceneAdapter edge cases', () => {
         [{ contentRect: { width: 300, height: 120 } } as ResizeObserverEntry],
         {} as ResizeObserver
       );
+
+      // 0→非 0 的可见性跃迁立即 resize（不走 rAF 合帧，避免 hidden tab
+      // 里的 1×1 canvas 在可见后仍保持旧尺寸数帧）
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => resolve());
+      });
 
       expect(scene.resize).toHaveBeenCalledOnce();
       expect(scene.render).toHaveBeenCalledOnce();

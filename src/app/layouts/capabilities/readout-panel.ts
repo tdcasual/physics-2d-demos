@@ -379,6 +379,8 @@ export function createReadoutPanel(
       const slot = document.createElement('ul');
       slot.className = `${cssPrefix}-readout-slot readout-slot ${cssPrefix}-readout-slot--adaptive`;
       slot.setAttribute('data-columns', 'auto');
+      // 可滚动区域必须可被键盘聚焦（WCAG 2.1.1 / axe scrollable-region-focusable）
+      slot.setAttribute('tabindex', '0');
 
       let toggleCleanup: (() => void) | null = null;
 

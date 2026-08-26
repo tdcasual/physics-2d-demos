@@ -164,6 +164,10 @@ export class MobileStackLayout implements ILayout {
     this.stageSlot.className = 'mobile-stage-slot';
     this.stageCanvas = cfg.preservedCanvas ?? document.createElement('canvas');
     this.stageCanvas.className = 'mobile-stage-canvas stage-canvas';
+    this.stageCanvas.setAttribute(
+      'aria-label',
+      cfg.title ? `动画演示区域：${cfg.title}` : '动画演示区域'
+    );
     this.stageSlot.appendChild(this.stageCanvas);
     animationSection.appendChild(this.stageSlot);
     container.appendChild(animationSection);
@@ -188,6 +192,10 @@ export class MobileStackLayout implements ILayout {
     this.tabBar = document.createElement('nav');
     this.tabBar.className = 'mobile-tab-bar';
     this.tabBar.setAttribute('role', 'tablist');
+    this.tabBar.setAttribute('aria-label', '面板切换');
+    this.tabBar.addEventListener('keydown', (e) => this._onTabKeydown(e), {
+      signal: this._abortCtl.signal
+    });
 
     // Tab content area
     const tabContent = document.createElement('div');
@@ -201,6 +209,7 @@ export class MobileStackLayout implements ILayout {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'mobile-tab';
+      btn.id = `mobile-tab-${tab.id}`;
       btn.setAttribute('role', 'tab');
       btn.setAttribute('aria-controls', `mobile-panel-${tab.id}`);
       btn.dataset.tab = tab.id;
@@ -215,6 +224,9 @@ export class MobileStackLayout implements ILayout {
       panel.className = 'mobile-tab-panel';
       panel.id = `mobile-panel-${tab.id}`;
       panel.setAttribute('role', 'tabpanel');
+      panel.setAttribute('aria-labelledby', `mobile-tab-${tab.id}`);
+      // 面板内容可滚动，需可聚焦以供键盘滚动（axe scrollable-region-focusable）
+      panel.tabIndex = 0;
 
       const slot = document.createElement('div');
       slot.className =
@@ -253,17 +265,47 @@ export class MobileStackLayout implements ILayout {
     if (!this.tabBar) return;
     this._activeTabId = tabId;
     for (const id of this._tabAllIds) {
-      const btn = this.tabBar.querySelector(`[data-tab="${id}"]`);
+      const btn = this.tabBar.querySelector<HTMLElement>(`[data-tab="${id}"]`);
       const panel = this._tabPanels.get(id);
       const active = id === tabId;
       if (btn) {
         btn.classList.toggle('active', active);
         btn.setAttribute('aria-selected', String(active));
+        // roving tabindex: only the active tab stays in the tab order
+        btn.tabIndex = active ? 0 : -1;
       }
       if (panel) {
         panel.classList.toggle('active', active);
       }
     }
+  }
+
+  /** WAI-ARIA tabs keyboard support: ←/→/Home/End 移动焦点并自动激活 */
+  private _onTabKeydown(event: KeyboardEvent): void {
+    const ids = this._tabAllIds;
+    if (ids.length === 0) return;
+    const currentIndex = Math.max(ids.indexOf(this._activeTabId), 0);
+    let nextIndex: number;
+    switch (event.key) {
+      case 'ArrowRight':
+        nextIndex = (currentIndex + 1) % ids.length;
+        break;
+      case 'ArrowLeft':
+        nextIndex = (currentIndex - 1 + ids.length) % ids.length;
+        break;
+      case 'Home':
+        nextIndex = 0;
+        break;
+      case 'End':
+        nextIndex = ids.length - 1;
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    const nextId = ids[nextIndex];
+    this._switchTab(nextId);
+    this.tabBar?.querySelector<HTMLElement>(`[data-tab="${nextId}"]`)?.focus();
   }
 
   async unmount(): Promise<void> {

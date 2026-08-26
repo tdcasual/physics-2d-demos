@@ -55,7 +55,11 @@ export function drawEquipotentialLines(
   ctx.restore();
 }
 
-function getPotentialAt(px: number, py: number, charges: PixelCharge[]): number {
+function getPotentialAt(
+  px: number,
+  py: number,
+  charges: PixelCharge[]
+): number {
   let v = 0;
   for (const charge of charges) {
     const dx = px - charge.x;
@@ -115,7 +119,14 @@ function drawSingleEquipotential(
       if (!seed) continue;
 
       const path = traceEquipotential(
-        seed.x, seed.y, level, cellW, cellH, gridSize, potentialGrid, visited
+        seed.x,
+        seed.y,
+        level,
+        cellW,
+        cellH,
+        gridSize,
+        potentialGrid,
+        visited
       );
       if (path.length >= 4) {
         paths.push(path);
@@ -193,8 +204,12 @@ function traceEquipotential(
     visited.add(key);
 
     // 计算局部梯度（垂直于等势方向）
-    const gx = getPotentialAtGrid(potentialGrid, col + 1, row) - getPotentialAtGrid(potentialGrid, col - 1, row);
-    const gy = getPotentialAtGrid(potentialGrid, col, row + 1) - getPotentialAtGrid(potentialGrid, col, row - 1);
+    const gx =
+      getPotentialAtGrid(potentialGrid, col + 1, row) -
+      getPotentialAtGrid(potentialGrid, col - 1, row);
+    const gy =
+      getPotentialAtGrid(potentialGrid, col, row + 1) -
+      getPotentialAtGrid(potentialGrid, col, row - 1);
     const gradMag = Math.hypot(gx, gy);
 
     if (gradMag < 0.0001) break;
@@ -209,8 +224,12 @@ function traceEquipotential(
     const px2 = cx - dx;
     const py2 = cy - dy;
 
-    const v1 = Math.abs(bilinearSample(potentialGrid, px1, py1, gridSize) - level);
-    const v2 = Math.abs(bilinearSample(potentialGrid, px2, py2, gridSize) - level);
+    const v1 = Math.abs(
+      bilinearSample(potentialGrid, px1, py1, gridSize) - level
+    );
+    const v2 = Math.abs(
+      bilinearSample(potentialGrid, px2, py2, gridSize) - level
+    );
 
     if (v1 < v2) {
       cx = px1;
@@ -232,7 +251,11 @@ function traceEquipotential(
   return path;
 }
 
-function getPotentialAtGrid(grid: number[][], col: number, row: number): number {
+function getPotentialAtGrid(
+  grid: number[][],
+  col: number,
+  row: number
+): number {
   const r = Math.max(0, Math.min(grid.length - 1, row));
   const c = Math.max(0, Math.min(grid[0].length - 1, col));
   return grid[r][c];

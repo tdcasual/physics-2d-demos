@@ -160,7 +160,13 @@ export function drawMotion(context: MotionDrawContext): void {
     ctx.fillStyle = 'rgba(148,163,184,0.35)';
     ctx.beginPath();
     ctx.arc(orbX - orbR * 0.3, orbY - orbR * 0.2, orbR * 0.18, 0, Math.PI * 2);
-    ctx.arc(orbX + orbR * 0.25, orbY + orbR * 0.25, orbR * 0.12, 0, Math.PI * 2);
+    ctx.arc(
+      orbX + orbR * 0.25,
+      orbY + orbR * 0.25,
+      orbR * 0.12,
+      0,
+      Math.PI * 2
+    );
     ctx.fill();
   } else {
     ctx.strokeStyle = P.orbGlow;
@@ -168,8 +174,14 @@ export function drawMotion(context: MotionDrawContext): void {
     for (let i = 0; i < 8; i += 1) {
       const a = (i / 8) * Math.PI * 2 + t * 0.3;
       ctx.beginPath();
-      ctx.moveTo(orbX + Math.cos(a) * orbR * 1.3, orbY + Math.sin(a) * orbR * 1.3);
-      ctx.lineTo(orbX + Math.cos(a) * orbR * 1.6, orbY + Math.sin(a) * orbR * 1.6);
+      ctx.moveTo(
+        orbX + Math.cos(a) * orbR * 1.3,
+        orbY + Math.sin(a) * orbR * 1.3
+      );
+      ctx.lineTo(
+        orbX + Math.cos(a) * orbR * 1.6,
+        orbY + Math.sin(a) * orbR * 1.6
+      );
       ctx.stroke();
     }
   }
@@ -185,7 +197,9 @@ export function drawMotion(context: MotionDrawContext): void {
   for (const c of clouds) {
     const drift = (t * c.spd) % (cssW + 160 * s);
     let cx = c.bx * cssW + drift;
-    cx = ((cx % (cssW + 160 * s)) + (cssW + 160 * s)) % (cssW + 160 * s) - 80 * s;
+    cx =
+      (((cx % (cssW + 160 * s)) + (cssW + 160 * s)) % (cssW + 160 * s)) -
+      80 * s;
     const cy = c.y * cssH;
     const u = 16 * s * c.sc;
     ctx.beginPath();
@@ -206,7 +220,8 @@ export function drawMotion(context: MotionDrawContext): void {
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.18)';
   ctx.shadowBlur = 8 * s;
-  ctx.fillStyle = theme === 'light' ? 'rgba(255,255,255,0.92)' : 'rgba(30,41,59,0.85)';
+  ctx.fillStyle =
+    theme === 'light' ? 'rgba(255,255,255,0.92)' : 'rgba(30,41,59,0.85)';
   roundRect(ctx, tX, tY, tW, tH, tH / 2);
   ctx.fill();
   ctx.restore();
@@ -263,7 +278,12 @@ export function drawMotion(context: MotionDrawContext): void {
     const sway = Math.sin(t * 2 + x * 0.1) * 2 * s;
     ctx.beginPath();
     ctx.moveTo(x, roadBottom + 8 * s);
-    ctx.quadraticCurveTo(x + sway, roadBottom + 2 * s, x + 3 * s, roadBottom - 2 * s);
+    ctx.quadraticCurveTo(
+      x + sway,
+      roadBottom + 2 * s,
+      x + 3 * s,
+      roadBottom - 2 * s
+    );
     ctx.stroke();
   }
 
@@ -358,7 +378,13 @@ export function drawMotion(context: MotionDrawContext): void {
       const a = (i / 6) * Math.PI * 2 + t * 4;
       const rr = (34 + 8 * Math.sin(t * 10 + i)) * s;
       ctx.beginPath();
-      ctx.arc(mx + Math.cos(a) * rr, my + Math.sin(a) * rr, 2.5 * s, 0, Math.PI * 2);
+      ctx.arc(
+        mx + Math.cos(a) * rr,
+        my + Math.sin(a) * rr,
+        2.5 * s,
+        0,
+        Math.PI * 2
+      );
       ctx.fill();
     }
   } else {
@@ -565,7 +591,10 @@ function drawCar(
       const a = spin + (k / 4) * Math.PI * 2;
       ctx.beginPath();
       ctx.moveTo(wx, wheelY);
-      ctx.lineTo(wx + Math.cos(a) * wheelR * 0.8, wheelY + Math.sin(a) * wheelR * 0.8);
+      ctx.lineTo(
+        wx + Math.cos(a) * wheelR * 0.8,
+        wheelY + Math.sin(a) * wheelR * 0.8
+      );
       ctx.stroke();
     }
   };

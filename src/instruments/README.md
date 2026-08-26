@@ -43,9 +43,15 @@ export function createMyInstrumentSim(
 
   return {
     getState: () => state,
-    setParams: (p) => { if (p.value !== undefined) state = { ...state, value: p.value }; },
-    step: (dt) => { state = { ...state, timestamp: state.timestamp + dt }; },
-    reset: () => { state = { value: initial.value, timestamp: 0 }; },
+    setParams: (p) => {
+      if (p.value !== undefined) state = { ...state, value: p.value };
+    },
+    step: (dt) => {
+      state = { ...state, timestamp: state.timestamp + dt };
+    },
+    reset: () => {
+      state = { value: initial.value, timestamp: 0 };
+    }
   };
 }
 ```
@@ -72,10 +78,18 @@ export function createMyInstrumentView(options: {
 
   return {
     render,
-    resize: () => { /* 响应尺寸变化 */ },
-    setTheme: (t) => { /* 切换主题 */ },
-    setViewport: (v) => { currentViewport = v; },
-    dispose: () => { /* 清理 */ },
+    resize: () => {
+      /* 响应尺寸变化 */
+    },
+    setTheme: (t) => {
+      /* 切换主题 */
+    },
+    setViewport: (v) => {
+      currentViewport = v;
+    },
+    dispose: () => {
+      /* 清理 */
+    }
   };
 }
 ```
@@ -91,7 +105,7 @@ export const myInstrumentMeta: InstrumentMeta<MyInstrumentParams> = {
   description: '示例仪器',
   defaultParams: { value: 0 },
   unit: 'mm',
-  precision: 0.01,
+  precision: 0.01
 };
 ```
 
@@ -103,12 +117,18 @@ import type { InstrumentFactory } from '../_contract/instrument-contract';
 import { myInstrumentMeta } from './my-instrument.meta';
 import { createMyInstrumentSim } from './my-instrument.sim';
 import { createMyInstrumentView } from './my-instrument.view';
-import type { MyInstrumentState, MyInstrumentParams } from './my-instrument.sim';
+import type {
+  MyInstrumentState,
+  MyInstrumentParams
+} from './my-instrument.sim';
 
-export const myInstrument: InstrumentFactory<MyInstrumentState, MyInstrumentParams> = {
+export const myInstrument: InstrumentFactory<
+  MyInstrumentState,
+  MyInstrumentParams
+> = {
   meta: myInstrumentMeta,
   createSim: createMyInstrumentSim,
-  createView: createMyInstrumentView,
+  createView: createMyInstrumentView
 };
 
 export * from './my-instrument.sim';
@@ -140,7 +160,7 @@ export function createMyInstrumentScene({ canvas, theme }) {
   return createStandardSceneEntry({
     sim,
     view,
-    getState: () => sim.getState(),
+    getState: () => sim.getState()
   });
 }
 ```
@@ -160,19 +180,27 @@ export function createMeasurementLabScene({ canvas, theme }) {
 
   const mSim = micrometer.createSim({ reading: 0 });
   const mView = micrometer.createView({
-    canvas, theme,
+    canvas,
+    theme,
     viewport: { x: 0, y: 0, width: w, height: h * 0.5 }
   });
 
   const vSim = vernierCaliper.createSim({ reading: 0 });
   const vView = vernierCaliper.createView({
-    canvas, theme,
+    canvas,
+    theme,
     viewport: { x: 0, y: h * 0.5, width: w, height: h * 0.5 }
   });
 
   return {
-    init() { mView.resize(); vView.resize(); },
-    step(dt) { mSim.step(dt); vSim.step(dt); },
+    init() {
+      mView.resize();
+      vView.resize();
+    },
+    step(dt) {
+      mSim.step(dt);
+      vSim.step(dt);
+    },
     render() {
       const ctx = canvas.getContext('2d')!;
       ctx.clearRect(0, 0, w, h);
@@ -187,8 +215,14 @@ export function createMeasurementLabScene({ canvas, theme }) {
       mView.resize();
       vView.resize();
     },
-    setTheme(t) { mView.setTheme(t); vView.setTheme(t); },
-    dispose() { mView.dispose(); vView.dispose(); },
+    setTheme(t) {
+      mView.setTheme(t);
+      vView.setTheme(t);
+    },
+    dispose() {
+      mView.dispose();
+      vView.dispose();
+    }
   };
 }
 ```

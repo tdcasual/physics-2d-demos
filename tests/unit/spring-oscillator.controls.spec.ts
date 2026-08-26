@@ -56,8 +56,8 @@ describe('spring-oscillator controls', () => {
 
   it('add button calls scene.addOscillator', () => {
     const { mount, scene } = setup();
-    const addBtn = Array.from(mount.querySelectorAll('button')).find(
-      b => b.textContent?.includes('添加')
+    const addBtn = Array.from(mount.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('添加')
     );
     expect(addBtn).toBeTruthy();
     const before = scene.sim.oscillators.length;
@@ -71,8 +71,8 @@ describe('spring-oscillator controls', () => {
     scene.addOscillator();
     expect(scene.sim.oscillators.length).toBe(3);
 
-    const presetBtn = Array.from(mount.querySelectorAll('button')).find(
-      b => b.textContent?.includes('同相')
+    const presetBtn = Array.from(mount.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('同相')
     );
     expect(presetBtn).toBeTruthy();
     presetBtn!.click();
@@ -83,8 +83,8 @@ describe('spring-oscillator controls', () => {
 
   it('anti-phase preset sets T/2 delay', () => {
     const { mount, scene } = setup();
-    const presetBtn = Array.from(mount.querySelectorAll('button')).find(
-      b => b.textContent?.includes('反相')
+    const presetBtn = Array.from(mount.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('反相')
     );
     expect(presetBtn).toBeTruthy();
     presetBtn!.click();
@@ -112,7 +112,7 @@ describe('spring-oscillator controls', () => {
   it('each oscillator row has orientation toggle button', () => {
     const { mount } = setup();
     const orientBtns = Array.from(mount.querySelectorAll('button')).filter(
-      b => b.textContent === '横' || b.textContent === '竖'
+      (b) => b.textContent === '横' || b.textContent === '竖'
     );
     expect(orientBtns.length).toBe(2);
   });
@@ -120,7 +120,7 @@ describe('spring-oscillator controls', () => {
   it('each oscillator row has delete button', () => {
     const { mount, scene } = setup();
     const delBtns = Array.from(mount.querySelectorAll('button')).filter(
-      b => b.textContent === '✕'
+      (b) => b.textContent === '✕'
     );
     expect(delBtns.length).toBe(scene.sim.oscillators.length);
   });
@@ -128,7 +128,7 @@ describe('spring-oscillator controls', () => {
   it('delete button removes oscillator', () => {
     const { mount, scene } = setup();
     const delBtn = Array.from(mount.querySelectorAll('button')).find(
-      b => b.textContent === '✕'
+      (b) => b.textContent === '✕'
     );
     expect(delBtn).toBeTruthy();
     const before = scene.sim.oscillators.length;
@@ -139,7 +139,7 @@ describe('spring-oscillator controls', () => {
   it('orientation toggle switches between horizontal and vertical', () => {
     const { mount, scene } = setup();
     const orientBtn = Array.from(mount.querySelectorAll('button')).find(
-      b => b.textContent === '横'
+      (b) => b.textContent === '横'
     );
     expect(orientBtn).toBeTruthy();
     const osc = scene.sim.oscillators[0];

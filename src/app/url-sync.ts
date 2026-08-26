@@ -26,7 +26,9 @@ export function readSceneParams(
       // URL 字符串参数（如 step）保持原样；数值参数尝试解析
       const defaultVal = meta.defaultParams[key];
       if (typeof defaultVal === 'number') {
-        result[key] = value.includes('.') ? parseFloat(value) : parseInt(value, 10);
+        result[key] = value.includes('.')
+          ? parseFloat(value)
+          : parseInt(value, 10);
       } else {
         result[key] = value;
       }

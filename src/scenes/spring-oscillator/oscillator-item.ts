@@ -44,19 +44,11 @@ export function renderOscillatorItem(
   paramsContainer.style.rowGap = '2px';
 
   // k 滑块
-  const kControl = createMiniSlider(
-    'k',
-    osc.params.k,
-    1,
-    100,
-    1,
-    '',
-    (val) => {
-      scene.updateOscillator(osc.id, { k: val });
-      scene.resetOscillator(osc.id);
-      scene.render();
-    }
-  );
+  const kControl = createMiniSlider('k', osc.params.k, 1, 100, 1, '', (val) => {
+    scene.updateOscillator(osc.id, { k: val });
+    scene.resetOscillator(osc.id);
+    scene.render();
+  });
   disposers.push(kControl.dispose);
 
   // m 滑块

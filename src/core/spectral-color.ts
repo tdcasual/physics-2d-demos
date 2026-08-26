@@ -36,10 +36,14 @@ function cieZ(lambda: number): number {
 
 // ── XYZ → sRGB 转换 ──
 
-function xyzToSrgbLinear(x: number, y: number, z: number): [number, number, number] {
+function xyzToSrgbLinear(
+  x: number,
+  y: number,
+  z: number
+): [number, number, number] {
   const r = 3.2406 * x - 1.5372 * y - 0.4986 * z;
   const g = -0.9689 * x + 1.8758 * y + 0.0415 * z;
-  const b = 0.0557 * x - 0.2040 * y + 1.0570 * z;
+  const b = 0.0557 * x - 0.204 * y + 1.057 * z;
   return [r, g, b];
 }
 
@@ -63,7 +67,11 @@ function xyzToSrgb(x: number, y: number, z: number): [number, number, number] {
  * @param n 折射率
  * @param lambda 波长 nm
  */
-export function thinFilmReflectance(d: number, n: number, lambda: number): number {
+export function thinFilmReflectance(
+  d: number,
+  n: number,
+  lambda: number
+): number {
   const r0 = ((n - 1) / (n + 1)) ** 2;
   const delta = (4 * Math.PI * n * d) / lambda;
   return 4 * r0 * Math.sin(delta / 2) ** 2;
@@ -96,7 +104,10 @@ function initSpectralTables(): void {
  * @param n 折射率
  * @returns [r, g, b] 各 ∈ [0, 255]
  */
-export function whiteLightFilmColor(d: number, n: number): [number, number, number] {
+export function whiteLightFilmColor(
+  d: number,
+  n: number
+): [number, number, number] {
   initSpectralTables();
 
   let xSum = 0;

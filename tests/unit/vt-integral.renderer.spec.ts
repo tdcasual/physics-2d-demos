@@ -6,7 +6,9 @@ import { drawScene3 } from '../../src/scenes/vt-integral/renderer/draw-scene3';
 
 import type { VtIntegralSnapshot } from '../../src/scenes/vt-integral/scene.sim';
 
-function createSnapshot(scene: VtIntegralSnapshot['params']['scene']): VtIntegralSnapshot {
+function createSnapshot(
+  scene: VtIntegralSnapshot['params']['scene']
+): VtIntegralSnapshot {
   return {
     params: {
       scene,
@@ -25,13 +27,15 @@ function createSnapshot(scene: VtIntegralSnapshot['params']['scene']): VtIntegra
       relErr: 0.06,
       curveLength: 8.5,
       lineDistance: 7.2,
-      circumferenceDiff: 0.3,
-
+      circumferenceDiff: 0.3
     }
   };
 }
 
-function makeCtx(): { ctx: CanvasRenderingContext2D; canvas: HTMLCanvasElement } {
+function makeCtx(): {
+  ctx: CanvasRenderingContext2D;
+  canvas: HTMLCanvasElement;
+} {
   const canvas = document.createElement('canvas');
   canvas.width = 800;
   canvas.height = 600;
@@ -44,7 +48,14 @@ describe('vt-integral renderer', () => {
       const { ctx } = makeCtx();
       expect(() =>
         drawAxis(
-          { ctx, width: 800, height: 600, theme: 'dark', responsiveScale: 1, contentScale: 1 },
+          {
+            ctx,
+            width: 800,
+            height: 600,
+            theme: 'dark',
+            responsiveScale: 1,
+            contentScale: 1
+          },
           {
             x: 60,
             y: 60,
@@ -63,7 +74,11 @@ describe('vt-integral renderer', () => {
   });
 
   describe('scene renderers', () => {
-    const scenes: Array<{ name: string; fn: typeof drawScene1; scene: VtIntegralSnapshot['params']['scene'] }> = [
+    const scenes: Array<{
+      name: string;
+      fn: typeof drawScene1;
+      scene: VtIntegralSnapshot['params']['scene'];
+    }> = [
       { name: 'scene1', fn: drawScene1, scene: 'scene1' },
       { name: 'scene2', fn: drawScene2, scene: 'scene2' },
       { name: 'scene3', fn: drawScene3, scene: 'scene3' }
@@ -74,7 +89,17 @@ describe('vt-integral renderer', () => {
         const { ctx } = makeCtx();
         const snapshot = createSnapshot(scene);
         expect(() =>
-          fn({ ctx, width: 800, height: 600, theme: 'dark', responsiveScale: 1, contentScale: 1 }, snapshot)
+          fn(
+            {
+              ctx,
+              width: 800,
+              height: 600,
+              theme: 'dark',
+              responsiveScale: 1,
+              contentScale: 1
+            },
+            snapshot
+          )
         ).not.toThrow();
       });
 
@@ -82,7 +107,17 @@ describe('vt-integral renderer', () => {
         const { ctx } = makeCtx();
         const snapshot = createSnapshot(scene);
         expect(() =>
-          fn({ ctx, width: 800, height: 600, theme: 'light', responsiveScale: 0.6, contentScale: 1.7 }, snapshot)
+          fn(
+            {
+              ctx,
+              width: 800,
+              height: 600,
+              theme: 'light',
+              responsiveScale: 0.6,
+              contentScale: 1.7
+            },
+            snapshot
+          )
         ).not.toThrow();
       });
     }

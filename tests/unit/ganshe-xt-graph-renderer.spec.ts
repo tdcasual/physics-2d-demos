@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createXtGraphRenderer } from '../../src/scenes/ganshe/scene.view';
-import type { ObserverData, WaveParams } from '../../src/scenes/ganshe/scene.sim';
+import type {
+  ObserverData,
+  WaveParams
+} from '../../src/scenes/ganshe/scene.sim';
 
 describe('ganshe xt graph renderer', () => {
   let canvas: HTMLCanvasElement;
@@ -55,7 +58,10 @@ describe('ganshe xt graph renderer', () => {
   }
 
   it('renders background fill', () => {
-    const renderer = createXtGraphRenderer(canvas, { theme: 'light', title: '观察点1' });
+    const renderer = createXtGraphRenderer(canvas, {
+      theme: 'light',
+      title: '观察点1'
+    });
     renderer.resize(); // ensure ctx is initialized
 
     const ctx = canvas.getContext('2d')!;
@@ -71,7 +77,10 @@ describe('ganshe xt graph renderer', () => {
   });
 
   it('renders axis labels', () => {
-    const renderer = createXtGraphRenderer(canvas, { theme: 'light', title: '观察点1' });
+    const renderer = createXtGraphRenderer(canvas, {
+      theme: 'light',
+      title: '观察点1'
+    });
     renderer.resize();
 
     const ctx = canvas.getContext('2d')!;

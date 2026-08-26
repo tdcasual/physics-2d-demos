@@ -21,7 +21,10 @@ import {
 import { drawStepIndicator } from '../../src/scenes/electrification/renderer/draw-step-indicator';
 import type { ElectrificationSnapshot } from '../../src/scenes/electrification/scene.sim';
 
-function makeCtx(): { ctx: CanvasRenderingContext2D; canvas: HTMLCanvasElement } {
+function makeCtx(): {
+  ctx: CanvasRenderingContext2D;
+  canvas: HTMLCanvasElement;
+} {
   const canvas = document.createElement('canvas');
   canvas.width = 800;
   canvas.height = 600;
@@ -56,7 +59,9 @@ describe('electrification renderer', () => {
     it('draws glass rod without throwing', () => {
       const { ctx } = makeCtx();
       expect(() => drawGlassRod(ctx, 100, 100, 120, 60, true, 1)).not.toThrow();
-      expect(() => drawGlassRod(ctx, 100, 100, 120, 60, false, 1)).not.toThrow();
+      expect(() =>
+        drawGlassRod(ctx, 100, 100, 120, 60, false, 1)
+      ).not.toThrow();
     });
 
     it('draws silk without throwing', () => {
@@ -79,9 +84,15 @@ describe('electrification renderer', () => {
 
     it('draws charged sphere without throwing', () => {
       const { ctx } = makeCtx();
-      expect(() => drawChargedSphere(ctx, 200, 200, 35, 2, true, 1)).not.toThrow();
-      expect(() => drawChargedSphere(ctx, 200, 200, 35, -3, false, 1)).not.toThrow();
-      expect(() => drawChargedSphere(ctx, 200, 200, 35, 0, true, 1)).not.toThrow();
+      expect(() =>
+        drawChargedSphere(ctx, 200, 200, 35, 2, true, 1)
+      ).not.toThrow();
+      expect(() =>
+        drawChargedSphere(ctx, 200, 200, 35, -3, false, 1)
+      ).not.toThrow();
+      expect(() =>
+        drawChargedSphere(ctx, 200, 200, 35, 0, true, 1)
+      ).not.toThrow();
     });
   });
 
@@ -89,28 +100,42 @@ describe('electrification renderer', () => {
     it('draws net charges without throwing', () => {
       const { ctx } = makeCtx();
       expect(() => drawNetCharges(ctx, 200, 200, 2, 30, true, 1)).not.toThrow();
-      expect(() => drawNetCharges(ctx, 200, 200, -3, 30, true, 1)).not.toThrow();
+      expect(() =>
+        drawNetCharges(ctx, 200, 200, -3, 30, true, 1)
+      ).not.toThrow();
       expect(() => drawNetCharges(ctx, 200, 200, 0, 30, true, 1)).not.toThrow();
     });
 
     it('draws atom charges without throwing', () => {
       const { ctx } = makeCtx();
-      expect(() => drawAtomCharges(ctx, 100, 100, 120, 60, 0, true, 1)).not.toThrow();
-      expect(() => drawAtomCharges(ctx, 100, 100, 120, 60, 2, false, 1)).not.toThrow();
+      expect(() =>
+        drawAtomCharges(ctx, 100, 100, 120, 60, 0, true, 1)
+      ).not.toThrow();
+      expect(() =>
+        drawAtomCharges(ctx, 100, 100, 120, 60, 2, false, 1)
+      ).not.toThrow();
     });
 
     it('draws transfer arrow without throwing', () => {
       const { ctx } = makeCtx();
-      expect(() => drawTransferArrow(ctx, 100, 200, 300, 200, true, 1)).not.toThrow();
+      expect(() =>
+        drawTransferArrow(ctx, 100, 200, 300, 200, true, 1)
+      ).not.toThrow();
     });
   });
 
   describe('draw-field-lines', () => {
     it('draws field lines from point without throwing', () => {
       const { ctx } = makeCtx();
-      expect(() => drawFieldLinesFromPoint(ctx, 200, 200, 2, 60, true, 1)).not.toThrow();
-      expect(() => drawFieldLinesFromPoint(ctx, 200, 200, -3, 60, true, 1)).not.toThrow();
-      expect(() => drawFieldLinesFromPoint(ctx, 200, 200, 0, 60, true, 1)).not.toThrow();
+      expect(() =>
+        drawFieldLinesFromPoint(ctx, 200, 200, 2, 60, true, 1)
+      ).not.toThrow();
+      expect(() =>
+        drawFieldLinesFromPoint(ctx, 200, 200, -3, 60, true, 1)
+      ).not.toThrow();
+      expect(() =>
+        drawFieldLinesFromPoint(ctx, 200, 200, 0, 60, true, 1)
+      ).not.toThrow();
     });
 
     it('draws field lines between opposite charges without throwing', () => {
@@ -132,7 +157,16 @@ describe('electrification renderer', () => {
     it('draws step indicator without throwing', () => {
       const { ctx } = makeCtx();
       expect(() =>
-        drawStepIndicator(ctx, 800, 600, 1, 3, ['初始', '摩擦', '分离'], true, 1)
+        drawStepIndicator(
+          ctx,
+          800,
+          600,
+          1,
+          3,
+          ['初始', '摩擦', '分离'],
+          true,
+          1
+        )
       ).not.toThrow();
     });
   });
@@ -142,7 +176,10 @@ describe('electrification renderer', () => {
       const { ctx } = makeCtx();
       const snapshot = createSnapshot('friction', 0, 0, 0);
       expect(() =>
-        drawFriction({ ctx, width: 800, height: 600, theme: 'dark', responsiveScale: 1 }, snapshot)
+        drawFriction(
+          { ctx, width: 800, height: 600, theme: 'dark', responsiveScale: 1 },
+          snapshot
+        )
       ).not.toThrow();
     });
 
@@ -150,7 +187,10 @@ describe('electrification renderer', () => {
       const { ctx } = makeCtx();
       const snapshot = createSnapshot('friction', 1, -2, 2);
       expect(() =>
-        drawFriction({ ctx, width: 800, height: 600, theme: 'light', responsiveScale: 1 }, snapshot)
+        drawFriction(
+          { ctx, width: 800, height: 600, theme: 'light', responsiveScale: 1 },
+          snapshot
+        )
       ).not.toThrow();
     });
 
@@ -158,7 +198,10 @@ describe('electrification renderer', () => {
       const { ctx } = makeCtx();
       const snapshot = createSnapshot('induction', 0, -2, 2);
       expect(() =>
-        drawInduction({ ctx, width: 800, height: 600, theme: 'dark', responsiveScale: 1 }, snapshot)
+        drawInduction(
+          { ctx, width: 800, height: 600, theme: 'dark', responsiveScale: 1 },
+          snapshot
+        )
       ).not.toThrow();
     });
 
@@ -166,7 +209,10 @@ describe('electrification renderer', () => {
       const { ctx } = makeCtx();
       const snapshot = createSnapshot('contact', 0, 3, -1);
       expect(() =>
-        drawContact({ ctx, width: 800, height: 600, theme: 'light', responsiveScale: 1 }, snapshot)
+        drawContact(
+          { ctx, width: 800, height: 600, theme: 'light', responsiveScale: 1 },
+          snapshot
+        )
       ).not.toThrow();
     });
   });

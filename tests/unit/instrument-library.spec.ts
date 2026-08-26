@@ -26,7 +26,12 @@ type MockRegistryEntry = {
       render: (state: { currentReading: number; zeroOffset: number }) => void;
       resize: () => void;
       setTheme: (theme: 'light' | 'dark') => void;
-      setViewport: (viewport: { x: number; y: number; width: number; height: number }) => void;
+      setViewport: (viewport: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      }) => void;
     };
   }>;
 };
@@ -37,7 +42,9 @@ const registryState = vi.hoisted(() => ({
   categoryLabel: '测量仪器'
 }));
 
-const sizeCanvasToFillMock = vi.hoisted(() => vi.fn(() => ({}) as CanvasRenderingContext2D));
+const sizeCanvasToFillMock = vi.hoisted(() =>
+  vi.fn(() => ({}) as CanvasRenderingContext2D)
+);
 
 vi.mock('../../src/instruments/instrument-registry', () => ({
   buildInstrumentRegistry: () => registryState.registry,
@@ -56,15 +63,17 @@ beforeEach(() => {
   registryState.categoryLabel = '测量仪器';
   sizeCanvasToFillMock.mockClear();
 
-  vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
+  vi.stubGlobal(
+    'requestAnimationFrame',
+    vi.fn(() => 1)
+  );
   vi.stubGlobal('cancelAnimationFrame', vi.fn());
 });
 
 describe('instrument-library', () => {
   it('renders an empty state when no instruments are registered', async () => {
-    const { bootInstrumentLibrary } = await import(
-      '../../src/app/instrument-library/instrument-library'
-    );
+    const { bootInstrumentLibrary } =
+      await import('../../src/app/instrument-library/instrument-library');
 
     const dispose = bootInstrumentLibrary();
 
@@ -121,13 +130,12 @@ describe('instrument-library', () => {
       measurement: registryState.registry
     };
 
-    const { bootInstrumentLibrary } = await import(
-      '../../src/app/instrument-library/instrument-library'
-    );
+    const { bootInstrumentLibrary } =
+      await import('../../src/app/instrument-library/instrument-library');
 
     const teardown = bootInstrumentLibrary();
-    const button = Array.from(document.querySelectorAll('button')).find((node) =>
-      node.textContent?.includes('高精度干涉测微仪')
+    const button = Array.from(document.querySelectorAll('button')).find(
+      (node) => node.textContent?.includes('高精度干涉测微仪')
     );
 
     expect(button).toBeTruthy();

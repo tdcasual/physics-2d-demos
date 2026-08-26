@@ -8,17 +8,17 @@
 export type DopplerMode = 'source-moving' | 'observer-moving' | 'both-moving';
 
 export type DopplerParams = {
-  sourceSpeed: number;      // -5 ~ 5 m/s
-  observerSpeed: number;    // -5 ~ 5 m/s
-  emitFrequency: number;    // 1 ~ 10 Hz
+  sourceSpeed: number; // -5 ~ 5 m/s
+  observerSpeed: number; // -5 ~ 5 m/s
+  emitFrequency: number; // 1 ~ 10 Hz
   mode: DopplerMode;
   audioEnabled: boolean;
-  audioVolume: number;      // 0 ~ 1
-  playbackSpeed: number;    // 0.1 ~ 2.0
+  audioVolume: number; // 0 ~ 1
+  playbackSpeed: number; // 0.1 ~ 2.0
 };
 
 export type WaveRing = {
-  x: number;        // 发射位置 x (m)
+  x: number; // 发射位置 x (m)
   birthTime: number; // 发射时刻 (s)
 };
 
@@ -60,7 +60,7 @@ function computeReceivedFrequency(
   const denom = SOUND_SPEED - effectiveSourceSpeed;
   if (Math.abs(denom) < 1e-6) return emitFreq * 100; // 接近音速
 
-  return emitFreq * (SOUND_SPEED + effectiveObsSpeed) / denom;
+  return (emitFreq * (SOUND_SPEED + effectiveObsSpeed)) / denom;
 }
 
 function computeWavelengths(sourceSpeed: number, emitFreq: number) {
@@ -71,8 +71,8 @@ function computeWavelengths(sourceSpeed: number, emitFreq: number) {
   const absV = Math.abs(sourceSpeed);
   return {
     standard: lambda0,
-    front: lambda0 * (SOUND_SPEED - absV) / SOUND_SPEED,
-    back: lambda0 * (SOUND_SPEED + absV) / SOUND_SPEED,
+    front: (lambda0 * (SOUND_SPEED - absV)) / SOUND_SPEED,
+    back: (lambda0 * (SOUND_SPEED + absV)) / SOUND_SPEED
   };
 }
 
@@ -84,19 +84,26 @@ class AudioEngine {
   private gain: GainNode | null = null;
   private _enabled = false;
 
-  get enabled() { return this._enabled; }
+  get enabled() {
+    return this._enabled;
+  }
 
   enable(): void {
     if (this._enabled) return;
     try {
-      const AC = window.AudioContext || (window as unknown as Record<string, typeof AudioContext>).webkitAudioContext;
+      const AC =
+        window.AudioContext ||
+        (window as unknown as Record<string, typeof AudioContext>)
+          .webkitAudioContext;
       if (!AC) return;
       this.ctx = new AC({ sampleRate: 48000 });
       this.gain = this.ctx.createGain();
       this.gain.gain.value = 0.15;
       this.gain.connect(this.ctx.destination);
       this._enabled = true;
-    } catch { /* 浏览器不支持 */ }
+    } catch {
+      /* 浏览器不支持 */
+    }
   }
 
   disable(): void {
@@ -132,7 +139,11 @@ class AudioEngine {
 
   private stopOsc(): void {
     if (this.osc) {
-      try { this.osc.stop(); } catch { /* already stopped */ }
+      try {
+        this.osc.stop();
+      } catch {
+        /* already stopped */
+      }
       this.osc.disconnect();
       this.osc = null;
     }
@@ -151,7 +162,7 @@ export function createDopplerSim(initial: Partial<DopplerParams> = {}) {
     mode: 'source-moving',
     audioEnabled: false,
     audioVolume: 0.5,
-    playbackSpeed: 1.0,
+    playbackSpeed: 1.0
   };
 
   let params: DopplerParams = { ...defaults, ...initial };
@@ -166,10 +177,15 @@ export function createDopplerSim(initial: Partial<DopplerParams> = {}) {
   function getState(): DopplerState {
     const { sourceSpeed, observerSpeed, emitFrequency } = params;
     const receivedFrequency = computeReceivedFrequency(
-      emitFrequency, sourceSpeed, observerSpeed, sourceX, observerX
+      emitFrequency,
+      sourceSpeed,
+      observerSpeed,
+      sourceX,
+      observerX
     );
     const wl = computeWavelengths(sourceSpeed, emitFrequency);
-    const freqChangePct = ((receivedFrequency - emitFrequency) / emitFrequency) * 100;
+    const freqChangePct =
+      ((receivedFrequency - emitFrequency) / emitFrequency) * 100;
 
     return {
       params: { ...params },
@@ -183,7 +199,7 @@ export function createDopplerSim(initial: Partial<DopplerParams> = {}) {
       wavelengthBack: wl.back,
       machNumber: Math.abs(sourceSpeed) / SOUND_SPEED,
       frequencyChangePct: freqChangePct,
-      waveArrived,
+      waveArrived
     };
   }
 
@@ -235,12 +251,18 @@ export function createDopplerSim(initial: Partial<DopplerParams> = {}) {
     }
 
     // 移除超大环
-    waveRings = waveRings.filter(r => SOUND_SPEED * (time - r.birthTime) < 60);
+    waveRings = waveRings.filter(
+      (r) => SOUND_SPEED * (time - r.birthTime) < 60
+    );
 
     // 更新音频
     if (audio.enabled) {
       const recvFreq = computeReceivedFrequency(
-        params.emitFrequency, params.sourceSpeed, params.observerSpeed, sourceX, observerX
+        params.emitFrequency,
+        params.sourceSpeed,
+        params.observerSpeed,
+        sourceX,
+        observerX
       );
       // 将模拟频率 (1-10Hz) 映射到可听范围 (~100-1000Hz)
       audio.updateFreq(recvFreq * 100);
@@ -251,7 +273,11 @@ export function createDopplerSim(initial: Partial<DopplerParams> = {}) {
     audio.enable();
     if (audio.enabled) {
       const recvFreq = computeReceivedFrequency(
-        params.emitFrequency, params.sourceSpeed, params.observerSpeed, sourceX, observerX
+        params.emitFrequency,
+        params.sourceSpeed,
+        params.observerSpeed,
+        sourceX,
+        observerX
       );
       audio.startOsc(recvFreq * 100);
       audio.setVolume(params.audioVolume);
@@ -284,8 +310,15 @@ export function createDopplerSim(initial: Partial<DopplerParams> = {}) {
   }
 
   return {
-    getState, setParams, setSourceX, setObserverX,
-    enableAudio, disableAudio, setVolume,
-    step, reset, dispose,
+    getState,
+    setParams,
+    setSourceX,
+    setObserverX,
+    enableAudio,
+    disableAudio,
+    setVolume,
+    step,
+    reset,
+    dispose
   };
 }

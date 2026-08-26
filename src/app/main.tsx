@@ -3,7 +3,8 @@
  * React Application Entry
  */
 
-import '../styles/index.css';
+import '../styles/design-tokens.css';
+import '../styles/themes.css';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';

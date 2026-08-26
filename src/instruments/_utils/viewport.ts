@@ -79,6 +79,6 @@ export function toAbsoluteViewport(
     x: relative.x * w,
     y: relative.y * h,
     width: relative.width * w,
-    height: relative.height * h,
+    height: relative.height * h
   };
 }

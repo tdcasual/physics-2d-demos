@@ -20,7 +20,8 @@ describe('theme entry architecture', () => {
 
     expect(shell).toContain('shell-theme-toggle');
     for (const page of pages) {
-      const hasInlineThemeToggle = page.includes('onThemeToggle') && page.includes('shell.themeButton');
+      const hasInlineThemeToggle =
+        page.includes('onThemeToggle') && page.includes('shell.themeButton');
       const usesBootstrapper = page.includes('bootScenePage');
       expect(hasInlineThemeToggle || usesBootstrapper).toBe(true);
       expect(page.includes('themeToggle')).toBe(false);

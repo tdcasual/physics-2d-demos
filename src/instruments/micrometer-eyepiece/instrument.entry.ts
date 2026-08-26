@@ -1,14 +1,15 @@
-import type {
-  InstrumentFactory,
-} from '../_contract/instrument-contract';
+import type { InstrumentFactory } from '../_contract/instrument-contract';
 import type { TeachingTheme } from '../../platform/standards';
 import type { InstrumentViewport } from '../_contract/instrument-contract';
 
 import { micrometerEyepieceMeta } from './instrument.meta';
-import { createMicrometerEyepieceSim, type MicrometerEyepieceState } from './instrument.sim';
+import {
+  createMicrometerEyepieceSim,
+  type MicrometerEyepieceState
+} from './instrument.sim';
 import {
   createMicrometerEyepieceView,
-  type MicrometerEyepieceView,
+  type MicrometerEyepieceView
 } from './instrument.view';
 
 export function createMicrometerEyepiece(options: {
@@ -35,5 +36,5 @@ export const micrometerEyepieceFactory: InstrumentFactory<
   },
   createView(options) {
     return createMicrometerEyepieceView(options);
-  },
+  }
 };

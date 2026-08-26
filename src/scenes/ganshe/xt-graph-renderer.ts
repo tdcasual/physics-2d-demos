@@ -44,7 +44,11 @@ export function createXtGraphRenderer(
     responsiveScale = parseFloat(canvas.dataset.responsiveScale || '1');
 
     // Auto-repaint if size changed and we have cached data
-    if ((width !== oldWidth || height !== oldHeight) && lastObserver && lastParams) {
+    if (
+      (width !== oldWidth || height !== oldHeight) &&
+      lastObserver &&
+      lastParams
+    ) {
       render(lastObserver, lastTime, lastParams);
     }
   }
@@ -79,7 +83,11 @@ export function createXtGraphRenderer(
   /** 图表时间窗口（秒）：曲线在屏幕上保留的时间跨度 */
   const TIME_WINDOW = 30;
 
-  function render(observer: ObserverData, time: number, params: WaveParams): void {
+  function render(
+    observer: ObserverData,
+    time: number,
+    params: WaveParams
+  ): void {
     lastObserver = observer;
     lastTime = time;
     lastParams = params;
@@ -118,7 +126,9 @@ export function createXtGraphRenderer(
     ctx.fillStyle = colors.text;
     ctx.fillText(
       'y-t 图',
-      plotLeft + ctx.measureText(title).width + scaledSize(6, responsiveScale, 6),
+      plotLeft +
+        ctx.measureText(title).width +
+        scaledSize(6, responsiveScale, 6),
       scaledSize(14, responsiveScale, 14)
     );
 
@@ -187,9 +197,10 @@ export function createXtGraphRenderer(
     }
 
     // Current point (always show, even when paused/history is empty)
-    const currY = observer.history.length > 0
-      ? observer.history[observer.history.length - 1].y
-      : observer.interference.ySum;
+    const currY =
+      observer.history.length > 0
+        ? observer.history[observer.history.length - 1].y
+        : observer.interference.ySum;
     const cx = plotRight - 3;
     const cy = zeroY - currY * sy;
     const markerRadius = scaledSize(4, responsiveScale, 3);
@@ -239,11 +250,19 @@ export function createXtGraphRenderer(
     // Major labels every 10s
     for (let t = 0; t <= TIME_WINDOW; t += timeMajorStep) {
       const x = plotRight - (t / TIME_WINDOW) * plotWidth;
-      ctx.fillText(`-${t}`, x, plotBottom + scaledSize(12, responsiveScale, 12));
+      ctx.fillText(
+        `-${t}`,
+        x,
+        plotBottom + scaledSize(12, responsiveScale, 12)
+      );
     }
 
     // Horizontal axis label
-    ctx.fillText('t / s', plotRight - scaledSize(12, responsiveScale, 12), plotBottom + scaledSize(12, responsiveScale, 12));
+    ctx.fillText(
+      't / s',
+      plotRight - scaledSize(12, responsiveScale, 12),
+      plotBottom + scaledSize(12, responsiveScale, 12)
+    );
 
     // Vertical axis ticks & labels
     ctx.textAlign = 'right';
@@ -260,12 +279,19 @@ export function createXtGraphRenderer(
       c.stroke();
 
       // Label
-      c.fillText(val.toFixed(0), plotLeft - scaledSize(5, responsiveScale, 5), y + scaledSize(3, responsiveScale, 3));
+      c.fillText(
+        val.toFixed(0),
+        plotLeft - scaledSize(5, responsiveScale, 5),
+        y + scaledSize(3, responsiveScale, 3)
+      );
     });
 
     // Vertical axis label
     ctx.save();
-    ctx.translate(scaledSize(10, responsiveScale, 10), plotTop + plotHeight / 2);
+    ctx.translate(
+      scaledSize(10, responsiveScale, 10),
+      plotTop + plotHeight / 2
+    );
     ctx.rotate(-Math.PI / 2);
     ctx.textAlign = 'center';
     ctx.fillText('y / cm', 0, 0);

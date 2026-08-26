@@ -26,6 +26,7 @@ import { ContainerResizeObserver } from './container-resize-observer';
 import { detectLowPowerMode } from './power-awareness';
 import { CapabilityOrchestrator } from './capability-orchestrator';
 import { renderSceneToSlots } from './scene-slot-renderer';
+import { getStoredTheme, resolveThemePreference } from '../theme-store';
 import {
   buildCapabilityContext,
   updateCapabilityInstances
@@ -64,6 +65,7 @@ export class SceneContainerImpl implements SceneContainer {
   private _disposed = false;
   private _switching = false;
   private _pendingScene: Scene | null = null;
+  private _hasExplicitDefaultTheme: boolean;
   private _emitter: EventEmitter<SceneContainerEvents>;
   private _resizeObserver: ContainerResizeObserver;
   private _orchestrator = new CapabilityOrchestrator();
@@ -74,6 +76,7 @@ export class SceneContainerImpl implements SceneContainer {
     this._storageKey = options.storageKey || 'physics-demos-container-state';
     this._onResize = options.onResize;
     this._currentTheme = options.defaultTheme || 'light';
+    this._hasExplicitDefaultTheme = options.defaultTheme != null;
     this._layoutConfig = options.layoutConfig;
 
     // 设置容器基础样式（尺寸由各布局自行声明）
@@ -625,25 +628,30 @@ export class SceneContainerImpl implements SceneContainer {
 
   /**
    * 保存状态到 localStorage
+   *
+   * 主题不在此持久化——主题由 theme-store 统一管理（bootstrapper 订阅
+   * `theme:change` 事件写入），容器状态只保留布局偏好。
    */
   persistState(): void {
-    persistStateToStorage(
-      this._storageKey,
-      this._currentTheme,
-      this._userPreferredLayout
-    );
+    persistStateToStorage(this._storageKey, this._userPreferredLayout);
   }
 
   /**
    * 从 localStorage 恢复状态
+   *
+   * 布局偏好从容器状态恢复；主题从 theme-store 统一读取（含旧容器状态
+   * theme 字段的一次性迁移），调用方显式传入的 defaultTheme 优先。
    */
   restorePersistedState(): void {
     const restored = restorePersistedStateFromStorage(this._storageKey);
-    if (restored?.theme) {
-      this._currentTheme = restored.theme;
-    }
     if (restored?.preferredLayout) {
       this._userPreferredLayout = restored.preferredLayout;
+    }
+    if (!this._hasExplicitDefaultTheme) {
+      const stored = getStoredTheme();
+      if (stored) {
+        this._currentTheme = resolveThemePreference(stored);
+      }
     }
   }
 

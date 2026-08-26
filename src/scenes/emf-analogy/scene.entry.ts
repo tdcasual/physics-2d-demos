@@ -14,7 +14,9 @@ export type CreateEmfAnalogySceneOptions = {
   onReadout?: (snapshot: EmfAnalogySnapshot) => void;
 };
 
-function formatReadout(snapshot: EmfAnalogySnapshot): Array<{ label: string; value: string }> {
+function formatReadout(
+  snapshot: EmfAnalogySnapshot
+): Array<{ label: string; value: string }> {
   return [
     { label: '系统状态', value: snapshot.state.isSystemOn ? '通路' : '断路' },
     {
@@ -49,8 +51,6 @@ export function createEmfAnalogyScene(
   getView(): EmfViewMode;
   getSnapshot(): EmfAnalogySnapshot;
   getReadoutItems(): Array<{ label: string; value: string }>;
-  start(): void;
-  stop(): void;
   startAll(): void;
   pauseAll(): void;
   subscribe(listener: () => void): () => void;
@@ -101,19 +101,12 @@ export function createEmfAnalogyScene(
     getReadoutItems() {
       return formatReadout(sim.getSnapshot());
     },
-    start(): void {
-      (view as { start?(): void }).start?.();
-    },
-    stop(): void {
-      (view as { stop?(): void }).stop?.();
-    },
     startAll(): void {
-      (view as { start?(): void }).start?.();
+      // 播放循环由 scene-shell 驱动，这里只需重绘并同步读数
       base.renderAndEmit();
       base.notify();
     },
     pauseAll(): void {
-      (view as { stop?(): void }).stop?.();
       base.renderAndEmit();
       base.notify();
     }

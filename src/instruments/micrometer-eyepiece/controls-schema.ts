@@ -14,8 +14,8 @@ export const micrometerEyepieceControlsSchema: ControlsSchema = {
           min: 0,
           max: 32,
           step: 0.01,
-          value: 0.30,
-          unit: 'mm',
+          value: 0,
+          unit: 'mm'
         },
         {
           type: 'slider',
@@ -25,9 +25,9 @@ export const micrometerEyepieceControlsSchema: ControlsSchema = {
           max: 0.5,
           step: 0.001,
           value: 0,
-          unit: 'mm',
-        },
-      ],
+          unit: 'mm'
+        }
+      ]
     },
     {
       title: '视场模式',
@@ -41,10 +41,10 @@ export const micrometerEyepieceControlsSchema: ControlsSchema = {
           value: 'crosshair',
           options: [
             { label: '准星移动（默认）', value: 'crosshair' },
-            { label: '条纹移动', value: 'fringe' },
-          ],
-        },
-      ],
+            { label: '条纹移动', value: 'fringe' }
+          ]
+        }
+      ]
     },
     {
       title: '干涉条纹',
@@ -56,10 +56,10 @@ export const micrometerEyepieceControlsSchema: ControlsSchema = {
           key: 'stripeOffset',
           label: '十字准星位移',
           min: 0,
-          max: 2000,
-          step: 1,
-          value: 1200,
-          unit: 'px',
+          max: 32,
+          step: 0.01,
+          value: 12,
+          unit: 'mm'
         },
         {
           type: 'slider',
@@ -69,13 +69,13 @@ export const micrometerEyepieceControlsSchema: ControlsSchema = {
           max: 100,
           step: 1,
           value: 50,
-          unit: 'px',
+          unit: 'px'
         },
         {
           type: 'text',
           key: 'stripeColor',
           label: '条纹颜色',
-          value: 'rgba(200,80,20,0.4)',
+          value: 'rgba(200,80,20,0.4)'
         },
         {
           type: 'slider',
@@ -85,9 +85,9 @@ export const micrometerEyepieceControlsSchema: ControlsSchema = {
           max: 180,
           step: 1,
           value: 90,
-          unit: '°',
-        },
-      ],
+          unit: '°'
+        }
+      ]
     },
     {
       title: '操作说明',
@@ -104,16 +104,16 @@ export const micrometerEyepieceControlsSchema: ControlsSchema = {
               '• 拖动右侧测微螺杆（或鼠标滚轮）旋转副尺',
               '• 拖动左侧目镜壳体可整体移动仪器位置',
               '• 十字准星对准干涉条纹中心时触发对齐事件',
-              '• 使用「零位修正」校准仪器系统误差',
+              '• 使用「零位修正」校准仪器系统误差'
             ];
             lines.forEach((text) => {
               const p = document.createElement('p');
               p.textContent = text;
               mount.appendChild(p);
             });
-          },
-        },
-      ],
-    },
-  ],
+          }
+        }
+      ]
+    }
+  ]
 };

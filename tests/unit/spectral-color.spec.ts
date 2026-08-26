@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { thinFilmReflectance, whiteLightFilmColor } from '../../src/core/spectral-color';
+import {
+  thinFilmReflectance,
+  whiteLightFilmColor
+} from '../../src/core/spectral-color';
 
 describe('spectral-color', () => {
   describe('thinFilmReflectance', () => {

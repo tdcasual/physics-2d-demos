@@ -3,6 +3,7 @@
 ## 1. 现有架构概览
 
 ### 1.1 核心组件层
+
 ```
 ┌─────────────────────────────────────────┐
 │         teaching-demo-shell.ts          │  <- 统一样式容器
@@ -24,29 +25,32 @@
 
 ### 1.2 各场景差异分析
 
-| 场景 | UI模式 | 特殊组件 | 布局差异 |
-|-----|-------|---------|---------|
-| projectile | teaching-demo-shell | 标准 | 3栏: 控制/分隔/舞台 |
-| chase-meet | teaching-demo-shell / legacy | 双渲染器 | 支持iframe回退 |
-| field-lines | teaching-demo-shell | 电荷放置UI | 鼠标交互特殊 |
-| emf-analogy | teaching-demo-shell | 水管类比可视化 | 复杂UI覆盖层 |
-| electrification | teaching-demo-shell | 材料选择器 | 多步骤演示 |
-| spring-oscillator | **自定义** | 双Canvas (图形+舞台) | 完全不同布局 |
-| vt-integral | teaching-demo-shell | 图表区域 | 标准 |
+| 场景              | UI模式                       | 特殊组件             | 布局差异            |
+| ----------------- | ---------------------------- | -------------------- | ------------------- |
+| projectile        | teaching-demo-shell          | 标准                 | 3栏: 控制/分隔/舞台 |
+| chase-meet        | teaching-demo-shell / legacy | 双渲染器             | 支持iframe回退      |
+| field-lines       | teaching-demo-shell          | 电荷放置UI           | 鼠标交互特殊        |
+| emf-analogy       | teaching-demo-shell          | 水管类比可视化       | 复杂UI覆盖层        |
+| electrification   | teaching-demo-shell          | 材料选择器           | 多步骤演示          |
+| spring-oscillator | **自定义**                   | 双Canvas (图形+舞台) | 完全不同布局        |
+| vt-integral       | teaching-demo-shell          | 图表区域             | 标准                |
 
 ### 1.3 关键差异点
 
 **spring-oscillator 异常:**
+
 - 使用自定义布局 `spring-layout` + `spring-sidebar` + `spring-main`
 - 双Canvas设计: `graphCanvas` + `stageCanvas`
 - 独立的CSS文件和交互逻辑
 
 **控制组件差异:**
+
 - 大部分使用 `createXXXControls` 模式
 - 但参数结构、回调命名不统一
 - 有的返回 dispose，有的不返回
 
 **View渲染差异:**
+
 - 有的使用Canvas 2D，有的尝试WebGL
 - 颜色主题处理方式不一
 - 坐标系、缩放逻辑各自实现
@@ -70,17 +74,17 @@ interface UnifiedScene {
   // 生命周期
   mount(options: SceneMountOptions): void;
   unmount(): void;
-  
+
   // 控制
   play(): void;
   pause(): void;
   reset(): void;
   step(): void;
-  
+
   // 配置
   setParams(params: Record<string, unknown>): void;
   getParams(): Record<string, unknown>;
-  
+
   // 状态
   getState(): SceneState;
   subscribe(callback: StateCallback): Unsubscribe;
@@ -104,6 +108,7 @@ interface UnifiedView {
 ### 2.3 组件标准化
 
 **控制组件标准结构:**
+
 ```typescript
 // controls.ts
 export function createSceneControls(options: {
@@ -121,6 +126,7 @@ export function createSceneControls(options: {
 ```
 
 **View渲染标准结构:**
+
 ```typescript
 // view.ts
 export function createSceneView(options: {
@@ -188,26 +194,31 @@ export function createSceneView(options: {
 ## 3. 实施路线图
 
 ### Phase 1: 基础设施 (1周)
+
 - [ ] 完善 `core/colors.ts` 配色系统
 - [ ] 创建 `core/unified-canvas.ts` 统一Canvas工具
 - [ ] 创建 `core/unified-controls.ts` 控制组件基类
 - [ ] 更新 `teaching-demo-shell.ts` 支持自定义stage布局
 
 ### Phase 2: 试点改造 (1周)
+
 - [ ] 选择 1-2 个简单场景 (projectile/vt-integral)
 - [ ] 验证新架构可行性
 - [ ] 收集反馈调整设计
 
 ### Phase 3: 批量迁移 (2周)
+
 - [ ] 改造 field-lines
 - [ ] 改造 emf-analogy
 - [ ] 改造 electrification
 - [ ] 改造 chase-meet
 
 ### Phase 4: 复杂场景 (1周)
+
 - [ ] 改造 spring-oscillator (双Canvas特殊处理)
 
 ### Phase 5: 清理优化 (1周)
+
 - [ ] 删除旧代码
 - [ ] 统一文档
 - [ ] 性能优化

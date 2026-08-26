@@ -22,9 +22,7 @@ export function drawStepIndicator(
   ctx.save();
 
   // 背景线
-  ctx.strokeStyle = isDark
-    ? 'rgba(148,163,184,0.2)'
-    : 'rgba(71,85,105,0.15)';
+  ctx.strokeStyle = isDark ? 'rgba(148,163,184,0.2)' : 'rgba(71,85,105,0.15)';
   ctx.lineWidth = barH;
   ctx.lineCap = 'round';
   ctx.beginPath();
@@ -34,9 +32,7 @@ export function drawStepIndicator(
 
   // 已完成线段
   const progressX = startX + currentStep * stepW;
-  ctx.strokeStyle = isDark
-    ? 'rgba(56,189,248,0.7)'
-    : 'rgba(14,165,233,0.6)';
+  ctx.strokeStyle = isDark ? 'rgba(56,189,248,0.7)' : 'rgba(14,165,233,0.6)';
   ctx.beginPath();
   ctx.moveTo(startX, startY);
   ctx.lineTo(progressX, startY);
@@ -53,13 +49,21 @@ export function drawStepIndicator(
     ctx.beginPath();
     ctx.arc(cx, startY, dotR, 0, Math.PI * 2);
     ctx.fillStyle = isDone
-      ? isDark ? '#38bdf8' : '#0ea5e9'
-      : isDark ? 'rgba(30,41,59,0.9)' : 'rgba(241,245,249,0.9)';
+      ? isDark
+        ? '#38bdf8'
+        : '#0ea5e9'
+      : isDark
+        ? 'rgba(30,41,59,0.9)'
+        : 'rgba(241,245,249,0.9)';
     ctx.fill();
 
     ctx.strokeStyle = isDone
-      ? isDark ? '#38bdf8' : '#0ea5e9'
-      : isDark ? 'rgba(148,163,184,0.4)' : 'rgba(71,85,105,0.3)';
+      ? isDark
+        ? '#38bdf8'
+        : '#0ea5e9'
+      : isDark
+        ? 'rgba(148,163,184,0.4)'
+        : 'rgba(71,85,105,0.3)';
     ctx.lineWidth = isCurrent ? 2 : 1;
     ctx.stroke();
 
@@ -77,8 +81,12 @@ export function drawStepIndicator(
     // 标签
     if (labels[i]) {
       ctx.fillStyle = isDone
-        ? isDark ? '#e2e8f0' : '#1e293b'
-        : isDark ? 'rgba(226,232,240,0.5)' : 'rgba(71,85,105,0.5)';
+        ? isDark
+          ? '#e2e8f0'
+          : '#1e293b'
+        : isDark
+          ? 'rgba(226,232,240,0.5)'
+          : 'rgba(71,85,105,0.5)';
       ctx.font = `${Math.max(9, Math.round(11 * s))}px "Noto Sans SC", sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';

@@ -12,7 +12,10 @@ export function drawHeatmap(
   isDark: boolean
 ): void {
   // 根据画布尺寸和响应式缩放确定网格分辨率
-  const baseGridSize = Math.max(15, Math.min(35, Math.round(25 * responsiveScale)));
+  const baseGridSize = Math.max(
+    15,
+    Math.min(35, Math.round(25 * responsiveScale))
+  );
   const cellW = width / baseGridSize;
   const cellH = height / baseGridSize;
   const cols = Math.ceil(width / cellW);

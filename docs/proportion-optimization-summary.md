@@ -7,6 +7,7 @@
 ## 核心优化点
 
 ### 1. 侧边栏宽度优化
+
 ```
 修改前: 360px (占 26.4% 的 1366px 屏幕)
 修改后: 300px (占 22.0%)
@@ -16,20 +17,24 @@
 ```
 
 **文件:**
+
 - `src/app/teaching-demo-shell.ts` (第 229 行)
 - `src/ui/teaching-demo.css` (第 41 行)
 
 ### 2. 分隔条优化
+
 ```
 修改前: 12px (较显眼)
 修改后: 8px (更精致)
 ```
 
 **文件:**
+
 - `src/app/teaching-demo-shell.ts` (第 231 行)
 - `src/ui/teaching-demo.css` (第 78 行)
 
 ### 3. 响应式断点优化
+
 ```
 修改前: 1024px
 修改后: 900px (桌面/移动端分界)
@@ -40,10 +45,12 @@
 **优势:** 900-1024px 范围的设备现在使用桌面布局，而不是移动端布局
 
 **文件:**
+
 - `src/app/teaching-demo-shell.ts` (第 44 行)
 - `src/ui/teaching-demo.css` (第 277、297 行)
 
 ### 4. 内边距与字体优化
+
 ```
 侧边栏 padding:  20px → 16px
 头部卡片 padding: 20px → 16px
@@ -63,14 +70,15 @@
 import { getOptimalCanvasSize } from '@/core/unified-canvas';
 
 const { width, height, scale } = getOptimalCanvasSize(
-  stageWidth, 
-  stageHeight, 
-  margin = 40
+  stageWidth,
+  stageHeight,
+  (margin = 40)
 );
 // 返回: { width: 800, height: 600, scale: 1 }
 ```
 
 **逻辑:**
+
 - 宽屏 (16:9+) → 使用 16:9 比例
 - 标准屏 (4:3-16:9) → 使用 4:3 比例
 - 正方形 → 使用 1:1 比例
@@ -90,12 +98,12 @@ const { width, height, scale } = getOptimalCanvasSize(
 
 ## 各屏幕尺寸效果
 
-| 屏幕 | 侧边栏 | 分隔条 | 舞台 | 改进 |
-|-----|-------|-------|------|-----|
-| 1366×768 | 300px (22%) | 8px | 1058px (78%) | +64px |
-| 1440×900 | 320px (22%) | 8px | 1112px (78%) | 更合理 |
-| 1920×1080 | 340px (18%) | 8px | 1572px (82%) | 更合理 |
-| 1024×768 | 280px (27%) | 8px | 736px (72%) | 现用桌面布局 |
+| 屏幕      | 侧边栏      | 分隔条 | 舞台         | 改进         |
+| --------- | ----------- | ------ | ------------ | ------------ |
+| 1366×768  | 300px (22%) | 8px    | 1058px (78%) | +64px        |
+| 1440×900  | 320px (22%) | 8px    | 1112px (78%) | 更合理       |
+| 1920×1080 | 340px (18%) | 8px    | 1572px (82%) | 更合理       |
+| 1024×768  | 280px (27%) | 8px    | 736px (72%)  | 现用桌面布局 |
 
 ## 双面板场景建议
 
@@ -108,6 +116,7 @@ const { width, height, scale } = getOptimalCanvasSize(
 ```
 
 **理由:**
+
 - x-t 图像需要时间轴，45% 足够
 - 弹簧动画 55% 更宽敞
 - 接近黄金分割，视觉舒适

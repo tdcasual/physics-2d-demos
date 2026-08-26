@@ -47,9 +47,8 @@ export function drawElectronsOnPath(
       accumulated += segments[s];
     }
 
-    const segT = segments[segIndex] > 0
-      ? (dist - accumulated) / segments[segIndex]
-      : 0;
+    const segT =
+      segments[segIndex] > 0 ? (dist - accumulated) / segments[segIndex] : 0;
     const p0 = points[segIndex];
     const p1 = points[segIndex + 1];
     const ex = p0.x + (p1.x - p0.x) * segT;
@@ -59,9 +58,7 @@ export function drawElectronsOnPath(
     const brightness = speed > 0.05 ? 1 : 0.25;
     ctx.beginPath();
     ctx.arc(ex, ey, r, 0, Math.PI * 2);
-    ctx.fillStyle = speed > 0.05
-      ? colors.electron
-      : colors.electronDim;
+    ctx.fillStyle = speed > 0.05 ? colors.electron : colors.electronDim;
     ctx.globalAlpha = brightness;
     ctx.fill();
     ctx.globalAlpha = 1;

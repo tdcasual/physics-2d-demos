@@ -79,7 +79,10 @@ export function drawScene3(
   // 多边形填充（薄荷渐变）
   const polyGrad = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
   polyGrad.addColorStop(0, P.approxFill);
-  polyGrad.addColorStop(1, P.isDark ? 'rgba(78,205,196,0.05)' : 'rgba(18,165,148,0.05)');
+  polyGrad.addColorStop(
+    1,
+    P.isDark ? 'rgba(78,205,196,0.05)' : 'rgba(18,165,148,0.05)'
+  );
   ctx.fillStyle = polyGrad;
   ctx.beginPath();
   pts.forEach((p, i) => {
@@ -148,7 +151,11 @@ export function drawScene3(
     { label: '内接正多边形', value: `n = ${n} 边`, accent: false },
     { label: '多边形周长', value: perimeter.toFixed(4), accent: false },
     { label: '圆周长 2π', value: circumference.toFixed(4), accent: false },
-    { label: '两者之差', value: metrics.circumferenceDiff.toFixed(4), accent: true }
+    {
+      label: '两者之差',
+      value: metrics.circumferenceDiff.toFixed(4),
+      accent: true
+    }
   ];
   let panelW = 0;
   ctx.font = `${panelFont}px ${FONT_FAMILY}`;
@@ -166,7 +173,9 @@ export function drawScene3(
   ctx.fillStyle = P.isDark ? 'rgba(15,23,42,0.78)' : 'rgba(255,255,255,0.88)';
   roundRect(ctx, px0, py0, panelW, panelH, 10 * s);
   ctx.fill();
-  ctx.strokeStyle = P.isDark ? 'rgba(148,163,184,0.28)' : 'rgba(100,116,139,0.22)';
+  ctx.strokeStyle = P.isDark
+    ? 'rgba(148,163,184,0.28)'
+    : 'rgba(100,116,139,0.22)';
   ctx.lineWidth = 1;
   ctx.stroke();
 

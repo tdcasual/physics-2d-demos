@@ -7,7 +7,7 @@ interface UseScrollRevealOptions {
 
 export function useScrollReveal({
   threshold = 0.1,
-  rootMargin = '0px 0px -50px 0px',
+  rootMargin = '0px 0px -50px 0px'
 }: UseScrollRevealOptions = {}) {
   const ref = useRef<HTMLElement>(null);
   const [isVisible, setIsVisible] = useState(false);

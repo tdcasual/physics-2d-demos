@@ -7,7 +7,9 @@ describe('electrification sim', () => {
     const before = sim.getSnapshot();
     sim.runSceneAction();
     const after = sim.getSnapshot();
-    expect(after.state.stepIndex).toBeGreaterThanOrEqual(before.state.stepIndex);
+    expect(after.state.stepIndex).toBeGreaterThanOrEqual(
+      before.state.stepIndex
+    );
     expect(after.state.explanation).not.toBe(before.state.explanation);
   });
 });

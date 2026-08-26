@@ -3,7 +3,10 @@ import { drawCircuit } from '../../src/scenes/emf-analogy/renderer/draw-circuit'
 import { drawWaterAnalogy } from '../../src/scenes/emf-analogy/renderer/draw-water-analogy';
 import type { EmfAnalogySnapshot } from '../../src/scenes/emf-analogy/scene.sim';
 
-function makeCtx(): { ctx: CanvasRenderingContext2D; canvas: HTMLCanvasElement } {
+function makeCtx(): {
+  ctx: CanvasRenderingContext2D;
+  canvas: HTMLCanvasElement;
+} {
   const canvas = document.createElement('canvas');
   canvas.width = 800;
   canvas.height = 600;

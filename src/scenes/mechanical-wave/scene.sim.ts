@@ -8,18 +8,21 @@
 export type WaveDirection = 'right' | 'left';
 
 export type MechanicalWaveParams = {
-  amplitude: number;      // 1-10 cm
-  waveSpeed: number;      // 0.5-10 m/s
-  wavelength: number;     // 1-10 m
-  period: number;         // 0.5-8 s
+  amplitude: number; // 1-10 cm
+  waveSpeed: number; // 0.5-10 m/s
+  wavelength: number; // 1-10 m
+  period: number; // 0.5-8 s
   direction: WaveDirection;
   showMicroShift: boolean;
-  playbackSpeed: number;  // 0.1-2.0
+  playbackSpeed: number; // 0.1-2.0
 };
 
 export type ConstraintInfo = {
   dependent: 'waveSpeed' | 'wavelength' | 'period';
-  independent: ['waveSpeed' | 'wavelength' | 'period', 'waveSpeed' | 'wavelength' | 'period'];
+  independent: [
+    'waveSpeed' | 'wavelength' | 'period',
+    'waveSpeed' | 'wavelength' | 'period'
+  ];
 };
 
 export type MechanicalWaveState = {
@@ -39,7 +42,7 @@ const WAVE_PARAMS: WaveParam[] = ['waveSpeed', 'wavelength', 'period'];
 const RANGES: Record<WaveParam, [number, number]> = {
   waveSpeed: [0.5, 10],
   wavelength: [1, 10],
-  period: [0.5, 8],
+  period: [0.5, 8]
 };
 
 function clamp(v: number, min: number, max: number): number {
@@ -47,14 +50,28 @@ function clamp(v: number, min: number, max: number): number {
 }
 
 /** 波形函数：y(x,t) = A sin(kx − dir·ωt) */
-export function waveY(x: number, t: number, A: number, lambda: number, T: number, dir: number): number {
+export function waveY(
+  x: number,
+  t: number,
+  A: number,
+  lambda: number,
+  T: number,
+  dir: number
+): number {
   const k = (2 * Math.PI) / lambda;
   const omega = (2 * Math.PI) / T;
   return A * Math.sin(k * x - dir * omega * t);
 }
 
 /** 质点振动速度：v_particle = −dir·Aω cos(kx − dir·ωt) */
-export function waveVelocity(x: number, t: number, A: number, lambda: number, T: number, dir: number): number {
+export function waveVelocity(
+  x: number,
+  t: number,
+  A: number,
+  lambda: number,
+  T: number,
+  dir: number
+): number {
   const k = (2 * Math.PI) / lambda;
   const omega = (2 * Math.PI) / T;
   return -dir * A * omega * Math.cos(k * x - dir * omega * t);
@@ -66,7 +83,9 @@ export function waveAcceleration(y: number, T: number): number {
   return -omega * omega * y;
 }
 
-export function createMechanicalWaveSim(initial: Partial<MechanicalWaveParams> = {}) {
+export function createMechanicalWaveSim(
+  initial: Partial<MechanicalWaveParams> = {}
+) {
   const defaults: MechanicalWaveParams = {
     amplitude: 5,
     waveSpeed: 2,
@@ -74,7 +93,7 @@ export function createMechanicalWaveSim(initial: Partial<MechanicalWaveParams> =
     period: 2,
     direction: 'right',
     showMicroShift: true,
-    playbackSpeed: 1.0,
+    playbackSpeed: 1.0
   };
 
   let params: MechanicalWaveParams = { ...defaults, ...initial };
@@ -85,17 +104,20 @@ export function createMechanicalWaveSim(initial: Partial<MechanicalWaveParams> =
   let lastAdjusted: WaveParam[] = ['wavelength', 'period'];
 
   function getConstraint(): ConstraintInfo {
-    const dep = WAVE_PARAMS.find(p => !lastAdjusted.includes(p)) as WaveParam;
+    const dep = WAVE_PARAMS.find((p) => !lastAdjusted.includes(p)) as WaveParam;
     return {
       dependent: dep,
-      independent: [lastAdjusted[0], lastAdjusted[1]],
+      independent: [lastAdjusted[0], lastAdjusted[1]]
     };
   }
 
   function applyConstraint(changed: WaveParam): void {
     // 更新独立变量追踪
-    lastAdjusted = [changed, ...lastAdjusted.filter(p => p !== changed)].slice(0, 2) as WaveParam[];
-    const dep = WAVE_PARAMS.find(p => !lastAdjusted.includes(p)) as WaveParam;
+    lastAdjusted = [
+      changed,
+      ...lastAdjusted.filter((p) => p !== changed)
+    ].slice(0, 2) as WaveParam[];
+    const dep = WAVE_PARAMS.find((p) => !lastAdjusted.includes(p)) as WaveParam;
     const indep1 = lastAdjusted[0];
     const indep2 = lastAdjusted[1];
 
@@ -128,7 +150,11 @@ export function createMechanicalWaveSim(initial: Partial<MechanicalWaveParams> =
   }
 
   /** 因变量被 clamp 后，调整第二个独立变量以维持 v = λ/T */
-  function cascadeAdjust(dep: WaveParam, _indep1: WaveParam, indep2: WaveParam): void {
+  function cascadeAdjust(
+    dep: WaveParam,
+    _indep1: WaveParam,
+    indep2: WaveParam
+  ): void {
     // indep2 是较早的独立变量，优先调整它
     let cascaded: number;
     switch (indep2) {
@@ -152,8 +178,22 @@ export function createMechanicalWaveSim(initial: Partial<MechanicalWaveParams> =
 
   function getState(): MechanicalWaveState {
     const dir = params.direction === 'right' ? 1 : -1;
-    const y = waveY(pointPX, time, params.amplitude, params.wavelength, params.period, dir);
-    const vy = waveVelocity(pointPX, time, params.amplitude, params.wavelength, params.period, dir);
+    const y = waveY(
+      pointPX,
+      time,
+      params.amplitude,
+      params.wavelength,
+      params.period,
+      dir
+    );
+    const vy = waveVelocity(
+      pointPX,
+      time,
+      params.amplitude,
+      params.wavelength,
+      params.period,
+      dir
+    );
     const ay = waveAcceleration(y, params.period);
 
     return {
@@ -165,7 +205,7 @@ export function createMechanicalWaveSim(initial: Partial<MechanicalWaveParams> =
       pointPVy: vy,
       pointPAy: ay,
       velocityDirection: vy > 0.05 ? 'up' : vy < -0.05 ? 'down' : 'zero',
-      accelerationDirection: ay > 0.05 ? 'up' : ay < -0.05 ? 'down' : 'zero',
+      accelerationDirection: ay > 0.05 ? 'up' : ay < -0.05 ? 'down' : 'zero'
     };
   }
 

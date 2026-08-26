@@ -8,8 +8,7 @@
  * 4. 防止"变形"：确保 canvas.width/height 始终与 CSS 显示尺寸保持 DPR 比例
  */
 
-import { getResponsiveScale } from '../canvas-sizing';
-import { setCanvasSize } from '../canvas-sizing-utils';
+import { getResponsiveScale, setCanvasSize } from '../canvas-sizing';
 
 export interface ChartCanvasOptions {
   container: HTMLElement;

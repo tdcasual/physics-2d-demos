@@ -5,9 +5,9 @@
 export type WedgeStep = 'geometry' | 'path-diff' | 'equal-thickness' | 'result';
 
 export type WedgeParams = {
-  lambda: number;   // 波长 nm
-  theta: number;    // 劈尖角 度
-  L: number;        // 板长 cm
+  lambda: number; // 波长 nm
+  theta: number; // 劈尖角 度
+  L: number; // 板长 cm
   step: WedgeStep;
 };
 
@@ -35,7 +35,11 @@ export type WedgeState = {
 
 const DEG_TO_RAD = Math.PI / 180;
 
-function computeState(params: WedgeParams, cursorX: number, time = 0): WedgeState {
+function computeState(
+  params: WedgeParams,
+  cursorX: number,
+  time = 0
+): WedgeState {
   const lambda = params.lambda; // nm
   const thetaRad = params.theta * DEG_TO_RAD;
   const L = params.L * 10; // cm -> mm

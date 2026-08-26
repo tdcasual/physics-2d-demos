@@ -88,5 +88,11 @@ export function createKeyboardHelpOverlay(): KeyboardHelpOverlay {
 
   document.body.appendChild(overlay);
 
-  return { element: overlay, show, hide, toggle, dispose: () => overlay.remove() };
+  return {
+    element: overlay,
+    show,
+    hide,
+    toggle,
+    dispose: () => overlay.remove()
+  };
 }

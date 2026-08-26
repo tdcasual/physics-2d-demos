@@ -258,9 +258,10 @@ export function bootInstrumentLibrary() {
       const loop = () => {
         if (activeSim && activeView) {
           const now = performance.now();
-          const dt = now - lastTime;
+          const dtMs = now - lastTime;
           lastTime = now;
-          activeSim.step(dt);
+          // sim.step 与场景生态约定一致：dt 单位为秒
+          activeSim.step(dtMs / 1000);
           activeView.render(activeSim.getState());
         }
         rafId = requestAnimationFrame(loop);

@@ -46,11 +46,13 @@ describe('spring-oscillator entry', () => {
     scene.startAll();
     scene.step(0.5);
     const items = scene.getReadoutItems();
-    expect(items.some(i => i.label === '全局时间')).toBe(true);
-    expect(items.some(i => i.label === '振子数量' && i.value === '2')).toBe(true);
-    expect(items.some(i => i.label === '#1 ω')).toBe(true);
-    expect(items.some(i => i.label === '#1 T')).toBe(true);
-    expect(items.some(i => i.label === '#1 相位')).toBe(true);
+    expect(items.some((i) => i.label === '全局时间')).toBe(true);
+    expect(items.some((i) => i.label === '振子数量' && i.value === '2')).toBe(
+      true
+    );
+    expect(items.some((i) => i.label === '#1 ω')).toBe(true);
+    expect(items.some((i) => i.label === '#1 T')).toBe(true);
+    expect(items.some((i) => i.label === '#1 相位')).toBe(true);
   });
 
   it('getReadoutItems includes phase difference for two running oscillators', () => {
@@ -58,7 +60,7 @@ describe('spring-oscillator entry', () => {
     scene.init();
     scene.startAll();
     const items = scene.getReadoutItems();
-    expect(items.some(i => i.label === '相位差 φ₂-φ₁')).toBe(true);
+    expect(items.some((i) => i.label === '相位差 φ₂-φ₁')).toBe(true);
   });
 
   it('getReadoutItems does not include phase diff with fewer than 2 running', () => {
@@ -66,7 +68,7 @@ describe('spring-oscillator entry', () => {
     scene.init();
     // 默认不启动任何振子
     const items = scene.getReadoutItems();
-    expect(items.some(i => i.label === '相位差 φ₂-φ₁')).toBe(false);
+    expect(items.some((i) => i.label === '相位差 φ₂-φ₁')).toBe(false);
   });
 
   it('setTimeScale clamps to [0.05, 3]', () => {
@@ -111,9 +113,9 @@ describe('spring-oscillator entry', () => {
     const scene = createSpringOscillatorScene();
     scene.init();
     scene.startAll();
-    expect(scene.sim.oscillators.every(o => o.isPlaying)).toBe(true);
+    expect(scene.sim.oscillators.every((o) => o.isPlaying)).toBe(true);
     scene.pauseAll();
-    expect(scene.sim.oscillators.every(o => !o.isPlaying)).toBe(true);
+    expect(scene.sim.oscillators.every((o) => !o.isPlaying)).toBe(true);
   });
 
   it('getTransportState reflects playing state and speed', () => {
@@ -141,7 +143,9 @@ describe('spring-oscillator entry', () => {
     scene.subscribe(listener);
     scene.resetAll();
     expect(scene.sim.globalTime).toBe(0);
-    expect(scene.sim.oscillators.every(o => o.state.x === o.initial.x)).toBe(true);
+    expect(scene.sim.oscillators.every((o) => o.state.x === o.initial.x)).toBe(
+      true
+    );
     expect(listener).toHaveBeenCalledTimes(1);
   });
 

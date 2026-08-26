@@ -18,7 +18,10 @@ describe('sceneRegistry', () => {
       expect(item.subject.length, item.id).toBeGreaterThan(0);
       expect(item.concept.length, item.id).toBeGreaterThan(0);
       expect(item.subConcepts, item.id).toHaveLength(2);
-      expect(item.subConcepts.every((entry) => entry.trim().length > 0), item.id).toBe(true);
+      expect(
+        item.subConcepts.every((entry) => entry.trim().length > 0),
+        item.id
+      ).toBe(true);
     }
   });
 });

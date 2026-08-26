@@ -1,7 +1,12 @@
 import type { EmfAnalogySnapshot } from '../scene.sim';
 import type { TeachingTheme } from '../../../platform/standards';
 import { circuitColors } from './circuit-colors';
-import { drawBattery, drawResistor, drawSwitch, drawMeter } from './draw-circuit-components';
+import {
+  drawBattery,
+  drawResistor,
+  drawSwitch,
+  drawMeter
+} from './draw-circuit-components';
 import { drawElectronsOnPath } from './draw-electron-flow';
 
 export type CircuitDrawOptions = {
@@ -14,10 +19,10 @@ export type CircuitDrawOptions = {
   responsiveScale: number;
 };
 
-
 /* ── 主绘制函数 ── */
 export function drawCircuit(options: CircuitDrawOptions): void {
-  const { ctx, width, height, snapshot, theme, phase, responsiveScale } = options;
+  const { ctx, width, height, snapshot, theme, phase, responsiveScale } =
+    options;
   const colors = circuitColors(theme);
   const s = responsiveScale;
 
@@ -69,24 +74,24 @@ export function drawCircuit(options: CircuitDrawOptions): void {
   // ── 绘制元件 ──
 
   // 电池
-  drawBattery(
-    ctx, batteryX, wireY,
-    componentSize,
-    colors
-  );
+  drawBattery(ctx, batteryX, wireY, componentSize, colors);
 
   // 外阻
   drawResistor(
     ctx,
-    resistorX - componentSize * 0.3, wireY - componentSize * 0.15,
-    componentSize * 0.6, componentSize * 0.3,
+    resistorX - componentSize * 0.3,
+    wireY - componentSize * 0.15,
+    componentSize * 0.6,
+    componentSize * 0.3,
     colors,
     'R'
   );
 
   // 开关
   drawSwitch(
-    ctx, switchX, wireY,
+    ctx,
+    switchX,
+    wireY,
     componentSize,
     snapshot.state.isSystemOn,
     colors
@@ -114,7 +119,10 @@ export function drawCircuit(options: CircuitDrawOptions): void {
         { x: resistorX, y: wireY - componentSize * 0.5 },
         { x: switchX, y: wireY - componentSize * 0.5 }
       ],
-      electronSpeed, phase, responsiveScale, colors
+      electronSpeed,
+      phase,
+      responsiveScale,
+      colors
     );
 
     // 下路径（开关→电池）
@@ -124,7 +132,10 @@ export function drawCircuit(options: CircuitDrawOptions): void {
         { x: switchX, y: wireY + componentSize * 0.5 },
         { x: batteryX, y: wireY + componentSize * 0.5 }
       ],
-      electronSpeed, phase + 0.5, responsiveScale, colors
+      electronSpeed,
+      phase + 0.5,
+      responsiveScale,
+      colors
     );
   }
 
@@ -134,7 +145,8 @@ export function drawCircuit(options: CircuitDrawOptions): void {
   // 电流表（串联在电路中）
   drawMeter(
     ctx,
-    resistorX, wireY + componentSize * 0.9,
+    resistorX,
+    wireY + componentSize * 0.9,
     meterR,
     snapshot.state.currentI,
     2.0,
@@ -146,7 +158,8 @@ export function drawCircuit(options: CircuitDrawOptions): void {
   // 电压表（并联在电阻两端）
   drawMeter(
     ctx,
-    resistorX, wireY - componentSize * 0.9,
+    resistorX,
+    wireY - componentSize * 0.9,
     meterR,
     snapshot.state.terminalVoltage,
     2.0,

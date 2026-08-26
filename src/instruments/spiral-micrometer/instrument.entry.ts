@@ -1,4 +1,7 @@
-import type { InstrumentFactory, InstrumentViewport } from '../_contract/instrument-contract';
+import type {
+  InstrumentFactory,
+  InstrumentViewport
+} from '../_contract/instrument-contract';
 import type { TeachingTheme } from '../../platform/standards';
 
 import { spiralMicrometerMeta } from './instrument.meta';

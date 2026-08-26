@@ -44,7 +44,11 @@ export function drawOscillatorCell(
   ctx.font = `bold ${labelFontSize}px "Noto Sans SC", sans-serif`;
   ctx.textAlign = 'left';
   const statusText = osc.isPlaying ? '▶' : '⏸';
-  ctx.fillText(`${index + 1}.${statusText}`, cellX + marginLeft, cellY + marginTop - 4);
+  ctx.fillText(
+    `${index + 1}.${statusText}`,
+    cellX + marginLeft,
+    cellY + marginTop - 4
+  );
 
   // 参数（右上角）
   ctx.fillStyle = isDark ? Colors.darkText : Colors.gray;
@@ -72,13 +76,33 @@ export function drawOscillatorCell(
 
   if (isHorizontal) {
     clickArea = drawHorizontal(
-      ctx, osc, centerX, centerY, displacement, springLength, ballRadius,
-      coils, coilWidth, valueFontSize, isDark, responsiveScale
+      ctx,
+      osc,
+      centerX,
+      centerY,
+      displacement,
+      springLength,
+      ballRadius,
+      coils,
+      coilWidth,
+      valueFontSize,
+      isDark,
+      responsiveScale
     );
   } else {
     clickArea = drawVertical(
-      ctx, osc, centerX, centerY, displacement, springLength, ballRadius,
-      coils, coilWidth, valueFontSize, isDark, responsiveScale
+      ctx,
+      osc,
+      centerX,
+      centerY,
+      displacement,
+      springLength,
+      ballRadius,
+      coils,
+      coilWidth,
+      valueFontSize,
+      isDark,
+      responsiveScale
     );
   }
 

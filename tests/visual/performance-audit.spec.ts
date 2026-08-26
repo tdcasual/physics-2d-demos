@@ -14,9 +14,11 @@ test('projectile maintains FPS above 25 during animation', async ({ page }) => {
   });
   await page.waitForTimeout(1500);
 
-  // 点击播放按钮开始动画
+  // 点击播放按钮开始动画（桌面端为浮动控制条的第一个按钮，移动端为 .play-pause）
   const playBtn = page
-    .locator('.play-pause, .mobile-control-btn.play-pause')
+    .locator(
+      '.stage-floating-controls button, .play-pause, .mobile-control-btn.play-pause'
+    )
     .first();
   if (await playBtn.isVisible().catch(() => false)) {
     await playBtn.click();
@@ -62,7 +64,9 @@ test('chase-meet maintains FPS above 25 during animation', async ({ page }) => {
   await page.waitForTimeout(1500);
 
   const playBtn = page
-    .locator('.play-pause, .mobile-control-btn.play-pause')
+    .locator(
+      '.stage-floating-controls button, .play-pause, .mobile-control-btn.play-pause'
+    )
     .first();
   if (await playBtn.isVisible().catch(() => false)) {
     await playBtn.click();

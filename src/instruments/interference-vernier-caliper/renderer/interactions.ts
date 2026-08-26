@@ -1,0 +1,235 @@
+/**
+ * 干涉读数游标卡尺 — 指针拖拽与键盘交互
+ */
+
+import { UNIT_PX } from './constants';
+import { interferenceVernierCaliperMeta } from '../instrument.meta';
+
+/**
+ * 视图与交互共享的可变状态。
+ * 主文件（渲染/序列化）与本模块（拖拽）通过同一对象读写，语义与拆分前闭包共享一致。
+ */
+export type InteractionState = {
+  currentReadingCm: number;
+  isDragging: boolean;
+  dragMode: 'slider' | 'knob' | null;
+  startPointerX: number;
+  startReadingCm: number;
+  sysDragging: boolean;
+  sysStartX: number;
+  sysStartY: number;
+  sysX: number;
+  sysY: number;
+};
+
+export function createInteractionState(parent: HTMLElement): InteractionState {
+  const parentRect = parent.getBoundingClientRect();
+  const scaledW = 695 * 2;
+  const scaledH = 250 * 2;
+  const sysX =
+    parentRect.width > 100
+      ? Math.round((parentRect.width - scaledW) / 2)
+      : -100;
+  const sysY =
+    parentRect.height > 100
+      ? Math.max(0, Math.round((parentRect.height - scaledH) / 2))
+      : 0;
+  return {
+    currentReadingCm:
+      interferenceVernierCaliperMeta.defaultParams.initialReading,
+    isDragging: false,
+    dragMode: null,
+    startPointerX: 0,
+    startReadingCm: 0,
+    sysDragging: false,
+    sysStartX: 0,
+    sysStartY: 0,
+    sysX,
+    sysY
+  };
+}
+
+export type InteractionElements = {
+  slider: HTMLDivElement;
+  knob: HTMLDivElement;
+  mainRuler: HTMLElement;
+  instrumentEl: HTMLDivElement;
+};
+
+/**
+ * 绑定滑块/旋钮/整尺拖拽与键盘可访问性。
+ * 返回 detach 函数，移除全部已注册的监听器。
+ */
+export function attachInteractions(
+  elements: InteractionElements,
+  state: InteractionState,
+  onReadingMoved: () => void
+): () => void {
+  const { slider, knob, mainRuler, instrumentEl } = elements;
+
+  function getPointerX(e: MouseEvent | TouchEvent): number {
+    if ('touches' in e && e.touches.length > 0) {
+      return e.touches[0].clientX;
+    }
+    return (e as MouseEvent).clientX;
+  }
+
+  function handleDragStart(
+    e: MouseEvent | TouchEvent,
+    mode: 'slider' | 'knob'
+  ) {
+    if (mode === 'slider') {
+      const target = e.target as HTMLElement;
+      if (target.id === 'knob' || target.closest('#knob')) return;
+    }
+    state.isDragging = true;
+    state.dragMode = mode;
+    state.startPointerX = getPointerX(e);
+    state.startReadingCm = state.currentReadingCm;
+  }
+
+  function handleDragMove(e: MouseEvent | TouchEvent) {
+    if (!state.isDragging) return;
+    if ('touches' in e && e.cancelable) {
+      e.preventDefault();
+    }
+    const deltaX = getPointerX(e) - state.startPointerX;
+    if (state.dragMode === 'slider') {
+      state.currentReadingCm = state.startReadingCm + deltaX / 2 / UNIT_PX;
+    } else if (state.dragMode === 'knob') {
+      state.currentReadingCm =
+        state.startReadingCm + (deltaX / 2 / UNIT_PX) * 0.1;
+    }
+    onReadingMoved();
+  }
+
+  function handleDragEnd() {
+    state.isDragging = false;
+    state.dragMode = null;
+  }
+
+  const onSliderMouseDown = (e: MouseEvent) => handleDragStart(e, 'slider');
+  const onSliderTouchStart = (e: TouchEvent) => handleDragStart(e, 'slider');
+  const onKnobMouseDown = (e: MouseEvent) => {
+    e.stopPropagation();
+    handleDragStart(e, 'knob');
+  };
+  const onKnobTouchStart = (e: TouchEvent) => {
+    e.stopPropagation();
+    handleDragStart(e, 'knob');
+  };
+
+  const handleSysDragStart = (clientX: number, clientY: number) => {
+    state.sysDragging = true;
+    state.sysStartX = clientX;
+    state.sysStartY = clientY;
+  };
+  const handleSysDragMove = (clientX: number, clientY: number) => {
+    if (!state.sysDragging) return;
+    state.sysX += clientX - state.sysStartX;
+    state.sysY += clientY - state.sysStartY;
+    state.sysStartX = clientX;
+    state.sysStartY = clientY;
+    instrumentEl.style.transform = `translate(${state.sysX}px, ${state.sysY}px) scale(2)`;
+  };
+  const handleSysDragEnd = () => {
+    state.sysDragging = false;
+  };
+
+  const onRulerMouseDown = (e: MouseEvent) => {
+    e.stopPropagation();
+    handleSysDragStart(e.clientX, e.clientY);
+  };
+  const onRulerTouchStart = (e: TouchEvent) => {
+    e.stopPropagation();
+    handleSysDragStart(e.touches[0].clientX, e.touches[0].clientY);
+  };
+
+  const onDocMouseMove = (e: MouseEvent) => {
+    if (state.isDragging) handleDragMove(e);
+    if (state.sysDragging) handleSysDragMove(e.clientX, e.clientY);
+  };
+  const onDocTouchMove = (e: TouchEvent) => {
+    if (state.isDragging) handleDragMove(e);
+    if (state.sysDragging) {
+      if (e.cancelable) e.preventDefault();
+      handleSysDragMove(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  };
+  const onDocMouseUp = () => {
+    handleDragEnd();
+    handleSysDragEnd();
+  };
+  const onDocTouchEnd = () => {
+    handleDragEnd();
+    handleSysDragEnd();
+  };
+  const onDocTouchCancel = () => {
+    handleDragEnd();
+    handleSysDragEnd();
+  };
+
+  slider.addEventListener('mousedown', onSliderMouseDown);
+  slider.addEventListener('touchstart', onSliderTouchStart, { passive: false });
+  knob.addEventListener('mousedown', onKnobMouseDown);
+  knob.addEventListener('touchstart', onKnobTouchStart, { passive: false });
+  mainRuler.addEventListener('mousedown', onRulerMouseDown);
+  mainRuler.addEventListener('touchstart', onRulerTouchStart, {
+    passive: false
+  });
+  document.addEventListener('mousemove', onDocMouseMove);
+  document.addEventListener('touchmove', onDocTouchMove, { passive: false });
+  document.addEventListener('mouseup', onDocMouseUp);
+  document.addEventListener('touchend', onDocTouchEnd);
+  document.addEventListener('touchcancel', onDocTouchCancel);
+
+  // ── 键盘可访问性 ──
+  mainRuler.tabIndex = 0;
+  mainRuler.setAttribute('role', 'button');
+  mainRuler.setAttribute('aria-label', '主刻度尺，拖动可移动整个仪器');
+  const onRulerKeyDown = (e: KeyboardEvent) => {
+    const step = 30;
+    switch (e.key) {
+      case 'ArrowRight':
+        state.sysX += step;
+        break;
+      case 'ArrowLeft':
+        state.sysX -= step;
+        break;
+      case 'ArrowUp':
+        state.sysY -= step;
+        break;
+      case 'ArrowDown':
+        state.sysY += step;
+        break;
+      default:
+        return;
+    }
+    e.preventDefault();
+    instrumentEl.style.transform = `translate(${state.sysX}px, ${state.sysY}px) scale(2)`;
+  };
+  mainRuler.addEventListener('keydown', onRulerKeyDown);
+
+  return () => {
+    slider.removeEventListener('mousedown', onSliderMouseDown);
+    slider.removeEventListener('touchstart', onSliderTouchStart, {
+      passive: false
+    } as EventListenerOptions);
+    knob.removeEventListener('mousedown', onKnobMouseDown);
+    knob.removeEventListener('touchstart', onKnobTouchStart, {
+      passive: false
+    } as EventListenerOptions);
+    mainRuler.removeEventListener('mousedown', onRulerMouseDown);
+    mainRuler.removeEventListener('touchstart', onRulerTouchStart, {
+      passive: false
+    } as EventListenerOptions);
+    mainRuler.removeEventListener('keydown', onRulerKeyDown);
+    document.removeEventListener('mousemove', onDocMouseMove);
+    document.removeEventListener('touchmove', onDocTouchMove, {
+      passive: false
+    } as EventListenerOptions);
+    document.removeEventListener('mouseup', onDocMouseUp);
+    document.removeEventListener('touchend', onDocTouchEnd);
+    document.removeEventListener('touchcancel', onDocTouchCancel);
+  };
+}

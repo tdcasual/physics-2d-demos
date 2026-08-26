@@ -6,12 +6,8 @@ describe('instrument-manifest', () => {
     const ids = instrumentManifest.map((entry) => entry.id);
 
     expect(new Set(ids).size).toBe(ids.length);
-    expect(
-      instrumentManifest.map((entry) => entry.modulePath)
-    ).toEqual(
-      instrumentManifest.map(
-        (entry) => `/src/instruments/${entry.id}/index.ts`
-      )
+    expect(instrumentManifest.map((entry) => entry.modulePath)).toEqual(
+      instrumentManifest.map((entry) => `/src/instruments/${entry.id}/index.ts`)
     );
   });
 

@@ -34,7 +34,11 @@ function computeLambdaToRgb(lambda: number): [number, number, number] {
     g = 0;
     b = 0;
   }
-  return [Math.round(Math.max(0, Math.min(255, r))), Math.round(Math.max(0, Math.min(255, g))), Math.round(Math.max(0, Math.min(255, b)))];
+  return [
+    Math.round(Math.max(0, Math.min(255, r))),
+    Math.round(Math.max(0, Math.min(255, g))),
+    Math.round(Math.max(0, Math.min(255, b)))
+  ];
 }
 
 /** 预计算 400-700nm 查找表 */

@@ -1,164 +1,84 @@
-# 可访问性（a11y）设计方案
+# 可访问性（a11y）设计方案 —— 落地状态对照
 
-## 现状评分：5.0 / 10
+> 2026-08 更新：本文档原为设计稿（评分 5.0/10 时代的三个方案），方案一至三已随
+> 可访问性整改落地，且实现方式与原设计有出入。本文改为「设计 → 实现」对照；
+> 历史设计细节可从 git 历史查阅。
 
-### 问题清单
+## 落地状态总览
 
-1. 5/6 场景的 canvas 无 ARIA 属性（仅 chase-meet 有）
-2. 无颜色对比度自动化检查
-3. 无键盘快捷键（Space播放、R重置等）
-4. 无屏幕阅读器替代文本
-5. 色盲用户可能无法区分 A（蓝）和 B（红）
+| 设计项                       | 状态      | 实现位置                                                                        |
+| ---------------------------- | --------- | ------------------------------------------------------------------------------- |
+| 方案一：统一 Canvas ARIA     | ✅ 已落地 | `src/app/scene-adapter.ts`                                                      |
+| 方案二：键盘快捷键           | ✅ 已落地 | `src/platform/input/keyboard-shortcuts.ts`、`src/ui/components/KeyboardHelp.ts` |
+| 方案三：axe 自动化检查       | ✅ 已落地 | `tests/visual/a11y-audit.spec.ts`                                               |
+| 色盲友好 A/B 配色区分        | ❌ 未落地 | —                                                                               |
+| 动画内容的屏幕阅读器文字替代 | ❌ 未落地 | —                                                                               |
 
-## 设计目标
+## 方案一：Canvas ARIA —— 已落地（实现路径不同）
 
-- 所有 canvas 具备 `role="img"` + `aria-label`
-- WCAG 2.1 AA 颜色对比度 ≥ 4.5:1
-- 全局键盘快捷键覆盖核心操作
-- 自动化 a11y 测试纳入 CI
+原设计是在 `canvas-sizing.ts` 的 `applyCanvasSize` 增加 `ariaLabel` 参数，由各场景
+透传。**实际实现**改为在场景适配器统一注入，各场景零改动即覆盖：
 
----
+- `src/app/scene-adapter.ts`：主 canvas 设置 `role="img"` +
+  `aria-label="${meta.title}演示图"`；无 canvas 的渲染面容器设置
+  `role="img"` + `aria-label="${meta.title}演示区"`。
+- 多 canvas 场景按插入顺序编号（`...演示图 2`）；`MutationObserver` 为后插入的
+  canvas（如图表插槽 `attachGraphCanvas`）补 `role`/`aria-label`。
+- 断言：`tests/visual/a11y-audit.spec.ts` 的 `aria labels: <scene>` 用例遍历
+  16 个场景页，要求每个 canvas 有可访问名称。
 
-## 方案一：统一 Canvas ARIA 基础设施
+原设计中的「各场景 aria-label 文案表」未采用——统一由 `meta.title` 派生。
 
-### 设计
+## 方案二：键盘快捷键 —— 已落地
 
-在 `canvas-sizing.ts` 的 `applyCanvasSize` 中增加可选 `ariaLabel` 参数：
+- `src/platform/input/keyboard-shortcuts.ts`：`KeyboardShortcutManager`
+  （`register` / `registerMultiple`，输入框聚焦时自动忽略）。
+- 在 `src/app/scene-adapter.ts` 统一初始化，全局可用。
+- `src/ui/components/KeyboardHelp.ts`：`?` 键帮助浮层。
 
-```typescript
-export function applyCanvasSize(
-  canvas: HTMLCanvasElement,
-  sizing: CanvasSizingResult,
-  options?: { ariaLabel?: string }
-): CanvasRenderingContext2D {
-  // ... existing sizing logic ...
-  if (options?.ariaLabel) {
-    canvas.setAttribute('role', 'img');
-    canvas.setAttribute('aria-label', options.ariaLabel);
-  }
-  // ...
-}
-```
+实际快捷键表（以 `KeyboardHelp.ts` 的 `SHORTCUTS` 为准）：
 
-同时修改 `sizeCanvasToFill` / `sizeCanvasToFit` 透传 `options`。
+| 按键  | 动作                    |
+| ----- | ----------------------- |
+| Space | 播放 / 暂停             |
+| R     | 重置场景                |
+| T     | 切换主题                |
+| ← / → | 单步后退 / 前进         |
+| A / D | 减慢 / 加快速度         |
+| F     | 切换全屏                |
+| L     | 切换布局                |
+| ?     | 显示快捷键帮助          |
+| Esc   | 关闭帮助 / 退出演示模式 |
 
-### 各场景 aria-label 规范
+与原设计的差异：`+/-` 调速改为 `A/D`；`1-6` 切换子场景未实现（子场景切换
+仍走控制面板的场景选择器）。
 
-| 场景            | canvas 描述                  |
-| --------------- | ---------------------------- |
-| chase-meet      | "空间位置动画：A/B 一维追及" |
-| projectile      | "抛体运动轨迹图"             |
-| emf-analogy     | "电路水流类比演示图"         |
-| field-lines     | "电场线分布图"               |
-| electrification | "摩擦起电演示图"             |
-| vt-integral     | "微元法积分演示图"           |
+## 方案三：axe 自动化检查 —— 已落地（范围超出原设计）
 
-### 实施成本：低（1 小时）
+`@axe-core/playwright` 已接入。`tests/visual/a11y-audit.spec.ts`：
 
----
+- 覆盖 **16 个场景页 + 首页 + instruments 页**（原设计仅计划场景页对比度）。
+- 规则集为 `wcag2a` + `wcag2aa` 全量（含 `color-contrast`、`label`、
+  `button-name` 等），critical/serious 违规必须为零。
+- 另含键盘导航用例：Tab 可达多个控件、焦点指示器（outline/box-shadow）可见。
 
-## 方案二：键盘快捷键系统
+## 额外落地项（超出原三方案）
 
-### 设计
+- **slider 可访问名称与命中区**：`label htmlFor` 关联
+  （`src/ui/components/scene-controls/slider-row.ts`）；thumb/轨道命中区样式
+  见 `src/styles/shared/scene-controls.css`。
+- **toggle**：`role="switch"` + `aria-checked` + `aria-labelledby`
+  （`src/ui/components/scene-controls/toggle-row.ts`）；36×20 的视觉开关通过
+  CSS 把命中区扩到 ≥44px（`scene-controls.css`）。
+- **readout 滚动区可聚焦**：`tabindex="0"`
+  （`src/app/layouts/capabilities/readout-panel.ts`），键盘可滚动读数面板。
+- **分栏 resizer**：`role="separator"` + 动态 `aria-valuenow`
+  （`src/app/layouts/capabilities/resizer.ts`，满足 axe `aria-required-attr` /
+  WCAG 4.1.2）。
 
-新建 `src/platform/input/keyboard-shortcuts.ts`：
+## 未落地项
 
-```typescript
-export class KeyboardShortcutManager {
-  private shortcuts = new Map<string, () => void>();
-  private enabled = false;
-
-  register(key: string, handler: () => void): void {
-    this.shortcuts.set(key.toLowerCase(), handler);
-  }
-
-  init(): void {
-    if (this.enabled) return;
-    document.addEventListener('keydown', this.onKeyDown);
-    this.enabled = true;
-  }
-
-  private onKeyDown = (e: KeyboardEvent): void => {
-    if (this.isTypingInInput(e)) return;
-    const handler = this.shortcuts.get(e.key.toLowerCase());
-    if (handler) {
-      e.preventDefault();
-      handler();
-    }
-  };
-
-  private isTypingInInput(e: KeyboardEvent): boolean {
-    const target = e.target as HTMLElement;
-    return ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
-  }
-
-  dispose(): void {
-    document.removeEventListener('keydown', this.onKeyDown);
-    this.enabled = false;
-  }
-}
-```
-
-### 全局快捷键映射
-
-| 按键  | 动作          | 场景                                    |
-| ----- | ------------- | --------------------------------------- |
-| Space | 播放 / 暂停   | 全部                                    |
-| R     | 重置          | 全部                                    |
-| T     | 切换主题      | 全部                                    |
-| + / = | 增加速度      | 全部                                    |
-| -     | 降低速度      | 全部                                    |
-| 1-6   | 切换子场景    | emf-analogy / vt-integral / field-lines |
-| ← / → | 单步前进/后退 | 全部                                    |
-
-### 集成点
-
-在 `scene-bootstrapper.ts` 的 `bootScenePage` 中统一初始化：
-
-```typescript
-const keyboard = new KeyboardShortcutManager();
-keyboard.register(' ', () => scene.step?.(0.016) || scene.startAll?.());
-keyboard.register('r', () => scene.reset?.());
-keyboard.init();
-```
-
-### 实施成本：中（2-3 小时）
-
----
-
-## 方案三：颜色对比度自动化检查
-
-### 设计
-
-引入 `@axe-core/playwright`：
-
-```bash
-pnpm add -D @axe-core/playwright
-```
-
-测试文件 `tests/visual/a11y-contrast.spec.ts`：
-
-```typescript
-import { test, expect } from '@playwright/test';
-import AxeBuilder from '@axe-core/playwright';
-
-for (const scene of SCENES) {
-  test(`color contrast: ${scene}`, async ({ page }) => {
-    await page.goto(...);
-    const results = await new AxeBuilder({ page })
-      .withRules(['color-contrast'])
-      .analyze();
-    expect(results.violations).toEqual([]);
-  });
-}
-```
-
-### 实施成本：低（30 分钟）
-
----
-
-## 实施优先级
-
-1. P0：统一 Canvas ARIA（1 小时，影响全部 6 场景）
-2. P1：键盘快捷键（2-3 小时，影响全部 6 场景）
-3. P2：对比度检查（30 分钟，纯测试新增）
+- **色盲友好配色**：原问题清单第 5 条（A 蓝 / B 红难以区分）未专项处理，
+  目前仅依赖明暗双主题的对比度合规。
+- **动画的文字替代**：canvas 只有静态 `aria-label`，动画过程无 live region
+  播报；读数面板（可聚焦滚动区）是目前唯一的文字替代渠道。

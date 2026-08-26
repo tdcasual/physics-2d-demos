@@ -30,7 +30,10 @@ describe('createSceneControls', () => {
     expect(expanded.element.classList.contains('collapsed')).toBe(false);
     expect(expanded.body.style.display).toBe('flex');
 
-    const collapsed = createSceneControls({ title: 'b', defaultCollapsed: true });
+    const collapsed = createSceneControls({
+      title: 'b',
+      defaultCollapsed: true
+    });
     expect(collapsed.element.classList.contains('collapsed')).toBe(true);
     expect(collapsed.body.style.display).toBe('none');
   });
@@ -47,7 +50,10 @@ describe('createSceneControls', () => {
   it('renders header actions when provided', () => {
     const action = document.createElement('button');
     action.textContent = 'act';
-    const controls = createSceneControls({ title: 'x', headerActions: [action] });
+    const controls = createSceneControls({
+      title: 'x',
+      headerActions: [action]
+    });
     expect(controls.element.contains(action)).toBe(true);
   });
 });

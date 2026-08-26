@@ -36,7 +36,9 @@ bootScenePage({
         if (key === 'objectType') {
           caliperScene.setParams({ objectType: parseInt(String(value), 10) });
         } else if (key === 'precision') {
-          caliperScene.setParams({ precision: parseFloat(String(value)) as 0.02 | 0.05 | 0.1 });
+          caliperScene.setParams({
+            precision: parseFloat(String(value)) as 0.02 | 0.05 | 0.1
+          });
         }
         caliperScene.render();
         writeSceneParams({ [key]: value });

@@ -180,12 +180,12 @@ describe('bundle budget check', () => {
 
   it('keeps default budgets aligned with the current multi-entry build envelope', () => {
     expect(defaultBundleBudget).toEqual({
-      maxHomeEntryJsKb: 290,
-      maxHomeEntryCssKb: 75,
-      maxEntryJsKb: 160,
-      maxEntryCssKb: 70,
-      maxVendorJsKb: 170,
-      maxSharedJsKb: 130
+      maxHomeEntryJsKb: 190,
+      maxHomeEntryCssKb: 25,
+      maxEntryJsKb: 180,
+      maxEntryCssKb: 55,
+      maxVendorJsKb: 160,
+      maxSharedJsKb: 150
     });
   });
 });

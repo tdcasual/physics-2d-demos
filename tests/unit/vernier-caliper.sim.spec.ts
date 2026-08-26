@@ -7,7 +7,7 @@ import {
 
 const defaultParams: CaliperParams = {
   precision: 0.02,
-  objectType: 0,
+  objectType: 0
 };
 
 describe('vernier-caliper sim', () => {
@@ -30,20 +30,26 @@ describe('vernier-caliper sim', () => {
       const sim = createVernierCaliperSim({ ...defaultParams, objectType: 2 });
       const s = sim.getState();
       expect(s.objectName).toBe('管内径');
-      expect(s.objectSize).toBe(8.50);
+      expect(s.objectSize).toBe(8.5);
     });
   });
 
   describe('precision config', () => {
     it('precision=0.02 → 50 divisions, length=49', () => {
-      const sim = createVernierCaliperSim({ ...defaultParams, precision: 0.02 });
+      const sim = createVernierCaliperSim({
+        ...defaultParams,
+        precision: 0.02
+      });
       const s = sim.getState();
       expect(s.vernierDivisions).toBe(50);
       expect(s.vernierLength).toBe(49);
     });
 
     it('precision=0.05 → 20 divisions, length=19', () => {
-      const sim = createVernierCaliperSim({ ...defaultParams, precision: 0.05 });
+      const sim = createVernierCaliperSim({
+        ...defaultParams,
+        precision: 0.05
+      });
       const s = sim.getState();
       expect(s.vernierDivisions).toBe(20);
       expect(s.vernierLength).toBe(19);
@@ -67,14 +73,17 @@ describe('vernier-caliper sim', () => {
     it('totalReading = mainScale + alignment * precision', () => {
       const sim = createVernierCaliperSim(defaultParams);
       const s = sim.getState();
-      const expected = s.mainScaleReading + s.vernierAlignment * s.params.precision;
+      const expected =
+        s.mainScaleReading + s.vernierAlignment * s.params.precision;
       expect(s.totalReading).toBeCloseTo(expected, 6);
     });
 
     it('totalReading is close to objectSize', () => {
       const sim = createVernierCaliperSim(defaultParams);
       const s = sim.getState();
-      expect(Math.abs(s.totalReading - s.objectSize)).toBeLessThan(s.params.precision * 2);
+      expect(Math.abs(s.totalReading - s.objectSize)).toBeLessThan(
+        s.params.precision * 2
+      );
     });
 
     it('vernierAlignment is in valid range', () => {

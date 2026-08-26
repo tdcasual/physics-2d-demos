@@ -1,84 +1,154 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>布局母版系统测试</title>
-  <style>
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      max-width: 800px;
-      margin: 40px auto;
-      padding: 20px;
-      line-height: 1.6;
-    }
-    h1 { color: #333; }
-    .version-card {
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      padding: 20px;
-      margin: 20px 0;
-      background: #fafafa;
-    }
-    .version-card h2 { margin-top: 0; }
-    .tag {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 12px;
-      font-weight: bold;
-    }
-    .tag-legacy { background: #fef3c7; color: #92400e; }
-    .tag-new { background: #d1fae5; color: #065f46; }
-    a {
-      display: inline-block;
-      padding: 10px 20px;
-      background: #4f46e5;
-      color: white;
-      text-decoration: none;
-      border-radius: 6px;
-      margin-top: 10px;
-    }
-    a:hover { background: #4338ca; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
-  </style>
-</head>
-<body>
-  <h1>🔬 布局母版系统测试页面</h1>
-  <p>点击下方链接查看各场景演示：</p>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // 阻止 theme flash：在 JS 运行前从统一主题存储或系统偏好恢复主题
+      (function () {
+        function parseTheme(raw) {
+          if (!raw) return null;
+          if (raw === 'light' || raw === 'dark' || raw === 'system') return raw;
+          try {
+            var parsed = JSON.parse(raw);
+            if (
+              parsed &&
+              parsed.v === 1 &&
+              (parsed.theme === 'light' ||
+                parsed.theme === 'dark' ||
+                parsed.theme === 'system')
+            ) {
+              return parsed.theme;
+            }
+          } catch (e) {}
+          return null;
+        }
+        try {
+          var theme = parseTheme(localStorage.getItem('physics-lab-theme'));
+          // 兼容旧版容器状态中的 theme 字段
+          if (!theme) {
+            theme = parseTheme(
+              localStorage.getItem('physics-demos-container-state')
+            );
+          }
+          if (theme === 'system') {
+            theme = window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light';
+          }
+          if (theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            return;
+          }
+        } catch (e) {}
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      })();
+    </script>
+    <title>布局母版系统测试</title>
+    <style>
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 20px;
+        line-height: 1.6;
+      }
+      h1 {
+        color: #333;
+      }
+      .version-card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+        background: #fafafa;
+      }
+      .version-card h2 {
+        margin-top: 0;
+      }
+      .tag {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: bold;
+      }
+      .tag-legacy {
+        background: #fef3c7;
+        color: #92400e;
+      }
+      .tag-new {
+        background: #d1fae5;
+        color: #065f46;
+      }
+      a {
+        display: inline-block;
+        padding: 10px 20px;
+        background: #4f46e5;
+        color: white;
+        text-decoration: none;
+        border-radius: 6px;
+        margin-top: 10px;
+      }
+      a:hover {
+        background: #4338ca;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+      @media (max-width: 600px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🔬 布局母版系统测试页面</h1>
+    <p>点击下方链接查看各场景演示：</p>
 
-  <div class="grid">
-    <div class="version-card">
-      <h2>抛体运动 <span class="tag tag-new">力学</span></h2>
-      <p>二维抛体运动轨迹模拟</p>
-      <a href="/src/pages/projectile.html">打开 →</a>
+    <div class="grid">
+      <div class="version-card">
+        <h2>抛体运动 <span class="tag tag-new">力学</span></h2>
+        <p>二维抛体运动轨迹模拟</p>
+        <a href="/src/pages/projectile.html">打开 →</a>
+      </div>
+      <div class="version-card">
+        <h2>追及相遇 <span class="tag tag-new">力学</span></h2>
+        <p>运动学追及相遇问题</p>
+        <a href="/src/pages/chase-meet.html">打开 →</a>
+      </div>
+      <div class="version-card">
+        <h2>电场线演化 <span class="tag tag-new">电磁学</span></h2>
+        <p>电荷电场线分布演示</p>
+        <a href="/src/pages/field-lines.html">打开 →</a>
+      </div>
+      <div class="version-card">
+        <h2>电路水流类比 <span class="tag tag-new">电磁学</span></h2>
+        <p>闭合电路与水流类比</p>
+        <a href="/src/pages/emf-analogy.html">打开 →</a>
+      </div>
     </div>
-    <div class="version-card">
-      <h2>追及相遇 <span class="tag tag-new">力学</span></h2>
-      <p>运动学追及相遇问题</p>
-      <a href="/src/pages/chase-meet.html">打开 →</a>
-    </div>
-    <div class="version-card">
-      <h2>电场线演化 <span class="tag tag-new">电磁学</span></h2>
-      <p>电荷电场线分布演示</p>
-      <a href="/src/pages/field-lines.html">打开 →</a>
-    </div>
-    <div class="version-card">
-      <h2>电路水流类比 <span class="tag tag-new">电磁学</span></h2>
-      <p>闭合电路与水流类比</p>
-      <a href="/src/pages/emf-analogy.html">打开 →</a>
-    </div>
-  </div>
-  
-  <h2>📋 系统文档</h2>
-  <ul>
-    <li><a href="/docs/layout-master-system-design.md" target="_blank">系统设计文档</a></li>
-  </ul>
-  
-  <hr>
-  <p style="color: #666; font-size: 14px;">
-    提示：开发时可同时打开两个版本进行对比测试
-  </p>
-</body>
+
+    <h2>📋 系统文档</h2>
+    <ul>
+      <li>
+        <a href="/docs/layout-master-system-design.md" target="_blank"
+          >系统设计文档</a
+        >
+      </li>
+    </ul>
+
+    <hr />
+    <p style="color: #666; font-size: 14px">
+      提示：开发时可同时打开两个版本进行对比测试
+    </p>
+  </body>
 </html>

@@ -7,7 +7,10 @@ import {
   resizeCanvasWithDpr,
   resolveVisuals
 } from '../../src/scenes/chase-meet/renderer/view-utils';
-import type { ChaseMeetSnapshot, ChaseMeetSample } from '../../src/scenes/chase-meet/scene.sim';
+import type {
+  ChaseMeetSnapshot,
+  ChaseMeetSample
+} from '../../src/scenes/chase-meet/scene.sim';
 
 function makeCtx(): CanvasRenderingContext2D {
   const canvas = document.createElement('canvas');
@@ -128,9 +131,7 @@ describe('chase-meet renderer', () => {
     it('draws fallback in dark theme without throwing', () => {
       const ctx = makeCtx();
       const snapshot = createSnapshot();
-      expect(() =>
-        drawFallback(ctx, 800, 600, snapshot, 'dark')
-      ).not.toThrow();
+      expect(() => drawFallback(ctx, 800, 600, snapshot, 'dark')).not.toThrow();
     });
 
     it('draws fallback in light theme without throwing', () => {

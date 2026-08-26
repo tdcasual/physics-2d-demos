@@ -36,7 +36,14 @@ export const defaultChartThemes: Record<'light' | 'dark', ChartTheme> = {
     grid: 'rgba(100, 116, 139, 0.12)',
     axis: '#3b82f6',
     border: '#cbd5e1',
-    seriesColors: ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#a855f7', '#06b6d4']
+    seriesColors: [
+      '#ef4444',
+      '#3b82f6',
+      '#22c55e',
+      '#f59e0b',
+      '#a855f7',
+      '#06b6d4'
+    ]
   },
   dark: {
     mode: 'dark',
@@ -47,7 +54,14 @@ export const defaultChartThemes: Record<'light' | 'dark', ChartTheme> = {
     grid: 'rgba(148, 163, 184, 0.15)',
     axis: '#38bdf8',
     border: 'rgba(148, 163, 184, 0.2)',
-    seriesColors: ['#f87171', '#60a5fa', '#4ade80', '#fbbf24', '#c084fc', '#22d3ee']
+    seriesColors: [
+      '#f87171',
+      '#60a5fa',
+      '#4ade80',
+      '#fbbf24',
+      '#c084fc',
+      '#22d3ee'
+    ]
   }
 };
 

@@ -2,8 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createSpringOscillatorSim,
   createOscillatorState,
-  OSCILLATOR_COLORS,
-
+  OSCILLATOR_COLORS
 } from '../../src/scenes/spring-oscillator/scene.sim';
 
 describe('spring-oscillator sim', () => {
@@ -27,7 +26,12 @@ describe('spring-oscillator sim', () => {
 
   it('adds an oscillator with custom params', () => {
     const sim = createSpringOscillatorSim();
-    const osc = sim.addOscillator({ k: 20, m: 2, x0: -8, orientation: 'vertical' });
+    const osc = sim.addOscillator({
+      k: 20,
+      m: 2,
+      x0: -8,
+      orientation: 'vertical'
+    });
     expect(osc.params.k).toBe(20);
     expect(osc.params.m).toBe(2);
     expect(osc.params.x0).toBe(-8);
@@ -100,7 +104,10 @@ describe('spring-oscillator sim', () => {
     const omega = Math.sqrt(10);
     const t = 1;
     expect(osc.state.v).toBeCloseTo(-5 * omega * Math.sin(omega * t), 6);
-    expect(osc.state.a).toBeCloseTo(-5 * omega * omega * Math.cos(omega * t), 6);
+    expect(osc.state.a).toBeCloseTo(
+      -5 * omega * omega * Math.cos(omega * t),
+      6
+    );
   });
 
   it('handles startDelay: oscillator stays at initial position during delay', () => {
@@ -200,14 +207,27 @@ describe('spring-oscillator sim', () => {
   });
 
   it('createOscillatorState uses custom phase when provided', () => {
-    const state = createOscillatorState({ k: 10, m: 1, x0: 5, orientation: 'horizontal' }, Math.PI / 3);
+    const state = createOscillatorState(
+      { k: 10, m: 1, x0: 5, orientation: 'horizontal' },
+      Math.PI / 3
+    );
     expect(state.phase).toBe(Math.PI / 3);
   });
 
   it('createOscillatorState infers phase from x0 sign', () => {
-    const statePos = createOscillatorState({ k: 10, m: 1, x0: 5, orientation: 'horizontal' });
+    const statePos = createOscillatorState({
+      k: 10,
+      m: 1,
+      x0: 5,
+      orientation: 'horizontal'
+    });
     expect(statePos.phase).toBe(0);
-    const stateNeg = createOscillatorState({ k: 10, m: 1, x0: -5, orientation: 'horizontal' });
+    const stateNeg = createOscillatorState({
+      k: 10,
+      m: 1,
+      x0: -5,
+      orientation: 'horizontal'
+    });
     expect(stateNeg.phase).toBe(Math.PI);
   });
 });

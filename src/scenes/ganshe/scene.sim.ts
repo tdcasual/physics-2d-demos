@@ -81,14 +81,22 @@ function pulseEnvelope(x: number, center: number, width: number): number {
 }
 
 function normalizeParams(input: Partial<WaveParams>): WaveParams {
-  const observerX = clamp(Number.isFinite(input.observerX) ? input.observerX! : 15, 0, DOMAIN_MAX);
+  const observerX = clamp(
+    Number.isFinite(input.observerX) ? input.observerX! : 15,
+    0,
+    DOMAIN_MAX
+  );
   const observers = (input.observers ?? []).map((x) => clamp(x, 0, DOMAIN_MAX));
   return {
     freq1: clamp(Number.isFinite(input.freq1) ? input.freq1! : 4, 0.5, 20),
     freq2: clamp(Number.isFinite(input.freq2) ? input.freq2! : 4, 0.5, 20),
     amp1: clamp(Number.isFinite(input.amp1) ? input.amp1! : 5, 0.5, 15),
     amp2: clamp(Number.isFinite(input.amp2) ? input.amp2! : 5, 0.5, 15),
-    phaseDiff: clamp(Number.isFinite(input.phaseDiff) ? input.phaseDiff! : 0, 0, 360),
+    phaseDiff: clamp(
+      Number.isFinite(input.phaseDiff) ? input.phaseDiff! : 0,
+      0,
+      360
+    ),
     observerX,
     observers: observers.length > 0 ? observers : [],
     mode: input.mode === 'single' ? 'single' : 'head-on',
@@ -96,7 +104,11 @@ function normalizeParams(input: Partial<WaveParams>): WaveParams {
     showWave2: input.showWave2 ?? true,
     showInterference: input.showInterference ?? true,
     isPulseMode: input.isPulseMode ?? false,
-    playbackSpeed: clamp(Number.isFinite(input.playbackSpeed) ? input.playbackSpeed! : 1, 0.1, 3)
+    playbackSpeed: clamp(
+      Number.isFinite(input.playbackSpeed) ? input.playbackSpeed! : 1,
+      0.1,
+      3
+    )
   };
 }
 
@@ -148,7 +160,8 @@ export function computeInterference(
 
   const I_max = Math.pow(params.amp1 + params.amp2, 2);
   const I_current = Math.pow(A_theory, 2);
-  const intensityPct = (I_current / Math.pow(Math.max(params.amp1, params.amp2), 2)) * 100;
+  const intensityPct =
+    (I_current / Math.pow(Math.max(params.amp1, params.amp2), 2)) * 100;
 
   return {
     y1,

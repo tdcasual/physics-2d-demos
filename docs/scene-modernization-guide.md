@@ -55,17 +55,16 @@ bootScenePage(options)
 
 ## 3. 可复用 core 基建（现代化时直接用，别自己造）
 
-| 模块                                                     | 用途                                                                                                          |
-| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `core/fixed-step.ts`                                     | 固定步长步进器（框架已用，场景一般无需直接用）                                                                |
-| `core/canvas-sizing.ts`                                  | **响应式缩放核心**：`sizeCanvasToFill/Fit`、`getResponsiveScale`、`scaledSize`                                |
-| `core/high-dpi-canvas.ts`                                | 高 DPI 适配                                                                                                   |
-| `core/standards.ts`                                      | **演示模式渲染 token**：`getRenderTokens(scale)` → `{ bodyFontPx, strokePx, pointRadiusPx, rightStage{...} }` |
-| `core/chart/`                                            | 折线图等图表组件（含主题）                                                                                    |
-| `core/colors.ts` / `spectral-color.ts` / `wavelength.ts` | 配色 / 光谱色 / 波长工具                                                                                      |
-| `core/draw-primitives.ts`                                | 绘制基元                                                                                                      |
-| `scenes/scene-entry-helpers.ts`                          | `createStandardSceneEntry`（统一生命周期 + subscribe/notify）                                                 |
-| `scenes/page-utils.ts`                                   | `createParamMapper` / `createPresetApplier`（控制面板 → 参数映射）                                            |
+| 模块                                                     | 用途                                                                                                                    |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `core/fixed-step.ts`                                     | 固定步长步进器（框架已用，场景一般无需直接用）                                                                          |
+| `core/canvas-sizing.ts`                                  | **响应式缩放核心**：`sizeCanvasToFill/Fit`、`getResponsiveScale`、`scaledSize`，内部处理高 DPI（`getDevicePixelRatio`） |
+| `core/standards.ts`                                      | **演示模式渲染 token**：`getRenderTokens(scale)` → `{ bodyFontPx, strokePx, pointRadiusPx, rightStage{...} }`           |
+| `core/chart/`                                            | 折线图等图表组件（含主题）                                                                                              |
+| `core/colors.ts` / `spectral-color.ts` / `wavelength.ts` | 配色 / 光谱色 / 波长工具                                                                                                |
+| `core/draw-primitives.ts`                                | 绘制基元                                                                                                                |
+| `scenes/scene-entry-helpers.ts`                          | `createStandardSceneEntry`（统一生命周期 + subscribe/notify）                                                           |
+| `scenes/page-utils.ts`                                   | `createParamMapper` / `createPresetApplier`（控制面板 → 参数映射）                                                      |
 
 ---
 

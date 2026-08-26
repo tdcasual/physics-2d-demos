@@ -17,7 +17,8 @@ export type WaterDrawOptions = {
 /* ── 压力表 ── */
 function drawPressureGauge(
   ctx: CanvasRenderingContext2D,
-  cx: number, cy: number,
+  cx: number,
+  cy: number,
   radius: number,
   value: number,
   maxValue: number,
@@ -80,7 +81,8 @@ function drawPressureGauge(
 
 /* ── 主绘制函数 ── */
 export function drawWaterAnalogy(options: WaterDrawOptions): void {
-  const { ctx, width, height, snapshot, theme, phase, responsiveScale } = options;
+  const { ctx, width, height, snapshot, theme, phase, responsiveScale } =
+    options;
   const colors = waterColors(theme);
   const s = responsiveScale;
 
@@ -113,9 +115,13 @@ export function drawWaterAnalogy(options: WaterDrawOptions): void {
   // 上水管：泵 → 水轮机
   drawWaterFlow(
     ctx,
-    pumpX + componentSize * 0.4, pipeY - pipeWidth / 2,
-    turbineX - componentSize * 0.4, pipeY - pipeWidth / 2,
-    pipeWidth, flowSpeed, phase,
+    pumpX + componentSize * 0.4,
+    pipeY - pipeWidth / 2,
+    turbineX - componentSize * 0.4,
+    pipeY - pipeWidth / 2,
+    pipeWidth,
+    flowSpeed,
+    phase,
     1.0, // 高压
     colors
   );
@@ -123,9 +129,13 @@ export function drawWaterAnalogy(options: WaterDrawOptions): void {
   // 上水管：水轮机 → 阀门
   drawWaterFlow(
     ctx,
-    turbineX + componentSize * 0.4, pipeY - pipeWidth / 2,
-    valveX - componentSize * 0.3, pipeY - pipeWidth / 2,
-    pipeWidth, flowSpeed, phase,
+    turbineX + componentSize * 0.4,
+    pipeY - pipeWidth / 2,
+    valveX - componentSize * 0.3,
+    pipeY - pipeWidth / 2,
+    pipeWidth,
+    flowSpeed,
+    phase,
     0.6, // 中压（经过外阻后）
     colors
   );
@@ -133,9 +143,13 @@ export function drawWaterAnalogy(options: WaterDrawOptions): void {
   // 上水管：阀门 → 细网管
   drawWaterFlow(
     ctx,
-    valveX + componentSize * 0.3, pipeY - pipeWidth / 2,
-    meshX - meshW * 0.5, pipeY - pipeWidth / 2,
-    pipeWidth, flowSpeed, phase,
+    valveX + componentSize * 0.3,
+    pipeY - pipeWidth / 2,
+    meshX - meshW * 0.5,
+    pipeY - pipeWidth / 2,
+    pipeWidth,
+    flowSpeed,
+    phase,
     0.5, // 中低压
     colors
   );
@@ -143,9 +157,13 @@ export function drawWaterAnalogy(options: WaterDrawOptions): void {
   // 回水管：细网管 → 泵
   drawWaterFlow(
     ctx,
-    meshX + meshW * 0.5, pipeY + pipeWidth / 2,
-    pumpX - componentSize * 0.4, pipeY + pipeWidth / 2,
-    pipeWidth, flowSpeed, phase + 0.5,
+    meshX + meshW * 0.5,
+    pipeY + pipeWidth / 2,
+    pumpX - componentSize * 0.4,
+    pipeY + pipeWidth / 2,
+    pipeWidth,
+    flowSpeed,
+    phase + 0.5,
     0.2, // 低压（经过内阻后）
     colors
   );
@@ -162,7 +180,13 @@ export function drawWaterAnalogy(options: WaterDrawOptions): void {
   ctx.beginPath();
   ctx.moveTo(pumpElbowX, pipeY + pipeWidth / 2);
   ctx.arcTo(pumpElbowX, pipeY, pumpElbowX - elbowR, pipeY, elbowR);
-  ctx.arcTo(pumpElbowX - elbowR, pipeY, pumpElbowX - elbowR, pipeY - pipeWidth / 2, elbowR);
+  ctx.arcTo(
+    pumpElbowX - elbowR,
+    pipeY,
+    pumpElbowX - elbowR,
+    pipeY - pipeWidth / 2,
+    elbowR
+  );
   ctx.lineTo(pumpElbowX, pipeY - pipeWidth / 2);
   ctx.stroke();
 
@@ -170,8 +194,20 @@ export function drawWaterAnalogy(options: WaterDrawOptions): void {
   const meshElbowX = meshX + meshW * 0.5;
   ctx.beginPath();
   ctx.moveTo(meshElbowX, pipeY - pipeWidth / 2);
-  ctx.arcTo(meshElbowX + elbowR, pipeY - pipeWidth / 2, meshElbowX + elbowR, pipeY, elbowR);
-  ctx.arcTo(meshElbowX + elbowR, pipeY, meshElbowX, pipeY + pipeWidth / 2, elbowR);
+  ctx.arcTo(
+    meshElbowX + elbowR,
+    pipeY - pipeWidth / 2,
+    meshElbowX + elbowR,
+    pipeY,
+    elbowR
+  );
+  ctx.arcTo(
+    meshElbowX + elbowR,
+    pipeY,
+    meshElbowX,
+    pipeY + pipeWidth / 2,
+    elbowR
+  );
   ctx.stroke();
 
   // ── 绘制元件 ──
@@ -182,10 +218,25 @@ export function drawWaterAnalogy(options: WaterDrawOptions): void {
   // 水轮机（外阻）— 转速与电流成正比，但阻力越大转速越慢
   const externalR = snapshot.state.externalR;
   const loadRatio = externalR === Infinity ? 1 : Math.min(1, externalR / 5);
-  drawTurbine(ctx, turbineX, pipeY, componentSize, phase * rotationSpeed, loadRatio, colors);
+  drawTurbine(
+    ctx,
+    turbineX,
+    pipeY,
+    componentSize,
+    phase * rotationSpeed,
+    loadRatio,
+    colors
+  );
 
   // 阀门（开关）
-  drawValve(ctx, valveX, pipeY, componentSize, snapshot.state.isSystemOn, colors);
+  drawValve(
+    ctx,
+    valveX,
+    pipeY,
+    componentSize,
+    snapshot.state.isSystemOn,
+    colors
+  );
 
   // 细网管（内阻）
   drawMeshPipe(

@@ -12,7 +12,10 @@ import type {
   TransportState
 } from './layouts/types';
 import type { SceneMeta } from '../platform/scene-contract';
-import type { DemoRenderHints, SceneDemoProfile } from '../platform/demo-profile';
+import type {
+  DemoRenderHints,
+  SceneDemoProfile
+} from '../platform/demo-profile';
 
 /** 场景实例接口（场景实现方提供） */
 export type SceneInstance = {
@@ -79,4 +82,10 @@ export type ScenePageOptions<TScene extends SceneInstance = SceneInstance> = {
   maxSubSteps?: number;
   /** 场景挂载后自动播放动画，默认 false */
   autoPlay?: boolean;
+  /**
+   * 主题切换回调（可选）。由 bootstrapper 注入 container.setTheme，
+   * 让 `t` 快捷键走 container 统一路径（状态同步 + 持久化）；
+   * 未提供时 `t` 快捷键退回直接改 DOM 的旧行为。
+   */
+  onToggleTheme?: (next: Theme) => void;
 };

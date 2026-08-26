@@ -3,7 +3,9 @@ import { applyCanvasSize } from '../../src/core/canvas-sizing';
 import type { CanvasSizingResult } from '../../src/core/canvas-sizing';
 
 describe('applyCanvasSize', () => {
-  function makeSizing(overrides: Partial<CanvasSizingResult> = {}): CanvasSizingResult {
+  function makeSizing(
+    overrides: Partial<CanvasSizingResult> = {}
+  ): CanvasSizingResult {
     return {
       width: 800,
       height: 600,

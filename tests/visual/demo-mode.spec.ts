@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('demo mode (presentation)', () => {
-  test('chase-meet switches to demo mode and hides sidebar', async ({ page }) => {
+  test('chase-meet switches to demo mode and hides sidebar', async ({
+    page
+  }) => {
     await page.goto('/src/pages/chase-meet.html');
     await expect(page.locator('.layout-master')).toBeVisible();
 
@@ -30,7 +32,9 @@ test.describe('demo mode (presentation)', () => {
     await expect(modeButton).toHaveText('演示');
   });
 
-  test('field-lines switches to demo mode with minimal controls', async ({ page }) => {
+  test('field-lines switches to demo mode with minimal controls', async ({
+    page
+  }) => {
     await page.goto('/src/pages/field-lines.html');
     await expect(page.locator('.layout-master')).toBeVisible();
 

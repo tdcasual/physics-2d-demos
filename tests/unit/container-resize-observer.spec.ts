@@ -15,7 +15,11 @@ describe('ContainerResizeObserver', () => {
     container.remove();
   });
 
-  function createObserver(overrides?: Partial<ConstructorParameters<typeof ContainerResizeObserver>[1]>) {
+  function createObserver(
+    overrides?: Partial<
+      ConstructorParameters<typeof ContainerResizeObserver>[1]
+    >
+  ) {
     const defaults = {
       getCurrentScene: () => null,
       getUserPreferredLayout: () => null,
@@ -26,7 +30,10 @@ describe('ContainerResizeObserver', () => {
       notifyLayoutResize: vi.fn(),
       onResize: vi.fn()
     };
-    return new ContainerResizeObserver(container, { ...defaults, ...overrides });
+    return new ContainerResizeObserver(container, {
+      ...defaults,
+      ...overrides
+    });
   }
 
   it('should start without errors', () => {
@@ -43,7 +50,11 @@ describe('ContainerResizeObserver', () => {
   it('should debounce layout switch', async () => {
     const switchLayout = vi.fn();
     const observer = createObserver({
-      getCurrentScene: () => ({ id: 'test', preferredLayout: 'mobile' }) as import('../../src/app/layouts/types').Scene,
+      getCurrentScene: () =>
+        ({
+          id: 'test',
+          preferredLayout: 'mobile'
+        }) as import('../../src/app/layouts/types').Scene,
       getCurrentLayoutId: () => 'desktop',
       resolveLayout: () => 'mobile',
       switchLayout
@@ -87,7 +98,8 @@ describe('ContainerResizeObserver', () => {
   it('should not auto-switch when user has preference', async () => {
     const switchLayout = vi.fn();
     const observer = createObserver({
-      getCurrentScene: () => ({ id: 'test' }) as import('../../src/app/layouts/types').Scene,
+      getCurrentScene: () =>
+        ({ id: 'test' }) as import('../../src/app/layouts/types').Scene,
       getUserPreferredLayout: () => 'split-right',
       switchLayout
     });

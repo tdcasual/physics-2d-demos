@@ -41,14 +41,16 @@ export const OSCILLATOR_COLORS = [
   '#22c55e', // 绿
   '#ffd43b', // 黄
   '#da77f2', // 紫
-  '#ff922b'  // 橙
+  '#ff922b' // 橙
 ];
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function normalizeParams(input: Partial<OscillatorParams>): ResolvedOscillatorParams {
+function normalizeParams(
+  input: Partial<OscillatorParams>
+): ResolvedOscillatorParams {
   return {
     k: clamp(Number.isFinite(input.k) ? input.k! : 10, 1, 100),
     m: clamp(Number.isFinite(input.m) ? input.m! : 1, 0.1, 10),
@@ -66,10 +68,9 @@ export function createOscillatorState(
   customPhase?: number
 ): OscillatorState {
   // 使用自定义相位，或根据 x0 符号计算
-  const initialPhase = customPhase !== undefined 
-    ? customPhase 
-    : (params.x0 >= 0 ? 0 : Math.PI);
-  
+  const initialPhase =
+    customPhase !== undefined ? customPhase : params.x0 >= 0 ? 0 : Math.PI;
+
   return {
     x: params.x0,
     v: 0,
@@ -102,7 +103,10 @@ export function createOscillator(
 export type SpringOscillatorSim = {
   oscillators: Oscillator[];
   globalTime: number;
-  addOscillator(params?: Partial<OscillatorParams>, startDelay?: number): Oscillator;
+  addOscillator(
+    params?: Partial<OscillatorParams>,
+    startDelay?: number
+  ): Oscillator;
   removeOscillator(id: string): boolean;
   updateOscillator(id: string, params: Partial<OscillatorParams>): boolean;
   startOscillator(id: string): void;
@@ -128,9 +132,14 @@ export function createSpringOscillatorSim(): SpringOscillatorSim {
 
   return {
     oscillators,
-    get globalTime() { return globalTime; },
+    get globalTime() {
+      return globalTime;
+    },
 
-    addOscillator(params: Partial<OscillatorParams> = {}, startDelay: number = 0): Oscillator {
+    addOscillator(
+      params: Partial<OscillatorParams> = {},
+      startDelay: number = 0
+    ): Oscillator {
       const id = `osc-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       const osc = createOscillator(id, params, getNextColor(), startDelay);
       oscillators.push(osc);
@@ -138,45 +147,45 @@ export function createSpringOscillatorSim(): SpringOscillatorSim {
     },
 
     removeOscillator(id: string): boolean {
-      const idx = oscillators.findIndex(o => o.id === id);
+      const idx = oscillators.findIndex((o) => o.id === id);
       if (idx === -1) return false;
       oscillators.splice(idx, 1);
       return true;
     },
 
     updateOscillator(id: string, params: Partial<OscillatorParams>): boolean {
-      const osc = oscillators.find(o => o.id === id);
+      const osc = oscillators.find((o) => o.id === id);
       if (!osc) return false;
-      
+
       const wasPlaying = osc.isPlaying;
       osc.isPlaying = false;
-      
+
       // 保存自定义相位（如果提供了）
       const customPhase = params.phase;
-      
+
       // 更新参数
       osc.params = normalizeParams({ ...osc.params, ...params });
-      
+
       // 重新计算初始状态，保留自定义相位
       osc.initial = createOscillatorState(osc.params, customPhase);
       osc.state = { ...osc.initial };
-      
+
       osc.isPlaying = wasPlaying;
       return true;
     },
 
     startOscillator(id: string): void {
-      const osc = oscillators.find(o => o.id === id);
+      const osc = oscillators.find((o) => o.id === id);
       if (osc) osc.isPlaying = true;
     },
 
     pauseOscillator(id: string): void {
-      const osc = oscillators.find(o => o.id === id);
+      const osc = oscillators.find((o) => o.id === id);
       if (osc) osc.isPlaying = false;
     },
 
     resetOscillator(id: string): void {
-      const osc = oscillators.find(o => o.id === id);
+      const osc = oscillators.find((o) => o.id === id);
       if (osc) {
         osc.state = { ...osc.initial };
         osc.isPlaying = false;
@@ -185,7 +194,7 @@ export function createSpringOscillatorSim(): SpringOscillatorSim {
     },
 
     resetAll(): void {
-      oscillators.forEach(osc => {
+      oscillators.forEach((osc) => {
         osc.state = { ...osc.initial };
         osc.isPlaying = false;
         osc.localTime = 0;
@@ -196,15 +205,15 @@ export function createSpringOscillatorSim(): SpringOscillatorSim {
     step(dt: number): void {
       const safeDt = Math.max(0, dt);
       if (safeDt === 0) return;
-      
+
       globalTime += safeDt;
-      
-      oscillators.forEach(osc => {
+
+      oscillators.forEach((osc) => {
         if (!osc.isPlaying) return;
-        
+
         // 更新本地时间
         osc.localTime += safeDt;
-        
+
         // 如果还在启动延迟期内，保持在初始位置不动
         if (osc.localTime < osc.startDelay) {
           osc.state.x = osc.initial.x;
@@ -214,18 +223,18 @@ export function createSpringOscillatorSim(): SpringOscillatorSim {
           osc.state.phase = osc.initial.phase;
           return;
         }
-        
+
         // 实际运动时间（扣除延迟）
         const effectiveTime = osc.localTime - osc.startDelay;
-        
+
         const { k, m } = osc.params;
         const omega = computeOmega(k, m);
-        
+
         // 解析解：x(t) = A * cos(omega * t + phi)
         // 使用有效时间计算
         const A = Math.abs(osc.initial.x); // 使用绝对值作为振幅
         const phi0 = osc.initial.phase;
-        
+
         osc.state.t = osc.localTime;
         const phase = omega * effectiveTime + phi0;
         osc.state.phase = phase;
@@ -236,7 +245,7 @@ export function createSpringOscillatorSim(): SpringOscillatorSim {
     },
 
     getOmega(id: string): number {
-      const osc = oscillators.find(o => o.id === id);
+      const osc = oscillators.find((o) => o.id === id);
       if (!osc) return 0;
       return computeOmega(osc.params.k, osc.params.m);
     },
@@ -248,26 +257,26 @@ export function createSpringOscillatorSim(): SpringOscillatorSim {
     },
 
     getPhaseDifference(id1: string, id2: string): number | null {
-      const osc1 = oscillators.find(o => o.id === id1);
-      const osc2 = oscillators.find(o => o.id === id2);
+      const osc1 = oscillators.find((o) => o.id === id1);
+      const osc2 = oscillators.find((o) => o.id === id2);
       if (!osc1 || !osc2) return null;
-      
+
       // 计算周期
       const omega1 = computeOmega(osc1.params.k, osc1.params.m);
       const omega2 = computeOmega(osc2.params.k, osc2.params.m);
       const T1 = (2 * Math.PI) / omega1;
       const T2 = (2 * Math.PI) / omega2;
-      
+
       // 相位差由启动延迟决定：Δφ = 2π × (Δt / T)
       // 假设两个振子周期相同（同相演示的前提）
       const avgPeriod = (T1 + T2) / 2;
       const timeDiff = osc2.startDelay - osc1.startDelay;
       let diff = (2 * Math.PI * timeDiff) / avgPeriod;
-      
+
       // 归一化到 [-pi, pi]
       while (diff > Math.PI) diff -= 2 * Math.PI;
       while (diff < -Math.PI) diff += 2 * Math.PI;
-      
+
       return diff;
     }
   };

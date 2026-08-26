@@ -1,6 +1,17 @@
 /**
- * 统一配色配置 - 清新活泼主题
+ * Canvas 渲染专用调色板 - 清新活泼主题
  * 珊瑚橙 x 薄荷青
+ *
+ * ⚠️ 定位说明（与 themes.css 的关系）：
+ * 本模块是 canvas 像素渲染的历史调色板，与 src/styles/themes.css 的
+ * DOM 语义 token 是两套体系。部分值与 design token 等值
+ * （如 coral=#FF6B6B 与 --token-color-coral 一致），但也有意保留了
+ * 与主题 token 不同的值（如 dark=#2C3E50、bg=#FFFEF7）。
+ *
+ * Canvas fillStyle/strokeStyle 需要字面颜色字符串，无法直接引用 CSS var；
+ * 任何"对齐 token"的改值都会改变场景渲染像素，违反视觉回归基线。
+ * 因此本文件保持现状，仅作为场景绘制的等值颜色来源；DOM 侧一律使用
+ * themes.css 语义变量，不要反向引用本文件。
  */
 
 export const Colors = {

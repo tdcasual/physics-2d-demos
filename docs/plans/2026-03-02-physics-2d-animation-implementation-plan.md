@@ -11,6 +11,7 @@
 ---
 
 ## Required Skills During Execution
+
 - `@superpowers/test-driven-development`
 - `@superpowers/verification-before-completion`
 - `@skills/playwright`
@@ -18,6 +19,7 @@
 ### Task 1: Bootstrap Toolchain and Red/Green Smoke Loop
 
 **Files:**
+
 - Create: `package.json`
 - Create: `tsconfig.json`
 - Create: `vite.config.ts`
@@ -72,6 +74,7 @@ git commit -m "chore: bootstrap vite typescript test lint toolchain"
 ### Task 2: Fixed Timestep Simulation Core
 
 **Files:**
+
 - Create: `src/core/fixed-step.ts`
 - Create: `tests/unit/fixed-step.spec.ts`
 - Modify: `src/app/health.ts`
@@ -101,7 +104,10 @@ Expected: FAIL with missing `createFixedStepper` export.
 
 ```ts
 // src/core/fixed-step.ts
-export function createFixedStepper(config: { dt: number; maxSubSteps: number }) {
+export function createFixedStepper(config: {
+  dt: number;
+  maxSubSteps: number;
+}) {
   let accumulator = 0;
   return {
     consume(frameDt: number) {
@@ -133,6 +139,7 @@ git commit -m "feat: add deterministic fixed timestep core"
 ### Task 3: Deterministic RNG and Parameter Guard
 
 **Files:**
+
 - Create: `src/core/rng.ts`
 - Create: `src/core/guards.ts`
 - Create: `tests/unit/rng.spec.ts`
@@ -172,6 +179,7 @@ Run: `pnpm vitest run tests/unit/rng.spec.ts tests/unit/guards.spec.ts`
 Expected: FAIL with missing modules.
 
 **Step 3: Write minimal implementation**
+
 - `createRng(seed)` using deterministic LCG.
 - `clampParam(value, { min, max, fallback })` with NaN fallback.
 
@@ -190,6 +198,7 @@ git commit -m "feat: add deterministic rng and runtime param guards"
 ### Task 4: Scene Contract and First Example Scene (Projectile)
 
 **Files:**
+
 - Create: `src/scenes/types.ts`
 - Create: `src/scenes/projectile/scene.meta.ts`
 - Create: `src/scenes/projectile/scene.sim.ts`
@@ -238,6 +247,7 @@ Run: `pnpm vitest run tests/contract/scene-contract.spec.ts tests/unit/projectil
 Expected: FAIL with missing scene files.
 
 **Step 3: Write minimal implementation**
+
 - Define `SceneLifecycle` interface in `src/scenes/types.ts`.
 - Implement projectile sim with pure state updates.
 - Implement minimal Pixi view object with `render(state)`.
@@ -258,6 +268,7 @@ git commit -m "feat: add scene lifecycle contract and first projectile scene"
 ### Task 5: Reusable Scene Shell and Common Controls
 
 **Files:**
+
 - Create: `src/ui/control-panel.ts`
 - Create: `src/app/scene-shell.ts`
 - Create: `src/pages/projectile.html`
@@ -284,6 +295,7 @@ Run: `pnpm vitest run tests/unit/scene-shell.spec.ts`
 Expected: FAIL with missing module.
 
 **Step 3: Write minimal implementation**
+
 - Create scene shell state (`play`, `pause`, `reset`, `stepOnce`).
 - Add control panel component wiring.
 - Register `src/pages/projectile.html` as Vite multi-page input.
@@ -303,6 +315,7 @@ git commit -m "feat: add reusable scene shell and transport controls"
 ### Task 6: Metadata Index Generation and Navigation Integration
 
 **Files:**
+
 - Create: `scripts/generate-scene-index.ts`
 - Create: `src/app/scene-index.ts`
 - Create: `public/scene-index.json` (generated)
@@ -333,6 +346,7 @@ Run: `pnpm vitest run tests/unit/generate-scene-index.spec.ts`
 Expected: FAIL with missing export/module.
 
 **Step 3: Write minimal implementation**
+
 - Implement `toSceneIndex` pure function and file-generation CLI.
 - Add `pnpm generate:index` script.
 - Update navigation page to load `scene-index.json` first, fallback to hardcoded list.
@@ -352,6 +366,7 @@ git commit -m "feat: generate scene index from metadata and wire nav page"
 ### Task 7: Visual Regression Baseline with Playwright
 
 **Files:**
+
 - Create: `playwright.config.ts`
 - Create: `tests/visual/navigation.spec.ts`
 - Create: `tests/visual/projectile.spec.ts`
@@ -376,6 +391,7 @@ Run: `pnpm playwright test tests/visual/navigation.spec.ts`
 Expected: FAIL if preview server or page setup is missing.
 
 **Step 3: Write minimal implementation**
+
 - Configure Playwright `webServer` to run Vite preview/dev server.
 - Add deterministic viewport and locale.
 - Add first stable visual assertions and initial snapshot update command.
@@ -396,6 +412,7 @@ git commit -m "test: add playwright visual regression baseline"
 ### Task 8: End-to-End Verification Gate and CI Workflow
 
 **Files:**
+
 - Create: `.github/workflows/ci.yml`
 - Modify: `package.json`
 - Create: `README.md`
@@ -410,6 +427,7 @@ Run: `pnpm vitest run tests/unit/ci-scripts.spec.ts`
 Expected: FAIL if scripts are missing.
 
 **Step 3: Write minimal implementation**
+
 - Add CI workflow executing:
   - `pnpm install --frozen-lockfile`
   - `pnpm lint`
@@ -431,6 +449,7 @@ git commit -m "chore: add ci quality gates and developer runbook"
 ```
 
 ## Final Verification Checklist (Before Any PR)
+
 1. Run: `pnpm lint`
 2. Run: `pnpm test`
 3. Run: `pnpm test:visual`
@@ -440,6 +459,7 @@ git commit -m "chore: add ci quality gates and developer runbook"
 7. Confirm at least one scene supports `播放/暂停/重置/单步`.
 
 ## Notes for Legacy Migration
+
 - Keep existing `animations/**/*.html` untouched during foundation build.
 - Migrate legacy pages one-by-one into `src/scenes/*` after foundation is stable.
 - Preserve old pages behind legacy links until migrated scenes reach parity.

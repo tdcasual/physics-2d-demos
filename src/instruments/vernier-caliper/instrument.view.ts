@@ -7,7 +7,10 @@
  */
 
 import type { TeachingTheme } from '../../platform/standards';
-import type { InstrumentView, InstrumentViewport } from '../_contract/instrument-contract';
+import type {
+  InstrumentView,
+  InstrumentViewport
+} from '../_contract/instrument-contract';
 import type { VernierCaliperState } from './instrument.sim';
 
 type Pal = {
@@ -241,7 +244,11 @@ export function drawVernierCaliper(o: VernierCaliperDrawOptions): void {
     if (k % 5 === 0 && k < vernierDivisions && !isAligned) {
       ctx.fillStyle = P.tickNum;
       ctx.textAlign = 'center';
-      ctx.fillText(String(k), x, vernierY + vernierH - (k % 5 === 0 ? 10 : 6) * s - 3 * s);
+      ctx.fillText(
+        String(k),
+        x,
+        vernierY + vernierH - (k % 5 === 0 ? 10 : 6) * s - 3 * s
+      );
     }
   }
 
@@ -278,10 +285,23 @@ export function drawVernierCaliper(o: VernierCaliperDrawOptions): void {
     ctx.fill();
     ctx.stroke();
   } else if (objectName.includes('金属块')) {
-    const blockW = Math.min(objectSize * mmToPx, vernierX - mainScaleStartX - 2 * s);
+    const blockW = Math.min(
+      objectSize * mmToPx,
+      vernierX - mainScaleStartX - 2 * s
+    );
     const blockH = Math.min(16 * s, lowerJawH - 4 * s);
-    ctx.fillRect(objectCenterX - blockW / 2, objectY - blockH / 2, blockW, blockH);
-    ctx.strokeRect(objectCenterX - blockW / 2, objectY - blockH / 2, blockW, blockH);
+    ctx.fillRect(
+      objectCenterX - blockW / 2,
+      objectY - blockH / 2,
+      blockW,
+      blockH
+    );
+    ctx.strokeRect(
+      objectCenterX - blockW / 2,
+      objectY - blockH / 2,
+      blockW,
+      blockH
+    );
   } else {
     const tubeOuterR = Math.min((objectSize / 2 + 2) * mmToPx, lowerJawH * 0.4);
     ctx.beginPath();
@@ -375,17 +395,28 @@ export function createVernierCaliperView(
 
   function regionOf(): { x: number; y: number; w: number; h: number } {
     if (viewport) {
-      return { x: viewport.x, y: viewport.y, w: viewport.width, h: viewport.height };
+      return {
+        x: viewport.x,
+        y: viewport.y,
+        w: viewport.width,
+        h: viewport.height
+      };
     }
     return { x: 0, y: 0, w: cssW, h: cssH };
   }
 
   function resize(): void {
-    const dpr = Math.min(2, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
+    const dpr = Math.min(
+      2,
+      typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
+    );
     const rect = canvas.getBoundingClientRect();
     cssW = Math.max(1, Math.floor(rect.width || 800));
     cssH = Math.max(1, Math.floor(rect.height || 600));
-    if (canvas.width !== Math.floor(cssW * dpr) || canvas.height !== Math.floor(cssH * dpr)) {
+    if (
+      canvas.width !== Math.floor(cssW * dpr) ||
+      canvas.height !== Math.floor(cssH * dpr)
+    ) {
       canvas.width = Math.floor(cssW * dpr);
       canvas.height = Math.floor(cssH * dpr);
     }

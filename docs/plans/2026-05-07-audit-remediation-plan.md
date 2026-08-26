@@ -29,18 +29,21 @@ This is preferred over a pure byte-cutting pass because the current `check:bundl
 **Why:** `pnpm quality:core` currently fails because `scripts/check-bundle-budget.ts` sums all generated JS across all entries. For a 14-scene multi-page app, total emitted JS is not the same thing as initial user cost.
 
 **Files:**
+
 - Modify: `scripts/check-bundle-budget.ts`
 - Modify: `tests/unit/bundle-budget.spec.ts`
 - Modify: `package.json`
 - Inspect during implementation: `vite.config.ts`, `dist/.vite/manifest.json` or Vite build output shape
 
 **Target behavior:**
+
 - Keep guarding large shared chunks such as `vendor`, `layouts`, `ui`, and `core`
 - Add per-entry initial JS budget for each HTML page
 - Add per-entry initial CSS budget for each HTML page
 - Keep a site-level shared-assets budget, but stop summing every lazy scene chunk into one total cap
 
 **Recommended design:**
+
 - Read Vite manifest data rather than recursively summing every emitted `.js` file
 - For each HTML entry, compute:
   - initial JS reachable from that page
@@ -53,6 +56,7 @@ This is preferred over a pure byte-cutting pass because the current `check:bundl
   - optional homepage initial budget stricter than scene pages
 
 **Suggested default budgets:**
+
 - Homepage initial JS: `<= 220 kB`
 - Scene page initial JS: `<= 260 kB`
 - Entry initial CSS: `<= 70 kB`
@@ -62,6 +66,7 @@ This is preferred over a pure byte-cutting pass because the current `check:bundl
 **Step 1: Write failing tests for the new budget model**
 
 Add cases in `tests/unit/bundle-budget.spec.ts` covering:
+
 - a multi-entry site where total emitted JS is large but each entry budget passes
 - a scene page whose reachable initial JS exceeds the new per-entry cap
 - a vendor chunk that exceeds its shared cap
@@ -79,12 +84,14 @@ Expected: existing script assumptions fail against the new tests.
 **Step 3: Implement the manifest-aware analyzer**
 
 In `scripts/check-bundle-budget.ts`:
+
 - parse the Vite manifest
 - identify HTML entries and their imported chunks
 - classify shared chunks versus entry-local chunks
 - emit a report that explains which entry failed and why
 
 Avoid:
+
 - hard-coding current scene names
 - silently raising budgets without changing the model
 
@@ -123,11 +130,13 @@ git commit -m "build: make bundle budget entry-aware"
 **Why:** CI uploads `coverage/lcov.info`, but Vitest is only configured to emit `text`, `html`, and `json`. Codecov integration currently looks configured but does not receive the expected artifact.
 
 **Files:**
+
 - Modify: `vite.config.ts`
 - Modify: `.github/workflows/ci.yml`
 - Optional test/doc touch: `README.md`
 
 **Target behavior:**
+
 - `pnpm test:coverage` should produce `coverage/lcov.info`
 - CI should upload the exact artifact that local coverage emits
 - Coverage upload failure should remain non-blocking only if intentionally desired
@@ -135,6 +144,7 @@ git commit -m "build: make bundle budget entry-aware"
 **Step 1: Write a narrow regression test or scripted assertion**
 
 Preferred options:
+
 - add a small unit test in `tests/unit/ci-scripts.spec.ts`, or
 - extend the existing test to assert that the configured reporters include `lcov`
 
@@ -153,13 +163,13 @@ Expected: failure until `lcov` is configured.
 In `vite.config.ts`, change:
 
 ```ts
-reporter: ['text', 'html', 'json']
+reporter: ['text', 'html', 'json'];
 ```
 
 to include `lcov`:
 
 ```ts
-reporter: ['text', 'html', 'json', 'lcov']
+reporter: ['text', 'html', 'json', 'lcov'];
 ```
 
 **Step 4: Align CI with the actual artifact**
@@ -191,6 +201,7 @@ git commit -m "ci: align coverage reporters with codecov upload"
 **Why:** README and AGENTS still describe an 8-scene project, while tests and runtime discovery confirm 14 scenes. The package name also still reads `teaching-animations-legacy-html`, which no longer matches the product identity.
 
 **Files:**
+
 - Modify: `README.md`
 - Modify: `AGENTS.md`
 - Modify: `package.json`
@@ -198,11 +209,13 @@ git commit -m "ci: align coverage reporters with codecov upload"
 - Optional new check: `scripts/check-scenes.ts` or `tests/unit/ci-scripts.spec.ts`
 
 **Target behavior:**
+
 - Public docs describe the current project truthfully
 - High-churn counts are either updated automatically or written in a non-brittle way
 - Package metadata matches repository identity
 
 **Recommended design:**
+
 - Replace hard-coded overview text like "8 个场景" with one of:
   - "当前收录 14 个场景" if exact counts matter, or
   - "收录多个交互式 2D 物理场景" if the count changes often
@@ -214,6 +227,7 @@ git commit -m "ci: align coverage reporters with codecov upload"
 **Step 1: Update the docs**
 
 Revise:
+
 - project overview
 - project layout examples
 - quick facts such as scene count and build artifact notes
@@ -225,10 +239,12 @@ Rename the package in `package.json` to match the repo/product.
 **Step 3: Add a drift-prevention check**
 
 Preferred lightweight option:
+
 - extend `scripts/check-scenes.ts` or `tests/unit/ci-scripts.spec.ts`
 - assert that `README.md` and `AGENTS.md` do not contain the outdated fixed phrase `8 个`
 
 Avoid:
+
 - overengineering a full doc parser
 - duplicating scene count in many places
 
@@ -257,6 +273,7 @@ git commit -m "docs: sync project metadata with current scene inventory"
 **Why:** overall coverage is decent, but `src/instruments/` is nearly uncovered and `src/app/instrument-library/` is effectively uncovered. This is the largest confidence gap in the repository.
 
 **Files:**
+
 - Create: `tests/unit/instrument-registry.spec.ts`
 - Create: `tests/unit/instrument-library.spec.ts`
 - Create if needed: `tests/unit/instrument-manifest.spec.ts`
@@ -265,11 +282,13 @@ git commit -m "docs: sync project metadata with current scene inventory"
 - Optional new visual test: `tests/visual/instruments.spec.ts`
 
 **Target behavior:**
+
 - registry sorting, grouping, label mapping, and manifest validation are covered
 - the instrument library page can render empty state and non-empty state in tests
 - selecting an instrument is testable without needing a full production browser for every assertion
 
 **Recommended design for testability:**
+
 - extract small pure helpers from `bootInstrumentLibrary()` instead of testing one giant imperative blob
 - examples:
   - `detectTheme(document, matchMedia)`
@@ -282,6 +301,7 @@ Do not rewrite the feature into React. Keep the DOM architecture.
 **Step 1: Add registry tests**
 
 Cover in `tests/unit/instrument-registry.spec.ts`:
+
 - `buildInstrumentRegistry()` returns manifest-backed entries
 - entries sort by category order then title
 - `buildRegistryByCategory()` groups correctly
@@ -291,6 +311,7 @@ Cover in `tests/unit/instrument-registry.spec.ts`:
 **Step 2: Add manifest sanity tests**
 
 In `tests/unit/instrument-manifest.spec.ts`:
+
 - each manifest entry has unique `id`
 - `modulePath` matches `/src/instruments/<id>/index.ts`
 - category values match allowed contract values
@@ -298,12 +319,14 @@ In `tests/unit/instrument-manifest.spec.ts`:
 **Step 3: Add instrument-library DOM tests**
 
 In `tests/unit/instrument-library.spec.ts`:
+
 - empty registry shows empty state
 - non-empty registry renders category headers and buttons
 - clicking a registry item starts load and updates selected styles
 - failure path shows an error state
 
 To make this practical, inject or mock:
+
 - `buildInstrumentRegistry`
 - `buildRegistryByCategory`
 - `sizeCanvasToFill`
@@ -312,6 +335,7 @@ To make this practical, inject or mock:
 **Step 4: Add one browser-level smoke test**
 
 Create `tests/visual/instruments.spec.ts` or extend an existing visual suite:
+
 - open `/src/pages/instruments.html`
 - assert sidebar renders
 - click one instrument
@@ -328,6 +352,7 @@ pnpm test:coverage
 ```
 
 Expected:
+
 - `src/instruments/` coverage materially improves
 - `src/app/instrument-library/` is no longer at 0%
 
@@ -345,6 +370,7 @@ git commit -m "test: cover instrument registry and library flows"
 **Why:** the project already has design tokens and theme layers, but homepage UI still embeds large `<style>` blocks, uses local hard-coded colors, and imports fonts from Fontshare at runtime. This weakens theme consistency, offline resilience, and long-term maintainability.
 
 **Files:**
+
 - Modify: `src/app/App.tsx`
 - Modify: `src/app/sections/ExperimentsSection.tsx`
 - Modify: `src/app/data/scenes.ts`
@@ -355,12 +381,14 @@ git commit -m "test: cover instrument registry and library flows"
 - Optional create: `public/fonts/*` or `src/assets/fonts/*`
 
 **Target behavior:**
+
 - homepage components use shared CSS files instead of large inline `<style>` blocks
 - semantic category and difficulty colors come from tokens or theme vars
 - font delivery does not require runtime third-party CSS unless explicitly accepted
 - theme updates remain centralized
 
 **Recommended design:**
+
 - move homepage layout and experiments-section styles into `src/styles/app/home.css`
 - define tokens such as:
   - `--token-color-category-mechanics`
@@ -375,11 +403,13 @@ git commit -m "test: cover instrument registry and library flows"
 **Step 1: Write focused tests before refactor**
 
 Add or extend tests around:
+
 - `tests/unit/app.spec.tsx`
 - `tests/unit/navigation-branding.spec.ts`
 - `tests/unit/scenes-data.spec.ts`
 
 Assert:
+
 - homepage still renders featured scenes
 - theme toggle still updates `meta[name="theme-color"]`
 - scene category rendering still works after replacing raw hex metadata
@@ -387,6 +417,7 @@ Assert:
 **Step 2: Extract homepage styles**
 
 Move inline styles from:
+
 - `src/app/App.tsx`
 - `src/app/sections/ExperimentsSection.tsx`
 
@@ -395,6 +426,7 @@ into a shared stylesheet imported by the app entry.
 **Step 3: Tokenize semantic colors**
 
 Update:
+
 - `src/styles/design-tokens.css`
 - `src/styles/themes.css`
 - `src/app/data/scenes.ts`
@@ -404,9 +436,11 @@ Use semantic names instead of repeated literal colors.
 **Step 4: Decide and implement font strategy**
 
 Preferred:
+
 - self-host `Satoshi` and `Clash Display` if licensing allows
 
 Fallback:
+
 - replace the remote import with a stable local-first stack and document the trade-off
 
 **Step 5: Verify visually and functionally**
@@ -420,6 +454,7 @@ pnpm build
 ```
 
 Expected:
+
 - no homepage regressions
 - no new contrast regressions
 - CSS remains within budget
@@ -457,6 +492,7 @@ pnpm quality:full
 ```
 
 Expected end state:
+
 - core gate green
 - coverage upload real, not decorative
 - docs and metadata truthful

@@ -71,6 +71,8 @@ export interface LayoutConfig {
   preservedCanvas?: HTMLCanvasElement | null;
   /** 隐藏 transport 浮动控制条（适用于静态推导类场景） */
   hideTransport?: boolean;
+  /** 场景标题（由 bootstrapper 注入），用于 canvas aria-label 等无障碍文本 */
+  title?: string;
   __managedByContainer?: boolean;
 }
 

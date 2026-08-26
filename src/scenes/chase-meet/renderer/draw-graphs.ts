@@ -12,15 +12,9 @@ export function drawGraphs(context: GraphDrawContext): void {
   const paddingTop = 10 * visualScale;
   const paddingRight = 10 * visualScale;
 
-  const axisColor = isLight
-    ? 'rgba(51,65,85,0.7)'
-    : 'rgba(148,163,184,0.8)';
-  const labelColor = isLight
-    ? 'rgba(30,41,59,0.85)'
-    : 'rgba(226,232,240,0.9)';
-  const gridColor = isLight
-    ? 'rgba(71,85,105,0.18)'
-    : 'rgba(148,163,184,0.25)';
+  const axisColor = isLight ? 'rgba(51,65,85,0.7)' : 'rgba(148,163,184,0.8)';
+  const labelColor = isLight ? 'rgba(30,41,59,0.85)' : 'rgba(226,232,240,0.9)';
+  const gridColor = isLight ? 'rgba(71,85,105,0.18)' : 'rgba(148,163,184,0.25)';
   const markerColor = isLight
     ? 'rgba(30,41,59,0.55)'
     : 'rgba(248,250,252,0.65)';
@@ -161,28 +155,36 @@ export function drawGraphs(context: GraphDrawContext): void {
   };
 
   drawPolyline(
-    xCtx, xW, xH,
+    xCtx,
+    xW,
+    xH,
     'xA',
     'rgba(96,165,250,0.95)',
     'rgba(59,130,246,0.5)',
     currentTime
   );
   drawPolyline(
-    xCtx, xW, xH,
+    xCtx,
+    xW,
+    xH,
     'xB',
     'rgba(248,113,113,0.95)',
     'rgba(239,68,68,0.5)',
     currentTime
   );
   drawPolyline(
-    vCtx, vW, vH,
+    vCtx,
+    vW,
+    vH,
     'vA',
     'rgba(96,165,250,0.95)',
     'rgba(59,130,246,0.5)',
     currentTime
   );
   drawPolyline(
-    vCtx, vW, vH,
+    vCtx,
+    vW,
+    vH,
     'vB',
     'rgba(248,113,113,0.95)',
     'rgba(239,68,68,0.5)',

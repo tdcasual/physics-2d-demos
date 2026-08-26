@@ -19,6 +19,9 @@ export interface ControlCardInstance {
   dispose: () => void;
 }
 
+/** 卡片计数器，用于生成折叠按钮 aria-controls 指向的唯一内容区 id */
+let controlCardSeq = 0;
+
 /**
  * 创建控制卡片 - 弹簧振子风格
  */
@@ -128,10 +131,14 @@ export function createControlCard(
   }
 
   // 折叠按钮 - 高分屏适配
+  // 视觉尺寸 22px；命中区通过 .card-toggle-btn::before 伪元素扩到 44px
+  // （见 styles/shared/scene-controls.css），不占用布局空间
   const toggle = document.createElement('button');
   toggle.type = 'button';
   toggle.dataset.testid = 'card-toggle';
+  toggle.className = 'card-toggle-btn';
   toggle.style.cssText = `
+    position: relative;
     width: calc(22px * var(--ui-scale, 1));
     height: calc(22px * var(--ui-scale, 1));
     display: flex;
@@ -150,6 +157,7 @@ export function createControlCard(
     'aria-label',
     options?.defaultCollapsed ? '展开' : '折叠'
   );
+  toggle.setAttribute('aria-expanded', String(!options?.defaultCollapsed));
   const onToggleEnter = () => {
     toggle.style.background = 'var(--border-light)';
   };
@@ -168,24 +176,23 @@ export function createControlCard(
 
   // 内容区域 - 极致紧凑，高分屏适配
   const body = document.createElement('div');
+  body.id = `control-card-body-${++controlCardSeq}`;
   body.style.cssText = `
     padding: calc(4px * var(--ui-scale, 1)) calc(6px * var(--ui-scale, 1));
     display: ${options?.defaultCollapsed ? 'none' : 'flex'};
     flex-direction: column;
     gap: calc(4px * var(--ui-scale, 1));
   `;
+  toggle.setAttribute('aria-controls', body.id);
 
   card.appendChild(header);
   card.appendChild(body);
 
+  // 整个头部都可点击折叠；点击 headerActions 中的其他按钮时不触发
   const onHeaderClick = (e: MouseEvent) => {
-    if ((e.target as HTMLElement).closest('button') !== toggle) {
-      return;
-    }
-    const isCollapsed = card.classList.toggle('collapsed');
-    toggle.textContent = isCollapsed ? '▶' : '▼';
-    toggle.setAttribute('aria-label', isCollapsed ? '展开' : '折叠');
-    body.style.display = isCollapsed ? 'none' : 'flex';
+    const clickedButton = (e.target as HTMLElement).closest('button');
+    if (clickedButton && clickedButton !== toggle) return;
+    setCollapsed(!card.classList.contains('collapsed'));
   };
   header.addEventListener('click', onHeaderClick);
   cleanups.push(() => header.removeEventListener('click', onHeaderClick));
@@ -194,6 +201,7 @@ export function createControlCard(
     card.classList.toggle('collapsed', collapsed);
     toggle.textContent = collapsed ? '▶' : '▼';
     toggle.setAttribute('aria-label', collapsed ? '展开' : '折叠');
+    toggle.setAttribute('aria-expanded', String(!collapsed));
     body.style.display = collapsed ? 'none' : 'flex';
   }
 

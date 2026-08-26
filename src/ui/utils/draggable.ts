@@ -20,7 +20,12 @@ export function makeDraggable(
 
   function onPointerDown(e: PointerEvent) {
     if (e.button !== 0) return;
-    if ((e.target as HTMLElement).closest('button, a, input, select, textarea, [role="button"]')) return;
+    if (
+      (e.target as HTMLElement).closest(
+        'button, a, input, select, textarea, [role="button"]'
+      )
+    )
+      return;
     isDragging = true;
     startX = e.clientX;
     startY = e.clientY;

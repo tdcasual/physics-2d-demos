@@ -146,7 +146,8 @@ export function buildSplitLayoutDOM(
 
   const { stageFrame: stageFrameEl, stageSlot } = buildStage(
     prefix,
-    opts.existingCanvas
+    opts.existingCanvas,
+    cfg.title
   );
   rightPanel.appendChild(stageFrameEl);
 

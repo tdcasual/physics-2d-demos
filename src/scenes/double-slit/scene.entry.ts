@@ -25,8 +25,10 @@ import {
   FILTERS
 } from './scene.sim';
 import { createDoubleSlitView } from './scene.view';
-import { createInterferenceVernierCaliper } from '../../instruments/interference-vernier-caliper/instrument.entry';
-import { createMicrometerEyepiece } from '../../instruments/micrometer-eyepiece/instrument.entry';
+// 仪器组件体积较大且仅在步骤 6 使用，运行时通过 dynamic import 按需加载；
+// 此处保留 type-only 引用（不产生运行时 chunk 边）用于实例类型推导
+import type { createInterferenceVernierCaliper } from '../../instruments/interference-vernier-caliper/instrument.entry';
+import type { createMicrometerEyepiece } from '../../instruments/micrometer-eyepiece/instrument.entry';
 
 export type CreateDoubleSlitSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -86,6 +88,8 @@ export function createDoubleSlitScene(
   let parentOriginalPosition: string | null = null;
   const instrumentStateCache = new Map<string, Record<string, unknown>>();
   let instrumentUnsubscribers: Array<() => void> = [];
+  // 仪器模块异步加载的 dedup 缓存：并发 initInstruments 调用共享同一 Promise
+  let instrumentsLoadPromise: Promise<void> | null = null;
 
   function ensureInstrumentCanvases(): void {
     if (instrumentWrap) return;
@@ -129,34 +133,58 @@ export function createDoubleSlitScene(
   function initInstruments(theme: TeachingTheme): void {
     if (!leftContainer || !rightContainer || !leftCanvas || !rightCanvas)
       return;
+    // 已初始化或正在加载：并发调用去重
+    if (leftInstrument && rightInstrument) return;
+    if (instrumentsLoadPromise) return;
 
-    if (!leftInstrument) {
-      leftInstrument = createInterferenceVernierCaliper({
-        canvas: leftCanvas,
-        theme,
-        showHints: false
-      });
-      const cached = instrumentStateCache.get('caliper');
-      if (cached) leftInstrument.sim.setParams(cached);
-      // 订阅读数变化，同步到实验状态区
-      instrumentUnsubscribers.push(
-        leftInstrument.view.onReadingChange(() => base.notify())
-      );
-    }
+    instrumentsLoadPromise = Promise.all([
+      import('../../instruments/interference-vernier-caliper/instrument.entry'),
+      import('../../instruments/micrometer-eyepiece/instrument.entry')
+    ])
+      .then(([caliperModule, micrometerModule]) => {
+        // 加载期间已离开步骤 6（disposeInstruments 清空了容器与 canvas），
+        // 直接丢弃本次加载结果，避免在游离 DOM 上创建仪器
+        if (!leftContainer || !rightContainer || !leftCanvas || !rightCanvas)
+          return;
 
-    if (!rightInstrument) {
-      rightInstrument = createMicrometerEyepiece({
-        canvas: rightCanvas,
-        theme,
-        showHints: false
+        leftInstrument = caliperModule.createInterferenceVernierCaliper({
+          canvas: leftCanvas,
+          theme,
+          showHints: false
+        });
+        const cachedCaliper = instrumentStateCache.get('caliper');
+        if (cachedCaliper) leftInstrument.sim.setParams(cachedCaliper);
+        // 订阅读数变化，同步到实验状态区
+        instrumentUnsubscribers.push(
+          leftInstrument.view.onReadingChange(() => base.notify())
+        );
+
+        rightInstrument = micrometerModule.createMicrometerEyepiece({
+          canvas: rightCanvas,
+          theme,
+          showHints: false
+        });
+        const cachedMicrometer = instrumentStateCache.get('micrometer');
+        if (cachedMicrometer) rightInstrument.sim.setParams(cachedMicrometer);
+        // 订阅读数变化，同步到实验状态区
+        instrumentUnsubscribers.push(
+          rightInstrument.view.onReadingChange(() => base.notify())
+        );
+
+        // 加载期间 syncInstrumentParams 的脏检查可能已消费当前参数 key，
+        // 重置以强制向新建实例推送一次参数
+        _lastInstrKey = '';
+        // 仪器异步就绪后主动刷新，保证立即渲染
+        syncInstruments();
+        base.notify();
+      })
+      .catch((error: unknown) => {
+        // 仪器加载失败不阻断主场景，降级为无仪器模式
+        console.error('[double-slit] 仪器模块加载失败', error);
+      })
+      .finally(() => {
+        instrumentsLoadPromise = null;
       });
-      const cached = instrumentStateCache.get('micrometer');
-      if (cached) rightInstrument.sim.setParams(cached);
-      // 订阅读数变化，同步到实验状态区
-      instrumentUnsubscribers.push(
-        rightInstrument.view.onReadingChange(() => base.notify())
-      );
-    }
   }
 
   function disposeInstruments(): void {

@@ -3,7 +3,9 @@
  * 基于 Shruti 网站深度分析
  */
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -24,7 +26,9 @@ body {
   line-height: var(--leading-normal);
   color: var(--text-primary);
   background-color: var(--bg-primary);
-  transition: background-color var(--transition-slow), color var(--transition-slow);
+  transition:
+    background-color var(--transition-slow),
+    color var(--transition-slow);
   min-height: 100vh;
   height: 100%;
 }
@@ -54,17 +58,6 @@ body {
 ::selection {
   background: var(--text-primary);
   color: var(--bg-primary);
-}
-
-/* 点阵网格背景 */
-.dot-grid {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.4;
-  background-image: radial-gradient(circle, var(--text-muted) 1px, transparent 1px);
-  background-size: 24px 24px;
 }
 
 /* 排版 */
@@ -121,28 +114,7 @@ body {
 }
 
 /* 按钮 */
-.btn-primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-3) var(--space-6);
-  background: var(--accent-primary);
-  color: var(--text-inverse);
-  font-family: var(--font-body);
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  text-decoration: none;
-  border-radius: var(--radius-full);
-  border: none;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.btn-primary:hover {
-  opacity: 0.85;
-  transform: translateY(-1px);
-}
-
+/* .btn-primary 唯一定义在 app/home.css（首页链后加载，此前此处的定义一直被覆盖） */
 .btn-outline {
   display: inline-flex;
   align-items: center;
@@ -194,13 +166,25 @@ body {
 
 /* 动画 */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(40px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-fade-in {
@@ -211,20 +195,20 @@ body {
   animation: fadeInUp 1s var(--ease-out-expo) forwards;
 }
 
-/* 响应式 */
-@media (max-width: 767px) {
+/* 响应式（与布局 JS 断点 width < 768 语义一致） */
+@media (width < 768px) {
   .container {
     padding: 0 var(--space-5);
   }
-  
+
   .section {
     padding: var(--space-20) 0;
   }
-  
+
   .display-xl {
     font-size: var(--text-4xl);
   }
-  
+
   .display-lg {
     font-size: var(--text-3xl);
   }
@@ -243,14 +227,13 @@ body {
   outline-offset: 2px;
 }
 
-/* Focus-visible styles for interactive layout elements */
-[role="separator"]:focus-visible {
-  outline: 2px solid var(--accent-color, #4ecdc4);
-  outline-offset: 2px;
-}
-
+/* Focus-visible styles for interactive elements.
+   resizer（role=separator）只在场景页出现，其焦点样式在场景页链
+   shared/split-layout-common.css 中定义。 */
 button:focus-visible,
-[role="button"]:focus-visible {
-  outline: 2px solid var(--accent-color, #4ecdc4);
+[role='button']:focus-visible {
+  /* 浅色主题下 mint（#4ecdc4）白底对比度仅约 1.9:1，不达 WCAG 非文本 3:1；
+     改用加深珊瑚色（#e85d5d，白底约 3.4:1），与首页主色观感协调 */
+  outline: 2px solid var(--token-color-coral-dark, #e85d5d);
   outline-offset: 2px;
 }

@@ -13,6 +13,7 @@
 ### Task 1: Freeze Migration Scope and Parity Contract
 
 **Files:**
+
 - Create: `docs/plans/legacy-parity-checklist.md`
 - Modify: `src/app/legacy-animation-catalog.ts`
 - Test: `tests/unit/legacy-animation-catalog.spec.ts`
@@ -26,7 +27,9 @@ import { legacyAnimationCatalog } from '../../src/app/legacy-animation-catalog';
 
 describe('legacyAnimationCatalog parity metadata', () => {
   it('marks every legacy scene as not yet migrated by default', () => {
-    expect(legacyAnimationCatalog.every((s) => s.migrationStatus === 'legacy')).toBe(true);
+    expect(
+      legacyAnimationCatalog.every((s) => s.migrationStatus === 'legacy')
+    ).toBe(true);
   });
 });
 ```
@@ -65,6 +68,7 @@ git commit -m "chore: define legacy migration parity scope metadata"
 ### Task 2: Add Parity Test Harness (Legacy vs Modern)
 
 **Files:**
+
 - Create: `tests/visual/helpers/parity.ts`
 - Create: `tests/visual/parity.spec.ts`
 - Modify: `playwright.config.ts`
@@ -92,6 +96,7 @@ Run: `pnpm playwright test tests/visual/parity.spec.ts`
 Expected: FAIL because helper and modern page do not exist.
 
 **Step 3: Write minimal implementation**
+
 - Implement helper that captures same viewport region from both pages.
 - Keep this test skipped until each modern scene exists.
 - Configure deterministic viewport and timezone in Playwright project.
@@ -111,6 +116,7 @@ git commit -m "test: add visual parity harness for legacy-to-modern migration"
 ### Task 3: Migrate Scene 1 - Chase Meet
 
 **Files:**
+
 - Create: `src/scenes/chase-meet/scene.meta.ts`
 - Create: `src/scenes/chase-meet/scene.sim.ts`
 - Create: `src/scenes/chase-meet/scene.view.ts`
@@ -133,7 +139,11 @@ import { createChaseMeetSim } from '../../src/scenes/chase-meet/scene.sim';
 
 describe('chase-meet sim', () => {
   it('distance shrinks when pursuer speed > target speed', () => {
-    const sim = createChaseMeetSim({ leadDistance: 100, pursuerSpeed: 12, targetSpeed: 8 });
+    const sim = createChaseMeetSim({
+      leadDistance: 100,
+      pursuerSpeed: 12,
+      targetSpeed: 8
+    });
     const before = sim.getState().distance;
     sim.step(1);
     const after = sim.getState().distance;
@@ -150,6 +160,7 @@ Run: `pnpm vitest run tests/unit/chase-meet.sim.spec.ts tests/contract/scene-con
 Expected: FAIL due missing scene files.
 
 **Step 3: Write minimal implementation**
+
 - Implement deterministic chase model.
 - Render using existing teaching shell standards.
 - Reproduce legacy controls semantics (play/pause/reset/step + parameter controls).
@@ -176,6 +187,7 @@ git commit -m "feat: migrate chase-meet scene to modern architecture with parity
 ### Task 4: Migrate Scene 2 - VT Integral
 
 **Files:**
+
 - Create: `src/scenes/vt-integral/*`
 - Create: `src/pages/vt-integral.html`
 - Modify: `src/catalog/scene-registry.ts`
@@ -184,6 +196,7 @@ git commit -m "feat: migrate chase-meet scene to modern architecture with parity
 - Test: `tests/visual/parity.spec.ts`
 
 **Step 1: Write failing tests**
+
 - Add numeric area/increment checks in `vt-integral.sim.spec.ts`.
 - Add parity case in `parity.spec.ts`.
 
@@ -193,6 +206,7 @@ Run: `pnpm vitest run tests/unit/vt-integral.sim.spec.ts`
 Expected: FAIL.
 
 **Step 3: Write minimal implementation**
+
 - Build modern scene structure.
 - Preserve legacy sub-scene switch semantics and displayed formulas/readouts.
 
@@ -217,6 +231,7 @@ git commit -m "feat: migrate vt-integral scene to modern architecture"
 ### Task 5: Migrate Scene 3 - Electrification
 
 **Files:**
+
 - Create: `src/scenes/electrification/*`
 - Create: `src/pages/electrification.html`
 - Modify: `src/catalog/scene-registry.ts`
@@ -225,6 +240,7 @@ git commit -m "feat: migrate vt-integral scene to modern architecture"
 - Test: `tests/visual/parity.spec.ts`
 
 **Step 1: Write failing tests**
+
 - Add state transition tests for friction/induction/contact sequences.
 - Add parity case in visual parity suite.
 
@@ -234,6 +250,7 @@ Run: `pnpm vitest run tests/unit/electrification.sim.spec.ts`
 Expected: FAIL.
 
 **Step 3: Write minimal implementation**
+
 - Implement scene state machine + timeline.
 - Keep control flow labels and outcomes equivalent to legacy behavior.
 
@@ -258,6 +275,7 @@ git commit -m "feat: migrate electrification scene to modern architecture"
 ### Task 6: Migrate Scene 4 - EMF Analogy
 
 **Files:**
+
 - Create: `src/scenes/emf-analogy/*`
 - Create: `src/pages/emf-analogy.html`
 - Modify: `src/catalog/scene-registry.ts`
@@ -266,6 +284,7 @@ git commit -m "feat: migrate electrification scene to modern architecture"
 - Test: `tests/visual/parity.spec.ts`
 
 **Step 1: Write failing tests**
+
 - Add flow/circuit state tests.
 - Add parity visual case.
 
@@ -275,6 +294,7 @@ Run: `pnpm vitest run tests/unit/emf-analogy.sim.spec.ts`
 Expected: FAIL.
 
 **Step 3: Write minimal implementation**
+
 - Rebuild analogy model with deterministic update loop.
 - Match legacy controls and readout semantics.
 
@@ -299,6 +319,7 @@ git commit -m "feat: migrate emf-analogy scene to modern architecture"
 ### Task 7: Migrate Scene 5 - Field Lines
 
 **Files:**
+
 - Create: `src/scenes/field-lines/*`
 - Create: `src/pages/field-lines.html`
 - Modify: `src/catalog/scene-registry.ts`
@@ -307,6 +328,7 @@ git commit -m "feat: migrate emf-analogy scene to modern architecture"
 - Test: `tests/visual/parity.spec.ts`
 
 **Step 1: Write failing tests**
+
 - Add force-line generation invariants and drag response tests.
 - Add parity visual case.
 
@@ -316,6 +338,7 @@ Run: `pnpm vitest run tests/unit/field-lines.sim.spec.ts`
 Expected: FAIL.
 
 **Step 3: Write minimal implementation**
+
 - Build deterministic vector field model.
 - Match legacy interaction semantics (drag, density, scenarios).
 
@@ -340,6 +363,7 @@ git commit -m "feat: migrate field-lines scene to modern architecture"
 ### Task 8: Cut Legacy Runtime Path and Assets
 
 **Files:**
+
 - Delete: `src/pages/legacy-2d.html`
 - Delete: `src/app/legacy-2d-adapter.ts`
 - Delete: `src/app/legacy-2d-page.ts`
@@ -353,6 +377,7 @@ git commit -m "feat: migrate field-lines scene to modern architecture"
 - Modify: `tests/visual/*.spec.ts`
 
 **Step 1: Write failing tests**
+
 - Add assertion that no registry entries have `source: 'legacy'`.
 - Add assertion that `LEGACY_2D_HOST_PAGE_PATH` is removed.
 
@@ -362,6 +387,7 @@ Run: `pnpm vitest run tests/unit/scene-registry.spec.ts`
 Expected: FAIL due remaining legacy references.
 
 **Step 3: Write minimal implementation**
+
 - Remove legacy runtime and assets.
 - Ensure all scene routes resolve to modern pages.
 - Update docs and tests to single-architecture assumptions.
@@ -400,6 +426,7 @@ pnpm build
 ```
 
 Runtime checks:
+
 - `/` shows only modern scene routes.
 - Every migrated scene page supports unified play/pause/reset/step workflow.
 - No iframe/postMessage dependency remains in runtime.

@@ -8,8 +8,8 @@ Physics-2D-Demos 是一个物理教学演示中心（Teaching Demo Hub），当�
 
 - **技术栈**: Vite 7 + TypeScript 5.9 (strict) + React 18 + Tailwind CSS v4
 - **测试**: Vitest 3.2 (单元/契约) + Playwright (E2E/视觉)
-- **构建产物**: ~560KB JS（32 个 chunk），完整 dist（含 18 个 HTML 入口与 CSS）约 1.1MB
-- **Runtime 依赖**: 仅 4 个（React 生态）
+- **构建产物**: 体积预算与实测口径以 `scripts/check-bundle-budget.ts` 为准（2026-08 实测：首页 JS 162.05 kB / CSS 20.23 kB；场景页 JS 最大 157.25 kB（double-slit）/ CSS 最大 46.10 kB（chase-meet）；vendor 138.53 kB；shared 131.22 kB）
+- **Runtime 依赖**: 仅 2 个（react / react-dom）
 - **线上地址**: <https://x.infinitas.fun>
 
 ## 部署
@@ -38,16 +38,19 @@ ui/            — 共享组件库（DOM widgets）
                — 可依赖 platform/core
 scenes/        — 16 个物理场景（每个: meta/sim/view/entry/controls/page）
                — 场景由 catalog/scene-registry.ts 自动发现（import.meta.glob）
-               — 非 page.ts 不依赖 app/ui
+               — 非 page.ts 不依赖 app/ui；可依赖 instruments
+instruments/   — 4 个可按需加载的仪器组件（meta/sim/entry/controls-schema）
+               — 可被 scenes 依赖；不依赖 app/ui/scenes
 ```
 
 ### 依赖规则（ESLint 强制执行）
 
 - `core` → 不依赖任何上层
 - `platform` → 不依赖 app/ui/scenes
-- `scenes/*.ts`（非 page.ts）→ 不依赖 app/ui
+- `scenes/*.ts`（非 page.ts）→ 不依赖 app/ui，含声明式 `controls-schema.ts` 与 imperative `controls.ts`
+- `instruments` → 不依赖 app/ui/scenes
 - `app` → 可依赖 platform/core/ui
-- `ui` → 可依赖 platform/core
+- `ui` → 可依赖 platform/core（不依赖 app/scenes/catalog/instruments）
 
 ## 新增场景指南
 
@@ -161,7 +164,7 @@ DOM: [场景选择] [预设按钮] [观察点管理] → [含滑块的参数区 
 ### SceneMeta（scene-contract.ts）
 
 ```typescript
-export type SceneMeta = {
+export type SceneMeta = ScenePlacardMeta & {
   id: string;
   title: string;
   path: string;
@@ -173,7 +176,14 @@ export type SceneMeta = {
   icon?: string;
   category?: 'mechanics' | 'electromagnetism' | 'method';
   featured?: boolean; // true 则出现在首页 Hero
+  urlSyncKeys?: string[]; // 额外允许通过 URL query 同步的参数
+  demoProfile?: SceneDemoProfile; // 演示模式配置（可选）
+  testProfile?: SceneTestProfile; // 测试能力（真实场景由契约测试强制声明）
 };
+
+// ScenePlacardMeta（必填，用于生成标题卡片）：
+// { subject: string; concept: string; subConcepts: [string, string] }
+// SceneTestProfile = { hasGraph; hasTransport; supportsPresentation }
 ```
 
 ### ControlField（controls-schema.ts）
@@ -232,7 +242,9 @@ export type SceneMeta = {
 ### 提交前检查
 
 ```bash
-pnpm quality:full # 完整本地质量门禁
+pnpm quality:core # 快速门禁（lint + typecheck + 覆盖率测试 + 构建 + bundle 预算）
+pnpm quality:full # 完整本地质量门禁（在 core 之上追加 E2E 与视觉测试）
+pnpm check:audit # 依赖漏洞审计（CI 亦执行；overrides 见 pnpm-workspace.yaml）
 ```
 
 Husky pre-commit 自动运行 `lint-staged`（eslint --fix + prettier --write）。
@@ -314,5 +326,5 @@ function resize() {
 
 ## 已知限制
 
-- `spring-oscillator` 使用 imperative `controls.ts`（动态增删振子），已通过 `custom` 字段兼容 controls-schema 系统
+- `spring-oscillator` 与 `ganshe` 使用 imperative `controls.ts`（动态增删振子 / 观察点管理）。这两个文件 import ui 层组件，属 ESLint `no-restricted-imports` 的既有豁免（行内 disable 注释）；ganshe 为混合形态（`controls-schema.ts` + imperative 卡片），spring-oscillator 为纯 imperative（无 controls-schema.ts）
 - E2E 套件当前稳定：本地连续 3 次完整运行（含 `--repeat-each=2` 加压，累计 304 次执行）全部通过，早期文档所述「35 个不稳定测试」已不复现。若 CI 偶发超时，优先排查浏览器/资源环境而非测试本身。

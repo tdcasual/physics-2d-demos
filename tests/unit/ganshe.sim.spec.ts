@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { createWaveInterferenceSim, computeInterference } from '../../src/scenes/ganshe/scene.sim';
+import {
+  createWaveInterferenceSim,
+  computeInterference
+} from '../../src/scenes/ganshe/scene.sim';
 
 describe('ganshe wave interference sim', () => {
   it('initializes with default parameters', () => {

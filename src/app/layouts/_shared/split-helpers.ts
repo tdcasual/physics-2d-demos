@@ -175,7 +175,8 @@ export interface StageElements {
 
 export function buildStage(
   prefix: CssPrefix,
-  existingCanvas?: HTMLCanvasElement | null
+  existingCanvas?: HTMLCanvasElement | null,
+  sceneTitle?: string
 ): StageElements {
   const stageFrame = document.createElement('div');
   stageFrame.className = `${prefix}-stage-frame`;
@@ -185,7 +186,10 @@ export function buildStage(
 
   const canvas = existingCanvas ?? document.createElement('canvas');
   canvas.className = `${prefix}-stage-canvas stage-canvas`;
-  canvas.setAttribute('aria-label', '动画演示区域');
+  canvas.setAttribute(
+    'aria-label',
+    sceneTitle ? `动画演示区域：${sceneTitle}` : '动画演示区域'
+  );
   stageSlot.appendChild(canvas);
   stageFrame.appendChild(stageSlot);
 

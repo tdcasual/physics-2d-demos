@@ -5,27 +5,32 @@
 通过代码审查发现以下主要问题:
 
 ### 1.1 布局不一致
+
 - **projectile**: 使用 `teaching-demo-shell` ✅
 - **spring-oscillator**: 使用自定义 `spring-layout` ❌
 - **chase-meet**: 混合使用shell和legacy渲染 ❌
 - **其他场景**: 类似但不完全一致
 
 ### 1.2 配色不统一
+
 - 各场景使用不同的颜色值（如 `#0f172a`, `#e2e8f0`等）
 - 没有统一引用 `core/colors.ts` 的配色常量
 - 深色/浅色模式切换实现各异
 
 ### 1.3 控制组件差异
+
 - 参数控制UI样式不统一
 - 按钮、滑块等组件行为不一致
 - 状态显示格式各异
 
 ### 1.4 渲染逻辑重复
+
 - 每个场景都重复实现网格、坐标轴绘制
 - 轨迹渲染、数据面板显示逻辑重复
 - 坐标系转换逻辑不统一
 
 ### 1.5 显示比例不合理
+
 - **侧边栏过宽**: 当前 340-360px，占据约26%视口宽度
 - **spring-oscillator 双面板**: 等分 1fr:1fr，每个面板过窄
 - **响应式断点**: 1024px 过高，导致 900-1024px 区间布局拥挤
@@ -38,6 +43,7 @@
 ### 2.1 视觉设计
 
 #### 配色方案
+
 ```
 主色调: 珊瑚橙 #FF6B6B (活力、重点)
 辅助色: 薄荷青 #4ECDC4 (冷静、辅助)
@@ -48,6 +54,7 @@
 ```
 
 #### 布局结构
+
 ```
 ┌─────────────────────────────────────────────────────┐
 │ teaching-demo-shell                                  │
@@ -84,6 +91,7 @@
 #### 显示比例规范（优化后）
 
 **侧边栏与舞台比例:**
+
 ```
 侧边栏 : 分隔条 : 舞台 ≈ 22% : 最小 : 78%
 
@@ -99,6 +107,7 @@
 ```
 
 **双面板场景比例 (spring-oscillator):**
+
 ```
 x-t 图像 : 弹簧动画 ≈ 45% : 55%
 
@@ -109,6 +118,7 @@ x-t 图像 : 弹簧动画 ≈ 45% : 55%
 ```
 
 **Canvas 视口比例:**
+
 ```
 根据舞台区域自动选择最佳比例:
 - 宽屏 (16:9+): 使用 16:9 比例
@@ -121,16 +131,19 @@ x-t 图像 : 弹簧动画 ≈ 45% : 55%
 ### 2.2 交互规范
 
 #### 播放控制
+
 - 点击"播放"开始动画，按钮变为"暂停"
 - 点击"暂停"停止动画，保留当前状态
 - 点击"重置"恢复初始状态
 
 #### 参数调整
+
 - 数值变化时实时更新仿真
 - 播放中调整参数时自动暂停
 - 滑块拖拽结束后应用新值
 
 #### 主题切换
+
 - 点击"春日"/"月夜"切换浅色/深色
 - 动画过渡时间 300ms
 - Canvas 立即重新渲染
@@ -146,9 +159,15 @@ import { createPhysicsDemo } from '@/core/physics-demo';
 
 // 定义仿真逻辑
 const sim = {
-  init(params) { /* 初始化 */ },
-  update(dt, state) { /* 物理更新 */ },
-  reset() { /* 重置状态 */ }
+  init(params) {
+    /* 初始化 */
+  },
+  update(dt, state) {
+    /* 物理更新 */
+  },
+  reset() {
+    /* 重置状态 */
+  }
 };
 
 // 定义渲染逻辑
@@ -166,8 +185,22 @@ const demo = createPhysicsDemo({
   title: '抛体运动',
   subtitle: 'Projectile Motion',
   params: [
-    { key: 'v0', label: '初速度', type: 'slider', value: 50, min: 10, max: 100 },
-    { key: 'angle', label: '抛射角', type: 'slider', value: 45, min: 0, max: 90 }
+    {
+      key: 'v0',
+      label: '初速度',
+      type: 'slider',
+      value: 50,
+      min: 10,
+      max: 100
+    },
+    {
+      key: 'angle',
+      label: '抛射角',
+      type: 'slider',
+      value: 45,
+      min: 0,
+      max: 90
+    }
   ],
   sim,
   view
@@ -181,13 +214,13 @@ demo.mount(document.getElementById('app'));
 
 ```typescript
 // 统一绘制工具
-import { 
-  drawGrid,        // 标准网格
-  drawAxes,        // 坐标轴
-  drawBall,        // 高亮球体
-  drawTrail,       // 运动轨迹
-  drawVector,      // 矢量箭头
-  drawDataPanel,   // 数据面板
+import {
+  drawGrid, // 标准网格
+  drawAxes, // 坐标轴
+  drawBall, // 高亮球体
+  drawTrail, // 运动轨迹
+  drawVector, // 矢量箭头
+  drawDataPanel // 数据面板
 } from '@/core/unified-canvas';
 
 // 配色
@@ -202,44 +235,60 @@ import { createUnifiedControls } from '@/core/unified-controls';
 ## 4. 迁移计划
 
 ### Phase 1: 基础设施 (已完成 ✅)
+
 - ✅ `core/colors.ts` - 统一配色
 - ✅ `core/unified-canvas.ts` - 统一Canvas工具
 - ✅ `core/unified-controls.ts` - 统一控制组件
 - ✅ `core/unified-scene.ts` - 场景基类
 
 ### Phase 2: 试点场景 (建议: projectile)
+
 目标: 验证新框架可行性
 
 修改 `scenes/projectile/scene.view.ts`:
+
 ```typescript
 // 替换原有实现
-import { drawGrid, drawBall, drawTrail, drawDataPanel } from '../../core/unified-canvas';
+import {
+  drawGrid,
+  drawBall,
+  drawTrail,
+  drawDataPanel
+} from '../../core/unified-canvas';
 import { getThemeColors } from '../../core/colors';
 
 export function createProjectileView(canvas, options) {
   return {
     render(state, theme) {
       const colors = getThemeColors(theme);
-      
+
       // 使用统一网格
       drawGrid(ctx, width, height, { showAxes: true }, theme === 'dark');
-      
+
       // 使用统一绘制函数
       drawTrail(ctx, state.trail, colors.secondary);
       drawBall(ctx, state.x, state.y, 8, colors.primary);
-      
+
       // 统一数据面板
-      drawDataPanel(ctx, 20, 20, [
-        { label: '时间:', value: `${state.t.toFixed(2)}s` },
-        { label: '高度:', value: `${state.y.toFixed(1)}m` }
-      ], theme === 'dark');
+      drawDataPanel(
+        ctx,
+        20,
+        20,
+        [
+          { label: '时间:', value: `${state.t.toFixed(2)}s` },
+          { label: '高度:', value: `${state.y.toFixed(1)}m` }
+        ],
+        theme === 'dark'
+      );
     }
   };
 }
 ```
 
 ### Phase 3: 批量迁移
+
 按复杂度排序:
+
 1. vt-integral (简单)
 2. field-lines (中等)
 3. electrification (中等)
@@ -248,6 +297,7 @@ export function createProjectileView(canvas, options) {
 6. spring-oscillator (双Canvas，特殊处理)
 
 ### Phase 4: 清理
+
 - 删除旧版控制组件
 - 统一导出接口
 - 更新文档
@@ -274,6 +324,7 @@ export function createProjectileView(canvas, options) {
 ```
 
 实现方式:
+
 1. 使用 `teaching-demo-shell` 作为外层容器
 2. 在 `stage-frame` 中使用自定义CSS实现双面板
 3. 两个Canvas共享相同的仿真状态
@@ -284,16 +335,19 @@ export function createProjectileView(canvas, options) {
 ## 6. 预期效果
 
 ### 视觉统一
+
 - 所有场景使用相同的配色方案
 - 控制面板风格一致
 - Canvas 渲染风格统一
 
 ### 开发效率
+
 - 新场景开发时间减少 50%
 - 复用现有工具函数
 - 减少重复代码
 
 ### 用户体验
+
 - 跨场景学习成本降低
 - 一致的交互模式
 - 平滑的主题切换

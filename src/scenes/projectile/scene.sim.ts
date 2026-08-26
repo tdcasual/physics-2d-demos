@@ -29,20 +29,37 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 function normalizeParams(input: ProjectileParams): ResolvedProjectileParams {
-  const safeInitialHeight = typeof input.initialHeight === 'number' ? input.initialHeight : 0;
-  const safeWindAccel = typeof input.windAccel === 'number' ? input.windAccel : 0;
+  const safeInitialHeight =
+    typeof input.initialHeight === 'number' ? input.initialHeight : 0;
+  const safeWindAccel =
+    typeof input.windAccel === 'number' ? input.windAccel : 0;
   const safeDrag = typeof input.drag === 'number' ? input.drag : 0;
   return {
     speed: clamp(Number.isFinite(input.speed) ? input.speed : 0, 0, 120),
-    angleDeg: clamp(Number.isFinite(input.angleDeg) ? input.angleDeg : 45, 0, 89.9),
+    angleDeg: clamp(
+      Number.isFinite(input.angleDeg) ? input.angleDeg : 45,
+      0,
+      89.9
+    ),
     gravity: clamp(Number.isFinite(input.gravity) ? input.gravity : 9.8, 0, 40),
-    initialHeight: clamp(Number.isFinite(safeInitialHeight) ? safeInitialHeight : 0, 0, 50),
-    windAccel: clamp(Number.isFinite(safeWindAccel) ? safeWindAccel : 0, -20, 20),
+    initialHeight: clamp(
+      Number.isFinite(safeInitialHeight) ? safeInitialHeight : 0,
+      0,
+      50
+    ),
+    windAccel: clamp(
+      Number.isFinite(safeWindAccel) ? safeWindAccel : 0,
+      -20,
+      20
+    ),
     drag: clamp(Number.isFinite(safeDrag) ? safeDrag : 0, 0, 1)
   };
 }
 
-function resolveLaunchVelocity(params: ResolvedProjectileParams): { vx: number; vy: number } {
+function resolveLaunchVelocity(params: ResolvedProjectileParams): {
+  vx: number;
+  vy: number;
+} {
   const radians = (params.angleDeg * Math.PI) / 180;
   return {
     vx: params.speed * Math.cos(radians),

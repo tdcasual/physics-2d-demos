@@ -61,7 +61,8 @@ function drawSingleFieldLine(
     const fieldRatio = maxField > 0 ? (fieldMagnitudes[i] || 0) / maxField : 0;
 
     // 线宽：场强越大线越粗
-    const width = minWidth + (maxWidth - minWidth) * Math.min(1, fieldRatio * 2);
+    const width =
+      minWidth + (maxWidth - minWidth) * Math.min(1, fieldRatio * 2);
     // 透明度：场强越大越不透明
     const alpha = 0.35 + Math.min(0.45, fieldRatio * 0.8);
 

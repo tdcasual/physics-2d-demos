@@ -91,7 +91,11 @@ function drawChargeBall(
   const valueFontSize = Math.max(8, Math.round(fontSize * 0.55));
   ctx.font = `600 ${valueFontSize}px "Noto Sans SC", Arial, sans-serif`;
   ctx.fillStyle = palette.text;
-  ctx.fillText(`${q > 0 ? '+' : ''}${q.toFixed(1)}`, x, y + radius + valueFontSize + 2);
+  ctx.fillText(
+    `${q > 0 ? '+' : ''}${q.toFixed(1)}`,
+    x,
+    y + radius + valueFontSize + 2
+  );
 
   ctx.restore();
 }

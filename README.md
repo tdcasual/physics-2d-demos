@@ -66,7 +66,7 @@ src/
     scene-registry.ts          # 场景元数据注册表（单一数据源）
   core/
     fixed-step.ts              # 固定步长步进器
-    high-dpi-canvas.ts         # 高 DPI 画布缩放
+    canvas-sizing.ts           # 高 DPI + 响应式画布缩放
   scenes/
     projectile/                # 抛体运动
     chase-meet/                # 追及相遇
@@ -81,8 +81,9 @@ src/
     floating-controls.ts       # 浮动运输控制条（桌面端，可拖拽）
     components/                # 共享 DOM 组件（SchemaRenderer / ControlCard / scene-controls/*）
 scripts/
-  generate-scene-index.ts      # 生成导航索引
-  generate-nav-fallback.ts     # 生成导航 fallback JS
+  check-scenes.ts              # 场景注册表一致性检查
+  check-layouts.ts             # 布局注册表一致性检查
+  new-scene.ts                 # 新场景脚手架
 tests/
   unit/                        # 单元测试
   contract/                    # 场景契约测试
@@ -96,7 +97,7 @@ docs/
 
 ## Page Entrypoints
 
-- `/`：React 导航首页（读取 `scene-index.json`，支持搜索）
+- `/`：React 导航首页（经 `src/catalog/scene-registry.ts` 的 `import.meta.glob` eager 自动发现场景元数据，支持搜索）
 - `/src/pages/projectile.html`：抛体运动
 - `/src/pages/chase-meet.html`：追及相遇
 - `/src/pages/spring-oscillator.html`：弹簧振子
@@ -180,7 +181,7 @@ bootScenePage({
 - **模式**：`normal` / `presentation`
   - `presentation` 面向 1080P 投影，字号、线宽、关键点尺寸统一放大
 - **控制协议**：统一 `播放/暂停/重置/单步/速度调节`
-- **清晰度**：`high-dpi-canvas` 自动适配 `devicePixelRatio`
+- **清晰度**：`canvas-sizing` 自动适配 `devicePixelRatio` 与响应式缩放
 - **主题**：`light` / `dark`，支持系统偏好自动跟随
 
 ## Architecture Boundaries

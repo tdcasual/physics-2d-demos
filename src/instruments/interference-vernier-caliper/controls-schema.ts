@@ -14,8 +14,8 @@ export const interferenceVernierCaliperControlsSchema: ControlsSchema = {
           min: 0,
           max: 2.1,
           step: 0.002,
-          value: 1.400,
-          unit: 'cm',
+          value: 1.4,
+          unit: 'cm'
         },
         {
           type: 'slider',
@@ -25,9 +25,9 @@ export const interferenceVernierCaliperControlsSchema: ControlsSchema = {
           max: 0.1,
           step: 0.001,
           value: 0,
-          unit: 'cm',
-        },
-      ],
+          unit: 'cm'
+        }
+      ]
     },
     {
       title: '干涉条纹',
@@ -42,7 +42,7 @@ export const interferenceVernierCaliperControlsSchema: ControlsSchema = {
           max: 40,
           step: 1,
           value: 16,
-          unit: 'px',
+          unit: 'px'
         },
         {
           type: 'slider',
@@ -52,7 +52,7 @@ export const interferenceVernierCaliperControlsSchema: ControlsSchema = {
           max: 5,
           step: 0.1,
           value: 1.5,
-          unit: 'px',
+          unit: 'px'
         },
         {
           type: 'slider',
@@ -61,7 +61,7 @@ export const interferenceVernierCaliperControlsSchema: ControlsSchema = {
           min: 0.1,
           max: 1.0,
           step: 0.05,
-          value: 0.85,
+          value: 0.85
         },
         {
           type: 'slider',
@@ -71,9 +71,9 @@ export const interferenceVernierCaliperControlsSchema: ControlsSchema = {
           max: 600,
           step: 10,
           value: 320,
-          unit: 'px',
-        },
-      ],
+          unit: 'px'
+        }
+      ]
     },
     {
       title: '操作说明',
@@ -91,9 +91,9 @@ export const interferenceVernierCaliperControlsSchema: ControlsSchema = {
               '<p>• 微调旋钮减速比 10:1，适合精确对准干涉条纹</p>' +
               '<p>• 主尺量程 0–7 cm，有效测量范围 0–2.1 cm</p>' +
               '<p>• 使用「零位修正」校准仪器系统误差</p>';
-          },
-        },
-      ],
-    },
-  ],
+          }
+        }
+      ]
+    }
+  ]
 };

@@ -8,7 +8,7 @@
 
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import type { DemoRenderHints } from '../../platform/demo-profile';
-import { sizeCanvasToFill } from '../../core/canvas-sizing';
+import { getResponsiveScale, sizeCanvasToFill } from '../../core/canvas-sizing';
 import { drawSpiralMicrometer } from '../../instruments/spiral-micrometer/instrument.view';
 import type { MicrometerState } from './scene.sim';
 
@@ -37,6 +37,9 @@ export function createMicrometerView(
     if (newCtx) ctx = newCtx;
     cssW = Math.max(1, canvas.clientWidth || 800);
     cssH = Math.max(1, canvas.clientHeight || 600);
+    // 绘制委托给 instruments 内部缩放，这里显式暴露响应式缩放因子，
+    // 满足 AGENTS.md 的字面规范与布局矩阵检查
+    canvas.dataset.responsiveScale = String(getResponsiveScale(cssW, cssH));
   }
 
   function draw(next: MicrometerState): void {

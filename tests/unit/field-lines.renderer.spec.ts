@@ -3,10 +3,19 @@ import { drawCharges } from '../../src/scenes/field-lines/renderer/draw-charges'
 import { drawEquipotentialLines } from '../../src/scenes/field-lines/renderer/draw-equipotential';
 import { drawFieldLines } from '../../src/scenes/field-lines/renderer/draw-field-lines';
 import { drawHeatmap } from '../../src/scenes/field-lines/renderer/draw-heatmap';
-import { traceFieldLine, generateFieldLines } from '../../src/scenes/field-lines/renderer/trace-field';
-import type { PixelCharge, FieldLinePath } from '../../src/scenes/field-lines/renderer/types';
+import {
+  traceFieldLine,
+  generateFieldLines
+} from '../../src/scenes/field-lines/renderer/trace-field';
+import type {
+  PixelCharge,
+  FieldLinePath
+} from '../../src/scenes/field-lines/renderer/types';
 
-function makeCtx(): { ctx: CanvasRenderingContext2D; canvas: HTMLCanvasElement } {
+function makeCtx(): {
+  ctx: CanvasRenderingContext2D;
+  canvas: HTMLCanvasElement;
+} {
   const canvas = document.createElement('canvas');
   canvas.width = 800;
   canvas.height = 600;
@@ -43,19 +52,25 @@ describe('field-lines renderer', () => {
     it('draws equipotential lines in dark mode without throwing', () => {
       const { ctx } = makeCtx();
       const charges = makePixelCharges();
-      expect(() => drawEquipotentialLines(ctx, charges, 800, 600, 1, true)).not.toThrow();
+      expect(() =>
+        drawEquipotentialLines(ctx, charges, 800, 600, 1, true)
+      ).not.toThrow();
     });
 
     it('draws equipotential lines in light mode without throwing', () => {
       const { ctx } = makeCtx();
       const charges = makePixelCharges();
-      expect(() => drawEquipotentialLines(ctx, charges, 800, 600, 1, false)).not.toThrow();
+      expect(() =>
+        drawEquipotentialLines(ctx, charges, 800, 600, 1, false)
+      ).not.toThrow();
     });
 
     it('skips drawing on small screens', () => {
       const { ctx } = makeCtx();
       const charges = makePixelCharges();
-      expect(() => drawEquipotentialLines(ctx, charges, 800, 600, 0.5, true)).not.toThrow();
+      expect(() =>
+        drawEquipotentialLines(ctx, charges, 800, 600, 0.5, true)
+      ).not.toThrow();
     });
   });
 
@@ -118,7 +133,9 @@ describe('field-lines renderer', () => {
     it('draws heatmap with low responsive scale without throwing', () => {
       const { ctx } = makeCtx();
       const charges = makePixelCharges();
-      expect(() => drawHeatmap(ctx, charges, 800, 600, 0.5, true)).not.toThrow();
+      expect(() =>
+        drawHeatmap(ctx, charges, 800, 600, 0.5, true)
+      ).not.toThrow();
     });
   });
 

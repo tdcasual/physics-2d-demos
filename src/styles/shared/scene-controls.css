@@ -1,0 +1,83 @@
+/**
+ * Scene control widgets (ui/components/scene-controls)
+ *
+ * Pseudo-element styles that cannot be expressed inline:
+ * - range input thumb/track (WebKit paints no thumb under appearance:none
+ *   unless ::-webkit-slider-thumb is styled)
+ * - toggle switch expanded hit area
+ */
+
+/* === Slider row === */
+
+.slider-row-input {
+  -webkit-appearance: none;
+  appearance: none;
+  /* 44px hit area (--touch-min) via compensated height: the layout box stays
+     24px thanks to the -10px vertical margins, and the track/thumb stay
+     centered at the same position (both engines vertically center the
+     explicit-height track inside the input). Pseudo-element expansion like
+     the toggle below is not an option: range inputs are replaced elements
+     and Firefox does not render ::before/::after on them. */
+  height: 44px;
+  margin: -10px 0;
+  padding: 0;
+  background: transparent;
+}
+
+.slider-row-input::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--border-color);
+}
+
+.slider-row-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  /* vertically center the 16px thumb on the 4px track */
+  margin-top: -6px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  cursor: pointer;
+}
+
+.slider-row-input::-moz-range-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--border-color);
+}
+
+.slider-row-input::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  cursor: pointer;
+}
+
+/* === Toggle row === */
+
+.toggle-switch-btn {
+  position: relative;
+}
+
+/* Expand the hit area of the 36x20 visual switch to >= 44px without
+   changing its visual size. */
+.toggle-switch-btn::before {
+  content: '';
+  position: absolute;
+  inset: -12px;
+}
+
+/* === ControlCard 折叠按钮 === */
+
+/* Expand the hit area of the 22px visual toggle to >= 44px without
+   changing its visual size. */
+.card-toggle-btn::before {
+  content: '';
+  position: absolute;
+  inset: -11px;
+}

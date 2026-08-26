@@ -1,13 +1,13 @@
 /**
  * 仪器组件库 — 统一导出入口
  *
- * 当前尚无仪器注册，此文件仅导出合约接口和工具函数。
- * 未来每个仪器通过子目录独立导出，例如：
+ * 当前已注册 4 个仪器（spiral-micrometer、vernier-caliper、
+ * micrometer-eyepiece、interference-vernier-caliper），注册与按需加载
+ * 见 instrument-registry.ts。此文件仅导出合约接口和工具函数；
+ * 每个仪器通过子目录独立导出，例如：
  *
  * ```ts
- * export { micrometer } from './micrometer';
- * export { vernierCaliper } from './vernier-caliper';
- * export { stopwatch } from './stopwatch';
+ * export { spiralMicrometerFactory as spiralMicrometer } from './spiral-micrometer/instrument.entry';
  * ```
  */
 
@@ -20,7 +20,7 @@ export type {
   InstrumentViewport,
   InstrumentMeta,
   InstrumentCategory,
-  InstrumentFactory,
+  InstrumentFactory
 } from './_contract/instrument-contract';
 
 // ── 工具函数 ──

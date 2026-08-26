@@ -132,7 +132,10 @@ export function createVtIntegralView(
       if (snapshot) draw(snapshot);
     },
     dispose(): void {
-      if (transitionRaf !== null && typeof cancelAnimationFrame !== 'undefined') {
+      if (
+        transitionRaf !== null &&
+        typeof cancelAnimationFrame !== 'undefined'
+      ) {
         cancelAnimationFrame(transitionRaf);
         transitionRaf = null;
       }

@@ -5,7 +5,8 @@ import type { DrawContext, AxisConfig } from './types';
  */
 export function drawAxis(context: DrawContext, config: AxisConfig): void {
   const { ctx, theme, responsiveScale } = context;
-  const { x, y, width, height, xMin, xMax, yMin, yMax, xLabel, yLabel } = config;
+  const { x, y, width, height, xMin, xMax, yMin, yMax, xLabel, yLabel } =
+    config;
 
   const isDark = theme === 'dark';
   const axisColor = isDark ? 'rgba(226,232,240,0.6)' : 'rgba(71,85,105,0.6)';

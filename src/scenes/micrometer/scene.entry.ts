@@ -6,7 +6,11 @@ import type { TeachingTheme, TeachingMode } from '../../platform/standards';
 import type { SceneLifecycle } from '../../platform/scene-contract';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import { createStandardSceneEntry } from '../scene-entry-helpers';
-import { createMicrometerSim, type MicrometerParams, type MicrometerState } from './scene.sim';
+import {
+  createMicrometerSim,
+  type MicrometerParams,
+  type MicrometerState
+} from './scene.sim';
 import { createMicrometerView } from './scene.view';
 import { micrometerMeta } from './scene.meta';
 

@@ -29,6 +29,7 @@ export function createMiniSlider(
   // 滑块 - 响应式高度
   const slider = document.createElement('input');
   slider.type = 'range';
+  slider.setAttribute('aria-label', label);
   slider.min = String(min);
   slider.max = String(max);
   slider.step = String(step);

@@ -8,11 +8,11 @@
 export type ThinFilmStep = 'geometry' | 'path-diff' | 'half-wave' | 'result';
 
 export type ThinFilmParams = {
-  lambda: number;       // 波长 nm
-  dTop: number;         // 顶部厚度 nm
-  dBottom: number;      // 底部厚度 nm
-  n: number;            // 薄膜折射率
-  whiteLight: boolean;  // 白光模式
+  lambda: number; // 波长 nm
+  dTop: number; // 顶部厚度 nm
+  dBottom: number; // 底部厚度 nm
+  n: number; // 薄膜折射率
+  whiteLight: boolean; // 白光模式
   step: ThinFilmStep;
 };
 
@@ -41,7 +41,11 @@ export function thicknessAtY(dTop: number, dBottom: number, y: number): number {
   return dTop + (dBottom - dTop) * y;
 }
 
-function computeState(params: ThinFilmParams, cursorY: number, time = 0): ThinFilmState {
+function computeState(
+  params: ThinFilmParams,
+  cursorY: number,
+  time = 0
+): ThinFilmState {
   const { lambda, dTop, dBottom, n } = params;
   const d = thicknessAtY(dTop, dBottom, cursorY);
 
@@ -66,7 +70,10 @@ function computeState(params: ThinFilmParams, cursorY: number, time = 0): ThinFi
 }
 
 export function createThinFilmSim(initial: ThinFilmParams) {
-  let params: ThinFilmParams = { ...initial, dBottom: Math.max(initial.dBottom, initial.dTop) };
+  let params: ThinFilmParams = {
+    ...initial,
+    dBottom: Math.max(initial.dBottom, initial.dTop)
+  };
   let cursorY = 0.5;
   let time = 0;
 

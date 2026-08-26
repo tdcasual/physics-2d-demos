@@ -8,7 +8,10 @@ describe('KeyboardShortcutManager', () => {
     mgr?.dispose();
   });
 
-  function press(key: string, target: EventTarget = document.body): KeyboardEvent {
+  function press(
+    key: string,
+    target: EventTarget = document.body
+  ): KeyboardEvent {
     const event = new KeyboardEvent('keydown', {
       key,
       bubbles: true,
@@ -75,6 +78,75 @@ describe('KeyboardShortcutManager', () => {
       el.remove();
     }
     expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('ignores keys on interactive elements (button / link / ARIA widget roles)', () => {
+    mgr = new KeyboardShortcutManager();
+    const handler = vi.fn();
+    mgr.register('r', handler);
+    mgr.register('arrowleft', handler);
+    mgr.init();
+
+    const targets: HTMLElement[] = [];
+    const button = document.createElement('button');
+    const link = document.createElement('a');
+    link.href = '#';
+    targets.push(button, link);
+    for (const role of [
+      'tab',
+      'radio',
+      'switch',
+      'separator',
+      'slider',
+      'checkbox',
+      'menuitem'
+    ]) {
+      const el = document.createElement('div');
+      el.setAttribute('role', role);
+      targets.push(el);
+    }
+    const editable = document.createElement('div');
+    editable.setAttribute('contenteditable', 'true');
+    targets.push(editable);
+
+    for (const el of targets) {
+      document.body.appendChild(el);
+      press('r', el);
+      press('ArrowLeft', el);
+      el.remove();
+    }
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('ignores keys from descendants of interactive elements', () => {
+    mgr = new KeyboardShortcutManager();
+    const handler = vi.fn();
+    mgr.register(' ', handler);
+    mgr.init();
+
+    const button = document.createElement('button');
+    const span = document.createElement('span');
+    button.appendChild(span);
+    document.body.appendChild(button);
+    press(' ', span);
+    button.remove();
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('still fires shortcuts from canvas and plain elements', () => {
+    mgr = new KeyboardShortcutManager();
+    const handler = vi.fn();
+    mgr.register('arrowleft', handler);
+    mgr.init();
+
+    const canvas = document.createElement('canvas');
+    const div = document.createElement('div');
+    document.body.append(canvas, div);
+    press('ArrowLeft', canvas);
+    press('ArrowLeft', div);
+    canvas.remove();
+    div.remove();
+    expect(handler).toHaveBeenCalledTimes(2);
   });
 
   it('does not listen before init', () => {

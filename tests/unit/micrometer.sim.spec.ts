@@ -5,7 +5,7 @@ import {
 } from '../../src/scenes/micrometer/scene.sim';
 
 const defaultParams: MicrometerParams = {
-  reading: 4.593,
+  reading: 4.593
 };
 
 describe('micrometer sim', () => {

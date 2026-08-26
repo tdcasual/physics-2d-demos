@@ -12,6 +12,8 @@ import { layoutRegistry } from '../../src/app/layouts/registry';
 vi.mock('../../src/app/layouts/container', () => ({
   createSceneContainer: vi.fn(() => ({
     setScene: vi.fn().mockResolvedValue(undefined),
+    setTheme: vi.fn(),
+    on: vi.fn(() => vi.fn()),
     currentLayout: null,
     updateStatus: vi.fn()
   }))
@@ -422,10 +424,15 @@ describe('bootScenePage', () => {
     appDiv = document.createElement('div');
     appDiv.id = 'app';
     document.body.appendChild(appDiv);
+    localStorage.clear();
+    document.documentElement.removeAttribute('data-theme');
   });
 
   afterEach(() => {
     appDiv.remove();
+    localStorage.clear();
+    document.documentElement.removeAttribute('data-theme');
+    window.history.replaceState({}, '', '/');
     vi.clearAllMocks();
     layoutRegistry.clear();
   });
@@ -561,7 +568,12 @@ describe('bootScenePage', () => {
 
   it('should call container.setScene with adapter', () => {
     const mockSetScene = vi.fn().mockResolvedValue(undefined);
-    const mockContainer = { setScene: mockSetScene, currentLayout: null };
+    const mockContainer = {
+      setScene: mockSetScene,
+      setTheme: vi.fn(),
+      on: vi.fn(() => vi.fn()),
+      currentLayout: null
+    };
     (createSceneContainer as ReturnType<typeof vi.fn>).mockReturnValue(
       mockContainer
     );
@@ -585,5 +597,122 @@ describe('bootScenePage', () => {
     expect(mockSetScene).toHaveBeenCalledTimes(1);
     // Verify it's a SceneAdapter instance
     expect(mockSetScene.mock.calls[0][0]).toBeInstanceOf(SceneAdapter);
+  });
+
+  describe('theme resolution', () => {
+    function boot() {
+      bootScenePage({
+        meta: {
+          id: 'test',
+          title: '测试',
+          category: 'mechanics',
+          subject: 'test',
+          concept: 'test',
+          subConcepts: ['a', 'b'] as [string, string],
+          keywords: [],
+          objective: '',
+          defaultParams: {},
+          path: '/test'
+        },
+        createScene: () => createMockScene() as never
+      });
+    }
+
+    it('should fall back to light when nothing is stored (happy-dom prefers light)', () => {
+      boot();
+      expect(createSceneContainer).toHaveBeenCalledWith(
+        expect.objectContaining({ defaultTheme: 'light' })
+      );
+      expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+    });
+
+    it('should use the stored theme from theme-store', () => {
+      localStorage.setItem(
+        'physics-lab-theme',
+        JSON.stringify({ v: 1, theme: 'dark' })
+      );
+      boot();
+      expect(createSceneContainer).toHaveBeenCalledWith(
+        expect.objectContaining({ defaultTheme: 'dark' })
+      );
+      expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    });
+
+    it('should migrate theme from legacy container state', () => {
+      localStorage.setItem(
+        'physics-demos-container-state',
+        JSON.stringify({ v: 1, theme: 'dark' })
+      );
+      boot();
+      expect(createSceneContainer).toHaveBeenCalledWith(
+        expect.objectContaining({ defaultTheme: 'dark' })
+      );
+    });
+
+    it('should let ?theme= URL param win over stored theme', () => {
+      localStorage.setItem(
+        'physics-lab-theme',
+        JSON.stringify({ v: 1, theme: 'dark' })
+      );
+      window.history.replaceState({}, '', '?theme=light');
+      boot();
+      expect(createSceneContainer).toHaveBeenCalledWith(
+        expect.objectContaining({ defaultTheme: 'light' })
+      );
+    });
+
+    it('should persist container theme changes to theme-store', () => {
+      let themeChangeHandler:
+        | ((payload: { from: string; to: 'light' | 'dark' }) => void)
+        | undefined;
+      const mockContainer = {
+        setScene: vi.fn().mockResolvedValue(undefined),
+        setTheme: vi.fn(),
+        on: vi.fn((event: string, handler: never) => {
+          if (event === 'theme:change') themeChangeHandler = handler;
+          return vi.fn();
+        }),
+        currentLayout: null
+      };
+      (createSceneContainer as ReturnType<typeof vi.fn>).mockReturnValue(
+        mockContainer
+      );
+
+      boot();
+      expect(mockContainer.on).toHaveBeenCalledWith(
+        'theme:change',
+        expect.any(Function)
+      );
+
+      themeChangeHandler?.({ from: 'light', to: 'dark' });
+      const raw = localStorage.getItem('physics-lab-theme');
+      expect(raw).toBeTruthy();
+      expect(JSON.parse(raw!)).toEqual({ v: 1, theme: 'dark' });
+    });
+
+    it('should inject onToggleTheme that delegates to container.setTheme', () => {
+      const mockContainer = {
+        setScene: vi.fn().mockResolvedValue(undefined),
+        setTheme: vi.fn(),
+        on: vi.fn(() => vi.fn()),
+        currentLayout: null
+      };
+      (createSceneContainer as ReturnType<typeof vi.fn>).mockReturnValue(
+        mockContainer
+      );
+
+      boot();
+
+      const adapter = mockContainer.setScene.mock
+        .calls[0][0] as unknown as SceneAdapter;
+      const options = (
+        adapter as unknown as {
+          options: { onToggleTheme?: (next: 'light' | 'dark') => void };
+        }
+      ).options;
+      expect(typeof options.onToggleTheme).toBe('function');
+      options.onToggleTheme?.('dark');
+      expect(mockContainer.setTheme).toHaveBeenCalledWith('dark');
+    });
   });
 });

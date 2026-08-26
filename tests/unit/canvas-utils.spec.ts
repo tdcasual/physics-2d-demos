@@ -4,7 +4,7 @@ import {
   getOptimalCanvasSize,
   setCanvasSize,
   fitCanvasToContainer
-} from '../../src/core/canvas-sizing-utils';
+} from '../../src/core/canvas-sizing';
 import {
   drawGrid,
   drawDataPanel,
@@ -13,7 +13,7 @@ import {
   drawVector
 } from '../../src/core/draw-primitives';
 
-describe('core canvas utils (canvas-sizing-utils + draw-primitives)', () => {
+describe('core canvas utils (canvas-sizing + draw-primitives)', () => {
   let canvas: HTMLCanvasElement;
 
   beforeEach(() => {

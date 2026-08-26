@@ -1,5 +1,5 @@
 /* ========================================
-   响应式布局
+   响应式布局 + 演示模式 + 无障碍（reduced-motion）
    ======================================== */
 
 /* 平板 */
@@ -9,8 +9,9 @@
   }
 }
 
-/* 手机 */
-@media (max-width: 767px) {
+/* 手机（与 JS 断点 width < 768 语义一致，见 layouts/container.ts 与
+   viewport-detection.ts；区间语法覆盖 767–768px 之间的分数宽度） */
+@media (width < 768px) {
   .teaching-demo.split-right-shell {
     grid-template-columns: 1fr;
     grid-template-rows: auto 1fr;
@@ -38,8 +39,12 @@
   width: auto;
 }
 
-.teaching-demo[data-mode='presentation'] .teaching-stage-toolbar .teaching-sidebar-toggle,
-.teaching-demo[data-mode='presentation'] .teaching-stage-toolbar .shell-theme-toggle {
+.teaching-demo[data-mode='presentation']
+  .teaching-stage-toolbar
+  .teaching-sidebar-toggle,
+.teaching-demo[data-mode='presentation']
+  .teaching-stage-toolbar
+  .shell-theme-toggle {
   @apply hidden;
 }
 
@@ -52,7 +57,10 @@
 }
 
 /* 读数面板 dock/叠加/放大 — teaching + srgb 共享 */
-:is(.teaching-readout-panel, .srgb-readout-panel):is(.teaching-is-docked-bottom, .srgb-is-docked-bottom) {
+:is(.teaching-readout-panel, .srgb-readout-panel):is(
+  .teaching-is-docked-bottom,
+  .srgb-is-docked-bottom
+) {
   position: absolute;
   left: 0;
   right: 0;
@@ -63,7 +71,10 @@
   border-radius: 0;
 }
 
-:is(.teaching-readout-panel, .srgb-readout-panel):is(.teaching-is-docked-top, .srgb-is-docked-top) {
+:is(.teaching-readout-panel, .srgb-readout-panel):is(
+  .teaching-is-docked-top,
+  .srgb-is-docked-top
+) {
   position: absolute;
   left: 0;
   right: 0;
@@ -74,20 +85,61 @@
   border-radius: 0;
 }
 
-:is(.teaching-readout-panel, .srgb-readout-panel):is(.teaching-is-overlay, .srgb-is-overlay) {
+:is(.teaching-readout-panel, .srgb-readout-panel):is(
+  .teaching-is-overlay,
+  .srgb-is-overlay
+) {
   backdrop-filter: blur(8px);
   background: var(--color-bg-primary);
 }
 
-[data-theme='dark'] :is(.teaching-readout-panel, .srgb-readout-panel):is(.teaching-is-overlay, .srgb-is-overlay) {
+[data-theme='dark']
+  :is(.teaching-readout-panel, .srgb-readout-panel):is(
+    .teaching-is-overlay,
+    .srgb-is-overlay
+  ) {
   background: rgba(0, 0, 0, 0.75);
 }
 
-:is(.teaching-readout-panel, .srgb-readout-panel):is(.teaching-readout-enlarged, .srgb-readout-enlarged) :is(.teaching-readout-label, .srgb-readout-label) {
+:is(.teaching-readout-panel, .srgb-readout-panel):is(
+    .teaching-readout-enlarged,
+    .srgb-readout-enlarged
+  )
+  :is(.teaching-readout-label, .srgb-readout-label) {
   font-size: 1.1rem;
 }
-:is(.teaching-readout-panel, .srgb-readout-panel):is(.teaching-readout-enlarged, .srgb-readout-enlarged) :is(.teaching-readout-value, .srgb-readout-value) {
+:is(.teaching-readout-panel, .srgb-readout-panel):is(
+    .teaching-readout-enlarged,
+    .srgb-readout-enlarged
+  )
+  :is(.teaching-readout-value, .srgb-readout-value) {
   font-size: 1.25rem;
+}
+
+/* ========================================
+   键盘焦点指示（可访问性）
+   场景页链的通用 :focus-visible 来源，与首页链 global.css 等价
+   ======================================== */
+
+:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 2px;
+}
+
+/* ========================================
+   减少动画（可访问性）
+   场景页链的 prefers-reduced-motion 唯一来源；
+   首页链由 global.css 单独提供
+   （原 src/app/layouts/layout-primitives.css 已并入此处并删除）
+   ======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .layout-master,
+  .layout-master * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* 触摸优化 */
@@ -107,4 +159,3 @@
   max-height: 3rem;
   overflow: hidden;
 }
-

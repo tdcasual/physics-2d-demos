@@ -266,7 +266,7 @@ export function createProjectileSim(params: ProjectileParams) {
 }
 
 // ❌ 错误：导入 DOM
-import { getCanvasSize } from '../../core/high-dpi-canvas'; // 禁止！
+import { sizeCanvasToFill } from '../../core/canvas-sizing'; // 禁止！
 ```
 
 ### 6.2 状态快照模式
@@ -317,13 +317,14 @@ export function createProjectileView(opts: {
 
 ### 7.2 高 DPI 处理
 
-必须使用 `high-dpi-canvas` 工具处理 `devicePixelRatio`：
+必须使用 `canvas-sizing` 工具处理 `devicePixelRatio`（原 `high-dpi-canvas.ts`
+已删除，功能并入 `canvas-sizing.ts`）：
 
 ```typescript
-import { setupHighDpiCanvas } from '../../core/high-dpi-canvas';
+import { sizeCanvasToFill } from '../../core/canvas-sizing';
 
-// 在 scene.entry.ts 中初始化时调用
-setupHighDpiCanvas(canvas);
+// 在 scene.view.ts 的 resize 中调用，内部处理 DPR 并设置 responsiveScale
+sizeCanvasToFill(canvas);
 ```
 
 ---

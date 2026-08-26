@@ -8,7 +8,7 @@ const defaultParams: InterferenceFormulaParams = {
   lambda: 650,
   L: 1.0,
   d: 0.5,
-  step: 'geometry',
+  step: 'geometry'
 };
 
 describe('interference-formula sim', () => {
@@ -22,29 +22,49 @@ describe('interference-formula sim', () => {
     });
 
     it('scales linearly with lambda', () => {
-      const sim1 = createInterferenceFormulaSim({ ...defaultParams, lambda: 400 });
-      const sim2 = createInterferenceFormulaSim({ ...defaultParams, lambda: 800 });
-      expect(sim2.getState().deltaX).toBeCloseTo(sim1.getState().deltaX * 2, 10);
+      const sim1 = createInterferenceFormulaSim({
+        ...defaultParams,
+        lambda: 400
+      });
+      const sim2 = createInterferenceFormulaSim({
+        ...defaultParams,
+        lambda: 800
+      });
+      expect(sim2.getState().deltaX).toBeCloseTo(
+        sim1.getState().deltaX * 2,
+        10
+      );
     });
 
     it('scales linearly with L', () => {
       const sim1 = createInterferenceFormulaSim({ ...defaultParams, L: 1.0 });
       const sim2 = createInterferenceFormulaSim({ ...defaultParams, L: 2.0 });
-      expect(sim2.getState().deltaX).toBeCloseTo(sim1.getState().deltaX * 2, 10);
+      expect(sim2.getState().deltaX).toBeCloseTo(
+        sim1.getState().deltaX * 2,
+        10
+      );
     });
 
     it('scales inversely with d', () => {
       const sim1 = createInterferenceFormulaSim({ ...defaultParams, d: 0.5 });
       const sim2 = createInterferenceFormulaSim({ ...defaultParams, d: 1.0 });
-      expect(sim2.getState().deltaX).toBeCloseTo(sim1.getState().deltaX / 2, 10);
+      expect(sim2.getState().deltaX).toBeCloseTo(
+        sim1.getState().deltaX / 2,
+        10
+      );
     });
 
     it.each([
       { lambda: 400, L: 0.5, d: 1.0, expected: 2e-4 },
       { lambda: 700, L: 3.0, d: 0.1, expected: 21e-3 },
-      { lambda: 550, L: 2.0, d: 0.8, expected: 1.375e-3 },
+      { lambda: 550, L: 2.0, d: 0.8, expected: 1.375e-3 }
     ])('Δx($lambda, $L, $d) = $expected', ({ lambda, L, d, expected }) => {
-      const sim = createInterferenceFormulaSim({ ...defaultParams, lambda, L, d });
+      const sim = createInterferenceFormulaSim({
+        ...defaultParams,
+        lambda,
+        L,
+        d
+      });
       expect(sim.getState().deltaX).toBeCloseTo(expected, 8);
     });
   });
@@ -74,7 +94,10 @@ describe('interference-formula sim', () => {
       const sim = createInterferenceFormulaSim(defaultParams);
       const { fringePositions, deltaX } = sim.getState();
       for (let i = 1; i < fringePositions.length; i++) {
-        expect(fringePositions[i] - fringePositions[i - 1]).toBeCloseTo(deltaX, 12);
+        expect(fringePositions[i] - fringePositions[i - 1]).toBeCloseTo(
+          deltaX,
+          12
+        );
       }
     });
   });
@@ -142,14 +165,20 @@ describe('interference-formula sim', () => {
 
   describe('boundary values', () => {
     it('lambda at min (400nm)', () => {
-      const sim = createInterferenceFormulaSim({ ...defaultParams, lambda: 400 });
+      const sim = createInterferenceFormulaSim({
+        ...defaultParams,
+        lambda: 400
+      });
       const { deltaX } = sim.getState();
       expect(deltaX).toBeGreaterThan(0);
       expect(Number.isFinite(deltaX)).toBe(true);
     });
 
     it('lambda at max (700nm)', () => {
-      const sim = createInterferenceFormulaSim({ ...defaultParams, lambda: 700 });
+      const sim = createInterferenceFormulaSim({
+        ...defaultParams,
+        lambda: 700
+      });
       const { deltaX } = sim.getState();
       expect(deltaX).toBeGreaterThan(0);
       expect(Number.isFinite(deltaX)).toBe(true);

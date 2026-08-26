@@ -48,8 +48,12 @@ export function createTransportRow(
     labelSpan.style.color = 'var(--text-secondary)';
     labelSpan.textContent = btn.label;
     button.append(iconSpan, labelSpan);
-    const onEnter = () => { button.style.background = 'var(--btn-hover-bg)'; };
-    const onLeave = () => { button.style.background = 'var(--btn-bg)'; };
+    const onEnter = () => {
+      button.style.background = 'var(--btn-hover-bg)';
+    };
+    const onLeave = () => {
+      button.style.background = 'var(--btn-bg)';
+    };
     button.addEventListener('mouseenter', onEnter);
     button.addEventListener('mouseleave', onLeave);
     button.addEventListener('click', action);

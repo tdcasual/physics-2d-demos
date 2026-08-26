@@ -7,17 +7,8 @@ import { sceneRegistry as _sceneRegistry } from '../../catalog/scene-registry';
 // 重新导出以保持兼容
 export { _sceneRegistry as sceneRegistry };
 
-export interface SceneMeta {
-  id: string;
-  title: string;
-  description: string;
-  category: 'mechanics' | 'electromagnetism' | 'method';
-  categoryLabel: string;
-  icon: string;
-  difficulty: 1 | 2 | 3;
-  path: string;
-  thumbnail?: string;
-}
+// SceneMeta 唯一定义在 platform/scene-contract.ts，这里仅做别名转发，避免双类型定义
+export type { SceneMeta } from '../../platform/scene-contract';
 
 export const featuredScenes = _sceneRegistry.filter((s) => s.featured);
 

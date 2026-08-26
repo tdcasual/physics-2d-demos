@@ -1,15 +1,17 @@
 import { layoutRegistry } from './registry';
-import type { Theme } from './types';
 
+/**
+ * 容器自身状态只保留布局偏好。
+ * 主题由 src/app/theme-store.ts 统一管理（统一 key `physics-lab-theme`），
+ * 旧版本容器状态里的 theme 字段由 theme-store 的迁移逻辑吸收。
+ */
 export function persistState(
   storageKey: string,
-  theme: Theme,
   preferredLayout: string | null
 ): void {
   try {
     const state = {
       v: 1,
-      theme,
       preferredLayout,
       timestamp: Date.now()
     };
@@ -21,16 +23,13 @@ export function persistState(
 
 export function restorePersistedState(
   storageKey: string
-): { theme?: Theme; preferredLayout?: string } | null {
+): { preferredLayout?: string } | null {
   try {
     const saved = localStorage.getItem(storageKey);
     if (saved) {
       const state = JSON.parse(saved);
       if (state.v !== 1) return null;
-      const result: { theme?: Theme; preferredLayout?: string } = {};
-      if (state.theme === 'light' || state.theme === 'dark') {
-        result.theme = state.theme;
-      }
+      const result: { preferredLayout?: string } = {};
       if (state.preferredLayout && layoutRegistry.has(state.preferredLayout)) {
         result.preferredLayout = state.preferredLayout;
       }

@@ -2,17 +2,27 @@ import { test, expect } from '@playwright/test';
 import { sceneIds, scenePage } from './scene-pages';
 
 /**
- * Pixel snapshots are deliberately limited to reviewed representative scenes.
- * Every discovered scene is still covered by layout-matrix and the structural
- * audits; adding a scene here requires reviewed Darwin and Linux baselines.
+ * Pixel snapshots cover every discovered scene. Baselines are per-platform
+ * files: *-linux.png is maintained in the CI-parity container
+ * (scripts/visual-linux-container.sh), *-darwin.png on Mac.
  */
 const SNAPSHOT_SCENE_IDS = [
   'chase-meet',
+  'doppler-effect',
+  'double-slit',
   'electrification',
   'emf-analogy',
   'field-lines',
+  'ganshe',
+  'interference-formula',
+  'mechanical-wave',
+  'micrometer',
   'projectile',
-  'vt-integral'
+  'spring-oscillator',
+  'thin-film',
+  'vernier-caliper',
+  'vt-integral',
+  'wedge'
 ] as const;
 
 const SCENES = SNAPSHOT_SCENE_IDS.map((id) => ({ id, name: id }));
@@ -26,8 +36,9 @@ test('snapshot allowlist only references discovered scenes', () => {
 });
 
 for (const scene of SCENES) {
-  // emf-analogy 有粒子动画，diff 阈值需要更高
-  const isDynamic = scene.id === 'emf-analogy';
+  // emf-analogy 有粒子动画（相位推进）、double-slit 默认 autoPlay，
+  // 截图时动画可能仍在推进，diff 阈值需要更高
+  const isDynamic = scene.id === 'emf-analogy' || scene.id === 'double-slit';
 
   test(`desktop ${scene.id}`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });

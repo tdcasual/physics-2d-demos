@@ -13,7 +13,10 @@ export interface InstrumentState {
   zeroOffset: number;
 }
 
-export interface InstrumentSim<State extends InstrumentState, Params extends InstrumentParams> {
+export interface InstrumentSim<
+  State extends InstrumentState,
+  Params extends InstrumentParams
+> {
   getState(): State;
   setParams(params: Partial<Params>): void;
   step(dt: number): void;
@@ -35,7 +38,12 @@ export interface InstrumentView<State extends InstrumentState> {
   dispose(): void;
 }
 
-export type InstrumentCategory = 'measurement' | 'timing' | 'optical' | 'electrical' | 'mechanical';
+export type InstrumentCategory =
+  | 'measurement'
+  | 'timing'
+  | 'optical'
+  | 'electrical'
+  | 'mechanical';
 
 export interface InstrumentMeta<Params extends InstrumentParams> {
   id: string;
@@ -49,7 +57,7 @@ export interface InstrumentMeta<Params extends InstrumentParams> {
 
 export interface InstrumentFactory<
   State extends InstrumentState,
-  Params extends InstrumentParams,
+  Params extends InstrumentParams
 > {
   meta: InstrumentMeta<Params>;
   createSim(): InstrumentSim<State, Params>;

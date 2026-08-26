@@ -44,7 +44,9 @@ export function createSelectRow(
     select.appendChild(opt);
   });
 
-  const onChange = () => { options.onChange?.(select.value); };
+  const onChange = () => {
+    options.onChange?.(select.value);
+  };
   select.addEventListener('change', onChange);
 
   row.append(labelEl, select);

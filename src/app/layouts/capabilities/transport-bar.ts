@@ -85,6 +85,7 @@ export function createTransportBar(
         const speedSlider = document.createElement('input');
         speedSlider.type = 'range';
         speedSlider.className = 'mobile-transport-speed-slider';
+        speedSlider.setAttribute('aria-label', '速度');
         speedSlider.min = '0.05';
         speedSlider.max = '3';
         speedSlider.step = '0.05';

@@ -227,6 +227,7 @@ function renderField(
       const preset = createPresetButtonGroup(presetContainer, field.presets, {
         initialActive: field.initialActive,
         columns: field.columns,
+        label: field.label,
         onSelect: (id) => onChange(field.key, id)
       });
       return {

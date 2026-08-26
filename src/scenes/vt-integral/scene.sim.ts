@@ -1,5 +1,5 @@
 export const VT_SCENE_VALUES = ['scene1', 'scene2', 'scene3'] as const;
-export type VtScene = typeof VT_SCENE_VALUES[number];
+export type VtScene = (typeof VT_SCENE_VALUES)[number];
 export type VtMethod = 'left' | 'mid' | 'right' | 'trap';
 
 export type VtIntegralParams = {
@@ -21,7 +21,6 @@ export type VtIntegralMetrics = {
   curveLength: number;
   lineDistance: number;
   circumferenceDiff: number;
-
 };
 
 export type VtIntegralSnapshot = {
@@ -37,7 +36,11 @@ function vFn(t: number): number {
   return 1 + 0.8 * t;
 }
 
-function integrateByRects(time: number, rects: number, method: VtMethod): number {
+function integrateByRects(
+  time: number,
+  rects: number,
+  method: VtMethod
+): number {
   const dt = time / rects;
   let sum = 0;
   for (let i = 0; i < rects; i += 1) {
@@ -50,7 +53,7 @@ function integrateByRects(time: number, rects: number, method: VtMethod): number
     } else if (method === 'mid') {
       sum += vFn((t0 + t1) * 0.5) * dt;
     } else {
-      sum += ((vFn(t0) + vFn(t1)) * 0.5) * dt;
+      sum += (vFn(t0) + vFn(t1)) * 0.5 * dt;
     }
   }
   return sum;
@@ -97,19 +100,32 @@ function buildMetrics(params: VtIntegralParams): VtIntegralMetrics {
 function normalize(input: Partial<VtIntegralParams>): VtIntegralParams {
   // 运行时验证：无效场景值会回退到默认值，避免静默失败
   const scene: VtScene = VT_SCENE_VALUES.includes(input.scene as VtScene)
-    ? input.scene as VtScene
+    ? (input.scene as VtScene)
     : 'scene1';
   const method: VtMethod =
-    input.method === 'left' || input.method === 'mid' || input.method === 'right' || input.method === 'trap'
+    input.method === 'left' ||
+    input.method === 'mid' ||
+    input.method === 'right' ||
+    input.method === 'trap'
       ? input.method
       : 'mid';
   return {
     scene,
-    rects: Math.round(clamp(Number.isFinite(input.rects) ? Number(input.rects) : 10, 2, 40)),
+    rects: Math.round(
+      clamp(Number.isFinite(input.rects) ? Number(input.rects) : 10, 2, 40)
+    ),
     time: clamp(Number.isFinite(input.time) ? Number(input.time) : 5, 1, 10),
     method,
-    curveAmplitude: clamp(Number.isFinite(input.curveAmplitude) ? Number(input.curveAmplitude) : 0.25, 0.05, 0.45),
-    circleN: Math.round(clamp(Number.isFinite(input.circleN) ? Number(input.circleN) : 8, 3, 200)),
+    curveAmplitude: clamp(
+      Number.isFinite(input.curveAmplitude)
+        ? Number(input.curveAmplitude)
+        : 0.25,
+      0.05,
+      0.45
+    ),
+    circleN: Math.round(
+      clamp(Number.isFinite(input.circleN) ? Number(input.circleN) : 8, 3, 200)
+    ),
     surfaceN: 1,
     division: 16
   };
@@ -168,7 +184,10 @@ export function createVtIntegralSim(initial: Partial<VtIntegralParams> = {}) {
         return;
       }
       if (params.scene === 'scene2') {
-        params = normalize({ ...params, curveAmplitude: params.curveAmplitude + 0.01 });
+        params = normalize({
+          ...params,
+          curveAmplitude: params.curveAmplitude + 0.01
+        });
         return;
       }
       params = normalize({ ...params, circleN: params.circleN + 1 });

@@ -105,12 +105,12 @@
   --text-primary: #1a1a1a;
   --text-secondary: #444444;
   --text-muted: #4b4b4b;
-  --text-tertiary: #4b4b4b;
+  --text-tertiary: var(--text-muted);
   --text-inverse: #ffffff;
 
   /* 边框色 */
   --border-light: rgba(0, 0, 0, 0.08);
-  --border-medium: rgba(0, 0, 0, 0.08);
+  --border-medium: var(--border-light);
   --border-strong: #a8a6a3;
   --border-color: var(--border-medium);
 
@@ -127,16 +127,20 @@
   /* 阴影 */
   --shadow-color: rgba(0, 0, 0, 0.1);
 
-  /* 首页语义色 */
-  --category-mechanics: #3b82f6;
-  --category-electromagnetism: #d97706;
+  /* 首页语义色（文字级，均需 ≥4.5:1，见 WCAG AA） */
+  --category-mechanics: #1d4ed8;
+  --category-electromagnetism: #b45309;
   --category-method: #7c3aed;
-  --difficulty-level-1-text: #2563eb;
+  --difficulty-level-1-text: #1d4ed8;
   --difficulty-level-1-bg: rgba(59, 130, 246, 0.1);
-  --difficulty-level-2-text: #d97706;
+  --difficulty-level-2-text: #b45309;
   --difficulty-level-2-bg: rgba(245, 158, 11, 0.1);
   --difficulty-level-3-text: #7c3aed;
   --difficulty-level-3-bg: rgba(139, 92, 246, 0.1);
+
+  /* 移动端文字级强调色（tab 激活态、transport 播放态；
+     浅色下 coral #ff6b6b 仅 2.62:1，加深至 ≥4.5:1） */
+  --mobile-accent-text: #cc2f2f;
 }
 
 /* ========================================
@@ -195,6 +199,9 @@
   --difficulty-level-1-bg: rgba(96, 165, 250, 0.15);
   --difficulty-level-2-text: #fbbf24;
   --difficulty-level-2-bg: rgba(251, 191, 36, 0.15);
-  --difficulty-level-3-text: #a78bfa;
-  --difficulty-level-3-bg: rgba(167, 139, 250, 0.15);
+  --difficulty-level-3-text: #c4b5fd;
+  --difficulty-level-3-bg: rgba(196, 181, 253, 0.15);
+
+  /* 深色下 coral 在深色底上达标（6.43:1），沿用主色 */
+  --mobile-accent-text: var(--token-color-coral);
 }

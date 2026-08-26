@@ -42,7 +42,9 @@ describe('spring-oscillator renderer', () => {
       };
 
       expect(() =>
-        drawOscillatorCell(ctx, osc, 0, 10, 10, 380, 280, 'dark', { responsiveScale: 1 })
+        drawOscillatorCell(ctx, osc, 0, 10, 10, 380, 280, 'dark', {
+          responsiveScale: 1
+        })
       ).not.toThrow();
     });
 
@@ -64,7 +66,9 @@ describe('spring-oscillator renderer', () => {
       };
 
       expect(() =>
-        drawOscillatorCell(ctx, osc, 1, 10, 10, 380, 280, 'light', { responsiveScale: 1.2 })
+        drawOscillatorCell(ctx, osc, 1, 10, 10, 380, 280, 'light', {
+          responsiveScale: 1.2
+        })
       ).not.toThrow();
     });
   });

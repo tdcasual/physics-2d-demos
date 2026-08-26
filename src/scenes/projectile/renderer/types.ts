@@ -1,4 +1,3 @@
-
 export type DrawContext = {
   ctx: CanvasRenderingContext2D;
   width: number;

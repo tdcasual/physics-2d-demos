@@ -13,6 +13,7 @@
 ### Task 1: Unify Scene Catalog as Single Source of Truth
 
 **Files:**
+
 - Create: `src/catalog/scene-registry.ts`
 - Modify: `src/app/scene-index.ts`
 - Modify: `src/app/legacy-animation-catalog.ts`
@@ -46,7 +47,10 @@ Expected: FAIL because `src/catalog/scene-registry.ts` does not exist.
 ```ts
 // src/catalog/scene-registry.ts
 import { projectileMeta } from '../scenes/projectile/scene.meta';
-import { legacyAnimationCatalog, buildLegacy2DHostPath } from '../app/legacy-animation-catalog';
+import {
+  legacyAnimationCatalog,
+  buildLegacy2DHostPath
+} from '../app/legacy-animation-catalog';
 
 export const sceneRegistry = [
   {
@@ -59,7 +63,10 @@ export const sceneRegistry = [
   ...legacyAnimationCatalog.map((item) => ({
     id: item.id,
     title: item.title,
-    path: item.dimension === '2d' ? buildLegacy2DHostPath(item.id) : item.sourcePath,
+    path:
+      item.dimension === '2d'
+        ? buildLegacy2DHostPath(item.id)
+        : item.sourcePath,
     keywords: item.keywords,
     source: 'legacy' as const
   }))
@@ -83,6 +90,7 @@ git commit -m "refactor: centralize scene catalog into single registry"
 ### Task 2: Remove Navigation Data Duplication (Generated Fallback)
 
 **Files:**
+
 - Create: `scripts/generate-nav-fallback.ts`
 - Create: `public/scene-fallback.js` (generated)
 - Modify: `index.html`
@@ -122,16 +130,20 @@ export function toFallbackScript(entries: unknown[]): string {
   return `window.__SCENE_FALLBACK__ = ${JSON.stringify(entries)};`;
 }
 
-export async function generateFallback(outFile = resolve(process.cwd(), 'public/scene-fallback.js')) {
+export async function generateFallback(
+  outFile = resolve(process.cwd(), 'public/scene-fallback.js')
+) {
   await writeFile(outFile, toFallbackScript(sceneRegistry), 'utf8');
 }
 ```
 
 Update `index.html`:
+
 - Load `/scene-fallback.js`
 - Replace inline hardcoded `fallbackPages` with `window.__SCENE_FALLBACK__ ?? []`
 
 Update scripts:
+
 - `generate:index` should run both generators.
 
 **Step 4: Run test to verify it passes**
@@ -149,6 +161,7 @@ git commit -m "refactor: generate nav fallback from scene registry"
 ### Task 3: Harden Legacy Adapter Protocol and Origin Checks
 
 **Files:**
+
 - Create: `src/app/legacy-2d-protocol.ts`
 - Modify: `src/app/legacy-2d-adapter.ts`
 - Test: `tests/unit/legacy-2d-protocol.spec.ts`
@@ -158,17 +171,32 @@ git commit -m "refactor: generate nav fallback from scene registry"
 ```ts
 // tests/unit/legacy-2d-protocol.spec.ts
 import { describe, expect, it } from 'vitest';
-import { isTrustedLegacyOrigin, isLegacyReadoutMessage } from '../../src/app/legacy-2d-protocol';
+import {
+  isTrustedLegacyOrigin,
+  isLegacyReadoutMessage
+} from '../../src/app/legacy-2d-protocol';
 
 describe('legacy protocol', () => {
   it('accepts same-origin and rejects foreign origin', () => {
     expect(isTrustedLegacyOrigin('https://a.com', 'https://a.com')).toBe(true);
-    expect(isTrustedLegacyOrigin('https://evil.com', 'https://a.com')).toBe(false);
+    expect(isTrustedLegacyOrigin('https://evil.com', 'https://a.com')).toBe(
+      false
+    );
   });
 
   it('validates readout payload shape', () => {
-    expect(isLegacyReadoutMessage({ type: 'legacy:readout', items: [{ label: 'x', value: '1' }] })).toBe(true);
-    expect(isLegacyReadoutMessage({ type: 'legacy:readout', items: [{ label: 'x' }] })).toBe(false);
+    expect(
+      isLegacyReadoutMessage({
+        type: 'legacy:readout',
+        items: [{ label: 'x', value: '1' }]
+      })
+    ).toBe(true);
+    expect(
+      isLegacyReadoutMessage({
+        type: 'legacy:readout',
+        items: [{ label: 'x' }]
+      })
+    ).toBe(false);
   });
 });
 ```
@@ -179,6 +207,7 @@ Run: `pnpm vitest run tests/unit/legacy-2d-protocol.spec.ts`
 Expected: FAIL (module missing).
 
 **Step 3: Write minimal implementation**
+
 - Move message-shape validators from adapter into `legacy-2d-protocol.ts`.
 - In adapter, compute `targetOrigin` from `sourcePath` and `window.location.origin`.
 - Replace `postMessage(..., '*')` with `postMessage(..., targetOrigin)`.
@@ -199,6 +228,7 @@ git commit -m "feat: harden legacy adapter protocol with origin validation"
 ### Task 4: Remove Scene Singleton and Standardize Page Lifecycle Cleanup
 
 **Files:**
+
 - Create: `src/app/page-lifecycle.ts`
 - Modify: `src/scenes/projectile/scene.entry.ts`
 - Modify: `tests/contract/scene-contract.spec.ts`
@@ -232,6 +262,7 @@ Run: `pnpm vitest run tests/unit/page-lifecycle.spec.ts`
 Expected: FAIL (module missing).
 
 **Step 3: Write minimal implementation**
+
 - Implement `createPageLifecycle` with idempotent `dispose()`.
 - In `projectile/page.ts` and `legacy-2d-page.ts`, register listeners/disposers via lifecycle object.
 - Remove global singleton export from `scene.entry.ts`:
@@ -253,6 +284,7 @@ git commit -m "refactor: enforce scene factory usage and page lifecycle cleanup"
 ### Task 5: Add Architecture Boundary Guardrails
 
 **Files:**
+
 - Create: `tests/unit/architecture-boundaries.spec.ts`
 - Modify: `.eslintrc.cjs`
 - Modify: `README.md`
@@ -266,9 +298,12 @@ import { describe, expect, it } from 'vitest';
 
 describe('architecture boundaries', () => {
   it('scene.sim modules do not import app layer', () => {
-    const simSource = readFileSync('src/scenes/projectile/scene.sim.ts', 'utf8');
-    expect(simSource.includes("../app/")).toBe(false);
-    expect(simSource.includes("../../app/")).toBe(false);
+    const simSource = readFileSync(
+      'src/scenes/projectile/scene.sim.ts',
+      'utf8'
+    );
+    expect(simSource.includes('../app/')).toBe(false);
+    expect(simSource.includes('../../app/')).toBe(false);
   });
 });
 ```
@@ -280,6 +315,7 @@ Run: `pnpm vitest run tests/unit/architecture-boundaries.spec.ts`
 Expected: FAIL during scratch check, then PASS after cleanup.
 
 **Step 3: Write minimal implementation**
+
 - Add `no-restricted-imports` rules in `.eslintrc.cjs`:
   - `src/core/**` cannot import `src/app/**` or `src/scenes/**/page`
   - `src/scenes/**/scene.sim.ts` cannot import `src/app/**` or `src/ui/**`
@@ -310,6 +346,7 @@ pnpm build
 ```
 
 Then verify runtime behavior:
+
 - `/` loads cards from generated index/fallback
 - `/src/pages/projectile.html` control loop + mode switch + resize works
 - `/src/pages/legacy-2d.html?scene=legacy-field-lines` can send control messages and render fallback readout
@@ -317,6 +354,7 @@ Then verify runtime behavior:
 ## Scope Guard (YAGNI)
 
 This PR intentionally does **not** include:
+
 - migrating any 3D legacy pages
 - introducing React or additional runtime frameworks
 - replacing current canvas renderer abstraction

@@ -71,7 +71,10 @@ export function createVtIntegralScene(
         { label: '矩形总面积', value: snapshot.metrics.rectArea.toFixed(4) },
         { label: '积分面积', value: snapshot.metrics.trueArea.toFixed(4) },
         { label: '绝对误差', value: snapshot.metrics.absErr.toFixed(4) },
-        { label: '相对误差', value: `${(snapshot.metrics.relErr * 100).toFixed(2)}%` }
+        {
+          label: '相对误差',
+          value: `${(snapshot.metrics.relErr * 100).toFixed(2)}%`
+        }
       ];
     }
     if (snapshot.params.scene === 'scene2') {
@@ -88,7 +91,14 @@ export function createVtIntegralScene(
       { label: '场景', value: sceneLabel(snapshot.params.scene) },
       { label: '显示模式', value: modeLabel(currentMode) },
       { label: '边数 n', value: String(snapshot.params.circleN) },
-      { label: '多边形周长', value: (2 * snapshot.params.circleN * Math.sin(Math.PI / snapshot.params.circleN)).toFixed(4) },
+      {
+        label: '多边形周长',
+        value: (
+          2 *
+          snapshot.params.circleN *
+          Math.sin(Math.PI / snapshot.params.circleN)
+        ).toFixed(4)
+      },
       { label: '圆周长 (2π)', value: (2 * Math.PI).toFixed(4) },
       { label: '周长差', value: snapshot.metrics.circumferenceDiff.toFixed(4) }
     ];

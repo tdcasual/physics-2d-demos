@@ -2,7 +2,10 @@ import type { ElectrificationSnapshot } from '../scene.sim';
 import type { DrawContext } from './types';
 import { drawConductor, drawChargedSphere, drawGround } from './draw-objects';
 import { drawNetCharges } from './draw-charges';
-import { drawFieldLinesFromPoint, drawFieldLinesBetween } from './draw-field-lines';
+import {
+  drawFieldLinesFromPoint,
+  drawFieldLinesBetween
+} from './draw-field-lines';
 import { drawStepIndicator } from './draw-step-indicator';
 
 /**
@@ -21,8 +24,8 @@ export function drawInduction(
   const cy = height * 0.4;
   const gap = Math.max(100, 160 * s);
 
-  const leftX = cx - gap * 0.5;   // 导体
-  const rightX = cx + gap * 0.5;  // 外部带电体
+  const leftX = cx - gap * 0.5; // 导体
+  const rightX = cx + gap * 0.5; // 外部带电体
   const objY = cy;
 
   const conductorR = Math.max(40, 60 * s);
@@ -53,19 +56,31 @@ export function drawInduction(
 
   // 净电荷（step 1+）
   if (state.stepIndex >= 1) {
-    drawNetCharges(ctx, leftX, objY, state.leftCharge, conductorR * 0.4, isDark, s);
+    drawNetCharges(
+      ctx,
+      leftX,
+      objY,
+      state.leftCharge,
+      conductorR * 0.4,
+      isDark,
+      s
+    );
   }
 
   // 接地符号（step 1）
   if (state.stepIndex === 1) {
     const groundGap = 5 * s;
-    drawGround(ctx, leftX, objY + conductorR + groundGap, Math.max(20, 30 * s), isDark);
+    drawGround(
+      ctx,
+      leftX,
+      objY + conductorR + groundGap,
+      Math.max(20, 30 * s),
+      isDark
+    );
 
     // 接地导走正电荷的箭头
     ctx.save();
-    ctx.strokeStyle = isDark
-      ? 'rgba(250,204,21,0.6)'
-      : 'rgba(202,138,4,0.5)';
+    ctx.strokeStyle = isDark ? 'rgba(250,204,21,0.6)' : 'rgba(202,138,4,0.5)';
     ctx.lineWidth = Math.max(1, 1.5 * s);
     ctx.setLineDash([4 * s, 3 * s]);
     ctx.beginPath();
@@ -78,10 +93,28 @@ export function drawInduction(
 
   // 电场线
   if (state.stepIndex < 2) {
-    drawFieldLinesBetween(ctx, leftX, objY, state.leftCharge, externalX, objY, 2, isDark, s);
+    drawFieldLinesBetween(
+      ctx,
+      leftX,
+      objY,
+      state.leftCharge,
+      externalX,
+      objY,
+      2,
+      isDark,
+      s
+    );
   }
   if (state.stepIndex >= 2) {
-    drawFieldLinesFromPoint(ctx, leftX, objY, state.leftCharge, conductorR * 2.2, isDark, s);
+    drawFieldLinesFromPoint(
+      ctx,
+      leftX,
+      objY,
+      state.leftCharge,
+      conductorR * 2.2,
+      isDark,
+      s
+    );
   }
 
   // 标签
@@ -96,8 +129,16 @@ export function drawInduction(
   }
 
   // 步骤指示器
-  drawStepIndicator(ctx, width, height, state.stepIndex, 3,
-    ['靠近', '接地', '移除'], isDark, s);
+  drawStepIndicator(
+    ctx,
+    width,
+    height,
+    state.stepIndex,
+    3,
+    ['靠近', '接地', '移除'],
+    isDark,
+    s
+  );
 }
 
 /** 绘制电荷分离效果（在导体边缘聚集） */
@@ -113,8 +154,12 @@ function drawSeparationCharges(
   const count = 5;
   const isPositive = side > 0;
   const color = isPositive
-    ? isDark ? 'rgba(239,68,68,0.7)' : 'rgba(220,50,50,0.6)'
-    : isDark ? 'rgba(59,130,246,0.7)' : 'rgba(40,100,220,0.6)';
+    ? isDark
+      ? 'rgba(239,68,68,0.7)'
+      : 'rgba(220,50,50,0.6)'
+    : isDark
+      ? 'rgba(59,130,246,0.7)'
+      : 'rgba(40,100,220,0.6)';
 
   ctx.save();
 

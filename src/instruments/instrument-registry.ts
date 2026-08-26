@@ -17,10 +17,9 @@ import type {
 
 // Vite 编译时收集所有可能的仪器模块，但不立即加载
 // 每个模块会生成独立的代码分割点
-const factoryModules = import.meta.glob('/src/instruments/*/index.ts') as Record<
-  string,
-  () => Promise<Record<string, unknown>>
->;
+const factoryModules = import.meta.glob(
+  '/src/instruments/*/index.ts'
+) as Record<string, () => Promise<Record<string, unknown>>>;
 
 /** kebab-case → camelCase */
 function toCamelCase(s: string): string {
@@ -36,7 +35,9 @@ export type RegistryEntry = {
   precision?: number;
   defaultParams: Record<string, unknown>;
   /** 按需加载工厂 — 首次调用时才会加载对应的 chunk */
-  loadFactory: () => Promise<InstrumentFactory<InstrumentState, InstrumentParams>>;
+  loadFactory: () => Promise<
+    InstrumentFactory<InstrumentState, InstrumentParams>
+  >;
 };
 
 /**
@@ -51,7 +52,9 @@ export function buildInstrumentRegistry(): RegistryEntry[] {
   for (const m of instrumentManifest) {
     const loader = factoryModules[m.modulePath];
     if (!loader) {
-      console.warn(`[InstrumentRegistry] 模块未找到: ${m.modulePath} (仪器: ${m.id})`);
+      console.warn(
+        `[InstrumentRegistry] 模块未找到: ${m.modulePath} (仪器: ${m.id})`
+      );
       continue;
     }
 
@@ -66,15 +69,17 @@ export function buildInstrumentRegistry(): RegistryEntry[] {
       loadFactory: async () => {
         const mod = await loader();
         const exportName = toCamelCase(m.id);
-        const factory = (mod[exportName] || mod[m.id]) as InstrumentFactory<InstrumentState, InstrumentParams> | undefined;
+        const factory = (mod[exportName] || mod[m.id]) as
+          | InstrumentFactory<InstrumentState, InstrumentParams>
+          | undefined;
         if (!factory) {
           throw new Error(
             `仪器 "${m.id}" 的工厂未在 ${m.modulePath} 中找到。` +
-            `请确保 export const ${exportName} = { meta, createSim, createView };`
+              `请确保 export const ${exportName} = { meta, createSim, createView };`
           );
         }
         return factory;
-      },
+      }
     });
   }
 
@@ -131,7 +136,9 @@ export function validateManifest(): { ok: boolean; errors: string[] } {
   const errors: string[] = [];
   for (const m of instrumentManifest) {
     if (!factoryModules[m.modulePath]) {
-      errors.push(`manifest 中注册的 "${m.id}" (${m.modulePath}) 在文件系统中不存在`);
+      errors.push(
+        `manifest 中注册的 "${m.id}" (${m.modulePath}) 在文件系统中不存在`
+      );
     }
   }
   return { ok: errors.length === 0, errors };

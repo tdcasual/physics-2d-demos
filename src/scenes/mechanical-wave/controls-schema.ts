@@ -19,7 +19,7 @@ export const mechanicalWaveControlsSchema: ControlsSchema = {
           max: 10,
           step: 0.1,
           value: 2,
-          unit: 'm/s',
+          unit: 'm/s'
         },
         {
           type: 'slider',
@@ -29,7 +29,7 @@ export const mechanicalWaveControlsSchema: ControlsSchema = {
           max: 10,
           step: 0.1,
           value: 4,
-          unit: 'm',
+          unit: 'm'
         },
         {
           type: 'slider',
@@ -39,9 +39,9 @@ export const mechanicalWaveControlsSchema: ControlsSchema = {
           max: 8,
           step: 0.1,
           value: 2,
-          unit: 's',
-        },
-      ],
+          unit: 's'
+        }
+      ]
     },
     {
       title: '振幅',
@@ -55,9 +55,9 @@ export const mechanicalWaveControlsSchema: ControlsSchema = {
           max: 10,
           step: 0.5,
           value: 5,
-          unit: 'cm',
-        },
-      ],
+          unit: 'cm'
+        }
+      ]
     },
     {
       title: '方向',
@@ -69,11 +69,11 @@ export const mechanicalWaveControlsSchema: ControlsSchema = {
           columns: 2,
           presets: [
             { id: 'right', label: '向右传播' },
-            { id: 'left', label: '向左传播' },
+            { id: 'left', label: '向左传播' }
           ],
-          initialActive: 'right',
-        },
-      ],
+          initialActive: 'right'
+        }
+      ]
     },
     {
       title: '显示',
@@ -83,9 +83,9 @@ export const mechanicalWaveControlsSchema: ControlsSchema = {
           type: 'toggle',
           key: 'showMicroShift',
           label: '微移对比',
-          value: true,
-        },
-      ],
+          value: true
+        }
+      ]
     },
     {
       title: '播放',
@@ -99,9 +99,9 @@ export const mechanicalWaveControlsSchema: ControlsSchema = {
           max: 2,
           step: 0.1,
           value: 1,
-          unit: 'x',
-        },
-      ],
-    },
-  ],
+          unit: 'x'
+        }
+      ]
+    }
+  ]
 };

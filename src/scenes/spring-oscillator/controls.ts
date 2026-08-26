@@ -3,6 +3,7 @@
  * 与 V3 像素级一致
  */
 
+// eslint-disable-next-line no-restricted-imports -- 既有豁免：imperative controls 动态增删振子，依赖 ui 组件（见 AGENTS.md「已知限制」）
 import { createControlCard } from '../../ui/components/ControlCard';
 import { renderOscillatorItem } from './oscillator-item';
 import type { OscillatorItemHandle } from './oscillator-item';
@@ -236,7 +237,13 @@ export function createSpringOscillatorControls(
     }
 
     scene.sim.oscillators.forEach((osc, index) => {
-      const handle = renderOscillatorItem(scene, osc, index, renderOscillatorList, onStatus);
+      const handle = renderOscillatorItem(
+        scene,
+        osc,
+        index,
+        renderOscillatorList,
+        onStatus
+      );
       itemHandles.push(handle);
       listContainer.appendChild(handle.element);
     });

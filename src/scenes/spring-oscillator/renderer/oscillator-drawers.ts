@@ -54,7 +54,16 @@ export function drawHorizontal(
   // 弹簧
   const springEndX = massX - ballRadius;
   if (springEndX > fixedX + 8 * s) {
-    drawSpring(ctx, fixedX, baseY, springEndX, baseY, coils, coilWidth, osc.color);
+    drawSpring(
+      ctx,
+      fixedX,
+      baseY,
+      springEndX,
+      baseY,
+      coils,
+      coilWidth,
+      osc.color
+    );
   }
 
   // 小球

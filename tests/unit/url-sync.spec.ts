@@ -30,7 +30,11 @@ describe('url-sync', () => {
 
   describe('readSceneParams', () => {
     it('reads numeric params and converts to correct types', () => {
-      window.history.replaceState({}, '', '/test.html?speed=30&angle=60&count=5');
+      window.history.replaceState(
+        {},
+        '',
+        '/test.html?speed=30&angle=60&count=5'
+      );
       const params = readSceneParams(mockMeta);
       expect(params.speed).toBe(30);
       expect(params.angle).toBe(60);

@@ -31,9 +31,7 @@ export function drawGlassRod(
   ctx.fill();
 
   // 纵向纹理线
-  ctx.strokeStyle = isDark
-    ? 'rgba(255,255,255,0.08)'
-    : 'rgba(0,0,0,0.06)';
+  ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
   ctx.lineWidth = Math.max(0.5, 1 * s);
   const pad = 4 * s;
   for (let i = 1; i < 6; i++) {
@@ -45,9 +43,7 @@ export function drawGlassRod(
   }
 
   // 边框
-  ctx.strokeStyle = isDark
-    ? 'rgba(200,150,80,0.5)'
-    : 'rgba(160,120,60,0.4)';
+  ctx.strokeStyle = isDark ? 'rgba(200,150,80,0.5)' : 'rgba(160,120,60,0.4)';
   ctx.lineWidth = Math.max(1, 1.5 * s);
   roundRect(ctx, x, y, w, h, Math.min(8, h * 0.1));
   ctx.stroke();
@@ -83,9 +79,7 @@ export function drawSilk(
   ctx.fill();
 
   // 横向波纹
-  ctx.strokeStyle = isDark
-    ? 'rgba(255,255,255,0.06)'
-    : 'rgba(0,0,0,0.05)';
+  ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
   ctx.lineWidth = Math.max(0.5, 1 * s);
   const pad = 4 * s;
   for (let i = 1; i < 5; i++) {
@@ -96,9 +90,7 @@ export function drawSilk(
     ctx.stroke();
   }
 
-  ctx.strokeStyle = isDark
-    ? 'rgba(170,140,200,0.5)'
-    : 'rgba(140,120,170,0.4)';
+  ctx.strokeStyle = isDark ? 'rgba(170,140,200,0.5)' : 'rgba(140,120,170,0.4)';
   ctx.lineWidth = Math.max(1, 1.5 * s);
   roundRect(ctx, x, y, w, h, Math.min(8, h * 0.1));
   ctx.stroke();
@@ -118,7 +110,14 @@ export function drawConductor(
   ctx.save();
 
   // 金属径向渐变
-  const grad = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
+  const grad = ctx.createRadialGradient(
+    x - r * 0.3,
+    y - r * 0.3,
+    r * 0.1,
+    x,
+    y,
+    r
+  );
   if (isDark) {
     grad.addColorStop(0, 'rgba(180,190,200,0.95)');
     grad.addColorStop(0.4, 'rgba(120,130,140,0.9)');
@@ -135,9 +134,7 @@ export function drawConductor(
   ctx.fill();
 
   // 边框
-  ctx.strokeStyle = isDark
-    ? 'rgba(160,170,180,0.5)'
-    : 'rgba(130,135,140,0.4)';
+  ctx.strokeStyle = isDark ? 'rgba(160,170,180,0.5)' : 'rgba(130,135,140,0.4)';
   ctx.lineWidth = Math.max(1, 1.5 * s);
   ctx.stroke();
 
@@ -159,9 +156,7 @@ export function drawGround(
   isDark: boolean
 ): void {
   ctx.save();
-  ctx.strokeStyle = isDark
-    ? 'rgba(226,232,240,0.7)'
-    : 'rgba(71,85,105,0.7)';
+  ctx.strokeStyle = isDark ? 'rgba(226,232,240,0.7)' : 'rgba(71,85,105,0.7)';
   ctx.lineWidth = Math.max(1.5, size * 0.08);
   ctx.lineCap = 'round';
 
@@ -206,19 +201,37 @@ export function drawChargedSphere(
 
   const isPositive = charge > 0;
   const glowColor = isPositive
-    ? isDark ? 'rgba(239,68,68,0.35)' : 'rgba(239,68,68,0.25)'
-    : isDark ? 'rgba(59,130,246,0.35)' : 'rgba(59,130,246,0.25)';
+    ? isDark
+      ? 'rgba(239,68,68,0.35)'
+      : 'rgba(239,68,68,0.25)'
+    : isDark
+      ? 'rgba(59,130,246,0.35)'
+      : 'rgba(59,130,246,0.25)';
   const coreColor = isPositive
-    ? isDark ? 'rgba(220,60,60,0.9)' : 'rgba(220,60,60,0.85)'
-    : isDark ? 'rgba(50,110,220,0.9)' : 'rgba(50,110,220,0.85)';
+    ? isDark
+      ? 'rgba(220,60,60,0.9)'
+      : 'rgba(220,60,60,0.85)'
+    : isDark
+      ? 'rgba(50,110,220,0.9)'
+      : 'rgba(50,110,220,0.85)';
 
   // 外发光
   ctx.shadowBlur = r * 0.5;
   ctx.shadowColor = glowColor;
 
   // 主体
-  const grad = ctx.createRadialGradient(x - r * 0.2, y - r * 0.2, r * 0.1, x, y, r);
-  grad.addColorStop(0, isPositive ? 'rgba(255,150,150,0.9)' : 'rgba(150,180,255,0.9)');
+  const grad = ctx.createRadialGradient(
+    x - r * 0.2,
+    y - r * 0.2,
+    r * 0.1,
+    x,
+    y,
+    r
+  );
+  grad.addColorStop(
+    0,
+    isPositive ? 'rgba(255,150,150,0.9)' : 'rgba(150,180,255,0.9)'
+  );
   grad.addColorStop(1, coreColor);
 
   ctx.fillStyle = grad;
@@ -230,8 +243,12 @@ export function drawChargedSphere(
 
   // 边框
   ctx.strokeStyle = isPositive
-    ? isDark ? 'rgba(239,68,68,0.6)' : 'rgba(220,50,50,0.5)'
-    : isDark ? 'rgba(59,130,246,0.6)' : 'rgba(40,100,220,0.5)';
+    ? isDark
+      ? 'rgba(239,68,68,0.6)'
+      : 'rgba(220,50,50,0.5)'
+    : isDark
+      ? 'rgba(59,130,246,0.6)'
+      : 'rgba(40,100,220,0.5)';
   ctx.lineWidth = Math.max(1, 1.5 * s);
   ctx.stroke();
 

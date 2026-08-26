@@ -26,16 +26,19 @@ test('instrument library loads and can switch to an instrument preview', async (
     );
   });
 
-  const canvasMetrics = await page.locator('canvas').first().evaluate((node) => {
-    const canvas = node as HTMLCanvasElement;
-    const preview = canvas.parentElement;
-    return {
-      previewHeight: preview?.clientHeight ?? 0,
-      previewWidth: preview?.clientWidth ?? 0,
-      height: canvas.height,
-      width: canvas.width
-    };
-  });
+  const canvasMetrics = await page
+    .locator('canvas')
+    .first()
+    .evaluate((node) => {
+      const canvas = node as HTMLCanvasElement;
+      const preview = canvas.parentElement;
+      return {
+        previewHeight: preview?.clientHeight ?? 0,
+        previewWidth: preview?.clientWidth ?? 0,
+        height: canvas.height,
+        width: canvas.width
+      };
+    });
 
   expect(canvasMetrics.previewWidth).toBeGreaterThan(200);
   expect(canvasMetrics.previewHeight).toBeGreaterThan(120);

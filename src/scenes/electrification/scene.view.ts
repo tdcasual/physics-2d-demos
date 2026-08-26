@@ -57,7 +57,7 @@ export function createElectrificationView(
       width,
       height,
       theme,
-      responsiveScale,
+      responsiveScale
     };
 
     // Fade-in transition on step change

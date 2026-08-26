@@ -29,9 +29,6 @@ export function createEmfAnalogyView(
   let cssHeight = 720;
   let responsiveScale = 1;
 
-  let rafId: number | null = null;
-  let isRunning = false;
-
   function resizeCanvas(): void {
     if (!canvas) return;
     const newCtx = sizeCanvasToFill(canvas);
@@ -71,14 +68,8 @@ export function createEmfAnalogyView(
     }
   }
 
-  const tick = () => {
-    if (!isRunning) return;
-    draw();
-    if (typeof window !== 'undefined') {
-      rafId = window.requestAnimationFrame(tick);
-    }
-  };
-
+  // 渲染统一由 scene-shell 的播放循环驱动（onStep 推进相位、onRender 调 render），
+  // 视图不再自建 RAF，避免播放时每帧重复绘制。
   return {
     render(next: EmfAnalogySnapshot): void {
       snapshot = next;
@@ -108,25 +99,7 @@ export function createEmfAnalogyView(
       return currentView;
     },
 
-    start(): void {
-      if (isRunning) return;
-      isRunning = true;
-      tick();
-    },
-
-    stop(): void {
-      isRunning = false;
-      if (rafId !== null && typeof window !== 'undefined') {
-        window.cancelAnimationFrame(rafId);
-        rafId = null;
-      }
-    },
-
     dispose(): void {
-      isRunning = false;
-      if (rafId !== null && typeof window !== 'undefined') {
-        window.cancelAnimationFrame(rafId);
-      }
       snapshot = null;
       canvas = null;
       ctx = null;

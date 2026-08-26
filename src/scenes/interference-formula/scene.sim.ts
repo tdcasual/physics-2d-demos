@@ -4,12 +4,16 @@
  * 计算干涉条纹间距与光强分布。
  */
 
-export type InterferenceFormulaStep = 'geometry' | 'path-diff' | 'small-angle' | 'result';
+export type InterferenceFormulaStep =
+  | 'geometry'
+  | 'path-diff'
+  | 'small-angle'
+  | 'result';
 
 export type InterferenceFormulaParams = {
   lambda: number; // 波长，单位 nm
-  L: number;      // 双缝到屏幕距离，单位 m
-  d: number;      // 双缝间距，单位 mm
+  L: number; // 双缝到屏幕距离，单位 m
+  d: number; // 双缝间距，单位 mm
   step: InterferenceFormulaStep;
 };
 
@@ -36,7 +40,9 @@ function computeFringePositions(deltaX: number, maxOrder = 10): number[] {
   return positions;
 }
 
-export function createInterferenceFormulaSim(initial: InterferenceFormulaParams) {
+export function createInterferenceFormulaSim(
+  initial: InterferenceFormulaParams
+) {
   let params: InterferenceFormulaParams = { ...initial };
 
   function getState(): InterferenceFormulaState {
@@ -44,11 +50,13 @@ export function createInterferenceFormulaSim(initial: InterferenceFormulaParams)
     return {
       params: { ...params },
       deltaX,
-      fringePositions: computeFringePositions(deltaX),
+      fringePositions: computeFringePositions(deltaX)
     };
   }
 
-  function setParams(next: Partial<InterferenceFormulaParams>): InterferenceFormulaParams {
+  function setParams(
+    next: Partial<InterferenceFormulaParams>
+  ): InterferenceFormulaParams {
     params = { ...params, ...next };
     return params;
   }

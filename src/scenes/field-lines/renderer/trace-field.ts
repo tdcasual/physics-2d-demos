@@ -12,10 +12,7 @@ function getElectricFieldAt(
   for (const charge of charges) {
     const dx = px - charge.x;
     const dy = py - charge.y;
-    const rSquared = Math.max(
-      charge.radius * charge.radius,
-      dx * dx + dy * dy
-    );
+    const rSquared = Math.max(charge.radius * charge.radius, dx * dx + dy * dy);
     const r = Math.sqrt(rSquared);
     const magnitude = charge.q / rSquared;
     Ex += magnitude * (dx / r);
@@ -91,17 +88,30 @@ export function generateFieldLines(
   const paths: FieldLinePath[] = [];
   const maxSegments = 900;
   // density 1~100 映射到 visualStepSize 120~5，但这里只用于起始点数量
-  const linesPerUnitCharge = Math.max(4, Math.min(32, Math.round(density * 0.3)));
+  const linesPerUnitCharge = Math.max(
+    4,
+    Math.min(32, Math.round(density * 0.3))
+  );
 
   // 正电荷：发出电场线（direction = 1）
   for (const charge of charges) {
     if (charge.q <= 0) continue;
-    const numLines = Math.max(4, Math.min(40, Math.round(linesPerUnitCharge * charge.q)));
+    const numLines = Math.max(
+      4,
+      Math.min(40, Math.round(linesPerUnitCharge * charge.q))
+    );
     for (let i = 0; i < numLines; i++) {
       const angle = (i / numLines) * Math.PI * 2;
       const startX = charge.x + charge.radius * 1.4 * Math.cos(angle);
       const startY = charge.y + charge.radius * 1.4 * Math.sin(angle);
-      const path = traceFieldLine(startX, startY, maxSegments, 1, charges, bounds);
+      const path = traceFieldLine(
+        startX,
+        startY,
+        maxSegments,
+        1,
+        charges,
+        bounds
+      );
       if (path.points.length >= 3) {
         paths.push(path);
       }
@@ -111,12 +121,22 @@ export function generateFieldLines(
   // 负电荷：吸收电场线（direction = -1，从电荷外开始向内追踪）
   for (const charge of charges) {
     if (charge.q >= 0) continue;
-    const numLines = Math.max(4, Math.min(40, Math.round(linesPerUnitCharge * Math.abs(charge.q))));
+    const numLines = Math.max(
+      4,
+      Math.min(40, Math.round(linesPerUnitCharge * Math.abs(charge.q)))
+    );
     for (let i = 0; i < numLines; i++) {
       const angle = (i / numLines) * Math.PI * 2;
       const startX = charge.x + charge.radius * 1.4 * Math.cos(angle);
       const startY = charge.y + charge.radius * 1.4 * Math.sin(angle);
-      const path = traceFieldLine(startX, startY, maxSegments, -1, charges, bounds);
+      const path = traceFieldLine(
+        startX,
+        startY,
+        maxSegments,
+        -1,
+        charges,
+        bounds
+      );
       if (path.points.length >= 3) {
         paths.push(path);
       }

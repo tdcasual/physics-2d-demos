@@ -173,6 +173,7 @@ export function createFloatingControls(options: {
 
   const speedSlider = document.createElement('input');
   speedSlider.type = 'range';
+  speedSlider.setAttribute('aria-label', '播放速度');
   speedSlider.min = '0.05';
   speedSlider.max = '3';
   speedSlider.step = '0.05';

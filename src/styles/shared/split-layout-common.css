@@ -65,7 +65,8 @@
   align-content: start;
 }
 /* Sections containing sliders or text inputs span the full row */
-:is(.teaching-control-slot, .srgb-control-slot)[data-control-columns='auto'] > [data-span='full'] {
+:is(.teaching-control-slot, .srgb-control-slot)[data-control-columns='auto']
+  > [data-span='full'] {
   grid-column: 1 / -1;
 }
 :is(.teaching-control-slot, .srgb-control-slot)[data-control-columns='2'] {
@@ -220,6 +221,12 @@
 :is(.teaching-panel-resizer, .srgb-resizer-v):hover,
 :is(.teaching-panel-resizer, .srgb-resizer-v).is-dragging {
   background: var(--color-accent-color);
+}
+
+/* 键盘焦点指示（resizer 可聚焦，role=separator） */
+[role='separator']:focus-visible {
+  outline: 2px solid var(--accent-color, #4ecdc4);
+  outline-offset: 2px;
 }
 
 :is(.teaching-panel-resizer, .srgb-resizer-v)::before {

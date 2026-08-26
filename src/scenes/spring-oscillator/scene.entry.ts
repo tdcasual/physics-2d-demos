@@ -1,5 +1,8 @@
 import { createSpringOscillatorSim, type OscillatorParams } from './scene.sim';
-import { createSpringOscillatorView, type SpringOscillatorViewOptions } from './scene.view';
+import {
+  createSpringOscillatorView,
+  type SpringOscillatorViewOptions
+} from './scene.view';
 
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import type { DemoRenderHints } from '../../platform/demo-profile';
@@ -12,19 +15,21 @@ export type CreateSpringOscillatorSceneOptions = {
   demoHints?: DemoRenderHints;
 };
 
-export function createSpringOscillatorScene(options: CreateSpringOscillatorSceneOptions = {}) {
+export function createSpringOscillatorScene(
+  options: CreateSpringOscillatorSceneOptions = {}
+) {
   const sim = createSpringOscillatorSim();
-  
+
   // 时间缩放因子（播放速度控制）
   let timeScale = 1;
-  
+
   // 状态变化监听器
   const listeners = new Set<() => void>();
-  
+
   function notify(): void {
-    listeners.forEach(fn => fn());
+    listeners.forEach((fn) => fn());
   }
-  
+
   // 生成读数数据（供容器统一刷新）
   function getReadoutItems(): Array<{ label: string; value: string }> {
     const items: Array<{ label: string; value: string }> = [
@@ -36,7 +41,7 @@ export function createSpringOscillatorScene(options: CreateSpringOscillatorScene
       const omega = sim.getOmega(osc.id);
       const period = sim.getPeriod(osc.id);
       // 实时相位角，归一化到 [0°, 360°)
-      let phaseDeg = (osc.state.phase * 180 / Math.PI) % 360;
+      let phaseDeg = ((osc.state.phase * 180) / Math.PI) % 360;
       if (phaseDeg < 0) phaseDeg += 360;
       items.push(
         { label: `#${index + 1} ω`, value: `${omega.toFixed(2)} rad/s` },
@@ -46,26 +51,27 @@ export function createSpringOscillatorScene(options: CreateSpringOscillatorScene
     });
 
     // 如果有两个以上振子正在运行，显示它们之间的相位差
-    const running = sim.oscillators.filter(o => o.isPlaying);
+    const running = sim.oscillators.filter((o) => o.isPlaying);
     if (running.length >= 2) {
       const phaseDiff = sim.getPhaseDifference(running[0].id, running[1].id);
       if (phaseDiff !== null) {
-        const diffDeg = (phaseDiff * 180 / Math.PI).toFixed(0);
+        const diffDeg = ((phaseDiff * 180) / Math.PI).toFixed(0);
         let relation = '';
         if (Math.abs(phaseDiff) < 0.1) relation = '(同相)';
-        else if (Math.abs(Math.abs(phaseDiff) - Math.PI) < 0.1) relation = '(反相)';
+        else if (Math.abs(Math.abs(phaseDiff) - Math.PI) < 0.1)
+          relation = '(反相)';
         items.push({ label: '相位差 φ₂-φ₁', value: `${diffDeg}° ${relation}` });
       }
     }
 
     return items;
   }
-  
+
   // 点击小球切换播放/暂停
   function handleToggleOscillator(id: string): void {
-    const osc = sim.oscillators.find(o => o.id === id);
+    const osc = sim.oscillators.find((o) => o.id === id);
     if (!osc) return;
-    
+
     if (osc.isPlaying) {
       sim.pauseOscillator(id);
     } else {
@@ -73,7 +79,7 @@ export function createSpringOscillatorScene(options: CreateSpringOscillatorScene
     }
     notify();
   }
-  
+
   const viewOptions: SpringOscillatorViewOptions = {
     graphCanvas: options.graphCanvas,
     stageCanvas: options.stageCanvas,
@@ -83,7 +89,7 @@ export function createSpringOscillatorScene(options: CreateSpringOscillatorScene
     demoHints: options.demoHints,
     onToggleOscillator: handleToggleOscillator
   };
-  
+
   const view = createSpringOscillatorView(viewOptions);
 
   return {
@@ -164,12 +170,12 @@ export function createSpringOscillatorScene(options: CreateSpringOscillatorScene
     },
 
     startAll(): void {
-      sim.oscillators.forEach(o => sim.startOscillator(o.id));
+      sim.oscillators.forEach((o) => sim.startOscillator(o.id));
       notify();
     },
 
     pauseAll(): void {
-      sim.oscillators.forEach(o => sim.pauseOscillator(o.id));
+      sim.oscillators.forEach((o) => sim.pauseOscillator(o.id));
       notify();
     },
 
@@ -184,16 +190,16 @@ export function createSpringOscillatorScene(options: CreateSpringOscillatorScene
     attachGraphCanvas(canvas: HTMLCanvasElement): void {
       view.attachGraphCanvas(canvas);
     },
-    
+
     getReadoutItems,
-    
+
     getTransportState(): { isPlaying: boolean; speed: number } {
       return {
-        isPlaying: sim.oscillators.some(o => o.isPlaying),
+        isPlaying: sim.oscillators.some((o) => o.isPlaying),
         speed: timeScale
       };
     },
-    
+
     subscribe(listener: () => void): () => void {
       listeners.add(listener);
       return () => listeners.delete(listener);
@@ -206,4 +212,6 @@ export function createSpringOscillatorScene(options: CreateSpringOscillatorScene
   };
 }
 
-export type SpringOscillatorScene = ReturnType<typeof createSpringOscillatorScene>;
+export type SpringOscillatorScene = ReturnType<
+  typeof createSpringOscillatorScene
+>;

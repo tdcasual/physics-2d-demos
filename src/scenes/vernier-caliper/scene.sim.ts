@@ -34,10 +34,13 @@ export type CaliperState = {
 const OBJECTS: Array<{ name: string; size: number }> = [
   { name: '小球直径', size: 5.24 },
   { name: '金属块长度', size: 12.36 },
-  { name: '管内径', size: 8.50 }
+  { name: '管内径', size: 8.5 }
 ];
 
-function getPrecisionConfig(precision: CaliperPrecision): { divisions: number; length: number } {
+function getPrecisionConfig(precision: CaliperPrecision): {
+  divisions: number;
+  length: number;
+} {
   switch (precision) {
     case 0.1:
       return { divisions: 10, length: 9 };

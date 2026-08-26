@@ -141,13 +141,25 @@ export class SceneAdapter<
           : []
       )
     ]);
+    // 为后插入的 canvas（如图表插槽 attachGraphCanvas）补 role/aria-label。
+    // 观察范围收窄到动画容器与已提供的插槽元素，而非 document.body 整个子树。
+    const labelRoots = Array.from(
+      new Set<HTMLElement>([
+        container,
+        ...Object.values(this.slots ?? {}).filter(
+          (slot): slot is HTMLElement => slot instanceof HTMLElement
+        )
+      ])
+    );
     let canvasIndex = 0;
     const labelCanvases = () => {
-      document.querySelectorAll<HTMLCanvasElement>('canvas').forEach((node) => {
-        node.setAttribute('role', 'img');
-        if (!node.getAttribute('aria-label')) {
-          node.setAttribute('aria-label', `${this.options.meta.title}演示图`);
-        }
+      labelRoots.forEach((rootEl) => {
+        rootEl.querySelectorAll<HTMLCanvasElement>('canvas').forEach((node) => {
+          node.setAttribute('role', 'img');
+          if (!node.getAttribute('aria-label')) {
+            node.setAttribute('aria-label', `${this.options.meta.title}演示图`);
+          }
+        });
       });
     };
     canvases.forEach((node) => {
@@ -162,7 +174,9 @@ export class SceneAdapter<
     });
     labelCanvases();
     const canvasObserver = new MutationObserver(labelCanvases);
-    canvasObserver.observe(document.body, { childList: true, subtree: true });
+    labelRoots.forEach((rootEl) =>
+      canvasObserver.observe(rootEl, { childList: true, subtree: true })
+    );
     this.lifecycle.onDispose(() => canvasObserver.disconnect());
 
     this.transport = createSceneShell({
@@ -181,18 +195,26 @@ export class SceneAdapter<
       ' ': () => {
         if (this.transport?.transport.isPlaying) {
           this.transport?.pause();
+          this.perfMonitor?.stop();
         } else {
           this.transport?.play();
+          this.perfMonitor?.start();
         }
       },
       r: () => {
         this.transport?.reset?.();
+        this.perfMonitor?.stop();
         this.scene?.reset?.();
       },
       t: () => {
         const current = document.documentElement.getAttribute('data-theme');
-        const next = current === 'dark' ? 'light' : 'dark';
-        this.scene?.setTheme(next as Theme);
+        const next = (current === 'dark' ? 'light' : 'dark') as Theme;
+        if (this.options.onToggleTheme) {
+          // 统一走 container.setTheme：同步 container 状态、布局与持久化
+          this.options.onToggleTheme(next);
+          return;
+        }
+        this.scene?.setTheme(next);
         document.documentElement.setAttribute('data-theme', next);
       },
       arrowleft: () => this.scene?.step?.(-0.016),
@@ -231,8 +253,9 @@ export class SceneAdapter<
     this.keyboard.init();
     this.lifecycle.onDispose(() => this.keyboard?.dispose());
 
+    // 性能监控不再常驻采样：仅播放时运行（startAll/键盘空格/autoPlay 启动，
+    // pauseAll/reset 停止），dispose 时彻底停止。
     this.perfMonitor = new PerformanceMonitor();
-    this.perfMonitor.start();
     (window as unknown as Record<string, unknown>).__perfMonitor =
       this.perfMonitor;
     this.lifecycle.onDispose(() => {
@@ -249,14 +272,32 @@ export class SceneAdapter<
     this.lifecycle.onDispose(() => adaptiveFps.dispose());
 
     if (!this._resizeHandlerAdded) {
-      const handleResize = () => {
-        this.scene?.resize();
-        this.scene?.render();
+      // rAF 合帧：同帧内多次触发（window resize + ResizeObserver）只执行一次
+      // resize+render；dispose 时取消挂起的 rAF。
+      let resizeScheduled = false;
+      let resizeRafId: number | null = null;
+      const scheduleResize = () => {
+        if (resizeScheduled) return;
+        resizeScheduled = true;
+        resizeRafId = window.requestAnimationFrame(() => {
+          resizeScheduled = false;
+          resizeRafId = null;
+          this.scene?.resize();
+          this.scene?.render();
+        });
       };
-      window.addEventListener('resize', handleResize);
-      this.lifecycle.onDispose(() =>
-        window.removeEventListener('resize', handleResize)
-      );
+      const cancelScheduledResize = () => {
+        if (resizeRafId !== null) {
+          window.cancelAnimationFrame(resizeRafId);
+          resizeRafId = null;
+        }
+        resizeScheduled = false;
+      };
+      window.addEventListener('resize', scheduleResize);
+      this.lifecycle.onDispose(() => {
+        window.removeEventListener('resize', scheduleResize);
+        cancelScheduledResize();
+      });
 
       // Observe render surface for size changes (sidebar toggle, layout changes, etc.)
       // window.resize doesn't fire on internal layout changes like sidebar toggle.
@@ -268,8 +309,7 @@ export class SceneAdapter<
           if (resizing) return;
           resizing = true;
           try {
-            this.scene?.resize();
-            this.scene?.render();
+            scheduleResize();
           } finally {
             resizing = false;
           }
@@ -298,6 +338,7 @@ export class SceneAdapter<
     // 自动播放：场景挂载后立即启动动画循环
     if (this.options.autoPlay) {
       this.transport?.play();
+      this.perfMonitor?.start();
     }
 
     if (this.scene.subscribe) {
@@ -307,7 +348,6 @@ export class SceneAdapter<
       });
       this.lifecycle.onDispose(() => unsubscribe());
     } else if (this.scene.getReadoutItems) {
-      // eslint-disable-next-line no-console
       console.warn(
         `[scene-adapter] Scene "${this.options.meta.id}" exposes getReadoutItems but not subscribe. ` +
           `Readout panel will not update automatically. ` +
@@ -346,6 +386,27 @@ export class SceneAdapter<
       scene.attachGraphCanvas(canvas);
       // Hidden mobile graph tabs are remeasured when they become visible.
       this._ro?.observe(container);
+      // 共享 resize 路径已改为 rAF 合帧；但 0→非 0 的可见性跃迁（如 mobile-stack
+      // 切到图表 tab）必须立即重排——attach 时面板 display:none 会把 canvas
+      // 量成 1×1 显式 CSS 尺寸，合帧延迟会让它保持数帧甚至错过断言窗口。
+      if (typeof ResizeObserver !== 'undefined') {
+        let lastW = container.clientWidth;
+        let lastH = container.clientHeight;
+        const visibilityRo = new ResizeObserver((entries) => {
+          const entry = entries[entries.length - 1];
+          const w = entry?.contentRect.width ?? 0;
+          const h = entry?.contentRect.height ?? 0;
+          const becameVisible = (lastW === 0 || lastH === 0) && w > 0 && h > 0;
+          lastW = w;
+          lastH = h;
+          if (becameVisible) {
+            this.scene?.resize();
+            this.scene?.render();
+          }
+        });
+        visibilityRo.observe(container);
+        this.lifecycle.onDispose(() => visibilityRo.disconnect());
+      }
     }
   }
 
@@ -377,16 +438,19 @@ export class SceneAdapter<
 
   startAll(): void {
     this.transport?.play();
+    this.perfMonitor?.start();
     this.scene?.startAll?.();
   }
 
   pauseAll(): void {
     this.transport?.pause();
+    this.perfMonitor?.stop();
     this.scene?.pauseAll?.();
   }
 
   reset(): void {
     this.transport?.reset();
+    this.perfMonitor?.stop();
     this.scene?.reset?.();
     this.scene?.render();
     const c = this.controls as { refresh?(): void } | null;

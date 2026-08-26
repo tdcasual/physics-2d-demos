@@ -31,7 +31,7 @@ export function drawNetCharges(
   const isPositive = charge > 0;
 
   for (let i = 0; i < count; i++) {
-    const angle = (i / count) * Math.PI * 2 + (Math.PI / count);
+    const angle = (i / count) * Math.PI * 2 + Math.PI / count;
     const dist = spreadRadius * randomDistCache[i % RANDOM_CACHE_SIZE];
     const px = centerX + Math.cos(angle) * dist;
     const py = centerY + Math.sin(angle) * dist;
@@ -56,13 +56,21 @@ function drawChargeParticle(
   // 微弱 glow
   ctx.shadowBlur = 6 * s;
   ctx.shadowColor = isPositive
-    ? isDark ? 'rgba(239,68,68,0.4)' : 'rgba(239,68,68,0.3)'
-    : isDark ? 'rgba(59,130,246,0.4)' : 'rgba(59,130,246,0.3)';
+    ? isDark
+      ? 'rgba(239,68,68,0.4)'
+      : 'rgba(239,68,68,0.3)'
+    : isDark
+      ? 'rgba(59,130,246,0.4)'
+      : 'rgba(59,130,246,0.3)';
 
   // 主体
   ctx.fillStyle = isPositive
-    ? isDark ? 'rgba(239,68,68,0.9)' : 'rgba(220,50,50,0.85)'
-    : isDark ? 'rgba(59,130,246,0.9)' : 'rgba(40,100,220,0.85)';
+    ? isDark
+      ? 'rgba(239,68,68,0.9)'
+      : 'rgba(220,50,50,0.85)'
+    : isDark
+      ? 'rgba(59,130,246,0.9)'
+      : 'rgba(40,100,220,0.85)';
   ctx.beginPath();
   ctx.arc(x, y, r, 0, Math.PI * 2);
   ctx.fill();
@@ -135,9 +143,7 @@ export function drawTransferArrow(
   s: number
 ): void {
   ctx.save();
-  ctx.strokeStyle = isDark
-    ? 'rgba(250,204,21,0.7)'
-    : 'rgba(202,138,4,0.7)';
+  ctx.strokeStyle = isDark ? 'rgba(250,204,21,0.7)' : 'rgba(202,138,4,0.7)';
   ctx.lineWidth = Math.max(1, 2 * s);
   ctx.setLineDash([6 * s, 4 * s]);
   ctx.lineCap = 'round';
@@ -169,9 +175,7 @@ export function drawTransferArrow(
   ctx.stroke();
 
   // 标签
-  ctx.fillStyle = isDark
-    ? 'rgba(250,204,21,0.9)'
-    : 'rgba(202,138,4,0.9)';
+  ctx.fillStyle = isDark ? 'rgba(250,204,21,0.9)' : 'rgba(202,138,4,0.9)';
   ctx.font = `bold ${Math.max(9, Math.round(11 * s))}px "Noto Sans SC", sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';

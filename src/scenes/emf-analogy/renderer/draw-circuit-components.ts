@@ -3,7 +3,8 @@ import type { CircuitColors } from './circuit-colors';
 /** 电池符号 (长线正极 + 短线负极) */
 export function drawBattery(
   ctx: CanvasRenderingContext2D,
-  x: number, y: number,
+  x: number,
+  y: number,
   size: number,
   colors: CircuitColors
 ): void {
@@ -49,8 +50,10 @@ export function drawBattery(
 /** 电阻符号 (锯齿矩形) */
 export function drawResistor(
   ctx: CanvasRenderingContext2D,
-  x: number, y: number,
-  w: number, h: number,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
   colors: CircuitColors,
   label: string
 ): void {
@@ -92,7 +95,8 @@ export function drawResistor(
 /** 开关符号 */
 export function drawSwitch(
   ctx: CanvasRenderingContext2D,
-  x: number, y: number,
+  x: number,
+  y: number,
   size: number,
   isOn: boolean,
   colors: CircuitColors
@@ -145,7 +149,8 @@ export function drawSwitch(
 /** 电表（圆形表盘 + 指针） */
 export function drawMeter(
   ctx: CanvasRenderingContext2D,
-  cx: number, cy: number,
+  cx: number,
+  cy: number,
   radius: number,
   value: number,
   maxValue: number,

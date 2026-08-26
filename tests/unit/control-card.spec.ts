@@ -46,14 +46,51 @@ describe('createControlCard', () => {
     expect(card.body.style.display).not.toBe('none');
   });
 
-  it('should not toggle when clicking header outside toggle button', () => {
+  it('should toggle collapse when clicking anywhere on the header', () => {
     const card = createControlCard('标题');
     // Click on the header element itself, not the toggle button
     const clickEvent = new MouseEvent('click', { bubbles: true });
     Object.defineProperty(clickEvent, 'target', { value: card.header });
     card.header.dispatchEvent(clickEvent);
 
+    expect(card.element.classList.contains('collapsed')).toBe(true);
+    expect(card.body.style.display).toBe('none');
+  });
+
+  it('should not toggle when clicking header action buttons', () => {
+    const btn = document.createElement('button');
+    btn.textContent = 'Action';
+    const card = createControlCard('标题', { headerActions: [btn] });
+
+    btn.click();
     expect(card.element.classList.contains('collapsed')).toBe(false);
+  });
+
+  it('should expose aria-expanded / aria-controls on the toggle button', () => {
+    const card = createControlCard('标题');
+    const toggle = card.header.querySelector(
+      '[data-testid="card-toggle"]'
+    ) as HTMLButtonElement;
+
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(toggle.getAttribute('aria-controls')).toBe(card.body.id);
+    expect(card.body.id).toBeTruthy();
+
+    toggle.click();
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    toggle.click();
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('should sync aria-expanded when collapsed programmatically', () => {
+    const card = createControlCard('标题', { defaultCollapsed: true });
+    const toggle = card.header.querySelector(
+      '[data-testid="card-toggle"]'
+    ) as HTMLButtonElement;
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+
+    card.setCollapsed(false);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
   });
 
   it('should set collapsed programmatically', () => {

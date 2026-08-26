@@ -2,17 +2,23 @@ import { describe, it, expect } from 'vitest';
 import {
   buildCoordSystem,
   worldToScreen,
-  computeWorldBounds,
+  computeWorldBounds
 } from '../../src/scenes/projectile/renderer/coords';
 import { drawAxes } from '../../src/scenes/projectile/renderer/draw-axes';
 import { drawBackground } from '../../src/scenes/projectile/renderer/draw-background';
 import { drawProjectile } from '../../src/scenes/projectile/renderer/draw-projectile';
 import { drawTrajectory } from '../../src/scenes/projectile/renderer/draw-trajectory';
 
-import type { CoordSystem, WorldPoint } from '../../src/scenes/projectile/renderer/types';
+import type {
+  CoordSystem,
+  WorldPoint
+} from '../../src/scenes/projectile/renderer/types';
 import type { ProjectileState } from '../../src/scenes/projectile/scene.sim';
 
-function makeCtx(): { ctx: CanvasRenderingContext2D; canvas: HTMLCanvasElement } {
+function makeCtx(): {
+  ctx: CanvasRenderingContext2D;
+  canvas: HTMLCanvasElement;
+} {
   const canvas = document.createElement('canvas');
   canvas.width = 800;
   canvas.height = 600;
@@ -21,7 +27,14 @@ function makeCtx(): { ctx: CanvasRenderingContext2D; canvas: HTMLCanvasElement }
 
 function makeDrawContext() {
   const { ctx } = makeCtx();
-  return { ctx, width: 800, height: 600, theme: 'dark' as const, responsiveScale: 1, contentScale: 1 };
+  return {
+    ctx,
+    width: 800,
+    height: 600,
+    theme: 'dark' as const,
+    responsiveScale: 1,
+    contentScale: 1
+  };
 }
 
 describe('projectile renderer', () => {
@@ -56,7 +69,7 @@ describe('projectile renderer', () => {
       const state: ProjectileState = { x: 80, y: 40, vx: 10, vy: 5, t: 1 };
       const trail: WorldPoint[] = [
         { x: 10, y: 20 },
-        { x: 30, y: 35 },
+        { x: 30, y: 35 }
       ];
       expect(() => computeWorldBounds(state, trail)).not.toThrow();
     });
@@ -65,7 +78,7 @@ describe('projectile renderer', () => {
       const state: ProjectileState = { x: 80, y: 40, vx: 10, vy: 5, t: 1 };
       const trail: WorldPoint[] = [
         { x: 10, y: 20 },
-        { x: 30, y: 35 },
+        { x: 30, y: 35 }
       ];
       const bounds = computeWorldBounds(state, trail);
       expect(bounds.maxX).toBe(80);
@@ -92,14 +105,18 @@ describe('projectile renderer', () => {
       const context = makeDrawContext();
       const position: WorldPoint = { x: 10, y: 20 };
       const coords: CoordSystem = { originX: 60, originY: 550, scale: 5 };
-      expect(() => drawProjectile(context, position, { vx: 15, vy: 10 }, coords, false)).not.toThrow();
+      expect(() =>
+        drawProjectile(context, position, { vx: 15, vy: 10 }, coords, false)
+      ).not.toThrow();
     });
 
     it('draws landed projectile without throwing', () => {
       const context = makeDrawContext();
       const position: WorldPoint = { x: 50, y: 0 };
       const coords: CoordSystem = { originX: 60, originY: 550, scale: 5 };
-      expect(() => drawProjectile(context, position, { vx: 0, vy: 0 }, coords, true)).not.toThrow();
+      expect(() =>
+        drawProjectile(context, position, { vx: 0, vy: 0 }, coords, true)
+      ).not.toThrow();
     });
   });
 
@@ -109,7 +126,7 @@ describe('projectile renderer', () => {
       const trail: WorldPoint[] = [
         { x: 0, y: 0 },
         { x: 5, y: 10 },
-        { x: 10, y: 15 },
+        { x: 10, y: 15 }
       ];
       const coords: CoordSystem = { originX: 60, originY: 550, scale: 5 };
       expect(() => drawTrajectory(context, trail, coords)).not.toThrow();

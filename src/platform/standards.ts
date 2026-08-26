@@ -72,4 +72,3 @@ export function getRenderTokens(scale: number = 1.0): TeachingStandards {
     }
   };
 }
-

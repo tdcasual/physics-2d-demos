@@ -107,8 +107,12 @@ export function createFieldLinesView(
     drawEquipotentialLines(ctx, charges, width, height, s, isDark);
 
     // 4. 生成并绘制连续电场线
-    const adjustedDensity = s < 0.5 ? Math.max(1, Math.round(density * 0.6)) : density;
-    const paths = generateFieldLines(charges, adjustedDensity, { width, height });
+    const adjustedDensity =
+      s < 0.5 ? Math.max(1, Math.round(density * 0.6)) : density;
+    const paths = generateFieldLines(charges, adjustedDensity, {
+      width,
+      height
+    });
     drawFieldLines(ctx, paths, s, isDark);
 
     // 5. 立体电荷球

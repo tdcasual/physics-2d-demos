@@ -176,7 +176,7 @@ export function createSceneShell(options: SceneShellOptions = {}) {
       stopFrameLoop();
     },
     stepOnce(onStep?: (dt: number) => void): void {
-      const dt = options.stepSeconds ?? (1 / 60);
+      const dt = options.stepSeconds ?? 1 / 60;
       if (onStep) {
         onStep(dt);
       } else {
@@ -195,7 +195,10 @@ export function createSceneShell(options: SceneShellOptions = {}) {
       stepper.reset();
       stopFrameLoop();
       if (typeof document !== 'undefined') {
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        document.removeEventListener(
+          'visibilitychange',
+          handleVisibilityChange
+        );
       }
     }
   };

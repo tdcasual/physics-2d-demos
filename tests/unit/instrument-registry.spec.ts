@@ -69,7 +69,11 @@ describe('instrument-registry', () => {
   });
 
   it('keeps manifest paths in sync with files on disk', () => {
-    expect(getManifest().map((entry) => entry.modulePath).sort()).toEqual([
+    expect(
+      getManifest()
+        .map((entry) => entry.modulePath)
+        .sort()
+    ).toEqual([
       '/src/instruments/interference-vernier-caliper/index.ts',
       '/src/instruments/micrometer-eyepiece/index.ts',
       '/src/instruments/spiral-micrometer/index.ts',

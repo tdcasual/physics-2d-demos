@@ -1,20 +1,66 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>双缝干涉 — 物理演示</title>
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <link rel="manifest" href="/manifest.json" />
-  <meta name="theme-color" content="#0f172a" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-</head>
-<body class="bg-slate-900 text-slate-200">
-  <div id="app" class="h-screen flex flex-col">
-    <canvas id="scene-canvas" class="flex-1 w-full"></canvas>
-    <div id="controls"></div>
-  </div>
-  <script type="module" src="/src/scenes/double-slit/page.ts"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // 阻止 theme flash：在 JS 运行前从统一主题存储或系统偏好恢复主题
+      (function () {
+        function parseTheme(raw) {
+          if (!raw) return null;
+          if (raw === 'light' || raw === 'dark' || raw === 'system') return raw;
+          try {
+            var parsed = JSON.parse(raw);
+            if (
+              parsed &&
+              parsed.v === 1 &&
+              (parsed.theme === 'light' ||
+                parsed.theme === 'dark' ||
+                parsed.theme === 'system')
+            ) {
+              return parsed.theme;
+            }
+          } catch (e) {}
+          return null;
+        }
+        try {
+          var theme = parseTheme(localStorage.getItem('physics-lab-theme'));
+          // 兼容旧版容器状态中的 theme 字段
+          if (!theme) {
+            theme = parseTheme(
+              localStorage.getItem('physics-demos-container-state')
+            );
+          }
+          if (theme === 'system') {
+            theme = window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light';
+          }
+          if (theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            return;
+          }
+        } catch (e) {}
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      })();
+    </script>
+    <title>双缝干涉 - 物理演示</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+  </head>
+  <body class="bg-slate-900 text-slate-200">
+    <div id="app" class="h-screen flex flex-col">
+      <canvas id="scene-canvas" class="flex-1 w-full"></canvas>
+      <div id="controls"></div>
+    </div>
+    <script type="module" src="/src/scenes/double-slit/page.ts"></script>
+  </body>
 </html>

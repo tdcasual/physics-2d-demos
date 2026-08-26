@@ -197,6 +197,8 @@ src/
 ```
 
 > **注意**：`split-right/index.ts` 在文档 v0.1 中被列出，但实际并未创建。`split-right.ts` 和 `split-right.css` 直接位于该目录下。
+>
+> **注意（2026-08）**：`layout-primitives.css` 已删除。其选择器（`.layout-region`、`[data-region]`、`.resizer`）与实际布局 DOM 契约不符、从未被引用；唯一有实际价值的 `prefers-reduced-motion` 规则已并入 `src/styles/shared/responsive-demo.css`（场景页样式链）。
 
 ## 4. 现有代码保留策略
 

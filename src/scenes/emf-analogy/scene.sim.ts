@@ -37,7 +37,7 @@ function openingToResistance(opening: number): number {
   if (opening <= 0) return Infinity;
   // 开度 0.5 → R = 2.0Ω，此时 I = 1.5 / (2.0 + 0.5) = 0.6A
   // 开度 1.0 → R = 0Ω，此时 I = 1.5 / 0.5 = 3.0A (短路)
-  return 2.0 * (1 - opening) / opening;
+  return (2.0 * (1 - opening)) / opening;
 }
 
 export function createEmfAnalogySim() {
@@ -121,9 +121,7 @@ export function createEmfAnalogySim() {
       const safeDt = Math.max(0, dt);
       if (safeDt <= 0) return;
       // 相位用于驱动动画旋转，与电流成正比
-      const speed = state.isSystemOn
-        ? 0.5 + state.currentI * 3.0
-        : 0.02;
+      const speed = state.isSystemOn ? 0.5 + state.currentI * 3.0 : 0.02;
       state.phase += safeDt * speed;
     }
   };

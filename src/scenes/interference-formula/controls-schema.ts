@@ -18,9 +18,9 @@ export const interferenceFormulaControlsSchema: ControlsSchema = {
           max: 700,
           step: 1,
           value: 650,
-          unit: 'nm',
-        },
-      ],
+          unit: 'nm'
+        }
+      ]
     },
     {
       title: '参数',
@@ -34,7 +34,7 @@ export const interferenceFormulaControlsSchema: ControlsSchema = {
           max: 3.0,
           step: 0.1,
           value: 1.0,
-          unit: 'm',
+          unit: 'm'
         },
         {
           type: 'slider',
@@ -44,9 +44,9 @@ export const interferenceFormulaControlsSchema: ControlsSchema = {
           max: 1.0,
           step: 0.05,
           value: 0.5,
-          unit: 'mm',
-        },
-      ],
+          unit: 'mm'
+        }
+      ]
     },
     {
       title: '推导步骤',
@@ -60,11 +60,11 @@ export const interferenceFormulaControlsSchema: ControlsSchema = {
             { id: 'geometry', label: '1. 几何结构' },
             { id: 'path-diff', label: '2. 光程差' },
             { id: 'small-angle', label: '3. 小角近似' },
-            { id: 'result', label: '4. 结论' },
+            { id: 'result', label: '4. 结论' }
           ],
-          initialActive: 'geometry',
-        },
-      ],
-    },
-  ],
+          initialActive: 'geometry'
+        }
+      ]
+    }
+  ]
 };

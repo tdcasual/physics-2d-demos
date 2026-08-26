@@ -4,16 +4,25 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#faf8f5" />
-    <meta name="description" content="交互式物理教学演示平台 - 从古希腊到现代物理，让张博士带你领略科学之美" />
-    <meta name="keywords" content="物理, 教学, 模拟, 实验, 力学, 电磁学, 交互式学习" />
+    <meta
+      name="description"
+      content="交互式物理教学演示平台 - 从古希腊到现代物理，让张博士带你领略科学之美"
+    />
+    <meta
+      name="keywords"
+      content="物理, 教学, 模拟, 实验, 力学, 电磁学, 交互式学习"
+    />
     <meta name="author" content="张博士的物理实验室" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';" />
-    
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';"
+    />
+
     <!-- Open Graph -->
     <meta property="og:title" content="物理实验室 - 探索物理学的奇妙世界" />
     <meta property="og:description" content="交互式物理教学演示平台" />
     <meta property="og:type" content="website" />
-    
+
     <!-- Favicon -->
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="manifest" href="/manifest.json" />
@@ -24,19 +33,63 @@
     <meta name="apple-mobile-web-app-title" content="物理实验室" />
 
     <title>物理实验室 - 探索物理学的奇妙世界</title>
-    
+
+    <script>
+      // 阻止 theme flash：在 JS 运行前从统一主题存储或系统偏好恢复主题
+      (function () {
+        function parseTheme(raw) {
+          if (!raw) return null;
+          if (raw === 'light' || raw === 'dark' || raw === 'system') return raw;
+          try {
+            var parsed = JSON.parse(raw);
+            if (
+              parsed &&
+              parsed.v === 1 &&
+              (parsed.theme === 'light' ||
+                parsed.theme === 'dark' ||
+                parsed.theme === 'system')
+            ) {
+              return parsed.theme;
+            }
+          } catch (e) {}
+          return null;
+        }
+        try {
+          var theme = parseTheme(localStorage.getItem('physics-lab-theme'));
+          // 兼容旧版容器状态中的 theme 字段
+          if (!theme) {
+            theme = parseTheme(
+              localStorage.getItem('physics-demos-container-state')
+            );
+          }
+          if (theme === 'system') {
+            theme = window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light';
+          }
+          if (theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            return;
+          }
+        } catch (e) {}
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      })();
+    </script>
+
     <style>
       /* 关键CSS - 防止闪烁 */
       html {
         background-color: #faf8f5;
       }
-      
+
       @media (prefers-color-scheme: dark) {
         html {
           background-color: #0f172a;
         }
       }
-      
+
       /* 加载占位符 */
       #loading-placeholder {
         position: fixed;
@@ -49,12 +102,12 @@
         z-index: 9999;
         transition: opacity 0.3s ease;
       }
-      
+
       #loading-placeholder.hidden {
         opacity: 0;
         pointer-events: none;
       }
-      
+
       .loading-spinner {
         width: 48px;
         height: 48px;
@@ -63,29 +116,34 @@
         border-radius: 50%;
         animation: spin 1s linear infinite;
       }
-      
+
       .loading-text {
         margin-top: 16px;
-        font-family: system-ui, -apple-system, sans-serif;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
         color: #636e72;
         font-size: 14px;
       }
-      
+
       @keyframes spin {
-        to { transform: rotate(360deg); }
+        to {
+          transform: rotate(360deg);
+        }
       }
-      
+
       /* 深色模式加载占位符 */
       @media (prefers-color-scheme: dark) {
         #loading-placeholder {
           background: #0f172a;
         }
-        
+
         .loading-spinner {
           border-color: #2d3339;
           border-top-color: #ff8c69;
         }
-        
+
         .loading-text {
           color: #b2bec3;
         }
@@ -98,28 +156,9 @@
       <div class="loading-spinner"></div>
       <div class="loading-text">正在准备实验室...</div>
     </div>
-    
+
     <!-- React 挂载点 -->
     <div id="app"></div>
-    
-    <script>
-      // 阻止 theme flash：在 JS 运行前从 localStorage 或系统偏好恢复主题
-      (function() {
-        var theme = localStorage.getItem('physics-demos-container-state');
-        if (theme) {
-          try {
-            var parsed = JSON.parse(theme);
-            if (parsed.theme) {
-              document.documentElement.setAttribute('data-theme', parsed.theme);
-              return;
-            }
-          } catch (e) {}
-        }
-        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-          document.documentElement.setAttribute('data-theme', 'dark');
-        }
-      })();
-    </script>
 
     <script type="module" src="/src/app/main.tsx"></script>
 
@@ -129,7 +168,7 @@
         var placeholder = document.getElementById('loading-placeholder');
         if (placeholder) {
           placeholder.classList.add('hidden');
-          setTimeout(function() {
+          setTimeout(function () {
             placeholder.remove();
           }, 300);
         }

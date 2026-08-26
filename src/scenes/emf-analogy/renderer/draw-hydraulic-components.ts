@@ -3,7 +3,8 @@ import type { WaterColors } from './water-colors';
 /* ── 水泵绘制 ── */
 export function drawPump(
   ctx: CanvasRenderingContext2D,
-  x: number, y: number,
+  x: number,
+  y: number,
   size: number,
   rotation: number,
   colors: WaterColors
@@ -51,7 +52,8 @@ export function drawPump(
 /* ── 水轮机（外阻）绘制 ── */
 export function drawTurbine(
   ctx: CanvasRenderingContext2D,
-  x: number, y: number,
+  x: number,
+  y: number,
   size: number,
   rotation: number,
   loadRatio: number, // 0~1, 阻力越大转得越慢
@@ -107,7 +109,8 @@ export function drawTurbine(
 /* ── 阀门（开关）绘制 ── */
 export function drawValve(
   ctx: CanvasRenderingContext2D,
-  x: number, y: number,
+  x: number,
+  y: number,
   size: number,
   isOpen: boolean,
   colors: WaterColors

@@ -18,11 +18,19 @@ export function drawFieldLinesFromPoint(
   const isPositive = charge > 0;
   const lineCount = Math.min(12, Math.max(3, absQ * 3));
   const color = isPositive
-    ? isDark ? 'rgba(239,68,68,0.3)' : 'rgba(239,68,68,0.25)'
-    : isDark ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.25)';
+    ? isDark
+      ? 'rgba(239,68,68,0.3)'
+      : 'rgba(239,68,68,0.25)'
+    : isDark
+      ? 'rgba(59,130,246,0.3)'
+      : 'rgba(59,130,246,0.25)';
   const arrowColor = isPositive
-    ? isDark ? 'rgba(239,68,68,0.5)' : 'rgba(239,68,68,0.4)'
-    : isDark ? 'rgba(59,130,246,0.5)' : 'rgba(59,130,246,0.4)';
+    ? isDark
+      ? 'rgba(239,68,68,0.5)'
+      : 'rgba(239,68,68,0.4)'
+    : isDark
+      ? 'rgba(59,130,246,0.5)'
+      : 'rgba(59,130,246,0.4)';
 
   ctx.save();
   ctx.strokeStyle = color;
@@ -92,9 +100,7 @@ export function drawFieldLinesBetween(
   const dist = Math.hypot(x2 - x1, y2 - y1);
 
   ctx.save();
-  ctx.strokeStyle = isDark
-    ? 'rgba(148,163,184,0.15)'
-    : 'rgba(71,85,105,0.12)';
+  ctx.strokeStyle = isDark ? 'rgba(148,163,184,0.15)' : 'rgba(71,85,105,0.12)';
   ctx.lineWidth = Math.max(0.3, 0.5 * s);
   ctx.setLineDash([4 * s, 4 * s]);
 

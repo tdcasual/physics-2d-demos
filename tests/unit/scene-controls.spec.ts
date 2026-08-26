@@ -7,7 +7,8 @@ import {
   createButtonGrid,
   createPresetButtonGroup,
   createTransportRow,
-  createSceneSelector
+  createSceneSelector,
+  createToggleRow
 } from '../../src/ui/components/scene-controls';
 
 describe('SceneControls', () => {
@@ -24,10 +25,47 @@ describe('SceneControls', () => {
       });
 
       expect(row.tagName).toBe('DIV');
-      const spans = row.querySelectorAll('span');
-      expect(spans[0]?.textContent).toBe('速度');
+      const labelEl = row.querySelector('label');
+      expect(labelEl?.textContent).toBe('速度');
       expect(row.querySelector('input[type="range"]')).not.toBeNull();
-      expect(spans[1]?.textContent).toBe('50m/s');
+      const valueEl = row.querySelector('span');
+      expect(valueEl?.textContent).toBe('50m/s');
+    });
+
+    it('should associate the label with the slider via htmlFor/id', () => {
+      const row = createSliderRow('速度', {
+        min: 0,
+        max: 100,
+        step: 1,
+        value: 50
+      });
+
+      const labelEl = row.querySelector('label') as HTMLLabelElement;
+      const slider = row.querySelector(
+        'input[type="range"]'
+      ) as HTMLInputElement;
+      expect(slider.id).toBeTruthy();
+      expect(labelEl.htmlFor).toBe(slider.id);
+    });
+
+    it('should generate unique slider ids across instances', () => {
+      const a = createSliderRow('速度', {
+        min: 0,
+        max: 100,
+        step: 1,
+        value: 50
+      });
+      const b = createSliderRow('速度', {
+        min: 0,
+        max: 100,
+        step: 1,
+        value: 50
+      });
+      const idA = a.querySelector('input')?.id;
+      const idB = b.querySelector('input')?.id;
+      expect(idA).toBeTruthy();
+      expect(idB).toBeTruthy();
+      expect(idA).not.toBe(idB);
     });
 
     it('should call onChange when slider value changes', () => {
@@ -44,6 +82,55 @@ describe('SceneControls', () => {
       input.value = '60';
       input.dispatchEvent(new Event('input'));
       expect(onChange).toHaveBeenCalledWith(60);
+    });
+  });
+
+  describe('createToggleRow', () => {
+    it('should expose an accessible name via aria-labelledby', () => {
+      const row = createToggleRow('显示轨迹', { value: true });
+
+      const labelEl = row.querySelector('span') as HTMLSpanElement;
+      const track = row.querySelector(
+        'button[role="switch"]'
+      ) as HTMLButtonElement;
+      expect(labelEl.textContent).toBe('显示轨迹');
+      expect(labelEl.id).toBeTruthy();
+      expect(track.getAttribute('aria-labelledby')).toBe(labelEl.id);
+      expect(track.getAttribute('aria-checked')).toBe('true');
+    });
+
+    it('should generate unique label ids across instances', () => {
+      const a = createToggleRow('显示轨迹', { value: false });
+      const b = createToggleRow('显示轨迹', { value: false });
+      const idA = a.querySelector('span')?.id;
+      const idB = b.querySelector('span')?.id;
+      expect(idA).toBeTruthy();
+      expect(idB).toBeTruthy();
+      expect(idA).not.toBe(idB);
+    });
+
+    it('should carry the hit-area expansion class', () => {
+      const row = createToggleRow('显示轨迹', { value: false });
+      const track = row.querySelector(
+        'button[role="switch"]'
+      ) as HTMLButtonElement;
+      expect(track.classList.contains('toggle-switch-btn')).toBe(true);
+    });
+
+    it('should toggle aria-checked and call onChange on click', () => {
+      const onChange = vi.fn();
+      const row = createToggleRow('显示轨迹', { value: false, onChange });
+      const track = row.querySelector(
+        'button[role="switch"]'
+      ) as HTMLButtonElement;
+
+      track.click();
+      expect(track.getAttribute('aria-checked')).toBe('true');
+      expect(onChange).toHaveBeenCalledWith(true);
+
+      track.click();
+      expect(track.getAttribute('aria-checked')).toBe('false');
+      expect(onChange).toHaveBeenCalledWith(false);
     });
   });
 
@@ -196,6 +283,96 @@ describe('SceneControls', () => {
       preset.setActive('b');
       const labelSpan = buttons[1].querySelector('span') as HTMLElement;
       expect(labelSpan.style.color).toContain('var(--text-primary)');
+    });
+
+    it('should label the radiogroup with the provided label or a default', () => {
+      const mount = document.createElement('div');
+      createPresetButtonGroup(mount, [{ id: 'a', label: 'A' }], {
+        label: '预设场景',
+        onSelect: () => {}
+      });
+      expect(
+        mount.querySelector('[role="radiogroup"]')!.getAttribute('aria-label')
+      ).toBe('预设场景');
+
+      const mount2 = document.createElement('div');
+      createPresetButtonGroup(mount2, [{ id: 'a', label: 'A' }], {
+        onSelect: () => {}
+      });
+      expect(
+        mount2.querySelector('[role="radiogroup"]')!.getAttribute('aria-label')
+      ).toBe('预设选项');
+    });
+
+    it('should navigate with arrow keys and Home/End (roving tabindex)', () => {
+      const onSelect = vi.fn();
+      const mount = document.createElement('div');
+      document.body.appendChild(mount);
+      createPresetButtonGroup(
+        mount,
+        [
+          { id: 'a', label: 'A' },
+          { id: 'b', label: 'B' },
+          { id: 'c', label: 'C' }
+        ],
+        { initialActive: 'a', onSelect }
+      );
+      const buttons = Array.from(mount.querySelectorAll('button'));
+      const pressKey = (btn: HTMLButtonElement, key: string) =>
+        btn.dispatchEvent(
+          new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })
+        );
+
+      // ArrowRight: 移动焦点并选中下一项
+      pressKey(buttons[0], 'ArrowRight');
+      expect(onSelect).toHaveBeenCalledWith('b');
+      expect(buttons[1].getAttribute('aria-checked')).toBe('true');
+      expect(buttons[1].tabIndex).toBe(0);
+      expect(buttons[0].tabIndex).toBe(-1);
+      expect(document.activeElement).toBe(buttons[1]);
+
+      // ArrowLeft 回到上一项
+      pressKey(buttons[1], 'ArrowLeft');
+      expect(onSelect).toHaveBeenLastCalledWith('a');
+
+      // ArrowDown / ArrowUp 与左右方向等价（含环绕）
+      pressKey(buttons[0], 'ArrowUp');
+      expect(onSelect).toHaveBeenLastCalledWith('c');
+      pressKey(buttons[2], 'ArrowDown');
+      expect(onSelect).toHaveBeenLastCalledWith('a');
+
+      // Home / End 跳转首末项
+      pressKey(buttons[0], 'End');
+      expect(onSelect).toHaveBeenLastCalledWith('c');
+      expect(document.activeElement).toBe(buttons[2]);
+      pressKey(buttons[2], 'Home');
+      expect(onSelect).toHaveBeenLastCalledWith('a');
+      expect(document.activeElement).toBe(buttons[0]);
+
+      mount.remove();
+    });
+
+    it('should remove keydown listeners on dispose', () => {
+      const onSelect = vi.fn();
+      const mount = document.createElement('div');
+      const preset = createPresetButtonGroup(
+        mount,
+        [
+          { id: 'a', label: 'A' },
+          { id: 'b', label: 'B' }
+        ],
+        { initialActive: 'a', onSelect }
+      );
+      preset.dispose();
+      const buttons = mount.querySelectorAll('button');
+      buttons[0].dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'ArrowRight',
+          bubbles: true,
+          cancelable: true
+        })
+      );
+      expect(onSelect).not.toHaveBeenCalled();
     });
   });
 

@@ -11,6 +11,12 @@ import { registerAllLayouts } from './layouts/auto-register';
 import { layoutRegistry } from './layouts/registry';
 import { SceneAdapter } from './scene-adapter';
 import { restoreSceneParams, persistSceneParams } from './url-sync';
+import {
+  getStoredTheme,
+  resolveThemePreference,
+  resolveSystemTheme,
+  storeTheme
+} from './theme-store';
 import type {
   SceneInstance,
   ScenePageOptions
@@ -32,13 +38,17 @@ export function bootScenePage<TScene extends SceneInstance>(
   options: ScenePageOptions<TScene>,
   mountSelector: string = '#app'
 ): void {
+  // 主题解析优先级：?theme= 参数 > theme-store 存储（system 取系统偏好）> 系统偏好
   const requestedTheme = new URLSearchParams(window.location.search).get(
     'theme'
   );
+  const storedTheme = getStoredTheme();
   const defaultTheme =
     requestedTheme === 'dark' || requestedTheme === 'light'
       ? requestedTheme
-      : 'light';
+      : storedTheme
+        ? resolveThemePreference(storedTheme)
+        : resolveSystemTheme();
   document.documentElement.setAttribute('data-theme', defaultTheme);
 
   // 恢复之前保存的参数（URL 无参数时）
@@ -77,9 +87,17 @@ export function bootScenePage<TScene extends SceneInstance>(
     }
   });
 
-  // 创建场景适配器
+  // 场景页主题切换统一持久化到 theme-store（全站单一事实源，
+  // 首页 useTheme 与场景页防闪烁脚本读取同一个 key）
+  container.on('theme:change', ({ to }) => storeTheme(to));
+
+  // 创建场景适配器（注入主题切换回调，让 t 快捷键走 container 统一路径）
   const adapter = new SceneAdapter<TScene>(
-    { ...options, preferredLayout },
+    {
+      ...options,
+      preferredLayout,
+      onToggleTheme: (next) => container.setTheme(next)
+    },
     (text) => container.currentLayout?.updateStatus?.(text)
   );
 

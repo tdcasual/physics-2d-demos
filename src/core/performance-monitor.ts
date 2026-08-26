@@ -66,6 +66,10 @@ export class PerformanceMonitor {
   start(): void {
     if (this.running) return;
     this.running = true;
+    // stop() 会摘除 visibility 监听；恢复采样时重新挂上
+    if (!this._visibilityHandler) {
+      this._setupVisibilityHandler();
+    }
     this.lastTime = performance.now();
     this.rafId = requestAnimationFrame(this.loop);
   }
@@ -145,6 +149,10 @@ export class PerformanceMonitor {
     };
   }
 
+  /**
+   * 停止采样并清空帧样本（场景暂停时由 SceneAdapter 调用）。
+   * 可通过 start() 恢复采样。
+   */
   stop(): void {
     this.running = false;
     cancelAnimationFrame(this.rafId);

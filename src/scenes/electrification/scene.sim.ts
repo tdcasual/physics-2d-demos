@@ -33,7 +33,10 @@ const SCENE_EXPLANATIONS: Record<ElectrificationScene, string[]> = {
   contact: ['两个导体接触前电荷不均。', '接触后电荷重新分配达到平衡。']
 };
 
-function chargeState(scene: ElectrificationScene, stepIndex: number): { left: number; right: number } {
+function chargeState(
+  scene: ElectrificationScene,
+  stepIndex: number
+): { left: number; right: number } {
   if (scene === 'friction') {
     if (stepIndex === 0) return { left: 0, right: 0 };
     if (stepIndex === 1) return { left: -2, right: 2 };
@@ -65,7 +68,8 @@ export function createElectrificationSim() {
   function buildState(): ElectrificationState {
     const charges = chargeState(scene, stepIndex);
     const actions = SCENE_LABELS[scene];
-    const nextActionLabel = stepIndex < actions.length ? actions[stepIndex] : '无';
+    const nextActionLabel =
+      stepIndex < actions.length ? actions[stepIndex] : '无';
     return {
       scene,
       stepIndex,

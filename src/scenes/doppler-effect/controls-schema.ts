@@ -18,7 +18,7 @@ export const dopplerControlsSchema: ControlsSchema = {
           max: 5,
           step: 0.1,
           value: 0,
-          unit: 'm/s',
+          unit: 'm/s'
         },
         {
           type: 'slider',
@@ -28,9 +28,9 @@ export const dopplerControlsSchema: ControlsSchema = {
           max: 10,
           step: 0.5,
           value: 3,
-          unit: 'Hz',
-        },
-      ],
+          unit: 'Hz'
+        }
+      ]
     },
     {
       title: '观察者',
@@ -44,9 +44,9 @@ export const dopplerControlsSchema: ControlsSchema = {
           max: 5,
           step: 0.1,
           value: 0,
-          unit: 'm/s',
-        },
-      ],
+          unit: 'm/s'
+        }
+      ]
     },
     {
       title: '模式',
@@ -59,11 +59,11 @@ export const dopplerControlsSchema: ControlsSchema = {
           presets: [
             { id: 'source-moving', label: '波源运动' },
             { id: 'observer-moving', label: '观察者运动' },
-            { id: 'both-moving', label: '双方运动' },
+            { id: 'both-moving', label: '双方运动' }
           ],
-          initialActive: 'source-moving',
-        },
-      ],
+          initialActive: 'source-moving'
+        }
+      ]
     },
     {
       title: '预设',
@@ -77,10 +77,10 @@ export const dopplerControlsSchema: ControlsSchema = {
             { id: 'static', label: '静止' },
             { id: 'approach', label: '接近' },
             { id: 'recede', label: '远离' },
-            { id: 'low-freq', label: '低频' },
-          ],
-        },
-      ],
+            { id: 'low-freq', label: '低频' }
+          ]
+        }
+      ]
     },
     {
       title: '播放',
@@ -94,9 +94,9 @@ export const dopplerControlsSchema: ControlsSchema = {
           max: 2,
           step: 0.1,
           value: 1,
-          unit: 'x',
-        },
-      ],
+          unit: 'x'
+        }
+      ]
     },
     {
       title: '音频',
@@ -106,7 +106,7 @@ export const dopplerControlsSchema: ControlsSchema = {
           type: 'toggle',
           key: 'audioEnabled',
           label: '开启音频',
-          value: false,
+          value: false
         },
         {
           type: 'slider',
@@ -116,9 +116,9 @@ export const dopplerControlsSchema: ControlsSchema = {
           max: 100,
           step: 1,
           value: 50,
-          unit: '%',
-        },
-      ],
-    },
-  ],
+          unit: '%'
+        }
+      ]
+    }
+  ]
 };

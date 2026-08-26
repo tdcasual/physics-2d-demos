@@ -2,6 +2,9 @@
  * 高精度干涉测微仪 — 渲染器（DOM 实现）
  *
  * 扩展接口：MeasurableInstrument + SerializableInstrument + CalibratableInstrument
+ *
+ * 本文件仅保留工厂装配逻辑；样式、DOM 结构、条纹、刻度、渲染引擎与交互
+ * 分别位于 renderer/ 子目录（styles/dom/stripes/scales/render-view/interactions）。
  */
 
 import type { TeachingTheme } from '../../platform/standards';
@@ -10,9 +13,17 @@ import type {
   InstrumentViewport,
   MeasurableInstrument,
   SerializableInstrument,
-  CalibratableInstrument,
+  CalibratableInstrument
 } from '../_contract/instrument-contract';
 import type { MicrometerEyepieceState } from './instrument.sim';
+import { micrometerEyepieceMeta } from './instrument.meta';
+import type { MicrometerViewState } from './renderer/types';
+import { CSS } from './renderer/styles';
+import { buildMicrometerDom } from './renderer/dom';
+import { createStripeUpdater } from './renderer/stripes';
+import { createThimbleTicks, initSleeve } from './renderer/scales';
+import { createViewRenderer } from './renderer/render-view';
+import { bindInteractions } from './renderer/interactions';
 
 export type MicrometerEyepieceView = InstrumentView<MicrometerEyepieceState> &
   MeasurableInstrument &
@@ -21,309 +32,6 @@ export type MicrometerEyepieceView = InstrumentView<MicrometerEyepieceState> &
     /** 显示/隐藏仪器内部读数浮层（宿主场景统一在外部显示读数时可隐藏） */
     setReadoutVisible(visible: boolean): void;
   };
-
-const CSS = `
-:host {
-  --border-dark: #2c3338;
-  --case-bg: #b5bcc2;
-  --ring-outer: #848d94;
-  --ring-inner: #545c62;
-  --sleeve-bg: #d7dadd;
-  --thimble-bevel: #e2e5e7;
-  --thimble-body: #cfd3d6;
-  --scale-color: #1a1c1e;
-  --tick-gap-x: 11px;
-  --tick-gap-y: 8px;
-}
-
-.micrometer-root {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: var(--instrument-align, center);
-  width: 100%;
-  height: 100%;
-  padding-top: 15px;
-  box-sizing: border-box;
-  background: transparent;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  user-select: none;
-  overflow: visible;
-}
-
-.micrometer-system {
-  display: flex;
-  align-items: center;
-  position: relative;
-  transform-origin: top left;
-  margin-left: var(--instrument-offset, 0px);
-}
-
-.case {
-  width: 240px;
-  height: 240px;
-  background-color: var(--case-bg);
-  border: 4px solid var(--border-dark);
-  border-radius: 45px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-  z-index: 10;
-  box-shadow: 10px 10px 20px rgba(0,0,0,0.15);
-  cursor: grab;
-}
-
-.case:active {
-  cursor: grabbing;
-}
-
-.lens-outer-ring {
-  width: 200px;
-  height: 200px;
-  background-color: var(--ring-outer);
-  border: 4px solid var(--border-dark);
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.lens-inner-ring {
-  width: 176px;
-  height: 176px;
-  background-color: var(--ring-inner);
-  border: 4px solid var(--border-dark);
-  border-radius: 50%;
-  overflow: hidden;
-  position: relative;
-}
-
-.lens-view {
-  width: 100%;
-  height: 100%;
-  background: radial-gradient(circle at 40% 40%, #ffffff 0%, #fbd1a6 60%, #e09854 100%);
-  position: absolute;
-  will-change: transform;
-  background-image: repeating-linear-gradient(
-    90deg,
-    transparent 0px,
-    transparent 15px,
-    rgba(200, 80, 20, 0.2) 22px,
-    rgba(200, 80, 20, 0.4) 25px,
-    rgba(200, 80, 20, 0.2) 28px,
-    transparent 35px,
-    transparent 50px
-  );
-}
-
-.crosshair-system {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  left: 0;
-  top: 0;
-  will-change: transform;
-}
-
-.crosshair-v {
-  position: absolute;
-  width: 2px;
-  height: 100%;
-  background-color: rgba(20, 20, 20, 0.85);
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.crosshair-h {
-  position: absolute;
-  height: 2px;
-  width: 100%;
-  background-color: rgba(20, 20, 20, 0.85);
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.sleeve-container {
-  position: absolute;
-  left: 215px;
-  height: 165px;
-  width: 250px;
-  background: linear-gradient(to bottom, #e8eaec 0%, var(--sleeve-bg) 30%, var(--sleeve-bg) 70%, #b8bcbf 100%);
-  border-top: 4px solid var(--border-dark);
-  border-bottom: 4px solid var(--border-dark);
-  z-index: 5;
-}
-
-.baseline {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background-color: var(--scale-color);
-  transform: translateY(-50%);
-}
-
-.sleeve-scales {
-  position: absolute;
-  top: 0;
-  left: 30px;
-  width: 100%;
-  height: 100%;
-}
-
-.sleeve-tick {
-  position: absolute;
-  width: 2px;
-  background-color: var(--scale-color);
-}
-
-.sleeve-tick.major {
-  bottom: 50%;
-  height: 12px;
-}
-
-.sleeve-tick.major.numbered {
-  height: 18px;
-}
-
-.sleeve-tick.minor {
-  top: 50%;
-  height: 10px;
-}
-
-.sleeve-number {
-  position: absolute;
-  bottom: 22px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-family: "Times New Roman", Times, serif;
-  font-size: 14px;
-  font-weight: bold;
-  color: var(--scale-color);
-}
-
-/* 反转模式：mm 刻度在基准线下方，0.5mm 刻度在上方 */
-.sleeve-container.scale-inverted .sleeve-tick.major {
-  top: 50%;
-  bottom: auto;
-}
-
-.sleeve-container.scale-inverted .sleeve-tick.minor {
-  bottom: 50%;
-  top: auto;
-}
-
-.sleeve-container.scale-inverted .sleeve-number {
-  top: 22px;
-  bottom: auto;
-}
-
-.thimble-group {
-  position: absolute;
-  left: 245px;
-  display: flex;
-  align-items: center;
-  z-index: 8;
-  cursor: grab;
-  filter: drop-shadow(-4px 0px 6px rgba(0,0,0,0.2));
-  will-change: transform;
-}
-
-.thimble-group:active {
-  cursor: grabbing;
-}
-
-.thimble-bevel {
-  width: 35px;
-  height: 180px;
-  background: linear-gradient(to bottom, #f0f2f3 0%, var(--thimble-bevel) 20%, var(--thimble-bevel) 80%, #c4c8cb 100%);
-  border: 4px solid var(--border-dark);
-  border-right: none;
-  border-radius: 6px 0 0 6px;
-  position: relative;
-  overflow: hidden;
-}
-
-.thimble-bevel::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  top: 0;
-  width: 6px;
-  height: 100%;
-  background: linear-gradient(to right, transparent, rgba(0,0,0,0.15));
-}
-
-.thimble-scales-strip {
-  position: absolute;
-  width: 100%;
-  left: 0;
-  bottom: 0;
-}
-
-.thimble-tick {
-  position: absolute;
-  height: 2px;
-  background-color: var(--scale-color);
-  left: 0;
-}
-
-.thimble-tick.major { width: 15px; }
-.thimble-tick.minor { width: 10px; }
-
-.thimble-number {
-  position: absolute;
-  left: 18px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-family: "Times New Roman", Times, serif;
-  font-size: 14px;
-  font-weight: bold;
-  color: var(--scale-color);
-  line-height: 1;
-}
-
-.thimble-body {
-  width: 100px;
-  height: 180px;
-  background: linear-gradient(to bottom, #f4f5f6 0%, var(--thimble-body) 20%, var(--thimble-body) 80%, #b5b9bc 100%);
-  border: 4px solid var(--border-dark);
-  border-left: 1px solid rgba(0,0,0,0.3);
-}
-
-.ratchet {
-  width: 45px;
-  height: 120px;
-  background: linear-gradient(to bottom, #eff1f2 0%, #c8cccf 20%, #c8cccf 80%, #a2a6a9 100%);
-  border: 4px solid var(--border-dark);
-  border-left: none;
-  border-radius: 0 8px 8px 0;
-}
-
-.dashboard {
-  margin-top: 50px;
-  background: transparent;
-  padding: 15px 30px;
-  text-align: center;
-  z-index: 20;
-}
-
-.readout {
-  font-family: "Courier New", Courier, monospace;
-  font-size: 32px;
-  font-weight: bold;
-  color: #1565c0;
-  letter-spacing: 2px;
-}
-
-.hint {
-  font-size: 13px;
-  color: #555;
-  margin-top: 8px;
-}
-`;
 
 export function createMicrometerEyepieceView(options: {
   canvas: HTMLCanvasElement;
@@ -334,7 +42,9 @@ export function createMicrometerEyepieceView(options: {
   const { canvas, showHints = true } = options;
   const parent = canvas.parentElement;
   if (!parent) {
-    throw new Error('MicrometerEyepieceView: canvas must have a parent element');
+    throw new Error(
+      'MicrometerEyepieceView: canvas must have a parent element'
+    );
   }
 
   canvas.style.display = 'none';
@@ -355,454 +65,125 @@ export function createMicrometerEyepieceView(options: {
   styleEl.textContent = CSS;
   shadow.appendChild(styleEl);
 
-  const root = document.createElement('div');
-  root.className = 'micrometer-root';
-  shadow.appendChild(root);
-
-  // ── DOM 结构（与原始 HTML 完全一致）──
-  root.innerHTML = `
-    <div class="micrometer-system">
-      <div class="case">
-        <div class="lens-outer-ring">
-          <div class="lens-inner-ring">
-            <div class="lens-view" id="lens-view"></div>
-            <div class="crosshair-system" id="crosshair-system">
-              <div class="crosshair-v"></div>
-              <div class="crosshair-h"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="sleeve-container">
-        <div class="baseline"></div>
-        <div class="sleeve-scales" id="sleeve-scales"></div>
-      </div>
-      <div class="thimble-group" id="thimble-group">
-        <div class="thimble-bevel">
-          <div class="thimble-scales-strip" id="thimble-strip"></div>
-        </div>
-        <div class="thimble-body"></div>
-        <div class="ratchet"></div>
-      </div>
-    </div>
-    <div class="dashboard">
-      <div class="hint" id="hint-text"></div>
-    </div>
-  `;
-
-  const qs = <T extends HTMLElement>(id: string) => shadow.getElementById(id) as T;
-
-  const sleeveContainer = root.querySelector('.sleeve-container') as HTMLDivElement;
-  const sleeveScales = qs<HTMLDivElement>('sleeve-scales');
-  const thimbleStrip = qs<HTMLDivElement>('thimble-strip');
-  const thimbleGroup = qs<HTMLDivElement>('thimble-group');
-  const crosshairSystem = qs<HTMLDivElement>('crosshair-system');
-  const lensView = qs<HTMLDivElement>('lens-view');
-  const readoutDisplay = shadow.getElementById('readout-display') as HTMLDivElement | null;
-  const hintEl = qs<HTMLDivElement>('hint-text');
-  const caseEl = root.querySelector('.case') as HTMLDivElement;
-  const systemEl = root.querySelector('.micrometer-system') as HTMLDivElement;
+  const {
+    root,
+    sleeveContainer,
+    sleeveScales,
+    thimbleStrip,
+    thimbleGroup,
+    crosshairSystem,
+    lensView,
+    readoutDisplay,
+    hintEl,
+    caseEl,
+    systemEl
+  } = buildMicrometerDom(shadow);
 
   function updateHint() {
     if (!hintEl) return;
-    hintEl.textContent = viewMode === 'crosshair'
-      ? '↕ 上下拨动或 ↔ 左右推拉右侧测微螺杆，移动准星瞄准条纹'
-      : '↕ 上下拨动或 ↔ 左右推拉右侧测微螺杆，移动条纹对准准星';
+    hintEl.textContent =
+      viewState.viewMode === 'crosshair'
+        ? '↕ 上下拨动或 ↔ 左右推拉右侧测微螺杆，移动准星瞄准条纹'
+        : '↕ 上下拨动或 ↔ 左右推拉右侧测微螺杆，移动条纹对准准星';
   }
 
   if (!showHints && hintEl) {
     hintEl.style.display = 'none';
   }
 
+  // 读数统一显示在场景实验状态区，仪器内部默认隐藏（宿主可用 setReadoutVisible 打开）
+  if (readoutDisplay) {
+    readoutDisplay.style.display = 'none';
+  }
+
   const config = {
-    initialReading: 0,
-    maxReading: 32.00,
+    initialReading: micrometerEyepieceMeta.defaultParams.initialReading,
+    maxReading: 32.0,
     tickGapX: 10,
-    tickGapY: 12,
+    tickGapY: 12
   };
 
-  let crosshairSpeed = 100;
+  // 整体仪器初始位置（基于父容器居中）
+  const parentRect = parent.getBoundingClientRect();
+  const scaledW = 915 * 1.5;
+  const scaledH = 450 * 1.5;
 
-  let currentReading = config.initialReading;
-  let zeroOffset = 0;
-  let viewMode: 'crosshair' | 'fringe' = 'fringe';
-  let isDragging = false;
-  let startX = 0;
-  let startY = 0;
-  let startReading = 0;
-  let disposed = false;
+  // 跨渲染子模块共享的可变视图状态（原为工厂闭包 let 变量，语义不变）
+  const viewState: MicrometerViewState = {
+    crosshairSpeed: 100,
+    currentReading: config.initialReading,
+    zeroOffset: 0,
+    viewMode: 'fringe',
+    disposed: false,
+    simLastCrosshairAngle: 0,
+    sysX:
+      parentRect.width > 100
+        ? Math.round((parentRect.width - scaledW) / 2)
+        : -100,
+    sysY:
+      parentRect.height > 100
+        ? Math.max(0, Math.round((parentRect.height - scaledH) / 2))
+        : 0
+  };
+
   let simLastZero = 0;
   let simLastViewMode: 'crosshair' | 'fringe' = 'fringe';
   let simLastSpeed = 100;
   let simLastScaleInverted = false;
-  let simLastCrosshairAngle = 0;
-  // 整体仪器拖拽状态
-  let sysDragging = false;
-  let sysStartX = 0;
-  let sysStartY = 0;
-  const parentRect = parent.getBoundingClientRect();
-  const scaledW = 915 * 1.5;
-  const scaledH = 450 * 1.5;
-  let sysX = parentRect.width > 100 ? Math.round((parentRect.width - scaledW) / 2) : -100;
-  let sysY = parentRect.height > 100 ? Math.max(0, Math.round((parentRect.height - scaledH) / 2)) : 0;
 
   // 事件监听器
   const listeners = {
     reading: [] as Array<(reading: number) => void>,
     align: [] as Array<() => void>,
-    limit: [] as Array<() => void>,
+    limit: [] as Array<() => void>
   };
-
-  let wasAligned = false;
-  let wasAtLimit = false;
 
   // ── 条纹配置 ──
   const stripeConfig = {
     offset: 12,
     spacing: 50,
     color: 'rgba(200, 80, 20, 0.4)',
-    angle: 90,
+    angle: 90
   };
 
   function emitReading() {
-    const reading = currentReading + zeroOffset;
+    const reading = viewState.currentReading + viewState.zeroOffset;
     listeners.reading.forEach((cb) => cb(reading));
   }
 
-  function checkAlign(viewOffset: number, spacing: number) {
-    const dist = Math.abs(((viewOffset - spacing / 2) % spacing + spacing) % spacing - spacing / 2);
-    return dist < 2;
-  }
-
-  function checkLimit(reading: number) {
-    return reading <= 0.001 || reading >= config.maxReading - 0.001;
-  }
-
-  // ── 解析任意 CSS 颜色为 rgba ──
-  function parseRgba(color: string): { r: number; g: number; b: number; a: number } {
-    const el = document.createElement('div');
-    el.style.color = color;
-    el.style.position = 'absolute';
-    el.style.visibility = 'hidden';
-    document.body.appendChild(el);
-    const computed = getComputedStyle(el).color;
-    el.remove();
-    const m = computed.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
-    if (m) {
-      return { r: +m[1], g: +m[2], b: +m[3], a: m[4] ? +m[4] : 1 };
-    }
-    return { r: 0, g: 0, b: 0, a: 1 };
-  }
-
-  // ── 预渲染一个周期的条纹瓷砖（90deg 时用 Canvas 位图平铺，比 gradient 快）──
-  function buildStripeTile(period: number, color: string): string {
-    const c = parseRgba(color);
-    const gap = Math.round(period * 0.2);
-    const fadeInEnd = Math.round(period * 0.3);
-    const fadeOutStart = Math.round(period * 0.7);
-    const fadeOutEnd = Math.round(period * 0.8);
-
-    const cvs = document.createElement('canvas');
-    cvs.width = period;
-    cvs.height = 1;
-    const ctx = cvs.getContext('2d')!;
-    const grad = ctx.createLinearGradient(0, 0, period, 0);
-
-    grad.addColorStop(0, 'rgba(0,0,0,0)');
-    grad.addColorStop(gap / period, 'rgba(0,0,0,0)');
-    grad.addColorStop(fadeInEnd / period, `rgba(${c.r},${c.g},${c.b},${c.a * 0.5})`);
-    grad.addColorStop(0.5, `rgba(${c.r},${c.g},${c.b},${c.a})`);
-    grad.addColorStop(fadeOutStart / period, `rgba(${c.r},${c.g},${c.b},${c.a})`);
-    grad.addColorStop(fadeOutEnd / period, `rgba(${c.r},${c.g},${c.b},${c.a * 0.5})`);
-    grad.addColorStop(1, 'rgba(0,0,0,0)');
-
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, period, 1);
-    return cvs.toDataURL('image/png');
-  }
-
-  let _stripeTileUrl = '';
-
-  function updateStripes() {
-    const s = stripeConfig;
-    if (s.angle === 90) {
-      // 垂直条纹：Canvas 位图 + repeat 平铺（GPU 加速，无需取模）
-      _stripeTileUrl = buildStripeTile(s.spacing, s.color);
-      lensView.style.backgroundImage = `url(${_stripeTileUrl})`;
-      lensView.style.backgroundRepeat = 'repeat';
-    } else {
-      // 非垂直角度：回退到 CSS gradient（倾斜条纹无缝瓷砖较复杂）
-      const gap = Math.round(s.spacing * 0.2);
-      const fadeInEnd = Math.round(s.spacing * 0.3);
-      const fadeOutStart = Math.round(s.spacing * 0.7);
-      const fadeOutEnd = Math.round(s.spacing * 0.8);
-      const fadeColor = `color-mix(in srgb, transparent 50%, ${s.color})`;
-      lensView.style.backgroundImage = `repeating-linear-gradient(
-        ${s.angle}deg,
-        transparent 0px,
-        transparent ${gap}px,
-        ${fadeColor} ${fadeInEnd}px,
-        ${s.color} ${Math.round(s.spacing * 0.5)}px,
-        ${s.color} ${fadeOutStart}px,
-        ${fadeColor} ${fadeOutEnd}px,
-        transparent ${s.spacing}px
-      )`;
-      lensView.style.backgroundRepeat = '';
-    }
-  }
-
-  // ── 初始化主尺双刻度 ──
-  function initSleeve() {
-    const totalHalfMm = Math.floor(config.maxReading / 0.5);
-    const sleeveWidth = totalHalfMm * config.tickGapX + 60;
-    sleeveContainer.style.width = `${sleeveWidth}px`;
-
-    for (let i = 0; i <= totalHalfMm; i++) {
-      const isIntegerMm = (i % 2 === 0);
-      const mmValue = i * 0.5;
-      const tick = document.createElement('div');
-      tick.style.left = `${i * config.tickGapX}px`;
-
-      if (isIntegerMm) {
-        const isNumbered = (mmValue % 5 === 0);
-        tick.className = `sleeve-tick major ${isNumbered ? 'numbered' : ''}`;
-        if (isNumbered) {
-          const num = document.createElement('div');
-          num.className = 'sleeve-number';
-          num.innerText = String(mmValue);
-          tick.appendChild(num);
-        }
-      } else {
-        tick.className = 'sleeve-tick minor';
-      }
-      sleeveScales.appendChild(tick);
-    }
-  }
-
-  // ── 副尺卷轴对象池 ──
-  const TICK_POOL_SIZE = 40;
-  const thimbleTickPool: Array<{ tick: HTMLDivElement; num: HTMLDivElement }> = [];
-
-  // ── 初始化副尺卷轴（对象池，仅创建可视区域需要的 tick）──
-  function initThimble() {
-    for (let i = 0; i < TICK_POOL_SIZE; i++) {
-      const tick = document.createElement('div');
-      tick.className = 'thimble-tick';
-      tick.style.position = 'absolute';
-      tick.style.left = '0';
-
-      const num = document.createElement('div');
-      num.className = 'thimble-number';
-      tick.appendChild(num);
-
-      thimbleStrip.appendChild(tick);
-      thimbleTickPool.push({ tick, num });
-    }
-  }
-
-  let _lastTickReading = -1;
-
-  function updateThimbleTicks() {
-    // 脏检查：变化小于半个最小刻度（0.005 mm）时跳过
-    if (Math.abs(currentReading - _lastTickReading) < 0.005) return;
-    _lastTickReading = currentReading;
-
-    const totalTicksPassed = currentReading / 0.01;
-    const centerTick = Math.round(totalTicksPassed);
-    const halfPool = Math.floor(TICK_POOL_SIZE / 2);
-
-    for (let i = 0; i < TICK_POOL_SIZE; i++) {
-      const tickIndex = centerTick - halfPool + i;
-      const { tick, num } = thimbleTickPool[i];
-
-      if (tickIndex < 0 || tickIndex >= 3000) {
-        tick.style.display = 'none';
-        continue;
-      }
-
-      const val = tickIndex % 50;
-      const isMajor = val % 5 === 0;
-
-      tick.className = `thimble-tick ${isMajor ? 'major' : 'minor'}`;
-      tick.style.bottom = `${tickIndex * config.tickGapY}px`;
-      tick.style.display = 'block';
-
-      if (isMajor) {
-        num.style.display = 'block';
-        num.innerText = String(val);
-      } else {
-        num.style.display = 'none';
-      }
-    }
-  }
-
-  // ── 核心物理渲染引擎 ──
-  function renderView() {
-    if (disposed) return;
-    currentReading = Math.max(0, Math.min(currentReading, config.maxReading));
-
-    // A. 测微筒水平位移（transform 避免每帧触发 layout）
-    const moveX = (currentReading / 0.5) * config.tickGapX;
-    thimbleGroup.style.transform = `translateX(${moveX}px)`;
-
-    // B. 副尺刻度垂直滚动匹配
-    const totalTicksPassed = currentReading / 0.01;
-    const targetYFromBottom = totalTicksPassed * config.tickGapY;
-    const translateY = targetYFromBottom - 90;
-    thimbleStrip.style.transform = `translateY(${translateY}px)`;
-
-    // B2. 更新对象池中的可见 tick
-    updateThimbleTicks();
-
-    // C. 联动干涉视场
-    const viewOffset = (currentReading - config.initialReading - stripeConfig.offset) * crosshairSpeed;
-    const angle = simLastCrosshairAngle;
-    if (viewMode === 'fringe') {
-      // 准星不动模式：准星固定居中，条纹随读数滚动
-      crosshairSystem.style.transform = `translateX(0) rotate(${angle}deg)`;
-      // background-repeat:repeat 自动处理周期，无需取模或 round
-      lensView.style.backgroundPositionX = `${-viewOffset}px`;
-    } else {
-      // 准星移动模式：条纹固定，准星用相同 viewOffset 做线性位移
-      lensView.style.backgroundPositionX = '0px';
-      crosshairSystem.style.transform = `translateX(${Math.round(viewOffset)}px) rotate(${angle}deg)`;
-    }
-
-    // D. 高精度数字更新
-    const totalReading = currentReading + zeroOffset;
-    if (readoutDisplay) readoutDisplay.innerText = totalReading.toFixed(3) + ' mm';
-
-    // E. 事件检测
-    const aligned = checkAlign(viewOffset, stripeConfig.spacing);
-    if (aligned && !wasAligned) {
-      listeners.align.forEach((cb) => cb());
-    }
-    wasAligned = aligned;
-
-    const atLimit = checkLimit(currentReading);
-    if (atLimit && !wasAtLimit) {
-      listeners.limit.forEach((cb) => cb());
-    }
-    wasAtLimit = atLimit;
-  }
-
-  // ── 统一交互事件处理 ──
-  const handleDragStart = (clientX: number, clientY: number) => {
-    isDragging = true;
-    startX = clientX;
-    startY = clientY;
-    startReading = currentReading;
-    thimbleGroup.style.cursor = 'grabbing';
-  };
-
-  const handleDragMove = (clientX: number, clientY: number) => {
-    if (!isDragging) return;
-    const deltaX = clientX - startX;
-    const deltaY = clientY - startY;
-    const deltaReadingX = (deltaX / 1.8 / config.tickGapX) * 0.5;
-    const deltaReadingY = (deltaY / 1.8 / config.tickGapY) * 0.01;
-    const newReading = Math.max(0, Math.min(startReading + deltaReadingX + deltaReadingY, config.maxReading));
-    if (newReading !== currentReading) {
-      currentReading = newReading;
-      renderView();
-      emitReading();
-    }
-  };
-
-  const handleDragEnd = () => {
-    isDragging = false;
-    thimbleGroup.style.cursor = 'grab';
-  };
-
-  // ── 整体仪器拖拽（拖动目镜）──
-  const handleSysDragStart = (clientX: number, clientY: number) => {
-    sysDragging = true;
-    sysStartX = clientX;
-    sysStartY = clientY;
-    caseEl.style.cursor = 'grabbing';
-  };
-
-  const handleSysDragMove = (clientX: number, clientY: number) => {
-    if (!sysDragging) return;
-    sysX += clientX - sysStartX;
-    sysY += clientY - sysStartY;
-    sysStartX = clientX;
-    sysStartY = clientY;
-    systemEl.style.transform = `translate(${sysX}px, ${sysY}px) scale(1.5)`;
-  };
-
-  const handleSysDragEnd = () => {
-    sysDragging = false;
-    caseEl.style.cursor = 'grab';
-  };
-
-  const onMouseDown = (e: MouseEvent) => {
-    e.stopPropagation();
-    handleDragStart(e.clientX, e.clientY);
-  };
-  const onMouseMove = (e: MouseEvent) => {
-    if (isDragging) handleDragMove(e.clientX, e.clientY);
-    if (sysDragging) handleSysDragMove(e.clientX, e.clientY);
-  };
-  const onMouseUp = () => {
-    handleDragEnd();
-    handleSysDragEnd();
-  };
-
-  const onCaseMouseDown = (e: MouseEvent) => {
-    e.stopPropagation();
-    handleSysDragStart(e.clientX, e.clientY);
-  };
-  const onCaseTouchStart = (e: TouchEvent) => {
-    e.stopPropagation();
-    handleSysDragStart(e.touches[0].clientX, e.touches[0].clientY);
-  };
-
-  const onTouchStart = (e: TouchEvent) => {
-    e.stopPropagation();
-    handleDragStart(e.touches[0].clientX, e.touches[0].clientY);
-  };
-  const onTouchMove = (e: TouchEvent) => {
-    if (isDragging) {
-      e.preventDefault();
-      handleDragMove(e.touches[0].clientX, e.touches[0].clientY);
-    }
-    if (sysDragging) {
-      e.preventDefault();
-      handleSysDragMove(e.touches[0].clientX, e.touches[0].clientY);
-    }
-  };
-  const onTouchEnd = () => {
-    handleDragEnd();
-    handleSysDragEnd();
-  };
-
-  const onWheel = (e: WheelEvent) => {
-    e.preventDefault();
-    const newReading = Math.max(0, Math.min(currentReading + (e.deltaY > 0 ? 0.01 : -0.01), config.maxReading));
-    if (newReading !== currentReading) {
-      currentReading = newReading;
-      renderView();
-      emitReading();
-    }
-  };
-
-  thimbleGroup.addEventListener('mousedown', onMouseDown);
-  caseEl.addEventListener('mousedown', onCaseMouseDown);
-  document.addEventListener('mousemove', onMouseMove);
-  document.addEventListener('mouseup', onMouseUp);
-  thimbleGroup.addEventListener('touchstart', onTouchStart, { passive: false });
-  caseEl.addEventListener('touchstart', onCaseTouchStart, { passive: false });
-  document.addEventListener('touchmove', onTouchMove, { passive: false });
-  document.addEventListener('touchend', onTouchEnd);
-  thimbleGroup.addEventListener('wheel', onWheel, { passive: false });
+  const updateStripes = createStripeUpdater(lensView);
+  const { initThimble, updateThimbleTicks } = createThimbleTicks({
+    thimbleStrip,
+    config
+  });
+  const renderView = createViewRenderer({
+    viewState,
+    config,
+    stripeConfig,
+    elements: {
+      thimbleGroup,
+      thimbleStrip,
+      crosshairSystem,
+      lensView,
+      readoutDisplay
+    },
+    listeners,
+    updateThimbleTicks
+  });
+  const unbindInteractions = bindInteractions({
+    viewState,
+    config,
+    elements: { thimbleGroup, caseEl, systemEl },
+    renderView,
+    emitReading
+  });
 
   // ── 启动引擎 ──
   caseEl.style.cursor = 'grab';
   caseEl.setAttribute('role', 'button');
   caseEl.setAttribute('aria-label', '目镜壳体，拖动可移动整个仪器');
   caseEl.tabIndex = 0;
-  systemEl.style.transform = `translate(${sysX}px, ${sysY}px) scale(1.5)`;
+  systemEl.style.transform = `translate(${viewState.sysX}px, ${viewState.sysY}px) scale(1.5)`;
 
   // ── 副尺键盘操作 ──
   thimbleGroup.tabIndex = 0;
@@ -810,55 +191,24 @@ export function createMicrometerEyepieceView(options: {
   thimbleGroup.setAttribute('aria-label', '测微螺杆');
   thimbleGroup.setAttribute('aria-valuemin', '0');
   thimbleGroup.setAttribute('aria-valuemax', String(config.maxReading));
-  thimbleGroup.setAttribute('aria-valuenow', currentReading.toFixed(3));
-  thimbleGroup.setAttribute('aria-valuetext', `${currentReading.toFixed(3)} mm`);
+  thimbleGroup.setAttribute(
+    'aria-valuenow',
+    viewState.currentReading.toFixed(3)
+  );
+  thimbleGroup.setAttribute(
+    'aria-valuetext',
+    `${viewState.currentReading.toFixed(3)} mm`
+  );
 
-  const onThimbleKeyDown = (e: KeyboardEvent) => {
-    let delta = 0;
-    switch (e.key) {
-      case 'ArrowRight': case 'ArrowUp': delta = 0.01; break;
-      case 'ArrowLeft':  case 'ArrowDown': delta = -0.01; break;
-      case 'PageUp':   delta = 0.1; break;
-      case 'PageDown': delta = -0.1; break;
-      case 'Home': delta = -currentReading; break;
-      case 'End':  delta = config.maxReading - currentReading; break;
-      default: return;
-    }
-    e.preventDefault();
-    const next = Math.max(0, Math.min(currentReading + delta, config.maxReading));
-    if (next !== currentReading) {
-      currentReading = next;
-      renderView();
-      emitReading();
-      thimbleGroup.setAttribute('aria-valuenow', currentReading.toFixed(3));
-      thimbleGroup.setAttribute('aria-valuetext', `${currentReading.toFixed(3)} mm`);
-    }
-  };
-
-  const onCaseKeyDown = (e: KeyboardEvent) => {
-    const step2 = 30;
-    switch (e.key) {
-      case 'ArrowRight': sysX += step2; break;
-      case 'ArrowLeft':  sysX -= step2; break;
-      case 'ArrowUp':    sysY -= step2; break;
-      case 'ArrowDown':  sysY += step2; break;
-      default: return;
-    }
-    e.preventDefault();
-    systemEl.style.transform = `translate(${sysX}px, ${sysY}px) scale(1.5)`;
-  };
-
-  thimbleGroup.addEventListener('keydown', onThimbleKeyDown);
-  caseEl.addEventListener('keydown', onCaseKeyDown);
-  initSleeve();
+  initSleeve(config, sleeveContainer, sleeveScales);
   initThimble();
-  updateStripes();
+  updateStripes(stripeConfig);
   updateHint();
   renderView();
 
   return {
     render(state) {
-      crosshairSpeed = state.crosshairSpeed;
+      viewState.crosshairSpeed = state.crosshairSpeed;
 
       if (state.scaleInverted !== simLastScaleInverted) {
         simLastScaleInverted = state.scaleInverted;
@@ -873,7 +223,7 @@ export function createMicrometerEyepieceView(options: {
         stripeConfig.spacing = Math.round(state.stripeSpacing);
         stripeConfig.color = state.stripeColor;
         stripeConfig.angle = state.stripeAngle;
-        updateStripes();
+        updateStripes(stripeConfig);
       }
 
       const needRender =
@@ -881,16 +231,16 @@ export function createMicrometerEyepieceView(options: {
         state.stripeOffset !== stripeConfig.offset ||
         state.viewMode !== simLastViewMode ||
         state.crosshairSpeed !== simLastSpeed ||
-        state.crosshairAngle !== simLastCrosshairAngle;
+        state.crosshairAngle !== viewState.simLastCrosshairAngle;
       if (needRender) {
-        zeroOffset = state.zeroOffset;
+        viewState.zeroOffset = state.zeroOffset;
         stripeConfig.offset = state.stripeOffset;
-        viewMode = state.viewMode;
+        viewState.viewMode = state.viewMode;
         simLastZero = state.zeroOffset;
         simLastViewMode = state.viewMode;
         simLastSpeed = state.crosshairSpeed;
-        simLastCrosshairAngle = state.crosshairAngle;
-        updateStripes();
+        viewState.simLastCrosshairAngle = state.crosshairAngle;
+        updateStripes(stripeConfig);
         updateHint();
         renderView();
       }
@@ -910,18 +260,8 @@ export function createMicrometerEyepieceView(options: {
       // DOM 层已占满 canvas 父容器
     },
     dispose() {
-      disposed = true;
-      thimbleGroup.removeEventListener('mousedown', onMouseDown);
-      caseEl.removeEventListener('mousedown', onCaseMouseDown);
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-      thimbleGroup.removeEventListener('touchstart', onTouchStart, { passive: false } as EventListenerOptions);
-      caseEl.removeEventListener('touchstart', onCaseTouchStart, { passive: false } as EventListenerOptions);
-      document.removeEventListener('touchmove', onTouchMove, { passive: false } as EventListenerOptions);
-      document.removeEventListener('touchend', onTouchEnd);
-      thimbleGroup.removeEventListener('wheel', onWheel);
-      thimbleGroup.removeEventListener('keydown', onThimbleKeyDown);
-      caseEl.removeEventListener('keydown', onCaseKeyDown);
+      viewState.disposed = true;
+      unbindInteractions();
       if (wrapper.parentElement) {
         wrapper.parentElement.removeChild(wrapper);
       }
@@ -933,7 +273,7 @@ export function createMicrometerEyepieceView(options: {
 
     // ── MeasurableInstrument ──
     getReading() {
-      return currentReading + zeroOffset;
+      return viewState.currentReading + viewState.zeroOffset;
     },
     onReadingChange(callback) {
       listeners.reading.push(callback);
@@ -960,30 +300,40 @@ export function createMicrometerEyepieceView(options: {
     // ── SerializableInstrument ──
     serialize() {
       return JSON.stringify({
-        currentReading,
-        zeroOffset,
+        currentReading: viewState.currentReading,
+        zeroOffset: viewState.zeroOffset,
         stripeOffset: stripeConfig.offset,
         stripeSpacing: stripeConfig.spacing,
         stripeColor: stripeConfig.color,
         stripeAngle: stripeConfig.angle,
-        sysX,
-        sysY,
+        sysX: viewState.sysX,
+        sysY: viewState.sysY
       });
     },
     deserialize(json) {
       try {
         const data = JSON.parse(json);
         if (typeof data.currentReading === 'number') {
-          currentReading = Math.max(0, Math.min(data.currentReading, config.maxReading));
+          viewState.currentReading = Math.max(
+            0,
+            Math.min(data.currentReading, config.maxReading)
+          );
         }
         if (typeof data.zeroOffset === 'number') {
-          zeroOffset = Math.max(-0.5, Math.min(data.zeroOffset, 0.5));
+          viewState.zeroOffset = Math.max(-0.5, Math.min(data.zeroOffset, 0.5));
         }
         if (typeof data.stripeOffset === 'number') {
-          stripeConfig.offset = Math.max(0, Math.min(data.stripeOffset, 2000));
+          // stripeOffset 单位为 mm，与 config.maxReading 同量纲
+          stripeConfig.offset = Math.max(
+            0,
+            Math.min(data.stripeOffset, config.maxReading)
+          );
         }
         if (typeof data.stripeSpacing === 'number') {
-          stripeConfig.spacing = Math.max(20, Math.min(data.stripeSpacing, 100));
+          stripeConfig.spacing = Math.max(
+            20,
+            Math.min(data.stripeSpacing, 100)
+          );
         }
         if (typeof data.stripeColor === 'string') {
           stripeConfig.color = data.stripeColor;
@@ -991,10 +341,10 @@ export function createMicrometerEyepieceView(options: {
         if (typeof data.stripeAngle === 'number') {
           stripeConfig.angle = Math.max(0, Math.min(data.stripeAngle, 180));
         }
-        if (typeof data.sysX === 'number') sysX = data.sysX;
-        if (typeof data.sysY === 'number') sysY = data.sysY;
-        systemEl.style.transform = `translate(${sysX}px, ${sysY}px) scale(1.5)`;
-        updateStripes();
+        if (typeof data.sysX === 'number') viewState.sysX = data.sysX;
+        if (typeof data.sysY === 'number') viewState.sysY = data.sysY;
+        systemEl.style.transform = `translate(${viewState.sysX}px, ${viewState.sysY}px) scale(1.5)`;
+        updateStripes(stripeConfig);
         renderView();
       } catch {
         // 忽略无效的序列化数据
@@ -1003,18 +353,18 @@ export function createMicrometerEyepieceView(options: {
 
     // ── CalibratableInstrument ──
     setZero(val) {
-      zeroOffset = val;
+      viewState.zeroOffset = val;
       renderView();
     },
     getZero() {
-      return zeroOffset;
+      return viewState.zeroOffset;
     },
     getCalibrationOffset() {
-      return zeroOffset;
+      return viewState.zeroOffset;
     },
 
     setReadoutVisible(visible: boolean) {
       if (readoutDisplay) readoutDisplay.style.display = visible ? '' : 'none';
-    },
+    }
   } as MicrometerEyepieceView & { setReadoutVisible(visible: boolean): void };
 }

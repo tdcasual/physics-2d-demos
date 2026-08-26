@@ -23,7 +23,7 @@ describe('ci scripts and workflow', () => {
         'pnpm check:circular',
         'pnpm lint',
         'pnpm typecheck',
-        'pnpm test',
+        'pnpm test:coverage',
         'pnpm build',
         'pnpm check:bundle'
       ].join(' && ')

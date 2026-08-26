@@ -23,13 +23,13 @@ src/instruments/_manifest/manifest.ts   # 在 instrumentManifest 数组中追加
 
 ### 命名规则
 
-| 项目 | 规则 | 示例 |
-|---|---|---|
-| 目录名 | kebab-case | `vernier-caliper` |
-| 工厂变量 | 与目录同名 | `export const vernierCaliper = {...}` |
-| Sim 函数 | `create<Id>Sim` | `createVernierCaliperSim` |
-| View 函数 | `create<Id>View` | `createVernierCaliperView` |
-| Meta 变量 | `<id>Meta` | `vernierCaliperMeta` |
+| 项目      | 规则             | 示例                                  |
+| --------- | ---------------- | ------------------------------------- |
+| 目录名    | kebab-case       | `vernier-caliper`                     |
+| 工厂变量  | 与目录同名       | `export const vernierCaliper = {...}` |
+| Sim 函数  | `create<Id>Sim`  | `createVernierCaliperSim`             |
+| View 函数 | `create<Id>View` | `createVernierCaliperView`            |
+| Meta 变量 | `<id>Meta`       | `vernierCaliperMeta`                  |
 
 ## 2. Sim 规范
 
@@ -51,8 +51,12 @@ export interface MyParams extends InstrumentParams {
   // ... 其他字段
 }
 
-export function createMySim(initial: MyParams): InstrumentSim<MyState, MyParams> {
-  let state: MyState = { /* 初始状态 */ };
+export function createMySim(
+  initial: MyParams
+): InstrumentSim<MyState, MyParams> {
+  let state: MyState = {
+    /* 初始状态 */
+  };
 
   return {
     getState: () => state,
@@ -65,8 +69,10 @@ export function createMySim(initial: MyParams): InstrumentSim<MyState, MyParams>
       // 物理/逻辑步进
     },
     reset: () => {
-      state = { /* 恢复到 initial 对应的初始状态 */ };
-    },
+      state = {
+        /* 恢复到 initial 对应的初始状态 */
+      };
+    }
   };
 }
 ```
@@ -181,24 +187,24 @@ function render(state) {
 
 ```typescript
 export const myMeta: InstrumentMeta<MyParams> = {
-  id: 'my-instrument',           // kebab-case，全局唯一
-  title: '我的仪器',              // 中文显示名称
-  category: 'measurement',       // 必须是：measurement | electronics | optics | mechanics
+  id: 'my-instrument', // kebab-case，全局唯一
+  title: '我的仪器', // 中文显示名称
+  category: 'measurement', // 必须是：measurement | electronics | optics | mechanics
   description: '一句话描述仪器的用途',
   defaultParams: { reading: 0 }, // 所有参数必须有默认值
-  unit: 'mm',                    // 可选：测量单位
-  precision: 0.01,               // 可选：最小分度值
+  unit: 'mm', // 可选：测量单位
+  precision: 0.01 // 可选：最小分度值
 };
 ```
 
 ### 分类定义
 
-| 分类 | 说明 | 示例 |
-|---|---|---|
+| 分类          | 说明     | 示例                       |
+| ------------- | -------- | -------------------------- |
 | `measurement` | 测量仪器 | 螺旋测微器、游标卡尺、秒表 |
-| `electronics` | 电子仪器 | 示波器、万用表 |
-| `optics` | 光学仪器 | 光具座、干涉仪 |
-| `mechanics` | 力学仪器 | 气垫导轨、打点计时器 |
+| `electronics` | 电子仪器 | 示波器、万用表             |
+| `optics`      | 光学仪器 | 光具座、干涉仪             |
+| `mechanics`   | 力学仪器 | 气垫导轨、打点计时器       |
 
 新增分类需修改 `InstrumentCategory` 类型定义。
 
@@ -216,7 +222,7 @@ import { createMyView } from './my-instrument.view';
 export const myInstrument: InstrumentFactory<MyState, MyParams> = {
   meta: myMeta,
   createSim: createMySim,
-  createView: createMyView,
+  createView: createMyView
 };
 
 // 可选：额外导出类型和子模块
@@ -241,8 +247,8 @@ export const instrumentManifest: InstrumentManifestEntry[] = [
     defaultParams: { reading: 0 },
     unit: 'mm',
     precision: 0.01,
-    modulePath: '/src/instruments/my-instrument/index.ts',
-  },
+    modulePath: '/src/instruments/my-instrument/index.ts'
+  }
 ];
 ```
 
@@ -337,11 +343,11 @@ dist/assets/instrument-micrometer-xxx.js      # 螺旋测微器代码
 
 ### 首屏加载估算
 
-| 组件数量 | 首屏加载 | 点击仪器后额外加载 |
-|---|---|---|
-| 10 个 | ~5 KB (manifest) | ~20-50 KB / 仪器 |
-| 100 个 | ~5 KB (manifest) | ~20-50 KB / 仪器 |
-| 500 个 | ~10 KB (manifest) | ~20-50 KB / 仪器 |
+| 组件数量 | 首屏加载          | 点击仪器后额外加载 |
+| -------- | ----------------- | ------------------ |
+| 10 个    | ~5 KB (manifest)  | ~20-50 KB / 仪器   |
+| 100 个   | ~5 KB (manifest)  | ~20-50 KB / 仪器   |
+| 500 个   | ~10 KB (manifest) | ~20-50 KB / 仪器   |
 
 > manifest 增长极慢：每条记录约 50-100 bytes，500 个组件约 25-50 KB。
 

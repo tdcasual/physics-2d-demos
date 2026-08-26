@@ -68,6 +68,20 @@ export function createResizer(
       );
       resizer.setAttribute('tabindex', '0');
 
+      // 可聚焦的 separator 必须暴露取值（axe aria-required-attr / WCAG 4.1.2）：
+      // 以面板尺寸占容器的百分比表示，拖拽与键盘调整时同步更新。
+      resizer.setAttribute('aria-valuemin', '0');
+      resizer.setAttribute('aria-valuemax', '100');
+
+      const updateAriaValue = (sizePx: number) => {
+        const containerSize =
+          direction === 'vertical'
+            ? ctx.container.clientWidth
+            : ctx.container.clientHeight;
+        const pct = Math.round((sizePx / (containerSize || 1)) * 100);
+        resizer!.setAttribute('aria-valuenow', String(pct));
+      };
+
       if (created) {
         ctx.container.appendChild(resizer);
       }
@@ -75,6 +89,12 @@ export function createResizer(
       const target = ctx.container.querySelector(
         targetSel
       ) as HTMLElement | null;
+
+      updateAriaValue(
+        direction === 'vertical'
+          ? (target?.clientWidth ?? minSize)
+          : (target?.clientHeight ?? minSize)
+      );
 
       // Cleanup function for active drag (mouse or touch)
       let cleanupDrag: (() => void) | null = null;
@@ -95,6 +115,7 @@ export function createResizer(
             ? ctx.container.clientWidth
             : ctx.container.clientHeight;
         const ratio = newSize / (containerSize || 1);
+        updateAriaValue(newSize);
 
         if (target) {
           if (direction === 'vertical') {
@@ -208,6 +229,7 @@ export function createResizer(
           ? ctx.container.clientWidth
           : ctx.container.clientHeight;
         const ratio = newSize / (containerSize || 1);
+        updateAriaValue(newSize);
 
         if (target) {
           if (isVertical) {

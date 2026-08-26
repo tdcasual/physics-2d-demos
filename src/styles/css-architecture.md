@@ -4,10 +4,9 @@
 
 ```
 src/styles/
-  index.css                    # 入口：@import 所有文件（cascade 顺序）
-  global.css                   # 全局 reset / base
+  index.css                    # 场景页/仪器页入口：@import 下列场景链文件（cascade 顺序）
+                               #   由 app/scene-bootstrapper.ts 与 app/instrument-library/page.ts 引入
   design-tokens.css            # 设计令牌原始值
-  layout-tokens.css            # 布局令牌
   themes.css                   # 主题变量映射
   base/
     theme.css                  # Tailwind 配置 + @theme + CSS 变量 + 暗色主题
@@ -19,10 +18,22 @@ src/styles/
     readout-panel.css          # 数据区浮动面板（teaching + srgb 已用 :is() 统一）
     buttons.css                # 通用 capability 按钮（兜底样式）
   shared/
-    responsive-demo.css        # 响应式断点 + 演示模式
+    responsive-demo.css        # 响应式断点 + 演示模式 + 场景页 prefers-reduced-motion
+    split-layout-common.css    # teaching/srgb 分栏布局共享骨架（:is() 消除前缀差异）
+    scene-controls.css         # 场景控件伪元素样式（slider thumb/track、toggle 命中区）
   scene/
     chase-modern.css           # chase-meet 场景样式（class 前缀隔离）
+
+  # ── 首页链（不经 index.css，由 main.tsx / App.tsx 直接 import）──
+  global.css                   # 全局 reset / base / 排版 / 首页 prefers-reduced-motion
+                               #   （main.tsx 先引入 design-tokens.css + themes.css）
+  app/
+    home.css                   # 首页组件样式（在 global.css 之后加载，冲突时以本文件为准）
 ```
+
+> 首页链与场景页链互不重叠：场景页不加载 global.css / app/home.css，
+> 首页不加载 index.css。两条链各自的 `prefers-reduced-motion` 来源唯一：
+> 场景页在 `shared/responsive-demo.css`，首页在 `global.css`。
 
 ## 核心原则
 
@@ -60,12 +71,14 @@ src/styles/
 场景样式必须自隔离，避免污染其他场景或布局：
 
 **规则:**
+
 - 场景自建 CSS 文件，放在 `src/styles/scene/` 下
 - 所有选择器使用场景专属 class 前缀（如 `.chase-modern-*`）
 - 场景 CSS 不定义 CSS 变量，只消费布局层提供的变量（`--bg-card`、`--border-color`、`--text-primary` 等）
 - 场景 page.ts 在文件顶部 `import '../../styles/scene/<name>.css'`
 
 **示例 (chase-modern.css):**
+
 ```css
 /* ✅ 正确：class 前缀隔离 */
 .chase-modern-stage { ... }
@@ -105,11 +118,13 @@ src/styles/
 ## 常见错误
 
 ❌ **不要这样做**:
+
 - 在场景/布局 CSS 中定义新的 CSS 变量
 - 使用过于宽泛的选择器（如 `button`、`div`）
 - 在 capability CSS 中硬编码布局相关的尺寸
 
 ✅ **正确做法**:
+
 - 场景 CSS 用 class 前缀隔离
 - 布局 CSS 只定义 grid 结构
 - 所有颜色/间距使用语义化 CSS 变量

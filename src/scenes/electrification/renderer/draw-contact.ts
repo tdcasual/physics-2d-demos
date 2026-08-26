@@ -2,7 +2,10 @@ import type { ElectrificationSnapshot } from '../scene.sim';
 import type { DrawContext } from './types';
 import { drawConductor, drawChargedSphere } from './draw-objects';
 import { drawNetCharges } from './draw-charges';
-import { drawFieldLinesFromPoint, drawFieldLinesBetween } from './draw-field-lines';
+import {
+  drawFieldLinesFromPoint,
+  drawFieldLinesBetween
+} from './draw-field-lines';
 import { drawStepIndicator } from './draw-step-indicator';
 
 /**
@@ -27,8 +30,16 @@ export function drawContact(
   }
 
   // 步骤指示器
-  drawStepIndicator(ctx, width, height, state.stepIndex, 2,
-    ['接触前', '接触后'], isDark, s);
+  drawStepIndicator(
+    ctx,
+    width,
+    height,
+    state.stepIndex,
+    2,
+    ['接触前', '接触后'],
+    isDark,
+    s
+  );
 }
 
 /** step 0: 接触前 — 两个带电球 */
@@ -52,14 +63,38 @@ function drawContactStep0(
   drawChargedSphere(ctx, rightX, cy, sphereR, state.rightCharge, isDark, s);
 
   // 电场线
-  drawFieldLinesFromPoint(ctx, leftX, cy, state.leftCharge, sphereR * 2.2, isDark, s);
-  drawFieldLinesFromPoint(ctx, rightX, cy, state.rightCharge, sphereR * 2.2, isDark, s);
-  drawFieldLinesBetween(ctx, leftX, cy, state.leftCharge, rightX, cy, state.rightCharge, isDark, s);
+  drawFieldLinesFromPoint(
+    ctx,
+    leftX,
+    cy,
+    state.leftCharge,
+    sphereR * 2.2,
+    isDark,
+    s
+  );
+  drawFieldLinesFromPoint(
+    ctx,
+    rightX,
+    cy,
+    state.rightCharge,
+    sphereR * 2.2,
+    isDark,
+    s
+  );
+  drawFieldLinesBetween(
+    ctx,
+    leftX,
+    cy,
+    state.leftCharge,
+    rightX,
+    cy,
+    state.rightCharge,
+    isDark,
+    s
+  );
 
   // 即将接触提示
-  ctx.strokeStyle = isDark
-    ? 'rgba(148,163,184,0.25)'
-    : 'rgba(71,85,105,0.2)';
+  ctx.strokeStyle = isDark ? 'rgba(148,163,184,0.25)' : 'rgba(71,85,105,0.2)';
   ctx.lineWidth = Math.max(0.5, 1 * s);
   ctx.setLineDash([5 * s, 5 * s]);
   ctx.beginPath();
@@ -110,9 +145,7 @@ function drawContactStep1(
 
   // 电荷流动箭头（从左向右，示意正电荷流动方向）
   ctx.save();
-  ctx.strokeStyle = isDark
-    ? 'rgba(250,204,21,0.5)'
-    : 'rgba(202,138,4,0.45)';
+  ctx.strokeStyle = isDark ? 'rgba(250,204,21,0.5)' : 'rgba(202,138,4,0.45)';
   ctx.lineWidth = Math.max(1, 1.5 * s);
   ctx.setLineDash([5 * s, 4 * s]);
 
@@ -125,9 +158,7 @@ function drawContactStep1(
   // 箭头头
   const arrowY = cy - sphereR * 0.6;
   ctx.setLineDash([]);
-  ctx.fillStyle = isDark
-    ? 'rgba(250,204,21,0.6)'
-    : 'rgba(202,138,4,0.55)';
+  ctx.fillStyle = isDark ? 'rgba(250,204,21,0.6)' : 'rgba(202,138,4,0.55)';
   const arrowTipX = rightX - sphereR * 0.5;
   const arrowH = 4 * s;
   const arrowW = 8 * s;
@@ -141,9 +172,7 @@ function drawContactStep1(
   ctx.restore();
 
   // 接触标记（实线）
-  ctx.strokeStyle = isDark
-    ? 'rgba(148,163,184,0.4)'
-    : 'rgba(71,85,105,0.3)';
+  ctx.strokeStyle = isDark ? 'rgba(148,163,184,0.4)' : 'rgba(71,85,105,0.3)';
   ctx.lineWidth = Math.max(1, 2 * s);
   ctx.beginPath();
   ctx.moveTo(leftX + sphereR, cy);

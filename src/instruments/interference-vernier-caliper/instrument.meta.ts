@@ -2,7 +2,10 @@
  * 干涉读数游标卡尺（双缝干涉测量）— 元数据
  */
 
-import type { InstrumentMeta, InstrumentParams } from '../_contract/instrument-contract';
+import type {
+  InstrumentMeta,
+  InstrumentParams
+} from '../_contract/instrument-contract';
 
 export interface InterferenceVernierCaliperParams extends InstrumentParams {
   /** 当前读数（cm） */
@@ -27,20 +30,21 @@ export interface InterferenceVernierCaliperParams extends InstrumentParams {
   stripeOffset?: number;
 }
 
-export const interferenceVernierCaliperMeta: InstrumentMeta<InterferenceVernierCaliperParams> = {
-  id: 'interference-vernier-caliper',
-  title: '干涉读数游标卡尺',
-  category: 'optical',
-  description: '带双缝干涉条纹的干涉读数游标卡尺，50分度游标精度0.002cm',
-  defaultParams: {
-    initialReading: 1.400,
-    zeroOffset: 0,
-    fringeSpacing: 16,
-    fringeBlur: 1.5,
-    fringeOpacity: 0.85,
-    fringeEnvelopeWidth: 320,
-    fringeColor: 'rgba(30,15,0,0.85)',
-  },
-  unit: 'cm',
-  precision: 0.002,
-};
+export const interferenceVernierCaliperMeta: InstrumentMeta<InterferenceVernierCaliperParams> =
+  {
+    id: 'interference-vernier-caliper',
+    title: '干涉读数游标卡尺',
+    category: 'optical',
+    description: '带双缝干涉条纹的干涉读数游标卡尺，50分度游标精度0.002cm',
+    defaultParams: {
+      initialReading: 1.4,
+      zeroOffset: 0,
+      fringeSpacing: 16,
+      fringeBlur: 1.5,
+      fringeOpacity: 0.85,
+      fringeEnvelopeWidth: 320,
+      fringeColor: 'rgba(30,15,0,0.85)'
+    },
+    unit: 'cm',
+    precision: 0.002
+  };

@@ -2,7 +2,10 @@
  * 干涉读数游标卡尺（双缝干涉测量）— 模拟器
  */
 
-import type { InstrumentSim, InstrumentState } from '../_contract/instrument-contract';
+import type {
+  InstrumentSim,
+  InstrumentState
+} from '../_contract/instrument-contract';
 import type { InterferenceVernierCaliperParams } from './instrument.meta';
 
 export interface InterferenceVernierCaliperState extends InstrumentState {
@@ -19,8 +22,11 @@ export interface InterferenceVernierCaliperState extends InstrumentState {
 }
 
 export function createInterferenceVernierCaliperSim(
-  initial: InterferenceVernierCaliperParams,
-): InstrumentSim<InterferenceVernierCaliperState, InterferenceVernierCaliperParams> {
+  initial: InterferenceVernierCaliperParams
+): InstrumentSim<
+  InterferenceVernierCaliperState,
+  InterferenceVernierCaliperParams
+> {
   const state: InterferenceVernierCaliperState = {
     currentReading: initial.initialReading,
     zeroOffset: initial.zeroOffset,
@@ -30,7 +36,7 @@ export function createInterferenceVernierCaliperSim(
     fringeEnvelopeWidth: initial.fringeEnvelopeWidth,
     fringeColor: initial.fringeColor,
     crosshairAngle: initial.crosshairAngle ?? 0,
-    viewMode: initial.viewMode ?? 'fringe',
+    viewMode: initial.viewMode ?? 'fringe'
   };
 
   return {
@@ -77,8 +83,8 @@ export function createInterferenceVernierCaliperSim(
       state.fringeOpacity = initial.fringeOpacity;
       state.fringeEnvelopeWidth = initial.fringeEnvelopeWidth;
       state.fringeColor = initial.fringeColor;
-      state.crosshairAngle = 0;
+      state.crosshairAngle = initial.crosshairAngle ?? 0;
       state.viewMode = initial.viewMode ?? 'fringe';
-    },
+    }
   };
 }

@@ -2,15 +2,31 @@ import { describe, expect, it } from 'vitest';
 import { makeDraggable } from '../../src/ui/utils/draggable';
 
 function pointerDown(el: Element, x: number, y: number) {
-  el.dispatchEvent(new PointerEvent('pointerdown', { clientX: x, clientY: y, bubbles: true, pointerId: 1 }));
+  el.dispatchEvent(
+    new PointerEvent('pointerdown', {
+      clientX: x,
+      clientY: y,
+      bubbles: true,
+      pointerId: 1
+    })
+  );
 }
 
 function pointerMove(el: Element, x: number, y: number) {
-  el.dispatchEvent(new PointerEvent('pointermove', { clientX: x, clientY: y, bubbles: true, pointerId: 1 }));
+  el.dispatchEvent(
+    new PointerEvent('pointermove', {
+      clientX: x,
+      clientY: y,
+      bubbles: true,
+      pointerId: 1
+    })
+  );
 }
 
 function pointerUp(el: Element) {
-  el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1 }));
+  el.dispatchEvent(
+    new PointerEvent('pointerup', { bubbles: true, pointerId: 1 })
+  );
 }
 
 describe('makeDraggable', () => {

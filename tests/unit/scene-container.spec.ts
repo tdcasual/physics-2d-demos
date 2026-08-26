@@ -101,29 +101,60 @@ describe('SceneContainerImpl', () => {
     expect(eventSpy).toHaveBeenCalledWith({ from: 'light', to: 'dark' });
   });
 
-  it('should persist state to localStorage', () => {
+  it('should persist layout preference to localStorage (without theme field)', () => {
     const container = createSceneContainer({ mount, storageKey: 'test-state' });
 
-    container.setTheme('dark');
+    container.setUserPreferredLayout('mobile-stack');
 
     const saved = localStorage.getItem('test-state');
     expect(saved).toBeTruthy();
     const parsed = JSON.parse(saved!);
-    expect(parsed.theme).toBe('dark');
+    expect(parsed.preferredLayout).toBe('mobile-stack');
+    // 主题不再写入容器状态，由 theme-store 统一管理
+    expect('theme' in parsed).toBe(false);
   });
 
-  it('should restore persisted state', () => {
+  it('should restore preferred layout from persisted state', () => {
     localStorage.setItem(
       'test-state',
       JSON.stringify({
         v: 1,
-        theme: 'dark',
         preferredLayout: 'split-right'
       })
     );
 
     const container = createSceneContainer({ mount, storageKey: 'test-state' });
+    expect(container.getUserPreferredLayout()).toBe('split-right');
+  });
+
+  it('should restore theme from the unified theme-store key', () => {
+    localStorage.setItem(
+      'physics-lab-theme',
+      JSON.stringify({ v: 1, theme: 'dark' })
+    );
+
+    const container = createSceneContainer({ mount, storageKey: 'test-state' });
     expect(container.getTheme()).toBe('dark');
+  });
+
+  it('should migrate theme from legacy container state', () => {
+    localStorage.setItem(
+      'physics-demos-container-state',
+      JSON.stringify({ v: 1, theme: 'dark', preferredLayout: 'split-right' })
+    );
+
+    const container = createSceneContainer({ mount });
+    expect(container.getTheme()).toBe('dark');
+  });
+
+  it('should prefer explicit defaultTheme over stored theme', () => {
+    localStorage.setItem(
+      'physics-lab-theme',
+      JSON.stringify({ v: 1, theme: 'dark' })
+    );
+
+    const container = createSceneContainer({ mount, defaultTheme: 'light' });
+    expect(container.getTheme()).toBe('light');
   });
 
   it('should set and get user preferred layout', () => {

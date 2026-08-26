@@ -3,7 +3,9 @@
  */
 
 /** 获取设备类型（基于 responsiveScale 的连续判断，避免像素边界跳变） */
-export function getDeviceType(responsiveScale: number): 'mobile' | 'tablet' | 'desktop' {
+export function getDeviceType(
+  responsiveScale: number
+): 'mobile' | 'tablet' | 'desktop' {
   if (responsiveScale < 0.7) return 'mobile';
   if (responsiveScale < 1.0) return 'tablet';
   return 'desktop';

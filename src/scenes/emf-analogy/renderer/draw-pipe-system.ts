@@ -3,8 +3,10 @@ import type { WaterColors } from './water-colors';
 /* ── 细网管（内阻）绘制 ── */
 export function drawMeshPipe(
   ctx: CanvasRenderingContext2D,
-  x: number, y: number,
-  w: number, h: number,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
   colors: WaterColors
 ): void {
   // 管体
@@ -62,8 +64,10 @@ function getWaterParticles(count: number): WaterParticle[] {
 
 export function drawWaterFlow(
   ctx: CanvasRenderingContext2D,
-  x1: number, y1: number,
-  x2: number, y2: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
   width: number,
   speed: number,
   phase: number,
@@ -124,7 +128,8 @@ export function drawWaterFlow(
       const t = i / (waveCount * 10);
       const px = x1 + dx * t;
       const py = y1 + dy * t;
-      const wave = Math.sin(t * waveCount * Math.PI * 2 + wavePhase) * width * 0.12;
+      const wave =
+        Math.sin(t * waveCount * Math.PI * 2 + wavePhase) * width * 0.12;
       const fx = px + nx * (offset + wave);
       const fy = py + ny * (offset + wave);
       if (i === 0) ctx.moveTo(fx, fy);

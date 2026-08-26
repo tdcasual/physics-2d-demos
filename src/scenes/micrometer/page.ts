@@ -51,7 +51,9 @@ bootScenePage({
     const onPresetClick = (e: Event) => {
       const btn = (e.target as HTMLElement).closest('[data-preset-id]');
       if (btn) {
-        const val = parseFloat((btn as HTMLElement).dataset.presetId || '4.593');
+        const val = parseFloat(
+          (btn as HTMLElement).dataset.presetId || '4.593'
+        );
         microScene.setParams({ reading: val });
         renderer.setValue('reading', val);
         microScene.render();

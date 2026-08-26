@@ -37,7 +37,6 @@ function createTestContext(
       mode = m;
       listeners.get('modechange')?.forEach((h) => h({ mode: m }));
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     on: ((event: string, handler: (payload: unknown) => void): (() => void) => {
       if (!listeners.has(event)) listeners.set(event, new Set());
       listeners.get(event)!.add(handler);

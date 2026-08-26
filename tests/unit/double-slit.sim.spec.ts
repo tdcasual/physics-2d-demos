@@ -3,7 +3,16 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createDoubleSlitSim, lambdaToGap, lambdaToRgb, wavelengthToColor, computeFringeSpacingPx, DEFAULT_L, PHYSICAL_D_SCALE, PIXEL_TO_MM } from '../../src/scenes/double-slit/scene.sim';
+import {
+  createDoubleSlitSim,
+  lambdaToGap,
+  lambdaToRgb,
+  wavelengthToColor,
+  computeFringeSpacingPx,
+  DEFAULT_L,
+  PHYSICAL_D_SCALE,
+  PIXEL_TO_MM
+} from '../../src/scenes/double-slit/scene.sim';
 
 const defaultParams = {
   step: 1 as const,
@@ -13,7 +22,7 @@ const defaultParams = {
   activeInstrument: 'caliper' as const,
   showInstrumentReadout: false,
   micrometerOffset: 0,
-  stripeOffset: 0,
+  stripeOffset: 0
 };
 
 describe('double-slit simulation', () => {

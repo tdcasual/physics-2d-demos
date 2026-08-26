@@ -32,6 +32,6 @@ export function createTransitionTracker(durationMs = 250) {
 
     get isTransitioning(): boolean {
       return isTransitioning;
-    },
+    }
   };
 }

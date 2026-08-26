@@ -2,7 +2,10 @@
  * 高精度干涉测微仪 — 模拟器
  */
 
-import type { InstrumentSim, InstrumentState } from '../_contract/instrument-contract';
+import type {
+  InstrumentSim,
+  InstrumentState
+} from '../_contract/instrument-contract';
 import type { MicrometerEyepieceParams, ViewMode } from './instrument.meta';
 
 export interface MicrometerEyepieceState extends InstrumentState {
@@ -19,7 +22,7 @@ export interface MicrometerEyepieceState extends InstrumentState {
 }
 
 export function createMicrometerEyepieceSim(
-  initial: MicrometerEyepieceParams,
+  initial: MicrometerEyepieceParams
 ): InstrumentSim<MicrometerEyepieceState, MicrometerEyepieceParams> {
   const state: MicrometerEyepieceState = {
     currentReading: initial.initialReading,
@@ -31,7 +34,7 @@ export function createMicrometerEyepieceSim(
     viewMode: initial.viewMode,
     crosshairSpeed: initial.crosshairSpeed ?? 100,
     scaleInverted: initial.scaleInverted ?? false,
-    crosshairAngle: initial.crosshairAngle ?? 0,
+    crosshairAngle: initial.crosshairAngle ?? 0
   };
 
   return {
@@ -81,6 +84,9 @@ export function createMicrometerEyepieceSim(
       state.stripeColor = initial.stripeColor;
       state.stripeAngle = initial.stripeAngle;
       state.viewMode = initial.viewMode;
-    },
+      state.crosshairSpeed = initial.crosshairSpeed ?? 100;
+      state.scaleInverted = initial.scaleInverted ?? false;
+      state.crosshairAngle = initial.crosshairAngle ?? 0;
+    }
   };
 }

@@ -151,7 +151,9 @@ export function drawScene1(
   ctx.fillStyle = P.isDark ? 'rgba(15,23,42,0.72)' : 'rgba(255,255,255,0.82)';
   roundRect(ctx, px0, py0, panelW, panelH, 8 * s);
   ctx.fill();
-  ctx.strokeStyle = P.isDark ? 'rgba(148,163,184,0.25)' : 'rgba(100,116,139,0.2)';
+  ctx.strokeStyle = P.isDark
+    ? 'rgba(148,163,184,0.25)'
+    : 'rgba(100,116,139,0.2)';
   ctx.lineWidth = 1;
   ctx.stroke();
 
@@ -199,7 +201,9 @@ export function drawScene1(
   ctx.fillStyle = P.isDark ? 'rgba(15,23,42,0.72)' : 'rgba(255,255,255,0.82)';
   roundRect(ctx, bx, by, bW, bH, 8 * s);
   ctx.fill();
-  ctx.strokeStyle = P.isDark ? 'rgba(148,163,184,0.25)' : 'rgba(100,116,139,0.2)';
+  ctx.strokeStyle = P.isDark
+    ? 'rgba(148,163,184,0.25)'
+    : 'rgba(100,116,139,0.2)';
   ctx.lineWidth = 1;
   ctx.stroke();
   ctx.textAlign = 'left';

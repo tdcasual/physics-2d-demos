@@ -3,7 +3,12 @@ import { createFieldLinesSim } from '../../src/scenes/field-lines/scene.sim';
 
 describe('field-lines sim', () => {
   it('switches to custom scene and applies custom charge values', () => {
-    const sim = createFieldLinesSim({ scene: 'single', density: 10, q1: 1, q2: -1 });
+    const sim = createFieldLinesSim({
+      scene: 'single',
+      density: 10,
+      q1: 1,
+      q2: -1
+    });
     sim.setScene('custom');
     sim.setCustomCharges(2.5, -3);
     const snapshot = sim.getSnapshot();

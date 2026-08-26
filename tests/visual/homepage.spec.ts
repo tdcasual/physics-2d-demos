@@ -13,7 +13,9 @@ test('homepage renders hero, experiments, and theme toggle', async ({
 
   await expect(page.locator('.hero-title .line-1')).toHaveText('交互式');
   await expect(page.locator('#experiments')).toBeVisible();
-  await expect(page.getByRole('button', { name: '切换到暗色模式' })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: '切换到暗色模式' })
+  ).toBeVisible();
   await expect(page.locator('.experiment-card').first()).toBeVisible();
 
   await page.getByRole('button', { name: '切换到暗色模式' }).click();

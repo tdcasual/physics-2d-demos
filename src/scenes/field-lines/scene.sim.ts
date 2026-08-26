@@ -24,7 +24,11 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function defaultCharges(scene: FieldLinesScene, q1: number, q2: number): FieldCharge[] {
+function defaultCharges(
+  scene: FieldLinesScene,
+  q1: number,
+  q2: number
+): FieldCharge[] {
   if (scene === 'single') {
     return [{ x: 0.5, y: 0.5, q: 1 }];
   }
@@ -46,15 +50,24 @@ function defaultCharges(scene: FieldLinesScene, q1: number, q2: number): FieldCh
   ];
 }
 
-function normalizeParams(input: Partial<FieldLinesParams>): ResolvedFieldLinesParams {
+function normalizeParams(
+  input: Partial<FieldLinesParams>
+): ResolvedFieldLinesParams {
   const scene: FieldLinesScene =
-    input.scene === 'single' || input.scene === 'like' || input.scene === 'unlike' || input.scene === 'custom'
+    input.scene === 'single' ||
+    input.scene === 'like' ||
+    input.scene === 'unlike' ||
+    input.scene === 'custom'
       ? input.scene
       : 'single';
 
   return {
     scene,
-    density: clamp(Number.isFinite(input.density) ? Number(input.density) : 10, 1, 100),
+    density: clamp(
+      Number.isFinite(input.density) ? Number(input.density) : 10,
+      1,
+      100
+    ),
     q1: clamp(Number.isFinite(input.q1) ? Number(input.q1) : 1, -5, 5),
     q2: clamp(Number.isFinite(input.q2) ? Number(input.q2) : -1, -5, 5)
   };

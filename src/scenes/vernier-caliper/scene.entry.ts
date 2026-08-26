@@ -6,7 +6,11 @@ import type { TeachingTheme, TeachingMode } from '../../platform/standards';
 import type { SceneLifecycle } from '../../platform/scene-contract';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import { createStandardSceneEntry } from '../scene-entry-helpers';
-import { createVernierCaliperSim, type CaliperParams, type CaliperState } from './scene.sim';
+import {
+  createVernierCaliperSim,
+  type CaliperParams,
+  type CaliperState
+} from './scene.sim';
 import { createVernierCaliperView } from './scene.view';
 
 export type CreateCaliperSceneOptions = {

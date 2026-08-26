@@ -4,7 +4,7 @@
  */
 
 import { Colors, alpha } from './colors';
-import type { GridOptions } from './canvas-sizing-utils';
+import type { GridOptions } from './canvas-sizing';
 
 /**
  * 绘制标准化网格

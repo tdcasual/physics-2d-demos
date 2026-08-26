@@ -11,7 +11,7 @@ const defaultParams: ThinFilmParams = {
   dBottom: 800,
   n: 1.33,
   whiteLight: false,
-  step: 'geometry',
+  step: 'geometry'
 };
 
 describe('thin-film sim', () => {
@@ -77,7 +77,9 @@ describe('thin-film sim', () => {
       const sim2 = createThinFilmSim({ ...defaultParams, dBottom: 1200 });
       sim1.setCursorY(0.5);
       sim2.setCursorY(0.5);
-      expect(sim2.getState().pathDiff).toBeGreaterThan(sim1.getState().pathDiff);
+      expect(sim2.getState().pathDiff).toBeGreaterThan(
+        sim1.getState().pathDiff
+      );
     });
 
     it('increases with n', () => {
@@ -85,7 +87,9 @@ describe('thin-film sim', () => {
       const sim2 = createThinFilmSim({ ...defaultParams, n: 2.0 });
       sim1.setCursorY(0.5);
       sim2.setCursorY(0.5);
-      expect(sim2.getState().pathDiff).toBeGreaterThan(sim1.getState().pathDiff);
+      expect(sim2.getState().pathDiff).toBeGreaterThan(
+        sim1.getState().pathDiff
+      );
     });
 
     it('λ/2 offset is always present', () => {
@@ -109,7 +113,7 @@ describe('thin-film sim', () => {
       const cases = [
         { lambda: 400, dTop: 50, dBottom: 50, n: 1.0 },
         { lambda: 700, dTop: 2000, dBottom: 2000, n: 2.5 },
-        { lambda: 550, dTop: 100, dBottom: 800, n: 1.5 },
+        { lambda: 550, dTop: 100, dBottom: 800, n: 1.5 }
       ];
       for (const p of cases) {
         const sim = createThinFilmSim({ ...defaultParams, ...p });
@@ -237,7 +241,11 @@ describe('thin-film sim', () => {
     });
 
     it('dTop at min (50nm)', () => {
-      const sim = createThinFilmSim({ ...defaultParams, dTop: 50, dBottom: 50 });
+      const sim = createThinFilmSim({
+        ...defaultParams,
+        dTop: 50,
+        dBottom: 50
+      });
       sim.setCursorY(0);
       const s = sim.getState();
       expect(s.pathDiff).toBeGreaterThan(0);

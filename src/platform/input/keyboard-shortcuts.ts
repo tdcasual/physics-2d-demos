@@ -12,6 +12,31 @@
 export type ShortcutHandler = () => void;
 
 export class KeyboardShortcutManager {
+  /**
+   * 焦点位于这些可交互元素上时不触发全局快捷键，
+   * 避免与元素自身的键盘行为冲突（如 tab/radio 的方向键导航、
+   * button 的 Space 激活、separator/slider 的方向键调整、
+   * tabpanel 的方向键滚动）。
+   * 注意：canvas 可聚焦且 ←/→ 单步是刻意功能，不在豁免之列。
+   */
+  private static readonly INTERACTIVE_SELECTOR = [
+    'button',
+    'a[href]',
+    'input',
+    'textarea',
+    'select',
+    '[contenteditable="true"]',
+    '[role="tab"]',
+    '[role="tabpanel"]',
+    '[role="region"]',
+    '[role="radio"]',
+    '[role="switch"]',
+    '[role="separator"]',
+    '[role="slider"]',
+    '[role="checkbox"]',
+    '[role="menuitem"]'
+  ].join(',');
+
   private shortcuts = new Map<string, ShortcutHandler>();
   private enabled = false;
 
@@ -32,7 +57,7 @@ export class KeyboardShortcutManager {
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (this.isTypingInInput(e)) return;
+    if (this.isInteractiveTarget(e)) return;
     const handler = this.shortcuts.get(e.key.toLowerCase());
     if (handler) {
       e.preventDefault();
@@ -40,13 +65,11 @@ export class KeyboardShortcutManager {
     }
   };
 
-  private isTypingInInput(e: KeyboardEvent): boolean {
+  private isInteractiveTarget(e: KeyboardEvent): boolean {
     const target = e.target as HTMLElement | null;
-    if (!target) return false;
+    if (!target || typeof target.closest !== 'function') return false;
     return (
-      target.tagName === 'INPUT' ||
-      target.tagName === 'TEXTAREA' ||
-      target.tagName === 'SELECT' ||
+      target.closest(KeyboardShortcutManager.INTERACTIVE_SELECTOR) !== null ||
       target.isContentEditable
     );
   }
