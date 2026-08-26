@@ -69,6 +69,38 @@ function hasControlsFile(scenePath: string): boolean {
   );
 }
 
+function checkSceneHtml(id: string): string[] {
+  const htmlPath = join(pagesDir, `${id}.html`);
+  if (!existsSync(htmlPath)) {
+    return [`missing src/pages/${id}.html`];
+  }
+  const errors: string[] = [];
+  const html = read(htmlPath);
+
+  if (!html.includes('id="app"')) {
+    errors.push(`${id}.html must contain an #app mount element`);
+  }
+  const expectedScript = `<script type="module" src="../scenes/${id}/page.ts"></script>`;
+  if (!html.includes(expectedScript)) {
+    errors.push(
+      `${id}.html must load the scene entry via ${expectedScript} (relative src)`
+    );
+  }
+  // 死标记：bootScenePage 只挂载 #app，不读取这些历史遗留节点
+  for (const dead of ['scene-canvas', 'id="controls"']) {
+    if (html.includes(dead)) {
+      errors.push(`${id}.html contains dead markup: ${dead}`);
+    }
+  }
+  // 防闪烁脚本由 vite-plugin-theme-noflash 单源注入，HTML 中禁止手抄
+  if (html.includes('阻止 theme flash')) {
+    errors.push(
+      `${id}.html must not hand-copy the anti-flash script (injected by vite-plugin-theme-noflash)`
+    );
+  }
+  return errors;
+}
+
 function checkScene(id: string): SceneCheckResult {
   const scenePath = join(scenesDir, id);
   const errors: string[] = [];
@@ -83,9 +115,7 @@ function checkScene(id: string): SceneCheckResult {
     errors.push('missing controls-schema.ts or controls.ts');
   }
 
-  if (!existsSync(join(pagesDir, `${id}.html`))) {
-    errors.push(`missing src/pages/${id}.html`);
-  }
+  errors.push(...checkSceneHtml(id));
 
   const metaPath = join(scenePath, 'scene.meta.ts');
   if (existsSync(metaPath)) {

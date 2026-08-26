@@ -4,6 +4,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { analyzer } from 'vite-bundle-analyzer';
+import { themeNoFlash } from './scripts/vite-plugin-theme-noflash';
 
 /**
  * 自动扫描 src/pages/*.html 作为构建入口。
@@ -27,6 +28,7 @@ function discoverPageEntries(pagesDir: string): Record<string, string> {
 
 export default defineConfig({
   plugins: [
+    themeNoFlash(),
     tailwindcss(),
     react(),
     process.env.ANALYZE === 'true' &&
@@ -123,9 +125,14 @@ export default defineConfig({
               return `instrument-${instrumentId}`;
             }
           }
-          // Scene metadata shared across entries
-          if (id.includes('/scene.meta.')) {
-            return 'scene-meta';
+          // Scene metadata: one chunk per scene so scene pages only preload
+          // their own meta. The home page still gets the full set through the
+          // scene-registry aggregation chunk.
+          const sceneMetaMatch = id.match(
+            /\/src\/scenes\/([^/]+)\/scene\.meta\./
+          );
+          if (sceneMetaMatch) {
+            return `scene-meta-${sceneMetaMatch[1]}`;
           }
           // Scene bootstrapper shared across entries
           if (

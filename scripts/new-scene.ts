@@ -287,6 +287,7 @@ export const __CAMEL__ControlsSchema: ControlsSchema = {
 `;
 
 const pageTpl = `import { bootScenePage } from '../../app/scene-bootstrapper';
+import { readSceneParams, writeSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { create__PASCAL__Scene } from './scene.entry';
 import { __CAMEL__Meta } from './scene.meta';
@@ -308,26 +309,48 @@ bootScenePage({
       schema: __CAMEL__ControlsSchema,
       onChange: (key, value) => {
         scene.setParams({ [key]: value } as Partial<__PASCAL__Params>);
+        writeSceneParams({ [key]: value });
       },
       onAction: () => {}
     });
-    return { dispose: () => renderer.dispose() };
+
+    // 应用 URL 参数（键集 = meta.defaultParams ∪ meta.urlSyncKeys）
+    const urlParams = readSceneParams(__CAMEL__Meta);
+    for (const [key, value] of Object.entries(urlParams)) {
+      if (key in __CAMEL__Meta.defaultParams) {
+        const num = Number.isInteger(__CAMEL__Meta.defaultParams[key])
+          ? parseInt(String(value), 10)
+          : parseFloat(String(value));
+        scene.setParams({ [key]: num } as Partial<__PASCAL__Params>);
+        renderer.setValue(key, num);
+      }
+    }
+
+    return {
+      setValue(key: string, value: number | string) {
+        renderer.setValue(key, value);
+      },
+      setActive(key: string, value: string) {
+        renderer.setActive(key, value);
+      },
+      dispose: () => renderer.dispose()
+    };
   }
 });
 `;
 
-const htmlTpl = `<!DOCTYPE html>
+const htmlTpl = `<!doctype html>
 <html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>__TITLE__</title>
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-</head>
-<body>
-  <main id="app"></main>
-  <script type="module" src="../scenes/__ID__/page.ts"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>__TITLE__ - 物理演示</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <main id="app"></main>
+    <script type="module" src="../scenes/__ID__/page.ts"></script>
+  </body>
 </html>
 `;
 

@@ -5,34 +5,28 @@ import { sceneIds, scenePage } from './scene-pages';
  * Pixel snapshots cover every discovered scene. Baselines are per-platform
  * files: *-linux.png is maintained in the CI-parity container
  * (scripts/visual-linux-container.sh), *-darwin.png on Mac.
+ *
+ * 覆盖清单 = 自动发现（tests/visual/scene-pages.ts 的 sceneIds，
+ * 即 src/pages/*.html 减去工具页）− 下方 SNAPSHOT_OPT_OUT。
+ * 新场景默认纳入像素覆盖；首次补充基线用
+ * scripts/visual-linux-container.sh update（linux）或
+ * pnpm test:visual:update（darwin）。
  */
-const SNAPSHOT_SCENE_IDS = [
-  'chase-meet',
-  'doppler-effect',
-  'double-slit',
-  'electrification',
-  'emf-analogy',
-  'field-lines',
-  'ganshe',
-  'interference-formula',
-  'mechanical-wave',
-  'micrometer',
-  'projectile',
-  'spring-oscillator',
-  'thin-film',
-  'vernier-caliper',
-  'vt-integral',
-  'wedge'
-] as const;
+
+// 显式 opt-out 清单，每个条目必须带理由注释。当前为空：所有场景均有基线。
+const SNAPSHOT_OPT_OUT: readonly string[] = [];
+
+const SNAPSHOT_SCENE_IDS = sceneIds.filter(
+  (id) => !SNAPSHOT_OPT_OUT.includes(id)
+);
 
 const SCENES = SNAPSHOT_SCENE_IDS.map((id) => ({ id, name: id }));
 
-test('snapshot allowlist only references discovered scenes', () => {
-  const unknown = SNAPSHOT_SCENE_IDS.filter((id) => !sceneIds.includes(id));
-  expect(
-    unknown,
-    'snapshot scene allowlist contains unknown scene ids'
-  ).toEqual([]);
+test('snapshot opt-out list only references discovered scenes', () => {
+  const unknown = SNAPSHOT_OPT_OUT.filter((id) => !sceneIds.includes(id));
+  expect(unknown, 'snapshot opt-out list contains unknown scene ids').toEqual(
+    []
+  );
 });
 
 for (const scene of SCENES) {

@@ -1,0 +1,221 @@
+/**
+ * 场景参数契约测试 — defaultParams ∪ urlSyncKeys 键回环校验
+ *
+ * 对每个场景实例化 entry，对 meta.defaultParams（及 urlSyncKeys）的每个键
+ * 调 setParams({key}) 后断言 getParams() 包含对应键，保证：
+ * - URL 同步键（readSceneParams 的 allowedKeys）都能真正落到 sim 上
+ * - 控制面板的 key 不会静默失效
+ *
+ * meta 键与 sim 参数键不一致的场景（如 projectile 的 v0→speed），
+ * 必须在 PARAM_KEY_MAP 显式登记映射；不经过 sim setParams 的键
+ * （如 UI 状态键）必须在 NON_SIM_KEYS 登记豁免并注明理由。
+ */
+
+import { describe, expect, it } from 'vitest';
+import type { SceneMeta } from '../../src/platform/scene-contract';
+
+// ---------------------------------------------------------------------------
+// 键名映射：meta.defaultParams/urlSyncKeys 键 → sim setParams 键
+// ---------------------------------------------------------------------------
+
+const PARAM_KEY_MAP: Record<string, Record<string, string>> = {
+  // page.ts 经 createParamMapper 做的同一份映射，这里显式登记以便机器校验
+  projectile: {
+    v0: 'speed',
+    theta: 'angleDeg',
+    h0: 'initialHeight',
+    g: 'gravity',
+    c: 'drag'
+  }
+};
+
+// ---------------------------------------------------------------------------
+// 豁免：不经过 sim setParams 的键（必须注明承载方式）
+// ---------------------------------------------------------------------------
+
+const NON_SIM_KEYS: Record<string, Record<string, string>> = {};
+
+// 无对象式 setParams 的场景（entry 暴露专用 setter，须注明承载方式）
+const NO_PARAMS_API: Record<string, string> = {
+  // 教程式场景：entry 暴露 setScene/runSceneAction，无连续参数
+  electrification: 'entry exposes setScene/runSceneAction instead of setParams',
+  // entry 暴露 setSystemOn/setTapOpening/setView 专用 API
+  'emf-analogy':
+    'entry exposes setSystemOn/setTapOpening/setView instead of setParams',
+  // entry 暴露 setDensity/setCustomCharges 专用 API
+  'field-lines':
+    'entry exposes setDensity/setCustomCharges instead of setParams',
+  // entry 暴露 setParam(key, value) 单键设置
+  'mechanical-wave': 'entry exposes setParam(key, value) instead of setParams',
+  // 多振子场景：参数挂在每个振子上（addOscillator/updateOscillator）
+  'spring-oscillator':
+    'params live on individual oscillators (addOscillator/updateOscillator)',
+  // entry 暴露 setRects/setScene/setMethod 等专用 API
+  'vt-integral':
+    'entry exposes setRects/setScene/setMethod instead of setParams'
+};
+
+// ---------------------------------------------------------------------------
+// 动态发现 meta 与 entry
+// ---------------------------------------------------------------------------
+
+const metaModules = import.meta.glob<Record<string, unknown>>(
+  '../../src/scenes/*/scene.meta.ts',
+  { eager: true }
+);
+
+const entryModules = import.meta.glob<Record<string, unknown>>(
+  '../../src/scenes/*/scene.entry.ts',
+  { eager: true }
+);
+
+type DiscoveredScene = {
+  id: string;
+  meta: SceneMeta;
+  create: () => Record<string, unknown>;
+};
+
+function extractMeta(mod: Record<string, unknown>): SceneMeta {
+  const key = Object.keys(mod).find((k) => k.endsWith('Meta'));
+  if (!key) throw new Error('scene.meta.ts must export a *Meta object');
+  return mod[key] as SceneMeta;
+}
+
+function extractCreate(
+  mod: Record<string, unknown>
+): (opts?: Record<string, unknown>) => Record<string, unknown> {
+  const fn = Object.entries(mod).find(
+    ([key, val]) =>
+      key.startsWith('create') &&
+      key.endsWith('Scene') &&
+      typeof val === 'function'
+  )?.[1];
+  if (typeof fn !== 'function') {
+    throw new Error('scene.entry.ts must export a create*Scene factory');
+  }
+  return fn as (opts?: Record<string, unknown>) => Record<string, unknown>;
+}
+
+const scenes: DiscoveredScene[] = Object.entries(metaModules).map(
+  ([path, mod]) => {
+    const id = path.split('/').slice(-2, -1)[0];
+    const entry = entryModules[`../../src/scenes/${id}/scene.entry.ts`];
+    if (!entry) throw new Error(`${id}: missing scene.entry.ts`);
+    return {
+      id,
+      meta: extractMeta(mod),
+      create: () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 800;
+        canvas.height = 600;
+        return extractCreate(entry)({ canvas });
+      }
+    };
+  }
+);
+
+// ---------------------------------------------------------------------------
+// 契约测试
+// ---------------------------------------------------------------------------
+
+describe('scene params contract', () => {
+  it.each(scenes.map((s) => ({ id: s.id })))(
+    '$id: every mapped/exempted key actually exists in meta keys',
+    ({ id }) => {
+      const meta = scenes.find((s) => s.id === id)!.meta;
+      const keys = new Set([
+        ...Object.keys(meta.defaultParams),
+        ...(meta.urlSyncKeys ?? [])
+      ]);
+      for (const key of Object.keys(PARAM_KEY_MAP[id] ?? {})) {
+        expect(
+          keys.has(key),
+          `${id}: PARAM_KEY_MAP 登记了 meta 中不存在的键 "${key}"`
+        ).toBe(true);
+      }
+      for (const key of Object.keys(NON_SIM_KEYS[id] ?? {})) {
+        expect(
+          keys.has(key),
+          `${id}: NON_SIM_KEYS 登记了 meta 中不存在的键 "${key}"`
+        ).toBe(true);
+      }
+      // 防陈旧：登记了 NO_PARAMS_API 的场景必须确实没有 setParams
+      if (id in NO_PARAMS_API) {
+        const scene = scenes.find((s) => s.id === id)!.create();
+        const maybe = scene as { setParams?: unknown; dispose?: () => void };
+        expect(
+          typeof maybe.setParams,
+          `${id}: 已登记 NO_PARAMS_API 但 entry 已有 setParams，请移除登记并走默认回环校验`
+        ).toBe('undefined');
+        maybe.dispose?.();
+      }
+    }
+  );
+
+  it.each(scenes)(
+    '$id: defaultParams ∪ urlSyncKeys keys round-trip through setParams/getParams',
+    ({ id, meta, create }) => {
+      const scene = create();
+      const s = scene as {
+        setParams?: (p: Record<string, unknown>) => unknown;
+        getParams?: () => Record<string, unknown>;
+        dispose?: () => void;
+      };
+      try {
+        if (typeof s.setParams !== 'function') {
+          expect(
+            NO_PARAMS_API[id],
+            `${id}: entry 无 setParams，必须在 NO_PARAMS_API 登记理由`
+          ).toBeTypeOf('string');
+          return;
+        }
+
+        const keys = new Set([
+          ...Object.keys(meta.defaultParams),
+          ...(meta.urlSyncKeys ?? [])
+        ]);
+        const map = PARAM_KEY_MAP[id] ?? {};
+        const exempt = NON_SIM_KEYS[id] ?? {};
+
+        for (const key of keys) {
+          if (key in exempt) continue;
+          const simKey = map[key] ?? key;
+          const value = meta.defaultParams[key] ?? 0;
+          const returned = s.setParams({ [simKey]: value });
+          // 优先读 getParams()；无 getParams 的场景用 setParams 的返回做回环
+          const resolved =
+            typeof s.getParams === 'function'
+              ? s.getParams()
+              : (returned as Record<string, unknown> | undefined);
+          expect(
+            resolved && typeof resolved === 'object'
+              ? Object.keys(resolved)
+              : [],
+            `${id}: setParams({ ${simKey} }) 后读数缺少该键` +
+              (simKey !== key ? `（meta 键 "${key}" 的映射）` : '')
+          ).toContain(simKey);
+        }
+      } finally {
+        s.dispose?.();
+      }
+    }
+  );
+
+  it.each(scenes)('$id: placard 字段非空', ({ meta }) => {
+    expect(meta.subject.trim().length, 'subject').toBeGreaterThan(0);
+    expect(meta.concept.trim().length, 'concept').toBeGreaterThan(0);
+    expect(meta.subConcepts, 'subConcepts').toHaveLength(2);
+    for (const sub of meta.subConcepts) {
+      expect(sub.trim().length, 'subConcepts item').toBeGreaterThan(0);
+    }
+    expect(meta.objective.trim().length, 'objective').toBeGreaterThan(0);
+    expect(meta.keywords.length, 'keywords').toBeGreaterThan(0);
+    for (const kw of meta.keywords) {
+      expect(kw.trim().length, 'keywords item').toBeGreaterThan(0);
+    }
+    expect(
+      (meta.description ?? '').trim().length,
+      'description'
+    ).toBeGreaterThan(0);
+  });
+});
