@@ -9,16 +9,23 @@
 src/instruments/
 ├── _contract/
 │   └── instrument-contract.ts     # 通用接口（Sim / View / Meta / Factory）
+├── _manifest/
+│   └── manifest.ts                # 仪器清单（纯元数据，注册表与审计读取）
 ├── _utils/
 │   └── viewport.ts                # 视口裁剪、坐标变换工具
-├── index.ts                       # 统一导出入口
-├── micrometer/                    # 螺旋测微器（未来添加）
-│   ├── micrometer.sim.ts
-│   ├── micrometer.view.ts
-│   ├── micrometer.meta.ts
-│   └── index.ts
-├── vernier-caliper/               # 游标卡尺（未来添加）
-└── ...
+├── index.ts                       # 统一导出入口（仅契约类型 + 工具函数）
+├── instrument-registry.ts         # 注册表（import.meta.glob 按需懒加载工厂）
+├── spiral-micrometer/             # 螺旋测微器（千分尺）
+├── vernier-caliper/               # 游标卡尺
+├── micrometer-eyepiece/           # 测微目镜（高精度干涉测微仪）
+├── interference-vernier-caliper/  # 干涉游标卡尺
+└── <my-instrument>/               # 新仪器目录，固定文件名约定：
+    ├── instrument.sim.ts          #   状态/逻辑
+    ├── instrument.view.ts         #   Canvas 渲染
+    ├── instrument.meta.ts         #   元数据
+    ├── instrument.entry.ts        #   组装工厂（导出 <name>Factory）
+    ├── controls-schema.ts         #   控制面板 schema（可选）
+    └── index.ts                   #   模块出口（re-export 工厂）
 ```
 
 ## 添加新仪器的步骤
@@ -26,7 +33,7 @@ src/instruments/
 ### 1. 定义参数和状态类型
 
 ```typescript
-// my-instrument/my-instrument.sim.ts
+// my-instrument/instrument.sim.ts
 export interface MyInstrumentParams {
   value: number;
 }
@@ -59,7 +66,7 @@ export function createMyInstrumentSim(
 ### 2. 实现 Canvas 渲染
 
 ```typescript
-// my-instrument/my-instrument.view.ts
+// my-instrument/instrument.view.ts
 export function createMyInstrumentView(options: {
   canvas: HTMLCanvasElement;
   theme: TeachingTheme;
@@ -97,7 +104,7 @@ export function createMyInstrumentView(options: {
 ### 3. 定义元数据
 
 ```typescript
-// my-instrument/my-instrument.meta.ts
+// my-instrument/instrument.meta.ts
 export const myInstrumentMeta: InstrumentMeta<MyInstrumentParams> = {
   id: 'my-instrument',
   title: '我的仪器',
@@ -112,17 +119,14 @@ export const myInstrumentMeta: InstrumentMeta<MyInstrumentParams> = {
 ### 4. 组装工厂并导出
 
 ```typescript
-// my-instrument/index.ts
+// my-instrument/instrument.entry.ts
 import type { InstrumentFactory } from '../_contract/instrument-contract';
-import { myInstrumentMeta } from './my-instrument.meta';
-import { createMyInstrumentSim } from './my-instrument.sim';
-import { createMyInstrumentView } from './my-instrument.view';
-import type {
-  MyInstrumentState,
-  MyInstrumentParams
-} from './my-instrument.sim';
+import { myInstrumentMeta } from './instrument.meta';
+import { createMyInstrumentSim } from './instrument.sim';
+import { createMyInstrumentView } from './instrument.view';
+import type { MyInstrumentState, MyInstrumentParams } from './instrument.sim';
 
-export const myInstrument: InstrumentFactory<
+export const myInstrumentFactory: InstrumentFactory<
   MyInstrumentState,
   MyInstrumentParams
 > = {
@@ -130,17 +134,19 @@ export const myInstrument: InstrumentFactory<
   createSim: createMyInstrumentSim,
   createView: createMyInstrumentView
 };
-
-export * from './my-instrument.sim';
-export * from './my-instrument.meta';
 ```
-
-### 5. 注册到统一入口
 
 ```typescript
-// src/instruments/index.ts
-export { myInstrument } from './my-instrument';
+// my-instrument/index.ts — 模块出口，re-export 工厂
+export { myInstrumentFactory as myInstrument } from './instrument.entry';
 ```
+
+### 5. 注册到仪器清单
+
+新仪器必须在 `_manifest/manifest.ts` 的 `instrumentManifest` 中登记纯元数据
+（id / title / category / description / defaultParams / modulePath），
+注册表（`instrument-registry.ts`）通过 `import.meta.glob` 按目录自动发现工厂并懒加载。
+`src/instruments/index.ts` 只导出契约类型与工具函数，无需修改。
 
 ## 场景使用方式
 
@@ -150,7 +156,7 @@ export { myInstrument } from './my-instrument';
 
 ```typescript
 // scenes/my-instrument-scene/scene.entry.ts
-import { myInstrument } from '../../instruments';
+import { myInstrument } from '../../instruments/my-instrument';
 import { createStandardSceneEntry } from '../scene-entry-helpers';
 
 export function createMyInstrumentScene({ canvas, theme }) {
@@ -171,15 +177,15 @@ export function createMyInstrumentScene({ canvas, theme }) {
 
 ```typescript
 // scenes/measurement-lab/scene.entry.ts
-import { micrometer } from '../../instruments';
-import { vernierCaliper } from '../../instruments';
+import { spiralMicrometer } from '../../instruments/spiral-micrometer';
+import { vernierCaliper } from '../../instruments/vernier-caliper';
 
 export function createMeasurementLabScene({ canvas, theme }) {
   const w = canvas.width;
   const h = canvas.height;
 
-  const mSim = micrometer.createSim({ reading: 0 });
-  const mView = micrometer.createView({
+  const mSim = spiralMicrometer.createSim({ reading: 0 });
+  const mView = spiralMicrometer.createView({
     canvas,
     theme,
     viewport: { x: 0, y: 0, width: w, height: h * 0.5 }

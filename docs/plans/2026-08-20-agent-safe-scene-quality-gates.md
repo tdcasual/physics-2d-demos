@@ -1,6 +1,8 @@
 # Agent-Safe Scene Quality Gates
 
-> 状态：规划中
+> 状态：已完成（交付物已落地：`SceneTestProfile`、`LayoutTestProfile`、`tests/visual/layout-matrix.spec.ts`、
+> `tests/contract/layout-contract.spec.ts`、`tests/helpers/scene-profile.ts`、`scripts/check-scenes.ts`、
+> `docs/new-scene-agent-contract.md` 等均已存在并生效）
 >
 > 目标：让 OpenClaw、Hermes 或其他代码代理新增场景时，自动纳入结构、生命周期、响应式布局、移动端 tab、图表、可访问性和构建门禁，最大限度阻止新场景引入回归。
 

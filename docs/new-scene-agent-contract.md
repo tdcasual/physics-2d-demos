@@ -47,7 +47,7 @@ pnpm check:bundle
 
 浏览器门禁也是必跑项：执行 `pnpm test:e2e` 和 `pnpm test:visual`。`quality:full` 会在一次构建后复用 `dist/` 执行这两套测试；`tests/visual/layout-matrix.spec.ts` 已包含在 visual 套件中，也可单独运行以快速定位布局问题。只有浏览器安装或执行环境存在明确、可复现的阻断时才可暂时缺跑，最终报告必须写出失败命令、错误和待补验证，且不能把任务报告为可合并完成。
 
-布局矩阵自动遍历全部场景、全部注册布局及 profile 视口，并检查页面无横向溢出、活跃 Canvas 尺寸、slot 水平边界、`responsiveScale` 范围与缩略像素内容非空；graph 会在需要时先激活对应 tab。像素回归只覆盖 `tests/visual/visual-regression.spec.ts` 中明确列出的代表场景；新增场景默认不加入像素清单，除非同时审查并生成 Darwin/Linux 两套基线。视觉失败不能直接更新 snapshot；先确认 viewport、字体、布局和实际 DOM。移动 tab 的非激活 panel 中 canvas 可以是 `display:none`，断言前必须激活目标 tab 或过滤非激活 panel。
+布局矩阵自动遍历全部场景、全部注册布局及 profile 视口，并检查页面无横向溢出、活跃 Canvas 尺寸、slot 水平边界、`responsiveScale` 范围与缩略像素内容非空；graph 会在需要时先激活对应 tab。像素回归覆盖清单 = 自动发现的全部场景 − `tests/visual/visual-regression.spec.ts` 中的 `SNAPSHOT_OPT_OUT` 显式豁免（每个条目须带理由注释）；新增场景默认纳入像素覆盖，首次须生成 Darwin/Linux 两套基线，确实无法稳定截图的场景才加入 opt-out。视觉失败不能直接更新 snapshot；先确认 viewport、字体、布局和实际 DOM。移动 tab 的非激活 panel 中 canvas 可以是 `display:none`，断言前必须激活目标 tab 或过滤非激活 panel。
 
 ## 失败报告格式
 

@@ -6,12 +6,12 @@
 
 ## 必读（新协作者）
 
-| 文档                                                               | 说明                                                           |
-| ------------------------------------------------------------------ | -------------------------------------------------------------- |
-| [README.md](../README.md)                                          | 项目概览、Quick Start、架构介绍                                |
-| [AGENTS.md](../AGENTS.md)                                          | AI 协作编码约定、常见陷阱、禁止事项                            |
-| [scene-migration-requirements.md](scene-migration-requirements.md) | **新场景开发规范**：文件结构、SceneInstance 契约、控制面板约定 |
-| [quality-gates.md](quality-gates.md)                               | **质量门禁**：CI、本地验收、bundle budget、视觉快照维护流程    |
+| 文档                                                       | 说明                                                                      |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------- |
+| [README.md](../README.md)                                  | 项目概览、Quick Start、架构介绍                                           |
+| [AGENTS.md](../AGENTS.md)                                  | AI 协作编码约定、常见陷阱、禁止事项                                       |
+| [new-scene-agent-contract.md](new-scene-agent-contract.md) | **新场景开发规范（当前有效）**：代理工作边界、场景/布局交付要求、必跑门禁 |
+| [quality-gates.md](quality-gates.md)                       | **质量门禁**：CI、本地验收、bundle budget、视觉快照维护流程               |
 
 ---
 
@@ -29,15 +29,15 @@
 
 ## 场景与迁移
 
-| 文档                                                               | 说明                                                           |
-| ------------------------------------------------------------------ | -------------------------------------------------------------- |
-| [scene-migration-requirements.md](scene-migration-requirements.md) | 新场景开发规范（当前有效）                                     |
-| [scene-modernization-guide.md](scene-modernization-guide.md)       | **场景现代化指南**：当前标准、可复用基建、安全重写流程、脚手架 |
-| [scene-analysis.md](scene-analysis.md)                             | 场景功能分析与分类                                             |
-| [scene-design-proposal.md](scene-design-proposal.md)               | 场景设计提案模板                                               |
-| [scene-layout-configs.md](scene-layout-configs.md)                 | 各场景布局配置汇总                                             |
-| [projectile-migration-review.md](projectile-migration-review.md)   | 抛体运动迁移评审                                               |
-| [projectile-migration-summary.md](projectile-migration-summary.md) | 抛体运动迁移总结                                               |
+| 文档                                                               | 说明                                                                     |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| [scene-migration-requirements.md](scene-migration-requirements.md) | 旧版场景开发规范（**历史文档**，当前规范见 new-scene-agent-contract.md） |
+| [scene-modernization-guide.md](scene-modernization-guide.md)       | **场景现代化指南**：当前标准、可复用基建、安全重写流程、脚手架           |
+| [scene-analysis.md](scene-analysis.md)                             | 场景功能分析与分类（**历史文档**，统一框架落地前的分析快照）             |
+| [scene-design-proposal.md](scene-design-proposal.md)               | 场景设计提案模板                                                         |
+| [scene-layout-configs.md](scene-layout-configs.md)                 | 各场景布局配置汇总                                                       |
+| [projectile-migration-review.md](projectile-migration-review.md)   | 抛体运动迁移评审                                                         |
+| [projectile-migration-summary.md](projectile-migration-summary.md) | 抛体运动迁移总结                                                         |
 
 ---
 

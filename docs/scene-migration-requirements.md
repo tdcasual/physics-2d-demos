@@ -1,5 +1,13 @@
 # 场景开发规范
 
+> **⚠️ 历史文档（已归档）**：本文描述的是旧版场景契约（`SceneInstance` 手动生命周期、
+> `controls-v4.ts`、`createTeachingDemoShell()` 等），其中 `controls-v4.ts` 与
+> `createTeachingDemoShell()` 已从代码库移除，文件结构与控制面板约定也已演进
+> （当前为 `controls-schema.ts` + `SchemaRenderer`，或 imperative `controls.ts`）。
+>
+> **当前有效的新场景开发规范以 [new-scene-agent-contract.md](new-scene-agent-contract.md)
+> 与根目录 [AGENTS.md](../AGENTS.md) 为准。** 本文保留供追溯迁移历史，请勿据此开发新场景。
+
 > 本文档定义创建新场景或迁移旧场景到统一框架的硬性要求。
 >
 > 旧版 `createTeachingDemoShell()` API 已废弃，所有场景统一使用 `bootScenePage()`。

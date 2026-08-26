@@ -1,5 +1,10 @@
 # 场景演示界面分析报告
 
+> **⚠️ 历史文档**：本文是统一框架（布局母版系统）落地前的分析快照，
+> 所述 `teaching-demo-shell`、`scene-shell`、legacy/iframe 回退等架构均已移除。
+> 保留供追溯当时的迁移动机；当前架构以根目录 AGENTS.md 与
+> [layout-master-system-design.md](layout-master-system-design.md) 为准。
+
 ## 1. 现有架构概览
 
 ### 1.1 核心组件层

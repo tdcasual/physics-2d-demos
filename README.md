@@ -92,7 +92,8 @@ tests/
 docs/
   README.md                    # 文档索引
   layout-master-system-design.md   # 布局母版系统设计
-  scene-migration-requirements.md  # 新场景开发规范
+  new-scene-agent-contract.md      # 新场景开发规范（当前有效）
+  scene-migration-requirements.md  # 旧版场景开发规范（历史归档）
 ```
 
 ## Page Entrypoints
@@ -207,7 +208,7 @@ bootScenePage({
    - 至少 1 个 E2E test（页面截图或控件交互）
 6. 执行质量门禁并更新快照（如需要）
 
-详细规范见：[docs/scene-migration-requirements.md](./docs/scene-migration-requirements.md)
+详细规范见：[docs/new-scene-agent-contract.md](./docs/new-scene-agent-contract.md)（旧版规范 scene-migration-requirements.md 已归档，仅供追溯）
 
 布局系统扩展指南见：[docs/layout-master-system-design.md](./docs/layout-master-system-design.md)
 

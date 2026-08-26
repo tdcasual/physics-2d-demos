@@ -8,7 +8,7 @@ Physics-2D-Demos 是一个物理教学演示中心（Teaching Demo Hub），当�
 
 - **技术栈**: Vite 7 + TypeScript 5.9 (strict) + React 18 + Tailwind CSS v4
 - **测试**: Vitest 3.2 (单元/契约) + Playwright (E2E/视觉)
-- **构建产物**: 体积预算与实测口径以 `scripts/check-bundle-budget.ts` 为准（2026-08 实测：首页 JS 162.05 kB / CSS 20.23 kB；场景页 JS 最大 157.25 kB（double-slit）/ CSS 最大 46.10 kB（chase-meet）；vendor 138.53 kB；shared 131.22 kB）
+- **构建产物**: 体积预算与实测口径以 `scripts/check-bundle-budget.ts` 为唯一权威（预算值：首页 JS 190 kB / CSS 25 kB；场景页 JS 180 kB / CSS 55 kB；vendor 160 kB；shared 150 kB；个别复杂场景有入口级覆盖，详见脚本）。实测数字随构建变化，不在本文固化，运行 `pnpm check:bundle` 获取当前值
 - **Runtime 依赖**: 仅 2 个（react / react-dom）
 - **线上地址**: <https://x.infinitas.fun>
 
@@ -67,6 +67,13 @@ src/scenes/<id>/
 
 src/pages/<id>.html  — HTML 入口（vite 自动扫描）
 ```
+
+HTML 入口约定（`pnpm check:scenes` 强制）：必须含 `#app` 挂载点与相对路径
+`<script type="module" src="../scenes/<id>/page.ts"></script>`；禁止内联
+`<canvas id="scene-canvas">` / `<div id="controls">` 死标记（bootScenePage 只挂载
+#app，不会清理这些节点）；禁止手抄主题防闪烁脚本——它由
+`scripts/vite-plugin-theme-noflash.ts`（transformIndexHtml）在 dev 与 build
+时统一注入所有 HTML，唯一模板改动需同步 `src/app/theme-store.ts` 的存储格式。
 
 ### controls-schema.ts 示例
 
@@ -229,6 +236,8 @@ export type SceneMeta = ScenePlacardMeta & {
   `Noto Sans CJK SC`（见 `design-tokens.css` 字体栈与 ci.yml 的字体安装步骤）。
 - 移动端断言遍历 canvas 时必须跳过非激活 tab 面板（`.mobile-tab-panel:not(.active)`
   内的 canvas 是 display:none，尺寸为 0 属设计如此），或先切换到目标 tab 再断言。
+- 像素覆盖清单 = 自动发现的全部场景 − spec 内 `SNAPSHOT_OPT_OUT` 显式豁免
+  （每个条目须带理由注释）。新增场景默认纳入像素覆盖，首次须生成两套平台基线。
 
 ### 场景删除保护规则（强制）
 

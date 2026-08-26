@@ -1,8 +1,9 @@
 # 场景现代化指南
 
 > 面向：要把早期「落后」场景重写/升级，或新增场景的开发者。
-> 本文与 [scene-migration-requirements.md](scene-migration-requirements.md)（新场景开发规范）互补：
-> 那份讲「契约与文件结构」，本文讲「如何把一个场景做到当前标准、如何安全地重写、有哪些可复用基建」。
+> 本文与 [new-scene-agent-contract.md](new-scene-agent-contract.md)（新场景开发规范）互补：
+> 那份讲「契约与交付要求」，本文讲「如何把一个场景做到当前标准、如何安全地重写、有哪些可复用基建」。
+> （旧版 scene-migration-requirements.md 已归档，仅供追溯。）
 
 布局母版系统已稳定，场景会持续演进。本指南的目标是让**每个新增或重写的场景都达到统一的「当前标准」**，并且这个标准只升不降。
 

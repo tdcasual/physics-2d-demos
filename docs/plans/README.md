@@ -1,6 +1,6 @@
 # 项目计划归档
 
-> 本目录包含已完成的历史计划和当前规划中的实施计划。
+> 本目录包含已执行完毕的历史计划，保留供追溯。
 
 ---
 
@@ -8,7 +8,7 @@
 
 | 文件                                                                                                                   | 日期  | 主题                                       | 状态      |
 | ---------------------------------------------------------------------------------------------------------------------- | ----- | ------------------------------------------ | --------- |
-| [2026-08-20-agent-safe-scene-quality-gates.md](2026-08-20-agent-safe-scene-quality-gates.md)                           | 08-20 | Agent 安全场景质量门禁与移动端布局自动审计 | 🚧 规划中 |
+| [2026-08-20-agent-safe-scene-quality-gates.md](2026-08-20-agent-safe-scene-quality-gates.md)                           | 08-20 | Agent 安全场景质量门禁与移动端布局自动审计 | ✅ 已完成 |
 | [2026-03-02-2d-teaching-demo-standard.md](2026-03-02-2d-teaching-demo-standard.md)                                     | 03-02 | 2D 教学演示标准                            | ✅ 已完成 |
 | [2026-03-02-physics-2d-animation-implementation-plan.md](2026-03-02-physics-2d-animation-implementation-plan.md)       | 03-02 | 物理 2D 动画实施计划                       | ✅ 已完成 |
 | [2026-03-02-physics-2d-animation-stack-design.md](2026-03-02-physics-2d-animation-stack-design.md)                     | 03-02 | 动画栈设计                                 | ✅ 已完成 |

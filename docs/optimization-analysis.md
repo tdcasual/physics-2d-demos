@@ -1,5 +1,10 @@
 # 项目深度分析与优化建议
 
+> **⚠️ 数据快照说明**：本文数据为 2026-04-20 的分析快照，此后项目经过多轮审计修复
+> （bundle 已拆分 vendor/shared、覆盖率阈值已提高、场景数量与控制面板架构均已变化），
+> 文中具体数字（bundle 体积、测试数、覆盖率、引用计数等）大多已过期。
+> 当前口径以代码与 `scripts/check-bundle-budget.ts`、`vite.config.ts` 为准。本文保留分析思路供参考。
+
 **分析日期**: 2026-04-20  
 **分析范围**: 构建性能、代码质量、测试策略、架构健康度  
 **当前状态**: 57 测试文件 / 454 测试通过 / 0 ESLint / 0 TS 错误
@@ -76,8 +81,8 @@ build: {
 
 **建议 2: SchemaRenderer 共享 Chunk（P0）**
 
-- 当前 SchemaRenderer 被 6 个场景 page.ts 导入
-- 如果每个场景 chunk 都内联 SchemaRenderer，总重复量 = 74KB × 6 = 444KB
+- 当时 SchemaRenderer 被 6 个场景 page.ts 导入（2026-08 复查：已增至 15 个场景）
+- 如果每个场景 chunk 都内联 SchemaRenderer，总重复量 = 74KB × 场景数
 - **实际上 Vite 会自动去重**，但 main chunk 可能已经包含了它
 - 验证方式：检查 `main-C9DGGBct.js` 中是否包含 SchemaRenderer 代码
 
