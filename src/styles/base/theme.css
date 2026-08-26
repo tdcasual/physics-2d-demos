@@ -16,44 +16,18 @@
    ======================================== */
 @variant dark (&:where([data-theme="dark"] *));
 
-/* Tailwind/layout aliases backed by the shared semantic theme. */
+/* Tailwind utilities consumed by class names (e.g. text-coral / bg-coral/10 in
+   ui/components/scene-controls/delete-button.ts). 布局 CSS 一律直接使用语义变量。 */
 @theme {
   --color-coral: var(--token-color-coral);
-  --color-mint: var(--token-color-mint);
-  --color-yellow: var(--token-color-yellow);
-  --color-bg-primary: var(--bg-primary);
-  --color-bg-secondary: var(--bg-secondary);
-  --color-bg-card: var(--bg-card);
-  --color-sidebar-bg: var(--sidebar-bg);
-  --color-stage-bg: var(--stage-bg);
-  --color-border-color: var(--border-color);
-  --color-border-light: var(--border-light);
-  --color-text-primary: var(--text-primary);
-  --color-text-secondary: var(--text-secondary);
-  --color-text-muted: var(--text-muted);
-  --color-text-inverse: var(--text-inverse);
-  --color-btn-bg: var(--btn-bg);
-  --color-btn-hover-bg: var(--btn-hover-bg);
-  --color-accent-color: var(--accent-color);
-  --color-accent-contrast: var(--accent-contrast);
-  --color-accent-primary: var(--accent-primary);
 }
 
 :root {
   /* 高分屏字体缩放系数 - 默认1.0 */
   --ui-scale: 1;
-  --font-base: calc(1rem * var(--ui-scale));
-  --font-sm: calc(0.875rem * var(--ui-scale));
-  --font-xs: calc(0.75rem * var(--ui-scale));
-  --font-lg: calc(1.125rem * var(--ui-scale));
 
   /* 触摸目标最小尺寸 */
   --touch-min: 44px;
-
-  /* 间距 */
-  --space-xs: calc(0.25rem * var(--ui-scale));
-  --space-sm: calc(0.5rem * var(--ui-scale));
-  --space-md: calc(0.75rem * var(--ui-scale));
 }
 
 /* 高分屏优化：DPR >= 2 时增大 UI */

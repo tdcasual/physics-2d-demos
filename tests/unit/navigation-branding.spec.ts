@@ -36,12 +36,16 @@ describe('navigation branding', () => {
       resolve(process.cwd(), 'src/styles/global.css'),
       'utf8'
     );
+    const homeCss = readFileSync(
+      resolve(process.cwd(), 'src/styles/app/home.css'),
+      'utf8'
+    );
 
     expect(tokens).toContain("'Noto Sans SC'");
     expect(tokens).toContain("'PingFang SC'");
     expect(tokens).not.toContain("'Satoshi'");
     expect(tokens).not.toContain("'Clash Display'");
     expect(globalCss).toContain('font-family: var(--font-body);');
-    expect(globalCss).toContain('font-family: var(--font-display);');
+    expect(homeCss).toContain('font-family: var(--font-display);');
   });
 });

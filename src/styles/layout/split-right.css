@@ -8,7 +8,7 @@
   display: grid;
   height: 100dvh;
   overflow: hidden;
-  background: var(--color-bg-primary);
+  background: var(--bg-primary);
   grid-template-columns: minmax(260px, 40%) 8px 1fr;
 }
 
@@ -27,13 +27,13 @@
   min-height: 140px;
   flex: 1;
   flex-direction: column;
-  background: var(--color-bg-primary);
+  background: var(--bg-primary);
 }
 
 .teaching-graph-section .teaching-section-title {
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--text-primary);
 }
 
 .teaching-graph-slot {
@@ -79,9 +79,9 @@
 
 /* ---- Mode toggle accent ---- */
 .teaching-mode-toggle {
-  background: var(--color-accent-color);
-  border-color: var(--color-accent-color);
-  color: var(--color-accent-contrast, #0a0a0a);
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: var(--accent-contrast, #0a0a0a);
 }
 
 .teaching-mode-toggle:hover {
@@ -106,12 +106,12 @@
   z-index: 50;
   display: inline-flex;
   border-radius: 0.375rem;
-  border: 1px solid var(--color-border-color);
+  border: 1px solid var(--border-color);
   left: calc(0.5rem * var(--ui-scale, 1));
   top: calc(0.5rem * var(--ui-scale, 1));
   gap: calc(0.25rem * var(--ui-scale, 1));
   padding: calc(0.25rem * var(--ui-scale, 1));
-  background: var(--color-bg-primary);
+  background: var(--bg-primary);
   box-shadow: var(--shadow-lg);
 }
 
@@ -121,7 +121,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 0.375rem;
-  border: 1px solid var(--color-border-color);
+  border: 1px solid var(--border-color);
   padding: 0;
   transition: all var(--transition-fast);
   min-width: 44px;
@@ -129,14 +129,14 @@
   width: calc(1.75rem * var(--ui-scale, 1));
   height: calc(1.75rem * var(--ui-scale, 1));
   font-size: calc(0.875rem * var(--ui-scale, 1));
-  background: var(--color-btn-bg);
-  color: var(--color-text-secondary);
+  background: var(--btn-bg);
+  color: var(--text-secondary);
 }
 
 .teaching-stage-floating-controls button:hover {
-  border-color: var(--color-accent-color);
-  background: var(--color-btn-hover-bg);
-  color: var(--color-text-primary);
+  border-color: var(--accent-color);
+  background: var(--btn-hover-bg);
+  color: var(--text-primary);
 }
 
 .teaching-stage-floating-controls button:active {

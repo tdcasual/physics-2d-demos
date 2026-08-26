@@ -5,6 +5,8 @@
  * v = λ/T 约束系统：最近调节的两个参数独立，第三个自动计算
  */
 
+import { clamp } from '../../core/math';
+
 export type WaveDirection = 'right' | 'left';
 
 export type MechanicalWaveParams = {
@@ -44,10 +46,6 @@ const RANGES: Record<WaveParam, [number, number]> = {
   wavelength: [1, 10],
   period: [0.5, 8]
 };
-
-function clamp(v: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, v));
-}
 
 /** 波形函数：y(x,t) = A sin(kx − dir·ωt) */
 export function waveY(

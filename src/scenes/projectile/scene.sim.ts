@@ -1,3 +1,5 @@
+import { clamp } from '../../core/math';
+
 export type ProjectileParams = {
   speed: number;
   angleDeg: number;
@@ -23,10 +25,6 @@ export type ProjectileState = {
   vy: number;
   t: number;
 };
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
 
 function normalizeParams(input: ProjectileParams): ResolvedProjectileParams {
   const safeInitialHeight =

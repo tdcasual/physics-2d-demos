@@ -1,6 +1,6 @@
 /**
  * Canvas 绘制原语
- * 提供标准化的网格、数据面板、轨迹、球体、矢量等绘制函数
+ * 提供标准化的网格、轨迹、球体等绘制函数
  */
 
 import { Colors, alpha } from './colors';
@@ -98,60 +98,6 @@ export function drawGrid(
 }
 
 /**
- * 绘制数据面板
- */
-export function drawDataPanel(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  items: Array<{ label: string; value: string }>,
-  isDark: boolean = false
-): void {
-  const lineHeight = 28;
-  const padding = 16;
-  const maxLabelWidth = Math.max(...items.map((i) => i.label.length)) * 14;
-  const maxValueWidth = Math.max(...items.map((i) => i.value.length)) * 10;
-  const panelWidth = maxLabelWidth + maxValueWidth + padding * 3;
-  const panelHeight = items.length * lineHeight + padding * 2;
-
-  ctx.save();
-
-  // 面板背景
-  ctx.fillStyle = isDark
-    ? alpha(Colors.darkCard, 0.9)
-    : alpha(Colors.white, 0.95);
-  ctx.strokeStyle = isDark
-    ? alpha(Colors.coral, 0.3)
-    : alpha(Colors.coral, 0.2);
-  ctx.lineWidth = 2;
-
-  ctx.beginPath();
-  ctx.roundRect(x, y, panelWidth, panelHeight, 12);
-  ctx.fill();
-  ctx.stroke();
-
-  // 文字
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'middle';
-
-  items.forEach((item, index) => {
-    const itemY = y + padding + index * lineHeight + lineHeight / 2;
-
-    // 标签
-    ctx.font = '500 14px "Noto Sans SC", system-ui, sans-serif';
-    ctx.fillStyle = isDark ? Colors.gray : Colors.gray;
-    ctx.fillText(item.label, x + padding, itemY);
-
-    // 值
-    ctx.font = '600 14px "Noto Sans SC", system-ui, sans-serif';
-    ctx.fillStyle = Colors.coral;
-    ctx.fillText(item.value, x + padding + maxLabelWidth + 16, itemY);
-  });
-
-  ctx.restore();
-}
-
-/**
  * 绘制轨迹点
  */
 export function drawTrail(
@@ -207,51 +153,6 @@ export function drawBall(
   ctx.beginPath();
   ctx.arc(x - radius * 0.3, y - radius * 0.3, radius * 0.3, 0, Math.PI * 2);
   ctx.fill();
-
-  ctx.restore();
-}
-
-/**
- * 绘制矢量箭头
- */
-export function drawVector(
-  ctx: CanvasRenderingContext2D,
-  fromX: number,
-  fromY: number,
-  toX: number,
-  toY: number,
-  color: string = Colors.mint,
-  lineWidth: number = 3
-): void {
-  ctx.save();
-  ctx.strokeStyle = color;
-  ctx.fillStyle = color;
-  ctx.lineWidth = lineWidth;
-  ctx.lineCap = 'round';
-
-  // 线
-  ctx.beginPath();
-  ctx.moveTo(fromX, fromY);
-  ctx.lineTo(toX, toY);
-  ctx.stroke();
-
-  // 箭头
-  const angle = Math.atan2(toY - fromY, toX - fromX);
-  const arrowLength = 12;
-  const arrowAngle = Math.PI / 6;
-
-  ctx.beginPath();
-  ctx.moveTo(toX, toY);
-  ctx.lineTo(
-    toX - arrowLength * Math.cos(angle - arrowAngle),
-    toY - arrowLength * Math.sin(angle - arrowAngle)
-  );
-  ctx.moveTo(toX, toY);
-  ctx.lineTo(
-    toX - arrowLength * Math.cos(angle + arrowAngle),
-    toY - arrowLength * Math.sin(angle + arrowAngle)
-  );
-  ctx.stroke();
 
   ctx.restore();
 }

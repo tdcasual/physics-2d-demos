@@ -29,8 +29,6 @@
   /* 字体粗细 */
   --font-normal: var(--token-font-weight-normal);
   --font-medium: var(--token-font-weight-medium);
-  --font-semibold: var(--token-font-weight-semibold);
-  --font-bold: var(--token-font-weight-bold);
 
   /* 行高 */
   --leading-tight: var(--token-line-height-tight);
@@ -40,7 +38,6 @@
 
   /* 字间距 */
   --tracking-tight: -0.025em;
-  --tracking-normal: 0;
   --tracking-wide: 0.025em;
   --tracking-wider: 0.05em;
 
@@ -56,14 +53,11 @@
   --space-12: var(--token-space-12);
   --space-16: var(--token-space-16);
   --space-20: 5rem; /* 80px */
-  --space-24: 6rem; /* 96px */
   --space-32: 8rem; /* 128px */
 
   /* 圆角 */
   --radius-sm: var(--token-radius-sm);
   --radius-md: var(--token-radius-md);
-  --radius-lg: var(--token-radius-lg);
-  --radius-xl: var(--token-radius-xl);
   --radius-full: var(--token-radius-full);
 
   /* 阴影 */
@@ -73,14 +67,11 @@
 
   /* 过渡 */
   --transition-fast: var(--token-duration-fast);
-  --transition-normal: var(--token-duration-normal);
   --transition-slow: var(--token-duration-slow);
-  --ease-out: var(--token-ease-out);
   --ease-out-expo: var(--token-ease-out-expo);
 
   /* 布局尺寸 */
   --size-max: 1440px;
-  --size-content: 768px;
 }
 
 /* ========================================
@@ -98,7 +89,8 @@
   --bg-card: rgba(255, 255, 255, 0.6);
   --bg-hover: #f5f3f0;
 
-  /* 卡片背景（别名，用于浮动控制等） */
+  /* 悬浮层背景（浮动运输条 floating-controls）：比 --bg-card 更不透明，
+     避免下方 canvas 内容透出；深色下为中性灰而非 slate，与 --bg-card 语义不同 */
   --card-bg: rgba(255, 255, 255, 0.85);
 
   /* 文字色 */
@@ -157,7 +149,7 @@
   --bg-card: rgba(30, 41, 59, 0.8);
   --bg-hover: rgba(255, 255, 255, 0.1);
 
-  /* 卡片背景（别名，用于浮动控制等） */
+  /* 悬浮层背景（浮动运输条 floating-controls），见浅色主题注释 */
   --card-bg: rgba(30, 30, 30, 0.85);
 
   /* 文字色 */

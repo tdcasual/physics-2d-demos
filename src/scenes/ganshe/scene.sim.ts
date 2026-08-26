@@ -5,6 +5,8 @@
  * 支持脉冲包络、观察点历史记录、干涉参数实时计算。
  */
 
+import { clamp } from '../../core/math';
+
 export const WAVE_SPEED = 6;
 export const DOMAIN_MAX = 30;
 
@@ -70,10 +72,6 @@ export type WaveState = {
 const PULSE_WIDTH = 4;
 const PULSE_PERIOD = 8;
 const PULSE_DELAY = 2;
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
 
 function pulseEnvelope(x: number, center: number, width: number): number {
   const sigma = width / 3;

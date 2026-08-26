@@ -1,3 +1,5 @@
+import { clamp } from '../../core/math';
+
 export const VT_SCENE_VALUES = ['scene1', 'scene2', 'scene3'] as const;
 export type VtScene = (typeof VT_SCENE_VALUES)[number];
 export type VtMethod = 'left' | 'mid' | 'right' | 'trap';
@@ -27,10 +29,6 @@ export type VtIntegralSnapshot = {
   params: VtIntegralParams;
   metrics: VtIntegralMetrics;
 };
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
 
 function vFn(t: number): number {
   return 1 + 0.8 * t;

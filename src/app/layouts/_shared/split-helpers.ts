@@ -256,7 +256,7 @@ export function applyResponsiveColumns(
     if (leftPanel) {
       leftPanel.style.maxHeight = '50vh';
       leftPanel.style.borderRight = 'none';
-      leftPanel.style.borderBottom = '1px solid var(--color-border-color)';
+      leftPanel.style.borderBottom = '1px solid var(--border-color)';
     }
   } else if (width < tabletBreakpoint) {
     const sidebarWidth = width < 900 ? 240 : 280;
@@ -266,7 +266,7 @@ export function applyResponsiveColumns(
     container.style.gridTemplateRows = '';
     if (leftPanel) {
       leftPanel.style.maxHeight = '';
-      leftPanel.style.borderRight = '1px solid var(--color-border-color)';
+      leftPanel.style.borderRight = '1px solid var(--border-color)';
       leftPanel.style.borderBottom = 'none';
     }
   } else {
@@ -284,7 +284,7 @@ export function applyResponsiveColumns(
     container.style.gridTemplateRows = '';
     if (leftPanel) {
       leftPanel.style.maxHeight = '';
-      leftPanel.style.borderRight = '1px solid var(--color-border-color)';
+      leftPanel.style.borderRight = '1px solid var(--border-color)';
       leftPanel.style.borderBottom = 'none';
     }
   }

@@ -53,17 +53,6 @@
   letter-spacing: 0.01em;
 }
 
-.chase-modern-card-tag {
-  font-size: 0.6875rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-  background: var(--btn-bg);
-  padding: 1px 8px;
-  border-radius: 999px;
-  line-height: 1.4;
-  white-space: nowrap;
-}
-
 /* Motion canvas — fills card body */
 .chase-modern-motion-canvas {
   flex: 1;

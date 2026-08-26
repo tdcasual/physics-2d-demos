@@ -27,7 +27,7 @@ function tryDispose(el: HTMLElement): void {
   if (typeof d === 'function') d();
 }
 
-export interface SchemaRendererOptions {
+interface SchemaRendererOptions {
   mount: HTMLElement;
   schema: ControlsSchema;
   onChange: (key: string, value: number | string | boolean) => void;

@@ -352,14 +352,27 @@ describe('readout-panel drag', () => {
     panel.style.left = '100px';
     panel.style.top = '100px';
 
-    // Mousedown on toggle button should NOT start drag
+    // Pointer down on toggle button should NOT start drag
     toggle.dispatchEvent(
-      new MouseEvent('mousedown', { clientX: 150, clientY: 120, bubbles: true })
+      new PointerEvent('pointerdown', {
+        clientX: 150,
+        clientY: 120,
+        bubbles: true,
+        pointerId: 1
+      })
     );
 
-    // Even with subsequent mousemove, position should not change
-    document.dispatchEvent(
-      new MouseEvent('mousemove', { clientX: 250, clientY: 220, bubbles: true })
+    // Even with subsequent pointermove, position should not change
+    const header = slots.animation.querySelector(
+      '.teaching-readout-header'
+    ) as HTMLElement;
+    header.dispatchEvent(
+      new PointerEvent('pointermove', {
+        clientX: 250,
+        clientY: 220,
+        bubbles: true,
+        pointerId: 1
+      })
     );
 
     // Panel should NOT have moved (drag was blocked)
@@ -367,11 +380,13 @@ describe('readout-panel drag', () => {
     expect(panel.style.left).toBe('100px');
     expect(panel.style.top).toBe('100px');
 
-    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    header.dispatchEvent(
+      new PointerEvent('pointerup', { bubbles: true, pointerId: 1 })
+    );
     inst.dispose();
   });
 
-  it('moves panel on header mousedown + mousemove', () => {
+  it('moves panel on header pointerdown + pointermove', () => {
     const inst = mountPanel();
     const panel = slots.animation.querySelector(
       '.teaching-readout-panel'
@@ -387,12 +402,24 @@ describe('readout-panel drag', () => {
 
     // Simulate drag: start at (100, 100), move to (150, 130) = delta (50, 30)
     header.dispatchEvent(
-      new MouseEvent('mousedown', { clientX: 100, clientY: 100, bubbles: true })
+      new PointerEvent('pointerdown', {
+        clientX: 100,
+        clientY: 100,
+        bubbles: true,
+        pointerId: 1
+      })
     );
-    document.dispatchEvent(
-      new MouseEvent('mousemove', { clientX: 150, clientY: 130, bubbles: true })
+    header.dispatchEvent(
+      new PointerEvent('pointermove', {
+        clientX: 150,
+        clientY: 130,
+        bubbles: true,
+        pointerId: 1
+      })
     );
-    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    header.dispatchEvent(
+      new PointerEvent('pointerup', { bubbles: true, pointerId: 1 })
+    );
 
     // Position should have changed (exact values depend on computed styles)
     expect(panel.style.left).not.toBe('100px');
@@ -408,17 +435,24 @@ describe('readout-panel drag', () => {
     ) as HTMLElement;
 
     header.dispatchEvent(
-      new MouseEvent('mousedown', { clientX: 100, clientY: 100, bubbles: true })
+      new PointerEvent('pointerdown', {
+        clientX: 100,
+        clientY: 100,
+        bubbles: true,
+        pointerId: 1
+      })
     );
     expect(document.body.style.userSelect).toBe('none');
 
-    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    header.dispatchEvent(
+      new PointerEvent('pointerup', { bubbles: true, pointerId: 1 })
+    );
     expect(document.body.style.userSelect).toBe('');
 
     inst.dispose();
   });
 
-  it('does not move without mousedown', () => {
+  it('does not move without pointerdown', () => {
     const inst = mountPanel();
     const panel = slots.animation.querySelector(
       '.teaching-readout-panel'
@@ -428,9 +462,17 @@ describe('readout-panel drag', () => {
     panel.style.left = '50px';
     panel.style.top = '50px';
 
-    // Mouse move without prior mousedown
-    document.dispatchEvent(
-      new MouseEvent('mousemove', { clientX: 200, clientY: 200, bubbles: true })
+    // Pointer move without prior pointerdown
+    const header = slots.animation.querySelector(
+      '.teaching-readout-header'
+    ) as HTMLElement;
+    header.dispatchEvent(
+      new PointerEvent('pointermove', {
+        clientX: 200,
+        clientY: 200,
+        bubbles: true,
+        pointerId: 1
+      })
     );
 
     expect(panel.style.left).toBe('50px');

@@ -1,3 +1,5 @@
+import { clamp } from '../../core/math';
+
 export type FieldLinesScene = 'single' | 'like' | 'unlike' | 'custom';
 
 export type FieldCharge = {
@@ -19,10 +21,6 @@ export type FieldLinesSnapshot = {
   params: ResolvedFieldLinesParams;
   charges: FieldCharge[];
 };
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
 
 function defaultCharges(
   scene: FieldLinesScene,

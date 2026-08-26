@@ -9,9 +9,9 @@
 .layout-switch-btn {
   cursor: pointer;
   border-radius: 0.375rem;
-  border: 1px solid var(--color-border-color);
-  background: var(--color-btn-bg);
-  color: var(--color-text-secondary);
+  border: 1px solid var(--border-color);
+  background: var(--btn-bg);
+  color: var(--text-secondary);
   padding: 0.375rem 0.75rem;
   font-size: 0.875rem;
   min-width: 44px;
@@ -23,14 +23,14 @@
 .mode-toggle-btn:hover,
 .sidebar-toggle-btn:hover,
 .layout-switch-btn:hover {
-  background: var(--color-btn-hover-bg);
-  color: var(--color-text-primary);
+  background: var(--btn-hover-bg);
+  color: var(--text-primary);
 }
 
 .mode-toggle-btn {
-  background: var(--color-accent-color);
-  border-color: var(--color-accent-color);
-  color: var(--color-accent-contrast, #0a0a0a);
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: var(--accent-contrast, #0a0a0a);
 }
 
 .layout-switch-btn {

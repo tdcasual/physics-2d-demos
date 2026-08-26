@@ -41,10 +41,7 @@ export type ChaseMeetSnapshot = {
 };
 
 import { createVelocityFunction, type VelocityFn } from './expression-parser';
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(value, max));
-}
+import { clamp } from '../../core/math';
 
 function toFiniteOr(value: unknown, fallback: number): number {
   const parsed = Number(value);

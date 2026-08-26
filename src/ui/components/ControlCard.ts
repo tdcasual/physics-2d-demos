@@ -2,7 +2,7 @@
  * ControlCard - 弹簧振子风格（白色清爽）
  */
 
-export interface ControlCardOptions {
+interface ControlCardOptions {
   className?: string;
   defaultCollapsed?: boolean;
   icon?: string;
@@ -11,7 +11,7 @@ export interface ControlCardOptions {
   span?: 'full';
 }
 
-export interface ControlCardInstance {
+interface ControlCardInstance {
   element: HTMLElement;
   body: HTMLElement;
   header: HTMLElement;

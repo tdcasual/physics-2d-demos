@@ -1,3 +1,5 @@
+import { clamp } from '../../core/math';
+
 export type Orientation = 'horizontal' | 'vertical';
 
 export type OscillatorParams = {
@@ -43,10 +45,6 @@ export const OSCILLATOR_COLORS = [
   '#da77f2', // 紫
   '#ff922b' // 橙
 ];
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
 
 function normalizeParams(
   input: Partial<OscillatorParams>

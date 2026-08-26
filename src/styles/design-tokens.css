@@ -16,29 +16,13 @@
 
   /* 主色调 - 珊瑚橙 */
   --token-color-coral: #ff6b6b;
-  --token-color-coral-light: #ff8e72;
   --token-color-coral-dark: #e85d5d;
 
   /* 辅助色 - 薄荷青 */
   --token-color-mint: #4ecdc4;
-  --token-color-mint-light: #95e1d3;
-  --token-color-mint-dark: #3dbdb5;
 
   /* 点缀色 */
   --token-color-yellow: #ffe66d;
-  --token-color-salmon: #ffa07a;
-
-  /* 深色模式色系 */
-  --token-color-slate-900: #0f172a;
-  --token-color-slate-800: #1e293b;
-  --token-color-slate-700: #334155;
-  --token-color-slate-600: #475569;
-  --token-color-slate-500: #64748b;
-  --token-color-slate-400: #94a3b8;
-  --token-color-slate-300: #cbd5e1;
-  --token-color-slate-200: #e2e8f0;
-  --token-color-slate-100: #f1f5f9;
-  --token-color-slate-50: #f8fafc;
 
   /* ========================================
      间距令牌 - Space Tokens
@@ -115,24 +99,4 @@
 
   --token-ease-out: cubic-bezier(0, 0, 0.2, 1);
   --token-ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
-
-  /* ========================================
-     Z-Index 令牌
-     ======================================== */
-  --token-z-base: 0;
-  --token-z-dropdown: 100;
-  --token-z-sticky: 200;
-  --token-z-fixed: 300;
-  --token-z-modal: 400;
-  --token-z-tooltip: 500;
-
-  /* ========================================
-     布局令牌 - Layout Tokens
-     ======================================== */
-  --token-sidebar-width: 320px;
-  --token-sidebar-min-width: 280px;
-  --token-sidebar-max-width: 960px;
-  --token-resizer-width: 8px;
-  --token-toolbar-height: 48px;
-  --token-header-height: 64px;
 }

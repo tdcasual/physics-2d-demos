@@ -10,15 +10,15 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-right: 1px solid var(--color-border-color);
-  background: var(--color-sidebar-bg);
+  border-right: 1px solid var(--border-color);
+  background: var(--sidebar-bg);
 }
 
 /* ---- Header ---- */
 :is(.teaching-header, .srgb-header) {
   flex-shrink: 0;
-  border-bottom: 1px solid var(--color-border-color);
-  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
   padding: 1rem;
 }
 
@@ -26,13 +26,13 @@
   margin: 0;
   font-size: 1.25rem;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--text-primary);
 }
 
 :is(.teaching-subtitle, .srgb-subtitle) {
   margin-top: 0.25rem;
   font-size: 0.75rem;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
 }
 
 /* ---- Control section ---- */
@@ -41,7 +41,7 @@
   flex-shrink: 0;
   flex-direction: column;
   overflow: hidden;
-  border-bottom: 1px solid var(--color-border-color);
+  border-bottom: 1px solid var(--border-color);
 }
 
 :is(.teaching-control-slot, .srgb-control-slot) {
@@ -86,8 +86,8 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid var(--color-border-color);
-  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
   padding: 0.375rem 0.75rem;
 }
 
@@ -95,7 +95,7 @@
   margin: 0;
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--text-primary);
 }
 
 :is(.teaching-section-toggle, .srgb-section-toggle) {
@@ -105,9 +105,9 @@
   min-width: 44px;
   min-height: 44px;
   border-radius: 0.25rem;
-  border: 1px solid var(--color-border-color);
-  background: var(--color-btn-bg);
-  color: var(--color-text-secondary);
+  border: 1px solid var(--border-color);
+  background: var(--btn-bg);
+  color: var(--text-secondary);
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
@@ -116,9 +116,9 @@
 }
 
 :is(.teaching-section-toggle, .srgb-section-toggle):hover {
-  background: var(--color-btn-hover-bg);
-  border-color: var(--color-accent-color);
-  color: var(--color-accent-color);
+  background: var(--btn-hover-bg);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
 }
 
 /* Collapsed slot hiding */
@@ -137,7 +137,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--color-bg-primary);
+  background: var(--bg-primary);
   /* Always occupy the 3rd grid column so the right panel doesn't collapse to
      0px when sidebar-toggle sets display:none on the first two grid items. */
   grid-column-start: 3;
@@ -150,17 +150,17 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  border-bottom: 1px solid var(--color-border-color);
-  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
   padding: 0.75rem 1rem;
 }
 
 :is(.teaching-sidebar-toggle, .srgb-sidebar-toggle) {
   cursor: pointer;
   border-radius: 0.375rem;
-  border: 1px solid var(--color-border-color);
-  background: var(--color-btn-bg);
-  color: var(--color-text-secondary);
+  border: 1px solid var(--border-color);
+  background: var(--btn-bg);
+  color: var(--text-secondary);
   padding: 0.375rem 0.75rem;
   font-size: 0.875rem;
   min-width: 44px;
@@ -169,8 +169,8 @@
 }
 
 :is(.teaching-sidebar-toggle, .srgb-sidebar-toggle):hover {
-  background: var(--color-btn-hover-bg);
-  color: var(--color-text-primary);
+  background: var(--btn-hover-bg);
+  color: var(--text-primary);
 }
 
 :is(.teaching-toolbar-actions, .srgb-toolbar-actions) {
@@ -185,7 +185,7 @@
   flex: 1;
   overflow: hidden;
   padding: 0;
-  background: var(--color-stage-bg);
+  background: var(--stage-bg);
 }
 
 :is(.teaching-stage-slot, .srgb-stage-slot) {
@@ -215,12 +215,12 @@
   width: 0.5rem;
   cursor: col-resize;
   transition: background-color var(--transition-fast);
-  background: var(--color-border-color);
+  background: var(--border-color);
 }
 
 :is(.teaching-panel-resizer, .srgb-resizer-v):hover,
 :is(.teaching-panel-resizer, .srgb-resizer-v).is-dragging {
-  background: var(--color-accent-color);
+  background: var(--accent-color);
 }
 
 /* 键盘焦点指示（resizer 可聚焦，role=separator） */
@@ -239,5 +239,5 @@
   border-radius: var(--radius-full);
   opacity: 0.5;
   transform: translate(-50%, -50%);
-  background: var(--color-text-muted);
+  background: var(--text-muted);
 }

@@ -113,10 +113,10 @@ export function createObserverManager(
     primary.style.justifyContent = 'space-between';
     primary.style.padding = '4px 6px';
     primary.style.borderRadius = '4px';
-    primary.style.background = 'var(--color-bg-secondary, rgba(0,0,0,0.03))';
+    primary.style.background = 'var(--bg-secondary, rgba(0,0,0,0.03))';
     primary.innerHTML = `
       <span style="font-size:0.8rem;color:var(--text-primary)"><span style="color:${getObserverColor(0)};">●</span> 观察点1 x=${params.observerX.toFixed(2)}m</span>
-      <span style="font-size:0.7rem;color:var(--color-text-muted)">主观察点</span>
+      <span style="font-size:0.7rem;color:var(--text-muted)">主观察点</span>
     `;
     listEl.appendChild(primary);
 
@@ -128,7 +128,7 @@ export function createObserverManager(
       row.style.justifyContent = 'space-between';
       row.style.padding = '4px 6px';
       row.style.borderRadius = '4px';
-      row.style.background = 'var(--color-bg-secondary, rgba(0,0,0,0.03))';
+      row.style.background = 'var(--bg-secondary, rgba(0,0,0,0.03))';
 
       const color = getObserverColor(i + 1);
       const label = document.createElement('span');
@@ -140,9 +140,9 @@ export function createObserverManager(
       removeBtn.textContent = '删除';
       removeBtn.style.fontSize = '0.7rem';
       removeBtn.style.padding = '2px 6px';
-      removeBtn.style.border = '1px solid var(--color-border-color)';
+      removeBtn.style.border = '1px solid var(--border-color)';
       removeBtn.style.borderRadius = '4px';
-      removeBtn.style.background = 'var(--color-btn-bg)';
+      removeBtn.style.background = 'var(--btn-bg)';
       removeBtn.style.cursor = 'pointer';
       removeBtn.addEventListener(
         'click',
@@ -170,10 +170,10 @@ export function createObserverManager(
     addBtn.textContent = '+ 添加观察点';
     addBtn.style.flex = '1';
     addBtn.style.padding = '6px';
-    addBtn.style.border = '1px dashed var(--color-border-color)';
+    addBtn.style.border = '1px dashed var(--border-color)';
     addBtn.style.borderRadius = '4px';
     addBtn.style.background = 'transparent';
-    addBtn.style.color = 'var(--color-text-secondary)';
+    addBtn.style.color = 'var(--text-secondary)';
     addBtn.style.fontSize = '0.8rem';
     addBtn.style.cursor = 'pointer';
     addBtn.disabled = count >= 6;

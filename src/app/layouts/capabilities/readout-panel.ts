@@ -1,8 +1,8 @@
 /**
  * Readout Panel Capability — 数据读数面板
  *
- * 自包含实现：拖拽、自适应列数、resize handle、折叠/位置切换。
- * 内联原 ReadoutPanelManager + makeElementDraggable，不再依赖 old masters。
+ * 自包含实现：自适应列数、resize handle、折叠/位置切换；
+ * 拖拽复用 ui/utils/draggable 的共享 makeDraggable。
  */
 
 import type {
@@ -12,6 +12,7 @@ import type {
   LayoutSlots,
   ReadoutItem
 } from '../types';
+import { makeDraggable } from '../../../ui/utils/draggable';
 
 export interface ReadoutPanelConfig {
   position?:
@@ -27,115 +28,8 @@ export interface ReadoutPanelConfig {
 }
 
 // ============================================================================
-// Inline helpers (previously in masters/split-right/readout-panel.ts + drag)
+// Inline helpers (previously in masters/split-right/readout-panel.ts)
 // ============================================================================
-
-function makeDraggable(
-  element: HTMLElement,
-  handle: HTMLElement | null
-): () => void {
-  if (!handle) return () => {};
-
-  let isDragging = false;
-  let startX = 0;
-  let startY = 0;
-  let initialLeft = 0;
-  let initialTop = 0;
-
-  handle.style.cursor = 'move';
-
-  const onMouseDown = (e: MouseEvent) => {
-    if (e.button !== 0) return;
-    // 不拦截交互子元素（按钮、链接等）的点击
-    if (
-      (e.target as HTMLElement).closest(
-        'button, a, input, select, textarea, [role="button"]'
-      )
-    )
-      return;
-    isDragging = true;
-    startX = e.clientX;
-    startY = e.clientY;
-
-    const cs = window.getComputedStyle(element);
-    const currentLeft = parseFloat(cs.left) || 0;
-    const currentTop = parseFloat(cs.top) || 0;
-
-    if (cs.right !== 'auto') {
-      const parentRect = element.offsetParent?.getBoundingClientRect();
-      const elemRect = element.getBoundingClientRect();
-      if (parentRect) {
-        initialLeft = elemRect.left - parentRect.left;
-        initialTop = elemRect.top - parentRect.top;
-      } else {
-        initialLeft = currentLeft;
-        initialTop = currentTop;
-      }
-    } else {
-      initialLeft = currentLeft;
-      initialTop = currentTop;
-    }
-
-    element.style.left = `${initialLeft}px`;
-    element.style.top = `${initialTop}px`;
-    element.style.right = 'auto';
-    element.style.bottom = 'auto';
-    element.style.transition = 'none';
-    document.body.style.userSelect = 'none';
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  const onMouseMove = (e: MouseEvent) => {
-    if (!isDragging) return;
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
-    let nextLeft = initialLeft + dx;
-    let nextTop = initialTop + dy;
-    const parent = element.offsetParent as HTMLElement | null;
-    if (parent) {
-      const parentRect = parent.getBoundingClientRect();
-      const elemRect = element.getBoundingClientRect();
-      nextLeft = Math.max(
-        0,
-        Math.min(nextLeft, parentRect.width - elemRect.width)
-      );
-      nextTop = Math.max(
-        0,
-        Math.min(nextTop, parentRect.height - elemRect.height)
-      );
-    }
-    element.style.left = `${nextLeft}px`;
-    element.style.top = `${nextTop}px`;
-  };
-
-  const onMouseUp = () => {
-    if (isDragging) {
-      isDragging = false;
-      element.style.transition = '';
-      document.body.style.userSelect = '';
-    }
-  };
-
-  const cleanupDragStyles = () => {
-    if (isDragging) {
-      isDragging = false;
-      element.style.transition = '';
-      document.body.style.userSelect = '';
-    }
-  };
-
-  handle.addEventListener('mousedown', onMouseDown);
-  document.addEventListener('mousemove', onMouseMove);
-  document.addEventListener('mouseup', onMouseUp);
-
-  return () => {
-    handle.removeEventListener('mousedown', onMouseDown);
-    document.removeEventListener('mousemove', onMouseMove);
-    document.removeEventListener('mouseup', onMouseUp);
-    cleanupDragStyles();
-  };
-}
 
 function initAdaptiveColumns(
   slot: HTMLElement,
@@ -195,7 +89,7 @@ function initResizeHandle(
     width: 16px;
     height: 16px;
     cursor: nwse-resize;
-    background: linear-gradient(135deg, transparent 50%, var(--color-text-muted, #888) 50%);
+    background: linear-gradient(135deg, transparent 50%, var(--text-muted, #888) 50%);
     border-radius: 0 0 4px 0;
     opacity: 0.5;
     transition: opacity 0.2s;
@@ -434,7 +328,9 @@ export function createReadoutPanel(
         ? () => {}
         : makeDraggable(
             panel,
-            panel.querySelector(`.${cssPrefix}-readout-header`)
+            panel.querySelector<HTMLElement>(`.${cssPrefix}-readout-header`) ??
+              undefined,
+            { clampToParent: true }
           );
       const resizeObserver = initAdaptiveColumns(slot, panel, cssPrefix);
       const resizeResult = isInline

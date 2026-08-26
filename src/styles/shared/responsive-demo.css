@@ -19,7 +19,7 @@
 
   .teaching-left-panel {
     @apply max-h-[50vh] border-r-0 border-b;
-    border-color: var(--color-border-color);
+    border-color: var(--border-color);
   }
 
   .teaching-panel-resizer {
@@ -90,7 +90,7 @@
   .srgb-is-overlay
 ) {
   backdrop-filter: blur(8px);
-  background: var(--color-bg-primary);
+  background: var(--bg-primary);
 }
 
 [data-theme='dark']

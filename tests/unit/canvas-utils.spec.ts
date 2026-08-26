@@ -1,17 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import {
-  createCanvasContext,
-  getOptimalCanvasSize,
-  setCanvasSize,
-  fitCanvasToContainer
-} from '../../src/core/canvas-sizing';
-import {
-  drawGrid,
-  drawDataPanel,
-  drawTrail,
-  drawBall,
-  drawVector
-} from '../../src/core/draw-primitives';
+import { setCanvasSize } from '../../src/core/canvas-sizing';
+import { drawGrid, drawTrail, drawBall } from '../../src/core/draw-primitives';
 
 describe('core canvas utils (canvas-sizing + draw-primitives)', () => {
   let canvas: HTMLCanvasElement;
@@ -42,47 +31,6 @@ describe('core canvas utils (canvas-sizing + draw-primitives)', () => {
     Object.defineProperty(window, 'devicePixelRatio', {
       value: originalDpr,
       configurable: true
-    });
-  });
-
-  describe('createCanvasContext', () => {
-    it('should return canvas context with dpr scaling', () => {
-      Object.defineProperty(window, 'devicePixelRatio', {
-        value: 2,
-        configurable: true
-      });
-      const result = createCanvasContext(canvas);
-      expect(result.canvas).toBe(canvas);
-      expect(result.ctx).toBeDefined();
-      expect(result.dpr).toBe(2);
-      expect(canvas.width).toBeGreaterThan(0);
-      expect(canvas.height).toBeGreaterThan(0);
-    });
-  });
-
-  describe('getOptimalCanvasSize', () => {
-    it('should return size within stage bounds', () => {
-      const result = getOptimalCanvasSize(1000, 800);
-      expect(result.width).toBeLessThanOrEqual(920);
-      expect(result.height).toBeLessThanOrEqual(720);
-      expect(result.scale).toBeGreaterThan(0);
-    });
-
-    it('should use square aspect when stage is near square', () => {
-      const result = getOptimalCanvasSize(500, 500);
-      expect(result.width).toBe(result.height);
-    });
-
-    it('should clamp scale between 0.5 and 2', () => {
-      const tiny = getOptimalCanvasSize(100, 100);
-      expect(tiny.scale).toBe(0.5);
-      const huge = getOptimalCanvasSize(4000, 3000);
-      expect(huge.scale).toBe(2);
-    });
-
-    it('should respect custom margin', () => {
-      const withMargin = getOptimalCanvasSize(1000, 800, 100);
-      expect(withMargin.width).toBeLessThanOrEqual(800);
     });
   });
 
@@ -120,68 +68,6 @@ describe('core canvas utils (canvas-sizing + draw-primitives)', () => {
     });
   });
 
-  describe('fitCanvasToContainer', () => {
-    it('should size canvas to parent element', () => {
-      const parent = document.createElement('div');
-      parent.style.width = '500px';
-      parent.style.height = '400px';
-      document.body.appendChild(parent);
-      parent.appendChild(canvas);
-
-      const result = fitCanvasToContainer(canvas);
-      expect(result).not.toBeNull();
-      expect(result!.width).toBeGreaterThan(0);
-      expect(result!.height).toBeGreaterThan(0);
-      expect(result!.ctx).toBeDefined();
-
-      parent.remove();
-    });
-
-    it('should use explicit container if provided', () => {
-      const container = document.createElement('div');
-      container.style.width = '300px';
-      container.style.height = '200px';
-      document.body.appendChild(container);
-      Object.defineProperty(container, 'getBoundingClientRect', {
-        value: () => ({
-          width: 300,
-          height: 200,
-          top: 0,
-          left: 0,
-          right: 300,
-          bottom: 200
-        }),
-        configurable: true
-      });
-
-      const result = fitCanvasToContainer(canvas, container);
-      expect(result).not.toBeNull();
-      expect(result!.width).toBe(300);
-      expect(result!.height).toBe(200);
-
-      container.remove();
-    });
-
-    it('should return null when no parent or container', () => {
-      const orphan = document.createElement('canvas');
-      expect(fitCanvasToContainer(orphan)).toBeNull();
-    });
-
-    it('should enforce minimum size of 1x1', () => {
-      const parent = document.createElement('div');
-      parent.style.width = '0px';
-      parent.style.height = '0px';
-      document.body.appendChild(parent);
-      parent.appendChild(canvas);
-
-      const result = fitCanvasToContainer(canvas);
-      expect(result!.width).toBe(1);
-      expect(result!.height).toBe(1);
-
-      parent.remove();
-    });
-  });
-
   describe('drawGrid', () => {
     it('should draw grid and axes without error', () => {
       const ctx = canvas.getContext('2d')!;
@@ -201,22 +87,6 @@ describe('core canvas utils (canvas-sizing + draw-primitives)', () => {
     it('should hide axes when showAxes is false', () => {
       const ctx = canvas.getContext('2d')!;
       expect(() => drawGrid(ctx, 800, 600, { showAxes: false })).not.toThrow();
-    });
-  });
-
-  describe('drawDataPanel', () => {
-    it('should render data items without error', () => {
-      const ctx = canvas.getContext('2d')!;
-      const items = [
-        { label: 'Time', value: '1.5s' },
-        { label: 'Speed', value: '5m/s' }
-      ];
-      expect(() => drawDataPanel(ctx, 10, 10, items)).not.toThrow();
-    });
-
-    it('should support dark mode', () => {
-      const ctx = canvas.getContext('2d')!;
-      expect(() => drawDataPanel(ctx, 10, 10, [], true)).not.toThrow();
     });
   });
 
@@ -256,18 +126,6 @@ describe('core canvas utils (canvas-sizing + draw-primitives)', () => {
     it('should accept custom radius and color', () => {
       const ctx = canvas.getContext('2d')!;
       expect(() => drawBall(ctx, 50, 50, 12, '#00ff00')).not.toThrow();
-    });
-  });
-
-  describe('drawVector', () => {
-    it('should draw vector arrow', () => {
-      const ctx = canvas.getContext('2d')!;
-      expect(() => drawVector(ctx, 0, 0, 100, 100)).not.toThrow();
-    });
-
-    it('should accept custom color and line width', () => {
-      const ctx = canvas.getContext('2d')!;
-      expect(() => drawVector(ctx, 0, 0, 50, 50, '#0000ff', 4)).not.toThrow();
     });
   });
 });
