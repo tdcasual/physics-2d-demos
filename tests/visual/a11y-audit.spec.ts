@@ -42,6 +42,15 @@ for (const scene of sceneIds) {
     });
     await expect(page.locator('[data-layout-id]')).toBeVisible();
 
+    // 组件普遍使用 transition: all，聚焦瞬间 outline 处于过渡起点
+    // （UA 焦点环值），且不同 Chromium 版本的过渡起点计算不同，
+    // 直接读 computed style 会环境性误判。本测试只关心焦点指示的
+    // 存在性而非动画，故全局禁用过渡/动画。
+    await page.addStyleTag({
+      content:
+        '*, *::before, *::after { transition: none !important; animation: none !important; }'
+    });
+
     // 收集所有可聚焦元素
     const focusable = await page.evaluate(() => {
       const selector =
