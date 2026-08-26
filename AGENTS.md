@@ -220,7 +220,9 @@ export type SceneMeta = ScenePlacardMeta & {
 - 改动 UI 后基线过期：Linux 基线用 `scripts/visual-linux-container.sh update`
   （CI 同构 ubuntu 容器）或 CI 重生成（ci.yml 的
   `workflow_dispatch → update_snapshots`，下载 artifact 后提交）；Mac 基线在
-  Mac 上 `pnpm test:visual:update`。
+  Mac 上 `pnpm test:visual:update`，或用
+  `update-darwin-snapshots.yml`（workflow_dispatch，macos-latest runner，
+  渲染栈与 Mac 本地一致）重生成后下载 artifact 提交。
 - Linux 基线的权威校验同样在容器内进行：`scripts/visual-linux-container.sh`。
   宿主机直接跑 visual-regression 会因字体/光栅化环境漂移而仅供参考。
 - Linux 基线必须在装有 `fonts-noto-cjk` 的 ubuntu 环境生成，保证渲染字体为

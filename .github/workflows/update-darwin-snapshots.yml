@@ -1,0 +1,45 @@
+name: Update darwin visual baselines
+
+# darwin 视觉基线必须在 macOS 渲染栈上生成（字体光栅化与 Linux 不可互替）。
+# 本工作流在 macos-latest runner 上重生成基线并上传 artifact，
+# 等效于在 Mac 本地执行 `pnpm test:visual:update`（见 AGENTS.md 基线规则）。
+on:
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install chromium
+
+      # macOS 无 Noto Sans CJK SC，字体栈回退 PingFang SC（design-tokens.css），
+      # 与 Mac 本地开发机渲染一致，无需额外装字体。
+      - name: Build
+        run: pnpm build
+
+      - name: Regenerate darwin visual baselines
+        run: PLAYWRIGHT_SKIP_BUILD=1 pnpm exec playwright test tests/visual/visual-regression.spec.ts --update-snapshots
+
+      - name: Upload regenerated baselines
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-baselines-darwin
+          path: tests/visual/visual-regression.spec.ts-snapshots/*-darwin.png
