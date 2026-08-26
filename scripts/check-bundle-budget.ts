@@ -43,26 +43,29 @@ export type BundleBudgetReport = {
   violations: BundleBudgetViolation[];
 };
 
+// 预算 = Phase 3 bundle 治理后实测值 + 约 15% 余量。
+// 治理后实测（2026-08）：首页 JS 162.05 / CSS 20.23；场景页 JS 最大 157.25
+// （double-slit，仪器已改动态导入）/ CSS 最大 46.10（chase-meet）；
+// vendor 138.53；shared 131.22（kB）。
 export const defaultBundleBudget: BundleBudget = {
-  maxHomeEntryJsKb: 290,
-  maxHomeEntryCssKb: 75,
-  maxEntryJsKb: 160,
-  maxEntryCssKb: 70,
-  maxVendorJsKb: 170,
+  maxHomeEntryJsKb: 190,
+  maxHomeEntryCssKb: 25,
+  maxEntryJsKb: 180,
+  maxEntryCssKb: 55,
+  maxVendorJsKb: 160,
   // Layout/scene test capability metadata is intentionally shipped to each
   // page so the runtime and visual matrix share one source of truth.
-  maxSharedJsKb: 130
+  maxSharedJsKb: 150
 };
 
-/** 特定入口的预算覆盖（功能复杂的场景需要更大的 budget） */
+/**
+ * 特定入口的预算覆盖（功能复杂的场景需要更大的 budget）。
+ * 当前为空：double-slit 仪器动态导入后已回归标准预算。
+ */
 const ENTRY_BUDGET_OVERRIDES: Record<
   string,
   { maxJsKb?: number; maxCssKb?: number }
-> = {
-  // 白光/滤光片/crosshair/双仪器。190：Vite 7.3 当前产物基线约 188.2 kB，
-  // 同时包含 scene testProfile 元数据，保留约 0.3 kB 回归余量。
-  'src/pages/double-slit.html': { maxJsKb: 190 }
-};
+> = {};
 
 function toKb(bytes: number): number {
   return bytes / 1024;

@@ -20,7 +20,9 @@ import { build } from 'esbuild';
 const [inputFile, outputFile] = process.argv.slice(2);
 
 if (!inputFile || !outputFile) {
-  console.error('Usage: node esbuild-bundle-chunks.js <input.json> <output.js>');
+  console.error(
+    'Usage: node esbuild-bundle-chunks.js <input.json> <output.js>'
+  );
   process.exit(1);
 }
 

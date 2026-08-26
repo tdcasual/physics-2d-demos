@@ -12,13 +12,18 @@
     "jsxImportSource": "react",
     "types": ["node", "vitest/globals", "react", "react-dom", "vite/client"],
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "allowJs": true,
+    "checkJs": true
   },
   "include": [
     "src",
     "tests",
     "scripts",
     "vite.config.ts",
-    "playwright.config.ts"
+    "vite.config.standalone.ts",
+    "playwright.config.ts",
+    "playwright.e2e.config.ts",
+    "eslint.config.js"
   ]
 }

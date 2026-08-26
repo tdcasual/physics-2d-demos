@@ -8,6 +8,9 @@ import { analyzer } from 'vite-bundle-analyzer';
 /**
  * 自动扫描 src/pages/*.html 作为构建入口。
  * 新增场景页面时无需再手动修改此配置。
+ *
+ * 注意：src/pages/index-layout-test.html 是 tests/visual（scene-pages / 布局矩阵等）
+ * 在 preview 模式下的测试依赖，有意随构建发布到 dist，做产物清理时请勿删除。
  */
 function discoverPageEntries(pagesDir: string): Record<string, string> {
   const entries: Record<string, string> = {};
@@ -29,7 +32,7 @@ export default defineConfig({
     process.env.ANALYZE === 'true' &&
       analyzer({
         analyzerMode: 'static',
-        openAnalyzer: true
+        openAnalyzer: false
       })
   ].filter(Boolean),
   server: {
@@ -91,6 +94,13 @@ export default defineConfig({
           // UI components chunk
           if (id.includes('/src/ui/')) {
             return 'ui';
+          }
+          // theme-store 同时被首页（React useTheme）与场景页
+          // （layouts/container、scene-bootstrapper）引用。不显式分组时
+          // Rollup 会把它并入 layouts chunk，导致首页被迫预载整个
+          // 布局系统（layouts/ui/core/scene-bootstrapper 及其 CSS）。
+          if (id.includes('/src/app/theme-store.')) {
+            return 'theme-store';
           }
           // Layout system chunk
           if (id.includes('/src/app/layouts/')) {

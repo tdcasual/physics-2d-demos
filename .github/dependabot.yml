@@ -1,0 +1,23 @@
+# Dependabot：依赖与安全更新自动化
+# - npm：每周检查，分组小版本/补丁升级，减少 PR 噪音
+# - github-actions：每周检查 CI 所用 action 版本
+version: 2
+updates:
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+    open-pull-requests-limit: 5
+    groups:
+      dev-toolchain:
+        applies-to: 'version-updates'
+        dependency-type: 'development'
+        update-types: ['minor', 'patch']
+    labels: ['dependencies']
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+    labels: ['dependencies', 'ci']

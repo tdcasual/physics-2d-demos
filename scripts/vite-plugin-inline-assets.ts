@@ -73,10 +73,13 @@ function bundleChunksToIife(chunks: OutputChunk[], tmpDir: string): string {
   const inputFile = join(tmpDir, '_input.json');
   const outputFile = join(tmpDir, '_output.js');
 
-  writeFileSync(inputFile, JSON.stringify({
-    entry: basename(entryChunk.fileName),
-    chunks: chunkData
-  }));
+  writeFileSync(
+    inputFile,
+    JSON.stringify({
+      entry: basename(entryChunk.fileName),
+      chunks: chunkData
+    })
+  );
 
   const scriptPath = join(__dirname, 'esbuild-bundle-chunks.js');
 
@@ -111,7 +114,11 @@ export function inlineAssets(): Plugin {
     writeBundle(options, bundle) {
       const dir = options.dir ?? 'dist';
       const tmpDir = join(dir, '.tmp-esbuild');
-      try { mkdirSync(tmpDir, { recursive: true }); } catch { /* exists */ }
+      try {
+        mkdirSync(tmpDir, { recursive: true });
+      } catch {
+        /* exists */
+      }
 
       const htmlFiles = Object.keys(bundle).filter((f) => f.endsWith('.html'));
 
@@ -133,7 +140,11 @@ export function inlineAssets(): Plugin {
           const asset = bundle[cssKey];
           let cssContent: string | undefined;
 
-          if (asset && asset.type === 'asset' && typeof asset.source === 'string') {
+          if (
+            asset &&
+            asset.type === 'asset' &&
+            typeof asset.source === 'string'
+          ) {
             cssContent = asset.source;
           } else {
             const cssPath = join(dir, cssKey);
@@ -143,18 +154,12 @@ export function inlineAssets(): Plugin {
           }
 
           if (cssContent) {
-            html = html.replace(
-              fullMatch,
-              `<style>\n${cssContent}\n</style>`
-            );
+            html = html.replace(fullMatch, `<style>\n${cssContent}\n</style>`);
           }
         }
 
         // --- Remove modulepreload links ---
-        html = html.replace(
-          /<link\s+[^>]*rel="modulepreload"[^>]*\/?>/gi,
-          ''
-        );
+        html = html.replace(/<link\s+[^>]*rel="modulepreload"[^>]*\/?>/gi, '');
 
         // --- JS inlining ---
         const scriptMatch = html.match(

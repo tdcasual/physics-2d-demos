@@ -1,2 +1,16 @@
 allowBuilds:
   esbuild: true
+# 安全补丁 overrides（全部位于 dev 依赖链，runtime 依赖 react/react-dom 无漏洞）。
+# 阈值取自 npm 安全公告，跟随 dependabot 升级后应定期复核并移除过期条目。
+overrides:
+  'brace-expansion@<1.1.18': '>=1.1.18 <2'
+  'brace-expansion@>=2.0.0 <2.1.4': '>=2.1.4 <3'
+  'brace-expansion@>=5.0.0 <5.0.9': '>=5.0.9 <6'
+  'flatted@<3.4.2': '>=3.4.2 <4'
+  'picomatch@>=4.0.0 <4.0.4': '>=4.0.4 <5'
+  'postcss@<8.5.18': '>=8.5.18 <9'
+  'ws@>=8.0.0 <8.21.0': '>=8.21.0 <9'
+  'nanoid@<3.3.18': '>=3.3.18 <4'
+  '@babel/core@<=7.29.0': '>=7.29.6 <8'
+  'esbuild@<0.28.1': '>=0.28.1 <0.29'
+  'glob@>=10.2.0 <10.5.0': '>=10.5.0 <11'
