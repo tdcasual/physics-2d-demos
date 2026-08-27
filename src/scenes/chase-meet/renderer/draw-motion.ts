@@ -9,6 +9,7 @@
 
 import type { MotionDrawContext } from './types';
 import { nearestSample } from './view-utils';
+import { pathRoundRect } from '../../../core/draw-primitives';
 
 type Theme = 'light' | 'dark';
 
@@ -42,85 +43,88 @@ interface Pal {
   bubbleBorder: string;
 }
 
+const PALETTE_LIGHT: Pal = {
+  skyTop: '#7ec8ff',
+  skyBottom: '#eaf7ff',
+  orb: '#ffd23f',
+  orbGlow: 'rgba(255,210,63,0.45)',
+  cloud: 'rgba(255,255,255,0.92)',
+  hillFar: '#9bd98a',
+  hillNear: '#6bbf59',
+  road: '#8a93a3',
+  roadEdge: '#5b6473',
+  dash: 'rgba(255,255,255,0.9)',
+  post: '#c98a4b',
+  postSign: '#fff7e6',
+  postText: '#7a5230',
+  grass: '#7cc36a',
+  grassBlade: '#5aa84a',
+  carA: '#3b82f6',
+  cabinA: '#cfe2ff',
+  carB: '#ef4444',
+  cabinB: '#ffd2d2',
+  wheel: '#2b2f36',
+  hub: '#cfd6df',
+  eyeWhite: '#ffffff',
+  pupil: '#1f2937',
+  text: '#1f2937',
+  textSoft: 'rgba(31,41,55,0.7)',
+  bubble: 'rgba(255,255,255,0.95)',
+  bubbleBorder: 'rgba(31,41,55,0.35)'
+};
+
+const PALETTE_DARK: Pal = {
+  skyTop: '#16213a',
+  skyBottom: '#0b1224',
+  orb: '#e8eefc',
+  orbGlow: 'rgba(226,238,252,0.3)',
+  cloud: 'rgba(148,163,184,0.22)',
+  hillFar: '#1d3a2c',
+  hillNear: '#143024',
+  road: '#3a4456',
+  roadEdge: '#222b3a',
+  dash: 'rgba(203,213,225,0.7)',
+  post: '#7a5a36',
+  postSign: '#2a3344',
+  postText: '#cbd5e1',
+  grass: '#163a22',
+  grassBlade: '#0f2c19',
+  carA: '#60a5fa',
+  cabinA: '#1e3a8a',
+  carB: '#f87171',
+  cabinB: '#7f1d1d',
+  wheel: '#0b0f17',
+  hub: '#94a3b8',
+  eyeWhite: '#f8fafc',
+  pupil: '#0b0f17',
+  text: '#f1f5f9',
+  textSoft: 'rgba(226,232,240,0.7)',
+  bubble: 'rgba(30,41,59,0.92)',
+  bubbleBorder: 'rgba(148,163,184,0.4)'
+};
+
 function palette(theme: Theme): Pal {
-  const light = theme === 'light';
-  return light
-    ? {
-        skyTop: '#7ec8ff',
-        skyBottom: '#eaf7ff',
-        orb: '#ffd23f',
-        orbGlow: 'rgba(255,210,63,0.45)',
-        cloud: 'rgba(255,255,255,0.92)',
-        hillFar: '#9bd98a',
-        hillNear: '#6bbf59',
-        road: '#8a93a3',
-        roadEdge: '#5b6473',
-        dash: 'rgba(255,255,255,0.9)',
-        post: '#c98a4b',
-        postSign: '#fff7e6',
-        postText: '#7a5230',
-        grass: '#7cc36a',
-        grassBlade: '#5aa84a',
-        carA: '#3b82f6',
-        cabinA: '#cfe2ff',
-        carB: '#ef4444',
-        cabinB: '#ffd2d2',
-        wheel: '#2b2f36',
-        hub: '#cfd6df',
-        eyeWhite: '#ffffff',
-        pupil: '#1f2937',
-        text: '#1f2937',
-        textSoft: 'rgba(31,41,55,0.7)',
-        bubble: 'rgba(255,255,255,0.95)',
-        bubbleBorder: 'rgba(31,41,55,0.35)'
-      }
-    : {
-        skyTop: '#16213a',
-        skyBottom: '#0b1224',
-        orb: '#e8eefc',
-        orbGlow: 'rgba(226,238,252,0.3)',
-        cloud: 'rgba(148,163,184,0.22)',
-        hillFar: '#1d3a2c',
-        hillNear: '#143024',
-        road: '#3a4456',
-        roadEdge: '#222b3a',
-        dash: 'rgba(203,213,225,0.7)',
-        post: '#7a5a36',
-        postSign: '#2a3344',
-        postText: '#cbd5e1',
-        grass: '#163a22',
-        grassBlade: '#0f2c19',
-        carA: '#60a5fa',
-        cabinA: '#1e3a8a',
-        carB: '#f87171',
-        cabinB: '#7f1d1d',
-        wheel: '#0b0f17',
-        hub: '#94a3b8',
-        eyeWhite: '#f8fafc',
-        pupil: '#0b0f17',
-        text: '#f1f5f9',
-        textSoft: 'rgba(226,232,240,0.7)',
-        bubble: 'rgba(30,41,59,0.92)',
-        bubbleBorder: 'rgba(148,163,184,0.4)'
-      };
+  return theme === 'light' ? PALETTE_LIGHT : PALETTE_DARK;
 }
 
-function roundRect(
+// 每帧重建的线性渐变缓存：key 为主题 + 几何坐标，失效才重建
+const gradientCache = new Map<string, CanvasGradient>();
+
+function cachedLinearGradient(
   ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number
-): void {
-  const rr = Math.min(r, w / 2, h / 2);
-  ctx.beginPath();
-  ctx.moveTo(x + rr, y);
-  ctx.arcTo(x + w, y, x + w, y + h, rr);
-  ctx.arcTo(x + w, y + h, x, y + h, rr);
-  ctx.arcTo(x, y + h, x, y, rr);
-  ctx.arcTo(x, y, x + w, y, rr);
-  ctx.closePath();
+  cacheKey: string,
+  y0: number,
+  y1: number,
+  stops: ReadonlyArray<readonly [number, string]>
+): CanvasGradient {
+  const hit = gradientCache.get(cacheKey);
+  if (hit) return hit;
+  const grad = ctx.createLinearGradient(0, y0, 0, y1);
+  for (const [offset, color] of stops) {
+    grad.addColorStop(offset, color);
+  }
+  gradientCache.set(cacheKey, grad);
+  return grad;
 }
 
 export function drawMotion(context: MotionDrawContext): void {
@@ -137,9 +141,16 @@ export function drawMotion(context: MotionDrawContext): void {
   const roadBottom = cssH * 0.86;
 
   // ---------- 天空 ----------
-  const sky = ctx.createLinearGradient(0, 0, 0, horizonY);
-  sky.addColorStop(0, P.skyTop);
-  sky.addColorStop(1, P.skyBottom);
+  const sky = cachedLinearGradient(
+    ctx,
+    `${theme}|sky|${horizonY}`,
+    0,
+    horizonY,
+    [
+      [0, P.skyTop],
+      [1, P.skyBottom]
+    ]
+  );
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, cssW, horizonY);
 
@@ -222,7 +233,7 @@ export function drawMotion(context: MotionDrawContext): void {
   ctx.shadowBlur = 8 * s;
   ctx.fillStyle =
     theme === 'light' ? 'rgba(255,255,255,0.92)' : 'rgba(30,41,59,0.85)';
-  roundRect(ctx, tX, tY, tW, tH, tH / 2);
+  pathRoundRect(ctx, tX, tY, tW, tH, tH / 2);
   ctx.fill();
   ctx.restore();
   ctx.fillStyle = P.text;
@@ -251,10 +262,17 @@ export function drawMotion(context: MotionDrawContext): void {
   hill(horizonY + 14 * s, 18 * s, P.hillNear, 3.1);
 
   // ---------- 道路 ----------
-  const roadGrad = ctx.createLinearGradient(0, roadTop, 0, roadBottom);
-  roadGrad.addColorStop(0, P.roadEdge);
-  roadGrad.addColorStop(0.5, P.road);
-  roadGrad.addColorStop(1, P.roadEdge);
+  const roadGrad = cachedLinearGradient(
+    ctx,
+    `${theme}|road|${roadTop}|${roadBottom}`,
+    roadTop,
+    roadBottom,
+    [
+      [0, P.roadEdge],
+      [0.5, P.road],
+      [1, P.roadEdge]
+    ]
+  );
   ctx.fillStyle = roadGrad;
   ctx.fillRect(0, roadTop, cssW, roadBottom - roadTop);
   // 车道虚线（随时间轻微流动）
@@ -307,7 +325,7 @@ export function drawMotion(context: MotionDrawContext): void {
     ctx.fillRect(x - 1.5 * s, roadTop - 16 * s, 3 * s, 16 * s);
     // 牌面
     ctx.fillStyle = P.postSign;
-    roundRect(ctx, x - 11 * s, roadTop - 30 * s, 22 * s, 15 * s, 4 * s);
+    pathRoundRect(ctx, x - 11 * s, roadTop - 30 * s, 22 * s, 15 * s, 4 * s);
     ctx.fill();
     ctx.fillStyle = P.postText;
     ctx.font = `700 ${Math.max(8, Math.round(9 * s))}px system-ui`;
@@ -396,7 +414,7 @@ export function drawMotion(context: MotionDrawContext): void {
     ctx.fillStyle = P.bubble;
     ctx.strokeStyle = P.bubbleBorder;
     ctx.lineWidth = Math.max(1.5, 2 * s);
-    roundRect(ctx, midX - tw / 2, bubY - 13 * s, tw, 26 * s, 13 * s);
+    pathRoundRect(ctx, midX - tw / 2, bubY - 13 * s, tw, 26 * s, 13 * s);
     ctx.fill();
     ctx.stroke();
     // 气泡尖
@@ -489,7 +507,7 @@ function drawCar(
 
   // 车身（圆角）
   ctx.fillStyle = body;
-  roundRect(ctx, -carW * 0.5, bodyTop, carW, carH, 8 * s);
+  pathRoundRect(ctx, -carW * 0.5, bodyTop, carW, carH, 8 * s);
   ctx.fill();
   // 车顶舱
   const cabW = carW * 0.5;
@@ -497,11 +515,18 @@ function drawCar(
   const cabX = -cabW * 0.25;
   const cabY = bodyTop - cabH + 3 * s;
   ctx.fillStyle = body;
-  roundRect(ctx, cabX, cabY, cabW, cabH, 7 * s);
+  pathRoundRect(ctx, cabX, cabY, cabW, cabH, 7 * s);
   ctx.fill();
   // 车窗
   ctx.fillStyle = cabin;
-  roundRect(ctx, cabX + 3 * s, cabY + 3 * s, cabW - 6 * s, cabH - 6 * s, 4 * s);
+  pathRoundRect(
+    ctx,
+    cabX + 3 * s,
+    cabY + 3 * s,
+    cabW - 6 * s,
+    cabH - 6 * s,
+    4 * s
+  );
   ctx.fill();
 
   // 车灯（车头在右）

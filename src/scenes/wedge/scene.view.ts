@@ -25,8 +25,8 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
   let theme: TeachingTheme = options.theme ?? 'dark';
   let mode: TeachingMode = options.mode ?? 'normal';
   let demoHints: DemoRenderHints | undefined = options.demoHints;
-  let cssWidth = 800;
-  let cssHeight = 600;
+  let cssWidth = 0;
+  let cssHeight = 0;
   let scale = 1;
 
   function resizeCanvas(): void {
@@ -62,8 +62,11 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
 
   return {
     render(next: WedgeState): void {
-      resizeCanvas();
-      resizeGraphCanvas();
+      // sizing 由 SceneAdapter 的 ResizeObserver + rAF 路径驱动（scene.resize()），
+      // 这里仅在尚未完成首次 sizing（记录尺寸为 0）时兜底一次，
+      // 避免每帧 getBoundingClientRect + setTransform 的同步布局查询
+      if (cssWidth === 0 || cssHeight === 0) resizeCanvas();
+      if (graphCanvas && !graphCtx) resizeGraphCanvas();
       drawScene(viewContext(), next);
     },
     resize(): void {

@@ -3,3 +3,4 @@
  */
 
 export { spiralMicrometerFactory as spiralMicrometer } from './instrument.entry';
+export { spiralMicrometerControlsSchema } from './controls-schema';

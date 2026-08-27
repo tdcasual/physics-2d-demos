@@ -131,12 +131,17 @@ export function createInterferenceVernierCaliperView(options: {
   };
   let rawSpacing = 0;
 
-  let _stripeTileUrl = '';
+  // 条纹瓷砖按 (spacing, color) 缓存：key 未变时 DOM 背景已是目标值，
+  // 避免重复 parseRgba + toDataURL
+  let stripeTileKey = '';
 
   function updatePattern() {
     const s = fringeConfig.spacing;
-    _stripeTileUrl = buildStripeTile(s, fringeConfig.color);
-    stripeLayer.style.backgroundImage = `url(${_stripeTileUrl})`;
+    const key = `${s}|${fringeConfig.color}`;
+    if (key === stripeTileKey) return;
+    stripeTileKey = key;
+    const tileUrl = buildStripeTile(s, fringeConfig.color);
+    stripeLayer.style.backgroundImage = `url(${tileUrl})`;
     stripeLayer.style.backgroundRepeat = 'repeat';
   }
 

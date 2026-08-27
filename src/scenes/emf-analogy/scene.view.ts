@@ -106,5 +106,3 @@ export function createEmfAnalogyView(
     }
   };
 }
-
-export type EmfAnalogyView = ReturnType<typeof createEmfAnalogyView>;

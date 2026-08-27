@@ -128,7 +128,7 @@ export function createGansheScene(
     canvas: HTMLCanvasElement;
     renderer: XtGraphRenderer;
     wrapper: HTMLElement;
-    header: HTMLElement;
+    coordSpan: HTMLElement;
   }[] = [];
   let currentTheme: 'light' | 'dark' = options.theme ?? 'light';
 
@@ -156,7 +156,7 @@ export function createGansheScene(
     canvas: HTMLCanvasElement;
     renderer: XtGraphRenderer;
     wrapper: HTMLElement;
-    header: HTMLElement;
+    coordSpan: HTMLElement;
   } {
     const wrapper = document.createElement('div');
     wrapper.className = 'graph-cell';
@@ -166,6 +166,8 @@ export function createGansheScene(
     const color = getObserverColor(index);
     header.innerHTML = `<span aria-hidden="true" style="color:${color}">●</span> <span class="graph-cell-title">观察点${index + 1}</span> <span class="graph-cell-coord">x=${observer.x.toFixed(2)}m</span>`;
     wrapper.appendChild(header);
+    // 缓存坐标 span 引用，renderGraphs 每帧直接更新而不再 querySelector
+    const coordSpan = header.querySelector<HTMLElement>('.graph-cell-coord')!;
 
     const body = document.createElement('div');
     body.className = 'graph-cell-body';
@@ -183,7 +185,7 @@ export function createGansheScene(
     // Ensure canvas sizes after layout resolves (fixes 1x1 on mobile)
     requestAnimationFrame(() => renderer.resize());
 
-    return { canvas, renderer, wrapper, header };
+    return { canvas, renderer, wrapper, coordSpan };
   }
 
   function rebuildGraphs(): void {
@@ -232,10 +234,7 @@ export function createGansheScene(
         interference: state.interference
       };
       // Update header coordinate
-      const coordSpan = graphCells[0].header.querySelector('.graph-cell-coord');
-      if (coordSpan) {
-        coordSpan.textContent = `x=${state.params.observerX.toFixed(2)}m`;
-      }
+      graphCells[0].coordSpan.textContent = `x=${state.params.observerX.toFixed(2)}m`;
       graphCells[0].renderer.render(primaryData, state.time, state.params);
     }
 
@@ -246,11 +245,7 @@ export function createGansheScene(
       i++
     ) {
       const obs = state.allObservers[i];
-      const coordSpan =
-        graphCells[i + 1].header.querySelector('.graph-cell-coord');
-      if (coordSpan) {
-        coordSpan.textContent = `x=${obs.x.toFixed(2)}m`;
-      }
+      graphCells[i + 1].coordSpan.textContent = `x=${obs.x.toFixed(2)}m`;
       graphCells[i + 1].renderer.render(obs, state.time, state.params);
     }
   }
@@ -368,5 +363,3 @@ export function createGansheScene(
     }
   };
 }
-
-export type GansheScene = ReturnType<typeof createGansheScene>;

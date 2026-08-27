@@ -50,6 +50,8 @@ export type GhostPoint = {
   x: number;
   y: number;
   t: number;
+  /** 记录时刻按当前参数预算的干涉强度百分比，view 直接读取避免逐点重算 */
+  intensityPct: number;
 };
 
 export type ObserverData = {
@@ -184,6 +186,15 @@ export function createWaveInterferenceSim(initial: Partial<WaveParams> = {}) {
   const ghostTrail: GhostPoint[] = [];
   const maxHistory = 1800;
   const maxGhost = 60;
+  // 历史数组允许超长到 cap + TRIM_BATCH 再一次性 splice，
+  // 避免满容量后每步 O(n) 的 shift 搬移
+  const TRIM_BATCH = 120;
+
+  // getState 快照缓存：step/参数变更等状态修改后置 null
+  let stateCache: WaveState | null = null;
+  function invalidateState(): void {
+    stateCache = null;
+  }
 
   // Additional observers
   const observerHistories: HistoryPoint[][] = [];
@@ -206,8 +217,17 @@ export function createWaveInterferenceSim(initial: Partial<WaveParams> = {}) {
     // Primary observer
     const primary = computeInterference(params, params.observerX, time);
     history.push({ t: time, y: primary.ySum });
-    ghostTrail.push({ x: params.observerX, y: primary.ySum, t: time });
-    if (history.length > maxHistory) history.shift();
+    // 残影数量直接决定渲染点数，必须保持精确的 60 上限（视觉等价），
+    // 只有 1800 条的历史数组使用批量修剪
+    ghostTrail.push({
+      x: params.observerX,
+      y: primary.ySum,
+      t: time,
+      intensityPct: primary.intensityPct
+    });
+    if (history.length > maxHistory + TRIM_BATCH) {
+      history.splice(0, history.length - maxHistory);
+    }
     if (ghostTrail.length > maxGhost) ghostTrail.shift();
 
     // Additional observers
@@ -217,9 +237,29 @@ export function createWaveInterferenceSim(initial: Partial<WaveParams> = {}) {
       const h = observerHistories[i];
       const g = observerGhostTrails[i];
       h.push({ t: time, y: interference.ySum });
-      g.push({ x, y: interference.ySum, t: time });
-      if (h.length > maxHistory) h.shift();
+      g.push({
+        x,
+        y: interference.ySum,
+        t: time,
+        intensityPct: interference.intensityPct
+      });
+      if (h.length > maxHistory + TRIM_BATCH) {
+        h.splice(0, h.length - maxHistory);
+      }
       if (g.length > maxGhost) g.shift();
+    }
+  }
+
+  // 参数变化后按新参数重算既有残影点的强度（与 view 旧行为一致：
+  // 旧点颜色随当前参数更新），此开销仅在参数变更时发生而非每帧
+  function refreshGhostIntensities(): void {
+    for (const p of ghostTrail) {
+      p.intensityPct = computeInterference(params, p.x, p.t).intensityPct;
+    }
+    for (const g of observerGhostTrails) {
+      for (const p of g) {
+        p.intensityPct = computeInterference(params, p.x, p.t).intensityPct;
+      }
     }
   }
 
@@ -238,7 +278,8 @@ export function createWaveInterferenceSim(initial: Partial<WaveParams> = {}) {
   }
 
   function getState(): WaveState {
-    return {
+    if (stateCache) return stateCache;
+    stateCache = {
       time,
       observerX: params.observerX,
       history: [...history],
@@ -247,6 +288,7 @@ export function createWaveInterferenceSim(initial: Partial<WaveParams> = {}) {
       params: { ...params },
       allObservers: getAllObservers()
     };
+    return stateCache;
   }
 
   return {
@@ -256,6 +298,8 @@ export function createWaveInterferenceSim(initial: Partial<WaveParams> = {}) {
     },
     setParams(next: Partial<WaveParams>): WaveParams {
       params = normalizeParams({ ...params, ...next });
+      refreshGhostIntensities();
+      invalidateState();
       return { ...params };
     },
     step(dt: number): void {
@@ -263,6 +307,7 @@ export function createWaveInterferenceSim(initial: Partial<WaveParams> = {}) {
       if (safeDt === 0) return;
       time += safeDt;
       recordHistory();
+      invalidateState();
     },
     reset(): void {
       time = 0;
@@ -270,15 +315,18 @@ export function createWaveInterferenceSim(initial: Partial<WaveParams> = {}) {
       ghostTrail.length = 0;
       observerHistories.length = 0;
       observerGhostTrails.length = 0;
+      invalidateState();
     },
     setTime(t: number): void {
       time = Math.max(0, t);
+      invalidateState();
     },
     getTime(): number {
       return time;
     },
     setObserverX(x: number): void {
       params.observerX = clamp(x, 0, DOMAIN_MAX);
+      invalidateState();
     },
     addObserver(x: number): void {
       const pos = clamp(x, 0, DOMAIN_MAX);
@@ -286,6 +334,7 @@ export function createWaveInterferenceSim(initial: Partial<WaveParams> = {}) {
         params.observers = [...params.observers, pos];
         observerHistories.push([]);
         observerGhostTrails.push([]);
+        invalidateState();
       }
     },
     removeObserver(index: number): void {
@@ -293,6 +342,7 @@ export function createWaveInterferenceSim(initial: Partial<WaveParams> = {}) {
         params.observers = params.observers.filter((_, i) => i !== index);
         observerHistories.splice(index, 1);
         observerGhostTrails.splice(index, 1);
+        invalidateState();
       }
     },
     setObserverPosition(index: number, x: number): void {
@@ -300,6 +350,7 @@ export function createWaveInterferenceSim(initial: Partial<WaveParams> = {}) {
         const newObservers = [...params.observers];
         newObservers[index] = clamp(x, 0, DOMAIN_MAX);
         params.observers = newObservers;
+        invalidateState();
       }
     },
     clearHistory(): void {
@@ -309,8 +360,7 @@ export function createWaveInterferenceSim(initial: Partial<WaveParams> = {}) {
         observerHistories[i].length = 0;
         observerGhostTrails[i].length = 0;
       }
+      invalidateState();
     }
   };
 }
-
-export type WaveInterferenceSim = ReturnType<typeof createWaveInterferenceSim>;

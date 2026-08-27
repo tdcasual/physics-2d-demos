@@ -98,21 +98,17 @@ export type SceneStateListener = () => void;
 /** Capability 作用域 — container 作用域的能力在布局切换时保留，layout 作用域的会被销毁重建 */
 export type CapabilityScope = 'container' | 'layout';
 
-/** Capability 标识符列表 — 新增 Capability 只需添加到此数组，类型自动推导 */
-export const CAPABILITY_IDS = [
-  'transport-bar',
-  'readout-panel',
-  'demo-profile',
-  'theme-toggle',
-  'mode-toggle',
-  'sidebar-toggle',
-  'resizer',
-  'debug-overlay',
-  'layout-switch'
-] as const;
-
-/** Capability 标识符 — 从 CAPABILITY_IDS 自动推导 */
-export type CapabilityId = (typeof CAPABILITY_IDS)[number];
+/** Capability 标识符 — 新增 Capability 只需添加到此联合类型 */
+export type CapabilityId =
+  | 'transport-bar'
+  | 'readout-panel'
+  | 'demo-profile'
+  | 'theme-toggle'
+  | 'mode-toggle'
+  | 'sidebar-toggle'
+  | 'resizer'
+  | 'debug-overlay'
+  | 'layout-switch';
 
 /** Capability 上下文事件 */
 export interface CapabilityEvents {

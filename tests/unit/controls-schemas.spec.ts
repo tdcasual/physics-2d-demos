@@ -2,7 +2,10 @@ import { describe, it, expect } from 'vitest';
 import type { ControlsSchema } from '../../src/platform/controls-schema';
 
 const schemaModules = import.meta.glob<Record<string, unknown>>(
-  '../../src/scenes/*/controls-schema.ts',
+  [
+    '../../src/scenes/*/controls-schema.ts',
+    '../../src/instruments/*/controls-schema.ts'
+  ],
   { eager: true }
 );
 

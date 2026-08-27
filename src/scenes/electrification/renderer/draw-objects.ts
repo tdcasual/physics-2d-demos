@@ -2,6 +2,8 @@
  * 物体绘制：玻璃棒、丝绸、导体球、接地符号
  */
 
+import { pathRoundRect } from '../../../core/draw-primitives';
+
 /** 玻璃棒：棕色渐变 + 纵向纹理 */
 export function drawGlassRod(
   ctx: CanvasRenderingContext2D,
@@ -27,7 +29,7 @@ export function drawGlassRod(
   }
 
   ctx.fillStyle = grad;
-  roundRect(ctx, x, y, w, h, Math.min(8, h * 0.1));
+  pathRoundRect(ctx, x, y, w, h, Math.min(8, h * 0.1));
   ctx.fill();
 
   // 纵向纹理线
@@ -45,7 +47,7 @@ export function drawGlassRod(
   // 边框
   ctx.strokeStyle = isDark ? 'rgba(200,150,80,0.5)' : 'rgba(160,120,60,0.4)';
   ctx.lineWidth = Math.max(1, 1.5 * s);
-  roundRect(ctx, x, y, w, h, Math.min(8, h * 0.1));
+  pathRoundRect(ctx, x, y, w, h, Math.min(8, h * 0.1));
   ctx.stroke();
 
   ctx.restore();
@@ -75,7 +77,7 @@ export function drawSilk(
   }
 
   ctx.fillStyle = grad;
-  roundRect(ctx, x, y, w, h, Math.min(8, h * 0.1));
+  pathRoundRect(ctx, x, y, w, h, Math.min(8, h * 0.1));
   ctx.fill();
 
   // 横向波纹
@@ -92,7 +94,7 @@ export function drawSilk(
 
   ctx.strokeStyle = isDark ? 'rgba(170,140,200,0.5)' : 'rgba(140,120,170,0.4)';
   ctx.lineWidth = Math.max(1, 1.5 * s);
-  roundRect(ctx, x, y, w, h, Math.min(8, h * 0.1));
+  pathRoundRect(ctx, x, y, w, h, Math.min(8, h * 0.1));
   ctx.stroke();
 
   ctx.restore();
@@ -268,21 +270,4 @@ export function drawChargedSphere(
   ctx.fillText(label, x, y + 1);
 
   ctx.restore();
-}
-
-function roundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number
-): void {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
 }

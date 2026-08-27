@@ -59,6 +59,17 @@ export function createFieldLinesView(
   let cssWidth = 1280;
   let cssHeight = 720;
   let cachedScale = 1;
+  // 渲染签名：全部画面输入（快照引用 + 尺寸 + scale + contentScale + theme + mode）
+  // 未变时跳过静态画面的昂贵重绘（热力图 / 等势线 / 电场线追踪）
+  let lastRenderKey: {
+    snapshot: FieldLinesSnapshot;
+    cssWidth: number;
+    cssHeight: number;
+    scale: number;
+    contentScale: number;
+    theme: TeachingTheme;
+    mode: TeachingMode;
+  } | null = null;
 
   function resizeCanvas(): void {
     if (!canvas) return;
@@ -118,11 +129,34 @@ export function createFieldLinesView(
     // 5. 立体电荷球
     const visuals = getVisuals(getScale());
     drawCharges(ctx, charges, visuals.chargeFontPx, s, isDark);
+
+    lastRenderKey = {
+      snapshot: next,
+      cssWidth,
+      cssHeight,
+      scale: cachedScale,
+      contentScale: getScale(),
+      theme,
+      mode
+    };
   }
 
   return {
     render(next: FieldLinesSnapshot): void {
       snapshot = next;
+      const key = lastRenderKey;
+      if (
+        key &&
+        key.snapshot === next &&
+        key.cssWidth === cssWidth &&
+        key.cssHeight === cssHeight &&
+        key.scale === cachedScale &&
+        key.contentScale === getScale() &&
+        key.theme === theme &&
+        key.mode === mode
+      ) {
+        return; // 签名未变：静态画面跳过重绘
+      }
       draw(next);
     },
     resize(): void {

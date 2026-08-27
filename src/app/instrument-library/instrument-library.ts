@@ -19,6 +19,11 @@ import type {
 } from '../../instruments/_contract/instrument-contract';
 import type { TeachingTheme } from '../../platform/standards';
 import { sizeCanvasToFill } from '../../core/canvas-sizing';
+import {
+  getStoredTheme,
+  resolveSystemTheme,
+  resolveThemePreference
+} from '../theme-store';
 
 export function bootInstrumentLibrary() {
   const registry = buildInstrumentRegistry();
@@ -123,13 +128,10 @@ export function bootInstrumentLibrary() {
   let rafId = 0;
   let isLoading = false;
 
-  // 检测当前主题（从 html data-theme 属性或系统偏好）
+  // 检测当前主题：复用全站统一主题存储（用户偏好优先，回退系统偏好）
   function detectTheme(): TeachingTheme {
-    const htmlTheme = document.documentElement.getAttribute('data-theme');
-    if (htmlTheme === 'dark' || htmlTheme === 'light') return htmlTheme;
-    if (window.matchMedia('(prefers-color-scheme: dark)').matches)
-      return 'dark';
-    return 'light';
+    const stored = getStoredTheme();
+    return stored ? resolveThemePreference(stored) : resolveSystemTheme();
   }
   const currentTheme = detectTheme();
 

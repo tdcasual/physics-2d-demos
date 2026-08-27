@@ -15,6 +15,13 @@ import { drawIntensityCurve } from './draw-intensity';
 import { drawFringeOnMainCanvas } from './draw-fringe';
 import { drawWaveSuperpositionGraph } from './draw-wave';
 
+// 上下玻璃板渐变缓存：仅依赖几何（botY/topY/glassH）与主题，变化时重建
+let glassGradCache: {
+  key: string;
+  lower: CanvasGradient;
+  upper: CanvasGradient;
+} | null = null;
+
 export function drawScene(vc: WedgeViewContext, next: WedgeState): void {
   const c = vc.ctx;
   if (!c) return;
@@ -72,33 +79,39 @@ export function drawScene(vc: WedgeViewContext, next: WedgeState): void {
   c.closePath();
   c.fill();
 
+  // 上下玻璃板渐变（几何与主题不变时复用）
+  const glassGradKey = `${botY}|${topY}|${glassH}|${isDark}`;
+  if (!glassGradCache || glassGradCache.key !== glassGradKey) {
+    const lower = c.createLinearGradient(0, botY, 0, botY + glassH);
+    lower.addColorStop(
+      0,
+      isDark ? 'rgba(148,163,184,0.35)' : 'rgba(100,116,139,0.25)'
+    );
+    lower.addColorStop(
+      1,
+      isDark ? 'rgba(148,163,184,0.15)' : 'rgba(100,116,139,0.10)'
+    );
+    const upper = c.createLinearGradient(0, topY - glassH, 0, topY);
+    upper.addColorStop(
+      0,
+      isDark ? 'rgba(148,163,184,0.15)' : 'rgba(100,116,139,0.10)'
+    );
+    upper.addColorStop(
+      1,
+      isDark ? 'rgba(148,163,184,0.35)' : 'rgba(100,116,139,0.25)'
+    );
+    glassGradCache = { key: glassGradKey, lower, upper };
+  }
+
   // 下玻璃板（水平厚矩形）
-  const glassGrad1 = c.createLinearGradient(0, botY, 0, botY + glassH);
-  glassGrad1.addColorStop(
-    0,
-    isDark ? 'rgba(148,163,184,0.35)' : 'rgba(100,116,139,0.25)'
-  );
-  glassGrad1.addColorStop(
-    1,
-    isDark ? 'rgba(148,163,184,0.15)' : 'rgba(100,116,139,0.10)'
-  );
-  c.fillStyle = glassGrad1;
+  c.fillStyle = glassGradCache.lower;
   c.fillRect(leftX - 10 * scale, botY, rightX - leftX + 20 * scale, glassH);
   c.strokeStyle = text;
   c.lineWidth = 1.5 * scale;
   c.strokeRect(leftX - 10 * scale, botY, rightX - leftX + 20 * scale, glassH);
 
   // 上玻璃板（倾斜平行四边形）
-  const glassGrad2 = c.createLinearGradient(0, topY - glassH, 0, topY);
-  glassGrad2.addColorStop(
-    0,
-    isDark ? 'rgba(148,163,184,0.15)' : 'rgba(100,116,139,0.10)'
-  );
-  glassGrad2.addColorStop(
-    1,
-    isDark ? 'rgba(148,163,184,0.35)' : 'rgba(100,116,139,0.25)'
-  );
-  c.fillStyle = glassGrad2;
+  c.fillStyle = glassGradCache.upper;
   c.beginPath();
   c.moveTo(leftX, botY);
   c.lineTo(rightX, topY);

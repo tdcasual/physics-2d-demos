@@ -69,26 +69,6 @@ export interface InstrumentFactory<
 }
 
 /* ------------------------------------------------------------------
-   Data-flow Ports
-   ------------------------------------------------------------------ */
-
-export type DataSource<T> = {
-  subscribe(callback: (value: T) => void): () => void;
-  getValue(): T;
-};
-
-export interface InstrumentOutputPort<T> {
-  subscribe(callback: (value: T) => void): () => void;
-  getValue(): T;
-}
-
-export interface InstrumentInputPort<T> {
-  connect(source: DataSource<T>): void;
-  disconnect(): void;
-  setValue(value: T): void;
-}
-
-/* ------------------------------------------------------------------
    Measurable Instrument Extensions
    ------------------------------------------------------------------ */
 
@@ -104,16 +84,6 @@ export interface MeasurableInstrument {
 
   /** 读数接近量程上下限时触发 */
   onLimit(callback: () => void): () => void;
-}
-
-/* ------------------------------------------------------------------
-   Event Port
-   ------------------------------------------------------------------ */
-
-export interface EventPort {
-  on(event: string, listener: (...args: unknown[]) => void): () => void;
-  off(event: string, listener: (...args: unknown[]) => void): void;
-  emit(event: string, ...args: unknown[]): void;
 }
 
 /* ------------------------------------------------------------------

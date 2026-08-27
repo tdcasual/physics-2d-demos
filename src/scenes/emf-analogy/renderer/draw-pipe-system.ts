@@ -48,18 +48,55 @@ interface WaterParticle {
   size: number;
 }
 
-let waterParticles: WaterParticle[] | null = null;
+function createWaterParticle(): WaterParticle {
+  return {
+    t: Math.random(),
+    yOffset: (Math.random() - 0.5) * 0.6,
+    speedOffset: 0.8 + Math.random() * 0.4,
+    size: 0.5 + Math.random() * 0.8
+  };
+}
 
-function getWaterParticles(count: number): WaterParticle[] {
-  if (!waterParticles || waterParticles.length !== count) {
-    waterParticles = Array.from({ length: count }, () => ({
-      t: Math.random(),
-      yOffset: (Math.random() - 0.5) * 0.6,
-      speedOffset: 0.8 + Math.random() * 0.4,
-      size: 0.5 + Math.random() * 0.8
-    }));
+// 每段水管持有独立粒子池（按调用方传入的稳定 key），
+// 避免不同管段共享单一缓存导致每帧重新随机初始化（视觉抖动）
+const waterParticlePools = new Map<string, WaterParticle[]>();
+
+function getWaterParticles(key: string, count: number): WaterParticle[] {
+  let pool = waterParticlePools.get(key);
+  if (!pool) {
+    pool = [];
+    waterParticlePools.set(key, pool);
   }
-  return waterParticles;
+  // count 仅随管段长度（窗口尺寸）变化：不足则补随机粒子，超出则截断，
+  // 已有粒子保持稳定不跳动
+  while (pool.length < count) pool.push(createWaterParticle());
+  if (pool.length > count) pool.length = count;
+  return pool;
+}
+
+// 水波渐变色只随（几何, 压力档位, 主题色）变化，按帧复用避免每段每帧重建
+const waterGradientCache = new Map<string, CanvasGradient>();
+
+function getWaterGradient(
+  ctx: CanvasRenderingContext2D,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  highColor: string,
+  lowColor: string
+): CanvasGradient {
+  const key = `${x1}|${y1}|${x2}|${y2}|${highColor}|${lowColor}`;
+  let gradient = waterGradientCache.get(key);
+  if (!gradient) {
+    // 几何随窗口尺寸变化会产生新 key，限制缓存规模防止无限增长
+    if (waterGradientCache.size > 64) waterGradientCache.clear();
+    gradient = ctx.createLinearGradient(x1, y1, x2, y2);
+    gradient.addColorStop(0, highColor);
+    gradient.addColorStop(1, lowColor);
+    waterGradientCache.set(key, gradient);
+  }
+  return gradient;
 }
 
 export function drawWaterFlow(
@@ -72,6 +109,7 @@ export function drawWaterFlow(
   speed: number,
   phase: number,
   pressureRatio: number, // 0~1, 压力高低影响颜色
+  particleKey: string, // 管段稳定标识，决定独立的粒子池
   colors: WaterColors
 ): void {
   const dx = x2 - x1;
@@ -110,12 +148,10 @@ export function drawWaterFlow(
   );
   ctx.clip();
 
-  // 颜色渐变：高压端 → 低压端
-  const gradient = ctx.createLinearGradient(x1, y1, x2, y2);
+  // 颜色渐变：高压端 → 低压端（按几何与压力档位缓存）
   const highColor = pressureRatio > 0.5 ? colors.waterHigh : colors.waterMid;
   const lowColor = pressureRatio > 0.2 ? colors.waterMid : colors.waterLow;
-  gradient.addColorStop(0, highColor);
-  gradient.addColorStop(1, lowColor);
+  const gradient = getWaterGradient(ctx, x1, y1, x2, y2, highColor, lowColor);
 
   ctx.strokeStyle = gradient;
   ctx.lineWidth = Math.max(2, width * 0.25);
@@ -141,7 +177,10 @@ export function drawWaterFlow(
   ctx.globalAlpha = 1;
 
   // 高光粒子
-  const particles = getWaterParticles(Math.max(8, Math.floor(len / 15)));
+  const particles = getWaterParticles(
+    particleKey,
+    Math.max(8, Math.floor(len / 15))
+  );
   const flowSpeed = speed * 0.4;
 
   for (const p of particles) {

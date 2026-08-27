@@ -59,19 +59,27 @@ function buildStripeTile(period: number, color: string): string {
 }
 
 /**
- * 创建条纹更新器。`_stripeTileUrl` 为每实例状态（与原闭包变量一致）。
+ * 创建条纹更新器。
+ *
+ * 输出只取决于 (spacing, color, angle)：按此 key 缓存，key 未变时
+ * DOM 背景已是目标值，直接跳过重算（避免拖动十字丝时反复
+ * parseRgba + toDataURL）。
  */
 export function createStripeUpdater(
   lensView: HTMLDivElement
 ): (stripeConfig: StripeConfig) => void {
-  let _stripeTileUrl = '';
+  let lastKey = '';
 
   return function updateStripes(stripeConfig: StripeConfig): void {
     const s = stripeConfig;
+    const key = `${s.spacing}|${s.color}|${s.angle}`;
+    if (key === lastKey) return;
+    lastKey = key;
+
     if (s.angle === 90) {
       // 垂直条纹：Canvas 位图 + repeat 平铺（GPU 加速，无需取模）
-      _stripeTileUrl = buildStripeTile(s.spacing, s.color);
-      lensView.style.backgroundImage = `url(${_stripeTileUrl})`;
+      const tileUrl = buildStripeTile(s.spacing, s.color);
+      lensView.style.backgroundImage = `url(${tileUrl})`;
       lensView.style.backgroundRepeat = 'repeat';
     } else {
       // 非垂直角度：回退到 CSS gradient（倾斜条纹无缝瓷砖较复杂）

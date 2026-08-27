@@ -3,3 +3,4 @@
  */
 
 export { micrometerEyepieceFactory as micrometerEyepiece } from './instrument.entry';
+export { micrometerEyepieceControlsSchema } from './controls-schema';

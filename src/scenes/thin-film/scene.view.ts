@@ -29,6 +29,10 @@ export function createThinFilmView(options: CreateThinFilmViewOptions = {}) {
   let cssWidth = 800;
   let cssHeight = 600;
   let scale = 1;
+  // 图表 canvas 的记录尺寸（resize 时更新，render 热路径不再读 getBoundingClientRect）
+  let graphW = 400;
+  let graphH = 200;
+  let graphScale = 1;
 
   // 离屏 canvas 缓存，避免每帧分配（同时解决 HiDPI putImageData 坐标问题）
   let offCanvas: HTMLCanvasElement | null = null;
@@ -51,6 +55,10 @@ export function createThinFilmView(options: CreateThinFilmViewOptions = {}) {
     if (!graphCanvas) return;
     const newCtx = sizeCanvasToFill(graphCanvas);
     if (newCtx) graphCtx = newCtx;
+    const rect = graphCanvas.getBoundingClientRect();
+    graphW = Math.max(200, Math.floor(rect.width || 400));
+    graphH = Math.max(100, Math.floor(rect.height || 200));
+    graphScale = parseFloat(graphCanvas.dataset.responsiveScale || '1');
   }
 
   function drawScene(next: ThinFilmState): void {
@@ -326,10 +334,10 @@ export function createThinFilmView(options: CreateThinFilmViewOptions = {}) {
     const gCanvas = graphCanvas;
     if (!gc || !gCanvas) return;
 
-    const rect = gCanvas.getBoundingClientRect();
-    const gw = Math.max(200, Math.floor(rect.width || 400));
-    const gh = Math.max(100, Math.floor(rect.height || 200));
-    const gScale = parseFloat(gCanvas.dataset.responsiveScale || '1');
+    // 使用 resizeGraphCanvas 记录的尺寸，避免每帧同步布局查询
+    const gw = graphW;
+    const gh = graphH;
+    const gScale = graphScale;
     const isDark = theme === 'dark';
     const text = isDark ? '#e2e8f0' : '#1e293b';
     const dim = isDark ? '#94a3b8' : '#64748b';
@@ -544,6 +552,10 @@ export function createThinFilmView(options: CreateThinFilmViewOptions = {}) {
     );
   }
 
+  // 保留本地实现而非 core/draw-primitives 的 drawArrow：
+  // 本地版只画开口 V 形箭头头部（两段独立描边子路径），箭杆由调用方
+  // 按自身样式（颜色/虚线/透明度）单独绘制；core 版 fillHead:false 是
+  // 单条带拐角连接的路径且强制 lineCap='round'、必画箭杆，均无法像素对齐。
   function drawArrow(
     c: CanvasRenderingContext2D,
     x1: number,
@@ -569,8 +581,11 @@ export function createThinFilmView(options: CreateThinFilmViewOptions = {}) {
 
   return {
     render(next: ThinFilmState): void {
-      resizeCanvas();
-      resizeGraphCanvas();
+      // 尺寸由 SceneAdapter 的 ResizeObserver/rAF 驱动 view.resize() 维护；
+      // 仅在尚未完成首次 sizing（ctx 未建立）时兜底一次，防首帧 0 尺寸。
+      // 记录尺寸经 Math.max clamp 恒 > 0，故以 ctx 是否建立作为判据。
+      if (!ctx) resizeCanvas();
+      if (!graphCtx) resizeGraphCanvas();
       drawScene(next);
     },
     resize(): void {

@@ -15,7 +15,7 @@ export function resetInstrumentCaches(): void {
   _glowKey = '';
 }
 
-export function drawFilterElement(
+function drawFilterElement(
   c: CanvasRenderingContext2D,
   x: number,
   CY: number,

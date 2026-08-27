@@ -71,9 +71,9 @@ export function computeFringeSpacingPx(
 }
 
 /** 螺旋测微仪目镜条纹缩放：每 mm 物理条纹间距对应的视觉像素 */
-export const MICROMETER_STRIPE_SCALE = 31;
+const MICROMETER_STRIPE_SCALE = 31;
 /** 游标卡尺目镜中条纹视觉缩放基数 (1cm读数对应像素) */
-export const CALIPER_UNIT_PX = 96;
+const CALIPER_UNIT_PX = 96;
 
 /**
  * 根据物理条纹间距计算螺旋测微仪目镜中的条纹像素间距
@@ -124,10 +124,6 @@ export const WHITE_LAMBDAS = [430, 500, 550, 600, 660];
 
 export function isWhiteLight(params: DoubleSlitParams): boolean {
   return params.lightMode === 'white';
-}
-
-export function hasFilter(params: DoubleSlitParams): boolean {
-  return isWhiteLight(params) && params.filterColor != null;
 }
 
 export function getActiveWavelengths(params: DoubleSlitParams): number[] {

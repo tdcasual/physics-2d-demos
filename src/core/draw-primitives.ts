@@ -7,6 +7,112 @@ import { Colors, alpha } from './colors';
 import type { GridOptions } from './canvas-sizing';
 
 /**
+ * 箭头绘制选项
+ */
+export interface ArrowOptions {
+  /** 箭头颜色（同时设置 strokeStyle/fillStyle）；缺省沿用 ctx 当前样式 */
+  color?: string;
+  /** 线宽；缺省沿用 ctx 当前 lineWidth */
+  lineWidth?: number;
+  /** 箭头头部尺寸（px），默认 8 */
+  headSize?: number;
+  /** 箭头半角（弧度），默认 π/6 */
+  headAngle?: number;
+  /** true 时起点也绘制箭头（双向箭头），默认 false */
+  doubleEnded?: boolean;
+  /** true 时头部为实心填充三角，false 为开口 V 形描边，默认 true */
+  fillHead?: boolean;
+}
+
+/**
+ * 绘制带箭头的线段（从 (x1,y1) 指向 (x2,y2)）
+ */
+export function drawArrow(
+  ctx: CanvasRenderingContext2D,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  options: ArrowOptions = {}
+): void {
+  const {
+    color,
+    lineWidth,
+    headSize = 8,
+    headAngle = Math.PI / 6,
+    doubleEnded = false,
+    fillHead = true
+  } = options;
+
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const angle = Math.atan2(dy, dx);
+  if (Math.hypot(dx, dy) < 1) return;
+
+  ctx.save();
+  if (color !== undefined) {
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+  }
+  if (lineWidth !== undefined) ctx.lineWidth = lineWidth;
+  ctx.lineCap = 'round';
+
+  // 箭杆
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+
+  // 箭头头部
+  const head = (tipX: number, tipY: number, dir: number): void => {
+    const wing1X = tipX - headSize * Math.cos(dir - headAngle);
+    const wing1Y = tipY - headSize * Math.sin(dir - headAngle);
+    const wing2X = tipX - headSize * Math.cos(dir + headAngle);
+    const wing2Y = tipY - headSize * Math.sin(dir + headAngle);
+    ctx.beginPath();
+    if (fillHead) {
+      ctx.moveTo(tipX, tipY);
+      ctx.lineTo(wing1X, wing1Y);
+      ctx.lineTo(wing2X, wing2Y);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      ctx.moveTo(wing1X, wing1Y);
+      ctx.lineTo(tipX, tipY);
+      ctx.lineTo(wing2X, wing2Y);
+      ctx.stroke();
+    }
+  };
+
+  head(x2, y2, angle);
+  if (doubleEnded) head(x1, y1, angle + Math.PI);
+
+  ctx.restore();
+}
+
+/**
+ * 构建圆角矩形路径（仅建 path，fill/stroke 由调用方决定）
+ * r 会被钳制到 [0, min(w,h)/2]
+ */
+export function pathRoundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number
+): void {
+  const r = Math.max(0, Math.min(radius, Math.min(width, height) / 2));
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + width, y, x + width, y + height, r);
+  ctx.arcTo(x + width, y + height, x, y + height, r);
+  ctx.arcTo(x, y + height, x, y, r);
+  ctx.arcTo(x, y, x + width, y, r);
+  ctx.closePath();
+}
+
+/**
  * 绘制标准化网格
  */
 export function drawGrid(

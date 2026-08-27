@@ -123,6 +123,7 @@ export function drawWaterAnalogy(options: WaterDrawOptions): void {
     flowSpeed,
     phase,
     1.0, // 高压
+    'pipe-pump-turbine',
     colors
   );
 
@@ -137,6 +138,7 @@ export function drawWaterAnalogy(options: WaterDrawOptions): void {
     flowSpeed,
     phase,
     0.6, // 中压（经过外阻后）
+    'pipe-turbine-valve',
     colors
   );
 
@@ -151,6 +153,7 @@ export function drawWaterAnalogy(options: WaterDrawOptions): void {
     flowSpeed,
     phase,
     0.5, // 中低压
+    'pipe-valve-mesh',
     colors
   );
 
@@ -165,6 +168,7 @@ export function drawWaterAnalogy(options: WaterDrawOptions): void {
     flowSpeed,
     phase + 0.5,
     0.2, // 低压（经过内阻后）
+    'pipe-mesh-pump',
     colors
   );
 

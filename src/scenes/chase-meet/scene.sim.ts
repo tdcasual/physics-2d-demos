@@ -177,5 +177,3 @@ export function createChaseMeetSim(initial: Partial<ChaseMeetParams> = {}) {
 
   return { tick, step, reset, getSnapshot, getState, getParams, setParams };
 }
-
-export type ChaseMeetSim = ReturnType<typeof createChaseMeetSim>;

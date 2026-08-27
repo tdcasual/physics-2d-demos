@@ -1,24 +1,8 @@
 import type { VtIntegralSnapshot } from '../scene.sim';
 import type { DrawContext } from './types';
 import { drawAxis } from './draw-axis';
+import { pathRoundRect } from '../../../core/draw-primitives';
 import { vtPalette, fontPx, lineW, markR, FONT_FAMILY } from './palette';
-
-function roundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number
-): void {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-}
 
 /**
  * 子场景 2 · 化曲为直：用折线段逼近曲线长度
@@ -148,7 +132,7 @@ export function drawScene2(
   const px0 = right - panelW - 6 * s;
   const py0 = top + 4 * s;
   ctx.fillStyle = P.isDark ? 'rgba(15,23,42,0.72)' : 'rgba(255,255,255,0.82)';
-  roundRect(ctx, px0, py0, panelW, panelH, 8 * s);
+  pathRoundRect(ctx, px0, py0, panelW, panelH, 8 * s);
   ctx.fill();
   ctx.strokeStyle = P.isDark
     ? 'rgba(148,163,184,0.25)'
@@ -194,7 +178,7 @@ export function drawScene2(
   const bx = left + 8 * s;
   const by = bottom - bH - 8 * s;
   ctx.fillStyle = P.isDark ? 'rgba(15,23,42,0.72)' : 'rgba(255,255,255,0.82)';
-  roundRect(ctx, bx, by, bW, bH, 8 * s);
+  pathRoundRect(ctx, bx, by, bW, bH, 8 * s);
   ctx.fill();
   ctx.strokeStyle = P.isDark
     ? 'rgba(148,163,184,0.25)'

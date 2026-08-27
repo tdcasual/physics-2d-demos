@@ -301,6 +301,9 @@ export function createDopplerView(options: CreateDopplerViewOptions = {}) {
     );
   }
 
+  // 保留本地实现而非 core/draw-primitives 的 drawArrow：
+  // core 版强制 lineCap='round'，本场景历史渲染为默认 butt 线帽，
+  // 迁移会在箭杆两端（尤其箭头尖端外凸）产生像素差异。
   function drawArrow(
     c: CanvasRenderingContext2D,
     x1: number,
@@ -406,7 +409,9 @@ export function createDopplerView(options: CreateDopplerViewOptions = {}) {
     render(state: DopplerState): void {
       cachedSourceX = state.sourceX;
       cachedObserverX = state.observerX;
-      resizeCanvas();
+      // 尺寸由 SceneAdapter 的 ResizeObserver/rAF 驱动 view.resize() 维护；
+      // 仅当记录尺寸为 0（曾在隐藏容器中测量）时兜底重测一次，防首帧 0 尺寸。
+      if (cssW <= 0 || cssH <= 0) resizeCanvas();
       drawScene(state);
     },
     resize(): void {

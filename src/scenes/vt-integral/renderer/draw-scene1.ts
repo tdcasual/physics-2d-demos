@@ -1,6 +1,7 @@
 import type { VtIntegralSnapshot } from '../scene.sim';
 import type { DrawContext } from './types';
 import { drawAxis } from './draw-axis';
+import { pathRoundRect } from '../../../core/draw-primitives';
 import { vtPalette, fontPx, lineW, FONT_FAMILY } from './palette';
 
 const METHOD_LABEL: Record<string, string> = {
@@ -10,22 +11,9 @@ const METHOD_LABEL: Record<string, string> = {
   trap: '梯形'
 };
 
-function roundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number
-): void {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-}
+// 黎曼矩形渐变缓存：每个矩形的渐变仅依赖 (n, time, method, 画布几何, theme)，
+// 命中缓存时复用，参数或尺寸变化时整体重建
+let rectGradCache: { key: string; gradients: CanvasGradient[] } | null = null;
 
 /**
  * 子场景 1 · 以直代曲：v-t 图面积（黎曼和）
@@ -96,23 +84,38 @@ export function drawScene1(
   const dt = params.time / n;
   const slotW = axisW / n;
   const barW = slotW * (n > 30 ? 1 : 0.9);
-  for (let i = 0; i < n; i += 1) {
+
+  const rectValue = (i: number): number => {
     const t0 = i * dt;
     const t1 = (i + 1) * dt;
-    let vRect: number;
-    if (params.method === 'left') vRect = vFn(t0);
-    else if (params.method === 'right') vRect = vFn(t1);
-    else if (params.method === 'mid') vRect = vFn((t0 + t1) * 0.5);
-    else vRect = (vFn(t0) + vFn(t1)) * 0.5;
+    if (params.method === 'left') return vFn(t0);
+    if (params.method === 'right') return vFn(t1);
+    if (params.method === 'mid') return vFn((t0 + t1) * 0.5);
+    return (vFn(t0) + vFn(t1)) * 0.5;
+  };
 
+  // 每个矩形的渐变仅几何不同，按 (n, time, method, 画布几何, theme) 缓存复用
+  const gradKey = [n, params.time, params.method, width, height, P.isDark].join(
+    '|'
+  );
+  if (!rectGradCache || rectGradCache.key !== gradKey) {
+    const gradients: CanvasGradient[] = [];
+    for (let i = 0; i < n; i += 1) {
+      const g = ctx.createLinearGradient(0, toY(rectValue(i)), 0, bottom);
+      g.addColorStop(0, P.approxSoft);
+      g.addColorStop(1, P.approxFill);
+      gradients.push(g);
+    }
+    rectGradCache = { key: gradKey, gradients };
+  }
+  const rectGrads = rectGradCache.gradients;
+
+  for (let i = 0; i < n; i += 1) {
     const x0 = left + i * slotW + (slotW - barW) * 0.5;
-    const yTop = toY(vRect);
+    const yTop = toY(rectValue(i));
     const hPx = bottom - yTop;
 
-    const g = ctx.createLinearGradient(0, yTop, 0, bottom);
-    g.addColorStop(0, P.approxSoft);
-    g.addColorStop(1, P.approxFill);
-    ctx.fillStyle = g;
+    ctx.fillStyle = rectGrads[i];
     ctx.fillRect(x0, yTop, barW, hPx);
 
     ctx.strokeStyle = P.approx;
@@ -149,7 +152,7 @@ export function drawScene1(
   const px0 = right - panelW - 6 * s;
   const py0 = top + 4 * s;
   ctx.fillStyle = P.isDark ? 'rgba(15,23,42,0.72)' : 'rgba(255,255,255,0.82)';
-  roundRect(ctx, px0, py0, panelW, panelH, 8 * s);
+  pathRoundRect(ctx, px0, py0, panelW, panelH, 8 * s);
   ctx.fill();
   ctx.strokeStyle = P.isDark
     ? 'rgba(148,163,184,0.25)'
@@ -199,7 +202,7 @@ export function drawScene1(
   const bx = left + 8 * s;
   const by = bottom - bH - 8 * s;
   ctx.fillStyle = P.isDark ? 'rgba(15,23,42,0.72)' : 'rgba(255,255,255,0.82)';
-  roundRect(ctx, bx, by, bW, bH, 8 * s);
+  pathRoundRect(ctx, bx, by, bW, bH, 8 * s);
   ctx.fill();
   ctx.strokeStyle = P.isDark
     ? 'rgba(148,163,184,0.25)'

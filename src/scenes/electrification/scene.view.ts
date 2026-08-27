@@ -26,6 +26,8 @@ export function createElectrificationView(
   let cssHeight = 720;
   let responsiveScale = 1;
   const stepTransition = createTransitionTracker(200);
+  // 背景渐变缓存：仅依赖 (尺寸, theme)，变化时重建
+  let bgGradCache: { key: string; grad: CanvasGradient } | null = null;
 
   function resizeCanvas(): void {
     if (!canvas) return;
@@ -46,10 +48,14 @@ export function createElectrificationView(
 
     // 背景
     context.clearRect(0, 0, width, height);
-    const bgGrad = context.createLinearGradient(0, 0, width, height);
-    bgGrad.addColorStop(0, isDark ? '#111827' : '#f8fafc');
-    bgGrad.addColorStop(1, isDark ? '#1f2937' : '#f1f5f9');
-    context.fillStyle = bgGrad;
+    const gradKey = `${width}|${height}|${isDark}`;
+    if (!bgGradCache || bgGradCache.key !== gradKey) {
+      const bgGrad = context.createLinearGradient(0, 0, width, height);
+      bgGrad.addColorStop(0, isDark ? '#111827' : '#f8fafc');
+      bgGrad.addColorStop(1, isDark ? '#1f2937' : '#f1f5f9');
+      bgGradCache = { key: gradKey, grad: bgGrad };
+    }
+    context.fillStyle = bgGradCache.grad;
     context.fillRect(0, 0, width, height);
 
     const drawContext = {

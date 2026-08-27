@@ -74,9 +74,16 @@ function normalizeParams(
 export function createFieldLinesSim(initial: Partial<FieldLinesParams>) {
   let params = normalizeParams(initial);
   let charges = defaultCharges(params.scene, params.q1, params.q2);
+  // 快照引用缓存：静态场景下 getSnapshot 在状态未变时返回同一对象，
+  // 供 view 层用引用比较跳过昂贵重绘
+  let snapshotCache: FieldLinesSnapshot | null = null;
 
   function rebuildCharges(): void {
     charges = defaultCharges(params.scene, params.q1, params.q2);
+  }
+
+  function invalidateSnapshot(): void {
+    snapshotCache = null;
   }
 
   return {
@@ -84,18 +91,23 @@ export function createFieldLinesSim(initial: Partial<FieldLinesParams>) {
       return { ...params };
     },
     getSnapshot(): FieldLinesSnapshot {
-      return {
-        params: { ...params },
-        charges: charges.map((charge) => ({ ...charge }))
-      };
+      if (!snapshotCache) {
+        snapshotCache = {
+          params: { ...params },
+          charges: charges.map((charge) => ({ ...charge }))
+        };
+      }
+      return snapshotCache;
     },
     setScene(scene: FieldLinesScene): ResolvedFieldLinesParams {
       params = normalizeParams({ ...params, scene });
       rebuildCharges();
+      invalidateSnapshot();
       return { ...params };
     },
     setDensity(density: number): ResolvedFieldLinesParams {
       params = normalizeParams({ ...params, density });
+      invalidateSnapshot();
       return { ...params };
     },
     setCustomCharges(q1: number, q2: number): ResolvedFieldLinesParams {
@@ -104,6 +116,7 @@ export function createFieldLinesSim(initial: Partial<FieldLinesParams>) {
         charges[0].q = params.q1;
         charges[1].q = params.q2;
       }
+      invalidateSnapshot();
       return { ...params };
     },
     pickCharge(x: number, y: number, radiusNorm = 0.045): number | null {
@@ -120,6 +133,7 @@ export function createFieldLinesSim(initial: Partial<FieldLinesParams>) {
       if (index < 0 || index >= charges.length) return;
       charges[index].x = clamp(x, 0.02, 0.98);
       charges[index].y = clamp(y, 0.02, 0.98);
+      invalidateSnapshot();
     },
     addCharge(q: number): void {
       // 在随机位置添加新电荷
@@ -129,11 +143,13 @@ export function createFieldLinesSim(initial: Partial<FieldLinesParams>) {
         q: q
       };
       charges.push(newCharge);
+      invalidateSnapshot();
     },
     removeCharge(index: number): void {
       if (index < 0 || index >= charges.length) return;
       if (charges.length <= 1) return; // 至少保留一个电荷
       charges.splice(index, 1);
+      invalidateSnapshot();
     },
     reset(): void {
       params = normalizeParams({
@@ -143,6 +159,7 @@ export function createFieldLinesSim(initial: Partial<FieldLinesParams>) {
         q2: -1
       });
       rebuildCharges();
+      invalidateSnapshot();
     },
     step(dt: number): void {
       void dt;

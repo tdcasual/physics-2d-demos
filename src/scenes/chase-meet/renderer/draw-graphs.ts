@@ -1,5 +1,27 @@
 import type { GraphDrawContext } from './types';
 
+// 折线描边渐变缓存：key 为几何参数 + 颜色，几何随尺寸/visualScale 变化，失效才重建
+const polylineGradientCache = new Map<string, CanvasGradient>();
+
+function cachedPolylineGradient(
+  target: CanvasRenderingContext2D,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  colorA: string,
+  colorB: string
+): CanvasGradient {
+  const key = `${x0}|${y0}|${x1}|${y1}|${colorA}|${colorB}`;
+  const hit = polylineGradientCache.get(key);
+  if (hit) return hit;
+  const grad = target.createLinearGradient(x0, y0, x1, y1);
+  grad.addColorStop(0, colorA);
+  grad.addColorStop(1, colorB);
+  polylineGradientCache.set(key, grad);
+  return grad;
+}
+
 export function drawGraphs(context: GraphDrawContext): void {
   const { xCtx, vCtx, xW, xH, vW, vH, visualScale, snapshot, theme } = context;
   const isLight = theme === 'light';
@@ -108,14 +130,15 @@ export function drawGraphs(context: GraphDrawContext): void {
   ): void => {
     target.save();
     target.lineWidth = Math.max(3 * visualScale, 2.6 * visualScale);
-    const grad = target.createLinearGradient(
+    const grad = cachedPolylineGradient(
+      target,
       paddingLeft,
       paddingTop,
       w - paddingRight,
-      h - paddingBottom
+      h - paddingBottom,
+      colorA,
+      colorB
     );
-    grad.addColorStop(0, colorA);
-    grad.addColorStop(1, colorB);
     target.strokeStyle = grad;
     target.beginPath();
     let first = true;

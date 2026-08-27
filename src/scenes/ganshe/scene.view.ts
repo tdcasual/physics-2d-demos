@@ -6,7 +6,7 @@
  */
 
 import type { WaveState, WaveParams } from './scene.sim';
-import { WAVE_SPEED, DOMAIN_MAX, computeInterference } from './scene.sim';
+import { WAVE_SPEED, DOMAIN_MAX } from './scene.sim';
 import { sizeCanvasToFill } from '../../core/canvas-sizing';
 export {
   createXtGraphRenderer,
@@ -22,7 +22,7 @@ export type CreateWaveInterferenceViewOptions = {
 };
 
 /** 观察点颜色池 */
-export const OBSERVER_COLORS = [
+const OBSERVER_COLORS = [
   '#3b82f6', // blue
   '#ef4444', // red
   '#22c55e', // green
@@ -33,6 +33,44 @@ export const OBSERVER_COLORS = [
 
 export function getObserverColor(index: number): string {
   return OBSERVER_COLORS[index % OBSERVER_COLORS.length];
+}
+
+/** 主题色板：按 light/dark 各一份模块级常量，避免每帧重建对象 */
+type WaveColors = {
+  bg: string;
+  grid: string;
+  axis: string;
+  label: string;
+  text: string;
+  wave1: string;
+  wave2: string;
+  interference: string;
+};
+
+const LIGHT_COLORS: WaveColors = {
+  bg: '#ffffff',
+  grid: '#f3f4f6',
+  axis: '#374151',
+  label: '#6b7280',
+  text: '#1f2937',
+  wave1: '#3b82f6',
+  wave2: '#ef4444',
+  interference: '#8b5cf6'
+};
+
+const DARK_COLORS: WaveColors = {
+  bg: '#0f172a',
+  grid: '#1e293b',
+  axis: '#94a3b8',
+  label: '#cbd5e1',
+  text: '#e2e8f0',
+  wave1: '#3b82f6',
+  wave2: '#ef4444',
+  interference: '#8b5cf6'
+};
+
+function getColors(theme: 'light' | 'dark'): WaveColors {
+  return theme === 'dark' ? DARK_COLORS : LIGHT_COLORS;
 }
 
 export function createWaveInterferenceView(
@@ -98,24 +136,10 @@ export function createWaveInterferenceView(
     return (px - originX) / scaleX;
   }
 
-  function getColors() {
-    const isDark = theme === 'dark';
-    return {
-      bg: isDark ? '#0f172a' : '#ffffff',
-      grid: isDark ? '#1e293b' : '#f3f4f6',
-      axis: isDark ? '#94a3b8' : '#374151',
-      label: isDark ? '#cbd5e1' : '#6b7280',
-      text: isDark ? '#e2e8f0' : '#1f2937',
-      wave1: '#3b82f6',
-      wave2: '#ef4444',
-      interference: '#8b5cf6'
-    };
-  }
-
   function drawMainCanvas(state: WaveState): void {
     if (!ctx || width === 0 || height === 0) return;
 
-    const colors = getColors();
+    const colors = getColors(theme);
     const params = state.params;
     const t = state.time;
 
@@ -384,7 +408,7 @@ export function createWaveInterferenceView(
     // Coordinate label
     ctx.font = `bold ${11 * responsiveScale}px sans-serif`;
     ctx.textAlign = 'center';
-    ctx.fillStyle = getColors().text;
+    ctx.fillStyle = getColors(theme).text;
     const labelY = 38 * responsiveScale + colorIndex * 14 * responsiveScale;
     ctx.fillText(`x=${x.toFixed(2)}m`, obsPixelX, labelY);
     ctx.textAlign = 'left';
@@ -400,12 +424,10 @@ export function createWaveInterferenceView(
       const radius = (2 + (i / state.ghostTrail.length) * 4) * responsiveScale;
       const py = worldToPixelY(point.y);
 
-      const interference = computeInterference(state.params, point.x, point.t);
+      // 强度在残影点写入时由 sim 预算好（参数变更时 sim 侧重算），直接读取
       let color: string;
-      if (interference.intensityPct > 200)
-        color = `rgba(239, 68, 68, ${alpha})`;
-      else if (interference.intensityPct < 50)
-        color = `rgba(59, 130, 246, ${alpha})`;
+      if (point.intensityPct > 200) color = `rgba(239, 68, 68, ${alpha})`;
+      else if (point.intensityPct < 50) color = `rgba(59, 130, 246, ${alpha})`;
       else color = `rgba(139, 92, 246, ${alpha})`;
 
       ctx!.fillStyle = color;
@@ -428,7 +450,7 @@ export function createWaveInterferenceView(
         ctx.beginPath();
         ctx.arc(startX, y, 4 * responsiveScale, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = getColors().text;
+        ctx.fillStyle = getColors(theme).text;
         ctx.fillText(
           `源A (左): ${params.freq1.toFixed(1)}Hz →`,
           startX + 12 * responsiveScale,
@@ -441,7 +463,7 @@ export function createWaveInterferenceView(
         ctx.beginPath();
         ctx.arc(startX, y, 4 * responsiveScale, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = getColors().text;
+        ctx.fillStyle = getColors(theme).text;
         ctx.fillText(
           `源B (右): ${params.freq2.toFixed(1)}Hz ←`,
           startX + 12 * responsiveScale,
@@ -459,7 +481,7 @@ export function createWaveInterferenceView(
         ctx.lineTo(startX + 30 * responsiveScale, y);
         ctx.stroke();
         ctx.setLineDash([]);
-        ctx.fillStyle = getColors().text;
+        ctx.fillStyle = getColors(theme).text;
         ctx.fillText(
           `波1: ${params.freq1.toFixed(1)}Hz`,
           startX + 40 * responsiveScale,
@@ -476,7 +498,7 @@ export function createWaveInterferenceView(
         ctx.lineTo(startX + 30 * responsiveScale, y);
         ctx.stroke();
         ctx.setLineDash([]);
-        ctx.fillStyle = getColors().text;
+        ctx.fillStyle = getColors(theme).text;
         ctx.fillText(
           `波2: ${params.freq2.toFixed(1)}Hz`,
           startX + 40 * responsiveScale,
@@ -493,7 +515,7 @@ export function createWaveInterferenceView(
       ctx.moveTo(startX, y);
       ctx.lineTo(startX + 30 * responsiveScale, y);
       ctx.stroke();
-      ctx.fillStyle = getColors().text;
+      ctx.fillStyle = getColors(theme).text;
       ctx.font = `bold ${12 * responsiveScale}px sans-serif`;
       ctx.fillText(
         '合成波',
@@ -615,7 +637,3 @@ export function createWaveInterferenceView(
     }
   };
 }
-
-export type WaveInterferenceView = ReturnType<
-  typeof createWaveInterferenceView
->;

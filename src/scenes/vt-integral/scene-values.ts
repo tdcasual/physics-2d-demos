@@ -6,7 +6,7 @@
 
 import type { VtScene } from './scene.sim';
 
-export const VT_SCENES: { value: VtScene; label: string; desc: string }[] = [
+const VT_SCENES: { value: VtScene; label: string; desc: string }[] = [
   {
     value: 'scene1',
     label: 'v-t面积',

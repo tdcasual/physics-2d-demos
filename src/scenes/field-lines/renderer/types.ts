@@ -9,12 +9,6 @@ export type PixelCharge = {
   radius: number;
 };
 
-export type FieldVector = {
-  Ex: number;
-  Ey: number;
-  magnitude: number;
-};
-
 export type FieldLinePath = {
   points: Array<{ x: number; y: number }>;
   /** 每个点对应的局部场强 */

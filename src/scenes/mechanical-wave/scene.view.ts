@@ -298,6 +298,10 @@ export function createMechanicalWaveView(
     }
   }
 
+  // 保留本地实现而非 core/draw-primitives 的 drawArrow：
+  // core 版强制 lineCap='round' 且对 <1px 箭头直接返回，
+  // 而本场景历史渲染依赖 butt 线帽、且允许 0.5~1px 短箭头，
+  // 迁移会产生像素差异。
   function drawArrow(
     c: CanvasRenderingContext2D,
     x1: number,
@@ -359,7 +363,9 @@ export function createMechanicalWaveView(
 
   return {
     render(state: MechanicalWaveState): void {
-      resizeCanvas();
+      // 尺寸由 SceneAdapter 的 ResizeObserver/rAF 驱动 view.resize() 维护；
+      // 仅当记录尺寸为 0（曾在隐藏容器中测量）时兜底重测一次，防首帧 0 尺寸。
+      if (cssW <= 0 || cssH <= 0) resizeCanvas();
       drawScene(state);
     },
     resize(): void {

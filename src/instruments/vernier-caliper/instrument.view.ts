@@ -12,6 +12,7 @@ import type {
   InstrumentViewport
 } from '../_contract/instrument-contract';
 import type { VernierCaliperState } from './instrument.sim';
+import { pathRoundRect } from '../../core/draw-primitives';
 
 type Pal = {
   isDark: boolean;
@@ -75,23 +76,6 @@ export type VernierCaliperDrawOptions = {
   contentScale?: number;
   showReading?: boolean;
 };
-
-function roundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number
-): void {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-}
 
 function metalV(
   ctx: CanvasRenderingContext2D,
@@ -348,7 +332,7 @@ export function drawVernierCaliper(o: VernierCaliperDrawOptions): void {
     const px0 = ox + (w - panelW) / 2;
     const py0 = oy + h * 0.72;
     ctx.fillStyle = P.panelBg;
-    roundRect(ctx, px0, py0, panelW, panelH, 10 * s);
+    pathRoundRect(ctx, px0, py0, panelW, panelH, 10 * s);
     ctx.fill();
     ctx.strokeStyle = P.panelBorder;
     ctx.lineWidth = 1;

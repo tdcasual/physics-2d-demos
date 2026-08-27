@@ -1,7 +1,7 @@
 import type { DrawContext, WorldPoint } from './types';
 import type { CoordSystem } from './types';
 import { worldToScreen } from './coords';
-import { drawBall } from '../../../core/draw-primitives';
+import { drawArrow, drawBall } from '../../../core/draw-primitives';
 import { Colors } from '../../../core/colors';
 
 export function drawProjectile(
@@ -63,9 +63,11 @@ export function drawProjectile(
         pos.y,
         pos.x + Math.sign(velocity.vx) * Math.min(vxLen, 60 * s),
         pos.y,
-        isDark ? 'rgba(96,165,250,0.7)' : 'rgba(59,130,246,0.6)',
-        Math.max(1, 1.5 * s),
-        Math.max(3, 5 * s)
+        {
+          color: isDark ? 'rgba(96,165,250,0.7)' : 'rgba(59,130,246,0.6)',
+          lineWidth: Math.max(1, 1.5 * s),
+          headSize: Math.max(3, 5 * s)
+        }
       );
     }
 
@@ -78,9 +80,11 @@ export function drawProjectile(
         pos.y,
         pos.x,
         pos.y - Math.sign(velocity.vy) * Math.min(vyLen, 60 * s),
-        isDark ? 'rgba(74,222,128,0.7)' : 'rgba(22,163,74,0.6)',
-        Math.max(1, 1.5 * s),
-        Math.max(3, 5 * s)
+        {
+          color: isDark ? 'rgba(74,222,128,0.7)' : 'rgba(22,163,74,0.6)',
+          lineWidth: Math.max(1, 1.5 * s),
+          headSize: Math.max(3, 5 * s)
+        }
       );
     }
 
@@ -88,31 +92,21 @@ export function drawProjectile(
     const vAngle = Math.atan2(-velocity.vy, velocity.vx);
     const vEndX = pos.x + Math.cos(vAngle) * Math.min(arrowLen, 80 * s);
     const vEndY = pos.y + Math.sin(vAngle) * Math.min(arrowLen, 80 * s);
-    drawArrow(
-      ctx,
-      pos.x,
-      pos.y,
-      vEndX,
-      vEndY,
-      isDark ? 'rgba(248,250,252,0.85)' : 'rgba(15,23,42,0.75)',
-      Math.max(1.5, 2 * s),
-      Math.max(4, 6 * s)
-    );
+    drawArrow(ctx, pos.x, pos.y, vEndX, vEndY, {
+      color: isDark ? 'rgba(248,250,252,0.85)' : 'rgba(15,23,42,0.75)',
+      lineWidth: Math.max(1.5, 2 * s),
+      headSize: Math.max(4, 6 * s)
+    });
   }
 
   // Acceleration vector (gravity, always pointing down)
   if (!landed) {
     const gLen = 25 * s;
-    drawArrow(
-      ctx,
-      pos.x,
-      pos.y,
-      pos.x,
-      pos.y + gLen,
-      isDark ? 'rgba(251,191,36,0.7)' : 'rgba(202,138,4,0.6)',
-      Math.max(1.5, 2 * s),
-      Math.max(4, 6 * s)
-    );
+    drawArrow(ctx, pos.x, pos.y, pos.x, pos.y + gLen, {
+      color: isDark ? 'rgba(251,191,36,0.7)' : 'rgba(202,138,4,0.6)',
+      lineWidth: Math.max(1.5, 2 * s),
+      headSize: Math.max(4, 6 * s)
+    });
 
     // "g" label
     ctx.fillStyle = isDark ? 'rgba(251,191,36,0.8)' : 'rgba(202,138,4,0.7)';
@@ -151,50 +145,4 @@ export function drawProjectile(
       landScreen.y + 8 * s
     );
   }
-}
-
-function drawArrow(
-  ctx: CanvasRenderingContext2D,
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number,
-  color: string,
-  lineWidth: number,
-  headSize: number
-): void {
-  const dx = x2 - x1;
-  const dy = y2 - y1;
-  const angle = Math.atan2(dy, dx);
-  const len = Math.hypot(dx, dy);
-  if (len < 1) return;
-
-  ctx.save();
-  ctx.strokeStyle = color;
-  ctx.fillStyle = color;
-  ctx.lineWidth = lineWidth;
-  ctx.lineCap = 'round';
-
-  // Shaft
-  ctx.beginPath();
-  ctx.moveTo(x1, y1);
-  ctx.lineTo(x2, y2);
-  ctx.stroke();
-
-  // Arrowhead
-  const headAngle = Math.PI / 6;
-  ctx.beginPath();
-  ctx.moveTo(x2, y2);
-  ctx.lineTo(
-    x2 - headSize * Math.cos(angle - headAngle),
-    y2 - headSize * Math.sin(angle - headAngle)
-  );
-  ctx.lineTo(
-    x2 - headSize * Math.cos(angle + headAngle),
-    y2 - headSize * Math.sin(angle + headAngle)
-  );
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.restore();
 }

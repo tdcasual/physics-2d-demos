@@ -41,6 +41,8 @@ export function createVtIntegralView(
   const sceneTransition = createTransitionTracker(250);
   // 自驱动补帧：暂停/静态场景下也推进过渡动画至 alpha=1，避免画面停在淡化中途帧
   let transitionRaf: number | null = null;
+  // 背景渐变缓存：仅依赖 (尺寸, theme)，变化时重建
+  let bgGradCache: { key: string; grad: CanvasGradient } | null = null;
 
   function resizeCanvas(): void {
     if (!canvas) return;
@@ -58,13 +60,17 @@ export function createVtIntegralView(
 
     ctx.clearRect(0, 0, width, height);
 
-    const gradient = ctx.createLinearGradient(0, 0, width, height);
-    gradient.addColorStop(0, theme === 'light' ? '#eef2ff' : Colors.darkBg);
-    gradient.addColorStop(
-      1,
-      theme === 'light' ? '#e0e7ff' : alpha(Colors.darkCard, 0.8)
-    );
-    ctx.fillStyle = gradient;
+    const gradKey = `${width}|${height}|${theme}`;
+    if (!bgGradCache || bgGradCache.key !== gradKey) {
+      const gradient = ctx.createLinearGradient(0, 0, width, height);
+      gradient.addColorStop(0, theme === 'light' ? '#eef2ff' : Colors.darkBg);
+      gradient.addColorStop(
+        1,
+        theme === 'light' ? '#e0e7ff' : alpha(Colors.darkCard, 0.8)
+      );
+      bgGradCache = { key: gradKey, grad: gradient };
+    }
+    ctx.fillStyle = bgGradCache.grad;
     ctx.fillRect(0, 0, width, height);
   }
 
