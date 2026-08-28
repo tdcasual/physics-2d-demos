@@ -32,7 +32,7 @@ describe('micrometer-eyepiece controls-schema', () => {
 
     const simKeys = Object.keys(micrometerEyepieceMeta.defaultParams);
     for (const key of keys) {
-      if (key === 'hint') continue; // custom 操作说明字段
+      if (key === 'hint') continue; // hint 操作说明字段
       expect(simKeys).toContain(key);
     }
   });
@@ -111,15 +111,12 @@ describe('micrometer-eyepiece controls-schema', () => {
     });
   });
 
-  it('custom hint field renders one paragraph per instruction line', () => {
+  it('hint field lists one instruction line per operation', () => {
     const hint = allFields(schema).find((f) => f.key === 'hint');
-    expect(hint?.type).toBe('custom');
-    if (hint?.type !== 'custom') return;
+    expect(hint?.type).toBe('hint');
+    if (hint?.type !== 'hint') return;
 
-    const mount = document.createElement('div');
-    hint.render(mount);
-    const paragraphs = mount.querySelectorAll('p');
-    expect(paragraphs).toHaveLength(4);
-    expect(mount.textContent).toContain('零位修正');
+    expect(hint.lines).toHaveLength(4);
+    expect(hint.lines.join('\n')).toContain('零位修正');
   });
 });

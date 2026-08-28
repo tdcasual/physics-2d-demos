@@ -32,8 +32,7 @@ bootScenePage({
     hideHeader: true,
     readoutLabel: '数据读数',
     hideTransport: true,
-    hasGraph: true,
-    graphHeight: 0.4
+    hasGraph: true
   },
   createScene: ({ canvas, theme, mode, demoHints }) => {
     return createInterferenceFormulaScene({ canvas, theme, mode, demoHints });

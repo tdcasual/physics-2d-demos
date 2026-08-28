@@ -13,6 +13,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { SceneMeta } from '../../src/platform/scene-contract';
+import type { ControlsSchema } from '../../src/platform/controls-schema';
 
 // ---------------------------------------------------------------------------
 // 键名映射：meta.defaultParams/urlSyncKeys 键 → sim setParams 键
@@ -56,6 +57,65 @@ const NO_PARAMS_API: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
+// controls-schema 字段 key 契约的登记表
+// ---------------------------------------------------------------------------
+
+// 参与参数空间校验的字段类型（button/preset-group/transport 等为 action
+// 或导航类字段，天然不走 sim setParams，不在本契约范围内）
+const PARAM_FIELD_TYPES = new Set(['slider', 'number', 'select', 'toggle']);
+
+// 豁免：合法但不在 defaultParams ∪ urlSyncKeys 中的字段 key（必须注明承载方式）
+const NON_PARAM_KEYS: Record<string, Record<string, string>> = {
+  'doppler-effect': {
+    // page.ts: setParams({playbackSpeed})，为 sim 参数但未列入 meta
+    playbackSpeed: 'sim param via setParams, not declared in meta',
+    // page.ts: setParams + enableAudio/disableAudio 专用 API
+    audioEnabled: 'sim param + enableAudio/disableAudio dedicated API',
+    // page.ts: setParams + setVolume 专用 API（数值按 /100 换算）
+    audioVolume: 'sim param + setVolume dedicated API'
+  },
+  'double-slit': {
+    // page.ts: setParams({L: value / 100})，为 sim 参数但未列入 meta
+    L: 'sim param via setParams (scaled /100), not declared in meta',
+    // 仅步骤 6 schema 使用；page.ts: setParams({crosshairAngle})
+    crosshairAngle: 'sim param via setParams (step-6 schema only)',
+    // 仅步骤 6 schema 使用；page.ts: setParams({stripeOffset})
+    stripeOffset: 'sim param via setParams (step-6 schema only)'
+  },
+  'emf-analogy': {
+    // NO_PARAMS_API 场景；page.ts: setTapOpening 专用 API
+    tap: 'setTapOpening dedicated API',
+    // 播放速度 UI 状态，page.ts 仅更新状态栏与 URL
+    speed: 'playback-speed UI state, status line only'
+  },
+  'mechanical-wave': {
+    // NO_PARAMS_API 场景；page.ts: setParam('showMicroShift', 0|1)
+    showMicroShift: 'sim param via setParam single-key API',
+    // NO_PARAMS_API 场景；page.ts: setParam('playbackSpeed', v)
+    playbackSpeed: 'sim param via setParam single-key API'
+  },
+  'thin-film': {
+    // page.ts: setParams({whiteLight})，为 sim 参数但未列入 meta
+    whiteLight: 'sim param via setParams, not declared in meta',
+    // page.ts: setCursorY 专用 API（数值按 /100 换算）
+    cursorY: 'setCursorY dedicated API (scaled /100)'
+  },
+  'vt-integral': {
+    // NO_PARAMS_API 场景；以下均为 entry 专用 API
+    rects: 'setRects dedicated API',
+    division: 'setDivision dedicated API',
+    time: 'setTime dedicated API',
+    amplitude: 'setCurveAmplitude dedicated API',
+    'circle-n': 'setCircleN dedicated API',
+    'surface-n': 'setSurfaceN dedicated API'
+  },
+  wedge: {
+    // page.ts: setCursorX 专用 API（数值按 /100 换算）
+    cursorX: 'setCursorX dedicated API (scaled /100)'
+  }
+};
+
+// ---------------------------------------------------------------------------
 // 动态发现 meta 与 entry
 // ---------------------------------------------------------------------------
 
@@ -68,6 +128,27 @@ const entryModules = import.meta.glob<Record<string, unknown>>(
   '../../src/scenes/*/scene.entry.ts',
   { eager: true }
 );
+
+const schemaModules = import.meta.glob<Record<string, unknown>>(
+  '../../src/scenes/*/controls-schema.ts',
+  { eager: true }
+);
+
+function isControlsSchema(value: unknown): value is ControlsSchema {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    Array.isArray((value as { sections?: unknown }).sections)
+  );
+}
+
+// 一个 controls-schema.ts 可能导出多份 schema（如 double-slit 按步骤切换）
+const schemasById = new Map<string, ControlsSchema[]>();
+for (const [path, mod] of Object.entries(schemaModules)) {
+  const id = path.split('/').slice(-2, -1)[0];
+  const schemas = Object.values(mod).filter(isControlsSchema);
+  if (schemas.length > 0) schemasById.set(id, schemas);
+}
 
 type DiscoveredScene = {
   id: string;
@@ -217,5 +298,63 @@ describe('scene params contract', () => {
       (meta.description ?? '').trim().length,
       'description'
     ).toBeGreaterThan(0);
+  });
+
+  // controls-schema 的 slider/number/select/toggle 字段 key 必须落在场景
+  // 参数空间内：多数 sim 的 setParams 是扩散式 {...params, ...next}，
+  // 拼错的 key 会被静默吞掉且回环测试照过，只能在此拦截
+  it.each(scenes.map((s) => ({ id: s.id })))(
+    '$id: controls-schema param field keys exist in the scene param space',
+    ({ id }) => {
+      const schemas = schemasById.get(id);
+      // 纯 imperative 场景（spring-oscillator）无声明式 schema，跳过
+      if (!schemas) return;
+      const meta = scenes.find((s) => s.id === id)!.meta;
+      const allowed = new Set([
+        ...Object.keys(meta.defaultParams),
+        ...(meta.urlSyncKeys ?? [])
+      ]);
+      const exempt = NON_PARAM_KEYS[id] ?? {};
+      for (const schema of schemas) {
+        for (const section of schema.sections) {
+          for (const field of section.fields) {
+            if (!PARAM_FIELD_TYPES.has(field.type)) continue;
+            if (field.key in exempt) continue;
+            expect(
+              allowed.has(field.key),
+              `${id}: controls-schema 字段 "${field.key}" (${field.type}) 不在 ` +
+                'defaultParams ∪ urlSyncKeys 中——若是拼错请修正 schema，' +
+                '若是合法 action/专用 API 键请在 NON_PARAM_KEYS 登记'
+            ).toBe(true);
+          }
+        }
+      }
+    }
+  );
+
+  // 防陈旧：NON_PARAM_KEYS 的登记必须对应 schema 中真实存在的参数字段
+  it('NON_PARAM_KEYS registrations match real schema param fields', () => {
+    for (const [id, keys] of Object.entries(NON_PARAM_KEYS)) {
+      const schemas = schemasById.get(id);
+      expect(
+        schemas,
+        `${id}: NON_PARAM_KEYS 登记了无 controls-schema 的场景`
+      ).toBeDefined();
+      const fieldKeys = new Set<string>();
+      for (const schema of schemas ?? []) {
+        for (const section of schema.sections) {
+          for (const field of section.fields) {
+            if (PARAM_FIELD_TYPES.has(field.type)) fieldKeys.add(field.key);
+          }
+        }
+      }
+      for (const key of Object.keys(keys)) {
+        expect(
+          fieldKeys.has(key),
+          `${id}: NON_PARAM_KEYS 登记的 "${key}" 在 schema 参数字段中不存在，` +
+            '登记已陈旧请移除'
+        ).toBe(true);
+      }
+    }
   });
 });

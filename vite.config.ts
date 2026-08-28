@@ -79,6 +79,8 @@ export default defineConfig({
   },
   build: {
     chunkSizeWarningLimit: 200,
+    // 目标浏览器均支持 modulepreload（Safari 17+），省掉 polyfill 请求
+    modulePreload: { polyfill: false },
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),

@@ -28,7 +28,6 @@ bootScenePage({
     leftMinWidth: 280,
     leftMaxWidth: 420,
     hasGraph: true,
-    graphHeight: 0.4,
     controlColumns: 'auto',
     readoutCollapsed: false,
     hideHeader: true,

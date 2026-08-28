@@ -34,15 +34,7 @@ Playwright 分工如下：
 
 预算脚本：`scripts/check-bundle-budget.ts`
 
-默认预算：
-
-| 指标             |   上限 |
-| ---------------- | -----: |
-| Total JS         | 500 kB |
-| Total CSS        |  80 kB |
-| Single JS asset  | 180 kB |
-| Single CSS asset |  60 kB |
-| Vendor JS        | 170 kB |
+预算值以 `scripts/check-bundle-budget.ts` 的 `defaultBundleBudget` 为唯一权威（按首页/场景页/vendor/shared 分维度，并支持入口级覆盖），本文不固化数值；运行 `pnpm check:bundle` 获取当前实测。
 
 预算采用未压缩产物大小，原因是它更容易暴露真实模块增长；gzip 体积可以作为分析指标，但不作为当前 CI 阻断条件。
 

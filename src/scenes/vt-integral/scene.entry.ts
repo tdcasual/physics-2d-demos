@@ -41,6 +41,8 @@ export function createVtIntegralScene(
   setMethod(value: VtMethod): void;
   setCurveAmplitude(value: number): void;
   setCircleN(value: number): void;
+  setDivision(value: number): void;
+  setSurfaceN(value: number): void;
   getSnapshot(): VtIntegralSnapshot;
   getReadoutItems(): Array<{ label: string; value: string }>;
   subscribe(listener: () => void): () => void;
@@ -137,6 +139,16 @@ export function createVtIntegralScene(
     },
     setCircleN(value: number): void {
       sim.setCircleN(value);
+      base.renderAndEmit();
+      base.notify();
+    },
+    setDivision(value: number): void {
+      sim.setDivision(value);
+      base.renderAndEmit();
+      base.notify();
+    },
+    setSurfaceN(value: number): void {
+      sim.setSurfaceN(value);
       base.renderAndEmit();
       base.notify();
     },

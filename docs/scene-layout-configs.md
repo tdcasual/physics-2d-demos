@@ -68,7 +68,8 @@ layoutConfig: {
   leftMinWidth: 380,
   leftMaxWidth: 960,
   hasGraph: true,
-  graphHeight: 0.4,
+  // graphHeight 仅被 split-right-graph-bottom 消费；本场景 preferredLayout 为
+  // split-right，代码中遗留的 graphHeight: 0.4 实际无效，不再摘录
   controlColumns: 'auto',
   readoutCollapsed: true
 }

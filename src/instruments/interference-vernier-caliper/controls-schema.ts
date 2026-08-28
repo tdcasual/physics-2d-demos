@@ -81,17 +81,14 @@ export const interferenceVernierCaliperControlsSchema: ControlsSchema = {
       span: 'full',
       fields: [
         {
-          type: 'custom',
+          type: 'hint',
           key: 'hint',
-          label: '',
-          render(mount: HTMLElement) {
-            mount.className = 'text-sm text-[#555]';
-            mount.innerHTML =
-              '<p>• 拖动中间滑块进行粗调，横向拖动右侧旋钮进行精确微调</p>' +
-              '<p>• 微调旋钮减速比 10:1，适合精确对准干涉条纹</p>' +
-              '<p>• 主尺量程 0–7 cm，有效测量范围 0–2.1 cm</p>' +
-              '<p>• 使用「零位修正」校准仪器系统误差</p>';
-          }
+          lines: [
+            '• 拖动中间滑块进行粗调，横向拖动右侧旋钮进行精确微调',
+            '• 微调旋钮减速比 10:1，适合精确对准干涉条纹',
+            '• 主尺量程 0–7 cm，有效测量范围 0–2.1 cm',
+            '• 使用「零位修正」校准仪器系统误差'
+          ]
         }
       ]
     }

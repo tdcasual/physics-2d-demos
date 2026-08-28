@@ -326,6 +326,24 @@ function renderField(
       };
     }
 
+    case 'hint': {
+      const hintContainer = document.createElement('div');
+      hintContainer.className = 'text-sm';
+      hintContainer.style.color = 'var(--text-secondary)';
+      if (field.label) {
+        const labelEl = document.createElement('p');
+        labelEl.className = 'font-medium';
+        labelEl.textContent = field.label;
+        hintContainer.appendChild(labelEl);
+      }
+      for (const line of field.lines) {
+        const p = document.createElement('p');
+        p.textContent = line;
+        hintContainer.appendChild(p);
+      }
+      return { node: hintContainer };
+    }
+
     case 'custom': {
       const customContainer = document.createElement('div');
       const cleanup = field.render(customContainer);

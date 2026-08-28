@@ -71,6 +71,7 @@ describe('Controls schemas', () => {
           'transport',
           'scene-selector',
           'button-grid',
+          'hint',
           'custom'
         ];
         for (const section of schema!.sections) {
@@ -174,6 +175,20 @@ describe('Controls schemas', () => {
               if (field.initialActive !== undefined) {
                 const ids = field.scenes.map((s) => s.id);
                 expect(ids).toContain(field.initialActive);
+              }
+            }
+          }
+        }
+      });
+
+      it('should have hint fields with non-empty string lines', () => {
+        for (const section of schema!.sections) {
+          for (const field of section.fields) {
+            if (field.type === 'hint') {
+              expect(field.lines.length).toBeGreaterThan(0);
+              for (const line of field.lines) {
+                expect(typeof line).toBe('string');
+                expect(line.length).toBeGreaterThan(0);
               }
             }
           }

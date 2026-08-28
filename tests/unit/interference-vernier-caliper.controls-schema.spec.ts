@@ -28,7 +28,7 @@ describe('interference-vernier-caliper controls-schema', () => {
 
     const simKeys = Object.keys(interferenceVernierCaliperMeta.defaultParams);
     for (const key of keys) {
-      if (key === 'hint') continue; // custom 操作说明字段
+      if (key === 'hint') continue; // hint 操作说明字段
       expect(simKeys).toContain(key);
     }
   });
@@ -89,14 +89,12 @@ describe('interference-vernier-caliper controls-schema', () => {
     }
   });
 
-  it('custom hint field renders instruction text into the mount', () => {
+  it('hint field lists instruction lines', () => {
     const hint = allFields(schema).find((f) => f.key === 'hint');
-    expect(hint?.type).toBe('custom');
-    if (hint?.type !== 'custom') return;
+    expect(hint?.type).toBe('hint');
+    if (hint?.type !== 'hint') return;
 
-    const mount = document.createElement('div');
-    hint.render(mount);
-    expect(mount.innerHTML).toContain('微调旋钮减速比 10:1');
-    expect(mount.innerHTML).toContain('零位修正');
+    expect(hint.lines.join('\n')).toContain('微调旋钮减速比 10:1');
+    expect(hint.lines.join('\n')).toContain('零位修正');
   });
 });

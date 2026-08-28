@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import ts from 'typescript';
+import { UTILITY_PAGES } from './utility-pages';
 
 const root = process.cwd();
 const scenesDir = join(root, 'src/scenes');
@@ -149,13 +150,31 @@ function checkScene(id: string): SceneCheckResult {
 const results = listSceneIds().map(checkScene);
 const failed = results.filter((result) => result.errors.length > 0);
 
-if (failed.length > 0) {
+// 反向检查：src/pages/*.html（排除工具页）必须有同名场景目录，
+// 否则是孤儿 HTML（忘了删页面）或场景目录被误删（忘了删场景）。
+const orphanErrors: string[] = [];
+for (const entry of readdirSync(pagesDir, { withFileTypes: true })) {
+  if (!entry.isFile() || !entry.name.endsWith('.html')) continue;
+  const id = entry.name.replace(/\.html$/, '');
+  if (UTILITY_PAGES.has(id)) continue;
+  if (!existsSync(join(scenesDir, id))) {
+    orphanErrors.push(
+      `src/pages/${entry.name} has no matching scene directory src/scenes/${id}/` +
+        ' (orphan HTML or forgotten scene directory deletion)'
+    );
+  }
+}
+
+if (failed.length > 0 || orphanErrors.length > 0) {
   console.error('Scene structure check failed:');
   for (const result of failed) {
     console.error(`- ${result.id}`);
     for (const error of result.errors) {
       console.error(`  - ${error}`);
     }
+  }
+  for (const error of orphanErrors) {
+    console.error(`- ${error}`);
   }
   process.exit(1);
 }

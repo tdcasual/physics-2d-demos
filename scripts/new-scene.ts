@@ -15,6 +15,7 @@
  * 开发者只需替换 sim 的物理逻辑与 view 的绘制逻辑。
  */
 
+import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
@@ -407,11 +408,48 @@ console.log(`\n✓ 已生成场景 "${id}"（${title}）：\n`);
 for (const [path] of files) {
   console.log('  ' + path.replace(root + '/', ''));
 }
+
+// ---------------------------------------------------------------------------
+// 生成后自检 + 剩余待办清单
+// ---------------------------------------------------------------------------
+
+// meta 四字段的行号从实际生成内容中解析，避免模板改动后提示失真
+const metaRelPath = `src/scenes/${id}/scene.meta.ts`;
+const metaLines = render(metaTpl).split('\n');
+function metaLine(key: string): string {
+  const index = metaLines.findIndex((line) =>
+    line.trimStart().startsWith(`${key}:`)
+  );
+  return index >= 0 ? `${metaRelPath}:${index + 1}` : metaRelPath;
+}
+
+// 结构自检：失败不阻断脚手架（退出码仍为 0），但在待办清单中标注
+console.log('\n运行 pnpm check:scenes 自检…\n');
+const check = spawnSync('pnpm', ['check:scenes'], {
+  cwd: root,
+  stdio: 'inherit',
+  shell: process.platform === 'win32'
+});
+const checkFailed = check.status !== 0;
+
 console.log(`
-下一步：
-  1. 编辑 src/scenes/${id}/scene.sim.ts 实现物理逻辑
-  2. 编辑 src/scenes/${id}/scene.view.ts 实现绘制（保留响应式缩放与演示模式机制）
-  3. 完善 src/scenes/${id}/scene.meta.ts 的 concept / keywords / objective / defaultParams
-  4. 按需调整 controls-schema.ts 的控件
-  5. pnpm quality:core 验证（场景由 import.meta.glob 自动发现，无需注册）
+剩余待办清单：
+  ${checkFailed ? '[!]' : '[ ]'} pnpm check:scenes ${
+    checkFailed
+      ? '未通过（见上方输出）——脚手架不因此失败，但提交前必须修复'
+      : '已通过'
+  }
+  [ ] 填写 meta 四字段（契约测试 scene-params-contract 强制非空，留空必挂）：
+      - concept       ${metaLine('concept')}
+      - subConcepts   ${metaLine('subConcepts')}（两项均需非空）
+      - objective     ${metaLine('objective')}
+      - description   ${metaLine('description')}
+  [ ] 补全 ${metaRelPath} 的 defaultParams / keywords，使之贴合实际物理参数
+  [ ] 编辑 src/scenes/${id}/scene.sim.ts 实现物理逻辑
+  [ ] 编辑 src/scenes/${id}/scene.view.ts 实现绘制（保留响应式缩放与演示模式机制）
+  [ ] 按需调整 controls-schema.ts 的控件
+  [ ] 生成双平台视觉基线（规则见 AGENTS.md「视觉回归基线规则」）：
+      - Linux: scripts/visual-linux-container.sh update（或 CI 重生成 artifact）
+      - Mac:   pnpm test:visual:update（或 update-darwin-snapshots.yml）
+  [ ] pnpm quality:core 验证（场景由 import.meta.glob 自动发现，无需注册）
 `);

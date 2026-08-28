@@ -195,7 +195,9 @@ export type SceneMeta = ScenePlacardMeta & {
 
 ### ControlField（controls-schema.ts）
 
-支持 11 种字段类型：`slider` | `number` | `text` | `select` | `button` | `toggle` | `preset-group` | `transport` | `scene-selector` | `button-grid` | `custom`
+支持 12 种字段类型：`slider` | `number` | `text` | `select` | `button` | `toggle` | `preset-group` | `transport` | `scene-selector` | `button-grid` | `hint` | `custom`
+
+`hint` 为静态提示文本（`{ key, label?, lines: string[] }`），逐行渲染为 `<p>`，颜色用 `var(--text-secondary)`，不参与 onChange。优先用 `hint` 表达纯文本说明，避免手写 `custom`。
 
 ## 编码规范
 

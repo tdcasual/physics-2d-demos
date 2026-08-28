@@ -84,6 +84,13 @@ export type ControlField =
       buttons: Array<{ key: string; label: string; desc?: string }>;
     }
   | {
+      type: 'hint';
+      key: string;
+      label?: string;
+      /** 静态提示文本，逐行渲染为 <p>；不参与 onChange */
+      lines: string[];
+    }
+  | {
       type: 'custom';
       key: string;
       label: string;

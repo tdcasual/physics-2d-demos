@@ -346,6 +346,40 @@ describe('SchemaRenderer', () => {
     expect(input.value).toBe('t');
   });
 
+  it('should render hint as static paragraphs without onChange', () => {
+    const mount = createMount();
+    const onChange = vi.fn();
+    const schema: ControlsSchema = {
+      sections: [
+        {
+          title: '说明',
+          fields: [
+            {
+              type: 'hint',
+              key: 'hint',
+              lines: ['• 第一行', '• 第二行']
+            }
+          ]
+        }
+      ]
+    };
+
+    renderSchema({ mount, schema, onChange, onAction: vi.fn() });
+
+    const hintNode = mount.querySelector(
+      '[data-control-key="hint"]'
+    ) as HTMLElement;
+    expect(hintNode).not.toBeNull();
+    expect(hintNode.className).toContain('text-sm');
+    expect(hintNode.style.color).toContain('var(--text-secondary)');
+    const paragraphs = hintNode.querySelectorAll('p');
+    expect(paragraphs.length).toBe(2);
+    expect(paragraphs[0].textContent).toBe('• 第一行');
+    expect(paragraphs[1].textContent).toBe('• 第二行');
+    // hint 是静态文本，不应产生任何 onChange
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it('should render button and call onAction', () => {
     const mount = createMount();
     const onAction = vi.fn();

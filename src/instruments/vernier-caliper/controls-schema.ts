@@ -37,16 +37,13 @@ export const vernierCaliperControlsSchema: ControlsSchema = {
       span: 'full',
       fields: [
         {
-          type: 'custom',
+          type: 'hint',
           key: 'hint',
-          label: '',
-          render(mount: HTMLElement) {
-            mount.className = 'text-sm text-[#555]';
-            mount.innerHTML =
-              '<p>• 主尺读数：游标零线左侧的整毫米数</p>' +
-              '<p>• 游标读数：与主尺某刻度对齐的游标格数 × 精度</p>' +
-              '<p>• 测量值 = 主尺读数 + 游标读数（不需估读）</p>';
-          }
+          lines: [
+            '• 主尺读数：游标零线左侧的整毫米数',
+            '• 游标读数：与主尺某刻度对齐的游标格数 × 精度',
+            '• 测量值 = 主尺读数 + 游标读数（不需估读）'
+          ]
         }
       ]
     }

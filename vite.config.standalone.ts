@@ -8,7 +8,6 @@
 import { resolve } from 'node:path';
 import { readdirSync } from 'node:fs';
 import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { inlineAssets } from './scripts/vite-plugin-inline-assets';
 
@@ -24,7 +23,8 @@ function discoverPageEntries(pagesDir: string): Record<string, string> {
 }
 
 export default defineConfig({
-  plugins: [tailwindcss(), react(), inlineAssets()],
+  // 场景页无 React（仅首页使用），standalone 构建不需要 react 插件
+  plugins: [tailwindcss(), inlineAssets()],
   build: {
     outDir: 'dist/standalone',
     emptyOutDir: true,

@@ -50,6 +50,12 @@ bootScenePage({
         } else if (key === 'circle-n') {
           scene.setCircleN(value as number);
           scene.render();
+        } else if (key === 'division') {
+          scene.setDivision(value as number);
+          scene.render();
+        } else if (key === 'surface-n') {
+          scene.setSurfaceN(value as number);
+          scene.render();
         }
       },
       onAction: (key) => {

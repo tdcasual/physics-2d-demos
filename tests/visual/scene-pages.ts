@@ -1,7 +1,7 @@
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
-
-const UTILITY_PAGES = new Set(['index-layout-test', 'instruments']);
+// UTILITY_PAGES 的唯一事实来源在 scripts/utility-pages.ts（check-scenes 反向检查共用）
+import { UTILITY_PAGES } from '../../scripts/utility-pages';
 
 /** Discover scene entry pages without maintaining a second scene registry. */
 export const sceneIds = readdirSync(join(process.cwd(), 'src/pages'))
