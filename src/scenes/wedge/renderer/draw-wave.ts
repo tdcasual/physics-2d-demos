@@ -13,11 +13,14 @@ export function drawWaveSuperpositionGraph(
   const gc = vc.graphCtx;
   const gCanvas = vc.graphCanvas;
   if (!gc || !gCanvas) return;
+  // 隐藏 tab（display:none）时跳过 graph 绘制：0→非 0 的可见性跃迁由
+  // SceneAdapter 的可见性 ResizeObserver 补 resize+render（scene-adapter.ts）
+  if (gCanvas.offsetParent === null) return;
 
-  const rect = gCanvas.getBoundingClientRect();
-  const gw = Math.max(200, Math.floor(rect.width || 400));
-  const gh = Math.max(100, Math.floor(rect.height || 200));
-  const gScale = parseFloat(gCanvas.dataset.responsiveScale || '1');
+  // 使用 resizeGraphCanvas 记录的尺寸，避免每帧同步布局查询
+  const gw = vc.graphW;
+  const gh = vc.graphH;
+  const gScale = vc.graphScale;
   const isDark = vc.theme === 'dark';
   const text = isDark ? '#e2e8f0' : '#1e293b';
   const dim = isDark ? '#94a3b8' : '#64748b';

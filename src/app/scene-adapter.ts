@@ -372,6 +372,7 @@ export class SceneAdapter<
     if (scene && typeof scene.renderGraph === 'function') {
       this._graphRendered = true;
       scene.renderGraph(container);
+      this._observeGraphSlotVisibility(container);
       return;
     }
 
@@ -384,30 +385,33 @@ export class SceneAdapter<
       container.replaceChildren();
       container.appendChild(canvas);
       scene.attachGraphCanvas(canvas);
-      // Hidden mobile graph tabs are remeasured when they become visible.
-      this._ro?.observe(container);
-      // 共享 resize 路径已改为 rAF 合帧；但 0→非 0 的可见性跃迁（如 mobile-stack
-      // 切到图表 tab）必须立即重排——attach 时面板 display:none 会把 canvas
-      // 量成 1×1 显式 CSS 尺寸，合帧延迟会让它保持数帧甚至错过断言窗口。
-      if (typeof ResizeObserver !== 'undefined') {
-        let lastW = container.clientWidth;
-        let lastH = container.clientHeight;
-        const visibilityRo = new ResizeObserver((entries) => {
-          const entry = entries[entries.length - 1];
-          const w = entry?.contentRect.width ?? 0;
-          const h = entry?.contentRect.height ?? 0;
-          const becameVisible = (lastW === 0 || lastH === 0) && w > 0 && h > 0;
-          lastW = w;
-          lastH = h;
-          if (becameVisible) {
-            this.scene?.resize();
-            this.scene?.render();
-          }
-        });
-        visibilityRo.observe(container);
-        this.lifecycle.onDispose(() => visibilityRo.disconnect());
-      }
+      this._observeGraphSlotVisibility(container);
     }
+  }
+
+  // Hidden mobile graph tabs are remeasured when they become visible.
+  // 共享 resize 路径已改为 rAF 合帧；但 0→非 0 的可见性跃迁（如 mobile-stack
+  // 切到图表 tab）必须立即重排——attach 时面板 display:none 会把 canvas
+  // 量成 1×1 显式 CSS 尺寸，合帧延迟会让它保持数帧甚至错过断言窗口。
+  private _observeGraphSlotVisibility(container: HTMLElement): void {
+    this._ro?.observe(container);
+    if (typeof ResizeObserver === 'undefined') return;
+    let lastW = container.clientWidth;
+    let lastH = container.clientHeight;
+    const visibilityRo = new ResizeObserver((entries) => {
+      const entry = entries[entries.length - 1];
+      const w = entry?.contentRect.width ?? 0;
+      const h = entry?.contentRect.height ?? 0;
+      const becameVisible = (lastW === 0 || lastH === 0) && w > 0 && h > 0;
+      lastW = w;
+      lastH = h;
+      if (becameVisible) {
+        this.scene?.resize();
+        this.scene?.render();
+      }
+    });
+    visibilityRo.observe(container);
+    this.lifecycle.onDispose(() => visibilityRo.disconnect());
   }
 
   renderReadout(): void {

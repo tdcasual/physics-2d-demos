@@ -200,9 +200,8 @@ export function sizeCanvasToFill(
  * 与上方尺寸计算的差异：
  * - 上方 API 面向"布局策略 + responsiveScale"，是场景动画区的标准用法
  * - 下方 API 面向"直接给定 CSS 尺寸"，并额外提供 grid 绘制选项类型
- * 注意：下方 setCanvasSize 使用未封顶的 window.devicePixelRatio（上方
- * getDevicePixelRatio 上限为 2），两者保持各自历史行为，不做统一以免
- * 改变渲染结果。
+ * 注意：下方 setCanvasSize 的 DPR 默认同样封顶 2（与上方
+ * getDevicePixelRatio 一致），可通过 maxDpr 参数调整。
  * ========================================================================== */
 
 export interface GridOptions {
@@ -226,14 +225,16 @@ export interface GridOptions {
  * @param width CSS 宽度（逻辑像素）
  * @param height CSS 高度（逻辑像素）
  * @param setCssSize 是否设置 CSS 尺寸（默认 true）。如果为 false，只更新内部像素尺寸
+ * @param maxDpr DPR 上限（默认 2，与 sizeCanvasToFill 一致；高分屏防像素量爆炸）
  */
 export function setCanvasSize(
   canvas: HTMLCanvasElement,
   width: number,
   height: number,
-  setCssSize: boolean = true
+  setCssSize: boolean = true,
+  maxDpr: number = 2
 ): CanvasRenderingContext2D {
-  const dpr = window.devicePixelRatio || 1;
+  const dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
 
   // 设置CSS尺寸（如果需要）
   if (setCssSize) {

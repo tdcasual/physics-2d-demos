@@ -28,6 +28,12 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
   let cssWidth = 0;
   let cssHeight = 0;
   let scale = 1;
+  // 主 canvas 设备像素比（resize 时记录，renderer 热路径经 context 快照读取）
+  let dpr = 1;
+  // 图表 canvas 的记录尺寸（resize 时更新，render 热路径不再读 getBoundingClientRect）
+  let graphW = 400;
+  let graphH = 200;
+  let graphScale = 1;
 
   function resizeCanvas(): void {
     if (!canvas) return;
@@ -37,12 +43,17 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
     cssWidth = Math.max(200, Math.floor(rect.width || 800));
     cssHeight = Math.max(150, Math.floor(rect.height || 600));
     scale = parseFloat(canvas.dataset.responsiveScale || '1');
+    dpr = canvas.width / Math.max(1, cssWidth);
   }
 
   function resizeGraphCanvas(): void {
     if (!graphCanvas) return;
     const newCtx = sizeCanvasToFill(graphCanvas);
     if (newCtx) graphCtx = newCtx;
+    const rect = graphCanvas.getBoundingClientRect();
+    graphW = Math.max(200, Math.floor(rect.width || 400));
+    graphH = Math.max(100, Math.floor(rect.height || 200));
+    graphScale = parseFloat(graphCanvas.dataset.responsiveScale || '1');
   }
 
   // 绘制调用时把当前可变状态以快照形式显式传给 renderer 模块
@@ -56,7 +67,11 @@ export function createWedgeView(options: CreateWedgeViewOptions = {}) {
       demoHints,
       cssWidth,
       cssHeight,
-      scale
+      scale,
+      dpr,
+      graphW,
+      graphH,
+      graphScale
     };
   }
 

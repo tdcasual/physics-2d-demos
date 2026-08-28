@@ -3,6 +3,55 @@ import type { GraphDrawContext } from './types';
 // 折线描边渐变缓存：key 为几何参数 + 颜色，几何随尺寸/visualScale 变化，失效才重建
 const polylineGradientCache = new Map<string, CanvasGradient>();
 
+// 图表静态层（坐标轴 + 虚线网格 + 刻度文本）离屏缓存：
+// 静态于 (totalTime, 画布设备尺寸, theme, visualScale)，命中时按设备像素
+// 1:1 blit（原点 (0,0)、目标设备尺寸与离屏一致，无重采样，像素级一致），
+// 每帧只需重画折线/动点/时间游标。
+// 单测的 mock ctx 没有 .canvas（无法确定设备像素尺寸），回退为直接绘制。
+type StaticLayerCache = {
+  key: string;
+  canvas: HTMLCanvasElement;
+};
+let xStaticCache: StaticLayerCache | null = null;
+let vStaticCache: StaticLayerCache | null = null;
+
+function drawStaticLayer(
+  target: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  key: string,
+  slot: 'x' | 'v',
+  paint: (c: CanvasRenderingContext2D) => void
+): void {
+  const srcCanvas = target.canvas as HTMLCanvasElement | undefined;
+  const devW = srcCanvas?.width ?? 0;
+  const devH = srcCanvas?.height ?? 0;
+  if (!srcCanvas || devW < 1 || devH < 1 || w < 1 || h < 1) {
+    paint(target);
+    return;
+  }
+  const dpr = devW / w;
+  const fullKey = `${key}|${devW}|${devH}|${dpr}`;
+  let cache = slot === 'x' ? xStaticCache : vStaticCache;
+  if (!cache || cache.key !== fullKey) {
+    const off = document.createElement('canvas');
+    off.width = devW;
+    off.height = devH;
+    const oc = off.getContext('2d');
+    if (!oc) {
+      paint(target);
+      return;
+    }
+    oc.setTransform(dpr, 0, 0, dpr, 0, 0);
+    paint(oc);
+    cache = { key: fullKey, canvas: off };
+    if (slot === 'x') xStaticCache = cache;
+    else vStaticCache = cache;
+  }
+  // devW/dpr === w（dpr 由同一比值推出），目标设备区域与离屏像素 1:1 对齐
+  target.drawImage(cache.canvas, 0, 0, devW / dpr, devH / dpr);
+}
+
 function cachedPolylineGradient(
   target: CanvasRenderingContext2D,
   x0: number,
@@ -65,9 +114,6 @@ export function drawGraphs(context: GraphDrawContext): void {
     target.restore();
   };
 
-  drawAxis(xCtx, xW, xH, 'x / m');
-  drawAxis(vCtx, vW, vH, 'v / (m·s⁻¹)');
-
   const minT = 0;
   const maxT = snapshot.params.totalTime;
   const tRange = maxT - minT || 1;
@@ -116,8 +162,18 @@ export function drawGraphs(context: GraphDrawContext): void {
     target.restore();
   };
 
-  drawGrid(xCtx, xW, xH);
-  drawGrid(vCtx, vW, vH);
+  // 静态层（坐标轴 + 虚线网格 + 刻度）：key 覆盖其全部输入
+  // （totalTime → 网格步长/刻度、尺寸与 dpr 由 drawStaticLayer 内部并入、
+  // theme → 颜色、visualScale → 线宽/字号）
+  const staticKey = `${theme}|${visualScale}|${snapshot.params.totalTime}`;
+  drawStaticLayer(xCtx, xW, xH, staticKey, 'x', (c) => {
+    drawAxis(c, xW, xH, 'x / m');
+    drawGrid(c, xW, xH);
+  });
+  drawStaticLayer(vCtx, vW, vH, staticKey, 'v', (c) => {
+    drawAxis(c, vW, vH, 'v / (m·s⁻¹)');
+    drawGrid(c, vW, vH);
+  });
 
   const drawPolyline = (
     target: CanvasRenderingContext2D,

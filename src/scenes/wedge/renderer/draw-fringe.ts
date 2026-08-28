@@ -6,6 +6,47 @@ import type { WedgeState } from '../scene.sim';
 import type { WedgeViewContext } from './types';
 import { hexToRgb } from './view-utils';
 
+// 条纹带离屏缓存：条纹仅依赖 (lambda, theta, L, accent, 条纹区几何, dpr)，
+// 与 cursorX/时间无关。key 未变时按设备像素 1:1 blit，避免每帧 ~342 次
+// Math.tan/Math.sin + 模板字符串分配 + 独立 fillRect。
+// 离屏 canvas 原点对齐到设备像素整数格，内容以与直接绘制完全相同的
+// CSS 绝对坐标渲染（transform 平移整数个设备像素），保证像素级一致。
+let fringeCache: {
+  key: string;
+  canvas: HTMLCanvasElement;
+  devOX: number; // blit 目标原点（设备像素，整数对齐）
+  devOY: number;
+} | null = null;
+
+function drawStripeBand(
+  c: CanvasRenderingContext2D,
+  leftX: number,
+  rightX: number,
+  stripeTop: number,
+  stripeH: number,
+  displayL: number,
+  thetaRad: number,
+  lambda: number,
+  color: { r: number; g: number; b: number }
+): void {
+  const stripeW = rightX - leftX;
+  // 绘制竖直条纹（水平方向对应位置 x，垂直方向为条纹高度）
+  for (let px = leftX; px <= rightX; px += 2) {
+    const x = ((px - leftX) / stripeW) * displayL; // mm
+    const d = x * Math.tan(thetaRad) * 1e6; // nm
+    const phase = (2 * Math.PI * d) / lambda;
+    const intensity = Math.sin(phase) ** 2;
+    const brightness = intensity * 255;
+
+    const r = Math.min(255, color.r + brightness * 0.3);
+    const g = Math.min(255, color.g + brightness * 0.3);
+    const b = Math.min(255, color.b + brightness * 0.3);
+
+    c.fillStyle = `rgb(${Math.floor(r)},${Math.floor(g)},${Math.floor(b)})`;
+    c.fillRect(px, stripeTop, 2, stripeH);
+  }
+}
+
 export function drawFringeOnMainCanvas(
   vc: WedgeViewContext,
   next: WedgeState,
@@ -54,20 +95,63 @@ export function drawFringeOnMainCanvas(
   }
   const color = hexToRgb(accent);
 
-  // 绘制竖直条纹（水平方向对应位置 x，垂直方向为条纹高度）
-  for (let px = leftX; px <= rightX; px += 2) {
-    const x = ((px - leftX) / stripeW) * displayL; // mm
-    const d = x * Math.tan(thetaRad) * 1e6; // nm
-    const phase = (2 * Math.PI * d) / lambda;
-    const intensity = Math.sin(phase) ** 2;
-    const brightness = intensity * 255;
+  // 条纹带离屏缓存（key 覆盖条纹画面的全部输入）
+  const dpr = vc.dpr;
+  const cacheKey = `${lambda}|${next.params.theta}|${next.params.L}|${accent}|${leftX}|${rightX}|${stripeTop}|${stripeH}|${dpr}`;
+  // 条纹列 fillRect(px, ..., 2, stripeH) 最右一列右缘可达 rightX + 2
+  const devOX = Math.floor(leftX * dpr);
+  const devOY = Math.floor(stripeTop * dpr);
+  const devW = Math.ceil((rightX + 2) * dpr) - devOX;
+  const devH = Math.ceil((stripeTop + stripeH) * dpr) - devOY;
 
-    const r = Math.min(255, color.r + brightness * 0.3);
-    const g = Math.min(255, color.g + brightness * 0.3);
-    const b = Math.min(255, color.b + brightness * 0.3);
-
-    c.fillStyle = `rgb(${Math.floor(r)},${Math.floor(g)},${Math.floor(b)})`;
-    c.fillRect(px, stripeTop, 2, stripeH);
+  if (devW > 0 && devH > 0) {
+    if (!fringeCache || fringeCache.key !== cacheKey) {
+      const off = document.createElement('canvas');
+      off.width = devW;
+      off.height = devH;
+      const oc = off.getContext('2d');
+      if (oc) {
+        // 平移整数个设备像素，绘制坐标与直接绘制完全一致
+        oc.setTransform(dpr, 0, 0, dpr, -devOX, -devOY);
+        drawStripeBand(
+          oc,
+          leftX,
+          rightX,
+          stripeTop,
+          stripeH,
+          displayL,
+          thetaRad,
+          lambda,
+          color
+        );
+        fringeCache = {
+          key: cacheKey,
+          canvas: off,
+          devOX,
+          devOY
+        };
+      }
+    }
+    if (fringeCache && fringeCache.key === cacheKey) {
+      // 设备像素 1:1 blit（identity transform + 整数原点），无重采样
+      c.save();
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.drawImage(fringeCache.canvas, fringeCache.devOX, fringeCache.devOY);
+      c.restore();
+    } else {
+      // 离屏 2d context 不可用时回退直接绘制
+      drawStripeBand(
+        c,
+        leftX,
+        rightX,
+        stripeTop,
+        stripeH,
+        displayL,
+        thetaRad,
+        lambda,
+        color
+      );
+    }
   }
 
   // 边框

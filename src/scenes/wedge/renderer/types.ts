@@ -16,4 +16,10 @@ export type WedgeViewContext = {
   cssWidth: number;
   cssHeight: number;
   scale: number;
+  /** 主 canvas 设备像素比（resize 时记录，render 热路径不再读 DOM） */
+  dpr: number;
+  /** 图表 canvas 的记录尺寸（resize 时更新，render 热路径不再读 getBoundingClientRect） */
+  graphW: number;
+  graphH: number;
+  graphScale: number;
 };

@@ -223,6 +223,11 @@ export function createGansheScene(
   }
 
   function renderGraphs(): void {
+    // 隐藏 tab（display:none）下 graph 容器不可见，跳过整组重绘；
+    // 切回可见时由 SceneAdapter 的可见性 ResizeObserver 触发
+    // resize+render 补帧，不会丢帧。
+    if (graphContainer && graphContainer.offsetParent === null) return;
+
     const state = sim.getState();
 
     // Primary

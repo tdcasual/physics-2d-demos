@@ -334,6 +334,12 @@ export function createThinFilmView(options: CreateThinFilmViewOptions = {}) {
     const gCanvas = graphCanvas;
     if (!gc || !gCanvas) return;
 
+    // 隐藏 tab（display:none）下跳过重绘；切回可见时由 SceneAdapter
+    // 的可见性 ResizeObserver 触发 resize+render 补帧。
+    // 注意不能用 resizeGraphCanvas 记录的 graphW/graphH 判断：
+    // 记录值经 Math.max clamp 恒 > 0，无法反映可见性。
+    if (gCanvas.offsetParent === null) return;
+
     // 使用 resizeGraphCanvas 记录的尺寸，避免每帧同步布局查询
     const gw = graphW;
     const gh = graphH;
