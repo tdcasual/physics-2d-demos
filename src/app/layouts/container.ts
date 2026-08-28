@@ -403,10 +403,14 @@ export class SceneContainerImpl implements SceneContainer {
       // isn't left in a blank state.
       if (fromId && !this._disposed) {
         try {
-          const recovered = layoutRegistry.create(fromId, this.container, {
-            theme: this._currentTheme,
-            ...this._resolveLayoutConfig(fromId)
-          });
+          const recovered = await layoutRegistry.create(
+            fromId,
+            this.container,
+            {
+              theme: this._currentTheme,
+              ...this._resolveLayoutConfig(fromId)
+            }
+          );
           await recovered.mount();
           recovered.setTheme(this._currentTheme);
           if (this._currentScene) {
@@ -493,7 +497,7 @@ export class SceneContainerImpl implements SceneContainer {
     this.container.style.gridTemplateColumns = '';
     this.container.style.gridTemplateRows = '';
 
-    const newLayout = layoutRegistry.create(layoutId, this.container, {
+    const newLayout = await layoutRegistry.create(layoutId, this.container, {
       theme: this._currentTheme,
       ...this._resolveLayoutConfig(layoutId),
       preservedCanvas

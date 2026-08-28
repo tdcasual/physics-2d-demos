@@ -37,7 +37,7 @@ bootScenePage({
   createScene: ({ canvas, theme, mode, demoHints }) => {
     return createWedgeScene({ canvas, theme, mode, demoHints });
   },
-  createControls: ({ mount, scene }) => {
+  createControls: ({ mount, scene, scheduleRender = () => scene.render() }) => {
     const wedgeScene = scene as ReturnType<typeof createWedgeScene>;
 
     const renderer = renderSchema({
@@ -46,22 +46,22 @@ bootScenePage({
       onChange: (key, value) => {
         if (key === 'step') {
           wedgeScene.setParams({ step: String(value) as WedgeStep });
-          wedgeScene.render();
+          scheduleRender();
           renderer.setActive(key, String(value));
         } else if (key === 'lambda') {
           const num = Number(value);
           wedgeScene.setParams({ lambda: num });
           updateLambdaSliderColor(mount, num);
-          wedgeScene.render();
+          scheduleRender();
         } else if (key === 'cursorX') {
           wedgeScene.setCursorX(Number(value) / 100);
-          wedgeScene.render();
+          scheduleRender();
         } else {
           wedgeScene.setParams({ [key]: Number(value) } as Record<
             string,
             number
           >);
-          wedgeScene.render();
+          scheduleRender();
         }
         writeSceneParams({ [key]: value });
       },
@@ -91,6 +91,7 @@ bootScenePage({
         renderer.setValue(key, num);
       }
     }
+    // URL 参数应用后立即同步首绘（不等下一帧）
     if (Object.keys(urlParams).length > 0) {
       wedgeScene.render();
     }

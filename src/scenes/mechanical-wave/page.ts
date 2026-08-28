@@ -26,7 +26,7 @@ bootScenePage({
   createScene: ({ canvas, theme, mode, demoHints }) => {
     return createMechanicalWaveScene({ canvas, theme, mode, demoHints });
   },
-  createControls: ({ mount, scene }) => {
+  createControls: ({ mount, scene, scheduleRender = () => scene.render() }) => {
     const mwScene = scene as ReturnType<typeof createMechanicalWaveScene>;
     let isUpdatingFromSim = false;
 
@@ -52,7 +52,7 @@ bootScenePage({
         } else if (key === 'showMicroShift') {
           mwScene.setParam('showMicroShift', value ? 1 : 0);
         }
-        mwScene.render();
+        scheduleRender();
         writeSceneParams({ [key]: value });
       },
       onAction: () => {}

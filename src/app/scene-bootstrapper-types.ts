@@ -73,6 +73,14 @@ export type ScenePageOptions<TScene extends SceneInstance = SceneInstance> = {
     mount: HTMLElement;
     scene: TScene;
     onStatus?: (text: string) => void;
+    /**
+     * rAF 合帧渲染请求（由 bootstrapper 注入）：同帧内多次调用合并为一次
+     * scene.render()。控制面板内的参数变更（滑块 input、预设/场景切换）
+     * 应优先用它替代直接 scene.render()；需要立即出帧的场景
+     * （URL 参数应用后的首绘、transport 单步）仍保留同步 render。
+     * 可选：未注入时（如单测直接调用）页面应回退为同步 render。
+     */
+    scheduleRender?: () => void;
   }) => unknown;
   /** 格式化读数数据（可选，若场景提供 getReadoutItems 则不需要） */
   formatReadout?: (state: unknown) => ReadoutItem[];

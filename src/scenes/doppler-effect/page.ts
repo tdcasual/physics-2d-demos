@@ -27,7 +27,7 @@ bootScenePage({
   createScene: ({ canvas, theme, mode, demoHints }) => {
     return createDopplerScene({ canvas, theme, mode, demoHints });
   },
-  createControls: ({ mount, scene }) => {
+  createControls: ({ mount, scene, scheduleRender = () => scene.render() }) => {
     const dsScene = scene as ReturnType<typeof createDopplerScene>;
 
     const renderer = renderSchema({
@@ -61,7 +61,7 @@ bootScenePage({
         } else if (key === 'preset') {
           applyPreset(String(value));
         }
-        dsScene.render();
+        scheduleRender();
         if (key !== 'preset') writeSceneParams({ [key]: value });
       },
       onAction: () => {}

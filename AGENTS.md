@@ -54,7 +54,7 @@ instruments/   — 4 个可按需加载的仪器组件（meta/sim/entry/controls
 
 ## 新增场景指南
 
-新增一个场景只需 **7 个文件**（无需修改 registry）：
+新增一个场景只需 **6 个文件**（无需修改 registry）：
 
 ```
 src/scenes/<id>/
@@ -64,16 +64,19 @@ src/scenes/<id>/
   scene.entry.ts     — sim + view 组装
   controls-schema.ts — 声明式控制面板（推荐）或 controls.ts（复杂动态场景）
   page.ts            — bootScenePage({ meta, createScene, createControls })
-
-src/pages/<id>.html  — HTML 入口（vite 自动扫描）
 ```
 
-HTML 入口约定（`pnpm check:scenes` 强制）：必须含 `#app` 挂载点与相对路径
-`<script type="module" src="../scenes/<id>/page.ts"></script>`；禁止内联
-`<canvas id="scene-canvas">` / `<div id="controls">` 死标记（bootScenePage 只挂载
-#app，不会清理这些节点）；禁止手抄主题防闪烁脚本——它由
+HTML 入口**不是真实文件**：`scripts/vite-plugin-scene-pages.ts` 从
+`src/scenes/*/scene.meta.ts` 自动派生虚拟场景页（内容 = 统一同构模板：
+`#app` 挂载点 + `<script type="module" src="../scenes/<id>/page.ts">`，
+`<title>` 取 `SceneMeta.title + " - 物理演示"`），dev URL
+（`/src/pages/<id>.html`）与 build 产物路径（`dist/src/pages/<id>.html`）
+与历史手抄文件完全一致，测试 URL 无需变化。`src/pages/` 下只保留工具页
+真实文件（清单见 `scripts/utility-pages.ts`），`pnpm check:scenes` 会拒绝
+任何其他真实 HTML（防手抄回潮）。主题防闪烁脚本仍由
 `scripts/vite-plugin-theme-noflash.ts`（transformIndexHtml）在 dev 与 build
-时统一注入所有 HTML，唯一模板改动需同步 `src/app/theme-store.ts` 的存储格式。
+时统一注入所有 HTML（含虚拟场景页），唯一模板改动需同步
+`src/app/theme-store.ts` 的存储格式。
 
 ### controls-schema.ts 示例
 
@@ -243,12 +246,12 @@ export type SceneMeta = ScenePlacardMeta & {
 
 ### 场景删除保护规则（强制）
 
-**任何涉及 `src/scenes/*` 目录或 `src/pages/*.html` 的删除操作，必须经过双重确认：**
+**任何涉及 `src/scenes/*` 目录的删除操作，必须经过双重确认：**
 
 1. **检查 registry 引用**: 确认该场景不在 `src/catalog/scene-registry.ts` 的自动发现路径中（glob 模式 `/src/scenes/*/scene.meta.ts`）
 2. **检查跨文件引用**: 运行 `grep -r "scene-id" src/ tests/` 确认无残留引用
 3. **检查构建产物**: 删除后必须运行 `pnpm build`，确认无 chunk 缺失错误
-4. **检查 HTML 入口**: 确认 `src/pages/<scene-id>.html` 是否同时被删除
+4. **HTML 入口无需处理**: 场景页 HTML 由 `vite-plugin-scene-pages` 虚拟生成，删除场景目录后入口自动消失，不存在孤儿 HTML；`src/pages/` 下新增真实 HTML 会被 `pnpm check:scenes` 拒绝（仅 `scripts/utility-pages.ts` 清单内的工具页除外）
 
 **历史教训**: `spring-oscillator`（弹簧振子）曾因未迁移到 controls-schema 命名规范，被误判为 dead code 而误删。场景控制面板可以是 `controls-schema.ts`（声明式）或 `controls.ts`（imperative），两者均为有效形态。
 
@@ -327,6 +330,7 @@ function resize() {
 场景不得假设 `mobile-stack` 是唯一移动布局。布局由 `src/app/layouts/registry.ts` 动态注册，测试通过 `LayoutMetadata.layoutTestProfile` 识别其交互模型。
 
 - 新布局必须声明 `supportedSlots`、约束和 `layoutTestProfile`。
+- 内置布局经 `registerLazyLayout` 惰性注册（构造器首次使用时动态 import，元数据保持 eager）；新增布局若希望拆出独立 chunk，同样用 `registerLazyLayout` 而非静态 import。
 - 所有注册布局都必须声明 `layoutTestProfile`，无论 `autoSelectable` 是否为 `true`；手动或实验布局不能绕过布局矩阵。
 - `layoutTestProfile.interactionModel` 只能描述实际模型：`tabs`、`split`、`stack`、`fullscreen` 或 `custom`。
 - `control` 与 `animation` 是核心 slot；`header`、`graph`、`readout` 按能力兼容，不得要求每个场景填充所有 slot。

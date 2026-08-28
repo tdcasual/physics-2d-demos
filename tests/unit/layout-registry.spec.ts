@@ -1,8 +1,9 @@
-import { describe, expect, it, beforeEach, afterEach } from 'vitest';
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import type { ILayoutConstructor } from '../../src/app/layouts/types';
 import {
   layoutRegistry,
   registerLayout,
+  registerLazyLayout,
   registerLayoutTestAdapter,
   getDefaultLayoutId,
   saveLayoutPreference
@@ -37,16 +38,16 @@ describe('layoutRegistry', () => {
     layoutRegistry.clear();
   });
 
-  it('should register and create layout', () => {
+  it('should register and create layout', async () => {
     layoutRegistry.register('test-layout', FakeLayout, fakeMeta);
     const container = document.createElement('div');
-    const layout = layoutRegistry.create('test-layout', container);
+    const layout = await layoutRegistry.create('test-layout', container);
     expect(layout).toBeInstanceOf(FakeLayout);
   });
 
-  it('should throw for unknown layout', () => {
+  it('should throw for unknown layout', async () => {
     const container = document.createElement('div');
-    expect(() => layoutRegistry.create('unknown', container)).toThrow(
+    await expect(layoutRegistry.create('unknown', container)).rejects.toThrow(
       'Layout "unknown" not found'
     );
   });
@@ -139,11 +140,11 @@ describe('layoutRegistry', () => {
     ).not.toThrow();
   });
 
-  it('should throw for invalid container', () => {
+  it('should throw for invalid container', async () => {
     layoutRegistry.register('test-layout', FakeLayout, fakeMeta);
-    expect(() =>
+    await expect(
       layoutRegistry.create('test-layout', null as unknown as HTMLElement)
-    ).toThrow('Layout container must be a valid HTMLElement');
+    ).rejects.toThrow('Layout container must be a valid HTMLElement');
   });
 
   it('should list registered layouts', () => {
@@ -220,6 +221,102 @@ describe('registerLayout helper', () => {
   it('should delegate to layoutRegistry.register', () => {
     registerLayout('helper', FakeLayout, fakeMeta);
     expect(layoutRegistry.has('helper')).toBe(true);
+  });
+});
+
+describe('lazy layout registration', () => {
+  beforeEach(() => {
+    layoutRegistry.clear();
+  });
+
+  afterEach(() => {
+    layoutRegistry.clear();
+  });
+
+  it('exposes metadata synchronously without invoking the loader', () => {
+    const loader = vi.fn(() => FakeLayout);
+    registerLazyLayout('lazy', loader, fakeMeta);
+
+    expect(layoutRegistry.has('lazy')).toBe(true);
+    expect(layoutRegistry.list()).toContain('lazy');
+    expect(layoutRegistry.getMetadata('lazy')?.name).toBe('Test');
+    expect(loader).not.toHaveBeenCalled();
+  });
+
+  it('loads the constructor on first create', async () => {
+    const loader = vi.fn(async () => FakeLayout);
+    registerLazyLayout('lazy', loader, fakeMeta);
+
+    const container = document.createElement('div');
+    const layout = await layoutRegistry.create('lazy', container);
+
+    expect(loader).toHaveBeenCalledTimes(1);
+    expect(layout).toBeInstanceOf(FakeLayout);
+  });
+
+  it('shares one load across concurrent creates', async () => {
+    let resolveLoader!: (ctor: ILayoutConstructor) => void;
+    const loader = vi.fn(
+      () =>
+        new Promise<ILayoutConstructor>((resolve) => {
+          resolveLoader = resolve;
+        })
+    );
+    registerLazyLayout('lazy', loader, fakeMeta);
+
+    const c1 = document.createElement('div');
+    const c2 = document.createElement('div');
+    const p1 = layoutRegistry.create('lazy', c1);
+    const p2 = layoutRegistry.create('lazy', c2);
+    // loader 在微任务中执行，等它被调用后再 resolve
+    await vi.waitFor(() => expect(loader).toHaveBeenCalled());
+    resolveLoader(FakeLayout);
+
+    const [l1, l2] = await Promise.all([p1, p2]);
+    expect(loader).toHaveBeenCalledTimes(1);
+    expect(l1).toBeInstanceOf(FakeLayout);
+    expect(l2).toBeInstanceOf(FakeLayout);
+  });
+
+  it('rejects when the loader does not resolve to a constructor', async () => {
+    registerLazyLayout(
+      'lazy',
+      () => Promise.resolve(null as unknown as ILayoutConstructor),
+      fakeMeta
+    );
+    const container = document.createElement('div');
+    await expect(layoutRegistry.create('lazy', container)).rejects.toThrow(
+      'did not resolve to a valid constructor'
+    );
+  });
+
+  it('does not cache a failed load, allowing retry', async () => {
+    let fail = true;
+    const loader = vi.fn(() => {
+      if (fail) return Promise.reject(new Error('network'));
+      return Promise.resolve(FakeLayout);
+    });
+    registerLazyLayout('lazy', loader, fakeMeta);
+
+    const container = document.createElement('div');
+    await expect(layoutRegistry.create('lazy', container)).rejects.toThrow(
+      'network'
+    );
+
+    fail = false;
+    const layout = await layoutRegistry.create('lazy', container);
+    expect(layout).toBeInstanceOf(FakeLayout);
+    expect(loader).toHaveBeenCalledTimes(2);
+  });
+
+  it('throws for an invalid loader', () => {
+    expect(() =>
+      registerLazyLayout(
+        'bad-loader',
+        null as unknown as () => ILayoutConstructor,
+        fakeMeta
+      )
+    ).toThrow('Layout loader for "bad-loader" must be a valid function');
   });
 });
 

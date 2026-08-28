@@ -26,7 +26,7 @@ bootScenePage({
   createScene: ({ canvas, theme, mode, demoHints }) => {
     return createGansheScene({ canvas, theme, mode, demoHints });
   },
-  createControls: ({ mount, scene }) => {
+  createControls: ({ mount, scene, scheduleRender = () => scene.render() }) => {
     const applyParam = createParamMapper<WaveParams>(
       gansheParamMapping,
       (params) => {
@@ -39,11 +39,11 @@ bootScenePage({
       (params) => {
         scene.setParams(params);
         scene.reset?.();
-        scene.render();
+        scheduleRender();
       },
       () => {
         scene.reset?.();
-        scene.render();
+        scheduleRender();
       }
     );
 
@@ -60,11 +60,11 @@ bootScenePage({
           const modeValue = String(value) as 'head-on' | 'single';
           scene.setParams({ mode: modeValue });
           scene.reset?.();
-          scene.render();
+          scheduleRender();
           renderer.setActive(key, modeValue);
         } else {
           applyParam(key, value);
-          scene.render();
+          scheduleRender();
         }
       },
       onAction: () => {
@@ -76,7 +76,7 @@ bootScenePage({
     const observerManager = createObserverManager(
       scene as ReturnType<typeof createGansheScene>,
       () => {
-        scene.render();
+        scheduleRender();
       }
     );
 
@@ -108,7 +108,7 @@ bootScenePage({
       ],
       (key, value) => {
         applyParam(key, value);
-        scene.render();
+        scheduleRender();
       }
     );
 
@@ -137,7 +137,7 @@ bootScenePage({
       ],
       (key, value) => {
         applyParam(key, value);
-        scene.render();
+        scheduleRender();
       }
     );
 
@@ -157,7 +157,7 @@ bootScenePage({
       ],
       (key, value) => {
         applyParam(key, value);
-        scene.render();
+        scheduleRender();
       }
     );
 

@@ -14,11 +14,12 @@ bootScenePage({
     });
     return scene;
   },
-  createControls: ({ mount, scene, onStatus }) => {
+  createControls: ({ mount, scene, onStatus, scheduleRender }) => {
     return createSpringOscillatorControls({
       mount,
       scene,
-      onStatus
+      onStatus,
+      scheduleRender
     });
   },
   preferredLayout: 'split-right',

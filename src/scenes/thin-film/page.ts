@@ -37,7 +37,7 @@ bootScenePage({
   createScene: ({ canvas, theme, mode, demoHints }) => {
     return createThinFilmScene({ canvas, theme, mode, demoHints });
   },
-  createControls: ({ mount, scene }) => {
+  createControls: ({ mount, scene, scheduleRender = () => scene.render() }) => {
     const filmScene = scene as ReturnType<typeof createThinFilmScene>;
 
     const renderer = renderSchema({
@@ -66,7 +66,7 @@ bootScenePage({
             number
           >);
         }
-        filmScene.render();
+        scheduleRender();
         writeSceneParams({ [key]: value });
       },
       onAction: () => {}
@@ -102,6 +102,7 @@ bootScenePage({
         renderer.setValue(key, num);
       }
     }
+    // URL 参数应用后立即同步首绘（不等下一帧）
     if (Object.keys(urlParams).length > 0) {
       filmScene.render();
     }

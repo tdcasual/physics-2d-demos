@@ -5,10 +5,15 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { analyzer } from 'vite-bundle-analyzer';
 import { themeNoFlash } from './scripts/vite-plugin-theme-noflash';
+import {
+  discoverScenePageEntries,
+  scenePages
+} from './scripts/vite-plugin-scene-pages';
 
 /**
- * 自动扫描 src/pages/*.html 作为构建入口。
- * 新增场景页面时无需再手动修改此配置。
+ * 自动扫描 src/pages/*.html 真实文件作为构建入口（仅工具页；
+ * 场景页入口由 vite-plugin-scene-pages 虚拟生成，见
+ * discoverScenePageEntries）。新增场景页面时无需再手动修改此配置。
  *
  * 注意：src/pages/index-layout-test.html 是 tests/visual（scene-pages / 布局矩阵等）
  * 在 preview 模式下的测试依赖，有意随构建发布到 dist，做产物清理时请勿删除。
@@ -29,6 +34,7 @@ function discoverPageEntries(pagesDir: string): Record<string, string> {
 export default defineConfig({
   plugins: [
     themeNoFlash(),
+    scenePages(__dirname),
     tailwindcss(),
     react(),
     process.env.ANALYZE === 'true' &&
@@ -84,10 +90,18 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
-        ...discoverPageEntries(resolve(__dirname, 'src/pages'))
+        ...discoverPageEntries(resolve(__dirname, 'src/pages')),
+        ...discoverScenePageEntries(__dirname)
       },
       output: {
         manualChunks(id) {
+          // Vite preload helper 必须独立成 chunk：布局懒加载（动态
+          // import）后该 helper 会随使用者被归入 layouts chunk，
+          // 而首页懒加载 ExperimentsSection 同样需要它——不显式
+          // 分组时首页会被迫预载整个布局系统。
+          if (id.includes('preload-helper')) {
+            return 'preload-helper';
+          }
           // Vendor chunk: React ecosystem
           if (
             id.includes('node_modules/react') ||
@@ -106,8 +120,13 @@ export default defineConfig({
           if (id.includes('/src/app/theme-store.')) {
             return 'theme-store';
           }
-          // Layout system chunk
-          if (id.includes('/src/app/layouts/')) {
+          // Layout system chunk（仅框架：registry/container/capabilities；
+          // 具体布局实现经 registerLazyLayout 动态 import，
+          // 必须排除在 manualChunks 外才能成为独立异步 chunk）
+          if (
+            id.includes('/src/app/layouts/') &&
+            !id.includes('/src/app/layouts/layouts/')
+          ) {
             return 'layouts';
           }
           // Core utilities chunk

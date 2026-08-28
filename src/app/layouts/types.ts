@@ -330,6 +330,15 @@ export interface ILayoutConstructor {
   new (container: HTMLElement, config?: LayoutConfig): ILayout;
 }
 
+/**
+ * 惰性布局加载器 — 首次使用时动态 import 布局实现。
+ * 布局元数据在注册时即同步可用（布局矩阵测试与自动选择依赖），
+ * 仅构造器延迟到首次 create。
+ */
+export type LayoutLoader = () =>
+  | ILayoutConstructor
+  | Promise<ILayoutConstructor>;
+
 // ============================================================================
 // CapabilityDeclaration（实际声明结构）
 // ============================================================================

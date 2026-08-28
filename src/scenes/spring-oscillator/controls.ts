@@ -13,6 +13,8 @@ export interface SpringOscillatorControlsOptions {
   mount: HTMLElement;
   scene: SpringOscillatorScene;
   onStatus?: (text: string) => void;
+  /** rAF 合帧渲染请求（bootstrapper 注入）；缺省回退为同步 scene.render() */
+  scheduleRender?: () => void;
 }
 
 export interface SpringOscillatorControls {
@@ -23,7 +25,12 @@ export interface SpringOscillatorControls {
 export function createSpringOscillatorControls(
   options: SpringOscillatorControlsOptions
 ): SpringOscillatorControls {
-  const { mount, scene, onStatus } = options;
+  const {
+    mount,
+    scene,
+    onStatus,
+    scheduleRender = () => scene.render()
+  } = options;
   const cleanups: Array<() => void> = [];
   const itemHandles: OscillatorItemHandle[] = [];
 
@@ -66,7 +73,7 @@ export function createSpringOscillatorControls(
       orientation: 'horizontal'
     });
     renderOscillatorList();
-    scene.render();
+    scheduleRender();
     onStatus?.(`添加振子 #${newOsc.id.slice(-4)}`);
   };
   addBtn.addEventListener('click', onAddClick);
@@ -100,7 +107,7 @@ export function createSpringOscillatorControls(
         );
         renderOscillatorList();
         scene.reset();
-        scene.render();
+        scheduleRender();
         onStatus?.('同相演示：两振子同时启动');
       }
     },
@@ -121,7 +128,7 @@ export function createSpringOscillatorControls(
         );
         renderOscillatorList();
         scene.reset();
-        scene.render();
+        scheduleRender();
         onStatus?.('反相演示：第2个振子延迟半个周期启动');
       }
     },
@@ -142,7 +149,7 @@ export function createSpringOscillatorControls(
         );
         renderOscillatorList();
         scene.reset();
-        scene.render();
+        scheduleRender();
         onStatus?.('1/2相位演示：第2个振子延迟1/4周期启动');
       }
     },
@@ -163,7 +170,7 @@ export function createSpringOscillatorControls(
         );
         renderOscillatorList();
         scene.reset();
-        scene.render();
+        scheduleRender();
         onStatus?.('1/4相位演示：第2个振子延迟1/8周期启动');
       }
     }

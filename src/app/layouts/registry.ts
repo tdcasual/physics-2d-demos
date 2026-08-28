@@ -11,6 +11,7 @@ import type {
   ILayout,
   ILayoutConstructor,
   LayoutConfig,
+  LayoutLoader,
   LayoutTestProfile,
   SlotName
 } from './types';
@@ -132,14 +133,21 @@ export function validateLayoutTestProfile(
   }
 }
 
+/** 注册条目：eager 构造器或惰性加载器（元数据始终同步可用） */
+type LayoutEntry =
+  | { kind: 'eager'; ctor: ILayoutConstructor }
+  | { kind: 'lazy'; loader: LayoutLoader };
+
 /** 布局注册表 */
 class LayoutRegistry {
-  private layouts = new Map<string, ILayoutConstructor>();
+  private layouts = new Map<string, LayoutEntry>();
   private metadata = new Map<string, LayoutMetadata>();
   private pool = new Map<string, ILayout>();
+  /** 同一 id 的并发加载共享同一个 import promise */
+  private loadPromises = new Map<string, Promise<ILayoutConstructor>>();
 
   /**
-   * 注册布局母版
+   * 注册布局母版（eager 构造器）
    * @param id - 布局ID
    * @param ctor - 布局类构造函数
    * @param metadata - 布局元数据
@@ -149,13 +157,39 @@ class LayoutRegistry {
     ctor: ILayoutConstructor,
     metadata: Omit<LayoutMetadata, 'id'>
   ): void {
-    if (!id || typeof id !== 'string') {
-      throw new Error('Layout id must be a non-empty string');
-    }
     if (!ctor || typeof ctor !== 'function') {
       throw new Error(
         `Layout constructor for "${id}" must be a valid class/function`
       );
+    }
+    this.registerEntry(id, { kind: 'eager', ctor }, metadata);
+  }
+
+  /**
+   * 注册布局母版（惰性加载器）
+   * 元数据立即可用；loader 在首次 create 时才执行并缓存结果。
+   * @param id - 布局ID
+   * @param loader - 返回布局构造器的 thunk（通常包装动态 import）
+   * @param metadata - 布局元数据
+   */
+  registerLazy(
+    id: string,
+    loader: LayoutLoader,
+    metadata: Omit<LayoutMetadata, 'id'>
+  ): void {
+    if (!loader || typeof loader !== 'function') {
+      throw new Error(`Layout loader for "${id}" must be a valid function`);
+    }
+    this.registerEntry(id, { kind: 'lazy', loader }, metadata);
+  }
+
+  private registerEntry(
+    id: string,
+    entry: LayoutEntry,
+    metadata: Omit<LayoutMetadata, 'id'>
+  ): void {
+    if (!id || typeof id !== 'string') {
+      throw new Error('Layout id must be a non-empty string');
     }
     if (!metadata || typeof metadata !== 'object') {
       throw new Error(`Layout metadata for "${id}" must be a valid object`);
@@ -171,20 +205,60 @@ class LayoutRegistry {
 
     // Overwrite existing layout if same id
 
-    this.layouts.set(id, ctor);
+    this.layouts.set(id, entry);
     this.metadata.set(id, { id, ...metadata });
+    this.loadPromises.delete(id);
 
     // layout registered
   }
 
+  /** 解析布局构造器；惰性条目只触发一次加载并共享 promise */
+  private resolveConstructor(id: string): Promise<ILayoutConstructor> {
+    const entry = this.layouts.get(id);
+
+    if (!entry) {
+      const available = this.list().join(', ');
+      throw new Error(
+        `Layout "${id}" not found. ` +
+          `Available layouts: ${available || 'none'}`
+      );
+    }
+
+    if (entry.kind === 'eager') {
+      return Promise.resolve(entry.ctor);
+    }
+
+    let pending = this.loadPromises.get(id);
+    if (!pending) {
+      pending = Promise.resolve()
+        .then(() => entry.loader())
+        .then((ctor) => {
+          if (!ctor || typeof ctor !== 'function') {
+            throw new Error(
+              `Layout loader for "${id}" did not resolve to a valid constructor`
+            );
+          }
+          return ctor;
+        });
+      // 加载失败不缓存，允许下次 create 重试
+      pending.catch(() => this.loadPromises.delete(id));
+      this.loadPromises.set(id, pending);
+    }
+    return pending;
+  }
+
   /**
-   * 创建布局实例（优先从实例池复用）
+   * 创建布局实例（优先从实例池复用；惰性布局首次创建时动态加载）
    * @param id - 布局ID
    * @param container - 容器元素
    * @param config - 布局配置
    * @returns 布局实例
    */
-  create(id: string, container: HTMLElement, config?: LayoutConfig): ILayout {
+  async create(
+    id: string,
+    container: HTMLElement,
+    config?: LayoutConfig
+  ): Promise<ILayout> {
     if (!id || typeof id !== 'string') {
       throw new Error('Layout id must be a non-empty string');
     }
@@ -200,15 +274,7 @@ class LayoutRegistry {
       return cached;
     }
 
-    const LayoutClass = this.layouts.get(id);
-
-    if (!LayoutClass || typeof LayoutClass !== 'function') {
-      const available = this.list().join(', ');
-      throw new Error(
-        `Layout "${id}" not found. ` +
-          `Available layouts: ${available || 'none'}`
-      );
-    }
+    const LayoutClass = await this.resolveConstructor(id);
 
     return new LayoutClass(container, config);
   }
@@ -265,6 +331,7 @@ class LayoutRegistry {
   unregister(id: string): void {
     this.layouts.delete(id);
     this.metadata.delete(id);
+    this.loadPromises.delete(id);
     // layout unregistered
   }
 
@@ -283,6 +350,7 @@ class LayoutRegistry {
     this.layouts.clear();
     this.metadata.clear();
     this.pool.clear();
+    this.loadPromises.clear();
   }
 }
 
@@ -296,6 +364,18 @@ export function registerLayout(
   metadata: Omit<LayoutMetadata, 'id'>
 ): void {
   layoutRegistry.register(id, ctor, metadata);
+}
+
+/**
+ * 惰性注册布局：元数据同步可用，构造器首次使用时才加载。
+ * 用于把布局实现从首屏 chunk 中拆出（动态 import）。
+ */
+export function registerLazyLayout(
+  id: string,
+  loader: LayoutLoader,
+  metadata: Omit<LayoutMetadata, 'id'>
+): void {
+  layoutRegistry.registerLazy(id, loader, metadata);
 }
 
 /**

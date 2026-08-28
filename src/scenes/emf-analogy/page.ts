@@ -21,14 +21,19 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, onStatus }) => {
+  createControls: ({
+    mount,
+    scene,
+    onStatus,
+    scheduleRender = () => scene.render()
+  }) => {
     const renderer = renderSchema({
       mount,
       schema: emfAnalogyControlsSchema,
       onChange: (key, value) => {
         if (key === 'tap') {
           scene.setTapOpening(value as number);
-          scene.render();
+          scheduleRender();
           scene.startAll?.();
           const snapshot = scene.getSnapshot?.();
           const rText =
@@ -45,12 +50,12 @@ bootScenePage({
       onAction: (key) => {
         if (key === 'on') {
           scene.setSystemOn(true);
-          scene.render();
+          scheduleRender();
           scene.startAll?.();
           onStatus?.('开关闭合');
         } else if (key === 'off') {
           scene.setSystemOn(false);
-          scene.render();
+          scheduleRender();
           scene.pauseAll?.();
           onStatus?.('开关断开');
         } else if (key === 'circuit') {
@@ -69,6 +74,7 @@ bootScenePage({
         } else if (key === 'transport:reset') {
           scene.reset?.();
         } else if (key === 'transport:step') {
+          // 单步推进：保留同步渲染，用户期待立即看到这一帧
           scene.step?.(0.016);
           scene.render?.();
         }
@@ -85,6 +91,7 @@ bootScenePage({
         }
       }
     }
+    // URL 参数应用后立即同步首绘（不等下一帧）
     if (Object.keys(urlParams).length > 0) {
       scene.render();
     }

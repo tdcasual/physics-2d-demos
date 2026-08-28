@@ -43,20 +43,26 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, onStatus }) => {
+  createControls: ({
+    mount,
+    scene,
+    onStatus,
+    scheduleRender = () => scene.render()
+  }) => {
     const renderer = renderSchema({
       mount,
       schema: electrificationControlsSchema,
       onChange: (key, value) => {
         if (key === 'scene') {
           scene.setScene(value as ElectrificationScene);
-          scene.render();
+          scheduleRender();
           renderer.setActive(key, String(value));
           writeSceneParams({ [key]: value });
         }
       },
       onAction: (key) => {
         if (key === 'step') {
+          // 单步推进：保留同步渲染，用户期待立即看到这一帧
           scene.runSceneAction();
           scene.render();
           onStatus?.('执行下一步');

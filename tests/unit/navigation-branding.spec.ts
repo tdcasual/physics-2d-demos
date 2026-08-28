@@ -1,15 +1,18 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import {
+  listSceneIds,
+  renderScenePageHtml
+} from '../../scripts/vite-plugin-scene-pages';
 
-const htmlEntrypoints = [
+// 真实 HTML 入口：首页 + src/pages/ 下的 utility 页（场景页由
+// vite-plugin-scene-pages 虚拟生成，单独断言其模板）
+const realEntrypoints = [
   'index.html',
-  'src/pages/projectile.html',
-  'src/pages/chase-meet.html',
-  'src/pages/field-lines.html',
-  'src/pages/electrification.html',
-  'src/pages/emf-analogy.html',
-  'src/pages/vt-integral.html'
+  ...readdirSync(resolve(process.cwd(), 'src/pages'))
+    .filter((f) => f.endsWith('.html'))
+    .map((f) => `src/pages/${f}`)
 ] as const;
 
 describe('navigation branding', () => {
@@ -20,10 +23,15 @@ describe('navigation branding', () => {
 
   it('declares a shared favicon on all html entrypoints', () => {
     expect(existsSync(resolve(process.cwd(), 'public/favicon.svg'))).toBe(true);
-    for (const file of htmlEntrypoints) {
+    for (const file of realEntrypoints) {
       const html = readFileSync(resolve(process.cwd(), file), 'utf8');
       expect(html, file).toContain('rel="icon"');
       expect(html, file).toContain('href="/favicon.svg"');
+    }
+    for (const sceneId of listSceneIds(process.cwd())) {
+      const html = renderScenePageHtml(process.cwd(), sceneId);
+      expect(html, sceneId).toContain('rel="icon"');
+      expect(html, sceneId).toContain('href="/favicon.svg"');
     }
   });
 

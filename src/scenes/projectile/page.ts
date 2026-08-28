@@ -23,7 +23,7 @@ bootScenePage({
   createScene: ({ canvas, theme, mode, demoHints }) => {
     return createProjectileScene({ canvas, theme, mode, demoHints });
   },
-  createControls: ({ mount, scene }) => {
+  createControls: ({ mount, scene, scheduleRender = () => scene.render() }) => {
     const applyParam = createParamMapper<ProjectileParams>(
       {
         v0: 'speed',
@@ -45,7 +45,7 @@ bootScenePage({
       (params) => scene.setParams(params),
       () => {
         scene.reset?.();
-        scene.render();
+        scheduleRender();
       }
     );
 
@@ -80,6 +80,7 @@ bootScenePage({
         applyParam(key, value);
       }
     }
+    // URL 参数应用后立即同步首绘（不等下一帧）
     if (Object.keys(urlParams).length > 0) {
       scene.render();
     }

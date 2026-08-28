@@ -11,6 +11,8 @@ import { registerAllLayouts } from './layouts/auto-register';
 import { layoutRegistry } from './layouts/registry';
 import { SceneAdapter } from './scene-adapter';
 import { restoreSceneParams, persistSceneParams } from './url-sync';
+import { createRenderScheduler } from './render-scheduler';
+import type { RenderScheduler } from './render-scheduler';
 import {
   getStoredTheme,
   resolveThemePreference,
@@ -27,6 +29,31 @@ export type {
   ScenePageOptions
 } from './scene-bootstrapper-types';
 export { SceneAdapter } from './scene-adapter';
+
+/**
+ * 将 scheduler 的 dispose 合并进控制面板返回值：
+ * adapter 只对 createControls 的返回值调用 dispose()，
+ * 包装后可同时收口 scheduler 挂起的 rAF。
+ */
+function attachSchedulerDispose(
+  controls: unknown,
+  scheduler: RenderScheduler
+): unknown {
+  if (
+    controls !== null &&
+    (typeof controls === 'object' || typeof controls === 'function')
+  ) {
+    const target = controls as { dispose?: () => void };
+    const originalDispose = target.dispose;
+    target.dispose = () => {
+      scheduler.dispose();
+      originalDispose?.call(controls);
+    };
+    return controls;
+  }
+  // 控制面板未返回句柄时仍要收口 scheduler
+  return { dispose: () => scheduler.dispose() };
+}
 
 /**
  * 统一启动场景页面
@@ -92,10 +119,25 @@ export function bootScenePage<TScene extends SceneInstance>(
   container.on('theme:change', ({ to }) => storeTheme(to));
 
   // 创建场景适配器（注入主题切换回调，让 t 快捷键走 container 统一路径）
+  // createControls 包装：为控制面板注入 rAF 合帧渲染（scheduleRender），
+  // 滑块 input 高频触发时同帧只渲染一次；dispose 随控制面板返回值收口。
+  const userCreateControls = options.createControls;
   const adapter = new SceneAdapter<TScene>(
     {
       ...options,
       preferredLayout,
+      createControls: userCreateControls
+        ? (controlOpts) => {
+            const scheduler = createRenderScheduler(() => {
+              controlOpts.scene.render();
+            });
+            const controls = userCreateControls({
+              ...controlOpts,
+              scheduleRender: scheduler.schedule
+            });
+            return attachSchedulerDispose(controls, scheduler);
+          }
+        : undefined,
       onToggleTheme: (next) => container.setTheme(next)
     },
     (text) => container.currentLayout?.updateStatus?.(text)

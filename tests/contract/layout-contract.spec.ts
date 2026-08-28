@@ -80,7 +80,7 @@ describe('registry-wide layout contract', () => {
       const profile = requireTestProfile(meta);
       const viewport = profile.viewports[0];
       const container = createContainer(viewport.width, viewport.height);
-      const layout = layoutRegistry.create(meta.id, container);
+      const layout = await layoutRegistry.create(meta.id, container);
 
       const firstSlots = await layout.mount();
       const secondSlots = await layout.mount();
@@ -108,7 +108,7 @@ describe('registry-wide layout contract', () => {
       const profile = requireTestProfile(meta);
       const viewport = profile.viewports[0];
       const container = createContainer(viewport.width, viewport.height);
-      const layout = layoutRegistry.create(meta.id, container);
+      const layout = await layoutRegistry.create(meta.id, container);
       await layout.mount();
 
       const tabs = container.querySelectorAll('[role="tab"]');

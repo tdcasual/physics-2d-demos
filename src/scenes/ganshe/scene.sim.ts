@@ -56,19 +56,23 @@ export type GhostPoint = {
 
 export type ObserverData = {
   x: number;
-  history: HistoryPoint[];
-  ghostTrail: GhostPoint[];
+  /** sim 内部数组的直接引用（只读视图），消费方不得写入 */
+  history: readonly HistoryPoint[];
+  /** sim 内部数组的直接引用（只读视图），消费方不得写入 */
+  ghostTrail: readonly GhostPoint[];
   interference: InterferenceParams;
 };
 
 export type WaveState = {
   time: number;
   observerX: number;
-  history: HistoryPoint[];
-  ghostTrail: GhostPoint[];
+  /** sim 内部数组的直接引用（只读视图），消费方不得写入 */
+  history: readonly HistoryPoint[];
+  /** sim 内部数组的直接引用（只读视图），消费方不得写入 */
+  ghostTrail: readonly GhostPoint[];
   interference: InterferenceParams;
   params: WaveParams;
-  allObservers: ObserverData[];
+  allObservers: readonly ObserverData[];
 };
 
 const PULSE_WIDTH = 4;
@@ -269,8 +273,9 @@ export function createWaveInterferenceSim(initial: Partial<WaveParams> = {}) {
     for (let i = 0; i < params.observers.length; i++) {
       result.push({
         x: params.observers[i],
-        history: [...observerHistories[i]],
-        ghostTrail: [...observerGhostTrails[i]],
+        // 直接引用内部数组：全部消费方（view/entry/xt-graph-renderer）只读遍历
+        history: observerHistories[i],
+        ghostTrail: observerGhostTrails[i],
         interference: computeInterference(params, params.observers[i], time)
       });
     }
@@ -282,8 +287,9 @@ export function createWaveInterferenceSim(initial: Partial<WaveParams> = {}) {
     stateCache = {
       time,
       observerX: params.observerX,
-      history: [...history],
-      ghostTrail: [...ghostTrail],
+      // 直接引用内部数组（只读视图），避免每帧 ~7200 引用的浅拷贝分配
+      history,
+      ghostTrail,
       interference: computeInterference(params, params.observerX, time),
       params: { ...params },
       allObservers: getAllObservers()

@@ -26,7 +26,7 @@ bootScenePage({
   createScene: ({ canvas, theme, mode, demoHints }) => {
     return createMicrometerScene({ canvas, theme, mode, demoHints });
   },
-  createControls: ({ mount, scene }) => {
+  createControls: ({ mount, scene, scheduleRender = () => scene.render() }) => {
     const microScene = scene as ReturnType<typeof createMicrometerScene>;
 
     const renderer = renderSchema({
@@ -36,7 +36,7 @@ bootScenePage({
         if (key === 'reading') {
           microScene.setParams({ reading: parseFloat(String(value)) });
         }
-        microScene.render();
+        scheduleRender();
         writeSceneParams({ [key]: value });
       },
       onAction: (key) => {
@@ -56,7 +56,7 @@ bootScenePage({
         );
         microScene.setParams({ reading: val });
         renderer.setValue('reading', val);
-        microScene.render();
+        scheduleRender();
         writeSceneParams({ reading: val });
       }
     };
@@ -77,6 +77,7 @@ bootScenePage({
         renderer.setValue(key, num);
       }
     }
+    // URL 参数应用后立即同步首绘（不等下一帧）
     if (Object.keys(urlParams).length > 0) {
       microScene.render();
     }

@@ -35,7 +35,7 @@ bootScenePage({
   createScene: ({ canvas, theme, mode, demoHints }) => {
     return createDoubleSlitScene({ canvas, theme, mode, demoHints });
   },
-  createControls: ({ mount, scene }) => {
+  createControls: ({ mount, scene, scheduleRender = () => scene.render() }) => {
     const dsScene = scene as ReturnType<typeof createDoubleSlitScene>;
     let currentRenderer: SchemaRendererInstance | null = null;
     let unsubscribeControls: (() => void) | null = null;
@@ -129,7 +129,7 @@ bootScenePage({
             dsScene.setParams({ filterColor: filterVal });
             currentRenderer?.setActive(key, fc);
           }
-          dsScene.render();
+          scheduleRender();
           writeSceneParams({ [key]: value });
         },
         onAction: () => {

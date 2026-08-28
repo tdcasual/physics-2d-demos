@@ -6,7 +6,8 @@
  *   pnpm new:scene pendulum 单摆
  *
  * 生成一个符合「当前场景标准」的最小可运行场景骨架：
- * - 文件结构满足 scripts/check-scenes.ts（meta/sim/view/entry/controls-schema/page + html）
+ * - 文件结构满足 scripts/check-scenes.ts（meta/sim/view/entry/controls-schema/page；
+ *   HTML 入口由 vite-plugin-scene-pages 从 scene.meta.ts 虚拟生成，无需手抄）
  * - 视图经由 core 响应式缩放机制（sizeCanvasToFill + responsiveScale）
  * - 视图采用演示模式标准机制（getRenderTokens），自动通过 scene-standard 契约测试
  * - 使用 createStandardSceneEntry 统一生命周期，声明式 controls-schema
@@ -49,11 +50,9 @@ const pascal = id
 const camel = pascal.charAt(0).toLowerCase() + pascal.slice(1);
 
 const sceneDir = resolve(root, 'src/scenes', id);
-const pagePath = resolve(root, 'src/pages', `${id}.html`);
 const testPath = resolve(root, 'tests/unit', `${id}.sim.spec.ts`);
 
 if (existsSync(sceneDir)) fail(`场景已存在: src/scenes/${id}`);
-if (existsSync(pagePath)) fail(`页面已存在: src/pages/${id}.html`);
 
 // ---------------------------------------------------------------------------
 // 模板（占位符：__ID__ __TITLE__ __PASCAL__ __CAMEL__；生成代码不含模板字面量）
@@ -340,21 +339,6 @@ bootScenePage({
 });
 `;
 
-const htmlTpl = `<!doctype html>
-<html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>__TITLE__ - 物理演示</title>
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-  </head>
-  <body>
-    <main id="app"></main>
-    <script type="module" src="../scenes/__ID__/page.ts"></script>
-  </body>
-</html>
-`;
-
 const testTpl = `import { describe, expect, it } from 'vitest';
 import { create__PASCAL__Sim } from '../../src/scenes/__ID__/scene.sim';
 
@@ -396,7 +380,6 @@ const files: Array<[string, string]> = [
   [join(sceneDir, 'scene.entry.ts'), entryTpl],
   [join(sceneDir, 'controls-schema.ts'), controlsTpl],
   [join(sceneDir, 'page.ts'), pageTpl],
-  [pagePath, htmlTpl],
   [testPath, testTpl]
 ];
 

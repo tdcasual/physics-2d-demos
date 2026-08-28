@@ -26,7 +26,12 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, onStatus }) => {
+  createControls: ({
+    mount,
+    scene,
+    onStatus,
+    scheduleRender = () => scene.render()
+  }) => {
     const renderer = renderSchema({
       mount,
       schema: vtIntegralControlsSchema,
@@ -35,27 +40,27 @@ bootScenePage({
           const sceneId = String(value);
           if (isValidVtScene(sceneId)) {
             scene.setScene(sceneId);
-            scene.render();
+            scheduleRender();
             renderer.setActive(key, sceneId);
           }
         } else if (key === 'rects') {
           scene.setRects(value as number);
-          scene.render();
+          scheduleRender();
         } else if (key === 'time') {
           scene.setTime(value as number);
-          scene.render();
+          scheduleRender();
         } else if (key === 'amplitude') {
           scene.setCurveAmplitude(value as number);
-          scene.render();
+          scheduleRender();
         } else if (key === 'circle-n') {
           scene.setCircleN(value as number);
-          scene.render();
+          scheduleRender();
         } else if (key === 'division') {
           scene.setDivision(value as number);
-          scene.render();
+          scheduleRender();
         } else if (key === 'surface-n') {
           scene.setSurfaceN(value as number);
-          scene.render();
+          scheduleRender();
         }
       },
       onAction: (key) => {
@@ -69,6 +74,7 @@ bootScenePage({
         } else if (key === 'sine') {
           onStatus?.('正弦运动 v(t)=sin(t)');
         } else if (key === 'transport:play') {
+          // 单步推进：保留同步渲染，用户期待立即看到这一帧
           scene.step(0.1);
           scene.render();
         } else if (key === 'transport:pause') {
@@ -76,6 +82,7 @@ bootScenePage({
         } else if (key === 'transport:reset') {
           scene.reset?.();
         } else if (key === 'transport:step') {
+          // 单步推进：保留同步渲染，用户期待立即看到这一帧
           scene.step(0.1);
           scene.render();
         }
