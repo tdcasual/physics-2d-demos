@@ -5,7 +5,6 @@
  */
 
 import { bootScenePage } from '../../app/scene-bootstrapper';
-import { readSceneParams, writeSceneParams } from '../../app/url-sync';
 import { doubleSlitMeta } from './scene.meta';
 import { createDoubleSlitScene } from './scene.entry';
 import {
@@ -16,8 +15,9 @@ import {
   renderSchema,
   type SchemaRendererInstance
 } from '../../ui/components/SchemaRenderer';
+import type { DoubleSlitParams } from './scene.sim';
 
-bootScenePage({
+bootScenePage<ReturnType<typeof createDoubleSlitScene>>({
   meta: doubleSlitMeta,
   autoPlay: true,
   preferredLayout: 'split-right',
@@ -32,10 +32,42 @@ bootScenePage({
     hideTransport: true,
     hasGraph: false
   },
+  paramSync: {
+    // 批量应用（单次 setParams，避免中间 notify 触发 schema 重建），
+    // 应用后借控制面板句柄全量同步（L 滑块 /100 换算、section 可见性、
+    // 步骤 6 专属字段均在 syncFromScene 内处理）。
+    applyAll: (urlParams, ctx) => {
+      const batch: Partial<DoubleSlitParams> = {};
+      if (urlParams.step !== undefined)
+        batch.step = parseInt(String(urlParams.step), 10);
+      if (urlParams.lambda !== undefined)
+        batch.lambda = parseFloat(String(urlParams.lambda));
+      if (urlParams.slitDistance !== undefined)
+        batch.slitDistance = parseFloat(String(urlParams.slitDistance));
+      if (urlParams.activeInstrument !== undefined)
+        batch.activeInstrument = String(urlParams.activeInstrument) as
+          | 'caliper'
+          | 'micrometer';
+
+      if (Object.keys(batch).length > 0) {
+        ctx.scene.setParams(batch);
+      }
+      (
+        ctx.controls as { syncFromScene?: () => void } | null
+      )?.syncFromScene?.();
+      return true;
+    }
+  },
   createScene: ({ canvas, theme, mode, demoHints }) => {
     return createDoubleSlitScene({ canvas, theme, mode, demoHints });
   },
-  createControls: ({ mount, scene, scheduleRender = () => scene.render() }) => {
+  createControls: ({
+    mount,
+    scene,
+    scheduleRender = () => scene.render(),
+    urlParams = {},
+    writeParam = () => {}
+  }) => {
     const dsScene = scene as ReturnType<typeof createDoubleSlitScene>;
     let currentRenderer: SchemaRendererInstance | null = null;
     let unsubscribeControls: (() => void) | null = null;
@@ -130,7 +162,7 @@ bootScenePage({
             currentRenderer?.setActive(key, fc);
           }
           scheduleRender();
-          writeSceneParams({ [key]: value });
+          writeParam(key, value);
         },
         onAction: () => {
           // 无 action 按钮
@@ -139,8 +171,7 @@ bootScenePage({
       currentSchemaId = schemaId;
     }
 
-    // ── 读取 URL 参数，确定初始状态 ──
-    const urlParams = readSceneParams(doubleSlitMeta);
+    // ── 读取 URL 参数（bootstrapper 注入），确定初始 schema ──
     const targetStep = urlParams.step
       ? parseInt(String(urlParams.step), 10)
       : dsScene.getState().params.step;
@@ -153,22 +184,8 @@ bootScenePage({
     const initialSchemaId = targetStep === 6 ? 'step6' : 'default';
     buildSchema(initialSchema, initialSchemaId);
 
-    // ── 批量应用 URL 参数到场景（不触发中间 notify 导致的 schema 重建）──
-    const batchParams: Record<string, number | string> = {};
-    if (urlParams.step !== undefined)
-      batchParams.step = parseInt(String(urlParams.step), 10);
-    if (urlParams.lambda !== undefined)
-      batchParams.lambda = parseFloat(String(urlParams.lambda));
-    if (urlParams.slitDistance !== undefined)
-      batchParams.slitDistance = parseFloat(String(urlParams.slitDistance));
-    if (urlParams.activeInstrument !== undefined)
-      batchParams.activeInstrument = String(urlParams.activeInstrument);
-
-    if (Object.keys(batchParams).length > 0) {
-      dsScene.setParams(batchParams);
-    }
-
-    // 将当前场景状态同步到 renderer
+    // 初始同步（与 URL 无关）：对齐 section 可见性（滤光片/光源）与
+    // L 滑块 /100 换算等面板初始状态；URL 非空时管线 applyAll 会再次同步
     syncRendererToScene();
 
     // ── 注册订阅：步骤变化时自动切换 schema ──
@@ -191,6 +208,7 @@ bootScenePage({
       setActive(key: string, value: string) {
         currentRenderer?.setActive(key, value);
       },
+      syncFromScene: syncRendererToScene,
       dispose() {
         unsubscribeControls?.();
         unsubscribeControls = null;

@@ -287,7 +287,6 @@ export const __CAMEL__ControlsSchema: ControlsSchema = {
 `;
 
 const pageTpl = `import { bootScenePage } from '../../app/scene-bootstrapper';
-import { readSceneParams, writeSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { create__PASCAL__Scene } from './scene.entry';
 import { __CAMEL__Meta } from './scene.meta';
@@ -303,28 +302,19 @@ bootScenePage({
   },
   createScene: ({ canvas, theme, mode, demoHints }) =>
     create__PASCAL__Scene({ canvas, theme, mode, demoHints }),
-  createControls: ({ mount, scene }) => {
+  // URL 参数（键集 = meta.defaultParams ∪ meta.urlSyncKeys）由
+  // bootstrapper 参数管线自动应用与回写，无需手写样板。
+  createControls: ({ mount, scene, scheduleRender }) => {
+    const render = scheduleRender ?? (() => scene.render());
     const renderer = renderSchema({
       mount,
       schema: __CAMEL__ControlsSchema,
       onChange: (key, value) => {
         scene.setParams({ [key]: value } as Partial<__PASCAL__Params>);
-        writeSceneParams({ [key]: value });
+        render();
       },
       onAction: () => {}
     });
-
-    // 应用 URL 参数（键集 = meta.defaultParams ∪ meta.urlSyncKeys）
-    const urlParams = readSceneParams(__CAMEL__Meta);
-    for (const [key, value] of Object.entries(urlParams)) {
-      if (key in __CAMEL__Meta.defaultParams) {
-        const num = Number.isInteger(__CAMEL__Meta.defaultParams[key])
-          ? parseInt(String(value), 10)
-          : parseFloat(String(value));
-        scene.setParams({ [key]: num } as Partial<__PASCAL__Params>);
-        renderer.setValue(key, num);
-      }
-    }
 
     return {
       setValue(key: string, value: number | string) {

@@ -3,7 +3,6 @@
  */
 
 import { bootScenePage } from '../../app/scene-bootstrapper';
-import { readSceneParams, writeSceneParams } from '../../app/url-sync';
 import { thinFilmMeta } from './scene.meta';
 import { createThinFilmScene } from './scene.entry';
 import { thinFilmControlsSchema } from './controls-schema';
@@ -37,7 +36,12 @@ bootScenePage({
   createScene: ({ canvas, theme, mode, demoHints }) => {
     return createThinFilmScene({ canvas, theme, mode, demoHints });
   },
-  createControls: ({ mount, scene, scheduleRender = () => scene.render() }) => {
+  createControls: ({
+    mount,
+    scene,
+    scheduleRender = () => scene.render(),
+    writeParam = () => {}
+  }) => {
     const filmScene = scene as ReturnType<typeof createThinFilmScene>;
 
     const renderer = renderSchema({
@@ -67,45 +71,10 @@ bootScenePage({
           >);
         }
         scheduleRender();
-        writeSceneParams({ [key]: value });
+        writeParam(key, value);
       },
       onAction: () => {}
     });
-
-    // Apply URL params
-    const urlParams = readSceneParams(thinFilmMeta);
-    for (const [key, value] of Object.entries(urlParams)) {
-      if (key === 'step') {
-        filmScene.setParams({ step: String(value) as ThinFilmStep });
-        renderer.setActive(key, String(value));
-      } else if (key === 'lambda') {
-        const num = parseInt(String(value), 10);
-        filmScene.setParams({ lambda: num });
-        renderer.setValue(key, num);
-        updateLambdaSliderColor(mount, num);
-      } else if (key === 'whiteLight') {
-        filmScene.setParams({ whiteLight: value === 'true' });
-        renderer.setValue(key, value === 'true');
-      } else if (key === 'cursorY') {
-        const num = parseInt(String(value), 10);
-        filmScene.setCursorY(num / 100);
-        renderer.setValue(key, num);
-      } else if (key in thinFilmMeta.defaultParams) {
-        const num = Number.isInteger(
-          thinFilmMeta.defaultParams[
-            key as keyof typeof thinFilmMeta.defaultParams
-          ]
-        )
-          ? parseInt(String(value), 10)
-          : parseFloat(String(value));
-        filmScene.setParams({ [key]: num } as Record<string, number>);
-        renderer.setValue(key, num);
-      }
-    }
-    // URL 参数应用后立即同步首绘（不等下一帧）
-    if (Object.keys(urlParams).length > 0) {
-      filmScene.render();
-    }
 
     // 初始颜色和滑块状态
     const initialLambda = filmScene.getState().params.lambda;

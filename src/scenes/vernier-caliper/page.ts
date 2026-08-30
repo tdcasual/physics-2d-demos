@@ -3,7 +3,6 @@
  */
 
 import { bootScenePage } from '../../app/scene-bootstrapper';
-import { readSceneParams, writeSceneParams } from '../../app/url-sync';
 import { vernierCaliperMeta } from './scene.meta';
 import { createVernierCaliperScene } from './scene.entry';
 import { caliperControlsSchema } from './controls-schema';
@@ -11,6 +10,8 @@ import { renderSchema } from '../../ui/components/SchemaRenderer';
 
 bootScenePage({
   meta: vernierCaliperMeta,
+  // objectType/precision 是 preset-group，URL 参数回写走 setActive
+  paramSync: { activeKeys: ['objectType', 'precision'] },
   preferredLayout: 'split-right',
   layoutConfig: {
     defaultLeftRatio: 0.35,
@@ -26,7 +27,12 @@ bootScenePage({
   createScene: ({ canvas, theme, mode, demoHints }) => {
     return createVernierCaliperScene({ canvas, theme, mode, demoHints });
   },
-  createControls: ({ mount, scene, scheduleRender = () => scene.render() }) => {
+  createControls: ({
+    mount,
+    scene,
+    scheduleRender = () => scene.render(),
+    writeParam = () => {}
+  }) => {
     const caliperScene = scene as ReturnType<typeof createVernierCaliperScene>;
 
     const renderer = renderSchema({
@@ -41,34 +47,10 @@ bootScenePage({
           });
         }
         scheduleRender();
-        writeSceneParams({ [key]: value });
+        writeParam(key, value);
       },
       onAction: () => {}
     });
-
-    // Apply URL params
-    const urlParams = readSceneParams(vernierCaliperMeta);
-    for (const [key, value] of Object.entries(urlParams)) {
-      if (key === 'objectType') {
-        const num = parseInt(String(value), 10);
-        caliperScene.setParams({ objectType: num });
-        renderer.setActive(key, String(num));
-      } else if (key === 'precision') {
-        const num = parseFloat(String(value));
-        caliperScene.setParams({ precision: num as 0.02 | 0.05 | 0.1 });
-        renderer.setActive(key, String(num));
-      } else if (key in vernierCaliperMeta.defaultParams) {
-        const num = Number.isInteger(vernierCaliperMeta.defaultParams[key])
-          ? parseInt(String(value), 10)
-          : parseFloat(String(value));
-        caliperScene.setParams({ [key]: num } as Record<string, number>);
-        renderer.setValue(key, num);
-      }
-    }
-    // URL 参数应用后立即同步首绘（不等下一帧）
-    if (Object.keys(urlParams).length > 0) {
-      caliperScene.render();
-    }
 
     return {
       setValue(key: string, value: number | string) {

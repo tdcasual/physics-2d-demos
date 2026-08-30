@@ -10,7 +10,14 @@ import { createSceneContainer } from './layouts/container';
 import { registerAllLayouts } from './layouts/auto-register';
 import { layoutRegistry } from './layouts/registry';
 import { SceneAdapter } from './scene-adapter';
-import { restoreSceneParams, persistSceneParams } from './url-sync';
+import {
+  restoreSceneParams,
+  persistSceneParams,
+  readSceneParams,
+  writeSceneParams,
+  resolveUrlSyncKeys,
+  applySceneUrlParams
+} from './url-sync';
 import { createRenderScheduler } from './render-scheduler';
 import type { RenderScheduler } from './render-scheduler';
 import {
@@ -121,7 +128,11 @@ export function bootScenePage<TScene extends SceneInstance>(
   // 创建场景适配器（注入主题切换回调，让 t 快捷键走 container 统一路径）
   // createControls 包装：为控制面板注入 rAF 合帧渲染（scheduleRender），
   // 滑块 input 高频触发时同帧只渲染一次；dispose 随控制面板返回值收口。
+  // 同时注入 URL 参数管线：urlParams（只读快照）与 writeParam（合法键
+  // 过滤后的写回），并在 createControls 返回后统一执行
+  // readSceneParams → setParams → 句柄回写 → 首绘（applySceneUrlParams）。
   const userCreateControls = options.createControls;
+  const writableKeys = resolveUrlSyncKeys(options.meta);
   const adapter = new SceneAdapter<TScene>(
     {
       ...options,
@@ -133,8 +144,24 @@ export function bootScenePage<TScene extends SceneInstance>(
             });
             const controls = userCreateControls({
               ...controlOpts,
-              scheduleRender: scheduler.schedule
+              scheduleRender: scheduler.schedule,
+              urlParams: readSceneParams(options.meta),
+              writeParam: (key, value) => {
+                if (writableKeys.has(key)) {
+                  writeSceneParams({ [key]: value });
+                }
+              }
             });
+            applySceneUrlParams(
+              options.meta,
+              {
+                scene: controlOpts.scene,
+                controls,
+                mount: controlOpts.mount,
+                scheduleRender: scheduler.schedule
+              },
+              options.paramSync
+            );
             return attachSchedulerDispose(controls, scheduler);
           }
         : undefined,

@@ -1,5 +1,4 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
-import { readSceneParams, writeSceneParams } from '../../app/url-sync';
 import type { ReadoutItem } from '../../app/layouts/types';
 import { electrificationMeta } from './scene.meta';
 import { createElectrificationScene } from './scene.entry';
@@ -57,7 +56,6 @@ bootScenePage({
           scene.setScene(value as ElectrificationScene);
           scheduleRender();
           renderer.setActive(key, String(value));
-          writeSceneParams({ [key]: value });
         }
       },
       onAction: (key) => {
@@ -69,20 +67,10 @@ bootScenePage({
         } else if (key === 'reset') {
           scene.reset?.();
           renderer.setActive('scene', 'friction');
-          writeSceneParams({ scene: 'friction' });
           onStatus?.('已重置');
         }
       }
     });
-
-    // Apply URL params
-    const urlParams = readSceneParams(electrificationMeta);
-    for (const [key, value] of Object.entries(urlParams)) {
-      if (key === 'scene') {
-        scene.setScene(value as ElectrificationScene);
-        renderer.setActive(key, String(value));
-      }
-    }
 
     return {
       setActiveScene(scene: string) {

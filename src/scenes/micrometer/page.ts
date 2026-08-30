@@ -3,7 +3,6 @@
  */
 
 import { bootScenePage } from '../../app/scene-bootstrapper';
-import { readSceneParams, writeSceneParams } from '../../app/url-sync';
 import { micrometerMeta } from './scene.meta';
 import { createMicrometerScene } from './scene.entry';
 import { micrometerControlsSchema } from './controls-schema';
@@ -26,7 +25,12 @@ bootScenePage({
   createScene: ({ canvas, theme, mode, demoHints }) => {
     return createMicrometerScene({ canvas, theme, mode, demoHints });
   },
-  createControls: ({ mount, scene, scheduleRender = () => scene.render() }) => {
+  createControls: ({
+    mount,
+    scene,
+    scheduleRender = () => scene.render(),
+    writeParam = () => {}
+  }) => {
     const microScene = scene as ReturnType<typeof createMicrometerScene>;
 
     const renderer = renderSchema({
@@ -37,7 +41,7 @@ bootScenePage({
           microScene.setParams({ reading: parseFloat(String(value)) });
         }
         scheduleRender();
-        writeSceneParams({ [key]: value });
+        writeParam(key, value);
       },
       onAction: (key) => {
         if (key === 'preset') {
@@ -57,29 +61,11 @@ bootScenePage({
         microScene.setParams({ reading: val });
         renderer.setValue('reading', val);
         scheduleRender();
-        writeSceneParams({ reading: val });
+        writeParam('reading', val);
       }
     };
     if (presetContainer) {
       presetContainer.addEventListener('click', onPresetClick);
-    }
-
-    // Apply URL params
-    const urlParams = readSceneParams(micrometerMeta);
-    for (const [key, value] of Object.entries(urlParams)) {
-      if (key === 'reading') {
-        const num = parseFloat(String(value));
-        microScene.setParams({ reading: num });
-        renderer.setValue('reading', num);
-      } else if (key in micrometerMeta.defaultParams) {
-        const num = parseFloat(String(value));
-        microScene.setParams({ [key]: num } as Record<string, number>);
-        renderer.setValue(key, num);
-      }
-    }
-    // URL 参数应用后立即同步首绘（不等下一帧）
-    if (Object.keys(urlParams).length > 0) {
-      microScene.render();
     }
 
     return {

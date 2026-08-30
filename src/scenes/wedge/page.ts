@@ -3,7 +3,6 @@
  */
 
 import { bootScenePage } from '../../app/scene-bootstrapper';
-import { readSceneParams, writeSceneParams } from '../../app/url-sync';
 import { wedgeMeta } from './scene.meta';
 import { createWedgeScene } from './scene.entry';
 import { wedgeControlsSchema } from './controls-schema';
@@ -37,7 +36,12 @@ bootScenePage({
   createScene: ({ canvas, theme, mode, demoHints }) => {
     return createWedgeScene({ canvas, theme, mode, demoHints });
   },
-  createControls: ({ mount, scene, scheduleRender = () => scene.render() }) => {
+  createControls: ({
+    mount,
+    scene,
+    scheduleRender = () => scene.render(),
+    writeParam = () => {}
+  }) => {
     const wedgeScene = scene as ReturnType<typeof createWedgeScene>;
 
     const renderer = renderSchema({
@@ -63,38 +67,10 @@ bootScenePage({
           >);
           scheduleRender();
         }
-        writeSceneParams({ [key]: value });
+        writeParam(key, value);
       },
       onAction: () => {}
     });
-
-    // Apply URL params
-    const urlParams = readSceneParams(wedgeMeta);
-    for (const [key, value] of Object.entries(urlParams)) {
-      if (key === 'step') {
-        wedgeScene.setParams({ step: String(value) as WedgeStep });
-        renderer.setActive(key, String(value));
-      } else if (key === 'lambda') {
-        const num = parseInt(String(value), 10);
-        wedgeScene.setParams({ lambda: num });
-        renderer.setValue(key, num);
-        updateLambdaSliderColor(mount, num);
-      } else if (key === 'cursorX') {
-        const num = parseInt(String(value), 10);
-        wedgeScene.setCursorX(num / 100);
-        renderer.setValue(key, num);
-      } else if (key in wedgeMeta.defaultParams) {
-        const num = Number.isInteger(wedgeMeta.defaultParams[key])
-          ? parseInt(String(value), 10)
-          : parseFloat(String(value));
-        wedgeScene.setParams({ [key]: num } as Record<string, number>);
-        renderer.setValue(key, num);
-      }
-    }
-    // URL 参数应用后立即同步首绘（不等下一帧）
-    if (Object.keys(urlParams).length > 0) {
-      wedgeScene.render();
-    }
 
     // 初始颜色
     const initialLambda = wedgeScene.getState().params.lambda;

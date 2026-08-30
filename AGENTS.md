@@ -145,6 +145,25 @@ bootScenePage({
 });
 ```
 
+### URL 参数同步（自动管线，无需样板）
+
+`bootScenePage` 内置声明式 URL 参数管线（`applySceneUrlParams`，见
+`src/app/url-sync.ts`），page.ts **不要再手写** `readSceneParams` 循环：
+
+- **应用**：管线在 createControls 返回后统一执行
+  `readSceneParams → scene.setParams（无 setParams 时退回 setParam 单键 API）
+→ createControls 返回句柄回写（数值走 setValue；字符串或
+`paramSync.activeKeys` 走 setActive）→ URL 非空时同步首绘`。
+  合法键集合 = `defaultParams ∪ urlSyncKeys ∪ {preset}`（`resolveUrlSyncKeys`）。
+- **写回**：createControls 上下文注入 `writeParam(key, value)`，
+  等价旧样板的 `writeSceneParams({ [key]: value })` 但自动过滤非法键。
+- **上下文注入**：`urlParams`（合法参数只读快照，供建 UI 前必须知悉参数的
+  场景使用，如 double-slit 按 step 选 schema）。
+- **逃生口**：`ScenePageOptions.paramSync` —— `paramMap`（meta 键 → sim 键，
+  如 projectile 的 v0→speed）、`activeKeys`、`applyParam`（单键接管，返回
+  true 跳过默认处理）、`applyAll`（整体接管含首绘，用于批量约束语义）、
+  `afterApply`（默认管线后、首绘前）。
+
 ### 控制区列布局范式
 
 `controlColumns: 'auto'` 启用智能分列（推荐设为默认）。每个 section（一张卡片）根据内容自动决定宽度：

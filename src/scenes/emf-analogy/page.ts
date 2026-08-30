@@ -1,5 +1,4 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
-import { readSceneParams, writeSceneParams } from '../../app/url-sync';
 import { emfAnalogyMeta } from './scene.meta';
 import { createEmfAnalogyScene } from './scene.entry';
 import { emfAnalogyControlsSchema } from './controls-schema';
@@ -41,10 +40,8 @@ bootScenePage({
               ? '∞'
               : snapshot?.state.externalR.toFixed(1);
           onStatus?.(`外电阻 R=${rText}Ω`);
-          writeSceneParams({ [key]: value });
         } else if (key === 'speed') {
           onStatus?.(`播放速度: ${value}x`);
-          writeSceneParams({ [key]: value });
         }
       },
       onAction: (key) => {
@@ -80,21 +77,6 @@ bootScenePage({
         }
       }
     });
-
-    // Apply URL params
-    const urlParams = readSceneParams(emfAnalogyMeta);
-    for (const [key, value] of Object.entries(urlParams)) {
-      if (key === 'tap' || key === 'speed') {
-        renderer.setValue(key, value);
-        if (key === 'tap') {
-          scene.setTapOpening(value as number);
-        }
-      }
-    }
-    // URL 参数应用后立即同步首绘（不等下一帧）
-    if (Object.keys(urlParams).length > 0) {
-      scene.render();
-    }
 
     return {
       dispose: () => {

@@ -3,14 +3,13 @@
  */
 
 import { bootScenePage } from '../../app/scene-bootstrapper';
-import { readSceneParams, writeSceneParams } from '../../app/url-sync';
 import { dopplerEffectMeta } from './scene.meta';
 import { createDopplerScene } from './scene.entry';
 import { dopplerControlsSchema } from './controls-schema';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
-import type { DopplerMode } from './scene.sim';
+import type { DopplerMode, DopplerParams } from './scene.sim';
 
-bootScenePage({
+bootScenePage<ReturnType<typeof createDopplerScene>>({
   meta: dopplerEffectMeta,
   preferredLayout: 'split-right',
   layoutConfig: {
@@ -24,10 +23,39 @@ bootScenePage({
     readoutLabel: '数据读数',
     hideTransport: false
   },
+  paramSync: {
+    // mode 与速度存在互斥约束（sim.setParams 按 next.mode 清零对应速度），
+    // 必须单次批量 setParams 保持与原页面一致的约束语义；
+    // 应用后借控制面板句柄做全量同步（含约束调整后的回读）。
+    applyAll: (urlParams, ctx) => {
+      const batch: Partial<DopplerParams> = {};
+      if (urlParams.sourceSpeed !== undefined)
+        batch.sourceSpeed = Number(urlParams.sourceSpeed);
+      if (urlParams.observerSpeed !== undefined)
+        batch.observerSpeed = Number(urlParams.observerSpeed);
+      if (urlParams.emitFrequency !== undefined)
+        batch.emitFrequency = Number(urlParams.emitFrequency);
+      if (urlParams.mode !== undefined)
+        batch.mode = String(urlParams.mode) as DopplerMode;
+
+      if (Object.keys(batch).length > 0) {
+        ctx.scene.setParams(batch);
+      }
+      (
+        ctx.controls as { syncFromScene?: () => void } | null
+      )?.syncFromScene?.();
+      return true;
+    }
+  },
   createScene: ({ canvas, theme, mode, demoHints }) => {
     return createDopplerScene({ canvas, theme, mode, demoHints });
   },
-  createControls: ({ mount, scene, scheduleRender = () => scene.render() }) => {
+  createControls: ({
+    mount,
+    scene,
+    scheduleRender = () => scene.render(),
+    writeParam = () => {}
+  }) => {
     const dsScene = scene as ReturnType<typeof createDopplerScene>;
 
     const renderer = renderSchema({
@@ -62,7 +90,7 @@ bootScenePage({
           applyPreset(String(value));
         }
         scheduleRender();
-        if (key !== 'preset') writeSceneParams({ [key]: value });
+        if (key !== 'preset') writeParam(key, value);
       },
       onAction: () => {}
     });
@@ -96,22 +124,8 @@ bootScenePage({
       renderer.setActive('mode', s.params.mode);
     }
 
-    // 应用 URL 参数
-    const urlParams = readSceneParams(dopplerEffectMeta);
-    const batchParams: Record<string, unknown> = {};
-    if (urlParams.sourceSpeed !== undefined)
-      batchParams.sourceSpeed = parseFloat(String(urlParams.sourceSpeed));
-    if (urlParams.observerSpeed !== undefined)
-      batchParams.observerSpeed = parseFloat(String(urlParams.observerSpeed));
-    if (urlParams.emitFrequency !== undefined)
-      batchParams.emitFrequency = parseFloat(String(urlParams.emitFrequency));
-    if (urlParams.mode !== undefined)
-      batchParams.mode = String(urlParams.mode) as DopplerMode;
-
-    if (Object.keys(batchParams).length > 0) {
-      dsScene.setParams(batchParams);
-    }
-    syncRendererToScene();
+    // URL 参数应用（含应用后全量同步）由 bootstrapper 管线的
+    // paramSync.applyAll 接管
 
     return {
       setValue(key: string, value: number | string) {
@@ -120,6 +134,7 @@ bootScenePage({
       setActive(key: string, value: string) {
         renderer.setActive(key, value);
       },
+      syncFromScene: syncRendererToScene,
       dispose() {
         renderer.dispose();
       }

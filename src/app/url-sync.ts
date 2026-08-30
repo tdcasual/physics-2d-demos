@@ -7,6 +7,26 @@
  */
 
 import type { SceneMeta } from '../platform/scene-contract';
+import type {
+  ParamSyncContext,
+  SceneInstance,
+  SceneParamSync
+} from './scene-bootstrapper-types';
+
+/**
+ * 合法 URL 同步键集合：defaultParams ∪ urlSyncKeys ∪ {preset}
+ *
+ * 与 readSceneParams 的读取口径一致（readSceneParams 对 preset 有
+ * 特判放行），写回（writeParam）用同一集合过滤：不可读的 key
+ * 写了也无法恢复，直接忽略。
+ */
+export function resolveUrlSyncKeys(meta: SceneMeta): Set<string> {
+  return new Set([
+    ...Object.keys(meta.defaultParams),
+    ...(meta.urlSyncKeys ?? []),
+    'preset'
+  ]);
+}
 
 /**
  * 从当前 URL 读取与场景元数据匹配的参数
@@ -102,4 +122,80 @@ export function writeSceneParams(
     });
     window.history.replaceState({}, '', url);
   }, 150);
+}
+
+/** 管线场景侧最小 API：setParams 批量 / setParam 单键 / render 首绘 */
+type UrlParamSceneApi = {
+  setParams?: (params: Record<string, number | string>) => unknown;
+  setParam?: (key: string, value: number | string) => unknown;
+  render: () => void;
+};
+
+/**
+ * 声明式 URL 参数管线（场景页通用样板的下沉实现）
+ *
+ * readSceneParams → scene.setParams（无 setParams 时退回 setParam 单键
+ * API）→ createControls 返回句柄回写（数值走 setValue；字符串或
+ * paramSync.activeKeys 走 setActive）→ URL 非空时同步首绘。
+ *
+ * 场景特例通过 paramSync 钩子接管：applyParam（单键）、applyAll（整体，
+ * 返回 true 时连首绘也一并接管）、afterApply（默认管线后、首绘前）。
+ *
+ * 仅在 URL 含合法参数时动作；URL 无参数时为纯 no-op。
+ */
+export function applySceneUrlParams<TScene extends SceneInstance>(
+  meta: SceneMeta,
+  target: {
+    scene: TScene;
+    controls: unknown;
+    mount: HTMLElement;
+    scheduleRender: () => void;
+  },
+  paramSync?: SceneParamSync<TScene>
+): void {
+  const urlParams = readSceneParams(meta);
+  if (Object.keys(urlParams).length === 0) return;
+
+  const { scene, controls, mount, scheduleRender } = target;
+  const handle = (controls ?? {}) as {
+    setValue?: (key: string, value: number | string | boolean) => void;
+    setActive?: (key: string, value: string) => void;
+  };
+  const ctx: ParamSyncContext<TScene> = {
+    scene,
+    mount,
+    controls,
+    scheduleRender,
+    setControlValue: (key, value) => handle.setValue?.(key, value),
+    setControlActive: (key, value) => handle.setActive?.(key, value)
+  };
+
+  // 整体接管逃生口（含首绘时机）
+  if (paramSync?.applyAll?.(urlParams, ctx)) return;
+
+  const api = scene as unknown as UrlParamSceneApi;
+  const activeKeys = new Set(paramSync?.activeKeys ?? []);
+
+  for (const [key, value] of Object.entries(urlParams)) {
+    // 场景单键逃生口：返回 true 表示已处理
+    if (paramSync?.applyParam?.(key, value, ctx)) continue;
+    // preset 语义因场景而异，默认管线不应用（需 applyParam 接管）
+    if (key === 'preset') continue;
+
+    const simKey = paramSync?.paramMap?.[key] ?? key;
+    if (typeof api.setParams === 'function') {
+      api.setParams({ [simKey]: value });
+    } else if (typeof api.setParam === 'function') {
+      api.setParam(simKey, value);
+    }
+    if (typeof value === 'string' || activeKeys.has(key)) {
+      ctx.setControlActive(key, String(value));
+    } else {
+      ctx.setControlValue(key, value);
+    }
+  }
+
+  paramSync?.afterApply?.(ctx);
+  // URL 参数应用后立即同步首绘（不等下一帧）
+  scene.render();
 }

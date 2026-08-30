@@ -3,7 +3,6 @@
  */
 
 import { bootScenePage } from '../../app/scene-bootstrapper';
-import { readSceneParams, writeSceneParams } from '../../app/url-sync';
 import { interferenceFormulaMeta } from './scene.meta';
 import { createInterferenceFormulaScene } from './scene.entry';
 import { interferenceFormulaControlsSchema } from './controls-schema';
@@ -37,7 +36,7 @@ bootScenePage({
   createScene: ({ canvas, theme, mode, demoHints }) => {
     return createInterferenceFormulaScene({ canvas, theme, mode, demoHints });
   },
-  createControls: ({ mount, scene }) => {
+  createControls: ({ mount, scene, writeParam = () => {} }) => {
     const ifScene = scene as ReturnType<typeof createInterferenceFormulaScene>;
 
     const renderer = renderSchema({
@@ -54,32 +53,12 @@ bootScenePage({
         } else {
           ifScene.setParams({ [key]: Number(value) } as Record<string, number>);
         }
-        writeSceneParams({ [key]: value });
+        writeParam(key, value);
       },
       onAction: () => {
         // 无 action 按钮
       }
     });
-
-    // Apply URL params
-    const urlParams = readSceneParams(interferenceFormulaMeta);
-    for (const [key, value] of Object.entries(urlParams)) {
-      if (key === 'step') {
-        ifScene.setParams({ step: String(value) as InterferenceFormulaStep });
-        renderer.setActive(key, String(value));
-      } else if (key === 'lambda') {
-        const num = parseInt(String(value), 10);
-        ifScene.setParams({ lambda: num });
-        renderer.setValue(key, num);
-        updateLambdaSliderColor(mount, num);
-      } else if (key in interferenceFormulaMeta.defaultParams) {
-        const num = Number.isInteger(interferenceFormulaMeta.defaultParams[key])
-          ? parseInt(String(value), 10)
-          : parseFloat(String(value));
-        ifScene.setParams({ [key]: num } as Record<string, number>);
-        renderer.setValue(key, num);
-      }
-    }
 
     // 初始颜色
     const initialLambda = ifScene.getState().params.lambda;
