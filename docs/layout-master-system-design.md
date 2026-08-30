@@ -1,5 +1,7 @@
 # 布局母版系统设计文档
 
+> ⚠️ 历史快照（2026-08-30 标注）：文中文件路径与实现细节已失效，现行布局系统见 src/app/layouts/ 与 AGENTS.md 布局扩展规范。
+
 ## 审阅记录
 
 | 版本 | 日期       | 审阅人       | 状态                                              |
@@ -264,7 +266,7 @@ src/
 1. 提取 `auto-register.ts`，布局注册与场景启动解耦
 2. 引入 `LayoutSelector` 策略插件化选择机制
 3. 扩展 `LayoutMetadata`（`constraints` / `priority` / `autoSelectable`）
-4. Vite 配置自动扫描 `src/pages/*.html`
+4. 场景页 HTML 入口由 `vite-plugin-scene-pages` 从 `scene.meta.ts` 虚拟生成（原表述「Vite 配置自动扫描 `src/pages/*.html`」已失效，见文首头注）
 5. 创建 `layout-primitives.css` 共享样式原语
 
 ## 6. 关键设计约束

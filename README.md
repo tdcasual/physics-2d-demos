@@ -76,7 +76,7 @@ src/
     vt-integral/               # 微元法（多子场景）
     spring-oscillator/         # 弹簧振子
   pages/
-    *.html                     # 场景页面入口（Vite 自动扫描，无需手动注册）
+    *.html                     # 仅工具页真实文件；场景页入口由 vite-plugin-scene-pages 虚拟生成，禁止手写场景 HTML
   ui/
     floating-controls.ts       # 浮动运输控制条（桌面端，可拖拽）
     components/                # 共享 DOM 组件（SchemaRenderer / ControlCard / scene-controls/*）
@@ -200,8 +200,8 @@ bootScenePage({
 建议复制 `src/scenes/projectile` 的结构：
 
 1. 新建 `src/scenes/<scene-id>/`
-2. 拆分 `scene.meta.ts` / `scene.sim.ts` / `scene.view.ts` / `scene.entry.ts` / `controls-schema.ts`
-3. 新建 `src/pages/<scene-id>.html`（Vite 自动扫描，**无需**修改 `vite.config.ts`）
+2. 拆分 `scene.meta.ts` / `scene.sim.ts` / `scene.view.ts` / `scene.entry.ts` / `controls-schema.ts` / `page.ts`（共 6 个 TS 文件）
+3. 场景页 HTML 入口**无需创建**：由 `scripts/vite-plugin-scene-pages.ts` 从 `scene.meta.ts` 自动虚拟生成；**禁止**在 `src/pages/` 手写场景 HTML（`pnpm check:scenes` 会拒绝）
 4. 无需手动注册；`src/catalog/scene-registry.ts` 通过 `import.meta.glob` 自动发现
 5. 补齐测试：
    - 至少 1 个 unit test（数值或状态）

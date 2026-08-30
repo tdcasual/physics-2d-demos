@@ -7,15 +7,16 @@
 默认只修改：
 
 - `src/scenes/<id>/`
-- `src/pages/<id>.html`
 - 必要的场景单测或测试 fixture
+
+场景页 HTML 入口由 `scripts/vite-plugin-scene-pages.ts` 从 `scene.meta.ts` 虚拟生成，无需也不应在 `src/pages/` 下创建真实场景 HTML（`pnpm check:scenes` 会拒绝）。
 
 不要手动修改 `src/catalog/scene-registry.ts`。场景由 glob 自动发现。修改 `src/app`、`src/ui`、`src/platform`、`src/core` 或共享样式前，必须先说明影响范围，并增加针对回归的测试。
 
 ## 场景交付要求
 
-1. 使用 `pnpm new:scene` 或现有场景结构创建 `scene.meta.ts`、`scene.sim.ts`、`scene.view.ts`、`scene.entry.ts`、controls、`page.ts` 和 HTML 入口。
-2. `SceneMeta.id`、目录名、HTML 文件名和 `path` 必须一致。
+1. 使用 `pnpm new:scene` 或现有场景结构创建 `scene.meta.ts`、`scene.sim.ts`、`scene.view.ts`、`scene.entry.ts`、controls、`page.ts`（共 6 个文件）。HTML 入口由 `vite-plugin-scene-pages` 从 `scene.meta.ts` 虚拟生成，无需创建。
+2. `SceneMeta.id`、目录名和 `path` 必须一致（HTML 入口路径按 id 自动派生）。
 3. controls 优先使用 `controls-schema.ts` 和共享 `SchemaRenderer`；使用 imperative `controls.ts` 时说明原因。
 4. `scene.view.ts` 使用标准 canvas sizing 和 `responsiveScale`，不要用固定裸数字决定移动端元素尺寸。
 5. `testProfile` 只声明自身能力：`hasGraph`、`hasTransport`、`supportsPresentation`；不要把 `mobile-stack`、tab id 或某个布局的 CSS selector 写入场景 profile。

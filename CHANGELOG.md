@@ -1,5 +1,7 @@
 # Changelog
 
+> ⚠️ 本文件自 2026-05 起停止维护，此后的变更以 git log 为准。
+
 ## 2026-04 — 布局系统扩展性升级
 
 ### 架构升级
@@ -8,6 +10,8 @@
 - **策略插件化**：引入 `LayoutSelector` + `default-strategies.ts`，布局选择逻辑从硬编码 if-else 变为可插拔策略链
 - **元数据扩展**：`LayoutMetadata` 新增 `constraints`（视口约束）、`priority`（优先级）、`autoSelectable`
 - **Vite 自动扫描**：`vite.config.ts` 自动扫描 `src/pages/*.html`，无需手动注册页面入口
+
+  > 注：场景页自 2026-08 起由 `vite-plugin-scene-pages` 从 `scene.meta.ts` 虚拟生成，上述「自动扫描 `src/pages/*.html`」表述已失效。
 
 ### 文件变更
 

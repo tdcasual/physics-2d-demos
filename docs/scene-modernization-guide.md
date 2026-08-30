@@ -36,7 +36,9 @@ src/scenes/<id>/
   scene.entry.ts       # 组装 sim + view，套用 createStandardSceneEntry
   controls-schema.ts   # 声明式控制面板（推荐）；复杂动态场景可用 controls.ts
   page.ts              # bootScenePage(...) 唯一入口
-src/pages/<id>.html    # Vite 自动扫描的页面入口
+
+# 场景页 HTML（/src/pages/<id>.html）由 scripts/vite-plugin-scene-pages.ts
+# 从 scene.meta.ts 虚拟生成，无需手写 src/pages/ 下的真实 HTML
 ```
 
 **运行时数据流**（你只需关心 sim/view/entry，其余由框架处理）：
@@ -175,12 +177,16 @@ createControls: ({ mount, scene }) => {
 
 ---
 
-## 7. URL 参数同步约定（含历史教训）
+## 7. URL 参数同步（内置管线，无需手写）
 
-`url-sync` 用 **`Object.keys(meta.defaultParams)` ∪ `urlSyncKeys` ∪ `preset`** 作为可同步的 URL 键。
-读取（`readSceneParams`）按这些键，写入（`writeSceneParams`）用**控制面板的字段键**。
+URL 参数同步由 `bootScenePage` 内置的声明式管线（`src/app/url-sync.ts` 的 `applySceneUrlParams`）自动处理，场景 `page.ts` **不要**手写 `readSceneParams` / `writeSceneParams` 循环（这两个导出仍存在于 url-sync.ts，但仅供管线内部使用）。
 
-> **教训（projectile）**：曾经 meta 用 `angle`、控件用 `theta`，导致「写 theta、读 angle」，抛射角/初始高度/阻力的 URL 分享与恢复全部失效。**务必让 `meta.defaultParams` 的键与控制面板字段键一致**，URL 往返才正确。
+- **合法键** = `Object.keys(meta.defaultParams)` ∪ `urlSyncKeys` ∪ `{preset}`。管线在 `createControls` 返回后统一执行「读取 URL 参数 → `scene.setParams`（无 `setParams` 时退回单键 `setParam`）→ 控件句柄回写（数值走 `setValue`，字符串或 `paramSync.activeKeys` 走 `setActive`）→ URL 非空时同步首绘」。
+- **写回**：`createControls` 上下文注入 `writeParam(key, value)`，等价于旧样板的 `writeSceneParams({ [key]: value })`，但自动过滤非法键。
+- **上下文注入**：`urlParams`（合法参数只读快照），供建 UI 前必须知悉参数的场景使用。
+- **逃生口**：`ScenePageOptions.paramSync` —— `paramMap`（meta 键 → sim 键，如 projectile 的 v0→speed）、`activeKeys`、`applyParam`（单键接管，返回 true 跳过默认处理）、`applyAll`（整体接管含首绘）、`afterApply`（默认管线后、首绘前）。
+
+> **教训（projectile，仍有效）**：曾经 meta 用 `angle`、控件用 `theta`，导致「写 theta、读 angle」，抛射角/初始高度/阻力的 URL 分享与恢复全部失效。当时的页面靠手写读写循环，如今已由内置管线统一处理，但键名错配的问题依旧存在。**务必让 `meta.defaultParams` 的键与控制面板字段键一致**，URL 往返才正确。
 
 ---
 

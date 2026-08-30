@@ -8,7 +8,7 @@ Physics-2D-Demos 是一个物理教学演示中心（Teaching Demo Hub），当�
 
 - **技术栈**: Vite 7 + TypeScript 5.9 (strict) + React 18 + Tailwind CSS v4
 - **测试**: Vitest 3.2 (单元/契约) + Playwright (E2E/视觉)
-- **构建产物**: 体积预算与实测口径以 `scripts/check-bundle-budget.ts` 为唯一权威（预算值：首页 JS 190 kB / CSS 25 kB；场景页 JS 180 kB / CSS 55 kB；vendor 160 kB；shared 150 kB；个别复杂场景有入口级覆盖，详见脚本）。实测数字随构建变化，不在本文固化，运行 `pnpm check:bundle` 获取当前值
+- **构建产物**: 体积预算与实测口径以 `scripts/check-bundle-budget.ts` 为唯一权威（预算值：首页 JS 190 kB / CSS 25 kB；场景页 JS 180 kB / CSS 55 kB；vendor 160 kB；shared 150 kB；当前无入口级覆盖）。实测数字随构建变化，不在本文固化，运行 `pnpm check:bundle` 获取当前值
 - **Runtime 依赖**: 仅 2 个（react / react-dom）
 - **线上地址**: <https://x.infinitas.fun>
 
@@ -233,7 +233,7 @@ export type SceneMeta = ScenePlacardMeta & {
 
 - 纯 DOM 操作（非 React 组件），使用 `document.createElement`
 - 样式优先使用 Tailwind 类名，主题变量用 CSS custom properties (`var(--text-primary)`)
-- 共享组件放在 `ui/components/SceneControls.ts`，新场景不复刻 DOM 风格
+- 共享组件放在 `ui/components/scene-controls/`，新场景不复刻 DOM 风格
 
 ### 测试
 
