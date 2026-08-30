@@ -43,6 +43,13 @@ export function createDopplerScene(
     demoHints: options.demoHints
   });
 
+  const base = createStandardSceneEntry({
+    sim,
+    view,
+    getState: () => sim.getState(),
+    onReadout: options.onReadout
+  });
+
   // 连接 view 拖拽回调
   view.setOnDrag((entity, x) => {
     if (entity === 'source') sim.setSourceX(x);
@@ -54,13 +61,6 @@ export function createDopplerScene(
     sim.setObserverX(x);
     base.renderAndEmit();
     base.notify();
-  });
-
-  const base = createStandardSceneEntry({
-    sim,
-    view,
-    getState: () => sim.getState(),
-    onReadout: options.onReadout
   });
 
   function setParams(params: Partial<DopplerParams>): DopplerParams {

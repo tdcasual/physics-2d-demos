@@ -43,17 +43,17 @@ export function createMechanicalWaveScene(
     demoHints: options.demoHints
   });
 
-  view.setOnPointSelect((x) => {
-    sim.setPointP(x);
-    base.renderAndEmit();
-    base.notify();
-  });
-
   const base = createStandardSceneEntry({
     sim,
     view,
     getState: () => sim.getState(),
     onReadout: options.onReadout
+  });
+
+  view.setOnPointSelect((x) => {
+    sim.setPointP(x);
+    base.renderAndEmit();
+    base.notify();
   });
 
   function setParam(key: string, value: number | string): MechanicalWaveParams {
