@@ -1,5 +1,5 @@
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
-import { sizeCanvasToFill } from '../../core/canvas-sizing';
+import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import { createTransitionTracker } from '../../core/transition-tracker';
 import type { ElectrificationSnapshot } from './scene.sim';
 import { drawFriction } from './renderer/draw-friction';
@@ -18,33 +18,29 @@ export type CreateElectrificationViewOptions = {
 export function createElectrificationView(
   options: CreateElectrificationViewOptions = {}
 ) {
-  let canvas = options.canvas ?? null;
-  let ctx = canvas?.getContext('2d') ?? null;
-  let theme: TeachingTheme = options.theme ?? 'dark';
+  const env = createViewEnvironment({
+    theme: options.theme,
+    mode: options.mode,
+    demoHints: options.demoHints
+  });
+  const stage = createCanvasViewport({
+    canvas: options.canvas ?? null,
+    sizing: { mode: 'clamped', fallbackWidth: 1280, fallbackHeight: 720 },
+    initialWidth: 1280,
+    initialHeight: 720,
+    eagerContext: true
+  });
   let snapshot: ElectrificationSnapshot | null = null;
-  let cssWidth = 1280;
-  let cssHeight = 720;
-  let responsiveScale = 1;
   const stepTransition = createTransitionTracker(200);
   // 背景渐变缓存：仅依赖 (尺寸, theme)，变化时重建
   let bgGradCache: { key: string; grad: CanvasGradient } | null = null;
 
-  function resizeCanvas(): void {
-    if (!canvas) return;
-    const newCtx = sizeCanvasToFill(canvas);
-    if (newCtx) ctx = newCtx;
-    const rect = canvas.getBoundingClientRect();
-    cssWidth = Math.max(200, Math.floor(rect.width || 1280));
-    cssHeight = Math.max(150, Math.floor(rect.height || 720));
-    responsiveScale = parseFloat(canvas.dataset.responsiveScale || '1');
-  }
-
   function drawScene(next: ElectrificationSnapshot): void {
-    const context = ctx;
+    const context = stage.ctx;
     if (!context) return;
-    const width = cssWidth;
-    const height = cssHeight;
-    const isDark = theme === 'dark';
+    const width = stage.cssWidth;
+    const height = stage.cssHeight;
+    const isDark = env.theme === 'dark';
 
     // 背景
     context.clearRect(0, 0, width, height);
@@ -62,8 +58,8 @@ export function createElectrificationView(
       ctx: context,
       width,
       height,
-      theme,
-      responsiveScale
+      theme: env.theme,
+      responsiveScale: stage.responsiveScale
     };
 
     // Fade-in transition on step change
@@ -97,20 +93,20 @@ export function createElectrificationView(
       drawScene(next);
     },
     resize(): void {
-      resizeCanvas();
+      stage.resize();
       if (snapshot) drawScene(snapshot);
     },
-    setMode(_nextMode: TeachingMode, _hints?: DemoRenderHints): void {
+    setMode(nextMode: TeachingMode, hints?: DemoRenderHints): void {
+      env.setMode(nextMode, hints);
       if (snapshot) drawScene(snapshot);
     },
     setTheme(nextTheme: TeachingTheme): void {
-      theme = nextTheme;
+      env.setTheme(nextTheme);
       if (snapshot) drawScene(snapshot);
     },
     dispose(): void {
       snapshot = null;
-      canvas = null;
-      ctx = null;
+      stage.release();
     }
   };
 }

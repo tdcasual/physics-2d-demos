@@ -1,6 +1,6 @@
 import type { TeachingMode } from '../../platform/standards';
 import type { TeachingTheme } from '../../platform/standards';
-import { sizeCanvasToFill } from '../../core/canvas-sizing';
+import { createCanvasViewport } from '../view-base';
 import type { EmfAnalogySnapshot } from './scene.sim';
 import { drawCircuit } from './renderer/draw-circuit';
 import { drawWaterAnalogy } from './renderer/draw-water-analogy';
@@ -19,31 +19,24 @@ export type CreateEmfAnalogyViewOptions = {
 export function createEmfAnalogyView(
   options: CreateEmfAnalogyViewOptions = {}
 ) {
-  let canvas = options.canvas ?? null;
-  let ctx = canvas?.getContext('2d') ?? null;
+  const stage = createCanvasViewport({
+    canvas: options.canvas ?? null,
+    sizing: { mode: 'clamped', fallbackWidth: 1280, fallbackHeight: 720 },
+    initialWidth: 1280,
+    initialHeight: 720,
+    eagerContext: true
+  });
   let theme: TeachingTheme = options.theme ?? 'dark';
   // demoHints reserved for future demo profile integration
   let currentView: EmfViewMode = 'water';
   let snapshot: EmfAnalogySnapshot | null = null;
-  let cssWidth = 1280;
-  let cssHeight = 720;
-  let responsiveScale = 1;
-
-  function resizeCanvas(): void {
-    if (!canvas) return;
-    const newCtx = sizeCanvasToFill(canvas);
-    if (newCtx) ctx = newCtx;
-    const rect = canvas.getBoundingClientRect();
-    cssWidth = Math.max(200, Math.floor(rect.width || 1280));
-    cssHeight = Math.max(150, Math.floor(rect.height || 720));
-    responsiveScale = parseFloat(canvas?.dataset?.responsiveScale || '1');
-  }
 
   function draw(): void {
+    const ctx = stage.ctx;
     if (!ctx || !snapshot) return;
 
-    const width = cssWidth;
-    const height = cssHeight;
+    const width = stage.cssWidth;
+    const height = stage.cssHeight;
 
     if (currentView === 'circuit') {
       drawCircuit({
@@ -53,7 +46,7 @@ export function createEmfAnalogyView(
         snapshot,
         theme,
         phase: snapshot.state.phase,
-        responsiveScale
+        responsiveScale: stage.responsiveScale
       });
     } else {
       drawWaterAnalogy({
@@ -63,7 +56,7 @@ export function createEmfAnalogyView(
         snapshot,
         theme,
         phase: snapshot.state.phase,
-        responsiveScale
+        responsiveScale: stage.responsiveScale
       });
     }
   }
@@ -77,7 +70,7 @@ export function createEmfAnalogyView(
     },
 
     resize(): void {
-      resizeCanvas();
+      stage.resize();
       if (snapshot) draw();
     },
 
@@ -101,8 +94,7 @@ export function createEmfAnalogyView(
 
     dispose(): void {
       snapshot = null;
-      canvas = null;
-      ctx = null;
+      stage.release();
     }
   };
 }

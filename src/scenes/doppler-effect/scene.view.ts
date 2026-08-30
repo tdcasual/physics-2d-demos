@@ -6,7 +6,7 @@
 
 import type { TeachingTheme, TeachingMode } from '../../platform/standards';
 import type { DemoRenderHints } from '../../platform/demo-profile';
-import { sizeCanvasToFill } from '../../core/canvas-sizing';
+import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import type { DopplerState } from './scene.sim';
 import { SOUND_SPEED, CANVAS_MIN, CANVAS_MAX } from './scene.sim';
 
@@ -53,14 +53,18 @@ const PALETTE = {
 };
 
 export function createDopplerView(options: CreateDopplerViewOptions = {}) {
-  let canvas = options.canvas ?? null;
-  let ctx: CanvasRenderingContext2D | null = null;
-  let theme: TeachingTheme = options.theme ?? 'dark';
-  let mode: TeachingMode = options.mode ?? 'normal';
-  let demoHints: DemoRenderHints | undefined = options.demoHints;
-  let cssW = 800;
-  let cssH = 450;
-  let responsiveScale = 1;
+  const env = createViewEnvironment({
+    theme: options.theme,
+    mode: options.mode,
+    demoHints: options.demoHints
+  });
+  // raw 记录：隐藏容器下 rect 为 0，render 兜底以 0 值判据触发重测
+  const stage = createCanvasViewport({
+    canvas: options.canvas ?? null,
+    sizing: { mode: 'raw' },
+    initialWidth: 800,
+    initialHeight: 450
+  });
 
   // 坐标系参数
   const MARGIN_LEFT = 50;
@@ -78,43 +82,33 @@ export function createDopplerView(options: CreateDopplerViewOptions = {}) {
   let cachedSourceX = 15;
   let cachedObserverX = 25;
 
-  function resizeCanvas(): void {
-    if (!canvas) return;
-    const newCtx = sizeCanvasToFill(canvas);
-    if (newCtx) ctx = newCtx;
-    const rect = canvas.getBoundingClientRect();
-    cssW = rect.width;
-    cssH = rect.height;
-    responsiveScale = parseFloat(canvas.dataset.responsiveScale || '1');
-  }
-
   function worldToPixelX(x: number): number {
+    const cssW = stage.cssWidth;
     const drawW = cssW - MARGIN_LEFT - MARGIN_RIGHT;
     return MARGIN_LEFT + ((x - WORLD_MIN) / (WORLD_MAX - WORLD_MIN)) * drawW;
   }
 
   function pixelToWorldX(px: number): number {
+    const cssW = stage.cssWidth;
     const drawW = cssW - MARGIN_LEFT - MARGIN_RIGHT;
     return WORLD_MIN + ((px - MARGIN_LEFT) / drawW) * (WORLD_MAX - WORLD_MIN);
   }
 
   function getLaneY(): number {
-    return cssH * 0.55;
-  }
-
-  /** 演示模式内容放大系数（normal=1，presentation=renderHints.contentScale） */
-  function getContentScale(): number {
-    return mode === 'presentation' ? (demoHints?.contentScale ?? 1.5) : 1;
+    return stage.cssHeight * 0.55;
   }
 
   function drawScene(state: DopplerState): void {
-    const c = ctx;
-    if (!c || !canvas) return;
+    const c = stage.ctx;
+    if (!c || !stage.canvas) return;
 
-    const p = PALETTE[theme === 'dark' ? 'dark' : 'light'];
+    const cssW = stage.cssWidth;
+    const cssH = stage.cssHeight;
+    const responsiveScale = stage.responsiveScale;
+    const p = PALETTE[env.theme === 'dark' ? 'dark' : 'light'];
     const laneY = getLaneY();
     // 演示模式：几何坐标不变，字号/线宽/关键点按 contentScale 放大
-    const cs = getContentScale();
+    const cs = env.contentScale();
     const s = responsiveScale * cs;
 
     // 清除
@@ -339,6 +333,7 @@ export function createDopplerView(options: CreateDopplerViewOptions = {}) {
   // ── Canvas 交互 ──
 
   function handlePointerDown(e: PointerEvent): void {
+    const canvas = stage.canvas;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
     const px = e.clientX - rect.left;
@@ -349,7 +344,7 @@ export function createDopplerView(options: CreateDopplerViewOptions = {}) {
     const obsPx = worldToPixelX(cachedObserverX);
     const laneY = getLaneY();
 
-    const hitRadius = 25 * responsiveScale;
+    const hitRadius = 25 * stage.responsiveScale;
     if (
       Math.abs(px - srcPx) < hitRadius &&
       Math.abs(py - laneY) < hitRadius * 1.5
@@ -372,6 +367,7 @@ export function createDopplerView(options: CreateDopplerViewOptions = {}) {
   }
 
   function handlePointerMove(e: PointerEvent): void {
+    const canvas = stage.canvas;
     if (!canvas || !dragTarget) return;
     const rect = canvas.getBoundingClientRect();
     const px = e.clientX - rect.left;
@@ -385,6 +381,7 @@ export function createDopplerView(options: CreateDopplerViewOptions = {}) {
   }
 
   function attachEvents(): void {
+    const canvas = stage.canvas;
     if (!canvas) return;
     canvas.addEventListener('pointerdown', handlePointerDown);
     canvas.addEventListener('pointermove', handlePointerMove);
@@ -393,6 +390,7 @@ export function createDopplerView(options: CreateDopplerViewOptions = {}) {
   }
 
   function detachEvents(): void {
+    const canvas = stage.canvas;
     if (!canvas) return;
     canvas.removeEventListener('pointerdown', handlePointerDown);
     canvas.removeEventListener('pointermove', handlePointerMove);
@@ -400,8 +398,8 @@ export function createDopplerView(options: CreateDopplerViewOptions = {}) {
   }
 
   // 初始化
-  if (canvas) {
-    resizeCanvas();
+  if (stage.canvas) {
+    stage.resize();
     attachEvents();
   }
 
@@ -411,18 +409,17 @@ export function createDopplerView(options: CreateDopplerViewOptions = {}) {
       cachedObserverX = state.observerX;
       // 尺寸由 SceneAdapter 的 ResizeObserver/rAF 驱动 view.resize() 维护；
       // 仅当记录尺寸为 0（曾在隐藏容器中测量）时兜底重测一次，防首帧 0 尺寸。
-      if (cssW <= 0 || cssH <= 0) resizeCanvas();
+      stage.ensureSized();
       drawScene(state);
     },
     resize(): void {
-      resizeCanvas();
+      stage.resize();
     },
     setTheme(t: TeachingTheme): void {
-      theme = t;
+      env.setTheme(t);
     },
     setMode(m: TeachingMode, hints?: DemoRenderHints): void {
-      mode = m;
-      demoHints = hints;
+      env.setMode(m, hints);
     },
     setOnDrag(cb: (entity: 'source' | 'observer', x: number) => void): void {
       onDragCallback = cb;
@@ -432,8 +429,7 @@ export function createDopplerView(options: CreateDopplerViewOptions = {}) {
     },
     dispose(): void {
       detachEvents();
-      canvas = null;
-      ctx = null;
+      stage.release();
     }
   };
 }

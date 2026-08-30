@@ -11,7 +11,7 @@
 
 import type { TeachingTheme, TeachingMode } from '../../platform/standards';
 import type { DemoRenderHints } from '../../platform/demo-profile';
-import { sizeCanvasToFill } from '../../core/canvas-sizing';
+import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import type { DoubleSlitState } from './scene.sim';
 import {
   lambdaToGap,
@@ -78,31 +78,29 @@ let _cachedWl: number[] = [];
 export function createDoubleSlitView(
   options: CreateDoubleSlitViewOptions = {}
 ) {
-  let canvas = options.canvas ?? null;
-  let ctx: CanvasRenderingContext2D | null = null;
-  let theme: TeachingTheme = options.theme ?? 'dark';
-  let scale = 1;
-  let dpr = 1;
-  let mode: TeachingMode = options.mode ?? 'normal';
-  let demoHints: DemoRenderHints | undefined = options.demoHints;
-
-  /** 演示模式内容放大系数（normal=1，presentation=renderHints.contentScale） */
-  function getContentScale(): number {
-    return mode === 'presentation' ? (demoHints?.contentScale ?? 1.5) : 1;
-  }
-
-  function resizeCanvas(): void {
-    if (!canvas) return;
-    const newCtx = sizeCanvasToFill(canvas);
-    if (newCtx) ctx = newCtx;
-    const rawScale = parseFloat(canvas.dataset.responsiveScale || '1');
-    const cssW = parseFloat(canvas.style.width || '1000');
-    const cssH = parseFloat(canvas.style.height || '500');
-    dpr = canvas.width / cssW;
-    // 限制 scale 使 1000×500 逻辑画布始终能 fit 进 CSS 容器，再乘 dpr 利用高分辨率
-    const fitScale = Math.min(cssW / 1000, cssH / 500);
-    scale = Math.min(rawScale, fitScale);
-  }
+  const env = createViewEnvironment({
+    theme: options.theme,
+    mode: options.mode,
+    demoHints: options.demoHints
+  });
+  // 1000×500 逻辑画布：尺寸取自 style（sizeCanvasToFill 刚写入），
+  // scale 限制为逻辑画布 fit 进 CSS 容器的系数与 responsiveScale 的较小者
+  const stage = createCanvasViewport({
+    canvas: options.canvas ?? null,
+    sizing: { mode: 'raw' },
+    measure: (canvas) => ({
+      width: parseFloat(canvas.style.width || '1000'),
+      height: parseFloat(canvas.style.height || '500')
+    }),
+    resolveScale: (canvas, viewport) => {
+      const rawScale = parseFloat(canvas.dataset.responsiveScale || '1');
+      const fitScale = Math.min(
+        viewport.cssWidth / 1000,
+        viewport.cssHeight / 500
+      );
+      return Math.min(rawScale, fitScale);
+    }
+  });
 
   // 白光条纹面板离屏缓存（每实例一份）
   const whiteFringeCache = createWhiteFringeCache();
@@ -110,10 +108,13 @@ export function createDoubleSlitView(
   // ── 主渲染 ──
 
   function drawScene(next: DoubleSlitState): void {
-    const c = ctx;
-    if (!c || !canvas) return;
+    const c = stage.ctx;
+    if (!c || !stage.canvas) return;
+    const canvas = stage.canvas;
+    const scale = stage.responsiveScale;
+    const dpr = stage.dpr;
 
-    const isDark = theme === 'dark';
+    const isDark = env.theme === 'dark';
     const time = next.time;
     const step = next.params.step;
     const lambda = next.params.lambda;
@@ -153,7 +154,7 @@ export function createDoubleSlitView(
       c,
       white ? effectiveLambda : lambda,
       isDark,
-      getContentScale()
+      env.contentScale()
     );
 
     const CY = H * 0.5;
@@ -178,7 +179,7 @@ export function createDoubleSlitView(
         scene,
         isDark,
         L,
-        getContentScale()
+        env.contentScale()
       );
     } else {
       // 步骤 1–5：完整光路 + 仪器
@@ -190,10 +191,10 @@ export function createDoubleSlitView(
             CY,
             time,
             next.params.filterColor,
-            getContentScale()
+            env.contentScale()
           );
         } else {
-          drawMonoLightRays(c, POS, CY, time, palette.wave, getContentScale());
+          drawMonoLightRays(c, POS, CY, time, palette.wave, env.contentScale());
         }
       }
 
@@ -207,7 +208,7 @@ export function createDoubleSlitView(
             time,
             next.params.filterColor,
             scale,
-            getContentScale()
+            env.contentScale()
           );
         } else {
           drawWaves(
@@ -219,7 +220,7 @@ export function createDoubleSlitView(
             gap,
             time,
             scale,
-            getContentScale()
+            env.contentScale()
           );
         }
       }
@@ -235,7 +236,7 @@ export function createDoubleSlitView(
             time,
             next.params.filterColor,
             scale,
-            getContentScale()
+            env.contentScale()
           );
           drawWhiteWaves(
             c,
@@ -245,7 +246,7 @@ export function createDoubleSlitView(
             time,
             next.params.filterColor,
             scale,
-            getContentScale()
+            env.contentScale()
           );
         } else {
           drawWaves(
@@ -257,7 +258,7 @@ export function createDoubleSlitView(
             gap,
             time,
             scale,
-            getContentScale()
+            env.contentScale()
           );
           drawWaves(
             c,
@@ -268,7 +269,7 @@ export function createDoubleSlitView(
             gap,
             time,
             scale,
-            getContentScale()
+            env.contentScale()
           );
         }
       }
@@ -299,7 +300,7 @@ export function createDoubleSlitView(
             wavelengths,
             isDark,
             scale,
-            getContentScale()
+            env.contentScale()
           );
         } else {
           drawInterferenceOverlay(
@@ -314,7 +315,7 @@ export function createDoubleSlitView(
             isDark,
             time,
             scale,
-            getContentScale()
+            env.contentScale()
           );
         }
       }
@@ -331,7 +332,7 @@ export function createDoubleSlitView(
         white,
         next.params.filterColor,
         scale,
-        getContentScale()
+        env.contentScale()
       );
 
       // 干涉条纹与光强曲线
@@ -347,7 +348,7 @@ export function createDoubleSlitView(
             scene,
             isDark,
             scale,
-            getContentScale()
+            env.contentScale()
           );
           drawWhiteFringeDisplay(
             c,
@@ -359,7 +360,7 @@ export function createDoubleSlitView(
             isDark,
             W,
             H,
-            getContentScale()
+            env.contentScale()
           );
         } else {
           drawInterferencePattern(
@@ -372,7 +373,7 @@ export function createDoubleSlitView(
             POS.screen - POS.doubleSlit,
             scene,
             scale,
-            getContentScale()
+            env.contentScale()
           );
         }
       }
@@ -380,25 +381,23 @@ export function createDoubleSlitView(
   }
 
   // ── 初始化 ──
-  if (canvas) resizeCanvas();
+  if (stage.canvas) stage.resize();
 
   return {
     render(state: DoubleSlitState) {
       drawScene(state);
     },
     resize() {
-      resizeCanvas();
+      stage.resize();
     },
     setTheme(t: TeachingTheme) {
-      theme = t;
+      env.setTheme(t);
     },
     setMode(newMode: TeachingMode, hints?: DemoRenderHints) {
-      mode = newMode;
-      demoHints = hints;
+      env.setMode(newMode, hints);
     },
     dispose() {
-      canvas = null;
-      ctx = null;
+      stage.release();
       // 释放 offscreen 缓存
       resetSpectrumCache();
       resetInterferenceCaches();

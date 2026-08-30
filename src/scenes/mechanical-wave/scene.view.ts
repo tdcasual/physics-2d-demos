@@ -6,7 +6,7 @@
 
 import type { TeachingTheme, TeachingMode } from '../../platform/standards';
 import type { DemoRenderHints } from '../../platform/demo-profile';
-import { sizeCanvasToFill } from '../../core/canvas-sizing';
+import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import type { MechanicalWaveState } from './scene.sim';
 import { waveY, waveVelocity, waveAcceleration } from './scene.sim';
 
@@ -51,14 +51,18 @@ const PALETTE = {
 export function createMechanicalWaveView(
   options: CreateMechanicalWaveViewOptions = {}
 ) {
-  let canvas = options.canvas ?? null;
-  let ctx: CanvasRenderingContext2D | null = null;
-  let theme: TeachingTheme = options.theme ?? 'dark';
-  let mode: TeachingMode = options.mode ?? 'normal';
-  let demoHints: DemoRenderHints | undefined = options.demoHints;
-  let cssW = 800;
-  let cssH = 400;
-  let responsiveScale = 1;
+  const env = createViewEnvironment({
+    theme: options.theme,
+    mode: options.mode,
+    demoHints: options.demoHints
+  });
+  // raw 记录：隐藏容器下 rect 为 0，render 兜底以 0 值判据触发重测
+  const stage = createCanvasViewport({
+    canvas: options.canvas ?? null,
+    sizing: { mode: 'raw' },
+    initialWidth: 800,
+    initialHeight: 400
+  });
 
   // 世界坐标范围
   const WORLD_X_MIN = 0;
@@ -73,17 +77,8 @@ export function createMechanicalWaveView(
 
   let onPointSelectCallback: ((x: number) => void) | null = null;
 
-  function resizeCanvas(): void {
-    if (!canvas) return;
-    const newCtx = sizeCanvasToFill(canvas);
-    if (newCtx) ctx = newCtx;
-    const rect = canvas.getBoundingClientRect();
-    cssW = rect.width;
-    cssH = rect.height;
-    responsiveScale = parseFloat(canvas.dataset.responsiveScale || '1');
-  }
-
   function worldToPixelX(x: number): number {
+    const cssW = stage.cssWidth;
     const drawW = cssW - MARGIN_LEFT - MARGIN_RIGHT;
     return (
       MARGIN_LEFT + ((x - WORLD_X_MIN) / (WORLD_X_MAX - WORLD_X_MIN)) * drawW
@@ -91,33 +86,33 @@ export function createMechanicalWaveView(
   }
 
   function worldToPixelY(y: number): number {
+    const cssH = stage.cssHeight;
     const drawH = cssH - MARGIN_TOP - MARGIN_BOTTOM;
     const midY = MARGIN_TOP + drawH / 2;
     return midY - (y / (WORLD_Y_MAX - WORLD_Y_MIN)) * drawH;
   }
 
   function pixelToWorldX(px: number): number {
+    const cssW = stage.cssWidth;
     const drawW = cssW - MARGIN_LEFT - MARGIN_RIGHT;
     return (
       WORLD_X_MIN + ((px - MARGIN_LEFT) / drawW) * (WORLD_X_MAX - WORLD_X_MIN)
     );
   }
 
-  /** 演示模式内容放大系数（normal=1，presentation=renderHints.contentScale） */
-  function getContentScale(): number {
-    return mode === 'presentation' ? (demoHints?.contentScale ?? 1.5) : 1;
-  }
-
   function drawScene(state: MechanicalWaveState): void {
-    const c = ctx;
-    if (!c || !canvas) return;
-    const p = PALETTE[theme === 'dark' ? 'dark' : 'light'];
+    const c = stage.ctx;
+    if (!c || !stage.canvas) return;
+    const responsiveScale = stage.responsiveScale;
+    const cssW = stage.cssWidth;
+    const cssH = stage.cssHeight;
+    const p = PALETTE[env.theme === 'dark' ? 'dark' : 'light'];
     const { amplitude, wavelength, period, direction, showMicroShift } =
       state.params;
     const dir = direction === 'right' ? 1 : -1;
     const t = state.time;
     // 演示模式：几何坐标不变，字号/线宽/关键点按 contentScale 放大
-    const cs = getContentScale();
+    const cs = env.contentScale();
     const fs = Math.max(11, 12 * responsiveScale * cs);
 
     c.clearRect(0, 0, cssW, cssH);
@@ -336,6 +331,7 @@ export function createMechanicalWaveView(
 
   // ── Canvas 交互 ──
   function handleClick(e: PointerEvent): void {
+    const canvas = stage.canvas;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
     const px = e.clientX - rect.left;
@@ -346,18 +342,20 @@ export function createMechanicalWaveView(
   }
 
   function attachEvents(): void {
+    const canvas = stage.canvas;
     if (!canvas) return;
     canvas.addEventListener('pointerdown', handleClick);
     canvas.style.cursor = 'crosshair';
   }
 
   function detachEvents(): void {
+    const canvas = stage.canvas;
     if (!canvas) return;
     canvas.removeEventListener('pointerdown', handleClick);
   }
 
-  if (canvas) {
-    resizeCanvas();
+  if (stage.canvas) {
+    stage.resize();
     attachEvents();
   }
 
@@ -365,26 +363,24 @@ export function createMechanicalWaveView(
     render(state: MechanicalWaveState): void {
       // 尺寸由 SceneAdapter 的 ResizeObserver/rAF 驱动 view.resize() 维护；
       // 仅当记录尺寸为 0（曾在隐藏容器中测量）时兜底重测一次，防首帧 0 尺寸。
-      if (cssW <= 0 || cssH <= 0) resizeCanvas();
+      stage.ensureSized();
       drawScene(state);
     },
     resize(): void {
-      resizeCanvas();
+      stage.resize();
     },
     setTheme(t: TeachingTheme): void {
-      theme = t;
+      env.setTheme(t);
     },
     setMode(m: TeachingMode, hints?: DemoRenderHints): void {
-      mode = m;
-      demoHints = hints;
+      env.setMode(m, hints);
     },
     setOnPointSelect(cb: (x: number) => void): void {
       onPointSelectCallback = cb;
     },
     dispose(): void {
       detachEvents();
-      canvas = null;
-      ctx = null;
+      stage.release();
     }
   };
 }

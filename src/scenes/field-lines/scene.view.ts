@@ -2,7 +2,7 @@ import type { TeachingMode } from '../../platform/standards';
 import { getRenderTokens } from '../../platform/standards';
 import type { TeachingTheme } from '../../platform/standards';
 import type { DemoRenderHints } from '../../platform/demo-profile';
-import { sizeCanvasToFill } from '../../core/canvas-sizing';
+import { createCanvasViewport } from '../view-base';
 import type { FieldLinesSnapshot } from './scene.sim';
 import { generateFieldLines } from './renderer/trace-field';
 import { drawFieldLines } from './renderer/draw-field-lines';
@@ -50,15 +50,17 @@ const THEME_CONFIG: Record<TeachingTheme, ThemeColors> = {
 export function createFieldLinesView(
   options: CreateFieldLinesViewOptions = {}
 ) {
-  let canvas = options.canvas ?? null;
-  let ctx = canvas?.getContext('2d') ?? null;
+  const stage = createCanvasViewport({
+    canvas: options.canvas ?? null,
+    sizing: { mode: 'clamped', fallbackWidth: 1280, fallbackHeight: 720 },
+    initialWidth: 1280,
+    initialHeight: 720,
+    eagerContext: true
+  });
   let mode: TeachingMode = options.mode ?? 'normal';
   let demoHints: DemoRenderHints | null = options.demoHints ?? null;
   let theme: TeachingTheme = options.theme ?? 'dark';
   let snapshot: FieldLinesSnapshot | null = null;
-  let cssWidth = 1280;
-  let cssHeight = 720;
-  let cachedScale = 1;
   // 渲染签名：全部画面输入（快照引用 + 尺寸 + scale + contentScale + theme + mode）
   // 未变时跳过静态画面的昂贵重绘（热力图 / 等势线 / 电场线追踪）
   let lastRenderKey: {
@@ -71,40 +73,31 @@ export function createFieldLinesView(
     mode: TeachingMode;
   } | null = null;
 
-  function resizeCanvas(): void {
-    if (!canvas) return;
-    const newCtx = sizeCanvasToFill(canvas);
-    if (newCtx) ctx = newCtx;
-    const rect = canvas.getBoundingClientRect();
-    cssWidth = Math.max(200, Math.floor(rect.width || 1280));
-    cssHeight = Math.max(150, Math.floor(rect.height || 720));
-    cachedScale = parseFloat(canvas.dataset.responsiveScale || '1');
-  }
-
   function getScale(): number {
     return demoHints?.contentScale ?? (mode === 'presentation' ? 1.5 : 1.0);
   }
 
   function toPixelCharges(next: FieldLinesSnapshot): PixelCharge[] {
     const visuals = getVisuals(getScale());
-    const s = cachedScale;
+    const s = stage.responsiveScale;
     return next.charges.map((charge) => ({
-      x: charge.x * cssWidth,
-      y: charge.y * cssHeight,
+      x: charge.x * stage.cssWidth,
+      y: charge.y * stage.cssHeight,
       q: charge.q,
       radius: visuals.chargeRadius * s
     }));
   }
 
   function draw(next: FieldLinesSnapshot): void {
+    const ctx = stage.ctx;
     if (!ctx) return;
 
-    const width = cssWidth;
-    const height = cssHeight;
+    const width = stage.cssWidth;
+    const height = stage.cssHeight;
     const colors = THEME_CONFIG[theme];
     const charges = toPixelCharges(next);
     const density = Math.max(1, Math.min(100, Math.round(next.params.density)));
-    const s = cachedScale;
+    const s = stage.responsiveScale;
     const isDark = theme === 'dark';
 
     // 1. 纯色背景
@@ -132,9 +125,9 @@ export function createFieldLinesView(
 
     lastRenderKey = {
       snapshot: next,
-      cssWidth,
-      cssHeight,
-      scale: cachedScale,
+      cssWidth: width,
+      cssHeight: height,
+      scale: s,
       contentScale: getScale(),
       theme,
       mode
@@ -148,9 +141,9 @@ export function createFieldLinesView(
       if (
         key &&
         key.snapshot === next &&
-        key.cssWidth === cssWidth &&
-        key.cssHeight === cssHeight &&
-        key.scale === cachedScale &&
+        key.cssWidth === stage.cssWidth &&
+        key.cssHeight === stage.cssHeight &&
+        key.scale === stage.responsiveScale &&
         key.contentScale === getScale() &&
         key.theme === theme &&
         key.mode === mode
@@ -160,7 +153,7 @@ export function createFieldLinesView(
       draw(next);
     },
     resize(): void {
-      resizeCanvas();
+      stage.resize();
       if (snapshot) draw(snapshot);
     },
     setMode(nextMode: TeachingMode, hints?: DemoRenderHints): void {
@@ -180,8 +173,7 @@ export function createFieldLinesView(
     },
     dispose(): void {
       snapshot = null;
-      canvas = null;
-      ctx = null;
+      stage.release();
     }
   };
 }

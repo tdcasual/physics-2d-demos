@@ -13,7 +13,7 @@
 
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import type { DemoRenderHints } from '../../platform/demo-profile';
-import { sizeCanvasToFill } from '../../core/canvas-sizing';
+import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import { wavelengthToColor } from '../../core/wavelength';
 import type { InterferenceFormulaState } from './scene.sim';
 import {
@@ -38,43 +38,30 @@ export type CreateInterferenceFormulaViewOptions = {
 export function createInterferenceFormulaView(
   options: CreateInterferenceFormulaViewOptions = {}
 ) {
-  let canvas = options.canvas ?? null;
-  let ctx: CanvasRenderingContext2D | null = null;
-  let graphCanvas = options.graphCanvas ?? null;
-  let graphCtx: CanvasRenderingContext2D | null = null;
-  let theme: TeachingTheme = options.theme ?? 'dark';
-  let mode: TeachingMode = options.mode ?? 'normal';
-  let demoHints: DemoRenderHints | undefined = options.demoHints;
+  const env = createViewEnvironment({
+    theme: options.theme,
+    mode: options.mode,
+    demoHints: options.demoHints
+  });
+  const stage = createCanvasViewport({
+    canvas: options.canvas ?? null,
+    initialWidth: 800,
+    initialHeight: 600
+  });
+  const graph = createCanvasViewport({
+    canvas: options.graphCanvas ?? null
+  });
   let state: InterferenceFormulaState | null = null;
-  let cssWidth = 800;
-  let cssHeight = 600;
-  let scale = 1;
-
-  function resizeCanvas(): void {
-    if (!canvas) return;
-    const newCtx = sizeCanvasToFill(canvas);
-    if (newCtx) ctx = newCtx;
-    const rect = canvas.getBoundingClientRect();
-    cssWidth = Math.max(200, Math.floor(rect.width || 800));
-    cssHeight = Math.max(150, Math.floor(rect.height || 600));
-    scale = parseFloat(canvas.dataset.responsiveScale || '1');
-  }
-
-  function resizeGraphCanvas(): void {
-    if (!graphCanvas) return;
-    const newCtx = sizeCanvasToFill(graphCanvas);
-    if (newCtx) graphCtx = newCtx;
-  }
 
   function drawScene(next: InterferenceFormulaState): void {
-    const c = ctx;
+    const c = stage.ctx;
     if (!c) return;
-    const w = cssWidth;
-    const h = cssHeight;
+    const w = stage.cssWidth;
+    const h = stage.cssHeight;
+    const scale = stage.responsiveScale;
     // 演示模式内容放大系数（normal=1，presentation=renderHints.contentScale）
-    const modeScale =
-      mode === 'presentation' ? (demoHints?.contentScale ?? 1.5) : 1.0;
-    const isDark = theme === 'dark';
+    const modeScale = env.contentScale();
+    const isDark = env.theme === 'dark';
     const text = isDark ? '#e2e8f0' : '#1e293b';
     const dim = isDark ? '#94a3b8' : '#64748b';
     const accent = wavelengthToColor(next.params.lambda);
@@ -206,7 +193,7 @@ export function createInterferenceFormulaView(
     }
 
     // ── 图表区：干涉条纹始终显示 ──
-    drawFringeGraph(graphCtx, graphCanvas, next, modeScale, theme);
+    drawFringeGraph(graph.ctx, graph.canvas, next, modeScale, env.theme);
   }
 
   return {
@@ -215,31 +202,26 @@ export function createInterferenceFormulaView(
       drawScene(next);
     },
     resize(): void {
-      resizeCanvas();
-      resizeGraphCanvas();
+      stage.resize();
+      graph.resize();
       if (state) drawScene(state);
     },
     setMode(next: TeachingMode, hints?: DemoRenderHints): void {
-      mode = next;
-      demoHints = hints;
+      env.setMode(next, hints);
       if (state) drawScene(state);
     },
     setTheme(next: TeachingTheme): void {
-      theme = next;
+      env.setTheme(next);
       if (state) drawScene(state);
     },
     attachGraphCanvas(canvas: HTMLCanvasElement): void {
-      graphCanvas = canvas;
-      graphCtx = canvas.getContext('2d');
-      resizeGraphCanvas();
+      graph.attach(canvas);
       if (state) drawScene(state);
     },
     dispose(): void {
       state = null;
-      canvas = null;
-      ctx = null;
-      graphCanvas = null;
-      graphCtx = null;
+      stage.release();
+      graph.release();
     }
   };
 }

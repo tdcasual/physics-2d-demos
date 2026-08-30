@@ -4,7 +4,7 @@
 
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import type { DemoRenderHints } from '../../platform/demo-profile';
-import { sizeCanvasToFill } from '../../core/canvas-sizing';
+import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import type { ThinFilmState } from './scene.sim';
 import { thicknessAtY } from './scene.sim';
 import { lambdaToRgb, wavelengthToColor } from '../../core/wavelength';
@@ -19,20 +19,29 @@ export type CreateThinFilmViewOptions = {
 };
 
 export function createThinFilmView(options: CreateThinFilmViewOptions = {}) {
-  const canvas = options.canvas ?? null;
-  let ctx: CanvasRenderingContext2D | null = null;
-  let graphCanvas = options.graphCanvas ?? null;
-  let graphCtx: CanvasRenderingContext2D | null = null;
-  let theme: TeachingTheme = options.theme ?? 'dark';
-  let mode: TeachingMode = options.mode ?? 'normal';
-  let demoHints: DemoRenderHints | undefined = options.demoHints;
-  let cssWidth = 800;
-  let cssHeight = 600;
-  let scale = 1;
+  const env = createViewEnvironment({
+    theme: options.theme,
+    mode: options.mode,
+    demoHints: options.demoHints
+  });
+  const stage = createCanvasViewport({
+    canvas: options.canvas ?? null,
+    initialWidth: 800,
+    initialHeight: 600
+  });
   // 图表 canvas 的记录尺寸（resize 时更新，render 热路径不再读 getBoundingClientRect）
-  let graphW = 400;
-  let graphH = 200;
-  let graphScale = 1;
+  const graph = createCanvasViewport({
+    canvas: options.graphCanvas ?? null,
+    sizing: {
+      mode: 'clamped',
+      fallbackWidth: 400,
+      fallbackHeight: 200,
+      minWidth: 200,
+      minHeight: 100
+    },
+    initialWidth: 400,
+    initialHeight: 200
+  });
 
   // 离屏 canvas 缓存，避免每帧分配（同时解决 HiDPI putImageData 坐标问题）
   let offCanvas: HTMLCanvasElement | null = null;
@@ -41,35 +50,15 @@ export function createThinFilmView(options: CreateThinFilmViewOptions = {}) {
   let offH = 0;
   let _offKey = ''; // 缓存 key：参数未变时跳过重绘
 
-  function resizeCanvas(): void {
-    if (!canvas) return;
-    const newCtx = sizeCanvasToFill(canvas);
-    if (newCtx) ctx = newCtx;
-    const rect = canvas.getBoundingClientRect();
-    cssWidth = Math.max(200, Math.floor(rect.width || 800));
-    cssHeight = Math.max(150, Math.floor(rect.height || 600));
-    scale = parseFloat(canvas.dataset.responsiveScale || '1');
-  }
-
-  function resizeGraphCanvas(): void {
-    if (!graphCanvas) return;
-    const newCtx = sizeCanvasToFill(graphCanvas);
-    if (newCtx) graphCtx = newCtx;
-    const rect = graphCanvas.getBoundingClientRect();
-    graphW = Math.max(200, Math.floor(rect.width || 400));
-    graphH = Math.max(100, Math.floor(rect.height || 200));
-    graphScale = parseFloat(graphCanvas.dataset.responsiveScale || '1');
-  }
-
   function drawScene(next: ThinFilmState): void {
-    const c = ctx;
+    const c = stage.ctx;
     if (!c) return;
-    const w = cssWidth;
-    const h = cssHeight;
+    const w = stage.cssWidth;
+    const h = stage.cssHeight;
+    const scale = stage.responsiveScale;
     // 演示模式内容放大系数（normal=1，presentation=renderHints.contentScale）
-    const modeScale =
-      mode === 'presentation' ? (demoHints?.contentScale ?? 1.5) : 1.0;
-    const isDark = theme === 'dark';
+    const modeScale = env.contentScale();
+    const isDark = env.theme === 'dark';
     const text = isDark ? '#e2e8f0' : '#1e293b';
     const dim = isDark ? '#94a3b8' : '#64748b';
     const accent = wavelengthToColor(next.params.lambda);
@@ -330,21 +319,21 @@ export function createThinFilmView(options: CreateThinFilmViewOptions = {}) {
   }
 
   function drawReflectivityGraph(next: ThinFilmState): void {
-    const gc = graphCtx;
-    const gCanvas = graphCanvas;
+    const gc = graph.ctx;
+    const gCanvas = graph.canvas;
     if (!gc || !gCanvas) return;
 
     // 隐藏 tab（display:none）下跳过重绘；切回可见时由 SceneAdapter
     // 的可见性 ResizeObserver 触发 resize+render 补帧。
-    // 注意不能用 resizeGraphCanvas 记录的 graphW/graphH 判断：
+    // 注意不能用 resize 记录的 graphW/graphH 判断：
     // 记录值经 Math.max clamp 恒 > 0，无法反映可见性。
     if (gCanvas.offsetParent === null) return;
 
-    // 使用 resizeGraphCanvas 记录的尺寸，避免每帧同步布局查询
-    const gw = graphW;
-    const gh = graphH;
-    const gScale = graphScale;
-    const isDark = theme === 'dark';
+    // 使用 resize 记录的尺寸，避免每帧同步布局查询
+    const gw = graph.cssWidth;
+    const gh = graph.cssHeight;
+    const gScale = graph.responsiveScale;
+    const isDark = env.theme === 'dark';
     const text = isDark ? '#e2e8f0' : '#1e293b';
     const dim = isDark ? '#94a3b8' : '#64748b';
     const accent = wavelengthToColor(next.params.lambda);
@@ -590,25 +579,23 @@ export function createThinFilmView(options: CreateThinFilmViewOptions = {}) {
       // 尺寸由 SceneAdapter 的 ResizeObserver/rAF 驱动 view.resize() 维护；
       // 仅在尚未完成首次 sizing（ctx 未建立）时兜底一次，防首帧 0 尺寸。
       // 记录尺寸经 Math.max clamp 恒 > 0，故以 ctx 是否建立作为判据。
-      if (!ctx) resizeCanvas();
-      if (!graphCtx) resizeGraphCanvas();
+      if (!stage.ctx) stage.resize();
+      if (!graph.ctx) graph.resize();
       drawScene(next);
     },
     resize(): void {
-      resizeCanvas();
-      resizeGraphCanvas();
+      stage.resize();
+      graph.resize();
     },
     setTheme(t: TeachingTheme): void {
-      theme = t;
+      env.setTheme(t);
       _offKey = ''; // 主题改变背景色，需重绘
     },
     setMode(next: TeachingMode, hints?: DemoRenderHints): void {
-      mode = next;
-      demoHints = hints;
+      env.setMode(next, hints);
     },
     attachGraphCanvas(canvas: HTMLCanvasElement): void {
-      graphCanvas = canvas;
-      resizeGraphCanvas();
+      graph.attach(canvas);
     },
     dispose(): void {}
   };
