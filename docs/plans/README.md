@@ -22,7 +22,7 @@
 | [2026-03-06-readout-panel-compact.md](2026-03-06-readout-panel-compact.md)                                             | 03-06 | 读数面板紧凑化                               | ✅ 已完成 |
 | [legacy-parity-checklist.md](legacy-parity-checklist.md)                                                               | 03-04 | Legacy 一致性检查清单                        | 🗄️ 已归档 |
 | [2026-05-07-audit-remediation-plan.md](2026-05-07-audit-remediation-plan.md)                                           | 05-07 | 审计整改（预算/覆盖率/文档/仪器/样式）       | ✅ 已完成 |
-| [2026-08-30-audit-remediation-plan.md](2026-08-30-audit-remediation-plan.md)                                           | 08-30 | 全项目审计整改（正确性/文档/测试/样板/性能） | 🔵 进行中 |
+| [2026-08-30-audit-remediation-plan.md](2026-08-30-audit-remediation-plan.md)                                           | 08-30 | 全项目审计整改（正确性/文档/测试/样板/性能） | ✅ 已完成 |
 
 ---
 

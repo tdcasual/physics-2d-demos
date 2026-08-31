@@ -151,3 +151,23 @@
 - **P3** 每一项独立 commit，便于回滚；完成后删掉的重复行数预期 240+。
 - **P4/P5** 不单独排期，碰到相关文件时顺手做；20 的 standalone 验证建议在下次发布前做一次。
 - 全部阶段完成后跑 `pnpm quality:core`；涉及 UI 的改动（P3-12、P4-17/18）需补跑视觉基线校验（Linux 基线走 `scripts/visual-linux-container.sh`）。
+
+---
+
+## 执行结果（2026-08-31 全部完成）
+
+按 commit 追溯（`git log cd439b4..` 后段）：
+
+- **P0**（`3d64f87`）：TDZ 修复。
+- **P1**（`5417e12` + `58aba54`）：文档纠偏全部落地。
+- **P2-7/8**（`bb63af4`、`035b12e`）：doppler-effect 17 例、mechanical-wave 16 例。校准中发现两点事实：波环发射按帧量化（容差按一帧传播距离）；mechanical-wave 约束系统不 clamp 直接设置的参数本身（设计取舍，断言已对齐）。
+- **P2-9/10/11**（同一提交）：仪器 sim ×2（各 21 例，100% 覆盖）、platform viewport（16）、instruments viewport（8）、ganshe presets（24）、expression-parser 错误路径（26）；scene-entries 能力清单改从 testProfile 派生（顺带修正两处过期清单，断言数 157→190）。playwright config 合并不做（CI 耦合，收益仅美容）。
+- **P3-12**（`90b951a`）：micrometer/vernier-caliper 迁移 view-base（raw sizing 逐帧等价配置）；附带修复 preset 键盘导航此前不更新读数的 bug。
+- **P3-13/16**（`ca8b94e`）：7 个页面中**仅 projectile** 是纯透传可直返（其余 6 个含 syncFromScene / 滑块联动等真实逻辑，审计估计偏乐观）；doppler preset 收敛到 page-utils；mechanical-wave 类型擦除 cast 移除；零散死 export 清理。
+- **P3-14**（`6817c01`）：`wrapAction<A, R>`（泛型透传返回值）+ `resetView` 钩子；9 个 entry 迁移 ~25 处三行组；projectile 迁回标准 entry（删 ~55 行）；chase-meet 仅复用 createNotifySystem（其通知/渲染时序与标准 base 刻意不同，不整体迁入）。
+- **P3-15**（`0569f5f`）：**「两种 contentScale 语义」实为 bug**——field-lines/chase-meet 粘性保留 demoHints，presentation 切回 normal 后仍以演示倍率渲染。已统一到 view-base 语义。wedge/projectile/vt-integral 的三处内联同构表达式语义本就一致，未强行收敛。
+- **P4-17/18/19**（`0569f5f`）：interference-formula 热路径 DOM 读消除 + 条纹离屏缓存；electrification/field-lines 渐变键控缓存；ganshe 自适应采样（保底不比原 0.05 更密）。
+- **P4-20**（`658a0b1`）：**standalone 导出确认整体损坏并已修复**，三个叠加 bug：topoSortChunks 不跟随 dynamicImports（懒加载 chunk 被删）、内联 script 丢 type="module"（head 阶段先于 #app 执行）、esbuild IIFE 清空 import.meta 导致 \_\_vitePreload 抛 Invalid URL。修法：dynamicImports 遍历 + 保留 module defer 语义 + standalone 配置 modulePreload:false / cssCodeSplit:false / base:'./' + esbuild resolver 归一化。Playwright file:// 实测 5 场景零报错，double-slit 仪器懒加载验证通过。
+- **P5-21/22**（`c0f7acf`）：ESLint 四处层间缺口补齐（跨场景导入禁令用 regex 负向前瞻，实现要点见 eslint.config.js 注释），39 个合成探针验证无误伤；electrification 成为场景侧首个 hint 范例。
+
+**质量门禁**：`pnpm quality:core` 全绿（114 测试文件、构建 + bundle 预算通过）。渲染等价性改动（P3-12/P4）经 Linux 容器视觉基线校验。
