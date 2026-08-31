@@ -6,6 +6,12 @@
  *
  * 新增场景无需手动注册：只要 scene.entry.ts 导出了符合命名
  * 约定的 create 函数，就会被自动发现并纳入测试。
+ *
+ * 能力清单不再手动维护：
+ * - transport 能力直接派生自 SceneMeta.testProfile.hasTransport
+ *   （契约测试 scene-standard.spec.ts 已强制每个场景声明 testProfile）
+ * - getState / getSnapshot 由 scene-smoke 内部对实例做 typeof 探测，
+ *   存在即断言返回值 truthy，缺失则安全跳过
  */
 
 import { testSceneSmoke } from '../helpers/scene-smoke';
@@ -38,38 +44,27 @@ for (const [path, mod] of Object.entries(sceneModules)) {
 
   discovered.push(dirName);
 
+  const registryEntry = sceneRegistry.find((entry) => entry.id === dirName);
+  const testProfile = registryEntry?.testProfile;
+  if (!testProfile) {
+    throw new Error(
+      `Scene "${dirName}" has no SceneMeta.testProfile; smoke tests cannot infer its capabilities.`
+    );
+  }
+
   // spring-oscillator 使用 graphCanvas/stageCanvas 而非 canvas，
   // 但传递 canvas 也无副作用（函数内解构忽略未知 key）
   const needsCanvas = true;
-
-  // 根据场景的实际接口能力设置选项
-  const hasGetState = [
-    'projectile',
-    'chase-meet',
-    'ganshe',
-    'doppler-effect',
-    'mechanical-wave'
-  ].includes(dirName);
-  const hasGetSnapshot = [
-    'chase-meet',
-    'electrification',
-    'emf-analogy',
-    'field-lines',
-    'vt-integral'
-  ].includes(dirName);
-  const hasTransport = [
-    'spring-oscillator',
-    'chase-meet',
-    'projectile'
-  ].includes(dirName);
 
   testSceneSmoke(dirName, (opts) => createFn(opts), {
     needsCanvas,
     supportsSetMode: true,
     supportsSetTheme: true,
-    supportsTransport: hasTransport,
-    supportsGetState: hasGetState,
-    supportsGetSnapshot: hasGetSnapshot
+    supportsTransport: testProfile.hasTransport,
+    // getState/getSnapshot 不属于 testProfile 字段；scene-smoke 的能力
+    // 测试内部按实例实际方法探测，恒为 true 即可全量自动覆盖
+    supportsGetState: true,
+    supportsGetSnapshot: true
   });
 }
 
