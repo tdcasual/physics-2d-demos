@@ -45,7 +45,16 @@ const result = await build({
       name: 'virtual-chunks',
       setup(b) {
         b.onResolve({ filter: /.*/ }, (args) => {
-          for (const key of [args.path, args.path.replace(/^\.\//, '')]) {
+          // 归一化各种 specifier 形态：'./x.js'、'/assets/x.js'、'assets/x.js'
+          const stripped = args.path.replace(/^\.?\//, '');
+          const candidates = [
+            args.path,
+            stripped,
+            stripped.replace(/^assets\//, ''),
+            // chunkData 同时以 fileName 与 basename 为键
+            stripped.split('/').pop() ?? stripped
+          ];
+          for (const key of candidates) {
             if (chunkMap.has(key)) {
               return { path: key, namespace: 'virtual' };
             }

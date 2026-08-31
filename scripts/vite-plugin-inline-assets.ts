@@ -23,6 +23,8 @@ type OutputChunk = {
   type: 'chunk';
   fileName: string;
   imports: string[];
+  /** 动态导入的 chunk；standalone 单文件产物必须一并内联 */
+  dynamicImports: string[];
   isEntry?: boolean;
   code: string;
   facadeModuleId?: string | null;
@@ -34,6 +36,12 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 /**
  * Topological sort of chunks starting from an entry chunk.
+ *
+ * Follows both static imports and dynamic imports: the standalone HTML is
+ * a single file with no assets/ directory, so lazily-loaded chunks (layouts,
+ * instruments) must be inlined too. esbuild converts their import() into a
+ * Promise.resolve().then() shim (iife format, no code splitting), keeping
+ * the async semantics intact.
  */
 function topoSortChunks(
   entry: OutputChunk,
@@ -48,6 +56,9 @@ function topoSortChunks(
     const chunk = bundle[fileName];
     if (!chunk || chunk.type !== 'chunk') return;
     for (const imp of chunk.imports) {
+      visit(imp);
+    }
+    for (const imp of chunk.dynamicImports) {
       visit(imp);
     }
     result.push(chunk);
@@ -92,10 +103,11 @@ function bundleChunksToIife(chunks: OutputChunk[], tmpDir: string): string {
 }
 
 /**
- * Strip leading slash to match bundle keys.
+ * Strip leading slash / relative prefixes to match bundle keys.
+ * Handles '/assets/x', './assets/x', '../assets/x' → 'assets/x'.
  */
 function assetPathToKey(path: string): string {
-  return path.replace(/^\//, '');
+  return path.replace(/^(\.\.?\/)+/, '').replace(/^\//, '');
 }
 
 /**
@@ -178,11 +190,13 @@ export function inlineAssets(): Plugin {
               let bundledCode = bundleChunksToIife(orderedChunks, tmpDir);
               // Escape </script> inside the JS to prevent premature tag closing
               bundledCode = bundledCode.replace(/<\/script>/gi, '<\\/script>');
+              // 保留 type="module"：模块脚本默认 deferred，内联为 classic
+              // script 会在 head 解析阶段先于 #app 执行，导致启动挂载失败。
               // Use regex + function replacement to avoid JS treating $ in
               // bundledCode as special replacement patterns ($&, $', $`, $n)
               html = html.replace(
                 new RegExp(escapeRegex(fullScriptTag)),
-                () => `<script>\n${bundledCode}\n</script>`
+                () => `<script type="module">\n${bundledCode}\n</script>`
               );
             } catch (err) {
               console.warn(
