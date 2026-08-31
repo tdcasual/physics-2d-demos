@@ -4,8 +4,6 @@
 
 export type CaliperPrecision = 0.02 | 0.05 | 0.1;
 
-export type CaliperObjectType = 'ball' | 'block' | 'tube';
-
 export type CaliperParams = {
   precision: CaliperPrecision;
   objectType: number; // 0=ball, 1=block, 2=tube

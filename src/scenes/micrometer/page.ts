@@ -37,50 +37,22 @@ bootScenePage({
       mount,
       schema: micrometerControlsSchema,
       onChange: (key, value) => {
+        if (key === 'preset') {
+          // 预设语义 = 设定 reading 数值；setValue 派发 input 事件，
+          // 经由 reading 的 onChange 统一完成 setParams/scheduleRender/writeParam
+          const val = parseFloat(String(value));
+          if (!Number.isNaN(val)) renderer.setValue('reading', val);
+          return;
+        }
         if (key === 'reading') {
           microScene.setParams({ reading: parseFloat(String(value)) });
         }
         scheduleRender();
         writeParam(key, value);
       },
-      onAction: (key) => {
-        if (key === 'preset') {
-          // preset 按钮点击时，通过 onChange 回调中的 key='preset' 处理
-        }
-      }
+      onAction: () => {}
     });
 
-    // 自定义 preset 处理：preset 按钮设置 reading 值
-    const presetContainer = mount.querySelector('[data-field="preset"]');
-    const onPresetClick = (e: Event) => {
-      const btn = (e.target as HTMLElement).closest('[data-preset-id]');
-      if (btn) {
-        const val = parseFloat(
-          (btn as HTMLElement).dataset.presetId || '4.593'
-        );
-        microScene.setParams({ reading: val });
-        renderer.setValue('reading', val);
-        scheduleRender();
-        writeParam('reading', val);
-      }
-    };
-    if (presetContainer) {
-      presetContainer.addEventListener('click', onPresetClick);
-    }
-
-    return {
-      setValue(key: string, value: number | string) {
-        renderer.setValue(key, value);
-      },
-      setActive(key: string, value: string) {
-        renderer.setActive(key, value);
-      },
-      dispose() {
-        if (presetContainer) {
-          presetContainer.removeEventListener('click', onPresetClick);
-        }
-        renderer.dispose();
-      }
-    };
+    return renderer;
   }
 });

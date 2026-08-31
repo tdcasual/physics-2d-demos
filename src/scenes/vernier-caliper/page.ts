@@ -52,16 +52,6 @@ bootScenePage({
       onAction: () => {}
     });
 
-    return {
-      setValue(key: string, value: number | string) {
-        renderer.setValue(key, value);
-      },
-      setActive(key: string, value: string) {
-        renderer.setActive(key, value);
-      },
-      dispose() {
-        renderer.dispose();
-      }
-    };
+    return renderer;
   }
 });
