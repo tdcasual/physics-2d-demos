@@ -5,7 +5,7 @@
 
 import type { SceneLifecycle } from '../types';
 import type { DemoRenderHints } from '../../platform/demo-profile';
-import { createNotifySystem } from '../scene-entry-helpers';
+import { createStandardSceneEntry } from '../scene-entry-helpers';
 import { projectileMeta } from './scene.meta';
 import {
   createProjectileSim,
@@ -81,62 +81,33 @@ export function createProjectileScene(
     demoHints: options.demoHints
   });
 
-  const { notify, subscribe, clear } = createNotifySystem();
+  const base = createStandardSceneEntry({
+    sim,
+    view,
+    getState: () => sim.getState(),
+    onReadout: options.onReadout,
+    // init/reset 时除 sim.reset() 外还需清空轨迹
+    resetView: () => view.reset()
+  });
 
   return {
-    init(): void {
-      sim.reset();
-      view.reset();
-      const state = sim.getState();
-      options.onReadout?.(state);
-    },
-    reset(): void {
-      sim.reset();
-      view.reset();
-      const state = sim.getState();
-      options.onReadout?.(state);
-      notify();
-    },
-    step(dt: number): void {
-      sim.step(dt);
-    },
-    render(): void {
-      const state = sim.getState();
-      view.render(state);
-      options.onReadout?.(state);
-      notify();
-    },
-    resize(): void {
-      view.resize();
-    },
-    setTheme(theme: 'light' | 'dark'): void {
-      view.setTheme(theme);
-    },
-    setMode(mode: 'normal' | 'presentation'): void {
-      view.setMode(mode);
-    },
+    ...base,
     getState(): ProjectileState {
       return sim.getState();
     },
     getParams(): ResolvedProjectileParams {
       return sim.getParams();
     },
-    setParams(next: Partial<ProjectileParams>): ResolvedProjectileParams {
-      const params = sim.setParams(next);
-      notify();
-      return params;
-    },
+    setParams: base.wrapAction(
+      (next: Partial<ProjectileParams>): ResolvedProjectileParams =>
+        sim.setParams(next)
+    ),
     getReadoutItems(): Array<{
       label: string;
       value: string | number;
       layout?: 'half' | 'full';
     }> {
       return formatReadout(sim.getState(), sim.getParams());
-    },
-    subscribe,
-    dispose(): void {
-      clear();
-      view.dispose();
     }
   };
 }

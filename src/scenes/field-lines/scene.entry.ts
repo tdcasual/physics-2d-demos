@@ -104,39 +104,29 @@ export function createFieldLinesScene(
       currentTheme = theme;
       base.setTheme(theme);
     },
-    setScene(scene: FieldLinesScene): void {
+    setScene: base.wrapAction((scene: FieldLinesScene): void => {
       sim.setScene(scene);
-      base.renderAndEmit();
-      base.notify();
-    },
-    setDensity(value: number): void {
+    }),
+    setDensity: base.wrapAction((value: number): void => {
       sim.setDensity(value);
-      base.renderAndEmit();
-      base.notify();
-    },
-    setCustomCharges(q1: number, q2: number): void {
+    }),
+    setCustomCharges: base.wrapAction((q1: number, q2: number): void => {
       sim.setCustomCharges(q1, q2);
-      base.renderAndEmit();
-      base.notify();
-    },
+    }),
     pickCharge(normX: number, normY: number): number | null {
       return sim.pickCharge(normX, normY);
     },
-    moveCharge(index: number, normX: number, normY: number): void {
-      sim.setChargePosition(index, normX, normY);
-      base.renderAndEmit();
-      base.notify();
-    },
-    addCharge(q: number): void {
+    moveCharge: base.wrapAction(
+      (index: number, normX: number, normY: number): void => {
+        sim.setChargePosition(index, normX, normY);
+      }
+    ),
+    addCharge: base.wrapAction((q: number): void => {
       sim.addCharge(q);
-      base.renderAndEmit();
-      base.notify();
-    },
-    removeCharge(index: number): void {
+    }),
+    removeCharge: base.wrapAction((index: number): void => {
       sim.removeCharge(index);
-      base.renderAndEmit();
-      base.notify();
-    },
+    }),
     getSnapshot(): FieldLinesSnapshot {
       return sim.getSnapshot();
     },

@@ -2,6 +2,7 @@ import type { TeachingMode } from '../../platform/standards';
 import type { TeachingTheme } from '../../platform/standards';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { SceneLifecycle } from '../types';
+import { createNotifySystem } from '../scene-entry-helpers';
 import {
   createChaseMeetSim,
   type ChaseMeetParams,
@@ -59,17 +60,7 @@ export function createChaseMeetScene(
     options.onReadout?.(snapshot);
   }
 
-  const listeners: (() => void)[] = [];
-
-  function notify(): void {
-    for (const fn of listeners) {
-      try {
-        fn();
-      } catch {
-        /* ignore */
-      }
-    }
-  }
+  const { notify, subscribe, clear } = createNotifySystem();
 
   return {
     init(): void {
@@ -115,16 +106,10 @@ export function createChaseMeetScene(
     renderGraph(container: HTMLElement): void {
       view.attachGraphSlot(container);
     },
-    subscribe(listener: () => void): () => void {
-      listeners.push(listener);
-      return () => {
-        const idx = listeners.indexOf(listener);
-        if (idx > -1) listeners.splice(idx, 1);
-      };
-    },
+    subscribe,
     dispose(): void {
       view.dispose();
-      listeners.length = 0;
+      clear();
     }
   };
 }

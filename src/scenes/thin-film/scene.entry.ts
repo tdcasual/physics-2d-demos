@@ -83,17 +83,12 @@ export function createThinFilmScene(
     getState() {
       return sim.getState();
     },
-    setParams(params: Partial<ThinFilmParams>): ThinFilmParams {
-      const result = sim.setParams(params);
-      base.renderAndEmit();
-      base.notify();
-      return result;
-    },
-    setCursorY(y: number): void {
+    setParams: base.wrapAction(
+      (params: Partial<ThinFilmParams>): ThinFilmParams => sim.setParams(params)
+    ),
+    setCursorY: base.wrapAction((y: number): void => {
       sim.setCursorY(y);
-      base.renderAndEmit();
-      base.notify();
-    },
+    }),
     attachGraphCanvas(canvas: HTMLCanvasElement): void {
       view.attachGraphCanvas(canvas);
     },

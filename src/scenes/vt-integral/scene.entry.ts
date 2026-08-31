@@ -112,46 +112,30 @@ export function createVtIntegralScene(
       currentMode = mode;
       base.setMode(mode, hints);
     },
-    setScene(scene: VtScene): void {
+    setScene: base.wrapAction((scene: VtScene): void => {
       sim.setScene(scene);
-      base.renderAndEmit();
-      base.notify();
-    },
-    setRects(value: number): void {
+    }),
+    setRects: base.wrapAction((value: number): void => {
       sim.setRects(value);
-      base.renderAndEmit();
-      base.notify();
-    },
-    setTime(value: number): void {
+    }),
+    setTime: base.wrapAction((value: number): void => {
       sim.setTime(value);
-      base.renderAndEmit();
-      base.notify();
-    },
-    setMethod(value: VtMethod): void {
+    }),
+    setMethod: base.wrapAction((value: VtMethod): void => {
       sim.setMethod(value);
-      base.renderAndEmit();
-      base.notify();
-    },
-    setCurveAmplitude(value: number): void {
+    }),
+    setCurveAmplitude: base.wrapAction((value: number): void => {
       sim.setCurveAmplitude(value);
-      base.renderAndEmit();
-      base.notify();
-    },
-    setCircleN(value: number): void {
+    }),
+    setCircleN: base.wrapAction((value: number): void => {
       sim.setCircleN(value);
-      base.renderAndEmit();
-      base.notify();
-    },
-    setDivision(value: number): void {
+    }),
+    setDivision: base.wrapAction((value: number): void => {
       sim.setDivision(value);
-      base.renderAndEmit();
-      base.notify();
-    },
-    setSurfaceN(value: number): void {
+    }),
+    setSurfaceN: base.wrapAction((value: number): void => {
       sim.setSurfaceN(value);
-      base.renderAndEmit();
-      base.notify();
-    },
+    }),
     getSnapshot(): VtIntegralSnapshot {
       return sim.getSnapshot();
     },

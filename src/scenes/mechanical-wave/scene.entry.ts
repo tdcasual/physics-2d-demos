@@ -50,24 +50,20 @@ export function createMechanicalWaveScene(
     onReadout: options.onReadout
   });
 
-  view.setOnPointSelect((x) => {
+  view.setOnPointSelect(
+    base.wrapAction((x: number): void => {
+      sim.setPointP(x);
+    })
+  );
+
+  const setParam = base.wrapAction(
+    (key: string, value: number | string): MechanicalWaveParams =>
+      sim.setParam(key, value)
+  );
+
+  const setPointP = base.wrapAction((x: number): void => {
     sim.setPointP(x);
-    base.renderAndEmit();
-    base.notify();
   });
-
-  function setParam(key: string, value: number | string): MechanicalWaveParams {
-    const result = sim.setParam(key, value);
-    base.renderAndEmit();
-    base.notify();
-    return result;
-  }
-
-  function setPointP(x: number): void {
-    sim.setPointP(x);
-    base.renderAndEmit();
-    base.notify();
-  }
 
   const dirLabels: Record<string, string> = {
     up: '↑ 向上',

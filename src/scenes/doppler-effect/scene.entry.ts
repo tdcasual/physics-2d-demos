@@ -51,24 +51,21 @@ export function createDopplerScene(
   });
 
   // 连接 view 拖拽回调
-  view.setOnDrag((entity, x) => {
-    if (entity === 'source') sim.setSourceX(x);
-    else sim.setObserverX(x);
-    base.renderAndEmit();
-    base.notify();
-  });
-  view.setOnPointClick((x) => {
-    sim.setObserverX(x);
-    base.renderAndEmit();
-    base.notify();
-  });
+  view.setOnDrag(
+    base.wrapAction((entity: 'source' | 'observer', x: number): void => {
+      if (entity === 'source') sim.setSourceX(x);
+      else sim.setObserverX(x);
+    })
+  );
+  view.setOnPointClick(
+    base.wrapAction((x: number): void => {
+      sim.setObserverX(x);
+    })
+  );
 
-  function setParams(params: Partial<DopplerParams>): DopplerParams {
-    const result = sim.setParams(params);
-    base.renderAndEmit();
-    base.notify();
-    return result;
-  }
+  const setParams = base.wrapAction(
+    (params: Partial<DopplerParams>): DopplerParams => sim.setParams(params)
+  );
 
   function getReadoutItems(): Array<{ label: string; value: string }> {
     const s = sim.getState();
@@ -86,17 +83,13 @@ export function createDopplerScene(
     ];
   }
 
-  function enableAudio(): void {
+  const enableAudio = base.wrapAction((): void => {
     sim.enableAudio();
-    base.renderAndEmit();
-    base.notify();
-  }
+  });
 
-  function disableAudio(): void {
+  const disableAudio = base.wrapAction((): void => {
     sim.disableAudio();
-    base.renderAndEmit();
-    base.notify();
-  }
+  });
 
   function setVolume(v: number): void {
     sim.setVolume(v);

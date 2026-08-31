@@ -74,17 +74,12 @@ export function createWedgeScene(
     getState() {
       return sim.getState();
     },
-    setParams(params: Partial<WedgeParams>): WedgeParams {
-      const result = sim.setParams(params);
-      base.renderAndEmit();
-      base.notify();
-      return result;
-    },
-    setCursorX(x: number): void {
+    setParams: base.wrapAction(
+      (params: Partial<WedgeParams>): WedgeParams => sim.setParams(params)
+    ),
+    setCursorX: base.wrapAction((x: number): void => {
       sim.setCursorX(x);
-      base.renderAndEmit();
-      base.notify();
-    },
+    }),
     attachGraphCanvas(canvas: HTMLCanvasElement): void {
       view.attachGraphCanvas(canvas);
     },

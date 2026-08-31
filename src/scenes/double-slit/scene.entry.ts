@@ -394,13 +394,13 @@ export function createDoubleSlitScene(
     getState() {
       return sim.getState();
     },
-    setParams(params: Partial<DoubleSlitParams>): DoubleSlitParams {
-      const result = sim.setParams(params);
-      base.renderAndEmit();
-      syncInstruments();
-      base.notify();
-      return result;
-    },
+    setParams: base.wrapAction(
+      (params: Partial<DoubleSlitParams>): DoubleSlitParams => {
+        const result = sim.setParams(params);
+        syncInstruments();
+        return result;
+      }
+    ),
     render() {
       base.renderAndEmit();
       syncInstruments();

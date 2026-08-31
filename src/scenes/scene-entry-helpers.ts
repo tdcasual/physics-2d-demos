@@ -70,10 +70,9 @@ export function createNotifySystem() {
  * });
  * return {
  *   ...base,
- *   setParam(key: string, value: number) {
+ *   setParam: base.wrapAction((key: string, value: number) => {
  *     sim.setParam(key, value);
- *     base.renderAndEmit();
- *   }
+ *   })
  * };
  */
 export function createStandardSceneEntry<
@@ -85,6 +84,11 @@ export function createStandardSceneEntry<
   view: TView;
   getState: () => TState;
   onReadout?: (state: TState) => void;
+  /**
+   * 可选视图重置钩子 — 在 init/reset 路径中于 sim.reset() 之后、
+   * 首次 renderAndEmit 之前调用（如清空轨迹、重置相机）
+   */
+  resetView?: () => void;
 }): SceneLifecycle & {
   resize(): void;
   setTheme(theme: TeachingTheme): void;
@@ -92,8 +96,13 @@ export function createStandardSceneEntry<
   renderAndEmit(): void;
   subscribe(listener: () => void): () => void;
   notify(): void;
+  /**
+   * 包装场景动作：执行 fn 后自动 renderAndEmit + notify，
+   * 并透传 fn 的返回值（适用于需要返回 sim 结果的 setter）
+   */
+  wrapAction<A extends unknown[], R>(fn: (...args: A) => R): (...args: A) => R;
 } {
-  const { sim, view, getState, onReadout } = options;
+  const { sim, view, getState, onReadout, resetView } = options;
   const { subscribe, notify, clear } = createNotifySystem();
 
   function renderAndEmit(): void {
@@ -102,13 +111,26 @@ export function createStandardSceneEntry<
     onReadout?.(state);
   }
 
+  function wrapAction<A extends unknown[], R>(
+    fn: (...args: A) => R
+  ): (...args: A) => R {
+    return (...args: A): R => {
+      const result = fn(...args);
+      renderAndEmit();
+      notify();
+      return result;
+    };
+  }
+
   return {
     init(): void {
       sim.reset();
+      resetView?.();
       renderAndEmit();
     },
     reset(): void {
       sim.reset();
+      resetView?.();
       renderAndEmit();
       notify();
     },
@@ -139,6 +161,7 @@ export function createStandardSceneEntry<
     },
     renderAndEmit,
     subscribe,
-    notify
+    notify,
+    wrapAction
   };
 }

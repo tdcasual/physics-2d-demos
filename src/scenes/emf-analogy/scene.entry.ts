@@ -72,26 +72,18 @@ export function createEmfAnalogyScene(
 
   return {
     ...base,
-    setSystemOn(on: boolean): void {
+    setSystemOn: base.wrapAction((on: boolean): void => {
       sim.setSystemOn(on);
-      base.renderAndEmit();
-      base.notify();
-    },
-    setTapOpening(opening: number): void {
+    }),
+    setTapOpening: base.wrapAction((opening: number): void => {
       sim.setTapOpening(opening);
-      base.renderAndEmit();
-      base.notify();
-    },
-    incrementOpening(step = 0.05): void {
+    }),
+    incrementOpening: base.wrapAction((step = 0.05): void => {
       sim.incrementOpening(step);
-      base.renderAndEmit();
-      base.notify();
-    },
-    setView(viewMode: EmfViewMode): void {
+    }),
+    setView: base.wrapAction((viewMode: EmfViewMode): void => {
       view.setView(viewMode);
-      base.renderAndEmit();
-      base.notify();
-    },
+    }),
     getView(): EmfViewMode {
       return view.getView();
     },
