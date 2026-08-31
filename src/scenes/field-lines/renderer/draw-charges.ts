@@ -1,6 +1,25 @@
 import type { PixelCharge } from './types';
 import { getFieldLineColors, type FieldLineColors } from './colors';
 
+// 电荷球渐变只随（几何参数, 电荷符号, 主题）变化，按 key 复用避免
+// 每电荷每帧重建（参考 emf-analogy/renderer/draw-pipe-system.ts 的
+// Map 缓存模式）；电荷被拖拽时几何变化产生新 key，限制缓存规模防膨胀。
+// CanvasGradient 与具体 canvas 上下文无关，可安全跨帧复用。
+const gradientCache = new Map<string, CanvasGradient>();
+
+function getCachedGradient(
+  key: string,
+  create: () => CanvasGradient
+): CanvasGradient {
+  let gradient = gradientCache.get(key);
+  if (!gradient) {
+    if (gradientCache.size > 64) gradientCache.clear();
+    gradient = create();
+    gradientCache.set(key, gradient);
+  }
+  return gradient;
+}
+
 export function drawCharges(
   ctx: CanvasRenderingContext2D,
   charges: PixelCharge[],
@@ -33,17 +52,23 @@ function drawChargeBall(
   ctx.shadowColor = palette.glow;
 
   // 主体径向渐变
-  const gradient = ctx.createRadialGradient(
-    x - radius * 0.25,
-    y - radius * 0.25,
-    radius * 0.1,
-    x,
-    y,
-    radius
+  const gradient = getCachedGradient(
+    `body|${x}|${y}|${radius}|${isPositive ? 1 : 0}|${isDark ? 1 : 0}`,
+    () => {
+      const g = ctx.createRadialGradient(
+        x - radius * 0.25,
+        y - radius * 0.25,
+        radius * 0.1,
+        x,
+        y,
+        radius
+      );
+      g.addColorStop(0, palette.light);
+      g.addColorStop(0.4, palette.mid);
+      g.addColorStop(1, palette.core);
+      return g;
+    }
   );
-  gradient.addColorStop(0, palette.light);
-  gradient.addColorStop(0.4, palette.mid);
-  gradient.addColorStop(1, palette.core);
 
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, Math.PI * 2);
@@ -59,16 +84,19 @@ function drawChargeBall(
 
   // 高光
   const highlightRadius = radius * 0.22;
-  const highlightGradient = ctx.createRadialGradient(
-    x - radius * 0.3,
-    y - radius * 0.3,
-    0,
-    x - radius * 0.3,
-    y - radius * 0.3,
-    highlightRadius
-  );
-  highlightGradient.addColorStop(0, 'rgba(255,255,255,0.7)');
-  highlightGradient.addColorStop(1, 'rgba(255,255,255,0)');
+  const highlightGradient = getCachedGradient(`hl|${x}|${y}|${radius}`, () => {
+    const g = ctx.createRadialGradient(
+      x - radius * 0.3,
+      y - radius * 0.3,
+      0,
+      x - radius * 0.3,
+      y - radius * 0.3,
+      highlightRadius
+    );
+    g.addColorStop(0, 'rgba(255,255,255,0.7)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    return g;
+  });
 
   ctx.beginPath();
   ctx.arc(x - radius * 0.3, y - radius * 0.3, highlightRadius, 0, Math.PI * 2);

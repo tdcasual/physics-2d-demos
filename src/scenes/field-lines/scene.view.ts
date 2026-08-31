@@ -2,7 +2,7 @@ import type { TeachingMode } from '../../platform/standards';
 import { getRenderTokens } from '../../platform/standards';
 import type { TeachingTheme } from '../../platform/standards';
 import type { DemoRenderHints } from '../../platform/demo-profile';
-import { createCanvasViewport } from '../view-base';
+import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import type { FieldLinesSnapshot } from './scene.sim';
 import { generateFieldLines } from './renderer/trace-field';
 import { drawFieldLines } from './renderer/draw-field-lines';
@@ -57,9 +57,13 @@ export function createFieldLinesView(
     initialHeight: 720,
     eagerContext: true
   });
-  let mode: TeachingMode = options.mode ?? 'normal';
-  let demoHints: DemoRenderHints | null = options.demoHints ?? null;
-  let theme: TeachingTheme = options.theme ?? 'dark';
+  // theme/mode/demoHints 状态与 contentScale 计算托管给 view-base，
+  // 保证全库只有一处 contentScale 语义（normal=1，presentation=hints ?? 1.5）
+  const env = createViewEnvironment({
+    theme: options.theme,
+    mode: options.mode,
+    demoHints: options.demoHints ?? undefined
+  });
   let snapshot: FieldLinesSnapshot | null = null;
   // 渲染签名：全部画面输入（快照引用 + 尺寸 + scale + contentScale + theme + mode）
   // 未变时跳过静态画面的昂贵重绘（热力图 / 等势线 / 电场线追踪）
@@ -74,7 +78,7 @@ export function createFieldLinesView(
   } | null = null;
 
   function getScale(): number {
-    return demoHints?.contentScale ?? (mode === 'presentation' ? 1.5 : 1.0);
+    return env.contentScale();
   }
 
   function toPixelCharges(next: FieldLinesSnapshot): PixelCharge[] {
@@ -94,11 +98,11 @@ export function createFieldLinesView(
 
     const width = stage.cssWidth;
     const height = stage.cssHeight;
-    const colors = THEME_CONFIG[theme];
+    const colors = THEME_CONFIG[env.theme];
     const charges = toPixelCharges(next);
     const density = Math.max(1, Math.min(100, Math.round(next.params.density)));
     const s = stage.responsiveScale;
-    const isDark = theme === 'dark';
+    const isDark = env.theme === 'dark';
 
     // 1. 纯色背景
     ctx.fillStyle = colors.canvasBg;
@@ -129,8 +133,8 @@ export function createFieldLinesView(
       cssHeight: height,
       scale: s,
       contentScale: getScale(),
-      theme,
-      mode
+      theme: env.theme,
+      mode: env.mode
     };
   }
 
@@ -145,8 +149,8 @@ export function createFieldLinesView(
         key.cssHeight === stage.cssHeight &&
         key.scale === stage.responsiveScale &&
         key.contentScale === getScale() &&
-        key.theme === theme &&
-        key.mode === mode
+        key.theme === env.theme &&
+        key.mode === env.mode
       ) {
         return; // 签名未变：静态画面跳过重绘
       }
@@ -157,16 +161,13 @@ export function createFieldLinesView(
       if (snapshot) draw(snapshot);
     },
     setMode(nextMode: TeachingMode, hints?: DemoRenderHints): void {
-      mode = nextMode;
-      if (hints) {
-        demoHints = hints;
-      }
+      env.setMode(nextMode, hints);
       if (snapshot) {
         draw(snapshot);
       }
     },
     setTheme(nextTheme: TeachingTheme): void {
-      theme = nextTheme;
+      env.setTheme(nextTheme);
       if (snapshot) {
         draw(snapshot);
       }

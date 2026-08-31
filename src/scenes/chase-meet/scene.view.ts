@@ -3,6 +3,7 @@ import type { TeachingMode } from '../../platform/standards';
 import type { TeachingTheme } from '../../platform/standards';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import { sizeCanvasToFill } from '../../core/canvas-sizing';
+import { createViewEnvironment } from '../view-base';
 import {
   getResponsiveViewport,
   resolveResponsiveStageWidth
@@ -32,8 +33,11 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
   let stageSlot = options.stageSlot ?? null;
   let graphSlot = options.graphSlot ?? null;
   let stageDom: StageDom | null = null;
-  let mode: TeachingMode = options.mode ?? 'normal';
-  let demoHints: DemoRenderHints | null = options.demoHints ?? null;
+  // contentScale 计算统一走 view-base（normal=1，presentation=hints ?? 1.5）
+  const env = createViewEnvironment({
+    mode: options.mode,
+    demoHints: options.demoHints ?? undefined
+  });
   let theme: TeachingTheme = options.theme ?? 'dark';
   let snapshot: ChaseMeetSnapshot | null = null;
   let cssWidth = 1280;
@@ -101,8 +105,7 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
       return;
     }
 
-    const scale =
-      demoHints?.contentScale ?? (mode === 'presentation' ? 1.5 : 1.0);
+    const scale = env.contentScale();
     const viewport = getResponsiveViewport(960);
     const totalWidth = resolveResponsiveStageWidth(dom.root, {
       minWidthPx: 1,
@@ -190,7 +193,7 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
 
     const cssW = dom.motionCanvas.width / dom.dpr;
     const cssH = dom.motionCanvas.height / dom.dpr;
-    const s = demoHints?.contentScale ?? (mode === 'presentation' ? 1.5 : 1.0);
+    const s = env.contentScale();
     const visuals = resolveVisuals(s, cssW, cssH);
 
     drawMotion({
@@ -256,10 +259,7 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
       }
     },
     setMode(nextMode: TeachingMode, hints?: DemoRenderHints): void {
-      mode = nextMode;
-      if (hints) {
-        demoHints = hints;
-      }
+      env.setMode(nextMode, hints);
       initStageSize();
       if (snapshot) {
         draw(snapshot);

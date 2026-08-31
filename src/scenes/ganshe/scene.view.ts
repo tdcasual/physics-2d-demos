@@ -89,6 +89,9 @@ export function createWaveInterferenceView(
   let viewDomainMax = DOMAIN_MAX;
   let originX = 50;
   let originY = 0;
+  // 波形采样步长（世界单位/米）：resize 时按 scaleX 与 dpr 自适应，
+  // 约每 2 设备像素一个采样点，且不比历史固定步长 0.05 更密
+  let waveStep = 0.05;
 
   // Observer interaction state
   let isDragging = false;
@@ -122,6 +125,13 @@ export function createWaveInterferenceView(
     // Reduced vertical margin to give wave more display height on mobile
     scaleY = (height / 2 - 22 * responsiveScale) / 16;
     originY = height / 2;
+
+    // 自适应采样步长：scaleX（CSS px/米）× dpr = 设备 px/米，
+    // 每 2 设备像素一个采样点；最坏情况从固定 0.05 步长（每波 600 次
+    // lineTo）降到与屏幕分辨率匹配，同时保底不劣于原采样密度
+    const dpr = canvas.width / Math.max(1, width);
+    waveStep =
+      scaleX > 0 && dpr > 0 ? Math.max(0.05, 2 / (scaleX * dpr)) : 0.05;
   }
 
   function worldToPixelX(x: number): number {
@@ -134,6 +144,31 @@ export function createWaveInterferenceView(
 
   function pixelToWorldX(px: number): number {
     return (px - originX) / scaleX;
+  }
+
+  /**
+   * 按自适应步长 waveStep 采样波形路径（仅 moveTo/lineTo，不含 stroke）。
+   * 终点始终精确落在 viewDomainMax，避免步长不整除时右缘留下数像素缺口。
+   */
+  function traceWave(
+    c: CanvasRenderingContext2D,
+    yAt: (x: number) => number
+  ): void {
+    let first = true;
+    for (let x = 0; x < viewDomainMax; x += waveStep) {
+      const px = worldToPixelX(x);
+      const py = worldToPixelY(yAt(x));
+      if (first) {
+        c.moveTo(px, py);
+        first = false;
+      } else {
+        c.lineTo(px, py);
+      }
+    }
+    const endPx = worldToPixelX(viewDomainMax);
+    const endPy = worldToPixelY(yAt(viewDomainMax));
+    if (first) c.moveTo(endPx, endPy);
+    else c.lineTo(endPx, endPy);
   }
 
   function drawMainCanvas(state: WaveState): void {
@@ -219,16 +254,12 @@ export function createWaveInterferenceView(
         ctx.strokeStyle = 'rgba(59, 130, 246, 0.5)';
         ctx.lineWidth = 3 * responsiveScale;
         ctx.setLineDash([4, 4]);
-        for (let x = 0; x <= viewDomainMax; x += 0.05) {
+        traceWave(ctx, (x) => {
           const env = params.isPulseMode
             ? pulseEnvelope(x, pulseCenter1!, PULSE_WIDTH)
             : 1;
-          const y = params.amp1 * Math.sin(k1 * x - omega1 * t) * env;
-          const px = worldToPixelX(x);
-          const py = worldToPixelY(y);
-          if (x === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        }
+          return params.amp1 * Math.sin(k1 * x - omega1 * t) * env;
+        });
         ctx.stroke();
         ctx.setLineDash([]);
 
@@ -244,19 +275,15 @@ export function createWaveInterferenceView(
         ctx.strokeStyle = 'rgba(239, 68, 68, 0.5)';
         ctx.lineWidth = 3 * responsiveScale;
         ctx.setLineDash([4, 4]);
-        for (let x = 0; x <= viewDomainMax; x += 0.05) {
-          const env = params.isPulseMode
-            ? pulseEnvelope(x, pulseCenter2!, PULSE_WIDTH)
-            : 1;
-          const y =
+        traceWave(
+          ctx,
+          (x) =>
             params.amp2 *
             Math.sin(k2 * (viewDomainMax - x) - omega2 * t + phaseRad) *
-            env;
-          const px = worldToPixelX(x);
-          const py = worldToPixelY(y);
-          if (x === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        }
+            (params.isPulseMode
+              ? pulseEnvelope(x, pulseCenter2!, PULSE_WIDTH)
+              : 1)
+        );
         ctx.stroke();
         ctx.setLineDash([]);
 
@@ -281,7 +308,7 @@ export function createWaveInterferenceView(
         ctx.beginPath();
         ctx.strokeStyle = colors.interference;
         ctx.lineWidth = 4 * responsiveScale;
-        for (let x = 0; x <= viewDomainMax; x += 0.05) {
+        traceWave(ctx, (x) => {
           const env1 = params.isPulseMode
             ? pulseEnvelope(x, pulseCenter1!, PULSE_WIDTH)
             : 1;
@@ -293,12 +320,8 @@ export function createWaveInterferenceView(
             params.amp2 *
             Math.sin(k2 * (viewDomainMax - x) - omega2 * t + phaseRad) *
             env2;
-          const y = y1 + y2;
-          const px = worldToPixelX(x);
-          const py = worldToPixelY(y);
-          if (x === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        }
+          return y1 + y2;
+        });
         ctx.stroke();
       }
     } else {
@@ -307,13 +330,7 @@ export function createWaveInterferenceView(
         ctx.strokeStyle = 'rgba(59, 130, 246, 0.6)';
         ctx.lineWidth = 2.5 * responsiveScale;
         ctx.setLineDash([5, 5]);
-        for (let x = 0; x <= viewDomainMax; x += 0.05) {
-          const y = params.amp1 * Math.sin(k1 * x - omega1 * t);
-          const px = worldToPixelX(x);
-          const py = worldToPixelY(y);
-          if (x === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        }
+        traceWave(ctx, (x) => params.amp1 * Math.sin(k1 * x - omega1 * t));
         ctx.stroke();
         ctx.setLineDash([]);
       }
@@ -323,13 +340,10 @@ export function createWaveInterferenceView(
         ctx.strokeStyle = 'rgba(239, 68, 68, 0.6)';
         ctx.lineWidth = 2.5 * responsiveScale;
         ctx.setLineDash([5, 5]);
-        for (let x = 0; x <= viewDomainMax; x += 0.05) {
-          const y = params.amp2 * Math.sin(k2 * x - omega2 * t + phaseRad);
-          const px = worldToPixelX(x);
-          const py = worldToPixelY(y);
-          if (x === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        }
+        traceWave(
+          ctx,
+          (x) => params.amp2 * Math.sin(k2 * x - omega2 * t + phaseRad)
+        );
         ctx.stroke();
         ctx.setLineDash([]);
       }
@@ -338,15 +352,11 @@ export function createWaveInterferenceView(
         ctx.beginPath();
         ctx.strokeStyle = colors.interference;
         ctx.lineWidth = 4 * responsiveScale;
-        for (let x = 0; x <= viewDomainMax; x += 0.05) {
+        traceWave(ctx, (x) => {
           const y1 = params.amp1 * Math.sin(k1 * x - omega1 * t);
           const y2 = params.amp2 * Math.sin(k2 * x - omega2 * t + phaseRad);
-          const y = y1 + y2;
-          const px = worldToPixelX(x);
-          const py = worldToPixelY(y);
-          if (x === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        }
+          return y1 + y2;
+        });
         ctx.stroke();
       }
     }

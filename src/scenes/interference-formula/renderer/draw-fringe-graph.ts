@@ -3,6 +3,11 @@
  *
  * 原 scene.view.ts 中依赖闭包状态（graphCtx / graphCanvas / theme）的
  * drawFringeGraph，此处改为显式参数传递，绘制逻辑逐行不变。
+ *
+ * 尺寸与 scale 由调用方持有的 CanvasViewport 记录值传入（resize 时更新），
+ * 渲染热路径不再读 getBoundingClientRect / dataset。
+ * 条纹图案按（λ, d, L, 尺寸, 步长, 主题）key 缓存在离屏 canvas 中，
+ * 避免每帧逐像素 fillRect + rgb 字符串分配（参考 thin-film 的参数 key 缓存）。
  */
 
 import type { TeachingTheme } from '../../../platform/standards';
@@ -10,9 +15,62 @@ import { wavelengthToColor, lambdaToRgb } from '../../../core/wavelength';
 import type { InterferenceFormulaState } from '../scene.sim';
 import { drawArrowLine } from './view-utils';
 
+/** 条纹绘制所需的 viewport 记录值（与 CanvasViewport 对应字段结构兼容） */
+export type FringeGraphMetrics = {
+  /** 记录的 CSS 宽（resize 时 clamp 记录） */
+  cssWidth: number;
+  /** 记录的 CSS 高 */
+  cssHeight: number;
+  /** 记录的响应式缩放因子 */
+  responsiveScale: number;
+  /** 记录的设备像素比 canvas.width / max(1, cssWidth) */
+  dpr: number;
+};
+
+// 条纹离屏缓存：内容仅随 key 变化，key 未变时直接 drawImage 复用
+let fringeCache: {
+  canvas: HTMLCanvasElement;
+  ctx: CanvasRenderingContext2D;
+  key: string;
+} | null = null;
+
+/**
+ * 逐列计算条纹强度并填入目标上下文（x 从 0 起，对应主画布 stripeX 偏移）。
+ * 离屏缓存重绘与（理论上的）直绘兜底共用同一实现，保证像素一致。
+ */
+function paintFringeColumns(
+  target: CanvasRenderingContext2D,
+  stripeW: number,
+  stripeH: number,
+  stepPx: number,
+  range: number,
+  lambdaM: number,
+  dM: number,
+  L: number,
+  lambdaNm: number,
+  isDark: boolean
+): void {
+  const [cr, cg, cb] = lambdaToRgb(lambdaNm);
+  const bgR = isDark ? 15 : 248;
+  const bgG = isDark ? 23 : 250;
+  const bgB = isDark ? 42 : 252;
+
+  for (let px = 0; px < stripeW; px += stepPx) {
+    const xPhysical = ((px - stripeW / 2) / (stripeW / 2)) * range;
+    const phase = (Math.PI * dM * xPhysical) / (lambdaM * L);
+    const intensity = Math.cos(phase) ** 2;
+    const rr = Math.round(bgR + (cr - bgR) * intensity);
+    const rg = Math.round(bgG + (cg - bgG) * intensity);
+    const rb = Math.round(bgB + (cb - bgB) * intensity);
+    target.fillStyle = `rgb(${rr},${rg},${rb})`;
+    target.fillRect(px, 0, stepPx, stripeH);
+  }
+}
+
 export function drawFringeGraph(
   graphCtx: CanvasRenderingContext2D | null,
   graphCanvas: HTMLCanvasElement | null,
+  metrics: FringeGraphMetrics,
   next: InterferenceFormulaState,
   modeScale: number,
   theme: TeachingTheme
@@ -21,20 +79,20 @@ export function drawFringeGraph(
   const gCanvas = graphCanvas;
   if (!gc || !gCanvas) return;
 
-  const rect = gCanvas.getBoundingClientRect();
-  const gw = Math.max(200, Math.floor(rect.width || 400));
-  const gh = Math.max(100, Math.floor(rect.height || 200));
-  const gScale = parseFloat(gCanvas.dataset.responsiveScale || '1');
+  // 使用 resize 记录的尺寸/scale/dpr，避免每帧同步布局查询
+  const gw = metrics.cssWidth;
+  const gh = metrics.cssHeight;
+  const gScale = metrics.responsiveScale;
   const isDark = theme === 'dark';
   const text = isDark ? '#e2e8f0' : '#1e293b';
   const dim = isDark ? '#94a3b8' : '#64748b';
   const accent = wavelengthToColor(next.params.lambda);
 
   // DPR-aware clear: pixel-space fillRect before setTransform
-  const gDpr = gCanvas ? gCanvas.width / Math.max(1, gw) : 1;
-  gc.clearRect(0, 0, gCanvas?.width ?? gw, gCanvas?.height ?? gh);
+  const gDpr = metrics.dpr;
+  gc.clearRect(0, 0, gCanvas.width, gCanvas.height);
   gc.fillStyle = isDark ? '#0f172a' : '#f8fafc';
-  gc.fillRect(0, 0, gCanvas?.width ?? gw, gCanvas?.height ?? gh);
+  gc.fillRect(0, 0, gCanvas.width, gCanvas.height);
   gc.setTransform(gDpr, 0, 0, gDpr, 0, 0);
 
   const { params, deltaX } = next;
@@ -58,20 +116,57 @@ export function drawFringeGraph(
     const stripeCenterX = stripeX + stripeW / 2;
     const stepPx = Math.max(1, gScale);
 
-    const [cr, cg, cb] = lambdaToRgb(next.params.lambda);
-    const bgR = isDark ? 15 : 248;
-    const bgG = isDark ? 23 : 250;
-    const bgB = isDark ? 42 : 252;
-
-    for (let px = 0; px < stripeW; px += stepPx) {
-      const xPhysical = ((px - stripeW / 2) / (stripeW / 2)) * range;
-      const phase = (Math.PI * dM * xPhysical) / (lambdaM * params.L);
-      const intensity = Math.cos(phase) ** 2;
-      const rr = Math.round(bgR + (cr - bgR) * intensity);
-      const rg = Math.round(bgG + (cg - bgG) * intensity);
-      const rb = Math.round(bgB + (cb - bgB) * intensity);
-      gc.fillStyle = `rgb(${rr},${rg},${rb})`;
-      gc.fillRect(stripeX + px, stripeY, stepPx, stripeH);
+    // 条纹图案离屏缓存：参数/尺寸/主题未变时跳过重绘。
+    // 离屏尺寸按 CSS 像素取整，drawImage 受当前 DPR transform 影响自动对齐。
+    const offW = Math.max(1, Math.ceil(stripeW));
+    const offH = Math.max(1, Math.ceil(stripeH));
+    const offKey = `${params.lambda}_${params.d}_${params.L}_${offW}_${offH}_${stepPx}_${isDark ? 1 : 0}`;
+    if (
+      !fringeCache ||
+      fringeCache.canvas.width !== offW ||
+      fringeCache.canvas.height !== offH
+    ) {
+      const offCanvas = document.createElement('canvas');
+      offCanvas.width = offW;
+      offCanvas.height = offH;
+      const offCtx = offCanvas.getContext('2d');
+      fringeCache = offCtx ? { canvas: offCanvas, ctx: offCtx, key: '' } : null;
+    }
+    if (fringeCache) {
+      if (fringeCache.key !== offKey) {
+        fringeCache.key = offKey;
+        paintFringeColumns(
+          fringeCache.ctx,
+          stripeW,
+          offH,
+          stepPx,
+          range,
+          lambdaM,
+          dM,
+          params.L,
+          params.lambda,
+          isDark
+        );
+      }
+      gc.drawImage(fringeCache.canvas, stripeX, stripeY, stripeW, stripeH);
+    } else {
+      // 离屏上下文不可用（理论上不发生）时退回直绘，保证图案不缺失；
+      // paintFringeColumns 的 x 从 0 起，平移到条纹区原点以复用同一实现
+      gc.save();
+      gc.translate(stripeX, stripeY);
+      paintFringeColumns(
+        gc,
+        stripeW,
+        stripeH,
+        stepPx,
+        range,
+        lambdaM,
+        dM,
+        params.L,
+        params.lambda,
+        isDark
+      );
+      gc.restore();
     }
 
     // 中央亮纹

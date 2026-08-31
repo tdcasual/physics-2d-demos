@@ -48,8 +48,20 @@ export function createInterferenceFormulaView(
     initialWidth: 800,
     initialHeight: 600
   });
+  // 图表 viewport 的 clamp/兜底与原 drawFringeGraph 内联公式一致
+  // （min 200x100，fallback 400x200），保证记录值与历史测量值逐点相等
   const graph = createCanvasViewport({
-    canvas: options.graphCanvas ?? null
+    canvas: options.graphCanvas ?? null,
+    sizing: {
+      mode: 'clamped',
+      fallbackWidth: 400,
+      fallbackHeight: 200,
+      minWidth: 200,
+      minHeight: 100
+    },
+    // 首次 resize 前的记录值 = 旧内联公式对 0 尺寸 rect 的兜底结果
+    initialWidth: 400,
+    initialHeight: 200
   });
   let state: InterferenceFormulaState | null = null;
 
@@ -193,7 +205,8 @@ export function createInterferenceFormulaView(
     }
 
     // ── 图表区：干涉条纹始终显示 ──
-    drawFringeGraph(graph.ctx, graph.canvas, next, modeScale, env.theme);
+    // 尺寸/scale/dpr 走 resize 记录值，渲染热路径不再读 DOM
+    drawFringeGraph(graph.ctx, graph.canvas, graph, next, modeScale, env.theme);
   }
 
   return {

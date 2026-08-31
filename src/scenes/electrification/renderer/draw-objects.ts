@@ -4,6 +4,25 @@
 
 import { pathRoundRect } from '../../../core/draw-primitives';
 
+// 渐变只随（几何参数, 主题/电荷符号）变化，按 key 复用避免每帧重建
+// （参考 emf-analogy/renderer/draw-pipe-system.ts 的 Map 缓存模式）；
+// 几何随动画/窗口变化会产生新 key，限制缓存规模防止无限增长。
+// CanvasGradient 与具体 canvas 上下文无关，可安全跨帧复用。
+const gradientCache = new Map<string, CanvasGradient>();
+
+function getCachedGradient(
+  key: string,
+  create: () => CanvasGradient
+): CanvasGradient {
+  let gradient = gradientCache.get(key);
+  if (!gradient) {
+    if (gradientCache.size > 64) gradientCache.clear();
+    gradient = create();
+    gradientCache.set(key, gradient);
+  }
+  return gradient;
+}
+
 /** 玻璃棒：棕色渐变 + 纵向纹理 */
 export function drawGlassRod(
   ctx: CanvasRenderingContext2D,
@@ -17,16 +36,22 @@ export function drawGlassRod(
   ctx.save();
 
   // 主体渐变
-  const grad = ctx.createLinearGradient(x, y, x + w, y + h);
-  if (isDark) {
-    grad.addColorStop(0, 'rgba(180,130,70,0.9)');
-    grad.addColorStop(0.5, 'rgba(160,110,50,0.85)');
-    grad.addColorStop(1, 'rgba(140,90,30,0.8)');
-  } else {
-    grad.addColorStop(0, 'rgba(210,170,110,0.9)');
-    grad.addColorStop(0.5, 'rgba(190,150,90,0.85)');
-    grad.addColorStop(1, 'rgba(170,130,70,0.8)');
-  }
+  const grad = getCachedGradient(
+    `rod|${x}|${y}|${w}|${h}|${isDark ? 1 : 0}`,
+    () => {
+      const g = ctx.createLinearGradient(x, y, x + w, y + h);
+      if (isDark) {
+        g.addColorStop(0, 'rgba(180,130,70,0.9)');
+        g.addColorStop(0.5, 'rgba(160,110,50,0.85)');
+        g.addColorStop(1, 'rgba(140,90,30,0.8)');
+      } else {
+        g.addColorStop(0, 'rgba(210,170,110,0.9)');
+        g.addColorStop(0.5, 'rgba(190,150,90,0.85)');
+        g.addColorStop(1, 'rgba(170,130,70,0.8)');
+      }
+      return g;
+    }
+  );
 
   ctx.fillStyle = grad;
   pathRoundRect(ctx, x, y, w, h, Math.min(8, h * 0.1));
@@ -65,16 +90,22 @@ export function drawSilk(
 ): void {
   ctx.save();
 
-  const grad = ctx.createLinearGradient(x, y, x + w, y + h);
-  if (isDark) {
-    grad.addColorStop(0, 'rgba(150,120,180,0.9)');
-    grad.addColorStop(0.5, 'rgba(130,100,160,0.85)');
-    grad.addColorStop(1, 'rgba(110,80,140,0.8)');
-  } else {
-    grad.addColorStop(0, 'rgba(200,180,220,0.9)');
-    grad.addColorStop(0.5, 'rgba(180,160,200,0.85)');
-    grad.addColorStop(1, 'rgba(160,140,180,0.8)');
-  }
+  const grad = getCachedGradient(
+    `silk|${x}|${y}|${w}|${h}|${isDark ? 1 : 0}`,
+    () => {
+      const g = ctx.createLinearGradient(x, y, x + w, y + h);
+      if (isDark) {
+        g.addColorStop(0, 'rgba(150,120,180,0.9)');
+        g.addColorStop(0.5, 'rgba(130,100,160,0.85)');
+        g.addColorStop(1, 'rgba(110,80,140,0.8)');
+      } else {
+        g.addColorStop(0, 'rgba(200,180,220,0.9)');
+        g.addColorStop(0.5, 'rgba(180,160,200,0.85)');
+        g.addColorStop(1, 'rgba(160,140,180,0.8)');
+      }
+      return g;
+    }
+  );
 
   ctx.fillStyle = grad;
   pathRoundRect(ctx, x, y, w, h, Math.min(8, h * 0.1));
@@ -112,23 +143,29 @@ export function drawConductor(
   ctx.save();
 
   // 金属径向渐变
-  const grad = ctx.createRadialGradient(
-    x - r * 0.3,
-    y - r * 0.3,
-    r * 0.1,
-    x,
-    y,
-    r
+  const grad = getCachedGradient(
+    `conductor|${x}|${y}|${r}|${isDark ? 1 : 0}`,
+    () => {
+      const g = ctx.createRadialGradient(
+        x - r * 0.3,
+        y - r * 0.3,
+        r * 0.1,
+        x,
+        y,
+        r
+      );
+      if (isDark) {
+        g.addColorStop(0, 'rgba(180,190,200,0.95)');
+        g.addColorStop(0.4, 'rgba(120,130,140,0.9)');
+        g.addColorStop(1, 'rgba(70,80,90,0.85)');
+      } else {
+        g.addColorStop(0, 'rgba(220,225,230,0.95)');
+        g.addColorStop(0.4, 'rgba(170,175,180,0.9)');
+        g.addColorStop(1, 'rgba(120,125,130,0.85)');
+      }
+      return g;
+    }
   );
-  if (isDark) {
-    grad.addColorStop(0, 'rgba(180,190,200,0.95)');
-    grad.addColorStop(0.4, 'rgba(120,130,140,0.9)');
-    grad.addColorStop(1, 'rgba(70,80,90,0.85)');
-  } else {
-    grad.addColorStop(0, 'rgba(220,225,230,0.95)');
-    grad.addColorStop(0.4, 'rgba(170,175,180,0.9)');
-    grad.addColorStop(1, 'rgba(120,125,130,0.85)');
-  }
 
   ctx.fillStyle = grad;
   ctx.beginPath();
@@ -222,19 +259,25 @@ export function drawChargedSphere(
   ctx.shadowColor = glowColor;
 
   // 主体
-  const grad = ctx.createRadialGradient(
-    x - r * 0.2,
-    y - r * 0.2,
-    r * 0.1,
-    x,
-    y,
-    r
+  const grad = getCachedGradient(
+    `sphere|${x}|${y}|${r}|${isPositive ? 1 : 0}|${isDark ? 1 : 0}`,
+    () => {
+      const g = ctx.createRadialGradient(
+        x - r * 0.2,
+        y - r * 0.2,
+        r * 0.1,
+        x,
+        y,
+        r
+      );
+      g.addColorStop(
+        0,
+        isPositive ? 'rgba(255,150,150,0.9)' : 'rgba(150,180,255,0.9)'
+      );
+      g.addColorStop(1, coreColor);
+      return g;
+    }
   );
-  grad.addColorStop(
-    0,
-    isPositive ? 'rgba(255,150,150,0.9)' : 'rgba(150,180,255,0.9)'
-  );
-  grad.addColorStop(1, coreColor);
 
   ctx.fillStyle = grad;
   ctx.beginPath();
