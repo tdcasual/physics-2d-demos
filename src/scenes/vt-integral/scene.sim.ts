@@ -1,6 +1,6 @@
 import { clamp } from '../../core/math';
 
-export const VT_SCENE_VALUES = ['scene1', 'scene2', 'scene3'] as const;
+const VT_SCENE_VALUES = ['scene1', 'scene2', 'scene3'] as const;
 export type VtScene = (typeof VT_SCENE_VALUES)[number];
 export type VtMethod = 'left' | 'mid' | 'right' | 'trap';
 

@@ -5,9 +5,6 @@ import type {
   SceneTestProfile
 } from '../platform/scene-contract';
 
-export type SceneRegistrySource = 'modern';
-export type SceneRegistryDimension = '2d' | '3d';
-
 export type SceneRegistryEntry = ScenePlacardMeta & {
   id: string;
   title: string;
@@ -19,8 +16,8 @@ export type SceneRegistryEntry = ScenePlacardMeta & {
   category: string;
   categoryLabel: string;
   featured: boolean;
-  source: SceneRegistrySource;
-  dimension: SceneRegistryDimension;
+  source: 'modern';
+  dimension: '2d' | '3d';
   testProfile?: SceneTestProfile;
 };
 

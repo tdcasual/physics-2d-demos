@@ -7,7 +7,16 @@ import { dopplerEffectMeta } from './scene.meta';
 import { createDopplerScene } from './scene.entry';
 import { dopplerControlsSchema } from './controls-schema';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { createPresetApplier } from '../page-utils';
 import type { DopplerMode, DopplerParams } from './scene.sim';
+
+// 预设 → sim 参数映射（createPresetApplier 消费）
+const dopplerPresets: Record<string, Partial<DopplerParams>> = {
+  static: { sourceSpeed: 0, observerSpeed: 0 },
+  approach: { sourceSpeed: 3, observerSpeed: 0 },
+  recede: { sourceSpeed: -3, observerSpeed: 0 },
+  'low-freq': { emitFrequency: 1, sourceSpeed: 2 }
+};
 
 bootScenePage<ReturnType<typeof createDopplerScene>>({
   meta: dopplerEffectMeta,
@@ -58,6 +67,14 @@ bootScenePage<ReturnType<typeof createDopplerScene>>({
   }) => {
     const dsScene = scene as ReturnType<typeof createDopplerScene>;
 
+    // 预设应用：setParams 批量应用后全量同步面板（syncRendererToScene
+    // 为下方函数声明，存在提升，此处仅作闭包引用）
+    const applyPreset = createPresetApplier<DopplerParams>(
+      dopplerPresets,
+      (params) => dsScene.setParams(params),
+      () => syncRendererToScene()
+    );
+
     const renderer = renderSchema({
       mount,
       schema: dopplerControlsSchema,
@@ -94,24 +111,6 @@ bootScenePage<ReturnType<typeof createDopplerScene>>({
       },
       onAction: () => {}
     });
-
-    function applyPreset(preset: string): void {
-      switch (preset) {
-        case 'static':
-          dsScene.setParams({ sourceSpeed: 0, observerSpeed: 0 });
-          break;
-        case 'approach':
-          dsScene.setParams({ sourceSpeed: 3, observerSpeed: 0 });
-          break;
-        case 'recede':
-          dsScene.setParams({ sourceSpeed: -3, observerSpeed: 0 });
-          break;
-        case 'low-freq':
-          dsScene.setParams({ emitFrequency: 1, sourceSpeed: 2 });
-          break;
-      }
-      syncRendererToScene();
-    }
 
     function syncRendererToScene(): void {
       const s = dsScene.getState();

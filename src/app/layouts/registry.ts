@@ -69,12 +69,12 @@ export function registerLayoutTestAdapter(id: string): void {
   layoutTestAdapters.add(id);
 }
 
-export function hasLayoutTestAdapter(id: string): boolean {
+function hasLayoutTestAdapter(id: string): boolean {
   return layoutTestAdapters.has(id);
 }
 
 /** Validate a layout's declarative test capabilities before registration. */
-export function validateLayoutTestProfile(
+function validateLayoutTestProfile(
   id: string,
   profile: LayoutTestProfile | undefined,
   supportedSlots: SlotName[]

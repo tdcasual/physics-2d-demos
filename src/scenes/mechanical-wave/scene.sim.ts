@@ -47,6 +47,20 @@ const RANGES: Record<WaveParam, [number, number]> = {
   period: [0.5, 8]
 };
 
+/** 数值型参数键（setParam 的类型安全分发表） */
+const NUMERIC_PARAMS = [
+  'amplitude',
+  'waveSpeed',
+  'wavelength',
+  'period',
+  'playbackSpeed'
+] as const;
+type NumericParam = (typeof NUMERIC_PARAMS)[number];
+
+function isNumericParam(key: string): key is NumericParam {
+  return (NUMERIC_PARAMS as readonly string[]).includes(key);
+}
+
 /** 波形函数：y(x,t) = A sin(kx − dir·ωt) */
 export function waveY(
   x: number,
@@ -212,10 +226,10 @@ export function createMechanicalWaveSim(
       params.direction = (value === 'left' ? 'left' : 'right') as WaveDirection;
     } else if (key === 'showMicroShift') {
       params.showMicroShift = Boolean(value);
-    } else {
-      (params as unknown as Record<string, number>)[key] = value as number;
-      if (WAVE_PARAMS.includes(key as WaveParam)) {
-        applyConstraint(key as WaveParam);
+    } else if (isNumericParam(key)) {
+      params[key] = Number(value);
+      if (key === 'waveSpeed' || key === 'wavelength' || key === 'period') {
+        applyConstraint(key);
       }
     }
     return { ...params };

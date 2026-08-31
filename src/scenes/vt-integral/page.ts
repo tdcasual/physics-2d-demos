@@ -20,9 +20,6 @@ bootScenePage({
       ...scene,
       getState() {
         return scene.getSnapshot();
-      },
-      dispose() {
-        scene.dispose();
       }
     };
   },
