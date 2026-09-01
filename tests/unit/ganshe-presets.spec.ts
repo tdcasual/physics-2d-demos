@@ -6,19 +6,9 @@ import {
 import { gansheControlsSchema } from '../../src/scenes/ganshe/controls-schema';
 import {
   createWaveInterferenceSim,
-  DOMAIN_MAX,
+  PARAM_DOMAINS,
   type WaveParams
 } from '../../src/scenes/ganshe/scene.sim';
-
-// 与 scene.sim.ts 中 normalizeParams 的 clamp 域保持一致
-const PARAM_DOMAINS = {
-  freq1: { min: 0.5, max: 20 },
-  freq2: { min: 0.5, max: 20 },
-  amp1: { min: 0.5, max: 15 },
-  amp2: { min: 0.5, max: 15 },
-  phaseDiff: { min: 0, max: 360 },
-  observerX: { min: 0, max: DOMAIN_MAX }
-} as const;
 
 const EXPECTED_PRESET_IDS = [
   'constructive',

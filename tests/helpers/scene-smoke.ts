@@ -120,44 +120,56 @@ export function testSceneSmoke(
       });
     }
 
-    if (supportsTransport) {
-      it('startAll / pauseAll / reset cycle without throw', () => {
-        const scene = create();
-        const s = scene as {
-          init?: () => void;
-          startAll?: () => void;
-          pauseAll?: () => void;
-          reset?: () => void;
-        };
-        s.init?.();
-        expect(() => s.startAll?.()).not.toThrow();
-        expect(() => s.pauseAll?.()).not.toThrow();
-        expect(() => s.reset?.()).not.toThrow();
-      });
-    }
-
-    if (supportsGetState) {
-      it('getState returns truthy value', () => {
-        const scene = create();
-        const s = scene as { init?: () => void; getState?: () => unknown };
-        s.init?.();
-        if (typeof s.getState === 'function') {
-          const state = s.getState();
-          expect(state).toBeTruthy();
+    it('startAll / pauseAll / reset cycle without throw', ({ skip }) => {
+      const scene = create();
+      const s = scene as {
+        init?: () => void;
+        startAll?: () => void;
+        pauseAll?: () => void;
+        reset?: () => void;
+      };
+      const implemented =
+        typeof s.startAll === 'function' && typeof s.pauseAll === 'function';
+      if (!implemented) {
+        if (supportsTransport) {
+          expect(typeof s.startAll).toBe('function');
+          expect(typeof s.pauseAll).toBe('function');
         }
-      });
-    }
+        skip('scene does not implement startAll/pauseAll');
+        return;
+      }
+      s.init?.();
+      expect(() => s.startAll!()).not.toThrow();
+      expect(() => s.pauseAll!()).not.toThrow();
+      expect(() => s.reset?.()).not.toThrow();
+    });
 
-    if (supportsGetSnapshot) {
-      it('getSnapshot returns truthy value', () => {
-        const scene = create();
-        const s = scene as { init?: () => void; getSnapshot?: () => unknown };
-        s.init?.();
-        if (typeof s.getSnapshot === 'function') {
-          const snap = s.getSnapshot();
-          expect(snap).toBeTruthy();
+    it('getState returns truthy value', ({ skip }) => {
+      const scene = create();
+      const s = scene as { init?: () => void; getState?: () => unknown };
+      if (typeof s.getState !== 'function') {
+        if (supportsGetState) {
+          expect(typeof s.getState).toBe('function');
         }
-      });
-    }
+        skip('scene does not implement getState');
+        return;
+      }
+      s.init?.();
+      expect(s.getState()).toBeTruthy();
+    });
+
+    it('getSnapshot returns truthy value', ({ skip }) => {
+      const scene = create();
+      const s = scene as { init?: () => void; getSnapshot?: () => unknown };
+      if (typeof s.getSnapshot !== 'function') {
+        if (supportsGetSnapshot) {
+          expect(typeof s.getSnapshot).toBe('function');
+        }
+        skip('scene does not implement getSnapshot');
+        return;
+      }
+      s.init?.();
+      expect(s.getSnapshot()).toBeTruthy();
+    });
   });
 }

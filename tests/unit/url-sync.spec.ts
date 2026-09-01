@@ -318,5 +318,15 @@ describe('url-sync', () => {
       expect(scene.setParams).toHaveBeenCalledWith({ speed: 30 });
       expect(scene.render).toHaveBeenCalledTimes(1);
     });
+
+    it('uses preloadedParams instead of re-reading the URL', () => {
+      window.history.replaceState({}, '', '/test.html?speed=30');
+      const scene = createFakeScene();
+      applySceneUrlParams(mockMeta, createTarget(scene, null), undefined, {
+        speed: 99
+      });
+      expect(scene.setParams).toHaveBeenCalledWith({ speed: 99 });
+      expect(scene.setParams).not.toHaveBeenCalledWith({ speed: 30 });
+    });
   });
 });

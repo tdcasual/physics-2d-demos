@@ -32,6 +32,13 @@ describe('vernier-caliper instrument sim', () => {
       const s = sim.getState();
       expect(s.vernierDivisions).toBe(50);
       expect(s.vernierLength).toBe(49);
+      // 构造路径与 setParams 共用吸附：0.03 → 最近合法档 0.02，读数按 0.02 计
+      expect(s.params.precision).toBe(0.02);
+      expect(s.totalReading).toBeCloseTo(
+        s.mainScaleReading + s.vernierAlignment * s.params.precision,
+        6
+      );
+      expect(s.totalReading).toBeCloseTo(s.jawPosition, 6);
     });
   });
 

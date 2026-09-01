@@ -8,10 +8,11 @@
  * 约定的 create 函数，就会被自动发现并纳入测试。
  *
  * 能力清单不再手动维护：
- * - transport 能力直接派生自 SceneMeta.testProfile.hasTransport
- *   （契约测试 scene-standard.spec.ts 已强制每个场景声明 testProfile）
- * - getState / getSnapshot 由 scene-smoke 内部对实例做 typeof 探测，
- *   存在即断言返回值 truthy，缺失则安全跳过
+ * - hasTransport 描述布局运输条（adapter 自带 play/pause），不等于
+ *   entry 暴露 startAll/pauseAll，故不把 hasTransport 当作 startAll 硬声明。
+ * - getState / getSnapshot 不属于 testProfile 字段。
+ * - scene-smoke：方法存在则硬断言；不存在则 skip（不是空转通过）。
+ *   仅当 options 显式要求该能力时，缺失才 fail。
  */
 
 import { testSceneSmoke } from '../helpers/scene-smoke';
@@ -60,11 +61,10 @@ for (const [path, mod] of Object.entries(sceneModules)) {
     needsCanvas,
     supportsSetMode: true,
     supportsSetTheme: true,
-    supportsTransport: testProfile.hasTransport,
-    // getState/getSnapshot 不属于 testProfile 字段；scene-smoke 的能力
-    // 测试内部按实例实际方法探测，恒为 true 即可全量自动覆盖
-    supportsGetState: true,
-    supportsGetSnapshot: true
+    // hasTransport 不等于 entry.startAll；缺失时 smoke 会 skip 而非空转通过
+    supportsTransport: false,
+    supportsGetState: false,
+    supportsGetSnapshot: false
   });
 }
 

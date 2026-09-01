@@ -88,14 +88,21 @@ describe('createCanvasViewport', () => {
   });
 
   it('记录 responsiveScale 与 dpr', () => {
-    const canvas = makeCanvas(640, 480);
-    const vp = createCanvasViewport({ canvas });
-    vp.resize();
-    // sizeCanvasToFill 已写入 dataset.responsiveScale
-    expect(vp.responsiveScale).toBe(
-      parseFloat(canvas.dataset.responsiveScale || '1')
-    );
-    expect(vp.dpr).toBe(canvas.width / Math.max(1, vp.cssWidth));
+    const originalDpr = window.devicePixelRatio;
+    window.devicePixelRatio = 2;
+    try {
+      const canvas = makeCanvas(400, 300);
+      const vp = createCanvasViewport({ canvas });
+      vp.resize();
+      expect(vp.cssWidth).toBe(400);
+      expect(vp.cssHeight).toBe(300);
+      expect(canvas.width).toBe(800);
+      expect(vp.dpr).toBe(2);
+      // 短边 300 / 参考 400 → 0.75（与 getResponsiveScale 公式独立对照）
+      expect(vp.responsiveScale).toBe(0.75);
+    } finally {
+      window.devicePixelRatio = originalDpr;
+    }
   });
 
   it('initialWidth/Height 作为首次 resize 前的记录值', () => {
