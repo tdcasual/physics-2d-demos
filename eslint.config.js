@@ -13,21 +13,24 @@ const crossSceneImportMessage =
   'Scene modules cannot import other scenes. Shared code belongs in the scenes root modules (types/page-utils/scene-entry-helpers/view-base).';
 
 // 深度 1 场景文件（src/scenes/<id>/*.ts）：`../X` 解析到 src/scenes/X，
-// 仅放行 4 个根共享模块（精确匹配模块名，子路径一律禁止）。
+// 仅放行 4 个根共享模块（匹配模块名，可选 `.ts` 扩展名；子路径一律禁止）。
 // 注意前缀后须排除 `.`，否则 `^\.\./` 会前缀命中 `../../…`。
+const sharedSceneRootModules =
+  'types(?:\\.ts)?$|page-utils(?:\\.ts)?$|scene-entry-helpers(?:\\.ts)?$|view-base(?:\\.ts)?$';
 const crossSceneImportDepth1 = {
-  regex:
-    '^\\.\\./(?!\\.)(?!types$|page-utils$|scene-entry-helpers$|view-base$)',
+  regex: `^\\.\\./(?!\\.)(?!${sharedSceneRootModules})`,
   message: crossSceneImportMessage
 };
 
 // 深度 ≥2 场景文件（renderer/ 等）：`../../X`、`../../../X`、`../../../../X`
 // 按深度解析到 src/scenes/X 或 src/X；负向前瞻放行根共享模块与 src 各一级
 // 目录（app/catalog/ui 是否合法由各自专属 group 约束，此处只负责不重复命中）。
+const srcLayerDirs =
+  'app(?:$|/)|catalog(?:$|/)|core(?:$|/)|instruments(?:$|/)|pages(?:$|/)|platform(?:$|/)|styles(?:$|/)|ui(?:$|/)';
 const crossSceneImportDeep = [
-  '^\\.\\./\\.\\./(?!\\.)(?!types$|page-utils$|scene-entry-helpers$|view-base$|app(?:$|/)|catalog(?:$|/)|core(?:$|/)|instruments(?:$|/)|pages(?:$|/)|platform(?:$|/)|styles(?:$|/)|ui(?:$|/))',
-  '^\\.\\./\\.\\./\\.\\./(?!\\.)(?!types$|page-utils$|scene-entry-helpers$|view-base$|app(?:$|/)|catalog(?:$|/)|core(?:$|/)|instruments(?:$|/)|pages(?:$|/)|platform(?:$|/)|styles(?:$|/)|ui(?:$|/))',
-  '^\\.\\./\\.\\./\\.\\./\\.\\./(?!\\.)(?!types$|page-utils$|scene-entry-helpers$|view-base$|app(?:$|/)|catalog(?:$|/)|core(?:$|/)|instruments(?:$|/)|pages(?:$|/)|platform(?:$|/)|styles(?:$|/)|ui(?:$|/))'
+  `^\\.\\./\\.\\./(?!\\.)(?!${sharedSceneRootModules}|${srcLayerDirs})`,
+  `^\\.\\./\\.\\./\\.\\./(?!\\.)(?!${sharedSceneRootModules}|${srcLayerDirs})`,
+  `^\\.\\./\\.\\./\\.\\./\\.\\./(?!\\.)(?!${sharedSceneRootModules}|${srcLayerDirs})`
 ].map((regex) => ({ regex, message: crossSceneImportMessage }));
 
 // 以下三组在两个 scenes 规则块间共享：深度 1 场景文件同时命中两块，而同一
@@ -237,7 +240,12 @@ export default tseslint.config(
               message: 'Catalog layer cannot import scenes layer.'
             },
             {
-              group: ['../core/*', '../core/**', '../../core/*', '../../core/**'],
+              group: [
+                '../core/*',
+                '../core/**',
+                '../../core/*',
+                '../../core/**'
+              ],
               message: 'Catalog layer cannot import core layer.'
             },
             {
@@ -393,7 +401,8 @@ export default tseslint.config(
                 '../../catalog/*',
                 '../../catalog/**'
               ],
-              message: 'Platform layer must stay independent from catalog layer.'
+              message:
+                'Platform layer must stay independent from catalog layer.'
             },
             {
               group: [

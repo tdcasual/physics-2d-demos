@@ -10,6 +10,16 @@ import { clamp } from '../../core/math';
 export const WAVE_SPEED = 6;
 export const DOMAIN_MAX = 30;
 
+/** 连续参数的 clamp 域（normalizeParams 与预设测试共用，避免手抄漂移） */
+export const PARAM_DOMAINS = {
+  freq1: { min: 0.5, max: 20 },
+  freq2: { min: 0.5, max: 20 },
+  amp1: { min: 0.5, max: 15 },
+  amp2: { min: 0.5, max: 15 },
+  phaseDiff: { min: 0, max: 360 },
+  observerX: { min: 0, max: DOMAIN_MAX }
+} as const;
+
 export type WaveSceneMode = 'head-on' | 'single';
 
 export type WaveParams = {
@@ -84,23 +94,29 @@ function pulseEnvelope(x: number, center: number, width: number): number {
   return Math.exp(-Math.pow((x - center) / sigma, 2));
 }
 
-function normalizeParams(input: Partial<WaveParams>): WaveParams {
-  const observerX = clamp(
-    Number.isFinite(input.observerX) ? input.observerX! : 15,
-    0,
-    DOMAIN_MAX
+function clampDomain(
+  value: number | undefined,
+  fallback: number,
+  domain: { readonly min: number; readonly max: number }
+): number {
+  return clamp(
+    Number.isFinite(value) ? value! : fallback,
+    domain.min,
+    domain.max
   );
-  const observers = (input.observers ?? []).map((x) => clamp(x, 0, DOMAIN_MAX));
+}
+
+function normalizeParams(input: Partial<WaveParams>): WaveParams {
+  const observerX = clampDomain(input.observerX, 15, PARAM_DOMAINS.observerX);
+  const observers = (input.observers ?? []).map((x) =>
+    clamp(x, PARAM_DOMAINS.observerX.min, PARAM_DOMAINS.observerX.max)
+  );
   return {
-    freq1: clamp(Number.isFinite(input.freq1) ? input.freq1! : 4, 0.5, 20),
-    freq2: clamp(Number.isFinite(input.freq2) ? input.freq2! : 4, 0.5, 20),
-    amp1: clamp(Number.isFinite(input.amp1) ? input.amp1! : 5, 0.5, 15),
-    amp2: clamp(Number.isFinite(input.amp2) ? input.amp2! : 5, 0.5, 15),
-    phaseDiff: clamp(
-      Number.isFinite(input.phaseDiff) ? input.phaseDiff! : 0,
-      0,
-      360
-    ),
+    freq1: clampDomain(input.freq1, 4, PARAM_DOMAINS.freq1),
+    freq2: clampDomain(input.freq2, 4, PARAM_DOMAINS.freq2),
+    amp1: clampDomain(input.amp1, 5, PARAM_DOMAINS.amp1),
+    amp2: clampDomain(input.amp2, 5, PARAM_DOMAINS.amp2),
+    phaseDiff: clampDomain(input.phaseDiff, 0, PARAM_DOMAINS.phaseDiff),
     observerX,
     observers: observers.length > 0 ? observers : [],
     mode: input.mode === 'single' ? 'single' : 'head-on',

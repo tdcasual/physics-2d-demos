@@ -42,6 +42,7 @@ bootScenePage({
           // 经由 reading 的 onChange 统一完成 setParams/scheduleRender/writeParam
           const val = parseFloat(String(value));
           if (!Number.isNaN(val)) renderer.setValue('reading', val);
+          writeParam('preset', String(value));
           return;
         }
         if (key === 'reading') {

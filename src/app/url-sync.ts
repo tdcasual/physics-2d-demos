@@ -14,11 +14,15 @@ import type {
 } from './scene-bootstrapper-types';
 
 /**
- * 合法 URL 同步键集合：defaultParams ∪ urlSyncKeys ∪ {preset}
+ * URL 读取/写回允许的键集合：defaultParams ∪ urlSyncKeys ∪ {preset}
  *
  * 与 readSceneParams 的读取口径一致（readSceneParams 对 preset 有
  * 特判放行），写回（writeParam）用同一集合过滤：不可读的 key
  * 写了也无法恢复，直接忽略。
+ *
+ * 这些键会被读取，但 entry 无 setParams/setParam 时管线静默丢弃
+ * （与旧行为等价）。无参数 API 的场景：electrification / emf-analogy /
+ * field-lines / spring-oscillator / vt-integral。
  */
 export function resolveUrlSyncKeys(meta: SceneMeta): Set<string> {
   return new Set([
@@ -151,9 +155,10 @@ export function applySceneUrlParams<TScene extends SceneInstance>(
     mount: HTMLElement;
     scheduleRender: () => void;
   },
-  paramSync?: SceneParamSync<TScene>
+  paramSync?: SceneParamSync<TScene>,
+  preloadedParams?: Record<string, number | string>
 ): void {
-  const urlParams = readSceneParams(meta);
+  const urlParams = preloadedParams ?? readSceneParams(meta);
   if (Object.keys(urlParams).length === 0) return;
 
   const { scene, controls, mount, scheduleRender } = target;

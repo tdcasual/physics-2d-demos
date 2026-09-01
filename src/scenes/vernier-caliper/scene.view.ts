@@ -85,7 +85,7 @@ export function createVernierCaliperView(
     },
     dispose(): void {
       last = null;
-      stage.ctx = null;
+      stage.release();
     }
   };
 }

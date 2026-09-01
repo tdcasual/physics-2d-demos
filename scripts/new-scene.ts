@@ -304,7 +304,7 @@ bootScenePage({
     create__PASCAL__Scene({ canvas, theme, mode, demoHints }),
   // URL 参数（键集 = meta.defaultParams ∪ meta.urlSyncKeys）由
   // bootstrapper 参数管线自动应用与回写，无需手写样板。
-  createControls: ({ mount, scene, scheduleRender }) => {
+  createControls: ({ mount, scene, scheduleRender, writeParam }) => {
     const render = scheduleRender ?? (() => scene.render());
     const renderer = renderSchema({
       mount,
@@ -312,6 +312,7 @@ bootScenePage({
       onChange: (key, value) => {
         scene.setParams({ [key]: value } as Partial<__PASCAL__Params>);
         render();
+        writeParam?.(key, value);
       },
       onAction: () => {}
     });

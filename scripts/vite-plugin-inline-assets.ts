@@ -32,7 +32,20 @@ type OutputChunk = {
 
 type OutputBundle = Record<string, OutputChunk | { type: 'asset' }>;
 
-const __dirname = fileURLToPath(new URL('.', import.meta.url));
+function resolvePluginDir(): string {
+  try {
+    if (
+      typeof import.meta.url === 'string' &&
+      import.meta.url.startsWith('file:')
+    ) {
+      return fileURLToPath(new URL('.', import.meta.url));
+    }
+  } catch {
+    /* vitest/happy-dom 下 import.meta.url 可能不是可用的 file URL */
+  }
+  return join(process.cwd(), 'scripts');
+}
+const __dirname = resolvePluginDir();
 
 /**
  * Topological sort of chunks starting from an entry chunk.
@@ -117,6 +130,51 @@ function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+export function findModuleScripts(
+  html: string
+): Array<{ fullTag: string; src: string }> {
+  // 每次新建正则，避免 /g lastIndex 在多次调用间残留
+  const re = /<script\s+type="module"[^>]*src="([^"]+)"[^>]*><\/script>/gi;
+  return [...html.matchAll(re)].map((m) => ({
+    fullTag: m[0],
+    src: m[1] ?? ''
+  }));
+}
+
+/**
+ * standalone 单文件页的 chrome 处理：favicon 内联为 data URI，
+ * manifest 无法自包含则删除 link（cleanup 也会删掉 manifest.json）。
+ */
+export function inlineStandaloneChrome(
+  html: string,
+  faviconSvg: string | null
+): string {
+  let out = html;
+  if (faviconSvg !== null) {
+    const dataUri = `data:image/svg+xml;base64,${Buffer.from(faviconSvg).toString('base64')}`;
+    out = out.replace(
+      /<link\s+[^>]*rel=["'](?:icon|shortcut icon)["'][^>]*>/gi,
+      `<link rel="icon" href="${dataUri}" type="image/svg+xml" />`
+    );
+  }
+  out = out.replace(
+    /<link\s+[^>]*rel=["']manifest["'][^>]*>/gi,
+    '<!-- standalone: manifest omitted (cannot self-contain) -->'
+  );
+  return out;
+}
+
+function readFaviconSvg(dir: string): string | null {
+  const candidates = [
+    join(dir, 'favicon.svg'),
+    join(process.cwd(), 'public/favicon.svg')
+  ];
+  for (const p of candidates) {
+    if (existsSync(p)) return readFileSync(p, 'utf-8');
+  }
+  return null;
+}
+
 export function inlineAssets(): Plugin {
   return {
     name: 'vite-plugin-inline-assets',
@@ -126,6 +184,7 @@ export function inlineAssets(): Plugin {
     writeBundle(options, bundle) {
       const dir = options.dir ?? 'dist';
       const tmpDir = join(dir, '.tmp-esbuild');
+      const failures: string[] = [];
       try {
         mkdirSync(tmpDir, { recursive: true });
       } catch {
@@ -133,6 +192,7 @@ export function inlineAssets(): Plugin {
       }
 
       const htmlFiles = Object.keys(bundle).filter((f) => f.endsWith('.html'));
+      const faviconSvg = readFaviconSvg(dir);
 
       for (const htmlFileName of htmlFiles) {
         const htmlPath = join(dir, htmlFileName);
@@ -173,42 +233,49 @@ export function inlineAssets(): Plugin {
         // --- Remove modulepreload links ---
         html = html.replace(/<link\s+[^>]*rel="modulepreload"[^>]*\/?>/gi, '');
 
-        // --- JS inlining ---
-        const scriptMatch = html.match(
-          /<script\s+type="module"[^>]*src="([^"]+)"[^>]*><\/script>/i
-        );
-
-        if (scriptMatch) {
-          const [fullScriptTag, scriptSrc] = scriptMatch;
-          const entryKey = assetPathToKey(scriptSrc);
+        // --- JS inlining：所有 type="module" src 脚本都必须内联，否则计失败 ---
+        const moduleScripts = findModuleScripts(html);
+        for (const { fullTag, src } of moduleScripts) {
+          const entryKey = assetPathToKey(src);
           const entryChunk = bundle[entryKey];
 
-          if (entryChunk && entryChunk.type === 'chunk') {
-            const orderedChunks = topoSortChunks(entryChunk, bundle);
+          if (!entryChunk || entryChunk.type !== 'chunk') {
+            failures.push(`${htmlFileName}: missing entry chunk "${entryKey}"`);
+            continue;
+          }
 
-            try {
-              let bundledCode = bundleChunksToIife(orderedChunks, tmpDir);
-              // Escape </script> inside the JS to prevent premature tag closing
-              bundledCode = bundledCode.replace(/<\/script>/gi, '<\\/script>');
-              // 保留 type="module"：模块脚本默认 deferred，内联为 classic
-              // script 会在 head 解析阶段先于 #app 执行，导致启动挂载失败。
-              // Use regex + function replacement to avoid JS treating $ in
-              // bundledCode as special replacement patterns ($&, $', $`, $n)
-              html = html.replace(
-                new RegExp(escapeRegex(fullScriptTag)),
-                () => `<script type="module">\n${bundledCode}\n</script>`
-              );
-            } catch (err) {
-              console.warn(
-                `[inline-assets] Failed to bundle ${entryKey}:`,
-                err instanceof Error ? err.message : err
-              );
-            }
+          const orderedChunks = topoSortChunks(entryChunk, bundle);
+
+          try {
+            let bundledCode = bundleChunksToIife(orderedChunks, tmpDir);
+            // Escape </script> inside the JS to prevent premature tag closing
+            bundledCode = bundledCode.replace(/<\/script>/gi, '<\\/script>');
+            // 保留 type="module"：模块脚本默认 deferred，内联为 classic
+            // script 会在 head 解析阶段先于 #app 执行，导致启动挂载失败。
+            // Use regex + function replacement to avoid JS treating $ in
+            // bundledCode as special replacement patterns ($&, $', $`, $n)
+            html = html.replace(
+              new RegExp(escapeRegex(fullTag)),
+              () => `<script type="module">\n${bundledCode}\n</script>`
+            );
+          } catch (err) {
+            const reason = err instanceof Error ? err.message : String(err);
+            failures.push(
+              `${htmlFileName}: failed to bundle ${entryKey}: ${reason}`
+            );
           }
         }
 
         // --- Remove crossorigin attributes ---
         html = html.replace(/\s+crossorigin/g, '');
+
+        if (
+          /<link\s+[^>]*rel=["'](?:icon|shortcut icon)["'][^>]*>/i.test(html) &&
+          faviconSvg === null
+        ) {
+          failures.push(`${htmlFileName}: favicon.svg not found for inlining`);
+        }
+        html = inlineStandaloneChrome(html, faviconSvg);
 
         // --- Write standalone HTML (flatten src/pages/ to root) ---
         const outputFileName = htmlFileName.replace(/^src\/pages\//, '');
@@ -218,10 +285,17 @@ export function inlineAssets(): Plugin {
 
       // --- Cleanup ---
       rmSync(tmpDir, { recursive: true, force: true });
-      const topLevel = readdirSync(dir);
-      for (const entry of topLevel) {
-        if (extname(entry) === '.html') continue;
-        rmSync(join(dir, entry), { recursive: true, force: true });
+      if (failures.length === 0) {
+        const topLevel = readdirSync(dir);
+        for (const entry of topLevel) {
+          if (extname(entry) === '.html') continue;
+          rmSync(join(dir, entry), { recursive: true, force: true });
+        }
+      } else {
+        this.error(
+          `[inline-assets] Failed to inline ${failures.length} asset(s):\n` +
+            failures.map((f) => `  - ${f}`).join('\n')
+        );
       }
     }
   };

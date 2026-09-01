@@ -170,6 +170,23 @@ bootScenePage({
     const sourceCards = [sourceACard, sourceBCard, phaseCard];
 
     return {
+      setValue(key: string, value: number | string | boolean) {
+        if (key === 'preset' || key === 'mode') {
+          renderer.setActive(key, String(value));
+          return;
+        }
+        if (gansheParamMapping[key]) {
+          const num = typeof value === 'number' ? value : Number(value);
+          if (Number.isFinite(num)) {
+            for (const card of sourceCards) card.setValue(key, num);
+          }
+          return;
+        }
+        renderer.setValue(key, value);
+      },
+      setActive(key: string, value: string) {
+        renderer.setActive(key, value);
+      },
       setParam(key: string, value: number) {
         if (gansheParamMapping[key]) {
           for (const card of sourceCards) card.setValue(key, value);

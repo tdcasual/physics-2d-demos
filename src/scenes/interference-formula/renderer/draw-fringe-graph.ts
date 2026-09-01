@@ -116,11 +116,13 @@ export function drawFringeGraph(
     const stripeCenterX = stripeX + stripeW / 2;
     const stepPx = Math.max(1, gScale);
 
-    // 条纹图案离屏缓存：参数/尺寸/主题未变时跳过重绘。
-    // 离屏尺寸按 CSS 像素取整，drawImage 受当前 DPR transform 影响自动对齐。
-    const offW = Math.max(1, Math.ceil(stripeW));
-    const offH = Math.max(1, Math.ceil(stripeH));
-    const offKey = `${params.lambda}_${params.d}_${params.L}_${offW}_${offH}_${stepPx}_${isDark ? 1 : 0}`;
+    // 条纹图案离屏缓存：参数/尺寸/主题/DPR 未变时跳过重绘。
+    // 离屏按设备像素创建，在离屏 ctx 上 setTransform(gDpr) 后按 CSS
+    // 坐标逐列绘制；主画布 drawImage 显式源/目标矩形缩回 CSS 尺寸，
+    // 避免当前 gDpr transform 把 CSS 尺寸离屏图再放大一遍导致模糊。
+    const offW = Math.max(1, Math.ceil(stripeW * gDpr));
+    const offH = Math.max(1, Math.ceil(stripeH * gDpr));
+    const offKey = `${params.lambda}_${params.d}_${params.L}_${offW}_${offH}_${stepPx}_${isDark ? 1 : 0}_${gDpr}`;
     if (
       !fringeCache ||
       fringeCache.canvas.width !== offW ||
@@ -135,10 +137,14 @@ export function drawFringeGraph(
     if (fringeCache) {
       if (fringeCache.key !== offKey) {
         fringeCache.key = offKey;
+        const offCtx = fringeCache.ctx;
+        offCtx.setTransform(1, 0, 0, 1, 0, 0);
+        offCtx.clearRect(0, 0, offW, offH);
+        offCtx.setTransform(gDpr, 0, 0, gDpr, 0, 0);
         paintFringeColumns(
-          fringeCache.ctx,
+          offCtx,
           stripeW,
-          offH,
+          stripeH,
           stepPx,
           range,
           lambdaM,
@@ -148,7 +154,17 @@ export function drawFringeGraph(
           isDark
         );
       }
-      gc.drawImage(fringeCache.canvas, stripeX, stripeY, stripeW, stripeH);
+      gc.drawImage(
+        fringeCache.canvas,
+        0,
+        0,
+        fringeCache.canvas.width,
+        fringeCache.canvas.height,
+        stripeX,
+        stripeY,
+        stripeW,
+        stripeH
+      );
     } else {
       // 离屏上下文不可用（理论上不发生）时退回直绘，保证图案不缺失；
       // paintFringeColumns 的 x 从 0 起，平移到条纹区原点以复用同一实现

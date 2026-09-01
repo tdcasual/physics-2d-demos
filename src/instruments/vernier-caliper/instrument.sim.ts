@@ -36,6 +36,24 @@ const OBJECTS: Array<{ name: string; size: number }> = [
   { name: '管内径', size: 8.5 }
 ];
 
+const VALID_PRECISIONS: CaliperPrecision[] = [0.02, 0.05, 0.1];
+
+function snapPrecision(raw: unknown): CaliperPrecision {
+  const p = Number(raw);
+  return VALID_PRECISIONS.reduce((best, v) =>
+    Math.abs(v - p) < Math.abs(best - p) ? v : best
+  );
+}
+
+function normalizeCaliperParams(
+  input: VernierCaliperParams
+): VernierCaliperParams {
+  return {
+    precision: snapPrecision(input.precision),
+    objectType: Number(input.objectType)
+  };
+}
+
 function precisionConfig(precision: CaliperPrecision): {
   divisions: number;
   length: number;
@@ -85,28 +103,22 @@ function computeState(params: VernierCaliperParams): VernierCaliperState {
 }
 
 export function createVernierCaliperSim(initial: VernierCaliperParams) {
-  let params: VernierCaliperParams = { ...initial };
+  const normalizedInitial = normalizeCaliperParams(initial);
+  let params: VernierCaliperParams = { ...normalizedInitial };
   return {
     getState(): VernierCaliperState {
       return computeState(params);
     },
     setParams(next: Partial<VernierCaliperParams>): void {
-      const merged: VernierCaliperParams = { ...params, ...next };
       // 控件可能传入字符串或连续值，统一转数值并把精度吸附到合法档位，
       // 保证读数与游标分度始终自洽（仪器库自动生成连续滑块时亦成立）
-      const validPrecisions: CaliperPrecision[] = [0.02, 0.05, 0.1];
-      const p = Number(merged.precision);
-      merged.precision = validPrecisions.reduce((best, v) =>
-        Math.abs(v - p) < Math.abs(best - p) ? v : best
-      );
-      merged.objectType = Number(merged.objectType);
-      params = merged;
+      params = normalizeCaliperParams({ ...params, ...next });
     },
     step(_dt: number): void {
       /* 静态仪器 */
     },
     reset(): void {
-      params = { ...initial };
+      params = { ...normalizedInitial };
     }
   };
 }

@@ -142,10 +142,11 @@ export function bootScenePage<TScene extends SceneInstance>(
             const scheduler = createRenderScheduler(() => {
               controlOpts.scene.render();
             });
+            const urlParams = readSceneParams(options.meta);
             const controls = userCreateControls({
               ...controlOpts,
               scheduleRender: scheduler.schedule,
-              urlParams: readSceneParams(options.meta),
+              urlParams,
               writeParam: (key, value) => {
                 if (writableKeys.has(key)) {
                   writeSceneParams({ [key]: value });
@@ -160,7 +161,8 @@ export function bootScenePage<TScene extends SceneInstance>(
                 mount: controlOpts.mount,
                 scheduleRender: scheduler.schedule
               },
-              options.paramSync
+              options.paramSync,
+              urlParams
             );
             return attachSchedulerDispose(controls, scheduler);
           }

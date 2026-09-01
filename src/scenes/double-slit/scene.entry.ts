@@ -73,6 +73,14 @@ export function createDoubleSlitScene(
     demoHints: options.demoHints
   });
 
+  // 标准入口提前创建，避免仪器异步 .then 回调在 TDZ 内引用 base
+  const base = createStandardSceneEntry({
+    sim,
+    view,
+    getState: () => sim.getState(),
+    onReadout: options.onReadout
+  });
+
   // ── 仪器实例管理 ──
   let instrumentWrap: HTMLDivElement | null = null;
   let leftContainer: HTMLDivElement | null = null;
@@ -319,14 +327,6 @@ export function createDoubleSlitScene(
     lastStep = state.params.step;
   }
 
-  // ── 标准场景入口 ──
-  const base = createStandardSceneEntry({
-    sim,
-    view,
-    getState: () => sim.getState(),
-    onReadout: options.onReadout
-  });
-
   function getReadoutItems(): Array<{ label: string; value: string }> {
     const s = sim.getState();
     const d = s.params.slitDistance;
@@ -394,13 +394,15 @@ export function createDoubleSlitScene(
     getState() {
       return sim.getState();
     },
-    setParams: base.wrapAction(
-      (params: Partial<DoubleSlitParams>): DoubleSlitParams => {
-        const result = sim.setParams(params);
-        syncInstruments();
-        return result;
-      }
-    ),
+    setParams(params: Partial<DoubleSlitParams>): DoubleSlitParams {
+      const result = sim.setParams(params);
+      // 主画布与仪器画布相互独立：先绘主场景再同步仪器（历史顺序）。
+      // wrapAction 会把 syncInstruments 放到 renderAndEmit 之前，此处显式保持旧序。
+      base.renderAndEmit();
+      syncInstruments();
+      base.notify();
+      return result;
+    },
     render() {
       base.renderAndEmit();
       syncInstruments();

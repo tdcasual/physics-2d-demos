@@ -86,11 +86,13 @@ export function createProjectileScene(
     view,
     getState: () => sim.getState(),
     onReadout: options.onReadout,
+    // init/reset 经标准入口会 renderAndEmit 一次（比旧手写入口多一次首绘），属有意对齐。
     // init/reset 时除 sim.reset() 外还需清空轨迹
     resetView: () => view.reset()
   });
 
   return {
+    // setMode 经标准入口转发 demoHints，属有意对齐（旧入口可能丢弃 hints）
     ...base,
     getState(): ProjectileState {
       return sim.getState();
@@ -98,6 +100,7 @@ export function createProjectileScene(
     getParams(): ResolvedProjectileParams {
       return sim.getParams();
     },
+    // wrapAction = 变更后 renderAndEmit + notify，属迁入标准入口后的有意行为
     setParams: base.wrapAction(
       (next: Partial<ProjectileParams>): ResolvedProjectileParams =>
         sim.setParams(next)

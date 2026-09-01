@@ -59,7 +59,13 @@ const result = await build({
               return { path: key, namespace: 'virtual' };
             }
           }
-          return { path: args.path, external: true };
+          return {
+            errors: [
+              {
+                text: `standalone inline: unresolved specifier "${args.path}" (not in chunk map)`
+              }
+            ]
+          };
         });
         b.onLoad({ filter: /.*/, namespace: 'virtual' }, (args) => {
           return { contents: chunkMap.get(args.path) || '', loader: 'js' };

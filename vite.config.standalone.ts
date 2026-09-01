@@ -10,6 +10,7 @@ import { readdirSync } from 'node:fs';
 import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import { inlineAssets } from './scripts/vite-plugin-inline-assets';
+import { themeNoFlash } from './scripts/vite-plugin-theme-noflash';
 import {
   discoverScenePageEntries,
   scenePages
@@ -29,7 +30,12 @@ function discoverPageEntries(pagesDir: string): Record<string, string> {
 export default defineConfig({
   // 场景页无 React（仅首页使用），standalone 构建不需要 react 插件
   // 场景页 HTML 与主构建一致，由 vite-plugin-scene-pages 虚拟生成
-  plugins: [tailwindcss(), scenePages(__dirname), inlineAssets()],
+  plugins: [
+    themeNoFlash(),
+    tailwindcss(),
+    scenePages(__dirname),
+    inlineAssets()
+  ],
   // 相对 base：产物常经 file:// 打开，绝对路径（/assets/...）会被 CORS 拦截
   base: './',
   build: {
