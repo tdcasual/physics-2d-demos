@@ -334,7 +334,11 @@ function findSceneMeta(id: string): {
 
 describe('scene modernization standard (anti-drift ratchet)', () => {
   it('discovers all scenes', () => {
-    expect(sceneIds.length).toBeGreaterThanOrEqual(16);
+    expect(
+      sceneIds.length,
+      'src/scenes 下发现的场景目录少于 16 个：若新增了场景，确认其位于 ' +
+        'src/scenes/<id>/ 目录下；若误删了场景请恢复后再提交'
+    ).toBeGreaterThanOrEqual(16);
   });
 
   describe('响应式缩放（强制，全员）', () => {
@@ -370,13 +374,20 @@ describe('scene modernization standard (anti-drift ratchet)', () => {
         );
       expect(
         violations,
-        'Large Canvas dimensions must be derived from responsiveScale, dimensions, or standard tokens'
+        '渲染代码含未缩放的大尺寸裸数字（格式 场景id:行:列 (数值)）：' +
+          '在对应 scene.view.ts / renderer 中把尺寸改为乘以 responsiveScale' +
+          '（canvas.dataset.responsiveScale）、或经 getResponsiveScale / ' +
+          'scaledSize / viewport 尺寸推导；新场景禁止加入 ' +
+          'LARGE_RENDER_LITERAL_EXEMPT 豁免清单。规范与示例见 AGENTS.md ' +
+          '「Canvas 响应式渲染规范」与 src/core/canvas-sizing.ts'
       ).toEqual([]);
     });
 
     it('large-render-literal exemption list contains only known scenes', () => {
       expect(
-        [...LARGE_RENDER_LITERAL_EXEMPT].filter((id) => !sceneIds.includes(id))
+        [...LARGE_RENDER_LITERAL_EXEMPT].filter((id) => !sceneIds.includes(id)),
+        'LARGE_RENDER_LITERAL_EXEMPT 含不存在的场景 id（拼写错误或场景已删除）：' +
+          '请修正 tests/contract/scene-standard.spec.ts 中的豁免清单'
       ).toEqual([]);
     });
   });
@@ -423,7 +434,9 @@ describe('scene modernization standard (anti-drift ratchet)', () => {
       const meta = findSceneMeta(id);
       expect(
         meta,
-        `场景 "${id}" 未找到可运行的 SceneMeta 导出。`
+        `场景 "${id}" 未找到 SceneMeta 导出：检查 ` +
+          `src/scenes/${id}/scene.meta.ts 是否导出了含 id 属性的 meta 对象` +
+          `（id 须与目录名一致），参考 src/scenes/projectile/scene.meta.ts`
       ).not.toBeNull();
       expect(
         meta?.demoProfile,
@@ -443,7 +456,12 @@ describe('scene modernization standard (anti-drift ratchet)', () => {
       '%s: declares a layout-independent test profile',
       (id) => {
         const meta = findSceneMeta(id);
-        expect(meta?.testProfile, `${id} missing testProfile`).toMatchObject({
+        expect(
+          meta?.testProfile,
+          `场景 "${id}" 缺少 testProfile：在 src/scenes/${id}/scene.meta.ts ` +
+            `中添加 testProfile: { hasGraph, hasTransport, ` +
+            `supportsPresentation }，参考 src/scenes/projectile/scene.meta.ts`
+        ).toMatchObject({
           hasGraph: expect.any(Boolean),
           hasTransport: expect.any(Boolean),
           supportsPresentation: expect.any(Boolean)
@@ -459,7 +477,10 @@ describe('scene modernization standard (anti-drift ratchet)', () => {
         if (meta?.testProfile?.hasGraph) {
           expect(
             GRAPH_ENTRY_PATTERN.test(source),
-            `${id} declares hasGraph=true but exposes neither renderGraph nor attachGraphCanvas`
+            `场景 "${id}" 声明 hasGraph=true 但未暴露图表挂载入口：` +
+              `在 src/scenes/${id}/ 的 view/entry 中实现 renderGraph(...) 或 ` +
+              `attachGraphCanvas(...)（参考 src/scenes/wedge），` +
+              `若场景确无图表则把 scene.meta.ts 的 hasGraph 改为 false`
           ).toBe(true);
         }
       }

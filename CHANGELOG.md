@@ -2,6 +2,25 @@
 
 > ⚠️ 本文件自 2026-05 起停止逐条维护，日常变更以 git log 为准；里程碑式的审计/修复批次仍会在此记录。
 
+## 2026-09-01 — 弱代理场景工作流加固
+
+### 反馈回路
+
+- 新增 `pnpm verify:scene <id>`：场景任务一站式验证（结构→lint→类型→契约/单测→构建→bundle 预算），失败即停并打印修复指引
+- 契约测试（scene-contract / scene-standard / scene-params-contract / instrument-manifest）断言失败消息全部处方化：问题 → 去哪个文件 → 怎么改 → 参考谁
+- `docs/new-scene-agent-contract.md` 重写为 6 步执行卡
+
+### 自证明与食谱
+
+- 新增 `pnpm check:scaffold`：真实生成探针场景并验证结构/lint/类型/单测全绿后自动清理，守护脚手架模板不脱节（已纳入 quality:core/full 与 CI）；首跑即抓到模板 canvas 可选性类型 bug 并修复
+- 新增 `docs/controls-cookbook.md`：12 种控件字段的可粘贴食谱
+- 新增 `docs/physics-testing-guide.md`：五种独立期望值测试模式 + 镜像测试反面教材
+
+### 防钻与兜底
+
+- `.github/CODEOWNERS`：契约测试、视觉基线、门禁脚本、eslint 层规则划归仓库所有者 review
+- CI 新增 scaffold 自检步骤；失败时 Job Summary 输出 `.github/ci-failure-triage.md` 分诊表
+
 ## 2026-09-01 — 审计跟进修复
 
 ### 正确性

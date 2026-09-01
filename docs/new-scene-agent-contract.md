@@ -1,63 +1,107 @@
-# 新场景代理契约
+# 新场景代理契约（执行卡）
 
-本文档供 OpenClaw、Hermes 及其他代码代理执行新增场景任务时使用。目标是让代理专注于物理场景创作，同时让共享布局和质量门禁自动保护现有行为。
+> 本文档供 OpenClaw、Hermes 及其他代码代理执行**新增场景**任务时使用。
+> 按步骤顺序执行，每步失败先看该步的「失败去哪修」。不要跳步。
+> 只需要记住一条验证命令：`pnpm verify:scene <id>`。
 
-## 工作边界
+## 执行步骤
 
-默认只修改：
-
-- `src/scenes/<id>/`
-- 必要的场景单测或测试 fixture
-
-场景页 HTML 入口由 `scripts/vite-plugin-scene-pages.ts` 从 `scene.meta.ts` 虚拟生成，无需也不应在 `src/pages/` 下创建真实场景 HTML（`pnpm check:scenes` 会拒绝）。
-
-不要手动修改 `src/catalog/scene-registry.ts`。场景由 glob 自动发现。修改 `src/app`、`src/ui`、`src/platform`、`src/core` 或共享样式前，必须先说明影响范围，并增加针对回归的测试。
-
-## 场景交付要求
-
-1. 使用 `pnpm new:scene` 或现有场景结构创建 `scene.meta.ts`、`scene.sim.ts`、`scene.view.ts`、`scene.entry.ts`、controls、`page.ts`（共 6 个文件）。HTML 入口由 `vite-plugin-scene-pages` 从 `scene.meta.ts` 虚拟生成，无需创建。
-2. `SceneMeta.id`、目录名和 `path` 必须一致（HTML 入口路径按 id 自动派生）。
-3. controls 优先使用 `controls-schema.ts` 和共享 `SchemaRenderer`；使用 imperative `controls.ts` 时说明原因。
-4. `scene.view.ts` 使用标准 canvas sizing 和 `responsiveScale`，不要用固定裸数字决定移动端元素尺寸。
-5. `testProfile` 只声明自身能力：`hasGraph`、`hasTransport`、`supportsPresentation`；不要把 `mobile-stack`、tab id 或某个布局的 CSS selector 写入场景 profile。
-6. graph 场景必须实现 `renderGraph` 或 `attachGraphCanvas`，并在每种兼容交互模型下产生实际 render surface。
-7. 新场景的 Canvas 空间参数和尺寸变量中，大于 50 的字面量必须由 `responsiveScale`、viewport 尺寸或标准 token 推导；不得把新场景加入历史豁免清单。
-
-## 布局交付要求
-
-新增布局时才修改 `src/app/layouts`：
-
-- 通过 `registerLayout` 注册，不在测试文件中复制布局列表。
-- 提供 `supportedSlots` 和 `layoutTestProfile`。
-- `interactionModel: 'tabs'` 才需要 tab/panel ARIA 和激活状态；split、fullscreen、custom 使用自己的适配器契约。
-- 每个注册布局都必须有 profile，包括 `autoSelectable: false` 的手动或实验布局；profile 的 viewport 必须满足布局自身约束。
-- 至少验证无 graph、含 graph、含 controls/readout 的真实场景，并验证布局切换后的 DOM 清理。
-
-## 必跑命令
+### Step 1 — 生成骨架
 
 ```bash
-pnpm check:scenes
-pnpm check:layouts
-pnpm check:circular
-pnpm lint
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm check:bundle
+pnpm new:scene <id> <标题>     # 例：pnpm new:scene pendulum 单摆
 ```
 
-浏览器门禁也是必跑项：执行 `pnpm test:e2e` 和 `pnpm test:visual`。`quality:full` 会在一次构建后复用 `dist/` 执行这两套测试；`tests/visual/layout-matrix.spec.ts` 已包含在 visual 套件中，也可单独运行以快速定位布局问题。只有浏览器安装或执行环境存在明确、可复现的阻断时才可暂时缺跑，最终报告必须写出失败命令、错误和待补验证，且不能把任务报告为可合并完成。
+id 必须 kebab-case。脚手架生成 6 个场景文件 + 1 个 sim 测试骨架，
+**生成物开箱即绿**（由 `pnpm check:scaffold` 守护，若生成物挂了说明
+模板脱节，修 `scripts/new-scene.ts`，不要绕）。
 
-布局矩阵自动遍历全部场景、全部注册布局及 profile 视口，并检查页面无横向溢出、活跃 Canvas 尺寸、slot 水平边界、`responsiveScale` 范围与缩略像素内容非空；graph 会在需要时先激活对应 tab。像素回归覆盖清单 = 自动发现的全部场景 − `tests/visual/visual-regression.spec.ts` 中的 `SNAPSHOT_OPT_OUT` 显式豁免（每个条目须带理由注释）；新增场景默认纳入像素覆盖，首次须生成 Darwin/Linux 两套基线，确实无法稳定截图的场景才加入 opt-out。视觉失败不能直接更新 snapshot；先确认 viewport、字体、布局和实际 DOM。移动 tab 的非激活 panel 中 canvas 可以是 `display:none`，断言前必须激活目标 tab 或过滤非激活 panel。
+### Step 2 — 填 meta 与物理
+
+按脚手架输出的待办清单逐项填：
+
+- `scene.meta.ts`：`concept` / `subConcepts`（两项）/ `objective` /
+  `description` 四项**非空**（契约测试强制）；`defaultParams` 与
+  `keywords` 贴合实际物理参数。`SceneMeta.id`、目录名、`path` 必须一致。
+- `scene.sim.ts`：实现物理逻辑。
+- `scene.view.ts`：实现绘制。**大于 50 的尺寸字面量必须由
+  `responsiveScale`、viewport 尺寸或标准 token 推导**（AST 棘轮强制，
+  新场景不得进豁免清单）；规范见 AGENTS.md「Canvas 响应式渲染规范」。
+- `controls-schema.ts`：控件写法见 `docs/controls-cookbook.md`（12 种
+  字段类型各有可粘贴示例）。优先声明式；只有运行时动态增删控件才写
+  imperative `controls.ts`（需在报告里说明理由）。
+
+### Step 3 — 写 sim 正确性测试
+
+编辑 `tests/unit/<id>.sim.spec.ts`。测试期望值必须有**独立推导**
+（教科书公式手算 / 物理不变量 / 读数规则），禁止从实现里抄公式生成
+期望值（镜像测试）。模式与真实示例见 `docs/physics-testing-guide.md`。
+
+### Step 4 — 验证（唯一需要记住的命令）
+
+```bash
+pnpm verify:scene <id>
+```
+
+一条命令跑完：结构 → 布局 → lint → 类型 → 单元/契约测试 → 构建 →
+bundle 预算，失败即停并打印修复指引。全绿才算完成编码部分。
+
+### Step 5 — 视觉基线（新场景必须）
+
+像素基线按平台分文件，**不要本地直接更新 snapshot**：
+
+- Linux（权威）：`scripts/visual-linux-container.sh update`
+  （CI 同构容器），或 CI `workflow_dispatch → update_snapshots` 下载 artifact
+- Mac：`pnpm test:visual:update`，或 `update-darwin-snapshots.yml` 重生成
+
+确实无法稳定截图的场景才加入 `visual-regression.spec.ts` 的
+`SNAPSHOT_OPT_OUT`，且必须带理由注释。
+
+### Step 6 — 浏览器门禁（有环境则跑）
+
+```bash
+pnpm quality:full    # 在 core 之上追加 e2e + 视觉回归
+```
+
+本地无浏览器/容器环境时可缺跑，但最终报告必须写明缺跑项与原因，
+由 CI 兜底；CI 失败时 Job Summary 会附 `.github/ci-failure-triage.md`
+分诊表，按表修复。
+
+## 工作边界（硬性）
+
+- 默认只修改：`src/scenes/<id>/`、`tests/unit/<id>*.spec.ts`
+- 不要手动创建 `src/pages/*.html`（场景页由 vite-plugin-scene-pages
+  虚拟生成，`check:scenes` 会拒绝手抄文件）
+- 不要手动修改 `src/catalog/scene-registry.ts`（glob 自动发现）
+- 修改 `src/app` / `src/ui` / `src/platform` / `src/core` / 共享样式前，
+  必须先说明影响范围并补回归测试
+
+## 禁止事项（违反即返工）
+
+代理**不得**通过以下方式消除失败：删除测试、增加无理由 skip、放宽
+尺寸/覆盖率/bundle 阈值、改写共享契约、直接覆盖视觉基线、把新场景
+加入 AST 豁免清单。以下路径受 `.github/CODEOWNERS` 保护，改动需要
+仓库所有者 review：
+
+- `tests/contract/`、`tests/helpers/`、`tests/visual/`
+- `scripts/check-*.ts`、`scripts/verify-scene.ts`
+- `eslint.config.js`
 
 ## 失败报告格式
 
 最终报告必须列出：
 
-- 修改文件和每个文件的目的；
-- 运行过的命令及通过/失败结果；
-- 失败场景、布局 id、interaction model、viewport、tab（如适用）、selector 和实际尺寸；
-- 未运行的检查及原因；
-- 仍需人工确认的物理正确性、教学表达和视觉质量风险。
+- 修改文件和每个文件的目的
+- 运行过的命令及通过/失败结果
+- 失败场景、布局 id、interaction model、viewport、tab（如适用）、
+  selector 和实际尺寸
+- 未运行的检查及原因
+- 仍需人工确认的物理正确性、教学表达和视觉质量风险
 
-代理不得通过删除测试、增加无理由 skip、放宽尺寸阈值、改写共享契约或直接覆盖视觉基线来消除失败。
+## 新增布局时（仅此时可改 `src/app/layouts`）
+
+- 通过 `registerLazyLayout` 注册，提供 `supportedSlots`、约束和
+  `layoutTestProfile`（含手动/实验布局）
+- `interactionModel` 如实声明（tabs/split/stack/fullscreen/custom）
+- 至少用一个无 graph、一个有 graph、一个带控件/读数的场景验证
+- 可用 `?layout=<id>` 强制浏览器测试某布局；不得在测试中硬编码布局 id 清单

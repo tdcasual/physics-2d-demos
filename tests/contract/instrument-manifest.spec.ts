@@ -14,16 +14,29 @@ describe('instrument manifest contract', () => {
       interferenceVernierCaliperMeta
     ];
 
-    expect(instrumentManifest).toHaveLength(metas.length);
+    expect(
+      instrumentManifest,
+      'manifest 条目数与仪器数不一致：新增仪器后请在 ' +
+        'src/instruments/_manifest/manifest.ts 注册条目，' +
+        '并在本文件中 import 对应 instrument.meta 加入校验列表'
+    ).toHaveLength(metas.length);
     for (const meta of metas) {
       const manifestEntry = instrumentManifest.find(
         (entry) => entry.id === meta.id
       );
       expect(
         manifestEntry,
-        `${meta.id} must be present in manifest`
+        `仪器 "${meta.id}" 未在 manifest 注册：在 ` +
+          'src/instruments/_manifest/manifest.ts 中添加该条目，' +
+          '参考 spiral-micrometer 条目'
       ).toBeDefined();
-      expect(manifestEntry).toMatchObject({
+      expect(
+        manifestEntry,
+        `仪器 "${meta.id}" 的 manifest 条目与 instrument.meta.ts 不一致：` +
+          `同步 src/instruments/_manifest/manifest.ts 中的 title/category/` +
+          'description/unit/precision/defaultParams，使其与 ' +
+          `src/instruments/${meta.id}/instrument.meta.ts 保持一致`
+      ).toMatchObject({
         title: meta.title,
         category: meta.category,
         description: meta.description,

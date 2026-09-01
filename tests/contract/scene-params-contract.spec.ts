@@ -246,7 +246,10 @@ describe('scene params contract', () => {
         if (typeof s.setParams !== 'function') {
           expect(
             NO_PARAMS_API[id],
-            `${id}: entry 无 setParams，必须在 NO_PARAMS_API 登记理由`
+            `${id}: entry 无 setParams——若场景确无对象式参数 API，在 ` +
+              'tests/contract/scene-params-contract.spec.ts 的 NO_PARAMS_API ' +
+              '登记理由；否则在 src/scenes/' +
+              `${id}/scene.entry.ts 中暴露 setParams/getParams`
           ).toBeTypeOf('string');
           return;
         }
@@ -273,7 +276,11 @@ describe('scene params contract', () => {
               ? Object.keys(resolved)
               : [],
             `${id}: setParams({ ${simKey} }) 后读数缺少该键` +
-              (simKey !== key ? `（meta 键 "${key}" 的映射）` : '')
+              (simKey !== key ? `（meta 键 "${key}" 的映射）` : '') +
+              `：在 src/scenes/${id}/ 的 sim setParams/getParams 中支持该键；` +
+              'meta 键与 sim 键不一致时在 PARAM_KEY_MAP 登记映射' +
+              '（参考 projectile 的 v0→speed），' +
+              '纯 UI 状态键在 NON_SIM_KEYS 登记豁免并注明理由'
           ).toContain(simKey);
         }
       } finally {
@@ -282,21 +289,31 @@ describe('scene params contract', () => {
     }
   );
 
-  it.each(scenes)('$id: placard 字段非空', ({ meta }) => {
-    expect(meta.subject.trim().length, 'subject').toBeGreaterThan(0);
-    expect(meta.concept.trim().length, 'concept').toBeGreaterThan(0);
-    expect(meta.subConcepts, 'subConcepts').toHaveLength(2);
+  it.each(scenes)('$id: placard 字段非空', ({ id, meta }) => {
+    const where = (field: string) =>
+      `场景 "${id}" 的 meta.${field} 为空或不合法：在 ` +
+      `src/scenes/${id}/scene.meta.ts 中填写该字段，` +
+      `参考 src/scenes/projectile/scene.meta.ts`;
+    expect(meta.subject.trim().length, where('subject')).toBeGreaterThan(0);
+    expect(meta.concept.trim().length, where('concept')).toBeGreaterThan(0);
+    expect(meta.subConcepts, where('subConcepts')).toHaveLength(2);
     for (const sub of meta.subConcepts) {
-      expect(sub.trim().length, 'subConcepts item').toBeGreaterThan(0);
+      expect(
+        sub.trim().length,
+        where('subConcepts（每个子概念须非空字符串）')
+      ).toBeGreaterThan(0);
     }
-    expect(meta.objective.trim().length, 'objective').toBeGreaterThan(0);
-    expect(meta.keywords.length, 'keywords').toBeGreaterThan(0);
+    expect(meta.objective.trim().length, where('objective')).toBeGreaterThan(0);
+    expect(meta.keywords.length, where('keywords')).toBeGreaterThan(0);
     for (const kw of meta.keywords) {
-      expect(kw.trim().length, 'keywords item').toBeGreaterThan(0);
+      expect(
+        kw.trim().length,
+        where('keywords（每个关键词须非空字符串）')
+      ).toBeGreaterThan(0);
     }
     expect(
       (meta.description ?? '').trim().length,
-      'description'
+      where('description')
     ).toBeGreaterThan(0);
   });
 
@@ -323,8 +340,12 @@ describe('scene params contract', () => {
             expect(
               allowed.has(field.key),
               `${id}: controls-schema 字段 "${field.key}" (${field.type}) 不在 ` +
-                'defaultParams ∪ urlSyncKeys 中——若是拼错请修正 schema，' +
-                '若是合法 action/专用 API 键请在 NON_PARAM_KEYS 登记'
+                'defaultParams ∪ urlSyncKeys 中——若是拼错请修正 ' +
+                `src/scenes/${id}/controls-schema.ts，若已在 ` +
+                `src/scenes/${id}/scene.meta.ts 声明参数请补进 ` +
+                'defaultParams/urlSyncKeys，若是合法 action/专用 API 键请在 ' +
+                'tests/contract/scene-params-contract.spec.ts 的 ' +
+                'NON_PARAM_KEYS 登记并注明理由'
             ).toBe(true);
           }
         }
