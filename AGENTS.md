@@ -130,12 +130,13 @@ bootScenePage({
   meta: mySceneMeta,
   createScene: ({ canvas, theme, mode }) =>
     createMyScene({ canvas, theme, mode }),
-  createControls: ({ mount, scene }) => {
+  createControls: ({ mount, scene, writeParam }) => {
     return renderSchema({
       mount,
       schema: mySceneControlsSchema,
       onChange: (key, value) => {
         /* 处理参数变化 */
+        writeParam?.(key, value);
       },
       onAction: (key) => {
         /* 处理按钮点击 */
@@ -163,6 +164,14 @@ bootScenePage({
   如 projectile 的 v0→speed）、`activeKeys`、`applyParam`（单键接管，返回
   true 跳过默认处理）、`applyAll`（整体接管含首绘，用于批量约束语义）、
   `afterApply`（默认管线后、首绘前）。
+
+**已知限制**：
+
+- 无 `setParams`/`setParam` 的场景（electrification、emf-analogy、field-lines、
+  spring-oscillator、vt-integral）的 `defaultParams` 键会被读取但静默丢弃
+  （行为与旧版等价）。
+- 布局重建重跑管线时，若落在 `writeParam` 150ms debounce 窗口内，存在理论性
+  回灌竞态（窗口极小，非新引入）。
 
 ### 控制区列布局范式
 
@@ -363,4 +372,5 @@ function resize() {
 ## 已知限制
 
 - `spring-oscillator` 与 `ganshe` 使用 imperative `controls.ts`（动态增删振子 / 观察点管理）。这两个文件 import ui 层组件，属 ESLint `no-restricted-imports` 的既有豁免（行内 disable 注释）；ganshe 为混合形态（`controls-schema.ts` + imperative 卡片），spring-oscillator 为纯 imperative（无 controls-schema.ts）
+- chase-meet 的表达式解析器语义（除零得 0、悬挂操作符补 0、多余 token 静默丢弃）已被 `tests/unit/chase-meet-expression-parser.spec.ts` 固化为特征化契约；「修正」parser 前须先改测试，否则会被该契约挡住。
 - E2E 套件当前稳定：本地连续 3 次完整运行（含 `--repeat-each=2` 加压，累计 304 次执行）全部通过，早期文档所述「35 个不稳定测试」已不复现。若 CI 偶发超时，优先排查浏览器/资源环境而非测试本身。

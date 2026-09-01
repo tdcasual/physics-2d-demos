@@ -1,6 +1,31 @@
 # Changelog
 
-> ⚠️ 本文件自 2026-05 起停止维护，此后的变更以 git log 为准。
+> ⚠️ 本文件自 2026-05 起停止逐条维护，日常变更以 git log 为准；里程碑式的审计/修复批次仍会在此记录。
+
+## 2026-09-01 — 审计跟进修复
+
+### 正确性
+
+- 脚手架 `page.ts` 模板 `onChange` 补 `writeParam`，新场景不再丢失 URL 写回
+- interference-formula 条纹离屏缓存按 DPR 创建，避免 HiDPI 模糊
+- standalone 内联失败改为非零退出；module script 全部检测；未解析 chunk 不再 `external: true`
+- scene-smoke 对已声明/已实现的 getState、getSnapshot、transport 改为硬断言，消除空转通过
+
+### 场景与仪器
+
+- double-slit：`const base` 上移避开 TDZ；setParams 恢复「主画布 → 仪器」顺序
+- micrometer 预设补写 `?preset=`；micrometer / vernier-caliper view `dispose` 改 `stage.release()`
+- ganshe 控制句柄补 `setValue`/`setActive`，URL 管线可回写面板
+- vernier-caliper 仪器构造路径复用 precision 吸附
+- ganshe `PARAM_DOMAINS` 导出，消除测试手抄域表
+
+### 工程
+
+- ESLint 放行 `../types.ts`；新增层规则探针测试
+- standalone：favicon 内联为 data URI，补 themeNoFlash 防闪烁
+- URL 管线消除重复 `readSceneParams`；view-base 测试改为独立预期值
+
+详见 `docs/plans/2026-09-01-audit-followup-fixes.md`。
 
 ## 2026-04 — 布局系统扩展性升级
 

@@ -8,6 +8,7 @@
 
 | 文件                                                                                                                   | 日期  | 主题                                         | 状态      |
 | ---------------------------------------------------------------------------------------------------------------------- | ----- | -------------------------------------------- | --------- |
+| [2026-09-01-audit-followup-fixes.md](2026-09-01-audit-followup-fixes.md)                                               | 09-01 | 审计跟进修复（URL/HiDPI/standalone/smoke）   | ✅ 已完成 |
 | [2026-08-20-agent-safe-scene-quality-gates.md](2026-08-20-agent-safe-scene-quality-gates.md)                           | 08-20 | Agent 安全场景质量门禁与移动端布局自动审计   | ✅ 已完成 |
 | [2026-03-02-2d-teaching-demo-standard.md](2026-03-02-2d-teaching-demo-standard.md)                                     | 03-02 | 2D 教学演示标准                              | ✅ 已完成 |
 | [2026-03-02-physics-2d-animation-implementation-plan.md](2026-03-02-physics-2d-animation-implementation-plan.md)       | 03-02 | 物理 2D 动画实施计划                         | ✅ 已完成 |
