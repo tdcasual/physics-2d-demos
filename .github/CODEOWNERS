@@ -1,0 +1,22 @@
+# 契约保护区：这些路径定义了场景/布局质量门禁本身，
+# 弱代理（OpenClaw 等）可能通过修改它们来"消除"失败而非修复问题。
+# 配合分支保护（Require review from Code Owners）生效。
+# 详见 docs/new-scene-agent-contract.md「代理不得…」条款。
+
+# 契约测试与测试基础设施
+tests/contract/ @tdcasual
+tests/helpers/ @tdcasual
+tests/unit/scene-entries.spec.ts @tdcasual
+tests/unit/eslint-layer-rules.spec.ts @tdcasual
+
+# 视觉回归基线与豁免清单
+tests/visual/ @tdcasual
+
+# 门禁脚本与预算
+scripts/check-scenes.ts @tdcasual
+scripts/check-layouts.ts @tdcasual
+scripts/check-bundle-budget.ts @tdcasual
+scripts/verify-scene.ts @tdcasual
+
+# 架构层规则
+eslint.config.js @tdcasual

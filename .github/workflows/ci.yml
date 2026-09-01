@@ -37,6 +37,9 @@ jobs:
       - name: Scene structure check
         run: pnpm check:scenes
 
+      - name: Scaffold self-check
+        run: pnpm check:scaffold
+
       - name: Layout contract check
         run: pnpm check:layouts
 
@@ -96,3 +99,9 @@ jobs:
         with:
           name: visual-baselines-linux
           path: tests/visual/visual-regression.spec.ts-snapshots/*-linux.png
+
+      # 失败时把分诊表输出到 Job Summary，供人类与 AI 代理直接按表修复
+      - name: Failure triage summary
+        if: ${{ failure() && !inputs.update_snapshots }}
+        run: cat .github/ci-failure-triage.md >> "$GITHUB_STEP_SUMMARY"
+

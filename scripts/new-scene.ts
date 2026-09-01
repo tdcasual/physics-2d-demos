@@ -137,14 +137,14 @@ import { sizeCanvasToFill } from '../../core/canvas-sizing';
 import type { __PASCAL__State } from './scene.sim';
 
 export type Create__PASCAL__ViewOptions = {
-  canvas: HTMLCanvasElement;
+  canvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
   mode?: TeachingMode;
   demoHints?: DemoRenderHints;
 };
 
 export function create__PASCAL__View(options: Create__PASCAL__ViewOptions) {
-  const canvas = options.canvas;
+  const canvas = options.canvas ?? document.createElement('canvas');
   let theme: TeachingTheme = options.theme ?? 'light';
   let mode: TeachingMode = options.mode ?? 'normal';
   let hints: DemoRenderHints | undefined = options.demoHints;
@@ -215,7 +215,7 @@ const defaultParams: __PASCAL__Params = {
 };
 
 export type Create__PASCAL__SceneOptions = {
-  canvas: HTMLCanvasElement;
+  canvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
   mode?: TeachingMode;
   demoHints?: DemoRenderHints;
