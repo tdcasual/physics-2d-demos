@@ -32,6 +32,23 @@ function createCanvasHost() {
   return canvas;
 }
 
+// 渲染技术软契约的最小结构视图：绕过 4 个工厂的具体泛型做统一遍历
+type AnyInstrumentFactory = {
+  meta: { id: string; renderTech?: 'canvas' | 'svg' };
+  createSim(): { getState(): unknown };
+  createView(options: { canvas: HTMLCanvasElement; theme: 'dark' }): {
+    render(state: unknown): void;
+    dispose(): void;
+  };
+};
+
+const allFactories: AnyInstrumentFactory[] = [
+  interferenceVernierCaliperFactory,
+  micrometerEyepieceFactory,
+  spiralMicrometerFactory,
+  vernierCaliperFactory
+] as unknown as AnyInstrumentFactory[];
+
 describe('instrument entries', () => {
   describe('interference-vernier-caliper', () => {
     it('exposes the meta on the factory', () => {
@@ -242,4 +259,35 @@ describe('instrument entries', () => {
       view.dispose();
     });
   });
+});
+
+describe('instrument render tech contract', () => {
+  // 渲染技术按元素密度选择（STANDARDS.md「View 规范」）：
+  // 刻度盘/读数窗类默认 svg，密集条纹/图案类默认 canvas。
+  // 声明与实际渲染面必须一致：svg 仪器在 canvas 旁插入 <svg> 兄弟节点；
+  // canvas 仪器不得注入 svg。缺省 renderTech 视为 'canvas'。
+  for (const factory of allFactories) {
+    it(`${factory.meta.id}: render surface matches declared renderTech`, () => {
+      const canvas = createCanvasHost();
+      const view = factory.createView({ canvas, theme: 'dark' });
+      view.render(factory.createSim().getState());
+      const svg = canvas.parentElement?.querySelector('svg') ?? null;
+      const declared = factory.meta.renderTech ?? 'canvas';
+      if (declared === 'svg') {
+        expect(
+          svg,
+          `${factory.meta.id}: meta.renderTech 声明为 'svg'，` +
+            'view 必须在 canvas.parentElement 内插入 <svg> 兄弟节点渲染；' +
+            '若实际用 Canvas 绘制，请改回 renderTech: "canvas" 或删除该字段'
+        ).not.toBeNull();
+      } else {
+        expect(
+          svg,
+          `${factory.meta.id}: 未声明 renderTech: 'svg' 却注入了 <svg> 节点；` +
+            'SVG 仪器必须在 instrument.meta.ts 声明 renderTech: "svg"'
+        ).toBeNull();
+      }
+      view.dispose();
+    });
+  }
 });

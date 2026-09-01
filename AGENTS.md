@@ -41,6 +41,9 @@ scenes/        — 16 个物理场景（每个: meta/sim/view/entry/controls/pag
                — 非 page.ts 不依赖 app/ui；可依赖 instruments
 instruments/   — 4 个可按需加载的仪器组件（meta/sim/entry/controls-schema）
                — 可被 scenes 依赖；不依赖 app/ui/scenes
+               — 渲染技术按元素密度选择：刻度盘/读数窗类默认 SVG（meta
+                 声明 renderTech: 'svg'，view 在 canvas 旁插 <svg> 兄弟节点），
+                 密集条纹/图案类用 Canvas；详见 src/instruments/STANDARDS.md 第 3 节
 ```
 
 ### 依赖规则（ESLint 强制执行）
@@ -53,6 +56,8 @@ instruments/   — 4 个可按需加载的仪器组件（meta/sim/entry/controls
 - `ui` → 可依赖 platform/core（不依赖 app/scenes/catalog/instruments）
 
 ## 新增场景指南
+
+> **代理（OpenClaw 等）新增场景时，先读 [`docs/new-scene-agent-contract.md`](docs/new-scene-agent-contract.md) 执行卡**——按步执行、只需记住 `pnpm verify:scene <id>` 一条验证命令。本节是结构参考，控件写法见 [`docs/controls-cookbook.md`](docs/controls-cookbook.md)，sim 测试写法见 [`docs/physics-testing-guide.md`](docs/physics-testing-guide.md)。
 
 新增一个场景只需 **6 个文件**（无需修改 registry）：
 
@@ -286,10 +291,13 @@ export type SceneMeta = ScenePlacardMeta & {
 ### 提交前检查
 
 ```bash
-pnpm quality:core # 快速门禁（lint + typecheck + 覆盖率测试 + 构建 + bundle 预算）
+pnpm verify:scene <id>  # 场景任务的一站式验证（结构→lint→类型→测试→构建→预算，失败即停给修复指引）
+pnpm quality:core # 快速门禁（含 check:scaffold 脚手架自证明 + lint + typecheck + 覆盖率测试 + 构建 + bundle 预算）
 pnpm quality:full # 完整本地质量门禁（在 core 之上追加 E2E 与视觉测试）
 pnpm check:audit # 依赖漏洞审计（CI 亦执行；overrides 见 pnpm-workspace.yaml）
 ```
+
+契约/基线/门禁脚本受 `.github/CODEOWNERS` 保护；CI 失败时 Job Summary 附 `.github/ci-failure-triage.md` 分诊表。
 
 Husky pre-commit 自动运行 `lint-staged`（eslint --fix + prettier --write）。
 

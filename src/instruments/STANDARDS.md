@@ -10,7 +10,7 @@
 src/instruments/<id>/
 ├── index.ts              # 统一导出 InstrumentFactory（必须）
 ├── <id>.sim.ts           # 模拟逻辑（必须）
-├── <id>.view.ts          # Canvas 渲染（必须）
+├── <id>.view.ts          # 渲染（SVG 或 Canvas，按第 3 节密度规则选择）
 ├── <id>.meta.ts          # 元数据（必须）
 └── <id>.controls.ts      # 控制面板 schema（可选）
 ```
@@ -86,10 +86,28 @@ export function createMySim(
 
 ## 3. View 规范
 
+### 渲染技术选择（按元素密度，不按个人偏好）
+
+| 仪器内容                                               | 渲染技术           | meta 声明                     |
+| ------------------------------------------------------ | ------------------ | ----------------------------- |
+| 刻度盘、指针、读数窗（近静态、元素 <~200、重精细标注） | **SVG（默认）**    | `renderTech: 'svg'`           |
+| 密集条纹/波形/场图案（密度即信息）                     | **Canvas（默认）** | `renderTech: 'canvas'` 或省略 |
+
+仪器是事件驱动渲染（参数变化才 `render`，无 rAF 循环），SVG 的 DOM
+更新成本可承受。SVG 的净收益：矢量渲染天然无 HiDPI 模糊、读数可暴露
+为 `data-*` 属性供 DOM 断言、主题直接用 `var(--*)` CSS 变量。
+
+- SVG 仪器的 view **忽略** `createView` 传入的 canvas，改在
+  `canvas.parentElement` 内插入一个 `<svg>` 兄弟节点渲染；
+  `dispose()` 必须移除该节点。契约测试
+  `tests/unit/instrument-entries.spec.ts` 会校验声明与实际渲染面一致。
+- 现有 4 个 Canvas 仪器不强制迁移；新仪器按上表选择，违反默认方向
+  需在 PR 中说明理由。
+
 ### 职责边界
 
 - **只负责渲染**，不管理业务逻辑
-- 接收 `state` 并绘制到 Canvas，不修改 state
+- 接收 `state` 并绘制到渲染面（SVG 节点或 Canvas），不修改 state
 
 ### 接口要求
 
@@ -139,7 +157,7 @@ export function createMyView(options: {
 }
 ```
 
-### Canvas 响应式渲染（强制）
+### Canvas 响应式渲染（Canvas 仪器强制；SVG 仪器用 `viewBox` + 百分比尺寸自适应）
 
 与项目全局规范一致：
 
@@ -193,7 +211,8 @@ export const myMeta: InstrumentMeta<MyParams> = {
   description: '一句话描述仪器的用途',
   defaultParams: { reading: 0 }, // 所有参数必须有默认值
   unit: 'mm', // 可选：测量单位
-  precision: 0.01 // 可选：最小分度值
+  precision: 0.01, // 可选：最小分度值
+  renderTech: 'svg' // 可选：渲染技术（缺省 canvas）；刻度盘类默认 svg，密集条纹类用 canvas，见第 3 节
 };
 ```
 
@@ -364,7 +383,8 @@ dist/assets/instrument-micrometer-xxx.js      # 螺旋测微器代码
 - [ ] 目录结构符合规范（index.ts / sim.ts / view.ts / meta.ts）
 - [ ] 已在 `_manifest/manifest.ts` 中注册
 - [ ] Sim 不依赖 DOM/Canvas
-- [ ] View 使用 `sizeCanvasToFill` 和 `responsiveScale`
+- [ ] View 渲染技术符合密度规则（刻度盘类 svg / 密集条纹类 canvas），且与 `meta.renderTech` 声明一致
+- [ ] Canvas 仪器使用 `sizeCanvasToFill` 和 `responsiveScale`；SVG 仪器用 `viewBox` 自适应
 - [ ] View 中没有大于 50 的裸数字像素尺寸
 - [ ] View 使用 `withViewport` 处理局部绘制
 - [ ] Meta 的 `id` 全局唯一，`category` 在预定义列表中

@@ -53,6 +53,15 @@ export interface InstrumentMeta<Params extends InstrumentParams> {
   defaultParams: Params;
   unit?: string;
   precision?: number;
+  /**
+   * 渲染技术声明（缺省 'canvas'）。按元素密度选择：
+   * 刻度盘/指针/读数窗类（近静态、元素少、重精细标注）默认 'svg'；
+   * 密集条纹/波形/场图案类（密度即信息）用 'canvas'。
+   * SVG 仪器的 view 忽略传入的 canvas，改为在 canvas.parentElement 内
+   * 插入一个 <svg> 兄弟节点渲染（契约测试 instrument-entries 会校验
+   * 声明与实际渲染面一致）。详见 src/instruments/STANDARDS.md「View 规范」。
+   */
+  renderTech?: 'canvas' | 'svg';
 }
 
 export interface InstrumentFactory<
