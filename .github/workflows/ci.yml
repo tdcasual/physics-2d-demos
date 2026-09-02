@@ -95,7 +95,7 @@ jobs:
 
       - name: Upload regenerated baselines
         if: ${{ inputs.update_snapshots }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: visual-baselines-linux
           path: tests/visual/visual-regression.spec.ts-snapshots/*-linux.png
