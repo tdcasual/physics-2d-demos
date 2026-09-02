@@ -95,6 +95,27 @@ export function bootInstrumentLibrary() {
   canvas.style.cssText = 'width:100%;height:100%;display:block;';
   previewWrap.appendChild(canvas);
 
+  // SVG 仪器的视口内交互（如拖动游标）通过冒泡的 instrument-param
+  // 自定义事件上报参数变更，这里统一回写到当前 sim（见 STANDARDS.md
+  // 第 3 节 renderTech: 'svg' 约定）
+  previewWrap.addEventListener('instrument-param', (ev) => {
+    const detail = (ev as CustomEvent<{ key: string; value: unknown }>).detail;
+    if (activeSim && detail && typeof detail.key === 'string') {
+      activeSim.setParams({
+        [detail.key]: detail.value
+      } as Partial<InstrumentParams>);
+      // 同步参数编辑器显示值：编辑器 number 输入在失焦时会用显示值触发
+      // change 回灌，不同步会把拖拽结果打回旧值
+      if (typeof detail.value === 'number') {
+        const editor = paramEditors.get(detail.key);
+        if (editor) {
+          editor.range.value = String(detail.value);
+          editor.num.value = String(detail.value);
+        }
+      }
+    }
+  });
+
   // 信息面板
   const infoPanel = document.createElement('div');
   infoPanel.style.cssText = `
@@ -127,6 +148,11 @@ export function bootInstrumentLibrary() {
   let activeView: InstrumentView<InstrumentState> | null = null;
   let rafId = 0;
   let isLoading = false;
+  // 当前参数编辑器的数值输入引用（key → range/num），供 instrument-param 同步
+  const paramEditors = new Map<
+    string,
+    { range: HTMLInputElement; num: HTMLInputElement }
+  >();
 
   // 检测当前主题：复用全站统一主题存储（用户偏好优先，回退系统偏好）
   function detectTheme(): TeachingTheme {
@@ -325,6 +351,7 @@ export function bootInstrumentLibrary() {
     sim: InstrumentSim<InstrumentState, InstrumentParams>
   ) {
     paramsWrap.innerHTML = '';
+    paramEditors.clear();
 
     const defaults = entry.defaultParams;
     const keys = Object.keys(defaults);
@@ -399,6 +426,8 @@ export function bootInstrumentLibrary() {
 
         range.addEventListener('input', () => update(parseFloat(range.value)));
         num.addEventListener('change', () => update(parseFloat(num.value)));
+
+        paramEditors.set(key, { range, num });
 
         row.appendChild(range);
         row.appendChild(num);

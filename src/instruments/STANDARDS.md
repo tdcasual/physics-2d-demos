@@ -65,7 +65,7 @@ export function createMySim(
       // 部分更新：只更新提供的字段
     },
     step: (dt) => {
-      // dt: 毫秒
+      // dt: 秒（与场景生态一致；仪器库预览循环传入 dtMs / 1000）
       // 物理/逻辑步进
     },
     reset: () => {
@@ -101,6 +101,12 @@ export function createMySim(
   `canvas.parentElement` 内插入一个 `<svg>` 兄弟节点渲染；
   `dispose()` 必须移除该节点。契约测试
   `tests/unit/instrument-entries.spec.ts` 会校验声明与实际渲染面一致。
+- SVG 仪器的视口内交互（如拖动游标）：view **不直接持有 sim**，改为在
+  `<svg>` 节点上派发
+  `CustomEvent('instrument-param', { detail: { key, value }, bubbles: true })`，
+  由宿主页面监听并回写 `sim.setParams({ [key]: value })`（参考实现：
+  `src/app/instrument-library/instrument-library.ts`）。事件必须冒泡，
+  `key` 为 sim 参数名，`value` 为数值或字符串。
 - 现有 4 个 Canvas 仪器不强制迁移；新仪器按上表选择，违反默认方向
   需在 PR 中说明理由。
 

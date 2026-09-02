@@ -98,5 +98,22 @@ export const instrumentManifest: InstrumentManifestEntry[] = [
     unit: 'cm',
     precision: 0.002,
     modulePath: '/src/instruments/interference-vernier-caliper/index.ts'
+  },
+  {
+    id: 'vernier-caliper-guide',
+    title: '游标卡尺使用演示',
+    category: 'measurement',
+    description:
+      '完整解剖（内/外测量爪、深度尺、紧固螺钉），演示外径/内径/深度三种测量与读数练习',
+    defaultParams: {
+      precision: 0.1,
+      mode: 0,
+      jawPosition: 23.7,
+      showReading: 1,
+      demo: 0
+    },
+    unit: 'mm',
+    precision: 0.1,
+    modulePath: '/src/instruments/vernier-caliper-guide/index.ts'
   }
 ];

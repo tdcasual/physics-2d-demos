@@ -19,6 +19,11 @@ import {
   vernierCaliperFactory
 } from '../../src/instruments/vernier-caliper/instrument.entry';
 import { vernierCaliperMeta } from '../../src/instruments/vernier-caliper/instrument.meta';
+import {
+  createVernierCaliperGuide,
+  vernierCaliperGuideFactory
+} from '../../src/instruments/vernier-caliper-guide/instrument.entry';
+import { vernierCaliperGuideMeta } from '../../src/instruments/vernier-caliper-guide/instrument.meta';
 import type { InterferenceVernierCaliperView } from '../../src/instruments/interference-vernier-caliper/instrument.view';
 import type { MicrometerEyepieceView } from '../../src/instruments/micrometer-eyepiece/instrument.view';
 import type { SpiralMicrometerView } from '../../src/instruments/spiral-micrometer/instrument.view';
@@ -46,7 +51,8 @@ const allFactories: AnyInstrumentFactory[] = [
   interferenceVernierCaliperFactory,
   micrometerEyepieceFactory,
   spiralMicrometerFactory,
-  vernierCaliperFactory
+  vernierCaliperFactory,
+  vernierCaliperGuideFactory
 ] as unknown as AnyInstrumentFactory[];
 
 describe('instrument entries', () => {
@@ -256,6 +262,60 @@ describe('instrument entries', () => {
       const { sim, view } = createVernierCaliper({ canvas, theme: 'dark' });
       expect(sim.getState().objectName).toBe('小球直径');
       expect(typeof view.setMode).toBe('function');
+      view.dispose();
+    });
+  });
+  describe('vernier-caliper-guide（SVG 样例）', () => {
+    it('exposes the meta on the factory', () => {
+      expect(vernierCaliperGuideFactory.meta).toBe(vernierCaliperGuideMeta);
+      expect(vernierCaliperGuideFactory.meta.id).toBe('vernier-caliper-guide');
+      expect(vernierCaliperGuideFactory.meta.renderTech).toBe('svg');
+    });
+
+    it('createSim builds a sim initialized from meta.defaultParams', () => {
+      const sim = vernierCaliperGuideFactory.createSim();
+      const s = sim.getState();
+      expect(s.precision).toBe(0.1);
+      expect(s.mode).toBe(0);
+      expect(s.jawPosition).toBe(23.7);
+      // 读数引擎的独立核算（手算期望值 + 进位边界回归）见
+      // instrument-vernier-caliper-guide.sim.spec.ts，此处只校验管线自洽
+      expect(s.totalReading).toBeCloseTo(s.currentReading, 10);
+    });
+
+    it('createView renders an <svg> sibling and satisfies the view contract', () => {
+      const canvas = createCanvasHost();
+      const view = vernierCaliperGuideFactory.createView({
+        canvas,
+        theme: 'dark'
+      });
+      for (const method of [
+        'render',
+        'resize',
+        'setTheme',
+        'setViewport',
+        'dispose'
+      ] as const) {
+        expect(typeof view[method]).toBe('function');
+      }
+      const sim = vernierCaliperGuideFactory.createSim();
+      view.render(sim.getState());
+      // renderTech: 'svg' — 渲染面是 canvas 旁的 <svg> 兄弟节点
+      const svg = canvas.parentElement?.querySelector('svg');
+      expect(svg).not.toBeNull();
+      expect(svg?.getAttribute('viewBox')).toBe('0 0 900 430');
+      view.dispose();
+      expect(canvas.parentElement?.querySelector('svg')).toBeNull();
+    });
+
+    it('createVernierCaliperGuide assembles sim + view', () => {
+      const canvas = createCanvasHost();
+      const { sim, view } = createVernierCaliperGuide({
+        canvas,
+        theme: 'light'
+      });
+      expect(sim.getState().modeName).toContain('外径');
+      view.render(sim.getState());
       view.dispose();
     });
   });

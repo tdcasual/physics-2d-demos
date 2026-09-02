@@ -4,6 +4,7 @@ import { spiralMicrometerMeta } from '../../src/instruments/spiral-micrometer/in
 import { vernierCaliperMeta } from '../../src/instruments/vernier-caliper/instrument.meta';
 import { micrometerEyepieceMeta } from '../../src/instruments/micrometer-eyepiece/instrument.meta';
 import { interferenceVernierCaliperMeta } from '../../src/instruments/interference-vernier-caliper/instrument.meta';
+import { vernierCaliperGuideMeta } from '../../src/instruments/vernier-caliper-guide/instrument.meta';
 
 describe('instrument manifest contract', () => {
   it('keeps manifest metadata and defaults aligned with instrument.meta', () => {
@@ -11,7 +12,8 @@ describe('instrument manifest contract', () => {
       spiralMicrometerMeta,
       vernierCaliperMeta,
       micrometerEyepieceMeta,
-      interferenceVernierCaliperMeta
+      interferenceVernierCaliperMeta,
+      vernierCaliperGuideMeta
     ];
 
     expect(
