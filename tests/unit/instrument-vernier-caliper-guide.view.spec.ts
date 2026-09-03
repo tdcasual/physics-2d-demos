@@ -34,9 +34,9 @@ function highlightLine(parent: HTMLElement): SVGLineElement | null {
   return parent.querySelector('line[stroke-opacity]');
 }
 
-/** 滑框 = 高 86 的 rect */
+/** 滑框 = 高 64 的 rect */
 function sliderRect(parent: HTMLElement): SVGRectElement | null {
-  return parent.querySelector('rect[height="86"]');
+  return parent.querySelector('rect[height="64"]');
 }
 
 describe('vernier-caliper-guide view', () => {

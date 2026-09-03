@@ -35,8 +35,11 @@ const BEAM_END = BEAM_X + JAW_MAX * PX_PER_MM; // 主尺右端面 x
 const JAW_TOP = 70; // 内测量爪刀尖 y
 const JAW_BOTTOM = 390; // 外测量爪刀尖 y
 const SLIDER_PAD = 60; // 滑框在游标刻度之外的余量（螺钉/边框）
-/** 滑框上下边界之外的拖拽命中余量 */
-const DRAG_Y_MIN = BEAM_Y + BEAM_H - 30;
+/** 滑框上缘 = 主尺下缘：滑框体不遮挡主尺刻度带（判对齐要看清主尺刻线），
+ *  游标刻线尖端与主尺下缘相隔 2px——真实卡尺的尺度贴合关系 */
+const SLIDER_TOP = BEAM_Y + BEAM_H;
+/** 拖拽命中的 y 范围（滑框体 + 标注区；排除读数面板等） */
+const DRAG_Y_MIN = SLIDER_TOP - 4;
 const DRAG_Y_MAX = BEAM_Y + BEAM_H + 90;
 
 function el(tag: string, attrs: Record<string, string>): SVGElement {
@@ -385,16 +388,16 @@ export function createVernierCaliperGuideView(options: {
       })
     );
 
-    // 游标滑框（包住主尺，宽度随分度自适应）
+    // 游标滑框（上缘贴主尺下缘，宽度随分度自适应）
     const sliderX = jawX - 6;
     const slider = el('g', { cursor: 'ew-resize' }) as SVGGElement;
     slider.style.touchAction = 'none';
     slider.appendChild(
       el('rect', {
         x: String(sliderX),
-        y: String(BEAM_Y + BEAM_H - 22),
+        y: String(SLIDER_TOP),
         width: String(sliderW),
-        height: '86',
+        height: '64',
         fill: 'var(--bg-secondary)',
         'fill-opacity': '0.92',
         stroke: ink,
@@ -402,11 +405,11 @@ export function createVernierCaliperGuideView(options: {
         ...(demo ? hi(3) : {})
       })
     );
-    // 游标零线
+    // 游标零线（探入尺身下缘 4px，便于对照主尺整毫米刻线）
     slider.appendChild(
       el('line', {
         x1: String(jawX),
-        y1: String(BEAM_Y + BEAM_H - 22),
+        y1: String(SLIDER_TOP - 4),
         x2: String(jawX),
         y2: String(BEAM_Y + BEAM_H + 18),
         stroke: 'var(--accent-primary)',
@@ -562,7 +565,7 @@ export function createVernierCaliperGuideView(options: {
   }
 
   svg.addEventListener('pointerdown', (ev) => {
-    if (!lastState) return;
+    if (ev.button !== 0 || !lastState) return;
     const x = toViewX(ev.clientX);
     const y = toViewY(ev.clientY);
     const jawX = BEAM_X + lastState.jawPosition * PX_PER_MM;

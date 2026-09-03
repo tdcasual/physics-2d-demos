@@ -181,6 +181,11 @@ export function createVernierCaliperGuideSim(
     setParams(next: Partial<VernierCaliperGuideParams>): void {
       // 控件可能传入字符串或连续值，统一吸附/钳位，保证读数与分度自洽
       const merged = normalize({ ...params, ...next });
+      // 演示播放中用户手动拖爪（外部写入 jawPosition）→ 退出演示，
+      // 避免 step() 每帧覆盖用户操作
+      if (next.jawPosition !== undefined && params.demo === 1) {
+        merged.demo = 0;
+      }
       if (merged.mode !== params.mode || merged.demo > params.demo) {
         demoTime = 0;
       }

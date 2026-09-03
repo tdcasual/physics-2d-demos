@@ -206,6 +206,19 @@ describe('vernier-caliper-guide sim', () => {
       expect(sim.getState().demoStep).toBe(0);
     });
 
+    it('demo 播放中手动拖爪（外部写入 jawPosition）自动退出演示', () => {
+      const sim = createVernierCaliperGuideSim({ ...base, demo: 1 });
+      sim.step(0.5);
+      expect(sim.getState().demo).toBe(true);
+      // 宿主回写拖拽结果（instrument-param → setParams）
+      sim.setParams({ jawPosition: 60 });
+      expect(sim.getState().demo).toBe(false);
+      expect(sim.getState().jawPosition).toBe(60);
+      // 退出后 step 不再覆盖用户位置
+      sim.step(5);
+      expect(sim.getState().jawPosition).toBe(60);
+    });
+
     it('demo=0 时 step 不改变任何状态', () => {
       const sim = createVernierCaliperGuideSim(base);
       const before = sim.getState();
