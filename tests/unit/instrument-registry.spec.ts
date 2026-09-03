@@ -14,14 +14,14 @@ describe('instrument-registry', () => {
     expect(entries.map((entry) => entry.id).sort()).toEqual([
       'interference-vernier-caliper',
       'micrometer-eyepiece',
-      'spiral-micrometer',
-      'vernier-caliper',
       'vernier-caliper-guide'
     ]);
 
-    const spiral = entries.find((entry) => entry.id === 'spiral-micrometer')!;
-    const factory = await spiral.loadFactory();
-    expect(factory.meta.id).toBe('spiral-micrometer');
+    const eyepiece = entries.find(
+      (entry) => entry.id === 'micrometer-eyepiece'
+    )!;
+    const factory = await eyepiece.loadFactory();
+    expect(factory.meta.id).toBe('micrometer-eyepiece');
     expect(factory.createSim).toBeTypeOf('function');
     expect(factory.createView).toBeTypeOf('function');
   });
@@ -33,8 +33,6 @@ describe('instrument-registry', () => {
     expect(entries.map((entry) => entry.category)).toEqual([
       'measurement',
       'measurement',
-      'measurement',
-      'measurement',
       'optical'
     ]);
     const measurementTitles = entries
@@ -42,7 +40,7 @@ describe('instrument-registry', () => {
       .map((entry) => entry.title)
       .sort();
     expect(measurementTitles).toEqual(
-      ['游标卡尺', '游标卡尺使用演示', '螺旋测微器', '高精度干涉测微仪'].sort()
+      ['游标卡尺使用演示', '高精度干涉测微仪'].sort()
     );
     expect(entries.find((entry) => entry.category === 'optical')?.title).toBe(
       '干涉读数游标卡尺'
@@ -55,8 +53,6 @@ describe('instrument-registry', () => {
     expect(Object.keys(grouped).sort()).toEqual(['measurement', 'optical']);
     expect(grouped.measurement?.map((entry) => entry.id).sort()).toEqual([
       'micrometer-eyepiece',
-      'spiral-micrometer',
-      'vernier-caliper',
       'vernier-caliper-guide'
     ]);
     expect(grouped.optical?.map((entry) => entry.id)).toEqual([
@@ -79,9 +75,7 @@ describe('instrument-registry', () => {
     ).toEqual([
       '/src/instruments/interference-vernier-caliper/index.ts',
       '/src/instruments/micrometer-eyepiece/index.ts',
-      '/src/instruments/spiral-micrometer/index.ts',
-      '/src/instruments/vernier-caliper-guide/index.ts',
-      '/src/instruments/vernier-caliper/index.ts'
+      '/src/instruments/vernier-caliper-guide/index.ts'
     ]);
     expect(validateManifest()).toEqual({ ok: true, errors: [] });
   });

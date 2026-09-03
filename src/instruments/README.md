@@ -15,10 +15,9 @@ src/instruments/
 │   └── viewport.ts                # 视口裁剪、坐标变换工具
 ├── index.ts                       # 统一导出入口（仅契约类型 + 工具函数）
 ├── instrument-registry.ts         # 注册表（import.meta.glob 按需懒加载工厂）
-├── spiral-micrometer/             # 螺旋测微器（千分尺）
-├── vernier-caliper/               # 游标卡尺
 ├── micrometer-eyepiece/           # 测微目镜（高精度干涉测微仪）
 ├── interference-vernier-caliper/  # 干涉游标卡尺
+├── vernier-caliper-guide/         # 游标卡尺使用演示（SVG 样例）
 └── <my-instrument>/               # 新仪器目录，固定文件名约定：
     ├── instrument.sim.ts          #   状态/逻辑
     ├── instrument.view.ts         #   Canvas 渲染
@@ -177,22 +176,22 @@ export function createMyInstrumentScene({ canvas, theme }) {
 
 ```typescript
 // scenes/measurement-lab/scene.entry.ts
-import { spiralMicrometer } from '../../instruments/spiral-micrometer';
-import { vernierCaliper } from '../../instruments/vernier-caliper';
+import { interferenceVernierCaliper } from '../../instruments/interference-vernier-caliper';
+import { micrometerEyepiece } from '../../instruments/micrometer-eyepiece';
 
 export function createMeasurementLabScene({ canvas, theme }) {
   const w = canvas.width;
   const h = canvas.height;
 
-  const mSim = spiralMicrometer.createSim({ reading: 0 });
-  const mView = spiralMicrometer.createView({
+  const mSim = interferenceVernierCaliper.createSim({});
+  const mView = interferenceVernierCaliper.createView({
     canvas,
     theme,
     viewport: { x: 0, y: 0, width: w, height: h * 0.5 }
   });
 
-  const vSim = vernierCaliper.createSim({ reading: 0 });
-  const vView = vernierCaliper.createView({
+  const vSim = micrometerEyepiece.createSim({});
+  const vView = micrometerEyepiece.createView({
     canvas,
     theme,
     viewport: { x: 0, y: h * 0.5, width: w, height: h * 0.5 }

@@ -1,19 +1,15 @@
 /**
- * 螺旋测微器（千分尺）— 可复用渲染
+ * 螺旋测微器（千分尺）— 场景渲染
  *
  * 结构参照人教版高中物理：固定刻度套筒（上排整毫米 + 下排半毫米 +
  * 水平基准线）+ 可旋转微分筒（0–50 分度，估读一位）。
  *
- * 导出 drawSpiralMicrometer 纯绘制函数，供仪器组件视图与
- * scenes/micrometer 场景视图共用，避免渲染代码重复。
+ * drawSpiralMicrometer 纯绘制函数，供 scene.view.ts 调用（原
+ * instruments/spiral-micrometer 仪器的渲染代码；该仪器组件已移除，
+ * 场景渲染收归场景自身）。
  */
 
 import type { TeachingTheme } from '../../platform/standards';
-import type {
-  InstrumentView,
-  InstrumentViewport
-} from '../_contract/instrument-contract';
-import type { SpiralMicrometerState } from './instrument.sim';
 
 type Pal = {
   isDark: boolean;
@@ -296,104 +292,4 @@ export function drawSpiralMicrometer(o: SpiralMicrometerDrawOptions): void {
   }
 
   ctx.restore();
-}
-
-export type SpiralMicrometerViewOptions = {
-  canvas: HTMLCanvasElement;
-  theme: TeachingTheme;
-  viewport?: InstrumentViewport;
-  showReading?: boolean;
-  mode?: 'normal' | 'presentation';
-  contentScale?: number;
-};
-
-export type SpiralMicrometerView = InstrumentView<SpiralMicrometerState> & {
-  setMode(mode: 'normal' | 'presentation', contentScale?: number): void;
-};
-
-export function createSpiralMicrometerView(
-  options: SpiralMicrometerViewOptions
-): SpiralMicrometerView {
-  const canvas = options.canvas;
-  let ctx = canvas.getContext('2d');
-  let theme: TeachingTheme = options.theme;
-  let viewport: InstrumentViewport | undefined = options.viewport;
-  const showReading = options.showReading ?? true;
-  let contentScale = options.contentScale ?? 1;
-  let lastState: SpiralMicrometerState | null = null;
-  let cssW = 800;
-  let cssH = 600;
-
-  function regionOf(): { x: number; y: number; w: number; h: number } {
-    if (viewport) {
-      return {
-        x: viewport.x,
-        y: viewport.y,
-        w: viewport.width,
-        h: viewport.height
-      };
-    }
-    return { x: 0, y: 0, w: cssW, h: cssH };
-  }
-
-  function resize(): void {
-    const dpr = Math.min(
-      2,
-      typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
-    );
-    const rect = canvas.getBoundingClientRect();
-    cssW = Math.max(1, Math.floor(rect.width || 800));
-    cssH = Math.max(1, Math.floor(rect.height || 600));
-    if (
-      canvas.width !== Math.floor(cssW * dpr) ||
-      canvas.height !== Math.floor(cssH * dpr)
-    ) {
-      canvas.width = Math.floor(cssW * dpr);
-      canvas.height = Math.floor(cssH * dpr);
-    }
-    ctx = canvas.getContext('2d');
-    ctx?.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-
-  function draw(state: SpiralMicrometerState): void {
-    if (!ctx) return;
-    lastState = state;
-    ctx.clearRect(0, 0, cssW, cssH);
-    drawSpiralMicrometer({
-      ctx,
-      region: regionOf(),
-      state,
-      theme,
-      contentScale,
-      showReading
-    });
-  }
-
-  resize();
-
-  return {
-    render(state) {
-      draw(state);
-    },
-    resize() {
-      resize();
-      if (lastState) draw(lastState);
-    },
-    setTheme(t) {
-      theme = t;
-      if (lastState) draw(lastState);
-    },
-    setViewport(vp) {
-      viewport = vp;
-      if (lastState) draw(lastState);
-    },
-    setMode(_m, cs) {
-      contentScale = cs ?? 1;
-      if (lastState) draw(lastState);
-    },
-    dispose() {
-      ctx = null;
-      lastState = null;
-    }
-  };
 }

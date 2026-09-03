@@ -2,6 +2,14 @@
 
 > ⚠️ 本文件自 2026-05 起停止逐条维护，日常变更以 git log 为准；里程碑式的审计/修复批次仍会在此记录。
 
+## 2026-09-02 — 仪器库：旧游标卡尺仪器移除 + 移动端布局
+
+- 移除 `vernier-caliper` 仪器（由 vernier-caliper-guide 取代）；其 Canvas 绘制代码逐字迁入 `scenes/vernier-caliper/caliper-render.ts`，场景页渲染不变
+- 移除 `spiral-micrometer` 仪器；其 Canvas 绘制代码逐字迁入 `scenes/micrometer/micrometer-render.ts`，场景页渲染不变。仪器库余 3 个组件（micrometer-eyepiece / interference-vernier-caliper / vernier-caliper-guide，均为 DOM/SVG 渲染面）
+- 仪器库页面响应式重设计：移动端（width < 768px，与全局断点一致）为横向分类条 + 预览 + 底部「参数调节/组件信息」tab 页；ResizeObserver 驱动预览区尺寸动态重算（横竖屏切换、窗口缩放）
+- 修复参数编辑器与视口拖拽不同步导致的失焦回灌；新增移动端 Playwright 测试（横向分类条/tab 切换/canvas 尺寸跟踪）
+- 游标卡尺使用演示三轮审计修复：滑框体不再遮挡主尺刻度带（上缘降至主尺下缘，游标刻线与主尺刻线尖端相隔 2px，练习模式可正常判对齐）；demo 播放中手动拖爪自动退出演示；拖拽仅响应左键
+
 ## 2026-09-02 — 新组件：游标卡尺使用演示（vernier-caliper-guide）
 
 - 首个 `renderTech: 'svg'` 仪器：完整解剖（内/外测量爪、深度尺、紧固螺钉、主尺、游标尺），SVG + `var(--*)` 主题直通，游标尺可拖拽

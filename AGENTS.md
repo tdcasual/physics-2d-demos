@@ -4,7 +4,7 @@
 
 ## 项目概述
 
-Physics-2D-Demos 是一个物理教学演示中心（Teaching Demo Hub），当前包含 16 个交互式 2D 物理场景，以及 4 个可按需加载的仪器组件。
+Physics-2D-Demos 是一个物理教学演示中心（Teaching Demo Hub），当前包含 16 个交互式 2D 物理场景，以及 3 个可按需加载的仪器组件。
 
 - **技术栈**: Vite 7 + TypeScript 5.9 (strict) + React 18 + Tailwind CSS v4
 - **测试**: Vitest 3.2 (单元/契约) + Playwright (E2E/视觉)
@@ -39,7 +39,7 @@ ui/            — 共享组件库（DOM widgets）
 scenes/        — 16 个物理场景（每个: meta/sim/view/entry/controls/page）
                — 场景由 catalog/scene-registry.ts 自动发现（import.meta.glob）
                — 非 page.ts 不依赖 app/ui；可依赖 instruments
-instruments/   — 4 个可按需加载的仪器组件（meta/sim/entry/controls-schema）
+instruments/   — 3 个可按需加载的仪器组件（meta/sim/entry/controls-schema）
                — 可被 scenes 依赖；不依赖 app/ui/scenes
                — 渲染技术按元素密度选择：刻度盘/读数窗类默认 SVG（meta
                  声明 renderTech: 'svg'，view 在 canvas 旁插 <svg> 兄弟节点），

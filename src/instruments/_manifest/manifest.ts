@@ -44,26 +44,6 @@ export type InstrumentManifestEntry = {
  */
 export const instrumentManifest: InstrumentManifestEntry[] = [
   {
-    id: 'spiral-micrometer',
-    title: '螺旋测微器',
-    category: 'measurement',
-    description: '千分尺：固定刻度 + 可旋转微分筒，精度 0.01mm，估读到 0.001mm',
-    defaultParams: { reading: 6.725 },
-    unit: 'mm',
-    precision: 0.001,
-    modulePath: '/src/instruments/spiral-micrometer/index.ts'
-  },
-  {
-    id: 'vernier-caliper',
-    title: '游标卡尺',
-    category: 'measurement',
-    description: '主尺 + 游标尺，10/20/50 分度，精度 0.1/0.05/0.02mm',
-    defaultParams: { precision: 0.02, objectType: 0 },
-    unit: 'mm',
-    precision: 0.02,
-    modulePath: '/src/instruments/vernier-caliper/index.ts'
-  },
-  {
     id: 'micrometer-eyepiece',
     title: '高精度干涉测微仪',
     category: 'measurement',

@@ -10,24 +10,12 @@ import {
 } from '../../src/instruments/micrometer-eyepiece/instrument.entry';
 import { micrometerEyepieceMeta } from '../../src/instruments/micrometer-eyepiece/instrument.meta';
 import {
-  createSpiralMicrometer,
-  spiralMicrometerFactory
-} from '../../src/instruments/spiral-micrometer/instrument.entry';
-import { spiralMicrometerMeta } from '../../src/instruments/spiral-micrometer/instrument.meta';
-import {
-  createVernierCaliper,
-  vernierCaliperFactory
-} from '../../src/instruments/vernier-caliper/instrument.entry';
-import { vernierCaliperMeta } from '../../src/instruments/vernier-caliper/instrument.meta';
-import {
   createVernierCaliperGuide,
   vernierCaliperGuideFactory
 } from '../../src/instruments/vernier-caliper-guide/instrument.entry';
 import { vernierCaliperGuideMeta } from '../../src/instruments/vernier-caliper-guide/instrument.meta';
 import type { InterferenceVernierCaliperView } from '../../src/instruments/interference-vernier-caliper/instrument.view';
 import type { MicrometerEyepieceView } from '../../src/instruments/micrometer-eyepiece/instrument.view';
-import type { SpiralMicrometerView } from '../../src/instruments/spiral-micrometer/instrument.view';
-import type { VernierCaliperView } from '../../src/instruments/vernier-caliper/instrument.view';
 
 function createCanvasHost() {
   const parent = document.createElement('div');
@@ -50,8 +38,6 @@ type AnyInstrumentFactory = {
 const allFactories: AnyInstrumentFactory[] = [
   interferenceVernierCaliperFactory,
   micrometerEyepieceFactory,
-  spiralMicrometerFactory,
-  vernierCaliperFactory,
   vernierCaliperGuideFactory
 ] as unknown as AnyInstrumentFactory[];
 
@@ -177,94 +163,6 @@ describe('instrument entries', () => {
     });
   });
 
-  describe('spiral-micrometer', () => {
-    it('exposes the meta on the factory', () => {
-      expect(spiralMicrometerFactory.meta).toBe(spiralMicrometerMeta);
-      expect(spiralMicrometerFactory.meta.id).toBe('spiral-micrometer');
-    });
-
-    it('createSim builds a sim initialized from meta.defaultParams', () => {
-      const sim = spiralMicrometerFactory.createSim();
-      const s = sim.getState();
-      expect(s.reading).toBe(spiralMicrometerMeta.defaultParams.reading);
-      expect(s.currentReading).toBe(spiralMicrometerMeta.defaultParams.reading);
-    });
-
-    it('createView satisfies the InstrumentView + setMode contract', () => {
-      const canvas = createCanvasHost();
-      const view = spiralMicrometerFactory.createView({
-        canvas,
-        theme: 'dark'
-      }) as SpiralMicrometerView;
-      for (const method of [
-        'render',
-        'resize',
-        'setTheme',
-        'setViewport',
-        'dispose',
-        'setMode'
-      ] as const) {
-        expect(typeof view[method]).toBe('function');
-      }
-      view.dispose();
-    });
-
-    it('createSpiralMicrometer assembles sim + view', () => {
-      const canvas = createCanvasHost();
-      const { sim, view } = createSpiralMicrometer({ canvas, theme: 'dark' });
-      expect(sim.getState().reading).toBe(6.725);
-      expect(typeof view.setMode).toBe('function');
-      view.dispose();
-    });
-  });
-
-  describe('vernier-caliper', () => {
-    it('exposes the meta on the factory', () => {
-      expect(vernierCaliperFactory.meta).toBe(vernierCaliperMeta);
-      expect(vernierCaliperFactory.meta.id).toBe('vernier-caliper');
-    });
-
-    it('createSim builds a sim initialized from meta.defaultParams', () => {
-      const sim = vernierCaliperFactory.createSim();
-      const s = sim.getState();
-      expect(s.params.precision).toBe(
-        vernierCaliperMeta.defaultParams.precision
-      );
-      expect(s.params.objectType).toBe(
-        vernierCaliperMeta.defaultParams.objectType
-      );
-      // 默认 0.02mm 精度 + 小球（5.24mm）：主尺 5mm，游标第 12 格对齐
-      expect(s.vernierDivisions).toBe(50);
-      expect(s.currentReading).toBeCloseTo(5.24, 10);
-    });
-
-    it('createView satisfies the InstrumentView + setMode contract', () => {
-      const canvas = createCanvasHost();
-      const view = vernierCaliperFactory.createView({
-        canvas,
-        theme: 'dark'
-      }) as VernierCaliperView;
-      for (const method of [
-        'render',
-        'resize',
-        'setTheme',
-        'setViewport',
-        'dispose',
-        'setMode'
-      ] as const) {
-        expect(typeof view[method]).toBe('function');
-      }
-      view.dispose();
-    });
-
-    it('createVernierCaliper assembles sim + view', () => {
-      const canvas = createCanvasHost();
-      const { sim, view } = createVernierCaliper({ canvas, theme: 'dark' });
-      expect(sim.getState().objectName).toBe('小球直径');
-      expect(typeof view.setMode).toBe('function');
-      view.dispose();
-    });
-  });
   describe('vernier-caliper-guide（SVG 样例）', () => {
     it('exposes the meta on the factory', () => {
       expect(vernierCaliperGuideFactory.meta).toBe(vernierCaliperGuideMeta);

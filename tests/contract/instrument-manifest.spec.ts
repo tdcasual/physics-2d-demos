@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { instrumentManifest } from '../../src/instruments/_manifest/manifest';
-import { spiralMicrometerMeta } from '../../src/instruments/spiral-micrometer/instrument.meta';
-import { vernierCaliperMeta } from '../../src/instruments/vernier-caliper/instrument.meta';
 import { micrometerEyepieceMeta } from '../../src/instruments/micrometer-eyepiece/instrument.meta';
 import { interferenceVernierCaliperMeta } from '../../src/instruments/interference-vernier-caliper/instrument.meta';
 import { vernierCaliperGuideMeta } from '../../src/instruments/vernier-caliper-guide/instrument.meta';
@@ -9,8 +7,6 @@ import { vernierCaliperGuideMeta } from '../../src/instruments/vernier-caliper-g
 describe('instrument manifest contract', () => {
   it('keeps manifest metadata and defaults aligned with instrument.meta', () => {
     const metas = [
-      spiralMicrometerMeta,
-      vernierCaliperMeta,
       micrometerEyepieceMeta,
       interferenceVernierCaliperMeta,
       vernierCaliperGuideMeta
@@ -30,7 +26,7 @@ describe('instrument manifest contract', () => {
         manifestEntry,
         `仪器 "${meta.id}" 未在 manifest 注册：在 ` +
           'src/instruments/_manifest/manifest.ts 中添加该条目，' +
-          '参考 spiral-micrometer 条目'
+          '参考 micrometer-eyepiece 条目'
       ).toBeDefined();
       expect(
         manifestEntry,
