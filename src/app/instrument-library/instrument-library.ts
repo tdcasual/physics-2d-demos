@@ -25,7 +25,53 @@ import {
   resolveThemePreference
 } from '../theme-store';
 
+/**
+ * 布局样式：桌面为「侧栏 + 预览 + 底部信息栏」；移动端（与全局断点
+ * width < 768px 一致）改为「横向分类条 + 预览 + 底部 tab 页」，
+ * 预览区随容器尺寸经 ResizeObserver 动态重算。
+ */
+const LIBRARY_CSS = `
+.il-container{display:flex;flex-direction:column;height:100vh;background:var(--bg-primary);color:var(--text-primary);font-family:var(--font-body);}
+.il-header{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;border-bottom:1px solid var(--border-color);flex-shrink:0;}
+.il-body{flex:1;display:flex;overflow:hidden;}
+.il-sidebar{width:280px;border-right:1px solid var(--border-color);overflow-y:auto;flex-shrink:0;}
+.il-cat{padding:12px 16px 6px;font-size:var(--text-xs);font-weight:var(--font-medium);color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;}
+.il-list{margin-bottom:8px;}
+.il-item{width:100%;text-align:left;padding:10px 16px;font-size:var(--text-sm);background:transparent;border:none;color:var(--text-primary);cursor:pointer;transition:background var(--transition-fast);white-space:nowrap;}
+.il-main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.il-preview{flex:1;position:relative;background:var(--bg-secondary);min-height:0;}
+.il-info{height:220px;border-top:1px solid var(--border-color);flex-shrink:0;display:flex;}
+.il-tabs{display:none;}
+.il-meta{width:280px;border-right:1px solid var(--border-color);padding:16px;overflow-y:auto;flex-shrink:0;}
+.il-params{flex:1;padding:16px;overflow-y:auto;}
+@media (width < 768px){
+  .il-header{padding:0 12px;}
+  .il-body{flex-direction:column;}
+  .il-sidebar{width:auto;border-right:none;border-bottom:1px solid var(--border-color);overflow-x:auto;overflow-y:hidden;display:flex;align-items:center;gap:2px;padding:4px 8px;}
+  .il-cat{padding:4px 8px;flex-shrink:0;}
+  .il-list{display:contents;}
+  .il-item{width:auto;padding:8px 14px;border-radius:999px;flex-shrink:0;}
+  .il-info{height:42%;flex-direction:column;}
+  .il-tabs{display:flex;flex-shrink:0;border-bottom:1px solid var(--border-color);}
+  .il-tab{flex:1;padding:8px;font-size:var(--text-sm);background:transparent;border:none;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;}
+  .il-info[data-tab='params'] .il-tab-params,
+  .il-info[data-tab='meta'] .il-tab-meta{color:var(--accent-link);border-bottom-color:var(--accent-link);font-weight:var(--font-medium);}
+  .il-meta,.il-params{width:auto;border-right:none;flex:1;min-height:0;}
+  .il-info[data-tab='params'] .il-meta{display:none;}
+  .il-info[data-tab='meta'] .il-params{display:none;}
+}
+`;
+
+function injectLibraryStyles(): void {
+  if (document.getElementById('il-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'il-styles';
+  style.textContent = LIBRARY_CSS;
+  document.head.appendChild(style);
+}
+
 export function bootInstrumentLibrary() {
+  injectLibraryStyles();
   const registry = buildInstrumentRegistry();
   const byCategory = buildRegistryByCategory();
 
@@ -34,27 +80,12 @@ export function bootInstrumentLibrary() {
 
   // ── 根容器 ──
   const container = document.createElement('div');
-  container.style.cssText = `
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    font-family: var(--font-body);
-  `;
+  container.className = 'il-container';
   root.appendChild(container);
 
   // ── 顶部导航栏 ──
   const header = document.createElement('header');
-  header.style.cssText = `
-    height: 56px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 24px;
-    border-bottom: 1px solid var(--border-color);
-    flex-shrink: 0;
-  `;
+  header.className = 'il-header';
   header.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;">
       <span style="font-size:var(--text-lg);font-weight:var(--font-medium);">仪器组件库</span>
@@ -66,29 +97,22 @@ export function bootInstrumentLibrary() {
 
   // ── 主体区域 ──
   const body = document.createElement('div');
-  body.style.cssText = 'flex:1;display:flex;overflow:hidden;';
+  body.className = 'il-body';
   container.appendChild(body);
 
-  // ── 左侧边栏 ──
+  // ── 左侧边栏（移动端变为横向分类条） ──
   const sidebar = document.createElement('aside');
-  sidebar.style.cssText = `
-    width: 280px;
-    border-right: 1px solid var(--border-color);
-    overflow-y: auto;
-    flex-shrink: 0;
-  `;
+  sidebar.className = 'il-sidebar';
   body.appendChild(sidebar);
 
   // ── 右侧主区域 ──
   const main = document.createElement('main');
-  main.style.cssText =
-    'flex:1;display:flex;flex-direction:column;overflow:hidden;';
+  main.className = 'il-main';
   body.appendChild(main);
 
-  // 预览区（Canvas）
+  // 预览区（Canvas；SVG 仪器隐藏 canvas 并在旁插 <svg>）
   const previewWrap = document.createElement('div');
-  previewWrap.style.cssText =
-    'flex:1;position:relative;background:var(--bg-secondary);';
+  previewWrap.className = 'il-preview';
   main.appendChild(previewWrap);
 
   const canvas = document.createElement('canvas');
@@ -116,30 +140,37 @@ export function bootInstrumentLibrary() {
     }
   });
 
-  // 信息面板
+  // 信息面板（移动端带 tab：参数调节 / 组件信息）
   const infoPanel = document.createElement('div');
-  infoPanel.style.cssText = `
-    height: 220px;
-    border-top: 1px solid var(--border-color);
-    flex-shrink: 0;
-    display: flex;
-  `;
+  infoPanel.className = 'il-info';
+  infoPanel.dataset.tab = 'params';
   main.appendChild(infoPanel);
+
+  const tabBar = document.createElement('div');
+  tabBar.className = 'il-tabs';
+  const tabParams = document.createElement('button');
+  tabParams.className = 'il-tab il-tab-params';
+  tabParams.textContent = '参数调节';
+  tabParams.addEventListener('click', () => {
+    infoPanel.dataset.tab = 'params';
+  });
+  const tabMeta = document.createElement('button');
+  tabMeta.className = 'il-tab il-tab-meta';
+  tabMeta.textContent = '组件信息';
+  tabMeta.addEventListener('click', () => {
+    infoPanel.dataset.tab = 'meta';
+  });
+  tabBar.append(tabParams, tabMeta);
+  infoPanel.appendChild(tabBar);
 
   // 元数据区
   const metaWrap = document.createElement('div');
-  metaWrap.style.cssText = `
-    width: 280px;
-    border-right: 1px solid var(--border-color);
-    padding: 16px;
-    overflow-y: auto;
-    flex-shrink: 0;
-  `;
+  metaWrap.className = 'il-meta';
   infoPanel.appendChild(metaWrap);
 
   // 参数编辑器区
   const paramsWrap = document.createElement('div');
-  paramsWrap.style.cssText = 'flex:1;padding:16px;overflow-y:auto;';
+  paramsWrap.className = 'il-params';
   infoPanel.appendChild(paramsWrap);
 
   // ── 状态 ──
@@ -181,33 +212,16 @@ export function bootInstrumentLibrary() {
   const categories = Object.keys(byCategory);
   for (const cat of categories) {
     const catHeader = document.createElement('div');
-    catHeader.style.cssText = `
-      padding: 12px 16px 6px;
-      font-size: var(--text-xs);
-      font-weight: var(--font-medium);
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    `;
+    catHeader.className = 'il-cat';
     catHeader.textContent = getCategoryLabel(cat);
     sidebar.appendChild(catHeader);
 
     const list = document.createElement('ul');
-    list.style.cssText = 'margin-bottom:8px;';
+    list.className = 'il-list';
     for (const entry of byCategory[cat]) {
       const li = document.createElement('li');
       const btn = document.createElement('button');
-      btn.style.cssText = `
-        width: 100%;
-        text-align: left;
-        padding: 10px 16px;
-        font-size: var(--text-sm);
-        background: transparent;
-        border: none;
-        color: var(--text-primary);
-        cursor: pointer;
-        transition: background var(--transition-fast);
-      `;
+      btn.className = 'il-item';
       btn.textContent = entry.title;
       btn.addEventListener('mouseenter', () => {
         if (activeEntry?.id !== entry.id) {
@@ -488,11 +502,16 @@ export function bootInstrumentLibrary() {
     grid.appendChild(resetBtn);
   }
 
-  // ── 响应窗口尺寸变化 ──
-  const handleResize = () => {
-    if (activeView) activeView.resize();
-  };
-  window.addEventListener('resize', handleResize);
+  // ── 响应容器尺寸变化（窗口缩放、横竖屏切换、桌面/移动布局切换） ──
+  // ResizeObserver 覆盖 window resize 的所有场景：预览区尺寸一变，
+  // 就按新尺寸重设 canvas 并通知 view。SVG 仪器的 canvas 处于隐藏态，
+  // 跳过重设（其 view 用 viewBox 自适应，resize 为空操作）。
+  const resizeObserver = new ResizeObserver(() => {
+    if (!activeView) return;
+    if (canvas.style.display !== 'none') sizeCanvasToFill(canvas);
+    activeView.resize();
+  });
+  resizeObserver.observe(previewWrap);
 
   // ── 清理 ──
   const handleBeforeUnload = () => {
@@ -503,7 +522,7 @@ export function bootInstrumentLibrary() {
 
   // 提供 dispose 方法供外部调用（如页面切换时）
   return function dispose() {
-    window.removeEventListener('resize', handleResize);
+    resizeObserver.disconnect();
     window.removeEventListener('beforeunload', handleBeforeUnload);
     if (rafId) cancelAnimationFrame(rafId);
     if (activeView) activeView.dispose();
