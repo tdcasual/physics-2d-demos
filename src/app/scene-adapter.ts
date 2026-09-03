@@ -193,12 +193,12 @@ export class SceneAdapter<
 
     this.keyboard.registerMultiple({
       ' ': () => {
+        // 统一走 startAll/pauseAll：transport 循环与场景的
+        // startAll/pauseAll 钩子（播放状态、读数文案）保持同步
         if (this.transport?.transport.isPlaying) {
-          this.transport?.pause();
-          this.perfMonitor?.stop();
+          this.pauseAll();
         } else {
-          this.transport?.play();
-          this.perfMonitor?.start();
+          this.startAll();
         }
       },
       r: () => {
@@ -337,8 +337,7 @@ export class SceneAdapter<
 
     // 自动播放：场景挂载后立即启动动画循环
     if (this.options.autoPlay) {
-      this.transport?.play();
-      this.perfMonitor?.start();
+      this.startAll();
     }
 
     if (this.scene.subscribe) {

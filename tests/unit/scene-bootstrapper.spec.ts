@@ -225,6 +225,61 @@ describe('SceneAdapter', () => {
     expect(scene.pauseAll).toHaveBeenCalled();
   });
 
+  it('space key toggles through startAll/pauseAll (keeps scene hooks in sync)', () => {
+    const scene = createMockScene();
+    const adapter = createAdapter({ createScene: () => scene as never });
+    const container = document.createElement('div');
+    const canvas = document.createElement('canvas');
+    canvas.className = 'stage-canvas';
+    container.appendChild(canvas);
+
+    adapter.renderAnimation(container, {
+      animation: container,
+      control: container
+    } as LayoutSlots);
+
+    const pressSpace = () =>
+      document.body.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: ' ',
+          bubbles: true,
+          cancelable: true
+        })
+      );
+
+    pressSpace();
+    expect(scene.startAll).toHaveBeenCalledTimes(1);
+    expect(adapter.getTransportState().isPlaying).toBe(true);
+
+    pressSpace();
+    expect(scene.pauseAll).toHaveBeenCalledTimes(1);
+    expect(adapter.getTransportState().isPlaying).toBe(false);
+
+    adapter.unmount();
+  });
+
+  it('autoPlay starts through startAll (scene hooks included)', () => {
+    const scene = createMockScene();
+    const adapter = createAdapter({
+      createScene: () => scene as never,
+      autoPlay: true
+    } as Partial<ScenePageOptions>);
+    const container = document.createElement('div');
+    const canvas = document.createElement('canvas');
+    canvas.className = 'stage-canvas';
+    container.appendChild(canvas);
+
+    adapter.renderAnimation(container, {
+      animation: container,
+      control: container
+    } as LayoutSlots);
+
+    expect(scene.startAll).toHaveBeenCalledTimes(1);
+    expect(adapter.getTransportState().isPlaying).toBe(true);
+
+    adapter.unmount();
+  });
+
   it('reset should call transport reset and scene reset', () => {
     const scene = createMockScene();
     const adapter = createAdapter({ createScene: () => scene as never });

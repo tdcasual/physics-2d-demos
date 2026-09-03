@@ -9,6 +9,16 @@ import type { SceneLifecycle } from './types';
 import type { TeachingMode, TeachingTheme } from '../platform/standards';
 import type { DemoRenderHints } from '../platform/demo-profile';
 
+/** 播放速度倍率下限（与 transport-bar 滑块区间对齐） */
+export const MIN_TIME_SCALE = 0.25;
+/** 播放速度倍率上限 */
+export const MAX_TIME_SCALE = 3;
+
+/** 钳制播放速度倍率到 [MIN_TIME_SCALE, MAX_TIME_SCALE] */
+export function clampTimeScale(scale: number): number {
+  return Math.max(MIN_TIME_SCALE, Math.min(MAX_TIME_SCALE, scale));
+}
+
 /** 最小视图接口 — 标准场景入口所需 */
 export type MinimalViewApi = {
   render(state: unknown): void;

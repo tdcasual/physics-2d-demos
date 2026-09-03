@@ -2,6 +2,15 @@
 
 > ⚠️ 本文件自 2026-05 起停止逐条维护，日常变更以 git log 为准；里程碑式的审计/修复批次仍会在此记录。
 
+## 2026-09-03 — 新场景：位置时间图像（xt-graph）+ 龟兔赛跑（tortoise-hare）
+
+- 新增 `xt-graph`：x–t 图线随时间逐点绘出，红色光点与下方位置轴小车严格同步；8 个预设运动（静止/匀速×2/匀加速/匀减速/三角波往返/课本折线 O→A→B→C→D/跨越正负区折线），分段线性预设由 `piecewise` 构造
+- 新增 `tortoise-hare`：双物体 x–t 同图对比（龟=青绿、兔=橙），图线交点=相遇（★ 标记），兔子中途停下时垂耳画 Zzz，赛道含起点/终点旗与间距读数；6 个预设覆盖同时同地/同时非同地/同地非同时出发与折线/曲线组合，相遇点均为手算解析解（t=4、4.5、8 s）
+- 两场景均为单 canvas 复合渲染（上 67% 图像区 + 下 33% 轨道/赛道区），不改布局系统；播放/暂停/速度复用布局 transport-bar；`?preset=` URL 同步经 `paramSync.applyParam` 接管
+- 平台修复（场景审计带出）：`scene-adapter` 空格键与 `autoPlay` 原先只动 transport shell、不调场景的 `startAll/pauseAll` 钩子，导致场景播放状态与 transport bar 脱钩；现统一走 `startAll/pauseAll`（补回归测试）
+- 场景侧修复：兔子 Zzz 字号在已缩放的变换内二次缩放（移动端不可见）改为常量；`bounded` 包装随预设缓存避免每帧分配；预设回退改为按 `DEFAULT_*_PRESET_ID` 解析（不再依赖数组顺序）；切预设不再强制暂停（entry 无法触及 shell 循环，暂停语义会造成脱钩）；`clampTimeScale` 下沉 `scene-entry-helpers.ts`
+- 测试：sim 层手算解析值 + 中心差分导数交叉验证；新增 entry 层 transport 状态机测试 ×2（仿 spring-oscillator.entry）
+
 ## 2026-09-02 — 仪器库：旧游标卡尺仪器移除 + 移动端布局
 
 - 移除 `vernier-caliper` 仪器（由 vernier-caliper-guide 取代）；其 Canvas 绘制代码逐字迁入 `scenes/vernier-caliper/caliper-render.ts`，场景页渲染不变
