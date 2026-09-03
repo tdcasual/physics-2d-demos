@@ -9,7 +9,8 @@ bootScenePage({
   preferredLayout: 'split-right',
   layoutConfig: {
     controlColumns: 'auto',
-    readoutCollapsed: false
+    readoutCollapsed: false,
+    hasGraph: false
   },
   createScene: ({ canvas, theme, mode, demoHints }) =>
     createXtGraphScene({ canvas, theme, mode, demoHints }),
