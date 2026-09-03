@@ -104,4 +104,3 @@ jobs:
       - name: Failure triage summary
         if: ${{ failure() && !inputs.update_snapshots }}
         run: cat .github/ci-failure-triage.md >> "$GITHUB_STEP_SUMMARY"
-
