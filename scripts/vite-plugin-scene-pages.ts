@@ -1,7 +1,7 @@
 /**
  * Vite plugin: 场景页 HTML 虚拟生成
  *
- * 16 个场景页 HTML 此前是 src/pages/<id>.html 的同构手抄模板
+ * 场景页 HTML 此前是 src/pages/<id>.html 的同构手抄模板
  * （#app 挂载点 + <script src="../scenes/<id>/page.ts">，仅 title 不同）。
  * 现在由本插件从 src/scenes/<id>/scene.meta.ts 派生，手抄文件已删除：
  *

@@ -1,6 +1,6 @@
 # Teaching Demo Hub
 
-面向课堂演示的多学科 2D 动画静态站点。当前收录 16 个交互式物理教学场景与 4 个仪器组件，统一的布局母版系统，支持桌面端/移动端自适应切换。
+面向课堂演示的多学科 2D 动画静态站点。当前收录 18 个交互式物理教学场景与 3 个仪器组件，统一的布局母版系统，支持桌面端/移动端自适应切换。
 
 ## Tech Stack
 
@@ -37,8 +37,12 @@ pnpm quality:full
 | `pnpm build`              | 构建产物到 `dist/`                         |
 | `pnpm preview`            | 预览构建结果                               |
 | `pnpm check:scenes`       | 检查场景标准文件、控制面板形态与 HTML 入口 |
+| `pnpm check:layouts`      | 检查布局注册表与 layoutTestProfile         |
+| `pnpm check:scaffold`     | 脚手架自证明（生成探针场景后清理）         |
 | `pnpm check:bundle`       | 检查生产构建产物是否超过 bundle budget     |
 | `pnpm check:circular`     | 检查 `src/` 循环依赖                       |
+| `pnpm check:audit`        | 依赖漏洞审计                               |
+| `pnpm verify:scene`       | 单场景一站式验证（结构→测试→构建→预算）    |
 | `pnpm quality:core`       | 快速本地质量门禁                           |
 | `pnpm quality:full`       | 完整本地质量门禁                           |
 | `pnpm lint`               | ESLint 静态检查                            |
@@ -70,6 +74,9 @@ src/
   scenes/
     projectile/                # 抛体运动
     chase-meet/                # 追及相遇
+    xt-graph/                  # 位置时间图像
+    tortoise-hare/             # 龟兔赛跑
+    ganshe/                    # 波的干涉
     field-lines/               # 电场线
     emf-analogy/               # 电路水流类比
     electrification/           # 起电方式
@@ -101,6 +108,8 @@ docs/
 - `/`：React 导航首页（经 `src/catalog/scene-registry.ts` 的 `import.meta.glob` eager 自动发现场景元数据，支持搜索）
 - `/src/pages/projectile.html`：抛体运动
 - `/src/pages/chase-meet.html`：追及相遇
+- `/src/pages/xt-graph.html`：位置时间图像
+- `/src/pages/tortoise-hare.html`：龟兔赛跑
 - `/src/pages/spring-oscillator.html`：弹簧振子
 - `/src/pages/ganshe.html`：波的干涉
 - `/src/pages/mechanical-wave.html`：机械波
@@ -115,31 +124,32 @@ docs/
 - `/src/pages/wedge.html`：劈尖干涉
 - `/src/pages/vernier-caliper.html`：游标卡尺
 - `/src/pages/micrometer.html`：螺旋测微仪
-- `/src/pages/instruments.html`：仪器组件库（螺旋测微器、游标卡尺、干涉读数游标卡尺、高精度干涉测微仪）
+- `/src/pages/instruments.html`：仪器组件库（高精度干涉测微仪、干涉读数游标卡尺、游标卡尺使用演示）
 
 ## Architecture
 
-### 三层架构
+### 场景页运行时
 
 ```
 ┌─────────────────────────────────────────┐
-│  LayoutMaster（布局母版）                │
-│  split-right / mobile-stack / ...       │
-│  - 定义区域结构（Slots）                  │
-│  - 处理响应式/主题/动画                   │
+│  bootScenePage                          │
+│  主题 / URL 参数 / 布局注册              │
 └─────────────────────────────────────────┘
-                    ▲
-        ┌───────────┴───────────┐
-        │   TransportBridge     │
-        │  场景状态 → 布局同步    │
-        └───────────┬───────────┘
+                    │
                     ▼
 ┌─────────────────────────────────────────┐
-│  Scene（场景实例）                       │
-│  - 物理仿真 + Canvas 渲染                │
-│  - 通过标准接口提供数据                   │
-│  getTransportState() / getReadoutItems() │
-│  subscribe() → 自动通知布局刷新           │
+│  SceneAdapter                           │
+│  createScene + createSceneShell（RAF）  │
+│  getTransportState / getReadoutItems    │
+│  subscribe → 读数与运输条刷新            │
+└─────────────────────────────────────────┘
+                    │
+                    ▼
+┌─────────────────────────────────────────┐
+│  SceneContainer + ILayout               │
+│  split-right / mobile-stack / …         │
+│  Capability：transport / readout / 主题  │
+│  场景不 import 布局实现                  │
 └─────────────────────────────────────────┘
 ```
 

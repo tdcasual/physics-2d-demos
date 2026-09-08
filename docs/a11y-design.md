@@ -25,7 +25,7 @@
 - 多 canvas 场景按插入顺序编号（`...演示图 2`）；`MutationObserver` 为后插入的
   canvas（如图表插槽 `attachGraphCanvas`）补 `role`/`aria-label`。
 - 断言：`tests/visual/a11y-audit.spec.ts` 的 `aria labels: <scene>` 用例遍历
-  16 个场景页，要求每个 canvas 有可访问名称。
+  全部场景页，要求每个 canvas 有可访问名称。
 
 原设计中的「各场景 aria-label 文案表」未采用——统一由 `meta.title` 派生。
 
@@ -57,7 +57,7 @@
 
 `@axe-core/playwright` 已接入。`tests/visual/a11y-audit.spec.ts`：
 
-- 覆盖 **16 个场景页 + 首页 + instruments 页**（原设计仅计划场景页对比度）。
+- 覆盖 **全部场景页 + 首页 + instruments 页**（原设计仅计划场景页对比度）。
 - 规则集为 `wcag2a` + `wcag2aa` 全量（含 `color-contrast`、`label`、
   `button-name` 等），critical/serious 违规必须为零。
 - 另含键盘导航用例：Tab 可达多个控件、焦点指示器（outline/box-shadow）可见。
