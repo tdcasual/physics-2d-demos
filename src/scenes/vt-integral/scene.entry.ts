@@ -29,6 +29,22 @@ function modeLabel(mode: TeachingMode): string {
   return mode === 'presentation' ? '演示模式' : '标准模式';
 }
 
+function coerceVtScene(value: number | string): VtScene {
+  if (value === 'scene2' || value === 2 || value === '2') return 'scene2';
+  if (value === 'scene3' || value === 3 || value === '3') return 'scene3';
+  return 'scene1';
+}
+
+function vtUrlParams(snapshot: VtIntegralSnapshot): {
+  n: number;
+  scene: number;
+} {
+  return {
+    n: snapshot.params.rects,
+    scene: Number(snapshot.params.scene.replace('scene', '')) || 1
+  };
+}
+
 export function createVtIntegralScene(
   options: CreateVtIntegralSceneOptions = {}
 ): SceneLifecycle & {
@@ -36,6 +52,11 @@ export function createVtIntegralScene(
   setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
   setTheme(theme: TeachingTheme): void;
   setScene(scene: VtScene): void;
+  setParams(next: { n?: number; scene?: number | string }): {
+    n: number;
+    scene: number;
+  };
+  getParams(): { n: number; scene: number };
   setRects(value: number): void;
   setTime(value: number): void;
   setMethod(value: VtMethod): void;
@@ -115,6 +136,23 @@ export function createVtIntegralScene(
     setScene: base.wrapAction((scene: VtScene): void => {
       sim.setScene(scene);
     }),
+    setParams(next: { n?: number; scene?: number | string }): {
+      n: number;
+      scene: number;
+    } {
+      if (next.scene !== undefined) {
+        sim.setScene(coerceVtScene(next.scene));
+      }
+      if (typeof next.n === 'number' && Number.isFinite(next.n)) {
+        sim.setRects(next.n);
+      }
+      base.renderAndEmit();
+      base.notify();
+      return vtUrlParams(sim.getSnapshot());
+    },
+    getParams(): { n: number; scene: number } {
+      return vtUrlParams(sim.getSnapshot());
+    },
     setRects: base.wrapAction((value: number): void => {
       sim.setRects(value);
     }),

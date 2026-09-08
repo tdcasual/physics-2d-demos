@@ -90,6 +90,9 @@ export function createElectrificationSim() {
       scene = nextScene;
       stepIndex = 0;
     },
+    setStepIndex(next: number): void {
+      stepIndex = clampStep(scene, next);
+    },
     runSceneAction(): void {
       stepIndex = clampStep(scene, stepIndex + 1);
     },

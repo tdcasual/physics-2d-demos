@@ -38,22 +38,11 @@ const NON_SIM_KEYS: Record<string, Record<string, string>> = {};
 
 // 无对象式 setParams 的场景（entry 暴露专用 setter，须注明承载方式）
 const NO_PARAMS_API: Record<string, string> = {
-  // 教程式场景：entry 暴露 setScene/runSceneAction，无连续参数
-  electrification: 'entry exposes setScene/runSceneAction instead of setParams',
-  // entry 暴露 setSystemOn/setTapOpening/setView 专用 API
+  // 水路类比：defaultParams 已清空；控件键 tap/speed 走 NON_PARAM_KEYS
   'emf-analogy':
-    'entry exposes setSystemOn/setTapOpening/setView instead of setParams',
-  // entry 暴露 setDensity/setCustomCharges 专用 API
-  'field-lines':
-    'entry exposes setDensity/setCustomCharges instead of setParams',
-  // entry 暴露 setParam(key, value) 单键设置
-  'mechanical-wave': 'entry exposes setParam(key, value) instead of setParams',
-  // 多振子场景：参数挂在每个振子上（addOscillator/updateOscillator）
-  'spring-oscillator':
-    'params live on individual oscillators (addOscillator/updateOscillator)',
-  // entry 暴露 setRects/setScene/setMethod 等专用 API
-  'vt-integral':
-    'entry exposes setRects/setScene/setMethod instead of setParams'
+    'entry exposes setSystemOn/setTapOpening/setView; no URL-shareable defaultParams',
+  // entry 暴露 setParam(key, value) 单键设置；URL 管线会 fallback setParam
+  'mechanical-wave': 'entry exposes setParam(key, value) instead of setParams'
 };
 
 // ---------------------------------------------------------------------------

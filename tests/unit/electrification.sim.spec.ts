@@ -12,4 +12,14 @@ describe('electrification sim', () => {
     );
     expect(after.state.explanation).not.toBe(before.state.explanation);
   });
+
+  it('setStepIndex jumps to a clamped step without looping actions', () => {
+    const sim = createElectrificationSim();
+    sim.setStepIndex(2);
+    expect(sim.getSnapshot().state.stepIndex).toBe(2);
+    sim.setStepIndex(99);
+    expect(sim.getSnapshot().state.stepIndex).toBe(2);
+    sim.setStepIndex(-1);
+    expect(sim.getSnapshot().state.stepIndex).toBe(0);
+  });
 });

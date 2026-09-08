@@ -191,6 +191,45 @@ export function createSpringOscillatorScene(
       view.attachGraphCanvas(canvas);
     },
 
+    setParams(next: { k?: number; m?: number; A?: number }): {
+      k: number;
+      m: number;
+      A: number;
+    } {
+      const first = sim.oscillators[0];
+      if (first) {
+        const patch: Partial<OscillatorParams> = {};
+        if (typeof next.k === 'number' && Number.isFinite(next.k)) {
+          patch.k = next.k;
+        }
+        if (typeof next.m === 'number' && Number.isFinite(next.m)) {
+          patch.m = next.m;
+        }
+        if (typeof next.A === 'number' && Number.isFinite(next.A)) {
+          patch.x0 = next.A;
+        }
+        if (Object.keys(patch).length > 0) {
+          sim.updateOscillator(first.id, patch);
+          notify();
+        }
+      }
+      const osc = sim.oscillators[0];
+      return {
+        k: osc?.params.k ?? 10,
+        m: osc?.params.m ?? 1,
+        A: osc?.params.x0 ?? 5
+      };
+    },
+
+    getParams(): { k: number; m: number; A: number } {
+      const first = sim.oscillators[0];
+      return {
+        k: first?.params.k ?? 10,
+        m: first?.params.m ?? 1,
+        A: first?.params.x0 ?? 5
+      };
+    },
+
     getReadoutItems,
 
     getTransportState(): { isPlaying: boolean; speed: number } {

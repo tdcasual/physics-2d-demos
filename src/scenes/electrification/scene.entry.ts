@@ -25,6 +25,7 @@ export function createElectrificationScene(
   setMode(mode: TeachingMode): void;
   setTheme(theme: TeachingTheme): void;
   setScene(scene: ElectrificationScene): void;
+  setParams(next: { step?: number }): { step: number };
   runSceneAction(): void;
   getSnapshot(): ElectrificationSnapshot;
   subscribe(listener: () => void): () => void;
@@ -50,6 +51,14 @@ export function createElectrificationScene(
       sim.setScene(scene);
       base.renderAndEmit();
       base.notify();
+    },
+    setParams(next: { step?: number }): { step: number } {
+      if (typeof next.step === 'number' && Number.isFinite(next.step)) {
+        sim.setStepIndex(next.step);
+        base.renderAndEmit();
+        base.notify();
+      }
+      return { step: sim.getSnapshot().state.stepIndex };
     },
     runSceneAction(): void {
       sim.runSceneAction();

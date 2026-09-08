@@ -31,11 +31,7 @@ export const emfAnalogyMeta: SceneMeta = {
   icon: '💧',
   category: 'electromagnetism',
   featured: false,
-  defaultParams: {
-    B: 1,
-    v: 2,
-    L: 1
-  },
+  defaultParams: {},
   testProfile: {
     hasGraph: false,
     hasTransport: true,

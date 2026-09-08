@@ -86,7 +86,7 @@ export function bootScenePage<TScene extends SceneInstance>(
   document.documentElement.setAttribute('data-theme', defaultTheme);
 
   // 恢复之前保存的参数（URL 无参数时）
-  restoreSceneParams(options.meta.id);
+  restoreSceneParams(options.meta);
 
   const mount = document.querySelector(mountSelector) as HTMLElement | null;
   if (!mount) {

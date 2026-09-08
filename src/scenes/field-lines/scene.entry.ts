@@ -42,6 +42,11 @@ export function createFieldLinesScene(
   setScene(scene: FieldLinesScene): void;
   setDensity(value: number): void;
   setCustomCharges(q1: number, q2: number): void;
+  setParams(next: { density?: number; q1?: number; q2?: number }): {
+    density: number;
+    q1: number;
+    q2: number;
+  };
   pickCharge(normX: number, normY: number): number | null;
   moveCharge(index: number, normX: number, normY: number): void;
   addCharge(q: number): void;
@@ -113,6 +118,30 @@ export function createFieldLinesScene(
     setCustomCharges: base.wrapAction((q1: number, q2: number): void => {
       sim.setCustomCharges(q1, q2);
     }),
+    setParams(next: { density?: number; q1?: number; q2?: number }): {
+      density: number;
+      q1: number;
+      q2: number;
+    } {
+      if (typeof next.density === 'number' && Number.isFinite(next.density)) {
+        sim.setDensity(next.density);
+      }
+      if (
+        (typeof next.q1 === 'number' && Number.isFinite(next.q1)) ||
+        (typeof next.q2 === 'number' && Number.isFinite(next.q2))
+      ) {
+        const params = sim.getParams();
+        if (params.scene !== 'custom') {
+          sim.setScene('custom');
+        }
+        const latest = sim.getParams();
+        sim.setCustomCharges(next.q1 ?? latest.q1, next.q2 ?? latest.q2);
+      }
+      base.renderAndEmit();
+      base.notify();
+      const after = sim.getParams();
+      return { density: after.density, q1: after.q1, q2: after.q2 };
+    },
     pickCharge(normX: number, normY: number): number | null {
       return sim.pickCharge(normX, normY);
     },

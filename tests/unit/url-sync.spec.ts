@@ -3,7 +3,8 @@ import {
   readSceneParams,
   writeSceneParams,
   resolveUrlSyncKeys,
-  applySceneUrlParams
+  applySceneUrlParams,
+  restoreSceneParams
 } from '../../src/app/url-sync';
 import type { SceneMeta } from '../../src/platform/scene-contract';
 import type {
@@ -133,6 +134,23 @@ describe('url-sync', () => {
       const keys = resolveUrlSyncKeys(mockMeta);
       expect(keys.has('preset')).toBe(true);
       expect(keys.size).toBe(4); // speed/angle/count/preset
+    });
+  });
+
+  describe('restoreSceneParams', () => {
+    afterEach(() => {
+      localStorage.removeItem('physics-demos-params-test');
+    });
+
+    it('drops keys outside the URL allowlist', () => {
+      localStorage.setItem(
+        'physics-demos-params-test',
+        JSON.stringify({ speed: '30', junk: 'nope' })
+      );
+      restoreSceneParams(mockMeta);
+      const url = new URL(window.location.href);
+      expect(url.searchParams.get('speed')).toBe('30');
+      expect(url.searchParams.get('junk')).toBeNull();
     });
   });
 

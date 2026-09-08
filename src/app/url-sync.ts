@@ -91,16 +91,19 @@ export function persistSceneParams(sceneId: string): void {
  * 从 localStorage 恢复之前保存的参数
  * 若 URL 已有参数则不覆盖（URL 优先级更高）
  */
-export function restoreSceneParams(sceneId: string): void {
+export function restoreSceneParams(meta: SceneMeta): void {
   const url = new URL(window.location.href);
   if (url.searchParams.toString()) return; // URL 已有参数，不覆盖
 
-  const raw = localStorage.getItem(`${PARAMS_KEY_PREFIX}${sceneId}`);
+  const raw = localStorage.getItem(`${PARAMS_KEY_PREFIX}${meta.id}`);
   if (!raw) return;
 
   try {
     const params = JSON.parse(raw) as Record<string, string>;
-    Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+    const allowed = resolveUrlSyncKeys(meta);
+    Object.entries(params).forEach(([k, v]) => {
+      if (allowed.has(k)) url.searchParams.set(k, v);
+    });
     window.history.replaceState({}, '', url);
   } catch {
     // ignore corrupt storage
