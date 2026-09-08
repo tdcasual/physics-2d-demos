@@ -67,6 +67,8 @@ export function createTortoiseHareView(
   let width = 0;
   let height = 0;
   let responsiveScale = 1;
+  let staticCanvas: HTMLCanvasElement | null = null;
+  let cachedStaticKey: string | null = null;
 
   function resize(): void {
     const newCtx = sizeCanvasToFill(canvas);
@@ -83,7 +85,12 @@ export function createTortoiseHareView(
 
   /* ────────────────────── x–t 图像区 ────────────────────── */
 
-  function drawGraph(state: RaceState, scale: number, regionH: number): void {
+  function drawGraph(
+    state: RaceState,
+    scale: number,
+    regionH: number,
+    layer: 'static' | 'dynamic'
+  ): void {
     if (!ctx) return;
     const c = getThemeColors(theme);
     const sem = semanticColors(theme);
@@ -97,142 +104,147 @@ export function createTortoiseHareView(
       padT +
       (1 - (x - RACE_X_MIN) / (RACE_X_MAX - RACE_X_MIN)) *
         (regionH - padT - padB);
-
-    /* 网格 */
-    ctx.lineWidth = 1;
-    for (let t = 0; t <= RACE_T_MAX; t += 1) {
-      ctx.strokeStyle = t % 5 === 0 ? sem.gridStrong : c.canvasGrid;
-      ctx.beginPath();
-      ctx.moveTo(gx(t), padT);
-      ctx.lineTo(gx(t), regionH - padB);
-      ctx.stroke();
-    }
-    for (let x = RACE_X_MIN; x <= RACE_X_MAX; x += 2) {
-      ctx.strokeStyle = x % 8 === 0 ? sem.gridStrong : c.canvasGrid;
-      ctx.beginPath();
-      ctx.moveTo(padL, gy(x));
-      ctx.lineTo(width - padR, gy(x));
-      ctx.stroke();
-    }
-
-    /* 坐标轴：纵轴在左，时间轴在底部（x = 0） */
     const axisY0 = gy(0);
-    ctx.strokeStyle = c.canvasText;
-    ctx.lineWidth = 2.5 * scale;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(padL, padT - 8 * scale);
-    ctx.lineTo(padL, regionH - padB + 6 * scale);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(padL, axisY0);
-    ctx.lineTo(width - padR + 8 * scale, axisY0);
-    ctx.stroke();
-    ctx.fillStyle = c.canvasText;
-    ctx.beginPath();
-    ctx.moveTo(padL, padT - 14 * scale);
-    ctx.lineTo(padL - 6 * scale, padT - 4 * scale);
-    ctx.lineTo(padL + 6 * scale, padT - 4 * scale);
-    ctx.closePath();
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(width - padR + 14 * scale, axisY0);
-    ctx.lineTo(width - padR + 4 * scale, axisY0 - 6 * scale);
-    ctx.lineTo(width - padR + 4 * scale, axisY0 + 6 * scale);
-    ctx.closePath();
-    ctx.fill();
-
-    /* 刻度标签 */
-    ctx.fillStyle = c.textSecondary;
-    ctx.font = font(12, scale);
-    ctx.textAlign = 'center';
-    for (let t = 1; t <= RACE_T_MAX; t += 1) {
-      ctx.fillText(String(t), gx(t), axisY0 + 20 * scale);
-    }
-    ctx.textAlign = 'right';
-    for (let x = RACE_X_MIN; x <= RACE_X_MAX; x += 4) {
-      ctx.fillText(String(x), padL - 10 * scale, gy(x) + 4);
-    }
-    ctx.textAlign = 'left';
-    ctx.fillStyle = c.canvasText;
-    ctx.font = font(14, scale);
-    ctx.fillText('x/m', padL + 10 * scale, padT + 14 * scale);
-    ctx.fillText('t/s', width - padR - 8 * scale, axisY0 - 10 * scale);
-
-    /* 终点线（水平虚线 + 标签） */
-    ctx.strokeStyle = sem.meet;
-    ctx.lineWidth = 2 * scale;
-    ctx.setLineDash([8 * scale, 6 * scale]);
-    ctx.beginPath();
-    ctx.moveTo(padL, gy(RACE_X_MAX));
-    ctx.lineTo(width - padR, gy(RACE_X_MAX));
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle = sem.meet;
-    ctx.font = font(12, scale);
-    ctx.textAlign = 'left';
-    ctx.fillText('终点', padL + 6 * scale, gy(RACE_X_MAX) + 16 * scale);
-
-    /* 图线末端标签（沿曲线标注名字，t=0 无动点时也可辨识） */
     const preset = getRacePreset(state.preset);
     const clampX = (x: number) => Math.min(RACE_X_MAX, Math.max(RACE_X_MIN, x));
-    ctx.font = font(12, scale);
-    ctx.textAlign = 'right';
-    const endLabel = (
-      mover: RaceMover,
-      color: string,
-      name: string,
-      above: boolean
-    ): void => {
-      if (!ctx) return;
-      const ex = gx(RACE_T_MAX) - 6 * scale;
-      const ey = gy(clampX(mover.x(RACE_T_MAX))) + (above ? -10 : 18) * scale;
-      ctx.fillStyle = color;
-      ctx.fillText(name, ex, ey);
-    };
-    endLabel(preset.a, sem.tortoise, '乌龟', true);
-    endLabel(preset.b, sem.hare, '兔子', false);
 
-    /* 图线绘制（虚线预览 + 已走过实线） */
-    const SAMPLES = 300;
-    const drawCurve = (
-      mover: RaceMover,
-      ghostColor: string,
-      solidColor: string
-    ): void => {
-      if (!ctx) return;
-      ctx.strokeStyle = ghostColor;
-      ctx.lineWidth = 2.5 * scale;
-      ctx.setLineDash([6 * scale, 6 * scale]);
-      ctx.beginPath();
-      for (let i = 0; i <= SAMPLES; i += 1) {
-        const t = (i / SAMPLES) * RACE_T_MAX;
-        const px = gx(t);
-        const py = gy(clampX(mover.x(t)));
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
+    if (layer === 'static') {
+      /* 网格 */
+      ctx.lineWidth = 1;
+      for (let t = 0; t <= RACE_T_MAX; t += 1) {
+        ctx.strokeStyle = t % 5 === 0 ? sem.gridStrong : c.canvasGrid;
+        ctx.beginPath();
+        ctx.moveTo(gx(t), padT);
+        ctx.lineTo(gx(t), regionH - padB);
+        ctx.stroke();
       }
+      for (let x = RACE_X_MIN; x <= RACE_X_MAX; x += 2) {
+        ctx.strokeStyle = x % 8 === 0 ? sem.gridStrong : c.canvasGrid;
+        ctx.beginPath();
+        ctx.moveTo(padL, gy(x));
+        ctx.lineTo(width - padR, gy(x));
+        ctx.stroke();
+      }
+
+      /* 坐标轴：纵轴在左，时间轴在底部（x = 0） */
+      ctx.strokeStyle = c.canvasText;
+      ctx.lineWidth = 2.5 * scale;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(padL, padT - 8 * scale);
+      ctx.lineTo(padL, regionH - padB + 6 * scale);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(padL, axisY0);
+      ctx.lineTo(width - padR + 8 * scale, axisY0);
+      ctx.stroke();
+      ctx.fillStyle = c.canvasText;
+      ctx.beginPath();
+      ctx.moveTo(padL, padT - 14 * scale);
+      ctx.lineTo(padL - 6 * scale, padT - 4 * scale);
+      ctx.lineTo(padL + 6 * scale, padT - 4 * scale);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(width - padR + 14 * scale, axisY0);
+      ctx.lineTo(width - padR + 4 * scale, axisY0 - 6 * scale);
+      ctx.lineTo(width - padR + 4 * scale, axisY0 + 6 * scale);
+      ctx.closePath();
+      ctx.fill();
+
+      /* 刻度标签 */
+      ctx.fillStyle = c.textSecondary;
+      ctx.font = font(12, scale);
+      ctx.textAlign = 'center';
+      for (let t = 1; t <= RACE_T_MAX; t += 1) {
+        ctx.fillText(String(t), gx(t), axisY0 + 20 * scale);
+      }
+      ctx.textAlign = 'right';
+      for (let x = RACE_X_MIN; x <= RACE_X_MAX; x += 4) {
+        ctx.fillText(String(x), padL - 10 * scale, gy(x) + 4);
+      }
+      ctx.textAlign = 'left';
+      ctx.fillStyle = c.canvasText;
+      ctx.font = font(14, scale);
+      ctx.fillText('x/m', padL + 10 * scale, padT + 14 * scale);
+      ctx.fillText('t/s', width - padR - 8 * scale, axisY0 - 10 * scale);
+
+      /* 终点线（水平虚线 + 标签） */
+      ctx.strokeStyle = sem.meet;
+      ctx.lineWidth = 2 * scale;
+      ctx.setLineDash([8 * scale, 6 * scale]);
+      ctx.beginPath();
+      ctx.moveTo(padL, gy(RACE_X_MAX));
+      ctx.lineTo(width - padR, gy(RACE_X_MAX));
       ctx.stroke();
       ctx.setLineDash([]);
-      if (state.t > 0) {
-        ctx.strokeStyle = solidColor;
-        ctx.lineWidth = 4 * scale;
-        ctx.lineJoin = 'round';
-        ctx.lineCap = 'round';
+      ctx.fillStyle = sem.meet;
+      ctx.font = font(12, scale);
+      ctx.textAlign = 'left';
+      ctx.fillText('终点', padL + 6 * scale, gy(RACE_X_MAX) + 16 * scale);
+
+      /* 图线末端标签（沿曲线标注名字，t=0 无动点时也可辨识） */
+      ctx.font = font(12, scale);
+      ctx.textAlign = 'right';
+      const endLabel = (
+        mover: RaceMover,
+        color: string,
+        name: string,
+        above: boolean
+      ): void => {
+        if (!ctx) return;
+        const ex = gx(RACE_T_MAX) - 6 * scale;
+        const ey = gy(clampX(mover.x(RACE_T_MAX))) + (above ? -10 : 18) * scale;
+        ctx.fillStyle = color;
+        ctx.fillText(name, ex, ey);
+      };
+      endLabel(preset.a, sem.tortoise, '乌龟', true);
+      endLabel(preset.b, sem.hare, '兔子', false);
+
+      /* 图线绘制（虚线预览） */
+      const SAMPLES = 300;
+      const drawGhost = (mover: RaceMover, ghostColor: string): void => {
+        if (!ctx) return;
+        ctx.strokeStyle = ghostColor;
+        ctx.lineWidth = 2.5 * scale;
+        ctx.setLineDash([6 * scale, 6 * scale]);
         ctx.beginPath();
-        const steps = Math.max(2, Math.round((state.t / RACE_T_MAX) * SAMPLES));
-        for (let i = 0; i <= steps; i += 1) {
-          const t = (i / steps) * state.t;
+        for (let i = 0; i <= SAMPLES; i += 1) {
+          const t = (i / SAMPLES) * RACE_T_MAX;
           const px = gx(t);
           const py = gy(clampX(mover.x(t)));
           if (i === 0) ctx.moveTo(px, py);
           else ctx.lineTo(px, py);
         }
         ctx.stroke();
+        ctx.setLineDash([]);
+      };
+      drawGhost(preset.a, sem.tortoiseGhost);
+      drawGhost(preset.b, sem.hareGhost);
+      return;
+    }
+
+    /* 已走过实线 */
+    const SAMPLES = 300;
+    const drawSolid = (mover: RaceMover, solidColor: string): void => {
+      if (!ctx || state.t <= 0) return;
+      ctx.strokeStyle = solidColor;
+      ctx.lineWidth = 4 * scale;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      const steps = Math.max(2, Math.round((state.t / RACE_T_MAX) * SAMPLES));
+      for (let i = 0; i <= steps; i += 1) {
+        const t = (i / steps) * state.t;
+        const px = gx(t);
+        const py = gy(clampX(mover.x(t)));
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
       }
+      ctx.stroke();
     };
-    drawCurve(preset.a, sem.tortoiseGhost, sem.tortoise);
-    drawCurve(preset.b, sem.hareGhost, sem.hare);
+    drawSolid(preset.a, sem.tortoise);
+    drawSolid(preset.b, sem.hare);
 
     /* 实时动点 + 名字标签 */
     if (state.t > 0) {
@@ -438,7 +450,8 @@ export function createTortoiseHareView(
     state: RaceState,
     scale: number,
     regionTop: number,
-    regionH: number
+    regionH: number,
+    layer: 'static' | 'dynamic'
   ): void {
     if (!ctx) return;
     const c = getThemeColors(theme);
@@ -450,68 +463,71 @@ export function createTortoiseHareView(
       padX +
       ((x - RACE_X_MIN) / (RACE_X_MAX - RACE_X_MIN)) * (width - 2 * padX);
 
-    /* 区域标题 */
-    ctx.fillStyle = c.textSecondary;
-    ctx.font = font(12, scale);
-    ctx.textAlign = 'left';
-    ctx.fillText('赛道', 10 * scale, regionTop + 14 * scale);
-
-    /* 轴 + 箭头 */
-    ctx.strokeStyle = c.canvasText;
-    ctx.lineWidth = 2.5 * scale;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(padX, axisY);
-    ctx.lineTo(width - padX, axisY);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(width - padX + 12 * scale, axisY);
-    ctx.lineTo(width - padX, axisY - 6 * scale);
-    ctx.lineTo(width - padX, axisY + 6 * scale);
-    ctx.closePath();
-    ctx.fillStyle = c.canvasText;
-    ctx.fill();
-    ctx.font = font(14, scale);
-    ctx.textAlign = 'left';
-    ctx.fillText('x/m', width - padX + 2 * scale, axisY - 12 * scale);
-
-    /* 刻度（每 2m） */
-    ctx.font = font(11, scale);
-    for (let x = RACE_X_MIN; x <= RACE_X_MAX; x += 2) {
-      const px = tx(x);
-      ctx.strokeStyle = c.textSecondary;
-      ctx.lineWidth = 1.4 * scale;
-      ctx.beginPath();
-      ctx.moveTo(px, axisY);
-      ctx.lineTo(px, axisY - (x % 8 === 0 ? 14 : 9) * scale);
-      ctx.stroke();
+    if (layer === 'static') {
+      /* 区域标题 */
       ctx.fillStyle = c.textSecondary;
-      ctx.textAlign = 'center';
-      ctx.fillText(String(x), px, axisY + 18 * scale);
-    }
+      ctx.font = font(12, scale);
+      ctx.textAlign = 'left';
+      ctx.fillText('赛道', 10 * scale, regionTop + 14 * scale);
 
-    /* 起点 / 终点旗 */
-    ctx.fillStyle = c.canvasText;
-    ctx.textAlign = 'center';
-    ctx.font = font(11, scale);
-    ctx.fillText('起点', tx(0), axisY + 34 * scale);
-    const flagX = tx(RACE_X_MAX);
-    ctx.strokeStyle = sem.meet;
-    ctx.lineWidth = 2 * scale;
-    ctx.beginPath();
-    ctx.moveTo(flagX, axisY);
-    ctx.lineTo(flagX, axisY - 40 * scale);
-    ctx.stroke();
-    ctx.fillStyle = sem.meet;
-    ctx.beginPath();
-    ctx.moveTo(flagX, axisY - 40 * scale);
-    ctx.lineTo(flagX - 16 * scale, axisY - 34 * scale);
-    ctx.lineTo(flagX, axisY - 28 * scale);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = c.canvasText;
-    ctx.font = font(11, scale);
-    ctx.fillText('终点', flagX, axisY + 34 * scale);
+      /* 轴 + 箭头 */
+      ctx.strokeStyle = c.canvasText;
+      ctx.lineWidth = 2.5 * scale;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(padX, axisY);
+      ctx.lineTo(width - padX, axisY);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(width - padX + 12 * scale, axisY);
+      ctx.lineTo(width - padX, axisY - 6 * scale);
+      ctx.lineTo(width - padX, axisY + 6 * scale);
+      ctx.closePath();
+      ctx.fillStyle = c.canvasText;
+      ctx.fill();
+      ctx.font = font(14, scale);
+      ctx.textAlign = 'left';
+      ctx.fillText('x/m', width - padX + 2 * scale, axisY - 12 * scale);
+
+      /* 刻度（每 2m） */
+      ctx.font = font(11, scale);
+      for (let x = RACE_X_MIN; x <= RACE_X_MAX; x += 2) {
+        const px = tx(x);
+        ctx.strokeStyle = c.textSecondary;
+        ctx.lineWidth = 1.4 * scale;
+        ctx.beginPath();
+        ctx.moveTo(px, axisY);
+        ctx.lineTo(px, axisY - (x % 8 === 0 ? 14 : 9) * scale);
+        ctx.stroke();
+        ctx.fillStyle = c.textSecondary;
+        ctx.textAlign = 'center';
+        ctx.fillText(String(x), px, axisY + 18 * scale);
+      }
+
+      /* 起点 / 终点旗 */
+      ctx.fillStyle = c.canvasText;
+      ctx.textAlign = 'center';
+      ctx.font = font(11, scale);
+      ctx.fillText('起点', tx(0), axisY + 34 * scale);
+      const flagX = tx(RACE_X_MAX);
+      ctx.strokeStyle = sem.meet;
+      ctx.lineWidth = 2 * scale;
+      ctx.beginPath();
+      ctx.moveTo(flagX, axisY);
+      ctx.lineTo(flagX, axisY - 40 * scale);
+      ctx.stroke();
+      ctx.fillStyle = sem.meet;
+      ctx.beginPath();
+      ctx.moveTo(flagX, axisY - 40 * scale);
+      ctx.lineTo(flagX - 16 * scale, axisY - 34 * scale);
+      ctx.lineTo(flagX, axisY - 28 * scale);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = c.canvasText;
+      ctx.font = font(11, scale);
+      ctx.fillText('终点', flagX, axisY + 34 * scale);
+      return;
+    }
 
     /* 两只动物（上下错开两个车道避免重叠） */
     const met = Math.abs(state.xa - state.xb) < 0.2 && state.t > 0;
@@ -566,6 +582,25 @@ export function createTortoiseHareView(
     );
   }
 
+  function snapshotStaticLayer(): boolean {
+    if (!staticCanvas) staticCanvas = document.createElement('canvas');
+    staticCanvas.width = canvas.width;
+    staticCanvas.height = canvas.height;
+    const octx = staticCanvas.getContext('2d');
+    if (!octx) return false;
+    octx.setTransform(1, 0, 0, 1, 0, 0);
+    octx.drawImage(canvas, 0, 0);
+    return true;
+  }
+
+  function blitStaticLayer(c: CanvasRenderingContext2D): void {
+    if (!staticCanvas) return;
+    c.save();
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.drawImage(staticCanvas, 0, 0);
+    c.restore();
+  }
+
   function render(state: RaceState): void {
     if (!ctx || width === 0 || height === 0) {
       resize();
@@ -573,14 +608,31 @@ export function createTortoiseHareView(
     }
     const scale = responsiveScale * contentScale();
     const c = getThemeColors(theme);
-
-    ctx.fillStyle = c.canvasBg;
-    ctx.fillRect(0, 0, width, height);
-
-    /* 上 67% 为图像区，下 33% 为赛道区 */
     const graphH = height * 0.67;
-    drawGraph(state, scale, graphH);
-    drawTrack(state, scale, graphH, height - graphH);
+    const staticKey = [
+      width,
+      height,
+      canvas.width,
+      canvas.height,
+      responsiveScale,
+      theme,
+      mode,
+      contentScale(),
+      state.preset
+    ].join('|');
+
+    if (staticKey !== cachedStaticKey) {
+      ctx.fillStyle = c.canvasBg;
+      ctx.fillRect(0, 0, width, height);
+      drawGraph(state, scale, graphH, 'static');
+      drawTrack(state, scale, graphH, height - graphH, 'static');
+      cachedStaticKey = snapshotStaticLayer() ? staticKey : null;
+    } else {
+      blitStaticLayer(ctx);
+    }
+
+    drawGraph(state, scale, graphH, 'dynamic');
+    drawTrack(state, scale, graphH, height - graphH, 'dynamic');
   }
 
   resize();
@@ -598,6 +650,8 @@ export function createTortoiseHareView(
     },
     dispose(): void {
       ctx = null;
+      staticCanvas = null;
+      cachedStaticKey = null;
     }
   };
 }

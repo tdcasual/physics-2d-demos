@@ -1,20 +1,18 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 const PORT = 5177;
 
-/**
- * 性能审计
- *
- * 验证动画场景在播放时维持合理的 FPS。
- */
-test('projectile maintains FPS above 25 during animation', async ({ page }) => {
+async function assertFps(
+  page: Page,
+  path: string,
+  label: string
+): Promise<void> {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(`http://127.0.0.1:${PORT}/src/pages/projectile.html`, {
+  await page.goto(`http://127.0.0.1:${PORT}${path}`, {
     waitUntil: 'domcontentloaded'
   });
   await page.waitForTimeout(1500);
 
-  // 点击播放按钮开始动画（桌面端为浮动控制条的第一个按钮，移动端为 .play-pause）
   const playBtn = page
     .locator(
       '.stage-floating-controls button, .play-pause, .mobile-control-btn.play-pause'
@@ -24,10 +22,8 @@ test('projectile maintains FPS above 25 during animation', async ({ page }) => {
     await playBtn.click();
   }
 
-  // 等待 3 秒让动画稳定运行
   await page.waitForTimeout(3000);
 
-  // 读取性能监控数据
   const metrics = await page.evaluate(() => {
     const monitor = (window as unknown as Record<string, unknown>)
       .__perfMonitor as
@@ -42,9 +38,12 @@ test('projectile maintains FPS above 25 during animation', async ({ page }) => {
     return monitor?.getMetrics?.() ?? null;
   });
 
-  expect(metrics, 'Performance monitor should be active').not.toBeNull();
+  expect(
+    metrics,
+    `${label}: performance monitor should be active`
+  ).not.toBeNull();
   if (metrics) {
-    console.log('Projectile performance:', JSON.stringify(metrics));
+    console.log(`${label} performance:`, JSON.stringify(metrics));
     expect(
       metrics.fps,
       `FPS too low: ${metrics.fps.toFixed(1)}`
@@ -54,46 +53,22 @@ test('projectile maintains FPS above 25 during animation', async ({ page }) => {
       `Frame time too high: ${metrics.frameTime.toFixed(1)}ms`
     ).toBeLessThan(40);
   }
+}
+
+test('projectile maintains FPS above 25 during animation', async ({ page }) => {
+  await assertFps(page, '/src/pages/projectile.html', 'Projectile');
 });
 
 test('chase-meet maintains FPS above 25 during animation', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(`http://127.0.0.1:${PORT}/src/pages/chase-meet.html`, {
-    waitUntil: 'domcontentloaded'
-  });
-  await page.waitForTimeout(1500);
+  await assertFps(page, '/src/pages/chase-meet.html', 'Chase-meet');
+});
 
-  const playBtn = page
-    .locator(
-      '.stage-floating-controls button, .play-pause, .mobile-control-btn.play-pause'
-    )
-    .first();
-  if (await playBtn.isVisible().catch(() => false)) {
-    await playBtn.click();
-  }
+test('xt-graph maintains FPS above 25 during animation', async ({ page }) => {
+  await assertFps(page, '/src/pages/xt-graph.html', 'xt-graph');
+});
 
-  await page.waitForTimeout(3000);
-
-  const metrics = await page.evaluate(() => {
-    const monitor = (window as unknown as Record<string, unknown>)
-      .__perfMonitor as
-      | {
-          getMetrics?: () => {
-            fps: number;
-            frameTime: number;
-            memoryMB?: number;
-          };
-        }
-      | undefined;
-    return monitor?.getMetrics?.() ?? null;
-  });
-
-  expect(metrics, 'Performance monitor should be active').not.toBeNull();
-  if (metrics) {
-    console.log('Chase-meet performance:', JSON.stringify(metrics));
-    expect(
-      metrics.fps,
-      `FPS too low: ${metrics.fps.toFixed(1)}`
-    ).toBeGreaterThan(25);
-  }
+test('tortoise-hare maintains FPS above 25 during animation', async ({
+  page
+}) => {
+  await assertFps(page, '/src/pages/tortoise-hare.html', 'tortoise-hare');
 });

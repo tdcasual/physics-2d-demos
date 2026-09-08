@@ -55,6 +55,8 @@ export function createXtGraphView(options: CreateXtGraphViewOptions = {}) {
   let width = 0;
   let height = 0;
   let responsiveScale = 1;
+  let staticCanvas: HTMLCanvasElement | null = null;
+  let cachedStaticKey: string | null = null;
 
   function resize(): void {
     const newCtx = sizeCanvasToFill(canvas);
@@ -75,7 +77,8 @@ export function createXtGraphView(options: CreateXtGraphViewOptions = {}) {
   function drawGraph(
     state: XtGraphState,
     scale: number,
-    regionH: number
+    regionH: number,
+    layer: 'static' | 'dynamic'
   ): void {
     if (!ctx) return;
     const c = getThemeColors(theme);
@@ -89,89 +92,95 @@ export function createXtGraphView(options: CreateXtGraphViewOptions = {}) {
     const gy = (x: number) =>
       padT +
       (1 - (x - XT_X_MIN) / (XT_X_MAX - XT_X_MIN)) * (regionH - padT - padB);
-
-    /* 网格 */
-    ctx.lineWidth = 1;
-    for (let t = 0; t <= XT_T_MAX; t += 1) {
-      ctx.strokeStyle = t % 5 === 0 ? sem.gridStrong : c.canvasGrid;
-      ctx.beginPath();
-      ctx.moveTo(gx(t), padT);
-      ctx.lineTo(gx(t), regionH - padB);
-      ctx.stroke();
-    }
-    for (let x = XT_X_MIN; x <= XT_X_MAX; x += 2) {
-      ctx.strokeStyle = x % 10 === 0 ? sem.gridStrong : c.canvasGrid;
-      ctx.beginPath();
-      ctx.moveTo(padL, gy(x));
-      ctx.lineTo(width - padR, gy(x));
-      ctx.stroke();
-    }
-
-    /* 坐标轴：纵轴在左，时间轴位于 x = 0 高度（标准物理画法） */
     const axisY0 = gy(0);
-    ctx.strokeStyle = c.canvasText;
-    ctx.lineWidth = 2.5 * scale;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(padL, padT - 8 * scale);
-    ctx.lineTo(padL, regionH - padB + 6 * scale);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(padL, axisY0);
-    ctx.lineTo(width - padR + 8 * scale, axisY0);
-    ctx.stroke();
-    /* 箭头 */
-    ctx.fillStyle = c.canvasText;
-    ctx.beginPath();
-    ctx.moveTo(padL, padT - 14 * scale);
-    ctx.lineTo(padL - 6 * scale, padT - 4 * scale);
-    ctx.lineTo(padL + 6 * scale, padT - 4 * scale);
-    ctx.closePath();
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(width - padR + 14 * scale, axisY0);
-    ctx.lineTo(width - padR + 4 * scale, axisY0 - 6 * scale);
-    ctx.lineTo(width - padR + 4 * scale, axisY0 + 6 * scale);
-    ctx.closePath();
-    ctx.fill();
-
-    /* 刻度标签 */
-    ctx.fillStyle = c.textSecondary;
-    ctx.font = font(12, scale);
-    ctx.textAlign = 'center';
-    for (let t = 1; t <= XT_T_MAX; t += 1) {
-      ctx.fillText(String(t), gx(t), axisY0 + 20 * scale);
-    }
-    ctx.textAlign = 'right';
-    for (let x = XT_X_MIN; x <= XT_X_MAX; x += 4) {
-      if (x !== 0) {
-        ctx.fillText(x > 0 ? `+${x}` : String(x), padL - 10 * scale, gy(x) + 4);
-      }
-    }
-    ctx.fillText('O', padL - 10 * scale, axisY0 + 18 * scale);
-    ctx.textAlign = 'left';
-    ctx.fillStyle = c.canvasText;
-    ctx.font = font(14, scale);
-    ctx.fillText('x/m', padL + 10 * scale, padT + 14 * scale);
-    ctx.fillText('t/s', width - padR - 8 * scale, axisY0 - 10 * scale);
-
     const preset = getXtPreset(state.preset);
 
-    /* 预设完整图线（虚线预览） */
-    ctx.strokeStyle = sem.curveGhost;
-    ctx.lineWidth = 2.5 * scale;
-    ctx.setLineDash([6 * scale, 6 * scale]);
-    ctx.beginPath();
-    const PREVIEW_SAMPLES = 300;
-    for (let i = 0; i <= PREVIEW_SAMPLES; i += 1) {
-      const t = (i / PREVIEW_SAMPLES) * XT_T_MAX;
-      const px = gx(t);
-      const py = gy(preset.x(t));
-      if (i === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
+    if (layer === 'static') {
+      /* 网格 */
+      ctx.lineWidth = 1;
+      for (let t = 0; t <= XT_T_MAX; t += 1) {
+        ctx.strokeStyle = t % 5 === 0 ? sem.gridStrong : c.canvasGrid;
+        ctx.beginPath();
+        ctx.moveTo(gx(t), padT);
+        ctx.lineTo(gx(t), regionH - padB);
+        ctx.stroke();
+      }
+      for (let x = XT_X_MIN; x <= XT_X_MAX; x += 2) {
+        ctx.strokeStyle = x % 10 === 0 ? sem.gridStrong : c.canvasGrid;
+        ctx.beginPath();
+        ctx.moveTo(padL, gy(x));
+        ctx.lineTo(width - padR, gy(x));
+        ctx.stroke();
+      }
+
+      /* 坐标轴：纵轴在左，时间轴位于 x = 0 高度（标准物理画法） */
+      ctx.strokeStyle = c.canvasText;
+      ctx.lineWidth = 2.5 * scale;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(padL, padT - 8 * scale);
+      ctx.lineTo(padL, regionH - padB + 6 * scale);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(padL, axisY0);
+      ctx.lineTo(width - padR + 8 * scale, axisY0);
+      ctx.stroke();
+      /* 箭头 */
+      ctx.fillStyle = c.canvasText;
+      ctx.beginPath();
+      ctx.moveTo(padL, padT - 14 * scale);
+      ctx.lineTo(padL - 6 * scale, padT - 4 * scale);
+      ctx.lineTo(padL + 6 * scale, padT - 4 * scale);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(width - padR + 14 * scale, axisY0);
+      ctx.lineTo(width - padR + 4 * scale, axisY0 - 6 * scale);
+      ctx.lineTo(width - padR + 4 * scale, axisY0 + 6 * scale);
+      ctx.closePath();
+      ctx.fill();
+
+      /* 刻度标签 */
+      ctx.fillStyle = c.textSecondary;
+      ctx.font = font(12, scale);
+      ctx.textAlign = 'center';
+      for (let t = 1; t <= XT_T_MAX; t += 1) {
+        ctx.fillText(String(t), gx(t), axisY0 + 20 * scale);
+      }
+      ctx.textAlign = 'right';
+      for (let x = XT_X_MIN; x <= XT_X_MAX; x += 4) {
+        if (x !== 0) {
+          ctx.fillText(
+            x > 0 ? `+${x}` : String(x),
+            padL - 10 * scale,
+            gy(x) + 4
+          );
+        }
+      }
+      ctx.fillText('O', padL - 10 * scale, axisY0 + 18 * scale);
+      ctx.textAlign = 'left';
+      ctx.fillStyle = c.canvasText;
+      ctx.font = font(14, scale);
+      ctx.fillText('x/m', padL + 10 * scale, padT + 14 * scale);
+      ctx.fillText('t/s', width - padR - 8 * scale, axisY0 - 10 * scale);
+
+      /* 预设完整图线（虚线预览） */
+      ctx.strokeStyle = sem.curveGhost;
+      ctx.lineWidth = 2.5 * scale;
+      ctx.setLineDash([6 * scale, 6 * scale]);
+      ctx.beginPath();
+      const PREVIEW_SAMPLES = 300;
+      for (let i = 0; i <= PREVIEW_SAMPLES; i += 1) {
+        const t = (i / PREVIEW_SAMPLES) * XT_T_MAX;
+        const px = gx(t);
+        const py = gy(preset.x(t));
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      return;
     }
-    ctx.stroke();
-    ctx.setLineDash([]);
 
     /* 已走过的图线（实线） */
     if (state.t > 0) {
@@ -271,7 +280,8 @@ export function createXtGraphView(options: CreateXtGraphViewOptions = {}) {
     state: XtGraphState,
     scale: number,
     regionTop: number,
-    regionH: number
+    regionH: number,
+    layer: 'static' | 'dynamic'
   ): void {
     if (!ctx) return;
     const c = getThemeColors(theme);
@@ -282,49 +292,52 @@ export function createXtGraphView(options: CreateXtGraphViewOptions = {}) {
     const tx = (x: number) =>
       padX + ((x - XT_X_MIN) / (XT_X_MAX - XT_X_MIN)) * (width - 2 * padX);
 
-    /* 区域标题 */
-    ctx.fillStyle = c.textSecondary;
-    ctx.font = font(12, scale);
-    ctx.textAlign = 'left';
-    ctx.fillText('位置轴', 10 * scale, regionTop + 14 * scale);
-
-    /* 轴 + 箭头 */
-    ctx.strokeStyle = c.canvasText;
-    ctx.lineWidth = 2.5 * scale;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(padX, axisY);
-    ctx.lineTo(width - padX, axisY);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(width - padX + 12 * scale, axisY);
-    ctx.lineTo(width - padX, axisY - 6 * scale);
-    ctx.lineTo(width - padX, axisY + 6 * scale);
-    ctx.closePath();
-    ctx.fillStyle = c.canvasText;
-    ctx.fill();
-    ctx.font = font(14, scale);
-    ctx.textAlign = 'left';
-    ctx.fillText('x/m', width - padX + 2 * scale, axisY - 12 * scale);
-
-    /* 刻度（每 2m 一标，与原演示一致；窄屏字号由 scaledSize 钳制下限） */
-    ctx.font = font(11, scale);
-    for (let x = XT_X_MIN; x <= XT_X_MAX; x += 2) {
-      const px = tx(x);
-      ctx.strokeStyle = c.textSecondary;
-      ctx.lineWidth = 1.4 * scale;
-      ctx.beginPath();
-      ctx.moveTo(px, axisY);
-      ctx.lineTo(px, axisY - (x % 10 === 0 ? 14 : 9) * scale);
-      ctx.stroke();
+    if (layer === 'static') {
+      /* 区域标题 */
       ctx.fillStyle = c.textSecondary;
+      ctx.font = font(12, scale);
+      ctx.textAlign = 'left';
+      ctx.fillText('位置轴', 10 * scale, regionTop + 14 * scale);
+
+      /* 轴 + 箭头 */
+      ctx.strokeStyle = c.canvasText;
+      ctx.lineWidth = 2.5 * scale;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(padX, axisY);
+      ctx.lineTo(width - padX, axisY);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(width - padX + 12 * scale, axisY);
+      ctx.lineTo(width - padX, axisY - 6 * scale);
+      ctx.lineTo(width - padX, axisY + 6 * scale);
+      ctx.closePath();
+      ctx.fillStyle = c.canvasText;
+      ctx.fill();
+      ctx.font = font(14, scale);
+      ctx.textAlign = 'left';
+      ctx.fillText('x/m', width - padX + 2 * scale, axisY - 12 * scale);
+
+      /* 刻度（每 2m 一标，与原演示一致；窄屏字号由 scaledSize 钳制下限） */
+      ctx.font = font(11, scale);
+      for (let x = XT_X_MIN; x <= XT_X_MAX; x += 2) {
+        const px = tx(x);
+        ctx.strokeStyle = c.textSecondary;
+        ctx.lineWidth = 1.4 * scale;
+        ctx.beginPath();
+        ctx.moveTo(px, axisY);
+        ctx.lineTo(px, axisY - (x % 10 === 0 ? 14 : 9) * scale);
+        ctx.stroke();
+        ctx.fillStyle = c.textSecondary;
+        ctx.textAlign = 'center';
+        ctx.fillText(x > 0 ? `+${x}` : String(x), px, axisY + 18 * scale);
+      }
+      ctx.fillStyle = c.canvasText;
       ctx.textAlign = 'center';
-      ctx.fillText(x > 0 ? `+${x}` : String(x), px, axisY + 18 * scale);
+      ctx.font = font(11, scale);
+      ctx.fillText('原点 O', tx(0), axisY + 34 * scale);
+      return;
     }
-    ctx.fillStyle = c.canvasText;
-    ctx.textAlign = 'center';
-    ctx.font = font(11, scale);
-    ctx.fillText('原点 O', tx(0), axisY + 34 * scale);
 
     const cx = tx(state.x);
     const cy = axisY - 24 * scale;
@@ -478,6 +491,25 @@ export function createXtGraphView(options: CreateXtGraphViewOptions = {}) {
     );
   }
 
+  function snapshotStaticLayer(): boolean {
+    if (!staticCanvas) staticCanvas = document.createElement('canvas');
+    staticCanvas.width = canvas.width;
+    staticCanvas.height = canvas.height;
+    const octx = staticCanvas.getContext('2d');
+    if (!octx) return false;
+    octx.setTransform(1, 0, 0, 1, 0, 0);
+    octx.drawImage(canvas, 0, 0);
+    return true;
+  }
+
+  function blitStaticLayer(c: CanvasRenderingContext2D): void {
+    if (!staticCanvas) return;
+    c.save();
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.drawImage(staticCanvas, 0, 0);
+    c.restore();
+  }
+
   function render(state: XtGraphState): void {
     if (!ctx || width === 0 || height === 0) {
       resize();
@@ -485,14 +517,31 @@ export function createXtGraphView(options: CreateXtGraphViewOptions = {}) {
     }
     const scale = responsiveScale * contentScale();
     const c = getThemeColors(theme);
-
-    ctx.fillStyle = c.canvasBg;
-    ctx.fillRect(0, 0, width, height);
-
-    /* 上 67% 为图像区，下 33% 为位置轴区（与原演示 470:230 的比例一致） */
     const graphH = height * 0.67;
-    drawGraph(state, scale, graphH);
-    drawTrack(state, scale, graphH, height - graphH);
+    const staticKey = [
+      width,
+      height,
+      canvas.width,
+      canvas.height,
+      responsiveScale,
+      theme,
+      mode,
+      contentScale(),
+      state.preset
+    ].join('|');
+
+    if (staticKey !== cachedStaticKey) {
+      ctx.fillStyle = c.canvasBg;
+      ctx.fillRect(0, 0, width, height);
+      drawGraph(state, scale, graphH, 'static');
+      drawTrack(state, scale, graphH, height - graphH, 'static');
+      cachedStaticKey = snapshotStaticLayer() ? staticKey : null;
+    } else {
+      blitStaticLayer(ctx);
+    }
+
+    drawGraph(state, scale, graphH, 'dynamic');
+    drawTrack(state, scale, graphH, height - graphH, 'dynamic');
   }
 
   resize();
@@ -510,6 +559,8 @@ export function createXtGraphView(options: CreateXtGraphViewOptions = {}) {
     },
     dispose(): void {
       ctx = null;
+      staticCanvas = null;
+      cachedStaticKey = null;
     }
   };
 }
