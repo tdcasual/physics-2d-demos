@@ -22,13 +22,6 @@ document.addEventListener('DOMContentLoaded', () => {
           <App />
         </React.StrictMode>
       );
-
-      // 隐藏加载占位符
-      const placeholder = document.getElementById('loading-placeholder');
-      if (placeholder) {
-        placeholder.classList.add('hidden');
-        setTimeout(() => placeholder.remove(), 300);
-      }
     } catch (error) {
       console.error('[Main] Error:', error);
     }

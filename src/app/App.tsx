@@ -3,9 +3,15 @@
  * 基于 Shruti 网站深度分析 - 丰富Hero区域
  */
 
-import React, { useEffect, useState, Suspense, lazy } from 'react';
+import React, {
+  useEffect,
+  useLayoutEffect,
+  useState,
+  Suspense,
+  lazy
+} from 'react';
 import { useTheme } from './hooks';
-import { featuredScenes } from './data/scenes';
+import { featuredScenes } from './data/featured-scenes';
 
 const ExperimentsSection = lazy(() => import('./sections/ExperimentsSection'));
 
@@ -14,11 +20,17 @@ import '../styles/app/home.css';
 
 const App: React.FC = () => {
   const { resolvedTheme, toggleTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
 
+  useLayoutEffect(() => {
+    const placeholder = document.getElementById('loading-placeholder');
+    if (!placeholder) return;
+    placeholder.classList.add('hidden');
+    const timer = window.setTimeout(() => placeholder.remove(), 300);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
-    setMounted(true);
     document.title = '物理实验室';
 
     const metaThemeColor = document.querySelector('meta[name="theme-color"]');
@@ -29,8 +41,6 @@ const App: React.FC = () => {
       );
     }
   }, [resolvedTheme]);
-
-  if (!mounted) return null;
 
   return (
     <div className="app">

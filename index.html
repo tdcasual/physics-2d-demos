@@ -117,18 +117,5 @@
     <div id="app"></div>
 
     <script type="module" src="/src/app/main.tsx"></script>
-
-    <script>
-      // 隐藏加载占位符
-      window.addEventListener('load', () => {
-        var placeholder = document.getElementById('loading-placeholder');
-        if (placeholder) {
-          placeholder.classList.add('hidden');
-          setTimeout(function () {
-            placeholder.remove();
-          }, 300);
-        }
-      });
-    </script>
   </body>
 </html>

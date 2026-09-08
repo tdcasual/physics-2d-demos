@@ -9,7 +9,12 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { getStoredTheme, storeTheme, resolveSystemTheme } from '../theme-store';
+import {
+  getStoredTheme,
+  storeTheme,
+  resolveSystemTheme,
+  resolveThemePreference
+} from '../theme-store';
 
 export type Theme = 'light' | 'dark' | 'system';
 export type ResolvedTheme = 'light' | 'dark';
@@ -29,7 +34,10 @@ export function useTheme(): UseThemeReturn {
     return getStoredTheme() ?? 'system';
   });
 
-  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>('light');
+  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(() => {
+    if (typeof window === 'undefined') return 'light';
+    return resolveThemePreference(getStoredTheme() ?? 'system');
+  });
 
   // 解析主题为实际明暗模式
   const resolveTheme = useCallback((t: Theme): ResolvedTheme => {
