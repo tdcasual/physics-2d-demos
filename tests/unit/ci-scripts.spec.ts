@@ -1,4 +1,5 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 describe('ci scripts and workflow', () => {
@@ -26,7 +27,9 @@ describe('ci scripts and workflow', () => {
         'pnpm check:scaffold',
         'pnpm check:layouts',
         'pnpm check:circular',
+        'pnpm check:audit',
         'pnpm lint',
+        'pnpm format:check',
         'pnpm typecheck',
         'pnpm test:coverage',
         'pnpm build',
@@ -39,7 +42,9 @@ describe('ci scripts and workflow', () => {
         'pnpm check:scaffold',
         'pnpm check:layouts',
         'pnpm check:circular',
+        'pnpm check:audit',
         'pnpm lint',
+        'pnpm format:check',
         'pnpm typecheck',
         'pnpm test:coverage',
         'pnpm build',
@@ -82,11 +87,22 @@ describe('ci scripts and workflow', () => {
     };
     const readme = readFileSync('README.md', 'utf8');
     const agents = readFileSync('AGENTS.md', 'utf8');
+    const sceneCount = readdirSync(join(process.cwd(), 'src/scenes'), {
+      withFileTypes: true
+    }).filter((entry) => entry.isDirectory()).length;
+    const instrumentManifest = readFileSync(
+      join(process.cwd(), 'src/instruments/_manifest/manifest.ts'),
+      'utf8'
+    );
+    const instrumentCount = [...instrumentManifest.matchAll(/id:\s*'([^']+)'/g)]
+      .length;
 
     expect(pkg.name).toBe('physics-2d-demos');
-    expect(readme).not.toContain('8 个交互式物理教学场景');
-    expect(agents).not.toContain('包含 8 个交互式 2D 物理场景');
-    expect(agents).not.toContain('scenes/        — 8 个物理场景');
+    expect(readme).toContain(`${sceneCount} 个交互式物理教学场景`);
+    expect(readme).toContain(`${instrumentCount} 个仪器组件`);
+    expect(readme).not.toContain('TransportBridge');
+    expect(agents).toContain(`${sceneCount} 个交互式 2D 物理场景`);
+    expect(agents).toContain(`${instrumentCount} 个可按需加载的仪器组件`);
   });
 
   it('keeps global fonts local-first without remote CSS imports', () => {

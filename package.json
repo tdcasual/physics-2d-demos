@@ -26,9 +26,9 @@
     "new:scene": "tsx scripts/new-scene.ts",
     "verify:scene": "tsx scripts/verify-scene.ts",
     "check:scaffold": "tsx scripts/check-scaffold.ts",
-    "quality:core": "pnpm check:scenes && pnpm check:scaffold && pnpm check:layouts && pnpm check:circular && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm build && pnpm check:bundle",
+    "quality:core": "pnpm check:scenes && pnpm check:scaffold && pnpm check:layouts && pnpm check:circular && pnpm check:audit && pnpm lint && pnpm format:check && pnpm typecheck && pnpm test:coverage && pnpm build && pnpm check:bundle",
     "export:standalone": "vite build --config vite.config.standalone.ts",
-    "quality:full": "pnpm check:scenes && pnpm check:scaffold && pnpm check:layouts && pnpm check:circular && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm build && pnpm check:bundle && PLAYWRIGHT_SKIP_BUILD=1 pnpm test:e2e && PLAYWRIGHT_SKIP_BUILD=1 pnpm test:visual",
+    "quality:full": "pnpm check:scenes && pnpm check:scaffold && pnpm check:layouts && pnpm check:circular && pnpm check:audit && pnpm lint && pnpm format:check && pnpm typecheck && pnpm test:coverage && pnpm build && pnpm check:bundle && PLAYWRIGHT_SKIP_BUILD=1 pnpm test:e2e && PLAYWRIGHT_SKIP_BUILD=1 pnpm test:visual",
     "prepare": "husky"
   },
   "devDependencies": {

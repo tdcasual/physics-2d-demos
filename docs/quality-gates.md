@@ -17,8 +17,10 @@ pnpm quality:full
 ```
 
 `pnpm check:bundle` 依赖 `dist/`，因此必须在 `pnpm build` 之后运行。
-`quality:core` 已按该顺序编排：结构检查、依赖检查、静态检查、单元测试、构建、bundle budget。
-`quality:full` 已按该顺序编排：结构检查、依赖检查、静态检查、单元/覆盖率、构建、bundle budget、E2E、视觉测试。
+`quality:core` 与 CI 的静态段对齐：结构检查、循环依赖、`check:audit`、lint、`format:check`、类型、带覆盖率的单元/契约测试、构建、bundle budget。
+`quality:full` 在 core 之后追加 E2E 与视觉测试（`PLAYWRIGHT_SKIP_BUILD=1`，复用刚产出的 `dist/`）。
+
+CI（`.github/workflows/ci.yml`）额外上传 Codecov；本地不必跑 Codecov。覆盖率实测通常高于 `vite.config.ts` 阈值，禁止下调该阈值来「修」失败。
 
 Vitest 覆盖率阈值以 `vite.config.ts` 为唯一事实来源：lines 65%、functions 65%、branches 70%、statements 65%。`quality:full` 只执行一次带覆盖率的 Vitest，随后只构建一次；E2E 与 visual 共用该 `dist/`，避免重复工作掩盖真实失败。
 

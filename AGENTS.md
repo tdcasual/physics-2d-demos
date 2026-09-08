@@ -172,9 +172,9 @@ bootScenePage({
 
 **已知限制**：
 
-- 无 `setParams`/`setParam` 的场景（electrification、emf-analogy、field-lines、
-  spring-oscillator、vt-integral）的 `defaultParams` 键会被读取但静默丢弃
-  （行为与旧版等价）。
+- `emf-analogy` 无对象式 `setParams`（`defaultParams` 已清空）。`mechanical-wave`
+  仅有 `setParam` 单键 API，URL 管线会 fallback。覆盖率实测约 80%，禁止下调
+  `vite.config.ts` 阈值来掩盖缺口。
 - 布局重建重跑管线时，若落在 `writeParam` 150ms debounce 窗口内，存在理论性
   回灌竞态（窗口极小，非新引入）。
 
@@ -292,7 +292,7 @@ export type SceneMeta = ScenePlacardMeta & {
 
 ```bash
 pnpm verify:scene <id>  # 场景任务的一站式验证（结构→lint→类型→测试→构建→预算，失败即停给修复指引）
-pnpm quality:core # 快速门禁（含 check:scaffold 脚手架自证明 + lint + typecheck + 覆盖率测试 + 构建 + bundle 预算）
+pnpm quality:core # 快速门禁（结构/脚手架/布局/循环依赖/audit/lint/format/类型/覆盖率/构建/预算）
 pnpm quality:full # 完整本地质量门禁（在 core 之上追加 E2E 与视觉测试）
 pnpm check:audit # 依赖漏洞审计（CI 亦执行；overrides 见 pnpm-workspace.yaml）
 ```
