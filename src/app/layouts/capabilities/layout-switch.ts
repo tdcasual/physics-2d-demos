@@ -65,7 +65,7 @@ export function createLayoutSwitch(
         const currentId = ctx.getCurrentLayoutId();
         const currentIdx = layouts.findIndex((l) => l.id === currentId);
         const nextIdx = (currentIdx + 1) % layouts.length;
-        // switchLayout triggers full re-mount; new instance calls updateLabel()
+        // switchLayout reattaches the live sim; this instance stays mounted
         ctx.switchLayout(layouts[nextIdx].id, true);
       };
 

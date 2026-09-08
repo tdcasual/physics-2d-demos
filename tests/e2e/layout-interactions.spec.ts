@@ -251,6 +251,44 @@ test.describe('SplitRightLayout Desktop', () => {
     expect(hasContent).toBe(true);
   });
 
+  test('layout switch keeps chase-meet clock running', async ({ page }) => {
+    await gotoScene(page, 'chase-meet');
+    const playPauseBtn = page
+      .locator('.stage-floating-controls button')
+      .first();
+    await playPauseBtn.click();
+    await expect
+      .poll(async () => (await getFloatingPlayState(page)).isPlaying)
+      .toBe(true);
+
+    const before = await getReadoutMap(page);
+    const beforeTime = Number.parseFloat(
+      (before['当前时间'] ?? '0').replace(/[^\d.-]/g, '')
+    );
+
+    await page.locator('.layout-switch-btn').click();
+    await page.waitForSelector('.layout-master', { state: 'visible' });
+
+    await expect(
+      page.locator('canvas.chase-modern-motion-canvas')
+    ).toBeAttached();
+    await expect
+      .poll(async () => {
+        const current = await getReadoutMap(page);
+        return Number.parseFloat(
+          (current['当前时间'] ?? '0').replace(/[^\d.-]/g, '')
+        );
+      })
+      .toBeGreaterThan(beforeTime);
+
+    const hasContent = await canvasHasContent(
+      page,
+      'canvas.chase-modern-motion-canvas'
+    );
+    expect(hasContent).toBe(true);
+    expect((await getFloatingPlayState(page)).isPlaying).toBe(true);
+  });
+
   // ── 3. Reset restores scene ──
   test('reset restores initial animation state', async ({ page }) => {
     await gotoScene(page, 'projectile');
