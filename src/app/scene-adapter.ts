@@ -50,6 +50,8 @@ export class SceneAdapter<
   private _resizeHandlerAdded = false;
   private _ro: ResizeObserver | null = null;
   private _graphRendered = false;
+  private _graphVisibilityRo: ResizeObserver | null = null;
+  private _scheduleResize: (() => void) | null = null;
 
   constructor(
     private options: ScenePageOptions<TScene>,
@@ -57,6 +59,12 @@ export class SceneAdapter<
   ) {
     this.id = options.meta.id;
     this.preferredLayout = options.preferredLayout ?? 'split-right';
+  }
+
+  private _disposeControls(): void {
+    const c = this.controls as { dispose?(): void } | null;
+    c?.dispose?.();
+    this.controls = null;
   }
 
   private _createControls(container: HTMLElement): void {
@@ -67,12 +75,6 @@ export class SceneAdapter<
         scene: this.scene,
         onStatus: (text) => this.layoutUpdateStatus?.(text)
       }) || null;
-    if (this.controls) {
-      this.lifecycle.onDispose(() => {
-        const c = this.controls as { dispose?(): void } | null;
-        c?.dispose?.();
-      });
-    }
   }
 
   renderControl(container: HTMLElement): void {
@@ -81,20 +83,17 @@ export class SceneAdapter<
       this._deferredControlContainer = container;
       return;
     }
+    this._disposeControls();
     this._createControls(container);
   }
 
   renderAnimation(container: HTMLElement, slots: LayoutSlots): void {
-    // Dispose old resources if called multiple times
-    if (this.scene || this.transport) {
-      this.scene?.dispose();
-      this.lifecycle.dispose();
-      this.lifecycle = createPageLifecycle();
-      this._resizeHandlerAdded = false;
-      this._graphRendered = false;
-    }
-
     this.slots = slots;
+
+    if (this.scene && this.transport) {
+      this._reattachLiveScene(container, slots);
+      return;
+    }
 
     // 渲染面 = 动画区容器；canvas 供 canvas 类场景使用，非 canvas 渲染时为空
     const canvas = container.querySelector('canvas') ?? undefined;
@@ -294,33 +293,14 @@ export class SceneAdapter<
         resizeScheduled = false;
       };
       window.addEventListener('resize', scheduleResize);
+      this._scheduleResize = scheduleResize;
       this.lifecycle.onDispose(() => {
         window.removeEventListener('resize', scheduleResize);
         cancelScheduledResize();
+        this._scheduleResize = null;
       });
 
-      // Observe render surface for size changes (sidebar toggle, layout changes, etc.)
-      // window.resize doesn't fire on internal layout changes like sidebar toggle.
-      // canvas 类场景观察 canvas 父级；非 canvas 渲染回退到动画区容器。
-      const parent = canvas?.parentElement ?? container;
-      if (parent && typeof ResizeObserver !== 'undefined') {
-        let resizing = false;
-        this._ro = new ResizeObserver(() => {
-          if (resizing) return;
-          resizing = true;
-          try {
-            scheduleResize();
-          } finally {
-            resizing = false;
-          }
-        });
-        this._ro.observe(parent);
-        this.lifecycle.onDispose(() => {
-          this._ro?.disconnect();
-          this._ro = null;
-        });
-      }
-
+      this._observeAnimationSurface(canvas, container);
       this._resizeHandlerAdded = true;
     }
 
@@ -344,6 +324,7 @@ export class SceneAdapter<
       const unsubscribe = this.scene.subscribe(() => {
         this.refreshReadout();
         this.notifyListeners();
+        this._syncShellToSceneTransport();
       });
       this.lifecycle.onDispose(() => unsubscribe());
     } else if (this.scene.getReadoutItems) {
@@ -356,26 +337,99 @@ export class SceneAdapter<
     }
   }
 
+  private _observeAnimationSurface(
+    canvas: HTMLCanvasElement | undefined,
+    container: HTMLElement
+  ): void {
+    this._ro?.disconnect();
+    this._ro = null;
+    const parent = canvas?.parentElement ?? container;
+    const scheduleResize = this._scheduleResize;
+    if (!parent || typeof ResizeObserver === 'undefined' || !scheduleResize) {
+      return;
+    }
+    let resizing = false;
+    this._ro = new ResizeObserver(() => {
+      if (resizing) return;
+      resizing = true;
+      try {
+        scheduleResize();
+      } finally {
+        resizing = false;
+      }
+    });
+    this._ro.observe(parent);
+    this.lifecycle.onDispose(() => {
+      this._ro?.disconnect();
+      this._ro = null;
+    });
+  }
+
+  private _disconnectGraphVisibility(): void {
+    this._graphVisibilityRo?.disconnect();
+    this._graphVisibilityRo = null;
+  }
+
+  /**
+   * 布局切换：保住 sim 与 shell，把渲染面绑到新槽。
+   * 禁止 dispose / init / createScene（init 会 reset 物理时钟）。
+   */
+  private _reattachLiveScene(container: HTMLElement, slots: LayoutSlots): void {
+    const canvas = container.querySelector('canvas') ?? undefined;
+    const theme =
+      (container
+        .closest('[data-theme]')
+        ?.getAttribute('data-theme') as Theme) ||
+      (document.documentElement.getAttribute('data-theme') as Theme) ||
+      'light';
+    const mode =
+      (container.closest('[data-mode]')?.getAttribute('data-mode') as
+        | 'normal'
+        | 'presentation') || 'normal';
+
+    this.scene?.setTheme(theme);
+    this.scene?.setMode(mode);
+
+    if (this.scene?.reattach) {
+      this.scene.reattach({ container, canvas, slots });
+    } else if (this.scene?.attachStageSlot) {
+      this.scene.attachStageSlot(container);
+    }
+
+    this._observeAnimationSurface(canvas, container);
+    this._disconnectGraphVisibility();
+    this._graphRendered = false;
+
+    this.scene?.resize();
+    this.scene?.render();
+  }
+
+  /** 场景宣称已停时停掉 shell，避免 finished 后 step 空转。 */
+  private _syncShellToSceneTransport(): void {
+    if (!this.scene?.getTransportState || !this.transport) return;
+    if (
+      this.transport.transport.isPlaying &&
+      this.scene.getTransportState().isPlaying === false
+    ) {
+      this.pauseAll();
+    }
+  }
+
   renderGraph(container: HTMLElement): void {
     this._renderGraphSlot(container);
   }
 
   private _renderGraphSlot(container: HTMLElement): void {
-    if (this._graphRendered) return;
+    if (this._graphRendered || !this.scene) return;
 
-    const scene = this.scene as {
-      renderGraph?(container: HTMLElement): void;
-      attachGraphCanvas?(canvas: HTMLCanvasElement): void;
-    } | null;
-
-    if (scene && typeof scene.renderGraph === 'function') {
+    if (this.scene.renderGraph) {
       this._graphRendered = true;
-      scene.renderGraph(container);
+      this.scene.renderGraph(container);
       this._observeGraphSlotVisibility(container);
       return;
     }
 
-    if (scene && typeof scene.attachGraphCanvas === 'function') {
+    if (this.scene.attachGraphCanvas) {
       this._graphRendered = true;
       const canvas = document.createElement('canvas');
       canvas.style.width = '100%';
@@ -383,7 +437,7 @@ export class SceneAdapter<
       canvas.style.display = 'block';
       container.replaceChildren();
       container.appendChild(canvas);
-      scene.attachGraphCanvas(canvas);
+      this.scene.attachGraphCanvas(canvas);
       this._observeGraphSlotVisibility(container);
     }
   }
@@ -394,10 +448,11 @@ export class SceneAdapter<
   // 量成 1×1 显式 CSS 尺寸，合帧延迟会让它保持数帧甚至错过断言窗口。
   private _observeGraphSlotVisibility(container: HTMLElement): void {
     this._ro?.observe(container);
+    this._disconnectGraphVisibility();
     if (typeof ResizeObserver === 'undefined') return;
     let lastW = container.clientWidth;
     let lastH = container.clientHeight;
-    const visibilityRo = new ResizeObserver((entries) => {
+    this._graphVisibilityRo = new ResizeObserver((entries) => {
       const entry = entries[entries.length - 1];
       const w = entry?.contentRect.width ?? 0;
       const h = entry?.contentRect.height ?? 0;
@@ -409,8 +464,7 @@ export class SceneAdapter<
         this.scene?.render();
       }
     });
-    visibilityRo.observe(container);
-    this.lifecycle.onDispose(() => visibilityRo.disconnect());
+    this._graphVisibilityRo.observe(container);
   }
 
   renderReadout(): void {
@@ -422,6 +476,10 @@ export class SceneAdapter<
   }
 
   unmount(): void {
+    this._disconnectGraphVisibility();
+    this._ro?.disconnect();
+    this._ro = null;
+    this._disposeControls();
     this.scene?.dispose();
     this.lifecycle.dispose();
     this.scene = null;
@@ -437,6 +495,7 @@ export class SceneAdapter<
     this._graphRendered = false;
     this._resizeHandlerAdded = false;
     this._deferredControlContainer = null;
+    this._scheduleResize = null;
   }
 
   startAll(): void {
@@ -515,10 +574,7 @@ export class SceneAdapter<
     if (this.scene?.getTransportState) {
       return this.scene.getTransportState();
     }
-    const isPlaying = this.transport
-      ? ((this.transport as { transport?: { isPlaying?: boolean } }).transport
-          ?.isPlaying ?? false)
-      : false;
+    const isPlaying = this.transport?.transport.isPlaying ?? false;
     const speed = this.scene?.getTimeScale?.() ?? 1;
     return { isPlaying, speed };
   }
@@ -539,10 +595,8 @@ export class SceneAdapter<
     if (this.scene.getState) {
       return this.scene.getState();
     }
-    const getSnapshot = (this.scene as { getSnapshot?: () => unknown })
-      .getSnapshot;
-    if (typeof getSnapshot === 'function') {
-      return getSnapshot.call(this.scene);
+    if (this.scene.getSnapshot) {
+      return this.scene.getSnapshot();
     }
     return undefined;
   }

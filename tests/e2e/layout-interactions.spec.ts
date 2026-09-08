@@ -224,6 +224,33 @@ test.describe('SplitRightLayout Desktop', () => {
     expect(afterPause.isPlaying).toBe(false);
   });
 
+  test('layout switch keeps projectile clock running', async ({ page }) => {
+    await gotoScene(page, 'projectile');
+    const playPauseBtn = page
+      .locator('.stage-floating-controls button')
+      .first();
+    await playPauseBtn.click();
+    await expect
+      .poll(async () => (await getFloatingPlayState(page)).isPlaying)
+      .toBe(true);
+
+    const before = await getReadoutMap(page);
+    const beforeTime = Number.parseFloat(before['时间 t'] ?? '0');
+
+    await page.locator('.layout-switch-btn').click();
+    await page.waitForSelector('.layout-master', { state: 'visible' });
+
+    await expect
+      .poll(async () => {
+        const current = await getReadoutMap(page);
+        return Number.parseFloat(current['时间 t'] ?? '0');
+      })
+      .toBeGreaterThan(beforeTime);
+
+    const hasContent = await canvasHasContent(page, 'canvas');
+    expect(hasContent).toBe(true);
+  });
+
   // ── 3. Reset restores scene ──
   test('reset restores initial animation state', async ({ page }) => {
     await gotoScene(page, 'projectile');

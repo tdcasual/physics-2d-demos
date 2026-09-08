@@ -77,6 +77,9 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
   }
 
   function attachGraphSlot(nextSlot: HTMLElement): void {
+    graphResizeObserver?.disconnect();
+    graphResizeObserver = null;
+    lastGraphSlotSize = '';
     graphSlot = nextSlot;
     const dom = ensureStageDom();
     const graphsSection = dom?.root.querySelector('.chase-modern-card--graphs');
@@ -118,8 +121,11 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
       1,
       Math.floor(dom.root.getBoundingClientRect().height || viewport.height)
     );
+    const layoutId = stageSlot
+      ?.closest('[data-layout-id]')
+      ?.getAttribute('data-layout-id');
     const hasMobileGraphSlot =
-      graphSlot?.classList.contains('mobile-graph-slot') ?? false;
+      Boolean(graphSlot) && layoutId === 'mobile-stack';
     // 移动端：运动/图表用按宽度的合理高度，配合 CSS 让 stage 可滚动，
     // 避免挤在不可滚动的动画区被裁切；桌面端沿用按 stage 高度的比例。
     const trackHeight = viewport.isNarrow

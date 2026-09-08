@@ -32,11 +32,20 @@ export type SceneInstance = {
   setTimeScale?(scale: number): void;
   getTimeScale?(): number;
   getState?(): unknown;
+  getSnapshot?(): unknown;
   getReadoutItems?(): ReadoutItem[];
   getTransportState?(): TransportState;
   subscribe?(listener: () => void): () => void;
-  // 允许场景暴露额外方法供控制面板使用
-  [key: string]: unknown;
+  /** 布局切换时把渲染面绑到新槽，禁止 dispose+init。 */
+  reattach?(opts: {
+    container: HTMLElement;
+    canvas?: HTMLCanvasElement;
+    slots: LayoutSlots;
+  }): void;
+  attachStageSlot?(slot: HTMLElement): void;
+  attachGraphSlot?(slot: HTMLElement): void;
+  attachGraphCanvas?(canvas: HTMLCanvasElement): void;
+  renderGraph?(container: HTMLElement): void;
 };
 
 /**

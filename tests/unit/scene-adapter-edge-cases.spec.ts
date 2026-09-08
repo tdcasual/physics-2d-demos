@@ -76,29 +76,55 @@ describe('SceneAdapter edge cases', () => {
     vi.clearAllMocks();
   });
 
-  it('double renderAnimation should dispose old scene before creating new one', () => {
+  it('second renderAnimation reattaches without dispose or createScene', () => {
     const scene1 = createMockScene();
-    const scene2 = createMockScene();
     let callCount = 0;
     const adapter = createAdapter({
       createScene: () => {
         callCount++;
-        return (callCount === 1 ? scene1 : scene2) as never;
+        return scene1 as never;
       }
     });
 
-    const { container } = mountAdapter(adapter);
-    // Second renderAnimation — old scene should be disposed
+    mountAdapter(adapter);
+    adapter.startAll();
+    const next = document.createElement('div');
     const canvas2 = document.createElement('canvas');
     canvas2.className = 'stage-canvas';
-    container.appendChild(canvas2);
-    adapter.renderAnimation(container, {
-      animation: container,
-      control: container
+    next.appendChild(canvas2);
+    adapter.renderAnimation(next, {
+      animation: next,
+      control: next
     } as LayoutSlots);
 
-    expect(scene1.dispose).toHaveBeenCalled();
-    expect(callCount).toBe(2);
+    expect(scene1.dispose).not.toHaveBeenCalled();
+    expect(callCount).toBe(1);
+    expect(scene1.resize).toHaveBeenCalled();
+    expect(scene1.render).toHaveBeenCalled();
+    expect(adapter.getTransportState().isPlaying).toBe(true);
+  });
+
+  it('pauses shell when scene getTransportState reports stopped', () => {
+    const listeners: Array<() => void> = [];
+    const scene = {
+      ...createMockScene(),
+      getTransportState: vi.fn(() => ({ isPlaying: true, speed: 1 })),
+      subscribe: vi.fn((listener: () => void) => {
+        listeners.push(listener);
+        return () => undefined;
+      })
+    };
+    const adapter = createAdapter({
+      createScene: () => scene as never
+    });
+    mountAdapter(adapter);
+    adapter.startAll();
+    expect(adapter.getTransportState().isPlaying).toBe(true);
+
+    scene.getTransportState.mockReturnValue({ isPlaying: false, speed: 1 });
+    listeners.forEach((fn) => fn());
+    expect(adapter.getTransportState().isPlaying).toBe(false);
+    expect(scene.pauseAll).toHaveBeenCalled();
   });
 
   it('unmount should reset state flags for re-mount', () => {

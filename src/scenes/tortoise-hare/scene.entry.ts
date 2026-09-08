@@ -53,6 +53,7 @@ export function createTortoiseHareScene(
       sim.step(dt * timeScale);
       if (playing && sim.getState().finished) {
         playing = false;
+        // 只 notify；停 RAF 由 SceneAdapter 根据 getTransportState 执行。
         base.notify();
       }
     },

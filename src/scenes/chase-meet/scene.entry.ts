@@ -42,6 +42,8 @@ export function createChaseMeetScene(
   setParams(next: Partial<ChaseMeetParams>): ResolvedChaseMeetParams;
   getSnapshot(): ChaseMeetSnapshot;
   renderGraph(container: HTMLElement): void;
+  attachStageSlot(slot: HTMLElement): void;
+  attachGraphSlot(slot: HTMLElement): void;
   subscribe(listener: () => void): () => void;
 } {
   const sim = createChaseMeetSim(DEFAULT_PARAMS);
@@ -72,12 +74,14 @@ export function createChaseMeetScene(
       sim.reset();
       view.reset();
       renderAndEmit();
+      notify();
     },
     step(dt: number): void {
       sim.step(dt);
     },
     render(): void {
       renderAndEmit();
+      notify();
     },
     resize(): void {
       view.resize();
@@ -105,6 +109,12 @@ export function createChaseMeetScene(
     },
     renderGraph(container: HTMLElement): void {
       view.attachGraphSlot(container);
+    },
+    attachStageSlot(slot: HTMLElement): void {
+      view.attachStageSlot(slot);
+    },
+    attachGraphSlot(slot: HTMLElement): void {
+      view.attachGraphSlot(slot);
     },
     subscribe,
     dispose(): void {

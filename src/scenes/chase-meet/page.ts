@@ -4,7 +4,6 @@ import type { ReadoutItem } from '../../app/layouts/types';
 import type { TeachingMode } from '../../platform/standards';
 import { chaseMeetMeta } from './scene.meta';
 import { createChaseMeetScene } from './scene.entry';
-import { createSceneListener } from '../../app/scene-listener';
 import { chaseMeetControlsSchema } from './controls-schema';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import type { ChaseMeetSnapshot, ChaseMeetParams } from './scene.sim';
@@ -41,13 +40,15 @@ bootScenePage({
       throw new Error('Missing animation container for chase-meet');
     }
 
-    const mobileGraphSlot = slots.graph?.classList.contains('mobile-graph-slot')
-      ? slots.graph
-      : undefined;
+    const layoutId = stageSlot
+      .closest('[data-layout-id]')
+      ?.getAttribute('data-layout-id');
+    const graphSlot =
+      layoutId === 'mobile-stack' && slots.graph ? slots.graph : undefined;
 
     const scene = createChaseMeetScene({
       stageSlot,
-      graphSlot: mobileGraphSlot,
+      graphSlot,
       mode,
       demoHints,
       theme,
@@ -57,10 +58,9 @@ bootScenePage({
     let currentMode = mode;
     let isPlaying = false;
 
-    const originalDispose = scene.dispose.bind(scene);
     const originalSetParams = scene.setParams.bind(scene);
     const originalReset = scene.reset.bind(scene);
-    const { subscribe, notify } = createSceneListener();
+    const originalSetMode = scene.setMode.bind(scene);
 
     return {
       ...scene,
@@ -73,35 +73,42 @@ bootScenePage({
       getTransportState() {
         return { isPlaying, speed: 1 };
       },
-      subscribe,
       setMode(m: 'normal' | 'presentation', hints?: unknown) {
         currentMode = m;
-        scene.setMode(m, hints as Parameters<typeof scene.setMode>[1]);
-        notify();
+        originalSetMode(m, hints as Parameters<typeof scene.setMode>[1]);
       },
       setParams(next: Partial<ChaseMeetParams>) {
         const result = originalSetParams(next);
         originalReset();
         scene.render();
-        notify();
         return result;
       },
       startAll() {
         isPlaying = true;
-        notify();
+        scene.render();
       },
       pauseAll() {
         isPlaying = false;
-        notify();
+        scene.render();
       },
       reset() {
         isPlaying = false;
         originalReset();
-        scene.render();
-        notify();
       },
-      dispose() {
-        originalDispose();
+      attachStageSlot(slot: HTMLElement) {
+        scene.attachStageSlot(slot);
+      },
+      attachGraphSlot(slot: HTMLElement) {
+        scene.attachGraphSlot(slot);
+      },
+      reattach({ container, slots: nextSlots }) {
+        scene.attachStageSlot(container);
+        const nextLayoutId = container
+          .closest('[data-layout-id]')
+          ?.getAttribute('data-layout-id');
+        if (nextLayoutId === 'mobile-stack' && nextSlots.graph) {
+          scene.attachGraphSlot(nextSlots.graph);
+        }
       }
     };
   },
@@ -154,6 +161,7 @@ bootScenePage({
     };
   },
   preferredLayout: 'split-right',
+  // hasGraph 仅 mobile-stack 打开：桌面图在舞台内，移动端用 graph 槽。
   layoutConfig: {
     defaultLeftRatio: 0.32,
     hasGraph: false,

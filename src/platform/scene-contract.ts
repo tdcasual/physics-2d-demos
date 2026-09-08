@@ -47,4 +47,10 @@ export type SceneLifecycle = {
   step(dt: number): void;
   render(): void;
   dispose(): void;
+  resize?(): void;
+  setTheme?(theme: import('./standards').TeachingTheme): void;
+  setMode?(
+    mode: import('./standards').TeachingMode,
+    hints?: import('./demo-profile').DemoRenderHints
+  ): void;
 };
