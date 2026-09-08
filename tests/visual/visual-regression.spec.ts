@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { sceneIds, scenePage } from './scene-pages';
+import { waitForFirstFrame } from '../helpers/wait-first-frame';
 
 /**
  * Pixel snapshots cover every discovered scene. Baselines are per-platform
@@ -39,7 +40,9 @@ for (const scene of SCENES) {
     await page.goto(scenePage(scene.id), {
       waitUntil: 'domcontentloaded'
     });
-    await page.waitForTimeout(2000);
+    await waitForFirstFrame(page, {
+      remainderMs: isDynamic || scene.id === 'chase-meet' ? 400 : 150
+    });
     await expect(page).toHaveScreenshot(`${scene.id}-desktop.png`, {
       maxDiffPixels: isDynamic ? 3000 : 800,
       threshold: isDynamic ? 0.3 : 0.2
@@ -51,7 +54,9 @@ for (const scene of SCENES) {
     await page.goto(scenePage(scene.id), {
       waitUntil: 'domcontentloaded'
     });
-    await page.waitForTimeout(2000);
+    await waitForFirstFrame(page, {
+      remainderMs: isDynamic || scene.id === 'chase-meet' ? 400 : 150
+    });
     await expect(page).toHaveScreenshot(`${scene.id}-mobile.png`, {
       maxDiffPixels: isDynamic ? 3000 : 800,
       threshold: isDynamic ? 0.3 : 0.2

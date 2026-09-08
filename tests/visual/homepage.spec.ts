@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { waitForHomepageReady } from '../helpers/wait-homepage-ready';
 
 const PORT = 5177;
 
@@ -9,7 +10,7 @@ test('homepage renders hero, experiments, and theme toggle', async ({
   await page.goto(`http://127.0.0.1:${PORT}/`, {
     waitUntil: 'domcontentloaded'
   });
-  await page.waitForTimeout(2000);
+  await waitForHomepageReady(page);
 
   await expect(page.locator('.hero-title .line-1')).toHaveText('交互式');
   await expect(page.locator('#experiments')).toBeVisible();

@@ -87,8 +87,28 @@ export class SceneAdapter<
     this._createControls(container);
   }
 
+  private _firstFrameHost(): HTMLElement | null {
+    return (
+      this.slots?.animation?.closest('.layout-master') ??
+      document.querySelector('.layout-master')
+    );
+  }
+
+  private _clearFirstFrame(): void {
+    const host = this._firstFrameHost();
+    if (host) delete host.dataset.firstFrame;
+  }
+
+  private _markFirstFrame(): void {
+    const host = this._firstFrameHost();
+    if (host) host.dataset.firstFrame = 'ready';
+    const canvas = this.slots?.animation?.querySelector('canvas');
+    if (canvas) canvas.dataset.firstFrame = 'ready';
+  }
+
   renderAnimation(container: HTMLElement, slots: LayoutSlots): void {
     this.slots = slots;
+    this._clearFirstFrame();
 
     if (this.scene && this.transport) {
       this._reattachLiveScene(container, slots);
@@ -314,6 +334,7 @@ export class SceneAdapter<
 
     this.scene.resize();
     this.scene.render();
+    this._markFirstFrame();
 
     // 自动播放：场景挂载后立即启动动画循环
     if (this.options.autoPlay) {
@@ -402,6 +423,7 @@ export class SceneAdapter<
 
     this.scene?.resize();
     this.scene?.render();
+    this._markFirstFrame();
   }
 
   /** 场景宣称已停时停掉 shell，避免 finished 后 step 空转。 */

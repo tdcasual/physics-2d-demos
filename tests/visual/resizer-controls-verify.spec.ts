@@ -2,6 +2,7 @@
  * 验证 resizer 拖拽 + controlColumns 多列布局
  */
 import { test, expect } from '@playwright/test';
+import { waitForFirstFrame } from '../helpers/wait-first-frame';
 
 test.describe('resizer drag fix', () => {
   test('spring-oscillator grid-template-columns updated during drag', async ({
@@ -11,7 +12,7 @@ test.describe('resizer drag fix', () => {
     await page.goto('/src/pages/spring-oscillator.html', {
       waitUntil: 'domcontentloaded'
     });
-    await page.waitForTimeout(2000);
+    await waitForFirstFrame(page);
 
     const container = page.locator('[data-testid="split-right-layout"]');
     const initialGrid = await container.evaluate(
@@ -42,7 +43,7 @@ test.describe('resizer drag fix', () => {
     await page.goto('/src/pages/ganshe.html', {
       waitUntil: 'domcontentloaded'
     });
-    await page.waitForTimeout(2000);
+    await waitForFirstFrame(page);
 
     const container = page.locator(
       '[data-testid="split-right-graph-bottom-layout"]'
@@ -78,7 +79,7 @@ test.describe('controlColumns', () => {
     await page.goto('/src/pages/ganshe.html', {
       waitUntil: 'domcontentloaded'
     });
-    await page.waitForTimeout(2000);
+    await waitForFirstFrame(page);
 
     const controlSlot = page.locator('.srgb-control-slot');
     const attr = await controlSlot.getAttribute('data-control-columns');
@@ -90,7 +91,7 @@ test.describe('controlColumns', () => {
     await page.goto('/src/pages/ganshe.html', {
       waitUntil: 'domcontentloaded'
     });
-    await page.waitForTimeout(2000);
+    await waitForFirstFrame(page);
 
     const controlSlot = page.locator('.srgb-control-slot');
     const display = await controlSlot.evaluate(

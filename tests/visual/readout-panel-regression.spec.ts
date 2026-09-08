@@ -9,6 +9,7 @@
  */
 import { test, expect } from '@playwright/test';
 import { sceneIds, scenePage } from './scene-pages';
+import { waitForFirstFrame } from '../helpers/wait-first-frame';
 
 const SCENES = [
   { id: 'spring-oscillator', prefix: 'teaching', name: '弹簧振子' },
@@ -26,7 +27,7 @@ for (const scene of SCENES) {
       await page.goto(`/src/pages/${scene.id}.html`, {
         waitUntil: 'domcontentloaded'
       });
-      await page.waitForTimeout(2000);
+      await waitForFirstFrame(page);
     });
 
     // --- Mount & defaults ---
@@ -158,7 +159,7 @@ test.describe('mobile-stack readout panel', () => {
     await page.goto('/src/pages/spring-oscillator.html', {
       waitUntil: 'domcontentloaded'
     });
-    await page.waitForTimeout(2000);
+    await waitForFirstFrame(page);
   });
 
   test('uses mobile prefix on small viewport and appears in data tab', async ({

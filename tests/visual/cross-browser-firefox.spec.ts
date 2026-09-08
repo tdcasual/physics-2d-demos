@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { sceneIds, scenePage } from './scene-pages';
+import { waitForFirstFrame } from '../helpers/wait-first-frame';
 
 test.use({ browserName: 'firefox', launchOptions: {} });
 
@@ -17,7 +18,14 @@ for (const scene of sceneIds) {
     await page.goto(`http://127.0.0.1:${PORT}${scenePage(scene)}`, {
       waitUntil: 'domcontentloaded'
     });
-    await page.waitForTimeout(2000);
+    await waitForFirstFrame(page, {
+      remainderMs:
+        scene === 'chase-meet' ||
+        scene === 'emf-analogy' ||
+        scene === 'double-slit'
+          ? 400
+          : 150
+    });
 
     expect(await page.locator('canvas').count()).toBeGreaterThan(0);
     expect(errors).toEqual([]);
