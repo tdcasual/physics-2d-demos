@@ -1,9 +1,9 @@
 # 项目深度分析与优化建议
 
-> **⚠️ 数据快照说明**：本文数据为 2026-04-20 的分析快照，此后项目经过多轮审计修复
-> （bundle 已拆分 vendor/shared、覆盖率阈值已提高、场景数量与控制面板架构均已变化），
-> 文中具体数字（bundle 体积、测试数、覆盖率、引用计数等）大多已过期。
-> 当前口径以代码与 `scripts/check-bundle-budget.ts`、`vite.config.ts` 为准。本文保留分析思路供参考。
+> **⚠️ 历史快照（2026-04-20）**。禁止按本文数字提 PR。文中「三个核心瓶颈」
+> （Main 167KB、覆盖率 62%、监听器泄漏）是当时结论，不是现行债。
+> 现行瓶颈见 [`docs/plans/2026-09-08-wave6-current-bottlenecks.md`](plans/2026-09-08-wave6-current-bottlenecks.md)
+> 与 `scripts/check-bundle-budget.ts`。
 
 **分析日期**: 2026-04-20  
 **分析范围**: 构建性能、代码质量、测试策略、架构健康度  

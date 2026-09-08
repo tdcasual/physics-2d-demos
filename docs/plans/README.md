@@ -8,6 +8,8 @@
 
 | 文件                                                                                                                   | 日期  | 主题                                                   | 状态      |
 | ---------------------------------------------------------------------------------------------------------------------- | ----- | ------------------------------------------------------ | --------- |
+| [2026-09-08-wave6-optimization-plan.md](2026-09-08-wave6-optimization-plan.md)                                         | 09-08 | Wave 6 性能与可执行优化（设计+PR 计划）                | ✅ 已完成 |
+| [2026-09-08-wave6-current-bottlenecks.md](2026-09-08-wave6-current-bottlenecks.md)                                     | 09-08 | Wave 6 之后现行瓶颈一页                                | 📌 现行   |
 | [2026-09-01-weak-agent-scene-workflow.md](2026-09-01-weak-agent-scene-workflow.md)                                     | 09-01 | 弱代理场景工作流加固（verify:scene/脚手架自证明/防钻） | ✅ 已完成 |
 | [2026-09-01-audit-followup-fixes.md](2026-09-01-audit-followup-fixes.md)                                               | 09-01 | 审计跟进修复（URL/HiDPI/standalone/smoke）             | ✅ 已完成 |
 | [2026-08-20-agent-safe-scene-quality-gates.md](2026-08-20-agent-safe-scene-quality-gates.md)                           | 08-20 | Agent 安全场景质量门禁与移动端布局自动审计             | ✅ 已完成 |

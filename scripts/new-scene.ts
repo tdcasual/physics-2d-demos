@@ -133,7 +133,7 @@ export function create__PASCAL__Sim(initial: __PASCAL__Params) {
 const viewTpl = `import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { getRenderTokens } from '../../platform/standards';
 import type { DemoRenderHints } from '../../platform/demo-profile';
-import { sizeCanvasToFill } from '../../core/canvas-sizing';
+import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import type { __PASCAL__State } from './scene.sim';
 
 export type Create__PASCAL__ViewOptions = {
@@ -145,55 +145,55 @@ export type Create__PASCAL__ViewOptions = {
 
 export function create__PASCAL__View(options: Create__PASCAL__ViewOptions) {
   const canvas = options.canvas ?? document.createElement('canvas');
-  let theme: TeachingTheme = options.theme ?? 'light';
-  let mode: TeachingMode = options.mode ?? 'normal';
-  let hints: DemoRenderHints | undefined = options.demoHints;
-  let ctx: CanvasRenderingContext2D | null = null;
-  let width = 0;
-  let height = 0;
-  let responsiveScale = 1;
-
-  function resize(): void {
-    ctx = sizeCanvasToFill(canvas);
-    const rect = canvas.getBoundingClientRect();
-    width = Math.max(1, Math.floor(rect.width));
-    height = Math.max(1, Math.floor(rect.height));
-    responsiveScale = parseFloat(canvas.dataset.responsiveScale || '1');
-  }
+  const env = createViewEnvironment({
+    theme: options.theme ?? 'light',
+    mode: options.mode ?? 'normal',
+    demoHints: options.demoHints
+  });
+  const stage = createCanvasViewport({
+    canvas,
+    sizing: { mode: 'raw' },
+    measure: (c) => {
+      const rect = c.getBoundingClientRect();
+      return {
+        width: Math.max(1, Math.floor(rect.width)),
+        height: Math.max(1, Math.floor(rect.height))
+      };
+    }
+  });
 
   function render(state: __PASCAL__State): void {
-    if (!ctx || width === 0) {
-      resize();
-      if (!ctx) return;
-    }
-    // 演示模式下按 demoHints.contentScale 放大渲染 token
-    const scale = mode === 'presentation' ? (hints?.contentScale ?? 1.5) : 1;
+    stage.ensureSized();
+    const ctx = stage.ctx;
+    if (!ctx) return;
+    const width = stage.cssWidth;
+    const height = stage.cssHeight;
+    const scale = env.contentScale();
     const tokens = getRenderTokens(scale);
 
     ctx.clearRect(0, 0, width, height);
     const cx = width / 2 + state.x * width * 0.3;
     const cy = height / 2;
-    ctx.fillStyle = theme === 'dark' ? '#e2e8f0' : '#1a202c';
+    ctx.fillStyle = env.theme === 'dark' ? '#e2e8f0' : '#1a202c';
     ctx.beginPath();
-    ctx.arc(cx, cy, tokens.pointRadiusPx * responsiveScale, 0, Math.PI * 2);
+    ctx.arc(cx, cy, tokens.pointRadiusPx * stage.responsiveScale, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  resize();
+  stage.resize();
 
   return {
     render,
-    resize,
+    resize: () => stage.resize(),
     reset(): void {},
     setTheme(t: TeachingTheme): void {
-      theme = t;
+      env.setTheme(t);
     },
     setMode(m: TeachingMode, h?: DemoRenderHints): void {
-      mode = m;
-      hints = h;
+      env.setMode(m, h);
     },
     dispose(): void {
-      ctx = null;
+      stage.release();
     }
   };
 }

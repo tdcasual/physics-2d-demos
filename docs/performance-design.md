@@ -1,13 +1,19 @@
 # 性能设计方案
 
-## 现状评分：6.0 / 10
+> **⚠️ 历史草案**。文中「零性能测试 / 无 code splitting」已过时
+> （现有 `PerformanceMonitor`、`registerLazyLayout`、场景分 chunk）。
+> 禁止按本文评分提 PR。现行瓶颈见
+> [`docs/plans/2026-09-08-wave6-current-bottlenecks.md`](plans/2026-09-08-wave6-current-bottlenecks.md)
+> 与 `scripts/check-bundle-budget.ts`。
 
-### 问题清单
+## 现状评分（2026-04 历史）：6.0 / 10
 
-1. 零性能测试（无 FPS、内存、重绘监控）
+### 问题清单（历史）
+
+1. 零性能测试（无 FPS、内存、重绘监控）— 历史；现有 PerformanceMonitor
 2. chase-meet 3 个 canvas 同时 requestAnimationFrame 重绘
 3. emf-analogy 160 个 particle 每帧重新计算位置
-4. 无 code splitting / lazy loading（所有场景一次性打包）
+4. 无 code splitting / lazy loading — 历史；现已分 vendor/layouts/scene chunks
 5. 无 PerformanceObserver 或 requestIdleCallback 优化
 
 ## 设计目标
