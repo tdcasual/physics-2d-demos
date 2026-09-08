@@ -13,10 +13,8 @@ vi.mock('../../src/app/layouts/auto-register', () => ({
 vi.mock('../../src/app/layouts/container-persistence', () => ({
   persistState: vi.fn(),
   restorePersistedState: vi.fn(() => null),
-  saveSceneState: vi.fn(),
   saveLayoutState: vi.fn(),
-  restoreLayoutState: vi.fn(() => null),
-  restoreSceneState: vi.fn(() => null)
+  restoreLayoutState: vi.fn(() => null)
 }));
 
 vi.mock('../../src/app/layouts/power-awareness', () => ({
@@ -71,8 +69,7 @@ function createMockScene(id: string) {
     dispose: vi.fn(),
     setTheme: vi.fn(),
     getTransportState: vi.fn(() => ({ isPlaying: false, speed: 1 })),
-    subscribe: vi.fn(() => vi.fn()),
-    saveState: vi.fn()
+    subscribe: vi.fn(() => vi.fn())
   };
 }
 

@@ -13,10 +13,8 @@ vi.mock('../../src/app/layouts/auto-register', () => ({
 vi.mock('../../src/app/layouts/container-persistence', () => ({
   persistState: vi.fn(),
   restorePersistedState: vi.fn(() => null),
-  saveSceneState: vi.fn(),
   saveLayoutState: vi.fn(),
-  restoreLayoutState: vi.fn(() => null),
-  restoreSceneState: vi.fn(() => null)
+  restoreLayoutState: vi.fn(() => null)
 }));
 
 vi.mock('../../src/app/layouts/power-awareness', () => ({
@@ -78,7 +76,6 @@ function createMockScene(overrides: Record<string, unknown> = {}) {
     resize: vi.fn(),
     subscribe: vi.fn(() => vi.fn()),
     getTransportState: vi.fn(() => ({ isPlaying: false, speed: 1 })),
-    saveState: vi.fn(),
     ...overrides
   };
 }
@@ -249,19 +246,5 @@ describe('Container edge cases', () => {
     await expect(container.switchLayout('nonexistent-layout')).rejects.toThrow(
       'not found'
     );
-  });
-
-  it('scene.saveState() throw should not prevent scene switch', async () => {
-    const badScene = createMockScene({
-      saveState: vi.fn(() => {
-        throw new Error('save boom');
-      })
-    });
-    const goodScene = createMockScene();
-
-    const container = createSceneContainer({ mount: appDiv });
-    await container.setScene(badScene as never);
-    await container.setScene(goodScene as never);
-    expect(goodScene.mount).toHaveBeenCalled();
   });
 });

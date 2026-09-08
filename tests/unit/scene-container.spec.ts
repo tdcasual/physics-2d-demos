@@ -1,8 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import {
-  SceneContainerImpl,
-  createSceneContainer
-} from '../../src/app/layouts/container';
+import { createSceneContainer } from '../../src/app/layouts/container';
 import type { Scene } from '../../src/app/layouts/types';
 import { SplitRightLayout } from '../../src/app/layouts/layouts/split-right/split-right';
 import { MobileStackLayout } from '../../src/app/layouts/layouts/mobile-stack/mobile-stack';
@@ -278,28 +275,6 @@ describe('SceneContainerImpl', () => {
     expect(saveLayoutPreference).toHaveBeenCalledWith('split-right');
   });
 
-  it('should restore scene state from localStorage', () => {
-    localStorage.setItem(
-      'test-state-scene-projectile',
-      JSON.stringify({
-        v: 1,
-        state: { angle: 45, speed: 10 }
-      })
-    );
-
-    const container = new SceneContainerImpl({
-      mount,
-      storageKey: 'test-state'
-    });
-    const state = (
-      container as unknown as {
-        restoreSceneState: (id: string) => object | null;
-      }
-    ).restoreSceneState('projectile');
-
-    expect(state).toEqual({ angle: 45, speed: 10 });
-  });
-
   it('should set scene and mount it', async () => {
     const container = createSceneContainer({ mount });
 
@@ -313,7 +288,6 @@ describe('SceneContainerImpl', () => {
       renderReadout: vi.fn(),
       mount: vi.fn(),
       unmount: vi.fn(),
-      saveState: vi.fn(() => ({ test: true })),
       getTransportState: vi.fn(() => ({ isPlaying: false, speed: 1 })),
       subscribe: vi.fn(() => vi.fn())
     } as unknown as Scene;
@@ -362,7 +336,6 @@ describe('SceneContainerImpl', () => {
       renderControl: vi.fn(),
       mount: vi.fn(),
       unmount: vi.fn(),
-      saveState: vi.fn(() => null),
       getTransportState: vi.fn(() => ({ isPlaying: false, speed: 1 })),
       subscribe: vi.fn(() => vi.fn())
     } as unknown as Scene;
@@ -374,7 +347,6 @@ describe('SceneContainerImpl', () => {
       renderControl: vi.fn(),
       mount: vi.fn(),
       unmount: vi.fn(),
-      saveState: vi.fn(() => null),
       getTransportState: vi.fn(() => ({ isPlaying: false, speed: 1 })),
       subscribe: vi.fn(() => vi.fn())
     } as unknown as Scene;
@@ -399,7 +371,6 @@ describe('SceneContainerImpl', () => {
       renderAnimation: vi.fn(),
       renderControl: vi.fn(),
       mount: vi.fn(),
-      saveState: vi.fn(() => null),
       getTransportState: vi.fn(() => ({ isPlaying: false, speed: 1 })),
       subscribe: vi.fn(() => vi.fn())
     } as unknown as Scene;
@@ -411,30 +382,48 @@ describe('SceneContainerImpl', () => {
     container.dispose();
   });
 
-  it('should restore scene state on mount if available', async () => {
+  it('does not read or write leftover scene-id localStorage keys', async () => {
+    const leftoverKey = 'physics-demos-container-state-scene-test-scene';
     localStorage.setItem(
-      'physics-demos-container-state-scene-test-scene',
+      leftoverKey,
       JSON.stringify({ v: 1, state: { angle: 45 } })
     );
 
     const container = createSceneContainer({ mount });
-    const restoreState = vi.fn();
-
     const mockScene = {
       id: 'test-scene',
       preferredLayout: 'split-right',
       renderAnimation: vi.fn(),
       renderControl: vi.fn(),
       mount: vi.fn(),
-      restoreState,
-      saveState: vi.fn(() => null),
+      unmount: vi.fn(),
       getTransportState: vi.fn(() => ({ isPlaying: false, speed: 1 })),
       subscribe: vi.fn(() => vi.fn())
     } as unknown as Scene;
 
     await container.setScene(mockScene);
+    expect(localStorage.getItem(leftoverKey)).toBe(
+      JSON.stringify({ v: 1, state: { angle: 45 } })
+    );
 
-    expect(restoreState).toHaveBeenCalledWith({ angle: 45 });
+    const mockScene2 = {
+      id: 'other-scene',
+      preferredLayout: 'split-right',
+      renderAnimation: vi.fn(),
+      renderControl: vi.fn(),
+      mount: vi.fn(),
+      unmount: vi.fn(),
+      getTransportState: vi.fn(() => ({ isPlaying: false, speed: 1 })),
+      subscribe: vi.fn(() => vi.fn())
+    } as unknown as Scene;
+    await container.setScene(mockScene2);
+
+    expect(localStorage.getItem(leftoverKey)).toBe(
+      JSON.stringify({ v: 1, state: { angle: 45 } })
+    );
+    expect(
+      Object.keys(localStorage).filter((k) => k.includes('-scene-'))
+    ).toEqual([leftoverKey]);
 
     container.dispose();
   });

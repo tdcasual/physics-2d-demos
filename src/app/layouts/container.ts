@@ -16,10 +16,8 @@ import type { LayoutSelectionContext } from './selector';
 import {
   persistState as persistStateToStorage,
   restorePersistedState as restorePersistedStateFromStorage,
-  saveSceneState as saveSceneStateToStorage,
   saveLayoutState as saveLayoutStateToStorage,
-  restoreLayoutState as restoreLayoutStateFromStorage,
-  restoreSceneState as restoreSceneStateFromStorage
+  restoreLayoutState as restoreLayoutStateFromStorage
 } from './container-persistence';
 import { satisfiesConstraints } from './layout-constraints';
 import { ContainerResizeObserver } from './container-resize-observer';
@@ -212,21 +210,8 @@ export class SceneContainerImpl implements SceneContainer {
     this.activateSceneLifecycle(scene, targetLayout);
   }
 
-  /** 激活场景生命周期：状态恢复、Capability 装配、事件绑定、挂载 */
+  /** 激活场景生命周期：Capability 装配、事件绑定、挂载 */
   private activateSceneLifecycle(scene: Scene, layout: ILayout): void {
-    // 恢复持久化状态
-    const savedState = this.restoreSceneState(scene.id);
-    if (savedState && scene.restoreState) {
-      try {
-        scene.restoreState(savedState);
-      } catch (err) {
-        console.error(
-          `[SceneContainer] Failed to restore state for scene ${scene.id}:`,
-          err
-        );
-      }
-    }
-
     const slots = layout.getSlots?.() || {};
 
     // 装配布局声明的 capabilities（ILayout 约定 capabilities 必填）
@@ -281,19 +266,6 @@ export class SceneContainerImpl implements SceneContainer {
 
     // 取消场景状态订阅
     this._orchestrator.cleanupSceneBindings();
-
-    // 保存场景状态
-    try {
-      const state = scene.saveState?.();
-      if (state) {
-        this.saveSceneState(scene.id, state);
-      }
-    } catch (err) {
-      console.error(
-        `[SceneContainer] Failed to save state for scene ${scene.id}:`,
-        err
-      );
-    }
 
     // 调用场景卸载生命周期 — 必须在 null 赋值前确保执行
     try {
@@ -657,20 +629,6 @@ export class SceneContainerImpl implements SceneContainer {
         this._currentTheme = resolveThemePreference(stored);
       }
     }
-  }
-
-  /**
-   * 保存场景状态
-   */
-  private saveSceneState(sceneId: string, state: object): void {
-    saveSceneStateToStorage(this._storageKey, sceneId, state);
-  }
-
-  /**
-   * 恢复场景状态
-   */
-  restoreSceneState(sceneId: string): object | null {
-    return restoreSceneStateFromStorage(this._storageKey, sceneId);
   }
 
   /**

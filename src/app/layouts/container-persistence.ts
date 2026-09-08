@@ -44,50 +44,6 @@ export function restorePersistedState(
   return null;
 }
 
-export function saveSceneState(
-  storageKey: string,
-  sceneId: string,
-  state: object
-): void {
-  try {
-    const key = `${storageKey}-scene-${sceneId}`;
-    localStorage.setItem(
-      key,
-      JSON.stringify({
-        v: 1,
-        state,
-        timestamp: Date.now()
-      })
-    );
-  } catch (err) {
-    console.warn(
-      '[persistence] Failed to save state:',
-      err instanceof Error ? err.message : err
-    );
-  }
-}
-
-export function restoreSceneState(
-  storageKey: string,
-  sceneId: string
-): object | null {
-  try {
-    const key = `${storageKey}-scene-${sceneId}`;
-    const saved = localStorage.getItem(key);
-    if (saved) {
-      const data = JSON.parse(saved);
-      if (data.v !== 1) return null;
-      return data.state;
-    }
-  } catch (err) {
-    console.warn(
-      '[persistence] Failed to restore scene state:',
-      err instanceof Error ? err.message : err
-    );
-  }
-  return null;
-}
-
 export function saveLayoutState(
   storageKey: string,
   layoutId: string,

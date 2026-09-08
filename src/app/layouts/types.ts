@@ -226,8 +226,6 @@ export interface Scene {
   onLayoutWillChange?(from: string, to: string): Promise<void>;
   onLayoutDidChange?(to: string): void;
 
-  saveState?(): object;
-  restoreState?(state: object): void;
   mount?(): void;
   unmount?(): void;
   setTheme?(theme: Theme): void;

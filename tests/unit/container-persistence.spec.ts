@@ -1,9 +1,7 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import {
   persistState,
-  restorePersistedState,
-  saveSceneState,
-  restoreSceneState
+  restorePersistedState
 } from '../../src/app/layouts/container-persistence';
 
 // 容器状态只关心布局偏好是否已注册；主题由 theme-store 统一管理
@@ -98,52 +96,6 @@ describe('container-persistence', () => {
       const restored = restorePersistedState(storageKey);
       expect(restored).not.toBeNull();
       expect(restored!.preferredLayout).toBeUndefined();
-    });
-  });
-
-  describe('saveSceneState / restoreSceneState', () => {
-    it('should persist and restore scene state', () => {
-      const state = { speed: 1.5, paused: false };
-      saveSceneState(storageKey, 'test-scene', state);
-      const restored = restoreSceneState(storageKey, 'test-scene');
-      expect(restored).toEqual(state);
-    });
-
-    it('should return null when no scene state exists', () => {
-      const restored = restoreSceneState(storageKey, 'missing-scene');
-      expect(restored).toBeNull();
-    });
-
-    it('should ignore scene state with wrong version', () => {
-      const key = `${storageKey}-scene-oldscene`;
-      localStorage.setItem(key, JSON.stringify({ v: 0, state: { foo: 1 } }));
-      const restored = restoreSceneState(storageKey, 'oldscene');
-      expect(restored).toBeNull();
-    });
-
-    it('should ignore corrupted scene JSON', () => {
-      const key = `${storageKey}-scene-badscene`;
-      localStorage.setItem(key, 'not-json');
-      const restored = restoreSceneState(storageKey, 'badscene');
-      expect(restored).toBeNull();
-    });
-
-    it('should include timestamp and version in saved scene state', () => {
-      saveSceneState(storageKey, 'scene-1', { value: 42 });
-      const key = `${storageKey}-scene-scene-1`;
-      const raw = localStorage.getItem(key);
-      expect(raw).not.toBeNull();
-      const parsed = JSON.parse(raw!);
-      expect(parsed.v).toBe(1);
-      expect(parsed.timestamp).toBeTypeOf('number');
-      expect(parsed.state).toEqual({ value: 42 });
-    });
-
-    it('should isolate different scene ids', () => {
-      saveSceneState(storageKey, 'scene-a', { x: 1 });
-      saveSceneState(storageKey, 'scene-b', { x: 2 });
-      expect(restoreSceneState(storageKey, 'scene-a')).toEqual({ x: 1 });
-      expect(restoreSceneState(storageKey, 'scene-b')).toEqual({ x: 2 });
     });
   });
 });
