@@ -23,8 +23,8 @@ for (const scene of sceneIds) {
         scene === 'chase-meet' ||
         scene === 'emf-analogy' ||
         scene === 'double-slit'
-          ? 400
-          : 150
+          ? 1200
+          : 800
     });
 
     expect(await page.locator('canvas').count()).toBeGreaterThan(0);

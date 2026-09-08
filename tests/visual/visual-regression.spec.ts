@@ -41,7 +41,7 @@ for (const scene of SCENES) {
       waitUntil: 'domcontentloaded'
     });
     await waitForFirstFrame(page, {
-      remainderMs: isDynamic || scene.id === 'chase-meet' ? 400 : 150
+      remainderMs: isDynamic || scene.id === 'chase-meet' ? 1200 : 800
     });
     await expect(page).toHaveScreenshot(`${scene.id}-desktop.png`, {
       maxDiffPixels: isDynamic ? 3000 : 800,
@@ -55,7 +55,7 @@ for (const scene of SCENES) {
       waitUntil: 'domcontentloaded'
     });
     await waitForFirstFrame(page, {
-      remainderMs: isDynamic || scene.id === 'chase-meet' ? 400 : 150
+      remainderMs: isDynamic || scene.id === 'chase-meet' ? 1200 : 800
     });
     await expect(page).toHaveScreenshot(`${scene.id}-mobile.png`, {
       maxDiffPixels: isDynamic ? 3000 : 800,

@@ -25,5 +25,13 @@ export async function waitForFirstFrame(
     });
   });
   await page.evaluate(() => document.fonts?.ready ?? Promise.resolve());
-  await page.waitForTimeout(opts?.remainderMs ?? 150);
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      })
+  );
+  // 150ms 在 Linux 容器里不够：全场景 ~2% 像素差（layout/读数尚未稳住）。
+  // 800ms 仍远低于旧的固定 2000ms。
+  await page.waitForTimeout(opts?.remainderMs ?? 800);
 }
