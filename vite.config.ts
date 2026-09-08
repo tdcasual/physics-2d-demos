@@ -51,6 +51,19 @@ export default defineConfig({
     host: true,
     port: 5177
   },
+  resolve: {
+    // Vitest + @testing-library/react 必须走真 React；生产/dev 才 alias Preact。
+    alias: process.env.VITEST
+      ? {}
+      : {
+          react: 'preact/compat',
+          'react-dom': 'preact/compat',
+          'react-dom/client': 'preact/compat',
+          'react/jsx-runtime': 'preact/jsx-runtime',
+          'react/jsx-dev-runtime': 'preact/jsx-dev-runtime',
+          'react-dom/test-utils': 'preact/test-utils'
+        }
+  },
   test: {
     environment: 'happy-dom',
     setupFiles: ['tests/setup.ts'],
@@ -105,6 +118,7 @@ export default defineConfig({
           // Vendor chunk: React ecosystem
           if (
             id.includes('node_modules/react') ||
+            id.includes('node_modules/preact') ||
             id.includes('node_modules/scheduler')
           ) {
             return 'vendor';
