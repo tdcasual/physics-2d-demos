@@ -259,19 +259,20 @@ export type SceneMeta = ScenePlacardMeta & {
 ### 视觉回归基线规则（强制）
 
 `visual-regression.spec.ts` 的截图基线**按平台分文件**：`*-darwin.png`（Mac）与
-`*-linux.png`（CI / ubuntu 容器）。像素级截图无法跨平台复现（CJK 字体光栅化
+`*-linux.png`（`scripts/visual-linux-container.sh`）。像素级截图无法跨平台复现（CJK 字体光栅化
 不同），**禁止**把两套基线合并成单一"平台中立"文件。
 
-- 改动 UI 后基线过期：Linux 基线用 `scripts/visual-linux-container.sh update`
-  （CI 同构 ubuntu 容器）或 CI 重生成（ci.yml 的
-  `workflow_dispatch → update_snapshots`，下载 artifact 后提交）；Mac 基线在
-  Mac 上 `pnpm test:visual:update`，或用
-  `update-darwin-snapshots.yml`（workflow_dispatch，macos-latest runner，
-  渲染栈与 Mac 本地一致）重生成后下载 artifact 提交。
-- Linux 基线的权威校验同样在容器内进行：`scripts/visual-linux-container.sh`。
-  宿主机直接跑 visual-regression 会因字体/光栅化环境漂移而仅供参考。
-- Linux 基线必须在装有 `fonts-noto-cjk` 的 ubuntu 环境生成，保证渲染字体为
-  `Noto Sans CJK SC`（见 `design-tokens.css` 字体栈与 ci.yml 的字体安装步骤）。
+- Linux 像素唯一权威是 `scripts/visual-linux-container.sh`（ubuntu:24.04 +
+  `fonts-noto-cjk`）。CI 的 visual-regression 与 `workflow_dispatch →
+update_snapshots` **调用同一脚本**，不是 runner 上裸跑 PNG。
+- 禁止在 Linux 宿主机 `--update-snapshots` / `pnpm test:visual:update`：会用错误光栅覆盖
+  `*-linux.png`（路径模板按 `process.platform` 分文件，不会写成 darwin 文件名）。
+- 改动 UI 后 Linux 基线过期：`scripts/visual-linux-container.sh update`，或 CI
+  `update_snapshots` 下载 artifact 后提交。Mac 基线在 Mac 上
+  `pnpm test:visual:update`，或用 `update-darwin-snapshots.yml`
+  （workflow_dispatch，macos-latest，渲染栈与 Mac 本地一致）重生成后下载 artifact 提交。
+- Linux 基线必须在装有 `fonts-noto-cjk` 的 ubuntu:24.04 容器内生成，保证渲染字体为
+  `Noto Sans CJK SC`（见 `design-tokens.css` 字体栈）。
 - 移动端断言遍历 canvas 时必须跳过非激活 tab 面板（`.mobile-tab-panel:not(.active)`
   内的 canvas 是 display:none，尺寸为 0 属设计如此），或先切换到目标 tab 再断言。
 - 像素覆盖清单 = 自动发现的全部场景 − spec 内 `SNAPSHOT_OPT_OUT` 显式豁免

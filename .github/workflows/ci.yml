@@ -89,9 +89,13 @@ jobs:
         if: ${{ !inputs.update_snapshots }}
         run: PLAYWRIGHT_SKIP_BUILD=1 pnpm test:visual
 
+      - name: Linux visual-regression (container)
+        if: ${{ !inputs.update_snapshots }}
+        run: ./scripts/visual-linux-container.sh
+
       - name: Regenerate Linux visual baselines
         if: ${{ inputs.update_snapshots }}
-        run: PLAYWRIGHT_SKIP_BUILD=1 pnpm exec playwright test tests/visual/visual-regression.spec.ts --update-snapshots
+        run: ./scripts/visual-linux-container.sh update
 
       - name: Upload regenerated baselines
         if: ${{ inputs.update_snapshots }}

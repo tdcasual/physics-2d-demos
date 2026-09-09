@@ -18,6 +18,8 @@ scripts/check-layouts.ts @tdcasual
 scripts/check-bundle-budget.ts @tdcasual
 scripts/check-scaffold.ts @tdcasual
 scripts/verify-scene.ts @tdcasual
+scripts/visual-linux-container.sh @tdcasual
+docs/quality-gates.md @tdcasual
 
 # 架构层规则与覆盖率/分包
 eslint.config.js @tdcasual

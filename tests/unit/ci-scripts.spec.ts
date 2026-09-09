@@ -73,6 +73,49 @@ describe('ci scripts and workflow', () => {
     expect(ci).not.toContain('run: pnpm test\n');
   });
 
+  it('keeps linux visual PNG SoT on the ubuntu:24.04 container script', () => {
+    const ci = readFileSync('.github/workflows/ci.yml', 'utf8');
+    const script = readFileSync('scripts/visual-linux-container.sh', 'utf8');
+    const owners = readFileSync('.github/CODEOWNERS', 'utf8');
+    const spec = readFileSync('tests/visual/visual-regression.spec.ts', 'utf8');
+
+    expect(ci).toContain('./scripts/visual-linux-container.sh');
+    expect(ci).toContain('./scripts/visual-linux-container.sh update');
+    expect(owners).toContain('scripts/visual-linux-container.sh');
+
+    expect(script).toMatch(/su builder[\s\S]*export VISUAL_LINUX_AUTHORITY=1/);
+    expect(script).toContain('PLAYWRIGHT_JSON_OUTPUT_FILE');
+    expect(script).toContain('function walk(s)');
+    expect(script).toContain('s.specs');
+    expect(script).toContain('s.suites');
+    expect(script).toContain('/^(desktop|mobile) /');
+    expect(script).toContain('canary.ok !== true');
+    expect(script).toContain('r.status === "skipped"');
+    expect(script).toContain('process.exit(1)');
+    expect(script).toContain('--shm-size=1g');
+    expect(script).not.toContain('CI-parity');
+    expect(script).not.toContain('与 CI 同构');
+
+    const canaryIdx = spec.indexOf(
+      'linux PNG authority env is fail-closed in the container'
+    );
+    const optOutIdx = spec.indexOf(
+      'snapshot opt-out list only references discovered scenes'
+    );
+    const describeIdx = spec.indexOf("test.describe('scene screenshots'");
+    const skipIdx = spec.indexOf('test.skip(');
+    expect(canaryIdx).toBeGreaterThan(-1);
+    expect(optOutIdx).toBeGreaterThan(-1);
+    expect(describeIdx).toBeGreaterThan(-1);
+    expect(skipIdx).toBeGreaterThan(-1);
+    expect(canaryIdx).toBeLessThan(describeIdx);
+    expect(optOutIdx).toBeLessThan(describeIdx);
+    expect(skipIdx).toBeGreaterThan(describeIdx);
+    expect(spec.indexOf('for (const scene of SCENES)')).toBeGreaterThan(
+      describeIdx
+    );
+  });
+
   it('keeps coverage reporters aligned with codecov upload', () => {
     const viteConfig = readFileSync('vite.config.ts', 'utf8');
     const ci = readFileSync('.github/workflows/ci.yml', 'utf8');
