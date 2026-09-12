@@ -4,12 +4,20 @@ import type { TeachingTheme } from '../../platform/standards';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import type { FieldLinesSnapshot } from './scene.sim';
-import { generateFieldLines } from './renderer/trace-field';
+import {
+  generateFieldLines,
+  sampleProbesAlongPath
+} from './renderer/trace-field';
 import { drawFieldLines } from './renderer/draw-field-lines';
+import { drawProbes } from './renderer/draw-probes';
 import { drawCharges } from './renderer/draw-charges';
-import { drawHeatmap } from './renderer/draw-heatmap';
-import { drawEquipotentialLines } from './renderer/draw-equipotential';
-import type { PixelCharge, VisualConfig, ThemeColors } from './renderer/types';
+import type {
+  PixelCharge,
+  VisualConfig,
+  ThemeColors,
+  FieldLinePath,
+  FieldProbe
+} from './renderer/types';
 
 export type CreateFieldLinesViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -47,6 +55,17 @@ const THEME_CONFIG: Record<TeachingTheme, ThemeColors> = {
   }
 };
 
+function smoothstep(edge0: number, edge1: number, x: number): number {
+  const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
+  return t * t * (3 - 2 * t);
+}
+
+function captionForN(n: number): string {
+  if (n <= 6) return '用试探电荷测出这些点的场强 E（箭头方向与相对大小）';
+  if (n <= 16) return '试探点变密，箭头沿 E 的方向连起来，电场线开始显现';
+  return '电场线形成：线上每一点的切线都沿着该点的 E';
+}
+
 export function createFieldLinesView(
   options: CreateFieldLinesViewOptions = {}
 ) {
@@ -57,16 +76,12 @@ export function createFieldLinesView(
     initialHeight: 720,
     eagerContext: true
   });
-  // theme/mode/demoHints 状态与 contentScale 计算托管给 view-base，
-  // 保证全库只有一处 contentScale 语义（normal=1，presentation=hints ?? 1.5）
   const env = createViewEnvironment({
     theme: options.theme,
     mode: options.mode,
     demoHints: options.demoHints ?? undefined
   });
   let snapshot: FieldLinesSnapshot | null = null;
-  // 渲染签名：全部画面输入（快照引用 + 尺寸 + scale + contentScale + theme + mode）
-  // 未变时跳过静态画面的昂贵重绘（热力图 / 等势线 / 电场线追踪）
   let lastRenderKey: {
     snapshot: FieldLinesSnapshot;
     cssWidth: number;
@@ -75,6 +90,10 @@ export function createFieldLinesView(
     contentScale: number;
     theme: TeachingTheme;
     mode: TeachingMode;
+  } | null = null;
+  let pathCache: {
+    key: string;
+    paths: FieldLinePath[];
   } | null = null;
 
   function getScale(): number {
@@ -92,6 +111,36 @@ export function createFieldLinesView(
     }));
   }
 
+  function chargePathKey(
+    charges: PixelCharge[],
+    width: number,
+    height: number
+  ): string {
+    const body = charges
+      .map(
+        (c) =>
+          `${c.x.toFixed(1)},${c.y.toFixed(1)},${c.q.toFixed(2)},${c.radius.toFixed(1)}`
+      )
+      .join(';');
+    return `${width}x${height}|${body}`;
+  }
+
+  function drawCaption(
+    ctx: CanvasRenderingContext2D,
+    text: string,
+    width: number,
+    height: number,
+    s: number,
+    ms: number,
+    isDark: boolean
+  ): void {
+    ctx.fillStyle = isDark ? '#94a3b8' : '#64748b';
+    ctx.font = `${Math.max(11, 13 * s * ms)}px "Noto Sans SC", sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, width / 2, height - Math.max(16, 22 * s));
+  }
+
   function draw(next: FieldLinesSnapshot): void {
     const ctx = stage.ctx;
     if (!ctx) return;
@@ -100,39 +149,60 @@ export function createFieldLinesView(
     const height = stage.cssHeight;
     const colors = THEME_CONFIG[env.theme];
     const charges = toPixelCharges(next);
-    const density = Math.max(1, Math.min(100, Math.round(next.params.density)));
+    const n = Math.max(1, Math.min(40, Math.round(next.params.n)));
     const s = stage.responsiveScale;
+    const ms = getScale();
     const isDark = env.theme === 'dark';
 
-    // 1. 纯色背景
     ctx.fillStyle = colors.canvasBg;
     ctx.fillRect(0, 0, width, height);
 
-    // 2. 电场强度热力图（半透明背景层）
-    drawHeatmap(ctx, charges, width, height, s, isDark);
+    const key = chargePathKey(charges, width, height);
+    if (!pathCache || pathCache.key !== key) {
+      pathCache = {
+        key,
+        paths: generateFieldLines(charges, { width, height })
+      };
+    }
+    const paths = pathCache.paths;
 
-    // 3. 等势线
-    drawEquipotentialLines(ctx, charges, width, height, s, isDark);
+    const probes: FieldProbe[] = [];
+    for (const path of paths) {
+      probes.push(...sampleProbesAlongPath(path, n, charges));
+    }
 
-    // 4. 生成并绘制连续电场线
-    const adjustedDensity =
-      s < 0.5 ? Math.max(1, Math.round(density * 0.6)) : density;
-    const paths = generateFieldLines(charges, adjustedDensity, {
-      width,
-      height
+    const lineAlpha = smoothstep(8, 22, n);
+    const probeAlpha = 1 - 0.92 * smoothstep(14, 32, n);
+    const arrowScale = 1 - 0.5 * smoothstep(8, 28, n);
+    const showTestCharge = n <= 6;
+    const showTicks = n >= 26;
+
+    if (lineAlpha > 0.02) {
+      drawFieldLines(ctx, paths, s, isDark, {
+        strokeAlpha: lineAlpha,
+        showTicks
+      });
+    }
+
+    drawProbes(ctx, probes, {
+      responsiveScale: s,
+      contentScale: ms,
+      isDark,
+      arrowScale,
+      alpha: probeAlpha,
+      showTestCharge
     });
-    drawFieldLines(ctx, paths, s, isDark);
 
-    // 5. 立体电荷球
-    const visuals = getVisuals(getScale());
+    const visuals = getVisuals(ms);
     drawCharges(ctx, charges, visuals.chargeFontPx, s, isDark);
+    drawCaption(ctx, captionForN(n), width, height, s, ms, isDark);
 
     lastRenderKey = {
       snapshot: next,
       cssWidth: width,
       cssHeight: height,
       scale: s,
-      contentScale: getScale(),
+      contentScale: ms,
       theme: env.theme,
       mode: env.mode
     };
@@ -152,12 +222,13 @@ export function createFieldLinesView(
         key.theme === env.theme &&
         key.mode === env.mode
       ) {
-        return; // 签名未变：静态画面跳过重绘
+        return;
       }
       draw(next);
     },
     resize(): void {
       stage.resize();
+      pathCache = null;
       if (snapshot) draw(snapshot);
     },
     setMode(nextMode: TeachingMode, hints?: DemoRenderHints): void {
@@ -174,6 +245,7 @@ export function createFieldLinesView(
     },
     dispose(): void {
       snapshot = null;
+      pathCache = null;
       stage.release();
     }
   };

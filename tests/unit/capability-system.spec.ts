@@ -219,6 +219,25 @@ describe('mode-toggle capability', () => {
 // ============================================================================
 
 describe('demo-profile capability', () => {
+  function resolved(
+    partial: Partial<
+      import('../../src/platform/demo-profile').ResolvedDemoProfile
+    > &
+      Pick<
+        import('../../src/platform/demo-profile').ResolvedDemoProfile,
+        'controlPanel' | 'readoutPanel'
+      >
+  ): import('../../src/platform/demo-profile').ResolvedDemoProfile {
+    return {
+      lessonTask: 'unmigrated',
+      visibleControlKeys: [],
+      readoutKeys: [],
+      renderHints: { contentScale: 1 },
+      touchTargetMinSize: 48,
+      ...partial
+    };
+  }
+
   it('filters minimal controls and restores them when leaving presentation mode', () => {
     const container = document.createElement('div');
     const sidebar = document.createElement('aside');
@@ -236,7 +255,10 @@ describe('demo-profile capability', () => {
     sidebar.append(visibleSection, hiddenSection);
     container.appendChild(sidebar);
 
-    const ctx = createTestContext({ container });
+    const ctx = createTestContext({
+      container,
+      getCurrentLayoutId: () => 'split-right'
+    });
     const instance = capabilityFactories['demo-profile']({}).mount(
       { control: sidebar, animation: document.createElement('div') },
       {},
@@ -245,12 +267,11 @@ describe('demo-profile capability', () => {
 
     instance.update?.({
       mode: 'presentation',
-      profile: {
+      profile: resolved({
         controlPanel: 'minimal',
         readoutPanel: 'hidden',
-        renderHints: { contentScale: 1 },
-        interactionHints: { visibleControlKeys: ['speed'] }
-      }
+        visibleControlKeys: ['speed']
+      })
     });
 
     expect(visibleField.style.display).toBe('');
@@ -261,6 +282,228 @@ describe('demo-profile capability', () => {
     instance.update?.({ mode: 'normal', profile: null });
     expect(hiddenField.style.display).toBe('');
     expect(hiddenSection.style.display).toBe('');
+    instance.dispose();
+  });
+
+  it('collapses split-grid columns for hidden and collapsed control panels', () => {
+    const container = document.createElement('div');
+    container.style.display = 'grid';
+    container.style.gridTemplateColumns = 'minmax(260px, 672px) 8px 1fr';
+    const sidebar = document.createElement('aside');
+    sidebar.className = 'layout-left-panel';
+    const resizer = document.createElement('div');
+    resizer.setAttribute('role', 'separator');
+    resizer.setAttribute('aria-orientation', 'vertical');
+    container.append(sidebar, resizer);
+
+    const ctx = createTestContext({
+      container,
+      getCurrentLayoutId: () => 'split-right'
+    });
+    const instance = capabilityFactories['demo-profile']({}).mount(
+      { control: sidebar, animation: document.createElement('div') },
+      {},
+      ctx
+    );
+
+    instance.update?.({
+      mode: 'presentation',
+      profile: resolved({
+        controlPanel: 'collapsed',
+        readoutPanel: 'overlay',
+        renderHints: { contentScale: 1.5 }
+      })
+    });
+
+    expect(sidebar.classList.contains('is-demo-rail')).toBe(true);
+    expect(sidebar.classList.contains('is-collapsed-demo')).toBe(false);
+    expect(container.style.gridTemplateColumns).toBe('48px 0px 1fr');
+    expect(resizer.style.display).toBe('none');
+
+    instance.update?.({ mode: 'normal', profile: null });
+    expect(sidebar.classList.contains('is-demo-rail')).toBe(false);
+    expect(container.style.gridTemplateColumns).toBe(
+      'minmax(260px, 672px) 8px 1fr'
+    );
+    expect(resizer.style.display).toBe('');
+
+    instance.update?.({
+      mode: 'presentation',
+      profile: resolved({
+        controlPanel: 'hidden',
+        readoutPanel: 'docked-bottom',
+        renderHints: { contentScale: 1.5 }
+      })
+    });
+    expect(sidebar.style.display).toBe('none');
+    expect(container.style.gridTemplateColumns).toBe('0px 0px 1fr');
+
+    instance.update?.({
+      mode: 'presentation',
+      profile: resolved({
+        controlPanel: 'minimal',
+        readoutPanel: 'overlay',
+        renderHints: { contentScale: 1.5 },
+        visibleControlKeys: ['speed']
+      })
+    });
+    expect(container.style.gridTemplateColumns).toBe(
+      'minmax(260px, 22rem) 8px 1fr'
+    );
+
+    instance.dispose();
+  });
+
+  it('keeps inner button-grid keys visible when the parent key is listed', () => {
+    const container = document.createElement('div');
+    container.style.display = 'grid';
+    container.style.gridTemplateColumns = 'minmax(260px, 672px) 8px 1fr';
+    const sidebar = document.createElement('aside');
+    sidebar.className = 'layout-left-panel';
+    const grid = document.createElement('div');
+    grid.dataset.controlKey = 'preset';
+    const innerA = document.createElement('button');
+    innerA.dataset.controlKey = 'uniform';
+    const innerB = document.createElement('button');
+    innerB.dataset.controlKey = 'accelerated';
+    grid.append(innerA, innerB);
+    sidebar.appendChild(grid);
+    container.appendChild(sidebar);
+
+    const ctx = createTestContext({
+      container,
+      getCurrentLayoutId: () => 'split-right'
+    });
+    const instance = capabilityFactories['demo-profile']({}).mount(
+      { control: sidebar, animation: document.createElement('div') },
+      {},
+      ctx
+    );
+
+    instance.update?.({
+      mode: 'presentation',
+      profile: resolved({
+        controlPanel: 'hidden',
+        readoutPanel: 'docked-bottom',
+        visibleControlKeys: ['preset']
+      })
+    });
+
+    expect(innerA.style.display).toBe('');
+    expect(innerB.style.display).toBe('');
+    instance.dispose();
+  });
+
+  it('hides sibling inner keys when only one child key is listed', () => {
+    const container = document.createElement('div');
+    const sidebar = document.createElement('aside');
+    sidebar.className = 'layout-left-panel';
+    const grid = document.createElement('div');
+    grid.dataset.controlKey = 'action';
+    const step = document.createElement('button');
+    step.dataset.controlKey = 'step';
+    const reset = document.createElement('button');
+    reset.dataset.controlKey = 'reset';
+    grid.append(step, reset);
+    sidebar.appendChild(grid);
+    container.appendChild(sidebar);
+
+    const ctx = createTestContext({
+      container,
+      getCurrentLayoutId: () => 'split-right'
+    });
+    const instance = capabilityFactories['demo-profile']({}).mount(
+      { control: sidebar, animation: document.createElement('div') },
+      {},
+      ctx
+    );
+
+    instance.update?.({
+      mode: 'presentation',
+      profile: resolved({
+        controlPanel: 'hidden',
+        readoutPanel: 'docked-bottom',
+        visibleControlKeys: ['step']
+      })
+    });
+
+    expect(grid.style.display).toBe('');
+    expect(step.style.display).toBe('');
+    expect(reset.style.display).toBe('none');
+    instance.dispose();
+  });
+
+  it('does not reparent a left graph while the control panel stays minimal', () => {
+    const container = document.createElement('div');
+    const sidebar = document.createElement('aside');
+    sidebar.className = 'layout-left-panel';
+    const graph = document.createElement('section');
+    graph.className = 'graph-section';
+    sidebar.appendChild(graph);
+    const animation = document.createElement('div');
+    animation.className = 'animation-slot';
+    container.append(sidebar, animation);
+    container.dataset.hasGraph = 'true';
+
+    const ctx = createTestContext({
+      container,
+      getCurrentLayoutId: () => 'split-right'
+    });
+    const instance = capabilityFactories['demo-profile']({}).mount(
+      { control: sidebar, animation },
+      {},
+      ctx
+    );
+
+    instance.update?.({
+      mode: 'presentation',
+      profile: resolved({
+        controlPanel: 'minimal',
+        readoutPanel: 'overlay',
+        graphPanel: 'visible',
+        visibleControlKeys: ['lambda']
+      })
+    });
+
+    expect(graph.parentElement).toBe(sidebar);
+    expect(graph.classList.contains('is-demo-stage-graph')).toBe(false);
+    instance.dispose();
+  });
+
+  it('reparents a left graph onto the stage when the sidebar is hidden', () => {
+    const container = document.createElement('div');
+    const sidebar = document.createElement('aside');
+    sidebar.className = 'layout-left-panel';
+    const graph = document.createElement('section');
+    graph.className = 'graph-section';
+    sidebar.appendChild(graph);
+    const animation = document.createElement('div');
+    animation.className = 'animation-slot';
+    container.append(sidebar, animation);
+    container.dataset.hasGraph = 'true';
+
+    const ctx = createTestContext({
+      container,
+      getCurrentLayoutId: () => 'split-right'
+    });
+    const instance = capabilityFactories['demo-profile']({}).mount(
+      { control: sidebar, animation },
+      {},
+      ctx
+    );
+
+    instance.update?.({
+      mode: 'presentation',
+      profile: resolved({
+        controlPanel: 'hidden',
+        readoutPanel: 'docked-bottom',
+        graphPanel: 'visible'
+      })
+    });
+
+    expect(graph.parentElement).toBe(animation);
+    expect(graph.classList.contains('is-demo-stage-graph')).toBe(true);
+    expect(animation.classList.contains('is-demo-stage-with-graph')).toBe(true);
     instance.dispose();
   });
 });

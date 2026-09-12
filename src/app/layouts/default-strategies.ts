@@ -24,11 +24,12 @@ export function registerDefaultStrategies(): void {
     return null;
   });
 
-  // 策略 2：场景声明的偏好布局（如果满足约束且允许自动选择）
+  // 策略 2：场景声明的偏好布局（满足视口约束即可；autoSelectable
+  // 只约束策略 3 的自动匹配，避免实验布局抢走其他场景的默认项）
   layoutSelector.register((ctx) => {
     if (!ctx.scenePreference) return null;
     const meta = layoutRegistry.getMetadata(ctx.scenePreference);
-    if (!meta || meta.autoSelectable === false) return null;
+    if (!meta) return null;
     if (!satisfiesConstraints(meta, ctx.viewport, ctx.orientation)) return null;
     return ctx.scenePreference;
   });

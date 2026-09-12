@@ -32,7 +32,7 @@ export function createDopplerScene(
   enableAudio(): void;
   disableAudio(): void;
   setVolume(v: number): void;
-  getReadoutItems(): Array<{ label: string; value: string }>;
+  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
   subscribe(listener: () => void): () => void;
 } {
   const sim = createDopplerSim();
@@ -67,19 +67,44 @@ export function createDopplerScene(
     (params: Partial<DopplerParams>): DopplerParams => sim.setParams(params)
   );
 
-  function getReadoutItems(): Array<{ label: string; value: string }> {
+  function getReadoutItems(): Array<{
+    key: string;
+    label: string;
+    value: string;
+  }> {
     const s = sim.getState();
     return [
-      { label: '发射频率', value: `${s.params.emitFrequency.toFixed(1)} Hz` },
-      { label: '接收频率', value: `${s.receivedFrequency.toFixed(2)} Hz` },
       {
+        key: 'f-emit',
+        label: '发射频率',
+        value: `${s.params.emitFrequency.toFixed(1)} Hz`
+      },
+      {
+        key: 'f-receive',
+        label: '接收频率',
+        value: `${s.receivedFrequency.toFixed(2)} Hz`
+      },
+      {
+        key: 'delta-pct',
         label: '频率变化',
         value: `${s.frequencyChangePct >= 0 ? '+' : ''}${s.frequencyChangePct.toFixed(0)}%`
       },
-      { label: '标准波长 λ₀', value: `${s.wavelengthStandard.toFixed(2)} m` },
-      { label: '前方波长', value: `${s.wavelengthFront.toFixed(2)} m` },
-      { label: '后方波长', value: `${s.wavelengthBack.toFixed(2)} m` },
-      { label: '马赫数', value: `${s.machNumber.toFixed(2)}` }
+      {
+        key: 'lambda-0',
+        label: '标准波长 λ₀',
+        value: `${s.wavelengthStandard.toFixed(2)} m`
+      },
+      {
+        key: 'lambda-front',
+        label: '前方波长',
+        value: `${s.wavelengthFront.toFixed(2)} m`
+      },
+      {
+        key: 'lambda-back',
+        label: '后方波长',
+        value: `${s.wavelengthBack.toFixed(2)} m`
+      },
+      { key: 'mach', label: '马赫数', value: `${s.machNumber.toFixed(2)}` }
     ];
   }
 

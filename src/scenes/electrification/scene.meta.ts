@@ -7,13 +7,15 @@ import type { SceneMeta } from '../types';
 import type { SceneDemoProfile } from '../../platform/demo-profile';
 
 export const demoProfile: SceneDemoProfile = {
-  controlPanel: 'hidden',
-  readoutPanel: 'docked-bottom',
+  lessonTask: 'process',
+  transport: 'hidden',
+  readoutKeys: ['scene', 'next'],
   renderHints: {
     contentScale: 1.6
   },
   interactionHints: {
-    touchTargetMinSize: 48
+    touchTargetMinSize: 48,
+    visibleControlKeys: ['scene', 'step']
   }
 };
 

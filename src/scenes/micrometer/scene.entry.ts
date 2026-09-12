@@ -30,7 +30,8 @@ export function createMicrometerScene(
   setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
   getState(): MicrometerState;
   setParams(params: Partial<MicrometerParams>): MicrometerParams;
-  getReadoutItems(): Array<{ label: string; value: string }>;
+  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  setRevealAnswer(value: boolean): void;
   subscribe(listener: () => void): () => void;
 } {
   const sim = createMicrometerSim({
@@ -51,13 +52,40 @@ export function createMicrometerScene(
     onReadout: options.onReadout
   });
 
-  function getReadoutItems(): Array<{ label: string; value: string }> {
+  let revealed =
+    (options.mode ?? 'normal') !== 'presentation' ||
+    Boolean(options.demoHints?.revealAnswer);
+
+  function getReadoutItems(): Array<{
+    key: string;
+    label: string;
+    value: string;
+  }> {
+    if (!revealed) {
+      return [{ key: 'status', label: '读数', value: '点击「揭示」后显示' }];
+    }
     const s = sim.getState();
     return [
-      { label: '测量读数', value: `${s.reading.toFixed(3)} mm` },
-      { label: '固定刻度', value: `${s.mainScaleReading.toFixed(1)} mm` },
-      { label: '微分筒读数', value: `${s.drumReading.toFixed(1)} 格` },
-      { label: '半毫米线', value: s.hasHalfMm ? '已露出' : '未露出' }
+      {
+        key: 'reading',
+        label: '测量读数',
+        value: `${s.reading.toFixed(3)} mm`
+      },
+      {
+        key: 'main',
+        label: '固定刻度',
+        value: `${s.mainScaleReading.toFixed(1)} mm`
+      },
+      {
+        key: 'drum',
+        label: '微分筒读数',
+        value: `${s.drumReading.toFixed(1)} 格`
+      },
+      {
+        key: 'half-mm',
+        label: '半毫米线',
+        value: s.hasHalfMm ? '已露出' : '未露出'
+      }
     ];
   }
 
@@ -66,12 +94,21 @@ export function createMicrometerScene(
     getState() {
       return sim.getState();
     },
+    setMode(mode: TeachingMode, hints?: DemoRenderHints): void {
+      revealed = mode !== 'presentation' || Boolean(hints?.revealAnswer);
+      base.setMode(mode, hints);
+    },
     setParams(params: Partial<MicrometerParams>): MicrometerParams {
       const result = sim.setParams(params);
       base.renderAndEmit();
       base.notify();
       return result;
     },
-    getReadoutItems
+    getReadoutItems,
+    setRevealAnswer(value: boolean): void {
+      revealed = value;
+      view.setRevealAnswer(value);
+      base.notify();
+    }
   };
 }

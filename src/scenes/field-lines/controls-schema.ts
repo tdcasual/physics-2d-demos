@@ -1,4 +1,5 @@
 import type { ControlsSchema } from '../../platform/controls-schema';
+import { PROBE_N_DEFAULT, PROBE_N_MAX, PROBE_N_MIN } from './scene.sim';
 
 export const fieldLinesControlsSchema: ControlsSchema = {
   sections: [
@@ -20,6 +21,30 @@ export const fieldLinesControlsSchema: ControlsSchema = {
       ]
     },
     {
+      title: '试探',
+      collapsed: false,
+      fields: [
+        {
+          type: 'slider',
+          key: 'n',
+          label: '试探次数',
+          min: PROBE_N_MIN,
+          max: PROBE_N_MAX,
+          step: 1,
+          value: PROBE_N_DEFAULT,
+          unit: '点'
+        },
+        {
+          type: 'hint',
+          key: 'n-hint',
+          lines: [
+            '电场线条数由电荷量决定，滑动只加密试探点。',
+            '点足够密时，E 矢量连成电场线。'
+          ]
+        }
+      ]
+    },
+    {
       title: '电荷控制',
       collapsed: false,
       fields: [
@@ -32,21 +57,6 @@ export const fieldLinesControlsSchema: ControlsSchema = {
             { key: 'add-negative', label: '- 负电荷' },
             { key: 'remove', label: '移除电荷' }
           ]
-        }
-      ]
-    },
-    {
-      title: '线密度',
-      collapsed: true,
-      fields: [
-        {
-          type: 'slider',
-          key: 'density',
-          label: '电场线密度',
-          min: 1,
-          max: 100,
-          step: 1,
-          value: 10
         }
       ]
     },

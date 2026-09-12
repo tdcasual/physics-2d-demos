@@ -17,6 +17,15 @@ export type FieldLinePath = {
   direction: 1 | -1;
 };
 
+/** 试探点：该处的电场矢量 */
+export type FieldProbe = {
+  x: number;
+  y: number;
+  Ex: number;
+  Ey: number;
+  magnitude: number;
+};
+
 export type VisualConfig = {
   chargeRadius: number;
   chargeFontPx: number;

@@ -1,4 +1,7 @@
-import type { TeachingTheme } from '../../../platform/standards';
+import {
+  getRenderTokens,
+  type TeachingTheme
+} from '../../../platform/standards';
 
 /**
  * 微元法场景统一调色板
@@ -49,19 +52,41 @@ export function vtPalette(theme: TeachingTheme): VtPalette {
   };
 }
 
+/** 课堂 token 缩放：合并 responsive × content，并封顶以免 1080P 字号翻倍 */
+export function tokenScale(s: number, cs: number): number {
+  return Math.min(Math.max(0.5, s * Math.min(cs, 1.6)), 1.6);
+}
+
+export function resolveTypeScale(s: number, cs: number) {
+  const rs = getRenderTokens(tokenScale(s, cs)).rightStage;
+  return {
+    titlePx: Math.max(14, Math.round(rs.primaryFontPx * 0.68)),
+    labelPx: Math.max(12, Math.round(rs.secondaryFontPx * 0.58)),
+    tickPx: Math.max(11, Math.round(rs.secondaryFontPx * 0.52)),
+    stroke: Math.max(1.2, rs.majorStrokePx * 0.42),
+    minorStroke: Math.max(1, rs.minorStrokePx * 0.38),
+    marker: Math.max(4, rs.markerRadiusPx * 0.42)
+  };
+}
+
 /** 字体（含响应式与演示放大），返回可直接用于 ctx.font 的像素值 */
 export function fontPx(base: number, s: number, cs: number): number {
-  return Math.max(9, Math.round(base * s * cs));
+  const t = resolveTypeScale(s, cs);
+  if (base >= 14) return t.titlePx;
+  if (base >= 12) return t.labelPx;
+  return t.tickPx;
 }
 
 /** 线宽（演示放大幅度更柔和） */
 export function lineW(base: number, s: number, cs: number): number {
-  return Math.max(1, base * s * Math.min(cs, 1.6));
+  const t = resolveTypeScale(s, cs);
+  return Math.max(1, t.stroke * (base / 2.8));
 }
 
 /** 标记半径 */
 export function markR(base: number, s: number, cs: number): number {
-  return Math.max(2, base * s * cs);
+  const t = resolveTypeScale(s, cs);
+  return Math.max(2, t.marker * (base / 6));
 }
 
 /** 通用字体族 */

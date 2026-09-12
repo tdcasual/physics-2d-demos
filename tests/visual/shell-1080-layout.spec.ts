@@ -49,7 +49,7 @@ for (const scene of sceneIds) {
   test(`${scene} avoids duplicate desktop sidebar toggles`, async ({
     page
   }) => {
-    const path = scenePage(scene);
+    const path = scenePage(scene, '?layout=split-right');
     await page.goto(path);
     const visibleSidebarToggles = await page
       .locator('.sidebar-toggle')

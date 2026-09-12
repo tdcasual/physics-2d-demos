@@ -16,7 +16,7 @@ for (const scene of sceneIds) {
     page
   }) => {
     await page.setViewportSize({ width: 320, height: 568 });
-    const path = scenePage(scene);
+    const path = scenePage(scene, '?layout=mobile-stack');
     await page.goto(path, {
       waitUntil: 'domcontentloaded',
       timeout: 30_000

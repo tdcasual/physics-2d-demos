@@ -6,6 +6,10 @@ import type {
   Theme,
   SceneContainerEvents
 } from './types';
+import {
+  resolveDemoProfile,
+  type DemoRenderHints
+} from '../../platform/demo-profile';
 
 type Mode = 'normal' | 'presentation';
 type DemoProfileUpdate = CapabilityEvents['modechange'];
@@ -55,8 +59,12 @@ export function buildCapabilityContext(
         : 'normal',
     setMode: (mode: Mode) => {
       container.setAttribute('data-mode', mode);
-      const profile =
+      const raw =
         mode === 'presentation' ? scene?.getDemoProfile?.() || null : null;
+      const profile =
+        mode === 'presentation' && raw && scene?.id
+          ? resolveDemoProfile(raw, { sceneId: scene.id })
+          : null;
       const payload = { mode, profile };
       emit('layout:mode', payload);
       container.dispatchEvent(
@@ -66,7 +74,14 @@ export function buildCapabilityContext(
         })
       );
       updateDemoProfileInstances(payload);
-      scene?.setMode?.(mode);
+      if (mode === 'presentation' && profile) {
+        const withHints = scene as unknown as {
+          setMode?(m: Mode, hints?: DemoRenderHints): void;
+        };
+        withHints?.setMode?.(mode, profile.renderHints);
+      } else {
+        scene?.setMode?.(mode);
+      }
     },
     switchLayout,
     getCurrentLayoutId,

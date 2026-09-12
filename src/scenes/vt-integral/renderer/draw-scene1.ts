@@ -1,15 +1,8 @@
-import type { VtIntegralSnapshot } from '../scene.sim';
+import { vAt, type VtIntegralSnapshot } from '../scene.sim';
 import type { DrawContext } from './types';
 import { drawAxis } from './draw-axis';
 import { pathRoundRect } from '../../../core/draw-primitives';
 import { vtPalette, fontPx, lineW, FONT_FAMILY } from './palette';
-
-const METHOD_LABEL: Record<string, string> = {
-  left: '左端点',
-  mid: '中点',
-  right: '右端点',
-  trap: '梯形'
-};
 
 // 黎曼矩形渐变缓存：每个矩形的渐变仅依赖 (n, time, method, 画布几何, theme)，
 // 命中缓存时复用，参数或尺寸变化时整体重建
@@ -24,7 +17,7 @@ export function drawScene1(
   snapshot: VtIntegralSnapshot
 ): void {
   const { ctx, width, height, responsiveScale, contentScale } = context;
-  const { params, metrics } = snapshot;
+  const { params } = snapshot;
   const P = vtPalette(context.theme);
   const s = responsiveScale;
   const cs = contentScale;
@@ -36,11 +29,21 @@ export function drawScene1(
   const axisW = right - left;
   const axisH = bottom - top;
 
-  const vMax = 1 + 0.8 * params.time;
-  const yMax = vMax * 1.15;
-  const vFn = (t: number) => 1 + 0.8 * t;
+  const samples = 48;
+  let vPeak = 0.2;
+  let vFloor = 0;
+  for (let i = 0; i <= samples; i += 1) {
+    const v = vAt(params.curveKind, (i / samples) * params.time);
+    vPeak = Math.max(vPeak, v);
+    vFloor = Math.min(vFloor, v);
+  }
+  const yMax = Math.max(0.4, vPeak) * 1.15;
+  const yMin = Math.min(0, vFloor) * 1.15;
+  const vFn = (t: number) => vAt(params.curveKind, t);
   const toX = (t: number) => left + (t / params.time) * axisW;
-  const toY = (v: number) => bottom - (v / yMax) * axisH;
+  const ySpan = yMax - yMin;
+  const toY = (v: number) => bottom - ((v - yMin) / ySpan) * axisH;
+  const yAxis = toY(0);
 
   drawAxis(context, {
     x: left,
@@ -49,7 +52,7 @@ export function drawScene1(
     height: axisH,
     xMin: 0,
     xMax: params.time,
-    yMin: 0,
+    yMin,
     yMax,
     xLabel: 't / s',
     yLabel: 'v / (m·s⁻¹)'
@@ -62,7 +65,7 @@ export function drawScene1(
   ctx.font = `600 ${fontPx(14, s, cs)}px ${FONT_FAMILY}`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText('以直代曲 · 矩形逼近 v-t 图面积', left + 2 * s, top - 14 * s);
+  ctx.fillText('v–t 面积 · 矩形逼近位移', left + 2 * s, top - 14 * s);
 
   // 真实面积（曲线下）渐变填充
   const fillGrad = ctx.createLinearGradient(0, top, 0, bottom);
@@ -70,12 +73,12 @@ export function drawScene1(
   fillGrad.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = fillGrad;
   ctx.beginPath();
-  ctx.moveTo(left, bottom);
+  ctx.moveTo(left, yAxis);
   for (let i = 0; i <= 200; i += 1) {
     const t = (i / 200) * params.time;
     ctx.lineTo(toX(t), toY(vFn(t)));
   }
-  ctx.lineTo(toX(params.time), bottom);
+  ctx.lineTo(toX(params.time), yAxis);
   ctx.closePath();
   ctx.fill();
 
@@ -83,7 +86,7 @@ export function drawScene1(
   const n = params.rects;
   const dt = params.time / n;
   const slotW = axisW / n;
-  const barW = slotW * (n > 30 ? 1 : 0.9);
+  const barW = slotW;
 
   const rectValue = (i: number): number => {
     const t0 = i * dt;
@@ -95,9 +98,15 @@ export function drawScene1(
   };
 
   // 每个矩形的渐变仅几何不同，按 (n, time, method, 画布几何, theme) 缓存复用
-  const gradKey = [n, params.time, params.method, width, height, P.isDark].join(
-    '|'
-  );
+  const gradKey = [
+    n,
+    params.time,
+    params.method,
+    params.curveKind,
+    width,
+    height,
+    P.isDark
+  ].join('|');
   if (!rectGradCache || rectGradCache.key !== gradKey) {
     const gradients: CanvasGradient[] = [];
     for (let i = 0; i < n; i += 1) {
@@ -111,18 +120,19 @@ export function drawScene1(
   const rectGrads = rectGradCache.gradients;
 
   for (let i = 0; i < n; i += 1) {
-    const x0 = left + i * slotW + (slotW - barW) * 0.5;
-    const yTop = toY(rectValue(i));
-    const hPx = bottom - yTop;
+    const x0 = left + i * slotW;
+    const yVal = toY(rectValue(i));
+    const yTop = Math.min(yAxis, yVal);
+    const hPx = Math.max(1, Math.abs(yAxis - yVal));
 
     ctx.fillStyle = rectGrads[i];
     ctx.fillRect(x0, yTop, barW, hPx);
 
     ctx.strokeStyle = P.approx;
-    ctx.lineWidth = lineW(1.4, s, cs);
+    ctx.lineWidth = lineW(1.2, s, cs);
     ctx.beginPath();
-    ctx.moveTo(x0, yTop);
-    ctx.lineTo(x0 + barW, yTop);
+    ctx.moveTo(x0, yVal);
+    ctx.lineTo(x0 + barW, yVal);
     ctx.stroke();
   }
 
@@ -182,39 +192,6 @@ export function drawScene1(
   ctx.strokeRect(px0 + 12 * s, rowY2 - 5 * s, 18 * s, 10 * s);
   ctx.fillStyle = P.text;
   ctx.fillText('矩形近似', px0 + 38 * s, rowY2);
-
-  // ── 收敛数据徽章（左下）──
-  const badgeFont = fontPx(11, s, cs);
-  const relPct = (metrics.relErr * 100).toFixed(2);
-  const lines = [
-    `分割 n = ${n}（${METHOD_LABEL[params.method] ?? params.method}）`,
-    `近似面积 = ${metrics.rectArea.toFixed(3)}`,
-    `真实面积 = ${metrics.trueArea.toFixed(3)}`,
-    `相对误差 = ${relPct}%`
-  ];
-  const bLineH = Math.max(17, 20 * s * cs);
-  const bPad = 12 * s;
-  let bW = 0;
-  ctx.font = `${badgeFont}px ${FONT_FAMILY}`;
-  for (const ln of lines) bW = Math.max(bW, ctx.measureText(ln).width);
-  bW += bPad * 2;
-  const bH = bLineH * lines.length + bPad * 1.4;
-  const bx = left + 8 * s;
-  const by = bottom - bH - 8 * s;
-  ctx.fillStyle = P.isDark ? 'rgba(15,23,42,0.72)' : 'rgba(255,255,255,0.82)';
-  pathRoundRect(ctx, bx, by, bW, bH, 8 * s);
-  ctx.fill();
-  ctx.strokeStyle = P.isDark
-    ? 'rgba(148,163,184,0.25)'
-    : 'rgba(100,116,139,0.2)';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'middle';
-  lines.forEach((ln, idx) => {
-    ctx.fillStyle = idx === 3 ? P.accent : P.textSecondary;
-    ctx.fillText(ln, bx + bPad, by + bPad * 0.7 + bLineH * (idx + 0.5));
-  });
 
   ctx.restore();
 }

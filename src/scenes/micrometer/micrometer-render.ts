@@ -65,6 +65,7 @@ export type SpiralMicrometerDrawOptions = {
   theme: TeachingTheme;
   /** 演示模式内容放大系数（normal=1） */
   contentScale?: number;
+  fontScale?: number;
   /** 是否绘制底部大读数面板（嵌入式仪器可关闭） */
   showReading?: boolean;
 };
@@ -89,12 +90,15 @@ function roundRect(
 export function drawSpiralMicrometer(o: SpiralMicrometerDrawOptions): void {
   const { ctx, region, state, theme } = o;
   const contentScale = o.contentScale ?? 1;
+  const fontScale = o.fontScale ?? 1;
   const showReading = o.showReading ?? true;
   const P = palette(theme);
 
-  // 区域自适应缩放（短边 / 参考值，clamp 0.3..1.5）
-  const s = Math.max(0.3, Math.min(1.5, Math.min(region.w, region.h) / 360));
-  const fs = s * contentScale; // 字体/读数放大
+  const s = Math.max(
+    0.3,
+    Math.min(3.2, Math.min(region.w, region.h) / 300) * contentScale
+  );
+  const fs = Math.min(s, 1.6) * fontScale;
 
   const { w, h } = region;
   const ox = region.x;

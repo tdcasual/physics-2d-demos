@@ -74,10 +74,11 @@ describe('registerDefaultStrategies', () => {
     expect(result).toBe('split-right');
   });
 
-  it('strategy 2: should return null if scene preference not autoSelectable', () => {
+  it('strategy 2: should honor scene preference even if not autoSelectable', () => {
     vi.mocked(layoutRegistry.getMetadata).mockReturnValue({
       id: 'legacy',
-      autoSelectable: false
+      autoSelectable: false,
+      constraints: {}
     } as ReturnType<typeof layoutRegistry.getMetadata>);
 
     registerDefaultStrategies();
@@ -88,7 +89,7 @@ describe('registerDefaultStrategies', () => {
       viewport: { width: 1200, height: 800 },
       orientation: 'landscape'
     } as Parameters<typeof strategy2>[0]);
-    expect(result).toBeNull();
+    expect(result).toBe('legacy');
   });
 
   it('strategy 2: should return null if scene preference not in registry', () => {

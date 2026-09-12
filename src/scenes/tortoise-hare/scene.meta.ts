@@ -2,10 +2,13 @@ import type { SceneMeta } from '../types';
 import type { SceneDemoProfile } from '../../platform/demo-profile';
 
 const demoProfile: SceneDemoProfile = {
-  controlPanel: 'collapsed',
-  readoutPanel: 'docked-bottom',
+  lessonTask: 'process',
+  readoutKeys: ['t', 'xa', 'xb'],
   renderHints: { contentScale: 1.6 },
-  interactionHints: { touchTargetMinSize: 48 }
+  interactionHints: {
+    touchTargetMinSize: 48,
+    visibleControlKeys: ['preset']
+  }
 };
 
 export const tortoiseHareMeta: SceneMeta = {

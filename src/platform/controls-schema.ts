@@ -44,6 +44,7 @@ export type ControlField =
       type: 'button';
       key: string;
       label: string;
+      presentationLabel?: string;
       variant?: 'primary' | 'secondary' | 'danger';
     }
   | {
@@ -57,7 +58,12 @@ export type ControlField =
       key: string;
       label?: string;
       columns?: 2 | 3 | 4;
-      presets: Array<{ id: string; label: string; desc?: string }>;
+      presets: Array<{
+        id: string;
+        label: string;
+        desc?: string;
+        presentationLabel?: string;
+      }>;
       initialActive?: string;
     }
   | {
@@ -81,7 +87,12 @@ export type ControlField =
       key: string;
       label?: string;
       columns?: 1 | 2 | 3;
-      buttons: Array<{ key: string; label: string; desc?: string }>;
+      buttons: Array<{
+        key: string;
+        label: string;
+        desc?: string;
+        presentationLabel?: string;
+      }>;
     }
   | {
       type: 'hint';

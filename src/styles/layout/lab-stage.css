@@ -1,0 +1,337 @@
+/* Lab-stage: animation on top, controls below, floating data/graph */
+
+.lab-stage-layout {
+  height: 100vh;
+  height: 100dvh;
+  background: var(--bg-primary, #f8fafc);
+  color: var(--text-primary);
+}
+
+.lab-stage-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
+.lab-stage-anim {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 220px;
+  overflow: hidden;
+}
+
+.lab-stage-slot {
+  width: 100%;
+  height: 100%;
+  min-height: 160px;
+  box-sizing: border-box;
+}
+
+.lab-stage-slot canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.lab-stage-toolbar {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  z-index: 30;
+  display: flex;
+  gap: 0.4rem;
+}
+
+.lab-control-section {
+  flex: 0 0 auto;
+  max-height: 26%;
+  overflow: auto;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-secondary, var(--bg-card));
+}
+
+.lab-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.3rem 0.75rem;
+}
+
+.lab-section-title {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.lab-control-slot {
+  padding: 0.25rem 0.6rem 0.45rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  align-content: start;
+  gap: 0.4rem;
+}
+
+.lab-control-slot[data-control-columns='auto'] > [data-span='full'] {
+  grid-column: 1 / -1;
+}
+
+.lab-control-slot [data-testid='control-card'],
+.lab-control-slot .control-card {
+  margin: 0;
+}
+
+.lab-float {
+  position: absolute;
+  z-index: 20;
+  width: min(380px, calc(100% - 1.5rem));
+  max-height: 52%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: var(--shadow-md, 0 8px 24px rgba(15, 23, 42, 0.12));
+  overflow: hidden;
+}
+
+.lab-float-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: nwse-resize;
+  z-index: 2;
+}
+
+.lab-float-resize::after {
+  content: '';
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--text-secondary);
+  border-bottom: 2px solid var(--text-secondary);
+}
+
+.lab-float-data {
+  top: auto;
+  left: auto;
+  right: 18rem;
+  bottom: 13.25rem;
+  width: min(32.5rem, calc(100% - 20rem));
+  height: 13.75rem;
+  max-height: none;
+}
+
+.lab-float-graph {
+  right: 0.75rem;
+  bottom: 0.75rem;
+  width: min(40rem, calc(100% - 1.5rem));
+  height: min(20rem, 40%);
+  max-height: 42%;
+}
+
+.lab-float-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0.6rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  cursor: move;
+}
+
+.lab-float-title {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.lab-float-fold {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.lab-float-body {
+  min-height: 0;
+  overflow: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.lab-plot-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 0 0 auto;
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.lab-plot-toolbar button {
+  border: 1px solid var(--border-color);
+  background: var(--bg-card, #fff);
+  color: var(--text-primary);
+  border-radius: 6px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.lab-plot-toolbar button[aria-pressed='true'] {
+  border-color: var(--accent-primary, #0f766e);
+  background: color-mix(
+    in srgb,
+    var(--accent-primary, #0f766e) 14%,
+    var(--bg-card, #fff)
+  );
+}
+
+.lab-plot-toolbar button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.lab-plot-dirty {
+  margin-left: auto;
+  font-size: 0.72rem;
+  color: var(--warning, #b45309);
+}
+
+.lab-stage-layout .lab-float .mobile-tab-panel {
+  position: relative;
+  inset: auto;
+  padding: 0.5rem;
+  overflow: auto;
+}
+
+.lab-stage-layout .lab-float .mobile-tab-panel.active {
+  min-height: 140px;
+}
+
+.lab-data-slot,
+.lab-readout-slot {
+  min-height: 0;
+  height: auto;
+}
+
+.lab-readout-slot:empty {
+  display: none;
+}
+
+.lab-graph-slot {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 0.5rem;
+  min-height: 160px;
+  flex: 1;
+  height: auto;
+}
+
+/* Scene-provided graph cells must participate in the floating panel's flex
+   sizing just like they do in split-right and mobile-stack layouts. */
+.lab-graph-slot > .graph-cell {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.lab-graph-slot .graph-cell-body {
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.lab-graph-slot canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.lab-float.is-collapsed {
+  height: auto !important;
+  min-height: 0 !important;
+  width: max-content !important;
+  max-width: min(16rem, calc(100% - 1rem));
+}
+
+.lab-float.is-collapsed .lab-float-body,
+.lab-float.is-collapsed .lab-float-resize {
+  display: none;
+}
+
+.lab-float.is-collapsed .lab-float-header {
+  border-bottom: none;
+  cursor: move;
+}
+
+/* 1080P 演示：控制条压成底栏，舞台吃满；悬浮表/图由 lab-stage.ts 收成标题条 */
+.lab-stage-layout.teaching-demo[data-mode='presentation'] .lab-control-section {
+  max-height: 8.5rem;
+}
+
+.lab-stage-layout.teaching-demo[data-mode='presentation']
+  .lab-control-section.is-collapsed-demo {
+  max-height: 0;
+  overflow: hidden;
+  border-top-width: 0;
+  padding: 0;
+}
+
+.lab-stage-layout.teaching-demo[data-mode='presentation'] .lab-control-slot {
+  padding-top: 0.1rem;
+  gap: 0.25rem;
+}
+
+.lab-stage-layout.teaching-demo[data-mode='presentation'] .lab-section-header {
+  padding-top: 0.15rem;
+  padding-bottom: 0.1rem;
+}
+
+@media (max-width: 720px) {
+  .lab-stage-toolbar {
+    top: 3.75rem;
+  }
+
+  .lab-float-data,
+  .lab-float-graph {
+    left: 0.5rem;
+    right: 0.5rem;
+    width: auto;
+  }
+
+  .lab-float-data {
+    top: auto;
+    bottom: calc(38% + 0.35rem);
+    height: auto;
+    max-height: 28%;
+  }
+
+  .lab-float-graph {
+    bottom: calc(38% + 0.35rem);
+    height: min(16rem, 32%);
+  }
+
+  .lab-control-section {
+    max-height: 32%;
+  }
+}

@@ -1,11 +1,16 @@
-import type { TeachingMode, TeachingTheme } from '../../platform/standards';
+import {
+  getRenderTokens,
+  type TeachingMode,
+  type TeachingTheme
+} from '../../platform/standards';
 import { sizeCanvasToFill } from '../../core/canvas-sizing';
 import { createTransitionTracker } from '../../core/transition-tracker';
 import { Colors, alpha } from '../../core/colors';
 import type { VtIntegralSnapshot } from './scene.sim';
 import type { DrawContext } from './renderer/types';
+import { curveY } from './scene.sim';
 import { drawScene1 } from './renderer/draw-scene1';
-import { drawScene2 } from './renderer/draw-scene2';
+import { drawScene2, scene2Layout } from './renderer/draw-scene2';
 import { drawScene3 } from './renderer/draw-scene3';
 
 import type { DemoRenderHints } from '../../platform/demo-profile';
@@ -38,6 +43,8 @@ export function createVtIntegralView(
   let canvasWidth = 800;
   let canvasHeight = 600;
   let responsiveScale = 1;
+  let onPointDrag: ((id: 'A' | 'B', x: number) => void) | null = null;
+  let dragging: 'A' | 'B' | null = null;
   const sceneTransition = createTransitionTracker(250);
   // 自驱动补帧：暂停/静态场景下也推进过渡动画至 alpha=1，避免画面停在淡化中途帧
   let transitionRaf: number | null = null;
@@ -89,6 +96,14 @@ export function createVtIntegralView(
 
       const contentScale =
         mode === 'presentation' ? (hints?.contentScale ?? 1.5) : 1;
+      const classroom = getRenderTokens(
+        Math.min(responsiveScale * Math.min(contentScale, 1.6), 1.6)
+      );
+      if (canvas) {
+        canvas.dataset.tokenPrimary = String(
+          classroom.rightStage.primaryFontPx
+        );
+      }
 
       renderer(
         {
@@ -109,6 +124,98 @@ export function createVtIntegralView(
       if (sceneTransition.isTransitioning) driveTransition();
     }
   }
+
+  function canvasLocal(e: PointerEvent): { x: number; y: number } | null {
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  }
+
+  function hitPoint(px: number, py: number): 'A' | 'B' | null {
+    if (!snapshot || snapshot.params.scene !== 'scene2') return null;
+    const layout = scene2Layout(
+      canvasWidth,
+      canvasHeight,
+      responsiveScale,
+      snapshot.params.curveAmplitude
+    );
+    const amp = snapshot.params.curveAmplitude;
+    const a = {
+      x: layout.toX(snapshot.params.pointA),
+      y: layout.toY(curveY(snapshot.params.pointA, amp))
+    };
+    const b = {
+      x: layout.toX(snapshot.params.pointB),
+      y: layout.toY(curveY(snapshot.params.pointB, amp))
+    };
+    const dA = Math.hypot(px - a.x, py - a.y);
+    const dB = Math.hypot(px - b.x, py - b.y);
+    const r = layout.hitR;
+    if (dA <= r || dB <= r) {
+      return dA <= dB ? 'A' : 'B';
+    }
+    return null;
+  }
+
+  function paramFromX(px: number): number {
+    if (!snapshot) return 0;
+    const layout = scene2Layout(
+      canvasWidth,
+      canvasHeight,
+      responsiveScale,
+      snapshot.params.curveAmplitude
+    );
+    const span = layout.right - layout.left;
+    if (span <= 1e-6) return 0;
+    return Math.max(0, Math.min(1, (px - layout.left) / span));
+  }
+
+  function handlePointerDown(e: PointerEvent): void {
+    const local = canvasLocal(e);
+    if (!local || !canvas) return;
+    const hit = hitPoint(local.x, local.y);
+    if (!hit) return;
+    dragging = hit;
+    canvas.setPointerCapture(e.pointerId);
+    canvas.style.cursor = 'grabbing';
+    e.preventDefault();
+  }
+
+  function handlePointerMove(e: PointerEvent): void {
+    const local = canvasLocal(e);
+    if (!local || !canvas) return;
+    if (dragging) {
+      onPointDrag?.(dragging, paramFromX(local.x));
+      return;
+    }
+    canvas.style.cursor = hitPoint(local.x, local.y) ? 'grab' : 'default';
+  }
+
+  function handlePointerUp(e: PointerEvent): void {
+    dragging = null;
+    if (!canvas) return;
+    const local = canvasLocal(e);
+    canvas.style.cursor =
+      local && hitPoint(local.x, local.y) ? 'grab' : 'default';
+  }
+
+  function attachEvents(): void {
+    if (!canvas) return;
+    canvas.addEventListener('pointerdown', handlePointerDown);
+    canvas.addEventListener('pointermove', handlePointerMove);
+    canvas.addEventListener('pointerup', handlePointerUp);
+    canvas.addEventListener('pointercancel', handlePointerUp);
+  }
+
+  function detachEvents(): void {
+    if (!canvas) return;
+    canvas.removeEventListener('pointerdown', handlePointerDown);
+    canvas.removeEventListener('pointermove', handlePointerMove);
+    canvas.removeEventListener('pointerup', handlePointerUp);
+    canvas.removeEventListener('pointercancel', handlePointerUp);
+  }
+
+  attachEvents();
 
   function driveTransition(): void {
     if (transitionRaf !== null) return;
@@ -137,7 +244,11 @@ export function createVtIntegralView(
       theme = nextTheme;
       if (snapshot) draw(snapshot);
     },
+    setOnPointDrag(cb: (id: 'A' | 'B', x: number) => void): void {
+      onPointDrag = cb;
+    },
     dispose(): void {
+      detachEvents();
       if (
         transitionRaf !== null &&
         typeof cancelAnimationFrame !== 'undefined'
@@ -146,6 +257,7 @@ export function createVtIntegralView(
         transitionRaf = null;
       }
       snapshot = null;
+      onPointDrag = null;
       canvas = null;
       ctx = null;
     }

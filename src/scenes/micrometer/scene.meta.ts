@@ -6,14 +6,15 @@ import type { SceneMeta } from '../../platform/scene-contract';
 import type { SceneDemoProfile } from '../../platform/demo-profile';
 
 const demoProfile: SceneDemoProfile = {
-  controlPanel: 'minimal',
-  readoutPanel: 'overlay',
+  lessonTask: 'instrument',
   renderHints: {
-    contentScale: 1.5
+    contentScale: 1.5,
+    fontScale: 1.2,
+    revealAnswer: false
   },
   interactionHints: {
     touchTargetMinSize: 48,
-    visibleControlKeys: ['preset', 'reading']
+    visibleControlKeys: ['preset', 'reveal']
   }
 };
 

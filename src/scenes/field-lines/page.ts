@@ -5,7 +5,7 @@ import { fieldLinesMeta } from './scene.meta';
 import { createFieldLinesScene } from './scene.entry';
 import { fieldLinesControlsSchema } from './controls-schema';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
-import type { FieldLinesScene } from './scene.sim';
+import { PROBE_N_DEFAULT, type FieldLinesScene } from './scene.sim';
 
 function sceneLabel(scene: FieldLinesScene): string {
   if (scene === 'single') return '单个电荷';
@@ -94,15 +94,17 @@ bootScenePage({
     mount,
     scene,
     onStatus,
-    scheduleRender = () => scene.render()
+    scheduleRender = () => scene.render(),
+    writeParam = () => {}
   }) => {
     const renderer = renderSchema({
       mount,
       schema: fieldLinesControlsSchema,
       onChange: (key, value) => {
-        if (key === 'density') {
-          scene.setDensity(value as number);
+        if (key === 'n') {
+          scene.setN(value as number);
           scheduleRender();
+          writeParam(key, value);
         } else if (key === 'q1' || key === 'q2') {
           // Values are updated in the input; apply happens via button
         }
@@ -139,12 +141,20 @@ bootScenePage({
           onStatus?.(`设置电荷 Q₁=${q1}, Q₂=${q2}`);
         } else if (key === 'reset') {
           scene.reset?.();
+          renderer.setValue('n', PROBE_N_DEFAULT);
+          scheduleRender();
           onStatus?.('已重置场景');
         }
       }
     });
 
     return {
+      setValue(key: string, value: number | string) {
+        renderer.setValue(key, value);
+      },
+      setActive(key: string, value: string) {
+        renderer.setActive(key, value);
+      },
       dispose: () => {
         renderer.dispose();
       }

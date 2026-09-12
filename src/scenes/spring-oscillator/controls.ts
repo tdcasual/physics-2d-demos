@@ -58,6 +58,7 @@ export function createSpringOscillatorControls(
     headerActions: [addBtn],
     span: 'full'
   });
+  listCard.element.dataset.controlKey = 'oscillators';
 
   const listContainer = document.createElement('div');
   listContainer.className = 'flex flex-col gap-[2px]';
@@ -81,6 +82,7 @@ export function createSpringOscillatorControls(
 
   // ===== 2. 预设场景卡片 =====
   const presetCard = createControlCard('相位演示', { defaultCollapsed: false });
+  presetCard.element.dataset.controlKey = 'preset';
 
   // 精确复刻 V3 网格布局
   const presetContainer = document.createElement('div');

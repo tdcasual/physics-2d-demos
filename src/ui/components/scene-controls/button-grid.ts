@@ -9,7 +9,9 @@ import { withDispose, type DisposableElement } from './types';
 
 export function createButtonGrid(
   buttons: Array<{
+    key?: string;
     label: string;
+    presentationLabel?: string;
     desc?: string;
     onClick: () => void;
   }>,
@@ -44,10 +46,15 @@ export function createButtonGrid(
     button.addEventListener('mouseenter', onEnter);
     button.addEventListener('mouseleave', onLeave);
 
+    if (btn.key) button.dataset.controlKey = btn.key;
     const labelSpan = document.createElement('span');
     labelSpan.className = 'text-xs font-semibold';
     labelSpan.style.color = 'var(--text-primary)';
     labelSpan.textContent = btn.label;
+    labelSpan.dataset.standardLabel = btn.label;
+    if (btn.presentationLabel) {
+      labelSpan.dataset.presentationLabel = btn.presentationLabel;
+    }
 
     if (btn.desc) {
       const descSpan = document.createElement('span');

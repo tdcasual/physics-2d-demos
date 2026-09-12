@@ -75,6 +75,8 @@ export type ScenePageOptions<TScene extends SceneInstance = SceneInstance> = {
   layoutConfig?: Record<string, unknown>;
   /** 演示配置（默认从 meta.demoProfile 读取） */
   demoProfile?: SceneDemoProfile;
+  /** Esc 等走容器 setMode，避免 Adapter 再派一次无 profile 的事件 */
+  onSetMode?: (mode: 'normal' | 'presentation') => void;
   /** 创建场景实例 */
   createScene: (opts: StandardSceneCreateParams) => TScene;
   /** 创建控制面板（可选） */

@@ -53,6 +53,22 @@ describe('SchemaRenderer', () => {
     expect(mount.querySelector('[data-control-key="speed"]')).not.toBeNull();
   });
 
+  it('stamps a button field key only on the wrapper', () => {
+    const mount = createMount();
+    const schema: ControlsSchema = {
+      sections: [
+        {
+          title: '读数',
+          fields: [{ type: 'button', key: 'reveal', label: '显示读数' }]
+        }
+      ]
+    };
+    renderSchema({ mount, schema, onChange: vi.fn(), onAction: vi.fn() });
+    const keyed = mount.querySelectorAll('[data-control-key="reveal"]');
+    expect(keyed).toHaveLength(1);
+    expect(keyed[0].querySelector('button')).not.toBeNull();
+  });
+
   it('should render slider and call onChange', () => {
     const mount = createMount();
     const onChange = vi.fn();

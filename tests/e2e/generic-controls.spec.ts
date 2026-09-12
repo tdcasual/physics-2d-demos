@@ -517,7 +517,9 @@ test.describe('Generic Control Response (Mobile)', () => {
         `[${sceneId} mobile] ${raw.sliders.length} sliders, ${buttons.length} buttons, ${raw.checkboxes.length} checkboxes`
       );
 
-      const area = '.mobile-control-slot';
+      // A mobile viewport does not imply MobileStackLayout: scenes may declare
+      // another responsive layout (for example ticker-tape's lab-stage).
+      const area = '.control-slot';
 
       expect(
         raw.sliders.length + buttons.length + raw.checkboxes.length,

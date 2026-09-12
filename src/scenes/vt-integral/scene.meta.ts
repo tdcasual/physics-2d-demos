@@ -7,13 +7,23 @@ import type { SceneMeta } from '../types';
 import type { SceneDemoProfile } from '../../platform/demo-profile';
 
 export const demoProfile: SceneDemoProfile = {
-  controlPanel: 'collapsed',
-  readoutPanel: 'docked-bottom',
+  lessonTask: 'lecture',
+  transport: 'hidden',
+  readoutKeys: [
+    'scene',
+    'rect-area',
+    'true-area',
+    'line',
+    'curve',
+    'poly',
+    'circle'
+  ],
   renderHints: {
-    contentScale: 1.7
+    contentScale: 1.5
   },
   interactionHints: {
-    touchTargetMinSize: 48
+    touchTargetMinSize: 48,
+    visibleControlKeys: ['scene', 'preset', 'n']
   }
 };
 
@@ -37,7 +47,7 @@ export const vtIntegralMeta: SceneMeta = {
   },
   testProfile: {
     hasGraph: false,
-    hasTransport: true,
+    hasTransport: false,
     supportsPresentation: true
   },
   demoProfile

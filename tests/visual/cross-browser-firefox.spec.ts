@@ -53,7 +53,7 @@ function canvasSignature(): string | null {
 
 test('firefox field-lines slider repaints canvas', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  // field-lines 的「电场线密度」滑块在 onChange 中立即 setDensity + render，
+  // field-lines 的「试探次数」滑块在 onChange 中立即 setN + render，
   // 暂停状态下也会重绘 canvas（projectile 等场景暂停时改参数不重绘，不适合本断言）
   await page.goto(`http://127.0.0.1:${PORT}${scenePage('field-lines')}`, {
     waitUntil: 'domcontentloaded'
@@ -83,11 +83,7 @@ test('firefox field-lines slider repaints canvas', async ({ page }) => {
     return false;
   });
 
-  // 「线密度」section 默认折叠，先展开（折叠开关只响应卡片 toggle 按钮）
-  const densityCard = page.locator('[data-control-section="线密度"]');
-  await densityCard.getByRole('button', { name: '展开' }).click();
-
-  const slider = page.getByRole('slider', { name: '电场线密度' });
+  const slider = page.getByRole('slider', { name: '试探次数' });
   await expect(slider).toBeVisible();
 
   const before = await page.evaluate(canvasSignature);

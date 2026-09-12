@@ -10,9 +10,9 @@ const VT_SCENES: { value: VtScene; label: string; desc: string }[] = [
   {
     value: 'scene1',
     label: 'v-t面积',
-    desc: '矩形逼近 v-t 图面积（以直代曲）'
+    desc: '矩形逼近 v-t 图面积'
   },
-  { value: 'scene2', label: '化曲为直', desc: '折线逼近曲线弧长' },
+  { value: 'scene2', label: '化曲为直', desc: '拖动 A、B 比较直线与轨迹' },
   { value: 'scene3', label: '割圆术', desc: '内接多边形逼近圆周' }
 ] as const;
 

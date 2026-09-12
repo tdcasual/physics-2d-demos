@@ -46,7 +46,7 @@ export function createDoubleSlitScene(
   setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
   getState(): DoubleSlitState;
   setParams(params: Partial<DoubleSlitParams>): DoubleSlitParams;
-  getReadoutItems(): Array<{ label: string; value: string }>;
+  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
   getStepInfo(): { id: number; title: string; desc: string };
   subscribe(listener: () => void): () => void;
 } {
@@ -327,7 +327,11 @@ export function createDoubleSlitScene(
     lastStep = state.params.step;
   }
 
-  function getReadoutItems(): Array<{ label: string; value: string }> {
+  function getReadoutItems(): Array<{
+    key: string;
+    label: string;
+    value: string;
+  }> {
     const s = sim.getState();
     const d = s.params.slitDistance;
     const step = s.params.step;
@@ -340,10 +344,11 @@ export function createDoubleSlitScene(
           : '（无滤光片）')
       : `单色光 ${s.params.lambda} nm`;
     const items = [
-      { label: '当前步骤', value: `${step} / 6` },
-      { label: '光源', value: lightLabel },
-      { label: '双缝间距 d', value: `${dMm} mm` },
+      { key: 'step', label: '当前步骤', value: `${step} / 6` },
+      { key: 'light', label: '光源', value: lightLabel },
+      { key: 'd', label: '双缝间距 d', value: `${dMm} mm` },
       {
+        key: 'L',
         label: '缝屏距 L',
         value: `${((s.params.L ?? DEFAULT_L) * 100).toFixed(0)} cm`
       }
@@ -353,7 +358,11 @@ export function createDoubleSlitScene(
         s.params.activeInstrument === 'caliper'
           ? '干涉读数游标卡尺'
           : '高精度干涉测微仪';
-      items.push({ label: '当前仪器', value: instrumentName });
+      items.push({
+        key: 'instrument',
+        label: '当前仪器',
+        value: instrumentName
+      });
       const effectiveLambda = getEffectiveLambda(s.params);
       const realDeltaXmm = computeRealDeltaXmm(
         effectiveLambda,
@@ -361,6 +370,7 @@ export function createDoubleSlitScene(
         s.params.L ?? DEFAULT_L
       );
       items.push({
+        key: 'delta-x',
         label: '条纹间距 Δx',
         value: `${realDeltaXmm.toFixed(3)} mm`
       });
@@ -369,12 +379,14 @@ export function createDoubleSlitScene(
       if (active === 'caliper' && leftInstrument) {
         const reading = leftInstrument.view.getReading();
         items.push({
+          key: 'caliper',
           label: '游标卡尺读数',
           value: `${(reading * 10).toFixed(3)} mm`
         });
       } else if (active === 'micrometer' && rightInstrument) {
         const reading = rightInstrument.view.getReading();
         items.push({
+          key: 'micrometer',
           label: '螺旋测微仪读数',
           value: `${reading.toFixed(3)} mm`
         });

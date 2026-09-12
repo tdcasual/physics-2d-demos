@@ -84,7 +84,6 @@ export function makeDraggable(
   dragHandle.addEventListener('pointerup', onPointerUp);
   dragHandle.addEventListener('pointercancel', onPointerUp);
 
-  // 返回清理函数
   return () => {
     if (isDragging) {
       isDragging = false;
@@ -95,5 +94,71 @@ export function makeDraggable(
     dragHandle.removeEventListener('pointermove', onPointerMove);
     dragHandle.removeEventListener('pointerup', onPointerUp);
     dragHandle.removeEventListener('pointercancel', onPointerUp);
+  };
+}
+
+export function makeResizable(
+  element: HTMLElement,
+  options: {
+    minWidth?: number;
+    minHeight?: number;
+    onResize?: () => void;
+  } = {}
+): () => void {
+  const minWidth = options.minWidth ?? 220;
+  const minHeight = options.minHeight ?? 140;
+  const handle = document.createElement('button');
+  handle.type = 'button';
+  handle.className = 'lab-float-resize';
+  handle.setAttribute('aria-label', '调整面板大小');
+  handle.tabIndex = 0;
+  element.appendChild(handle);
+
+  let dragging = false;
+  let startX = 0;
+  let startY = 0;
+  let startW = 0;
+  let startH = 0;
+
+  function onPointerDown(e: PointerEvent): void {
+    if (e.button !== 0) return;
+    dragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    startW = element.getBoundingClientRect().width;
+    startH = element.getBoundingClientRect().height;
+    handle.setPointerCapture(e.pointerId);
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  function onPointerMove(e: PointerEvent): void {
+    if (!dragging) return;
+    const width = Math.max(minWidth, startW + (e.clientX - startX));
+    const height = Math.max(minHeight, startH + (e.clientY - startY));
+    element.style.width = `${width}px`;
+    element.style.height = `${height}px`;
+    element.style.maxHeight = 'none';
+    options.onResize?.();
+  }
+
+  function onPointerUp(): void {
+    if (!dragging) return;
+    dragging = false;
+    options.onResize?.();
+  }
+
+  handle.addEventListener('pointerdown', onPointerDown);
+  handle.addEventListener('pointermove', onPointerMove);
+  handle.addEventListener('pointerup', onPointerUp);
+  handle.addEventListener('pointercancel', onPointerUp);
+
+  return () => {
+    dragging = false;
+    handle.removeEventListener('pointerdown', onPointerDown);
+    handle.removeEventListener('pointermove', onPointerMove);
+    handle.removeEventListener('pointerup', onPointerUp);
+    handle.removeEventListener('pointercancel', onPointerUp);
+    handle.remove();
   };
 }

@@ -1,44 +1,56 @@
 /**
- * 薄膜干涉 — 物理模拟（竖直肥皂膜模型）
+ * 薄膜干涉 — 物理模拟
  *
- * 膜竖直放置，受重力影响上薄下厚：d(y) = dTop + (dBottom - dTop) * y
- * 近正入射简化，光程差 Δ = 2nd + λ/2
+ * 近正入射，一次半波损失：Δ = 2nd + λ/2（反射光，d=0 为暗）。
+ *
+ * 两种沿高度的厚度分布（正视图都是矩形膜，条纹始终水平）：
+ * - linear（均匀变化）：d(y) = d₀ + (d₁−d₀)·y ，条纹近似等间距
+ * - quad（非均匀变化）：d(y) = d₀ + (d₁−d₀)·y³ ，越往下增厚越快，条纹上疏下密
  */
 
 export type ThinFilmStep = 'geometry' | 'path-diff' | 'half-wave' | 'result';
+
+export type ThinFilmProfile = 'linear' | 'quad';
 
 export type ThinFilmParams = {
   lambda: number; // 波长 nm
   dTop: number; // 顶部厚度 nm
   dBottom: number; // 底部厚度 nm
   n: number; // 薄膜折射率
-  whiteLight: boolean; // 白光模式
+  whiteLight: boolean;
   step: ThinFilmStep;
+  profile: ThinFilmProfile;
 };
 
 export type ThinFilmState = {
   params: ThinFilmParams;
-  /** 观察点归一化位置 0=top, 1=bottom */
+  /** 观察点归一化高度 0=顶, 1=底 */
   cursorY: number;
-  /** 观察点处厚度 nm */
   localThickness: number;
-  /** 光程差 nm */
   pathDiff: number;
-  /** 干涉级次 */
   order: number;
-  /** 是否增强（明纹/相长） */
   isConstructive: boolean;
-  /** 相对反射光强 0-1 */
   reflectivity: number;
-  /** 时间相位（用于波形动画） */
   time: number;
-  /** 两束光的相位差 δ（弧度） */
   phaseDiff: number;
 };
 
-/** 计算归一化高度 y 处的厚度 (nm) */
+export function thicknessAt(
+  dThin: number,
+  dThick: number,
+  t: number,
+  profile: ThinFilmProfile = 'linear'
+): number {
+  const u = Math.max(0, Math.min(1, t));
+  if (profile === 'quad') {
+    return dThin + (dThick - dThin) * u * u * u;
+  }
+  return dThin + (dThick - dThin) * u;
+}
+
+/** 线性剖面别名，保留给既有测试 */
 export function thicknessAtY(dTop: number, dBottom: number, y: number): number {
-  return dTop + (dBottom - dTop) * y;
+  return thicknessAt(dTop, dBottom, y, 'linear');
 }
 
 function computeState(
@@ -46,10 +58,9 @@ function computeState(
   cursorY: number,
   time = 0
 ): ThinFilmState {
-  const { lambda, dTop, dBottom, n } = params;
-  const d = thicknessAtY(dTop, dBottom, cursorY);
+  const { lambda, dTop, dBottom, n, profile } = params;
+  const d = thicknessAt(dTop, dBottom, cursorY, profile);
 
-  // 近正入射：Δ = 2nd + λ/2（上表面空气→膜有半波损失，下表面膜→空气没有）
   const pathDiff = 2 * n * d + lambda / 2;
   const order = pathDiff / lambda;
   const phaseDiff = (2 * Math.PI * pathDiff) / lambda;
@@ -72,6 +83,7 @@ function computeState(
 export function createThinFilmSim(initial: ThinFilmParams) {
   let params: ThinFilmParams = {
     ...initial,
+    profile: initial.profile ?? 'linear',
     dBottom: Math.max(initial.dBottom, initial.dTop)
   };
   let cursorY = 0.5;
@@ -83,7 +95,6 @@ export function createThinFilmSim(initial: ThinFilmParams) {
 
   function setParams(next: Partial<ThinFilmParams>): ThinFilmParams {
     params = { ...params, ...next };
-    // 保证 dBottom >= dTop（重力物理约束）
     if (params.dBottom < params.dTop) {
       params.dBottom = params.dTop;
     }
@@ -103,7 +114,7 @@ export function createThinFilmSim(initial: ThinFilmParams) {
   }
 
   function reset(): void {
-    params = { ...initial };
+    params = { ...initial, profile: initial.profile ?? 'linear' };
     cursorY = 0.5;
     time = 0;
   }

@@ -4,12 +4,12 @@
 
 ## 项目概述
 
-Physics-2D-Demos 是一个物理教学演示中心（Teaching Demo Hub），当前包含 18 个交互式 2D 物理场景，以及 3 个可按需加载的仪器组件。
+Physics-2D-Demos 是一个物理教学演示中心（Teaching Demo Hub），当前包含 19 个交互式 2D 物理场景，以及 3 个可按需加载的仪器组件。
 
 - **技术栈**: Vite 7 + TypeScript 5.9 (strict) + React 18 + Tailwind CSS v4
 - **测试**: Vitest 3.2 (单元/契约) + Playwright (E2E/视觉)
 - **构建产物**: 体积预算与实测口径以 `scripts/check-bundle-budget.ts` 为唯一权威（预算值：首页 JS 190 kB / CSS 25 kB；场景页 JS 180 kB / CSS 55 kB；vendor 160 kB；shared 150 kB；当前无入口级覆盖）。实测数字随构建变化，不在本文固化，运行 `pnpm check:bundle` 获取当前值
-- **Runtime 依赖**: 仅 2 个（react / react-dom）
+- **Runtime 依赖**: 仅 3 个（preact / react / react-dom）
 - **线上地址**: <https://x.infinitas.fun>
 
 ## 部署
@@ -36,7 +36,7 @@ app/           — 布局系统、场景引导器、首页
                — 可依赖 platform/core/ui
 ui/            — 共享组件库（DOM widgets）
                — 可依赖 platform/core
-scenes/        — 18 个物理场景（每个: meta/sim/view/entry/controls/page）
+scenes/        — 19 个物理场景（每个: meta/sim/view/entry/controls/page）
                — 场景由 catalog/scene-registry.ts 自动发现（import.meta.glob）
                — 非 page.ts 不依赖 app/ui；可依赖 instruments
 instruments/   — 3 个可按需加载的仪器组件（meta/sim/entry/controls-schema）

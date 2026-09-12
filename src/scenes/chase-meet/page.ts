@@ -15,19 +15,29 @@ function formatReadout(
 ): ReadoutItem[] {
   return [
     {
+      key: 'mode',
       label: '显示模式',
       value: mode === 'presentation' ? '演示模式' : '标准模式'
     },
-    { label: '动画状态', value: isPlaying ? '运行中' : '已暂停' },
-    { label: '当前时间', value: `${snapshot.state.t.toFixed(2)} s` },
-    { label: '当前距离', value: `${snapshot.state.distance.toFixed(2)} m` },
-    { label: '相遇信息', value: snapshot.state.meetMessage },
     {
+      key: 'playing',
+      label: '动画状态',
+      value: isPlaying ? '运行中' : '已暂停'
+    },
+    { key: 't', label: '当前时间', value: `${snapshot.state.t.toFixed(2)} s` },
+    {
+      key: 'distance',
+      label: '当前距离',
+      value: `${snapshot.state.distance.toFixed(2)} m`
+    },
+    { key: 'meet', label: '相遇信息', value: snapshot.state.meetMessage },
+    {
+      key: 'T-dt',
       label: 'T / Δt',
       value: `${snapshot.params.totalTime.toFixed(2)} / ${snapshot.params.dt.toFixed(3)}`
     },
-    { label: 'vA(t)', value: snapshot.params.vExprA },
-    { label: 'vB(t)', value: snapshot.params.vExprB }
+    { key: 'vA', label: 'vA(t)', value: snapshot.params.vExprA },
+    { key: 'vB', label: 'vB(t)', value: snapshot.params.vExprB }
   ];
 }
 

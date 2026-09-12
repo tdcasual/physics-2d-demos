@@ -47,8 +47,14 @@ export function createSpringOscillatorView(
   let sim = options.sim ?? null;
 
   let theme: TeachingTheme = options.theme ?? 'dark';
-  // demoHints reserved for future demo profile integration
+  let mode: TeachingMode = options.mode ?? 'normal';
+  let demoHints: DemoRenderHints | undefined = options.demoHints;
   let onToggleOscillator = options.onToggleOscillator;
+
+  function drawScale(): number {
+    const cs = mode === 'presentation' ? (demoHints?.contentScale ?? 1.5) : 1;
+    return responsiveScale * cs;
+  }
 
   let graphWidth = 400;
   let graphHeight = 300;
@@ -112,8 +118,9 @@ export function createSpringOscillatorView(
 
     const ctx = stageCtx;
 
+    const drawS = drawScale();
     if (sim.oscillators.length === 0) {
-      const s = responsiveScale;
+      const s = drawS;
       ctx.fillStyle = Colors.gray;
       ctx.font = `${Math.round(16 * s)}px "Noto Sans SC", sans-serif`;
       ctx.textAlign = 'center';
@@ -124,7 +131,7 @@ export function createSpringOscillatorView(
     }
 
     const total = sim.oscillators.length;
-    const layout = calculateGridLayout(total, stageWidth, responsiveScale);
+    const layout = calculateGridLayout(total, stageWidth, drawS);
     const cellW = width / layout.cols;
     const cellH = height / layout.rows;
 
@@ -132,7 +139,7 @@ export function createSpringOscillatorView(
     ctx.strokeStyle = isDark
       ? 'rgba(128,128,128,0.15)'
       : 'rgba(128,128,128,0.25)';
-    ctx.lineWidth = 1 * responsiveScale;
+    ctx.lineWidth = 1 * drawS;
 
     for (let i = 1; i < layout.cols; i++) {
       ctx.beginPath();
@@ -162,7 +169,7 @@ export function createSpringOscillatorView(
         cellW,
         cellH,
         theme,
-        { responsiveScale }
+        { responsiveScale: drawS }
       );
       clickAreas.push(area);
     });
@@ -282,8 +289,9 @@ export function createSpringOscillatorView(
       resizeStageCanvas();
     },
 
-    setMode(_mode?: TeachingMode, _hints?: DemoRenderHints): void {
-      // no-op for now
+    setMode(nextMode?: TeachingMode, hints?: DemoRenderHints): void {
+      if (nextMode) mode = nextMode;
+      if (hints) demoHints = hints;
     },
 
     setTheme(nextTheme: TeachingTheme): void {

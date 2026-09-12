@@ -109,13 +109,17 @@ export function createXtGraphScene(options: CreateXtGraphSceneOptions = {}) {
       return { speed: timeScale };
     },
     getState: (): XtGraphState => sim.getState(),
-    getReadoutItems(): Array<{ label: string; value: string }> {
+    getReadoutItems(): Array<{ key: string; label: string; value: string }> {
       const s = sim.getState();
       const sign = (v: number) => (v >= 0 ? '+' : '');
       return [
-        { label: '时间 t', value: `${s.t.toFixed(2)} s` },
-        { label: '位置 x', value: `${sign(s.x)}${s.x.toFixed(2)} m` },
-        { label: '速度 v', value: `${sign(s.v)}${s.v.toFixed(2)} m/s` }
+        { key: 't', label: '时间 t', value: `${s.t.toFixed(2)} s` },
+        { key: 'x', label: '位置 x', value: `${sign(s.x)}${s.x.toFixed(2)} m` },
+        {
+          key: 'v',
+          label: '速度 v',
+          value: `${sign(s.v)}${s.v.toFixed(2)} m/s`
+        }
       ];
     }
   };

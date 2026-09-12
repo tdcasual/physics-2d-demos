@@ -22,7 +22,7 @@
     "check:layouts": "tsx scripts/check-layouts.ts",
     "check:bundle": "tsx scripts/check-bundle-budget.ts",
     "check:circular": "madge --circular --extensions ts,tsx src/",
-    "check:audit": "npm_config_registry=https://registry.npmjs.org pnpm audit",
+    "check:audit": "pnpm audit --registry=https://registry.npmjs.org",
     "new:scene": "tsx scripts/new-scene.ts",
     "verify:scene": "tsx scripts/verify-scene.ts",
     "check:scaffold": "tsx scripts/check-scaffold.ts",

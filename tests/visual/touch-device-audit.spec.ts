@@ -6,9 +6,12 @@ const PORT = 5177;
 for (const scene of sceneIds) {
   test(`touch policy on ${scene}`, async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto(`http://127.0.0.1:${PORT}${scenePage(scene)}`, {
-      waitUntil: 'domcontentloaded'
-    });
+    await page.goto(
+      `http://127.0.0.1:${PORT}${scenePage(scene, '?layout=mobile-stack')}`,
+      {
+        waitUntil: 'domcontentloaded'
+      }
+    );
     await page.waitForTimeout(1500);
 
     // 图表 canvas 可以保留浏览器默认手势；交互舞台必须显式声明策略。
@@ -28,9 +31,10 @@ for (const scene of sceneIds) {
 
   test(`viewport resilience on ${scene}`, async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto(`http://127.0.0.1:${PORT}/src/pages/${scene}.html`, {
-      waitUntil: 'domcontentloaded'
-    });
+    await page.goto(
+      `http://127.0.0.1:${PORT}${scenePage(scene, '?layout=mobile-stack')}`,
+      { waitUntil: 'domcontentloaded' }
+    );
     await page.waitForTimeout(1500);
 
     // 模拟软键盘弹出（视口高度减少）

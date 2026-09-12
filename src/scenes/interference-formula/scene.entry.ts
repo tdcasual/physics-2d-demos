@@ -32,7 +32,7 @@ export function createInterferenceFormulaScene(
     params: Partial<InterferenceFormulaParams>
   ): InterferenceFormulaParams;
   attachGraphCanvas(canvas: HTMLCanvasElement): void;
-  getReadoutItems(): Array<{ label: string; value: string }>;
+  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
   subscribe(listener: () => void): () => void;
 } {
   const sim = createInterferenceFormulaSim({
@@ -56,7 +56,11 @@ export function createInterferenceFormulaScene(
     onReadout: options.onReadout
   });
 
-  function getReadoutItems(): Array<{ label: string; value: string }> {
+  function getReadoutItems(): Array<{
+    key: string;
+    label: string;
+    value: string;
+  }> {
     const s = sim.getState();
     const { lambda, L, d } = s.params;
     const x = s.deltaX;
@@ -66,14 +70,26 @@ export function createInterferenceFormulaScene(
     const relErr = Math.abs((sinTheta - tanTheta) / sinTheta);
 
     return [
-      { label: '波长 λ', value: `${lambda} nm` },
-      { label: '缝屏距 L', value: `${L.toFixed(1)} m` },
-      { label: '缝间距 d', value: `${d.toFixed(1)} mm` },
-      { label: '条纹间距 Δx', value: `${(x * 1e3).toFixed(2)} mm` },
-      { label: 'θ', value: `${((thetaRad * 180) / Math.PI).toFixed(4)}°` },
-      { label: 'sinθ', value: sinTheta.toExponential(4) },
-      { label: 'tanθ = x/L', value: tanTheta.toExponential(4) },
-      { label: '相对误差', value: relErr.toExponential(2) }
+      { key: 'lambda', label: '波长 λ', value: `${lambda} nm` },
+      { key: 'L', label: '缝屏距 L', value: `${L.toFixed(1)} m` },
+      { key: 'd', label: '缝间距 d', value: `${d.toFixed(1)} mm` },
+      {
+        key: 'delta-x',
+        label: '条纹间距 Δx',
+        value: `${(x * 1e3).toFixed(2)} mm`
+      },
+      {
+        key: 'theta',
+        label: 'θ',
+        value: `${((thetaRad * 180) / Math.PI).toFixed(4)}°`
+      },
+      { key: 'sin-theta', label: 'sinθ', value: sinTheta.toExponential(4) },
+      {
+        key: 'tan-theta',
+        label: 'tanθ = x/L',
+        value: tanTheta.toExponential(4)
+      },
+      { key: 'rel-err', label: '相对误差', value: relErr.toExponential(2) }
     ];
   }
 

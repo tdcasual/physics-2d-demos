@@ -12,6 +12,10 @@
   grid-template-columns: minmax(260px, 40%) 8px 1fr;
 }
 
+.teaching-demo.split-right-shell:has(.layout-left-panel.is-collapsed-demo) {
+  grid-template-columns: 0 0 1fr;
+}
+
 /* ---- Graph visibility tied to data-has-graph ---- */
 .teaching-demo[data-has-graph='true'] .teaching-control-section {
   max-height: 60%;
@@ -93,7 +97,7 @@
 .teaching-stage-slot
   > *:not(canvas):not(.teaching-stage-floating-controls):not(
     .teaching-readout-panel
-  ) {
+  ):not(.graph-section) {
   height: 100%;
   max-height: 100%;
   width: 100%;

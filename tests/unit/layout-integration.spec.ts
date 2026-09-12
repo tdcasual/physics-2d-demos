@@ -12,6 +12,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { SplitRightLayout } from '../../src/app/layouts/layouts/split-right/split-right';
 import { MobileStackLayout } from '../../src/app/layouts/layouts/mobile-stack/mobile-stack';
 import { SplitRightGraphBottomLayout } from '../../src/app/layouts/layouts/split-right-graph-bottom/split-right-graph-bottom';
+import { LabStageLayout } from '../../src/app/layouts/layouts/lab-stage/lab-stage';
 import { layoutRegistry } from '../../src/app/layouts/registry';
 import type {
   CapabilityContext,
@@ -105,6 +106,17 @@ describe('Canvas rendering', () => {
   it('mobile-stack: canvas is renderable after mount', async () => {
     const container = createContainer(375, 812);
     const layout = new MobileStackLayout(container);
+    const slots = await layout.mount();
+
+    verifyCanvasReady(slots.animation.querySelector('canvas'));
+
+    await layout.unmount();
+    container.remove();
+  });
+
+  it('lab-stage: canvas is renderable after mount', async () => {
+    const container = createContainer();
+    const layout = new LabStageLayout(container);
     const slots = await layout.mount();
 
     verifyCanvasReady(slots.animation.querySelector('canvas'));
@@ -242,6 +254,61 @@ describe('Graph slot completeness', () => {
     await layout.unmount();
     container.remove();
   });
+
+  it('lab-stage: graph is collapsed by default; data slot is independent', async () => {
+    const container = createContainer();
+    const layout = new LabStageLayout(container);
+    const slots = await layout.mount();
+
+    expect(slots.graph).toBeDefined();
+    expect(container.contains(slots.graph!)).toBe(true);
+    expect(container.querySelector('.lab-float-tabs')).toBeNull();
+    expect(
+      container
+        .querySelector('#lab-panel-graph')
+        ?.classList.contains('is-collapsed')
+    ).toBe(true);
+    expect(
+      container.querySelector('#lab-panel-graph .lab-float-fold')?.textContent
+    ).toBe('+');
+    expect(
+      container
+        .querySelector('#lab-panel-data')
+        ?.classList.contains('is-collapsed')
+    ).toBe(false);
+    expect(
+      container.querySelector('#lab-panel-data .lab-float-fold')?.textContent
+    ).toBe('−');
+    const dataFold = container.querySelector(
+      '#lab-panel-data .lab-float-fold'
+    ) as HTMLButtonElement;
+    dataFold.click();
+    expect(
+      container
+        .querySelector('#lab-panel-data')
+        ?.classList.contains('is-collapsed')
+    ).toBe(true);
+    expect(dataFold.textContent).toBe('+');
+    expect(container.contains(container.querySelector('#lab-panel-data'))).toBe(
+      true
+    );
+    dataFold.click();
+    expect(
+      container
+        .querySelector('#lab-panel-data')
+        ?.classList.contains('is-collapsed')
+    ).toBe(false);
+    expect(container.querySelector('[data-lab-data-slot]')).not.toBeNull();
+    expect(slots.control.contains(slots.graph!)).toBe(false);
+    const dataSlot = container.querySelector('[data-lab-data-slot]');
+    expect(dataSlot && slots.control.contains(dataSlot)).toBe(false);
+    expect(slots.readout).toBeDefined();
+    expect(slots.readout?.hidden).toBe(false);
+    expect(dataSlot?.contains(slots.readout!)).toBe(false);
+
+    await layout.unmount();
+    container.remove();
+  });
 });
 
 // ============================================================================
@@ -276,6 +343,12 @@ describe('Slot declaration consistency', () => {
       create: (c) => new MobileStackLayout(c),
       width: 375,
       height: 812
+    },
+    {
+      name: 'lab-stage',
+      create: (c) => new LabStageLayout(c),
+      width: 1200,
+      height: 800
     }
   ];
 
@@ -420,6 +493,27 @@ describe('Layout switching', () => {
     verifyCanvasReady(finalCanvas);
 
     await lr2.unmount();
+    container.remove();
+  });
+
+  it('lab-stage reuses preserved canvas', async () => {
+    const container = createContainer();
+    const layout1 = new LabStageLayout(container);
+    const slots1 = await layout1.mount();
+    const original = slots1.animation.querySelector('canvas')!;
+    verifyCanvasReady(original);
+
+    await layout1.unmount();
+    container.replaceChildren();
+
+    const layout2 = new LabStageLayout(container, {
+      preservedCanvas: original
+    });
+    const slots2 = await layout2.mount();
+    expect(slots2.animation.querySelector('canvas')).toBe(original);
+    verifyCanvasReady(original);
+
+    await layout2.unmount();
     container.remove();
   });
 });

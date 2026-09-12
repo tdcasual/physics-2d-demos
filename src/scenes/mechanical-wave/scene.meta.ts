@@ -6,8 +6,8 @@ import type { SceneMeta } from '../../platform/scene-contract';
 import type { SceneDemoProfile } from '../../platform/demo-profile';
 
 const demoProfile: SceneDemoProfile = {
-  controlPanel: 'minimal',
-  readoutPanel: 'overlay',
+  lessonTask: 'lecture',
+  readoutKeys: ['wave-speed', 't', 'p-y'],
   renderHints: {
     contentScale: 1.5
   },

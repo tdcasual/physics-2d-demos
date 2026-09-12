@@ -66,6 +66,7 @@ export function createSceneSelector(
     btn.appendChild(labelSpan);
     if (s.desc) {
       const descSpan = document.createElement('span');
+      descSpan.className = 'scene-selector-desc';
       descSpan.style.cssText =
         'display: block; font-size: var(--scene-selector-desc-size, 11px); margin-top: 3px; color: var(--text-secondary);';
       descSpan.textContent = s.desc;

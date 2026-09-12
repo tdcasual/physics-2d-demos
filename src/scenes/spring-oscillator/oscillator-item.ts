@@ -29,6 +29,7 @@ export function renderOscillatorItem(
     min-height: calc(36px * var(--ui-scale, 1));
   `;
   item.style.borderLeft = `3px solid ${osc.color}`;
+  item.dataset.controlKey = `oscillator-${osc.id}`;
 
   // 色块标识 - 响应式大小
   const colorDot = document.createElement('div');

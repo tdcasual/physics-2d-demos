@@ -12,6 +12,7 @@ import type {
 function formatReadout(snapshot: ElectrificationSnapshot): ReadoutItem[] {
   return [
     {
+      key: 'scene',
       label: '场景',
       value:
         snapshot.state.scene === 'friction'
@@ -20,8 +21,8 @@ function formatReadout(snapshot: ElectrificationSnapshot): ReadoutItem[] {
             ? '感应起电'
             : '接触起电'
     },
-    { label: '下一步动作', value: snapshot.state.nextActionLabel },
-    { label: '说明', value: snapshot.state.explanation }
+    { key: 'next', label: '下一步动作', value: snapshot.state.nextActionLabel },
+    { key: 'info', label: '说明', value: snapshot.state.explanation }
   ];
 }
 

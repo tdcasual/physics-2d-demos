@@ -7,6 +7,22 @@ import type { ControlsSchema } from '../../platform/controls-schema';
 export const thinFilmControlsSchema: ControlsSchema = {
   sections: [
     {
+      title: '厚度分布',
+      collapsed: false,
+      fields: [
+        {
+          type: 'preset-group',
+          key: 'profile',
+          columns: 2,
+          presets: [
+            { id: 'linear', label: '均匀变化', desc: '条纹等间距' },
+            { id: 'quad', label: '非均匀变化', desc: '下密上疏' }
+          ],
+          initialActive: 'linear'
+        }
+      ]
+    },
+    {
       title: '光源',
       collapsed: false,
       fields: [
@@ -35,8 +51,8 @@ export const thinFilmControlsSchema: ControlsSchema = {
         {
           type: 'slider',
           key: 'dTop',
-          label: '顶部厚度 d_top',
-          min: 50,
+          label: '顶厚',
+          min: 0,
           max: 1000,
           step: 10,
           value: 100,
@@ -45,7 +61,7 @@ export const thinFilmControlsSchema: ControlsSchema = {
         {
           type: 'slider',
           key: 'dBottom',
-          label: '底部厚度 d_bottom',
+          label: '底厚',
           min: 100,
           max: 2000,
           step: 10,
@@ -55,7 +71,7 @@ export const thinFilmControlsSchema: ControlsSchema = {
         {
           type: 'slider',
           key: 'n',
-          label: '折射率 n',
+          label: '折射率',
           min: 1.0,
           max: 2.5,
           step: 0.05,
@@ -71,7 +87,7 @@ export const thinFilmControlsSchema: ControlsSchema = {
         {
           type: 'slider',
           key: 'cursorY',
-          label: '观察点位置',
+          label: '位置',
           min: 0,
           max: 100,
           step: 1,

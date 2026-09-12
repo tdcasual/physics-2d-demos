@@ -3,6 +3,7 @@ import { drawAxis } from '../../src/scenes/vt-integral/renderer/draw-axis';
 import { drawScene1 } from '../../src/scenes/vt-integral/renderer/draw-scene1';
 import { drawScene2 } from '../../src/scenes/vt-integral/renderer/draw-scene2';
 import { drawScene3 } from '../../src/scenes/vt-integral/renderer/draw-scene3';
+import { fontPx } from '../../src/scenes/vt-integral/renderer/palette';
 
 import type { VtIntegralSnapshot } from '../../src/scenes/vt-integral/scene.sim';
 
@@ -15,10 +16,13 @@ function createSnapshot(
       rects: 10,
       time: 5,
       method: 'mid',
+      curveKind: 'linear',
       curveAmplitude: 2,
       circleN: 6,
       surfaceN: 8,
-      division: 4
+      division: 4,
+      pointA: 0.2,
+      pointB: 0.8
     },
     metrics: {
       rectArea: 10.5,
@@ -114,12 +118,21 @@ describe('vt-integral renderer', () => {
               height: 600,
               theme: 'light',
               responsiveScale: 0.6,
-              contentScale: 1.7
+              contentScale: 1.5
             },
             snapshot
           )
         ).not.toThrow();
       });
     }
+  });
+
+  describe('classroom tokens', () => {
+    it('keeps 1080P presentation titles in the projector band', () => {
+      const title = fontPx(14, 1.5, 1.5);
+      expect(title).toBeGreaterThanOrEqual(24);
+      expect(title).toBeLessThanOrEqual(48);
+      expect(fontPx(11, 1.5, 1.5)).toBeLessThan(title);
+    });
   });
 });

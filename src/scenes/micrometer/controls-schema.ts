@@ -1,6 +1,18 @@
 import type { ControlsSchema } from '../../platform/controls-schema';
 import { micrometerMeta } from './scene.meta';
 
+export const MICROMETER_PRESET_MM: Record<string, number> = {
+  zero: 0,
+  'sample-a': 0.5,
+  'sample-b': 1,
+  'sample-c': 2.15,
+  'sample-d': 3.7,
+  'sample-e': 4.593,
+  'sample-f': 5.62,
+  'sample-g': 6.725,
+  'sample-h': 8.116
+};
+
 export const micrometerControlsSchema: ControlsSchema = {
   sections: [
     {
@@ -28,18 +40,61 @@ export const micrometerControlsSchema: ControlsSchema = {
           key: 'preset',
           columns: 2,
           presets: [
-            { id: '0.000', label: '零点校准' },
-            { id: '0.500', label: '半毫米线' },
-            { id: '1.000', label: '1.000 mm' },
-            { id: '2.150', label: '2.150 mm' },
-            { id: '3.700', label: '3.700 mm' },
-            { id: '4.593', label: '4.593 mm' },
-            { id: '5.620', label: '5.620 mm' },
-            { id: '6.725', label: '6.725 mm' },
-            { id: '8.116', label: '8.116 mm' },
-            { id: '9.998', label: '9.998 mm' }
+            { id: 'zero', label: '零点校准', presentationLabel: '零点' },
+            {
+              id: 'sample-a',
+              label: '0.500 mm',
+              presentationLabel: '样品A'
+            },
+            {
+              id: 'sample-b',
+              label: '1.000 mm',
+              presentationLabel: '样品B'
+            },
+            {
+              id: 'sample-c',
+              label: '2.150 mm',
+              presentationLabel: '样品C'
+            },
+            {
+              id: 'sample-d',
+              label: '3.700 mm',
+              presentationLabel: '样品D'
+            },
+            {
+              id: 'sample-e',
+              label: '4.593 mm',
+              presentationLabel: '样品E'
+            },
+            {
+              id: 'sample-f',
+              label: '5.620 mm',
+              presentationLabel: '样品F'
+            },
+            {
+              id: 'sample-g',
+              label: '6.725 mm',
+              presentationLabel: '样品G'
+            },
+            {
+              id: 'sample-h',
+              label: '8.116 mm',
+              presentationLabel: '样品H'
+            }
           ],
-          initialActive: '4.593'
+          initialActive: 'sample-e'
+        }
+      ]
+    },
+    {
+      title: '读数',
+      collapsed: false,
+      fields: [
+        {
+          type: 'button',
+          key: 'reveal',
+          label: '显示读数',
+          presentationLabel: '揭示'
         }
       ]
     }

@@ -333,6 +333,7 @@ describe('registerAllLayouts', () => {
     registerAllLayouts();
     expect(layoutRegistry.list()).toContain('split-right');
     expect(layoutRegistry.list()).toContain('mobile-stack');
+    expect(layoutRegistry.list()).toContain('lab-stage');
   });
 
   it('should provide a valid profile for every registered layout', () => {

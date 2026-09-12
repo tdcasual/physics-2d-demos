@@ -71,6 +71,7 @@ export type VernierCaliperDrawOptions = {
   state: VernierCaliperReading;
   theme: TeachingTheme;
   contentScale?: number;
+  fontScale?: number;
   showReading?: boolean;
 };
 
@@ -92,10 +93,14 @@ function metalV(
 export function drawVernierCaliper(o: VernierCaliperDrawOptions): void {
   const { ctx, region, state, theme } = o;
   const contentScale = o.contentScale ?? 1;
+  const fontScale = o.fontScale ?? 1;
   const showReading = o.showReading ?? true;
   const P = palette(theme);
-  const s = Math.max(0.3, Math.min(1.5, Math.min(region.w, region.h) / 320));
-  const fs = s * contentScale;
+  const s = Math.max(
+    0.3,
+    Math.min(2.4, Math.min(region.w, region.h) / 280) * contentScale
+  );
+  const fs = Math.min(s, 1.6) * fontScale;
   const { w, h } = region;
   const ox = region.x;
   const oy = region.y;

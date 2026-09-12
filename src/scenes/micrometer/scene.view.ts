@@ -51,6 +51,9 @@ export function createMicrometerView(
     }
   });
   let last: MicrometerState | null = null;
+  let showReading =
+    (options.mode ?? 'normal') !== 'presentation' ||
+    (options.demoHints?.revealAnswer ?? false);
 
   function draw(next: MicrometerState): void {
     const ctx = stage.ctx;
@@ -62,8 +65,9 @@ export function createMicrometerView(
       region: { x: 0, y: 0, w: stage.cssWidth, h: stage.cssHeight },
       state: next,
       theme: env.theme,
-      contentScale: env.contentScale(),
-      showReading: true
+      contentScale: env.phenomenonScale(),
+      fontScale: env.fontScale(),
+      showReading
     });
   }
 
@@ -81,6 +85,11 @@ export function createMicrometerView(
     },
     setMode(m: TeachingMode, h?: DemoRenderHints): void {
       env.setMode(m, h);
+      showReading = m !== 'presentation' || (h?.revealAnswer ?? false);
+      if (last) draw(last);
+    },
+    setRevealAnswer(value: boolean): void {
+      showReading = value;
       if (last) draw(last);
     },
     dispose(): void {

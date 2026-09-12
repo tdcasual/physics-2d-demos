@@ -62,8 +62,7 @@ const metaTpl = `import type { SceneMeta } from '../types';
 import type { SceneDemoProfile } from '../../platform/demo-profile';
 
 const demoProfile: SceneDemoProfile = {
-  controlPanel: 'minimal',
-  readoutPanel: 'overlay',
+  lessonTask: 'lecture',
   renderHints: { contentScale: 1.5 },
   interactionHints: { touchTargetMinSize: 48, visibleControlKeys: [] }
 };
@@ -223,9 +222,9 @@ export type Create__PASCAL__SceneOptions = {
 
 function formatReadout(state: __PASCAL__State, params: __PASCAL__Params) {
   return [
-    { label: '时间 t', value: state.t.toFixed(2) + ' s' },
-    { label: 'x', value: state.x.toFixed(3) },
-    { label: 'speed', value: params.speed.toFixed(2) }
+    { key: 't', label: '时间 t', value: state.t.toFixed(2) + ' s' },
+    { key: 'x', label: 'x', value: state.x.toFixed(3) },
+    { key: 'speed', label: 'speed', value: params.speed.toFixed(2) }
   ];
 }
 

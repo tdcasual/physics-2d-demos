@@ -31,7 +31,7 @@ export function createMechanicalWaveScene(
   getState(): MechanicalWaveState;
   setParam(key: string, value: number | string): MechanicalWaveParams;
   setPointP(x: number): void;
-  getReadoutItems(): Array<{ label: string; value: string }>;
+  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
   getConstraintInfo(): ConstraintInfo;
   subscribe(listener: () => void): () => void;
 } {
@@ -71,14 +71,30 @@ export function createMechanicalWaveScene(
     zero: '○ 零'
   };
 
-  function getReadoutItems(): Array<{ label: string; value: string }> {
+  function getReadoutItems(): Array<{
+    key: string;
+    label: string;
+    value: string;
+  }> {
     const s = sim.getState();
     return [
-      { label: '波速 v = λ/T', value: `${s.params.waveSpeed.toFixed(2)} m/s` },
-      { label: '当前时刻 t', value: `${s.time.toFixed(2)} s` },
-      { label: 'P 点位移', value: `${s.pointPY.toFixed(2)} cm` },
-      { label: 'P 点速度方向', value: dirLabels[s.velocityDirection] },
-      { label: 'P 点加速度方向', value: dirLabels[s.accelerationDirection] }
+      {
+        key: 'wave-speed',
+        label: '波速 v = λ/T',
+        value: `${s.params.waveSpeed.toFixed(2)} m/s`
+      },
+      { key: 't', label: '当前时刻 t', value: `${s.time.toFixed(2)} s` },
+      { key: 'p-y', label: 'P 点位移', value: `${s.pointPY.toFixed(2)} cm` },
+      {
+        key: 'p-v-dir',
+        label: 'P 点速度方向',
+        value: dirLabels[s.velocityDirection]
+      },
+      {
+        key: 'p-a-dir',
+        label: 'P 点加速度方向',
+        value: dirLabels[s.accelerationDirection]
+      }
     ];
   }
 

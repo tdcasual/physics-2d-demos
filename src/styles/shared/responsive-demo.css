@@ -44,7 +44,9 @@
   .teaching-sidebar-toggle,
 .teaching-demo[data-mode='presentation']
   .teaching-stage-toolbar
-  .shell-theme-toggle {
+  .shell-theme-toggle,
+[data-mode='presentation'] .srgb-stage-toolbar .srgb-sidebar-toggle,
+[data-mode='presentation'] .srgb-stage-toolbar .shell-theme-toggle {
   @apply hidden;
 }
 
@@ -52,8 +54,15 @@
   @apply left-4 top-4;
 }
 
-.teaching-demo[data-mode='presentation'] .teaching-readout-panel {
-  @apply right-4 top-4;
+.teaching-demo[data-mode='presentation']
+  .teaching-readout-panel.teaching-is-overlay {
+  right: 1rem;
+  top: 1rem;
+}
+
+.teaching-demo[data-mode='presentation'] .srgb-readout-panel.srgb-is-overlay {
+  right: 1rem;
+  top: 1rem;
 }
 
 /* 读数面板 dock/叠加/放大 — teaching + srgb 共享 */
@@ -68,6 +77,8 @@
   top: auto;
   max-width: none;
   width: 100%;
+  max-height: min(22vh, 11rem);
+  overflow: auto;
   border-radius: 0;
 }
 
@@ -149,11 +160,69 @@
   min-height: var(--demo-touch-min, 48px);
 }
 
-/* 演示模式：侧边栏和图表面板最小化 */
-.layout-left-panel.is-collapsed-demo {
-  max-height: 3rem;
-  overflow: hidden;
+/* 演示模式：侧边栏收进网格第一列，不要用 max-height 把竖栏压成一条
+   却仍占 40% 宽。split-right 的 grid-template-columns 是内联样式，
+   需 !important 才能压过；JS（demo-profile）会同步写成 0 0 1fr。 */
+.teaching-demo.split-right-shell:has(.layout-left-panel.is-collapsed-demo) {
+  grid-template-columns: 0 0 1fr !important;
 }
+
+.teaching-demo.split-right-shell:has(.layout-left-panel.is-demo-rail) {
+  grid-template-columns: 48px 0 1fr !important;
+}
+
+.teaching-demo.split-right-shell:has(.layout-left-panel.is-collapsed-demo)
+  .teaching-panel-resizer,
+.teaching-demo.split-right-shell:has(.layout-left-panel.is-demo-rail)
+  .teaching-panel-resizer {
+  display: none;
+}
+
+.layout-left-panel.is-collapsed-demo {
+  min-width: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.layout-left-panel.is-demo-rail {
+  min-width: 0;
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+.graph-section.is-demo-stage-graph {
+  flex: 0 0 min(28vh, 220px);
+  min-height: 140px;
+  max-height: min(28vh, 220px);
+}
+
+.demo-chip-slot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem 0.5rem;
+  border-top: 1px solid var(--border-color);
+  max-height: 5.5rem;
+  overflow: auto;
+}
+
+.demo-chip-slot .text-\[10px\],
+.demo-chip-slot .scene-selector-desc {
+  display: none !important;
+}
+
+.demo-chip-slot .grid,
+.demo-chip-slot [role='radiogroup'] {
+  display: flex !important;
+  flex-wrap: wrap;
+}
+
+.demo-chip-slot [role='radiogroup'] > button {
+  width: auto !important;
+  flex: 0 0 auto;
+  padding: 0.35rem 0.75rem !important;
+}
+
 .graph-section.is-collapsed-demo,
 .layout-graph-section.is-collapsed-demo {
   max-height: 3rem;

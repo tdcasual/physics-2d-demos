@@ -6,15 +6,14 @@ import type { SceneMeta } from '../../platform/scene-contract';
 import type { SceneDemoProfile } from '../../platform/demo-profile';
 
 const demoProfile: SceneDemoProfile = {
-  controlPanel: 'minimal',
-  readoutPanel: 'overlay',
-  graphPanel: 'visible',
+  lessonTask: 'derivation',
+  readoutKeys: ['lambda', 'd-local', 'order'],
   renderHints: {
     contentScale: 1.5
   },
   interactionHints: {
     touchTargetMinSize: 48,
-    visibleControlKeys: ['step', 'lambda', 'whiteLight']
+    visibleControlKeys: ['profile', 'step', 'lambda', 'whiteLight']
   }
 };
 
@@ -26,8 +25,9 @@ export const thinFilmMeta: SceneMeta = {
   concept: '光的干涉',
   subConcepts: ['薄膜干涉', '半波损失'],
   keywords: ['光学', '薄膜干涉', '半波损失', '肥皂泡', '光程差', '厚度梯度'],
-  objective: '理解薄膜反射干涉的原理及光程差公式',
-  description: '竖直肥皂膜受重力影响上薄下厚，观察干涉条纹随厚度的变化',
+  objective: '理解薄膜反射干涉：厚度均匀变化时条纹等距，非均匀时条纹疏密不均',
+  description:
+    '主视看干涉图样，侧视看厚度剖面；均匀变化条纹等间距，非均匀变化越往下越密',
   difficulty: 2,
   icon: '🫧',
   category: 'method',
@@ -38,7 +38,7 @@ export const thinFilmMeta: SceneMeta = {
     dBottom: 800,
     n: 1.33
   },
-  urlSyncKeys: ['step'],
+  urlSyncKeys: ['step', 'profile'],
   testProfile: {
     hasGraph: true,
     hasTransport: true,

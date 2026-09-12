@@ -47,30 +47,39 @@ export type CreateGansheSceneOptions = {
 };
 
 function formatReadout(state: WaveState): Array<{
+  key: string;
   label: string;
   value: string | number;
   layout?: 'half' | 'full';
 }> {
   const p = state.interference;
   const items: Array<{
+    key: string;
     label: string;
     value: string | number;
     layout?: 'half' | 'full';
   }> = [
-    { label: '时间 t', value: `${state.time.toFixed(2)} s` },
-    { label: '观察点 x', value: `${state.params.observerX.toFixed(2)} m` },
-    { label: '相对相位差', value: `${p.dphaseDeg.toFixed(0)}°` },
-    { label: '瞬时位移', value: `${p.ySum.toFixed(2)} cm` },
-    { label: '理论振幅', value: `${p.A_theory.toFixed(1)} cm` },
+    { key: 't', label: '时间 t', value: `${state.time.toFixed(2)} s` },
     {
+      key: 'x',
+      label: '观察点 x',
+      value: `${state.params.observerX.toFixed(2)} m`
+    },
+    { key: 'dphase', label: '相对相位差', value: `${p.dphaseDeg.toFixed(0)}°` },
+    { key: 'y', label: '瞬时位移', value: `${p.ySum.toFixed(2)} cm` },
+    { key: 'A', label: '理论振幅', value: `${p.A_theory.toFixed(1)} cm` },
+    {
+      key: 'intensity',
       label: '干涉强度',
       value: `${Math.min(p.intensityPct, 400).toFixed(0)}%`
     },
     {
+      key: 'freq',
       label: '参数 f₁/f₂',
       value: `${state.params.freq1.toFixed(1)} / ${state.params.freq2.toFixed(1)} Hz`
     },
     {
+      key: 'amp',
       label: '参数 A₁/A₂',
       value: `${state.params.amp1.toFixed(1)} / ${state.params.amp2.toFixed(1)} cm`
     }
@@ -80,6 +89,7 @@ function formatReadout(state: WaveState): Array<{
   if (state.allObservers.length > 0) {
     state.allObservers.forEach((obs, i) => {
       items.push({
+        key: `obs-${i + 2}`,
         label: `观察点${i + 2} x=${obs.x.toFixed(1)}`,
         value: `A=${obs.interference.A_theory.toFixed(1)}`,
         layout: 'half'
@@ -100,6 +110,7 @@ export function createGansheScene(
   getParams(): WaveParams;
   setParams(next: Partial<WaveParams>): WaveParams;
   getReadoutItems(): Array<{
+    key: string;
     label: string;
     value: string | number;
     layout?: 'half' | 'full';
@@ -319,6 +330,7 @@ export function createGansheScene(
       return params;
     },
     getReadoutItems(): Array<{
+      key: string;
       label: string;
       value: string | number;
       layout?: 'half' | 'full';

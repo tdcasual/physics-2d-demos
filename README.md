@@ -1,6 +1,6 @@
 # Teaching Demo Hub
 
-面向课堂演示的多学科 2D 动画静态站点。当前收录 18 个交互式物理教学场景与 3 个仪器组件，统一的布局母版系统，支持桌面端/移动端自适应切换。
+面向课堂演示的多学科 2D 动画静态站点。当前收录 19 个交互式物理教学场景与 3 个仪器组件，统一的布局母版系统，支持桌面端/移动端自适应切换。
 
 ## Tech Stack
 
@@ -76,6 +76,7 @@ src/
     chase-meet/                # 追及相遇
     xt-graph/                  # 位置时间图像
     tortoise-hare/             # 龟兔赛跑
+    ticker-tape/               # 打点计时器纸带
     ganshe/                    # 波的干涉
     field-lines/               # 电场线
     emf-analogy/               # 电路水流类比
@@ -110,6 +111,7 @@ docs/
 - `/src/pages/chase-meet.html`：追及相遇
 - `/src/pages/xt-graph.html`：位置时间图像
 - `/src/pages/tortoise-hare.html`：龟兔赛跑
+- `/src/pages/ticker-tape.html`：打点计时器纸带
 - `/src/pages/spring-oscillator.html`：弹簧振子
 - `/src/pages/ganshe.html`：波的干涉
 - `/src/pages/mechanical-wave.html`：机械波

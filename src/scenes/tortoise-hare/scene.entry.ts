@@ -111,13 +111,14 @@ export function createTortoiseHareScene(
       return { speed: timeScale };
     },
     getState: (): RaceState => sim.getState(),
-    getReadoutItems(): Array<{ label: string; value: string }> {
+    getReadoutItems(): Array<{ key: string; label: string; value: string }> {
       const s = sim.getState();
       return [
-        { label: '时间 t', value: `${s.t.toFixed(2)} s` },
-        { label: '乌龟 x', value: `${s.xa.toFixed(2)} m` },
-        { label: '兔子 x', value: `${s.xb.toFixed(2)} m` },
+        { key: 't', label: '时间 t', value: `${s.t.toFixed(2)} s` },
+        { key: 'xa', label: '乌龟 x', value: `${s.xa.toFixed(2)} m` },
+        { key: 'xb', label: '兔子 x', value: `${s.xb.toFixed(2)} m` },
         {
+          key: 'dx',
           label: '间距 Δx',
           value: `${Math.abs(s.xa - s.xb).toFixed(2)} m`
         }

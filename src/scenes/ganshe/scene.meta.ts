@@ -6,8 +6,9 @@ import type { SceneMeta } from '../types';
 import type { SceneDemoProfile } from '../../platform/demo-profile';
 
 export const demoProfile: SceneDemoProfile = {
-  controlPanel: 'minimal',
-  readoutPanel: 'overlay',
+  lessonTask: 'lecture',
+  graphPanel: 'visible',
+  readoutKeys: ['t', 'dphase', 'intensity'],
   renderHints: {
     contentScale: 1.2
   },

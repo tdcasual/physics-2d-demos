@@ -1,62 +1,287 @@
 /**
  * 演示配置系统 — 平台层共享契约
  *
- * 每个场景声明自己的演示偏好（"我想要什么"），
- * 布局母版决定怎么实现（"我怎么给你空间"），
- * 场景 view 决定怎么画（"我怎么放大内容"）。
- *
- * 放在 platform 层以避免 app/scenes 循环依赖。
+ * 场景声明上课任务与键名；布局 capability 决定几何；
+ * 场景 view 用 renderHints 放大现象。
  */
 
 /** 控制面板策略 */
-export type DemoControlStrategy =
-  | 'hidden' // 完全隐藏，通过浮动控制条操作
-  | 'collapsed' // 折叠为标题栏，点击展开
-  | 'minimal' // 只显示场景指定的高频控件
-  | 'full'; // 保持完整控制面板
+export type DemoControlStrategy = 'hidden' | 'collapsed' | 'minimal' | 'full';
 
 /** 读数面板策略 */
 export type DemoReadoutStrategy =
-  | 'hidden' // 不显示读数
-  | 'overlay' // 叠加在动画区上方（半透明背景）
-  | 'docked-top' // 固定在动画区上方，占整行
-  | 'docked-bottom'; // 固定在动画区下方，占整行
+  | 'hidden'
+  | 'overlay'
+  | 'docked-top'
+  | 'docked-bottom';
 
 /** 图表区策略 */
 export type DemoGraphStrategy = 'hidden' | 'collapsed' | 'visible';
 
+/** 运输条策略（undefined = 不改已挂载节点） */
+export type DemoTransportStrategy = 'hidden' | 'visible';
+
+/** 上课任务母版 */
+export type LessonTask = 'lecture' | 'derivation' | 'instrument' | 'process';
+
 /** 渲染提示（传给场景 view） */
 export interface DemoRenderHints {
-  /** 内容缩放倍率（相对于标准模式） */
   contentScale: number;
-  /** 字体额外缩放（覆盖 contentScale） */
   fontScale?: number;
-  /** 线条额外缩放（覆盖 contentScale） */
   strokeScale?: number;
-  /** 标记点额外缩放（覆盖 contentScale） */
   markerScale?: number;
-  /** 场景自定义参数，view 自行消费 */
+  /** C 类唯一揭示开关。默认 false。 */
+  revealAnswer?: boolean;
   custom?: Record<string, unknown>;
 }
 
 /** 交互提示 */
 export interface DemoInteractionHints {
-  /** 触摸目标最小尺寸（px），布局负责放大控件 */
   touchTargetMinSize?: number;
-  /** 演示时可见的控件 key 列表（供 minimal 策略使用） */
   visibleControlKeys?: string[];
 }
 
 /** 场景演示配置（场景作者编写） */
 export interface SceneDemoProfile {
-  /** 控制面板策略 */
-  controlPanel: DemoControlStrategy;
-  /** 读数面板策略 */
-  readoutPanel: DemoReadoutStrategy;
-  /** 图表区策略 */
+  lessonTask?: LessonTask;
+  /** 有 lessonTask 时省略 = 用母版；无 lessonTask 时被 UNMIGRATED 表忽略 */
+  controlPanel?: DemoControlStrategy;
+  readoutPanel?: DemoReadoutStrategy;
   graphPanel?: DemoGraphStrategy;
-  /** 渲染提示（传给 view） */
+  transport?: DemoTransportStrategy;
+  readoutKeys?: string[];
   renderHints: DemoRenderHints;
-  /** 交互提示 */
   interactionHints?: DemoInteractionHints;
+}
+
+export interface ResolveDemoProfileContext {
+  sceneId: string;
+}
+
+export interface ResolvedDemoProfile {
+  lessonTask: LessonTask | 'unmigrated';
+  controlPanel: DemoControlStrategy;
+  readoutPanel: DemoReadoutStrategy;
+  graphPanel?: DemoGraphStrategy;
+  transport?: DemoTransportStrategy;
+  readoutKeys: string[];
+  visibleControlKeys: string[];
+  renderHints: DemoRenderHints;
+  touchTargetMinSize: number;
+}
+
+export const TASK_MASTERS: Record<
+  LessonTask,
+  {
+    controlPanel: DemoControlStrategy;
+    readoutPanel: DemoReadoutStrategy;
+    graphPanel?: DemoGraphStrategy;
+    transport: DemoTransportStrategy;
+  }
+> = {
+  lecture: {
+    controlPanel: 'minimal',
+    readoutPanel: 'overlay',
+    graphPanel: 'hidden',
+    transport: 'visible'
+  },
+  derivation: {
+    controlPanel: 'minimal',
+    readoutPanel: 'overlay',
+    graphPanel: 'visible',
+    transport: 'hidden'
+  },
+  instrument: {
+    controlPanel: 'minimal',
+    readoutPanel: 'hidden',
+    transport: 'hidden'
+  },
+  process: {
+    controlPanel: 'hidden',
+    readoutPanel: 'docked-bottom',
+    graphPanel: 'visible',
+    transport: 'visible'
+  }
+};
+
+/** 未迁移窗口冻结表。改一行必须附单测。 */
+export const UNMIGRATED: Record<
+  string,
+  Pick<
+    ResolvedDemoProfile,
+    'controlPanel' | 'readoutPanel' | 'graphPanel' | 'transport'
+  >
+> = {
+  projectile: {
+    controlPanel: 'minimal',
+    readoutPanel: 'overlay',
+    graphPanel: undefined,
+    transport: undefined
+  },
+  'mechanical-wave': {
+    controlPanel: 'minimal',
+    readoutPanel: 'overlay',
+    graphPanel: undefined,
+    transport: undefined
+  },
+  'field-lines': {
+    controlPanel: 'minimal',
+    readoutPanel: 'overlay',
+    graphPanel: undefined,
+    transport: undefined
+  },
+  'doppler-effect': {
+    controlPanel: 'minimal',
+    readoutPanel: 'overlay',
+    graphPanel: undefined,
+    transport: undefined
+  },
+  'vt-integral': {
+    controlPanel: 'minimal',
+    readoutPanel: 'overlay',
+    graphPanel: undefined,
+    transport: undefined
+  },
+  'double-slit': {
+    controlPanel: 'minimal',
+    readoutPanel: 'overlay',
+    graphPanel: undefined,
+    transport: undefined
+  },
+  'interference-formula': {
+    controlPanel: 'minimal',
+    readoutPanel: 'overlay',
+    graphPanel: 'visible',
+    transport: undefined
+  },
+  'thin-film': {
+    controlPanel: 'minimal',
+    readoutPanel: 'overlay',
+    graphPanel: 'visible',
+    transport: undefined
+  },
+  wedge: {
+    controlPanel: 'minimal',
+    readoutPanel: 'overlay',
+    graphPanel: 'visible',
+    transport: undefined
+  },
+  'vernier-caliper': {
+    controlPanel: 'minimal',
+    readoutPanel: 'overlay',
+    graphPanel: undefined,
+    transport: undefined
+  },
+  micrometer: {
+    controlPanel: 'minimal',
+    readoutPanel: 'overlay',
+    graphPanel: undefined,
+    transport: undefined
+  },
+  ganshe: {
+    controlPanel: 'minimal',
+    readoutPanel: 'overlay',
+    graphPanel: undefined,
+    transport: undefined
+  },
+  'chase-meet': {
+    controlPanel: 'hidden',
+    readoutPanel: 'docked-bottom',
+    graphPanel: 'visible',
+    transport: undefined
+  },
+  'tortoise-hare': {
+    controlPanel: 'hidden',
+    readoutPanel: 'docked-bottom',
+    graphPanel: undefined,
+    transport: undefined
+  },
+  'xt-graph': {
+    controlPanel: 'hidden',
+    readoutPanel: 'docked-bottom',
+    graphPanel: undefined,
+    transport: undefined
+  },
+  electrification: {
+    controlPanel: 'hidden',
+    readoutPanel: 'docked-bottom',
+    graphPanel: undefined,
+    transport: undefined
+  },
+  'emf-analogy': {
+    controlPanel: 'hidden',
+    readoutPanel: 'docked-bottom',
+    graphPanel: undefined,
+    transport: undefined
+  },
+  'spring-oscillator': {
+    controlPanel: 'hidden',
+    readoutPanel: 'hidden',
+    graphPanel: 'visible',
+    transport: undefined
+  },
+  'ticker-tape': {
+    controlPanel: 'minimal',
+    readoutPanel: 'docked-bottom',
+    graphPanel: undefined,
+    transport: undefined
+  }
+};
+
+export function resolveDemoProfile(
+  input: SceneDemoProfile,
+  ctx: ResolveDemoProfileContext
+): ResolvedDemoProfile {
+  const hints: DemoRenderHints = {
+    contentScale: input.renderHints.contentScale,
+    fontScale: input.renderHints.fontScale,
+    strokeScale: input.renderHints.strokeScale,
+    markerScale: input.renderHints.markerScale,
+    revealAnswer: input.renderHints.revealAnswer ?? false,
+    custom: input.renderHints.custom
+  };
+  const keys = {
+    readoutKeys: input.readoutKeys ?? [],
+    visibleControlKeys: input.interactionHints?.visibleControlKeys ?? [],
+    touchTargetMinSize: input.interactionHints?.touchTargetMinSize ?? 48,
+    renderHints: hints
+  };
+
+  if (!input.lessonTask) {
+    const row = UNMIGRATED[ctx.sceneId];
+    if (!row) {
+      console.warn(
+        `[demo-profile] unknown unmigrated scene "${ctx.sceneId}"; using raw control/readout`
+      );
+      return {
+        lessonTask: 'unmigrated',
+        controlPanel: input.controlPanel ?? 'minimal',
+        readoutPanel: input.readoutPanel ?? 'overlay',
+        graphPanel: input.graphPanel,
+        transport: input.transport,
+        ...keys
+      };
+    }
+    return { lessonTask: 'unmigrated', ...row, ...keys };
+  }
+
+  const master = TASK_MASTERS[input.lessonTask];
+  return {
+    lessonTask: input.lessonTask,
+    controlPanel: input.controlPanel ?? master.controlPanel,
+    readoutPanel: input.readoutPanel ?? master.readoutPanel,
+    graphPanel: input.graphPanel ?? master.graphPanel,
+    transport: input.transport ?? master.transport,
+    ...keys
+  };
+}
+
+export const DESKTOP_DEMO_LAYOUTS = [
+  'split-right',
+  'split-right-graph-bottom',
+  'lab-stage'
+] as const;
+
+export function isDesktopDemoLayout(layoutId: string): boolean {
+  return (DESKTOP_DEMO_LAYOUTS as readonly string[]).includes(layoutId);
 }

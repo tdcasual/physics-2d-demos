@@ -157,6 +157,10 @@ export type ViewEnvironment = {
   setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
   /** 演示模式内容放大系数（normal=1，presentation=demoHints.contentScale ?? 1.5） */
   contentScale(): number;
+  /** 现象几何倍率，与 contentScale 相同 */
+  phenomenonScale(): number;
+  /** 字号倍率；演示期不回落到 phenomenonScale */
+  fontScale(): number;
 };
 
 export type ViewEnvironmentOptions = {
@@ -180,9 +184,16 @@ export function createViewEnvironment(
       env.demoHints = hints;
     },
     contentScale(): number {
+      return env.phenomenonScale();
+    },
+    phenomenonScale(): number {
       return env.mode === 'presentation'
         ? (env.demoHints?.contentScale ?? 1.5)
         : 1;
+    },
+    fontScale(): number {
+      if (env.mode !== 'presentation') return 1;
+      return env.demoHints?.fontScale ?? 1;
     }
   };
   return env;

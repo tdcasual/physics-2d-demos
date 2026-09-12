@@ -8,8 +8,9 @@ import type { SceneMeta } from '../../platform/scene-contract';
 import type { SceneDemoProfile } from '../../platform/demo-profile';
 
 const demoProfile: SceneDemoProfile = {
-  controlPanel: 'minimal',
-  readoutPanel: 'overlay',
+  lessonTask: 'derivation',
+  transport: 'hidden',
+  readoutKeys: ['step', 'light', 'd'],
   renderHints: {
     contentScale: 1.5
   },

@@ -174,6 +174,16 @@ export function createDopplerSim(initial: Partial<DopplerParams> = {}) {
   let waveArrived = false;
   const audio = new AudioEngine();
 
+  function seedRings(): void {
+    const period = 1 / Math.max(0.1, params.emitFrequency);
+    waveRings = [];
+    for (let i = 4; i >= 1; i -= 1) {
+      waveRings.push({ x: sourceX, birthTime: -i * period });
+    }
+    lastEmitTime = 0;
+  }
+  seedRings();
+
   function getState(): DopplerState {
     const { sourceSpeed, observerSpeed, emitFrequency } = params;
     const receivedFrequency = computeReceivedFrequency(
@@ -300,9 +310,8 @@ export function createDopplerSim(initial: Partial<DopplerParams> = {}) {
     time = 0;
     sourceX = 15;
     observerX = 25;
-    waveRings = [];
-    lastEmitTime = 0;
     waveArrived = false;
+    seedRings();
   }
 
   function dispose(): void {

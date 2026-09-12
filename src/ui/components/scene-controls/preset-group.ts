@@ -8,7 +8,12 @@
  */
 export function createPresetButtonGroup(
   mount: HTMLElement,
-  presets: Array<{ id: string; label: string; desc?: string }>,
+  presets: Array<{
+    id: string;
+    label: string;
+    desc?: string;
+    presentationLabel?: string;
+  }>,
   options: {
     initialActive?: string;
     columns?: 2 | 3 | 4;
@@ -69,6 +74,10 @@ export function createPresetButtonGroup(
     const labelSpan = document.createElement('span');
     labelSpan.className = 'text-xs font-semibold';
     labelSpan.textContent = p.label;
+    labelSpan.dataset.standardLabel = p.label;
+    if (p.presentationLabel) {
+      labelSpan.dataset.presentationLabel = p.presentationLabel;
+    }
 
     if (p.desc) {
       const descSpan = document.createElement('span');

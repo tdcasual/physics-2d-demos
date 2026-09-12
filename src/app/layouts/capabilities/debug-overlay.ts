@@ -36,6 +36,8 @@ export function createDebugOverlay(
       const intervalMs = config.intervalMs ?? cfg.intervalMs ?? 1000;
 
       const el = document.createElement('div');
+      el.className = 'debug-overlay';
+      el.dataset.debugOverlay = 'fps';
       el.style.cssText = `
         position: absolute; left: 8px; bottom: 8px; z-index: 9999;
         background: rgba(0,0,0,0.7); color: #0f0; font-family: monospace;

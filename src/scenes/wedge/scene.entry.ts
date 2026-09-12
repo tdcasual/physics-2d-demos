@@ -28,7 +28,7 @@ export function createWedgeScene(
   setParams(params: Partial<WedgeParams>): WedgeParams;
   setCursorX(x: number): void;
   attachGraphCanvas(canvas: HTMLCanvasElement): void;
-  getReadoutItems(): Array<{ label: string; value: string }>;
+  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
   subscribe(listener: () => void): () => void;
 } {
   const sim = createWedgeSim({
@@ -53,19 +53,43 @@ export function createWedgeScene(
     onReadout: options.onReadout
   });
 
-  function getReadoutItems(): Array<{ label: string; value: string }> {
+  function getReadoutItems(): Array<{
+    key: string;
+    label: string;
+    value: string;
+  }> {
     const s = sim.getState();
     const { lambda, theta, L } = s.params;
     return [
-      { label: '波长 λ', value: `${lambda} nm` },
-      { label: '劈尖角 θ', value: `${theta.toFixed(3)}°` },
-      { label: '板长 L', value: `${L.toFixed(1)} cm` },
-      { label: '光标位置 x', value: `${(s.cursorX * L * 10).toFixed(2)} mm` },
-      { label: '厚度 d', value: `${(s.thickness / 1e3).toFixed(2)} μm` },
-      { label: '光程差 Δ', value: `${(s.pathDiff / 1e3).toFixed(2)} μm` },
-      { label: '级次 m', value: s.order.toFixed(1) },
-      { label: '干涉结果', value: s.isBright ? '明纹' : '暗纹' },
-      { label: '条纹间距 l', value: `${(s.fringeSpacing * 1e3).toFixed(3)} mm` }
+      { key: 'lambda', label: '波长 λ', value: `${lambda} nm` },
+      { key: 'theta', label: '劈尖角 θ', value: `${theta.toFixed(3)}°` },
+      { key: 'L', label: '板长 L', value: `${L.toFixed(1)} cm` },
+      {
+        key: 'x',
+        label: '光标位置 x',
+        value: `${(s.cursorX * L * 10).toFixed(2)} mm`
+      },
+      {
+        key: 'd',
+        label: '厚度 d',
+        value: `${(s.thickness / 1e3).toFixed(2)} μm`
+      },
+      {
+        key: 'path-diff',
+        label: '光程差 Δ',
+        value: `${(s.pathDiff / 1e3).toFixed(2)} μm`
+      },
+      { key: 'order', label: '级次 m', value: s.order.toFixed(1) },
+      {
+        key: 'result',
+        label: '干涉结果',
+        value: s.isBright ? '明纹' : '暗纹'
+      },
+      {
+        key: 'fringe-l',
+        label: '条纹间距 l',
+        value: `${s.fringeSpacing.toFixed(3)} mm`
+      }
     ];
   }
 

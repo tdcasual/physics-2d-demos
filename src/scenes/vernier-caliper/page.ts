@@ -49,7 +49,12 @@ bootScenePage({
         scheduleRender();
         writeParam(key, value);
       },
-      onAction: () => {}
+      onAction: (key) => {
+        if (key === 'reveal') {
+          caliperScene.setRevealAnswer(true);
+          scheduleRender();
+        }
+      }
     });
 
     return renderer;

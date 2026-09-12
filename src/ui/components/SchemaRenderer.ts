@@ -210,8 +210,16 @@ function renderField(
     }
 
     case 'button': {
+      // Wrapper already gets data-control-key={field.key}. Do not stamp the
+      // same key on the inner button (duplicate reveal/fillRuler matches).
       const grid = createButtonGrid(
-        [{ label: field.label, onClick: () => onAction(field.key) }],
+        [
+          {
+            label: field.label,
+            presentationLabel: field.presentationLabel,
+            onClick: () => onAction(field.key)
+          }
+        ],
         1
       );
       return {
@@ -283,8 +291,10 @@ function renderField(
     case 'button-grid': {
       const grid = createButtonGrid(
         field.buttons.map((b) => ({
+          key: b.key,
           label: b.label,
           desc: b.desc,
+          presentationLabel: b.presentationLabel,
           onClick: () => onAction(b.key)
         })),
         field.columns ?? 2

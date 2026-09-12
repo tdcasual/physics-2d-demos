@@ -7,8 +7,8 @@ import type { SceneMeta } from '../types';
 import type { SceneDemoProfile } from '../../platform/demo-profile';
 
 export const demoProfile: SceneDemoProfile = {
-  controlPanel: 'minimal',
-  readoutPanel: 'overlay',
+  lessonTask: 'lecture',
+  readoutKeys: ['t', 'x', 'y', 'v0-theta'],
   renderHints: {
     contentScale: 1.5
   },

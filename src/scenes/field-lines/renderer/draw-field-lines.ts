@@ -1,6 +1,11 @@
 import type { FieldLinePath } from './types';
 import { getFieldLineColors, type FieldLineColors } from './colors';
 
+export type DrawFieldLinesOptions = {
+  strokeAlpha?: number;
+  showTicks?: boolean;
+};
+
 /**
  * 绘制连续电场线
  */
@@ -8,9 +13,13 @@ export function drawFieldLines(
   ctx: CanvasRenderingContext2D,
   paths: FieldLinePath[],
   responsiveScale: number,
-  isDark: boolean
+  isDark: boolean,
+  options: DrawFieldLinesOptions = {}
 ): void {
   if (paths.length === 0) return;
+  const strokeAlpha = options.strokeAlpha ?? 1;
+  const showTicks = options.showTicks ?? true;
+  if (strokeAlpha <= 0.01) return;
 
   let maxField = 0;
   for (const path of paths) {
@@ -24,9 +33,17 @@ export function drawFieldLines(
   ctx.save();
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
+  ctx.globalAlpha = strokeAlpha;
 
   for (const path of paths) {
-    drawSingleFieldLine(ctx, path, maxField, responsiveScale, colors);
+    drawSingleFieldLine(
+      ctx,
+      path,
+      maxField,
+      responsiveScale,
+      colors,
+      showTicks
+    );
   }
 
   ctx.restore();
@@ -37,34 +54,31 @@ function drawSingleFieldLine(
   path: FieldLinePath,
   maxField: number,
   responsiveScale: number,
-  colors: FieldLineColors
+  colors: FieldLineColors,
+  showTicks: boolean
 ): void {
-  const { points, fieldMagnitudes, direction } = path;
+  const { points, fieldMagnitudes } = path;
   if (points.length < 2) return;
 
-  const isPositiveFlow = direction === 1;
-  const baseColor = isPositiveFlow
-    ? colors.fieldLineWarm.base
-    : colors.fieldLineCool.base;
+  // 全部电场线同一颜色：叠加后是一个场，不是正/负两套线
+  const baseColor = colors.fieldLineWarm.base;
 
   // 电场线带微妙的外发光效果
   ctx.shadowBlur = Math.round(6 * responsiveScale);
   ctx.shadowColor = `rgba(${baseColor}, 0.25)`;
 
   // 分段绘制，每段根据局部场强调整线宽和透明度
-  const minWidth = Math.max(0.5, 0.8 * responsiveScale);
-  const maxWidth = Math.max(1.5, 2.2 * responsiveScale);
+  const minWidth = Math.max(1, 1.4 * responsiveScale);
+  const maxWidth = Math.max(1.6, 2.2 * responsiveScale);
 
   for (let i = 0; i < points.length - 1; i++) {
     const p1 = points[i];
     const p2 = points[i + 1];
     const fieldRatio = maxField > 0 ? (fieldMagnitudes[i] || 0) / maxField : 0;
 
-    // 线宽：场强越大线越粗
-    const width =
-      minWidth + (maxWidth - minWidth) * Math.min(1, fieldRatio * 2);
-    // 透明度：场强越大越不透明
-    const alpha = 0.35 + Math.min(0.45, fieldRatio * 0.8);
+    // 电场线以条数/间距表示 |E|，线宽只做轻微变化，避免远场淡到看不见
+    const width = minWidth + (maxWidth - minWidth) * Math.min(1, fieldRatio);
+    const alpha = 0.62 + Math.min(0.3, fieldRatio * 0.4);
 
     ctx.beginPath();
     ctx.moveTo(p1.x, p1.y);
@@ -76,8 +90,9 @@ function drawSingleFieldLine(
 
   ctx.shadowBlur = 0;
 
-  // 在电场线末端绘制方向箭头
-  drawArrowAtEnd(ctx, points, direction, responsiveScale, baseColor);
+  if (showTicks) {
+    drawArrowAtEnd(ctx, points, responsiveScale, baseColor);
+  }
 }
 
 /**
@@ -86,7 +101,6 @@ function drawSingleFieldLine(
 function drawArrowAtEnd(
   ctx: CanvasRenderingContext2D,
   points: Array<{ x: number; y: number }>,
-  direction: 1 | -1,
   responsiveScale: number,
   color: string
 ): void {

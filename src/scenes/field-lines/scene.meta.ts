@@ -1,20 +1,22 @@
 /**
- * 电场线分布 — 点电荷系统的电场强度可视化
+ * 电场线演化 — 试探电荷测 E，加密后连成电场线
  */
 
 import type { SceneMeta } from '../types';
 
 import type { SceneDemoProfile } from '../../platform/demo-profile';
+import { PROBE_N_DEFAULT } from './scene.sim';
 
 export const demoProfile: SceneDemoProfile = {
-  controlPanel: 'minimal',
-  readoutPanel: 'overlay',
+  lessonTask: 'lecture',
+  transport: 'hidden',
+  readoutKeys: ['scene', 'n', 'lines'],
   renderHints: {
     contentScale: 1.6
   },
   interactionHints: {
     touchTargetMinSize: 48,
-    visibleControlKeys: ['scene', 'charge', 'density', 'q1', 'q2']
+    visibleControlKeys: ['scene', 'n']
   }
 };
 
@@ -24,16 +26,17 @@ export const fieldLinesMeta: SceneMeta = {
   path: '/src/pages/field-lines.html',
   subject: '电磁学',
   concept: '电场分布',
-  subConcepts: ['电荷叠加', '场线疏密'],
-  keywords: ['电磁学', '电场线', '2D'],
-  objective: '展示点电荷组合下电场矢量分布和拖拽交互反馈',
-  description: '可视化看不见的力量，电场线的绘制与理解',
+  subConcepts: ['试探电荷', '电场线'],
+  keywords: ['电磁学', '电场线', '试探电荷', '场强'],
+  objective:
+    '用试探电荷测出若干点的 E；加密试探后箭头连成电场线。线条条数由电荷量决定，不随试探次数改变',
+  description: '电场线不是画上去的密度，而是足够多次场强测量连成的曲线',
   difficulty: 2,
   icon: '⚡',
   category: 'electromagnetism',
   featured: true,
   defaultParams: {
-    density: 10,
+    n: PROBE_N_DEFAULT,
     q1: 1,
     q2: -1
   },

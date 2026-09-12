@@ -137,11 +137,22 @@ describe('doppler-effect sim', () => {
   });
 
   describe('wave ring emission', () => {
+    it('seeds visible wavefronts at t=0', () => {
+      const sim = createDopplerSim({ emitFrequency: 3 });
+      const s = sim.getState();
+      expect(s.time).toBe(0);
+      expect(s.waveRings.length).toBe(4);
+      const radii = s.waveRings.map(
+        (r) => SOUND_SPEED * (s.time - r.birthTime)
+      );
+      expect(Math.min(...radii)).toBeGreaterThan(1);
+    });
+
     it('emits rings at the configured period from a static source', () => {
       const sim = createDopplerSim({ emitFrequency: 4 }); // 周期 0.25 s
       // 推进约 1 秒
       for (let i = 0; i < 60; i++) sim.step(1 / 60);
-      const rings = sim.getState().waveRings;
+      const rings = sim.getState().waveRings.filter((r) => r.birthTime >= 0);
       expect(rings.length).toBeGreaterThanOrEqual(3);
       expect(rings.length).toBeLessThanOrEqual(5);
       // 静止波源：所有环从同一位置发出
@@ -175,7 +186,7 @@ describe('doppler-effect sim', () => {
   });
 
   describe('lifecycle', () => {
-    it('reset restores defaults and clears wave rings', () => {
+    it('reset restores defaults and reseeds t=0 wavefronts', () => {
       const sim = createDopplerSim({ sourceSpeed: 3, emitFrequency: 8 });
       for (let i = 0; i < 30; i++) sim.step(1 / 60);
       sim.reset();
@@ -185,7 +196,8 @@ describe('doppler-effect sim', () => {
       expect(s.time).toBe(0);
       expect(s.sourceX).toBe(15);
       expect(s.observerX).toBe(25);
-      expect(s.waveRings).toHaveLength(0);
+      expect(s.waveRings).toHaveLength(4);
+      expect(s.waveRings.every((r) => r.birthTime < 0)).toBe(true);
       expect(s.receivedFrequency).toBeCloseTo(3, 6);
     });
 

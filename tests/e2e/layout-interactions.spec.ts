@@ -22,8 +22,8 @@ const ANIMATED_SCENES = ['chase-meet', 'emf-analogy'] as const;
 
 // ── Helpers ─────────────────────────────────────────────────────────────
 
-async function gotoScene(page: Page, sceneId: string) {
-  await page.goto(scenePage(sceneId));
+async function gotoScene(page: Page, sceneId: string, query = '') {
+  await page.goto(scenePage(sceneId, query));
   await page.waitForSelector('.layout-master', {
     state: 'visible',
     timeout: 10000
@@ -125,7 +125,7 @@ test.describe('SplitRightLayout Desktop', () => {
   for (const scene of sceneProfiles) {
     const { id: sceneId, profile } = scene;
     test(`${sceneId} loads with correct structure`, async ({ page }) => {
-      await gotoScene(page, sceneId);
+      await gotoScene(page, sceneId, '?layout=split-right');
 
       await expect(page.locator('.layout-master')).toBeVisible();
       await expect(

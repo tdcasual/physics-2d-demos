@@ -1,6 +1,5 @@
 import type { VtIntegralSnapshot } from '../scene.sim';
 import type { DrawContext } from './types';
-import { pathRoundRect } from '../../../core/draw-primitives';
 import { vtPalette, fontPx, lineW, markR, FONT_FAMILY } from './palette';
 
 // 圆渐变 / 多边形渐变 / 内接多边形顶点：仅依赖几何与主题，
@@ -21,7 +20,7 @@ export function drawScene3(
   snapshot: VtIntegralSnapshot
 ): void {
   const { ctx, width, height, responsiveScale, contentScale } = context;
-  const { params, metrics } = snapshot;
+  const { params } = snapshot;
   const P = vtPalette(context.theme);
   const s = responsiveScale;
   const cs = contentScale;
@@ -148,60 +147,11 @@ export function drawScene3(
     ctx.fillText('割之又割，多边形已近乎与圆合体', cx, cy - r - 14 * s);
   }
 
-  // ── 收敛数据面板（右侧）──
-  const perimeter = 2 * n * Math.sin(Math.PI / n);
-  const circumference = Math.PI * 2;
-  const panelFont = fontPx(11.5, s, cs);
-  const lineH = Math.max(20, 24 * s * cs);
-  const rows = [
-    { label: '内接正多边形', value: `n = ${n} 边`, accent: false },
-    { label: '多边形周长', value: perimeter.toFixed(4), accent: false },
-    { label: '圆周长 2π', value: circumference.toFixed(4), accent: false },
-    {
-      label: '两者之差',
-      value: metrics.circumferenceDiff.toFixed(4),
-      accent: true
-    }
-  ];
-  let panelW = 0;
-  ctx.font = `${panelFont}px ${FONT_FAMILY}`;
-  for (const rw of rows) {
-    panelW = Math.max(
-      panelW,
-      ctx.measureText(rw.label).width + ctx.measureText(rw.value).width
-    );
-  }
-  panelW += 60 * s * cs;
-  const panelH = lineH * (rows.length + 1) + 18 * s;
-  const px0 = Math.min(width - panelW - 24 * s, cx + r + 40 * s);
-  const py0 = cy - panelH * 0.5;
-
-  ctx.fillStyle = P.isDark ? 'rgba(15,23,42,0.78)' : 'rgba(255,255,255,0.88)';
-  pathRoundRect(ctx, px0, py0, panelW, panelH, 10 * s);
-  ctx.fill();
-  ctx.strokeStyle = P.isDark
-    ? 'rgba(148,163,184,0.28)'
-    : 'rgba(100,116,139,0.22)';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  // 面板标题
   ctx.fillStyle = P.text;
-  ctx.font = `600 ${fontPx(12.5, s, cs)}px ${FONT_FAMILY}`;
+  ctx.font = `600 ${fontPx(14, s, cs)}px ${FONT_FAMILY}`;
   ctx.textAlign = 'left';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('割圆术 · 逼近圆周', px0 + 16 * s, py0 + lineH * 0.6);
-
-  rows.forEach((rw, idx) => {
-    const ry = py0 + lineH * (idx + 1.5);
-    ctx.font = `${panelFont}px ${FONT_FAMILY}`;
-    ctx.textAlign = 'left';
-    ctx.fillStyle = P.textSecondary;
-    ctx.fillText(rw.label, px0 + 16 * s, ry);
-    ctx.textAlign = 'right';
-    ctx.fillStyle = rw.accent ? P.accent : P.text;
-    ctx.fillText(rw.value, px0 + panelW - 16 * s, ry);
-  });
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText('割圆术 · 逼近圆周', 24 * s, 28 * s);
 
   ctx.restore();
 }

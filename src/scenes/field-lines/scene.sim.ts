@@ -1,3 +1,10 @@
+/**
+ * 电场线演化 — 用试探电荷测 E，加密后连成电场线
+ *
+ * 线条条数由 |Q| 决定（高斯定理：通量 ∝ 电荷量），不随试探次数 n 变化。
+ * n 只控制每条预定电场线上的采样点数。
+ */
+
 import { clamp } from '../../core/math';
 
 export type FieldLinesScene = 'single' | 'like' | 'unlike' | 'custom';
@@ -8,9 +15,19 @@ export type FieldCharge = {
   q: number;
 };
 
+export const PROBE_N_MIN = 1;
+export const PROBE_N_MAX = 40;
+export const PROBE_N_DEFAULT = 3;
+
+/** 单位电荷发出的电场线条数（教学用约定，不随 n 改变） */
+export const LINES_PER_UNIT_CHARGE = 8;
+export const MIN_LINES_PER_CHARGE = 4;
+export const MAX_LINES_PER_CHARGE = 16;
+
 export type FieldLinesParams = {
   scene: FieldLinesScene;
-  density: number;
+  /** 每条电场线上的试探点数 */
+  n: number;
   q1: number;
   q2: number;
 };
@@ -21,6 +38,25 @@ export type FieldLinesSnapshot = {
   params: ResolvedFieldLinesParams;
   charges: FieldCharge[];
 };
+
+export function linesForCharge(q: number): number {
+  if (q === 0) return 0;
+  return Math.max(
+    MIN_LINES_PER_CHARGE,
+    Math.min(
+      MAX_LINES_PER_CHARGE,
+      Math.round(LINES_PER_UNIT_CHARGE * Math.abs(q))
+    )
+  );
+}
+
+/** 由电荷量决定的电场线条数；有正电荷时只从正电荷出发 */
+export function seedLineCount(charges: Array<{ q: number }>): number {
+  const positives = charges.filter((c) => c.q > 0);
+  const seeds =
+    positives.length > 0 ? positives : charges.filter((c) => c.q < 0);
+  return seeds.reduce((sum, c) => sum + linesForCharge(c.q), 0);
+}
 
 function defaultCharges(
   scene: FieldLinesScene,
@@ -61,10 +97,10 @@ function normalizeParams(
 
   return {
     scene,
-    density: clamp(
-      Number.isFinite(input.density) ? Number(input.density) : 10,
-      1,
-      100
+    n: clamp(
+      Number.isFinite(input.n) ? Math.round(Number(input.n)) : PROBE_N_DEFAULT,
+      PROBE_N_MIN,
+      PROBE_N_MAX
     ),
     q1: clamp(Number.isFinite(input.q1) ? Number(input.q1) : 1, -5, 5),
     q2: clamp(Number.isFinite(input.q2) ? Number(input.q2) : -1, -5, 5)
@@ -74,8 +110,6 @@ function normalizeParams(
 export function createFieldLinesSim(initial: Partial<FieldLinesParams>) {
   let params = normalizeParams(initial);
   let charges = defaultCharges(params.scene, params.q1, params.q2);
-  // 快照引用缓存：静态场景下 getSnapshot 在状态未变时返回同一对象，
-  // 供 view 层用引用比较跳过昂贵重绘
   let snapshotCache: FieldLinesSnapshot | null = null;
 
   function rebuildCharges(): void {
@@ -105,8 +139,8 @@ export function createFieldLinesSim(initial: Partial<FieldLinesParams>) {
       invalidateSnapshot();
       return { ...params };
     },
-    setDensity(density: number): ResolvedFieldLinesParams {
-      params = normalizeParams({ ...params, density });
+    setN(n: number): ResolvedFieldLinesParams {
+      params = normalizeParams({ ...params, n });
       invalidateSnapshot();
       return { ...params };
     },
@@ -136,7 +170,6 @@ export function createFieldLinesSim(initial: Partial<FieldLinesParams>) {
       invalidateSnapshot();
     },
     addCharge(q: number): void {
-      // 在随机位置添加新电荷
       const newCharge: FieldCharge = {
         x: 0.2 + Math.random() * 0.6,
         y: 0.2 + Math.random() * 0.6,
@@ -147,14 +180,14 @@ export function createFieldLinesSim(initial: Partial<FieldLinesParams>) {
     },
     removeCharge(index: number): void {
       if (index < 0 || index >= charges.length) return;
-      if (charges.length <= 1) return; // 至少保留一个电荷
+      if (charges.length <= 1) return;
       charges.splice(index, 1);
       invalidateSnapshot();
     },
     reset(): void {
       params = normalizeParams({
         scene: 'single',
-        density: 10,
+        n: PROBE_N_DEFAULT,
         q1: 1,
         q2: -1
       });

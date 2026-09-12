@@ -199,6 +199,30 @@
   height: 100%;
 }
 
+:is(.teaching-stage-slot, .srgb-stage-slot).is-demo-stage-with-graph {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  box-sizing: border-box;
+  padding-bottom: min(22vh, 11rem);
+}
+
+:is(.teaching-stage-slot, .srgb-stage-slot).is-demo-stage-with-graph > canvas {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  height: auto;
+}
+
+:is(.teaching-stage-slot, .srgb-stage-slot)
+  > .graph-section.is-demo-stage-graph {
+  flex: 0 0 min(28vh, 220px);
+  width: 100%;
+  height: min(28vh, 220px);
+  max-height: min(28vh, 220px);
+  max-width: none;
+}
+
 :is(.teaching-stage-canvas, .srgb-stage-canvas) {
   display: block;
   width: 100%;

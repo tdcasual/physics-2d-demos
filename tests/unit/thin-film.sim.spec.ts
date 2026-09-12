@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   createThinFilmSim,
+  thicknessAt,
   thicknessAtY,
   type ThinFilmParams
 } from '../../src/scenes/thin-film/scene.sim';
@@ -11,7 +12,8 @@ const defaultParams: ThinFilmParams = {
   dBottom: 800,
   n: 1.33,
   whiteLight: false,
-  step: 'geometry'
+  step: 'geometry',
+  profile: 'linear'
 };
 
 describe('thin-film sim', () => {
@@ -31,6 +33,31 @@ describe('thin-film sim', () => {
     it('works with equal dTop and dBottom', () => {
       expect(thicknessAtY(500, 500, 0.3)).toBe(500);
       expect(thicknessAtY(500, 500, 0.7)).toBe(500);
+    });
+  });
+
+  describe('thicknessAt quad (d ∝ y³)', () => {
+    it('equals dThin at the top t=0', () => {
+      expect(thicknessAt(100, 800, 0, 'quad')).toBe(100);
+    });
+
+    it('equals dThick at the bottom t=1', () => {
+      expect(thicknessAt(100, 800, 1, 'quad')).toBe(800);
+    });
+
+    it('is well below the linear midpoint at t=0.5, so fringes pack toward the bottom', () => {
+      expect(thicknessAt(100, 800, 0.5, 'quad')).toBe(187.5);
+      expect(thicknessAt(100, 800, 0.5, 'linear')).toBe(450);
+    });
+  });
+
+  describe('quad profile local thickness', () => {
+    const quad = { ...defaultParams, profile: 'quad' as const };
+
+    it('matches y³ at half height', () => {
+      const sim = createThinFilmSim(quad);
+      sim.setCursorY(0.5);
+      expect(sim.getState().localThickness).toBe(187.5);
     });
   });
 

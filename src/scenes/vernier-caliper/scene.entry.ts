@@ -29,7 +29,8 @@ export function createVernierCaliperScene(
   setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
   getState(): CaliperState;
   setParams(params: Partial<CaliperParams>): CaliperParams;
-  getReadoutItems(): Array<{ label: string; value: string }>;
+  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  setRevealAnswer(value: boolean): void;
   subscribe(listener: () => void): () => void;
 } {
   const sim = createVernierCaliperSim({
@@ -51,15 +52,38 @@ export function createVernierCaliperScene(
     onReadout: options.onReadout
   });
 
-  function getReadoutItems(): Array<{ label: string; value: string }> {
+  let revealed =
+    (options.mode ?? 'normal') !== 'presentation' ||
+    Boolean(options.demoHints?.revealAnswer);
+
+  function getReadoutItems(): Array<{
+    key: string;
+    label: string;
+    value: string;
+  }> {
     const s = sim.getState();
+    if (!revealed) {
+      return [
+        { key: 'object', label: '测量对象', value: s.objectName },
+        { key: 'precision', label: '精度', value: `${s.params.precision} mm` },
+        { key: 'status', label: '读数', value: '点击「揭示」后显示' }
+      ];
+    }
     return [
-      { label: '测量对象', value: s.objectName },
-      { label: '真实尺寸', value: `${s.objectSize.toFixed(2)} mm` },
-      { label: '精度', value: `${s.params.precision} mm` },
-      { label: '主尺读数', value: `${s.mainScaleReading} mm` },
-      { label: '游标对齐', value: `${s.vernierAlignment} 格` },
-      { label: '测量读数', value: `${s.totalReading.toFixed(2)} mm` }
+      { key: 'object', label: '测量对象', value: s.objectName },
+      {
+        key: 'size',
+        label: '真实尺寸',
+        value: `${s.objectSize.toFixed(2)} mm`
+      },
+      { key: 'precision', label: '精度', value: `${s.params.precision} mm` },
+      { key: 'main', label: '主尺读数', value: `${s.mainScaleReading} mm` },
+      { key: 'vernier', label: '游标对齐', value: `${s.vernierAlignment} 格` },
+      {
+        key: 'reading',
+        label: '测量读数',
+        value: `${s.totalReading.toFixed(2)} mm`
+      }
     ];
   }
 
@@ -68,12 +92,21 @@ export function createVernierCaliperScene(
     getState() {
       return sim.getState();
     },
+    setMode(mode: TeachingMode, hints?: DemoRenderHints): void {
+      revealed = mode !== 'presentation' || Boolean(hints?.revealAnswer);
+      base.setMode(mode, hints);
+    },
     setParams(params: Partial<CaliperParams>): CaliperParams {
       const result = sim.setParams(params);
       base.renderAndEmit();
       base.notify();
       return result;
     },
-    getReadoutItems
+    getReadoutItems,
+    setRevealAnswer(value: boolean): void {
+      revealed = value;
+      view.setRevealAnswer(value);
+      base.notify();
+    }
   };
 }

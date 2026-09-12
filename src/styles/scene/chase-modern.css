@@ -16,6 +16,20 @@
   box-sizing: border-box;
 }
 
+[data-mode='presentation'] .chase-modern-stage {
+  padding-bottom: min(22vh, 11rem);
+}
+
+[data-mode='presentation'] .chase-modern-card--motion {
+  flex: 3 1 0;
+  min-height: 0;
+}
+
+[data-mode='presentation'] .chase-modern-card--graphs {
+  flex: 2 1 0;
+  min-height: 0;
+}
+
 /* Card wrapper */
 .chase-modern-card {
   display: flex;

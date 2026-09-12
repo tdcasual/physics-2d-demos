@@ -21,4 +21,5 @@
 @import './layout/srgb.css';
 @import './capability/buttons.css';
 @import './layout/mobile-stack.css';
+@import './layout/lab-stage.css';
 @import './shared/scene-controls.css';

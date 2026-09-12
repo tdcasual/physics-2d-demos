@@ -31,10 +31,14 @@ export function createSpringOscillatorScene(
   }
 
   // 生成读数数据（供容器统一刷新）
-  function getReadoutItems(): Array<{ label: string; value: string }> {
-    const items: Array<{ label: string; value: string }> = [
-      { label: '全局时间', value: `${sim.globalTime.toFixed(2)} s` },
-      { label: '振子数量', value: String(sim.oscillators.length) }
+  function getReadoutItems(): Array<{
+    key: string;
+    label: string;
+    value: string;
+  }> {
+    const items: Array<{ key: string; label: string; value: string }> = [
+      { key: 't', label: '全局时间', value: `${sim.globalTime.toFixed(2)} s` },
+      { key: 'count', label: '振子数量', value: String(sim.oscillators.length) }
     ];
 
     sim.oscillators.forEach((osc, index) => {
@@ -43,10 +47,23 @@ export function createSpringOscillatorScene(
       // 实时相位角，归一化到 [0°, 360°)
       let phaseDeg = ((osc.state.phase * 180) / Math.PI) % 360;
       if (phaseDeg < 0) phaseDeg += 360;
+      const n = index + 1;
       items.push(
-        { label: `#${index + 1} ω`, value: `${omega.toFixed(2)} rad/s` },
-        { label: `#${index + 1} T`, value: `${period.toFixed(2)} s` },
-        { label: `#${index + 1} 相位`, value: `${phaseDeg.toFixed(0)}°` }
+        {
+          key: `omega-${n}`,
+          label: `#${n} ω`,
+          value: `${omega.toFixed(2)} rad/s`
+        },
+        {
+          key: `period-${n}`,
+          label: `#${n} T`,
+          value: `${period.toFixed(2)} s`
+        },
+        {
+          key: `phase-${n}`,
+          label: `#${n} 相位`,
+          value: `${phaseDeg.toFixed(0)}°`
+        }
       );
     });
 
@@ -60,7 +77,11 @@ export function createSpringOscillatorScene(
         if (Math.abs(phaseDiff) < 0.1) relation = '(同相)';
         else if (Math.abs(Math.abs(phaseDiff) - Math.PI) < 0.1)
           relation = '(反相)';
-        items.push({ label: '相位差 φ₂-φ₁', value: `${diffDeg}° ${relation}` });
+        items.push({
+          key: 'phase-diff',
+          label: '相位差 φ₂-φ₁',
+          value: `${diffDeg}° ${relation}`
+        });
       }
     }
 

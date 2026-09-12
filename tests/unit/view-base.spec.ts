@@ -264,4 +264,12 @@ describe('createViewEnvironment', () => {
     env.setMode('presentation', { contentScale: 1.8 });
     expect(env.contentScale()).toBe(1.8);
   });
+
+  it('fontScale 不回落到 phenomenonScale', () => {
+    const env = createViewEnvironment();
+    env.setMode('presentation', { contentScale: 1.8 });
+    expect(env.fontScale()).toBe(1);
+    env.setMode('presentation', { contentScale: 1.8, fontScale: 1.2 });
+    expect(env.fontScale()).toBe(1.2);
+  });
 });

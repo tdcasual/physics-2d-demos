@@ -206,8 +206,19 @@ for (const layout of layouts) {
           .count();
         if (hasGraph > 0) {
           const graphTab = page.locator('[role="tab"][data-tab="graph"]');
-          if (profile.requiresGraphActivation && (await graphTab.count()) > 0) {
-            await graphTab.click();
+          if (profile.requiresGraphActivation) {
+            if (await graphTab.count()) {
+              await graphTab.click();
+            } else if (profile.adapter === 'collapsible-floats') {
+              const graphDisclosure = page.locator(
+                '#lab-panel-graph .lab-float-fold'
+              );
+              if (
+                (await graphDisclosure.getAttribute('aria-expanded')) !== 'true'
+              ) {
+                await graphDisclosure.click();
+              }
+            }
           }
           const graphSurface = page.locator(GRAPH_SURFACE_SELECTOR);
           await expect(

@@ -89,15 +89,6 @@ const NON_PARAM_KEYS: Record<string, Record<string, string>> = {
     // page.ts: setCursorY 专用 API（数值按 /100 换算）
     cursorY: 'setCursorY dedicated API (scaled /100)'
   },
-  'vt-integral': {
-    // NO_PARAMS_API 场景；以下均为 entry 专用 API
-    rects: 'setRects dedicated API',
-    division: 'setDivision dedicated API',
-    time: 'setTime dedicated API',
-    amplitude: 'setCurveAmplitude dedicated API',
-    'circle-n': 'setCircleN dedicated API',
-    'surface-n': 'setSurfaceN dedicated API'
-  },
   wedge: {
     // page.ts: setCursorX 专用 API（数值按 /100 换算）
     cursorX: 'setCursorX dedicated API (scaled /100)'

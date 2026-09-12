@@ -5,7 +5,10 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { micrometerMeta } from './scene.meta';
 import { createMicrometerScene } from './scene.entry';
-import { micrometerControlsSchema } from './controls-schema';
+import {
+  MICROMETER_PRESET_MM,
+  micrometerControlsSchema
+} from './controls-schema';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 
 bootScenePage({
@@ -40,8 +43,8 @@ bootScenePage({
         if (key === 'preset') {
           // 预设语义 = 设定 reading 数值；setValue 派发 input 事件，
           // 经由 reading 的 onChange 统一完成 setParams/scheduleRender/writeParam
-          const val = parseFloat(String(value));
-          if (!Number.isNaN(val)) renderer.setValue('reading', val);
+          const val = MICROMETER_PRESET_MM[String(value)];
+          if (val !== undefined) renderer.setValue('reading', val);
           writeParam('preset', String(value));
           return;
         }
@@ -51,7 +54,12 @@ bootScenePage({
         scheduleRender();
         writeParam(key, value);
       },
-      onAction: () => {}
+      onAction: (key) => {
+        if (key === 'reveal') {
+          microScene.setRevealAnswer(true);
+          scheduleRender();
+        }
+      }
     });
 
     return renderer;

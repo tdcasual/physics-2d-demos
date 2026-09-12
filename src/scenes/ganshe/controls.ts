@@ -58,6 +58,7 @@ export function createWaveSourceCard(
       unit: s.unit,
       onChange: (val) => onChange(s.key, val)
     });
+    row.dataset.controlKey = s.key;
     const input = row.querySelector('input');
     if (input) {
       input.style.accentColor = accentColor;
@@ -68,6 +69,8 @@ export function createWaveSourceCard(
     }
     body.appendChild(row);
   }
+
+  card.element.dataset.controlKey = sliders[0]?.key ?? title;
 
   return {
     element: card.element,
@@ -195,6 +198,7 @@ export function createObserverManager(
     listEl.appendChild(addRow);
   }
 
+  card.element.dataset.controlKey = 'observers';
   refresh();
   return { element: card.element, refresh };
 }

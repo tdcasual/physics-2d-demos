@@ -2,10 +2,13 @@ import type { SceneMeta } from '../types';
 import type { SceneDemoProfile } from '../../platform/demo-profile';
 
 const demoProfile: SceneDemoProfile = {
-  controlPanel: 'collapsed',
-  readoutPanel: 'docked-bottom',
+  lessonTask: 'process',
+  readoutKeys: ['t', 'x', 'v'],
   renderHints: { contentScale: 1.6 },
-  interactionHints: { touchTargetMinSize: 48 }
+  interactionHints: {
+    touchTargetMinSize: 48,
+    visibleControlKeys: ['preset']
+  }
 };
 
 export const xtGraphMeta: SceneMeta = {

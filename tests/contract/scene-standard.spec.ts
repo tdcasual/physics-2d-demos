@@ -441,13 +441,19 @@ describe('scene modernization standard (anti-drift ratchet)', () => {
       expect(
         meta?.demoProfile,
         `场景 "${id}" 的 SceneMeta 未挂载 demoProfile。` +
-          `缺少时演示模式不会应用面板策略（controlPanel/readoutPanel）。` +
+          `缺少时演示模式不会应用面板策略。` +
           `参考 src/scenes/wedge/scene.meta.ts。`
       ).toMatchObject({
-        controlPanel: expect.any(String),
-        readoutPanel: expect.any(String),
         renderHints: expect.any(Object)
       });
+      const profile = meta?.demoProfile as
+        | { lessonTask?: string; controlPanel?: string; readoutPanel?: string }
+        | undefined;
+      expect(
+        Boolean(profile?.lessonTask) ||
+          (Boolean(profile?.controlPanel) && Boolean(profile?.readoutPanel)),
+        `场景 "${id}" 的 demoProfile 须声明 lessonTask，或同时声明 controlPanel 与 readoutPanel`
+      ).toBe(true);
     });
   });
 

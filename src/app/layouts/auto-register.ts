@@ -10,7 +10,11 @@
  * @version 2.1.0
  */
 
-import { layoutRegistry, registerLazyLayout } from './registry';
+import {
+  layoutRegistry,
+  registerLayoutTestAdapter,
+  registerLazyLayout
+} from './registry';
 import { registerDefaultStrategies } from './default-strategies';
 
 /**
@@ -19,6 +23,7 @@ import { registerDefaultStrategies } from './default-strategies';
  */
 export function registerAllLayouts(): void {
   registerDefaultStrategies();
+  registerLayoutTestAdapter('collapsible-floats');
 
   if (!layoutRegistry.has('split-right')) {
     registerLazyLayout(
@@ -110,6 +115,37 @@ export function registerAllLayouts(): void {
           minStageHeight: 100,
           minGraphWidth: 80,
           minGraphHeight: 40
+        }
+      }
+    );
+  }
+
+  if (!layoutRegistry.has('lab-stage')) {
+    registerLazyLayout(
+      'lab-stage',
+      () =>
+        import('./layouts/lab-stage/lab-stage').then((m) => m.LabStageLayout),
+      {
+        name: '实验台',
+        description: '动画在上、控制在下，数据表与图表悬浮',
+        tags: ['lab', 'desktop'],
+        supportsMobile: true,
+        supportedSlots: ['header', 'control', 'animation', 'graph', 'readout'],
+        constraints: { minWidth: 320, orientation: 'any' },
+        priority: 40,
+        autoSelectable: false,
+        layoutTestProfile: {
+          viewports: [
+            { width: 1280, height: 720 },
+            { width: 375, height: 812 }
+          ],
+          interactionModel: 'custom',
+          adapter: 'collapsible-floats',
+          requiresGraphActivation: true,
+          minStageWidth: 120,
+          minStageHeight: 100,
+          minGraphWidth: 80,
+          minGraphHeight: 80
         }
       }
     );

@@ -6,6 +6,7 @@ import {
   buildToolbar
 } from '../../src/app/layouts/_shared/split-helpers';
 import { MobileStackLayout } from '../../src/app/layouts/layouts/mobile-stack/mobile-stack';
+import { LabStageLayout } from '../../src/app/layouts/layouts/lab-stage/lab-stage';
 import { createReadoutPanel } from '../../src/app/layouts/capabilities/readout-panel';
 import type { CapabilityContext } from '../../src/app/layouts/types';
 import { createFloatingControls } from '../../src/ui/floating-controls';
@@ -90,6 +91,63 @@ describe('layout DOM compatibility contracts', () => {
 
     expect(slots.control.classList.contains('mobile-control-slot')).toBe(true);
     expect(slots.control.classList.contains('control-slot')).toBe(true);
+
+    await layout.unmount();
+  });
+
+  it('exposes a stable control-slot alias in lab-stage layouts', async () => {
+    const container = document.createElement('div');
+    const layout = new LabStageLayout(container);
+    const slots = await layout.mount();
+
+    expect(slots.control.classList.contains('lab-control-slot')).toBe(true);
+    expect(slots.control.classList.contains('control-slot')).toBe(true);
+    expect(slots.animation.querySelector('canvas')).toBeInstanceOf(
+      HTMLCanvasElement
+    );
+    expect(container.classList.contains('teaching-demo')).toBe(true);
+    expect(
+      container
+        .querySelector('.lab-control-section')
+        ?.classList.contains('layout-left-panel')
+    ).toBe(true);
+
+    expect(
+      container
+        .querySelector('#lab-panel-data')
+        ?.classList.contains('is-collapsed')
+    ).toBe(false);
+    const dataDisclosure = container.querySelector(
+      '#lab-panel-data .lab-float-fold'
+    );
+    expect(dataDisclosure?.getAttribute('aria-controls')).toBe(
+      'lab-panel-body-data'
+    );
+    expect(dataDisclosure?.getAttribute('aria-expanded')).toBe('true');
+    container.dispatchEvent(
+      new CustomEvent('layout:modechange', {
+        detail: { mode: 'presentation' }
+      })
+    );
+    expect(
+      container
+        .querySelector('#lab-panel-data')
+        ?.classList.contains('is-collapsed')
+    ).toBe(true);
+    expect(dataDisclosure?.getAttribute('aria-expanded')).toBe('false');
+    expect(
+      container
+        .querySelector('#lab-panel-graph')
+        ?.classList.contains('is-collapsed')
+    ).toBe(true);
+    container.dispatchEvent(
+      new CustomEvent('layout:modechange', { detail: { mode: 'normal' } })
+    );
+    expect(
+      container
+        .querySelector('#lab-panel-data')
+        ?.classList.contains('is-collapsed')
+    ).toBe(false);
 
     await layout.unmount();
   });

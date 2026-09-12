@@ -16,22 +16,33 @@ export type CreateEmfAnalogySceneOptions = {
 
 function formatReadout(
   snapshot: EmfAnalogySnapshot
-): Array<{ label: string; value: string }> {
+): Array<{ key: string; label: string; value: string }> {
   return [
-    { label: '系统状态', value: snapshot.state.isSystemOn ? '通路' : '断路' },
     {
+      key: 'state',
+      label: '系统状态',
+      value: snapshot.state.isSystemOn ? '通路' : '断路'
+    },
+    {
+      key: 'R',
       label: '外电阻 R',
       value:
         snapshot.state.externalR === Infinity
           ? '∞ Ω'
           : `${snapshot.state.externalR.toFixed(1)} Ω`
     },
-    { label: '电流 I', value: `${snapshot.state.currentI.toFixed(2)} A` },
     {
+      key: 'I',
+      label: '电流 I',
+      value: `${snapshot.state.currentI.toFixed(2)} A`
+    },
+    {
+      key: 'Ir',
       label: '内阻压降 Ir',
       value: `${snapshot.state.internalDrop.toFixed(2)} V`
     },
     {
+      key: 'U',
       label: '路端电压 U',
       value: `${snapshot.state.terminalVoltage.toFixed(2)} V`
     }
@@ -50,7 +61,7 @@ export function createEmfAnalogyScene(
   setView(view: EmfViewMode): void;
   getView(): EmfViewMode;
   getSnapshot(): EmfAnalogySnapshot;
-  getReadoutItems(): Array<{ label: string; value: string }>;
+  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
   startAll(): void;
   pauseAll(): void;
   subscribe(listener: () => void): () => void;

@@ -6,14 +6,14 @@ import type { SceneMeta } from '../../platform/scene-contract';
 import type { SceneDemoProfile } from '../../platform/demo-profile';
 
 const demoProfile: SceneDemoProfile = {
-  controlPanel: 'minimal',
-  readoutPanel: 'overlay',
+  lessonTask: 'lecture',
+  readoutKeys: ['f-emit', 'f-receive', 'delta-pct'],
   renderHints: {
     contentScale: 1.5
   },
   interactionHints: {
     touchTargetMinSize: 48,
-    visibleControlKeys: ['preset', 'sourceSpeed', 'observerSpeed', 'mode']
+    visibleControlKeys: ['preset', 'sourceSpeed', 'observerSpeed']
   }
 };
 

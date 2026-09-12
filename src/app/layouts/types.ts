@@ -77,6 +77,8 @@ export interface LayoutConfig {
 }
 
 export interface ReadoutItem {
+  /** 投影 HUD 过滤键；迁移期可选，有 readoutKeys 的场景必须带 */
+  key?: string;
   label: string;
   value: string | number;
   unit?: string;
@@ -114,7 +116,7 @@ export type CapabilityId =
 export interface CapabilityEvents {
   modechange: {
     mode: 'normal' | 'presentation';
-    profile?: import('../../platform/demo-profile').SceneDemoProfile | null;
+    profile?: import('../../platform/demo-profile').ResolvedDemoProfile | null;
   };
 }
 
@@ -315,7 +317,7 @@ export type SceneContainerEvents = {
   'scene:state': { scene: string; state: unknown };
   'layout:mode': {
     mode: string;
-    profile?: import('../../platform/demo-profile').SceneDemoProfile | null;
+    profile?: import('../../platform/demo-profile').ResolvedDemoProfile | null;
   };
   'slot:toggle': { slot: SlotName; collapsed: boolean };
 };

@@ -183,7 +183,9 @@ test.describe('all scenes have functional desktop readout', () => {
   for (const sceneId of sceneIds) {
     test(`${sceneId} readout toggle works`, async ({ page }) => {
       await page.setViewportSize({ width: 1440, height: 900 });
-      await page.goto(scenePage(sceneId), { waitUntil: 'domcontentloaded' });
+      await page.goto(scenePage(sceneId, '?layout=split-right'), {
+        waitUntil: 'domcontentloaded'
+      });
 
       const toggle = page.locator('[class*="-readout-toggle"]').first();
       await expect(toggle, `${sceneId}: readout toggle missing`).toBeVisible();

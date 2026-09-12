@@ -108,7 +108,6 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
       return;
     }
 
-    const scale = env.contentScale();
     const viewport = getResponsiveViewport(960);
     const totalWidth = resolveResponsiveStageWidth(dom.root, {
       minWidthPx: 1,
@@ -126,16 +125,20 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
       ?.getAttribute('data-layout-id');
     const hasMobileGraphSlot =
       Boolean(graphSlot) && layoutId === 'mobile-stack';
-    // 移动端：运动/图表用按宽度的合理高度，配合 CSS 让 stage 可滚动，
-    // 避免挤在不可滚动的动画区被裁切；桌面端沿用按 stage 高度的比例。
-    const trackHeight = viewport.isNarrow
+    // 布局高度不乘 contentScale：现象倍率只进绘制。演示期按 60/40 切运动带/图像，
+    // 并预留下方 docked-bottom 读数条，避免图被 HUD 盖住。
+    const isPresentation = env.mode === 'presentation';
+    const hudReserve = isPresentation
+      ? Math.round(Math.min(window.innerHeight * 0.22, 176))
+      : 0;
+    const usableHeight = Math.max(240, stageHeight - hudReserve);
+    let trackHeight = viewport.isNarrow
       ? hasMobileGraphSlot
         ? Math.max(180, stageHeight - 4)
         : Math.max(200, Math.min(300, Math.round(totalWidth * 0.52)))
-      : Math.min(
-          Math.round(380 * scale),
-          Math.max(Math.round(190 * scale), stageHeight * 0.42)
-        );
+      : isPresentation
+        ? Math.max(240, Math.round(usableHeight * 0.62))
+        : Math.min(380, Math.max(190, stageHeight * 0.42));
 
     let graphHeight: number;
     let graphWidth: number;
@@ -165,11 +168,27 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
       graphWidth = totalWidth;
       graphHeight = Math.max(130, Math.min(200, Math.round(totalWidth * 0.42)));
     } else {
-      graphHeight = Math.min(
-        Math.round(250 * scale),
-        Math.max(Math.round(160 * scale), stageHeight * 0.34)
-      );
+      graphHeight = isPresentation
+        ? Math.max(140, Math.round(usableHeight * 0.3))
+        : Math.min(250, Math.max(160, stageHeight * 0.34));
       graphWidth = Math.max(180, totalWidth / 2 - 8);
+    }
+
+    if (isPresentation && !viewport.isNarrow && !graphSlot) {
+      const motionCard = dom.motionCanvas.closest('.chase-modern-card--motion');
+      const graphsCard = dom.xCanvas.closest('.chase-modern-card--graphs');
+      const motionBox = motionCard?.getBoundingClientRect();
+      const graphsBox = graphsCard?.getBoundingClientRect();
+      if (motionBox && motionBox.height > 40) {
+        trackHeight = Math.max(200, Math.floor(motionBox.height));
+      }
+      if (graphsBox && graphsBox.height > 40) {
+        graphWidth = Math.max(
+          180,
+          Math.floor((graphsBox.width || totalWidth) / 2 - 8)
+        );
+        graphHeight = Math.max(120, Math.floor(graphsBox.height - 36));
+      }
     }
 
     const dpr = Math.min(

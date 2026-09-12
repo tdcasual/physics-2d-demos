@@ -31,8 +31,9 @@ export function createThinFilmScene(
   getState(): ThinFilmState;
   setParams(params: Partial<ThinFilmParams>): ThinFilmParams;
   setCursorY(y: number): void;
+  pickCursor(cssX: number, cssY: number): number | null;
   attachGraphCanvas(canvas: HTMLCanvasElement): void;
-  getReadoutItems(): Array<{ label: string; value: string }>;
+  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
   subscribe(listener: () => void): () => void;
 } {
   const sim = createThinFilmSim({
@@ -41,7 +42,8 @@ export function createThinFilmScene(
     dBottom: 800,
     n: 1.33,
     whiteLight: false,
-    step: 'geometry'
+    step: 'geometry',
+    profile: 'linear'
   });
 
   const view = createThinFilmView({
@@ -59,22 +61,48 @@ export function createThinFilmScene(
     onReadout: options.onReadout
   });
 
-  function getReadoutItems(): Array<{ label: string; value: string }> {
+  function getReadoutItems(): Array<{
+    key: string;
+    label: string;
+    value: string;
+  }> {
     const s = sim.getState();
-    const { lambda, dTop, dBottom, n, whiteLight } = s.params;
+    const { lambda, dTop, dBottom, n, whiteLight, profile } = s.params;
     return [
-      { label: '波长', value: whiteLight ? '白光' : `${lambda} nm` },
-      { label: '顶部厚度', value: `${dTop} nm` },
-      { label: '底部厚度', value: `${dBottom} nm` },
-      { label: '折射率 n', value: n.toFixed(2) },
-      { label: '观察点厚度 d', value: `${s.localThickness.toFixed(0)} nm` },
-      { label: '光程差 Δ', value: `${(s.pathDiff / 1e3).toFixed(2)} μm` },
-      { label: '级次 m', value: s.order.toFixed(1) },
       {
+        key: 'profile',
+        label: '厚度分布',
+        value: profile === 'quad' ? '非均匀（下密）' : '均匀（等间距）'
+      },
+      {
+        key: 'lambda',
+        label: '波长',
+        value: whiteLight ? '白光' : `${lambda} nm`
+      },
+      { key: 'd-top', label: '顶部厚度', value: `${dTop} nm` },
+      { key: 'd-bottom', label: '底部厚度', value: `${dBottom} nm` },
+      { key: 'n', label: '折射率 n', value: n.toFixed(2) },
+      {
+        key: 'd-local',
+        label: '观察点厚度 d',
+        value: `${s.localThickness.toFixed(0)} nm`
+      },
+      {
+        key: 'path-diff',
+        label: '光程差 Δ',
+        value: `${(s.pathDiff / 1e3).toFixed(2)} μm`
+      },
+      { key: 'order', label: '级次 m', value: s.order.toFixed(1) },
+      {
+        key: 'result',
         label: '干涉结果',
         value: s.isConstructive ? '相长（增强）' : '相消（减弱）'
       },
-      { label: '反射率 R', value: `${(s.reflectivity * 100).toFixed(1)}%` }
+      {
+        key: 'R',
+        label: '反射率 R',
+        value: `${(s.reflectivity * 100).toFixed(1)}%`
+      }
     ];
   }
 
@@ -89,6 +117,9 @@ export function createThinFilmScene(
     setCursorY: base.wrapAction((y: number): void => {
       sim.setCursorY(y);
     }),
+    pickCursor(cssX: number, cssY: number): number | null {
+      return view.pickCursor(cssX, cssY);
+    },
     attachGraphCanvas(canvas: HTMLCanvasElement): void {
       view.attachGraphCanvas(canvas);
     },

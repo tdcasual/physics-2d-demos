@@ -16,7 +16,11 @@ import type {
   ReadoutItem,
   TransportState
 } from './layouts/types';
-import type { DemoRenderHints } from '../platform/demo-profile';
+import {
+  resolveDemoProfile,
+  type DemoRenderHints,
+  type ResolvedDemoProfile
+} from '../platform/demo-profile';
 import { createSceneShell } from './scene-shell';
 import { KeyboardShortcutManager } from '../platform/input/keyboard-shortcuts';
 import { PerformanceMonitor } from '../core/performance-monitor';
@@ -52,6 +56,8 @@ export class SceneAdapter<
   private _graphRendered = false;
   private _graphVisibilityRo: ResizeObserver | null = null;
   private _scheduleResize: (() => void) | null = null;
+  private _mode: 'normal' | 'presentation' = 'normal';
+  private _resolvedProfile: ResolvedDemoProfile | null = null;
 
   constructor(
     private options: ScenePageOptions<TScene>,
@@ -264,9 +270,19 @@ export class SceneAdapter<
       escape: () => {
         this.keyboardHelp?.hide();
         const layoutEl = document.querySelector('.layout-master');
-        if (layoutEl?.getAttribute('data-mode') === 'presentation') {
-          this.setMode('normal');
+        if (layoutEl?.getAttribute('data-mode') !== 'presentation') return;
+        if (this.options.onSetMode) {
+          this.options.onSetMode('normal');
+          return;
         }
+        const btn = layoutEl.querySelector(
+          '.mode-toggle'
+        ) as HTMLButtonElement | null;
+        if (btn) {
+          btn.click();
+          return;
+        }
+        this.setMode('normal');
       }
     });
     this.keyboard.init();
@@ -550,34 +566,30 @@ export class SceneAdapter<
     this.scene?.render();
   }
 
-  setMode(mode: 'normal' | 'presentation'): void {
-    const profile =
+  setMode(mode: 'normal' | 'presentation', hints?: DemoRenderHints): void {
+    this._mode = mode;
+    const raw =
       mode === 'presentation'
         ? (this.options.demoProfile ?? this.options.meta.demoProfile)
         : null;
+    this._resolvedProfile =
+      mode === 'presentation' && raw
+        ? resolveDemoProfile(raw, { sceneId: this.id })
+        : null;
 
-    // Dispatch event so SceneContainerImpl can apply/reset demo profile on layout
-    const layoutEl = document.querySelector('.layout-master');
-    if (layoutEl) {
-      layoutEl.dispatchEvent(
-        new CustomEvent('layout:modechange', {
-          detail: { mode },
-          bubbles: true
-        })
-      );
-    }
-
-    // Forward to scene
     try {
       if (this.scene?.setMode) {
-        if (mode === 'presentation' && profile) {
+        if (mode === 'presentation' && this._resolvedProfile) {
           const sceneWithHints = this.scene as unknown as {
             setMode(
               m: 'normal' | 'presentation',
-              hints?: DemoRenderHints
+              nextHints?: DemoRenderHints
             ): void;
           };
-          sceneWithHints.setMode(mode, profile.renderHints);
+          sceneWithHints.setMode(
+            mode,
+            hints ?? this._resolvedProfile.renderHints
+          );
         } else {
           this.scene.setMode(mode);
         }
@@ -585,6 +597,8 @@ export class SceneAdapter<
     } finally {
       this.scene?.resize();
       this.scene?.render();
+      this.refreshReadout();
+      this.notifyListeners();
     }
   }
 
@@ -602,14 +616,18 @@ export class SceneAdapter<
   }
 
   getReadoutItems(): ReadoutItem[] {
+    let items: ReadoutItem[];
     if (this.scene?.getReadoutItems) {
-      return this.scene.getReadoutItems();
+      items = this.scene.getReadoutItems();
+    } else {
+      const state = this.resolveSceneState();
+      if (this.options.formatReadout && state !== undefined) {
+        items = this.options.formatReadout(state);
+      } else {
+        items = this._readoutItems;
+      }
     }
-    const state = this.resolveSceneState();
-    if (this.options.formatReadout && state !== undefined) {
-      return this.options.formatReadout(state);
-    }
-    return this._readoutItems;
+    return filterPresentationReadout(items, this._mode, this._resolvedProfile);
   }
 
   private resolveSceneState(): unknown {
@@ -652,4 +670,22 @@ export class SceneAdapter<
       }
     });
   }
+}
+
+const READOUT_DENYLIST = ['显示模式', '主题', 'T / Δt', 'T/Δt'];
+
+export function filterPresentationReadout(
+  items: ReadoutItem[],
+  mode: 'normal' | 'presentation',
+  resolved: ResolvedDemoProfile | null
+): ReadoutItem[] {
+  if (mode !== 'presentation' || !resolved) return items;
+  if (resolved.readoutKeys.length > 0) {
+    return items.filter(
+      (it) => it.key != null && resolved.readoutKeys.includes(it.key)
+    );
+  }
+  return items.filter(
+    (it) => !READOUT_DENYLIST.some((deny) => it.label.includes(deny))
+  );
 }
