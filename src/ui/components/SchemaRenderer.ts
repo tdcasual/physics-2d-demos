@@ -139,6 +139,7 @@ function renderField(
         step: field.step,
         value: field.value,
         unit: field.unit,
+        formatValue: field.formatValue,
         onChange: (val) => onChange(field.key, val)
       });
       const input = row.querySelector('input');

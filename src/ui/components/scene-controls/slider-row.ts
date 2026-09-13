@@ -17,6 +17,7 @@ export function createSliderRow(
     step: number;
     value: number;
     unit?: string;
+    formatValue?: (value: number) => string;
     onChange?: (value: number) => void;
   }
 ): DisposableElement {
@@ -46,11 +47,14 @@ export function createSliderRow(
   const valueEl = document.createElement('span');
   valueEl.className = 'text-[12px] font-semibold w-10 text-right shrink-0';
   valueEl.style.color = 'var(--text-primary)';
-  valueEl.textContent = options.value + (options.unit || '');
+  const formatValue = (value: number) =>
+    (options.formatValue ? options.formatValue(value) : String(value)) +
+    (options.unit || '');
+  valueEl.textContent = formatValue(options.value);
 
   const onInput = () => {
     const val = parseFloat(slider.value);
-    valueEl.textContent = val + (options.unit || '');
+    valueEl.textContent = formatValue(val);
     options.onChange?.(val);
   };
   slider.addEventListener('input', onInput);

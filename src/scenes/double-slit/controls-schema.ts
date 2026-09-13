@@ -66,12 +66,13 @@ const paramsSection = {
     {
       type: 'slider' as const,
       key: 'slitDistance',
-      label: '双缝间距 (d)',
+      label: '双缝间距 d',
       min: 16,
       max: 43,
       step: 1,
       value: 20,
-      unit: '0.01mm'
+      unit: 'mm',
+      formatValue: (value: number) => (value * 0.01).toFixed(2)
     },
     {
       type: 'slider' as const,

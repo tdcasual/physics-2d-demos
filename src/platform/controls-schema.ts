@@ -15,6 +15,8 @@ export type ControlField =
       step: number;
       value: number;
       unit?: string;
+      /** 可选的展示格式化函数；不改变控件提交的原始数值。 */
+      formatValue?: (value: number) => string;
     }
   | {
       type: 'number';
