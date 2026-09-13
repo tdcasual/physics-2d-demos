@@ -153,12 +153,14 @@ bootScenePage({
           renderer.setValue('vExprB', '1');
           renderer.setValue('x0A', 0);
           renderer.setValue('x0B', 10);
+          scene.setParams({ vExprA: '2', vExprB: '1', x0A: 0, x0B: 10 });
           onStatus?.('应用预设: 匀速追赶');
         } else if (key === 'accelerated') {
           renderer.setValue('vExprA', '0.5*t');
           renderer.setValue('vExprB', '2');
           renderer.setValue('x0A', 0);
           renderer.setValue('x0B', 15);
+          scene.setParams({ vExprA: '0.5*t', vExprB: '2', x0A: 0, x0B: 15 });
           onStatus?.('应用预设: 加速追赶');
         }
       }

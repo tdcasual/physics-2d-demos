@@ -172,6 +172,12 @@ function renderField(
       const input = row.querySelector('input');
       return {
         node: row,
+        valueSetter: (value) => {
+          if (input) {
+            input.value = String(value);
+            input.dispatchEvent(new Event('input'));
+          }
+        },
         valueGetter: () => (input ? parseFloat(input.value) : field.value),
         cleanup: () => {
           tryDispose(row);
@@ -188,6 +194,12 @@ function renderField(
       const input = row.querySelector('input');
       return {
         node: row,
+        valueSetter: (value) => {
+          if (input) {
+            input.value = String(value);
+            input.dispatchEvent(new Event('input'));
+          }
+        },
         valueGetter: () => (input ? input.value : field.value),
         cleanup: () => {
           tryDispose(row);

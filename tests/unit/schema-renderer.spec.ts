@@ -362,6 +362,33 @@ describe('SchemaRenderer', () => {
     expect(input.value).toBe('t');
   });
 
+  it('should setValue for number and text inputs', () => {
+    const mount = createMount();
+    const schema: ControlsSchema = {
+      sections: [
+        {
+          title: '参数',
+          fields: [
+            { type: 'number', key: 'count', label: '数量', value: 2 },
+            { type: 'text', key: 'expr', label: '表达式', value: 't' }
+          ]
+        }
+      ]
+    };
+    const renderer = renderSchema({
+      mount,
+      schema,
+      onChange: vi.fn(),
+      onAction: vi.fn()
+    });
+
+    renderer.setValue('count', 5);
+    renderer.setValue('expr', '0.5*t');
+    const inputs = mount.querySelectorAll('input');
+    expect((inputs[0] as HTMLInputElement).value).toBe('5');
+    expect((inputs[1] as HTMLInputElement).value).toBe('0.5*t');
+  });
+
   it('should render hint as static paragraphs without onChange', () => {
     const mount = createMount();
     const onChange = vi.fn();
