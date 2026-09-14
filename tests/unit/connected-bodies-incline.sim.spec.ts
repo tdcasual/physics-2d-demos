@@ -3,7 +3,7 @@ import {
   connectedBodiesInclineConstants as C,
   deriveConnectedBodiesIncline,
   createConnectedBodiesInclineSim
-} from './scene.sim';
+} from '../../src/scenes/connected-bodies-incline/scene.sim';
 
 describe('connected-bodies-incline simulation', () => {
   it('recognises the reference near-balance state', () => {
