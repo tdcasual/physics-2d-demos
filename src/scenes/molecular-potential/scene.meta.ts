@@ -19,14 +19,14 @@ const demoProfile: SceneDemoProfile = {
 
 export const molecularMeta: SceneMeta = {
   id: 'molecular-potential',
-  title: '分子间作用力与势能',
+  title: '分子势能与分子间距离关系',
   path: '/src/pages/molecular-potential.html',
   subject: '热学',
-  concept: '分子间作用力',
+  concept: '分子势能与分子间距离',
   subConcepts: ['平衡距离', '分子势能'],
   keywords: ['分子力', '势能', 'Lennard-Jones', '平衡距离', '热振动'],
-  objective: '联动观察分子间作用力与势能随距离的变化',
-  description: '拖动间距，观察引力、斥力与势能曲线',
+  objective: '联动观察分子力与势能随距离的变化',
+  description: '拖动 r，观察 F 与 Eₚ 曲线',
   difficulty: 3,
   icon: 'r₀',
   category: 'mechanics',

@@ -6,6 +6,15 @@ import { molecularControlsSchema } from './controls-schema';
 import { createMolecularScene } from './scene.entry';
 import { molecularMeta } from './scene.meta';
 
+function asBoolean(value: unknown): boolean {
+  return (
+    value === true ||
+    value === 1 ||
+    value === '1' ||
+    String(value).toLowerCase() === 'true'
+  );
+}
+
 bootScenePage({
   meta: molecularMeta,
   autoPlay: true,
@@ -78,7 +87,7 @@ bootScenePage({
         key === 'showRepulsive' ||
         key === 'showAttractive'
       ) {
-        const flag = value === '1' || value === 'true';
+        const flag = asBoolean(value);
         ctx.scene.setParams({ [key]: flag } as Partial<MolecularParams>);
         ctx.setControlValue(key, flag);
         return true;

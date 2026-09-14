@@ -216,8 +216,13 @@ function drawCurve(
   p: Palette,
   energy = false
 ): void {
-  ctx.strokeStyle =
-    kind === 'repulsive' ? p.red : kind === 'attractive' ? p.blue : p.teal;
+  ctx.strokeStyle = energy
+    ? p.teal
+    : kind === 'repulsive'
+      ? p.red
+      : kind === 'attractive'
+        ? p.blue
+        : p.orange;
   ctx.lineWidth = kind === 'net' ? 4 : 3;
   if (kind !== 'net') ctx.setLineDash([8, 6]);
   ctx.beginPath();
@@ -320,22 +325,7 @@ function drawGraph(
     '分子势能 Eₚ'
   );
   drawCurve(ctx, state.epsilon, 'net', p, true);
-  ctx.fillStyle = p.orange;
-  ctx.strokeStyle = p.orange;
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  for (let index = 0; index <= 150; index += 1) {
-    const ratio =
-      molecularConstants.xMin +
-      ((molecularConstants.xMax - molecularConstants.xMin) * index) / 150;
-    const value = molecularForces(ratio, state.epsilon).potential;
-    const x = xToPx(ratio);
-    const y = energyToY(value);
-    if (index === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
-  ctx.stroke();
-  ctx.fillStyle = p.orange;
+  ctx.fillStyle = p.teal;
   ctx.beginPath();
   ctx.arc(currentX, energyToY(state.potentialEnergy), 6, 0, Math.PI * 2);
   ctx.fill();
@@ -580,7 +570,7 @@ function drawCards(
     (state.netForce >= 0 ? '+' : '') + state.netForce.toFixed(2),
     molecularConstants.panelX + molecularConstants.panelWidth - 20,
     molecularConstants.readoutCardY + 66,
-    p.blue,
+    p.orange,
     17,
     'right',
     700
@@ -600,7 +590,7 @@ function drawCards(
     state.potentialEnergy.toFixed(2) + ' ε',
     molecularConstants.panelX + molecularConstants.panelWidth - 20,
     molecularConstants.readoutCardY + 104,
-    p.orange,
+    p.teal,
     17,
     'right',
     700
@@ -640,7 +630,7 @@ function drawCards(
   ctx.stroke();
   text(
     ctx,
-    '曲线说明',
+    '曲线图例',
     molecularConstants.panelX + 20,
     molecularConstants.labelCardY + 24,
     p.ink,
@@ -709,11 +699,76 @@ function drawCards(
   ctx.stroke();
   text(
     ctx,
-    '势能 Eₚ',
+    '合力 F(合)',
     molecularConstants.panelX + molecularConstants.legendFirstText,
     molecularConstants.labelCardY + molecularConstants.legendRowTwoOffset,
     p.muted,
     13,
+    'left',
+    600
+  );
+  ctx.strokeStyle = p.teal;
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(
+    molecularConstants.panelX + molecularConstants.legendSecondStart,
+    molecularConstants.labelCardY + molecularConstants.legendRowTwoOffset
+  );
+  ctx.lineTo(
+    molecularConstants.panelX + molecularConstants.legendSecondEnd,
+    molecularConstants.labelCardY + molecularConstants.legendRowTwoOffset
+  );
+  ctx.stroke();
+  text(
+    ctx,
+    '势能 Eₚ',
+    molecularConstants.panelX + molecularConstants.legendSecondText,
+    molecularConstants.labelCardY + molecularConstants.legendRowTwoOffset,
+    p.muted,
+    13,
+    'left',
+    600
+  );
+  rounded(
+    ctx,
+    molecularConstants.panelX,
+    molecularConstants.formulaCardY,
+    molecularConstants.panelWidth,
+    molecularConstants.formulaCardHeight,
+    12
+  );
+  ctx.fillStyle = p.panel;
+  ctx.fill();
+  ctx.strokeStyle = p.border;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  text(
+    ctx,
+    '关系式',
+    molecularConstants.panelX + 20,
+    molecularConstants.formulaCardY + 22,
+    p.ink,
+    14,
+    'left',
+    700
+  );
+  text(
+    ctx,
+    'F合 = F斥 + F引',
+    molecularConstants.panelX + 20,
+    molecularConstants.formulaCardY + 52,
+    p.muted,
+    13,
+    'left',
+    600
+  );
+  text(
+    ctx,
+    'Eₚ = ε[(r₀/r)¹² − 2(r₀/r)⁶]',
+    molecularConstants.panelX + 20,
+    molecularConstants.formulaCardY + 78,
+    p.muted,
+    12,
     'left',
     600
   );
@@ -774,7 +829,7 @@ export function createMolecularView(options: CreateMolecularViewOptions = {}) {
       ctx,
       '拖动曲线上的 r，观察 F 与 Eₚ 联动',
       42,
-      718,
+      molecularConstants.instructionY,
       p.muted,
       13 * scale,
       'left',

@@ -75,7 +75,10 @@ export const molecularConstants = {
   legendFirstEnd: 76,
   legendFirstText: 88,
   legendRowOneOffset: 58,
-  legendRowTwoOffset: 94
+  legendRowTwoOffset: 94,
+  formulaCardY: 652,
+  formulaCardHeight: 94,
+  instructionY: 718
 } as const;
 
 const DEFAULTS: MolecularParams = {
