@@ -130,6 +130,16 @@ export const dynamicCircleControlsSchema: ControlsSchema = {
           step: 5,
           value: 380,
           unit: 'm'
+        },
+        {
+          type: 'slider',
+          key: 'circleY',
+          label: '圆心 y_c',
+          min: 180,
+          max: 480,
+          step: 5,
+          value: 330,
+          unit: 'm'
         }
       ]
     },

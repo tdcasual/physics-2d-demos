@@ -19,6 +19,13 @@ export type CreateDynamicCircleSceneOptions = {
   onReadout?: (state: DynamicCircleState) => void;
 };
 
+const TAB_LABEL: Record<DynamicCircleTab, string> = {
+  scaling: '放缩圆',
+  rotating: '旋转圆',
+  translating: '平移圆',
+  comprehensive: '综合聚焦'
+};
+
 export function createDynamicCircleScene(
   options: CreateDynamicCircleSceneOptions = {}
 ) {
@@ -43,23 +50,20 @@ export function createDynamicCircleScene(
   }> {
     const state = sim.getState();
     const radius = Number.isFinite(state.radius)
-      ? `${state.radius.toFixed(1)} m`
-      : '∞';
-    const angle = state.params.tab === 'scaling' ? -90 : state.params.theta;
+      ? `${state.radius.toFixed(1)} 米`
+      : '直线轨迹';
     return [
-      {
-        key: 'tab',
-        label: '模型',
-        value: {
-          scaling: '放缩圆',
-          rotating: '旋转圆',
-          translating: '平移圆',
-          comprehensive: '综合聚焦'
-        }[state.params.tab]
-      },
+      { key: 'tab', label: '模型', value: TAB_LABEL[state.params.tab] },
       { key: 'radius', label: 'R', value: radius },
+      { key: 'qOverM', label: 'q/m', value: '1.0 C/kg' },
+      { key: 'formula', label: '轨道', value: 'R = mv / qB' },
       { key: 'boundary', label: '边界', value: state.boundaryMetric },
-      { key: 'angle', label: 'θ', value: `${angle.toFixed(0)}°` },
+      { key: 'critical', label: '临界', value: state.criticalMetric },
+      {
+        key: 'angle',
+        label: 'θ',
+        value: `${state.launchAngle.toFixed(0)}°`
+      },
       { key: 'status', label: '状态', value: state.status }
     ];
   }
@@ -92,6 +96,7 @@ export function createDynamicCircleScene(
         sim.moveHandle(handle, x, y);
       }
     ),
-    getReadoutItems
+    getReadoutItems,
+    subscribe: base.subscribe
   };
 }

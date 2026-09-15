@@ -3,7 +3,9 @@ import type { DemoRenderHints } from '../../platform/demo-profile';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import {
   dynamicCircleConstants,
-  orbitPoint,
+  insideField,
+  stageLayoutFrom,
+  stageTransform,
   type DynamicCircleState,
   type Point
 } from './scene.sim';
@@ -15,28 +17,27 @@ export type CreateDynamicCircleViewOptions = {
   demoHints?: DemoRenderHints;
 };
 
-const {
-  baseWidth: BASE_W,
-  baseHeight: BASE_H,
-  fieldLeft: FIELD_LEFT,
-  fieldTop: FIELD_TOP,
-  fieldBottom: FIELD_BOTTOM,
-  sourceX: SOURCE_X,
-  sourceY: SOURCE_Y,
-  rotatingSourceX: ROTATING_SOURCE_X
-} = dynamicCircleConstants;
-const AXIS_LEFT = 40;
-const AXIS_RIGHT = 610;
-const AXIS_TOP = 40;
-const AXIS_BOTTOM = 620;
-const LABEL_X = 234;
-const FIELD_SYMBOL_STEP = 47;
-const TRAJECTORY_STEP = 1.5;
-const OVERLAY_X = 25;
-const OVERLAY_Y = 65;
-const OVERLAY_W = 180;
-const OVERLAY_H = 115;
-const BOUNDARY_LABEL_W = 7 * 10;
+const C = dynamicCircleConstants;
+const GUN_BODY_W = 26;
+const GUN_BODY_H = 20;
+const GUN_NOZZLE_W = 8;
+const GUN_NOZZLE_H = 10;
+const PARTICLE_R = 7.5;
+const CENTER_R = 5;
+const EXIT_R = 4;
+const HANDLE_R = 10;
+const VERTEX_R = 14;
+const LABEL_PAD_Y = 25;
+const BOUNDARY_LABEL_W = 70;
+const BOUNDARY_LABEL_H = 20;
+const CIRCLE_LABEL_W = 70;
+const CIRCLE_LABEL_H = 18;
+const TRI_LABEL_W = 80;
+const TRI_LABEL_H = 18;
+const CROSS_ARM = 4;
+const DOT_R = 1.8;
+const DOT_RING_R = 5;
+const RULER_LABEL_X = 234;
 
 type Palette = {
   bg: string;
@@ -49,6 +50,8 @@ type Palette = {
   gold: string;
   fieldStroke: string;
   card: string;
+  fieldInk: string;
+  handleBlue: string;
 };
 
 const PALETTE: Record<TeachingTheme, Palette> = {
@@ -56,13 +59,15 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     bg: '#FAF7F2',
     grid: 'rgba(52,58,64,0.15)',
     ink: '#3E2723',
-    muted: '#A1887F',
+    muted: '#8D6E63',
     red: '#E63946',
     teal: '#009688',
     purple: '#673AB7',
     gold: '#FFB300',
     fieldStroke: '#BCAAA4',
-    card: '#FAF7F2'
+    card: '#FAF7F2',
+    fieldInk: '#5D4037',
+    handleBlue: '#3F51B5'
   },
   dark: {
     bg: '#0f172a',
@@ -74,7 +79,9 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     purple: '#a78bfa',
     gold: '#fbbf24',
     fieldStroke: '#64748b',
-    card: '#172033'
+    card: '#172033',
+    fieldInk: '#cbd5e1',
+    handleBlue: '#818cf8'
   }
 };
 
@@ -119,8 +126,7 @@ function drawArrow(
   a: Point,
   b: Point,
   color: string,
-  width: number,
-  dashed = false
+  width: number
 ): void {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
@@ -134,12 +140,11 @@ function drawArrow(
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
   ctx.lineWidth = width;
-  ctx.setLineDash(dashed ? [5, 4] : []);
+  ctx.lineCap = 'round';
   ctx.beginPath();
   ctx.moveTo(a.x, a.y);
   ctx.lineTo(b.x, b.y);
   ctx.stroke();
-  ctx.setLineDash([]);
   ctx.beginPath();
   ctx.moveTo(b.x, b.y);
   ctx.lineTo(b.x - ux * head - uy * wing, b.y - uy * head + ux * wing);
@@ -157,28 +162,28 @@ function path(ctx: CanvasRenderingContext2D, points: Point[]): void {
     ctx.lineTo(points[i].x, points[i].y);
 }
 
-function pointInBoundary(point: Point, state: DynamicCircleState): boolean {
-  const { params } = state;
-  if (params.boundary === 'circle') {
-    return (
-      Math.hypot(point.x - params.circleX, point.y - SOURCE_Y) <= params.circleR
-    );
-  }
-  if (params.boundary === 'triangle') {
-    if (point.x < FIELD_LEFT || point.x > params.triX) return false;
-    const fraction =
-      (point.x - FIELD_LEFT) / Math.max(1, params.triX - FIELD_LEFT);
-    return Math.abs(point.y - SOURCE_Y) <= (params.triH * fraction) / 2;
-  }
-  return (
-    point.x >= FIELD_LEFT &&
-    point.x <= params.xBound &&
-    point.y >= FIELD_TOP &&
-    point.y <= FIELD_BOTTOM
-  );
+function drawTrajectory(
+  ctx: CanvasRenderingContext2D,
+  points: Point[],
+  color: string,
+  width: number,
+  dashed = false,
+  alpha = 1
+): void {
+  if (points.length < 2) return;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.setLineDash(dashed ? [5, 4] : []);
+  path(ctx, points);
+  ctx.stroke();
+  ctx.restore();
 }
 
-function drawField(
+function drawFieldShape(
   ctx: CanvasRenderingContext2D,
   state: DynamicCircleState,
   p: Palette,
@@ -193,54 +198,71 @@ function drawField(
   if (state.params.boundary === 'circle') {
     ctx.arc(
       state.params.circleX,
-      SOURCE_Y,
+      state.params.circleY,
       state.params.circleR,
       0,
       Math.PI * 2
     );
   } else if (state.params.boundary === 'triangle') {
-    const top = SOURCE_Y - state.params.triH / 2;
-    const bottom = SOURCE_Y + state.params.triH / 2;
-    ctx.moveTo(FIELD_LEFT, top);
-    ctx.lineTo(state.params.triX, SOURCE_Y);
-    ctx.lineTo(FIELD_LEFT, bottom);
+    const top = C.sourceY - state.params.triH / 2;
+    const bottom = C.sourceY + state.params.triH / 2;
+    ctx.moveTo(C.fieldLeft, top);
+    ctx.lineTo(state.params.triX, C.sourceY);
+    ctx.lineTo(C.fieldLeft, bottom);
     ctx.closePath();
   } else {
     ctx.rect(
-      FIELD_LEFT,
-      FIELD_TOP,
-      state.params.xBound - FIELD_LEFT,
-      FIELD_BOTTOM - FIELD_TOP
+      C.fieldLeft,
+      C.fieldTop,
+      state.params.xBound - C.fieldLeft,
+      C.fieldBottom - C.fieldTop
     );
   }
   ctx.fill();
   ctx.stroke();
   ctx.restore();
+}
 
-  const symbol = state.params.B >= 0 ? '×' : '·';
+function drawFieldSymbols(
+  ctx: CanvasRenderingContext2D,
+  state: DynamicCircleState,
+  p: Palette,
+  scale: number
+): void {
+  if (Math.abs(state.params.B) < C.fieldEps) return;
   ctx.save();
   ctx.globalAlpha = 0.22;
+  const inward = state.params.B > 0;
   for (
-    let x = FIELD_LEFT + 15;
-    x <= state.fieldBounds.right - 15;
-    x += FIELD_SYMBOL_STEP
+    let x = C.fieldLeft + C.fieldSymbolInset;
+    x <= C.axisRight;
+    x += C.fieldSymbolStep
   ) {
-    for (
-      let y = state.fieldBounds.top + 15;
-      y <= state.fieldBounds.bottom - 15;
-      y += FIELD_SYMBOL_STEP
-    ) {
-      if (!pointInBoundary({ x, y }, state)) continue;
-      drawLabel(
-        ctx,
-        symbol,
-        x,
-        y,
-        p.ink,
-        symbol === '×' ? 17 : 20,
-        'center',
-        500
-      );
+    for (let y = 60; y <= 600; y += C.fieldSymbolStep) {
+      if (!insideField({ x, y }, state.params)) continue;
+      ctx.save();
+      ctx.translate(x, y);
+      if (inward) {
+        ctx.strokeStyle = p.fieldInk;
+        ctx.lineWidth = 1.2 * scale;
+        ctx.beginPath();
+        ctx.moveTo(-CROSS_ARM, -CROSS_ARM);
+        ctx.lineTo(CROSS_ARM, CROSS_ARM);
+        ctx.moveTo(CROSS_ARM, -CROSS_ARM);
+        ctx.lineTo(-CROSS_ARM, CROSS_ARM);
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = p.fieldInk;
+        ctx.strokeStyle = p.fieldInk;
+        ctx.lineWidth = 0.8 * scale;
+        ctx.beginPath();
+        ctx.arc(0, 0, DOT_R * scale, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(0, 0, DOT_RING_R * scale, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
     }
   }
   ctx.restore();
@@ -257,18 +279,18 @@ function drawRulers(ctx: CanvasRenderingContext2D, p: Palette): void {
   ctx.textBaseline = 'middle';
   for (let y = 100; y <= 550; y += 50) {
     ctx.beginPath();
-    ctx.moveTo(FIELD_LEFT - 8, y);
-    ctx.lineTo(FIELD_LEFT, y);
+    ctx.moveTo(C.fieldLeft - 8, y);
+    ctx.lineTo(C.fieldLeft, y);
     ctx.stroke();
-    ctx.fillText(`${y}米`, LABEL_X, y + 3);
+    ctx.fillText(`${y}米`, RULER_LABEL_X, y + 3);
   }
   ctx.textAlign = 'center';
   for (let x = 300; x <= 600; x += 50) {
     ctx.beginPath();
-    ctx.moveTo(x, SOURCE_Y);
-    ctx.lineTo(x, SOURCE_Y + 8);
+    ctx.moveTo(x, C.sourceY);
+    ctx.lineTo(x, C.sourceY + 8);
     ctx.stroke();
-    ctx.fillText(`${x}米`, x, SOURCE_Y + 22);
+    ctx.fillText(`${x}米`, x, C.sourceY + 22);
   }
   ctx.restore();
 }
@@ -282,95 +304,41 @@ function drawGun(
 ): void {
   ctx.save();
   ctx.translate(source.x, source.y);
-  ctx.rotate((-angle * Math.PI) / 180);
+  ctx.rotate((angle * Math.PI) / 180);
   ctx.fillStyle = p.ink;
   ctx.strokeStyle = p.card;
   ctx.lineWidth = 1.5 * scale;
   ctx.beginPath();
-  ctx.roundRect(-26, -10, 26, 20, 4);
+  ctx.roundRect(-GUN_BODY_W, -GUN_BODY_H / 2, GUN_BODY_W, GUN_BODY_H, 4);
   ctx.fill();
   ctx.stroke();
   ctx.fillStyle = p.gold;
   ctx.beginPath();
-  ctx.roundRect(0, -5, 8, 10, 1.5);
+  ctx.roundRect(0, -GUN_NOZZLE_H / 2, GUN_NOZZLE_W, GUN_NOZZLE_H, 1.5);
   ctx.fill();
   ctx.fillStyle = '#00C853';
   ctx.beginPath();
-  ctx.arc(-16, 0, 3, 0, Math.PI * 2);
+  ctx.arc(-16, 0, 3 * scale, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
 
-function drawFormula(ctx: CanvasRenderingContext2D, p: Palette): void {
-  ctx.save();
-  ctx.fillStyle = p.card;
-  ctx.strokeStyle = '#EADEC9';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.roundRect(OVERLAY_X, OVERLAY_Y, OVERLAY_W, OVERLAY_H, 12);
-  ctx.fill();
-  ctx.stroke();
-  drawLabel(
-    ctx,
-    '物理学核心方程：',
-    OVERLAY_X + 15,
-    OVERLAY_Y + 28,
-    p.ink,
-    13,
-    'left',
-    700
-  );
-  drawLabel(
-    ctx,
-    '洛伦兹力: F = q v B',
-    OVERLAY_X + 15,
-    OVERLAY_Y + 54,
-    p.ink,
-    12,
-    'left',
-    500
-  );
-  drawLabel(
-    ctx,
-    '向心力: F = m v² / R',
-    OVERLAY_X + 15,
-    OVERLAY_Y + 76,
-    p.ink,
-    12,
-    'left',
-    500
-  );
-  drawLabel(
-    ctx,
-    '轨道半径: R = m v / q B',
-    OVERLAY_X + 15,
-    OVERLAY_Y + 98,
-    p.red,
-    12,
-    'left',
-    700
-  );
-  ctx.restore();
-}
-
-function drawTrajectory(
+function drawChip(
   ctx: CanvasRenderingContext2D,
-  points: Point[],
-  color: string,
+  x: number,
+  y: number,
   width: number,
-  dashed = false,
-  alpha = 1
+  height: number,
+  fill: string,
+  label: string,
+  p: Palette,
+  scale: number
 ): void {
-  if (points.length < 2) return;
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.strokeStyle = color;
-  ctx.lineWidth = width;
-  ctx.lineCap = 'round';
-  ctx.setLineDash(dashed ? [5, 4] : []);
-  path(ctx, points);
-  ctx.stroke();
-  ctx.restore();
+  ctx.fillStyle = fill;
+  ctx.beginPath();
+  ctx.roundRect(x - width / 2, y - height / 2, width, height, 6);
+  ctx.fill();
+  drawLabel(ctx, label, x, y, p.card, 9 * Math.max(0.85, scale), 'center', 700);
 }
 
 export function createDynamicCircleView(
@@ -378,9 +346,13 @@ export function createDynamicCircleView(
 ) {
   const stage = createCanvasViewport({
     canvas: options.canvas ?? null,
-    sizing: { mode: 'clamped', fallbackWidth: BASE_W, fallbackHeight: BASE_H },
-    initialWidth: BASE_W,
-    initialHeight: BASE_H,
+    sizing: {
+      mode: 'clamped',
+      fallbackWidth: C.baseWidth,
+      fallbackHeight: C.baseHeight
+    },
+    initialWidth: C.baseWidth,
+    initialHeight: C.baseHeight,
     eagerContext: true
   });
   const env = createViewEnvironment({
@@ -396,79 +368,83 @@ export function createDynamicCircleView(
     stage.ensureSized();
     const width = stage.cssWidth;
     const height = stage.cssHeight;
-    const fit = Math.min(width / BASE_W, height / BASE_H);
-    const offsetY = (height - BASE_H * fit) / 2;
+    const layout = stageLayoutFrom(stage.canvas);
+    const { fit, offsetX, offsetY, boxW, boxH } = stageTransform(
+      width,
+      height,
+      layout
+    );
     const p = PALETTE[env.theme];
     const contentScale = env.contentScale() * stage.responsiveScale;
     ctx.clearRect(0, 0, width, height);
     ctx.fillStyle = p.bg;
     ctx.fillRect(0, 0, width, height);
     ctx.save();
-    ctx.translate(0, offsetY);
+    ctx.translate(offsetX, offsetY);
     ctx.scale(fit, fit);
     ctx.fillStyle = p.bg;
-    ctx.fillRect(0, 0, BASE_W, BASE_H);
+    ctx.fillRect(0, 0, boxW, boxH);
     ctx.strokeStyle = p.grid;
     ctx.lineWidth = 1;
     ctx.setLineDash([4, 4]);
     ctx.beginPath();
-    ctx.moveTo(AXIS_LEFT, SOURCE_Y);
-    ctx.lineTo(AXIS_RIGHT, SOURCE_Y);
-    ctx.moveTo(SOURCE_X, AXIS_TOP);
-    ctx.lineTo(SOURCE_X, AXIS_BOTTOM);
+    ctx.moveTo(C.axisLeft, C.sourceY);
+    ctx.lineTo(C.axisRight, C.sourceY);
+    ctx.moveTo(C.fieldLeft, C.axisTop);
+    ctx.lineTo(C.fieldLeft, C.axisBottom);
     ctx.stroke();
     ctx.setLineDash([]);
 
-    drawField(ctx, state, p, contentScale);
+    drawFieldShape(ctx, state, p, contentScale);
+    drawFieldSymbols(ctx, state, p, contentScale);
     drawRulers(ctx, p);
 
-    if (state.params.tab === 'rotating') {
-      const center = { x: ROTATING_SOURCE_X, y: SOURCE_Y };
+    if (
+      state.params.tab === 'rotating' &&
+      Number.isFinite(state.radius) &&
+      state.radius < 1000
+    ) {
       ctx.save();
       ctx.strokeStyle = p.purple;
       ctx.globalAlpha = 0.45;
       ctx.lineWidth = 1.5 * contentScale;
       ctx.setLineDash([6, 4]);
       ctx.beginPath();
-      ctx.arc(center.x, center.y, state.radius, 0, Math.PI * 2);
+      ctx.arc(C.rotatingSourceX, C.sourceY, state.radius, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
-    } else if (state.params.tab === 'translating') {
+    } else if (state.params.tab === 'translating' && state.center) {
       drawLine(
         ctx,
-        { x: SOURCE_X, y: FIELD_TOP },
-        { x: SOURCE_X, y: FIELD_BOTTOM },
+        { x: state.center.x, y: C.fieldTop },
+        { x: state.center.x, y: C.fieldBottom },
         p.teal,
         1.5 * contentScale,
         true
       );
     }
 
-    for (const radius of state.auxiliaryRadii) {
-      const family = [];
-      for (let i = 0; i <= 180; i += 1) {
-        family.push(
-          orbitPoint(
-            state.source,
-            radius,
-            angleForState(state),
-            state.params.B,
-            i * TRAJECTORY_STEP
-          )
-        );
-      }
-      drawTrajectory(ctx, family, p.muted, 1, true, 0.25);
-    }
+    const auxColor =
+      state.params.tab === 'rotating'
+        ? p.purple
+        : state.params.tab === 'translating'
+          ? p.teal
+          : p.muted;
+    for (const family of state.auxiliaryTrajectories)
+      drawTrajectory(ctx, family, auxColor, 1.2 * contentScale, true, 0.45);
     for (const fan of state.fanTrajectories)
-      drawTrajectory(ctx, fan, p.red, 1.5, true, 0.32);
+      drawTrajectory(ctx, fan, p.red, 1.5 * contentScale, true, 0.32);
     drawTrajectory(ctx, state.trajectory, p.red, 4 * contentScale);
 
-    if (state.params.showCenter && Number.isFinite(state.radius)) {
+    if (state.params.showCenter && state.center) {
       drawLine(ctx, state.source, state.center, p.teal, 1 * contentScale, true);
       ctx.fillStyle = p.teal;
+      ctx.strokeStyle = p.card;
+      ctx.lineWidth = 1.5 * contentScale;
       ctx.beginPath();
-      ctx.arc(state.center.x, state.center.y, 5, 0, Math.PI * 2);
+      ctx.arc(state.center.x, state.center.y, CENTER_R, 0, Math.PI * 2);
       ctx.fill();
+      ctx.stroke();
       drawLabel(
         ctx,
         '圆心 O',
@@ -479,131 +455,186 @@ export function createDynamicCircleView(
         'left',
         700
       );
-      const particle =
-        state.trajectory[
-          Math.min(
-            state.trajectory.length - 1,
-            Math.floor(state.t * 20) % state.trajectory.length
-          )
-        ];
-      if (particle)
-        drawLine(ctx, state.center, particle, p.teal, 1 * contentScale, true);
+      if (state.exitPoint) {
+        drawLine(
+          ctx,
+          state.exitPoint,
+          state.center,
+          p.teal,
+          1 * contentScale,
+          true
+        );
+        ctx.fillStyle = p.red;
+        ctx.beginPath();
+        ctx.arc(state.exitPoint.x, state.exitPoint.y, EXIT_R, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
 
-    const arrowLength = state.params.tab === 'rotating' ? 55 : 65;
-    const arrowAngle = state.params.tab === 'rotating' ? state.params.theta : 0;
-    const arrowStart = {
-      x: state.source.x + (state.params.tab === 'rotating' ? 50 : 0),
-      y: state.source.y
-    };
-    const arrowEnd = {
-      x: arrowStart.x + arrowLength * Math.cos((arrowAngle * Math.PI) / 180),
-      y: arrowStart.y - arrowLength * Math.sin((arrowAngle * Math.PI) / 180)
-    };
-    drawArrow(ctx, arrowStart, arrowEnd, p.gold, 3 * contentScale);
-    drawGun(
+    drawArrow(
       ctx,
-      state.source,
-      state.params.tab === 'scaling' ? -90 : state.params.theta,
-      p,
-      contentScale
+      state.velocityFrom,
+      state.velocityTo,
+      p.gold,
+      3 * contentScale
     );
-    ctx.fillStyle = p.ink;
-    ctx.beginPath();
-    ctx.arc(state.source.x, state.source.y, 5, 0, Math.PI * 2);
-    ctx.fill();
-
-    const particle =
-      state.trajectory[
-        Math.min(
-          state.trajectory.length - 1,
-          Math.floor(state.t * 20) % state.trajectory.length
-        )
-      ];
-    if (particle) {
-      ctx.fillStyle = '#FFD700';
-      ctx.strokeStyle = p.card;
+    if (state.params.tab === 'rotating') {
+      ctx.save();
+      ctx.fillStyle = p.gold;
+      ctx.globalAlpha = 0.15;
+      ctx.strokeStyle = p.gold;
       ctx.lineWidth = 1.5 * contentScale;
       ctx.beginPath();
-      ctx.arc(particle.x, particle.y, 7.5, 0, Math.PI * 2);
+      ctx.arc(state.velocityTo.x, state.velocityTo.y, VERTEX_R, 0, Math.PI * 2);
       ctx.fill();
+      ctx.globalAlpha = 1;
       ctx.stroke();
+      ctx.restore();
     }
+    drawGun(ctx, state.source, state.launchAngle, p, contentScale);
+    ctx.fillStyle = p.ink;
+    ctx.strokeStyle = p.card;
+    ctx.lineWidth = 1.5 * contentScale;
+    ctx.beginPath();
+    ctx.arc(state.source.x, state.source.y, CENTER_R, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#FFD700';
+    ctx.strokeStyle = p.card;
+    ctx.lineWidth = 1.5 * contentScale;
+    ctx.beginPath();
+    ctx.arc(state.particle.x, state.particle.y, PARTICLE_R, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
 
     if (state.params.boundary === 'straight') {
-      ctx.fillStyle = p.red;
-      ctx.beginPath();
-      ctx.roundRect(
-        state.params.xBound - BOUNDARY_LABEL_W / 2,
-        FIELD_TOP - 25,
-        BOUNDARY_LABEL_W,
-        20,
-        6
-      );
-      ctx.fill();
-      drawLabel(
+      drawLine(
         ctx,
-        '右边界',
+        { x: state.params.xBound, y: C.fieldTop },
+        { x: state.params.xBound, y: C.fieldBottom },
+        p.red,
+        2.5 * contentScale,
+        true
+      );
+      drawChip(
+        ctx,
         state.params.xBound,
-        FIELD_TOP - 15,
-        p.card,
-        10,
-        'center',
-        700
+        C.fieldTop - LABEL_PAD_Y + BOUNDARY_LABEL_H / 2,
+        BOUNDARY_LABEL_W,
+        BOUNDARY_LABEL_H,
+        p.red,
+        '右边界',
+        p,
+        contentScale
       );
     } else if (state.params.boundary === 'triangle') {
+      ctx.save();
+      ctx.strokeStyle = p.red;
+      ctx.lineWidth = 2 * contentScale;
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.moveTo(C.fieldLeft, C.sourceY - state.params.triH / 2);
+      ctx.lineTo(state.params.triX, C.sourceY);
+      ctx.lineTo(C.fieldLeft, C.sourceY + state.params.triH / 2);
+      ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = 'rgba(230,57,70,0.2)';
+      ctx.strokeStyle = p.red;
+      ctx.lineWidth = 1.5 * contentScale;
+      ctx.beginPath();
+      ctx.arc(state.params.triX, C.sourceY, VERTEX_R, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
       ctx.fillStyle = p.red;
       ctx.beginPath();
-      ctx.arc(state.params.triX, SOURCE_Y, 14, 0, Math.PI * 2);
+      ctx.arc(state.params.triX, C.sourceY, HANDLE_R / 2, 0, Math.PI * 2);
       ctx.fill();
-      drawLabel(
+      drawChip(
         ctx,
-        '顶点',
         state.params.triX,
-        SOURCE_Y - 23,
-        p.card,
-        10,
-        'center',
-        700
+        C.sourceY - 21,
+        TRI_LABEL_W,
+        TRI_LABEL_H,
+        p.red,
+        '三角形顶点',
+        p,
+        contentScale
       );
     } else {
-      ctx.fillStyle = p.red;
+      ctx.save();
+      ctx.strokeStyle = p.red;
+      ctx.lineWidth = 2 * contentScale;
+      ctx.setLineDash([6, 4]);
       ctx.beginPath();
       ctx.arc(
-        state.params.circleX + state.params.circleR,
-        SOURCE_Y,
-        10,
+        state.params.circleX,
+        state.params.circleY,
+        state.params.circleR,
+        0,
+        Math.PI * 2
+      );
+      ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = 'rgba(63,81,181,0.2)';
+      ctx.strokeStyle = p.handleBlue;
+      ctx.lineWidth = 1.5 * contentScale;
+      ctx.beginPath();
+      ctx.arc(
+        state.params.circleX,
+        state.params.circleY,
+        VERTEX_R,
         0,
         Math.PI * 2
       );
       ctx.fill();
-      ctx.fillStyle = '#3F51B5';
+      ctx.stroke();
+      ctx.fillStyle = p.handleBlue;
       ctx.beginPath();
-      ctx.arc(state.params.circleX, SOURCE_Y, 10, 0, Math.PI * 2);
-      ctx.fill();
-      drawLabel(
-        ctx,
-        '圆心',
+      ctx.arc(
         state.params.circleX,
-        SOURCE_Y - 20,
-        p.card,
-        9,
-        'center',
-        700
+        state.params.circleY,
+        HANDLE_R / 2,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+      drawChip(
+        ctx,
+        state.params.circleX,
+        state.params.circleY - 21,
+        CIRCLE_LABEL_W,
+        CIRCLE_LABEL_H,
+        p.handleBlue,
+        '磁场圆心',
+        p,
+        contentScale
+      );
+      const rx = state.params.circleX + state.params.circleR;
+      const ry = state.params.circleY;
+      ctx.fillStyle = 'rgba(230,57,70,0.2)';
+      ctx.strokeStyle = p.red;
+      ctx.beginPath();
+      ctx.arc(rx, ry, 12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = p.red;
+      ctx.beginPath();
+      ctx.arc(rx, ry, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+      drawChip(
+        ctx,
+        rx,
+        ry + 23,
+        CIRCLE_LABEL_W,
+        CIRCLE_LABEL_H,
+        p.red,
+        '半径调节',
+        p,
+        contentScale
       );
     }
 
-    drawFormula(ctx, p);
-    drawLabel(
-      ctx,
-      '拖动红色控制柄或调整参数',
-      BASE_W / 2,
-      635,
-      p.muted,
-      11,
-      'center',
-      500
-    );
     ctx.restore();
   }
 
@@ -629,8 +660,4 @@ export function createDynamicCircleView(
       stage.release();
     }
   };
-}
-
-function angleForState(state: DynamicCircleState): number {
-  return state.params.tab === 'scaling' ? -90 : state.params.theta;
 }

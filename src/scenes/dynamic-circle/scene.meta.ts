@@ -3,7 +3,7 @@ import type { SceneDemoProfile } from '../../platform/demo-profile';
 
 const demoProfile: SceneDemoProfile = {
   lessonTask: 'process',
-  readoutKeys: ['tab', 'radius', 'boundary', 'status'],
+  readoutKeys: ['tab', 'radius', 'boundary', 'critical', 'status'],
   renderHints: { contentScale: 1.45 },
   interactionHints: {
     touchTargetMinSize: 48,
@@ -35,9 +35,11 @@ export const dynamicCircleMeta: SceneMeta = {
     triH: 300,
     circleR: 120,
     circleX: 380,
+    circleY: 330,
     autoSweep: 0,
     showCenter: 1
   },
+  urlSyncKeys: ['tab', 'boundary'],
   testProfile: {
     hasGraph: false,
     hasTransport: true,
