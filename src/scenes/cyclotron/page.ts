@@ -6,8 +6,18 @@ import { cyclotronMeta } from './scene.meta';
 import { cyclotronControlsSchema } from './controls-schema';
 import type { CyclotronParams, CyclotronParticle } from './scene.sim';
 
+function asBoolean(value: unknown): boolean {
+  return (
+    value === true ||
+    value === 1 ||
+    value === '1' ||
+    String(value).toLowerCase() === 'true'
+  );
+}
+
 bootScenePage({
   meta: cyclotronMeta,
+  autoPlay: true,
   preferredLayout: 'split-right',
   layoutConfig: {
     defaultLeftRatio: 0.34,
@@ -46,7 +56,7 @@ bootScenePage({
           renderer.setActive(key, String(value));
         } else if (key === 'autoRun' || key === 'showField') {
           cyclotronScene.setParams({
-            [key]: Boolean(value)
+            [key]: asBoolean(value)
           } as Partial<CyclotronParams>);
         } else if (key === 'B' || key === 'U') {
           cyclotronScene.setParams({

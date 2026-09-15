@@ -3,6 +3,7 @@ import type { DemoRenderHints } from '../../platform/demo-profile';
 import { createStandardSceneEntry } from '../scene-entry-helpers';
 import {
   createCyclotronSim,
+  PARTICLES,
   type CyclotronParams,
   type CyclotronParticle,
   type CyclotronState
@@ -40,22 +41,22 @@ export function createCyclotronScene(
     value: string;
   }> {
     const state = sim.getState();
-    const particle =
-      state.params.particle === 'deuteron'
-        ? '氘核'
-        : state.params.particle === 'alpha'
-          ? 'α粒子'
-          : '质子';
     return [
-      { key: 'particle', label: '粒子', value: particle },
+      {
+        key: 'particle',
+        label: '粒子',
+        value: PARTICLES[state.params.particle].label
+      },
+      { key: 'crossings', label: 'n', value: `${state.crossings}` },
       { key: 'energy', label: 'Eₖ', value: `${state.energy.toFixed(0)} MeV` },
+      {
+        key: 'maxEnergy',
+        label: 'Eₖₘ',
+        value: `${state.maxEnergy.toFixed(0)} MeV`
+      },
       { key: 'radius', label: 'R', value: `${state.radius.toFixed(0)} px` },
       { key: 'period', label: 'T/T₀', value: state.periodRatio.toFixed(2) },
-      {
-        key: 'status',
-        label: '状态',
-        value: `${state.crossings} 圈·${state.status}`
-      }
+      { key: 'status', label: '状态', value: state.status }
     ];
   }
 

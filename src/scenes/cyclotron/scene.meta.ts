@@ -1,9 +1,17 @@
 import type { SceneMeta } from '../../platform/scene-contract';
 import type { SceneDemoProfile } from '../../platform/demo-profile';
+import { cyclotronConstants as C } from './scene.sim';
 
 const demoProfile: SceneDemoProfile = {
   lessonTask: 'lecture',
-  readoutKeys: ['particle', 'energy', 'radius', 'period'],
+  readoutKeys: [
+    'particle',
+    'crossings',
+    'energy',
+    'maxEnergy',
+    'radius',
+    'period'
+  ],
   renderHints: { contentScale: 1.5 },
   interactionHints: {
     touchTargetMinSize: 48,
@@ -25,7 +33,12 @@ export const cyclotronMeta: SceneMeta = {
   icon: '⚛️',
   category: 'electromagnetism',
   featured: false,
-  defaultParams: { B: 3, U: 30, autoRun: 1, showField: 1 },
+  defaultParams: {
+    B: C.bDefault,
+    U: C.uDefault,
+    autoRun: 1,
+    showField: 1
+  },
   urlSyncKeys: ['B', 'U', 'particle', 'autoRun', 'showField'],
   testProfile: {
     hasGraph: false,

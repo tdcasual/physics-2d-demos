@@ -1,4 +1,5 @@
 import type { ControlsSchema } from '../../platform/controls-schema';
+import { cyclotronConstants as C } from './scene.sim';
 
 export const cyclotronControlsSchema: ControlsSchema = {
   sections: [
@@ -28,20 +29,20 @@ export const cyclotronControlsSchema: ControlsSchema = {
           type: 'slider',
           key: 'B',
           label: '磁场 B',
-          min: 1,
-          max: 3,
+          min: C.bMin,
+          max: C.bMax,
           step: 1,
-          value: 3,
+          value: C.bDefault,
           unit: 'T'
         },
         {
           type: 'slider',
           key: 'U',
           label: '电压 U',
-          min: 10,
-          max: 50,
-          step: 10,
-          value: 30,
+          min: C.uMin,
+          max: C.uMax,
+          step: C.uStep,
+          value: C.uDefault,
           unit: 'kV'
         }
       ]
@@ -62,9 +63,9 @@ export const cyclotronControlsSchema: ControlsSchema = {
           type: 'hint',
           key: 'formula',
           lines: [
-            'T = 2πm / (qB)',
-            'Eₖ,max = q²B²R² / (2m)',
-            'Eₖ,max 与 U 无关'
+            'T = 2πm / (qB)，与 U 无关',
+            'Eₖₘ = q²B²R² / (2m)',
+            '每次过缝 Eₖ 增加 qU；Eₖₘ 与 U 无关'
           ]
         }
       ]

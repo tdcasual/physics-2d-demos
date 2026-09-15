@@ -15,7 +15,7 @@
 | --: | ----------------------------------------------------- | ---- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--: |
 |   1 | 力的合成与分解                                        | 力学 | [`force-composition`](../src/scenes/force-composition/scene.meta.ts)                               | [详情](https://app.svgzhenli.com/resource/1e5fa5fb-0e00-40cd-b4c7-0ab9e2df8c5e) · [封面](https://img.svgzhenli.com/gallery-assets/covers/f3obs9ew871780737938418.png)   |  ✅  |
 |   2 | 动态圆·三法破临界                                     | 电磁 | [`dynamic-circle`](../src/scenes/dynamic-circle/scene.meta.ts)                                     | [详情](https://app.svgzhenli.com/resource/5aa418d4-7f15-48bf-9b40-2903a78a4a8d) · [封面](https://img.svgzhenli.com/gallery-assets/covers/3b63ldwj6881784565177525.png)  |  ✅  |
-|   3 | 回旋加速器核心结构与原理                              | 电磁 | [`cyclotron`](../src/scenes/cyclotron/scene.meta.ts)                                               | [详情](https://app.svgzhenli.com/resource/455c88d7-71d7-4bb9-8a8b-a505a95a135f) · [封面](https://img.svgzhenli.com/gallery-assets/covers/dji62m8jox91774712146984.png)  |  ☐   |
+|   3 | 回旋加速器核心结构与原理                              | 电磁 | [`cyclotron`](../src/scenes/cyclotron/scene.meta.ts)                                               | [详情](https://app.svgzhenli.com/resource/455c88d7-71d7-4bb9-8a8b-a505a95a135f) · [封面](https://img.svgzhenli.com/gallery-assets/covers/dji62m8jox91774712146984.png)  |  ✅  |
 |   4 | 简谐横波传播状态模型                                  | 力学 | [`harmonic-wave`](../src/scenes/harmonic-wave/scene.meta.ts)                                       | [详情](https://app.svgzhenli.com/resource/5c95b70b-3496-4df2-8bea-a020e92bbd29) · [封面](https://img.svgzhenli.com/gallery-assets/covers/oa7f9q6ecb1774685743478.png)   |  ☐   |
 |   5 | 法拉第圆盘发电机原理                                  | 电磁 | [`faraday-disc`](../src/scenes/faraday-disc/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/5cdaf4ca-9464-4554-b84a-caa9861a9bb7) · [封面](https://img.svgzhenli.com/gallery-assets/covers/h9i1ky6qviv1788264020500.png)  |  ☐   |
 |   6 | 平抛实验数据还原与轨迹分析                            | 力学 | [`projectile-data-analysis`](../src/scenes/projectile-data-analysis/scene.meta.ts)                 | [详情](https://app.svgzhenli.com/resource/7886d018-8006-4277-bd1c-4342c08f27e4) · [封面](https://img.svgzhenli.com/gallery-assets/covers/wjoea5u4c6e1787821850037.png)  |  ☐   |
@@ -136,6 +136,15 @@
 - 视觉与交互验证：首次复核发现 768/900px 分栏下动画被读数浮层错误压缩；Grok 修复为读数下方舞台布局。复验 `767/768/900/1024×768/1024×900/1440px` 无横向溢出、无控制台错误，动画本体在 768/900px 可读；播放/暂停、旋转圆/圆形边界切换、滑块 URL 同步与刷新恢复均通过 Playwright。
 - 物理与工程验证：轨道半径、曲率符号、出界切线、三角形场域与临界半径由 `22` 个场景单测覆盖；`pnpm verify:scene dynamic-circle` 全 `7/7` 步骤通过（3140 passed，134 skipped）。
 - 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/5aa418d4-7f15-48bf-9b40-2903a78a4a8d.md` · [原始详情](https://app.svgzhenli.com/resource/5aa418d4-7f15-48bf-9b40-2903a78a4a8d) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/3b63ldwj6881784565177525.png)
+
+### 3. 回旋加速器核心结构与原理 (`cyclotron`)
+
+- 状态：✅ Codex / Grok Build 交叉审计通过（2026-09-15）。
+- 修复：按解码后的 SVG 源场景保持 `640×660` 动画舞台、D 型盒/缝隙、X 磁场、U~ 源、电场箭头与动态极性；轨迹改为连续交替半圆，半径按 `R√(n/Nₘₐₓ)` 增长，达到 `Eₖₘ` 后沿左右引出通道出射；移除动画区冗余说明，公式与状态集中在控制/读数区。
+- 物理核验：`Eₖₘ=q²B²R²/(2m)`（教学缩放 `40q²B²/m`）、每次过缝增加 `qU`、`T/T₀=m/(qB)`、极性每半周翻转、奇偶圈对应左右引出；覆盖边界、连续性和粒子类型。
+- 视觉与交互验证：首次复核发现 `768/900px` 与 `1440px` 分栏时读数浮层遮挡 D 型盒，已改为测量浮层并自适应左侧/下方舞台；复验 `767/768/900/1024×768/1024×900/1440px` 无横向溢出、无控制台错误，3.2 秒动态截图轨迹连续且清晰；播放/暂停、粒子、B/U、显示电场、URL 同步与刷新恢复通过 Playwright。
+- 工程验证：`pnpm verify:scene cyclotron` 全 `7/7` 步骤通过（3140 passed，134 skipped）；场景专项 `22` 个测试通过，构建与 bundle 预算通过。
+- 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/455c88d7-71d7-4bb9-8a8b-a505a95a135f.md` · 原始 HTML `/home/tdcasual/Downloads/物理演示/高中物理全量审计/html/回旋加速器核心结构与原理.html` · [原始详情](https://app.svgzhenli.com/resource/455c88d7-71d7-4bb9-8a8b-a505a95a135f) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/dji62m8jox91774712146984.png)
 
 ## 复审记录模板
 
