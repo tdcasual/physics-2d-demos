@@ -42,12 +42,12 @@ export function createProjectileDataScene(
     return [
       {
         key: 'delta-x',
-        label: '水平等距 Δx',
+        label: '水平等间距 Δx',
         value: `${state.deltaX.toFixed(3)} m`
       },
       {
         key: 'delta-y2',
-        label: '竖直二阶差分',
+        label: '竖直二阶差 Δ²y',
         value: `${state.deltaY2.toFixed(3)} m`
       },
       {

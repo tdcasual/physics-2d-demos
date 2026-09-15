@@ -18,7 +18,7 @@
 |   3 | 回旋加速器核心结构与原理                              | 电磁 | [`cyclotron`](../src/scenes/cyclotron/scene.meta.ts)                                               | [详情](https://app.svgzhenli.com/resource/455c88d7-71d7-4bb9-8a8b-a505a95a135f) · [封面](https://img.svgzhenli.com/gallery-assets/covers/dji62m8jox91774712146984.png)  |  ✅  |
 |   4 | 简谐横波传播状态模型                                  | 力学 | [`harmonic-wave`](../src/scenes/harmonic-wave/scene.meta.ts)                                       | [详情](https://app.svgzhenli.com/resource/5c95b70b-3496-4df2-8bea-a020e92bbd29) · [封面](https://img.svgzhenli.com/gallery-assets/covers/oa7f9q6ecb1774685743478.png)   |  ✅  |
 |   5 | 法拉第圆盘发电机原理                                  | 电磁 | [`faraday-disc`](../src/scenes/faraday-disc/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/5cdaf4ca-9464-4554-b84a-caa9861a9bb7) · [封面](https://img.svgzhenli.com/gallery-assets/covers/h9i1ky6qviv1788264020500.png)  |  ✅  |
-|   6 | 平抛实验数据还原与轨迹分析                            | 力学 | [`projectile-data-analysis`](../src/scenes/projectile-data-analysis/scene.meta.ts)                 | [详情](https://app.svgzhenli.com/resource/7886d018-8006-4277-bd1c-4342c08f27e4) · [封面](https://img.svgzhenli.com/gallery-assets/covers/wjoea5u4c6e1787821850037.png)  |  ☐   |
+|   6 | 平抛实验数据还原与轨迹分析                            | 力学 | [`projectile-data-analysis`](../src/scenes/projectile-data-analysis/scene.meta.ts)                 | [详情](https://app.svgzhenli.com/resource/7886d018-8006-4277-bd1c-4342c08f27e4) · [封面](https://img.svgzhenli.com/gallery-assets/covers/wjoea5u4c6e1787821850037.png)  |  ✅  |
 |   7 | 子弹打木块力学模型                                    | 力学 | [`bullet-block`](../src/scenes/bullet-block/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/efdbc474-2e4e-4a0d-9aa1-a3ac3a9a5262) · [封面](https://img.svgzhenli.com/gallery-assets/covers/ttwrczxsemb1774681162042.png)  |  ☐   |
 |   8 | 验证力的平行四边形定则                                | 力学 | [`parallelogram-rule`](../src/scenes/parallelogram-rule/scene.meta.ts)                             | [详情](https://app.svgzhenli.com/resource/039f55b4-fd42-490f-9947-2e4c54601684) · [封面](https://img.svgzhenli.com/gallery-assets/covers/5ns9z0vm18w1783606039791.png)  |  ☐   |
 |   9 | 双星系统运动轨道-万有引力定律与航天                   | 力学 | [`binary-stars`](../src/scenes/binary-stars/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/cf938b0c-3fba-4a89-a76f-eceaf07397f5) · [封面](https://img.svgzhenli.com/gallery-assets/covers/9q4r2plqgqo1774679828854.png)  |  ☐   |
@@ -164,6 +164,15 @@
 - 交互与布局验证：播放/暂停冻结与恢复、重置、顺/逆时针、B 向里/向外、闭合/断开、预设与 URL 同步通过；`1280×720` 桌面和 `390×844` 移动端无横向溢出，移动端切换“数据”页后读数可见，标题/场域/圆盘/回路/读数无重叠；控制台无错误。
 - 工程验证：`pnpm verify:scene faraday-disc` 全 `7/7` 步骤通过（3136 passed，133 skipped）；独立 Playwright 浏览器审计 `2/2` 通过；构建、TypeScript、ESLint、布局契约和 bundle 预算通过。首轮响应式契约发现标题宽度裸常量，已移入 `faradayConstants` 并复验通过。
 - 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/5cdaf4ca-9464-4554-b84a-caa9861a9bb7.md` · [原始详情](https://app.svgzhenli.com/resource/5cdaf4ca-9464-4554-b84a-caa9861a9bb7) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/h9i1ky6qviv1788264020500.png)
+
+### 6. 平抛实验数据还原与轨迹分析 (`projectile-data-analysis`)
+
+- 状态：✅ Codex / Grok Build 交叉审计通过（2026-09-15）。
+- 修复：按 SVG 参考图重建米白实验卡、细/粗网格、O/A/B/C/D 五个频闪点、红色抛物线、绿色 Δy 箭头、坐标轴和分力分析卡；移除超出舞台的第六点，压缩分析/公式卡，标题和舞台随浮层安全区自适应，修复 y 轴标签裁切。
+- 物理核验：`x=v₀t`、`y=½gt²`、`y=gx²/(2v₀²)`、`vₓ=v₀`、`vᵧ=gt`、`v=√(vₓ²+vᵧ²)`；五点对应 `0…4T`，`Δx=v₀T`、`Δ²y=gT²`，参数范围与当前读数同步，覆盖默认值和边界夹取。
+- 交互与布局验证：播放/暂停冻结与恢复、重置、轨迹分析/频闪还原、速度分解开关、参数滑块和 URL 写回通过；`1280×720` 桌面及 `390×844` 移动端无横向溢出，标题、轨迹、分析卡、读数卡不重叠，控制台无错误。
+- 工程验证：`pnpm verify:scene projectile-data-analysis` 全 `7/7` 步骤通过（3124 passed，133 skipped）；独立 Playwright 桌面/移动交互审计 `1/1` 通过；构建、TypeScript、ESLint、布局契约和 bundle 预算通过。
+- 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/7886d018-8006-4277-bd1c-4342c08f27e4.md` · [原始详情](https://app.svgzhenli.com/resource/7886d018-8006-4277-bd1c-4342c08f27e4) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/wjoea5u4c6e1787821850037.png)
 
 ## 复审记录模板
 

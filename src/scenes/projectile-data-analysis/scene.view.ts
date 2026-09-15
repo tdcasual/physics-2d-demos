@@ -1,7 +1,13 @@
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
-import { projectileDataConstants, type ProjectileDataState } from './scene.sim';
+import {
+  projectileDataConstants,
+  projectileDataToCanvas,
+  stageLayoutFrom,
+  stageTransform,
+  type ProjectileDataState
+} from './scene.sim';
 
 export type CreateProjectileDataViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -21,8 +27,7 @@ const {
   gridStepY: GRID_STEP_Y,
   gridCountX: GRID_COUNT_X,
   gridCountY: GRID_COUNT_Y,
-  xScale: X_SCALE,
-  yScale: Y_SCALE,
+  gridMinorDiv: GRID_MINOR_DIV,
   pointRadius: POINT_RADIUS,
   labelOffsetX: LABEL_OFFSET_X,
   labelOffsetY: LABEL_OFFSET_Y,
@@ -36,8 +41,8 @@ const {
   formulaTop: FORMULA_TOP,
   formulaMid: FORMULA_MID,
   formulaRight: FORMULA_RIGHT,
-  titleY: TITLE_Y,
-  subtitleY: SUBTITLE_Y
+  formulaHeight: FORMULA_HEIGHT,
+  titleY: TITLE_Y
 } = projectileDataConstants;
 
 type Palette = {
@@ -164,8 +169,12 @@ export function createProjectileDataView(
     if (!ctx) return;
     const width = stage.cssWidth;
     const height = stage.cssHeight;
-    const fit = Math.min(width / BASE_W, height / BASE_H);
-    const offsetY = (height - BASE_H * fit) / 2;
+    const layout = stageLayoutFrom(stage.canvas);
+    const { fit, offsetX, offsetY, boxW, boxH } = stageTransform(
+      width,
+      height,
+      layout
+    );
     const palette = PALETTE[env.theme];
     const contentScale = env.contentScale() * stage.responsiveScale;
 
@@ -173,8 +182,14 @@ export function createProjectileDataView(
     ctx.fillStyle = palette.bg;
     ctx.fillRect(0, 0, width, height);
     ctx.save();
-    ctx.translate(0, offsetY);
+    ctx.translate(offsetX, offsetY);
     ctx.scale(fit, fit);
+    ctx.fillStyle = palette.panel;
+    ctx.fillRect(0, 0, boxW, boxH);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, boxW, boxH);
+    ctx.clip();
 
     text(
       ctx,
@@ -182,37 +197,42 @@ export function createProjectileDataView(
       BASE_W / 2,
       TITLE_Y,
       palette.ink,
-      22 * contentScale,
-      'center'
-    );
-    text(
-      ctx,
-      state.params.mode === 'strobe'
-        ? '频闪等时间隔 · 轨迹与数据联动'
-        : '水平匀速 · 竖直自由落体',
-      BASE_W / 2,
-      SUBTITLE_Y,
-      palette.muted,
-      14 * contentScale,
+      20 * contentScale,
       'center'
     );
 
-    ctx.fillStyle = palette.panel;
+    ctx.fillStyle = palette.bg;
     ctx.strokeStyle = palette.border;
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.roundRect(
       ORIGIN_X - 28,
-      ORIGIN_Y - 30,
+      ORIGIN_Y - 28,
       AXIS_END_X - ORIGIN_X + 48,
-      AXIS_END_Y - ORIGIN_Y + 36,
+      AXIS_END_Y - ORIGIN_Y + 32,
       12
     );
     ctx.fill();
     ctx.stroke();
 
+    const minorStepX = GRID_STEP_X / GRID_MINOR_DIV;
+    const minorStepY = GRID_STEP_Y / GRID_MINOR_DIV;
     ctx.strokeStyle = palette.grid;
     ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.45;
+    for (let x = ORIGIN_X + minorStepX; x < AXIS_END_X - 1; x += minorStepX) {
+      ctx.beginPath();
+      ctx.moveTo(x, ORIGIN_Y);
+      ctx.lineTo(x, AXIS_END_Y);
+      ctx.stroke();
+    }
+    for (let y = ORIGIN_Y + minorStepY; y < AXIS_END_Y - 1; y += minorStepY) {
+      ctx.beginPath();
+      ctx.moveTo(ORIGIN_X, y);
+      ctx.lineTo(AXIS_END_X, y);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
     for (let i = 0; i <= GRID_COUNT_X; i += 1) {
       const x = ORIGIN_X + i * GRID_STEP_X;
       ctx.beginPath();
@@ -267,11 +287,11 @@ export function createProjectileDataView(
     text(
       ctx,
       '+y（竖直向下/m）',
-      ORIGIN_X - 4,
-      AXIS_END_Y + 10,
+      ORIGIN_X + 8,
+      AXIS_END_Y - 12,
       palette.ink,
-      13 * contentScale,
-      'right'
+      12 * contentScale,
+      'left'
     );
     text(
       ctx,
@@ -307,10 +327,6 @@ export function createProjectileDataView(
     }
 
     const points = state.points;
-    const toCanvas = (x: number, y: number): { x: number; y: number } => ({
-      x: ORIGIN_X + x * X_SCALE,
-      y: ORIGIN_Y + y * Y_SCALE
-    });
     const trajectoryEnd = points[points.length - 1];
     ctx.strokeStyle = palette.red;
     ctx.lineWidth = 2.5 * contentScale;
@@ -323,7 +339,7 @@ export function createProjectileDataView(
         0.5 *
         state.params.gravity *
         (x / Math.max(state.params.v0, 0.001)) ** 2;
-      const point = toCanvas(x, y);
+      const point = projectileDataToCanvas(x, y);
       if (i === 0) ctx.moveTo(point.x, point.y);
       else ctx.lineTo(point.x, point.y);
     }
@@ -331,7 +347,7 @@ export function createProjectileDataView(
     ctx.setLineDash([]);
 
     for (const point of points) {
-      const position = toCanvas(point.x, point.y);
+      const position = projectileDataToCanvas(point.x, point.y);
       ctx.fillStyle = palette.orange;
       ctx.strokeStyle = palette.ink;
       ctx.lineWidth = 1.5;
@@ -339,25 +355,19 @@ export function createProjectileDataView(
       ctx.arc(position.x, position.y, POINT_RADIUS, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
-      const label =
-        point.index === 0
-          ? 'O(0)'
-          : `${String.fromCharCode(64 + point.index)}(${point.index}T)`;
-      text(
-        ctx,
-        label,
-        position.x + LABEL_OFFSET_X,
-        position.y + LABEL_OFFSET_Y,
-        palette.ink,
-        13 * contentScale
-      );
-      if (point.index > 0 && point.index <= 4) {
-        const previous = toCanvas(
+      if (point.index > 0) {
+        text(
+          ctx,
+          `${String.fromCharCode(64 + point.index)}(${point.index}T)`,
+          position.x + LABEL_OFFSET_X,
+          position.y + LABEL_OFFSET_Y,
+          palette.ink,
+          13 * contentScale
+        );
+        const previous = projectileDataToCanvas(
           points[point.index - 1].x,
           points[point.index - 1].y
         );
-        ctx.strokeStyle = palette.green;
-        ctx.lineWidth = 2 * contentScale;
         arrow(
           ctx,
           position.x,
@@ -369,14 +379,12 @@ export function createProjectileDataView(
         );
         text(
           ctx,
-          `Δy${point.index}=${point.deltaY.toFixed(2)}m`,
+          `Δy${point.index}=${point.deltaY.toFixed(3)}m`,
           position.x + 8,
           (previous.y + position.y) / 2,
           palette.green,
           11 * contentScale
         );
-      }
-      if (point.index > 0) {
         ctx.strokeStyle = palette.blue;
         ctx.setLineDash([4, 4]);
         ctx.beginPath();
@@ -387,7 +395,7 @@ export function createProjectileDataView(
       }
     }
 
-    const current = toCanvas(state.current.x, state.current.y);
+    const current = projectileDataToCanvas(state.current.x, state.current.y);
     ctx.strokeStyle = palette.red;
     ctx.lineWidth = 3 * contentScale;
     ctx.beginPath();
@@ -446,34 +454,26 @@ export function createProjectileDataView(
     text(
       ctx,
       '分力分析',
-      ANALYSIS_LEFT + 16,
-      ANALYSIS_TOP + 22,
+      ANALYSIS_LEFT + 14,
+      ANALYSIS_TOP + 20,
       palette.ink,
-      15 * contentScale
+      14 * contentScale
     );
     text(
       ctx,
-      '水平：Fₓ=0  ·  vₓ=v₀',
-      ANALYSIS_LEFT + 16,
-      ANALYSIS_TOP + 56,
+      '水平：Fₓ=0（aₓ=0）',
+      ANALYSIS_LEFT + 14,
+      ANALYSIS_TOP + 48,
       palette.blue,
       12 * contentScale
     );
     text(
       ctx,
-      '竖直：Fᵧ=mg  ·  aᵧ=g',
-      ANALYSIS_LEFT + 16,
-      ANALYSIS_TOP + 84,
+      '竖直：Fᵧ=mg（aᵧ=g）',
+      ANALYSIS_LEFT + 14,
+      ANALYSIS_TOP + 70,
       palette.purple,
       12 * contentScale
-    );
-    text(
-      ctx,
-      `当前 ${state.current.index}T  ·  t=${state.current.time.toFixed(2)}s`,
-      ANALYSIS_LEFT + 16,
-      ANALYSIS_TOP + 108,
-      palette.muted,
-      11 * contentScale
     );
 
     ctx.fillStyle = palette.panel;
@@ -483,7 +483,7 @@ export function createProjectileDataView(
       FORMULA_LEFT,
       FORMULA_TOP,
       FORMULA_RIGHT - FORMULA_LEFT,
-      36,
+      FORMULA_HEIGHT,
       10
     );
     ctx.fill();
@@ -514,6 +514,7 @@ export function createProjectileDataView(
       13 * contentScale,
       'right'
     );
+    ctx.restore();
     ctx.restore();
   }
 
