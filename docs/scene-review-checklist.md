@@ -17,7 +17,7 @@
 |   2 | 动态圆·三法破临界                                     | 电磁 | [`dynamic-circle`](../src/scenes/dynamic-circle/scene.meta.ts)                                     | [详情](https://app.svgzhenli.com/resource/5aa418d4-7f15-48bf-9b40-2903a78a4a8d) · [封面](https://img.svgzhenli.com/gallery-assets/covers/3b63ldwj6881784565177525.png)  |  ✅  |
 |   3 | 回旋加速器核心结构与原理                              | 电磁 | [`cyclotron`](../src/scenes/cyclotron/scene.meta.ts)                                               | [详情](https://app.svgzhenli.com/resource/455c88d7-71d7-4bb9-8a8b-a505a95a135f) · [封面](https://img.svgzhenli.com/gallery-assets/covers/dji62m8jox91774712146984.png)  |  ✅  |
 |   4 | 简谐横波传播状态模型                                  | 力学 | [`harmonic-wave`](../src/scenes/harmonic-wave/scene.meta.ts)                                       | [详情](https://app.svgzhenli.com/resource/5c95b70b-3496-4df2-8bea-a020e92bbd29) · [封面](https://img.svgzhenli.com/gallery-assets/covers/oa7f9q6ecb1774685743478.png)   |  ✅  |
-|   5 | 法拉第圆盘发电机原理                                  | 电磁 | [`faraday-disc`](../src/scenes/faraday-disc/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/5cdaf4ca-9464-4554-b84a-caa9861a9bb7) · [封面](https://img.svgzhenli.com/gallery-assets/covers/h9i1ky6qviv1788264020500.png)  |  ☐   |
+|   5 | 法拉第圆盘发电机原理                                  | 电磁 | [`faraday-disc`](../src/scenes/faraday-disc/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/5cdaf4ca-9464-4554-b84a-caa9861a9bb7) · [封面](https://img.svgzhenli.com/gallery-assets/covers/h9i1ky6qviv1788264020500.png)  |  ✅  |
 |   6 | 平抛实验数据还原与轨迹分析                            | 力学 | [`projectile-data-analysis`](../src/scenes/projectile-data-analysis/scene.meta.ts)                 | [详情](https://app.svgzhenli.com/resource/7886d018-8006-4277-bd1c-4342c08f27e4) · [封面](https://img.svgzhenli.com/gallery-assets/covers/wjoea5u4c6e1787821850037.png)  |  ☐   |
 |   7 | 子弹打木块力学模型                                    | 力学 | [`bullet-block`](../src/scenes/bullet-block/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/efdbc474-2e4e-4a0d-9aa1-a3ac3a9a5262) · [封面](https://img.svgzhenli.com/gallery-assets/covers/ttwrczxsemb1774681162042.png)  |  ☐   |
 |   8 | 验证力的平行四边形定则                                | 力学 | [`parallelogram-rule`](../src/scenes/parallelogram-rule/scene.meta.ts)                             | [详情](https://app.svgzhenli.com/resource/039f55b4-fd42-490f-9947-2e4c54601684) · [封面](https://img.svgzhenli.com/gallery-assets/covers/5ns9z0vm18w1783606039791.png)  |  ☐   |
@@ -155,6 +155,15 @@
 - 视觉与交互验证：独立 Playwright 复验 `767/768/900/1024×768/1024×900/1280×720/1440×900` 均无横向/纵向溢出、无控制台错误；波形传播、质点竖直振动、P/微移虚线清晰，读数不覆盖有效动画图形；播放/暂停冻结与恢复、左右传播、A/λ/T、显示开关、P 拖动、URL 写回与刷新恢复通过。
 - 工程验证：`pnpm verify:scene harmonic-wave` 全 `7/7` 步骤通过（3145 passed，133 skipped）；构建、TypeScript、ESLint、布局契约和 bundle 预算通过。
 - 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/5c95b70b-3496-4df2-8bea-a020e92bbd29.md` · 原始 HTML `/home/tdcasual/Downloads/物理演示/高中物理全量审计/html/简谐横波传播状态模型.html` · [原始详情](https://app.svgzhenli.com/resource/5c95b70b-3496-4df2-8bea-a020e92bbd29) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/oa7f9q6ecb1774685743478.png)
+
+### 5. 法拉第圆盘发电机原理 (`faraday-disc`)
+
+- 状态：✅ Codex / Grok Build 交叉审计通过（2026-09-15）。
+- 修复：按封面重建白色/米色实验卡、虚线匀强磁场区（⊗/⊙）、铜盘渐变/同心环/辐条、中心 A 与边缘 B 电刷、P 点 `v/F/ω` 矢量、开关/灯泡/检流计回路和动态电流点；补回左上实验装置标题，标题尺寸纳入响应式常量；动画区与右侧数据区分离，移除冗余说明。
+- 物理核验：`E = ½BωR²`、`v̄ = ½ωR`、闭路 `I = E/R外`、`P电 = IE = M安ω`，断路电流为 0；B/ω/R/R外、旋转方向、磁场方向、闭合状态及 A/B 极性同步，预设和 URL 刷新恢复可用。
+- 交互与布局验证：播放/暂停冻结与恢复、重置、顺/逆时针、B 向里/向外、闭合/断开、预设与 URL 同步通过；`1280×720` 桌面和 `390×844` 移动端无横向溢出，移动端切换“数据”页后读数可见，标题/场域/圆盘/回路/读数无重叠；控制台无错误。
+- 工程验证：`pnpm verify:scene faraday-disc` 全 `7/7` 步骤通过（3136 passed，133 skipped）；独立 Playwright 浏览器审计 `2/2` 通过；构建、TypeScript、ESLint、布局契约和 bundle 预算通过。首轮响应式契约发现标题宽度裸常量，已移入 `faradayConstants` 并复验通过。
+- 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/5cdaf4ca-9464-4554-b84a-caa9861a9bb7.md` · [原始详情](https://app.svgzhenli.com/resource/5cdaf4ca-9464-4554-b84a-caa9861a9bb7) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/h9i1ky6qviv1788264020500.png)
 
 ## 复审记录模板
 

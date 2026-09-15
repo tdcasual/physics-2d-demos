@@ -3,11 +3,11 @@ import type { SceneDemoProfile } from '../../platform/demo-profile';
 
 const demoProfile: SceneDemoProfile = {
   lessonTask: 'process',
-  readoutKeys: ['emf', 'current', 'power', 'polarity'],
+  readoutKeys: ['emf', 'current', 'power', 'torque', 'polarity', 'bulb'],
   renderHints: { contentScale: 1.45 },
   interactionHints: {
     touchTargetMinSize: 48,
-    visibleControlKeys: ['rotation', 'field', 'B', 'omega', 'radius']
+    visibleControlKeys: ['rotation', 'field', 'B', 'omega', 'closed']
   }
 };
 
@@ -19,8 +19,8 @@ export const faradayMeta: SceneMeta = {
   concept: '电磁感应',
   subConcepts: ['动生电动势', '能量守恒'],
   keywords: ['法拉第圆盘', '动生电动势', '洛伦兹力', '右手定则', '发电机'],
-  objective: '观察转动切割磁感线产生的电动势与电流',
-  description: '调节 B、ω、R，观察 E、I、P 的变化',
+  objective: '观察转动切割磁感线产生的电动势、极性与电流',
+  description: '调节 B、ω、R 与回路，观察 E = ½BωR² 及灯泡、检流计',
   difficulty: 3,
   icon: '🧲',
   category: 'electromagnetism',
@@ -39,7 +39,8 @@ export const faradayMeta: SceneMeta = {
     'externalResistance',
     'rotation',
     'field',
-    'closed'
+    'closed',
+    'preset'
   ],
   testProfile: {
     hasGraph: false,
