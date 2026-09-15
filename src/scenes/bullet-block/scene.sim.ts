@@ -28,6 +28,19 @@ export type BulletBlockState = {
   maxDepth: number;
 };
 
+export type StageLayoutHint = {
+  floatingReadout: boolean;
+  overlayPx?: number;
+  overlayTopPx?: number;
+  overlayHeightPx?: number;
+};
+
+type StagePose = {
+  fit: number;
+  offsetX: number;
+  offsetY: number;
+};
+
 const BASE_W = 820;
 const BASE_H = 600;
 const TRACK_LEFT = 70;
@@ -46,8 +59,8 @@ const RULER_STEP = 4;
 const RULER_COUNT = 9;
 const TITLE_Y = 30;
 const SUBTITLE_Y = 56;
-const CHART_LEFT = 545;
-const CHART_TOP = 78;
+const CHART_LEFT = 470;
+const CHART_TOP = 48;
 const CHART_WIDTH = 220;
 const CHART_HEIGHT = 150;
 const ENERGY_LEFT = 70;
@@ -58,14 +71,163 @@ const BAR_LEFT = 210;
 const BAR_WIDTH = 300;
 const BAR_STEP_Y = 22;
 const STATUS_X = 640;
-const STATUS_Y = 320;
+const STATUS_Y = 388;
 const STATUS_LEFT_OFFSET = 118;
 const STATUS_WIDTH = 236;
 const STATUS_HEIGHT = 52;
-const D_ARROW_Y = 190;
+const D_ARROW_Y = 340;
 
 function finite(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+function containInRect(
+  boxW: number,
+  boxH: number,
+  availW: number,
+  availH: number,
+  alignX: 'left' | 'center'
+): StagePose {
+  const width = Math.max(1, availW);
+  const height = Math.max(1, availH);
+  const fit = Math.min(width / boxW, height / boxH);
+  return {
+    fit,
+    offsetX: alignX === 'center' ? (width - boxW * fit) / 2 : 0,
+    offsetY: (height - boxH * fit) / 2
+  };
+}
+
+function betterPose(a: StagePose, b: StagePose): StagePose {
+  return b.fit > a.fit + 1e-9 ? b : a;
+}
+
+export function hasFloatingReadout(anchor?: Element | null): boolean {
+  if (typeof document === 'undefined') return true;
+  const node = anchor ?? document.body;
+  if (
+    node.closest('.mobile-stack-layout, [data-testid="mobile-stack-layout"]')
+  ) {
+    return false;
+  }
+  if (node.closest('.split-right-shell, [data-testid="split-right-layout"]')) {
+    return true;
+  }
+  const panel = document.querySelector(
+    '.teaching-readout-panel, .srgb-readout-panel'
+  );
+  if (panel instanceof HTMLElement && anchor?.parentElement) {
+    const position = getComputedStyle(panel).position;
+    return (
+      (position === 'absolute' || position === 'fixed') &&
+      panel.parentElement === anchor.parentElement
+    );
+  }
+  return true;
+}
+
+export function stageLayoutFrom(canvas?: Element | null): StageLayoutHint {
+  const floatingReadout = hasFloatingReadout(canvas);
+  if (!floatingReadout) return { floatingReadout: false, overlayPx: 0 };
+  let overlayPx = 0;
+  let overlayTopPx = 0;
+  let overlayHeightPx = 0;
+  if (canvas instanceof HTMLElement) {
+    const panel = canvas.parentElement?.querySelector(
+      '.teaching-readout-panel, .srgb-readout-panel'
+    );
+    if (panel instanceof HTMLElement) {
+      const canvasRect = canvas.getBoundingClientRect();
+      const panelRect = panel.getBoundingClientRect();
+      if (
+        panelRect.left < canvasRect.right &&
+        panelRect.right > canvasRect.left &&
+        panelRect.top < canvasRect.bottom &&
+        panelRect.bottom > canvasRect.top
+      ) {
+        overlayPx = Math.max(0, canvasRect.right - panelRect.left);
+        overlayTopPx = Math.max(panelRect.top, canvasRect.top) - canvasRect.top;
+        overlayHeightPx =
+          Math.min(panelRect.bottom, canvasRect.bottom) -
+          Math.max(panelRect.top, canvasRect.top);
+      }
+    }
+  }
+  return {
+    floatingReadout: true,
+    overlayPx: overlayPx || FLOATING_OVERLAY_FALLBACK,
+    ...(overlayHeightPx > 0 ? { overlayTopPx, overlayHeightPx } : {})
+  };
+}
+
+export function stageTransform(
+  cssWidth: number,
+  cssHeight: number,
+  layout: StageLayoutHint
+): {
+  fit: number;
+  offsetX: number;
+  offsetY: number;
+  boxW: number;
+  boxH: number;
+  floatingReadout: boolean;
+} {
+  const width = Math.max(1, cssWidth);
+  const height = Math.max(1, cssHeight);
+  const boxW = C.baseWidth;
+  const boxH = C.baseHeight;
+  if (!layout.floatingReadout) {
+    return {
+      ...containInRect(boxW, boxH, width, height, 'center'),
+      boxW,
+      boxH,
+      floatingReadout: false
+    };
+  }
+  const overlay = layout.overlayPx ?? FLOATING_OVERLAY_FALLBACK;
+  const gap = C.overlayGapPx;
+  let chosen = containInRect(
+    boxW,
+    boxH,
+    Math.max(1, width - overlay - gap),
+    height,
+    'left'
+  );
+  const overlayTop = layout.overlayTopPx;
+  const overlayHeight = layout.overlayHeightPx;
+  const wideColumn = width >= boxW && chosen.fit >= C.minReadableFit;
+  if (
+    !wideColumn &&
+    typeof overlayTop === 'number' &&
+    typeof overlayHeight === 'number' &&
+    overlayHeight > 0
+  ) {
+    const overlayBottom = overlayTop + overlayHeight;
+    if (overlayBottom + gap < height - 1) {
+      const fit = Math.min(
+        width / boxW,
+        height / boxH,
+        (height - overlayBottom - gap) / boxH
+      );
+      if (fit > 0) {
+        const stageW = boxW * fit;
+        const stageH = boxH * fit;
+        chosen = betterPose(chosen, {
+          fit,
+          offsetX: Math.max(0, (width - stageW) / 2),
+          offsetY: Math.max(0, Math.min(overlayBottom + gap, height - stageH))
+        });
+      }
+    }
+  }
+  if (chosen.fit < C.minReadableFit) {
+    const pose = containInRect(boxW, boxH, width, height, 'center');
+    chosen = betterPose(chosen, {
+      ...pose,
+      offsetY: Math.max(0, height - boxH * pose.fit)
+    });
+  }
+  return { ...chosen, boxW, boxH, floatingReadout: true };
 }
 
 function normalizeParams(input: Partial<BulletBlockParams>): BulletBlockParams {
@@ -134,8 +296,15 @@ export const bulletBlockConstants = {
   statusLeftOffset: STATUS_LEFT_OFFSET,
   statusWidth: STATUS_WIDTH,
   statusHeight: STATUS_HEIGHT,
-  dArrowY: D_ARROW_Y
+  dArrowY: D_ARROW_Y,
+  overlayFallbackPx: 228,
+  overlayGapPx: 16,
+  overlayClearTop: 0,
+  minReadableFit: 0.48
 };
+
+const C = bulletBlockConstants;
+const FLOATING_OVERLAY_FALLBACK = C.overlayFallbackPx;
 
 export function createBulletBlockSim(initial: Partial<BulletBlockParams> = {}) {
   const defaults = normalizeParams(initial);
@@ -209,63 +378,70 @@ export function createBulletBlockSim(initial: Partial<BulletBlockParams> = {}) {
       return { ...params };
     },
     step(dt: number): void {
-      const safeDt = Math.max(0, finite(dt, 0));
-      if (safeDt === 0) return;
-      time += safeDt;
-      if (phase === 'approach') {
-        bulletX += bulletSpeed * safeDt;
-        if (bulletX + BULLET_LENGTH / WORLD_SCALE >= blockX) {
+      let remaining = Math.max(0, finite(dt, 0));
+      if (remaining === 0) return;
+      time += remaining;
+      const m = params.bulletMass;
+      const M = params.blockMass;
+      const f = params.resistance;
+      const contactLength = BULLET_LENGTH / WORLD_SCALE;
+      const common = bulletBlockCommonSpeed(params.speed, m, M);
+      const maxDepth = bulletBlockMaxDepth(params.speed, m, M, f);
+      const relativeDecel = f * (1 / m + 1 / M);
+
+      while (remaining > 1e-9) {
+        if (phase === 'approach') {
+          const gap = Math.max(0, blockX - bulletX - contactLength);
+          const impactTime = bulletSpeed > 0 ? gap / bulletSpeed : Infinity;
+          if (impactTime > remaining || !Number.isFinite(impactTime)) {
+            bulletX += bulletSpeed * remaining;
+            remaining = 0;
+            continue;
+          }
+          bulletX += bulletSpeed * impactTime;
+          remaining -= impactTime;
           phase = 'embed';
-          bulletX = blockX - BULLET_LENGTH / WORLD_SCALE;
+          bulletX = blockX - contactLength;
+          continue;
         }
-      } else if (phase === 'embed') {
-        const force = Math.min(
-          params.resistance,
-          (params.bulletMass * bulletSpeed) / Math.max(safeDt, 0.001)
-        );
-        bulletSpeed = Math.max(
-          0,
-          bulletSpeed - (force / params.bulletMass) * safeDt
-        );
-        blockSpeed += (force / params.blockMass) * safeDt;
-        const relative = Math.max(0, bulletSpeed - blockSpeed);
-        penetration += relative * safeDt;
-        blockX += blockSpeed * safeDt;
-        bulletX = blockX - BLOCK_WIDTH + Math.min(BLOCK_WIDTH, penetration);
-        if (
-          relative <= 0.01 ||
-          penetration >=
-            bulletBlockMaxDepth(
-              params.speed,
-              params.bulletMass,
-              params.blockMass,
-              params.resistance
-            )
-        ) {
-          phase = 'coast';
-          const common = bulletBlockCommonSpeed(
-            params.speed,
-            params.bulletMass,
-            params.blockMass
-          );
-          bulletSpeed = common;
-          blockSpeed = common;
-          penetration = Math.min(
-            BLOCK_WIDTH,
-            Math.max(
-              penetration,
-              bulletBlockMaxDepth(
-                params.speed,
-                params.bulletMass,
-                params.blockMass,
-                params.resistance
-              )
-            )
-          );
+
+        if (phase === 'embed') {
+          const relative = Math.max(0, bulletSpeed - blockSpeed);
+          const stopTime = relative / relativeDecel;
+          const interval = Math.min(remaining, stopTime);
+          if (interval <= 1e-9) {
+            phase = 'coast';
+            bulletSpeed = common;
+            blockSpeed = common;
+            penetration = Math.max(penetration, maxDepth);
+            bulletX =
+              blockX - contactLength + Math.min(BLOCK_WIDTH, penetration);
+            continue;
+          }
+
+          const nextRelative = Math.max(0, relative - relativeDecel * interval);
+          const nextBlockSpeed = common - (m / (m + M)) * nextRelative;
+          penetration += ((relative + nextRelative) / 2) * interval;
+          blockX += ((blockSpeed + nextBlockSpeed) / 2) * interval;
+          bulletSpeed = common + (M / (m + M)) * nextRelative;
+          blockSpeed = nextBlockSpeed;
+          bulletX = blockX - contactLength + Math.min(BLOCK_WIDTH, penetration);
+          remaining -= interval;
+
+          if (stopTime <= interval + 1e-9) {
+            phase = 'coast';
+            penetration = Math.max(penetration, maxDepth);
+            bulletSpeed = common;
+            blockSpeed = common;
+            bulletX =
+              blockX - contactLength + Math.min(BLOCK_WIDTH, penetration);
+          }
+          continue;
         }
-      } else {
-        blockX += blockSpeed * safeDt;
-        bulletX = blockX - BLOCK_WIDTH + penetration;
+
+        blockX += blockSpeed * remaining;
+        bulletX = blockX - contactLength + Math.min(BLOCK_WIDTH, penetration);
+        remaining = 0;
       }
     },
     reset(): void {

@@ -1,7 +1,12 @@
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
-import { bulletBlockConstants, type BulletBlockState } from './scene.sim';
+import {
+  bulletBlockConstants,
+  stageLayoutFrom,
+  stageTransform,
+  type BulletBlockState
+} from './scene.sim';
 
 export type CreateBulletBlockViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -27,7 +32,6 @@ const {
   rulerStep: RULER_STEP,
   rulerCount: RULER_COUNT,
   titleY: TITLE_Y,
-  subtitleY: SUBTITLE_Y,
   chartLeft: CHART_LEFT,
   chartTop: CHART_TOP,
   chartWidth: CHART_WIDTH,
@@ -170,8 +174,12 @@ export function createBulletBlockView(
     if (!ctx) return;
     const width = stage.cssWidth;
     const height = stage.cssHeight;
-    const fit = Math.min(width / BASE_W, height / BASE_H);
-    const offsetY = (height - BASE_H * fit) / 2;
+    const layout = stageLayoutFrom(stage.canvas);
+    const { fit, offsetX, offsetY, boxW, boxH } = stageTransform(
+      width,
+      height,
+      layout
+    );
     const palette = PALETTE[env.theme];
     const contentScale = env.contentScale() * stage.responsiveScale;
     const worldX = (value: number): number => TRACK_LEFT + value * WORLD_SCALE;
@@ -180,8 +188,14 @@ export function createBulletBlockView(
     ctx.fillStyle = palette.bg;
     ctx.fillRect(0, 0, width, height);
     ctx.save();
-    ctx.translate(0, offsetY);
+    ctx.translate(offsetX, offsetY);
     ctx.scale(fit, fit);
+    ctx.fillStyle = palette.panel;
+    ctx.fillRect(0, 0, boxW, boxH);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, boxW, boxH);
+    ctx.clip();
 
     text(
       ctx,
@@ -192,16 +206,6 @@ export function createBulletBlockView(
       22 * contentScale,
       'center'
     );
-    text(
-      ctx,
-      '子弹入射 · 动量守恒 · 内能增加',
-      BASE_W / 2,
-      SUBTITLE_Y,
-      palette.muted,
-      14 * contentScale,
-      'center'
-    );
-
     ctx.strokeStyle = palette.ink;
     ctx.lineWidth = 3 * contentScale;
     ctx.beginPath();
@@ -282,15 +286,17 @@ export function createBulletBlockView(
     ctx.lineTo(bulletLeft + BULLET_LENGTH + 16, BULLET_Y + BULLET_HEIGHT - 4);
     ctx.closePath();
     ctx.fill();
-    text(
-      ctx,
-      'm',
-      bulletLeft + 10,
-      BULLET_Y - 16,
-      palette.pink,
-      15 * contentScale,
-      'center'
-    );
+    if (state.phase !== 'coast') {
+      text(
+        ctx,
+        'm',
+        bulletLeft + 10,
+        BULLET_Y - 16,
+        palette.pink,
+        15 * contentScale,
+        'center'
+      );
+    }
 
     const depthPx = Math.min(
       BLOCK_WIDTH * WORLD_SCALE,
@@ -309,29 +315,51 @@ export function createBulletBlockView(
       ctx,
       `d=${state.penetration.toFixed(2)}m`,
       blockLeft + depthPx / 2,
-      D_ARROW_Y - 12,
+      state.phase === 'approach' ? BLOCK_TOP - 20 : D_ARROW_Y - 12,
       palette.green,
       13 * contentScale,
       'center'
     );
-    arrow(
-      ctx,
-      bulletLeft + BULLET_LENGTH + 10,
-      BULLET_Y - 26,
-      bulletLeft + BULLET_LENGTH + 62,
-      BULLET_Y - 26,
-      palette.pink,
-      2 * contentScale
-    );
-    text(
-      ctx,
-      `v=${state.bulletSpeed.toFixed(1)}m/s`,
-      bulletLeft + BULLET_LENGTH + 36,
-      BULLET_Y - 44,
-      palette.pink,
-      12 * contentScale,
-      'center'
-    );
+    if (state.phase === 'coast') {
+      const commonArrowY = BLOCK_TOP + 12;
+      arrow(
+        ctx,
+        blockLeft + blockWidthPx / 2,
+        commonArrowY,
+        blockLeft + blockWidthPx / 2 + state.commonSpeed * WORLD_SCALE,
+        commonArrowY,
+        palette.green,
+        2 * contentScale
+      );
+      text(
+        ctx,
+        `v共=${state.commonSpeed.toFixed(1)}m/s`,
+        blockLeft + blockWidthPx / 2 + (state.commonSpeed * WORLD_SCALE) / 2,
+        commonArrowY - 18,
+        palette.green,
+        12 * contentScale,
+        'center'
+      );
+    } else {
+      arrow(
+        ctx,
+        bulletLeft + BULLET_LENGTH + 10,
+        BULLET_Y - 26,
+        bulletLeft + BULLET_LENGTH + 62,
+        BULLET_Y - 26,
+        palette.pink,
+        2 * contentScale
+      );
+      text(
+        ctx,
+        `v=${state.bulletSpeed.toFixed(1)}m/s`,
+        bulletLeft + BULLET_LENGTH + 36,
+        BULLET_Y - 44,
+        palette.pink,
+        12 * contentScale,
+        'center'
+      );
+    }
 
     ctx.fillStyle = palette.panel;
     ctx.strokeStyle = palette.border;
@@ -496,6 +524,7 @@ export function createBulletBlockView(
         11 * contentScale
       );
     });
+    ctx.restore();
     ctx.restore();
   }
 
