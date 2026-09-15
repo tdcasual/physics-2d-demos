@@ -6,8 +6,18 @@ import { binaryStarsMeta } from './scene.meta';
 import { binaryStarsControlsSchema } from './controls-schema';
 import type { BinaryStarsParams } from './scene.sim';
 
+function asBoolean(value: unknown): boolean {
+  return (
+    value === true ||
+    value === 1 ||
+    value === '1' ||
+    String(value).toLowerCase() === 'true'
+  );
+}
+
 bootScenePage({
   meta: binaryStarsMeta,
+  autoPlay: true,
   preferredLayout: 'split-right',
   layoutConfig: {
     defaultLeftRatio: 0.34,
@@ -43,11 +53,13 @@ bootScenePage({
       onChange: (key, value) => {
         if (key === 'autoRun' || key === 'showVectors') {
           binaryStarsScene.setParams({
-            [key]: Boolean(value)
+            [key]: asBoolean(value)
           } as Partial<BinaryStarsParams>);
         } else if (key === 'm1' || key === 'm2' || key === 'distance') {
+          const number = Number(value);
+          if (!Number.isFinite(number)) return;
           binaryStarsScene.setParams({
-            [key]: Number(value)
+            [key]: number
           } as Partial<BinaryStarsParams>);
         }
         render();
@@ -56,7 +68,7 @@ bootScenePage({
       onAction: () => {}
     });
     return {
-      setValue(key: string, value: number | string): void {
+      setValue(key: string, value: number | string | boolean): void {
         renderer.setValue(key, value);
       },
       setActive(key: string, value: string): void {
@@ -66,5 +78,23 @@ bootScenePage({
         renderer.dispose();
       }
     };
+  },
+  paramSync: {
+    applyParam: (key, value, ctx) => {
+      if (key === 'autoRun' || key === 'showVectors') {
+        const on = asBoolean(value);
+        ctx.scene.setParams({ [key]: on } as Partial<BinaryStarsParams>);
+        ctx.setControlValue(key, on);
+        return true;
+      }
+      if (key === 'm1' || key === 'm2' || key === 'distance') {
+        const number = Number(value);
+        if (!Number.isFinite(number)) return false;
+        ctx.scene.setParams({ [key]: number } as Partial<BinaryStarsParams>);
+        ctx.setControlValue(key, number);
+        return true;
+      }
+      return false;
+    }
   }
 });

@@ -3,7 +3,7 @@ import type { SceneDemoProfile } from '../../platform/demo-profile';
 
 const demoProfile: SceneDemoProfile = {
   lessonTask: 'lecture',
-  readoutKeys: ['m1', 'm2', 'r1', 'r2', 'omega'],
+  readoutKeys: ['r1', 'r2', 'ratio', 'force', 'omega'],
   renderHints: { contentScale: 1.25 },
   interactionHints: {
     touchTargetMinSize: 48,
