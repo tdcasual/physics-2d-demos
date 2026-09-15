@@ -8,6 +8,7 @@ import type { ParallelogramParams, ParallelogramStage } from './scene.sim';
 
 bootScenePage({
   meta: parallelogramMeta,
+  autoPlay: true,
   preferredLayout: 'split-right',
   layoutConfig: {
     defaultLeftRatio: 0.32,
@@ -17,6 +18,9 @@ bootScenePage({
     readoutCollapsed: true,
     readoutLabel: '数据读数',
     hasGraph: false
+  },
+  paramSync: {
+    activeKeys: ['stage']
   },
   createScene: ({ canvas, theme, mode, demoHints }) => {
     if (!canvas) throw new Error('parallelogram-rule requires a canvas');
@@ -37,10 +41,14 @@ bootScenePage({
   createControls: ({ mount, scene, scheduleRender, writeParam }) => {
     const render = scheduleRender ?? (() => scene.render());
     const vectorScene = scene as ReturnType<typeof createParallelogramScene>;
+    let applying = false;
+    let last = vectorScene.getParams();
+
     const renderer = renderSchema({
       mount,
       schema: parallelogramControlsSchema,
       onChange: (key, value) => {
+        if (applying) return;
         if (key === 'stage') {
           vectorScene.setParams({ stage: String(value) as ParallelogramStage });
           renderer.setActive(key, String(value));
@@ -49,11 +57,24 @@ bootScenePage({
             [key]: Number(value)
           } as Partial<ParallelogramParams>);
         }
+        last = vectorScene.getParams();
         render();
         writeParam?.(key, value);
       },
       onAction: () => {}
     });
+
+    const unsubscribe = vectorScene.subscribe(() => {
+      const p = vectorScene.getParams();
+      applying = true;
+      if (p.f1 !== last.f1) renderer.setValue('f1', p.f1);
+      if (p.f2 !== last.f2) renderer.setValue('f2', p.f2);
+      if (p.angle !== last.angle) renderer.setValue('angle', p.angle);
+      if (p.stage !== last.stage) renderer.setActive('stage', p.stage);
+      applying = false;
+      last = p;
+    });
+
     return {
       setValue(key: string, value: number | string): void {
         renderer.setValue(key, value);
@@ -62,6 +83,7 @@ bootScenePage({
         renderer.setActive(key, value);
       },
       dispose(): void {
+        unsubscribe();
         renderer.dispose();
       }
     };

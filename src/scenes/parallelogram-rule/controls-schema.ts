@@ -1,4 +1,5 @@
 import type { ControlsSchema } from '../../platform/controls-schema';
+import { parallelogramConstants as C } from './scene.sim';
 
 export const parallelogramControlsSchema: ControlsSchema = {
   sections: [
@@ -28,28 +29,28 @@ export const parallelogramControlsSchema: ControlsSchema = {
           type: 'slider',
           key: 'f1',
           label: '分力 F₁',
-          min: 0.5,
-          max: 4,
-          step: 0.1,
-          value: 1.8,
+          min: C.f1Min,
+          max: C.f1Max,
+          step: 0.02,
+          value: 1.82,
           unit: 'N'
         },
         {
           type: 'slider',
           key: 'f2',
           label: '分力 F₂',
-          min: 0.5,
-          max: 4,
-          step: 0.1,
-          value: 1.8,
+          min: C.f2Min,
+          max: C.f2Max,
+          step: 0.02,
+          value: 1.82,
           unit: 'N'
         },
         {
           type: 'slider',
           key: 'angle',
           label: '夹角 θ',
-          min: 20,
-          max: 160,
+          min: C.angleMin,
+          max: C.angleMax,
           step: 1,
           value: 90,
           unit: '°'
@@ -63,7 +64,7 @@ export const parallelogramControlsSchema: ControlsSchema = {
         {
           type: 'hint',
           key: 'formula',
-          lines: ['F′=F₁+F₂', '同点 → 等效']
+          lines: ['F′=F₁+F₂', '同点同向 → 等效']
         }
       ]
     }

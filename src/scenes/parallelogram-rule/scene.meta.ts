@@ -3,7 +3,17 @@ import type { SceneDemoProfile } from '../../platform/demo-profile';
 
 const demoProfile: SceneDemoProfile = {
   lessonTask: 'process',
-  readoutKeys: ['theory', 'measured', 'magnitude-error', 'angle-error'],
+  readoutKeys: [
+    'stage',
+    'f1',
+    'f2',
+    'angle',
+    'theory',
+    'measured',
+    'magnitude-error',
+    'angle-error',
+    'verdict'
+  ],
   renderHints: { contentScale: 1.3 },
   interactionHints: {
     touchTargetMinSize: 48,
@@ -25,7 +35,7 @@ export const parallelogramMeta: SceneMeta = {
   icon: '🧭',
   category: 'mechanics',
   featured: false,
-  defaultParams: { f1: 1.8, f2: 1.8, angle: 90 },
+  defaultParams: { f1: 1.82, f2: 1.82, angle: 90 },
   urlSyncKeys: ['f1', 'f2', 'angle', 'stage'],
   testProfile: {
     hasGraph: false,

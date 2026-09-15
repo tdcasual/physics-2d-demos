@@ -2,8 +2,10 @@ import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import {
-  parallelogramConstants,
-  type ParallelogramStage,
+  diagramFitScale,
+  parallelogramConstants as C,
+  stageLayoutFrom,
+  stageTransform,
   type ParallelogramState,
   type Vector
 } from './scene.sim';
@@ -15,78 +17,58 @@ export type CreateParallelogramViewOptions = {
   demoHints?: DemoRenderHints;
 };
 
-const {
-  baseWidth: BASE_W,
-  baseHeight: BASE_H,
-  origin: ORIGIN,
-  vectorScale: VECTOR_SCALE,
-  axisTop: AXIS_TOP,
-  axisBottom: AXIS_BOTTOM,
-  fieldLeft: FIELD_LEFT,
-  fieldTop: FIELD_TOP,
-  fieldRight: FIELD_RIGHT,
-  fieldBottom: FIELD_BOTTOM,
-  pointRadius: POINT_RADIUS,
-  arcRadius: ARC_RADIUS,
-  labelOffset: LABEL_OFFSET,
-  protractorLeft: PROTRACTOR_LEFT,
-  protractorTop: PROTRACTOR_TOP,
-  protractorWidth: PROTRACTOR_WIDTH,
-  protractorHeight: PROTRACTOR_HEIGHT,
-  panelLeft: PANEL_LEFT,
-  panelTop: PANEL_TOP,
-  panelWidth: PANEL_WIDTH,
-  panelHeight: PANEL_HEIGHT,
-  resultLeft: RESULT_LEFT,
-  resultTop: RESULT_TOP,
-  resultWidth: RESULT_WIDTH,
-  resultHeight: RESULT_HEIGHT,
-  formulaLeft: FORMULA_LEFT,
-  formulaTop: FORMULA_TOP,
-  titleY: TITLE_Y,
-  subtitleY: SUBTITLE_Y
-} = parallelogramConstants;
-
 type Palette = {
   bg: string;
-  field: string;
-  grid: string;
+  paper: string;
   ink: string;
   muted: string;
   red: string;
   blue: string;
   green: string;
   orange: string;
-  panel: string;
-  border: string;
+  pin: string;
+  pinRim: string;
+  band: string;
+  hook: string;
+  ruler: string;
+  rulerInk: string;
+  square: string;
 };
 
 const PALETTE: Record<TeachingTheme, Palette> = {
   light: {
-    bg: '#f8f5ec',
-    field: '#ffffff',
-    grid: 'rgba(69,82,100,0.12)',
+    bg: '#e8dfd0',
+    paper: '#fffcf7',
     ink: '#334155',
-    muted: '#8aa0b9',
+    muted: '#8a97a8',
     red: '#ef4b3e',
-    blue: '#2997dc',
+    blue: '#2b97dc',
     green: '#15a66d',
     orange: '#ec8a14',
-    panel: '#ffffff',
-    border: '#d7e0eb'
+    pin: '#e7b84a',
+    pinRim: '#c48a1c',
+    band: '#f0a12a',
+    hook: '#efc15a',
+    ruler: '#f7f4ee',
+    rulerInk: '#5b6570',
+    square: '#e8923a'
   },
   dark: {
-    bg: '#111827',
-    field: '#182235',
-    grid: 'rgba(148,163,184,0.14)',
+    bg: '#0f172a',
+    paper: '#182235',
     ink: '#e5e7eb',
     muted: '#94a3b8',
     red: '#fb7185',
     blue: '#60a5fa',
     green: '#34d399',
     orange: '#fbbf24',
-    panel: '#182235',
-    border: '#475569'
+    pin: '#e7b84a',
+    pinRim: '#b45309',
+    band: '#f59e0b',
+    hook: '#fbbf24',
+    ruler: '#1f2937',
+    rulerInk: '#cbd5e1',
+    square: '#f59e0b'
   }
 };
 
@@ -97,19 +79,20 @@ function text(
   y: number,
   color: string,
   size: number,
-  align: CanvasTextAlign = 'left'
+  align: CanvasTextAlign = 'left',
+  weight = 600
 ): void {
   ctx.fillStyle = color;
-  ctx.font = `600 ${size}px sans-serif`;
+  ctx.font = `${weight} ${size}px sans-serif`;
   ctx.textAlign = align;
   ctx.textBaseline = 'middle';
   ctx.fillText(value, x, y);
 }
 
-function pointOf(vector: Vector): { x: number; y: number } {
+function pointOf(vector: Vector, scale: number): { x: number; y: number } {
   return {
-    x: ORIGIN.x + vector.x * VECTOR_SCALE,
-    y: ORIGIN.y + vector.y * VECTOR_SCALE
+    x: C.origin.x + vector.x * scale,
+    y: C.origin.y + vector.y * scale
   };
 }
 
@@ -121,7 +104,8 @@ function arrow(
   y2: number,
   color: string,
   width: number,
-  dashed = false
+  dashed = false,
+  dashOffset = 0
 ): void {
   const dx = x2 - x1;
   const dy = y2 - y1;
@@ -129,15 +113,19 @@ function arrow(
   if (length < 2) return;
   const ux = dx / length;
   const uy = dy / length;
-  const head = Math.min(12, Math.max(7, length * 0.12));
+  const head = Math.min(13, Math.max(7, length * 0.12));
+  const shrink = head * 0.82;
   ctx.save();
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
   ctx.lineWidth = width;
-  ctx.setLineDash(dashed ? [5, 5] : []);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.setLineDash(dashed ? [6, 5] : []);
+  ctx.lineDashOffset = dashed ? dashOffset : 0;
   ctx.beginPath();
   ctx.moveTo(x1, y1);
-  ctx.lineTo(x2, y2);
+  ctx.lineTo(x2 - ux * shrink, y2 - uy * shrink);
   ctx.stroke();
   ctx.setLineDash([]);
   ctx.beginPath();
@@ -155,14 +143,259 @@ function arrow(
   ctx.restore();
 }
 
+function drawPin(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  palette: Palette
+): void {
+  ctx.save();
+  ctx.fillStyle = 'rgba(40, 50, 62, 0.16)';
+  ctx.beginPath();
+  ctx.ellipse(
+    x + 1.2,
+    y + 2.4,
+    C.pinRadius * 0.72,
+    C.pinRadius * 0.38,
+    0,
+    0,
+    Math.PI * 2
+  );
+  ctx.fill();
+  ctx.fillStyle = palette.pin;
+  ctx.strokeStyle = palette.pinRim;
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.arc(x, y, C.pinRadius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.45)';
+  ctx.beginPath();
+  ctx.arc(x - 2.2, y - 2.4, 2.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawHook(
+  ctx: CanvasRenderingContext2D,
+  palette: Palette,
+  cs: number
+): void {
+  const { x, y } = C.hook;
+  ctx.save();
+  ctx.strokeStyle = palette.pinRim;
+  ctx.lineWidth = 2 * cs;
+  ctx.beginPath();
+  ctx.moveTo(x, y - 16);
+  ctx.lineTo(x, y - 4);
+  ctx.stroke();
+  ctx.fillStyle = palette.pinRim;
+  ctx.beginPath();
+  ctx.arc(x, y - 18, 3.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = palette.hook;
+  ctx.strokeStyle = palette.pinRim;
+  ctx.lineWidth = 2.2 * cs;
+  ctx.beginPath();
+  ctx.arc(x, y + 6, 12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = palette.paper;
+  ctx.beginPath();
+  ctx.arc(x, y + 7, 5.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawBand(
+  ctx: CanvasRenderingContext2D,
+  palette: Palette,
+  cs: number
+): void {
+  ctx.save();
+  ctx.strokeStyle = palette.band;
+  ctx.lineWidth = 5 * cs;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(C.hook.x, C.hook.y + 18);
+  ctx.lineTo(C.origin.x, C.origin.y);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(255, 236, 180, 0.45)';
+  ctx.lineWidth = 1.6 * cs;
+  ctx.beginPath();
+  ctx.moveTo(C.hook.x - 1.4, C.hook.y + 18);
+  ctx.lineTo(C.origin.x - 1.4, C.origin.y);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawOrigin(
+  ctx: CanvasRenderingContext2D,
+  palette: Palette,
+  cs: number
+): void {
+  ctx.save();
+  ctx.strokeStyle = palette.red;
+  ctx.lineWidth = 1.2 * cs;
+  ctx.setLineDash([3, 3]);
+  for (let i = 0; i < 8; i += 1) {
+    const a = (i * Math.PI) / 4;
+    ctx.beginPath();
+    ctx.moveTo(
+      C.origin.x + Math.cos(a) * (C.pointRadius + 2),
+      C.origin.y + Math.sin(a) * (C.pointRadius + 2)
+    );
+    ctx.lineTo(
+      C.origin.x + Math.cos(a) * (C.pointRadius + 7),
+      C.origin.y + Math.sin(a) * (C.pointRadius + 7)
+    );
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  ctx.fillStyle = palette.paper;
+  ctx.strokeStyle = palette.orange;
+  ctx.lineWidth = 3 * cs;
+  ctx.beginPath();
+  ctx.arc(C.origin.x, C.origin.y, C.pointRadius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = palette.orange;
+  ctx.beginPath();
+  ctx.arc(C.origin.x, C.origin.y, 4, 0, Math.PI * 2);
+  ctx.fill();
+  text(
+    ctx,
+    'O',
+    C.origin.x - 18,
+    C.origin.y + 26,
+    palette.red,
+    15 * cs,
+    'right',
+    700
+  );
+  ctx.restore();
+}
+
+function drawRuler(
+  ctx: CanvasRenderingContext2D,
+  palette: Palette,
+  cs: number
+): void {
+  const { x, y, width, height, angle } = C.ruler;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate((angle * Math.PI) / 180);
+  ctx.fillStyle = 'rgba(40, 50, 62, 0.08)';
+  ctx.beginPath();
+  ctx.roundRect(3, 3, width, height, 8);
+  ctx.fill();
+  ctx.fillStyle = palette.ruler;
+  ctx.strokeStyle = palette.muted;
+  ctx.lineWidth = 1.4 * cs;
+  ctx.beginPath();
+  ctx.roundRect(0, 0, width, height, 8);
+  ctx.fill();
+  ctx.stroke();
+  ctx.strokeStyle = palette.rulerInk;
+  ctx.fillStyle = palette.rulerInk;
+  ctx.lineWidth = 1;
+  const start = 14;
+  const span = width - 28;
+  ctx.beginPath();
+  ctx.moveTo(start, height * 0.62);
+  ctx.lineTo(start + span, height * 0.62);
+  ctx.stroke();
+  for (let i = 0; i <= 20; i += 1) {
+    const tx = start + (i / 20) * span;
+    const tall = i % 5 === 0;
+    ctx.beginPath();
+    ctx.moveTo(tx, height * 0.62);
+    ctx.lineTo(tx, height * 0.62 - (tall ? 12 : 7));
+    ctx.stroke();
+    if (i % 5 === 0) {
+      text(ctx, String(i), tx, 11, palette.rulerInk, 9 * cs, 'center', 500);
+    }
+  }
+  text(ctx, 'cm', width - 16, height - 10, palette.muted, 9 * cs, 'right', 500);
+  ctx.restore();
+}
+
+function drawSetSquare(
+  ctx: CanvasRenderingContext2D,
+  palette: Palette,
+  cs: number
+): void {
+  const { x, y, size, angle } = C.setSquare;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate((angle * Math.PI) / 180);
+  ctx.strokeStyle = palette.square;
+  ctx.fillStyle = 'rgba(232, 146, 58, 0.08)';
+  ctx.lineWidth = 2.4 * cs;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(0, size);
+  ctx.lineTo(size, size);
+  ctx.lineTo(0, 0);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(18, size - 18);
+  ctx.lineTo(size - 38, size - 18);
+  ctx.lineTo(18, 38);
+  ctx.closePath();
+  ctx.stroke();
+  ctx.strokeStyle = palette.square;
+  ctx.lineWidth = 1 * cs;
+  for (let i = 0; i <= 10; i += 1) {
+    const t = 18 + ((size - 38 - 18) * i) / 10;
+    const mark = i % 5 === 0 ? 10 : 6;
+    ctx.beginPath();
+    ctx.moveTo(t, size - 18);
+    ctx.lineTo(t, size - 18 + mark);
+    ctx.stroke();
+  }
+  text(
+    ctx,
+    '10',
+    size * 0.42,
+    size - 4,
+    palette.square,
+    10 * cs,
+    'center',
+    600
+  );
+  ctx.restore();
+}
+
+function labelBeside(
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+  side: number,
+  dist: number
+): { x: number; y: number } {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const len = Math.hypot(dx, dy) || 1;
+  return {
+    x: from.x + dx * 0.62 + (-dy / len) * side * dist,
+    y: from.y + dy * 0.62 + (dx / len) * side * dist
+  };
+}
+
 export function createParallelogramView(
   options: CreateParallelogramViewOptions = {}
 ) {
   const stage = createCanvasViewport({
     canvas: options.canvas ?? null,
-    sizing: { mode: 'clamped', fallbackWidth: BASE_W, fallbackHeight: BASE_H },
-    initialWidth: BASE_W,
-    initialHeight: BASE_H,
+    sizing: {
+      mode: 'clamped',
+      fallbackWidth: C.baseWidth,
+      fallbackHeight: C.baseHeight
+    },
+    initialWidth: C.baseWidth,
+    initialHeight: C.baseHeight,
     eagerContext: true
   });
   const env = createViewEnvironment({
@@ -177,302 +410,121 @@ export function createParallelogramView(
     if (!ctx) return;
     const width = stage.cssWidth;
     const height = stage.cssHeight;
-    const fit = Math.min(width / BASE_W, height / BASE_H);
-    const offsetY = (height - BASE_H * fit) / 2;
+    const layout = stageLayoutFrom(stage.canvas);
+    const { fit, offsetX, offsetY, boxW, boxH } = stageTransform(
+      width,
+      height,
+      layout
+    );
     const palette = PALETTE[env.theme];
-    const contentScale = env.contentScale() * stage.responsiveScale;
-    const f1 = pointOf(state.f1);
-    const f2 = pointOf(state.f2);
-    const r = pointOf(state.resultant);
+    const cs = env.contentScale() * stage.responsiveScale;
+    const scale = C.vectorScale * diagramFitScale(state);
+    const f1 = pointOf(state.f1, scale);
+    const f2 = pointOf(state.f2, scale);
+    const r = pointOf(state.resultant, scale);
+    const m = pointOf(state.measured, scale);
+    const dash = -state.time * 22;
+    const showParallelogram = state.params.stage !== 'components';
+    const showMeasured = state.params.stage === 'compare';
 
     ctx.clearRect(0, 0, width, height);
     ctx.fillStyle = palette.bg;
     ctx.fillRect(0, 0, width, height);
     ctx.save();
-    ctx.translate(0, offsetY);
+    ctx.translate(offsetX, offsetY);
     ctx.scale(fit, fit);
-    text(
-      ctx,
-      '验证力的平行四边形定则',
-      BASE_W / 2,
-      TITLE_Y,
-      palette.ink,
-      22 * contentScale,
-      'center'
-    );
-    text(
-      ctx,
-      '同一点 · 同效果 · 合力等效',
-      BASE_W / 2,
-      SUBTITLE_Y,
-      palette.muted,
-      14 * contentScale,
-      'center'
-    );
 
-    ctx.fillStyle = palette.field;
-    ctx.strokeStyle = palette.border;
-    ctx.lineWidth = 1.5;
+    ctx.save();
+    ctx.shadowColor = 'rgba(48, 40, 28, 0.16)';
+    ctx.shadowBlur = 18;
+    ctx.shadowOffsetY = 4;
+    ctx.fillStyle = palette.paper;
     ctx.beginPath();
-    ctx.roundRect(
-      FIELD_LEFT,
-      FIELD_TOP,
-      FIELD_RIGHT - FIELD_LEFT,
-      FIELD_BOTTOM - FIELD_TOP,
-      12
-    );
+    ctx.roundRect(0, 0, boxW, boxH, 18);
     ctx.fill();
+    ctx.restore();
+    ctx.beginPath();
+    ctx.roundRect(0, 0, boxW, boxH, 18);
+    ctx.strokeStyle = 'rgba(120, 100, 70, 0.18)';
+    ctx.lineWidth = 1.2;
     ctx.stroke();
-    ctx.strokeStyle = palette.grid;
-    ctx.lineWidth = 1;
-    for (let x = FIELD_LEFT; x <= FIELD_RIGHT; x += 44) {
-      ctx.beginPath();
-      ctx.moveTo(x, FIELD_TOP);
-      ctx.lineTo(x, FIELD_BOTTOM);
-      ctx.stroke();
-    }
-    for (let y = FIELD_TOP; y <= FIELD_BOTTOM; y += 44) {
-      ctx.beginPath();
-      ctx.moveTo(FIELD_LEFT, y);
-      ctx.lineTo(FIELD_RIGHT, y);
-      ctx.stroke();
-    }
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(0, 0, boxW, boxH, 18);
+    ctx.clip();
+
+    drawPin(ctx, C.pinInset, C.pinInset, palette);
+    drawPin(ctx, boxW - C.pinInset, C.pinInset, palette);
+    drawPin(ctx, C.pinInset, boxH - C.pinInset, palette);
+    drawPin(ctx, boxW - C.pinInset, boxH - C.pinInset, palette);
+
     ctx.strokeStyle = palette.muted;
+    ctx.lineWidth = 1.2 * cs;
     ctx.setLineDash([7, 6]);
     ctx.beginPath();
-    ctx.moveTo(ORIGIN.x, AXIS_TOP);
-    ctx.lineTo(ORIGIN.x, AXIS_BOTTOM);
+    ctx.moveTo(C.origin.x, C.axisTop);
+    ctx.lineTo(C.origin.x, C.axisBottom);
     ctx.stroke();
     ctx.setLineDash([]);
-    text(
-      ctx,
-      '竖直方向轴',
-      ORIGIN.x + 10,
-      AXIS_TOP + 16,
-      palette.muted,
-      12 * contentScale
-    );
 
-    ctx.fillStyle = palette.panel;
-    ctx.strokeStyle = palette.orange;
-    ctx.lineWidth = 3 * contentScale;
-    ctx.beginPath();
-    ctx.arc(ORIGIN.x, ORIGIN.y, POINT_RADIUS, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = palette.orange;
-    ctx.beginPath();
-    ctx.arc(ORIGIN.x, ORIGIN.y, 4, 0, Math.PI * 2);
-    ctx.fill();
-    text(
-      ctx,
-      '标记位置 O',
-      ORIGIN.x - 10,
-      ORIGIN.y + 32,
-      palette.red,
-      14 * contentScale,
-      'right'
-    );
+    drawHook(ctx, palette, cs);
+    drawBand(ctx, palette, cs);
+    drawOrigin(ctx, palette, cs);
 
-    arrow(ctx, ORIGIN.x, ORIGIN.y, f1.x, f1.y, palette.red, 3 * contentScale);
-    arrow(ctx, ORIGIN.x, ORIGIN.y, f2.x, f2.y, palette.blue, 3 * contentScale);
-    if (state.params.stage !== 'components') {
-      arrow(ctx, ORIGIN.x, ORIGIN.y, r.x, r.y, palette.green, 4 * contentScale);
-      arrow(ctx, f1.x, f1.y, r.x, r.y, palette.blue, 1.5 * contentScale, true);
-      arrow(ctx, f2.x, f2.y, r.x, r.y, palette.red, 1.5 * contentScale, true);
-    }
-    text(
-      ctx,
-      `F₁=${state.params.f1.toFixed(2)}N`,
-      f1.x - LABEL_OFFSET,
-      f1.y + 20,
-      palette.red,
-      13 * contentScale,
-      'right'
-    );
-    text(
-      ctx,
-      `F₂=${state.params.f2.toFixed(2)}N`,
-      f2.x + LABEL_OFFSET,
-      f2.y + 20,
-      palette.blue,
-      13 * contentScale
-    );
-    text(
-      ctx,
-      `F合=${state.theoreticalMagnitude.toFixed(2)}N`,
-      r.x + LABEL_OFFSET,
-      r.y + 20,
-      palette.green,
-      14 * contentScale
-    );
+    const ang1 = Math.atan2(state.f1.y, state.f1.x);
+    const ang2 = Math.atan2(state.f2.y, state.f2.x);
+    ctx.save();
     ctx.strokeStyle = palette.muted;
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 1.4 * cs;
     ctx.setLineDash([4, 4]);
     ctx.beginPath();
-    ctx.arc(ORIGIN.x, ORIGIN.y, ARC_RADIUS, 0, Math.PI / 2);
+    ctx.arc(C.origin.x, C.origin.y, C.arcRadius, ang1, ang2, true);
     ctx.stroke();
     ctx.setLineDash([]);
+    ctx.restore();
+    const bisectX = state.f1.x / (Math.hypot(state.f1.x, state.f1.y) || 1);
+    const bisectY = state.f1.y / (Math.hypot(state.f1.x, state.f1.y) || 1);
+    const bisectX2 = state.f2.x / (Math.hypot(state.f2.x, state.f2.y) || 1);
+    const bisectY2 = state.f2.y / (Math.hypot(state.f2.x, state.f2.y) || 1);
+    const bx = bisectX + bisectX2;
+    const by = bisectY + bisectY2;
+    const bl = Math.hypot(bx, by) || 1;
     text(
       ctx,
-      `${state.params.angle.toFixed(0)}°`,
-      ORIGIN.x + ARC_RADIUS - 5,
-      ORIGIN.y + 20,
+      'θ',
+      C.origin.x + (bx / bl) * (C.arcRadius + 14),
+      C.origin.y + (by / bl) * (C.arcRadius + 14),
       palette.muted,
-      12 * contentScale
+      13 * cs,
+      'center'
     );
 
-    ctx.fillStyle = palette.panel;
-    ctx.strokeStyle = palette.border;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.roundRect(
-      PROTRACTOR_LEFT,
-      PROTRACTOR_TOP,
-      PROTRACTOR_WIDTH,
-      PROTRACTOR_HEIGHT,
-      8
-    );
-    ctx.fill();
-    ctx.stroke();
-    text(
-      ctx,
-      '量角器 / 刻度尺',
-      PROTRACTOR_LEFT + 16,
-      PROTRACTOR_TOP + 18,
-      palette.ink,
-      12 * contentScale
-    );
-    ctx.strokeStyle = palette.muted;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(PROTRACTOR_LEFT + 20, PROTRACTOR_TOP + 42);
-    ctx.lineTo(PROTRACTOR_LEFT + PROTRACTOR_WIDTH - 18, PROTRACTOR_TOP + 42);
-    ctx.stroke();
-    for (let i = 0; i <= 10; i += 1) {
-      const x = PROTRACTOR_LEFT + 20 + i * 17;
-      ctx.beginPath();
-      ctx.moveTo(x, PROTRACTOR_TOP + 42);
-      ctx.lineTo(x, PROTRACTOR_TOP + (i % 5 === 0 ? 30 : 36));
-      ctx.stroke();
+    if (showParallelogram) {
+      arrow(ctx, f1.x, f1.y, r.x, r.y, palette.blue, 1.6 * cs, true, dash);
+      arrow(ctx, f2.x, f2.y, r.x, r.y, palette.red, 1.6 * cs, true, dash);
+      arrow(ctx, C.origin.x, C.origin.y, r.x, r.y, palette.green, 4 * cs);
+    }
+    arrow(ctx, C.origin.x, C.origin.y, f1.x, f1.y, palette.red, 3 * cs);
+    arrow(ctx, C.origin.x, C.origin.y, f2.x, f2.y, palette.blue, 3 * cs);
+    if (showMeasured) {
+      arrow(ctx, C.origin.x, C.origin.y, m.x, m.y, palette.orange, 2.4 * cs);
     }
 
-    ctx.fillStyle = palette.panel;
-    ctx.strokeStyle = palette.border;
-    ctx.beginPath();
-    ctx.roundRect(PANEL_LEFT, PANEL_TOP, PANEL_WIDTH, PANEL_HEIGHT, 12);
-    ctx.fill();
-    ctx.stroke();
-    text(
-      ctx,
-      '操作步骤',
-      PANEL_LEFT + 16,
-      PANEL_TOP + 22,
-      palette.ink,
-      15 * contentScale
-    );
-    const stages: Array<[string, ParallelogramStage]> = [
-      ['1 画 F₁、F₂', 'components'],
-      ['2 作平行四边形', 'construct'],
-      ['3 合力 F′ 对比', 'compare']
-    ];
-    stages.forEach(([label, stageName], index) => {
-      const y = PANEL_TOP + 56 + index * 42;
-      ctx.fillStyle =
-        state.params.stage === stageName ? '#eaf5ff' : palette.panel;
-      ctx.strokeStyle =
-        state.params.stage === stageName ? palette.blue : palette.border;
-      ctx.beginPath();
-      ctx.roundRect(PANEL_LEFT + 12, y - 16, PANEL_WIDTH - 24, 30, 8);
-      ctx.fill();
-      ctx.stroke();
-      text(
-        ctx,
-        label,
-        PANEL_LEFT + 24,
-        y,
-        state.params.stage === stageName ? palette.blue : palette.ink,
-        12 * contentScale
-      );
-    });
-    text(
-      ctx,
-      '拖动左侧控件调整力值与夹角',
-      PANEL_LEFT + 16,
-      PANEL_TOP + PANEL_HEIGHT - 18,
-      palette.muted,
-      10 * contentScale
-    );
+    const l1 = labelBeside(C.origin, f1, 1, C.labelOffset);
+    const l2 = labelBeside(C.origin, f2, -1, C.labelOffset);
+    text(ctx, 'F₁', l1.x, l1.y, palette.red, 14 * cs, 'center', 700);
+    text(ctx, 'F₂', l2.x, l2.y, palette.blue, 14 * cs, 'center', 700);
+    if (showParallelogram) {
+      text(ctx, 'F', r.x + 8, r.y + 18, palette.green, 14 * cs, 'left', 700);
+    }
+    if (showMeasured) {
+      text(ctx, 'F′', m.x + 8, m.y + 36, palette.orange, 14 * cs, 'left', 700);
+    }
 
-    ctx.fillStyle = state.samePoint ? '#ecfff5' : palette.panel;
-    ctx.strokeStyle = state.samePoint ? palette.green : palette.border;
-    ctx.beginPath();
-    ctx.roundRect(RESULT_LEFT, RESULT_TOP, RESULT_WIDTH, RESULT_HEIGHT, 12);
-    ctx.fill();
-    ctx.stroke();
-    text(
-      ctx,
-      '定量验证',
-      RESULT_LEFT + 16,
-      RESULT_TOP + 22,
-      palette.ink,
-      15 * contentScale
-    );
-    text(
-      ctx,
-      `理论合力 F：${state.theoreticalMagnitude.toFixed(2)} N`,
-      RESULT_LEFT + 16,
-      RESULT_TOP + 52,
-      palette.green,
-      12 * contentScale
-    );
-    text(
-      ctx,
-      `实测合力 F′：${state.measuredMagnitude.toFixed(2)} N`,
-      RESULT_LEFT + 16,
-      RESULT_TOP + 78,
-      palette.orange,
-      12 * contentScale
-    );
-    text(
-      ctx,
-      `大小误差 ${state.magnitudeError.toFixed(1)}% · 方向 ${state.angleError.toFixed(1)}°`,
-      RESULT_LEFT + 16,
-      RESULT_TOP + 108,
-      palette.ink,
-      11 * contentScale
-    );
-    text(
-      ctx,
-      state.samePoint ? '结论：同点，等效成立' : '先完成作图，再进行对比',
-      RESULT_LEFT + 16,
-      RESULT_TOP + 132,
-      state.samePoint ? palette.green : palette.muted,
-      11 * contentScale
-    );
-    ctx.fillStyle = palette.panel;
-    ctx.strokeStyle = palette.border;
-    ctx.beginPath();
-    ctx.roundRect(FORMULA_LEFT, FORMULA_TOP, FIELD_RIGHT - FORMULA_LEFT, 30, 8);
-    ctx.fill();
-    ctx.stroke();
-    text(
-      ctx,
-      'F′ = F₁ + F₂',
-      FORMULA_LEFT + 16,
-      FORMULA_TOP + 15,
-      palette.ink,
-      13 * contentScale
-    );
-    text(
-      ctx,
-      '同一点 O → 作用效果相同',
-      FIELD_RIGHT - 16,
-      FORMULA_TOP + 15,
-      palette.muted,
-      12 * contentScale,
-      'right'
-    );
+    drawRuler(ctx, palette, cs);
+    drawSetSquare(ctx, palette, cs);
+
+    ctx.restore();
     ctx.restore();
   }
 

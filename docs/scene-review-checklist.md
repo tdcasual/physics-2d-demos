@@ -20,7 +20,7 @@
 |   5 | 法拉第圆盘发电机原理                                  | 电磁 | [`faraday-disc`](../src/scenes/faraday-disc/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/5cdaf4ca-9464-4554-b84a-caa9861a9bb7) · [封面](https://img.svgzhenli.com/gallery-assets/covers/h9i1ky6qviv1788264020500.png)  |  ✅  |
 |   6 | 平抛实验数据还原与轨迹分析                            | 力学 | [`projectile-data-analysis`](../src/scenes/projectile-data-analysis/scene.meta.ts)                 | [详情](https://app.svgzhenli.com/resource/7886d018-8006-4277-bd1c-4342c08f27e4) · [封面](https://img.svgzhenli.com/gallery-assets/covers/wjoea5u4c6e1787821850037.png)  |  ✅  |
 |   7 | 子弹打木块力学模型                                    | 力学 | [`bullet-block`](../src/scenes/bullet-block/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/efdbc474-2e4e-4a0d-9aa1-a3ac3a9a5262) · [封面](https://img.svgzhenli.com/gallery-assets/covers/ttwrczxsemb1774681162042.png)  |  ✅  |
-|   8 | 验证力的平行四边形定则                                | 力学 | [`parallelogram-rule`](../src/scenes/parallelogram-rule/scene.meta.ts)                             | [详情](https://app.svgzhenli.com/resource/039f55b4-fd42-490f-9947-2e4c54601684) · [封面](https://img.svgzhenli.com/gallery-assets/covers/5ns9z0vm18w1783606039791.png)  |  ☐   |
+|   8 | 验证力的平行四边形定则                                | 力学 | [`parallelogram-rule`](../src/scenes/parallelogram-rule/scene.meta.ts)                             | [详情](https://app.svgzhenli.com/resource/039f55b4-fd42-490f-9947-2e4c54601684) · [封面](https://img.svgzhenli.com/gallery-assets/covers/5ns9z0vm18w1783606039791.png)  |  ✅  |
 |   9 | 双星系统运动轨道-万有引力定律与航天                   | 力学 | [`binary-stars`](../src/scenes/binary-stars/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/cf938b0c-3fba-4a89-a76f-eceaf07397f5) · [封面](https://img.svgzhenli.com/gallery-assets/covers/9q4r2plqgqo1774679828854.png)  |  ☐   |
 |  10 | 双动式风箱工作原理演示                                | 力学 | [`bellows`](../src/scenes/bellows/scene.meta.ts)                                                   | [详情](https://app.svgzhenli.com/resource/c79a2708-0d3c-4073-a283-38fda18be645) · [封面](https://img.svgzhenli.com/gallery-assets/covers/xtwc0u5essg1776333366610.png)  |  ☐   |
 |  11 | 匀变速直线运动 - 速度与时间关系                       | 力学 | [`uniformly-varied-motion`](../src/scenes/uniformly-varied-motion/scene.meta.ts)                   | [详情](https://app.svgzhenli.com/resource/a0834791-f1a8-4673-aa23-4bb5f7df5271) · [封面](https://img.svgzhenli.com/gallery-assets/covers/gw9dhetax9f1774676803350.png)  |  ☐   |
@@ -182,6 +182,15 @@
 - 交互与布局验证：播放/暂停、重置、参数滑块与读数展开通过；`1280×720` 桌面默认/展开/共速态无标题、图表、轨道或木块遮挡，`390×844` 移动端控制/数据页分离且无横向溢出；浏览器无错误日志。
 - 工程验证：远程 Grok Build 明确返回 `CONSENSUS: PASS`；`pnpm verify:scene bullet-block` 全 `7/7` 步骤通过（3125 passed，133 skipped），专项单测 `6/6` 通过；构建、TypeScript、ESLint、布局契约和 bundle 预算通过。
 - 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/efdbc474-2e4e-4a0d-9aa1-a3ac3a9a5262.md` · [原始详情](https://app.svgzhenli.com/resource/efdbc474-2e4e-4a0d-9aa1-a3ac3a9a5262) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/ttwrczxsemb1774681162042.png)
+
+### 8. 验证力的平行四边形定则 (`parallelogram-rule`)
+
+- 状态：✅ Codex / Grok Build 交叉审计通过（2026-09-15）。
+- 修复：按封面重建白纸实验台、挂点 O、F₁/F₂ 矢量、虚线平行四边形、合力 F/F′、量角器与刻度尺；动画区移除步骤卡、公式卡和冗余解释，数值/误差集中在读数区，精简控制文案；舞台改为响应式 `720×660` 并对浮动读数自动避让，移除会被 transport 覆盖的非必要轴标签。
+- 物理核验：余弦定理计算 `|F|=√(F₁²+F₂²+2F₁F₂cosθ)`，平行四边形对角线与矢量分量一致；比较阶段 F′ 与 F 同点同向，大小误差 0.2%、方向误差 0.5° 按作图读数精度固定；参数边界夹取，阶段/重置/步进由专项测试覆盖。
+- 交互与布局验证：画分力/作图/对比阶段切换、播放/暂停、重置、F₁/F₂/夹角滑块及 URL 写回通过；`1280×720` 默认/作图/对比与展开读数无遮挡，`390×844` 移动端动画与数据页分离且无横向溢出；浏览器无错误日志。
+- 工程验证：远程 Grok Build 明确返回 `CONSENSUS: PASS`；`pnpm verify:scene parallelogram-rule` 全 `7/7` 步骤通过（3130 passed，133 skipped），专项单测 `11/11` 通过；构建、TypeScript、ESLint、布局契约和 bundle 预算通过。
+- 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/039f55b4-fd42-490f-9947-2e4c54601684.md` · [原始详情](https://app.svgzhenli.com/resource/039f55b4-fd42-490f-9947-2e4c54601684) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/5ns9z0vm18w1783606039791.png)
 
 ## 复审记录模板
 
