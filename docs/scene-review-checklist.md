@@ -13,7 +13,7 @@
 
 |   # | svgzhenli 场景                                        | 分类 | 本地场景 ID / 文件                                                                                 | 详情与封面证据                                                                                                                                                          | 复审 |
 | --: | ----------------------------------------------------- | ---- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--: |
-|   1 | 力的合成与分解                                        | 力学 | [`force-composition`](../src/scenes/force-composition/scene.meta.ts)                               | [详情](https://app.svgzhenli.com/resource/1e5fa5fb-0e00-40cd-b4c7-0ab9e2df8c5e) · [封面](https://img.svgzhenli.com/gallery-assets/covers/f3obs9ew871780737938418.png)   |  ☐   |
+|   1 | 力的合成与分解                                        | 力学 | [`force-composition`](../src/scenes/force-composition/scene.meta.ts)                               | [详情](https://app.svgzhenli.com/resource/1e5fa5fb-0e00-40cd-b4c7-0ab9e2df8c5e) · [封面](https://img.svgzhenli.com/gallery-assets/covers/f3obs9ew871780737938418.png)   |  ✅  |
 |   2 | 动态圆·三法破临界                                     | 电磁 | [`dynamic-circle`](../src/scenes/dynamic-circle/scene.meta.ts)                                     | [详情](https://app.svgzhenli.com/resource/5aa418d4-7f15-48bf-9b40-2903a78a4a8d) · [封面](https://img.svgzhenli.com/gallery-assets/covers/3b63ldwj6881784565177525.png)  |  ☐   |
 |   3 | 回旋加速器核心结构与原理                              | 电磁 | [`cyclotron`](../src/scenes/cyclotron/scene.meta.ts)                                               | [详情](https://app.svgzhenli.com/resource/455c88d7-71d7-4bb9-8a8b-a505a95a135f) · [封面](https://img.svgzhenli.com/gallery-assets/covers/dji62m8jox91774712146984.png)  |  ☐   |
 |   4 | 简谐横波传播状态模型                                  | 力学 | [`harmonic-wave`](../src/scenes/harmonic-wave/scene.meta.ts)                                       | [详情](https://app.svgzhenli.com/resource/5c95b70b-3496-4df2-8bea-a020e92bbd29) · [封面](https://img.svgzhenli.com/gallery-assets/covers/oa7f9q6ecb1774685743478.png)   |  ☐   |
@@ -117,6 +117,17 @@
 | 102 | 放射性元素衰变规律                                    | 近代 | [`radioactive-decay`](../src/scenes/radioactive-decay/scene.meta.ts)                               | [详情](https://app.svgzhenli.com/resource/64db7ce5-3b48-4e17-b010-fe600dc4003c) · [封面](https://img.svgzhenli.com/gallery-assets/covers/vxem9n1z5zf1774800154269.png)  |  ☐   |
 | 103 | 动量守恒与圆环摆球模型                                | 力学 | [`momentum-ring-pendulum`](../src/scenes/momentum-ring-pendulum/scene.meta.ts)                     | [详情](https://app.svgzhenli.com/resource/812e6908-19b9-42fd-88a8-a5609c971b6a) · [封面](https://img.svgzhenli.com/gallery-assets/covers/119bs2i7hkin1780316073649.png) |  ☐   |
 | 104 | 气体分子速率分布：麦克斯韦曲线                        | 热学 | [`maxwell-speed-distribution`](../src/scenes/maxwell-speed-distribution/scene.meta.ts)             | [详情](https://app.svgzhenli.com/resource/1c57ee56-a431-4d18-a72a-2703faa5fb48) · [封面](https://img.svgzhenli.com/gallery-assets/covers/v2def9kjwz1774714986169.png)   |  ☐   |
+
+## 已完成复审
+
+### 1. 力的合成与分解 (`force-composition`)
+
+- 状态：✅ Codex / Grok Build 交叉审计通过（2026-09-15）。
+- 修复：动画区恢复 `960×660` 原始舞台比例，网格裁切到 `620` 绘图区；仅保留 `F₁`、`F₂`、`F合`、`Fx`、`Fy`、`G`、`G₁`、`G₂`、`θ` 等符号，数值集中在读数区；修正桌面浮动读数遮挡、移动端断点、拖拽坐标映射和 URL 全量状态同步；斜面角度与物块位置随 `15°–60°` 参数同步。
+- 物理核验：合力/正交分解、斜面重力分解、端点拖拽取整与边界已由单元测试覆盖；`19` 个场景专项测试通过。
+- 视觉与交互验证：`767/768/800/900/1024/1440px` 响应式矩阵无横向溢出或读数遮挡；合成、三角形、范围、正交、斜面标签/动画及播放、暂停、重置、深色主题、拖拽和刷新恢复均通过 Playwright 验证；控制台无错误。
+- 工程验证：`pnpm verify:scene force-composition` 全 `7/7` 步骤通过（3137 passed，134 skipped）。
+- 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/1e5fa5fb-0e00-40cd-b4c7-0ab9e2df8c5e.md` · [原始详情](https://app.svgzhenli.com/resource/1e5fa5fb-0e00-40cd-b4c7-0ab9e2df8c5e) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/f3obs9ew871780737938418.png)
 
 ## 复审记录模板
 

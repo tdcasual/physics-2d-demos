@@ -68,7 +68,7 @@ export const forceCompositionControlsSchema: ControlsSchema = {
     },
     {
       title: '正交分解',
-      collapsed: true,
+      collapsed: false,
       fields: [
         {
           type: 'slider',
@@ -94,7 +94,7 @@ export const forceCompositionControlsSchema: ControlsSchema = {
     },
     {
       title: '斜面分解',
-      collapsed: true,
+      collapsed: false,
       fields: [
         {
           type: 'slider',
@@ -120,7 +120,7 @@ export const forceCompositionControlsSchema: ControlsSchema = {
     },
     {
       title: '范围演变',
-      collapsed: true,
+      collapsed: false,
       fields: [
         {
           type: 'toggle',

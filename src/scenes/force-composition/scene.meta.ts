@@ -35,6 +35,7 @@ export const forceCompositionMeta: SceneMeta = {
     inclineAngle: 30,
     rangeSweep: 1
   },
+  urlSyncKeys: ['tab', 'rule'],
   testProfile: {
     hasGraph: false,
     hasTransport: true,
