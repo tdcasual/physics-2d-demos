@@ -1,14 +1,30 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
+import { writeSceneParams } from '../../app/url-sync';
+import { applyTouchInteractionMode } from '../../platform/input/touch';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { createHarmonicWaveScene } from './scene.entry';
 import { harmonicWaveMeta } from './scene.meta';
 import { harmonicWaveControlsSchema } from './controls-schema';
-import type { HarmonicWaveParams, HarmonicWaveDirection } from './scene.sim';
-import { harmonicWaveConstants } from './scene.sim';
+import {
+  pointerToWorldX,
+  stageLayoutFrom,
+  type HarmonicWaveDirection,
+  type HarmonicWaveParams
+} from './scene.sim';
+
+function asBoolean(value: unknown): boolean {
+  return (
+    value === true ||
+    value === 1 ||
+    value === '1' ||
+    String(value).toLowerCase() === 'true'
+  );
+}
 
 bootScenePage({
   meta: harmonicWaveMeta,
+  autoPlay: true,
   preferredLayout: 'split-right',
   layoutConfig: {
     defaultLeftRatio: 0.34,
@@ -21,15 +37,17 @@ bootScenePage({
   },
   createScene: ({ canvas, theme, mode, demoHints }) => {
     if (!canvas) throw new Error('harmonic-wave requires a canvas');
+    applyTouchInteractionMode(canvas, 'drag');
     const scene = createHarmonicWaveScene({ canvas, theme, mode, demoHints });
     const scheduler = createRenderScheduler(() => scene.render());
     const toWorldX = (event: PointerEvent): number => {
       const rect = canvas.getBoundingClientRect();
-      const px =
-        ((event.clientX - rect.left) / Math.max(1, rect.width)) *
-        harmonicWaveConstants.baseWidth;
-      return (
-        (px - harmonicWaveConstants.graphLeft) / harmonicWaveConstants.xScale
+      return pointerToWorldX(
+        event.clientX - rect.left,
+        event.clientY - rect.top,
+        rect.width,
+        rect.height,
+        stageLayoutFrom(canvas)
       );
     };
     const onPointerDown = (event: PointerEvent): void => {
@@ -46,6 +64,17 @@ bootScenePage({
       } catch {
         // no-op
       }
+      const pointInput = document.querySelector<HTMLInputElement>(
+        '[data-control-key="pointX"] input[type="range"]'
+      );
+      if (pointInput) {
+        const value = String(scene.getParams().pointX);
+        if (pointInput.value !== value) {
+          pointInput.value = value;
+          pointInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }
+      writeSceneParams({ pointX: scene.getParams().pointX });
     };
     canvas.addEventListener('pointerdown', onPointerDown);
     canvas.addEventListener('pointermove', onPointerMove);
@@ -82,9 +111,13 @@ bootScenePage({
           key === 'showVelocity' ||
           key === 'showAcceleration'
         ) {
+          const on = asBoolean(value);
           waveScene.setParams({
-            [key]: Boolean(value)
+            [key]: on
           } as Partial<HarmonicWaveParams>);
+          writeParam?.(key, on ? 1 : 0);
+          render();
+          return;
         } else {
           waveScene.setParams({
             [key]: Number(value)

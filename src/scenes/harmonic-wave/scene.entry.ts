@@ -1,6 +1,9 @@
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import type { DemoRenderHints } from '../../platform/demo-profile';
-import { createStandardSceneEntry } from '../scene-entry-helpers';
+import {
+  clampTimeScale,
+  createStandardSceneEntry
+} from '../scene-entry-helpers';
 import {
   createHarmonicWaveSim,
   type HarmonicWaveParams,
@@ -27,6 +30,10 @@ export function createHarmonicWaveScene(
     mode: options.mode ?? 'normal',
     demoHints: options.demoHints
   });
+
+  let timeScale = 1;
+  let playing = false;
+
   const base = createStandardSceneEntry({
     sim,
     view,
@@ -71,6 +78,36 @@ export function createHarmonicWaveScene(
 
   return {
     ...base,
+    step(dt: number): void {
+      if (!playing) return;
+      sim.step(dt * timeScale);
+    },
+    startAll(): void {
+      playing = true;
+      base.renderAndEmit();
+      base.notify();
+    },
+    pauseAll(): void {
+      playing = false;
+      base.renderAndEmit();
+      base.notify();
+    },
+    reset(): void {
+      playing = false;
+      sim.reset();
+      base.renderAndEmit();
+      base.notify();
+    },
+    setTimeScale(scale: number): void {
+      timeScale = clampTimeScale(scale);
+      base.notify();
+    },
+    getTimeScale(): number {
+      return timeScale;
+    },
+    getTransportState(): { isPlaying: boolean; speed: number } {
+      return { isPlaying: playing, speed: timeScale };
+    },
     getState: (): HarmonicWaveState => sim.getState(),
     getSnapshot: (): HarmonicWaveState => sim.getSnapshot(),
     getParams: (): HarmonicWaveParams => sim.getParams(),

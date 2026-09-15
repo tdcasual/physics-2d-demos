@@ -4,7 +4,7 @@ import type { SceneDemoProfile } from '../../platform/demo-profile';
 const demoProfile: SceneDemoProfile = {
   lessonTask: 'process',
   readoutKeys: ['wave-speed', 'time', 'point-y', 'velocity', 'acceleration'],
-  renderHints: { contentScale: 1.45 },
+  renderHints: { contentScale: 1.2 },
   interactionHints: {
     touchTargetMinSize: 48,
     visibleControlKeys: [
@@ -36,7 +36,7 @@ export const harmonicWaveMeta: SceneMeta = {
     wavelength: 4,
     period: 2,
     pointX: 2,
-    showGhost: 1,
+    showGhost: 0,
     showVelocity: 1,
     showAcceleration: 1
   },

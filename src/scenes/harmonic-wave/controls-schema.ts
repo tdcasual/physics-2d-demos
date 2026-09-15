@@ -11,7 +11,7 @@ export const harmonicWaveControlsSchema: ControlsSchema = {
           type: 'slider',
           key: 'amplitude',
           label: '振幅 A',
-          min: 1,
+          min: 4,
           max: 10,
           step: 1,
           value: 10,
@@ -21,7 +21,7 @@ export const harmonicWaveControlsSchema: ControlsSchema = {
           type: 'slider',
           key: 'wavelength',
           label: '波长 λ',
-          min: 1,
+          min: 2,
           max: 8,
           step: 1,
           value: 4,
@@ -31,9 +31,9 @@ export const harmonicWaveControlsSchema: ControlsSchema = {
           type: 'slider',
           key: 'period',
           label: '周期 T',
-          min: 0.5,
+          min: 1,
           max: 4,
-          step: 0.5,
+          step: 1,
           value: 2,
           unit: 's'
         }
@@ -65,7 +65,7 @@ export const harmonicWaveControlsSchema: ControlsSchema = {
           label: '质点 P',
           min: 0,
           max: 8,
-          step: 0.5,
+          step: 0.1,
           value: 2,
           unit: 'm'
         },
@@ -73,7 +73,7 @@ export const harmonicWaveControlsSchema: ControlsSchema = {
           type: 'toggle',
           key: 'showGhost',
           label: '显示微移波形',
-          value: true
+          value: false
         },
         { type: 'toggle', key: 'showVelocity', label: '速度方向', value: true },
         {
@@ -91,7 +91,12 @@ export const harmonicWaveControlsSchema: ControlsSchema = {
         {
           type: 'hint',
           key: 'formula',
-          lines: ['y = A sin 2π(t/T ∓ x/λ)', 'v = λ/T']
+          lines: [
+            'y = A sin[2π(t/T ∓ x/λ)]',
+            'v_y = (2πA/T) cos(phase)',
+            'a_y = −ω² y',
+            'v = λ/T'
+          ]
         }
       ]
     }

@@ -16,7 +16,7 @@
 |   1 | 力的合成与分解                                        | 力学 | [`force-composition`](../src/scenes/force-composition/scene.meta.ts)                               | [详情](https://app.svgzhenli.com/resource/1e5fa5fb-0e00-40cd-b4c7-0ab9e2df8c5e) · [封面](https://img.svgzhenli.com/gallery-assets/covers/f3obs9ew871780737938418.png)   |  ✅  |
 |   2 | 动态圆·三法破临界                                     | 电磁 | [`dynamic-circle`](../src/scenes/dynamic-circle/scene.meta.ts)                                     | [详情](https://app.svgzhenli.com/resource/5aa418d4-7f15-48bf-9b40-2903a78a4a8d) · [封面](https://img.svgzhenli.com/gallery-assets/covers/3b63ldwj6881784565177525.png)  |  ✅  |
 |   3 | 回旋加速器核心结构与原理                              | 电磁 | [`cyclotron`](../src/scenes/cyclotron/scene.meta.ts)                                               | [详情](https://app.svgzhenli.com/resource/455c88d7-71d7-4bb9-8a8b-a505a95a135f) · [封面](https://img.svgzhenli.com/gallery-assets/covers/dji62m8jox91774712146984.png)  |  ✅  |
-|   4 | 简谐横波传播状态模型                                  | 力学 | [`harmonic-wave`](../src/scenes/harmonic-wave/scene.meta.ts)                                       | [详情](https://app.svgzhenli.com/resource/5c95b70b-3496-4df2-8bea-a020e92bbd29) · [封面](https://img.svgzhenli.com/gallery-assets/covers/oa7f9q6ecb1774685743478.png)   |  ☐   |
+|   4 | 简谐横波传播状态模型                                  | 力学 | [`harmonic-wave`](../src/scenes/harmonic-wave/scene.meta.ts)                                       | [详情](https://app.svgzhenli.com/resource/5c95b70b-3496-4df2-8bea-a020e92bbd29) · [封面](https://img.svgzhenli.com/gallery-assets/covers/oa7f9q6ecb1774685743478.png)   |  ✅  |
 |   5 | 法拉第圆盘发电机原理                                  | 电磁 | [`faraday-disc`](../src/scenes/faraday-disc/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/5cdaf4ca-9464-4554-b84a-caa9861a9bb7) · [封面](https://img.svgzhenli.com/gallery-assets/covers/h9i1ky6qviv1788264020500.png)  |  ☐   |
 |   6 | 平抛实验数据还原与轨迹分析                            | 力学 | [`projectile-data-analysis`](../src/scenes/projectile-data-analysis/scene.meta.ts)                 | [详情](https://app.svgzhenli.com/resource/7886d018-8006-4277-bd1c-4342c08f27e4) · [封面](https://img.svgzhenli.com/gallery-assets/covers/wjoea5u4c6e1787821850037.png)  |  ☐   |
 |   7 | 子弹打木块力学模型                                    | 力学 | [`bullet-block`](../src/scenes/bullet-block/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/efdbc474-2e4e-4a0d-9aa1-a3ac3a9a5262) · [封面](https://img.svgzhenli.com/gallery-assets/covers/ttwrczxsemb1774681162042.png)  |  ☐   |
@@ -145,6 +145,16 @@
 - 视觉与交互验证：首次复核发现 `768/900px` 与 `1440px` 分栏时读数浮层遮挡 D 型盒，已改为测量浮层并自适应左侧/下方舞台；复验 `767/768/900/1024×768/1024×900/1440px` 无横向溢出、无控制台错误，3.2 秒动态截图轨迹连续且清晰；播放/暂停、粒子、B/U、显示电场、URL 同步与刷新恢复通过 Playwright。
 - 工程验证：`pnpm verify:scene cyclotron` 全 `7/7` 步骤通过（3140 passed，134 skipped）；场景专项 `22` 个测试通过，构建与 bundle 预算通过。
 - 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/455c88d7-71d7-4bb9-8a8b-a505a95a135f.md` · 原始 HTML `/home/tdcasual/Downloads/物理演示/高中物理全量审计/html/回旋加速器核心结构与原理.html` · [原始详情](https://app.svgzhenli.com/resource/455c88d7-71d7-4bb9-8a8b-a505a95a135f) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/dji62m8jox91774712146984.png)
+
+### 4. 简谐横波传播状态模型 (`harmonic-wave`)
+
+- 状态：✅ Codex / Grok Build 交叉审计通过（2026-09-15）。
+- 修复：按解码 SVG 源保留 `960×660` 参考坐标的动画核心（项目舞台 `960×430`），波形、质点、P 点、微移虚线、坐标轴和传播指示对齐；标题仅在浮层不遮挡时显示，说明性副标题移除；公式与数据集中在控制/读数区。
+- 物理核验：`y=A sin[2π(t/T ∓ x/λ)]`，`v_y=(2πA/T)cos(phase)`，`a_y=−ω²y`，`v=λ/T`；A/λ/T 范围、左右传播、P 状态与微移时间由 `19` 个 sim 单测覆盖。
+- 交互与布局修复：首轮发现分栏读数遮挡/裁切、未自动播放、相位与速度符号错误、desktop/mobile transport 按钮无回调、P 拖动后滑块不回写；已分别修复舞台浮层避让、自动播放、源方程、标准 transport API、P 控件回写和标题避让。
+- 视觉与交互验证：独立 Playwright 复验 `767/768/900/1024×768/1024×900/1280×720/1440×900` 均无横向/纵向溢出、无控制台错误；波形传播、质点竖直振动、P/微移虚线清晰，读数不覆盖有效动画图形；播放/暂停冻结与恢复、左右传播、A/λ/T、显示开关、P 拖动、URL 写回与刷新恢复通过。
+- 工程验证：`pnpm verify:scene harmonic-wave` 全 `7/7` 步骤通过（3145 passed，133 skipped）；构建、TypeScript、ESLint、布局契约和 bundle 预算通过。
+- 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/5c95b70b-3496-4df2-8bea-a020e92bbd29.md` · 原始 HTML `/home/tdcasual/Downloads/物理演示/高中物理全量审计/html/简谐横波传播状态模型.html` · [原始详情](https://app.svgzhenli.com/resource/5c95b70b-3496-4df2-8bea-a020e92bbd29) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/oa7f9q6ecb1774685743478.png)
 
 ## 复审记录模板
 
