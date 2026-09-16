@@ -1,89 +1,54 @@
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
+import { getResponsiveScale, scaledSize } from '../../core/canvas-sizing';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
-import { springBallConstants, type SpringBallState } from './scene.sim';
+import { springBallConstants as C, type SpringBallState } from './scene.sim';
 
 export type CreateSpringBallViewOptions = {
   canvas?: HTMLCanvasElement;
+  graphCanvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
   mode?: TeachingMode;
   demoHints?: DemoRenderHints;
 };
 
-const {
-  baseWidth: BASE_W,
-  baseHeight: BASE_H,
-  fieldWidth: FIELD_W,
-  fieldLeft: FIELD_LEFT,
-  fieldRight: FIELD_RIGHT,
-  originY: ORIGIN_Y,
-  floorY: FLOOR_Y,
-  ballRadius: BALL_R,
-  minBallCenterY: MIN_BALL_CENTER_Y,
-  positionScale: POSITION_SCALE,
-  equilibriumX: EQUILIBRIUM_X,
-  graphX: GRAPH_X,
-  graphY: GRAPH_Y,
-  graphWidth: GRAPH_W,
-  graphHeight: GRAPH_H,
-  panelRuleY: PANEL_RULE_Y,
-  readoutCardY: READOUT_Y,
-  readoutCardHeight: READOUT_H,
-  formulaCardY: FORMULA_Y,
-  formulaCardHeight: FORMULA_H,
-  springCenterX: SPRING_CENTER_X,
-  springBaseX: SPRING_BASE_X,
-  springBaseWidth: SPRING_BASE_WIDTH,
-  springBaseY: SPRING_BASE_Y,
-  springFloorX: SPRING_FLOOR_X,
-  springFloorWidth: SPRING_FLOOR_WIDTH,
-  springFloorEdgeLeft: SPRING_FLOOR_EDGE_LEFT,
-  springFloorEdgeRight: SPRING_FLOOR_EDGE_RIGHT
-} = springBallConstants;
-
 type Palette = {
   bg: string;
-  panel: string;
   ink: string;
   muted: string;
   spring: string;
-  blue: string;
-  green: string;
-  red: string;
-  purple: string;
-  orange: string;
-  border: string;
+  ball: string;
+  velocity: string;
+  acceleration: string;
+  equilibrium: string;
+  bottom: string;
   grid: string;
 };
 
 const PALETTE: Record<TeachingTheme, Palette> = {
   light: {
-    bg: '#ffffff',
-    panel: '#ffffff',
+    bg: '#fbfcfe',
     ink: '#303744',
-    muted: '#8390a0',
-    spring: '#334155',
-    blue: '#26a7e0',
-    green: '#18a86d',
-    red: '#ef3c46',
-    purple: '#9333ea',
-    orange: '#ef9412',
-    border: '#d4dce5',
-    grid: '#edf1f4'
+    muted: '#8491a1',
+    spring: '#39485a',
+    ball: '#26a7e0',
+    velocity: '#168f7f',
+    acceleration: '#e34a54',
+    equilibrium: '#18a86d',
+    bottom: '#e34a54',
+    grid: '#e7edf3'
   },
   dark: {
     bg: '#101827',
-    panel: '#172235',
     ink: '#eef2f7',
-    muted: '#a8b4c5',
-    spring: '#b7c4d4',
-    blue: '#5ed0f5',
-    green: '#53d7a4',
-    red: '#ff6971',
-    purple: '#c084fc',
-    orange: '#ffc34d',
-    border: '#3d4d63',
-    grid: '#26364b'
+    muted: '#a4b1c2',
+    spring: '#c1cddd',
+    ball: '#5ed0f5',
+    velocity: '#55dfc8',
+    acceleration: '#ff6971',
+    equilibrium: '#53d7a4',
+    bottom: '#ff8b8f',
+    grid: '#2b3a4f'
   }
 };
 
@@ -95,7 +60,7 @@ function text(
   color: string,
   size: number,
   align: CanvasTextAlign = 'left',
-  weight = 600
+  weight = 700
 ): void {
   ctx.fillStyle = color;
   ctx.font = `${weight} ${size}px sans-serif`;
@@ -104,359 +69,359 @@ function text(
   ctx.fillText(value, x, y);
 }
 
-function rounded(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  radius = 12
-): void {
-  ctx.beginPath();
-  if (typeof ctx.roundRect === 'function')
-    ctx.roundRect(x, y, width, height, radius);
-  else ctx.rect(x, y, width, height);
-}
-
 function arrow(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
   length: number,
   angle: number,
-  color: string
+  color: string,
+  width = 3,
+  scale = 1
 ): void {
   const x2 = x + Math.cos(angle) * length;
   const y2 = y + Math.sin(angle) * length;
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
-  ctx.lineWidth = 4;
+  ctx.lineWidth = width;
+  ctx.lineCap = 'round';
   ctx.beginPath();
   ctx.moveTo(x, y);
   ctx.lineTo(x2, y2);
   ctx.stroke();
+  const head = 9 * scale;
   ctx.beginPath();
   ctx.moveTo(x2, y2);
   ctx.lineTo(
-    x2 - Math.cos(angle - 0.45) * 10,
-    y2 - Math.sin(angle - 0.45) * 10
+    x2 - Math.cos(angle - 0.45) * head,
+    y2 - Math.sin(angle - 0.45) * head
   );
   ctx.lineTo(
-    x2 - Math.cos(angle + 0.45) * 10,
-    y2 - Math.sin(angle + 0.45) * 10
+    x2 - Math.cos(angle + 0.45) * head,
+    y2 - Math.sin(angle + 0.45) * head
   );
   ctx.closePath();
   ctx.fill();
 }
 
-function drawSpring(
-  ctx: CanvasRenderingContext2D,
-  state: SpringBallState,
-  p: Palette
-): void {
-  const contactY = ORIGIN_Y;
-  const ballY = Math.max(
-    MIN_BALL_CENTER_Y,
-    ORIGIN_Y + state.x * POSITION_SCALE - BALL_R
+function graphSize(canvas: HTMLCanvasElement): {
+  ctx: CanvasRenderingContext2D | null;
+  width: number;
+  height: number;
+  responsiveScale: number;
+} {
+  const rect = canvas.getBoundingClientRect();
+  const measuredWidth = Math.max(
+    1,
+    Math.round(rect.width || canvas.clientWidth || 1)
   );
-  const bottomY = FLOOR_Y - 26;
-  const startY = contactY + BALL_R;
-  const endY = Math.min(bottomY, Math.max(startY + 36, ballY + BALL_R + 30));
-  ctx.strokeStyle = p.spring;
-  ctx.lineWidth = 5;
-  ctx.beginPath();
-  const coils = 14;
-  const step = (endY - startY) / coils;
-  ctx.moveTo(FIELD_LEFT + SPRING_CENTER_X, startY);
-  for (let i = 0; i < coils; i += 1) {
-    ctx.lineTo(
-      FIELD_LEFT + SPRING_CENTER_X + (i % 2 === 0 ? -26 : 26),
-      startY + step * (i + 0.5)
-    );
-    ctx.lineTo(FIELD_LEFT + SPRING_CENTER_X, startY + step * (i + 1));
-  }
-  ctx.stroke();
-  ctx.fillStyle = p.spring;
-  ctx.fillRect(
-    FIELD_LEFT + SPRING_BASE_X,
-    FLOOR_Y - SPRING_BASE_Y,
-    SPRING_BASE_WIDTH,
-    12
+  const measuredHeight = Math.max(
+    1,
+    Math.round(rect.height || canvas.clientHeight || 1)
   );
-  ctx.fillRect(
-    FIELD_LEFT + SPRING_FLOOR_X,
-    FLOOR_Y - 18,
-    SPRING_FLOOR_WIDTH,
-    8
+  const responsiveScale = getResponsiveScale(measuredWidth, measuredHeight);
+  const width = Math.max(scaledSize(320, responsiveScale, 280), measuredWidth);
+  const height = Math.max(
+    scaledSize(180, responsiveScale, 160),
+    measuredHeight
   );
-  ctx.strokeStyle = p.ink;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(FIELD_LEFT + SPRING_FLOOR_EDGE_LEFT, FLOOR_Y - 10);
-  ctx.lineTo(FIELD_LEFT + SPRING_FLOOR_EDGE_RIGHT, FLOOR_Y - 10);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(FIELD_LEFT + SPRING_CENTER_X, ballY, BALL_R, 0, Math.PI * 2);
-  ctx.fillStyle = p.blue;
-  ctx.fill();
-  ctx.strokeStyle = p.ink;
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  text(ctx, 'm', FIELD_LEFT + 258, ballY, '#ffffff', 17, 'center', 700);
-  ctx.strokeStyle = p.muted;
-  ctx.setLineDash([6, 6]);
-  ctx.beginPath();
-  ctx.moveTo(FIELD_LEFT + 42, contactY);
-  ctx.lineTo(FIELD_RIGHT - 40, contactY);
-  ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.strokeStyle = p.green;
-  ctx.setLineDash([6, 6]);
-  ctx.beginPath();
-  ctx.moveTo(FIELD_LEFT + 42, ORIGIN_Y + EQUILIBRIUM_X * POSITION_SCALE);
-  ctx.lineTo(FIELD_RIGHT - 40, ORIGIN_Y + EQUILIBRIUM_X * POSITION_SCALE);
-  ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.strokeStyle = p.red;
-  ctx.beginPath();
-  ctx.moveTo(FIELD_LEFT + 42, ORIGIN_Y + state.bottomX * POSITION_SCALE);
-  ctx.lineTo(FIELD_RIGHT - 40, ORIGIN_Y + state.bottomX * POSITION_SCALE);
-  ctx.stroke();
-  text(
-    ctx,
-    '原长位置 x=0',
-    FIELD_RIGHT - 40,
-    contactY - 18,
-    p.muted,
-    13,
-    'right',
-    600
-  );
-  text(
-    ctx,
-    '平衡位置 x₀',
-    FIELD_RIGHT - 40,
-    ORIGIN_Y + EQUILIBRIUM_X * POSITION_SCALE - 18,
-    p.green,
-    13,
-    'right',
-    700
-  );
-  text(
-    ctx,
-    '最低点·对称点',
-    FIELD_RIGHT - 40,
-    ORIGIN_Y + state.bottomX * POSITION_SCALE - 18,
-    p.red,
-    13,
-    'right',
-    700
-  );
-  if (state.stage === 'free-fall')
-    arrow(ctx, FIELD_LEFT + 258, ballY + BALL_R, 50, Math.PI / 2, p.red);
-  if (state.stage !== 'free-fall') {
-    const vAngle = state.velocity >= 0 ? Math.PI / 2 : -Math.PI / 2;
-    arrow(ctx, FIELD_LEFT + 258, ballY, 52, vAngle, p.blue);
-    text(
-      ctx,
-      'v',
-      FIELD_LEFT + 290,
-      ballY + (state.velocity >= 0 ? 30 : -30),
-      p.blue,
-      15,
-      'left',
-      700
-    );
-  }
-  const accelAngle = state.acceleration >= 0 ? Math.PI / 2 : -Math.PI / 2;
-  arrow(ctx, FIELD_LEFT + 258 - 42, ballY, 42, accelAngle, p.red);
-  text(
-    ctx,
-    `a=${state.acceleration.toFixed(1)} m/s²`,
-    FIELD_LEFT + 30,
-    ballY - 30,
-    p.red,
-    13,
-    'left',
-    700
-  );
+  const dpr = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
+  canvas.width = Math.round(width * dpr);
+  canvas.height = Math.round(height * dpr);
+  canvas.dataset.responsiveScale = String(responsiveScale);
+  const ctx = canvas.getContext('2d');
+  if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, width, height, responsiveScale };
 }
 
-function drawGraph(
-  ctx: CanvasRenderingContext2D,
-  state: SpringBallState,
-  p: Palette
-): void {
-  rounded(ctx, GRAPH_X - 18, GRAPH_Y - 58, GRAPH_W + 36, GRAPH_H + 102, 14);
-  ctx.fillStyle = p.panel;
-  ctx.fill();
-  ctx.strokeStyle = p.border;
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-  text(
-    ctx,
-    '实时位置—时间（x–t）图',
-    GRAPH_X,
-    GRAPH_Y - 34,
-    p.ink,
-    18,
-    'left',
-    700
-  );
-  ctx.fillStyle = p.grid;
-  ctx.fillRect(GRAPH_X, GRAPH_Y, GRAPH_W, GRAPH_H);
-  ctx.strokeStyle = p.border;
-  ctx.strokeRect(GRAPH_X, GRAPH_Y, GRAPH_W, GRAPH_H);
-  ctx.strokeStyle = p.green;
-  ctx.setLineDash([6, 6]);
-  const eqY = GRAPH_Y + GRAPH_H * 0.56;
-  ctx.beginPath();
-  ctx.moveTo(GRAPH_X, eqY);
-  ctx.lineTo(GRAPH_X + GRAPH_W, eqY);
-  ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.strokeStyle = p.blue;
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  const points =
-    state.history.length > 0
-      ? state.history
-      : [{ t: 0, x: -state.params.releaseHeight }];
-  points.forEach((point, index) => {
-    const px = GRAPH_X + Math.min(1, point.t / 1.6) * GRAPH_W;
-    const py =
-      GRAPH_Y +
-      GRAPH_H * 0.18 +
-      Math.min(1.1, Math.max(-0.1, (point.x + 0.1) / 0.95)) * GRAPH_H * 0.72;
-    if (index === 0) ctx.moveTo(px, py);
-    else ctx.lineTo(px, py);
-  });
-  ctx.stroke();
-  text(ctx, 'x / m', GRAPH_X + 8, GRAPH_Y + 14, p.muted, 12, 'left', 600);
-  text(
-    ctx,
-    't / s',
-    GRAPH_X + GRAPH_W - 8,
-    GRAPH_Y + GRAPH_H + 26,
-    p.muted,
-    12,
-    'right',
-    600
-  );
-  text(ctx, '平衡 x₀', GRAPH_X + 10, eqY - 13, p.green, 12, 'left', 600);
-}
-
-function drawPanel(
+function drawReferences(
   ctx: CanvasRenderingContext2D,
   state: SpringBallState,
   p: Palette,
   scale: number
 ): void {
-  const x = FIELD_W + 26;
-  ctx.fillStyle = p.panel;
-  ctx.fillRect(FIELD_W, 0, BASE_W - FIELD_W, BASE_H);
-  ctx.strokeStyle = p.blue;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(x, PANEL_RULE_Y);
-  ctx.lineTo(BASE_W - 24, PANEL_RULE_Y);
-  ctx.stroke();
-  text(ctx, '动力学参数', x, 38, p.ink, 21 * scale, 'left', 700);
-  rounded(ctx, x, READOUT_Y, 500, READOUT_H, 12);
-  ctx.fillStyle = p.panel;
-  ctx.fill();
-  ctx.strokeStyle = p.border;
-  ctx.stroke();
-  const readouts = [
-    {
-      label: '运动阶段',
-      value:
-        state.stage === 'free-fall'
-          ? '自由落体'
-          : state.stage === 'bottom'
-            ? '最低点'
-            : '接触压缩',
-      x: x + 16,
-      y: READOUT_Y + 18
-    },
-    {
-      label: '小球速度 v',
-      value: `${state.velocity.toFixed(2)} m/s`,
-      x: x + 260,
-      y: READOUT_Y + 18
-    },
-    {
-      label: '瞬时加速度 a',
-      value: `${state.acceleration.toFixed(2)} m/s²`,
-      x: x + 16,
-      y: READOUT_Y + 56
-    },
-    {
-      label: '弹簧力 / 合力',
-      value: `${state.springForce.toFixed(1)} / ${state.netForce.toFixed(1)} N`,
-      x: x + 260,
-      y: READOUT_Y + 56
-    }
+  const left = C.fieldLeft + 12;
+  const right = C.fieldRight - 10;
+  const yFor = (value: number) =>
+    Math.max(26, Math.min(C.floorY - 24, C.originY + value * C.positionScale));
+  const lines = [
+    { value: 0, color: p.muted, label: 'x=0' },
+    { value: state.equilibriumX, color: p.equilibrium, label: 'x₀' },
+    { value: state.bottomX, color: p.bottom, label: 'x底' }
   ];
-  readouts.forEach((item) => {
-    text(ctx, item.label, item.x, item.y, p.muted, 12 * scale, 'left', 500);
+  lines.forEach(({ value, color, label }) => {
+    const y = yFor(value);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.6 * scale;
+    ctx.setLineDash([7, 7]);
+    ctx.beginPath();
+    ctx.moveTo(left, y);
+    ctx.lineTo(right, y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    text(ctx, label, right, y - 15 * scale, color, 13 * scale, 'right', 700);
+  });
+}
+
+function drawSpring(
+  ctx: CanvasRenderingContext2D,
+  state: SpringBallState,
+  p: Palette,
+  scale: number
+): void {
+  const cx = C.fieldLeft + C.springCenterX;
+  const radius = C.ballRadius * scale;
+  const ballY = Math.max(
+    C.minBallCenterY,
+    Math.min(
+      C.floorY - radius - 8 * scale,
+      C.originY + state.x * C.positionScale
+    )
+  );
+  const naturalTop = C.originY + radius + 8 * scale;
+  const springTop =
+    state.stage === 'free-fall' ? naturalTop : ballY + radius + 8 * scale;
+  const springBottom = C.floorY - 28;
+  const length = Math.max(42, springBottom - springTop);
+  const coils = 14;
+  const step = length / coils;
+  ctx.strokeStyle = p.spring;
+  ctx.lineWidth = 5 * scale;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(cx, springTop);
+  for (let i = 0; i < coils; i += 1) {
+    ctx.lineTo(
+      cx + (i % 2 === 0 ? -26 : 26) * scale,
+      springTop + step * (i + 0.5)
+    );
+    ctx.lineTo(cx, springTop + step * (i + 1));
+  }
+  ctx.stroke();
+  ctx.fillStyle = p.spring;
+  ctx.fillRect(
+    cx - (C.springBaseWidth * scale) / 2,
+    C.floorY - 30 * scale,
+    C.springBaseWidth * scale,
+    12 * scale
+  );
+  ctx.fillRect(
+    C.fieldLeft + C.springFloorX,
+    C.floorY - 18 * scale,
+    C.springFloorWidth * scale,
+    8 * scale
+  );
+  ctx.strokeStyle = p.ink;
+  ctx.lineWidth = 2 * scale;
+  ctx.beginPath();
+  ctx.moveTo(C.fieldLeft + C.springFloorEdgeLeft, C.floorY - 10);
+  ctx.lineTo(C.fieldLeft + C.springFloorEdgeRight, C.floorY - 10);
+  ctx.stroke();
+  const glow = ctx.createRadialGradient(
+    cx - 7 * scale,
+    ballY - 8 * scale,
+    4 * scale,
+    cx,
+    ballY,
+    radius * 1.35
+  );
+  glow.addColorStop(0, '#ffffff');
+  glow.addColorStop(0.18, p.ball);
+  glow.addColorStop(1, p.ball);
+  ctx.beginPath();
+  ctx.arc(cx, ballY, radius, 0, Math.PI * 2);
+  ctx.fillStyle = glow;
+  ctx.fill();
+  ctx.strokeStyle = p.ink;
+  ctx.lineWidth = 2 * scale;
+  ctx.stroke();
+  text(ctx, 'm', cx, ballY + 1 * scale, '#ffffff', 16 * scale, 'center', 800);
+  if (state.stage === 'free-fall' || Math.abs(state.velocity) > 0.05) {
+    const vAngle =
+      state.stage === 'free-fall' || state.velocity >= 0
+        ? Math.PI / 2
+        : -Math.PI / 2;
+    arrow(
+      ctx,
+      cx + 34 * scale,
+      ballY,
+      46 * scale,
+      vAngle,
+      p.velocity,
+      3.2 * scale,
+      scale
+    );
     text(
       ctx,
-      item.value,
-      item.x,
-      item.y + 17,
-      item.label === '运动阶段' ? p.blue : p.ink,
-      14 * scale,
-      'left',
-      700
+      'v',
+      cx + 48 * scale,
+      ballY + (vAngle > 0 ? 32 : -32) * scale,
+      p.velocity,
+      15 * scale,
+      'center',
+      800
     );
-  });
-  rounded(ctx, x, FORMULA_Y, 500, FORMULA_H, 12);
-  ctx.fillStyle = p.panel;
-  ctx.fill();
-  ctx.strokeStyle = p.border;
+  }
+  const aAngle = state.acceleration >= 0 ? Math.PI / 2 : -Math.PI / 2;
+  arrow(
+    ctx,
+    cx - 34 * scale,
+    ballY,
+    40 * scale,
+    aAngle,
+    p.acceleration,
+    3.2 * scale,
+    scale
+  );
+  text(
+    ctx,
+    'a',
+    cx - 49 * scale,
+    ballY + (aAngle > 0 ? 29 : -29) * scale,
+    p.acceleration,
+    15 * scale,
+    'center',
+    800
+  );
+}
+
+function drawAnimation(
+  ctx: CanvasRenderingContext2D,
+  state: SpringBallState,
+  p: Palette,
+  scale: number
+): void {
+  ctx.fillStyle = p.bg;
+  ctx.fillRect(0, 0, C.baseWidth, C.baseHeight);
+  ctx.strokeStyle = p.grid;
+  ctx.lineWidth = 1;
+  for (let y = C.fieldTop; y <= C.floorY - 30; y += 60) {
+    ctx.beginPath();
+    ctx.moveTo(C.fieldLeft, y);
+    ctx.lineTo(C.fieldRight, y);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = p.muted;
+  ctx.lineWidth = 1.7 * scale;
+  ctx.beginPath();
+  ctx.moveTo(C.fieldLeft + 24, C.fieldTop);
+  ctx.lineTo(C.fieldLeft + 24, C.floorY - 18);
   ctx.stroke();
   text(
     ctx,
-    '关键关系',
-    x + 16,
-    FORMULA_Y + 24,
-    p.muted,
-    14 * scale,
-    'left',
-    700
-  );
-  text(
-    ctx,
-    'x₀ = mg/k = 0.25 m',
-    x + 16,
-    FORMULA_Y + 56,
+    'x',
+    C.fieldLeft + 24,
+    C.fieldTop - 18 * scale,
     p.ink,
-    16 * scale,
-    'left',
+    14 * scale,
+    'center',
+    800
+  );
+  for (let y = C.fieldTop + 20; y < C.floorY - 20; y += 40) {
+    ctx.beginPath();
+    ctx.moveTo(C.fieldLeft + 18, y);
+    ctx.lineTo(C.fieldLeft + 30, y);
+    ctx.stroke();
+  }
+  drawReferences(ctx, state, p, scale);
+  drawSpring(ctx, state, p, scale);
+}
+
+function drawGraph(
+  ctx: CanvasRenderingContext2D,
+  state: SpringBallState,
+  width: number,
+  height: number,
+  p: Palette,
+  scale: number
+): void {
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = p.bg;
+  ctx.fillRect(0, 0, width, height);
+  const left = 48;
+  const right = width - 20;
+  const top = 20;
+  const bottom = height - 34;
+  const tMax = Math.max(1.6, state.contactTime + 1.05);
+  const xMin = Math.min(-0.08, -state.params.releaseHeight - 0.08);
+  const xMax = Math.max(0.72, state.bottomX + 0.08);
+  const px = (t: number) =>
+    left + Math.max(0, Math.min(1, t / tMax)) * (right - left);
+  const py = (x: number) =>
+    bottom -
+    ((Math.max(xMin, Math.min(xMax, x)) - xMin) / (xMax - xMin)) *
+      (bottom - top);
+  ctx.strokeStyle = p.grid;
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i += 1) {
+    const x = left + ((right - left) * i) / 4;
+    ctx.beginPath();
+    ctx.moveTo(x, top);
+    ctx.lineTo(x, bottom);
+    ctx.stroke();
+  }
+  [0, state.equilibriumX, state.bottomX].forEach((value, index) => {
+    ctx.strokeStyle =
+      index === 0 ? p.muted : index === 1 ? p.equilibrium : p.bottom;
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    ctx.moveTo(left, py(value));
+    ctx.lineTo(right, py(value));
+    ctx.stroke();
+    ctx.setLineDash([]);
+  });
+  ctx.strokeStyle = p.ink;
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.moveTo(left, bottom);
+  ctx.lineTo(right, bottom);
+  ctx.moveTo(left, bottom);
+  ctx.lineTo(left, top);
+  ctx.stroke();
+  const points =
+    state.history.length > 0
+      ? state.history
+      : [{ t: 0, x: -state.params.releaseHeight }];
+  ctx.strokeStyle = p.ball;
+  ctx.lineWidth = 2.5 * scale;
+  ctx.beginPath();
+  points.forEach((point, index) => {
+    const x = px(point.t);
+    const y = py(point.x);
+    if (index === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  text(ctx, 'x / m', left, top - 6 * scale, p.ink, 12 * scale, 'left', 700);
+  text(
+    ctx,
+    't / s',
+    right,
+    bottom + 20 * scale,
+    p.ink,
+    12 * scale,
+    'right',
     700
   );
   text(
     ctx,
-    state.params.releaseHeight === 0
-      ? 'h=0：最低点 x=2x₀，|a|=g'
-      : `当前最低点 x=${state.bottomX.toFixed(2)} m`,
-    x + 16,
-    FORMULA_Y + 80,
-    p.red,
-    15 * scale,
-    'left',
+    'x₀',
+    right - 4,
+    py(state.equilibriumX) - 11 * scale,
+    p.equilibrium,
+    11 * scale,
+    'right',
     700
   );
   text(
     ctx,
-    '接触后以平衡位置为中心做简谐运动',
-    x + 16,
-    FORMULA_Y + 108,
-    p.green,
-    13 * scale,
-    'left',
-    600
+    'x底',
+    right - 4,
+    py(state.bottomX) - 11 * scale,
+    p.bottom,
+    11 * scale,
+    'right',
+    700
   );
 }
 
@@ -465,37 +430,64 @@ export function createSpringBallView(
 ) {
   const stage = createCanvasViewport({
     canvas: options.canvas ?? null,
-    sizing: { mode: 'clamped', fallbackWidth: BASE_W, fallbackHeight: BASE_H },
-    initialWidth: BASE_W,
-    initialHeight: BASE_H,
+    sizing: {
+      mode: 'clamped',
+      fallbackWidth: C.baseWidth,
+      fallbackHeight: C.baseHeight
+    },
+    initialWidth: C.baseWidth,
+    initialHeight: C.baseHeight,
     eagerContext: true
   });
+  let graphCanvas = options.graphCanvas ?? null;
+  let graphCtx: CanvasRenderingContext2D | null = null;
+  let graphWidth = scaledSize(640, 1);
+  let graphHeight = scaledSize(240, 1);
+  let graphResponsiveScale = 1;
   const env = createViewEnvironment({
     theme: options.theme ?? 'light',
     mode: options.mode ?? 'normal',
     demoHints: options.demoHints
   });
   let snapshot: SpringBallState | null = null;
+  function resizeGraph(): void {
+    if (!graphCanvas) return;
+    const sized = graphSize(graphCanvas);
+    graphCtx = sized.ctx;
+    graphWidth = sized.width;
+    graphHeight = sized.height;
+    graphResponsiveScale = sized.responsiveScale;
+  }
   function draw(state: SpringBallState): void {
     const ctx = stage.ctx;
     if (!ctx) return;
     const width = stage.cssWidth;
     const height = stage.cssHeight;
-    const fit = Math.min(width / BASE_W, height / BASE_H);
-    const offsetY = (height - BASE_H * fit) / 2;
-    const scale = env.contentScale() * stage.responsiveScale;
+    const fit = Math.min(width / C.baseWidth, height / C.baseHeight);
+    const offsetX = (width - C.baseWidth * fit) / 2;
+    const offsetY = (height - C.baseHeight * fit) / 2;
+    const scale = Math.min(1, env.contentScale() * stage.responsiveScale);
     const p = PALETTE[env.theme];
     ctx.clearRect(0, 0, width, height);
     ctx.save();
-    ctx.translate(0, offsetY);
+    ctx.translate(offsetX, offsetY);
     ctx.scale(fit, fit);
-    ctx.fillStyle = p.bg;
-    ctx.fillRect(0, 0, BASE_W, BASE_H);
-    drawSpring(ctx, state, p);
-    drawPanel(ctx, state, p, scale);
-    drawGraph(ctx, state, p);
+    drawAnimation(ctx, state, p, scale);
     ctx.restore();
+    if (graphCanvas) {
+      if (!graphCtx) resizeGraph();
+      if (graphCtx)
+        drawGraph(
+          graphCtx,
+          state,
+          graphWidth,
+          graphHeight,
+          p,
+          Math.min(1, graphResponsiveScale)
+        );
+    }
   }
+  if (graphCanvas) resizeGraph();
   return {
     render(state: SpringBallState): void {
       snapshot = state;
@@ -504,6 +496,7 @@ export function createSpringBallView(
     },
     resize(): void {
       stage.resize();
+      resizeGraph();
       if (snapshot) draw(snapshot);
     },
     setTheme(theme: TeachingTheme): void {
@@ -514,9 +507,16 @@ export function createSpringBallView(
       env.setMode(mode, hints);
       if (snapshot) draw(snapshot);
     },
+    attachGraphCanvas(canvas: HTMLCanvasElement): void {
+      graphCanvas = canvas;
+      resizeGraph();
+      if (snapshot) draw(snapshot);
+    },
     dispose(): void {
       snapshot = null;
       stage.release();
+      graphCanvas = null;
+      graphCtx = null;
     },
     reset(): void {
       snapshot = null;

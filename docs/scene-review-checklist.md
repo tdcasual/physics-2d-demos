@@ -35,7 +35,7 @@
 |  20 | 示波管的原理与波形同步                                | 电磁 | [`oscilloscope`](../src/scenes/oscilloscope/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/5a841fe8-5060-47af-a132-cf4511d2d4eb) · [封面](https://img.svgzhenli.com/gallery-assets/covers/pfv1s8rnxzg1778497322822.png)  |  ✅  |
 |  21 | 打点计时器原理演示                                    | 力学 | [`ticker-timer`](../src/scenes/ticker-timer/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/0e146679-df0c-429f-b982-9e3c1c0c2367) · [封面](https://img.svgzhenli.com/gallery-assets/covers/aorki9og3yq1783606121977.png)  |  ✅  |
 |  22 | 带电粒子在匀强磁场中的圆周运动                        | 电磁 | [`charged-particle-circle`](../src/scenes/charged-particle-circle/scene.meta.ts)                   | [详情](https://app.svgzhenli.com/resource/bcf1789c-95eb-480d-9b4e-e9eb1ee6210c) · [封面](https://img.svgzhenli.com/gallery-assets/covers/ohou8hat4jj1774711562323.png)  |  ✅  |
-|  23 | 小球落到竖直弹簧与简谐运动                            | 力学 | [`spring-ball`](../src/scenes/spring-ball/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/75ac35a6-d777-4e05-b192-5ab524c74832) · [封面](https://img.svgzhenli.com/gallery-assets/covers/532og1b4u851788370155234.png)  |  ☐   |
+|  23 | 小球落到竖直弹簧与简谐运动                            | 力学 | [`spring-ball`](../src/scenes/spring-ball/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/75ac35a6-d777-4e05-b192-5ab524c74832) · [封面](https://img.svgzhenli.com/gallery-assets/covers/532og1b4u851788370155234.png)  |  ☑   |
 |  24 | 电阻测量法设计（限流接法、分压接法、电流表的内外接）  | 电磁 | [`resistor-measurement`](../src/scenes/resistor-measurement/scene.meta.ts)                         | [详情](https://app.svgzhenli.com/resource/250ca6cd-36d9-4ed5-9983-d4a2e9058251) · [封面](https://img.svgzhenli.com/gallery-assets/covers/zq29kqwn07m1781283130413.png)  |  ☐   |
 |  25 | 高精度测量工具读数原理（游标卡尺&螺旋测微器）         | 力学 | [`precision-tools`](../src/scenes/precision-tools/scene.meta.ts)                                   | [详情](https://app.svgzhenli.com/resource/db871107-556d-4e2f-936e-52ebd2767a54) · [封面](https://img.svgzhenli.com/gallery-assets/covers/08nk6xz5mriq1778077856552.png) |  ☐   |
 |  26 | 测电源电动势和内阻实验                                | 电磁 | [`emf-internal-resistance`](../src/scenes/emf-internal-resistance/scene.meta.ts)                   | [详情](https://app.svgzhenli.com/resource/11ed455d-d6bc-4ac7-82a3-0a57b2ef969f) · [封面](https://img.svgzhenli.com/gallery-assets/covers/h7646etm75j1787678239426.png)  |  ☐   |
@@ -317,6 +317,15 @@
 - 交互与布局验证：URL 初值支持数值、0/1 与 true/false 布尔值、into/out 或 0/1 方向值，第一帧即生效；速度调节使轨道半径变化，磁场方向切换改变 ×/· 与旋向，重置恢复 URL 基线并同步控件。浅色/深色、演示模式和移动端堆叠均无横向溢出；数据 tab 独立，无动画区内容泄漏；浏览器 console 无 error/warning。
 - 工程验证：专项单测 `15/15`（sim `11` + view `4`）；`pnpm verify:scene charged-particle-circle` 全 `7/7` 步骤通过（`3138 passed / 129 skipped`）；tsc、ESLint、生产构建、布局契约、bundle 预算和 `git diff --check` 通过（场景页 JS `132.87 kB / 180 kB`）。
 - 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/bcf1789c-95eb-480d-9b4e-e9eb1ee6210c.md` · [原始详情](https://app.svgzhenli.com/resource/bcf1789c-95eb-480d-9b4e-e9eb1ee6210c) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/ohou8hat4jj1774711562323.png) · Grok Build 最终意见：`AGREED: charged-particle-circle is ready to commit.`
+
+### 23. 小球落到竖直弹簧与简谐运动 (`spring-ball`)
+
+- 状态：✅ Codex / Grok Build 交叉审计通过（2026-09-16）。
+- 修复：按 SVGZhenli 参考重构竖直弹簧、质点、坐标轴和原长/平衡/最低点参考线；动画区只保留演示要素和必要的 v/a 矢量，x–t 曲线独立放入图表区，实时物理量放入数据区，关系式放入折叠控制区，文案精简；采用 `split-right-graph-bottom`、`hasGraph:true` 和响应式缩放。
+- 物理核验：m=1 kg、k=40 N/m、g=10 m/s²，向下为正；`x₀=mg/k=0.25 m`；自由落体 `x=-h+½gt²`，接触后围绕 x₀ 简谐运动；最低点 `x底=x₀+√(x₀²+(v接触/ω)²)`。h=0 时 `x底=0.50 m、a=-g`；h=0.50 m 时 `x底≈0.81 m、a≈−22.36 m/s²`；单次模式停在最低点，连续模式按周期回绕，参数有限值夹取。
+- 交互与布局验证：深色/浅色与演示模式通过；h=2x₀ 预设、自动播放/慢动作、播放暂停、重置、图表/控制/数据 tab 和 URL 初值通过。浏览器复核确认动画区无图表/数据卡，图表完整显示 h=0.50 m 的负位移自由落体段，数据读数与物理推导一致，无重叠或溢出。
+- 工程验证：专项 sim/view `9/9`；`pnpm verify:scene spring-ball` 全 `7/7` 步骤通过（`3132 passed / 129 skipped`），tsc、ESLint、生产构建、布局契约、bundle 预算通过（场景页 JS `135.13 kB / 180 kB`）。最终只读 Grok Build 返回 `AGREED: spring-ball is ready to commit.`
+- 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/75ac35a6-d777-4e05-b192-5ab524c74832.md` · [原始详情](https://app.svgzhenli.com/resource/75ac35a6-d777-4e05-b192-5ab524c74832) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/532og1b4u851788370155234.png)
 
 ## 复审记录模板
 

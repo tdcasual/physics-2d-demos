@@ -29,10 +29,9 @@ export type SpringBallState = {
 };
 
 export const springBallConstants = {
-  baseWidth: 1200,
+  baseWidth: 660,
   baseHeight: 760,
   fieldWidth: 660,
-  panelWidth: 540,
   fieldLeft: 36,
   fieldRight: 640,
   fieldTop: 54,
@@ -47,15 +46,6 @@ export const springBallConstants = {
   gravity: 10,
   equilibriumX: 0.25,
   sampleDt: 0.016,
-  graphX: 704,
-  graphY: 390,
-  graphWidth: 440,
-  graphHeight: 210,
-  panelRuleY: 72,
-  readoutCardY: 104,
-  readoutCardHeight: 94,
-  formulaCardY: 212,
-  formulaCardHeight: 120,
   springCenterX: 258,
   springBaseX: 222,
   springBaseWidth: 72,
@@ -81,30 +71,65 @@ const PRESET_HEIGHT: Record<SpringBallPreset, number> = {
   'h-3x0': springBallConstants.equilibriumX * 3
 };
 
+export function asBool(value: unknown, fallback: boolean): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number' && Number.isFinite(value)) return value !== 0;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['1', 'true', 'on', 'yes'].includes(normalized)) return true;
+    if (['0', 'false', 'off', 'no', ''].includes(normalized)) return false;
+  }
+  return fallback;
+}
+
+export function asMode(value: unknown): SpringBallMode | undefined {
+  if (value === 'single' || value === 'continuous') return value;
+  if (value === 0 || value === '0') return 'single';
+  if (value === 1 || value === '1') return 'continuous';
+  return undefined;
+}
+
+export function asPreset(value: unknown): SpringBallPreset | undefined {
+  if (
+    value === 'h0' ||
+    value === 'h-x0' ||
+    value === 'h-2x0' ||
+    value === 'h-3x0'
+  )
+    return value;
+  if (typeof value === 'number' && Number.isInteger(value))
+    return (['h0', 'h-x0', 'h-2x0', 'h-3x0'][value] ?? undefined) as
+      | SpringBallPreset
+      | undefined;
+  if (typeof value === 'string' && ['0', '1', '2', '3'].includes(value))
+    return ['h0', 'h-x0', 'h-2x0', 'h-3x0'][Number(value)] as SpringBallPreset;
+  return undefined;
+}
+
 function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
 }
 
 function normalize(
-  input: Partial<SpringBallParams>,
+  input: Partial<SpringBallParams> & Record<string, unknown>,
   previous = DEFAULTS
 ): SpringBallParams {
-  const preset = input.preset ?? previous.preset;
+  const preset = asPreset(input.preset) ?? previous.preset;
   return {
     releaseHeight: clamp(
       finite(input.releaseHeight, PRESET_HEIGHT[preset]),
       0,
       0.75
     ),
-    mode:
-      input.mode === 'continuous'
-        ? 'continuous'
-        : input.mode === 'single'
-          ? 'single'
-          : previous.mode,
+    mode: asMode(input.mode) ?? previous.mode,
     preset,
-    autoRun: input.autoRun ?? previous.autoRun,
-    slow: input.slow ?? previous.slow
+    autoRun: asBool(input.autoRun, previous.autoRun),
+    slow: asBool(input.slow, previous.slow)
   };
 }
 
@@ -169,7 +194,8 @@ function stateAt(params: SpringBallParams, time: number): SpringBallState {
 }
 
 export function createSpringBallSim(initial: Partial<SpringBallParams> = {}) {
-  let params = normalize(initial);
+  const baseline = normalize(initial);
+  let params = { ...baseline };
   let time = 0;
   let history: Array<{ t: number; x: number }> = [];
   function getState(): SpringBallState {
@@ -182,7 +208,8 @@ export function createSpringBallSim(initial: Partial<SpringBallParams> = {}) {
     getParams: (): SpringBallParams => ({ ...params }),
     setParams(next: Partial<SpringBallParams>): SpringBallParams {
       params = normalize({ ...params, ...next }, params);
-      if (next.preset) params.releaseHeight = PRESET_HEIGHT[next.preset];
+      const preset = asPreset(next.preset);
+      if (preset) params.releaseHeight = PRESET_HEIGHT[preset];
       history = [];
       return { ...params };
     },
@@ -230,7 +257,7 @@ export function createSpringBallSim(initial: Partial<SpringBallParams> = {}) {
       }
     },
     reset(): void {
-      params = { ...DEFAULTS };
+      params = { ...baseline };
       time = 0;
       history = [];
     }

@@ -3,7 +3,7 @@ import type { ControlsSchema } from '../../platform/controls-schema';
 export const springBallControlsSchema: ControlsSchema = {
   sections: [
     {
-      title: '释放高度',
+      title: '释放',
       collapsed: false,
       fields: [
         {
@@ -12,10 +12,10 @@ export const springBallControlsSchema: ControlsSchema = {
           columns: 2,
           initialActive: 'h0',
           presets: [
-            { id: 'h0', label: '原长释放 (h=0)' },
-            { id: 'h-x0', label: '低位 (h=x₀)' },
-            { id: 'h-2x0', label: '中位 (h=2x₀)' },
-            { id: 'h-3x0', label: '高位 (h=3x₀)' }
+            { id: 'h0', label: 'h=0' },
+            { id: 'h-x0', label: 'h=x₀' },
+            { id: 'h-2x0', label: 'h=2x₀' },
+            { id: 'h-3x0', label: 'h=3x₀' }
           ]
         },
         {
@@ -31,7 +31,7 @@ export const springBallControlsSchema: ControlsSchema = {
       ]
     },
     {
-      title: '播放',
+      title: '运行',
       collapsed: false,
       fields: [
         {
@@ -45,17 +45,17 @@ export const springBallControlsSchema: ControlsSchema = {
           ]
         },
         { type: 'toggle', key: 'autoRun', label: '自动播放', value: true },
-        { type: 'toggle', key: 'slow', label: '慢动作 0.3×', value: false }
+        { type: 'toggle', key: 'slow', label: '慢动作', value: false }
       ]
     },
     {
-      title: '结论',
+      title: '关系',
       collapsed: true,
       fields: [
         {
           type: 'hint',
           key: 'formula',
-          lines: ['x₀ = mg/k', '最低点：x = 2x₀', '|a| = g']
+          lines: ['x₀ = mg/k = 0.25 m', 'h=0：x底 = 2x₀', '向下为正']
         }
       ]
     }

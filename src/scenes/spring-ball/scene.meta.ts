@@ -4,7 +4,16 @@ import type { SceneMeta } from '../../platform/scene-contract';
 const demoProfile: SceneDemoProfile = {
   lessonTask: 'process',
   transport: 'visible',
-  readoutKeys: ['stage', 'velocity', 'acceleration'],
+  readoutKeys: [
+    'stage',
+    'position',
+    'velocity',
+    'acceleration',
+    'spring-force',
+    'net-force',
+    'direction',
+    'bottom'
+  ],
   renderHints: { contentScale: 1.05 },
   interactionHints: {
     touchTargetMinSize: 48,
@@ -29,7 +38,7 @@ export const springBallMeta: SceneMeta = {
   defaultParams: { releaseHeight: 0, mode: 0, preset: 0, autoRun: 1, slow: 0 },
   urlSyncKeys: ['releaseHeight', 'mode', 'preset', 'autoRun', 'slow'],
   testProfile: {
-    hasGraph: false,
+    hasGraph: true,
     hasTransport: true,
     supportsPresentation: true
   },
