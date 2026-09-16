@@ -12,9 +12,7 @@ const demoProfile: SceneDemoProfile = {
       'initialVelocity',
       'fieldStrength',
       'mass',
-      'resistance',
-      'autoRun',
-      'showCurrent'
+      'resistance'
     ]
   }
 };
@@ -38,19 +36,17 @@ export const singleLoopMeta: SceneMeta = {
     fieldStrength: 1.5,
     mass: 2,
     resistance: 2,
-    autoRun: 1,
-    showCurrent: 1
+    autoRun: 0
   },
   urlSyncKeys: [
     'initialVelocity',
     'fieldStrength',
     'mass',
     'resistance',
-    'autoRun',
-    'showCurrent'
+    'autoRun'
   ],
   testProfile: {
-    hasGraph: false,
+    hasGraph: true,
     hasTransport: true,
     supportsPresentation: true
   },

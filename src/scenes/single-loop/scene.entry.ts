@@ -1,16 +1,18 @@
 import type { DemoRenderHints } from '../../platform/demo-profile';
-import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import type { SceneLifecycle } from '../../platform/scene-contract';
+import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createStandardSceneEntry } from '../scene-entry-helpers';
 import { createSingleLoopView } from './scene.view';
 import {
   createSingleLoopSim,
+  regionLabel,
   type SingleLoopParams,
   type SingleLoopState
 } from './scene.sim';
 
 export type CreateSingleLoopSceneOptions = {
   canvas?: HTMLCanvasElement;
+  graphCanvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
   mode?: TeachingMode;
   demoHints?: DemoRenderHints;
@@ -29,10 +31,15 @@ export function createSingleLoopScene(
   setParams(params: Partial<SingleLoopParams>): SingleLoopParams;
   getReadoutItems(): Array<{ key: string; label: string; value: string }>;
   subscribe(listener: () => void): () => void;
+  attachGraphCanvas(canvas: HTMLCanvasElement): void;
+  startAll(): void;
+  pauseAll(): void;
+  getTransportState(): { isPlaying: boolean; speed: number };
 } {
   const sim = createSingleLoopSim();
   const view = createSingleLoopView({
     canvas: options.canvas,
+    graphCanvas: options.graphCanvas,
     theme: options.theme ?? 'light',
     mode: options.mode,
     demoHints: options.demoHints
@@ -43,31 +50,6 @@ export function createSingleLoopScene(
     getState: () => sim.getState(),
     onReadout: options.onReadout
   });
-  function getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string;
-  }> {
-    const state = sim.getState();
-    return [
-      { key: 'region', label: '阶段', value: state.region },
-      {
-        key: 'position',
-        label: '位置 x',
-        value: `${state.position.toFixed(2)} m`
-      },
-      {
-        key: 'velocity',
-        label: '速度 v',
-        value: `${state.velocity.toFixed(2)} m/s`
-      },
-      {
-        key: 'current',
-        label: '电流 i',
-        value: `${state.current.toFixed(2)} A`
-      }
-    ];
-  }
   return {
     ...base,
     getState: () => sim.getState(),
@@ -76,6 +58,44 @@ export function createSingleLoopScene(
     setParams: base.wrapAction((next: Partial<SingleLoopParams>) =>
       sim.setParams(next)
     ),
-    getReadoutItems
+    attachGraphCanvas(canvas: HTMLCanvasElement): void {
+      view.attachGraphCanvas(canvas);
+      base.renderAndEmit();
+    },
+    startAll: base.wrapAction(() => {
+      if (sim.getState().finished) sim.rewind();
+      sim.setParams({ autoRun: true });
+    }),
+    pauseAll: base.wrapAction(() => {
+      sim.setParams({ autoRun: false });
+    }),
+    getTransportState(): { isPlaying: boolean; speed: number } {
+      const state = sim.getState();
+      return {
+        isPlaying: state.params.autoRun && !state.finished,
+        speed: 1
+      };
+    },
+    getReadoutItems(): Array<{ key: string; label: string; value: string }> {
+      const state = sim.getState();
+      return [
+        { key: 'region', label: '区域', value: regionLabel(state.region) },
+        {
+          key: 'position',
+          label: 'x',
+          value: `${state.position.toFixed(2)} m`
+        },
+        {
+          key: 'velocity',
+          label: 'v',
+          value: `${state.velocity.toFixed(2)} m/s`
+        },
+        {
+          key: 'current',
+          label: 'i',
+          value: `${state.current.toFixed(2)} A`
+        }
+      ];
+    }
   };
 }

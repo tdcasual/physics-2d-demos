@@ -41,7 +41,7 @@
 |  26 | 测电源电动势和内阻实验                                | 电磁 | [`emf-internal-resistance`](../src/scenes/emf-internal-resistance/scene.meta.ts)                   | [详情](https://app.svgzhenli.com/resource/11ed455d-d6bc-4ac7-82a3-0a57b2ef969f) · [封面](https://img.svgzhenli.com/gallery-assets/covers/h7646etm75j1787678239426.png)  |  ☑   |
 |  27 | 电势电势能与E-x和φ-x图象                              | 电磁 | [`potential-energy-graphs`](../src/scenes/potential-energy-graphs/scene.meta.ts)                   | [详情](https://app.svgzhenli.com/resource/ff3b0997-708a-4845-8ce1-1f8a1a198337) · [封面](https://img.svgzhenli.com/gallery-assets/covers/gqj6h49siwi1787678193054.png)  |  ☑   |
 |  28 | 冲量动量定理与F-t图象                                 | 力学 | [`impulse-momentum`](../src/scenes/impulse-momentum/scene.meta.ts)                                 | [详情](https://app.svgzhenli.com/resource/55c5259d-0e1f-4ff8-b491-791c7df3c02e) · [封面](https://img.svgzhenli.com/gallery-assets/covers/tpvaff7fej91787660726259.png)  |  ☑   |
-|  29 | 单匝线框穿过有界匀强磁场                              | 电磁 | [`single-loop`](../src/scenes/single-loop/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/4c98b69d-8854-45ad-9914-82c68b961368) · [封面](https://img.svgzhenli.com/gallery-assets/covers/86no26fi9ne1774713114955.png)  |  ☐   |
+|  29 | 单匝线框穿过有界匀强磁场                              | 电磁 | [`single-loop`](../src/scenes/single-loop/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/4c98b69d-8854-45ad-9914-82c68b961368) · [封面](https://img.svgzhenli.com/gallery-assets/covers/86no26fi9ne1774713114955.png)  |  ☑   |
 |  30 | 电磁感应 - 电容棒与电阻棒模型                         | 电磁 | [`rod-model`](../src/scenes/rod-model/scene.meta.ts)                                               | [详情](https://app.svgzhenli.com/resource/58836693-454f-4300-aa52-0b99316f1c26) · [封面](https://img.svgzhenli.com/gallery-assets/covers/6hlwqwk5c7i1786857749323.png)  |  ☐   |
 |  31 | 匀速圆周运动与向心力模型                              | 力学 | [`centripetal-motion`](../src/scenes/centripetal-motion/scene.meta.ts)                             | [详情](https://app.svgzhenli.com/resource/2b810c0c-11fe-4d31-933f-770b06d1a88e) · [封面](https://img.svgzhenli.com/gallery-assets/covers/7e91dq40i21775496835830.png)   |  ☐   |
 |  32 | 安培力方向与导体平衡                                  | 电磁 | [`ampere-balance`](../src/scenes/ampere-balance/scene.meta.ts)                                     | [详情](https://app.svgzhenli.com/resource/1bfccf2e-a260-4be5-9a1d-d3dcd3e6cb00) · [封面](https://img.svgzhenli.com/gallery-assets/covers/t5xsdch4bs1787678015468.png)   |  ☐   |
@@ -371,6 +371,15 @@
 - 交互与布局验证：拖动 F-t 图探针联动时间、力、冲量、动量和速度；播放/暂停与重置同步 URL，重置恢复默认并保留 `audit` 查询。实际浏览器核对动画、图表、数据分区；`1280×720` 与 `390×844` 无横向溢出，移动端图表完整可见，console 无 error/warning。
 - 工程验证：专项 sim/view `13/13`；`pnpm verify:scene impulse-momentum` 全 `7/7` 步骤通过（`3138 passed / 127 skipped`），场景结构 `120` 项、布局契约 `4` 项、ESLint、全量 TypeScript、生产构建、bundle 预算及 `git diff --check` 通过。Grok Build 最终返回 `AGREE`。
 - 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/55c5259d-0e1f-4ff8-b491-791c7df3c02e.md` · [原始详情](https://app.svgzhenli.com/resource/55c5259d-0e1f-4ff8-b491-791c7df3c02e) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/tpvaff7fej91787660726259.png)
+
+### 29. 单匝线框穿过有界匀强磁场 (`single-loop`)
+
+- 状态：✅ Codex / Grok Build 交叉审计通过（2026-09-17）。
+- 修复：动画区只保留水平单匝线框、有限宽磁场、运动方向与必要标注；v-x、i-x 曲线放入独立图表区，x/v/i/区域读数放入数据区，移除冗余“显示电流/自动播放”控件，文案精简并采用 `split-right-graph-bottom`。
+- 物理核验：x 取线框前沿；进入 0–1 m、全入场 1–4 m、穿出 4–5 m。核对 `k=B²d²/(mR)`、进入/穿出速度斜率、`I=±Bdv/R` 与全入场 `I=0`；位置、速度、电流、区域和两图共用同一状态，闭式时间演化一致；覆盖场区边界、零速停滞及 B/m/R/v₀ 改变不瞬移。
+- 交互与布局验证：参数调整从起点重播；Reset 恢复默认且 URL 五个参数同步、保留 `audit=scene29`。真实浏览器点击 Reset 验证 B 从 3 回到 1.5；桌面/移动布局图表与数据分区清楚且无横溢，console 无修复后新增错误。
+- 工程验证：专项 sim/view 与真实 Reset 集成测试通过；`pnpm verify:scene single-loop` 全 `7/7` 步骤通过（`3147 passed / 126 skipped`），结构、布局契约、ESLint、TypeScript、构建和 bundle 预算通过；Prettier、`git diff --check` 通过。远程 Grok Build 最终返回 `AGREE`。
+- 证据：远程审计报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/4c98b69d-8854-45ad-9914-82c68b961368.md` · [原始详情](https://app.svgzhenli.com/resource/4c98b69d-8854-45ad-9914-82c68b961368) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/86no26fi9ne1774713114955.png)
 
 ## 复审记录模板
 

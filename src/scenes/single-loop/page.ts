@@ -1,30 +1,46 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { singleLoopControlsSchema } from './controls-schema';
+import { readSceneParams } from '../../app/url-sync';
 import { createSingleLoopScene } from './scene.entry';
 import { singleLoopMeta } from './scene.meta';
-import type { SingleLoopParams } from './scene.sim';
+import { asBool, type SingleLoopParams } from './scene.sim';
+import {
+  createSingleLoopControls,
+  withSingleLoopUrlSync
+} from '../../pages/single-loop-integration';
+
+const rawInitial = readSceneParams(singleLoopMeta);
+const NUMBER_KEYS = [
+  'initialVelocity',
+  'fieldStrength',
+  'mass',
+  'resistance'
+] as const;
 
 bootScenePage({
   meta: singleLoopMeta,
-  autoPlay: true,
-  preferredLayout: 'split-right',
+  autoPlay:
+    rawInitial.autoRun === undefined ? true : asBool(rawInitial.autoRun, true),
+  preferredLayout: 'split-right-graph-bottom',
   layoutConfig: {
-    defaultLeftRatio: 0.34,
+    defaultLeftRatio: 0.32,
     leftMinWidth: 300,
-    leftMaxWidth: 450,
+    leftMaxWidth: 440,
     controlColumns: 'auto',
-    readoutCollapsed: true,
+    readoutCollapsed: false,
     readoutLabel: '数据读数',
-    hasGraph: false
+    hasGraph: true,
+    graphHeight: 250,
+    graphMinHeight: 180,
+    graphMaxHeight: 340,
+    graphColumns: 1
   },
   createScene: ({ canvas, theme, mode, demoHints }) => {
     if (!canvas) throw new Error('single-loop requires a canvas');
     const scene = createSingleLoopScene({ canvas, theme, mode, demoHints });
     const scheduler = createRenderScheduler(() => scene.render());
     const dispose = scene.dispose.bind(scene);
-    return {
+    return withSingleLoopUrlSync({
       ...scene,
       step(dt: number): void {
         scene.step(dt);
@@ -34,59 +50,20 @@ bootScenePage({
         scheduler.dispose();
         dispose();
       }
-    };
-  },
-  createControls: ({ mount, scene, scheduleRender, writeParam }) => {
-    const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
-      mount,
-      schema: singleLoopControlsSchema,
-      onChange: (key, value) => {
-        if (
-          key === 'initialVelocity' ||
-          key === 'fieldStrength' ||
-          key === 'mass' ||
-          key === 'resistance'
-        ) {
-          scene.setParams({
-            [key]: Number(value)
-          } as Partial<SingleLoopParams>);
-          writeParam?.(key, value);
-        } else if (key === 'autoRun' || key === 'showCurrent') {
-          scene.setParams({
-            [key]: Boolean(value)
-          } as Partial<SingleLoopParams>);
-          writeParam?.(key, value ? 1 : 0);
-        }
-        render();
-      },
-      onAction: () => {}
     });
-    return {
-      setValue: (key: string, value: number | string | boolean) =>
-        renderer.setValue(key, value),
-      setActive: (key: string, value: string) => renderer.setActive(key, value),
-      dispose: () => renderer.dispose()
-    };
   },
+  createControls: (options) => createSingleLoopControls(options),
   paramSync: {
     applyParam: (key, value, ctx) => {
-      if (
-        key === 'initialVelocity' ||
-        key === 'fieldStrength' ||
-        key === 'mass' ||
-        key === 'resistance'
-      ) {
+      if ((NUMBER_KEYS as readonly string[]).includes(key)) {
         const n = Number(value);
         if (!Number.isFinite(n)) return false;
         ctx.scene.setParams({ [key]: n } as Partial<SingleLoopParams>);
         ctx.setControlValue(key, n);
         return true;
       }
-      if (key === 'autoRun' || key === 'showCurrent') {
-        const on = Number(value) > 0;
-        ctx.scene.setParams({ [key]: on } as Partial<SingleLoopParams>);
-        ctx.setControlValue(key, on);
+      if (key === 'autoRun') {
+        ctx.scene.setParams({ autoRun: asBool(value, false) });
         return true;
       }
       return false;

@@ -3,7 +3,7 @@ import type { ControlsSchema } from '../../platform/controls-schema';
 export const singleLoopControlsSchema: ControlsSchema = {
   sections: [
     {
-      title: '实验参数',
+      title: '参数',
       collapsed: false,
       fields: [
         {
@@ -49,29 +49,16 @@ export const singleLoopControlsSchema: ControlsSchema = {
       ]
     },
     {
-      title: '播放',
-      collapsed: false,
-      fields: [
-        { type: 'toggle', key: 'autoRun', label: '自动播放', value: true },
-        {
-          type: 'toggle',
-          key: 'showCurrent',
-          label: '显示电流箭头',
-          value: true
-        }
-      ]
-    },
-    {
-      title: '规律',
+      title: '关系',
       collapsed: true,
       fields: [
         {
           type: 'hint',
           key: 'formula',
           lines: [
-            'E = Bdv，i = E/R',
-            '进入/穿出：v-x 斜率 = −B²d²/(mR)',
-            '匀速区：i = 0'
+            'E = Bdv，I = ±Bdv/R（进入为正，穿出为负）',
+            '进入/穿出：v = v起点 − kΔx，k = B²d²/(mR)',
+            '匀速区：Φ 不变，I = 0'
           ]
         }
       ]
