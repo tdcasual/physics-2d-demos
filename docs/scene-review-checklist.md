@@ -34,7 +34,7 @@
 |  19 | 木块与木板相对滑动物理模型                            | 力学 | [`block-board`](../src/scenes/block-board/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/ccd3490a-6854-4a58-942e-2dc8e81a4fd9) · [封面](https://img.svgzhenli.com/gallery-assets/covers/6pvv1payb171774685383168.png)  |  ✅  |
 |  20 | 示波管的原理与波形同步                                | 电磁 | [`oscilloscope`](../src/scenes/oscilloscope/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/5a841fe8-5060-47af-a132-cf4511d2d4eb) · [封面](https://img.svgzhenli.com/gallery-assets/covers/pfv1s8rnxzg1778497322822.png)  |  ✅  |
 |  21 | 打点计时器原理演示                                    | 力学 | [`ticker-timer`](../src/scenes/ticker-timer/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/0e146679-df0c-429f-b982-9e3c1c0c2367) · [封面](https://img.svgzhenli.com/gallery-assets/covers/aorki9og3yq1783606121977.png)  |  ✅  |
-|  22 | 带电粒子在匀强磁场中的圆周运动                        | 电磁 | [`charged-particle-circle`](../src/scenes/charged-particle-circle/scene.meta.ts)                   | [详情](https://app.svgzhenli.com/resource/bcf1789c-95eb-480d-9b4e-e9eb1ee6210c) · [封面](https://img.svgzhenli.com/gallery-assets/covers/ohou8hat4jj1774711562323.png)  |  ☐   |
+|  22 | 带电粒子在匀强磁场中的圆周运动                        | 电磁 | [`charged-particle-circle`](../src/scenes/charged-particle-circle/scene.meta.ts)                   | [详情](https://app.svgzhenli.com/resource/bcf1789c-95eb-480d-9b4e-e9eb1ee6210c) · [封面](https://img.svgzhenli.com/gallery-assets/covers/ohou8hat4jj1774711562323.png)  |  ✅  |
 |  23 | 小球落到竖直弹簧与简谐运动                            | 力学 | [`spring-ball`](../src/scenes/spring-ball/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/75ac35a6-d777-4e05-b192-5ab524c74832) · [封面](https://img.svgzhenli.com/gallery-assets/covers/532og1b4u851788370155234.png)  |  ☐   |
 |  24 | 电阻测量法设计（限流接法、分压接法、电流表的内外接）  | 电磁 | [`resistor-measurement`](../src/scenes/resistor-measurement/scene.meta.ts)                         | [详情](https://app.svgzhenli.com/resource/250ca6cd-36d9-4ed5-9983-d4a2e9058251) · [封面](https://img.svgzhenli.com/gallery-assets/covers/zq29kqwn07m1781283130413.png)  |  ☐   |
 |  25 | 高精度测量工具读数原理（游标卡尺&螺旋测微器）         | 力学 | [`precision-tools`](../src/scenes/precision-tools/scene.meta.ts)                                   | [详情](https://app.svgzhenli.com/resource/db871107-556d-4e2f-936e-52ebd2767a54) · [封面](https://img.svgzhenli.com/gallery-assets/covers/08nk6xz5mriq1778077856552.png) |  ☐   |
@@ -308,6 +308,15 @@
 - 交互与布局验证：URL 数值/布尔参数规范化，首帧即采用 URL 初始参数，重置恢复该基线并同步控件；`autoRun=0` 保持暂停；动画区无图表、数据卡或说明段落。浏览器 `1280×720` 浅色/深色、演示模式和移动端堆叠均无溢出/遮挡；数据区实测 61 点、`3.50 m/s`、`2.50 m/s²`，console 无 error/warning。
 - 工程验证：专项单测 `10/10`（sim/audit `6` + view `4`）；`pnpm verify:scene ticker-timer` 全 `7/7` 步骤通过（`3133 passed / 129 skipped`）；tsc、ESLint、生产构建、布局契约、bundle 预算与 `git diff --check` 通过（场景页 JS `132.86 kB / 180 kB`）。
 - 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/0e146679-df0c-429f-b982-9e3c1c0c2367.md` · [原始详情](https://app.svgzhenli.com/resource/0e146679-df0c-429f-b982-9e3c1c0c2367) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/aorki9og3yq1783606121977.png)
+
+### 22. 带电粒子在匀强磁场中的圆周运动 (`charged-particle-circle`)
+
+- 状态：✅ Codex / Grok Build 交叉审计通过（2026-09-16）。
+- 修复：按 SVGZhenli 参考重构匀强磁场 ×/·、虚线圆轨道、粒子、R 半径线、速度 v 与洛伦兹力 F 向量及短尾迹；动画 canvas 仅保留演示要素，移除左手定则说明卡、参数/公式/读数/状态文案；公式进入折叠关系区，R/T/|F| 与极简结论进入标准数据区，`split-right`、`hasGraph:false`、移动端堆叠保持项目布局。
+- 物理核验：`R=mv/(|q|B)`、`T=2πm/(|q|B)` 且与 v 无关、`|F|=|q|vB`；角速度 `|q|B/m`，q 与磁场方向共同决定旋向；q=0、非法数值安全归一化，自动播放/暂停不误推进。
+- 交互与布局验证：URL 初值支持数值、0/1 与 true/false 布尔值、into/out 或 0/1 方向值，第一帧即生效；速度调节使轨道半径变化，磁场方向切换改变 ×/· 与旋向，重置恢复 URL 基线并同步控件。浅色/深色、演示模式和移动端堆叠均无横向溢出；数据 tab 独立，无动画区内容泄漏；浏览器 console 无 error/warning。
+- 工程验证：专项单测 `15/15`（sim `11` + view `4`）；`pnpm verify:scene charged-particle-circle` 全 `7/7` 步骤通过（`3138 passed / 129 skipped`）；tsc、ESLint、生产构建、布局契约、bundle 预算和 `git diff --check` 通过（场景页 JS `132.87 kB / 180 kB`）。
+- 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/bcf1789c-95eb-480d-9b4e-e9eb1ee6210c.md` · [原始详情](https://app.svgzhenli.com/resource/bcf1789c-95eb-480d-9b4e-e9eb1ee6210c) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/ohou8hat4jj1774711562323.png) · Grok Build 最终意见：`AGREED: charged-particle-circle is ready to commit.`
 
 ## 复审记录模板
 

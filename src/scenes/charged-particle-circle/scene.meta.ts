@@ -4,7 +4,7 @@ import type { SceneMeta } from '../../platform/scene-contract';
 const demoProfile: SceneDemoProfile = {
   lessonTask: 'lecture',
   transport: 'visible',
-  readoutKeys: ['radius', 'period', 'force'],
+  readoutKeys: ['radius', 'period', 'force', 'period-hint'],
   renderHints: { contentScale: 1.1 },
   interactionHints: {
     touchTargetMinSize: 48,

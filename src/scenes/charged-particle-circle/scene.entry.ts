@@ -3,6 +3,7 @@ import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import type { SceneLifecycle } from '../../platform/scene-contract';
 import { createStandardSceneEntry } from '../scene-entry-helpers';
 import {
+  asFieldDirection,
   createChargedParticleSim,
   type ChargedParticleParams,
   type ChargedParticleState,
@@ -16,12 +17,22 @@ export type CreateChargedParticleSceneOptions = {
   mode?: TeachingMode;
   demoHints?: DemoRenderHints;
   onReadout?: (state: ChargedParticleState) => void;
+  initialParams?: Partial<ChargedParticleParams>;
 };
 
-export function asFieldDirection(value: unknown): FieldDirection | undefined {
-  if (value === 'into' || value === 'out') return value;
-  if (typeof value === 'number') return value > 0 ? 'out' : 'into';
-  return undefined;
+function formatRadius(radius: number): string {
+  if (!Number.isFinite(radius)) return '—';
+  return `${radius >= 10 ? radius.toFixed(0) : radius.toFixed(1)} m`;
+}
+
+function formatPeriod(period: number): string {
+  if (!Number.isFinite(period) || period <= 0) return '—';
+  return `${(period / Math.PI).toFixed(2)}π s`;
+}
+
+function formatForce(force: number): string {
+  if (!Number.isFinite(force)) return '—';
+  return `${force.toFixed(1)} N`;
 }
 
 export function createChargedParticleScene(
@@ -37,7 +48,7 @@ export function createChargedParticleScene(
   getReadoutItems(): Array<{ key: string; label: string; value: string }>;
   subscribe(listener: () => void): () => void;
 } {
-  const sim = createChargedParticleSim();
+  const sim = createChargedParticleSim(options.initialParams);
   const view = createChargedParticleView({
     canvas: options.canvas,
     theme: options.theme ?? 'light',
@@ -48,8 +59,10 @@ export function createChargedParticleScene(
     sim,
     view,
     getState: () => sim.getState(),
-    onReadout: options.onReadout
+    onReadout: options.onReadout,
+    resetView: () => view.reset()
   });
+
   function getReadoutItems(): Array<{
     key: string;
     label: string;
@@ -60,20 +73,26 @@ export function createChargedParticleScene(
       {
         key: 'radius',
         label: '轨道半径 R',
-        value: `${state.radius.toFixed(0)}`
+        value: formatRadius(state.radius)
       },
       {
         key: 'period',
         label: '运动周期 T',
-        value: `${(state.period / Math.PI).toFixed(1)}π`
+        value: formatPeriod(state.period)
       },
       {
         key: 'force',
-        label: '洛伦兹力',
-        value: `${state.forceMagnitude.toFixed(1)}`
+        label: '洛伦兹力 |F|',
+        value: formatForce(state.forceMagnitude)
+      },
+      {
+        key: 'period-hint',
+        label: '提示',
+        value: 'T 与 v 无关'
       }
     ];
   }
+
   return {
     ...base,
     getState: () => sim.getState(),
@@ -85,3 +104,6 @@ export function createChargedParticleScene(
     getReadoutItems
   };
 }
+
+export { asFieldDirection };
+export type { FieldDirection };
