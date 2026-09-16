@@ -28,7 +28,7 @@
 |  13 | 三大性质力交互课件                                    | 力学 | [`three-forces`](../src/scenes/three-forces/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/a6e3e383-482e-4ad1-a69b-f7ddaeaf8aee) · [封面](https://img.svgzhenli.com/gallery-assets/covers/ihldajl8mpl1781095386830.png)  |  ✅  |
 |  14 | 原子核比结合能与质量数关系                            | 近代 | [`binding-energy`](../src/scenes/binding-energy/scene.meta.ts)                                     | [详情](https://app.svgzhenli.com/resource/56ab7ed1-01c6-4cfa-89d3-cae38e24c433) · [封面](https://img.svgzhenli.com/gallery-assets/covers/hlgy1dsu9wh1774799292161.png)  |  ✅  |
 |  15 | 探究加速度与力质量关系实验                            | 力学 | [`accel-force`](../src/scenes/accel-force/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/fe4a9b83-9f96-4f06-9ad6-d64ebd75c515) · [封面](https://img.svgzhenli.com/gallery-assets/covers/qgo9e87x771787678068367.png)   |  ✅  |
-|  16 | 单缝衍射条纹分布                                      | 光学 | [`single-slit`](../src/scenes/single-slit/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/50754223-e2c0-405d-9098-cfa3d2fedaca) · [封面](https://img.svgzhenli.com/gallery-assets/covers/7jar1z9ybu81774773489050.png)  |  ☐   |
+|  16 | 单缝衍射条纹分布                                      | 光学 | [`single-slit`](../src/scenes/single-slit/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/50754223-e2c0-405d-9098-cfa3d2fedaca) · [封面](https://img.svgzhenli.com/gallery-assets/covers/7jar1z9ybu81774773489050.png)  |  ✅  |
 |  17 | 磁镜与磁约束交互                                      | 电磁 | [`magnetic-mirror`](../src/scenes/magnetic-mirror/scene.meta.ts)                                   | [详情](https://app.svgzhenli.com/resource/c540be11-ba80-4952-8a22-570504fe1d69) · [封面](https://img.svgzhenli.com/gallery-assets/covers/q2ltmtzvpg1786796521171.png)   |  ☐   |
 |  18 | 匀变速直线运动位移与时间关系                          | 力学 | [`displacement-time`](../src/scenes/displacement-time/scene.meta.ts)                               | [详情](https://app.svgzhenli.com/resource/f8d783bf-0b36-425f-ae53-a692dba4aff9) · [封面](https://img.svgzhenli.com/gallery-assets/covers/noonxbfliw1774676556531.png)   |  ☐   |
 |  19 | 木块与木板相对滑动物理模型                            | 力学 | [`block-board`](../src/scenes/block-board/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/ccd3490a-6854-4a58-942e-2dc8e81a4fd9) · [封面](https://img.svgzhenli.com/gallery-assets/covers/6pvv1payb171774685383168.png)  |  ☐   |
@@ -254,6 +254,15 @@
 - 交互与布局验证：释放/复位/记录/清空/重新实验、模式切换、平衡摩擦力和 URL 参数通过；独立 CUA 复核 `1280×720`、`1024×768`、`900×768`、`768×768` 均使图表容器和 canvas 完整落在视口内，`390×844` 的控制/图表/数据标签分离且图表完整可见，无页面溢出；动画区无图表/数据卡，控制台新会话无 error。
 - 工程验证：Grok Build 完成布局根因修复与专项测试；独立复核 graph section 在桌面高度 220px、canvas 底部预留 8px，`git diff --check`、专项单测、ESLint、TypeScript 检查通过后提交。
 - 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/fe4a9b83-9f96-4f06-9ad6-d64ebd75c515.md` · [原始详情](https://app.svgzhenli.com/resource/fe4a9b83-9f96-4f06-9ad6-d64ebd75c515) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/qgo9e87x771787678068367.png)
+
+### 16. 单缝衍射条纹分布 (`single-slit`)
+
+- 状态：✅ Grok Build 审计通过（2026-09-16）。
+- 修复：动画区只保留激光器、单缝 a、入射光、探测屏衍射图样、绿色探测器/追踪线、θ、L 与 I/I₀ 曲线；移除 canvas 右侧参数/公式/数据卡和长文案。`preferredLayout:'split-right'`，读数默认折叠，`hasGraph:false`（曲线即主视觉）。舞台改为独立 960×660 并为 transport 下移装置。顺带把 `accel-force` 图表兜底宽高 400/200 收进常量，消除 scene-standard 裸尺寸棘轮失败。
+- 物理核验：Fraunhofer `I/I₀=(sinβ/β)²`，`β=π a sinθ/λ`，β=0 连续；小角 `x₁≈λL/a`、`Δx≈2λL/a`；λ↑ / a↓ / L↑ 条纹变宽；探测器 θ 与 I 与曲线联动；autoScan 边界反转、暂停冻结、复位、URL 0/1 由专项测试覆盖。
+- 交互与布局验证：独立 CUA `1280×720` 标准模式→演示模式→标准模式→演示模式往返无白屏、无曲线截断；演示模式全宽读数栏与动画区不重叠，动画区无数据卡；λ 变绿且包络变宽；移动端存在「控制/数据」标签。装置在 transport 下方完整可见。
+- 工程验证：专项 `21/21`（sim 16 + view 5，含 docked-bottom 几何契约）；tsc、ESLint、`git diff --check`、构建和 bundle 预算通过（场景页 JS 140.18 kB / 180 kB）。`verify:scene` 契约集 `3142 passed / 131 skipped`。
+- 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/50754223-e2c0-405d-9098-cfa3d2fedaca.md` · [原始详情](https://app.svgzhenli.com/resource/50754223-e2c0-405d-9098-cfa3d2fedaca) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/7jar1z9ybu81774773489050.png)
 
 ## 复审记录模板
 

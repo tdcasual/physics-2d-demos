@@ -1,13 +1,19 @@
-import type { SceneMeta } from '../../platform/scene-contract';
 import type { SceneDemoProfile } from '../../platform/demo-profile';
+import type { SceneMeta } from '../../platform/scene-contract';
 
 const demoProfile: SceneDemoProfile = {
   lessonTask: 'process',
-  readoutKeys: ['lambda', 'angle', 'first-minimum', 'central-width'],
+  readoutKeys: ['theta', 'intensity', 'firstMinimum', 'centralWidth'],
   renderHints: { contentScale: 1.15 },
   interactionHints: {
     touchTargetMinSize: 48,
-    visibleControlKeys: ['lambda', 'slitWidth', 'distance', 'detectorX']
+    visibleControlKeys: [
+      'lambda',
+      'slitWidth',
+      'distance',
+      'detectorX',
+      'autoScan'
+    ]
   }
 };
 

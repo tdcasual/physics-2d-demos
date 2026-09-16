@@ -1,39 +1,40 @@
 import type { ControlsSchema } from '../../platform/controls-schema';
+import { singleSlitConstants as C } from './scene.sim';
 
 export const singleSlitControlsSchema: ControlsSchema = {
   sections: [
     {
-      title: '实验参数',
+      title: '参数',
       collapsed: false,
       fields: [
         {
           type: 'slider',
           key: 'lambda',
           label: '波长 λ',
-          min: 400,
-          max: 700,
+          min: C.lambdaMin,
+          max: C.lambdaMax,
           step: 1,
-          value: 670,
+          value: C.lambdaDefault,
           unit: 'nm'
         },
         {
           type: 'slider',
           key: 'slitWidth',
-          label: '狭缝宽度 a',
-          min: 0.08,
-          max: 0.6,
+          label: '缝宽 a',
+          min: C.slitMin,
+          max: C.slitMax,
           step: 0.01,
-          value: 0.22,
+          value: C.slitDefault,
           unit: 'mm'
         },
         {
           type: 'slider',
           key: 'distance',
-          label: '缝屏距离 L',
-          min: 0.8,
-          max: 4,
+          label: '缝屏距 L',
+          min: C.distanceMin,
+          max: C.distanceMax,
           step: 0.1,
-          value: 2.4,
+          value: C.distanceDefault,
           unit: 'm'
         }
       ]
@@ -46,23 +47,23 @@ export const singleSlitControlsSchema: ControlsSchema = {
           type: 'slider',
           key: 'detectorX',
           label: '位置 x',
-          min: -32,
-          max: 32,
+          min: C.detectorMin,
+          max: C.detectorMax,
           step: 0.1,
-          value: 7.31,
+          value: C.detectorDefault,
           unit: 'mm'
         },
         { type: 'toggle', key: 'autoScan', label: '自动扫描', value: true }
       ]
     },
     {
-      title: '结论',
+      title: '要点',
       collapsed: true,
       fields: [
         {
           type: 'hint',
           key: 'formula',
-          lines: ['I/I₀ = (sinβ/β)²', 'x₁ = λL/a', 'Δx ≈ 2λL/a']
+          lines: ['I/I₀ = (sinβ/β)²', 'x₁ ≈ λL/a', 'Δx ≈ 2λL/a']
         }
       ]
     }
