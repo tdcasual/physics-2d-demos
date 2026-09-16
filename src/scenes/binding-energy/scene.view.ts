@@ -1,76 +1,75 @@
-import type { TeachingMode, TeachingTheme } from '../../platform/standards';
+import { scaledSize } from '../../core/canvas-sizing';
 import type { DemoRenderHints } from '../../platform/demo-profile';
+import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
-import { bindingEnergyConstants, type BindingEnergyState } from './scene.sim';
+import {
+  BINDING_ENERGY_DATA,
+  BINDING_ENERGY_LABELED,
+  BINDING_ENERGY_X_TITLE,
+  BINDING_ENERGY_Y_TITLE,
+  bindingEnergyAt,
+  bindingEnergyConstants as C,
+  chartX,
+  chartY,
+  clampLabelX,
+  estimateLabelWidth,
+  nuclideLabelAnchor,
+  stageLayoutFrom,
+  stageTransform,
+  type BindingEnergyLabelAnchor,
+  type BindingEnergyState
+} from './scene.sim';
+
 export type CreateBindingEnergyViewOptions = {
   canvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
   mode?: TeachingMode;
   demoHints?: DemoRenderHints;
 };
-const {
-  baseWidth: BASE_W,
-  baseHeight: BASE_H,
-  fieldWidth: FIELD_W,
-  chartLeft: LEFT,
-  chartRight: RIGHT,
-  chartTop: TOP,
-  chartBottom: BOTTOM,
-  panelWidth: PANEL_W,
-  panelInset: INSET,
-  titleY: TITLE_Y,
-  formulaTop: FORMULA_TOP,
-  formulaHeight: FORMULA_HEIGHT,
-  valuesTop: VALUES_TOP,
-  valuesHeight: VALUES_HEIGHT,
-  valuesStartY: VALUES_START_Y,
-  valuesRowGap: VALUES_ROW_GAP,
-  gridStepX: GRID_X,
-  gridStepY: GRID_Y,
-  pointRadius: POINT_R,
-  ironA: IRON_A
-} = bindingEnergyConstants;
+
 type Palette = {
   bg: string;
-  panel: string;
   grid: string;
   ink: string;
   muted: string;
   red: string;
-  blue: string;
   teal: string;
   gold: string;
-  border: string;
-  soft: string;
+  ironFill: string;
+  wash: string;
+  selected: string;
+  marker: string;
 };
+
 const PALETTE: Record<TeachingTheme, Palette> = {
   light: {
     bg: '#fbfaf7',
-    panel: '#fff',
-    grid: '#dce4ea',
+    grid: '#e2e7ee',
     ink: '#303744',
-    muted: '#8190a0',
+    muted: '#8b97a5',
     red: '#ef4050',
-    blue: '#3c80a8',
     teal: '#2a9d8f',
     gold: '#e6a719',
-    border: '#d2d9e2',
-    soft: '#f0f2f5'
+    ironFill: '#fff6d8',
+    wash: 'rgba(239, 64, 80, 0.08)',
+    selected: '#f4b942',
+    marker: '#ffffff'
   },
   dark: {
     bg: '#101827',
-    panel: '#172235',
     grid: '#435169',
     ink: '#eef2f7',
     muted: '#9eabbc',
     red: '#fb7185',
-    blue: '#60a5fa',
     teal: '#34d399',
     gold: '#fbbf24',
-    border: '#3c4b61',
-    soft: '#253249'
+    ironFill: '#3f2f12',
+    wash: 'rgba(251, 113, 133, 0.12)',
+    selected: '#fbbf24',
+    marker: '#172235'
   }
 };
+
 function text(
   ctx: CanvasRenderingContext2D,
   value: string,
@@ -87,247 +86,335 @@ function text(
   ctx.textBaseline = 'middle';
   ctx.fillText(value, x, y);
 }
-function drawArrow(
+
+function measuredWidth(
+  ctx: CanvasRenderingContext2D,
+  value: string,
+  size: number
+): number {
+  const width = ctx.measureText(value).width;
+  if (Number.isFinite(width) && width > 1) return width;
+  return estimateLabelWidth(value, size);
+}
+
+function fillLabel(
+  ctx: CanvasRenderingContext2D,
+  value: string,
+  x: number,
+  y: number,
+  color: string,
+  size: number,
+  align: BindingEnergyLabelAnchor['align'] = 'left',
+  weight = 600
+): void {
+  ctx.font = `${weight} ${size}px sans-serif`;
+  const width = measuredWidth(ctx, value, size);
+  const drawX = clampLabelX(x, width, align);
+  const half = size * 0.55;
+  const drawY = Math.min(
+    Math.max(y, C.labelInset + half),
+    C.baseHeight - C.labelInset - half
+  );
+  text(ctx, value, drawX, drawY, color, size, align, weight);
+}
+
+function arrow(
   ctx: CanvasRenderingContext2D,
   x1: number,
   y1: number,
   x2: number,
   y2: number,
-  color: string
+  color: string,
+  width: number,
+  head: number
 ): void {
   const dx = x2 - x1;
   const dy = y2 - y1;
-  const n = Math.hypot(dx, dy);
-  if (n < 2) return;
-  const ux = dx / n;
-  const uy = dy / n;
+  const length = Math.hypot(dx, dy);
+  if (length < 2) return;
+  const ux = dx / length;
+  const uy = dy / length;
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
-  ctx.lineWidth = 3;
-  ctx.setLineDash([8, 7]);
+  ctx.lineWidth = width;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
   ctx.beginPath();
   ctx.moveTo(x1, y1);
   ctx.lineTo(x2, y2);
   ctx.stroke();
-  ctx.setLineDash([]);
   ctx.beginPath();
   ctx.moveTo(x2, y2);
-  ctx.lineTo(x2 - ux * 12 - uy * 6, y2 - uy * 12 + ux * 6);
-  ctx.lineTo(x2 - ux * 12 + uy * 6, y2 - uy * 12 - ux * 6);
+  ctx.lineTo(
+    x2 - ux * head - uy * head * 0.45,
+    y2 - uy * head + ux * head * 0.45
+  );
+  ctx.lineTo(
+    x2 - ux * head + uy * head * 0.45,
+    y2 - uy * head - ux * head * 0.45
+  );
   ctx.closePath();
   ctx.fill();
 }
-function chartX(A: number): number {
-  return LEFT + (RIGHT - LEFT) * (A / 250);
-}
-function chartY(E: number): number {
-  return BOTTOM - (BOTTOM - TOP) * (E / 9);
-}
-function drawChart(
+
+function drawAxes(
   ctx: CanvasRenderingContext2D,
-  state: BindingEnergyState,
   p: Palette,
-  scale: number
+  font: (n: number) => number
 ): void {
   ctx.fillStyle = p.bg;
-  ctx.fillRect(0, 0, FIELD_W, BASE_H);
+  ctx.fillRect(0, 0, C.baseWidth, C.baseHeight);
+
+  const ironX = chartX(C.ironA);
+  ctx.fillStyle = p.wash;
+  ctx.fillRect(
+    chartX(0),
+    C.chartTop,
+    ironX - chartX(0),
+    C.chartBottom - C.chartTop
+  );
+
   ctx.strokeStyle = p.grid;
   ctx.lineWidth = 1;
-  for (let x = LEFT; x <= RIGHT; x += GRID_X) {
+  for (let a = 0; a <= C.axisMaxA; a += C.gridStepX) {
+    const x = chartX(a);
     ctx.beginPath();
-    ctx.moveTo(x, TOP);
-    ctx.lineTo(x, BOTTOM);
+    ctx.moveTo(x, C.chartTop);
+    ctx.lineTo(x, C.chartBottom);
     ctx.stroke();
+    if (a !== 0 && a < C.axisMaxA) {
+      text(ctx, `${a}`, x, C.chartBottom + 16, p.ink, font(11), 'center');
+    }
   }
-  for (let y = 0; y <= 9; y += GRID_Y) {
-    const py = chartY(y);
+  for (let e = 0; e <= 8; e += C.gridStepY) {
+    const y = chartY(e);
     ctx.beginPath();
-    ctx.moveTo(LEFT, py);
-    ctx.lineTo(RIGHT, py);
+    ctx.moveTo(C.chartLeft, y);
+    ctx.lineTo(C.chartRight, y);
     ctx.stroke();
-    text(ctx, `${y}`, LEFT - 14, py, p.muted, 11 * scale, 'right');
+    text(ctx, `${e}`, C.chartLeft - 10, y, p.muted, font(11), 'right');
   }
+
   ctx.strokeStyle = p.ink;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 1.8;
+  ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.moveTo(LEFT, BOTTOM);
-  ctx.lineTo(RIGHT + 12, BOTTOM);
-  ctx.moveTo(LEFT, BOTTOM);
-  ctx.lineTo(LEFT, TOP - 12);
+  ctx.moveTo(C.chartLeft, C.chartBottom);
+  ctx.lineTo(C.chartLeft, C.chartTop);
   ctx.stroke();
-  text(ctx, '质量数 A', RIGHT, BOTTOM + 24, p.ink, 14 * scale, 'right', 700);
-  text(
+  arrow(
     ctx,
-    '比结合能 E/A (MeV)',
-    LEFT - 8,
-    TOP - 28,
+    C.chartLeft,
+    C.chartBottom,
+    C.chartLeft,
+    C.chartTop - 8,
     p.ink,
-    15 * scale,
+    1.8,
+    9
+  );
+  ctx.beginPath();
+  ctx.moveTo(C.chartLeft, C.chartBottom);
+  ctx.lineTo(C.chartRight, C.chartBottom);
+  ctx.stroke();
+  arrow(
+    ctx,
+    C.chartLeft,
+    C.chartBottom,
+    C.chartRight + 8,
+    C.chartBottom,
+    p.ink,
+    1.8,
+    9
+  );
+  text(ctx, '0', C.chartLeft - 10, C.chartBottom, p.ink, font(11), 'right');
+  const titleSize = font(13);
+  const titleX = C.chartLeft + 8;
+  const titleLine2 = C.chartTop - 16;
+  const titleLine1 = titleLine2 - titleSize * 1.2;
+  fillLabel(
+    ctx,
+    BINDING_ENERGY_Y_TITLE[0],
+    titleX,
+    titleLine1,
+    p.ink,
+    titleSize,
     'left',
     700
   );
-  const points = [
-    { A: 1, E: 0 },
-    { A: 4, E: 7.07 },
-    { A: 12, E: 7.68 },
-    { A: 16, E: 7.98 },
-    { A: 40, E: 8.55 },
-    { A: 56, E: 8.79 },
-    { A: 89, E: 8.63 },
-    { A: 140, E: 8.42 },
-    { A: 238, E: 7.57 }
-  ];
+  fillLabel(
+    ctx,
+    BINDING_ENERGY_Y_TITLE[1],
+    titleX,
+    titleLine2,
+    p.ink,
+    titleSize,
+    'left',
+    700
+  );
+  fillLabel(
+    ctx,
+    BINDING_ENERGY_X_TITLE,
+    C.chartRight,
+    C.chartBottom + 30,
+    p.ink,
+    font(13),
+    'right',
+    700
+  );
+
   ctx.strokeStyle = p.gold;
-  ctx.lineWidth = 4;
+  ctx.lineWidth = 1.4;
+  ctx.setLineDash([5, 5]);
   ctx.beginPath();
-  points.forEach((point, index) => {
-    const x = chartX(point.A);
-    const y = chartY(point.E);
-    if (index === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
+  ctx.moveTo(ironX, C.chartBottom);
+  ctx.lineTo(ironX, chartY(C.ironBinding));
   ctx.stroke();
-  points.forEach((point) => {
-    ctx.fillStyle = point.A === IRON_A ? p.gold : p.panel;
-    ctx.strokeStyle = point.A === IRON_A ? p.gold : p.teal;
-    ctx.lineWidth = point.A === IRON_A ? 4 : 2;
-    ctx.beginPath();
-    ctx.arc(
-      chartX(point.A),
-      chartY(point.E),
-      point.A === IRON_A ? 13 : POINT_R,
-      0,
-      Math.PI * 2
+  ctx.setLineDash([]);
+}
+
+function drawCurve(ctx: CanvasRenderingContext2D, p: Palette): void {
+  const gradient = ctx.createLinearGradient(
+    chartX(C.aMin),
+    0,
+    chartX(C.aMax),
+    0
+  );
+  gradient.addColorStop(0, p.red);
+  gradient.addColorStop(C.ironA / C.axisMaxA, p.gold);
+  gradient.addColorStop(1, p.teal);
+  ctx.strokeStyle = gradient;
+  ctx.lineWidth = 4;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  for (let a = C.aMin; a <= C.aMax; a += 1) {
+    const x = chartX(a);
+    const y = chartY(bindingEnergyAt(a));
+    if (a === C.aMin) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}
+
+function drawNuclides(
+  ctx: CanvasRenderingContext2D,
+  p: Palette,
+  font: (n: number) => number
+): void {
+  for (const point of BINDING_ENERGY_DATA) {
+    const labeled = (BINDING_ENERGY_LABELED as readonly string[]).includes(
+      point.symbol
     );
+    if (!labeled && point.A !== C.ironA) continue;
+    const x = chartX(point.A);
+    const y = chartY(point.binding);
+    const iron = point.A === C.ironA;
+    ctx.fillStyle = iron ? p.ironFill : p.marker;
+    ctx.strokeStyle = iron ? p.gold : p.teal;
+    ctx.lineWidth = iron ? 3.5 : 2;
+    ctx.beginPath();
+    ctx.arc(x, y, iron ? C.ironRadius : C.pointRadius, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-    if ([4, 16, IRON_A, 89, 238].includes(point.A))
-      text(
-        ctx,
-        point.A === IRON_A ? 'Fe-56' : point.A === 238 ? 'U-238' : `${point.A}`,
-        chartX(point.A),
-        chartY(point.E) - 18,
-        p.ink,
-        12 * scale,
-        'center',
-        700
-      );
-  });
-  const currentX = chartX(state.point.A);
-  const currentY = chartY(state.point.binding);
-  ctx.fillStyle = p.red;
-  ctx.beginPath();
-  ctx.arc(currentX, currentY, POINT_R + 3, 0, Math.PI * 2);
-  ctx.fill();
-  text(
+    if (!labeled) continue;
+    const anchor = nuclideLabelAnchor(point.symbol);
+    fillLabel(
+      ctx,
+      point.symbol,
+      x + anchor.dx,
+      y + anchor.dy,
+      p.ink,
+      font(iron ? 13 : 12),
+      anchor.align,
+      700
+    );
+  }
+}
+
+function drawRegions(
+  ctx: CanvasRenderingContext2D,
+  p: Palette,
+  font: (n: number) => number
+): void {
+  ctx.setLineDash([7, 6]);
+  arrow(ctx, chartX(16), chartY(6.4), chartX(48), chartY(8.45), p.red, 2.2, 10);
+  arrow(
     ctx,
-    state.point.symbol,
-    currentX,
-    currentY - 22,
+    chartX(210),
+    chartY(6.35),
+    chartX(78),
+    chartY(8.35),
+    p.teal,
+    2.2,
+    10
+  );
+  ctx.setLineDash([]);
+  fillLabel(
+    ctx,
+    '聚变',
+    chartX(32),
+    chartY(5.15),
     p.red,
-    13 * scale,
+    font(13),
     'center',
     700
   );
-  if (state.params.showRegions) {
-    drawArrow(ctx, chartX(235), chartY(7.55), chartX(62), chartY(8.7), p.teal);
-    text(
-      ctx,
-      '裂变释放能量',
-      chartX(168),
-      chartY(8.1),
-      p.teal,
-      14 * scale,
-      'center',
-      700
-    );
-    drawArrow(ctx, chartX(15), chartY(7.2), chartX(53), chartY(8.7), p.red);
-    text(
-      ctx,
-      '聚变释放能量',
-      chartX(33),
-      chartY(7.8),
-      p.red,
-      14 * scale,
-      'center',
-      700
-    );
-  }
+  fillLabel(
+    ctx,
+    '裂变',
+    chartX(155),
+    chartY(6.2),
+    p.teal,
+    font(13),
+    'center',
+    700
+  );
 }
-function drawPanel(
+
+function drawSelection(
   ctx: CanvasRenderingContext2D,
   state: BindingEnergyState,
   p: Palette,
-  scale: number
+  font: (n: number) => number
 ): void {
-  const x = FIELD_W;
-  ctx.fillStyle = p.panel;
-  ctx.fillRect(x, 0, BASE_W - FIELD_W, BASE_H);
-  ctx.strokeStyle = p.border;
+  const a = state.cursorA;
+  const x = chartX(a);
+  const y = chartY(bindingEnergyAt(a));
+  ctx.fillStyle = p.selected;
+  ctx.strokeStyle = p.ink;
+  ctx.lineWidth = 2.4;
   ctx.beginPath();
-  ctx.moveTo(x, 0);
-  ctx.lineTo(x, BASE_H);
-  ctx.stroke();
-  text(
-    ctx,
-    '原子核比结合能',
-    x + INSET,
-    TITLE_Y + 24,
-    p.blue,
-    20 * scale,
-    'left',
-    700
-  );
-  text(ctx, state.point.symbol, x + INSET, 86, p.ink, 18 * scale, 'left', 700);
-  ctx.fillStyle = p.soft;
-  ctx.beginPath();
-  ctx.roundRect(x + INSET, FORMULA_TOP, PANEL_W, FORMULA_HEIGHT, 10);
+  ctx.arc(x, y, C.selectedRadius, 0, Math.PI * 2);
   ctx.fill();
-  text(
-    ctx,
-    'E = A × (E/A)',
-    x + 42,
-    FORMULA_TOP + 28,
-    p.ink,
-    15 * scale,
-    'left',
-    700
-  );
-  text(
-    ctx,
-    `≈ ${state.total.toFixed(1)} MeV`,
-    x + 42,
-    FORMULA_TOP + 58,
-    p.teal,
-    15 * scale,
-    'left',
-    700
-  );
-  ctx.strokeStyle = p.border;
-  ctx.beginPath();
-  ctx.roundRect(x + INSET, VALUES_TOP, PANEL_W, VALUES_HEIGHT, 10);
   ctx.stroke();
-  const rows: Array<[string, string, string]> = [
-    ['核素名称', state.point.name, p.ink],
-    ['质量数 A', `${state.point.A}`, p.ink],
-    ['比结合能', `${state.point.binding.toFixed(2)} MeV`, p.teal],
-    ['状态', state.status, p.gold]
-  ];
-  rows.forEach(([label, value, color], index) => {
-    const y = VALUES_START_Y + index * VALUES_ROW_GAP;
-    text(ctx, label, x + 42, y, p.muted, 13 * scale);
-    text(ctx, value, x + 224, y, color, 13 * scale, 'right', 700);
-  });
-  text(ctx, '铁附近最稳定', x + INSET, 520, p.muted, 13 * scale);
+  const labeled = BINDING_ENERGY_DATA.filter((point) =>
+    (BINDING_ENERGY_LABELED as readonly string[]).includes(point.symbol)
+  );
+  if (labeled.some((point) => Math.abs(point.A - a) <= 6)) return;
+  fillLabel(
+    ctx,
+    `A=${Math.round(a)}`,
+    x,
+    y - 20,
+    p.ink,
+    font(12),
+    'center',
+    700
+  );
 }
+
 export function createBindingEnergyView(
   options: CreateBindingEnergyViewOptions = {}
 ) {
   const stage = createCanvasViewport({
     canvas: options.canvas ?? null,
-    sizing: { mode: 'clamped', fallbackWidth: BASE_W, fallbackHeight: BASE_H },
-    initialWidth: BASE_W,
-    initialHeight: BASE_H,
+    sizing: {
+      mode: 'clamped',
+      fallbackWidth: C.baseWidth,
+      fallbackHeight: C.baseHeight
+    },
+    initialWidth: C.baseWidth,
+    initialHeight: C.baseHeight,
     eagerContext: true
   });
   const env = createViewEnvironment({
@@ -336,22 +423,34 @@ export function createBindingEnergyView(
     demoHints: options.demoHints
   });
   let snapshot: BindingEnergyState | null = null;
+
   function draw(state: BindingEnergyState): void {
     const ctx = stage.ctx;
     if (!ctx) return;
     const width = stage.cssWidth;
     const height = stage.cssHeight;
-    const fit = Math.min(width / BASE_W, height / BASE_H);
-    const offsetY = (height - BASE_H * fit) / 2;
-    const scale = env.contentScale() * stage.responsiveScale;
+    const layout = stageLayoutFrom(stage.canvas);
+    const { fit, offsetX, offsetY } = stageTransform(width, height, layout);
+    const palette = PALETTE[env.theme];
+    const rs = stage.responsiveScale;
+    const typeScale = env.fontScale() * Math.min(env.contentScale(), 1.25);
+    const font = (base: number): number =>
+      scaledSize(base * typeScale, Math.max(rs, 0.3), 11) / Math.max(fit, 0.05);
+
     ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = palette.bg;
+    ctx.fillRect(0, 0, width, height);
     ctx.save();
-    ctx.translate(0, offsetY);
+    ctx.translate(offsetX, offsetY);
     ctx.scale(fit, fit);
-    drawChart(ctx, state, PALETTE[env.theme], scale);
-    drawPanel(ctx, state, PALETTE[env.theme], scale);
+    drawAxes(ctx, palette, font);
+    drawCurve(ctx, palette);
+    if (state.params.showRegions) drawRegions(ctx, palette, font);
+    drawNuclides(ctx, palette, font);
+    drawSelection(ctx, state, palette, font);
     ctx.restore();
   }
+
   return {
     render(state: BindingEnergyState): void {
       snapshot = state;

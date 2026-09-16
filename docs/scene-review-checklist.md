@@ -26,7 +26,7 @@
 |  11 | 匀变速直线运动 - 速度与时间关系                       | 力学 | [`uniformly-varied-motion`](../src/scenes/uniformly-varied-motion/scene.meta.ts)                   | [详情](https://app.svgzhenli.com/resource/a0834791-f1a8-4673-aa23-4bb5f7df5271) · [封面](https://img.svgzhenli.com/gallery-assets/covers/gw9dhetax9f1774676803350.png)  |  ✅  |
 |  12 | 竖直平面内圆周运动临界状态                            | 力学 | [`vertical-circle`](../src/scenes/vertical-circle/scene.meta.ts)                                   | [详情](https://app.svgzhenli.com/resource/d53c6251-b24c-4a6c-a6b9-9e104a3995b8) · [封面](https://img.svgzhenli.com/gallery-assets/covers/s3fq03sft9n1775626003953.png)  |  ✅  |
 |  13 | 三大性质力交互课件                                    | 力学 | [`three-forces`](../src/scenes/three-forces/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/a6e3e383-482e-4ad1-a69b-f7ddaeaf8aee) · [封面](https://img.svgzhenli.com/gallery-assets/covers/ihldajl8mpl1781095386830.png)  |  ✅  |
-|  14 | 原子核比结合能与质量数关系                            | 近代 | [`binding-energy`](../src/scenes/binding-energy/scene.meta.ts)                                     | [详情](https://app.svgzhenli.com/resource/56ab7ed1-01c6-4cfa-89d3-cae38e24c433) · [封面](https://img.svgzhenli.com/gallery-assets/covers/hlgy1dsu9wh1774799292161.png)  |  ☐   |
+|  14 | 原子核比结合能与质量数关系                            | 近代 | [`binding-energy`](../src/scenes/binding-energy/scene.meta.ts)                                     | [详情](https://app.svgzhenli.com/resource/56ab7ed1-01c6-4cfa-89d3-cae38e24c433) · [封面](https://img.svgzhenli.com/gallery-assets/covers/hlgy1dsu9wh1774799292161.png)  |  ✅  |
 |  15 | 探究加速度与力质量关系实验                            | 力学 | [`accel-force`](../src/scenes/accel-force/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/fe4a9b83-9f96-4f06-9ad6-d64ebd75c515) · [封面](https://img.svgzhenli.com/gallery-assets/covers/qgo9e87x771787678068367.png)   |  ☐   |
 |  16 | 单缝衍射条纹分布                                      | 光学 | [`single-slit`](../src/scenes/single-slit/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/50754223-e2c0-405d-9098-cfa3d2fedaca) · [封面](https://img.svgzhenli.com/gallery-assets/covers/7jar1z9ybu81774773489050.png)  |  ☐   |
 |  17 | 磁镜与磁约束交互                                      | 电磁 | [`magnetic-mirror`](../src/scenes/magnetic-mirror/scene.meta.ts)                                   | [详情](https://app.svgzhenli.com/resource/c540be11-ba80-4952-8a22-570504fe1d69) · [封面](https://img.svgzhenli.com/gallery-assets/covers/q2ltmtzvpg1786796521171.png)   |  ☐   |
@@ -236,6 +236,15 @@
 - 交互与布局验证：桌面 `1280×720`、`1024×768`、`900×768`、`768×768` 与移动 `390×844` 无横纵溢出；动画区无公式/数据面板，展开数据区仍在画布外；重力/摩擦/弹力切换、μ 静止/下滑与临界逻辑、弹簧参数、播放暂停冻结、重置、深色主题、演示模式和 URL 恢复通过；浏览器 console 无 error/warning。
 - 工程验证：远程 Grok Build 两轮均明确返回 `CONSENSUS: PASS`；专项单测 `28/28`（sim `23` + view `5`）通过；与 `verify:scene` 相同目标集单线程复跑 `3148 passed / 132 skipped`，tsc、ESLint、`git diff --check`、构建和 bundle 预算通过。默认并行 `verify:scene` 的第 5 步曾随机命中无关场景 5 秒超时，目标场景测试本身无失败。
 - 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/a6e3e383-482e-4ad1-a69b-f7ddaeaf8aee.md` · [原始详情](https://app.svgzhenli.com/resource/a6e3e383-482e-4ad1-a69b-f7ddaeaf8aee) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/ihldajl8mpl1781095386830.png)
+
+### 14. 原子核比结合能与质量数关系 (`binding-energy`)
+
+- 状态：✅ Grok Build 审计通过（2026-09-16）。
+- 修复：动画区只保留 E/A–A 曲线、坐标轴/网格、选中核素点、短核素标签与可选「聚变/裂变」方向标；移除 canvas 右侧数据/公式/状态卡和键盘说明条。数值、公式与状态进入标准控制区/折叠读数区。`preferredLayout:'split-right'`、读数默认折叠。`hasGraph:false`：曲线本身即主视觉，不另造图表卡。补 U-235 数据。U-235/U-238 右锚点上下抽离，避免 768 split-right 右缘截成 `U-23…`；y 轴标题拆成「比结合能 / E/A (MeV)」两行，Fe-56 放在峰值右下，离开标题。标签在设计框内夹紧，不靠 overflow hidden 遮挡。
+- 物理核验：`E = A × (E/A)`（MeV）；Fe-56 峰值 8.79 MeV；聚变增益仅 A<56，裂变增益仅 A>56，铁峰附近为零并显示稳定巅峰。A∈[1,238]，插值有限。←/→ 按质量数整数漫游（对接全局 `step(±0.016)`）。
+- 交互与布局验证：Playwright 复核 `1280×720`、`1024×768`、`900×768`、`768×768`、`390×844`（`?autoRun=0&showRegions=1`，A=56 / A=238）无横纵溢出、无 console error/warning；U-235/U-238/Fe-56 与 y 轴标题完整可读、互不覆盖；动画区无数据卡；移动端控制/数据页分离；滑块、播放暂停冻结、重置、深色主题、演示模式和 `?A=56&autoRun=0` URL 恢复通过。
+- 工程验证：专项 `28/28`（sim `21` + view `7`）；tsc、ESLint、`git diff --check`、构建和 bundle 预算通过（场景页 JS 137.25 kB / 180 kB）。
+- 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/56ab7ed1-01c6-4cfa-89d3-cae38e24c433.md` · [原始详情](https://app.svgzhenli.com/resource/56ab7ed1-01c6-4cfa-89d3-cae38e24c433) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/hlgy1dsu9wh1774799292161.png)
 
 ## 复审记录模板
 
