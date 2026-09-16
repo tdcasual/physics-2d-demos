@@ -70,18 +70,17 @@ export const potentialGraphControlsSchema: ControlsSchema = {
           key: 'showArea',
           label: '显示 E-x 有向面积',
           value: true
-        },
-        { type: 'toggle', key: 'autoRun', label: '自动移动探针', value: false }
+        }
       ]
     },
     {
-      title: '规律',
+      title: '关系',
       collapsed: true,
       fields: [
         {
           type: 'hint',
           key: 'formula',
-          lines: ['E = −dφ/dx', '∫E dx = φ₁ − φ₂', 'Ep = qφ，F = qE']
+          lines: ['E = −dφ/dx', '∫E dx = φ₁ − φ₂', 'Uₚ = qφ，F = qE']
         }
       ]
     }

@@ -4,7 +4,15 @@ import type { SceneMeta } from '../../platform/scene-contract';
 const demoProfile: SceneDemoProfile = {
   lessonTask: 'lecture',
   transport: 'visible',
-  readoutKeys: ['position', 'potential', 'field', 'energy'],
+  readoutKeys: [
+    'position',
+    'potential',
+    'slope',
+    'field',
+    'energy',
+    'force',
+    'area'
+  ],
   renderHints: { contentScale: 1.02 },
   interactionHints: {
     touchTargetMinSize: 48,
@@ -14,8 +22,7 @@ const demoProfile: SceneDemoProfile = {
       'chargeMagnitude',
       'probePosition',
       'showTangent',
-      'showArea',
-      'autoRun'
+      'showArea'
     ]
   }
 };
@@ -52,7 +59,7 @@ export const potentialGraphMeta: SceneMeta = {
     'autoRun'
   ],
   testProfile: {
-    hasGraph: false,
+    hasGraph: true,
     hasTransport: true,
     supportsPresentation: true
   },

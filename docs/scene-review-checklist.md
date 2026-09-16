@@ -39,7 +39,7 @@
 |  24 | 电阻测量法设计（限流接法、分压接法、电流表的内外接）  | 电磁 | [`resistor-measurement`](../src/scenes/resistor-measurement/scene.meta.ts)                         | [详情](https://app.svgzhenli.com/resource/250ca6cd-36d9-4ed5-9983-d4a2e9058251) · [封面](https://img.svgzhenli.com/gallery-assets/covers/zq29kqwn07m1781283130413.png)  |  ☑   |
 |  25 | 高精度测量工具读数原理（游标卡尺&螺旋测微器）         | 力学 | [`precision-tools`](../src/scenes/precision-tools/scene.meta.ts)                                   | [详情](https://app.svgzhenli.com/resource/db871107-556d-4e2f-936e-52ebd2767a54) · [封面](https://img.svgzhenli.com/gallery-assets/covers/08nk6xz5mriq1778077856552.png) |  ☑   |
 |  26 | 测电源电动势和内阻实验                                | 电磁 | [`emf-internal-resistance`](../src/scenes/emf-internal-resistance/scene.meta.ts)                   | [详情](https://app.svgzhenli.com/resource/11ed455d-d6bc-4ac7-82a3-0a57b2ef969f) · [封面](https://img.svgzhenli.com/gallery-assets/covers/h7646etm75j1787678239426.png)  |  ☑   |
-|  27 | 电势电势能与E-x和φ-x图象                              | 电磁 | [`potential-energy-graphs`](../src/scenes/potential-energy-graphs/scene.meta.ts)                   | [详情](https://app.svgzhenli.com/resource/ff3b0997-708a-4845-8ce1-1f8a1a198337) · [封面](https://img.svgzhenli.com/gallery-assets/covers/gqj6h49siwi1787678193054.png)  |  ☐   |
+|  27 | 电势电势能与E-x和φ-x图象                              | 电磁 | [`potential-energy-graphs`](../src/scenes/potential-energy-graphs/scene.meta.ts)                   | [详情](https://app.svgzhenli.com/resource/ff3b0997-708a-4845-8ce1-1f8a1a198337) · [封面](https://img.svgzhenli.com/gallery-assets/covers/gqj6h49siwi1787678193054.png)  |  ☑   |
 |  28 | 冲量动量定理与F-t图象                                 | 力学 | [`impulse-momentum`](../src/scenes/impulse-momentum/scene.meta.ts)                                 | [详情](https://app.svgzhenli.com/resource/55c5259d-0e1f-4ff8-b491-791c7df3c02e) · [封面](https://img.svgzhenli.com/gallery-assets/covers/tpvaff7fej91787660726259.png)  |  ☐   |
 |  29 | 单匝线框穿过有界匀强磁场                              | 电磁 | [`single-loop`](../src/scenes/single-loop/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/4c98b69d-8854-45ad-9914-82c68b961368) · [封面](https://img.svgzhenli.com/gallery-assets/covers/86no26fi9ne1774713114955.png)  |  ☐   |
 |  30 | 电磁感应 - 电容棒与电阻棒模型                         | 电磁 | [`rod-model`](../src/scenes/rod-model/scene.meta.ts)                                               | [详情](https://app.svgzhenli.com/resource/58836693-454f-4300-aa52-0b99316f1c26) · [封面](https://img.svgzhenli.com/gallery-assets/covers/6hlwqwk5c7i1786857749323.png)  |  ☐   |
@@ -353,6 +353,15 @@
 - 交互与布局验证：桌面浏览器确认动画画布干净、图表刻度与坐标一致；改动开关/电压表分流后工具栏重置会同步恢复控件与 URL，重载后状态保持；理想/有限电压表开路读数分别为 `3.00 V` / `2.97 V`，电流均为 `0 A`。
 - 工程验证：专项 sim/view `22/22`；`pnpm verify:scene emf-internal-resistance` 全 `7/7` 步骤通过（`3145 passed / 129 skipped`），场景结构 `120` 项、布局契约 `4` 项、ESLint、全量 TypeScript、生产构建、bundle 预算与 `git diff --check` 均通过。Grok Build 最终返回 `AGREE — ready to commit`。
 - 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/11ed455d-d6bc-4ac7-82a3-0a57b2ef969f.md` · [原始详情](https://app.svgzhenli.com/resource/11ed455d-d6bc-4ac7-82a3-0a57b2ef969f) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/h7646etm75j1787678239426.png)
+
+### 27. 电势、电势能与 E-x、φ-x 图象 (`potential-energy-graphs`)
+
+- 状态：✅ Codex / Grok Build 交叉审计通过（2026-09-17）。
+- 修复：动画区只保留场景装置、场线箭头、探针与必要短标；φ-x、E-x 曲线独立放入图表区，实时 x/φ/E/Uₚ/F/有向面积读数放入数据区，公式精简折叠；点电荷源像与计算坐标一致（x=−1、11），图表域仍为 0–10 m。
+- 物理核验：`E=−dφ/dx`、`Uₚ=qφ`、`F=qE`、`∫E dx=φ(0)−φ(x)`；分段场在 x=3、7 m 处 φ 连续但不可导，明确显示左右极限 E/F，隐藏唯一切线及单一场/力箭头；正、负试探电荷不改变源场。
+- 交互与布局验证：分段匀强场、单正点电荷、等量异种电荷；探针正负、电量、位置、φ-x 切线和 E-x 有向面积可调；重置写回默认 URL 且保留审计参数，播放/暂停与探针位置同步。浏览器逐项核对图表/控制/数据分区及 x=3/7 折点、点电荷/偶极场坐标，无动画区图表或数据卡。
+- 工程验证：专项 sim/view `25/25`；`pnpm verify:scene potential-energy-graphs` 全 `7/7` 步骤通过，场景结构 `120` 项、布局契约 `4` 项、ESLint、全量 TypeScript、生产构建、bundle 预算与 `git diff --check` 通过。远程 Grok Build 最终返回 `AGREE`。
+- 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/ff3b0997-708a-4845-8ce1-1f8a1a198337.md` · [原始详情](https://app.svgzhenli.com/resource/ff3b0997-708a-4845-8ce1-1f8a1a198337) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/gqj6h49siwi1787678193054.png)
 
 ## 复审记录模板
 
