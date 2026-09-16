@@ -1,6 +1,6 @@
-import type { TeachingMode, TeachingTheme } from '../../platform/standards';
-import type { SceneLifecycle } from '../../platform/scene-contract';
 import type { DemoRenderHints } from '../../platform/demo-profile';
+import type { SceneLifecycle } from '../../platform/scene-contract';
+import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createStandardSceneEntry } from '../scene-entry-helpers';
 import {
   createDisplacementTimeSim,
@@ -27,6 +27,7 @@ export function createDisplacementTimeScene(
   getSnapshot(): DisplacementTimeState;
   getParams(): DisplacementTimeParams;
   setParams(params: Partial<DisplacementTimeParams>): DisplacementTimeParams;
+  stepFrame(dt?: number): void;
   getReadoutItems(): Array<{ key: string; label: string; value: string }>;
   subscribe(listener: () => void): () => void;
 } {
@@ -34,7 +35,7 @@ export function createDisplacementTimeScene(
   const view = createDisplacementTimeView({
     canvas: options.canvas,
     theme: options.theme ?? 'light',
-    mode: options.mode,
+    mode: options.mode ?? 'normal',
     demoHints: options.demoHints
   });
   const base = createStandardSceneEntry({
@@ -73,6 +74,7 @@ export function createDisplacementTimeScene(
     setParams: base.wrapAction((next: Partial<DisplacementTimeParams>) =>
       sim.setParams(next)
     ),
+    stepFrame: base.wrapAction((dt?: number) => sim.stepFrame(dt)),
     getReadoutItems
   };
 }

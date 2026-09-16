@@ -30,7 +30,7 @@
 |  15 | 探究加速度与力质量关系实验                            | 力学 | [`accel-force`](../src/scenes/accel-force/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/fe4a9b83-9f96-4f06-9ad6-d64ebd75c515) · [封面](https://img.svgzhenli.com/gallery-assets/covers/qgo9e87x771787678068367.png)   |  ✅  |
 |  16 | 单缝衍射条纹分布                                      | 光学 | [`single-slit`](../src/scenes/single-slit/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/50754223-e2c0-405d-9098-cfa3d2fedaca) · [封面](https://img.svgzhenli.com/gallery-assets/covers/7jar1z9ybu81774773489050.png)  |  ✅  |
 |  17 | 磁镜与磁约束交互                                      | 电磁 | [`magnetic-mirror`](../src/scenes/magnetic-mirror/scene.meta.ts)                                   | [详情](https://app.svgzhenli.com/resource/c540be11-ba80-4952-8a22-570504fe1d69) · [封面](https://img.svgzhenli.com/gallery-assets/covers/q2ltmtzvpg1786796521171.png)   |  ☐   |
-|  18 | 匀变速直线运动位移与时间关系                          | 力学 | [`displacement-time`](../src/scenes/displacement-time/scene.meta.ts)                               | [详情](https://app.svgzhenli.com/resource/f8d783bf-0b36-425f-ae53-a692dba4aff9) · [封面](https://img.svgzhenli.com/gallery-assets/covers/noonxbfliw1774676556531.png)   |  ☐   |
+|  18 | 匀变速直线运动位移与时间关系                          | 力学 | [`displacement-time`](../src/scenes/displacement-time/scene.meta.ts)                               | [详情](https://app.svgzhenli.com/resource/f8d783bf-0b36-425f-ae53-a692dba4aff9) · [封面](https://img.svgzhenli.com/gallery-assets/covers/noonxbfliw1774676556531.png)   |  ✅  |
 |  19 | 木块与木板相对滑动物理模型                            | 力学 | [`block-board`](../src/scenes/block-board/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/ccd3490a-6854-4a58-942e-2dc8e81a4fd9) · [封面](https://img.svgzhenli.com/gallery-assets/covers/6pvv1payb171774685383168.png)  |  ☐   |
 |  20 | 示波管的原理与波形同步                                | 电磁 | [`oscilloscope`](../src/scenes/oscilloscope/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/5a841fe8-5060-47af-a132-cf4511d2d4eb) · [封面](https://img.svgzhenli.com/gallery-assets/covers/pfv1s8rnxzg1778497322822.png)  |  ☐   |
 |  21 | 打点计时器原理演示                                    | 力学 | [`ticker-timer`](../src/scenes/ticker-timer/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/0e146679-df0c-429f-b982-9e3c1c0c2367) · [封面](https://img.svgzhenli.com/gallery-assets/covers/aorki9og3yq1783606121977.png)  |  ☐   |
@@ -272,6 +272,15 @@
 - 交互与布局验证：独立 CUA `1280×720` 标准→演示→标准→演示往返；演示模式 docked-bottom 读数栏与动画阶段几何避让，线圈、场线、粒子、标签完整可见，无白屏、横向溢出或 console error/warning；动画区无数据/公式卡。ResizeObserver/MutationObserver 通过 rAF 合并重绘，模式切换不复用旧几何。
 - 工程验证：专项 `11/11`（sim/source `9` + view 几何 `2`）；`pnpm verify:scene magnetic-mirror` `7/7` 步骤通过（`3132 passed / 131 skipped`），tsc、ESLint、生产构建、bundle 预算和 `git diff --check` 通过（场景页 JS 133.43 kB / 180 kB）。远程 Grok Build 最终返回 `CONSENSUS: PASS`。
 - 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/c540be11-ba80-4952-8a22-570504fe1d69.md` · [原始详情](https://app.svgzhenli.com/resource/c540be11-ba80-4952-8a22-570504fe1d69) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/q2ltmtzvpg1786796521171.png)
+
+### 18. 匀变速直线运动位移与时间关系 (`displacement-time`)
+
+- 状态：✅ Codex / Grok Build 交叉审计通过（2026-09-16）。
+- 修复：按 SVGZhenli 封面保留水平轨道、小车、速度箭头、v-t 有符号面积分解、x-t 抛物线与贯穿上下的金色时间游标；移除 canvas 内右侧参数、读数、公式和说明卡，数据/公式集中到框架控制区与读数区，文案精简；`preferredLayout:'split-right'`、`hasGraph:false`，曲线只留在动画区主视觉。
+- 物理核验：`v=v₀+at`、`x=v₀t+½at²`；v-t 面积按 v=0 分段并保持正负位移符号，跨零时正负面积相加等于位移；小车位移为教学缩放，参数夹取、时间回绕、自动播放/暂停/固定帧/重置由专项测试覆盖。
+- 交互与布局验证：标准 `1280×720` 通过 transport 顶部安全区 `transportClearY=96` 避让轨道/小车/箭头；演示 process docked-bottom 仅水平 `scaleX≤1.35` 增强动画宽度（约 430px 以上），底边保留 `16px` gap 且不遮挡读数；标准↔演示往返无白屏；移动 `390×844` 切换项目自带“移动端堆叠”后动画、控制/数据 tab 无溢出；CUA console 无 error/warning。
+- 工程验证：专项 `21/21`（sim `13` + view `8`）；`pnpm verify:scene displacement-time` 全 `7/7` 步骤通过（`3142 passed / 131 skipped`）；tsc、ESLint、生产构建、bundle 预算和 `git diff --check` 通过；最终只读 Grok Build 返回 `CONSENSUS: PASS`。
+- 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/f8d783bf-0b36-425f-ae53-a692dba4aff9.md` · [原始详情](https://app.svgzhenli.com/resource/f8d783bf-0b36-425f-ae53-a692dba4aff9) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/noonxbfliw1774676556531.png)
 
 ## 复审记录模板
 

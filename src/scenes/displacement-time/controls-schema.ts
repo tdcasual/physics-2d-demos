@@ -1,4 +1,5 @@
 import type { ControlsSchema } from '../../platform/controls-schema';
+import { displacementTimeConstants as C } from './scene.sim';
 
 export const displacementTimeControlsSchema: ControlsSchema = {
   sections: [
@@ -10,20 +11,20 @@ export const displacementTimeControlsSchema: ControlsSchema = {
           type: 'slider',
           key: 'v0',
           label: '初速度 v₀',
-          min: -10,
-          max: 20,
+          min: C.v0Min,
+          max: C.v0Max,
           step: 1,
-          value: 5,
+          value: C.v0Default,
           unit: 'm/s'
         },
         {
           type: 'slider',
           key: 'acceleration',
           label: '加速度 a',
-          min: -6,
-          max: 6,
+          min: C.accelerationMin,
+          max: C.accelerationMax,
           step: 1,
-          value: 4,
+          value: C.accelerationDefault,
           unit: 'm/s²'
         }
       ]
@@ -43,7 +44,7 @@ export const displacementTimeControlsSchema: ControlsSchema = {
         {
           type: 'hint',
           key: 'formula',
-          lines: ['v = v₀ + at', 'x = v₀t + ½at²', '图像面积 = 位移']
+          lines: ['v = v₀ + at', 'x = v₀t + ½at²', 'v-t 面积 = 位移']
         }
       ]
     }

@@ -1,8 +1,15 @@
-import type { TeachingMode, TeachingTheme } from '../../platform/standards';
+import { scaledSize } from '../../core/canvas-sizing';
 import type { DemoRenderHints } from '../../platform/demo-profile';
+import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import {
-  displacementTimeConstants,
+  carX,
+  displacementAt,
+  displacementTimeConstants as C,
+  stageLayoutFrom,
+  stageTransform,
+  tapeTimes,
+  velocityAt,
   type DisplacementTimeState
 } from './scene.sim';
 
@@ -13,48 +20,9 @@ export type CreateDisplacementTimeViewOptions = {
   demoHints?: DemoRenderHints;
 };
 
-const {
-  baseWidth: BASE_W,
-  baseHeight: BASE_H,
-  fieldWidth: FIELD_W,
-  panelWidth: PANEL_W,
-  panelInset: INSET,
-  trackStartX: TRACK_START_X,
-  trackEndX: TRACK_END_X,
-  trackY: TRACK_Y,
-  trackOriginX: TRACK_ORIGIN_X,
-  trackScale: TRACK_SCALE,
-  trackDotStartX: TRACK_DOT_START_X,
-  trackDotGap: TRACK_DOT_GAP,
-  trackDotCount: TRACK_DOT_COUNT,
-  carWidth: CAR_WIDTH,
-  carHeight: CAR_HEIGHT,
-  graphLeft: GRAPH_LEFT,
-  graphRight: GRAPH_RIGHT,
-  velocityTop: VELOCITY_TOP,
-  velocityBottom: VELOCITY_BOTTOM,
-  velocityAxisY: VELOCITY_AXIS_Y,
-  velocityMax: VELOCITY_MAX,
-  displacementTop: DISPLACEMENT_TOP,
-  displacementBottom: DISPLACEMENT_BOTTOM,
-  displacementAxisY: DISPLACEMENT_AXIS_Y,
-  displacementMax: DISPLACEMENT_MAX,
-  maxTime: MAX_TIME,
-  cursorWidth: CURSOR_WIDTH,
-  panelTitleY: PANEL_TITLE_Y,
-  panelDividerY: PANEL_DIVIDER_Y,
-  inputCardY1: INPUT_CARD_Y1,
-  inputCardY2: INPUT_CARD_Y2,
-  inputCardHeight: INPUT_CARD_HEIGHT,
-  formulaY: FORMULA_Y,
-  formulaHeight: FORMULA_HEIGHT,
-  readoutY: READOUT_Y,
-  readoutHeight: READOUT_HEIGHT
-} = displacementTimeConstants;
-
 type Palette = {
   bg: string;
-  panel: string;
+  rail: string;
   grid: string;
   ink: string;
   muted: string;
@@ -62,27 +30,33 @@ type Palette = {
   blue: string;
   teal: string;
   gold: string;
-  border: string;
-  soft: string;
+  car: string;
+  glass: string;
+  future: string;
+  posArea: string;
+  accelArea: string;
 };
 
 const PALETTE: Record<TeachingTheme, Palette> = {
   light: {
     bg: '#fbfaf7',
-    panel: '#ffffff',
+    rail: '#d8dee6',
     grid: '#dbe2ea',
     ink: '#303744',
     muted: '#8b97a5',
     red: '#ef4050',
     blue: '#35a9db',
     teal: '#259d91',
-    gold: '#efb52b',
-    border: '#d2d9e2',
-    soft: '#f1f4f7'
+    gold: '#f0b429',
+    car: '#2b9fd6',
+    glass: '#bfeaf8',
+    future: '#c5ccd4',
+    posArea: 'rgba(53,169,219,0.22)',
+    accelArea: 'rgba(239,64,80,0.22)'
   },
   dark: {
     bg: '#101827',
-    panel: '#172235',
+    rail: '#3c4b61',
     grid: '#40516b',
     ink: '#eef2f7',
     muted: '#9eabbc',
@@ -90,8 +64,11 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     blue: '#38bdf8',
     teal: '#4dd4c0',
     gold: '#fbbf24',
-    border: '#3c4b61',
-    soft: '#253249'
+    car: '#38bdf8',
+    glass: '#1e3a4c',
+    future: '#64748b',
+    posArea: 'rgba(56,189,248,0.22)',
+    accelArea: 'rgba(251,113,133,0.22)'
   }
 };
 
@@ -112,6 +89,22 @@ function text(
   ctx.fillText(value, x, y);
 }
 
+function rounded(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number
+): void {
+  ctx.beginPath();
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(x, y, w, h, r);
+    return;
+  }
+  ctx.rect(x, y, w, h);
+}
+
 function arrow(
   ctx: CanvasRenderingContext2D,
   x1: number,
@@ -119,44 +112,76 @@ function arrow(
   x2: number,
   y2: number,
   color: string,
-  width = 4
+  width: number,
+  head = 11
 ): void {
   const dx = x2 - x1;
   const dy = y2 - y1;
-  const length = Math.hypot(dx, dy);
-  if (length < 2) return;
-  const ux = dx / length;
-  const uy = dy / length;
+  const len = Math.hypot(dx, dy);
+  if (len < 2) return;
+  const ux = dx / len;
+  const uy = dy / len;
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
   ctx.lineWidth = width;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
   ctx.beginPath();
   ctx.moveTo(x1, y1);
   ctx.lineTo(x2, y2);
   ctx.stroke();
   ctx.beginPath();
   ctx.moveTo(x2, y2);
-  ctx.lineTo(x2 - ux * 13 - uy * 6, y2 - uy * 13 + ux * 6);
-  ctx.lineTo(x2 - ux * 13 + uy * 6, y2 - uy * 13 - ux * 6);
+  ctx.lineTo(
+    x2 - ux * head - uy * head * 0.45,
+    y2 - uy * head + ux * head * 0.45
+  );
+  ctx.lineTo(
+    x2 - ux * head + uy * head * 0.45,
+    y2 - uy * head - ux * head * 0.45
+  );
   ctx.closePath();
   ctx.fill();
 }
 
 function graphX(time: number): number {
-  return GRAPH_LEFT + (GRAPH_RIGHT - GRAPH_LEFT) * (time / MAX_TIME);
+  return C.graphLeft + (C.graphRight - C.graphLeft) * (time / C.maxTime);
 }
 
 function velocityY(velocity: number): number {
+  const clipped = Math.max(
+    -C.velocityNegMax,
+    Math.min(C.velocityPosMax, velocity)
+  );
+  if (clipped >= 0) {
+    return (
+      C.velocityAxisY -
+      (clipped / C.velocityPosMax) * (C.velocityAxisY - C.velocityTop)
+    );
+  }
   return (
-    VELOCITY_AXIS_Y -
-    velocity * ((VELOCITY_AXIS_Y - VELOCITY_TOP) / VELOCITY_MAX)
+    C.velocityAxisY +
+    (Math.abs(clipped) / C.velocityNegMax) *
+      (C.velocityBottom - C.velocityAxisY)
   );
 }
 
 function displacementY(displacement: number): number {
+  const clipped = Math.max(
+    -C.displacementNegMax,
+    Math.min(C.displacementPosMax, displacement)
+  );
+  if (clipped >= 0) {
+    return (
+      C.displacementAxisY -
+      (clipped / C.displacementPosMax) *
+        (C.displacementAxisY - C.displacementTop)
+    );
+  }
   return (
-    DISPLACEMENT_AXIS_Y -
-    displacement * ((DISPLACEMENT_AXIS_Y - DISPLACEMENT_TOP) / DISPLACEMENT_MAX)
+    C.displacementAxisY +
+    (Math.abs(clipped) / C.displacementNegMax) *
+      (C.displacementBottom - C.displacementAxisY)
   );
 }
 
@@ -164,444 +189,372 @@ function drawTrack(
   ctx: CanvasRenderingContext2D,
   state: DisplacementTimeState,
   p: Palette,
-  scale: number
+  font: (n: number) => number
 ): void {
-  ctx.strokeStyle = p.grid;
+  ctx.strokeStyle = p.rail;
   ctx.lineWidth = 10;
+  ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.moveTo(TRACK_START_X, TRACK_Y);
-  ctx.lineTo(TRACK_END_X, TRACK_Y);
+  ctx.moveTo(C.trackStartX, C.trackY);
+  ctx.lineTo(C.trackEndX, C.trackY);
   ctx.stroke();
-  ctx.strokeStyle = p.border;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(TRACK_START_X, TRACK_Y - 7);
-  ctx.lineTo(TRACK_END_X, TRACK_Y - 7);
-  ctx.stroke();
-  for (let i = 0; i < TRACK_DOT_COUNT; i += 1) {
-    const x = TRACK_DOT_START_X + i * TRACK_DOT_GAP;
+
+  const { v0, acceleration } = state.params;
+  for (const mark of tapeTimes(state.time)) {
+    const x = carX(displacementAt(v0, acceleration, mark));
     ctx.fillStyle = p.muted;
     ctx.beginPath();
-    ctx.arc(x, TRACK_Y, 3, 0, Math.PI * 2);
+    ctx.arc(x, C.trackY, 2.6, 0, Math.PI * 2);
     ctx.fill();
   }
-  const carX = Math.max(
-    TRACK_START_X + CAR_WIDTH / 2,
-    Math.min(
-      TRACK_END_X - CAR_WIDTH / 2,
-      TRACK_ORIGIN_X + state.displacement * TRACK_SCALE
-    )
-  );
-  ctx.fillStyle = '#2b9fd6';
-  ctx.beginPath();
-  ctx.roundRect(
-    carX - CAR_WIDTH / 2,
-    TRACK_Y - CAR_HEIGHT,
-    CAR_WIDTH,
-    CAR_HEIGHT,
-    7
-  );
-  ctx.fill();
-  ctx.fillStyle = '#bfeaf8';
-  ctx.beginPath();
-  ctx.roundRect(carX - 18, TRACK_Y - CAR_HEIGHT - 12, 36, 15, 5);
-  ctx.fill();
-  ctx.fillStyle = p.ink;
-  ctx.beginPath();
-  ctx.arc(carX - 20, TRACK_Y + 2, 8, 0, Math.PI * 2);
-  ctx.arc(carX + 20, TRACK_Y + 2, 8, 0, Math.PI * 2);
-  ctx.fill();
-  const direction = Math.sign(state.velocity || 1);
-  const speedLength = Math.max(
-    18,
-    Math.min(86, Math.abs(state.velocity) * 3.1)
-  );
+
   arrow(
     ctx,
-    carX,
-    TRACK_Y - 36,
-    carX + direction * speedLength,
-    TRACK_Y - 36,
-    p.red,
-    4
-  );
-  text(
-    ctx,
-    'v',
-    carX + direction * (speedLength + 15),
-    TRACK_Y - 36,
-    p.red,
-    17 * scale,
-    'center',
-    700
-  );
-  arrow(
-    ctx,
-    TRACK_ORIGIN_X,
-    TRACK_Y + 28,
-    TRACK_ORIGIN_X + 50,
-    TRACK_Y + 28,
+    C.trackStartX + 8,
+    C.trackY + 28,
+    C.trackEndX,
+    C.trackY + 28,
     p.ink,
-    2
+    1.6,
+    10
   );
   text(
     ctx,
     'x',
-    TRACK_END_X + 20,
-    TRACK_Y + 20,
+    C.trackEndX + 16,
+    C.trackY + 28,
     p.ink,
-    16 * scale,
+    font(15),
     'center',
     700
   );
+  text(ctx, '0', C.trackOriginX, C.trackY + 44, p.ink, font(12), 'center');
   text(
     ctx,
     '−50m',
-    TRACK_START_X + 120,
-    TRACK_Y + 28,
+    C.trackOriginX - 50 * C.trackScale,
+    C.trackY + 44,
     p.muted,
-    13 * scale,
+    font(12),
     'center'
   );
-  text(ctx, '0', TRACK_ORIGIN_X, TRACK_Y + 28, p.ink, 13 * scale, 'center');
   text(
     ctx,
     '50m',
-    TRACK_ORIGIN_X + 50 * TRACK_SCALE,
-    TRACK_Y + 28,
+    C.trackOriginX + 50 * C.trackScale,
+    C.trackY + 44,
     p.muted,
-    13 * scale,
+    font(12),
     'center'
   );
+  ctx.fillStyle = p.ink;
+  ctx.beginPath();
+  ctx.arc(C.trackOriginX, C.trackY + 28, 2.4, 0, Math.PI * 2);
+  ctx.fill();
+
+  const x = carX(state.displacement);
+  const y = C.trackY;
+  const bodyW = C.carWidth;
+  const bodyH = C.carHeight;
+  ctx.fillStyle = p.car;
+  rounded(ctx, x - bodyW / 2, y - bodyH, bodyW, bodyH, 6);
+  ctx.fill();
+  ctx.fillStyle = p.glass;
+  rounded(ctx, x - 16, y - bodyH - 10, 32, 12, 4);
+  ctx.fill();
+  ctx.fillStyle = p.ink;
+  ctx.beginPath();
+  ctx.arc(x - 16, y + 2, 7, 0, Math.PI * 2);
+  ctx.arc(x + 16, y + 2, 7, 0, Math.PI * 2);
+  ctx.fill();
+
+  const vSign = Math.sign(state.velocity);
+  if (vSign !== 0) {
+    const vLen = Math.max(16, Math.min(72, Math.abs(state.velocity) * 3.1));
+    const vY = y - bodyH - 16;
+    const vStart = x + vSign * (bodyW / 2);
+    arrow(ctx, vStart, vY, vStart + vSign * vLen, vY, p.red, 4, 11);
+    text(
+      ctx,
+      'v',
+      vStart + vSign * (vLen + 14),
+      vY,
+      p.red,
+      font(16),
+      'center',
+      700
+    );
+  }
 }
 
-function drawGraphGrid(
+function drawAxes(
   ctx: CanvasRenderingContext2D,
   p: Palette,
-  scale: number
+  font: (n: number) => number
 ): void {
   ctx.strokeStyle = p.grid;
   ctx.lineWidth = 1;
-  for (let i = 0; i <= MAX_TIME; i += 1) {
+  for (let i = 1; i <= C.maxTime; i += 1) {
     const x = graphX(i);
     ctx.beginPath();
-    ctx.moveTo(x, VELOCITY_TOP);
-    ctx.lineTo(x, VELOCITY_BOTTOM);
-    ctx.moveTo(x, DISPLACEMENT_TOP);
-    ctx.lineTo(x, DISPLACEMENT_BOTTOM);
+    ctx.moveTo(x, C.velocityTop);
+    ctx.lineTo(x, C.velocityBottom);
+    ctx.moveTo(x, C.displacementTop);
+    ctx.lineTo(x, C.displacementBottom);
     ctx.stroke();
-    text(ctx, `${i}`, x, VELOCITY_BOTTOM + 16, p.muted, 11 * scale, 'center');
+    text(ctx, `${i}`, x, C.velocityBottom + 14, p.muted, font(11), 'center');
   }
-  for (let i = -2; i <= 2; i += 1) {
-    const y = velocityY(i * 10);
+  for (const v of [-20, 20, 40]) {
+    const y = velocityY(v);
     ctx.beginPath();
-    ctx.moveTo(GRAPH_LEFT, y);
-    ctx.lineTo(GRAPH_RIGHT, y);
+    ctx.moveTo(C.graphLeft, y);
+    ctx.lineTo(C.graphRight, y);
     ctx.stroke();
-    text(ctx, `${i * 10}`, GRAPH_LEFT - 12, y, p.muted, 11 * scale, 'right');
+    text(ctx, `${v}`, C.graphLeft - 10, y, p.muted, font(11), 'right');
   }
-  for (let i = 0; i <= 3; i += 1) {
-    const y = displacementY(i * 20);
+  for (const xVal of [-40, 40, 80, 120]) {
+    const y = displacementY(xVal);
     ctx.beginPath();
-    ctx.moveTo(GRAPH_LEFT, y);
-    ctx.lineTo(GRAPH_RIGHT, y);
+    ctx.moveTo(C.graphLeft, y);
+    ctx.lineTo(C.graphRight, y);
     ctx.stroke();
+    text(ctx, `${xVal}`, C.graphLeft - 10, y, p.muted, font(11), 'right');
   }
+
   ctx.strokeStyle = p.ink;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(GRAPH_LEFT, VELOCITY_TOP - 8);
-  ctx.lineTo(GRAPH_LEFT, VELOCITY_BOTTOM);
-  ctx.lineTo(GRAPH_RIGHT + 10, VELOCITY_BOTTOM);
-  ctx.moveTo(GRAPH_LEFT, DISPLACEMENT_TOP - 8);
-  ctx.lineTo(GRAPH_LEFT, DISPLACEMENT_BOTTOM);
-  ctx.lineTo(GRAPH_RIGHT + 10, DISPLACEMENT_BOTTOM);
-  ctx.stroke();
+  ctx.lineWidth = 1.8;
+  ctx.lineCap = 'round';
+  arrow(
+    ctx,
+    C.graphLeft,
+    C.velocityBottom,
+    C.graphLeft,
+    C.velocityTop - 8,
+    p.ink,
+    1.8,
+    9
+  );
+  arrow(
+    ctx,
+    C.graphLeft,
+    C.velocityAxisY,
+    C.graphRight + 8,
+    C.velocityAxisY,
+    p.ink,
+    1.8,
+    9
+  );
+  arrow(
+    ctx,
+    C.graphLeft,
+    C.displacementBottom,
+    C.graphLeft,
+    C.displacementTop - 8,
+    p.ink,
+    1.8,
+    9
+  );
+  arrow(
+    ctx,
+    C.graphLeft,
+    C.displacementAxisY,
+    C.graphRight + 8,
+    C.displacementAxisY,
+    p.ink,
+    1.8,
+    9
+  );
   text(
     ctx,
     'v',
-    GRAPH_LEFT - 10,
-    VELOCITY_TOP - 10,
+    C.graphLeft - 16,
+    C.velocityTop - 6,
     p.ink,
-    16 * scale,
+    font(15),
     'center',
     700
   );
   text(
     ctx,
     'x',
-    GRAPH_LEFT - 10,
-    DISPLACEMENT_TOP - 10,
+    C.graphLeft - 16,
+    C.displacementTop - 6,
     p.ink,
-    16 * scale,
+    font(15),
     'center',
     700
   );
   text(
     ctx,
     't',
-    GRAPH_RIGHT + 18,
-    VELOCITY_BOTTOM,
+    C.graphRight + 18,
+    C.velocityAxisY,
     p.ink,
-    15 * scale,
-    'center',
+    font(14),
+    'left',
     700
   );
   text(
     ctx,
     't',
-    GRAPH_RIGHT + 18,
-    DISPLACEMENT_BOTTOM,
+    C.graphRight + 18,
+    C.displacementAxisY,
     p.ink,
-    15 * scale,
-    'center',
+    font(14),
+    'left',
     700
   );
+  text(ctx, '0', C.graphLeft - 10, C.velocityAxisY, p.muted, font(11), 'right');
+  text(
+    ctx,
+    '0',
+    C.graphLeft - 10,
+    C.displacementAxisY,
+    p.muted,
+    font(11),
+    'right'
+  );
+}
+
+function drawArea(
+  ctx: CanvasRenderingContext2D,
+  state: DisplacementTimeState,
+  p: Palette,
+  font: (n: number) => number
+): void {
+  const tNow = state.time;
+  if (!state.params.showArea || tNow <= 1e-3) return;
+  const v0 = state.params.v0;
+  const vNow = state.velocity;
+  const x0 = graphX(0);
+  const xt = graphX(tNow);
+  const axisY = C.velocityAxisY;
+  const yV0 = velocityY(v0);
+  const yNow = velocityY(vNow);
+  const width = xt - x0;
+  if (width < 2) return;
+
+  ctx.fillStyle = p.posArea;
+  ctx.fillRect(x0, Math.min(axisY, yV0), width, Math.abs(yV0 - axisY));
+
+  if (Math.abs(vNow - v0) > 1e-6) {
+    ctx.fillStyle = p.accelArea;
+    ctx.beginPath();
+    ctx.moveTo(x0, yV0);
+    ctx.lineTo(xt, yNow);
+    ctx.lineTo(xt, yV0);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.strokeStyle = p.blue;
+  ctx.lineWidth = 1;
+  ctx.setLineDash([5, 4]);
+  ctx.beginPath();
+  ctx.moveTo(x0, yV0);
+  ctx.lineTo(xt, yV0);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  if (Math.abs(yV0 - axisY) > 12 && width > 36) {
+    text(
+      ctx,
+      'v₀t',
+      (x0 + xt) / 2,
+      (axisY + yV0) / 2,
+      p.blue,
+      font(13),
+      'center',
+      700
+    );
+  }
+  if (Math.abs(yNow - yV0) > 12 && width > 48) {
+    text(
+      ctx,
+      '½at²',
+      (x0 + xt) / 2 + 18,
+      (yV0 + yNow) / 2,
+      p.red,
+      font(13),
+      'center',
+      700
+    );
+  }
 }
 
 function drawGraphs(
   ctx: CanvasRenderingContext2D,
   state: DisplacementTimeState,
   p: Palette,
-  scale: number
+  font: (n: number) => number
 ): void {
-  text(
-    ctx,
-    'v-t 图：面积 = 位移',
-    (GRAPH_LEFT + GRAPH_RIGHT) / 2,
-    156,
-    p.muted,
-    16 * scale,
-    'center',
-    700
-  );
-  text(
-    ctx,
-    'x-t 图',
-    (GRAPH_LEFT + GRAPH_RIGHT) / 2,
-    388,
-    p.muted,
-    16 * scale,
-    'center',
-    700
-  );
-  drawGraphGrid(ctx, p, scale);
-  const cursorX = graphX(state.time);
-  const v0Y = velocityY(state.params.v0);
-  const currentY = velocityY(state.velocity);
-  if (state.params.showArea) {
-    ctx.fillStyle = 'rgba(53,169,219,0.22)';
-    ctx.fillRect(
-      GRAPH_LEFT,
-      Math.min(VELOCITY_AXIS_Y, v0Y),
-      cursorX - GRAPH_LEFT,
-      Math.abs(v0Y - VELOCITY_AXIS_Y)
-    );
-    ctx.fillStyle = 'rgba(239,64,80,0.22)';
-    ctx.beginPath();
-    ctx.moveTo(GRAPH_LEFT, v0Y);
-    ctx.lineTo(cursorX, currentY);
-    ctx.lineTo(cursorX, v0Y);
-    ctx.closePath();
-    ctx.fill();
-  }
-  ctx.strokeStyle = p.red;
-  ctx.lineWidth = 4;
+  drawAxes(ctx, p, font);
+  drawArea(ctx, state, p, font);
+
+  const { v0, acceleration } = state.params;
+  const tNow = state.time;
+  const vNow = state.velocity;
+  const vEnd = velocityAt(v0, acceleration, C.maxTime);
+
+  ctx.strokeStyle = p.future;
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 6]);
   ctx.beginPath();
-  ctx.moveTo(GRAPH_LEFT, v0Y);
-  ctx.lineTo(cursorX, currentY);
+  ctx.moveTo(graphX(tNow), velocityY(vNow));
+  ctx.lineTo(graphX(C.maxTime), velocityY(vEnd));
   ctx.stroke();
-  text(
-    ctx,
-    'v₀t',
-    (GRAPH_LEFT + cursorX) / 2,
-    (VELOCITY_AXIS_Y + v0Y) / 2,
-    p.blue,
-    13 * scale,
-    'center',
-    700
-  );
-  text(
-    ctx,
-    '½at²',
-    (GRAPH_LEFT + cursorX) / 2 + 32,
-    (v0Y + currentY) / 2 - 14,
-    p.red,
-    13 * scale,
-    'center',
-    700
-  );
-  ctx.strokeStyle = p.teal;
-  ctx.lineWidth = 4;
   ctx.beginPath();
-  for (let i = 0; i <= 40; i += 1) {
-    const t = MAX_TIME * (i / 40);
+  ctx.moveTo(graphX(tNow), displacementY(state.displacement));
+  for (let i = 0; i <= C.curveSamples; i += 1) {
+    const t = C.maxTime * (i / C.curveSamples);
+    if (t <= tNow) continue;
+    ctx.lineTo(graphX(t), displacementY(displacementAt(v0, acceleration, t)));
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.strokeStyle = p.red;
+  ctx.lineWidth = 3.5;
+  ctx.beginPath();
+  ctx.moveTo(graphX(0), velocityY(v0));
+  ctx.lineTo(graphX(tNow), velocityY(vNow));
+  ctx.stroke();
+
+  ctx.strokeStyle = p.teal;
+  ctx.lineWidth = 3.5;
+  ctx.beginPath();
+  const steps = Math.max(2, Math.round((tNow / C.maxTime) * C.curveSamples));
+  for (let i = 0; i <= steps; i += 1) {
+    const t = tNow * (i / steps);
     const x = graphX(t);
-    const displacement =
-      state.params.v0 * t + 0.5 * state.params.acceleration * t * t;
-    const y = displacementY(displacement);
+    const y = displacementY(displacementAt(v0, acceleration, t));
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   }
   ctx.stroke();
-  const currentDisplacementY = displacementY(state.displacement);
-  ctx.fillStyle = p.panel;
-  ctx.strokeStyle = p.teal;
-  ctx.lineWidth = 3;
+
+  const cursorX = graphX(tNow);
+  ctx.strokeStyle = p.gold;
+  ctx.lineWidth = C.cursorWidth;
+  ctx.setLineDash([7, 6]);
   ctx.beginPath();
-  ctx.arc(cursorX, currentDisplacementY, 7, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-  ctx.strokeStyle = '#f0b429';
-  ctx.lineWidth = CURSOR_WIDTH;
-  ctx.setLineDash([8, 8]);
-  ctx.beginPath();
-  ctx.moveTo(cursorX, VELOCITY_TOP - 25);
-  ctx.lineTo(cursorX, DISPLACEMENT_BOTTOM + 12);
+  ctx.moveTo(cursorX, C.velocityTop - 18);
+  ctx.lineTo(cursorX, C.displacementBottom + 10);
   ctx.stroke();
   ctx.setLineDash([]);
-}
 
-function drawPanel(
-  ctx: CanvasRenderingContext2D,
-  state: DisplacementTimeState,
-  p: Palette,
-  scale: number
-): void {
-  const x = FIELD_W;
-  ctx.fillStyle = p.panel;
-  ctx.fillRect(x, 0, PANEL_W, BASE_H);
-  ctx.strokeStyle = p.border;
-  ctx.lineWidth = 1;
+  ctx.fillStyle = p.bg;
+  ctx.strokeStyle = p.red;
+  ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.moveTo(x, 0);
-  ctx.lineTo(x, BASE_H);
+  ctx.arc(cursorX, velocityY(vNow), 6, 0, Math.PI * 2);
+  ctx.fill();
   ctx.stroke();
-  text(
-    ctx,
-    '匀变速直线运动图像',
-    x + INSET,
-    PANEL_TITLE_Y,
-    p.ink,
-    20 * scale,
-    'left',
-    700
-  );
-  ctx.strokeStyle = p.ink;
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = p.teal;
   ctx.beginPath();
-  ctx.moveTo(x + INSET, PANEL_DIVIDER_Y);
-  ctx.lineTo(x + PANEL_W - INSET, PANEL_DIVIDER_Y);
+  ctx.arc(cursorX, displacementY(state.displacement), 6, 0, Math.PI * 2);
+  ctx.fill();
   ctx.stroke();
-  const cardWidth = PANEL_W - INSET * 2;
-  ctx.fillStyle = p.soft;
-  ctx.beginPath();
-  ctx.roundRect(x + INSET, INPUT_CARD_Y1, cardWidth, INPUT_CARD_HEIGHT, 10);
-  ctx.roundRect(x + INSET, INPUT_CARD_Y2, cardWidth, INPUT_CARD_HEIGHT, 10);
-  ctx.fill();
-  text(ctx, '初速度 v₀', x + INSET + 16, 104, p.ink, 14 * scale, 'left', 700);
-  text(
-    ctx,
-    `${state.params.v0.toFixed(0)} m/s`,
-    x + PANEL_W - INSET - 16,
-    104,
-    p.ink,
-    15 * scale,
-    'right',
-    700
-  );
-  text(ctx, '加速度 a', x + INSET + 16, 170, p.ink, 14 * scale, 'left', 700);
-  text(
-    ctx,
-    `${state.params.acceleration.toFixed(0)} m/s²`,
-    x + PANEL_W - INSET - 16,
-    170,
-    p.ink,
-    15 * scale,
-    'right',
-    700
-  );
-  ctx.fillStyle = p.soft;
-  ctx.beginPath();
-  ctx.roundRect(x + INSET, READOUT_Y, cardWidth, READOUT_HEIGHT, 10);
-  ctx.fill();
-  text(
-    ctx,
-    '实时运动数据',
-    x + INSET + 16,
-    READOUT_Y + 20,
-    p.muted,
-    13 * scale,
-    'left',
-    700
-  );
-  text(ctx, '时刻 t', x + INSET + 16, READOUT_Y + 54, p.ink, 14 * scale);
-  text(
-    ctx,
-    `${state.time.toFixed(2)} s`,
-    x + PANEL_W - INSET - 16,
-    READOUT_Y + 54,
-    p.ink,
-    15 * scale,
-    'right',
-    700
-  );
-  text(ctx, '瞬时速度 v', x + INSET + 16, READOUT_Y + 88, p.red, 14 * scale);
-  text(
-    ctx,
-    `${state.velocity.toFixed(2)} m/s`,
-    x + PANEL_W - INSET - 16,
-    READOUT_Y + 88,
-    p.red,
-    15 * scale,
-    'right',
-    700
-  );
-  text(ctx, '总位移 x', x + INSET + 16, READOUT_Y + 122, p.teal, 14 * scale);
-  text(
-    ctx,
-    `${state.displacement.toFixed(2)} m`,
-    x + PANEL_W - INSET - 16,
-    READOUT_Y + 122,
-    p.teal,
-    15 * scale,
-    'right',
-    700
-  );
-  ctx.fillStyle = '#fff1f1';
-  ctx.beginPath();
-  ctx.roundRect(x + INSET, FORMULA_Y, cardWidth, FORMULA_HEIGHT, 10);
-  ctx.fill();
-  text(
-    ctx,
-    'v-t 图像面积 = 位移',
-    x + PANEL_W / 2,
-    FORMULA_Y + 24,
-    p.muted,
-    13 * scale,
-    'center',
-    700
-  );
-  text(
-    ctx,
-    'x = v₀t + ½at²',
-    x + PANEL_W / 2,
-    FORMULA_Y + 54,
-    p.red,
-    16 * scale,
-    'center',
-    700
-  );
-  text(
-    ctx,
-    `x = ${(state.params.v0 * state.time).toFixed(2)} + ${(0.5 * state.params.acceleration * state.time * state.time).toFixed(2)} = ${state.displacement.toFixed(2)} m`,
-    x + PANEL_W / 2,
-    FORMULA_Y + 94,
-    p.blue,
-    12 * scale,
-    'center',
-    700
-  );
 }
 
 export function createDisplacementTimeView(
@@ -609,9 +562,13 @@ export function createDisplacementTimeView(
 ) {
   const stage = createCanvasViewport({
     canvas: options.canvas ?? null,
-    sizing: { mode: 'clamped', fallbackWidth: BASE_W, fallbackHeight: BASE_H },
-    initialWidth: BASE_W,
-    initialHeight: BASE_H,
+    sizing: {
+      mode: 'clamped',
+      fallbackWidth: C.baseWidth,
+      fallbackHeight: C.baseHeight
+    },
+    initialWidth: C.baseWidth,
+    initialHeight: C.baseHeight,
     eagerContext: true
   });
   const env = createViewEnvironment({
@@ -620,26 +577,77 @@ export function createDisplacementTimeView(
     demoHints: options.demoHints
   });
   let snapshot: DisplacementTimeState | null = null;
+  let redrawFrame: number | null = null;
+  let watched = false;
+  const observers: Array<{ disconnect(): void }> = [];
 
   function draw(state: DisplacementTimeState): void {
     const ctx = stage.ctx;
     if (!ctx) return;
     const width = stage.cssWidth;
     const height = stage.cssHeight;
-    const fit = Math.min(width / BASE_W, height / BASE_H);
-    const offsetY = (height - BASE_H * fit) / 2;
-    const scale = env.contentScale() * stage.responsiveScale;
+    const layout = stageLayoutFrom(stage.canvas);
+    const { fit, offsetX, offsetY, scaleX } = stageTransform(
+      width,
+      height,
+      layout
+    );
     const p = PALETTE[env.theme];
+    const rs = stage.responsiveScale;
+    const typeScale = env.fontScale() * Math.min(env.contentScale(), 1.25);
+    const font = (base: number): number =>
+      scaledSize(base * typeScale, Math.max(rs, 0.3), 11) / Math.max(fit, 0.05);
+
     ctx.clearRect(0, 0, width, height);
-    ctx.save();
-    ctx.translate(0, offsetY);
-    ctx.scale(fit, fit);
     ctx.fillStyle = p.bg;
-    ctx.fillRect(0, 0, FIELD_W, BASE_H);
-    drawTrack(ctx, state, p, scale);
-    drawGraphs(ctx, state, p, scale);
-    drawPanel(ctx, state, p, scale);
+    ctx.fillRect(0, 0, width, height);
+    ctx.save();
+    ctx.translate(offsetX, offsetY);
+    ctx.scale(fit * scaleX, fit);
+    ctx.fillStyle = p.bg;
+    ctx.fillRect(0, 0, C.baseWidth, C.baseHeight);
+    drawTrack(ctx, state, p, font);
+    drawGraphs(ctx, state, p, font);
     ctx.restore();
+    watchOverlay();
+  }
+
+  function scheduleRedraw(): void {
+    if (!snapshot) return;
+    if (typeof requestAnimationFrame !== 'function') {
+      draw(snapshot);
+      return;
+    }
+    if (redrawFrame !== null) return;
+    redrawFrame = requestAnimationFrame(() => {
+      redrawFrame = null;
+      if (snapshot) draw(snapshot);
+    });
+  }
+
+  function watchOverlay(): void {
+    if (watched || !stage.canvas) return;
+    const parent = stage.canvas.parentElement;
+    if (!parent) return;
+    watched = true;
+    if (typeof ResizeObserver !== 'undefined') {
+      const resize = new ResizeObserver(() => scheduleRedraw());
+      resize.observe(parent);
+      const panel = parent.querySelector(
+        '.teaching-readout-panel, .srgb-readout-panel, .readout-panel'
+      );
+      if (panel instanceof HTMLElement) resize.observe(panel);
+      observers.push(resize);
+    }
+    if (typeof MutationObserver !== 'undefined') {
+      const mutate = new MutationObserver(() => scheduleRedraw());
+      mutate.observe(parent, {
+        attributes: true,
+        subtree: true,
+        attributeFilter: ['class', 'style']
+      });
+      observers.push(mutate);
+    }
   }
 
   return {
@@ -662,6 +670,13 @@ export function createDisplacementTimeView(
     },
     dispose(): void {
       snapshot = null;
+      if (redrawFrame !== null && typeof cancelAnimationFrame === 'function') {
+        cancelAnimationFrame(redrawFrame);
+        redrawFrame = null;
+      }
+      observers.forEach((observer) => observer.disconnect());
+      observers.length = 0;
+      watched = false;
       stage.release();
     }
   };

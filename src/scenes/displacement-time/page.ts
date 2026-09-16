@@ -6,6 +6,15 @@ import { displacementTimeMeta } from './scene.meta';
 import { displacementTimeControlsSchema } from './controls-schema';
 import type { DisplacementTimeParams } from './scene.sim';
 
+function asBoolean(value: unknown): boolean {
+  return (
+    value === true ||
+    value === 1 ||
+    value === '1' ||
+    String(value).toLowerCase() === 'true'
+  );
+}
+
 bootScenePage({
   meta: displacementTimeMeta,
   autoPlay: true,
@@ -43,15 +52,22 @@ bootScenePage({
   },
   createControls: ({ mount, scene, scheduleRender, writeParam }) => {
     const render = scheduleRender ?? (() => scene.render());
+    const dtScene = scene as ReturnType<typeof createDisplacementTimeScene>;
     const renderer = renderSchema({
       mount,
       schema: displacementTimeControlsSchema,
       onChange: (key, value) => {
-        scene.setParams({
-          [key]: ['autoRun', 'showArea'].includes(key)
-            ? Boolean(value)
-            : Number(value)
-        } as Partial<DisplacementTimeParams>);
+        if (key === 'autoRun' || key === 'showArea') {
+          dtScene.setParams({
+            [key]: asBoolean(value)
+          } as Partial<DisplacementTimeParams>);
+        } else if (key === 'v0' || key === 'acceleration') {
+          const number = Number(value);
+          if (!Number.isFinite(number)) return;
+          dtScene.setParams({
+            [key]: number
+          } as Partial<DisplacementTimeParams>);
+        }
         render();
         writeParam?.(key, value);
       },
@@ -68,5 +84,25 @@ bootScenePage({
         renderer.dispose();
       }
     };
+  },
+  paramSync: {
+    applyParam: (key, value, ctx) => {
+      if (key === 'autoRun' || key === 'showArea') {
+        const on = asBoolean(value);
+        ctx.scene.setParams({ [key]: on } as Partial<DisplacementTimeParams>);
+        ctx.setControlValue(key, on);
+        return true;
+      }
+      if (key === 'v0' || key === 'acceleration') {
+        const number = Number(value);
+        if (!Number.isFinite(number)) return false;
+        ctx.scene.setParams({
+          [key]: number
+        } as Partial<DisplacementTimeParams>);
+        ctx.setControlValue(key, number);
+        return true;
+      }
+      return false;
+    }
   }
 });
