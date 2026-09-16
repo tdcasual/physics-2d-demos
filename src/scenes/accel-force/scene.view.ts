@@ -1,35 +1,38 @@
-import type { TeachingMode, TeachingTheme } from '../../platform/standards';
+import {
+  applyCanvasSize,
+  getResponsiveScale,
+  scaledSize
+} from '../../core/canvas-sizing';
 import type { DemoRenderHints } from '../../platform/demo-profile';
+import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
-import { accelForceConstants, type AccelForceState } from './scene.sim';
+import {
+  ACCEL_FORCE_X_TITLE_FORCE,
+  ACCEL_FORCE_X_TITLE_MASS,
+  ACCEL_FORCE_Y_TITLE,
+  accelForceConstants as C,
+  apparatusLayout,
+  graphFrame,
+  graphToPx,
+  hangerDiscCount,
+  stageLayoutFrom,
+  stageTransform,
+  tapeDotPositions,
+  type AccelForceRecord,
+  type AccelForceState,
+  type ApparatusLayout
+} from './scene.sim';
+
 export type CreateAccelForceViewOptions = {
   canvas?: HTMLCanvasElement;
+  graphCanvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
   mode?: TeachingMode;
   demoHints?: DemoRenderHints;
 };
-const {
-  baseWidth: BASE_W,
-  baseHeight: BASE_H,
-  fieldWidth: FIELD_W,
-  trackY: TRACK_Y,
-  cartX: CART_X,
-  trackLeft: TRACK_LEFT,
-  trackRight: TRACK_RIGHT,
-  graphLeft: GRAPH_LEFT,
-  graphRight: GRAPH_RIGHT,
-  graphTop: GRAPH_TOP,
-  graphBottom: GRAPH_BOTTOM,
-  panelWidth: PANEL_W,
-  panelInset: INSET,
-  gridStep: GRID_STEP,
-  graphMaxAccel: MAX_A,
-  hangerYOffset: HANGER_Y_OFFSET,
-  formulaBoxY: FORMULA_BOX_Y
-} = accelForceConstants;
+
 type Palette = {
   bg: string;
-  panel: string;
   grid: string;
   ink: string;
   muted: string;
@@ -37,26 +40,33 @@ type Palette = {
   blue: string;
   teal: string;
   gold: string;
-  border: string;
-  soft: string;
+  wood: string;
+  woodDark: string;
+  cart: string;
+  glass: string;
+  tape: string;
+  ticker: string;
 };
+
 const PALETTE: Record<TeachingTheme, Palette> = {
   light: {
     bg: '#fbfaf7',
-    panel: '#fff',
-    grid: '#dce4ea',
+    grid: '#e4dfd4',
     ink: '#303744',
-    muted: '#8190a0',
+    muted: '#8b97a5',
     red: '#ef4050',
     blue: '#3278bc',
     teal: '#2a9d8f',
-    gold: '#e6a719',
-    border: '#d2d9e2',
-    soft: '#f0f2f5'
+    gold: '#d4a017',
+    wood: '#c4a484',
+    woodDark: '#8d7b6a',
+    cart: '#3d7cc0',
+    glass: '#eef4fb',
+    tape: '#efe6c9',
+    ticker: '#2b313c'
   },
   dark: {
     bg: '#101827',
-    panel: '#172235',
     grid: '#435169',
     ink: '#eef2f7',
     muted: '#9eabbc',
@@ -64,10 +74,65 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     blue: '#60a5fa',
     teal: '#34d399',
     gold: '#fbbf24',
-    border: '#3c4b61',
-    soft: '#253249'
+    wood: '#8d6e54',
+    woodDark: '#c4a484',
+    cart: '#60a5fa',
+    glass: '#1f3148',
+    tape: '#3f3420',
+    ticker: '#d5dee8'
   }
 };
+
+function contentBoxSize(host: HTMLElement): { width: number; height: number } {
+  const cs = getComputedStyle(host);
+  const rect = host.getBoundingClientRect();
+  const padX =
+    (Number.parseFloat(cs.paddingLeft) || 0) +
+    (Number.parseFloat(cs.paddingRight) || 0);
+  const padY =
+    (Number.parseFloat(cs.paddingTop) || 0) +
+    (Number.parseFloat(cs.paddingBottom) || 0);
+  return {
+    width: Math.max(1, Math.floor(rect.width - padX)),
+    height: Math.max(1, Math.floor(rect.height - padY))
+  };
+}
+
+/** Size the graph canvas to the host content box, not the padded border box. */
+export function sizeGraphCanvasToHost(canvas: HTMLCanvasElement): {
+  ctx: CanvasRenderingContext2D;
+  cssWidth: number;
+  cssHeight: number;
+  responsiveScale: number;
+} {
+  const host = canvas.parentElement;
+  let cssWidth: number;
+  let cssHeight: number;
+  if (host) {
+    const box = contentBoxSize(host);
+    cssWidth = box.width;
+    cssHeight = box.height;
+  } else {
+    const rect = canvas.getBoundingClientRect();
+    cssWidth = Math.max(1, Math.floor(rect.width || 400));
+    cssHeight = Math.max(1, Math.floor(rect.height || 200));
+  }
+  const dpr = Math.min(
+    2,
+    typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1
+  );
+  const responsiveScale = getResponsiveScale(cssWidth, cssHeight);
+  const ctx = applyCanvasSize(canvas, {
+    width: Math.max(1, Math.floor(cssWidth * dpr)),
+    height: Math.max(1, Math.floor(cssHeight * dpr)),
+    cssWidth,
+    cssHeight,
+    dpr,
+    responsiveScale
+  });
+  return { ctx, cssWidth, cssHeight, responsiveScale };
+}
+
 function text(
   ctx: CanvasRenderingContext2D,
   value: string,
@@ -84,304 +149,683 @@ function text(
   ctx.textBaseline = 'middle';
   ctx.fillText(value, x, y);
 }
+
+function rounded(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number
+): void {
+  ctx.beginPath();
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(x, y, w, h, r);
+    return;
+  }
+  ctx.rect(x, y, w, h);
+}
+
 function arrow(
   ctx: CanvasRenderingContext2D,
   x1: number,
   y1: number,
   x2: number,
   y2: number,
-  color: string
+  color: string,
+  width: number,
+  head = 11
 ): void {
   const dx = x2 - x1;
   const dy = y2 - y1;
-  const n = Math.hypot(dx, dy);
-  if (n < 2) return;
-  const ux = dx / n;
-  const uy = dy / n;
+  const len = Math.hypot(dx, dy);
+  if (len < 2) return;
+  const ux = dx / len;
+  const uy = dy / len;
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
-  ctx.lineWidth = 4;
+  ctx.lineWidth = width;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
   ctx.beginPath();
   ctx.moveTo(x1, y1);
   ctx.lineTo(x2, y2);
   ctx.stroke();
   ctx.beginPath();
   ctx.moveTo(x2, y2);
-  ctx.lineTo(x2 - ux * 13 - uy * 6, y2 - uy * 13 + ux * 6);
-  ctx.lineTo(x2 - ux * 13 + uy * 6, y2 - uy * 13 - ux * 6);
+  ctx.lineTo(
+    x2 - ux * head - uy * head * 0.45,
+    y2 - uy * head + ux * head * 0.45
+  );
+  ctx.lineTo(
+    x2 - ux * head + uy * head * 0.45,
+    y2 - uy * head - ux * head * 0.45
+  );
   ctx.closePath();
   ctx.fill();
 }
-function drawGraph(
-  ctx: CanvasRenderingContext2D,
-  state: AccelForceState,
-  p: Palette,
-  scale: number
-): void {
+
+function drawGrid(ctx: CanvasRenderingContext2D, p: Palette): void {
+  ctx.fillStyle = p.bg;
+  ctx.fillRect(0, 0, C.baseWidth, C.baseHeight);
   ctx.strokeStyle = p.grid;
   ctx.lineWidth = 1;
-  for (let x = GRAPH_LEFT; x <= GRAPH_RIGHT; x += GRID_STEP) {
+  for (let x = 0; x <= C.baseWidth; x += C.gridStep) {
     ctx.beginPath();
-    ctx.moveTo(x, GRAPH_TOP);
-    ctx.lineTo(x, GRAPH_BOTTOM);
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, C.baseHeight);
     ctx.stroke();
   }
-  for (let y = 0; y <= MAX_A; y += 0.5) {
-    const py = GRAPH_BOTTOM - ((GRAPH_BOTTOM - GRAPH_TOP) * y) / MAX_A;
+  for (let y = 0; y <= C.baseHeight; y += C.gridStep) {
     ctx.beginPath();
-    ctx.moveTo(GRAPH_LEFT, py);
-    ctx.lineTo(GRAPH_RIGHT, py);
+    ctx.moveTo(0, y);
+    ctx.lineTo(C.baseWidth, y);
     ctx.stroke();
-    text(ctx, y.toFixed(1), GRAPH_LEFT - 10, py, p.muted, 10 * scale, 'right');
   }
+}
+
+function drawTable(
+  ctx: CanvasRenderingContext2D,
+  layout: ApparatusLayout,
+  p: Palette
+): void {
+  const y = Math.max(layout.trackStart.y, layout.trackEnd.y);
+  ctx.fillStyle = p.wood;
+  ctx.fillRect(
+    layout.trackStart.x - 18,
+    y,
+    layout.trackEnd.x - layout.trackStart.x + 28,
+    C.tableThickness
+  );
+  ctx.strokeStyle = p.woodDark;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(layout.trackStart.x - 8, y + C.tableThickness);
+  ctx.lineTo(layout.trackStart.x - 8, y + C.tableThickness + C.tableLeg);
+  ctx.moveTo(layout.trackEnd.x - 10, y + C.tableThickness);
+  ctx.lineTo(layout.trackEnd.x - 10, y + C.tableThickness + C.tableLeg);
+  ctx.stroke();
+}
+
+function drawTrack(
+  ctx: CanvasRenderingContext2D,
+  layout: ApparatusLayout,
+  balanced: boolean,
+  p: Palette,
+  font: (n: number) => number
+): void {
+  ctx.strokeStyle = p.ink;
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(layout.trackStart.x, layout.trackStart.y);
+  ctx.lineTo(layout.trackEnd.x, layout.trackEnd.y);
+  ctx.stroke();
+  if (balanced) {
+    ctx.fillStyle = p.woodDark;
+    ctx.beginPath();
+    ctx.moveTo(layout.pad.x - 16, layout.pad.y + 8);
+    ctx.lineTo(layout.pad.x, layout.trackStart.y + 2);
+    ctx.lineTo(layout.pad.x + 16, layout.pad.y + 8);
+    ctx.closePath();
+    ctx.fill();
+    text(
+      ctx,
+      '垫高',
+      layout.pad.x,
+      layout.pad.y + 20,
+      p.muted,
+      font(12),
+      'center'
+    );
+  }
+}
+
+function drawTicker(
+  ctx: CanvasRenderingContext2D,
+  layout: ApparatusLayout,
+  p: Palette,
+  font: (n: number) => number
+): void {
+  const x = layout.ticker.x;
+  const y = layout.ticker.y;
+  ctx.fillStyle = p.ticker;
+  rounded(
+    ctx,
+    x - C.tickerWidth / 2,
+    y - C.tickerHeight / 2,
+    C.tickerWidth,
+    C.tickerHeight,
+    4
+  );
+  ctx.fill();
+  ctx.fillStyle = p.red;
+  ctx.beginPath();
+  ctx.arc(x + 8, y - 2, 4, 0, Math.PI * 2);
+  ctx.fill();
+  text(
+    ctx,
+    '打点计时器',
+    x - C.tickerWidth / 2,
+    y - C.tickerHeight / 2 - 10,
+    p.muted,
+    font(12),
+    'left'
+  );
+}
+
+function drawTape(
+  ctx: CanvasRenderingContext2D,
+  state: AccelForceState,
+  layout: ApparatusLayout,
+  p: Palette
+): void {
+  ctx.strokeStyle = p.tape;
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(layout.tapeFrom.x, layout.tapeFrom.y);
+  ctx.lineTo(layout.tapeTo.x, layout.tapeTo.y);
+  ctx.stroke();
+  const dots = tapeDotPositions(state, layout);
+  ctx.fillStyle = p.red;
+  dots.forEach((dot, index) => {
+    ctx.beginPath();
+    ctx.arc(dot.x, dot.y, index % C.countEvery === 0 ? 3.2 : 2, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+function drawCart(
+  ctx: CanvasRenderingContext2D,
+  layout: ApparatusLayout,
+  p: Palette,
+  font: (n: number) => number
+): void {
+  const x = layout.cart.x;
+  const y = layout.cart.y;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(Math.atan2(layout.uy, layout.ux));
+  ctx.fillStyle = p.cart;
+  rounded(
+    ctx,
+    -C.cartWidth / 2,
+    -C.cartHeight / 2,
+    C.cartWidth,
+    C.cartHeight,
+    6
+  );
+  ctx.fill();
+  ctx.fillStyle = p.glass;
+  rounded(ctx, -16, -C.cartHeight / 2 + 5, 32, 11, 4);
+  ctx.fill();
+  ctx.fillStyle = p.ink;
+  ctx.beginPath();
+  ctx.arc(-18, C.cartHeight / 2 - 2, C.wheelRadius, 0, Math.PI * 2);
+  ctx.arc(18, C.cartHeight / 2 - 2, C.wheelRadius, 0, Math.PI * 2);
+  ctx.fill();
+  text(ctx, 'M', 0, -1, p.glass, font(13), 'center', 700);
+  ctx.restore();
+}
+
+function drawPulleyAndHanger(
+  ctx: CanvasRenderingContext2D,
+  state: AccelForceState,
+  layout: ApparatusLayout,
+  p: Palette,
+  font: (n: number) => number
+): void {
+  const pulley = layout.pulley;
+  ctx.strokeStyle = p.ink;
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  ctx.moveTo(
+    layout.cart.x + layout.ux * (C.cartWidth / 2),
+    layout.cart.y + layout.uy * (C.cartWidth / 2) + layout.upY * 4
+  );
+  ctx.lineTo(pulley.x, pulley.y);
+  const hangerTop =
+    layout.hanger.y -
+    hangerDiscCount(state.params.hangerMass) * (C.hangerDiscHeight / 2);
+  ctx.lineTo(layout.hanger.x, hangerTop);
+  ctx.stroke();
+
+  ctx.fillStyle = p.muted;
+  ctx.beginPath();
+  ctx.arc(pulley.x, pulley.y, C.pulleyRadius, 0, Math.PI * 2);
+  ctx.fill();
   ctx.strokeStyle = p.ink;
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(GRAPH_LEFT, GRAPH_BOTTOM);
-  ctx.lineTo(GRAPH_RIGHT + 10, GRAPH_BOTTOM);
-  ctx.moveTo(GRAPH_LEFT, GRAPH_BOTTOM);
-  ctx.lineTo(GRAPH_LEFT, GRAPH_TOP - 8);
+  ctx.arc(pulley.x, pulley.y, C.pulleyRadius - 3, 0, Math.PI * 2);
   ctx.stroke();
+  ctx.fillStyle = p.ink;
+  ctx.beginPath();
+  ctx.arc(pulley.x, pulley.y, 3, 0, Math.PI * 2);
+  ctx.fill();
   text(
     ctx,
-    state.params.mode === 'force' ? 'F / N' : '1/M / kg⁻¹',
-    GRAPH_RIGHT,
-    GRAPH_BOTTOM + 20,
+    '定滑轮',
+    pulley.x + 18,
+    pulley.y - C.pulleyRadius - 8,
+    p.muted,
+    font(12),
+    'left'
+  );
+
+  const discs = hangerDiscCount(state.params.hangerMass);
+  const top = layout.hanger.y - (discs * C.hangerDiscHeight) / 2;
+  for (let i = 0; i < discs; i += 1) {
+    ctx.fillStyle = i % 2 === 0 ? p.gold : p.wood;
+    rounded(
+      ctx,
+      layout.hanger.x - C.hangerDiscWidth / 2,
+      top + i * C.hangerDiscHeight,
+      C.hangerDiscWidth,
+      C.hangerDiscHeight - 1,
+      3
+    );
+    ctx.fill();
+  }
+  if (discs > 0) {
+    text(
+      ctx,
+      '槽码',
+      layout.hanger.x + C.hangerDiscWidth / 2 + 10,
+      layout.hanger.y,
+      p.red,
+      font(12),
+      'left'
+    );
+    text(ctx, 'm', layout.hanger.x, top - 10, p.ink, font(12), 'center', 700);
+  }
+}
+
+function drawForces(
+  ctx: CanvasRenderingContext2D,
+  layout: ApparatusLayout,
+  p: Palette,
+  font: (n: number) => number
+): void {
+  if (layout.forceArrow) {
+    arrow(
+      ctx,
+      layout.forceArrow.x1,
+      layout.forceArrow.y1,
+      layout.forceArrow.x2,
+      layout.forceArrow.y2,
+      p.blue,
+      4
+    );
+    text(
+      ctx,
+      'F',
+      layout.forceArrow.x2 + 12,
+      layout.forceArrow.y2 - 2,
+      p.blue,
+      font(15),
+      'left',
+      700
+    );
+  }
+  if (layout.frictionArrow) {
+    arrow(
+      ctx,
+      layout.frictionArrow.x1,
+      layout.frictionArrow.y1,
+      layout.frictionArrow.x2,
+      layout.frictionArrow.y2,
+      p.red,
+      4
+    );
+    text(
+      ctx,
+      'f',
+      layout.frictionArrow.x2 - 12,
+      layout.frictionArrow.y2 - 2,
+      p.red,
+      font(15),
+      'right',
+      700
+    );
+  }
+}
+
+function drawApparatus(
+  ctx: CanvasRenderingContext2D,
+  state: AccelForceState,
+  p: Palette,
+  font: (n: number) => number
+): void {
+  const layout = apparatusLayout(state);
+  drawGrid(ctx, p);
+  drawTable(ctx, layout, p);
+  drawTrack(ctx, layout, state.params.balanced, p, font);
+  drawTicker(ctx, layout, p, font);
+  drawTape(ctx, state, layout, p);
+  drawCart(ctx, layout, p, font);
+  drawPulleyAndHanger(ctx, state, layout, p, font);
+  drawForces(ctx, layout, p, font);
+}
+
+function drawGraphAxes(
+  ctx: CanvasRenderingContext2D,
+  state: AccelForceState,
+  frame: ReturnType<typeof graphFrame>,
+  width: number,
+  height: number,
+  p: Palette,
+  font: (n: number) => number
+): void {
+  const xTitle =
+    state.params.mode === 'force'
+      ? ACCEL_FORCE_X_TITLE_FORCE
+      : ACCEL_FORCE_X_TITLE_MASS;
+  const xMax =
+    state.params.mode === 'force' ? C.graphMaxForce : C.graphMaxInvMass;
+  ctx.strokeStyle = p.grid;
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i += 1) {
+    const x = frame.left + ((frame.right - frame.left) * i) / 4;
+    const y = frame.bottom - ((frame.bottom - frame.top) * i) / 4;
+    ctx.beginPath();
+    ctx.moveTo(x, frame.top);
+    ctx.lineTo(x, frame.bottom);
+    ctx.moveTo(frame.left, y);
+    ctx.lineTo(frame.right, y);
+    ctx.stroke();
+    text(
+      ctx,
+      ((xMax * i) / 4).toFixed(1),
+      x,
+      Math.min(height - 8, frame.bottom + 14),
+      p.muted,
+      font(11),
+      'center'
+    );
+    text(
+      ctx,
+      ((C.graphMaxAccel * i) / 4).toFixed(1),
+      frame.left - 8,
+      y,
+      p.muted,
+      font(11),
+      'right'
+    );
+  }
+  ctx.strokeStyle = p.ink;
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.moveTo(frame.left, frame.bottom);
+  ctx.lineTo(frame.right, frame.bottom);
+  ctx.moveTo(frame.left, frame.bottom);
+  ctx.lineTo(frame.left, frame.top);
+  ctx.stroke();
+  arrow(
+    ctx,
+    frame.left,
+    frame.bottom,
+    frame.right + 6,
+    frame.bottom,
     p.ink,
-    12 * scale,
+    1.6,
+    8
+  );
+  arrow(
+    ctx,
+    frame.left,
+    frame.bottom,
+    frame.left,
+    frame.top - 6,
+    p.ink,
+    1.6,
+    8
+  );
+  text(
+    ctx,
+    xTitle,
+    Math.min(width - 4, frame.right),
+    Math.min(height - 10, frame.bottom + 28),
+    p.ink,
+    font(12),
     'right',
     700
   );
   text(
     ctx,
-    'a / m·s⁻²',
-    GRAPH_LEFT,
-    GRAPH_TOP - 20,
+    ACCEL_FORCE_Y_TITLE,
+    frame.left,
+    Math.max(10, frame.top - 12),
     p.ink,
-    12 * scale,
+    font(12),
     'left',
     700
   );
-  ctx.strokeStyle = p.teal;
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  state.samples.forEach((sample, index) => {
-    const x = GRAPH_LEFT + ((GRAPH_RIGHT - GRAPH_LEFT) * index) / 7;
-    const y =
-      GRAPH_BOTTOM -
-      ((GRAPH_BOTTOM - GRAPH_TOP) * Math.min(MAX_A, sample.y)) / MAX_A;
-    if (index === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-  ctx.stroke();
 }
-function drawExperiment(
+
+function drawGraphSeries(
+  ctx: CanvasRenderingContext2D,
+  points: AccelForceRecord[],
+  mode: AccelForceState['params']['mode'],
+  frame: ReturnType<typeof graphFrame>,
+  color: string,
+  style: 'line' | 'dots'
+): void {
+  const filtered = points.filter((item) => item.mode === mode);
+  if (filtered.length === 0) return;
+  if (style === 'line') {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    filtered.forEach((item, index) => {
+      const p = graphToPx(item.x, item.y, mode, frame);
+      if (index === 0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    });
+    ctx.stroke();
+    return;
+  }
+  ctx.fillStyle = color;
+  filtered.forEach((item) => {
+    const p = graphToPx(item.x, item.y, mode, frame);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+function drawGraphCanvas(
   ctx: CanvasRenderingContext2D,
   state: AccelForceState,
+  width: number,
+  height: number,
   p: Palette,
-  scale: number
+  font: (n: number) => number
 ): void {
-  ctx.strokeStyle = p.ink;
-  ctx.lineWidth = 5;
-  ctx.beginPath();
-  ctx.moveTo(TRACK_LEFT, TRACK_Y);
-  ctx.lineTo(TRACK_RIGHT, TRACK_Y);
-  ctx.stroke();
-  const x = CART_X + state.position;
-  ctx.fillStyle = p.blue;
-  ctx.fillRect(x - 42, TRACK_Y - 32, 84 * scale, 32 * scale);
-  ctx.fillStyle = p.panel;
-  ctx.fillRect(x - 28, TRACK_Y - 48, 56 * scale, 16 * scale);
-  ctx.fillStyle = p.ink;
-  ctx.beginPath();
-  ctx.arc(x - 24, TRACK_Y + 5, 8, 0, Math.PI * 2);
-  ctx.arc(x + 24, TRACK_Y + 5, 8, 0, Math.PI * 2);
-  ctx.fill();
-  text(
-    ctx,
-    `M=${state.params.cartMass.toFixed(2)} kg`,
-    x,
-    TRACK_Y - 16,
-    p.panel,
-    12 * scale,
-    'center',
-    700
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = p.bg;
+  ctx.fillRect(0, 0, width, height);
+  const frame = graphFrame(width, height);
+  drawGraphAxes(ctx, state, frame, width, height, p, font);
+  drawGraphSeries(ctx, state.curve, state.params.mode, frame, p.teal, 'line');
+  drawGraphSeries(ctx, state.records, state.params.mode, frame, p.blue, 'dots');
+  const current = graphToPx(
+    state.params.mode === 'force' ? state.force : state.inverseMass,
+    state.acceleration,
+    state.params.mode,
+    frame
   );
-  ctx.strokeStyle = p.ink;
-  ctx.lineWidth = 2;
-  ctx.setLineDash([4, 4]);
-  ctx.beginPath();
-  ctx.moveTo(x + 42, TRACK_Y - 16);
-  ctx.lineTo(TRACK_RIGHT - 20, TRACK_Y + 40);
-  ctx.stroke();
-  ctx.setLineDash([]);
+  ctx.strokeStyle = p.gold;
   ctx.fillStyle = p.gold;
+  ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.arc(
-    TRACK_RIGHT - 20,
-    TRACK_Y + HANGER_Y_OFFSET,
-    18 * scale,
-    0,
-    Math.PI * 2
-  );
+  ctx.arc(current.x, current.y, 6, 0, Math.PI * 2);
   ctx.fill();
-  text(
-    ctx,
-    `m=${state.params.hangerMass.toFixed(2)}`,
-    TRACK_RIGHT - 20,
-    TRACK_Y + 56,
-    p.ink,
-    10 * scale,
-    'center',
-    700
-  );
-  arrow(ctx, x + 46, TRACK_Y - 16, x + 120, TRACK_Y - 16, p.blue);
-  text(
-    ctx,
-    `F=${state.force.toFixed(3)} N`,
-    x + 130,
-    TRACK_Y - 36,
-    p.blue,
-    13 * scale,
-    'center',
-    700
-  );
-  text(
-    ctx,
-    '打点计时器',
-    TRACK_LEFT + 40,
-    TRACK_Y - 48,
-    p.muted,
-    13 * scale,
-    'center'
-  );
-  text(
-    ctx,
-    state.status,
-    310,
-    305,
-    state.params.balanced ? p.teal : p.red,
-    13 * scale,
-    'center',
-    700
-  );
-}
-function drawPanel(
-  ctx: CanvasRenderingContext2D,
-  state: AccelForceState,
-  p: Palette,
-  scale: number
-): void {
-  const x = FIELD_W;
-  ctx.fillStyle = p.panel;
-  ctx.fillRect(x, 0, BASE_W - FIELD_W, BASE_H);
-  ctx.strokeStyle = p.border;
-  ctx.beginPath();
-  ctx.moveTo(x, 0);
-  ctx.lineTo(x, BASE_H);
   ctx.stroke();
-  text(ctx, '探究 a 与 F、M', x + INSET, 38, p.ink, 19 * scale, 'left', 700);
-  ctx.fillStyle = p.soft;
-  ctx.beginPath();
-  ctx.roundRect(
-    x + INSET,
-    FORMULA_BOX_Y,
-    PANEL_W * scale,
-    82 * scale,
-    10 * scale
-  );
-  ctx.fill();
-  text(ctx, 'F = Ma', x + 42, 134, p.ink, 16 * scale, 'left', 700);
-  text(
-    ctx,
-    state.params.mode === 'force' ? 'a ∝ F' : 'a ∝ 1/M',
-    x + 42,
-    164,
-    p.teal,
-    16 * scale,
-    'left',
-    700
-  );
-  const rows: Array<[string, string, string]> = [
-    ['拉力 F', `${state.force.toFixed(3)} N`, p.blue],
-    ['理论加速度', `${state.acceleration.toFixed(2)} m/s²`, p.teal],
-    ['瞬时速度', `${state.velocity.toFixed(2)} m/s`, p.ink],
-    ['时间 t', `${state.time.toFixed(2)} s`, p.ink]
-  ];
-  rows.forEach(([label, value, color], index) => {
-    const y = 232 + index * 34;
-    text(ctx, label, x + 42, y, p.muted, 13 * scale);
-    text(ctx, value, x + 224, y, color, 13 * scale, 'right', 700);
-  });
-  text(ctx, '纸带逐差：Δs = a(Δt)²', x + INSET, 404, p.muted, 12 * scale);
-  text(
-    ctx,
-    '平衡摩擦后，a = F/M',
-    x + INSET,
-    438,
-    p.teal,
-    13 * scale,
-    'left',
-    700
-  );
 }
+
 export function createAccelForceView(
   options: CreateAccelForceViewOptions = {}
 ) {
   const stage = createCanvasViewport({
     canvas: options.canvas ?? null,
-    sizing: { mode: 'clamped', fallbackWidth: BASE_W, fallbackHeight: BASE_H },
-    initialWidth: BASE_W,
-    initialHeight: BASE_H,
+    sizing: {
+      mode: 'clamped',
+      fallbackWidth: C.baseWidth,
+      fallbackHeight: C.baseHeight
+    },
+    initialWidth: C.baseWidth,
+    initialHeight: C.baseHeight,
     eagerContext: true
   });
+  const graph = {
+    canvas: (options.graphCanvas ?? null) as HTMLCanvasElement | null,
+    ctx: null as CanvasRenderingContext2D | null,
+    cssWidth: 400,
+    cssHeight: 200,
+    responsiveScale: 1,
+    resize(): void {
+      if (!graph.canvas) return;
+      const sized = sizeGraphCanvasToHost(graph.canvas);
+      graph.ctx = sized.ctx;
+      graph.cssWidth = sized.cssWidth;
+      graph.cssHeight = sized.cssHeight;
+      graph.responsiveScale = sized.responsiveScale;
+    },
+    attach(canvas: HTMLCanvasElement): void {
+      graph.canvas = canvas;
+      graph.resize();
+    },
+    release(): void {
+      graph.canvas = null;
+      graph.ctx = null;
+    }
+  };
+  if (graph.canvas) graph.resize();
   const env = createViewEnvironment({
     theme: options.theme ?? 'light',
     mode: options.mode ?? 'normal',
     demoHints: options.demoHints
   });
   let snapshot: AccelForceState | null = null;
+  let parentObserved = false;
+  let panelObserved = false;
+  let drawing = false;
+  const overlayObservers: Array<{ disconnect(): void }> = [];
+
+  function paint(state: AccelForceState): void {
+    if (drawing) return;
+    drawing = true;
+    try {
+      draw(state);
+    } finally {
+      drawing = false;
+    }
+  }
+
+  function redraw(): void {
+    if (snapshot) paint(snapshot);
+  }
+
+  function watchOverlay(): void {
+    if (!stage.canvas) return;
+    const parent = stage.canvas.parentElement;
+    if (!parent) return;
+    if (!parentObserved && typeof ResizeObserver !== 'undefined') {
+      parentObserved = true;
+      const resize = new ResizeObserver(() => redraw());
+      resize.observe(parent);
+      overlayObservers.push(resize);
+    }
+    if (panelObserved) return;
+    const panel = parent.querySelector(
+      '.teaching-readout-panel, .srgb-readout-panel, .readout-panel'
+    );
+    if (!(panel instanceof HTMLElement)) return;
+    panelObserved = true;
+    if (typeof ResizeObserver !== 'undefined') {
+      const resize = new ResizeObserver(() => redraw());
+      resize.observe(panel);
+      overlayObservers.push(resize);
+    }
+    if (typeof MutationObserver !== 'undefined') {
+      const mutate = new MutationObserver(() => redraw());
+      mutate.observe(panel, {
+        attributes: true,
+        attributeFilter: ['class', 'style']
+      });
+      overlayObservers.push(mutate);
+    }
+  }
+
   function draw(state: AccelForceState): void {
     const ctx = stage.ctx;
     if (!ctx) return;
     const width = stage.cssWidth;
     const height = stage.cssHeight;
-    const fit = Math.min(width / BASE_W, height / BASE_H);
-    const offsetY = (height - BASE_H * fit) / 2;
-    const scale = env.contentScale() * stage.responsiveScale;
+    const layout = stageLayoutFrom(stage.canvas);
+    const { fit, offsetX, offsetY } = stageTransform(width, height, layout);
     const p = PALETTE[env.theme];
+    const rs = stage.responsiveScale;
+    const typeScale = env.fontScale() * Math.min(env.contentScale(), 1.25);
+    const font = (base: number): number =>
+      scaledSize(base * typeScale, Math.max(rs, 0.3), 11) / Math.max(fit, 0.05);
+
     ctx.clearRect(0, 0, width, height);
-    ctx.save();
-    ctx.translate(0, offsetY);
-    ctx.scale(fit, fit);
     ctx.fillStyle = p.bg;
-    ctx.fillRect(0, 0, FIELD_W, BASE_H);
-    drawExperiment(ctx, state, p, scale);
-    drawGraph(ctx, state, p, scale);
-    drawPanel(ctx, state, p, scale);
+    ctx.fillRect(0, 0, width, height);
+    ctx.save();
+    ctx.translate(offsetX, offsetY);
+    ctx.scale(fit, fit);
+    drawApparatus(ctx, state, p, font);
     ctx.restore();
+
+    if (graph.canvas) {
+      if (!graph.ctx) graph.resize();
+      const gctx = graph.ctx;
+      if (gctx) {
+        const gFont = (base: number): number =>
+          scaledSize(
+            base * typeScale,
+            Math.max(graph.responsiveScale, 0.3),
+            10
+          );
+        drawGraphCanvas(gctx, state, graph.cssWidth, graph.cssHeight, p, gFont);
+      }
+    }
+    watchOverlay();
   }
+
   return {
     render(state: AccelForceState): void {
       snapshot = state;
       stage.ensureSized();
-      draw(state);
+      paint(state);
     },
     resize(): void {
       stage.resize();
-      if (snapshot) draw(snapshot);
+      if (graph.canvas) graph.resize();
+      if (snapshot) paint(snapshot);
     },
     setTheme(theme: TeachingTheme): void {
       env.setTheme(theme);
-      if (snapshot) draw(snapshot);
+      if (snapshot) paint(snapshot);
     },
     setMode(mode: TeachingMode, hints?: DemoRenderHints): void {
       env.setMode(mode, hints);
-      if (snapshot) draw(snapshot);
+      if (snapshot) paint(snapshot);
+    },
+    attachGraphCanvas(canvas: HTMLCanvasElement): void {
+      graph.attach(canvas);
+      if (snapshot) paint(snapshot);
     },
     dispose(): void {
       snapshot = null;
+      overlayObservers.forEach((observer) => observer.disconnect());
+      overlayObservers.length = 0;
       stage.release();
+      graph.release();
     }
   };
 }

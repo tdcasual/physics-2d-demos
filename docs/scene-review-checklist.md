@@ -27,7 +27,7 @@
 |  12 | 竖直平面内圆周运动临界状态                            | 力学 | [`vertical-circle`](../src/scenes/vertical-circle/scene.meta.ts)                                   | [详情](https://app.svgzhenli.com/resource/d53c6251-b24c-4a6c-a6b9-9e104a3995b8) · [封面](https://img.svgzhenli.com/gallery-assets/covers/s3fq03sft9n1775626003953.png)  |  ✅  |
 |  13 | 三大性质力交互课件                                    | 力学 | [`three-forces`](../src/scenes/three-forces/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/a6e3e383-482e-4ad1-a69b-f7ddaeaf8aee) · [封面](https://img.svgzhenli.com/gallery-assets/covers/ihldajl8mpl1781095386830.png)  |  ✅  |
 |  14 | 原子核比结合能与质量数关系                            | 近代 | [`binding-energy`](../src/scenes/binding-energy/scene.meta.ts)                                     | [详情](https://app.svgzhenli.com/resource/56ab7ed1-01c6-4cfa-89d3-cae38e24c433) · [封面](https://img.svgzhenli.com/gallery-assets/covers/hlgy1dsu9wh1774799292161.png)  |  ✅  |
-|  15 | 探究加速度与力质量关系实验                            | 力学 | [`accel-force`](../src/scenes/accel-force/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/fe4a9b83-9f96-4f06-9ad6-d64ebd75c515) · [封面](https://img.svgzhenli.com/gallery-assets/covers/qgo9e87x771787678068367.png)   |  ☐   |
+|  15 | 探究加速度与力质量关系实验                            | 力学 | [`accel-force`](../src/scenes/accel-force/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/fe4a9b83-9f96-4f06-9ad6-d64ebd75c515) · [封面](https://img.svgzhenli.com/gallery-assets/covers/qgo9e87x771787678068367.png)   |  ✅  |
 |  16 | 单缝衍射条纹分布                                      | 光学 | [`single-slit`](../src/scenes/single-slit/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/50754223-e2c0-405d-9098-cfa3d2fedaca) · [封面](https://img.svgzhenli.com/gallery-assets/covers/7jar1z9ybu81774773489050.png)  |  ☐   |
 |  17 | 磁镜与磁约束交互                                      | 电磁 | [`magnetic-mirror`](../src/scenes/magnetic-mirror/scene.meta.ts)                                   | [详情](https://app.svgzhenli.com/resource/c540be11-ba80-4952-8a22-570504fe1d69) · [封面](https://img.svgzhenli.com/gallery-assets/covers/q2ltmtzvpg1786796521171.png)   |  ☐   |
 |  18 | 匀变速直线运动位移与时间关系                          | 力学 | [`displacement-time`](../src/scenes/displacement-time/scene.meta.ts)                               | [详情](https://app.svgzhenli.com/resource/f8d783bf-0b36-425f-ae53-a692dba4aff9) · [封面](https://img.svgzhenli.com/gallery-assets/covers/noonxbfliw1774676556531.png)   |  ☐   |
@@ -245,6 +245,15 @@
 - 交互与布局验证：Playwright 复核 `1280×720`、`1024×768`、`900×768`、`768×768`、`390×844`（`?autoRun=0&showRegions=1`，A=56 / A=238）无横纵溢出、无 console error/warning；U-235/U-238/Fe-56 与 y 轴标题完整可读、互不覆盖；动画区无数据卡；移动端控制/数据页分离；滑块、播放暂停冻结、重置、深色主题、演示模式和 `?A=56&autoRun=0` URL 恢复通过。
 - 工程验证：专项 `28/28`（sim `21` + view `7`）；tsc、ESLint、`git diff --check`、构建和 bundle 预算通过（场景页 JS 137.25 kB / 180 kB）。
 - 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/56ab7ed1-01c6-4cfa-89d3-cae38e24c433.md` · [原始详情](https://app.svgzhenli.com/resource/56ab7ed1-01c6-4cfa-89d3-cae38e24c433) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/hlgy1dsu9wh1774799292161.png)
+
+### 15. 探究加速度与力质量关系实验 (`accel-force`)
+
+- 状态：✅ Codex / Grok Build 交叉审计通过（2026-09-16）。
+- 修复：重构为纸带计时器—小车—定滑轮—槽码的米白实验动画，动画区只保留装置、运动、纸带和必要的 F/阻力/高度短标；右侧/下方数据图表独立接入标准 `split-right-graph-bottom` 图表区，移除画布内参数、公式、实时数据卡和长说明。
+- 物理核验：平衡摩擦力时 `a=mg/(M+m)`、绳张力 `F=Ma`；未平衡时 `a=(mg−f)/(M+m)`、`F−f=Ma`，纸带逐差 `Δs=a(Δt)²`、`g=9.8`；a–F 与 a–1/M 模式、参数夹取、暂停/复位/记录由专项测试覆盖。
+- 交互与布局验证：释放/复位/记录/清空/重新实验、模式切换、平衡摩擦力和 URL 参数通过；独立 CUA 复核 `1280×720`、`1024×768`、`900×768`、`768×768` 均使图表容器和 canvas 完整落在视口内，`390×844` 的控制/图表/数据标签分离且图表完整可见，无页面溢出；动画区无图表/数据卡，控制台新会话无 error。
+- 工程验证：Grok Build 完成布局根因修复与专项测试；独立复核 graph section 在桌面高度 220px、canvas 底部预留 8px，`git diff --check`、专项单测、ESLint、TypeScript 检查通过后提交。
+- 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/fe4a9b83-9f96-4f06-9ad6-d64ebd75c515.md` · [原始详情](https://app.svgzhenli.com/resource/fe4a9b83-9f96-4f06-9ad6-d64ebd75c515) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/qgo9e87x771787678068367.png)
 
 ## 复审记录模板
 
