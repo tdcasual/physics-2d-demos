@@ -6,32 +6,52 @@ export type BellowsParams = {
   showFlow: boolean;
 };
 
+export type BellowsPressure = 'high' | 'low';
+
+export type BellowsValves = { A: boolean; B: boolean; C: boolean; D: boolean };
+
 export type BellowsState = {
   params: BellowsParams;
   t: number;
   pistonX: number;
   progress: number;
   direction: 'left' | 'right';
-  leftPressure: 'high' | 'low';
-  rightPressure: 'high' | 'low';
-  valves: { A: boolean; B: boolean; C: boolean; D: boolean };
+  leftPressure: BellowsPressure;
+  rightPressure: BellowsPressure;
+  valves: BellowsValves;
 };
 
-const BASE_W = 900;
-const BASE_H = 640;
-const FIELD_W = 590;
-const CHAMBER_LEFT = 72;
-const CHAMBER_RIGHT = 540;
-const CHAMBER_TOP = 280;
-const CHAMBER_BOTTOM = 500;
-const PISTON_CENTER = 340;
-const STROKE = 145;
-const PIPE_TOP = 175;
-const PIPE_BOTTOM = 575;
+/** Animation-only design frame (no in-canvas side panel). */
+const VIEW_W = 800;
+const VIEW_H = 560;
+const CHAMBER_LEFT = 86;
+const CHAMBER_RIGHT = 560;
+const CHAMBER_TOP = 228;
+const CHAMBER_BOTTOM = 428;
+const PISTON_CENTER = (CHAMBER_LEFT + CHAMBER_RIGHT) / 2;
+const PISTON_HALF = 13;
+const PISTON_TRAVEL = 152;
 const CYCLE = 4;
+const FIXED_LEFT_PROGRESS = 0.42;
+const FIXED_RIGHT_PROGRESS = -0.42;
 
 function finite(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+function asBool(value: unknown, fallback: boolean): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'string') {
+    const text = value.trim().toLowerCase();
+    if (text === '0' || text === 'false' || text === 'off' || text === 'no') {
+      return false;
+    }
+    if (text === '1' || text === 'true' || text === 'on' || text === 'yes') {
+      return true;
+    }
+  }
+  return fallback;
 }
 
 function normalizeMotion(value: unknown): BellowsMotion {
@@ -41,78 +61,110 @@ function normalizeMotion(value: unknown): BellowsMotion {
 function normalizeParams(input: Partial<BellowsParams>): BellowsParams {
   return {
     motion: normalizeMotion(input.motion),
-    autoRun: input.autoRun !== false,
-    showFlow: input.showFlow !== false
+    autoRun: asBool(input.autoRun, true),
+    showFlow: asBool(input.showFlow, true)
   };
 }
 
+function wrapTime(t: number): number {
+  const cycle = ((t % CYCLE) + CYCLE) % CYCLE;
+  return cycle;
+}
+
+/**
+ * Boyle-law qualitative linkage: pressure and check valves follow the
+ * compressing side (motion direction), not the piston's position sign.
+ * Push left → left high, C exhaust + B intake; pull right → right high, D + A.
+ */
+export function linkageFromDirection(direction: 'left' | 'right'): {
+  leftPressure: BellowsPressure;
+  rightPressure: BellowsPressure;
+  valves: BellowsValves;
+} {
+  if (direction === 'left') {
+    return {
+      leftPressure: 'high',
+      rightPressure: 'low',
+      valves: { A: false, B: true, C: true, D: false }
+    };
+  }
+  return {
+    leftPressure: 'low',
+    rightPressure: 'high',
+    valves: { A: true, B: false, C: false, D: true }
+  };
+}
+
+function autoStroke(t: number): {
+  progress: number;
+  direction: 'left' | 'right';
+} {
+  const local = wrapTime(t);
+  const half = CYCLE / 2;
+  if (local < half) {
+    return { direction: 'left', progress: 1 - (local / half) * 2 };
+  }
+  return { direction: 'right', progress: -1 + ((local - half) / half) * 2 };
+}
+
 export const bellowsConstants = {
-  baseWidth: BASE_W,
-  baseHeight: BASE_H,
-  fieldWidth: FIELD_W,
+  baseWidth: VIEW_W,
+  baseHeight: VIEW_H,
   chamberLeft: CHAMBER_LEFT,
   chamberRight: CHAMBER_RIGHT,
   chamberTop: CHAMBER_TOP,
   chamberBottom: CHAMBER_BOTTOM,
   pistonCenter: PISTON_CENTER,
-  stroke: STROKE,
-  pipeTop: PIPE_TOP,
-  pipeBottom: PIPE_BOTTOM,
+  pistonHalf: PISTON_HALF,
+  pistonTravel: PISTON_TRAVEL,
+  pistonMin: PISTON_CENTER - PISTON_TRAVEL,
+  pistonMax: PISTON_CENTER + PISTON_TRAVEL,
   cycle: CYCLE,
-  panelDividerY: 62,
-  actionBoxX: 174,
-  actionBoxY: 84,
-  actionBoxWidth: 100,
-  actionBoxHeight: 38,
-  actionTextX: 224,
-  stateTextX: 165,
-  monitorY: 237,
-  cardLeftX: 25,
-  cardRightX: 174,
-  cardTopY: 275,
-  cardBottomY: 365,
-  cardWidth: 124,
-  cardHeight: 72,
-  cardTextOffsetX: 62,
-  mechanismTop: 462,
-  mechanismWidth: 249,
-  mechanismHeight: 102,
-  pipeLeftX: 225,
-  valvePipeX: 255,
-  pipeRightX: 420,
-  outletY: 88
+  outletX: PISTON_CENTER,
+  outletTop: 92,
+  outletWidth: 54,
+  manifoldY: 160,
+  pipeLeftX: CHAMBER_LEFT,
+  pipeRightX: CHAMBER_RIGHT,
+  rodEndX: 585,
+  valvePortInset: 22
 };
 
+function clampPiston(progress: number): { progress: number; pistonX: number } {
+  const limited = Math.max(-1, Math.min(1, progress));
+  const pistonX = Math.max(
+    bellowsConstants.pistonMin,
+    Math.min(
+      bellowsConstants.pistonMax,
+      PISTON_CENTER + limited * PISTON_TRAVEL
+    )
+  );
+  return { progress: limited, pistonX };
+}
+
 function makeState(params: BellowsParams, t: number): BellowsState {
-  let progress = 0;
   let direction: 'left' | 'right' = 'left';
+  let progress = 0;
   if (params.motion === 'left') {
-    progress = -0.55;
+    direction = 'left';
+    progress = FIXED_LEFT_PROGRESS;
   } else if (params.motion === 'right') {
-    progress = 0.55;
     direction = 'right';
+    progress = FIXED_RIGHT_PROGRESS;
   } else {
-    const local = (t + 0.45) % CYCLE;
-    if (local < CYCLE / 2) {
-      direction = 'left';
-      progress = 0.62 - local * 0.62;
-    } else {
-      direction = 'right';
-      progress = -0.62 + (local - CYCLE / 2) * 0.62;
-    }
+    const stroke = autoStroke(t);
+    direction = stroke.direction;
+    progress = stroke.progress;
   }
-  const leftCompressed = progress < 0;
+  const placed = clampPiston(progress);
+  const linkage = linkageFromDirection(direction);
   return {
     params: { ...params },
-    t,
-    pistonX: PISTON_CENTER + progress * STROKE,
-    progress,
+    t: wrapTime(t),
+    pistonX: placed.pistonX,
+    progress: placed.progress,
     direction,
-    leftPressure: leftCompressed ? 'high' : 'low',
-    rightPressure: leftCompressed ? 'low' : 'high',
-    valves: leftCompressed
-      ? { A: false, B: true, C: true, D: false }
-      : { A: true, B: false, C: false, D: true }
+    ...linkage
   };
 }
 
@@ -140,7 +192,8 @@ export function createBellowsSim(initial: Partial<BellowsParams> = {}) {
     },
     step(dt: number): void {
       if (!params.autoRun || params.motion !== 'auto') return;
-      t = (t + Math.max(0, finite(dt, 0))) % CYCLE;
+      const delta = Math.max(0, finite(dt, 0));
+      t = wrapTime(t + delta);
     },
     reset(): void {
       params = { ...defaults };

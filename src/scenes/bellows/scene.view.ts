@@ -1,5 +1,6 @@
-import type { TeachingMode, TeachingTheme } from '../../platform/standards';
+import { scaledSize } from '../../core/canvas-sizing';
 import type { DemoRenderHints } from '../../platform/demo-profile';
+import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import { bellowsConstants, type BellowsState } from './scene.sim';
 
@@ -11,37 +12,21 @@ export type CreateBellowsViewOptions = {
 };
 
 const {
-  baseWidth: BASE_W,
-  baseHeight: BASE_H,
-  fieldWidth: FIELD_W,
-  chamberLeft: CHAMBER_LEFT,
-  chamberRight: CHAMBER_RIGHT,
-  chamberTop: CHAMBER_TOP,
-  chamberBottom: CHAMBER_BOTTOM,
-  pipeTop: PIPE_TOP,
-  pipeBottom: PIPE_BOTTOM,
-  panelDividerY: PANEL_DIVIDER_Y,
-  actionBoxX: ACTION_BOX_X,
-  actionBoxY: ACTION_BOX_Y,
-  actionBoxWidth: ACTION_BOX_WIDTH,
-  actionBoxHeight: ACTION_BOX_HEIGHT,
-  actionTextX: ACTION_TEXT_X,
-  stateTextX: STATE_TEXT_X,
-  monitorY: MONITOR_Y,
-  cardLeftX: CARD_LEFT_X,
-  cardRightX: CARD_RIGHT_X,
-  cardTopY: CARD_TOP_Y,
-  cardBottomY: CARD_BOTTOM_Y,
-  cardWidth: CARD_WIDTH,
-  cardHeight: CARD_HEIGHT,
-  cardTextOffsetX: CARD_TEXT_OFFSET_X,
-  mechanismTop: MECHANISM_TOP,
-  mechanismWidth: MECHANISM_WIDTH,
-  mechanismHeight: MECHANISM_HEIGHT,
-  pipeLeftX: PIPE_LEFT_X,
-  valvePipeX: VALVE_PIPE_X,
-  pipeRightX: PIPE_RIGHT_X,
-  outletY: OUTLET_Y
+  baseWidth: VIEW_W,
+  baseHeight: VIEW_H,
+  chamberLeft: CH_L,
+  chamberRight: CH_R,
+  chamberTop: CH_T,
+  chamberBottom: CH_B,
+  pistonHalf: PISTON_HALF,
+  outletX: OUT_X,
+  outletTop: OUT_TOP,
+  outletWidth: OUT_W,
+  manifoldY: MANIFOLD_Y,
+  pipeLeftX: PIPE_L,
+  pipeRightX: PIPE_R,
+  rodEndX: ROD_END,
+  valvePortInset: PORT_INSET
 } = bellowsConstants;
 
 type Palette = {
@@ -50,12 +35,12 @@ type Palette = {
   muted: string;
   red: string;
   blue: string;
-  yellow: string;
-  green: string;
-  border: string;
-  panel: string;
-  soft: string;
+  gold: string;
   pipe: string;
+  piston: string;
+  pistonCore: string;
+  highFill: string;
+  lowFill: string;
 };
 
 const PALETTE: Record<TeachingTheme, Palette> = {
@@ -65,12 +50,12 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     muted: '#8793a2',
     red: '#ef4050',
     blue: '#3c80b1',
-    yellow: '#ffb812',
-    green: '#1ca456',
-    border: '#d6dce4',
-    panel: '#ffffff',
-    soft: '#f3f5f7',
-    pipe: '#323b42'
+    gold: '#e0a31a',
+    pipe: '#323b42',
+    piston: '#2c333c',
+    pistonCore: '#dfe4ea',
+    highFill: 'rgba(239,64,80,0.20)',
+    lowFill: 'rgba(60,128,177,0.12)'
   },
   dark: {
     bg: '#101827',
@@ -78,12 +63,12 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     muted: '#9aa9ba',
     red: '#fb7185',
     blue: '#60a5fa',
-    yellow: '#facc15',
-    green: '#34d399',
-    border: '#3c4b61',
-    panel: '#172235',
-    soft: '#243249',
-    pipe: '#bdc8d5'
+    gold: '#fbbf24',
+    pipe: '#c5d0dc',
+    piston: '#d5dee8',
+    pistonCore: '#243044',
+    highFill: 'rgba(251,113,133,0.22)',
+    lowFill: 'rgba(96,165,250,0.14)'
   }
 };
 
@@ -95,7 +80,7 @@ function text(
   color: string,
   size: number,
   align: CanvasTextAlign = 'left',
-  weight = 600
+  weight = 700
 ): void {
   ctx.fillStyle = color;
   ctx.font = `${weight} ${size}px sans-serif`;
@@ -104,183 +89,299 @@ function text(
   ctx.fillText(value, x, y);
 }
 
-function arrow(
+function rounded(
   ctx: CanvasRenderingContext2D,
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number,
-  color: string,
-  width = 4
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number
 ): void {
-  const dx = x2 - x1;
-  const dy = y2 - y1;
-  const len = Math.hypot(dx, dy);
-  if (len < 2) return;
-  const ux = dx / len;
-  const uy = dy / len;
+  ctx.beginPath();
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(x, y, w, h, r);
+    return;
+  }
+  ctx.rect(x, y, w, h);
+}
+
+function arrowHead(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  ux: number,
+  uy: number,
+  size: number
+): void {
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(
+    x - ux * size - uy * size * 0.55,
+    y - uy * size + ux * size * 0.55
+  );
+  ctx.lineTo(
+    x - ux * size + uy * size * 0.55,
+    y - uy * size - ux * size * 0.55
+  );
+  ctx.closePath();
+  ctx.fill();
+}
+
+function dashedPoly(
+  ctx: CanvasRenderingContext2D,
+  points: Array<{ x: number; y: number }>,
+  color: string,
+  width: number
+): void {
+  if (points.length < 2) return;
   ctx.save();
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
   ctx.lineWidth = width;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.setLineDash([10, 7]);
   ctx.beginPath();
-  ctx.moveTo(x1, y1);
-  ctx.lineTo(x2, y2);
+  ctx.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < points.length; i += 1) {
+    ctx.lineTo(points[i].x, points[i].y);
+  }
   ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(x2, y2);
-  ctx.lineTo(x2 - ux * 14 - uy * 7, y2 - uy * 14 + ux * 7);
-  ctx.lineTo(x2 - ux * 14 + uy * 7, y2 - uy * 14 - ux * 7);
-  ctx.closePath();
-  ctx.fill();
+  ctx.setLineDash([]);
+  const last = points[points.length - 1];
+  const prev = points[points.length - 2];
+  const dx = last.x - prev.x;
+  const dy = last.y - prev.y;
+  const len = Math.hypot(dx, dy) || 1;
+  arrowHead(ctx, last.x, last.y, dx / len, dy / len, 12);
   ctx.restore();
 }
 
-function drawValve(
+function drawFlap(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
-  label: string,
   open: boolean,
-  p: Palette,
-  side: 'red' | 'blue'
+  kind: 'exhaust' | 'intake',
+  side: 'left' | 'right',
+  p: Palette
 ): void {
-  ctx.fillStyle = open ? (side === 'red' ? '#ffe8ea' : '#e4f0fb') : p.panel;
-  ctx.strokeStyle = open ? (side === 'red' ? p.red : p.blue) : p.pipe;
-  ctx.lineWidth = 6;
-  ctx.beginPath();
-  ctx.roundRect(x - 18, y - 11, 36, 22, 5);
+  ctx.save();
+  ctx.translate(x, y);
+  if (open && kind === 'exhaust') {
+    ctx.rotate(side === 'left' ? -1.05 : 1.05);
+  } else if (open && kind === 'intake') {
+    ctx.rotate(side === 'left' ? 0.7 : -0.7);
+  }
+  ctx.fillStyle = p.gold;
+  ctx.strokeStyle = p.pipe;
+  ctx.lineWidth = 1.5;
+  rounded(ctx, -16, -5, 32, 10, 3);
   ctx.fill();
   ctx.stroke();
-  text(ctx, label, x, y - 28, p.ink, 13, 'center', 700);
+  ctx.restore();
 }
 
-function drawPanel(
+function drawHousing(ctx: CanvasRenderingContext2D, p: Palette): void {
+  const outL = OUT_X - OUT_W / 2;
+  const outR = OUT_X + OUT_W / 2;
+  ctx.strokeStyle = p.pipe;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 10;
+  rounded(ctx, CH_L, CH_T, CH_R - CH_L, CH_B - CH_T, 12);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(PIPE_L, CH_T);
+  ctx.lineTo(PIPE_L, MANIFOLD_Y);
+  ctx.lineTo(outL, MANIFOLD_Y);
+  ctx.lineTo(outL, OUT_TOP);
+  ctx.moveTo(PIPE_R, CH_T);
+  ctx.lineTo(PIPE_R, MANIFOLD_Y);
+  ctx.lineTo(outR, MANIFOLD_Y);
+  ctx.lineTo(outR, OUT_TOP);
+  ctx.stroke();
+  ctx.fillStyle = p.gold;
+  for (const [x, y] of [
+    [CH_L, CH_T],
+    [CH_R, CH_T],
+    [CH_L, CH_B],
+    [CH_R, CH_B]
+  ] as const) {
+    ctx.beginPath();
+    ctx.arc(x, y, 5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawPressure(
   ctx: CanvasRenderingContext2D,
   state: BellowsState,
   p: Palette,
-  scale: number
+  font: (n: number) => number
 ): void {
-  const x = FIELD_W;
-  ctx.fillStyle = p.panel;
-  ctx.fillRect(x, 0, BASE_W - FIELD_W, BASE_H);
-  ctx.strokeStyle = p.border;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(x, 0);
-  ctx.lineTo(x, BASE_H);
-  ctx.stroke();
-  text(ctx, '双动式风箱原理', x + 25, 36, p.ink, 20 * scale, 'left', 700);
-  ctx.strokeStyle = p.border;
-  ctx.beginPath();
-  ctx.moveTo(x + 25, PANEL_DIVIDER_Y);
-  ctx.lineTo(BASE_W - 25, PANEL_DIVIDER_Y);
-  ctx.stroke();
-  text(ctx, '当前机械动作', x + 25, 103, p.ink, 15 * scale, 'left', 700);
-  ctx.fillStyle = p.soft;
-  ctx.roundRect(
-    x + ACTION_BOX_X,
-    ACTION_BOX_Y,
-    ACTION_BOX_WIDTH,
-    ACTION_BOX_HEIGHT,
-    7
-  );
-  ctx.fill();
-  text(
-    ctx,
-    state.direction === 'left' ? '← 向左推动' : '向右拉回 →',
-    x + ACTION_TEXT_X,
-    103,
-    p.blue,
-    15 * scale,
-    'center',
-    700
-  );
-  text(ctx, '左侧气室状态：', x + 25, 153, p.ink, 13 * scale);
-  text(
-    ctx,
-    state.leftPressure === 'high' ? '● 压缩升压' : '● 扩大降压',
-    x + STATE_TEXT_X,
-    153,
-    state.leftPressure === 'high' ? p.red : p.blue,
-    13 * scale,
-    'left',
-    700
-  );
-  text(ctx, '右侧气室状态：', x + 25, 187, p.ink, 13 * scale);
-  text(
-    ctx,
-    state.rightPressure === 'high' ? '● 压缩升压' : '● 扩大降压',
-    x + STATE_TEXT_X,
-    187,
-    state.rightPressure === 'high' ? p.red : p.blue,
-    13 * scale,
-    'left',
-    700
-  );
-  text(
-    ctx,
-    '气动单向阀联动监测',
-    x + 25,
-    MONITOR_Y,
-    p.ink,
-    15 * scale,
-    'left',
-    700
-  );
-  const cards = [
-    ['排气阀 C', state.valves.C, CARD_LEFT_X, CARD_TOP_Y, 'red'],
-    ['排气阀 D', state.valves.D, CARD_RIGHT_X, CARD_TOP_Y, 'red'],
-    ['进气阀 A', state.valves.A, CARD_LEFT_X, CARD_BOTTOM_Y, 'blue'],
-    ['进气阀 B', state.valves.B, CARD_RIGHT_X, CARD_BOTTOM_Y, 'blue']
-  ] as const;
-  for (const [label, open, dx, dy, side] of cards) {
-    ctx.fillStyle = open ? (side === 'red' ? '#fff0f0' : '#edf6ff') : p.panel;
-    ctx.strokeStyle = open ? (side === 'red' ? p.red : p.blue) : p.border;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.roundRect(x + dx, dy, CARD_WIDTH, CARD_HEIGHT, 10);
-    ctx.fill();
-    ctx.stroke();
+  const inset = 7;
+  const top = CH_T + inset;
+  const height = CH_B - CH_T - inset * 2;
+  const pistonL = state.pistonX - PISTON_HALF;
+  const pistonR = state.pistonX + PISTON_HALF;
+  ctx.fillStyle = state.leftPressure === 'high' ? p.highFill : p.lowFill;
+  ctx.fillRect(CH_L + inset, top, Math.max(4, pistonL - CH_L - inset), height);
+  ctx.fillStyle = state.rightPressure === 'high' ? p.highFill : p.lowFill;
+  ctx.fillRect(pistonR, top, Math.max(4, CH_R - inset - pistonR), height);
+  const leftMid = (CH_L + pistonL) / 2;
+  const rightMid = (pistonR + CH_R) / 2;
+  // Keep labels above the horizontal piston rod. When a stroke makes one
+  // chamber narrow, use a compact label so the status remains legible.
+  const labelY = CH_T + 62;
+  const leftLabel = pistonL - CH_L < 150;
+  const rightLabel = CH_R - pistonR < 150;
+  if (state.leftPressure === 'high') {
     text(
       ctx,
-      label,
-      x + dx + CARD_TEXT_OFFSET_X,
-      dy + 24,
-      p.muted,
-      12 * scale,
-      'center'
-    );
-    text(
-      ctx,
-      open
-        ? side === 'red'
-          ? '被推开（排气）'
-          : '被推开（吸气）'
-        : '受压闭合',
-      x + dx + CARD_TEXT_OFFSET_X,
-      dy + 50,
-      open ? (side === 'red' ? p.red : p.blue) : p.muted,
-      13 * scale,
+      leftLabel ? '高压' : '排气高压',
+      leftMid,
+      labelY,
+      p.red,
+      font(leftLabel ? 17 : 16),
       'center',
       700
     );
+  } else {
+    text(
+      ctx,
+      leftLabel ? '低压' : '进气低压',
+      leftMid,
+      labelY,
+      p.blue,
+      font(leftLabel ? 17 : 15),
+      'center',
+      600
+    );
   }
-  ctx.fillStyle = p.soft;
-  ctx.roundRect(x + 25, MECHANISM_TOP, MECHANISM_WIDTH, MECHANISM_HEIGHT, 10);
+  if (state.rightPressure === 'high') {
+    text(
+      ctx,
+      rightLabel ? '高压' : '排气高压',
+      rightMid,
+      labelY,
+      p.red,
+      font(rightLabel ? 17 : 16),
+      'center',
+      700
+    );
+  } else {
+    text(
+      ctx,
+      rightLabel ? '低压' : '进气低压',
+      rightMid,
+      labelY,
+      p.blue,
+      font(rightLabel ? 17 : 15),
+      'center',
+      600
+    );
+  }
+}
+
+function drawPiston(
+  ctx: CanvasRenderingContext2D,
+  pistonX: number,
+  p: Palette
+): void {
+  const bodyW = PISTON_HALF * 2;
+  const bodyH = CH_B - CH_T + 12;
+  const y = CH_T - 6;
+  ctx.fillStyle = p.piston;
+  rounded(ctx, pistonX - PISTON_HALF, y, bodyW, bodyH, 4);
   ctx.fill();
-  text(ctx, '核心机制', x + 40, 486, p.ink, 14 * scale, 'left', 700);
-  text(ctx, '压缩端排气，扩张端进气。', x + 40, 513, p.ink, 13 * scale);
-  text(ctx, '往复运动，持续出风。', x + 40, 539, p.ink, 13 * scale);
-  text(ctx, 'SPACE 暂停 / 继续', x + 150, 604, p.muted, 12 * scale, 'center');
+  ctx.fillStyle = p.pistonCore;
+  ctx.fillRect(pistonX - 4, y + 14, 8, bodyH - 28);
+  ctx.fillStyle = p.piston;
+  const midY = (CH_T + CH_B) / 2;
+  rounded(ctx, pistonX, midY - 6, ROD_END - pistonX, 12, 4);
+  ctx.fill();
+}
+
+function drawValves(
+  ctx: CanvasRenderingContext2D,
+  state: BellowsState,
+  p: Palette,
+  font: (n: number) => number
+): void {
+  const c = { x: CH_L + PORT_INSET, y: CH_T };
+  const d = { x: CH_R - PORT_INSET, y: CH_T };
+  const a = { x: CH_L + PORT_INSET, y: CH_B };
+  const b = { x: CH_R - PORT_INSET, y: CH_B };
+  drawFlap(ctx, c.x, c.y, state.valves.C, 'exhaust', 'left', p);
+  drawFlap(ctx, d.x, d.y, state.valves.D, 'exhaust', 'right', p);
+  drawFlap(ctx, a.x, a.y, state.valves.A, 'intake', 'left', p);
+  drawFlap(ctx, b.x, b.y, state.valves.B, 'intake', 'right', p);
+  text(ctx, 'C', c.x - 28, c.y - 18, p.ink, font(15), 'center');
+  text(ctx, 'D', d.x + 28, d.y - 18, p.ink, font(15), 'center');
+  text(ctx, 'A', a.x, a.y + 28, p.ink, font(15), 'center');
+  text(ctx, 'B', b.x, b.y + 28, p.ink, font(15), 'center');
+}
+
+function drawFlow(
+  ctx: CanvasRenderingContext2D,
+  state: BellowsState,
+  p: Palette
+): void {
+  const outL = OUT_X - OUT_W / 2;
+  const outR = OUT_X + OUT_W / 2;
+  const mouth = OUT_TOP + 8;
+  if (state.direction === 'left') {
+    dashedPoly(
+      ctx,
+      [
+        { x: CH_L + PORT_INSET, y: CH_T - 8 },
+        { x: PIPE_L, y: MANIFOLD_Y + 10 },
+        { x: outL + 8, y: MANIFOLD_Y + 10 },
+        { x: OUT_X, y: mouth }
+      ],
+      p.red,
+      3.5
+    );
+    dashedPoly(
+      ctx,
+      [
+        { x: CH_R - PORT_INSET, y: CH_B + 56 },
+        { x: CH_R - PORT_INSET, y: CH_B + 8 }
+      ],
+      p.blue,
+      3.5
+    );
+  } else {
+    dashedPoly(
+      ctx,
+      [
+        { x: CH_R - PORT_INSET, y: CH_T - 8 },
+        { x: PIPE_R, y: MANIFOLD_Y + 10 },
+        { x: outR - 8, y: MANIFOLD_Y + 10 },
+        { x: OUT_X, y: mouth }
+      ],
+      p.red,
+      3.5
+    );
+    dashedPoly(
+      ctx,
+      [
+        { x: CH_L + PORT_INSET, y: CH_B + 56 },
+        { x: CH_L + PORT_INSET, y: CH_B + 8 }
+      ],
+      p.blue,
+      3.5
+    );
+  }
 }
 
 export function createBellowsView(options: CreateBellowsViewOptions = {}) {
   const stage = createCanvasViewport({
     canvas: options.canvas ?? null,
-    sizing: { mode: 'clamped', fallbackWidth: BASE_W, fallbackHeight: BASE_H },
-    initialWidth: BASE_W,
-    initialHeight: BASE_H,
+    sizing: { mode: 'clamped', fallbackWidth: VIEW_W, fallbackHeight: VIEW_H },
+    initialWidth: VIEW_W,
+    initialHeight: VIEW_H,
     eagerContext: true
   });
   const env = createViewEnvironment({
@@ -295,195 +396,27 @@ export function createBellowsView(options: CreateBellowsViewOptions = {}) {
     if (!ctx) return;
     const width = stage.cssWidth;
     const height = stage.cssHeight;
-    const fit = Math.min(width / BASE_W, height / BASE_H);
-    const offsetY = (height - BASE_H * fit) / 2;
     const p = PALETTE[env.theme];
-    const scale = env.contentScale() * stage.responsiveScale;
-    const pistonX = state.pistonX;
+    const fit = Math.min(width / VIEW_W, height / VIEW_H);
+    const ox = (width - VIEW_W * fit) / 2;
+    const oy = (height - VIEW_H * fit) / 2;
+    const rs = stage.responsiveScale;
+    const typeScale = env.fontScale() * Math.min(env.contentScale(), 1.25);
+    const font = (base: number): number =>
+      scaledSize(base * typeScale, Math.max(rs, 0.3), 11) / Math.max(fit, 0.05);
+
     ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = p.bg;
+    ctx.fillRect(0, 0, width, height);
     ctx.save();
-    ctx.translate(0, offsetY);
+    ctx.translate(ox, oy);
     ctx.scale(fit, fit);
-    ctx.fillStyle = p.bg;
-    ctx.fillRect(0, 0, FIELD_W, BASE_H);
-    ctx.fillStyle = p.panel;
-    ctx.fillRect(
-      CHAMBER_LEFT,
-      CHAMBER_TOP,
-      CHAMBER_RIGHT - CHAMBER_LEFT,
-      CHAMBER_BOTTOM - CHAMBER_TOP
-    );
-    ctx.fillStyle =
-      state.leftPressure === 'high'
-        ? 'rgba(239,64,80,0.18)'
-        : 'rgba(60,128,177,0.12)';
-    ctx.fillRect(
-      CHAMBER_LEFT + 6,
-      CHAMBER_TOP + 6,
-      pistonX - CHAMBER_LEFT - 6,
-      CHAMBER_BOTTOM - CHAMBER_TOP - 12
-    );
-    ctx.fillStyle =
-      state.rightPressure === 'high'
-        ? 'rgba(239,64,80,0.18)'
-        : 'rgba(60,128,177,0.12)';
-    ctx.fillRect(
-      pistonX + 8,
-      CHAMBER_TOP + 6,
-      CHAMBER_RIGHT - pistonX - 8,
-      CHAMBER_BOTTOM - CHAMBER_TOP - 12
-    );
-    ctx.strokeStyle = p.pipe;
-    ctx.lineWidth = 12;
-    ctx.beginPath();
-    ctx.moveTo(CHAMBER_LEFT, CHAMBER_TOP);
-    ctx.lineTo(CHAMBER_LEFT, PIPE_TOP);
-    ctx.lineTo(PIPE_LEFT_X, PIPE_TOP);
-    ctx.lineTo(VALVE_PIPE_X, PIPE_TOP - 36);
-    ctx.lineTo(VALVE_PIPE_X, OUTLET_Y);
-    ctx.moveTo(CHAMBER_RIGHT, CHAMBER_TOP);
-    ctx.lineTo(CHAMBER_RIGHT, PIPE_TOP);
-    ctx.lineTo(PIPE_RIGHT_X, PIPE_TOP);
-    ctx.lineTo(PIPE_RIGHT_X, PIPE_TOP - 36);
-    ctx.lineTo(PIPE_RIGHT_X, OUTLET_Y);
-    ctx.moveTo(CHAMBER_LEFT, CHAMBER_BOTTOM);
-    ctx.lineTo(CHAMBER_LEFT, PIPE_BOTTOM);
-    ctx.lineTo(PIPE_LEFT_X, PIPE_BOTTOM);
-    ctx.moveTo(CHAMBER_RIGHT, CHAMBER_BOTTOM);
-    ctx.lineTo(CHAMBER_RIGHT, PIPE_BOTTOM);
-    ctx.lineTo(PIPE_RIGHT_X, PIPE_BOTTOM);
-    ctx.stroke();
-    ctx.lineWidth = 7;
-    ctx.beginPath();
-    ctx.moveTo(CHAMBER_LEFT, CHAMBER_TOP);
-    ctx.lineTo(pistonX, CHAMBER_TOP);
-    ctx.moveTo(CHAMBER_LEFT, CHAMBER_BOTTOM);
-    ctx.lineTo(pistonX, CHAMBER_BOTTOM);
-    ctx.moveTo(pistonX, CHAMBER_TOP);
-    ctx.lineTo(CHAMBER_RIGHT, CHAMBER_TOP);
-    ctx.moveTo(pistonX, CHAMBER_BOTTOM);
-    ctx.lineTo(CHAMBER_RIGHT, CHAMBER_BOTTOM);
-    ctx.stroke();
-    ctx.fillStyle = p.pipe;
-    ctx.fillRect(
-      pistonX - 12,
-      CHAMBER_TOP - 5,
-      24,
-      CHAMBER_BOTTOM - CHAMBER_TOP + 10
-    );
-    ctx.fillStyle = p.bg;
-    ctx.fillRect(
-      pistonX - 5,
-      CHAMBER_TOP + 8,
-      10,
-      CHAMBER_BOTTOM - CHAMBER_TOP - 16
-    );
-    drawValve(
-      ctx,
-      CHAMBER_LEFT + 32,
-      CHAMBER_TOP,
-      'C',
-      state.valves.C,
-      p,
-      'red'
-    );
-    drawValve(
-      ctx,
-      CHAMBER_RIGHT - 32,
-      CHAMBER_TOP,
-      'D',
-      state.valves.D,
-      p,
-      'red'
-    );
-    drawValve(
-      ctx,
-      CHAMBER_LEFT + 32,
-      CHAMBER_BOTTOM,
-      'A',
-      state.valves.A,
-      p,
-      'blue'
-    );
-    drawValve(
-      ctx,
-      CHAMBER_RIGHT - 32,
-      CHAMBER_BOTTOM,
-      'B',
-      state.valves.B,
-      p,
-      'blue'
-    );
-    text(ctx, '出口', 255, 55, p.red, 20 * scale, 'center', 700);
-    text(
-      ctx,
-      'A',
-      CHAMBER_LEFT + 32,
-      CHAMBER_BOTTOM + 44,
-      p.ink,
-      14 * scale,
-      'center',
-      700
-    );
-    text(
-      ctx,
-      'B',
-      CHAMBER_RIGHT - 32,
-      CHAMBER_BOTTOM + 44,
-      p.ink,
-      14 * scale,
-      'center',
-      700
-    );
-    if (state.params.showFlow) {
-      ctx.save();
-      ctx.setLineDash([10, 8]);
-      if (state.direction === 'left') {
-        arrow(ctx, CHAMBER_LEFT + 46, CHAMBER_TOP - 46, 250, 92, p.red, 4);
-        arrow(
-          ctx,
-          CHAMBER_RIGHT - 46,
-          CHAMBER_BOTTOM + 70,
-          420,
-          CHAMBER_BOTTOM + 18,
-          p.blue,
-          4
-        );
-      } else {
-        arrow(ctx, CHAMBER_RIGHT - 46, CHAMBER_TOP - 46, 420, 92, p.red, 4);
-        arrow(
-          ctx,
-          CHAMBER_LEFT + 46,
-          CHAMBER_BOTTOM + 70,
-          225,
-          CHAMBER_BOTTOM + 18,
-          p.blue,
-          4
-        );
-      }
-      ctx.restore();
-    }
-    text(
-      ctx,
-      state.direction === 'left' ? '左推排气中…' : '右拉排气中…',
-      290,
-      540,
-      p.blue,
-      18 * scale,
-      'center',
-      700
-    );
-    text(
-      ctx,
-      '手动牵引活塞（观察气阀闭合）',
-      25,
-      590,
-      p.ink,
-      16 * scale,
-      'left',
-      700
-    );
-    drawPanel(ctx, state, p, scale);
+    drawPressure(ctx, state, p, font);
+    drawHousing(ctx, p);
+    drawPiston(ctx, state.pistonX, p);
+    drawValves(ctx, state, p, font);
+    if (state.params.showFlow) drawFlow(ctx, state, p);
+    text(ctx, '出风口', OUT_X, OUT_TOP - 16, p.red, font(18), 'center', 700);
     ctx.restore();
   }
 

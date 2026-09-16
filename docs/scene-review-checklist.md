@@ -22,7 +22,7 @@
 |   7 | 子弹打木块力学模型                                    | 力学 | [`bullet-block`](../src/scenes/bullet-block/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/efdbc474-2e4e-4a0d-9aa1-a3ac3a9a5262) · [封面](https://img.svgzhenli.com/gallery-assets/covers/ttwrczxsemb1774681162042.png)  |  ✅  |
 |   8 | 验证力的平行四边形定则                                | 力学 | [`parallelogram-rule`](../src/scenes/parallelogram-rule/scene.meta.ts)                             | [详情](https://app.svgzhenli.com/resource/039f55b4-fd42-490f-9947-2e4c54601684) · [封面](https://img.svgzhenli.com/gallery-assets/covers/5ns9z0vm18w1783606039791.png)  |  ✅  |
 |   9 | 双星系统运动轨道-万有引力定律与航天                   | 力学 | [`binary-stars`](../src/scenes/binary-stars/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/cf938b0c-3fba-4a89-a76f-eceaf07397f5) · [封面](https://img.svgzhenli.com/gallery-assets/covers/9q4r2plqgqo1774679828854.png)  |  ✅  |
-|  10 | 双动式风箱工作原理演示                                | 力学 | [`bellows`](../src/scenes/bellows/scene.meta.ts)                                                   | [详情](https://app.svgzhenli.com/resource/c79a2708-0d3c-4073-a283-38fda18be645) · [封面](https://img.svgzhenli.com/gallery-assets/covers/xtwc0u5essg1776333366610.png)  |  ☐   |
+|  10 | 双动式风箱工作原理演示                                | 力学 | [`bellows`](../src/scenes/bellows/scene.meta.ts)                                                   | [详情](https://app.svgzhenli.com/resource/c79a2708-0d3c-4073-a283-38fda18be645) · [封面](https://img.svgzhenli.com/gallery-assets/covers/xtwc0u5essg1776333366610.png)  |  ✅  |
 |  11 | 匀变速直线运动 - 速度与时间关系                       | 力学 | [`uniformly-varied-motion`](../src/scenes/uniformly-varied-motion/scene.meta.ts)                   | [详情](https://app.svgzhenli.com/resource/a0834791-f1a8-4673-aa23-4bb5f7df5271) · [封面](https://img.svgzhenli.com/gallery-assets/covers/gw9dhetax9f1774676803350.png)  |  ☐   |
 |  12 | 竖直平面内圆周运动临界状态                            | 力学 | [`vertical-circle`](../src/scenes/vertical-circle/scene.meta.ts)                                   | [详情](https://app.svgzhenli.com/resource/d53c6251-b24c-4a6c-a6b9-9e104a3995b8) · [封面](https://img.svgzhenli.com/gallery-assets/covers/s3fq03sft9n1775626003953.png)  |  ☐   |
 |  13 | 三大性质力交互课件                                    | 力学 | [`three-forces`](../src/scenes/three-forces/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/a6e3e383-482e-4ad1-a69b-f7ddaeaf8aee) · [封面](https://img.svgzhenli.com/gallery-assets/covers/ihldajl8mpl1781095386830.png)  |  ☐   |
@@ -200,6 +200,15 @@
 - 交互与布局验证：桌面 `1280×720` 默认/读数展开状态动画本体清晰、数据面板独立且无关键图形遮挡；移动 `390×844` 控制/数据标签分离、无水平溢出；浏览器无 console warning/error，动画区无说明性文本堆叠。
 - 工程验证：远程 Grok Build 明确返回 `CONSENSUS: PASS`；`pnpm verify:scene binary-stars` 全 `7/7` 步骤通过（3132 passed，133 skipped），专项单测 `13/13` 通过；构建、TypeScript、ESLint、布局契约和 bundle 预算通过。
 - 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/cf938b0c-3fba-4a89-a76f-eceaf07397f5.md` · [原始详情](https://app.svgzhenli.com/resource/cf938b0c-3fba-4a89-a76f-eceaf07397f5) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/9q4r2plqgqo1774679828854.png)
+
+### 10. 双动式风箱工作原理演示 (`bellows`)
+
+- 状态：✅ Codex / Grok Build 交叉审计通过（2026-09-16）。
+- 修复：按封面重建白/米白双气室、中央活塞、公共出风口、A/B/C/D 单向阀、红/蓝压强区与气流虚线；移除 canvas 内状态/监测/核心机制卡和重复文案，数据集中到联动监测读数区，控制文案精简；修正自动往复压强/阀门按运动方向联动，读数默认折叠并收窄装置右边界、下移出口避开 transport；窄右腔压强标签改为短文案并置于活塞杆上方。
+- 物理核验：向左推动→左高压/C 排气+B 进气；向右拉回→右高压/D 排气+A 进气；自动相位不再用活塞位置符号误判；步进、暂停、重置、固定动作、参数归一化由 `10` 个 sim tests 覆盖。
+- 交互与布局验证：桌面默认/展开联动监测/向右拉回无遮挡；移动端 `390×844` 控制/数据标签分离、无水平溢出；console 无错误。
+- 工程验证：远程 Grok Build 明确返回 `CONSENSUS: PASS`；专项 `15/15`、`pnpm verify:scene bellows` `7/7`（3134 passed，133 skipped）通过，tsc/eslint、构建和 bundle 预算通过。
+- 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/c79a2708-0d3c-4073-a283-38fda18be645.md` · [原始详情](https://app.svgzhenli.com/resource/c79a2708-0d3c-4073-a283-38fda18be645) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/xtwc0u5essg1776333366610.png)
 
 ## 复审记录模板
 

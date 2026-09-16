@@ -1,5 +1,5 @@
-import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import type { DemoRenderHints } from '../../platform/demo-profile';
+import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createStandardSceneEntry } from '../scene-entry-helpers';
 import {
   createBellowsSim,
@@ -16,6 +16,11 @@ export type CreateBellowsSceneOptions = {
   demoHints?: DemoRenderHints;
   onReadout?: (state: BellowsState) => void;
 };
+
+function valveReadout(open: boolean, role: 'exhaust' | 'intake'): string {
+  if (!open) return '闭合';
+  return role === 'exhaust' ? '开·排气' : '开·进气';
+}
 
 export function createBellowsScene(options: CreateBellowsSceneOptions = {}) {
   const sim = createBellowsSim();
@@ -41,13 +46,33 @@ export function createBellowsScene(options: CreateBellowsSceneOptions = {}) {
       },
       {
         key: 'leftPressure',
-        label: '左侧',
+        label: '左室',
         value: state.leftPressure === 'high' ? '压缩升压' : '扩张降压'
       },
       {
         key: 'rightPressure',
-        label: '右侧',
+        label: '右室',
         value: state.rightPressure === 'high' ? '压缩升压' : '扩张降压'
+      },
+      {
+        key: 'valveC',
+        label: '阀 C',
+        value: valveReadout(state.valves.C, 'exhaust')
+      },
+      {
+        key: 'valveD',
+        label: '阀 D',
+        value: valveReadout(state.valves.D, 'exhaust')
+      },
+      {
+        key: 'valveA',
+        label: '阀 A',
+        value: valveReadout(state.valves.A, 'intake')
+      },
+      {
+        key: 'valveB',
+        label: '阀 B',
+        value: valveReadout(state.valves.B, 'intake')
       }
     ];
   }

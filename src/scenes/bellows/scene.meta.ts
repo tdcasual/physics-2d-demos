@@ -1,9 +1,17 @@
-import type { SceneMeta } from '../../platform/scene-contract';
 import type { SceneDemoProfile } from '../../platform/demo-profile';
+import type { SceneMeta } from '../../platform/scene-contract';
 
 const demoProfile: SceneDemoProfile = {
   lessonTask: 'lecture',
-  readoutKeys: ['direction', 'leftPressure', 'rightPressure'],
+  readoutKeys: [
+    'direction',
+    'leftPressure',
+    'rightPressure',
+    'valveC',
+    'valveD',
+    'valveA',
+    'valveB'
+  ],
   renderHints: { contentScale: 1.2 },
   interactionHints: { touchTargetMinSize: 48, visibleControlKeys: ['motion'] }
 };

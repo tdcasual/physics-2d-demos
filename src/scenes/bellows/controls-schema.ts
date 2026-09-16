@@ -11,7 +11,7 @@ export const bellowsControlsSchema: ControlsSchema = {
           key: 'motion',
           columns: 3,
           presets: [
-            { id: 'auto', label: '自动' },
+            { id: 'auto', label: '自动往复' },
             { id: 'left', label: '向左推动' },
             { id: 'right', label: '向右拉回' }
           ],
@@ -23,18 +23,17 @@ export const bellowsControlsSchema: ControlsSchema = {
       title: '显示',
       collapsed: false,
       fields: [
-        { type: 'toggle', key: 'autoRun', label: '自动播放', value: true },
         { type: 'toggle', key: 'showFlow', label: '显示气流', value: true }
       ]
     },
     {
-      title: '结论',
-      collapsed: false,
+      title: '要点',
+      collapsed: true,
       fields: [
         {
           type: 'hint',
-          key: 'formula',
-          lines: ['压缩端排气', '扩张端进气', '往复运动，持续出风']
+          key: 'rule',
+          lines: ['压缩端排气，扩张端进气']
         }
       ]
     }
