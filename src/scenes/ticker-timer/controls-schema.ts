@@ -69,7 +69,7 @@ export const tickerTimerControlsSchema: ControlsSchema = {
         {
           type: 'hint',
           key: 'formula',
-          lines: ['T = 0.02 s', 'vₙ = (xₙ₊₁ − xₙ₋₁) / 2T', 'Δs = aT²']
+          lines: ['T = 0.020 s', 'vₙ = (xₙ₊₁ − xₙ₋₁) / 2T', 'a = Δs / T²']
         }
       ]
     }

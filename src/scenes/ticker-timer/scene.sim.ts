@@ -70,7 +70,48 @@ const MODEL_ACCELERATION: Record<TickerTimerModel, number> = {
 };
 
 function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
+}
+
+function bool(value: unknown, fallback: boolean): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (
+      normalized === '1' ||
+      normalized === 'true' ||
+      normalized === 'on' ||
+      normalized === 'yes'
+    )
+      return true;
+    if (
+      normalized === '0' ||
+      normalized === 'false' ||
+      normalized === 'off' ||
+      normalized === 'no' ||
+      normalized === ''
+    )
+      return false;
+  }
+  return fallback;
+}
+
+function model(value: unknown, fallback: TickerTimerModel): TickerTimerModel {
+  if (value === 'uniform' || value === 'ua' || value === 'ud') return value;
+  if (typeof value === 'number')
+    return (
+      (['uniform', 'ua', 'ud'][value] as TickerTimerModel | undefined) ??
+      fallback
+    );
+  if (typeof value === 'string' && /^(0|1|2)$/.test(value.trim()))
+    return ['uniform', 'ua', 'ud'][Number(value)] as TickerTimerModel;
+  return fallback;
 }
 
 function normalize(
@@ -78,7 +119,7 @@ function normalize(
   previous = DEFAULTS
 ): TickerTimerParams {
   return {
-    model: input.model ?? previous.model,
+    model: model(input.model, previous.model),
     initialVelocity: clamp(
       finite(input.initialVelocity, previous.initialVelocity),
       0,
@@ -89,8 +130,8 @@ function normalize(
       -5,
       5
     ),
-    voltageOn: input.voltageOn ?? previous.voltageOn,
-    autoRun: input.autoRun ?? previous.autoRun
+    voltageOn: bool(input.voltageOn, previous.voltageOn),
+    autoRun: bool(input.autoRun, previous.autoRun)
   };
 }
 
@@ -104,9 +145,9 @@ function velocityAt(v0: number, a: number, t: number): number {
 
 export function createTickerTimerSim(initial: Partial<TickerTimerParams> = {}) {
   let params = normalize(initial);
-  if (initial.model && initial.model in MODEL_ACCELERATION) {
-    params.acceleration = MODEL_ACCELERATION[initial.model];
-  }
+  if (initial.model !== undefined)
+    params.acceleration = MODEL_ACCELERATION[params.model];
+  const initialParams: TickerTimerParams = { ...params };
   let time = 0;
   let released = false;
   let error: string | null = null;
@@ -136,25 +177,23 @@ export function createTickerTimerSim(initial: Partial<TickerTimerParams> = {}) {
     const currentV = released
       ? velocityAt(params.initialVelocity, params.acceleration, currentT)
       : params.initialVelocity;
-    const n = dots.length;
     let averageVelocity: number | null = null;
     let deltaS: number | null = null;
     let measuredAcceleration: number | null = null;
-    if (n >= 3) {
-      const prev = dots[n - 2];
-      const before = dots[n - 3];
-      const latest = dots[n - 1];
+    if (dots.length >= 3) {
+      const before = dots[dots.length - 3];
+      const previous = dots[dots.length - 2];
+      const latest = dots[dots.length - 1];
       averageVelocity =
         (latest.xM - before.xM) / (2 * tickerTimerConstants.tickPeriod);
-      const sPrev = prev.xM - before.xM;
-      const sLatest = latest.xM - prev.xM;
-      deltaS = sLatest - sPrev;
+      deltaS = latest.xM - previous.xM - (previous.xM - before.xM);
       measuredAcceleration = deltaS / tickerTimerConstants.tickPeriod ** 2;
     }
     return {
       params: { ...params },
       time,
-      running: released && time < tickerTimerConstants.maxTime,
+      running:
+        params.autoRun && released && time < tickerTimerConstants.maxTime,
       released,
       finished: released && time >= tickerTimerConstants.maxTime,
       dots,
@@ -172,10 +211,11 @@ export function createTickerTimerSim(initial: Partial<TickerTimerParams> = {}) {
     getSnapshot: getState,
     getParams: (): TickerTimerParams => ({ ...params }),
     setParams(next: Partial<TickerTimerParams>): TickerTimerParams {
+      const nextModel =
+        next.model !== undefined ? model(next.model, params.model) : undefined;
       params = normalize({ ...params, ...next }, params);
-      if (next.model && next.model in MODEL_ACCELERATION) {
-        params.acceleration = MODEL_ACCELERATION[next.model];
-      }
+      if (nextModel !== undefined)
+        params.acceleration = MODEL_ACCELERATION[nextModel];
       error = null;
       return { ...params };
     },
@@ -193,7 +233,7 @@ export function createTickerTimerSim(initial: Partial<TickerTimerParams> = {}) {
       return true;
     },
     reset(): void {
-      params = { ...DEFAULTS };
+      params = { ...initialParams };
       time = 0;
       released = false;
       error = null;

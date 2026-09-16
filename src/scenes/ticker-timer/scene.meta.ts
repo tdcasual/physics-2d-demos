@@ -4,7 +4,13 @@ import type { SceneMeta } from '../types';
 const demoProfile: SceneDemoProfile = {
   lessonTask: 'instrument',
   transport: 'visible',
-  readoutKeys: ['timer-period', 'dot-count', 'measured-acceleration'],
+  readoutKeys: [
+    'timer-period',
+    'dot-count',
+    'instant-velocity',
+    'measured-acceleration',
+    'experiment-status'
+  ],
   renderHints: { contentScale: 1.05 },
   interactionHints: {
     touchTargetMinSize: 48,
@@ -26,8 +32,8 @@ export const tickerTimerMeta: SceneMeta = {
   concept: '打点计时器与匀变速运动',
   subConcepts: ['等时间打点', '位移差'],
   keywords: ['打点计时器', '纸带', '匀变速', '位移差', '实验步骤'],
-  objective: '按规范接通电源、释放纸带，用相邻等时位移差测加速度',
-  description: '观察纸带打点，验证 vₙ = (xₙ₊₁ − xₙ₋₁) / 2T 与 Δs = aT²',
+  objective: '接通电源后释放纸带，用位移差测加速度',
+  description: '观察等时间打点，测量速度与加速度',
   difficulty: 2,
   icon: '📍',
   category: 'mechanics',

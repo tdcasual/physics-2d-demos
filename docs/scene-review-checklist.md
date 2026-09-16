@@ -33,7 +33,7 @@
 |  18 | 匀变速直线运动位移与时间关系                          | 力学 | [`displacement-time`](../src/scenes/displacement-time/scene.meta.ts)                               | [详情](https://app.svgzhenli.com/resource/f8d783bf-0b36-425f-ae53-a692dba4aff9) · [封面](https://img.svgzhenli.com/gallery-assets/covers/noonxbfliw1774676556531.png)   |  ✅  |
 |  19 | 木块与木板相对滑动物理模型                            | 力学 | [`block-board`](../src/scenes/block-board/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/ccd3490a-6854-4a58-942e-2dc8e81a4fd9) · [封面](https://img.svgzhenli.com/gallery-assets/covers/6pvv1payb171774685383168.png)  |  ✅  |
 |  20 | 示波管的原理与波形同步                                | 电磁 | [`oscilloscope`](../src/scenes/oscilloscope/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/5a841fe8-5060-47af-a132-cf4511d2d4eb) · [封面](https://img.svgzhenli.com/gallery-assets/covers/pfv1s8rnxzg1778497322822.png)  |  ✅  |
-|  21 | 打点计时器原理演示                                    | 力学 | [`ticker-timer`](../src/scenes/ticker-timer/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/0e146679-df0c-429f-b982-9e3c1c0c2367) · [封面](https://img.svgzhenli.com/gallery-assets/covers/aorki9og3yq1783606121977.png)  |  ☐   |
+|  21 | 打点计时器原理演示                                    | 力学 | [`ticker-timer`](../src/scenes/ticker-timer/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/0e146679-df0c-429f-b982-9e3c1c0c2367) · [封面](https://img.svgzhenli.com/gallery-assets/covers/aorki9og3yq1783606121977.png)  |  ✅  |
 |  22 | 带电粒子在匀强磁场中的圆周运动                        | 电磁 | [`charged-particle-circle`](../src/scenes/charged-particle-circle/scene.meta.ts)                   | [详情](https://app.svgzhenli.com/resource/bcf1789c-95eb-480d-9b4e-e9eb1ee6210c) · [封面](https://img.svgzhenli.com/gallery-assets/covers/ohou8hat4jj1774711562323.png)  |  ☐   |
 |  23 | 小球落到竖直弹簧与简谐运动                            | 力学 | [`spring-ball`](../src/scenes/spring-ball/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/75ac35a6-d777-4e05-b192-5ab524c74832) · [封面](https://img.svgzhenli.com/gallery-assets/covers/532og1b4u851788370155234.png)  |  ☐   |
 |  24 | 电阻测量法设计（限流接法、分压接法、电流表的内外接）  | 电磁 | [`resistor-measurement`](../src/scenes/resistor-measurement/scene.meta.ts)                         | [详情](https://app.svgzhenli.com/resource/250ca6cd-36d9-4ed5-9983-d4a2e9058251) · [封面](https://img.svgzhenli.com/gallery-assets/covers/zq29kqwn07m1781283130413.png)  |  ☐   |
@@ -299,6 +299,15 @@
 - 交互与布局验证：动画区无图表/数据/说明卡；移动端 `390×844` 的图表、控制、数据 tab 独立且无横向溢出；桌面 split-right / graph-bottom 与实验台的浮动数据面板均通过几何避让，不遮挡电子枪、偏转板、荧光屏和示波屏；演示模式、暗色主题和无扫描状态通过，浏览器 console 无 error/warning。
 - 工程验证：专项单测 `27/27`（sim `17` + view `10`）；`pnpm verify:scene oscilloscope` 全 `7/7` 步骤通过（`3150 passed / 129 skipped`）；tsc、ESLint、生产构建、布局契约和 bundle 预算通过（场景页 JS 141.32 kB / 180 kB）。
 - 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/5a841fe8-5060-47af-a132-cf4511d2d4eb.md` · [原始详情](https://app.svgzhenli.com/resource/5a841fe8-5060-47af-a132-cf4511d2d4eb) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/pfv1s8rnxzg1778497322822.png)
+
+### 21. 打点计时器原理演示 (`ticker-timer`)
+
+- 状态：✅ Codex / Grok Build 交叉审计通过（2026-09-16）。
+- 修复：按 SVGZhenli 参考重建电磁打点计时器、线圈、摆臂/转轮、纸带、刻度尺与打点标记；动画 canvas 仅保留装置、纸带/打点、刻度与必要短标签，控制/公式/实时数据分别归入框架对应区域；文案精简，采用 `split-right` 与移动端堆叠布局。
+- 物理核验：固定周期 `T=0.020 s`；`x=v₀t+½at²`、`v=v₀+at`（非负夹取）；中点法求瞬时速度，`Δs/T²` 测加速度；匀速、匀加速、匀减速预设与 61 点上限一致；未接通电源时禁止释放纸带并在数据区显示简短错误。
+- 交互与布局验证：URL 数值/布尔参数规范化，首帧即采用 URL 初始参数，重置恢复该基线并同步控件；`autoRun=0` 保持暂停；动画区无图表、数据卡或说明段落。浏览器 `1280×720` 浅色/深色、演示模式和移动端堆叠均无溢出/遮挡；数据区实测 61 点、`3.50 m/s`、`2.50 m/s²`，console 无 error/warning。
+- 工程验证：专项单测 `10/10`（sim/audit `6` + view `4`）；`pnpm verify:scene ticker-timer` 全 `7/7` 步骤通过（`3133 passed / 129 skipped`）；tsc、ESLint、生产构建、布局契约、bundle 预算与 `git diff --check` 通过（场景页 JS `132.86 kB / 180 kB`）。
+- 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/0e146679-df0c-429f-b982-9e3c1c0c2367.md` · [原始详情](https://app.svgzhenli.com/resource/0e146679-df0c-429f-b982-9e3c1c0c2367) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/aorki9og3yq1783606121977.png)
 
 ## 复审记录模板
 

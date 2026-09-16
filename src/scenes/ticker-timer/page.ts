@@ -1,14 +1,38 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
+import { readSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { tickerTimerControlsSchema } from './controls-schema';
 import { asModel, createTickerTimerScene } from './scene.entry';
 import { tickerTimerMeta } from './scene.meta';
 import type { TickerTimerParams } from './scene.sim';
 
+function asBool(value: unknown, fallback = false): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'string') {
+    const v = value.trim().toLowerCase();
+    if (v === '1' || v === 'true' || v === 'on' || v === 'yes') return true;
+    if (v === '0' || v === 'false' || v === 'off' || v === 'no' || v === '')
+      return false;
+  }
+  return fallback;
+}
+
+const rawInitialParams = readSceneParams(tickerTimerMeta);
+const initialParams: Partial<TickerTimerParams> = {};
+const initialModel = asModel(rawInitialParams.model);
+if (initialModel !== undefined) initialParams.model = initialModel;
+for (const key of ['initialVelocity', 'acceleration'] as const) {
+  const value = Number(rawInitialParams[key]);
+  if (Number.isFinite(value)) initialParams[key] = value;
+}
+if (rawInitialParams.autoRun !== undefined)
+  initialParams.autoRun = asBool(rawInitialParams.autoRun);
+
 bootScenePage({
   meta: tickerTimerMeta,
-  autoPlay: true,
+  autoPlay: initialParams.autoRun !== false,
   preferredLayout: 'split-right',
   layoutConfig: {
     defaultLeftRatio: 0.34,
@@ -21,7 +45,13 @@ bootScenePage({
   },
   createScene: ({ canvas, theme, mode, demoHints }) => {
     if (!canvas) throw new Error('ticker-timer requires a canvas');
-    const scene = createTickerTimerScene({ canvas, theme, mode, demoHints });
+    const scene = createTickerTimerScene({
+      canvas,
+      theme,
+      mode,
+      demoHints,
+      initialParams
+    });
     const scheduler = createRenderScheduler(() => scene.render());
     const dispose = scene.dispose.bind(scene);
     return {
@@ -43,14 +73,15 @@ bootScenePage({
       schema: tickerTimerControlsSchema,
       onChange: (key, value) => {
         if (key === 'model') {
-          const model = asModel(value) ?? 'ua';
-          scene.setParams({ model });
-          renderer.setActive('model', model);
+          const nextModel = asModel(value) ?? 'ua';
+          scene.setParams({ model: nextModel });
+          renderer.setActive('model', nextModel);
           renderer.setValue('acceleration', scene.getParams().acceleration);
-          writeParam?.(key, model);
+          writeParam?.(key, nextModel);
         } else if (key === 'autoRun') {
-          scene.setParams({ autoRun: Boolean(value) });
-          writeParam?.(key, value ? 1 : 0);
+          const on = asBool(value, true);
+          scene.setParams({ autoRun: on });
+          writeParam?.(key, on ? 1 : 0);
         } else if (key === 'initialVelocity' || key === 'acceleration') {
           scene.setParams({
             [key]: Number(value)
@@ -62,7 +93,14 @@ bootScenePage({
       onAction: (key) => {
         if (key === 'power') scene.powerOn();
         else if (key === 'release') scene.releaseTape();
-        else if (key === 'reset') scene.reset();
+        else if (key === 'reset') {
+          scene.reset();
+          const params = scene.getParams();
+          renderer.setActive('model', params.model);
+          renderer.setValue('initialVelocity', params.initialVelocity);
+          renderer.setValue('acceleration', params.acceleration);
+          renderer.setValue('autoRun', params.autoRun);
+        }
         render();
       }
     });
@@ -76,9 +114,9 @@ bootScenePage({
   paramSync: {
     applyParam: (key, value, ctx) => {
       if (key === 'model') {
-        const model = asModel(value) ?? 'ua';
-        ctx.scene.setParams({ model });
-        ctx.setControlActive('model', model);
+        const nextModel = asModel(value) ?? 'ua';
+        ctx.scene.setParams({ model: nextModel });
+        ctx.setControlActive('model', nextModel);
         ctx.setControlValue('acceleration', ctx.scene.getParams().acceleration);
         return true;
       }
@@ -91,7 +129,7 @@ bootScenePage({
         return true;
       }
       if (key === 'autoRun') {
-        const on = Number(value) > 0;
+        const on = asBool(value);
         ctx.scene.setParams({ autoRun: on });
         ctx.setControlValue(key, on);
         return true;
