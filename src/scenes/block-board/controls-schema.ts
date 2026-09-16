@@ -1,49 +1,50 @@
 import type { ControlsSchema } from '../../platform/controls-schema';
+import { blockBoardConstants as C } from './scene.sim';
 
 export const blockBoardControlsSchema: ControlsSchema = {
   sections: [
     {
-      title: '系统参数',
+      title: '参数',
       collapsed: false,
       fields: [
         {
           type: 'slider',
           key: 'blockMass',
           label: '木块质量 m',
-          min: 0.5,
-          max: 8,
+          min: C.blockMassMin,
+          max: C.blockMassMax,
           step: 0.5,
-          value: 2,
+          value: C.blockMassDefault,
           unit: 'kg'
         },
         {
           type: 'slider',
           key: 'boardMass',
           label: '木板质量 M',
-          min: 0.5,
-          max: 10,
+          min: C.boardMassMin,
+          max: C.boardMassMax,
           step: 0.5,
-          value: 2,
+          value: C.boardMassDefault,
           unit: 'kg'
         },
         {
           type: 'slider',
           key: 'initialVelocity',
           label: '初速度 v₀',
-          min: 0,
-          max: 12,
+          min: C.v0Min,
+          max: C.v0Max,
           step: 1,
-          value: 6,
+          value: C.v0Default,
           unit: 'm/s'
         },
         {
           type: 'slider',
           key: 'friction',
           label: '动摩擦因数 μ',
-          min: 0.05,
-          max: 0.8,
+          min: C.frictionMin,
+          max: C.frictionMax,
           step: 0.05,
-          value: 0.2
+          value: C.frictionDefault
         }
       ]
     },
@@ -51,7 +52,7 @@ export const blockBoardControlsSchema: ControlsSchema = {
       title: '显示',
       collapsed: false,
       fields: [
-        { type: 'toggle', key: 'showArea', label: '显示相对位移', value: true },
+        { type: 'toggle', key: 'showArea', label: '显示 Δx 面积', value: true },
         {
           type: 'toggle',
           key: 'showForces',
@@ -68,7 +69,11 @@ export const blockBoardControlsSchema: ControlsSchema = {
         {
           type: 'hint',
           key: 'formula',
-          lines: ['f = μmg', 'a₁ = −μg', 'a₂ = μmg/M', '共速后 Δx 不变']
+          lines: [
+            't_c = v₀ / (μg(1 + m/M))',
+            'v_c = m v₀ / (M + m)',
+            'Δx = ½ v₀ t_c'
+          ]
         }
       ]
     }

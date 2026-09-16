@@ -1,90 +1,120 @@
-import type { TeachingMode, TeachingTheme } from '../../platform/standards';
+import {
+  applyCanvasSize,
+  getResponsiveScale,
+  scaledSize
+} from '../../core/canvas-sizing';
 import type { DemoRenderHints } from '../../platform/demo-profile';
+import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
-import { blockBoardConstants, type BlockBoardState } from './scene.sim';
+import {
+  apparatusLayout,
+  BLOCK_BOARD_X_TITLE,
+  BLOCK_BOARD_Y_TITLE,
+  blockBoardConstants as C,
+  graphFrame,
+  graphSeries,
+  graphToPx,
+  stageLayoutFrom,
+  stageTransform,
+  type BlockBoardGraphPoint,
+  type BlockBoardState,
+  type GraphFrame
+} from './scene.sim';
 
 export type CreateBlockBoardViewOptions = {
   canvas?: HTMLCanvasElement;
+  graphCanvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
   mode?: TeachingMode;
   demoHints?: DemoRenderHints;
 };
 
-const {
-  baseWidth: BASE_W,
-  baseHeight: BASE_H,
-  fieldWidth: FIELD_W,
-  panelWidth: PANEL_W,
-  panelInset: INSET,
-  trackStartX: TRACK_START_X,
-  trackEndX: TRACK_END_X,
-  trackY: TRACK_Y,
-  boardStartX: BOARD_START_X,
-  boardWidth: BOARD_WIDTH,
-  boardHeight: BOARD_HEIGHT,
-  blockWidth: BLOCK_WIDTH,
-  blockHeight: BLOCK_HEIGHT,
-  trackScale: TRACK_SCALE,
-  graphLeft: GRAPH_LEFT,
-  graphRight: GRAPH_RIGHT,
-  graphTop: GRAPH_TOP,
-  graphBottom: GRAPH_BOTTOM,
-  graphAxisY: GRAPH_AXIS_Y,
-  graphMaxTime: GRAPH_MAX_TIME,
-  graphMaxVelocity: GRAPH_MAX_VELOCITY,
-  panelTop: PANEL_TOP,
-  panelHeight: PANEL_HEIGHT,
-  readoutWidth: READOUT_WIDTH,
-  syncTopOffset: SYNC_TOP_OFFSET,
-  readoutRuleY: READOUT_RULE_Y,
-  panelRuleY: PANEL_RULE_Y,
-  formulaCardY: FORMULA_CARD_Y,
-  formulaCardHeight: FORMULA_CARD_HEIGHT,
-  syncDash: SYNC_DASH
-} = blockBoardConstants;
-
 type Palette = {
   bg: string;
-  panel: string;
-  grid: string;
   ink: string;
   muted: string;
   red: string;
   blue: string;
   teal: string;
   amber: string;
-  border: string;
-  soft: string;
+  ground: string;
+  hatch: string;
 };
 
 const PALETTE: Record<TeachingTheme, Palette> = {
   light: {
-    bg: '#ffffff',
-    panel: '#ffffff',
-    grid: '#d9e1e9',
+    bg: '#fbfaf7',
     ink: '#303744',
-    muted: '#8d99a8',
+    muted: '#8b97a5',
     red: '#ef4050',
     blue: '#4b83a5',
     teal: '#229c8e',
     amber: '#f3a51d',
-    border: '#d3dbe4',
-    soft: '#f4f7f9'
+    ground: '#303744',
+    hatch: '#c5ccd4'
   },
   dark: {
     bg: '#101827',
-    panel: '#172235',
-    grid: '#44556d',
     ink: '#eef2f7',
-    muted: '#a8b4c5',
+    muted: '#9eabbc',
     red: '#fb7185',
     blue: '#73b4dc',
     teal: '#4dd4c0',
     amber: '#fbbf24',
-    border: '#3d4d63',
-    soft: '#243248'
+    ground: '#d5dee8',
+    hatch: '#3c4b61'
   }
 };
+
+function contentBoxSize(host: HTMLElement): { width: number; height: number } {
+  const cs = getComputedStyle(host);
+  const rect = host.getBoundingClientRect();
+  const padX =
+    (Number.parseFloat(cs.paddingLeft) || 0) +
+    (Number.parseFloat(cs.paddingRight) || 0);
+  const padY =
+    (Number.parseFloat(cs.paddingTop) || 0) +
+    (Number.parseFloat(cs.paddingBottom) || 0);
+  return {
+    width: Math.max(1, Math.floor(rect.width - padX)),
+    height: Math.max(1, Math.floor(rect.height - padY))
+  };
+}
+
+/** Size the graph canvas to the host content box, not the padded border box. */
+export function sizeGraphCanvasToHost(canvas: HTMLCanvasElement): {
+  ctx: CanvasRenderingContext2D;
+  cssWidth: number;
+  cssHeight: number;
+  responsiveScale: number;
+} {
+  const host = canvas.parentElement;
+  let cssWidth: number;
+  let cssHeight: number;
+  if (host) {
+    const box = contentBoxSize(host);
+    cssWidth = box.width;
+    cssHeight = box.height;
+  } else {
+    const rect = canvas.getBoundingClientRect();
+    cssWidth = Math.max(1, Math.floor(rect.width || C.graphFallbackWidth));
+    cssHeight = Math.max(1, Math.floor(rect.height || C.graphFallbackHeight));
+  }
+  const dpr = Math.min(
+    2,
+    typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1
+  );
+  const responsiveScale = getResponsiveScale(cssWidth, cssHeight);
+  const ctx = applyCanvasSize(canvas, {
+    width: Math.max(1, Math.floor(cssWidth * dpr)),
+    height: Math.max(1, Math.floor(cssHeight * dpr)),
+    cssWidth,
+    cssHeight,
+    dpr,
+    responsiveScale
+  });
+  return { ctx, cssWidth, cssHeight, responsiveScale };
+}
 
 function text(
   ctx: CanvasRenderingContext2D,
@@ -103,6 +133,22 @@ function text(
   ctx.fillText(value, x, y);
 }
 
+function rounded(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number
+): void {
+  ctx.beginPath();
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(x, y, w, h, r);
+    return;
+  }
+  ctx.rect(x, y, w, h);
+}
+
 function arrow(
   ctx: CanvasRenderingContext2D,
   x1: number,
@@ -110,25 +156,34 @@ function arrow(
   x2: number,
   y2: number,
   color: string,
-  width = 4
+  width: number,
+  head = 11
 ): void {
   const dx = x2 - x1;
   const dy = y2 - y1;
-  const length = Math.hypot(dx, dy);
-  if (length < 2) return;
-  const ux = dx / length;
-  const uy = dy / length;
+  const len = Math.hypot(dx, dy);
+  if (len < 2) return;
+  const ux = dx / len;
+  const uy = dy / len;
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
   ctx.lineWidth = width;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
   ctx.beginPath();
   ctx.moveTo(x1, y1);
   ctx.lineTo(x2, y2);
   ctx.stroke();
   ctx.beginPath();
   ctx.moveTo(x2, y2);
-  ctx.lineTo(x2 - ux * 14 - uy * 6, y2 - uy * 14 + ux * 6);
-  ctx.lineTo(x2 - ux * 14 + uy * 6, y2 - uy * 14 - ux * 6);
+  ctx.lineTo(
+    x2 - ux * head - uy * head * 0.45,
+    y2 - uy * head + ux * head * 0.45
+  );
+  ctx.lineTo(
+    x2 - ux * head + uy * head * 0.45,
+    y2 - uy * head - ux * head * 0.45
+  );
   ctx.closePath();
   ctx.fill();
 }
@@ -137,462 +192,394 @@ function drawTrack(
   ctx: CanvasRenderingContext2D,
   state: BlockBoardState,
   p: Palette,
-  scale: number
+  font: (n: number) => number
 ): void {
-  ctx.strokeStyle = p.ink;
+  const layout = apparatusLayout(state);
+  const groundY = C.trackY + C.boardHeight / 2;
+  ctx.strokeStyle = p.hatch;
+  ctx.lineWidth = 8;
+  ctx.beginPath();
+  ctx.moveTo(layout.trackStart.x, groundY);
+  ctx.lineTo(layout.trackEnd.x, groundY);
+  ctx.stroke();
+  ctx.strokeStyle = p.ground;
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(TRACK_START_X, TRACK_Y + 30);
-  ctx.lineTo(TRACK_END_X, TRACK_Y + 30);
+  ctx.moveTo(layout.trackStart.x, groundY);
+  ctx.lineTo(layout.trackEnd.x, groundY);
   ctx.stroke();
-  ctx.strokeStyle = p.grid;
-  ctx.lineWidth = 10;
-  ctx.beginPath();
-  ctx.moveTo(TRACK_START_X, TRACK_Y + 30);
-  ctx.lineTo(TRACK_END_X, TRACK_Y + 30);
-  ctx.stroke();
-  ctx.strokeStyle = p.ink;
-  ctx.lineWidth = 2;
-  for (let i = 0; i <= 16; i += 1) {
-    const x = TRACK_START_X + i * TRACK_SCALE;
+  ctx.strokeStyle = p.hatch;
+  ctx.lineWidth = 1.4;
+  for (
+    let x = layout.trackStart.x;
+    x <= layout.trackEnd.x + 0.5;
+    x += C.hatchStep
+  ) {
     ctx.beginPath();
-    ctx.moveTo(x, TRACK_Y + 35);
-    ctx.lineTo(x, TRACK_Y + 47);
+    ctx.moveTo(x, groundY);
+    ctx.lineTo(x - 6, groundY + 8);
     ctx.stroke();
-    if (i % 2 === 0)
-      text(ctx, `${i}`, x, TRACK_Y + 65, p.muted, 12 * scale, 'center');
+  }
+  ctx.strokeStyle = p.ink;
+  ctx.lineWidth = 1.5;
+  for (const tick of layout.ticks) {
+    ctx.beginPath();
+    ctx.moveTo(tick.x, groundY);
+    ctx.lineTo(tick.x, groundY + C.groundTick);
+    ctx.stroke();
+    if (tick.meter % C.tickEveryM === 0) {
+      text(
+        ctx,
+        `${tick.meter}`,
+        tick.x,
+        groundY + C.groundTick + 12,
+        p.muted,
+        font(12),
+        'center'
+      );
+    }
   }
   text(
     ctx,
-    'x (m)',
-    TRACK_END_X - 12,
-    TRACK_Y + 62,
+    'x',
+    layout.trackEnd.x + 14,
+    groundY + C.groundTick + 12,
     p.muted,
-    13 * scale,
-    'right'
+    font(13),
+    'left'
   );
 
-  const boardX = BOARD_START_X + state.boardPosition * TRACK_SCALE;
-  const blockX = BOARD_START_X + 172 + state.blockPosition * TRACK_SCALE;
   ctx.fillStyle = p.blue;
-  ctx.beginPath();
-  ctx.roundRect(
-    boardX,
-    TRACK_Y - BOARD_HEIGHT / 2,
-    BOARD_WIDTH,
-    BOARD_HEIGHT,
+  rounded(
+    ctx,
+    layout.board.x,
+    layout.board.y,
+    layout.board.w,
+    layout.board.h,
     7
   );
   ctx.fill();
   ctx.fillStyle = p.red;
-  ctx.beginPath();
-  ctx.roundRect(
-    blockX - BLOCK_WIDTH / 2,
-    TRACK_Y - BOARD_HEIGHT / 2 - BLOCK_HEIGHT,
-    BLOCK_WIDTH,
-    BLOCK_HEIGHT,
+  rounded(
+    ctx,
+    layout.block.x,
+    layout.block.y,
+    layout.block.w,
+    layout.block.h,
     7
   );
   ctx.fill();
   text(
     ctx,
     'M',
-    boardX + BOARD_WIDTH / 2,
-    TRACK_Y,
+    layout.board.x + layout.board.w / 2,
+    layout.board.y + layout.board.h / 2,
     '#ffffff',
-    18 * scale,
+    font(16),
     'center',
     700
   );
   text(
     ctx,
     'm',
-    blockX,
-    TRACK_Y - BOARD_HEIGHT / 2 - BLOCK_HEIGHT / 2,
+    layout.block.x + layout.block.w / 2,
+    layout.block.y + layout.block.h / 2,
     '#ffffff',
-    18 * scale,
+    font(16),
     'center',
     700
   );
-  const blockDirection = Math.sign(state.blockVelocity || 1);
-  const boardDirection = Math.sign(state.boardVelocity || 1);
-  arrow(
-    ctx,
-    blockX,
-    TRACK_Y - BOARD_HEIGHT / 2 - BLOCK_HEIGHT - 16,
-    blockX + blockDirection * 72,
-    TRACK_Y - BOARD_HEIGHT / 2 - BLOCK_HEIGHT - 16,
-    p.red,
-    4
-  );
-  arrow(
-    ctx,
-    boardX + BOARD_WIDTH,
-    TRACK_Y - 2,
-    boardX + BOARD_WIDTH + boardDirection * 72,
-    TRACK_Y - 2,
-    p.teal,
-    4
-  );
-  text(
-    ctx,
-    'v₁',
-    blockX + blockDirection * 88,
-    TRACK_Y - BOARD_HEIGHT / 2 - BLOCK_HEIGHT - 16,
-    p.red,
-    16 * scale,
-    'center',
-    700
-  );
-  text(
-    ctx,
-    'v₂',
-    boardX + BOARD_WIDTH + boardDirection * 88,
-    TRACK_Y - 2,
-    p.teal,
-    16 * scale,
-    'center',
-    700
-  );
-  if (state.params.showForces && state.sliding) {
+
+  if (layout.blockArrow) {
     arrow(
       ctx,
-      blockX - 5,
-      TRACK_Y - BOARD_HEIGHT / 2 - BLOCK_HEIGHT - 46,
-      blockX - 58,
-      TRACK_Y - BOARD_HEIGHT / 2 - BLOCK_HEIGHT - 46,
-      p.amber,
-      3
+      layout.blockArrow.x1,
+      layout.blockArrow.y1,
+      layout.blockArrow.x2,
+      layout.blockArrow.y2,
+      p.red,
+      3.2
     );
+    text(
+      ctx,
+      'v₁',
+      layout.blockArrow.x2 + 12,
+      layout.blockArrow.y2,
+      p.red,
+      font(14),
+      'left',
+      700
+    );
+  }
+  if (layout.boardArrow) {
     arrow(
       ctx,
-      boardX + BOARD_WIDTH + 8,
-      TRACK_Y + 16,
-      boardX + BOARD_WIDTH + 60,
-      TRACK_Y + 16,
+      layout.boardArrow.x1,
+      layout.boardArrow.y1,
+      layout.boardArrow.x2,
+      layout.boardArrow.y2,
+      p.teal,
+      3.2
+    );
+    text(
+      ctx,
+      'v₂',
+      layout.boardArrow.x2 + 12,
+      layout.boardArrow.y2,
+      p.teal,
+      font(14),
+      'left',
+      700
+    );
+  }
+  if (layout.frictionBlock) {
+    arrow(
+      ctx,
+      layout.frictionBlock.x1,
+      layout.frictionBlock.y1,
+      layout.frictionBlock.x2,
+      layout.frictionBlock.y2,
       p.amber,
-      3
+      2.6
     );
     text(
       ctx,
       'f',
-      blockX - 72,
-      TRACK_Y - BOARD_HEIGHT / 2 - BLOCK_HEIGHT - 46,
+      layout.frictionBlock.x2 - 10,
+      layout.frictionBlock.y2,
       p.amber,
-      13 * scale,
+      font(13),
+      'right',
+      700
+    );
+  }
+  if (layout.frictionBoard) {
+    arrow(
+      ctx,
+      layout.frictionBoard.x1,
+      layout.frictionBoard.y1,
+      layout.frictionBoard.x2,
+      layout.frictionBoard.y2,
+      p.amber,
+      2.6
+    );
+    text(
+      ctx,
+      'f',
+      layout.frictionBoard.x2 + 10,
+      layout.frictionBoard.y2,
+      p.amber,
+      font(13),
+      'left',
+      700
+    );
+  }
+
+  if (layout.syncVisible) {
+    ctx.strokeStyle = p.teal;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([C.syncDash, C.syncDash]);
+    ctx.beginPath();
+    ctx.moveTo(layout.syncX, C.trackY - C.labelLift * 3);
+    ctx.lineTo(layout.syncX, groundY + 8);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    text(
+      ctx,
+      '共速',
+      layout.syncX,
+      groundY + C.groundTick + C.labelLift + 8,
+      p.teal,
+      font(13),
+      'center',
+      700
+    );
+  }
+}
+
+function drawGraphSeries(
+  ctx: CanvasRenderingContext2D,
+  points: BlockBoardGraphPoint[],
+  frame: GraphFrame,
+  color: string
+): void {
+  if (points.length < 2) return;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  points.forEach((item, index) => {
+    const p = graphToPx(item.t, item.v, frame);
+    if (index === 0) ctx.moveTo(p.x, p.y);
+    else ctx.lineTo(p.x, p.y);
+  });
+  ctx.stroke();
+}
+
+function drawGraphAxes(
+  ctx: CanvasRenderingContext2D,
+  frame: GraphFrame,
+  width: number,
+  height: number,
+  p: Palette,
+  font: (n: number) => number
+): void {
+  ctx.strokeStyle = p.hatch;
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 3; i += 1) {
+    const x = graphToPx(i, 0, frame).x;
+    ctx.beginPath();
+    ctx.moveTo(x, frame.top);
+    ctx.lineTo(x, frame.bottom);
+    ctx.stroke();
+    text(
+      ctx,
+      `${i}`,
+      x,
+      Math.min(height - 8, frame.bottom + 14),
+      p.muted,
+      font(11),
       'center'
     );
   }
-  const syncBlockPosition =
-    state.params.initialVelocity * state.syncTime +
-    0.5 * state.blockAcceleration * state.syncTime ** 2;
-  const syncX = BOARD_START_X + 172 + syncBlockPosition * TRACK_SCALE;
-  ctx.strokeStyle = p.teal;
-  ctx.lineWidth = 2;
-  ctx.setLineDash([SYNC_DASH, SYNC_DASH]);
-  ctx.beginPath();
-  ctx.moveTo(syncX, TRACK_Y - SYNC_TOP_OFFSET);
-  ctx.lineTo(syncX, TRACK_Y + 48);
-  ctx.stroke();
-  ctx.setLineDash([]);
-  text(
-    ctx,
-    '共速预定点',
-    syncX,
-    TRACK_Y + 82,
-    p.teal,
-    13 * scale,
-    'center',
-    700
-  );
-}
-
-function graphX(time: number): number {
-  return GRAPH_LEFT + (GRAPH_RIGHT - GRAPH_LEFT) * (time / GRAPH_MAX_TIME);
-}
-
-function velocityY(velocity: number): number {
-  return (
-    GRAPH_AXIS_Y - velocity * ((GRAPH_AXIS_Y - GRAPH_TOP) / GRAPH_MAX_VELOCITY)
-  );
-}
-
-function drawGraph(
-  ctx: CanvasRenderingContext2D,
-  state: BlockBoardState,
-  p: Palette,
-  scale: number
-): void {
-  text(
-    ctx,
-    'v-t 运动图像（面积 = 位移）',
-    (GRAPH_LEFT + GRAPH_RIGHT) / 2,
-    PANEL_TOP + 22,
-    p.ink,
-    16 * scale,
-    'center',
-    700
-  );
-  ctx.strokeStyle = p.grid;
-  ctx.lineWidth = 1;
   for (let i = 0; i <= 3; i += 1) {
-    const x = graphX(i);
+    const v = i * 4;
+    const y = graphToPx(0, v, frame).y;
     ctx.beginPath();
-    ctx.moveTo(x, GRAPH_TOP);
-    ctx.lineTo(x, GRAPH_BOTTOM);
+    ctx.moveTo(frame.left, y);
+    ctx.lineTo(frame.right, y);
     ctx.stroke();
-    text(ctx, `${i}`, x, GRAPH_BOTTOM + 16, p.muted, 11 * scale, 'center');
-  }
-  for (let i = 0; i <= 2; i += 1) {
-    const y = velocityY(i * 4);
-    ctx.beginPath();
-    ctx.moveTo(GRAPH_LEFT, y);
-    ctx.lineTo(GRAPH_RIGHT, y);
-    ctx.stroke();
-    text(ctx, `${i * 4}`, GRAPH_LEFT - 12, y, p.muted, 11 * scale, 'right');
+    text(ctx, `${v.toFixed(0)}`, frame.left - 8, y, p.muted, font(11), 'right');
   }
   ctx.strokeStyle = p.ink;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 1.8;
   ctx.beginPath();
-  ctx.moveTo(GRAPH_LEFT, GRAPH_TOP - 8);
-  ctx.lineTo(GRAPH_LEFT, GRAPH_BOTTOM);
-  ctx.lineTo(GRAPH_RIGHT + 10, GRAPH_BOTTOM);
+  ctx.moveTo(frame.left, frame.bottom);
+  ctx.lineTo(frame.right, frame.bottom);
+  ctx.moveTo(frame.left, frame.bottom);
+  ctx.lineTo(frame.left, frame.top);
   ctx.stroke();
+  arrow(
+    ctx,
+    frame.left,
+    frame.bottom,
+    frame.right + 6,
+    frame.bottom,
+    p.ink,
+    1.6,
+    8
+  );
+  arrow(
+    ctx,
+    frame.left,
+    frame.bottom,
+    frame.left,
+    frame.top - 6,
+    p.ink,
+    1.6,
+    8
+  );
   text(
     ctx,
-    'v',
-    GRAPH_LEFT - 10,
-    GRAPH_TOP - 10,
+    BLOCK_BOARD_X_TITLE,
+    Math.min(width - 4, frame.right),
+    Math.min(height - 10, frame.bottom + 28),
     p.ink,
-    15 * scale,
-    'center',
+    font(12),
+    'right',
     700
   );
   text(
     ctx,
-    't (s)',
-    GRAPH_RIGHT + 26,
-    GRAPH_BOTTOM,
+    BLOCK_BOARD_Y_TITLE,
+    frame.left,
+    Math.max(10, frame.top - 12),
     p.ink,
-    13 * scale,
-    'center'
+    font(12),
+    'left',
+    700
   );
-  const syncX = graphX(state.syncTime);
-  if (state.params.showArea) {
+}
+
+function drawGraphCanvas(
+  ctx: CanvasRenderingContext2D,
+  state: BlockBoardState,
+  width: number,
+  height: number,
+  p: Palette,
+  font: (n: number) => number
+): void {
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = p.bg;
+  ctx.fillRect(0, 0, width, height);
+  const frame = graphFrame(width, height);
+  drawGraphAxes(ctx, frame, width, height, p, font);
+  const series = graphSeries(state.params);
+  const block = series.find((item) => item.id === 'block');
+  const board = series.find((item) => item.id === 'board');
+  const tcDraw = Math.min(state.syncTime, C.graphViewTime);
+  if (state.params.showArea && tcDraw > 1e-6 && block && board) {
+    const a0 = graphToPx(0, state.params.initialVelocity, frame);
+    const a1 = graphToPx(
+      tcDraw,
+      tcDraw < state.syncTime - 1e-9
+        ? state.params.initialVelocity + state.blockAcceleration * tcDraw
+        : state.commonVelocity,
+      frame
+    );
+    const b1 = graphToPx(
+      tcDraw,
+      tcDraw < state.syncTime - 1e-9
+        ? state.boardAcceleration * tcDraw
+        : state.commonVelocity,
+      frame
+    );
+    const b0 = graphToPx(0, 0, frame);
     ctx.fillStyle = 'rgba(243,165,29,0.24)';
     ctx.beginPath();
-    ctx.moveTo(GRAPH_LEFT, velocityY(state.params.initialVelocity));
-    ctx.lineTo(syncX, velocityY(state.commonVelocity));
-    ctx.lineTo(syncX, velocityY(0));
-    ctx.lineTo(GRAPH_LEFT, velocityY(0));
+    ctx.moveTo(a0.x, a0.y);
+    ctx.lineTo(a1.x, a1.y);
+    ctx.lineTo(b1.x, b1.y);
+    ctx.lineTo(b0.x, b0.y);
     ctx.closePath();
     ctx.fill();
+    if (state.syncTime <= C.graphViewTime + 1e-9) {
+      text(
+        ctx,
+        'Δx',
+        (a0.x + a1.x) / 2,
+        (a0.y + b0.y) / 2,
+        p.amber,
+        font(13),
+        'center',
+        700
+      );
+    }
   }
-  ctx.strokeStyle = p.red;
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(GRAPH_LEFT, velocityY(state.params.initialVelocity));
-  ctx.lineTo(syncX, velocityY(state.commonVelocity));
-  ctx.lineTo(GRAPH_RIGHT, velocityY(state.commonVelocity));
-  ctx.stroke();
-  ctx.strokeStyle = p.blue;
-  ctx.beginPath();
-  ctx.moveTo(GRAPH_LEFT, velocityY(0));
-  ctx.lineTo(syncX, velocityY(state.commonVelocity));
-  ctx.lineTo(GRAPH_RIGHT, velocityY(state.commonVelocity));
-  ctx.stroke();
-  text(
-    ctx,
-    '木块 m',
-    GRAPH_RIGHT - 8,
-    velocityY(state.commonVelocity) - 18,
-    p.red,
-    13 * scale,
-    'right',
-    700
-  );
-  text(
-    ctx,
-    '木板 M',
-    GRAPH_RIGHT - 8,
-    velocityY(state.commonVelocity) + 18,
-    p.blue,
-    13 * scale,
-    'right',
-    700
-  );
-  text(
-    ctx,
-    'Δx',
-    (GRAPH_LEFT + syncX) / 2,
-    velocityY(state.commonVelocity) + 34,
-    p.amber,
-    15 * scale,
-    'center',
-    700
-  );
-  ctx.strokeStyle = p.teal;
-  ctx.lineWidth = 2;
-  ctx.setLineDash([SYNC_DASH, SYNC_DASH]);
-  ctx.beginPath();
-  ctx.moveTo(syncX, GRAPH_TOP - 12);
-  ctx.lineTo(syncX, GRAPH_BOTTOM + 8);
-  ctx.stroke();
-  ctx.setLineDash([]);
-  const cursorX = graphX(state.time);
-  ctx.strokeStyle = p.amber;
-  ctx.lineWidth = 2;
-  ctx.setLineDash([SYNC_DASH, SYNC_DASH]);
-  ctx.beginPath();
-  ctx.moveTo(cursorX, GRAPH_TOP - 12);
-  ctx.lineTo(cursorX, GRAPH_BOTTOM + 8);
-  ctx.stroke();
-  ctx.setLineDash([]);
-}
-
-function drawReadout(
-  ctx: CanvasRenderingContext2D,
-  state: BlockBoardState,
-  p: Palette,
-  scale: number
-): void {
-  const x = 28;
-  ctx.fillStyle = p.panel;
-  ctx.strokeStyle = p.border;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.roundRect(x, PANEL_TOP, READOUT_WIDTH, PANEL_HEIGHT, 12);
-  ctx.fill();
-  ctx.stroke();
-  text(
-    ctx,
-    '实时计算',
-    x + READOUT_WIDTH / 2,
-    PANEL_TOP + 30,
-    p.ink,
-    18 * scale,
-    'center',
-    700
-  );
-  ctx.strokeStyle = p.border;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(x + 22, PANEL_TOP + READOUT_RULE_Y);
-  ctx.lineTo(x + READOUT_WIDTH - 22, PANEL_TOP + READOUT_RULE_Y);
-  ctx.stroke();
-  const rows: Array<[string, string, string]> = [
-    ['木块加速度 a₁', `${state.blockAcceleration.toFixed(2)} m/s²`, p.red],
-    ['木板加速度 a₂', `${state.boardAcceleration.toFixed(2)} m/s²`, p.blue],
-    ['理论共速 v', `${state.commonVelocity.toFixed(2)} m/s`, p.teal],
-    ['相对位移 Δx', `${state.relativeDisplacement.toFixed(2)} m`, p.amber],
-    ['当前时间 t', `${state.time.toFixed(2)} s`, p.ink],
-    ['木块速度 v₁', `${state.blockVelocity.toFixed(2)} m/s`, p.red],
-    ['木板速度 v₂', `${state.boardVelocity.toFixed(2)} m/s`, p.blue]
-  ];
-  rows.forEach(([label, value, color], index) => {
-    const y = PANEL_TOP + 88 + index * 28;
-    text(ctx, label, x + 24, y, p.ink, 13 * scale);
-    text(
-      ctx,
-      value,
-      x + READOUT_WIDTH - 24,
-      y,
-      color,
-      13 * scale,
-      'right',
-      700
-    );
-  });
-}
-
-function drawPanel(
-  ctx: CanvasRenderingContext2D,
-  state: BlockBoardState,
-  p: Palette,
-  scale: number
-): void {
-  const x = FIELD_W;
-  ctx.fillStyle = p.panel;
-  ctx.fillRect(x, 0, PANEL_W, BASE_H);
-  ctx.strokeStyle = p.border;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(x, 0);
-  ctx.lineTo(x, BASE_H);
-  ctx.stroke();
-  text(ctx, '系统参数', x + INSET, 42, p.ink, 20 * scale, 'left', 700);
-  ctx.strokeStyle = p.ink;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(x + INSET, PANEL_RULE_Y);
-  ctx.lineTo(x + PANEL_W - INSET, PANEL_RULE_Y);
-  ctx.stroke();
-  const rows: Array<[string, string, string]> = [
-    ['木块质量 m', `${state.params.blockMass.toFixed(1)} kg`, p.red],
-    ['木板质量 M', `${state.params.boardMass.toFixed(1)} kg`, p.blue],
-    ['初速度 v₀', `${state.params.initialVelocity.toFixed(1)} m/s`, p.teal],
-    ['动摩擦因数 μ', state.params.friction.toFixed(2), p.ink]
-  ];
-  rows.forEach(([label, value, color], index) => {
-    const y = 112 + index * 52;
-    ctx.fillStyle = p.soft;
+  if (block) drawGraphSeries(ctx, block.points, frame, p.red);
+  if (board) drawGraphSeries(ctx, board.points, frame, p.blue);
+  const legendY = graphToPx(C.graphViewTime, state.commonVelocity, frame).y;
+  text(ctx, 'm', frame.right - 8, legendY - 14, p.red, font(12), 'right', 700);
+  text(ctx, 'M', frame.right - 8, legendY + 14, p.blue, font(12), 'right', 700);
+  if (state.syncTime > 0) {
+    const sync = graphToPx(Math.min(state.syncTime, C.graphViewTime), 0, frame);
+    ctx.strokeStyle = p.teal;
+    ctx.lineWidth = 1.6;
+    ctx.setLineDash([C.syncDash, C.syncDash]);
     ctx.beginPath();
-    ctx.roundRect(x + INSET, y - 20, PANEL_W - INSET * 2, 40, 9);
-    ctx.fill();
-    text(ctx, label, x + INSET + 14, y, p.ink, 13 * scale);
-    text(
-      ctx,
-      value,
-      x + PANEL_W - INSET - 14,
-      y,
-      color,
-      14 * scale,
-      'right',
-      700
-    );
-  });
-  ctx.fillStyle = p.soft;
+    ctx.moveTo(sync.x, frame.top);
+    ctx.lineTo(sync.x, frame.bottom);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  const cursor = graphToPx(Math.min(state.time, C.graphViewTime), 0, frame);
+  ctx.strokeStyle = p.amber;
+  ctx.lineWidth = 1.6;
+  ctx.setLineDash([C.syncDash, C.syncDash]);
   ctx.beginPath();
-  ctx.roundRect(
-    x + INSET,
-    FORMULA_CARD_Y,
-    PANEL_W - INSET * 2,
-    FORMULA_CARD_HEIGHT,
-    10
-  );
-  ctx.fill();
-  text(ctx, '核心关系', x + INSET + 16, 368, p.muted, 13 * scale, 'left', 700);
-  text(ctx, 'f = μmg', x + INSET + 16, 398, p.red, 15 * scale, 'left', 700);
-  text(
-    ctx,
-    't₀ = v₀ / (μg(1 + m/M))',
-    x + INSET + 16,
-    426,
-    p.teal,
-    13 * scale,
-    'left',
-    700
-  );
-  text(
-    ctx,
-    state.sliding ? '滑动中' : '已共速',
-    x + INSET + 16,
-    480,
-    state.sliding ? p.amber : p.teal,
-    15 * scale,
-    'left',
-    700
-  );
-  text(
-    ctx,
-    `t₀ = ${state.syncTime.toFixed(2)} s`,
-    x + PANEL_W - INSET - 14,
-    480,
-    p.ink,
-    13 * scale,
-    'right',
-    700
-  );
+  ctx.moveTo(cursor.x, frame.top);
+  ctx.lineTo(cursor.x, frame.bottom);
+  ctx.stroke();
+  ctx.setLineDash([]);
 }
 
 export function createBlockBoardView(
@@ -600,59 +587,168 @@ export function createBlockBoardView(
 ) {
   const stage = createCanvasViewport({
     canvas: options.canvas ?? null,
-    sizing: { mode: 'clamped', fallbackWidth: BASE_W, fallbackHeight: BASE_H },
-    initialWidth: BASE_W,
-    initialHeight: BASE_H,
+    sizing: {
+      mode: 'clamped',
+      fallbackWidth: C.baseWidth,
+      fallbackHeight: C.baseHeight
+    },
+    initialWidth: C.baseWidth,
+    initialHeight: C.baseHeight,
     eagerContext: true
   });
+  const graph = {
+    canvas: (options.graphCanvas ?? null) as HTMLCanvasElement | null,
+    ctx: null as CanvasRenderingContext2D | null,
+    cssWidth: C.graphFallbackWidth as number,
+    cssHeight: C.graphFallbackHeight as number,
+    responsiveScale: 1,
+    resize(): void {
+      if (!graph.canvas) return;
+      const sized = sizeGraphCanvasToHost(graph.canvas);
+      graph.ctx = sized.ctx;
+      graph.cssWidth = sized.cssWidth;
+      graph.cssHeight = sized.cssHeight;
+      graph.responsiveScale = sized.responsiveScale;
+    },
+    attach(canvas: HTMLCanvasElement): void {
+      graph.canvas = canvas;
+      graph.resize();
+    },
+    release(): void {
+      graph.canvas = null;
+      graph.ctx = null;
+    }
+  };
+  if (graph.canvas) graph.resize();
   const env = createViewEnvironment({
     theme: options.theme ?? 'light',
     mode: options.mode ?? 'normal',
     demoHints: options.demoHints
   });
   let snapshot: BlockBoardState | null = null;
+  let parentObserved = false;
+  let panelObserved = false;
+  let drawing = false;
+  const overlayObservers: Array<{ disconnect(): void }> = [];
+
+  function paint(state: BlockBoardState): void {
+    if (drawing) return;
+    drawing = true;
+    try {
+      draw(state);
+    } finally {
+      drawing = false;
+    }
+  }
+
+  function redraw(): void {
+    if (snapshot) paint(snapshot);
+  }
+
+  function watchOverlay(): void {
+    if (!stage.canvas) return;
+    const parent = stage.canvas.parentElement;
+    if (!parent) return;
+    if (!parentObserved && typeof ResizeObserver !== 'undefined') {
+      parentObserved = true;
+      const resize = new ResizeObserver(() => redraw());
+      resize.observe(parent);
+      overlayObservers.push(resize);
+    }
+    if (panelObserved) return;
+    const panel = parent.querySelector(
+      '.teaching-readout-panel, .srgb-readout-panel, .readout-panel'
+    );
+    if (!(panel instanceof HTMLElement)) return;
+    panelObserved = true;
+    if (typeof ResizeObserver !== 'undefined') {
+      const resize = new ResizeObserver(() => redraw());
+      resize.observe(panel);
+      overlayObservers.push(resize);
+    }
+    if (typeof MutationObserver !== 'undefined') {
+      const mutate = new MutationObserver(() => redraw());
+      mutate.observe(panel, {
+        attributes: true,
+        attributeFilter: ['class', 'style']
+      });
+      overlayObservers.push(mutate);
+    }
+  }
+
   function draw(state: BlockBoardState): void {
     const ctx = stage.ctx;
     if (!ctx) return;
     const width = stage.cssWidth;
     const height = stage.cssHeight;
-    const fit = Math.min(width / BASE_W, height / BASE_H);
-    const offsetY = (height - BASE_H * fit) / 2;
-    const scale = env.contentScale() * stage.responsiveScale;
+    const layout = stageLayoutFrom(stage.canvas);
+    const { fit, offsetX, offsetY, scaleX } = stageTransform(
+      width,
+      height,
+      layout
+    );
     const p = PALETTE[env.theme];
+    const rs = stage.responsiveScale;
+    const typeScale = env.fontScale() * Math.min(env.contentScale(), 1.25);
+    const font = (base: number): number =>
+      scaledSize(base * typeScale, Math.max(rs, 0.3), 11) / Math.max(fit, 0.05);
+
     ctx.clearRect(0, 0, width, height);
-    ctx.save();
-    ctx.translate(0, offsetY);
-    ctx.scale(fit, fit);
     ctx.fillStyle = p.bg;
-    ctx.fillRect(0, 0, BASE_W, BASE_H);
-    drawTrack(ctx, state, p, scale);
-    drawReadout(ctx, state, p, scale);
-    drawGraph(ctx, state, p, scale);
-    drawPanel(ctx, state, p, scale);
+    ctx.fillRect(0, 0, width, height);
+    ctx.save();
+    ctx.translate(offsetX, offsetY);
+    ctx.scale(fit * scaleX, fit);
+    ctx.fillStyle = p.bg;
+    ctx.fillRect(0, 0, C.baseWidth, C.baseHeight);
+    drawTrack(ctx, state, p, font);
     ctx.restore();
+
+    if (graph.canvas) {
+      if (!graph.ctx) graph.resize();
+      const gctx = graph.ctx;
+      if (gctx) {
+        const gFont = (base: number): number =>
+          scaledSize(
+            base * typeScale,
+            Math.max(graph.responsiveScale, 0.3),
+            10
+          );
+        drawGraphCanvas(gctx, state, graph.cssWidth, graph.cssHeight, p, gFont);
+      }
+    }
+    watchOverlay();
   }
+
   return {
     render(state: BlockBoardState): void {
       snapshot = state;
       stage.ensureSized();
-      draw(state);
+      paint(state);
     },
     resize(): void {
       stage.resize();
-      if (snapshot) draw(snapshot);
+      if (graph.canvas) graph.resize();
+      if (snapshot) paint(snapshot);
     },
     setTheme(theme: TeachingTheme): void {
       env.setTheme(theme);
-      if (snapshot) draw(snapshot);
+      if (snapshot) paint(snapshot);
     },
     setMode(mode: TeachingMode, hints?: DemoRenderHints): void {
       env.setMode(mode, hints);
-      if (snapshot) draw(snapshot);
+      if (snapshot) paint(snapshot);
+    },
+    attachGraphCanvas(canvas: HTMLCanvasElement): void {
+      graph.attach(canvas);
+      if (snapshot) paint(snapshot);
     },
     dispose(): void {
       snapshot = null;
+      overlayObservers.forEach((observer) => observer.disconnect());
+      overlayObservers.length = 0;
       stage.release();
+      graph.release();
     }
   };
 }

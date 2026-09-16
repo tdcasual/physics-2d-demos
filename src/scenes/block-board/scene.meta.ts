@@ -1,15 +1,19 @@
-import type { SceneMeta } from '../../platform/scene-contract';
 import type { SceneDemoProfile } from '../../platform/demo-profile';
+import type { SceneMeta } from '../../platform/scene-contract';
+import { blockBoardConstants as C } from './scene.sim';
 
 const demoProfile: SceneDemoProfile = {
   lessonTask: 'process',
   readoutKeys: [
     'block-velocity',
     'board-velocity',
+    'common-velocity',
     'relative-displacement',
-    'sync-time'
+    'sync-time',
+    'time',
+    'status'
   ],
-  renderHints: { contentScale: 1.1 },
+  renderHints: { contentScale: 1.15 },
   interactionHints: {
     touchTargetMinSize: 48,
     visibleControlKeys: [
@@ -31,16 +35,16 @@ export const blockBoardMeta: SceneMeta = {
   subConcepts: ['滑动摩擦', '共速与相对位移'],
   keywords: ['木块', '木板', '摩擦力', '相对位移', '共速'],
   objective: '观察摩擦力如何让木块与木板达到共速',
-  description: '同步显示板块运动、v-t 图像和相对位移',
+  description: '木块以 v₀ 滑上光滑地面上的木板，v-t 图像给出共速与相对位移',
   difficulty: 3,
   icon: '🧱',
   category: 'mechanics',
   featured: false,
   defaultParams: {
-    blockMass: 2,
-    boardMass: 2,
-    initialVelocity: 6,
-    friction: 0.2,
+    blockMass: C.blockMassDefault,
+    boardMass: C.boardMassDefault,
+    initialVelocity: C.v0Default,
+    friction: C.frictionDefault,
     autoRun: 1,
     showArea: 1,
     showForces: 0
@@ -55,7 +59,7 @@ export const blockBoardMeta: SceneMeta = {
     'showForces'
   ],
   testProfile: {
-    hasGraph: false,
+    hasGraph: true,
     hasTransport: true,
     supportsPresentation: true
   },

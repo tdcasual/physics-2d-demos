@@ -31,7 +31,7 @@
 |  16 | 单缝衍射条纹分布                                      | 光学 | [`single-slit`](../src/scenes/single-slit/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/50754223-e2c0-405d-9098-cfa3d2fedaca) · [封面](https://img.svgzhenli.com/gallery-assets/covers/7jar1z9ybu81774773489050.png)  |  ✅  |
 |  17 | 磁镜与磁约束交互                                      | 电磁 | [`magnetic-mirror`](../src/scenes/magnetic-mirror/scene.meta.ts)                                   | [详情](https://app.svgzhenli.com/resource/c540be11-ba80-4952-8a22-570504fe1d69) · [封面](https://img.svgzhenli.com/gallery-assets/covers/q2ltmtzvpg1786796521171.png)   |  ✅  |
 |  18 | 匀变速直线运动位移与时间关系                          | 力学 | [`displacement-time`](../src/scenes/displacement-time/scene.meta.ts)                               | [详情](https://app.svgzhenli.com/resource/f8d783bf-0b36-425f-ae53-a692dba4aff9) · [封面](https://img.svgzhenli.com/gallery-assets/covers/noonxbfliw1774676556531.png)   |  ✅  |
-|  19 | 木块与木板相对滑动物理模型                            | 力学 | [`block-board`](../src/scenes/block-board/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/ccd3490a-6854-4a58-942e-2dc8e81a4fd9) · [封面](https://img.svgzhenli.com/gallery-assets/covers/6pvv1payb171774685383168.png)  |  ☐   |
+|  19 | 木块与木板相对滑动物理模型                            | 力学 | [`block-board`](../src/scenes/block-board/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/ccd3490a-6854-4a58-942e-2dc8e81a4fd9) · [封面](https://img.svgzhenli.com/gallery-assets/covers/6pvv1payb171774685383168.png)  |  ✅  |
 |  20 | 示波管的原理与波形同步                                | 电磁 | [`oscilloscope`](../src/scenes/oscilloscope/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/5a841fe8-5060-47af-a132-cf4511d2d4eb) · [封面](https://img.svgzhenli.com/gallery-assets/covers/pfv1s8rnxzg1778497322822.png)  |  ☐   |
 |  21 | 打点计时器原理演示                                    | 力学 | [`ticker-timer`](../src/scenes/ticker-timer/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/0e146679-df0c-429f-b982-9e3c1c0c2367) · [封面](https://img.svgzhenli.com/gallery-assets/covers/aorki9og3yq1783606121977.png)  |  ☐   |
 |  22 | 带电粒子在匀强磁场中的圆周运动                        | 电磁 | [`charged-particle-circle`](../src/scenes/charged-particle-circle/scene.meta.ts)                   | [详情](https://app.svgzhenli.com/resource/bcf1789c-95eb-480d-9b4e-e9eb1ee6210c) · [封面](https://img.svgzhenli.com/gallery-assets/covers/ohou8hat4jj1774711562323.png)  |  ☐   |
@@ -281,6 +281,15 @@
 - 交互与布局验证：标准 `1280×720` 通过 transport 顶部安全区 `transportClearY=96` 避让轨道/小车/箭头；演示 process docked-bottom 仅水平 `scaleX≤1.35` 增强动画宽度（约 430px 以上），底边保留 `16px` gap 且不遮挡读数；标准↔演示往返无白屏；移动 `390×844` 切换项目自带“移动端堆叠”后动画、控制/数据 tab 无溢出；CUA console 无 error/warning。
 - 工程验证：专项 `21/21`（sim `13` + view `8`）；`pnpm verify:scene displacement-time` 全 `7/7` 步骤通过（`3142 passed / 131 skipped`）；tsc、ESLint、生产构建、bundle 预算和 `git diff --check` 通过；最终只读 Grok Build 返回 `CONSENSUS: PASS`。
 - 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/f8d783bf-0b36-425f-ae53-a692dba4aff9.md` · [原始详情](https://app.svgzhenli.com/resource/f8d783bf-0b36-425f-ae53-a692dba4aff9) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/noonxbfliw1774676556531.png)
+
+### 19. 木块与木板相对滑动物理模型 (`block-board`)
+
+- 状态：✅ Codex / Grok Build 交叉审计通过（2026-09-16）。
+- 修复：按 SVGZhenli 封面重建水平无摩擦地面、蓝色木板、红色木块、速度/摩擦力箭头、刻度轴和共速标记；动画 canvas 只保留装置与必要短标签，v-t 曲线移入独立“数据图表”区，参数/公式/实时数值移入控制与读数区，文案精简；桌面采用 `split-right-graph-bottom`，演示模式与移动端保持动画、图表、控制、数据分区。
+- 物理核验：滑动阶段 `a₁=-μg`、`a₂=μmg/M`；`t_c=v₀/[μg(1+m/M)]`、`v_c=mv₀/(M+m)`、`Δx=½v₀t_c`；共速后两物体保持 `v_c`，图表视窗可截断至 `3.2 s` 但不改真实 `t_c`。默认 `m=M=2、v₀=6、μ=.2` 得 `t_c=1.50 s、v_c=3.00 m/s、Δx=4.50 m`；边界 `m=.5、M=10、v₀=12、μ=.05` 得 `t_c=22.86 s、v_c=.57 m/s`。
+- 交互与布局验证：URL 参数在首帧直接进入 sim（极端 URL 读数为 `t_c=22.86 s`，`autoRun=0` 保持 `t=0`）；共速标记在设计框外不绘制，长程播放时装置采用有界视觉投影并保持木块在木板可视范围，真实状态/读数不变。标准 `1280×720`、演示模式和移动 `390×844` 均通过，移动端无横向溢出；动画区无图表/数据卡，图表和数据独立呈现；浏览器无 error/warning。
+- 工程验证：专项单测 `25/25`（sim `16` + view `9`）；`pnpm verify:scene block-board` 全 `7/7` 步骤通过（`3147 passed / 130 skipped`）；tsc、ESLint、生产构建、布局契约和 bundle 预算通过。
+- 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/ccd3490a-6854-4a58-942e-2dc8e81a4fd9.md` · [原始详情](https://app.svgzhenli.com/resource/ccd3490a-6854-4a58-942e-2dc8e81a4fd9) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/6pvv1payb171774685383168.png)
 
 ## 复审记录模板
 
