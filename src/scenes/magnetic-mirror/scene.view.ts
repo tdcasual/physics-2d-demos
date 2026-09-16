@@ -3,6 +3,16 @@ import type { DemoRenderHints } from '../../platform/demo-profile';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import { magneticMirrorConstants, type MagneticMirrorState } from './scene.sim';
 
+export type MagneticMirrorStageLayout = {
+  floatingReadout: boolean;
+  overlayLeftPx?: number;
+  overlayWidthPx?: number;
+  overlayTopPx?: number;
+  overlayHeightPx?: number;
+};
+
+type StagePose = { fit: number; offsetX: number; offsetY: number };
+
 export type CreateMagneticMirrorViewOptions = {
   canvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
@@ -11,12 +21,8 @@ export type CreateMagneticMirrorViewOptions = {
 };
 
 const {
-  baseWidth: BASE_W,
   baseHeight: BASE_H,
   fieldWidth: FIELD_W,
-  panelWidth: PANEL_W,
-  panelInset: INSET,
-  dividerY: DIVIDER_Y,
   axisY: AXIS_Y,
   coilLeftX: COIL_LEFT_X,
   coilRightX: COIL_RIGHT_X,
@@ -34,15 +40,7 @@ const {
   fieldLineCount: FIELD_LINE_COUNT,
   lineDash: LINE_DASH,
   particleRadius: PARTICLE_RADIUS,
-  arrowLength: ARROW_LENGTH,
-  cardWidth: CARD_WIDTH,
-  formulaCardY: FORMULA_CARD_Y,
-  formulaCardHeight: FORMULA_CARD_HEIGHT,
-  readoutCardY: READOUT_CARD_Y,
-  readoutCardHeight: READOUT_CARD_HEIGHT,
-  readoutRowHeight: READOUT_ROW_HEIGHT,
-  calloutY: CALLOUT_Y,
-  calloutHeight: CALLOUT_HEIGHT
+  arrowLength: ARROW_LENGTH
 } = magneticMirrorConstants;
 
 type Palette = {
@@ -96,6 +94,156 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     soft: '#243248'
   }
 };
+
+function containStage(
+  width: number,
+  height: number,
+  boxW: number,
+  boxH: number,
+  offsetY = 0
+): StagePose {
+  const fit = Math.min(width / boxW, height / boxH);
+  const stageW = boxW * fit;
+  const stageH = boxH * fit;
+  return {
+    fit,
+    offsetX: Math.max(0, (width - stageW) / 2),
+    offsetY: offsetY + Math.max(0, (height - stageH) / 2)
+  };
+}
+
+function hasFloatingReadout(canvas?: Element | null): boolean {
+  const anchor = canvas ?? document.body;
+  if (
+    anchor.closest('.mobile-stack-layout, [data-testid="mobile-stack-layout"]')
+  ) {
+    return false;
+  }
+  if (
+    anchor.closest('.split-right-shell, [data-testid="split-right-layout"]')
+  ) {
+    return true;
+  }
+  const panel = document.querySelector(
+    '.teaching-readout-panel, .srgb-readout-panel, .readout-panel'
+  );
+  if (panel instanceof HTMLElement && canvas?.parentElement) {
+    const position = getComputedStyle(panel).position;
+    return (
+      (position === 'absolute' || position === 'fixed') &&
+      panel.parentElement === canvas.parentElement
+    );
+  }
+  return true;
+}
+
+export function magneticMirrorStageLayoutFrom(
+  canvas?: Element | null
+): MagneticMirrorStageLayout {
+  if (!hasFloatingReadout(canvas)) return { floatingReadout: false };
+  let overlayTopPx = 0;
+  let overlayHeightPx = 0;
+  let overlayLeftPx = 0;
+  let overlayWidthPx = 0;
+  if (canvas instanceof HTMLElement) {
+    const panel = canvas.parentElement?.querySelector(
+      '.teaching-readout-panel, .srgb-readout-panel, .readout-panel'
+    );
+    if (panel instanceof HTMLElement) {
+      const cr = canvas.getBoundingClientRect();
+      const rr = panel.getBoundingClientRect();
+      if (
+        rr.left < cr.right &&
+        rr.right > cr.left &&
+        rr.top < cr.bottom &&
+        rr.bottom > cr.top
+      ) {
+        const top = Math.max(rr.top, cr.top);
+        const bottom = Math.min(rr.bottom, cr.bottom);
+        overlayLeftPx = Math.max(0, rr.left - cr.left);
+        overlayWidthPx = Math.max(
+          0,
+          Math.min(rr.right, cr.right) - Math.max(rr.left, cr.left)
+        );
+        overlayTopPx = Math.max(0, top - cr.top);
+        overlayHeightPx = Math.max(0, bottom - top);
+      }
+    }
+  }
+  return {
+    floatingReadout: true,
+    ...(overlayWidthPx > 0 ? { overlayLeftPx, overlayWidthPx } : {}),
+    ...(overlayHeightPx > 0 ? { overlayTopPx, overlayHeightPx } : {})
+  };
+}
+
+export function magneticMirrorStageTransform(
+  cssWidth: number,
+  cssHeight: number,
+  layout: MagneticMirrorStageLayout
+): StagePose & { boxW: number; boxH: number; floatingReadout: boolean } {
+  const width = Math.max(1, cssWidth);
+  const height = Math.max(1, cssHeight);
+  const boxW = FIELD_W;
+  const boxH = BASE_H;
+  if (!layout.floatingReadout) {
+    return {
+      ...containStage(width, height, boxW, boxH),
+      boxW,
+      boxH,
+      floatingReadout: false
+    };
+  }
+  const gap = 16;
+  const panelLeft = layout.overlayLeftPx;
+  const panelWidth = layout.overlayWidthPx;
+  const top = layout.overlayTopPx;
+  const panelHeight = layout.overlayHeightPx;
+  if (
+    typeof top === 'number' &&
+    typeof panelHeight === 'number' &&
+    panelHeight > 0
+  ) {
+    const panelTop = Math.max(0, Math.min(height, top));
+    const panelBottom = Math.max(panelTop, Math.min(height, top + panelHeight));
+    const candidates: StagePose[] = [];
+    if (
+      typeof panelLeft === 'number' &&
+      typeof panelWidth === 'number' &&
+      panelWidth > 0
+    ) {
+      const leftWidth = panelLeft - gap;
+      const rightStart = panelLeft + panelWidth + gap;
+      const rightWidth = width - rightStart;
+      if (leftWidth > 1)
+        candidates.push(containStage(leftWidth, height, boxW, boxH));
+      if (rightWidth > 1) {
+        candidates.push({
+          ...containStage(rightWidth, height, boxW, boxH),
+          offsetX:
+            rightStart + containStage(rightWidth, height, boxW, boxH).offsetX
+        });
+      }
+    }
+    const aboveHeight = panelTop - gap;
+    if (aboveHeight > 1)
+      candidates.push(containStage(width, aboveHeight, boxW, boxH));
+    const belowHeight = height - panelBottom - gap;
+    if (belowHeight > 1) {
+      candidates.push(
+        containStage(width, belowHeight, boxW, boxH, panelBottom + gap)
+      );
+    }
+    if (candidates.length > 0) {
+      const chosen = candidates.reduce((best, candidate) =>
+        candidate.fit > best.fit ? candidate : best
+      );
+      return { ...chosen, boxW, boxH, floatingReadout: true };
+    }
+  }
+  const fallback = containStage(width, height, boxW, boxH);
+  return { ...fallback, boxW, boxH, floatingReadout: true };
+}
 
 function text(
   ctx: CanvasRenderingContext2D,
@@ -235,14 +383,15 @@ function drawParticle(
   scale: number
 ): void {
   const x = CENTER_X + state.position * HALF_LENGTH;
-  const phase = state.time * 9;
+  const phase = state.time * 9 * state.fieldRatio;
+  const amplitude =
+    ORBIT_RADIUS * (state.gyroRadius / Math.max(state.speed, 1e-9));
   ctx.strokeStyle = p.gold;
   ctx.lineWidth = 3;
   ctx.beginPath();
   for (let i = 0; i <= TRAIL_LENGTH; i += 2) {
     const px = x - TRAIL_LENGTH + i;
     const local = (i / TRAIL_LENGTH) * Math.PI * 5 + phase;
-    const amplitude = ORBIT_RADIUS * (0.5 + Math.abs(state.position) * 0.55);
     const py = AXIS_Y + Math.sin(local) * amplitude;
     if (i === 0) ctx.moveTo(px, py);
     else ctx.lineTo(px, py);
@@ -307,7 +456,7 @@ function drawFieldRegion(
   ctx.fill();
   text(
     ctx,
-    '中间瓶腹区域（弱磁场）',
+    '弱磁场',
     CENTER_X,
     FIELD_BOTTOM + 38,
     p.muted,
@@ -317,7 +466,7 @@ function drawFieldRegion(
   );
   text(
     ctx,
-    '左端线圈（强磁场）',
+    '左线圈',
     COIL_LEFT_X,
     FIELD_BOTTOM + 38,
     p.ink,
@@ -327,7 +476,7 @@ function drawFieldRegion(
   );
   text(
     ctx,
-    '右端线圈（强磁场）',
+    '右线圈',
     COIL_RIGHT_X,
     FIELD_BOTTOM + 38,
     p.ink,
@@ -337,7 +486,7 @@ function drawFieldRegion(
   );
   text(
     ctx,
-    '磁镜反射边界',
+    '镜区',
     COIL_LEFT_X,
     FIELD_BOTTOM + 60,
     p.red,
@@ -346,7 +495,7 @@ function drawFieldRegion(
   );
   text(
     ctx,
-    '磁镜反射边界',
+    '镜区',
     COIL_RIGHT_X,
     FIELD_BOTTOM + 60,
     p.red,
@@ -354,163 +503,14 @@ function drawFieldRegion(
     'center'
   );
 }
-
-function drawPanel(
-  ctx: CanvasRenderingContext2D,
-  state: MagneticMirrorState,
-  p: Palette,
-  scale: number
-): void {
-  const x = FIELD_W;
-  ctx.fillStyle = p.panel;
-  ctx.fillRect(x, 0, PANEL_W, BASE_H);
-  ctx.strokeStyle = p.border;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(x, 0);
-  ctx.lineTo(x, BASE_H);
-  ctx.stroke();
-  text(ctx, '磁镜与磁约束', x + INSET, 38, p.ink, 19 * scale, 'left', 700);
-  ctx.strokeStyle = p.ink;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(x + INSET, DIVIDER_Y);
-  ctx.lineTo(x + CARD_WIDTH + INSET, DIVIDER_Y);
-  ctx.stroke();
-
-  ctx.fillStyle = p.soft;
-  ctx.beginPath();
-  ctx.roundRect(x + INSET, FORMULA_CARD_Y, CARD_WIDTH, FORMULA_CARD_HEIGHT, 12);
-  ctx.fill();
-  text(
-    ctx,
-    '物理关系',
-    x + INSET + 18,
-    FORMULA_CARD_Y + 22,
-    p.muted,
-    13 * scale,
-    'left',
-    700
-  );
-  text(
-    ctx,
-    'F = q(v × B)',
-    x + INSET + 18,
-    FORMULA_CARD_Y + 54,
-    p.ink,
-    16 * scale,
-    'left',
-    700
-  );
-  text(
-    ctx,
-    'Eₖ = ½mv² = 常量',
-    x + INSET + 18,
-    FORMULA_CARD_Y + 86,
-    p.green,
-    14 * scale,
-    'left',
-    700
-  );
-  text(
-    ctx,
-    'd = v∥T',
-    x + INSET + 18,
-    FORMULA_CARD_Y + 112,
-    p.cyan,
-    14 * scale,
-    'left',
-    700
-  );
-
-  ctx.fillStyle = p.soft;
-  ctx.beginPath();
-  ctx.roundRect(x + INSET, READOUT_CARD_Y, CARD_WIDTH, READOUT_CARD_HEIGHT, 12);
-  ctx.fill();
-  const rows: Array<[string, string, string]> = [
-    ['轴向位置 x', `${(state.position * 23.4).toFixed(2)} cm`, p.ink],
-    ['轴向速度 v∥', `${state.parallelSpeed.toFixed(2)} 米/秒`, p.green],
-    ['垂直速度 v⊥', `${state.perpendicularSpeed.toFixed(2)} 米/秒`, p.cyan],
-    ['轨迹螺距 d', `${state.pitchDistance.toFixed(2)} cm`, p.gold],
-    ['动能 Eₖ', `${state.energy.toFixed(2)} 焦耳`, p.red],
-    ['磁矩 μ', `${state.magneticMoment.toFixed(3)}`, p.blue]
-  ];
-  rows.forEach(([label, value, color], index) => {
-    const y = READOUT_CARD_Y + 18 + index * READOUT_ROW_HEIGHT;
-    text(ctx, label, x + INSET + 18, y, p.muted, 12 * scale);
-    text(
-      ctx,
-      value,
-      x + INSET + CARD_WIDTH - 18,
-      y,
-      color,
-      12 * scale,
-      'right',
-      700
-    );
-  });
-
-  ctx.fillStyle = '#e7f4f1';
-  ctx.beginPath();
-  ctx.roundRect(x + INSET, CALLOUT_Y, CARD_WIDTH, CALLOUT_HEIGHT, 12);
-  ctx.fill();
-  const modeText: Record<MirrorModeKey, [string, string]> = {
-    trajectory: ['两端强、中间弱', '粒子在磁镜间往返'],
-    velocity: ['B 增大 → v⊥ 增大', 'v∥ 随之减小'],
-    force: ['洛伦兹力垂直 v', '磁场力不做功'],
-    summary: ['动能与磁矩保持', '磁镜实现无接触约束']
-  };
-  const [lineOne, lineTwo] = modeText[state.params.mode];
-  text(
-    ctx,
-    lineOne,
-    x + INSET + 18,
-    CALLOUT_Y + 30,
-    p.green,
-    14 * scale,
-    'left',
-    700
-  );
-  text(
-    ctx,
-    lineTwo,
-    x + INSET + 18,
-    CALLOUT_Y + 64,
-    p.green,
-    14 * scale,
-    'left',
-    700
-  );
-  text(
-    ctx,
-    state.status,
-    x + INSET + 18,
-    CALLOUT_Y + 100,
-    p.muted,
-    12 * scale,
-    'left'
-  );
-  text(
-    ctx,
-    `Rₘ = ${state.params.mirrorRatio.toFixed(1)}`,
-    x + INSET + 18,
-    CALLOUT_Y + 124,
-    p.blue,
-    12 * scale,
-    'left',
-    700
-  );
-}
-
-type MirrorModeKey = MagneticMirrorState['params']['mode'];
 
 export function createMagneticMirrorView(
   options: CreateMagneticMirrorViewOptions = {}
 ) {
   const stage = createCanvasViewport({
     canvas: options.canvas ?? null,
-    sizing: { mode: 'clamped', fallbackWidth: BASE_W, fallbackHeight: BASE_H },
-    initialWidth: BASE_W,
+    sizing: { mode: 'clamped', fallbackWidth: FIELD_W, fallbackHeight: BASE_H },
+    initialWidth: FIELD_W,
     initialHeight: BASE_H,
     eagerContext: true
   });
@@ -520,22 +520,29 @@ export function createMagneticMirrorView(
     demoHints: options.demoHints
   });
   let snapshot: MagneticMirrorState | null = null;
+  let redrawFrame: number | null = null;
+  let watched = false;
+  const observers: Array<{ disconnect(): void }> = [];
 
   function draw(state: MagneticMirrorState): void {
     const ctx = stage.ctx;
     if (!ctx) return;
     const width = stage.cssWidth;
     const height = stage.cssHeight;
-    const fit = Math.min(width / BASE_W, height / BASE_H);
-    const offsetY = (height - BASE_H * fit) / 2;
+    const pose = magneticMirrorStageTransform(
+      width,
+      height,
+      magneticMirrorStageLayoutFrom(stage.canvas)
+    );
+    const { fit, offsetX, offsetY } = pose;
     const scale = env.contentScale() * stage.responsiveScale;
     const p = PALETTE[env.theme];
     ctx.clearRect(0, 0, width, height);
     ctx.save();
-    ctx.translate(0, offsetY);
+    ctx.translate(offsetX, offsetY);
     ctx.scale(fit, fit);
     ctx.fillStyle = p.bg;
-    ctx.fillRect(0, 0, BASE_W, BASE_H);
+    ctx.fillRect(0, 0, FIELD_W, BASE_H);
     drawFieldRegion(ctx, p, scale);
     drawFieldLines(ctx, state, p);
     drawCoil(ctx, COIL_LEFT_X, p, scale);
@@ -550,7 +557,7 @@ export function createMagneticMirrorView(
     ctx.setLineDash([]);
     text(
       ctx,
-      'x（磁瓶中心轴）',
+      'x 轴',
       COIL_RIGHT_X + 66,
       AXIS_Y - 4,
       p.muted,
@@ -558,8 +565,45 @@ export function createMagneticMirrorView(
       'left'
     );
     drawParticle(ctx, state, p, scale);
-    drawPanel(ctx, state, p, scale);
     ctx.restore();
+  }
+
+  function scheduleRedraw(): void {
+    if (!snapshot) return;
+    if (typeof requestAnimationFrame !== 'function') {
+      draw(snapshot);
+      return;
+    }
+    if (redrawFrame !== null) return;
+    redrawFrame = requestAnimationFrame(() => {
+      redrawFrame = null;
+      if (snapshot) draw(snapshot);
+    });
+  }
+
+  function watchOverlay(): void {
+    if (watched || !stage.canvas) return;
+    const parent = stage.canvas.parentElement;
+    if (!parent) return;
+    watched = true;
+    if (typeof ResizeObserver !== 'undefined') {
+      const resize = new ResizeObserver(() => scheduleRedraw());
+      resize.observe(parent);
+      const panel = parent.querySelector(
+        '.teaching-readout-panel, .srgb-readout-panel, .readout-panel'
+      );
+      if (panel instanceof HTMLElement) resize.observe(panel);
+      observers.push(resize);
+    }
+    if (typeof MutationObserver !== 'undefined') {
+      const mutate = new MutationObserver(() => scheduleRedraw());
+      mutate.observe(parent, {
+        attributes: true,
+        subtree: true,
+        attributeFilter: ['class', 'style']
+      });
+      observers.push(mutate);
+    }
   }
 
   return {
@@ -567,6 +611,7 @@ export function createMagneticMirrorView(
       snapshot = state;
       stage.ensureSized();
       draw(state);
+      watchOverlay();
     },
     resize(): void {
       stage.resize();
@@ -582,6 +627,12 @@ export function createMagneticMirrorView(
     },
     dispose(): void {
       snapshot = null;
+      if (redrawFrame !== null && typeof cancelAnimationFrame === 'function') {
+        cancelAnimationFrame(redrawFrame);
+        redrawFrame = null;
+      }
+      observers.forEach((observer) => observer.disconnect());
+      observers.length = 0;
       stage.release();
     }
   };

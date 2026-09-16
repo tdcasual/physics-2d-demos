@@ -21,6 +21,7 @@ export type MagneticMirrorState = {
   parallelSpeed: number;
   perpendicularSpeed: number;
   pitchDistance: number;
+  gyroRadius: number;
   energy: number;
   magneticMoment: number;
   mirrorPoint: number;
@@ -107,14 +108,26 @@ export function magneticFieldRatio(
   return 1 + (mirrorRatio - 1) * edge ** 4;
 }
 
+export function isMirrorTrapped(
+  pitchAngle: number,
+  mirrorRatio: number
+): boolean {
+  return Math.sin((pitchAngle * Math.PI) / 180) ** 2 * mirrorRatio > 1;
+}
+
 export function mirrorPointFor(
   pitchAngle: number,
   mirrorRatio: number
 ): number {
   const sinSquared = Math.sin((pitchAngle * Math.PI) / 180) ** 2;
-  if (sinSquared <= 0) return 1;
-  if (mirrorRatio <= 1 / sinSquared) return 1;
+  if (sinSquared <= 0 || !isMirrorTrapped(pitchAngle, mirrorRatio)) return 1;
+  if (mirrorRatio <= 1) return 1;
   return clamp(((1 / sinSquared - 1) / (mirrorRatio - 1)) ** 0.25, 0, 1);
+}
+
+function wrapOpenEnds(position: number): number {
+  if (position <= 1 && position >= -1) return position;
+  return ((((position + 1) % 2) + 2) % 2) - 1;
 }
 
 function stateAt(
@@ -134,14 +147,22 @@ function stateAt(
     Math.max(0, speed * speed - perpendicularSpeed * perpendicularSpeed)
   );
   const parallelSpeed = direction * parallelMagnitude;
-  const pitchDistance =
-    Math.abs(parallelMagnitude) * magneticMirrorConstants.gyroPeriod * 100;
+  const cyclotronPeriod =
+    magneticMirrorConstants.gyroPeriod / Math.max(fieldRatio, 1e-9);
+  const pitchDistance = Math.abs(parallelMagnitude) * cyclotronPeriod * 100;
+  const gyroRadius = perpendicularSpeed / Math.max(fieldRatio, 1e-9);
   const energy = 0.5 * speed * speed;
   const magneticMoment =
     (0.5 * perpendicularSpeed * perpendicularSpeed) / fieldRatio;
   const mirrorPoint = mirrorPointFor(params.pitchAngle, params.mirrorRatio);
-  const reflected =
-    mirrorPoint < 0.99 && Math.abs(position) >= mirrorPoint - 0.01;
+  const trapped = isMirrorTrapped(params.pitchAngle, params.mirrorRatio);
+  let status = '运动中';
+  if (!params.autoRun) status = '已暂停';
+  else if (trapped && Math.abs(position) >= mirrorPoint - 0.02) {
+    status = '磁镜反射';
+  } else if (!trapped && Math.abs(position) >= 0.92) {
+    status = '穿出端部';
+  }
   return {
     params: { ...params },
     time,
@@ -151,10 +172,11 @@ function stateAt(
     parallelSpeed,
     perpendicularSpeed,
     pitchDistance,
+    gyroRadius,
     energy,
     magneticMoment,
     mirrorPoint,
-    status: reflected ? '磁镜反射' : params.autoRun ? '运动中' : '已暂停'
+    status
   };
 }
 
@@ -192,14 +214,20 @@ export function createMagneticMirrorSim(
         velocityFactor *
         delta *
         magneticMirrorConstants.animationSpeed;
-      const mirrorPoint = mirrorPointFor(params.pitchAngle, params.mirrorRatio);
-      const limit = mirrorPoint < 0.99 ? mirrorPoint : 1;
-      if (position >= limit) {
-        position = limit;
-        direction = -1;
-      } else if (position <= -limit) {
-        position = -limit;
-        direction = 1;
+      if (isMirrorTrapped(params.pitchAngle, params.mirrorRatio)) {
+        const mirrorPoint = mirrorPointFor(
+          params.pitchAngle,
+          params.mirrorRatio
+        );
+        if (position >= mirrorPoint) {
+          position = mirrorPoint;
+          if (direction > 0) direction = -1;
+        } else if (position <= -mirrorPoint) {
+          position = -mirrorPoint;
+          if (direction < 0) direction = 1;
+        }
+      } else {
+        position = wrapOpenEnds(position);
       }
       time += delta;
     },

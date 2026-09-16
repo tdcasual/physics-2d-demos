@@ -264,6 +264,15 @@
 - 工程验证：专项 `21/21`（sim 16 + view 5，含 docked-bottom 几何契约）；tsc、ESLint、`git diff --check`、构建和 bundle 预算通过（场景页 JS 140.18 kB / 180 kB）。`verify:scene` 契约集 `3142 passed / 131 skipped`。
 - 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/50754223-e2c0-405d-9098-cfa3d2fedaca.md` · [原始详情](https://app.svgzhenli.com/resource/50754223-e2c0-405d-9098-cfa3d2fedaca) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/7jar1z9ybu81774773489050.png)
 
+### 17. 磁镜与磁约束交互 (`magnetic-mirror`)
+
+- 状态：✅ Codex / Grok Build 交叉审计通过（2026-09-16）。
+- 修复：动画区只保留两端线圈、强弱磁场线、带电粒子螺旋轨迹、必要的速度/约束力矢量和短标签；移除 canvas 内公式卡、读数卡、控制面板与长说明。公式进入折叠控制区，实时数值由框架读数区承载，`preferredLayout:'split-right'`、`hasGraph:false`，文案精简。
+- 物理核验：`B/B₀=1+(Rₘ−1)|x|⁴`；`μ=mv⊥²/(2B)` 与 `Eₖ=½mv²` 守恒；`B↑⇒v⊥↑、v∥↓`，`r_g∝v⊥/B`，`d=v∥·2πm/(qB)`；`sin²θ·Rₘ>1` 才在镜点反射，逃逸锥穿出端部；方向翻转仅在越界时触发，边界有限稳定。
+- 交互与布局验证：独立 CUA `1280×720` 标准→演示→标准→演示往返；演示模式 docked-bottom 读数栏与动画阶段几何避让，线圈、场线、粒子、标签完整可见，无白屏、横向溢出或 console error/warning；动画区无数据/公式卡。ResizeObserver/MutationObserver 通过 rAF 合并重绘，模式切换不复用旧几何。
+- 工程验证：专项 `11/11`（sim/source `9` + view 几何 `2`）；`pnpm verify:scene magnetic-mirror` `7/7` 步骤通过（`3132 passed / 131 skipped`），tsc、ESLint、生产构建、bundle 预算和 `git diff --check` 通过（场景页 JS 133.43 kB / 180 kB）。远程 Grok Build 最终返回 `CONSENSUS: PASS`。
+- 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/c540be11-ba80-4952-8a22-570504fe1d69.md` · [原始详情](https://app.svgzhenli.com/resource/c540be11-ba80-4952-8a22-570504fe1d69) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/q2ltmtzvpg1786796521171.png)
+
 ## 复审记录模板
 
 每完成一项，在上表勾选并在对应提交或审计记录中补充：

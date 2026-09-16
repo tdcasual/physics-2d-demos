@@ -63,7 +63,12 @@ export const magneticMirrorControlsSchema: ControlsSchema = {
         {
           type: 'hint',
           key: 'formula',
-          lines: ['F = q(v × B)', 'Eₖ = ½mv²', 'd = v∥T']
+          lines: [
+            'B/B₀ = 1+(Rₘ−1)|x|⁴',
+            'μ = mv⊥²/(2B)，Eₖ = ½mv²',
+            'd = v∥·2πm/(qB)',
+            'sin²θ·Rₘ>1 时在镜点反射'
+          ]
         }
       ]
     }
