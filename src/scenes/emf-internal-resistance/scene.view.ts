@@ -1,72 +1,28 @@
+import {
+  applyCanvasSize,
+  getResponsiveScale,
+  scaledSize
+} from '../../core/canvas-sizing';
 import type { DemoRenderHints } from '../../platform/demo-profile';
-import type { TeachingMode, TeachingTheme } from '../../platform/standards';
+import type { TeachingTheme, TeachingMode } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import {
-  emfInternalConstants,
+  emfInternalConstants as C,
+  type EmfFit,
   type EmfInternalState,
   type EmfRecord
 } from './scene.sim';
 
 export type CreateEmfInternalViewOptions = {
   canvas?: HTMLCanvasElement;
+  graphCanvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
   mode?: TeachingMode;
   demoHints?: DemoRenderHints;
 };
 
-const {
-  baseWidth: BASE_W,
-  baseHeight: BASE_H,
-  fieldWidth: FIELD_W,
-  panelX: PANEL_X,
-  panelWidth: PANEL_W,
-  fieldLeft: FIELD_LEFT,
-  fieldRight: FIELD_RIGHT,
-  fieldTop: FIELD_TOP,
-  fieldBottom: FIELD_BOTTOM,
-  circuitTop: CIRCUIT_TOP,
-  circuitBottom: CIRCUIT_BOTTOM,
-  graphX: GRAPH_X,
-  graphY: GRAPH_Y,
-  graphWidth: GRAPH_W,
-  graphHeight: GRAPH_H,
-  graphLeft: GRAPH_LEFT,
-  graphRight: GRAPH_RIGHT,
-  graphTop: GRAPH_TOP,
-  graphBottom: GRAPH_BOTTOM,
-  graphCurrentBaseMax: GRAPH_I_BASE_MAX,
-  graphVoltageMax: GRAPH_U_MAX,
-  graphGridStep: GRAPH_GRID_STEP,
-  sourceX: SOURCE_X,
-  sourceY: SOURCE_Y,
-  sourceWidth: SOURCE_W,
-  sourceHeight: SOURCE_H,
-  switchX: SWITCH_X,
-  ammeterX: AMMETER_X,
-  ammeterY: AMMETER_Y,
-  voltmeterX: VOLTMETER_X,
-  voltmeterY: VOLTMETER_Y,
-  meterRadius: METER_RADIUS,
-  rheostatX: RHEOSTAT_X,
-  rheostatY: RHEOSTAT_Y,
-  rheostatWidth: RHEOSTAT_W,
-  rheostatHeight: RHEOSTAT_H,
-  wireLeft: WIRE_LEFT,
-  wireRight: WIRE_RIGHT,
-  wireBottom: WIRE_BOTTOM,
-  cardX: CARD_X,
-  cardWidth: CARD_W,
-  headerRuleY: HEADER_RULE_Y,
-  readoutY: READOUT_Y,
-  readoutHeight: READOUT_H,
-  recordsY: RECORDS_Y,
-  recordsHeight: RECORDS_H,
-  fitY: FIT_Y,
-  fitHeight: FIT_H,
-  flowPeriod: FLOW_PERIOD,
-  flowSpacing: FLOW_SPACING,
-  pointRadius: POINT_RADIUS
-} = emfInternalConstants;
+const BASE_W = C.baseWidth;
+const BASE_H = C.baseHeight;
 
 type Palette = {
   bg: string;
@@ -117,6 +73,55 @@ const PALETTE: Record<TeachingTheme, Palette> = {
   }
 };
 
+function contentBoxSize(host: HTMLElement): { width: number; height: number } {
+  const cs = getComputedStyle(host);
+  const rect = host.getBoundingClientRect();
+  const padX =
+    (Number.parseFloat(cs.paddingLeft) || 0) +
+    (Number.parseFloat(cs.paddingRight) || 0);
+  const padY =
+    (Number.parseFloat(cs.paddingTop) || 0) +
+    (Number.parseFloat(cs.paddingBottom) || 0);
+  return {
+    width: Math.max(1, Math.floor(rect.width - padX)),
+    height: Math.max(1, Math.floor(rect.height - padY))
+  };
+}
+
+export function sizeGraphCanvasToHost(canvas: HTMLCanvasElement): {
+  ctx: CanvasRenderingContext2D;
+  cssWidth: number;
+  cssHeight: number;
+  responsiveScale: number;
+} {
+  const host = canvas.parentElement;
+  let cssWidth: number;
+  let cssHeight: number;
+  if (host) {
+    const box = contentBoxSize(host);
+    cssWidth = box.width;
+    cssHeight = box.height;
+  } else {
+    const rect = canvas.getBoundingClientRect();
+    cssWidth = Math.max(1, Math.floor(rect.width || C.graphFallbackWidth));
+    cssHeight = Math.max(1, Math.floor(rect.height || C.graphFallbackHeight));
+  }
+  const dpr = Math.min(
+    2,
+    typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1
+  );
+  const responsiveScale = getResponsiveScale(cssWidth, cssHeight);
+  const ctx = applyCanvasSize(canvas, {
+    width: Math.max(1, Math.floor(cssWidth * dpr)),
+    height: Math.max(1, Math.floor(cssHeight * dpr)),
+    cssWidth,
+    cssHeight,
+    dpr,
+    responsiveScale
+  });
+  return { ctx, cssWidth, cssHeight, responsiveScale };
+}
+
 function text(
   ctx: CanvasRenderingContext2D,
   value: string,
@@ -140,7 +145,7 @@ function rounded(
   y: number,
   width: number,
   height: number,
-  radius = 12
+  radius = 10
 ): void {
   ctx.beginPath();
   if (typeof ctx.roundRect === 'function')
@@ -152,11 +157,12 @@ function wire(
   ctx: CanvasRenderingContext2D,
   points: Array<[number, number]>,
   color: string,
+  width: number,
   dashed = false
 ): void {
   ctx.strokeStyle = color;
-  ctx.lineWidth = dashed ? 2 : 5;
-  ctx.setLineDash(dashed ? [7, 7] : []);
+  ctx.lineWidth = width;
+  ctx.setLineDash(dashed ? [6, 6] : []);
   ctx.beginPath();
   points.forEach(([x, y], index) => {
     if (index === 0) ctx.moveTo(x, y);
@@ -171,134 +177,157 @@ function drawMeter(
   x: number,
   y: number,
   letter: string,
-  value: string,
+  fraction: number,
   accent: string,
-  p: Palette
+  p: Palette,
+  radius: number
 ): void {
   ctx.fillStyle = p.panel;
   ctx.strokeStyle = p.wire;
   ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.arc(x, y, METER_RADIUS, 0, Math.PI * 2);
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
   ctx.strokeStyle = p.muted;
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.arc(x, y, METER_RADIUS - 11, Math.PI * 1.1, Math.PI * 1.9);
+  ctx.arc(x, y, radius - 10, Math.PI * 1.1, Math.PI * 1.9);
   ctx.stroke();
+  const t = Math.max(0, Math.min(1, fraction));
+  const angle = Math.PI * (1.15 + 0.7 * t);
   ctx.fillStyle = accent;
   ctx.beginPath();
-  ctx.arc(x, y, 6, 0, Math.PI * 2);
+  ctx.arc(x, y, 5, 0, Math.PI * 2);
   ctx.fill();
   ctx.strokeStyle = accent;
   ctx.lineWidth = 3;
   ctx.beginPath();
   ctx.moveTo(x, y);
-  ctx.lineTo(x + METER_RADIUS * 0.35, y - METER_RADIUS * 0.64);
+  ctx.lineTo(
+    x + Math.cos(angle) * radius * 0.62,
+    y + Math.sin(angle) * radius * 0.62
+  );
   ctx.stroke();
-  text(ctx, letter, x, y - 20, accent, 18, 'center', 700);
-  text(ctx, value, x, y + METER_RADIUS + 20, accent, 14, 'center', 700);
+  text(ctx, letter, x, y - radius * 0.18, accent, 16, 'center', 700);
 }
 
-function drawSource(
-  ctx: CanvasRenderingContext2D,
-  state: EmfInternalState,
-  p: Palette
-): void {
-  const left = SOURCE_X - SOURCE_W / 2;
-  const top = SOURCE_Y - SOURCE_H / 2;
+function drawSource(ctx: CanvasRenderingContext2D, p: Palette): void {
+  const left = C.sourceX - C.sourceWidth / 2;
+  const top = C.sourceY - C.sourceHeight / 2;
   ctx.fillStyle = p.soft;
   ctx.strokeStyle = p.gold;
   ctx.lineWidth = 2;
-  rounded(ctx, left, top, SOURCE_W, SOURCE_H, 9);
+  rounded(ctx, left, top, C.sourceWidth, C.sourceHeight, 8);
   ctx.fill();
   ctx.stroke();
   ctx.strokeStyle = p.red;
   ctx.lineWidth = 5;
   ctx.beginPath();
-  ctx.moveTo(SOURCE_X - 28, SOURCE_Y - 16);
-  ctx.lineTo(SOURCE_X - 28, SOURCE_Y + 16);
+  ctx.moveTo(C.sourceX - 26, C.sourceY - 14);
+  ctx.lineTo(C.sourceX - 26, C.sourceY + 14);
   ctx.stroke();
   ctx.strokeStyle = p.wire;
   ctx.lineWidth = 5;
   ctx.beginPath();
-  ctx.moveTo(SOURCE_X + 26, SOURCE_Y - 12);
-  ctx.lineTo(SOURCE_X + 26, SOURCE_Y + 12);
+  ctx.moveTo(C.sourceX + 24, C.sourceY - 10);
+  ctx.lineTo(C.sourceX + 24, C.sourceY + 10);
   ctx.stroke();
-  text(ctx, '+', SOURCE_X - 45, SOURCE_Y - 22, p.red, 16, 'center', 700);
-  text(ctx, '−', SOURCE_X + 45, SOURCE_Y - 22, p.ink, 16, 'center', 700);
-  text(
-    ctx,
-    `电源 E=${state.sourceVoltage.toFixed(2)} V`,
-    SOURCE_X,
-    SOURCE_Y + 52,
-    p.ink,
-    13,
-    'center',
-    700
-  );
+  text(ctx, '+', C.sourceX - 42, C.sourceY - 20, p.red, 14, 'center', 700);
+  text(ctx, '−', C.sourceX + 42, C.sourceY - 20, p.ink, 14, 'center', 700);
+  text(ctx, 'E, r', C.sourceX, C.sourceY + 40, p.ink, 13, 'center', 700);
 }
 
 function drawSwitch(
   ctx: CanvasRenderingContext2D,
-  state: EmfInternalState,
+  closed: boolean,
   p: Palette
 ): void {
   ctx.strokeStyle = p.wire;
-  ctx.lineWidth = 4;
+  ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.arc(SWITCH_X - 16, SOURCE_Y, 6, 0, Math.PI * 2);
-  ctx.arc(SWITCH_X + 20, SOURCE_Y, 6, 0, Math.PI * 2);
+  ctx.arc(C.switchX - 16, C.sourceY, 5, 0, Math.PI * 2);
+  ctx.arc(C.switchX + 18, C.sourceY, 5, 0, Math.PI * 2);
   ctx.stroke();
   ctx.beginPath();
-  ctx.moveTo(SWITCH_X - 16, SOURCE_Y);
+  ctx.moveTo(C.switchX - 16, C.sourceY);
   ctx.lineTo(
-    state.params.switchClosed ? SWITCH_X + 20 : SWITCH_X + 8,
-    state.params.switchClosed ? SOURCE_Y : SOURCE_Y - 22
+    closed ? C.switchX + 18 : C.switchX + 6,
+    closed ? C.sourceY : C.sourceY - 20
   );
-  ctx.strokeStyle = state.params.switchClosed ? p.teal : p.red;
+  ctx.strokeStyle = closed ? p.teal : p.red;
+  ctx.lineWidth = 4;
   ctx.stroke();
-  text(ctx, '开关 S', SWITCH_X, SOURCE_Y + 40, p.ink, 13, 'center', 700);
+  text(ctx, 'S', C.switchX, C.sourceY + 32, p.ink, 13, 'center', 700);
 }
 
 function drawRheostat(
   ctx: CanvasRenderingContext2D,
-  state: EmfInternalState,
+  r: number,
   p: Palette
 ): void {
-  const left = RHEOSTAT_X;
-  const top = RHEOSTAT_Y - RHEOSTAT_H / 2;
+  const left = C.rheostatX;
+  const top = C.rheostatY - C.rheostatHeight / 2;
   ctx.fillStyle = p.soft;
   ctx.strokeStyle = p.wire;
   ctx.lineWidth = 2;
-  rounded(ctx, left, top, RHEOSTAT_W, RHEOSTAT_H, 6);
+  rounded(ctx, left, top, C.rheostatWidth, C.rheostatHeight, 6);
   ctx.fill();
   ctx.stroke();
   for (let i = 1; i < 11; i += 1) {
-    const x = left + (RHEOSTAT_W * i) / 11;
+    const x = left + (C.rheostatWidth * i) / 11;
     ctx.strokeStyle = p.muted;
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(x, top + 5);
-    ctx.lineTo(x, top + RHEOSTAT_H - 5);
+    ctx.moveTo(x, top + 4);
+    ctx.lineTo(x, top + C.rheostatHeight - 4);
     ctx.stroke();
   }
-  const knobX = left + ((state.rheostatResistance - 1) / 14) * RHEOSTAT_W;
+  const knobX =
+    left +
+    ((r - C.rheostatMin) / (C.rheostatMax - C.rheostatMin)) * C.rheostatWidth;
   ctx.fillStyle = p.blue;
-  rounded(ctx, knobX - 12, top - 17, 24, 22, 5);
+  rounded(ctx, knobX - 11, top - 16, 22, 20, 4);
   ctx.fill();
   text(
     ctx,
-    `滑动变阻器 R=${state.rheostatResistance.toFixed(1)} Ω`,
-    left + RHEOSTAT_W / 2,
-    top - 30,
+    'R',
+    left + C.rheostatWidth / 2,
+    top - 28,
     p.ink,
     13,
     'center',
     700
   );
-  text(ctx, 'P', knobX, top - 6, '#ffffff', 13, 'center', 700);
+  text(ctx, 'P', knobX, top - 6, '#ffffff', 12, 'center', 700);
+}
+
+function polylineLength(points: Array<[number, number]>): number {
+  let length = 0;
+  for (let i = 1; i < points.length; i += 1) {
+    const dx = points[i][0] - points[i - 1][0];
+    const dy = points[i][1] - points[i - 1][1];
+    length += Math.hypot(dx, dy);
+  }
+  return length;
+}
+
+function pointOnPath(
+  points: Array<[number, number]>,
+  distance: number
+): [number, number] {
+  let remaining = distance;
+  for (let i = 1; i < points.length; i += 1) {
+    const dx = points[i][0] - points[i - 1][0];
+    const dy = points[i][1] - points[i - 1][1];
+    const seg = Math.hypot(dx, dy);
+    if (remaining <= seg) {
+      const t = seg === 0 ? 0 : remaining / seg;
+      return [points[i - 1][0] + dx * t, points[i - 1][1] + dy * t];
+    }
+    remaining -= seg;
+  }
+  return points[points.length - 1];
 }
 
 function drawFlow(
@@ -308,21 +337,22 @@ function drawFlow(
 ): void {
   if (!state.params.switchClosed) return;
   const path: Array<[number, number]> = [
-    [SOURCE_X + SOURCE_W / 2, SOURCE_Y],
-    [WIRE_RIGHT, SOURCE_Y],
-    [WIRE_RIGHT, WIRE_BOTTOM],
-    [WIRE_LEFT, WIRE_BOTTOM],
-    [WIRE_LEFT, SOURCE_Y]
+    [C.wireLeft, C.sourceY],
+    [C.wireRight, C.sourceY],
+    [C.wireRight, C.wireBottom],
+    [C.wireLeft, C.wireBottom],
+    [C.wireLeft, C.sourceY]
   ];
+  const total = polylineLength(path);
+  const spacing = C.flowSpacing;
+  const offset = ((state.phase % C.flowPeriod) / C.flowPeriod) * spacing;
   ctx.fillStyle = p.flow;
-  path.forEach(([x, y], index) => {
-    const offset =
-      ((state.phase * FLOW_SPACING + index * FLOW_SPACING) % FLOW_PERIOD) -
-      FLOW_PERIOD / 2;
+  for (let d = offset; d < total; d += spacing) {
+    const [x, y] = pointOnPath(path, d);
     ctx.beginPath();
-    ctx.arc(x + offset * 0.18, y, 4, 0, Math.PI * 2);
+    ctx.arc(x, y, 3.5, 0, Math.PI * 2);
     ctx.fill();
-  });
+  }
 }
 
 function drawCircuit(
@@ -330,459 +360,402 @@ function drawCircuit(
   state: EmfInternalState,
   p: Palette
 ): void {
-  text(
-    ctx,
-    '实验电路',
-    FIELD_LEFT + 4,
-    CIRCUIT_TOP - 2,
-    p.ink,
-    18,
-    'left',
-    700
-  );
-  text(
-    ctx,
-    state.status,
-    FIELD_RIGHT - 4,
-    CIRCUIT_TOP - 2,
-    state.params.switchClosed ? p.teal : p.red,
-    14,
-    'right',
-    700
-  );
+  const lw = 4;
   wire(
     ctx,
     [
-      [WIRE_LEFT, SOURCE_Y],
-      [SOURCE_X - SOURCE_W / 2, SOURCE_Y]
+      [C.wireLeft, C.sourceY],
+      [C.sourceX - C.sourceWidth / 2, C.sourceY]
     ],
-    p.wire
+    p.wire,
+    lw
   );
   wire(
     ctx,
     [
-      [SOURCE_X + SOURCE_W / 2, SOURCE_Y],
-      [SWITCH_X - 16, SOURCE_Y]
+      [C.sourceX + C.sourceWidth / 2, C.sourceY],
+      [C.switchX - 16, C.sourceY]
     ],
-    p.wire
+    p.wire,
+    lw
   );
   wire(
     ctx,
     [
-      [SWITCH_X + 20, SOURCE_Y],
-      [AMMETER_X - METER_RADIUS, AMMETER_Y]
+      [C.switchX + 18, C.sourceY],
+      [C.ammeterX - C.meterRadius, C.ammeterY]
     ],
-    p.wire
+    p.wire,
+    lw
   );
   wire(
     ctx,
     [
-      [AMMETER_X + METER_RADIUS, AMMETER_Y],
-      [RHEOSTAT_X, RHEOSTAT_Y]
+      [C.ammeterX + C.meterRadius, C.ammeterY],
+      [C.rheostatX, C.rheostatY]
     ],
-    p.wire
+    p.wire,
+    lw
   );
   wire(
     ctx,
     [
-      [RHEOSTAT_X + RHEOSTAT_W, RHEOSTAT_Y],
-      [WIRE_RIGHT, RHEOSTAT_Y],
-      [WIRE_RIGHT, WIRE_BOTTOM]
+      [C.rheostatX + C.rheostatWidth, C.rheostatY],
+      [C.wireRight, C.rheostatY],
+      [C.wireRight, C.wireBottom]
     ],
-    p.wire
+    p.wire,
+    lw
   );
   wire(
     ctx,
     [
-      [WIRE_LEFT, WIRE_BOTTOM],
-      [WIRE_LEFT, SOURCE_Y]
+      [C.wireLeft, C.wireBottom],
+      [C.wireLeft, C.sourceY]
     ],
-    p.wire
+    p.wire,
+    lw
   );
   wire(
     ctx,
     [
-      [WIRE_LEFT, WIRE_BOTTOM],
-      [WIRE_RIGHT, WIRE_BOTTOM]
+      [C.wireLeft, C.wireBottom],
+      [C.wireRight, C.wireBottom]
     ],
-    p.wire
+    p.wire,
+    lw
   );
   wire(
     ctx,
     [
-      [SWITCH_X + 20, SOURCE_Y],
-      [SWITCH_X + 20, VOLTMETER_Y],
-      [VOLTMETER_X - METER_RADIUS, VOLTMETER_Y]
+      [C.switchX - 16, C.sourceY],
+      [C.switchX - 16, C.voltmeterY],
+      [C.voltmeterX - C.meterRadius, C.voltmeterY]
     ],
     p.blue,
+    2,
     true
   );
   wire(
     ctx,
     [
-      [WIRE_RIGHT, WIRE_BOTTOM],
-      [WIRE_RIGHT - 56, WIRE_BOTTOM],
-      [WIRE_RIGHT - 56, VOLTMETER_Y],
-      [VOLTMETER_X + METER_RADIUS, VOLTMETER_Y]
+      [C.wireRight, C.wireBottom],
+      [C.wireRight - 48, C.wireBottom],
+      [C.wireRight - 48, C.voltmeterY],
+      [C.voltmeterX + C.meterRadius, C.voltmeterY]
     ],
     p.blue,
+    2,
     true
   );
   drawFlow(ctx, state, p);
-  drawSource(ctx, state, p);
-  drawSwitch(ctx, state, p);
-  drawRheostat(ctx, state, p);
-  drawMeter(
-    ctx,
-    AMMETER_X,
-    AMMETER_Y,
-    'A',
-    `${state.current.toFixed(2)} A`,
-    p.red,
-    p
+  drawSource(ctx, p);
+  drawSwitch(ctx, state.params.switchClosed, p);
+  drawRheostat(ctx, state.rheostatResistance, p);
+  const iFrac = Math.min(1, state.current / 1.2);
+  const uFrac = Math.min(
+    1,
+    state.terminalVoltage / Math.max(1.5, state.sourceVoltage)
   );
+  drawMeter(ctx, C.ammeterX, C.ammeterY, 'A', iFrac, p.red, p, C.meterRadius);
   drawMeter(
     ctx,
-    VOLTMETER_X,
-    VOLTMETER_Y,
+    C.voltmeterX,
+    C.voltmeterY,
     'V',
-    `${state.terminalVoltage.toFixed(2)} V`,
+    uFrac,
     p.blue,
-    p
-  );
-  text(
-    ctx,
-    '调节滑片改变 R，记录多组 U-I 数据',
-    FIELD_LEFT + 8,
-    CIRCUIT_BOTTOM - 14,
-    p.muted,
-    13,
-    'left',
-    600
+    p,
+    C.meterRadius
   );
 }
 
-function graphPoint(record: EmfRecord, currentMax: number): [number, number] {
+function graphPoint(
+  record: EmfRecord,
+  currentMax: number,
+  left: number,
+  right: number,
+  top: number,
+  bottom: number,
+  uMax: number
+): [number, number] {
   return [
-    GRAPH_LEFT + (record.current / currentMax) * (GRAPH_RIGHT - GRAPH_LEFT),
-    GRAPH_BOTTOM - (record.voltage / GRAPH_U_MAX) * (GRAPH_BOTTOM - GRAPH_TOP)
+    left + (record.current / currentMax) * (right - left),
+    bottom - (record.voltage / uMax) * (bottom - top)
   ];
 }
 
-function drawGraph(
+export function niceUiAxis(
+  requiredMax: number,
+  approxIntervals = 6
+): { max: number; step: number; ticks: number[] } {
+  const need = Math.max(requiredMax, 1e-6);
+  const intervals = Math.max(2, Math.round(approxIntervals));
+  const rough = need / intervals;
+  const mag = 10 ** Math.floor(Math.log10(rough));
+  const residual = rough / mag;
+  const step = residual >= 5 ? 5 * mag : residual >= 2 ? 2 * mag : mag;
+  const n = Math.ceil(need / step - 1e-9);
+  const max = n * step;
+  const ticks: number[] = [];
+  for (let i = 0; i <= n; i += 1) ticks.push(i * step);
+  return { max, step, ticks };
+}
+
+export function formatUiTick(value: number, step: number): string {
+  if (Math.abs(value) < 1e-9) return '0';
+  if (step >= 1 - 1e-9) return String(Math.round(value));
+  const decimals = step >= 0.1 - 1e-9 ? 1 : 2;
+  return value.toFixed(decimals);
+}
+
+export function uiGraphAxes(
+  input: {
+    sourceVoltage: number;
+    internalResistance: number;
+    fit?: EmfFit | null;
+  },
+  approxIntervals = 6
+): {
+  currentMax: number;
+  voltageMax: number;
+  currentStep: number;
+  voltageStep: number;
+  currentTicks: number[];
+  voltageTicks: number[];
+} {
+  const shortI =
+    input.sourceVoltage / Math.max(C.resistanceMin, input.internalResistance);
+  const fitI =
+    input.fit && input.fit.internalResistance > 0
+      ? input.fit.emf / input.fit.internalResistance
+      : 0;
+  const iAxis = niceUiAxis(
+    Math.max(C.graphCurrentBaseMax, shortI, fitI),
+    approxIntervals
+  );
+  const uAxis = niceUiAxis(
+    Math.max(C.graphVoltageBaseMax, input.sourceVoltage, input.fit?.emf ?? 0),
+    approxIntervals
+  );
+  return {
+    currentMax: iAxis.max,
+    voltageMax: uAxis.max,
+    currentStep: iAxis.step,
+    voltageStep: uAxis.step,
+    currentTicks: iAxis.ticks,
+    voltageTicks: uAxis.ticks
+  };
+}
+
+export function uiGraphPlotBox(
+  width: number,
+  height: number
+): { left: number; right: number; top: number; bottom: number } {
+  const padL = Math.max(36, width * 0.1);
+  const padR = Math.max(28, width * 0.06);
+  const padT = Math.max(28, height * 0.14);
+  const padB = Math.max(36, height * 0.18);
+  return {
+    left: padL,
+    right: width - padR,
+    top: padT,
+    bottom: height - padB
+  };
+}
+
+export function uiGraphLineEnd(
+  emf: number,
+  resistance: number,
+  currentMax: number
+): { current: number; voltage: number } {
+  const visibleMax = Math.max(0, currentMax);
+  if (
+    !(resistance > 0) ||
+    !Number.isFinite(resistance) ||
+    !Number.isFinite(emf)
+  ) {
+    return {
+      current: visibleMax,
+      voltage: Math.max(0, Number.isFinite(emf) ? emf : 0)
+    };
+  }
+  const interceptI = emf / resistance;
+  if (interceptI >= 0 && interceptI <= visibleMax) {
+    return { current: interceptI, voltage: 0 };
+  }
+  return {
+    current: visibleMax,
+    voltage: Math.max(0, emf - visibleMax * resistance)
+  };
+}
+
+function drawGraphCanvas(
   ctx: CanvasRenderingContext2D,
   state: EmfInternalState,
-  p: Palette
+  width: number,
+  height: number,
+  p: Palette,
+  font: (n: number) => number
 ): void {
-  const currentMax = Math.max(
-    GRAPH_I_BASE_MAX,
-    (state.sourceVoltage / Math.max(0.5, state.internalResistance)) * 1.15
-  );
-  rounded(ctx, GRAPH_X, GRAPH_Y, GRAPH_W, GRAPH_H, 12);
-  ctx.fillStyle = p.panel;
-  ctx.fill();
-  ctx.strokeStyle = p.border;
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-  text(
-    ctx,
-    'U-I 图像与拟合',
-    GRAPH_X + 18,
-    GRAPH_Y + 24,
-    p.ink,
-    16,
-    'left',
-    700
-  );
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = p.bg;
+  ctx.fillRect(0, 0, width, height);
+  const { left, right, top, bottom } = uiGraphPlotBox(width, height);
+  const axes = uiGraphAxes(state);
+  const uMax = axes.voltageMax;
+  const currentMax = axes.currentMax;
+  text(ctx, 'U-I', left, 16, p.ink, font(14), 'left', 700);
   ctx.strokeStyle = p.grid;
   ctx.lineWidth = 1;
-  for (let x = GRAPH_LEFT; x <= GRAPH_RIGHT; x += GRAPH_GRID_STEP) {
+  axes.currentTicks.forEach((current) => {
+    const x = left + (current / currentMax) * (right - left);
     ctx.beginPath();
-    ctx.moveTo(x, GRAPH_TOP);
-    ctx.lineTo(x, GRAPH_BOTTOM);
+    ctx.moveTo(x, top);
+    ctx.lineTo(x, bottom);
     ctx.stroke();
-  }
-  for (let y = GRAPH_TOP; y <= GRAPH_BOTTOM; y += GRAPH_GRID_STEP) {
+  });
+  axes.voltageTicks.forEach((voltage) => {
+    const y = bottom - (voltage / uMax) * (bottom - top);
     ctx.beginPath();
-    ctx.moveTo(GRAPH_LEFT, y);
-    ctx.lineTo(GRAPH_RIGHT, y);
+    ctx.moveTo(left, y);
+    ctx.lineTo(right, y);
     ctx.stroke();
-  }
+  });
   ctx.strokeStyle = p.ink;
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(GRAPH_LEFT, GRAPH_BOTTOM);
-  ctx.lineTo(GRAPH_RIGHT + 12, GRAPH_BOTTOM);
-  ctx.moveTo(GRAPH_LEFT, GRAPH_BOTTOM);
-  ctx.lineTo(GRAPH_LEFT, GRAPH_TOP - 10);
+  ctx.moveTo(left, bottom);
+  ctx.lineTo(right, bottom);
+  ctx.moveTo(left, bottom);
+  ctx.lineTo(left, top);
   ctx.stroke();
-  text(ctx, 'I / A', GRAPH_RIGHT + 18, GRAPH_BOTTOM, p.ink, 13, 'left', 700);
-  text(ctx, 'U / V', GRAPH_LEFT - 10, GRAPH_TOP - 18, p.ink, 13, 'right', 700);
-  text(ctx, '0', GRAPH_LEFT - 12, GRAPH_BOTTOM + 4, p.muted, 11, 'right', 600);
-  text(
-    ctx,
-    `${currentMax.toFixed(1)}`,
-    GRAPH_RIGHT,
-    GRAPH_BOTTOM + 18,
-    p.muted,
-    11,
-    'center',
-    600
+  text(ctx, 'I / A', right, bottom + 24, p.ink, font(11), 'right', 700);
+  text(ctx, 'U / V', left - 8, top - 12, p.ink, font(11), 'left', 700);
+  text(ctx, '0', left - 8, bottom + 11, p.muted, font(10), 'right', 600);
+  axes.currentTicks.forEach((current) => {
+    if (current === 0) return;
+    const x = left + (current / currentMax) * (right - left);
+    const align: CanvasTextAlign = current === currentMax ? 'right' : 'center';
+    text(
+      ctx,
+      formatUiTick(current, axes.currentStep),
+      x,
+      bottom + 11,
+      p.muted,
+      font(10),
+      align,
+      600
+    );
+  });
+  axes.voltageTicks.forEach((voltage) => {
+    if (voltage === 0) return;
+    const y = bottom - (voltage / uMax) * (bottom - top);
+    text(
+      ctx,
+      formatUiTick(voltage, axes.voltageStep),
+      left - 8,
+      y,
+      p.muted,
+      font(10),
+      'right',
+      600
+    );
+  });
+  const theoreticalEnd = uiGraphLineEnd(
+    state.sourceVoltage,
+    state.internalResistance,
+    currentMax
   );
-  text(
-    ctx,
-    `${GRAPH_U_MAX}`,
-    GRAPH_LEFT - 12,
-    GRAPH_TOP,
-    p.muted,
-    11,
-    'right',
-    600
+  const theoretical: EmfRecord[] = [
+    { current: 0, voltage: state.sourceVoltage, resistance: 0 },
+    {
+      current: theoreticalEnd.current,
+      voltage: theoreticalEnd.voltage,
+      resistance: 0
+    }
+  ];
+  const [tx1, ty1] = graphPoint(
+    theoretical[0],
+    currentMax,
+    left,
+    right,
+    top,
+    bottom,
+    uMax
   );
-  if (state.params.switchClosed) {
-    const theoretical: EmfRecord[] = [
-      { current: 0, voltage: state.sourceVoltage, resistance: 0 },
-      {
-        current: currentMax,
-        voltage: Math.max(
-          0,
-          state.sourceVoltage - currentMax * state.internalResistance
-        ),
-        resistance: 0
-      }
-    ];
-    const [x1, y1] = graphPoint(theoretical[0], currentMax);
-    const [x2, y2] = graphPoint(theoretical[1], currentMax);
-    ctx.strokeStyle = p.muted;
-    ctx.setLineDash([6, 6]);
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
+  const [tx2, ty2] = graphPoint(
+    theoretical[1],
+    currentMax,
+    left,
+    right,
+    top,
+    bottom,
+    uMax
+  );
+  ctx.strokeStyle = p.muted;
+  ctx.setLineDash([5, 5]);
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(tx1, ty1);
+  ctx.lineTo(tx2, ty2);
+  ctx.stroke();
+  ctx.setLineDash([]);
   if (state.fit) {
+    const fittedEnd = uiGraphLineEnd(
+      state.fit.emf,
+      state.fit.internalResistance,
+      currentMax
+    );
     const fitted: EmfRecord[] = [
       { current: 0, voltage: state.fit.emf, resistance: 0 },
       {
-        current: currentMax,
-        voltage: Math.max(0, state.fit.emf + state.fit.slope * currentMax),
+        current: fittedEnd.current,
+        voltage: fittedEnd.voltage,
         resistance: 0
       }
     ];
-    const [x1, y1] = graphPoint(fitted[0], currentMax);
-    const [x2, y2] = graphPoint(fitted[1], currentMax);
+    const [fx1, fy1] = graphPoint(
+      fitted[0],
+      currentMax,
+      left,
+      right,
+      top,
+      bottom,
+      uMax
+    );
+    const [fx2, fy2] = graphPoint(
+      fitted[1],
+      currentMax,
+      left,
+      right,
+      top,
+      bottom,
+      uMax
+    );
     ctx.strokeStyle = p.red;
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2.5;
     ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
+    ctx.moveTo(fx1, fy1);
+    ctx.lineTo(fx2, fy2);
     ctx.stroke();
   }
   state.records.forEach((record, index) => {
-    const [x, y] = graphPoint(record, currentMax);
+    const [x, y] = graphPoint(
+      record,
+      currentMax,
+      left,
+      right,
+      top,
+      bottom,
+      uMax
+    );
     ctx.fillStyle = p.teal;
     ctx.beginPath();
-    ctx.arc(x, y, POINT_RADIUS, 0, Math.PI * 2);
+    ctx.arc(x, y, C.pointRadius, 0, Math.PI * 2);
     ctx.fill();
-    text(ctx, String(index + 1), x + 10, y - 10, p.teal, 11, 'left', 700);
+    text(ctx, String(index + 1), x + 8, y - 8, p.teal, font(10), 'left', 700);
   });
-  if (state.records.length === 0) {
-    text(
-      ctx,
-      '闭合开关并记录多组数据',
-      (GRAPH_LEFT + GRAPH_RIGHT) / 2,
-      GRAPH_BOTTOM - 22,
-      p.muted,
-      14,
-      'center',
-      600
-    );
-  }
-}
-
-function drawPanel(
-  ctx: CanvasRenderingContext2D,
-  state: EmfInternalState,
-  p: Palette
-): void {
-  ctx.fillStyle = p.panel;
-  ctx.fillRect(FIELD_W, 0, BASE_W - FIELD_W, BASE_H);
-  text(ctx, '电源实验', PANEL_X + 18, 38, p.ink, 20, 'left', 700);
-  ctx.strokeStyle = p.blue;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(PANEL_X + 18, HEADER_RULE_Y);
-  ctx.lineTo(PANEL_X + PANEL_W - 22, HEADER_RULE_Y);
-  ctx.stroke();
-  rounded(ctx, CARD_X, READOUT_Y, CARD_W, READOUT_H, 12);
-  ctx.fillStyle = p.panel;
-  ctx.fill();
-  ctx.strokeStyle = p.border;
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-  text(ctx, '实时读数', CARD_X + 16, READOUT_Y + 20, p.muted, 14, 'left', 700);
-  const rows = [
-    ['滑片电阻 R', `${state.rheostatResistance.toFixed(1)} Ω`, p.ink],
-    ['端电压 U', `${state.terminalVoltage.toFixed(2)} V`, p.blue],
-    ['电流 I', `${state.current.toFixed(3)} A`, p.red],
-    [
-      '状态',
-      state.params.switchClosed ? '已闭合' : '已断开',
-      state.params.switchClosed ? p.teal : p.red
-    ]
-  ];
-  rows.forEach(([label, value, color], index) => {
-    const y = READOUT_Y + 45 + index * 20;
-    text(ctx, label, CARD_X + 16, y, p.muted, 12, 'left', 600);
-    text(ctx, value, CARD_X + CARD_W - 16, y, color, 13, 'right', 700);
-  });
-  rounded(ctx, CARD_X, RECORDS_Y, CARD_W, RECORDS_H, 12);
-  ctx.fillStyle = p.panel;
-  ctx.fill();
-  ctx.strokeStyle = p.border;
-  ctx.stroke();
-  text(ctx, '测量数据', CARD_X + 16, RECORDS_Y + 22, p.blue, 15, 'left', 700);
-  text(
-    ctx,
-    `已记录 ${state.records.length}/${6} 组`,
-    CARD_X + CARD_W - 16,
-    RECORDS_Y + 22,
-    p.muted,
-    12,
-    'right',
-    600
-  );
-  const tableY = RECORDS_Y + 50;
-  text(ctx, '序号', CARD_X + 20, tableY, p.muted, 11, 'left', 700);
-  text(ctx, 'U / V', CARD_X + 110, tableY, p.muted, 11, 'center', 700);
-  text(ctx, 'I / A', CARD_X + 210, tableY, p.muted, 11, 'center', 700);
-  text(ctx, 'R / Ω', CARD_X + 310, tableY, p.muted, 11, 'center', 700);
-  ctx.strokeStyle = p.border;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(CARD_X + 16, tableY + 15);
-  ctx.lineTo(CARD_X + CARD_W - 16, tableY + 15);
-  ctx.stroke();
-  const visible = state.records.slice(-4);
-  if (visible.length === 0) {
-    text(
-      ctx,
-      '点击“记录当前数据”',
-      CARD_X + CARD_W / 2,
-      RECORDS_Y + 112,
-      p.muted,
-      12,
-      'center',
-      600
-    );
-  } else {
-    visible.forEach((record, index) => {
-      const y = tableY + 35 + index * 24;
-      text(
-        ctx,
-        String(state.records.length - visible.length + index + 1),
-        CARD_X + 20,
-        y,
-        p.ink,
-        12,
-        'left',
-        600
-      );
-      text(
-        ctx,
-        record.voltage.toFixed(2),
-        CARD_X + 110,
-        y,
-        p.blue,
-        12,
-        'center',
-        600
-      );
-      text(
-        ctx,
-        record.current.toFixed(3),
-        CARD_X + 210,
-        y,
-        p.red,
-        12,
-        'center',
-        600
-      );
-      text(
-        ctx,
-        record.resistance.toFixed(1),
-        CARD_X + 310,
-        y,
-        p.ink,
-        12,
-        'center',
-        600
-      );
-    });
-  }
-  rounded(ctx, CARD_X, FIT_Y, CARD_W, FIT_H, 12);
-  ctx.fillStyle = p.soft;
-  ctx.fill();
-  ctx.strokeStyle = p.gold;
-  ctx.stroke();
-  text(
-    ctx,
-    '模拟数据拟合结果',
-    CARD_X + 16,
-    FIT_Y + 24,
-    p.gold,
-    15,
-    'left',
-    700
-  );
-  if (state.fit) {
-    text(
-      ctx,
-      `E测 = ${state.fit.emf.toFixed(2)} V`,
-      CARD_X + 16,
-      FIT_Y + 62,
-      p.ink,
-      16,
-      'left',
-      700
-    );
-    text(
-      ctx,
-      `r测 = ${state.fit.internalResistance.toFixed(2)} Ω`,
-      CARD_X + 16,
-      FIT_Y + 92,
-      p.ink,
-      16,
-      'left',
-      700
-    );
-    text(
-      ctx,
-      state.params.systematicError
-        ? '分流修正：E测、r测偏小'
-        : '理想表计：拟合应接近理论值',
-      CARD_X + 16,
-      FIT_Y + 132,
-      state.params.systematicError ? p.red : p.muted,
-      12,
-      'left',
-      600
-    );
-  } else {
-    text(
-      ctx,
-      '至少记录 2 组数据后拟合',
-      CARD_X + 16,
-      FIT_Y + 72,
-      p.muted,
-      13,
-      'left',
-      600
-    );
-    text(ctx, 'U = E − Ir', CARD_X + 16, FIT_Y + 108, p.ink, 18, 'left', 700);
-  }
 }
 
 export function createEmfInternalView(
@@ -800,55 +773,70 @@ export function createEmfInternalView(
     mode: options.mode ?? 'normal',
     demoHints: options.demoHints
   });
+  let graphCanvas: HTMLCanvasElement | null = options.graphCanvas ?? null;
+  let snapshot: EmfInternalState | null = null;
+
+  function paintGraph(state: EmfInternalState): void {
+    if (!graphCanvas) return;
+    const sized = sizeGraphCanvasToHost(graphCanvas);
+    const typeScale = env.contentScale();
+    const font = (base: number): number =>
+      scaledSize(base * typeScale, Math.max(sized.responsiveScale, 0.3), 10);
+    drawGraphCanvas(
+      sized.ctx,
+      state,
+      sized.cssWidth,
+      sized.cssHeight,
+      PALETTE[env.theme],
+      font
+    );
+  }
+
   function draw(state: EmfInternalState): void {
     const ctx = stage.ctx;
     if (!ctx) return;
     const width = stage.cssWidth;
     const height = stage.cssHeight;
     const fit = Math.min(width / BASE_W, height / BASE_H);
+    const offsetX = (width - BASE_W * fit) / 2;
     const offsetY = (height - BASE_H * fit) / 2;
-    const responsiveScale = stage.responsiveScale;
     ctx.clearRect(0, 0, width, height);
     ctx.save();
-    ctx.translate(0, offsetY);
+    ctx.translate(offsetX, offsetY);
     ctx.scale(fit, fit);
     const p = PALETTE[env.theme];
     ctx.fillStyle = p.bg;
     ctx.fillRect(0, 0, BASE_W, BASE_H);
-    ctx.strokeStyle = p.grid;
-    ctx.lineWidth = responsiveScale;
-    for (let x = FIELD_LEFT; x <= FIELD_RIGHT; x += 42) {
-      ctx.beginPath();
-      ctx.moveTo(x, FIELD_TOP);
-      ctx.lineTo(x, FIELD_BOTTOM);
-      ctx.stroke();
-    }
-    for (let y = FIELD_TOP; y <= FIELD_BOTTOM; y += 42) {
-      ctx.beginPath();
-      ctx.moveTo(FIELD_LEFT, y);
-      ctx.lineTo(FIELD_RIGHT, y);
-      ctx.stroke();
-    }
     drawCircuit(ctx, state, p);
-    drawGraph(ctx, state, p);
-    drawPanel(ctx, state, p);
     ctx.restore();
+    paintGraph(state);
   }
+
   return {
     render(state: EmfInternalState): void {
+      snapshot = state;
       stage.ensureSized();
       draw(state);
     },
     resize(): void {
       stage.resize();
+      if (snapshot) draw(snapshot);
     },
     setTheme(theme: TeachingTheme): void {
       env.setTheme(theme);
+      if (snapshot) draw(snapshot);
     },
     setMode(mode: TeachingMode, hints?: DemoRenderHints): void {
       env.setMode(mode, hints);
+      if (snapshot) draw(snapshot);
+    },
+    attachGraphCanvas(canvas: HTMLCanvasElement): void {
+      graphCanvas = canvas;
+      if (snapshot) draw(snapshot);
     },
     dispose(): void {
+      snapshot = null;
+      graphCanvas = null;
       stage.release();
     }
   };

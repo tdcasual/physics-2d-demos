@@ -38,7 +38,7 @@
 |  23 | 小球落到竖直弹簧与简谐运动                            | 力学 | [`spring-ball`](../src/scenes/spring-ball/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/75ac35a6-d777-4e05-b192-5ab524c74832) · [封面](https://img.svgzhenli.com/gallery-assets/covers/532og1b4u851788370155234.png)  |  ☑   |
 |  24 | 电阻测量法设计（限流接法、分压接法、电流表的内外接）  | 电磁 | [`resistor-measurement`](../src/scenes/resistor-measurement/scene.meta.ts)                         | [详情](https://app.svgzhenli.com/resource/250ca6cd-36d9-4ed5-9983-d4a2e9058251) · [封面](https://img.svgzhenli.com/gallery-assets/covers/zq29kqwn07m1781283130413.png)  |  ☑   |
 |  25 | 高精度测量工具读数原理（游标卡尺&螺旋测微器）         | 力学 | [`precision-tools`](../src/scenes/precision-tools/scene.meta.ts)                                   | [详情](https://app.svgzhenli.com/resource/db871107-556d-4e2f-936e-52ebd2767a54) · [封面](https://img.svgzhenli.com/gallery-assets/covers/08nk6xz5mriq1778077856552.png) |  ☑   |
-|  26 | 测电源电动势和内阻实验                                | 电磁 | [`emf-internal-resistance`](../src/scenes/emf-internal-resistance/scene.meta.ts)                   | [详情](https://app.svgzhenli.com/resource/11ed455d-d6bc-4ac7-82a3-0a57b2ef969f) · [封面](https://img.svgzhenli.com/gallery-assets/covers/h7646etm75j1787678239426.png)  |  ☐   |
+|  26 | 测电源电动势和内阻实验                                | 电磁 | [`emf-internal-resistance`](../src/scenes/emf-internal-resistance/scene.meta.ts)                   | [详情](https://app.svgzhenli.com/resource/11ed455d-d6bc-4ac7-82a3-0a57b2ef969f) · [封面](https://img.svgzhenli.com/gallery-assets/covers/h7646etm75j1787678239426.png)  |  ☑   |
 |  27 | 电势电势能与E-x和φ-x图象                              | 电磁 | [`potential-energy-graphs`](../src/scenes/potential-energy-graphs/scene.meta.ts)                   | [详情](https://app.svgzhenli.com/resource/ff3b0997-708a-4845-8ce1-1f8a1a198337) · [封面](https://img.svgzhenli.com/gallery-assets/covers/gqj6h49siwi1787678193054.png)  |  ☐   |
 |  28 | 冲量动量定理与F-t图象                                 | 力学 | [`impulse-momentum`](../src/scenes/impulse-momentum/scene.meta.ts)                                 | [详情](https://app.svgzhenli.com/resource/55c5259d-0e1f-4ff8-b491-791c7df3c02e) · [封面](https://img.svgzhenli.com/gallery-assets/covers/tpvaff7fej91787660726259.png)  |  ☐   |
 |  29 | 单匝线框穿过有界匀强磁场                              | 电磁 | [`single-loop`](../src/scenes/single-loop/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/4c98b69d-8854-45ad-9914-82c68b961368) · [封面](https://img.svgzhenli.com/gallery-assets/covers/86no26fi9ne1774713114955.png)  |  ☐   |
@@ -344,6 +344,15 @@
 - 交互与布局验证：直接 URL 的 `mode=micrometer`、`caliper10` 及 `0/1/2/3` 均正确初始化；`autoRun=0` 首帧暂停，播放/暂停有效；`showGuides` 只控制基准线，`showReading` 只控制数据区解析；修改后重置恢复 URL 基线并同步模式、滑块和开关；浅色/深色、演示模式、移动窄视口均无动画区数据泄漏、遮挡或横向溢出。
 - 工程验证：专项单测 `6/6 sim + 5/5 view`；`pnpm verify:scene precision-tools` 全 `7/7` 步骤通过（`3134 passed / 129 skipped`），tsc、ESLint、生产构建、布局契约、bundle 预算与 `git diff --check` 通过（场景页 JS `134.92 kB / 180 kB`）。远程 Grok Build 最终返回 `AGREED: precision-tools is ready to commit.`
 - 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/db871107-556d-4e2f-936e-52ebd2767a54.md` · [原始详情](https://app.svgzhenli.com/resource/db871107-556d-4e2f-936e-52ebd2767a54) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/08nk6xz5mriq1778077856552.png)
+
+### 26. 测电源电动势和内阻实验 (`emf-internal-resistance`)
+
+- 状态：✅ Codex / Grok Build 交叉审计通过（2026-09-17）。
+- 修复：动画区仅保留电源、开关、电流表、滑动变阻器、电压表与接线；电压表从开关前的电源端并联，回路线与表体分开、不再相交；U-I 图置于独立图表区并补齐数值刻度，读数在数据区，公式折叠，文案精简。
+- 物理核验：理想表开路 `U=E, I=0`；有限内阻电压表 `Rv=100 Ω` 时开路 `U=E·Rv/(r+Rv), I_A=0`；闭合时理想模型 `I=E/(r+R), U=IR`，有限表模型包含 `R∥Rv` 分流并显示电流表支路电流；U-I 线截距为 `E`、短路电流为 `E/r`。测试覆盖 `E=3 V, r=1 Ω` 及有限表拟合。
+- 交互与布局验证：桌面浏览器确认动画画布干净、图表刻度与坐标一致；改动开关/电压表分流后工具栏重置会同步恢复控件与 URL，重载后状态保持；理想/有限电压表开路读数分别为 `3.00 V` / `2.97 V`，电流均为 `0 A`。
+- 工程验证：专项 sim/view `22/22`；`pnpm verify:scene emf-internal-resistance` 全 `7/7` 步骤通过（`3145 passed / 129 skipped`），场景结构 `120` 项、布局契约 `4` 项、ESLint、全量 TypeScript、生产构建、bundle 预算与 `git diff --check` 均通过。Grok Build 最终返回 `AGREE — ready to commit`。
+- 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/11ed455d-d6bc-4ac7-82a3-0a57b2ef969f.md` · [原始详情](https://app.svgzhenli.com/resource/11ed455d-d6bc-4ac7-82a3-0a57b2ef969f) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/h7646etm75j1787678239426.png)
 
 ## 复审记录模板
 

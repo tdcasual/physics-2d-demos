@@ -4,7 +4,7 @@ import type { SceneMeta } from '../../platform/scene-contract';
 const demoProfile: SceneDemoProfile = {
   lessonTask: 'process',
   transport: 'visible',
-  readoutKeys: ['voltage', 'current', 'records', 'fit'],
+  readoutKeys: ['voltage', 'current', 'resistance', 'records', 'fit'],
   renderHints: { contentScale: 1.02 },
   interactionHints: {
     touchTargetMinSize: 48,
@@ -50,7 +50,7 @@ export const emfInternalMeta: SceneMeta = {
     'autoRun'
   ],
   testProfile: {
-    hasGraph: false,
+    hasGraph: true,
     hasTransport: true,
     supportsPresentation: true
   },

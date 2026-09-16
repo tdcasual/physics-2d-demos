@@ -1,31 +1,28 @@
 import type { DemoRenderHints } from '../../platform/demo-profile';
-import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import type { SceneLifecycle } from '../../platform/scene-contract';
+import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createStandardSceneEntry } from '../scene-entry-helpers';
 import { createEmfInternalView } from './scene.view';
 import {
+  asInternalResistance,
+  asSourceVoltage,
   createEmfInternalSim,
+  emfInternalConstants,
   type EmfInternalParams,
   type EmfInternalState
 } from './scene.sim';
 
 export type CreateEmfInternalSceneOptions = {
   canvas?: HTMLCanvasElement;
+  graphCanvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
   mode?: TeachingMode;
   demoHints?: DemoRenderHints;
   onReadout?: (state: EmfInternalState) => void;
+  initialParams?: Partial<EmfInternalParams>;
 };
 
-export function asSourceVoltage(value: unknown): number | undefined {
-  const n = Number(value);
-  return n === 1.5 || n === 3 || n === 6 ? n : undefined;
-}
-
-export function asInternalResistance(value: unknown): number | undefined {
-  const n = Number(value);
-  return n === 0.5 || n === 1 || n === 2 ? n : undefined;
-}
+export { asInternalResistance, asSourceVoltage };
 
 export function createEmfInternalScene(
   options: CreateEmfInternalSceneOptions = {}
@@ -41,12 +38,14 @@ export function createEmfInternalScene(
   recordPoint(): boolean;
   fitRecords(): EmfInternalState['fit'];
   clearRecords(): void;
+  attachGraphCanvas(canvas: HTMLCanvasElement): void;
   getReadoutItems(): Array<{ key: string; label: string; value: string }>;
   subscribe(listener: () => void): () => void;
 } {
-  const sim = createEmfInternalSim();
+  const sim = createEmfInternalSim(options.initialParams);
   const view = createEmfInternalView({
     canvas: options.canvas,
+    graphCanvas: options.graphCanvas,
     theme: options.theme ?? 'light',
     mode: options.mode,
     demoHints: options.demoHints
@@ -57,8 +56,50 @@ export function createEmfInternalScene(
     getState: () => sim.getState(),
     onReadout: options.onReadout
   });
+
+  function getReadoutItems(): Array<{
+    key: string;
+    label: string;
+    value: string;
+  }> {
+    const state = sim.getState();
+    const items = [
+      {
+        key: 'voltage',
+        label: '端电压 U',
+        value: `${state.terminalVoltage.toFixed(2)} V`
+      },
+      {
+        key: 'current',
+        label: '电流 I',
+        value: `${state.current.toFixed(3)} A`
+      },
+      {
+        key: 'resistance',
+        label: '滑片电阻 R',
+        value: `${state.rheostatResistance.toFixed(1)} Ω`
+      },
+      {
+        key: 'records',
+        label: '记录组数',
+        value: `${state.records.length}/${emfInternalConstants.maxRecords}`
+      },
+      {
+        key: 'fit',
+        label: '拟合结果',
+        value: state.fit
+          ? `E测=${state.fit.emf.toFixed(2)} V  r测=${state.fit.internalResistance.toFixed(2)} Ω`
+          : '待拟合'
+      }
+    ];
+    return items;
+  }
+
   return {
     ...base,
+    init(): void {
+      base.renderAndEmit();
+    },
     getState: () => sim.getState(),
     getSnapshot: () => sim.getSnapshot(),
     getParams: () => sim.getParams(),
@@ -69,30 +110,10 @@ export function createEmfInternalScene(
     recordPoint: base.wrapAction(() => sim.recordPoint()),
     fitRecords: base.wrapAction(() => sim.fitRecords()),
     clearRecords: base.wrapAction(() => sim.clearRecords()),
-    getReadoutItems(): Array<{ key: string; label: string; value: string }> {
-      const state = sim.getState();
-      return [
-        {
-          key: 'voltage',
-          label: '端电压 U',
-          value: `${state.terminalVoltage.toFixed(2)} V`
-        },
-        {
-          key: 'current',
-          label: '电流 I',
-          value: `${state.current.toFixed(3)} A`
-        },
-        {
-          key: 'records',
-          label: '记录组数',
-          value: `${state.records.length}/${6}`
-        },
-        {
-          key: 'fit',
-          label: '拟合结果',
-          value: state.fit ? `E=${state.fit.emf.toFixed(2)} V` : '待拟合'
-        }
-      ];
-    }
+    attachGraphCanvas(canvas: HTMLCanvasElement): void {
+      view.attachGraphCanvas(canvas);
+      base.renderAndEmit();
+    },
+    getReadoutItems
   };
 }

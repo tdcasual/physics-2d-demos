@@ -36,55 +36,29 @@ export type EmfInternalState = {
   phase: number;
 };
 
+export const SOURCE_VOLTAGE_OPTIONS = [1.5, 3, 6] as const;
+export const INTERNAL_RESISTANCE_OPTIONS = [0.5, 1, 2] as const;
+
 export const emfInternalConstants = {
-  baseWidth: 1200,
-  baseHeight: 760,
-  fieldWidth: 760,
-  panelX: 786,
-  panelWidth: 382,
-  fieldLeft: 42,
-  fieldRight: 730,
-  fieldTop: 104,
-  fieldBottom: 708,
-  circuitTop: 112,
-  circuitBottom: 392,
-  graphX: 42,
-  graphY: 414,
-  graphWidth: 688,
-  graphHeight: 294,
-  graphLeft: 76,
-  graphRight: 702,
-  graphTop: 456,
-  graphBottom: 674,
-  graphCurrentBaseMax: 3,
-  graphVoltageMax: 6.5,
-  graphGridStep: 64,
-  sourceX: 112,
-  sourceY: 202,
-  sourceWidth: 118,
-  sourceHeight: 62,
-  switchX: 258,
-  ammeterX: 386,
-  ammeterY: 202,
-  voltmeterX: 344,
-  voltmeterY: 318,
-  meterRadius: 40,
-  rheostatX: 500,
-  rheostatY: 202,
-  rheostatWidth: 182,
-  rheostatHeight: 42,
-  wireLeft: 58,
-  wireRight: 722,
-  wireBottom: 348,
-  cardX: 786,
-  cardWidth: 382,
-  headerRuleY: 72,
-  readoutY: 100,
-  readoutHeight: 132,
-  recordsY: 248,
-  recordsHeight: 166,
-  fitY: 430,
-  fitHeight: 172,
+  baseWidth: 900,
+  baseHeight: 380,
+  sourceX: 118,
+  sourceY: 150,
+  sourceWidth: 108,
+  sourceHeight: 56,
+  switchX: 248,
+  ammeterX: 372,
+  ammeterY: 150,
+  voltmeterX: 330,
+  voltmeterY: 268,
+  meterRadius: 36,
+  rheostatX: 468,
+  rheostatY: 150,
+  rheostatWidth: 196,
+  rheostatHeight: 40,
+  wireLeft: 48,
+  wireRight: 852,
+  wireBottom: 320, // below voltmeter body; cell-side lead must not meet the return rail
   sourceOptionsMin: 1.5,
   sourceOptionsMax: 6,
   resistanceMin: 0.5,
@@ -96,7 +70,11 @@ export const emfInternalConstants = {
   maxRecords: 6,
   flowPeriod: 72,
   flowSpacing: 28,
-  pointRadius: 6
+  pointRadius: 6,
+  graphFallbackWidth: 640,
+  graphFallbackHeight: 240,
+  graphCurrentBaseMax: 3,
+  graphVoltageBaseMax: 3
 } as const;
 
 const DEFAULTS: EmfInternalParams = {
@@ -112,29 +90,78 @@ function finite(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
+export function asBool(value: unknown, fallback: boolean): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'string') {
+    const v = value.trim().toLowerCase();
+    if (v === '1' || v === 'true' || v === 'on' || v === 'yes') return true;
+    if (v === '0' || v === 'false' || v === 'off' || v === 'no' || v === '')
+      return false;
+  }
+  return fallback;
+}
+
+function snapTo(value: number, options: readonly number[]): number {
+  return options.reduce((best, option) =>
+    Math.abs(option - value) < Math.abs(best - value) ? option : best
+  );
+}
+
+export function asSourceVoltage(value: unknown): number | undefined {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return undefined;
+  const snapped = snapTo(n, SOURCE_VOLTAGE_OPTIONS);
+  return SOURCE_VOLTAGE_OPTIONS.includes(
+    snapped as (typeof SOURCE_VOLTAGE_OPTIONS)[number]
+  )
+    ? snapped
+    : undefined;
+}
+
+export function asInternalResistance(value: unknown): number | undefined {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return undefined;
+  const snapped = snapTo(n, INTERNAL_RESISTANCE_OPTIONS);
+  return INTERNAL_RESISTANCE_OPTIONS.includes(
+    snapped as (typeof INTERNAL_RESISTANCE_OPTIONS)[number]
+  )
+    ? snapped
+    : undefined;
+}
+
 function normalize(
   input: Partial<EmfInternalParams>,
   previous = DEFAULTS
 ): EmfInternalParams {
+  const sourceVoltage =
+    asSourceVoltage(input.sourceVoltage) ??
+    asSourceVoltage(previous.sourceVoltage) ??
+    DEFAULTS.sourceVoltage;
+  const internalResistance =
+    asInternalResistance(input.internalResistance) ??
+    asInternalResistance(previous.internalResistance) ??
+    DEFAULTS.internalResistance;
   return {
-    sourceVoltage: clamp(
-      finite(input.sourceVoltage, previous.sourceVoltage),
-      emfInternalConstants.sourceOptionsMin,
-      emfInternalConstants.sourceOptionsMax
-    ),
-    internalResistance: clamp(
-      finite(input.internalResistance, previous.internalResistance),
-      emfInternalConstants.resistanceMin,
-      emfInternalConstants.resistanceMax
-    ),
+    sourceVoltage,
+    internalResistance,
     rheostatResistance: clamp(
       finite(input.rheostatResistance, previous.rheostatResistance),
       emfInternalConstants.rheostatMin,
       emfInternalConstants.rheostatMax
     ),
-    switchClosed: input.switchClosed ?? previous.switchClosed,
-    systematicError: input.systematicError ?? previous.systematicError,
-    autoRun: input.autoRun ?? previous.autoRun
+    switchClosed:
+      input.switchClosed === undefined
+        ? previous.switchClosed
+        : asBool(input.switchClosed, previous.switchClosed),
+    systematicError:
+      input.systematicError === undefined
+        ? previous.systematicError
+        : asBool(input.systematicError, previous.systematicError),
+    autoRun:
+      input.autoRun === undefined
+        ? previous.autoRun
+        : asBool(input.autoRun, previous.autoRun)
   };
 }
 
@@ -143,28 +170,47 @@ function measurement(params: EmfInternalParams): {
   current: number;
   trueCurrent: number;
 } {
+  const load = Math.max(
+    emfInternalConstants.rheostatMin,
+    params.rheostatResistance
+  );
+  const r = Math.max(
+    emfInternalConstants.resistanceMin,
+    params.internalResistance
+  );
+  const e = params.sourceVoltage;
+  const rv = emfInternalConstants.voltmeterResistance;
   if (!params.switchClosed) {
-    return { terminalVoltage: 0, current: 0, trueCurrent: 0 };
-  }
-  const load = params.rheostatResistance;
-  const r = params.internalResistance;
-  if (!params.systematicError) {
-    const current = params.sourceVoltage / (r + load);
+    // Cell-side voltmeter still sees the source. Ideal: U=E, I=0.
+    // Finite meter: the only closed path is E–r–Rv, so U=E Rv/(r+Rv).
+    if (!params.systematicError) {
+      return { terminalVoltage: e, current: 0, trueCurrent: 0 };
+    }
+    const totalCurrent = e / (r + rv);
+    const terminalVoltage = totalCurrent * rv;
     return {
-      terminalVoltage: current * load,
-      current,
-      trueCurrent: current
+      terminalVoltage: Number.isFinite(terminalVoltage) ? terminalVoltage : 0,
+      current: 0,
+      trueCurrent: Number.isFinite(totalCurrent) ? totalCurrent : 0
     };
   }
-  const rv = emfInternalConstants.voltmeterResistance;
-  const parallelLoad = (load * rv) / Math.max(0.001, load + rv);
-  const totalCurrent = params.sourceVoltage / (r + parallelLoad);
+  if (!params.systematicError) {
+    const current = e / (r + load);
+    const safe = Number.isFinite(current) ? current : 0;
+    return {
+      terminalVoltage: safe * load,
+      current: safe,
+      trueCurrent: safe
+    };
+  }
+  const parallelLoad = (load * rv) / Math.max(1e-6, load + rv);
+  const totalCurrent = e / (r + parallelLoad);
   const terminalVoltage = totalCurrent * parallelLoad;
-  const current = terminalVoltage / load;
+  const branchCurrent = terminalVoltage / load;
   return {
-    terminalVoltage,
-    current,
-    trueCurrent: terminalVoltage / load
+    terminalVoltage: Number.isFinite(terminalVoltage) ? terminalVoltage : 0,
+    current: Number.isFinite(branchCurrent) ? branchCurrent : 0,
+    trueCurrent: Number.isFinite(totalCurrent) ? totalCurrent : 0
   };
 }
 
@@ -180,9 +226,11 @@ function fitRecords(records: EmfRecord[]): EmfFit | null {
     covariance += (point.current - meanI) * (point.voltage - meanU);
     variance += (point.current - meanI) ** 2;
   });
-  if (variance < 0.000001) return null;
+  if (!(variance > 1e-9) || !Number.isFinite(variance)) return null;
   const slope = covariance / variance;
+  if (!Number.isFinite(slope)) return null;
   const emf = meanU - slope * meanI;
+  if (!Number.isFinite(emf)) return null;
   return { emf, internalResistance: Math.abs(slope), slope };
 }
 
@@ -195,9 +243,9 @@ function derive(
   const reading = measurement(params);
   const status = params.switchClosed
     ? params.systematicError
-      ? '已闭合 · 已考虑电压表分流'
-      : '已闭合 · 理想读数'
-    : '开关断开';
+      ? '已闭合 · 分流'
+      : '已闭合'
+    : '断开';
   return {
     params: { ...params },
     time,
@@ -215,7 +263,8 @@ function derive(
 }
 
 export function createEmfInternalSim(initial: Partial<EmfInternalParams> = {}) {
-  let params = normalize(initial);
+  const initialParams = normalize(initial);
+  let params = { ...initialParams };
   let time = 0;
   let records: EmfRecord[] = [];
   let fit: EmfFit | null = null;
@@ -263,15 +312,34 @@ export function createEmfInternalSim(initial: Partial<EmfInternalParams> = {}) {
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      time += Math.max(0, finite(dt, 0));
+      const delta = Math.max(0, finite(dt, 0));
+      time += delta;
       if (time > emfInternalConstants.flowPeriod)
         time %= emfInternalConstants.flowPeriod;
     },
     reset(): void {
-      params = { ...DEFAULTS };
+      params = { ...initialParams };
       time = 0;
       records = [];
       fit = null;
     }
+  };
+}
+
+export function restoredUrlParams(params: EmfInternalParams): {
+  sourceVoltage: number;
+  internalResistance: number;
+  rheostatResistance: number;
+  switchClosed: number;
+  systematicError: number;
+  autoRun: number;
+} {
+  return {
+    sourceVoltage: params.sourceVoltage,
+    internalResistance: params.internalResistance,
+    rheostatResistance: params.rheostatResistance,
+    switchClosed: params.switchClosed ? 1 : 0,
+    systematicError: params.systematicError ? 1 : 0,
+    autoRun: params.autoRun ? 1 : 0
   };
 }

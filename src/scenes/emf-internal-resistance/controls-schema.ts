@@ -11,10 +11,10 @@ export const emfInternalControlsSchema: ControlsSchema = {
           key: 'actions',
           columns: 2,
           buttons: [
-            { key: 'toggleSwitch', label: '断开 / 闭合' },
-            { key: 'record', label: '记录当前数据' },
-            { key: 'fit', label: '拟合 U-I 图像' },
-            { key: 'clear', label: '清除记录' }
+            { key: 'toggleSwitch', label: '开关' },
+            { key: 'record', label: '记录' },
+            { key: 'fit', label: '拟合' },
+            { key: 'clear', label: '清除' }
           ]
         }
       ]
@@ -26,7 +26,7 @@ export const emfInternalControlsSchema: ControlsSchema = {
         {
           type: 'select',
           key: 'sourceVoltage',
-          label: '理论电动势 E₀',
+          label: '电动势 E',
           value: '1.5',
           options: [
             { label: '1.50 V', value: '1.5' },
@@ -37,7 +37,7 @@ export const emfInternalControlsSchema: ControlsSchema = {
         {
           type: 'select',
           key: 'internalResistance',
-          label: '理论内阻 r₀',
+          label: '内阻 r',
           value: '0.5',
           options: [
             { label: '0.50 Ω', value: '0.5' },
@@ -48,7 +48,7 @@ export const emfInternalControlsSchema: ControlsSchema = {
         {
           type: 'slider',
           key: 'rheostatResistance',
-          label: '滑动变阻器 R',
+          label: '变阻器 R',
           min: 1,
           max: 15,
           step: 0.5,
@@ -64,7 +64,7 @@ export const emfInternalControlsSchema: ControlsSchema = {
         {
           type: 'toggle',
           key: 'systematicError',
-          label: '考虑电表分流',
+          label: '电压表分流',
           value: false
         },
         { type: 'toggle', key: 'autoRun', label: '电子流动', value: true }
@@ -77,7 +77,11 @@ export const emfInternalControlsSchema: ControlsSchema = {
         {
           type: 'hint',
           key: 'formula',
-          lines: ['U = E − Ir', '纵截距 E，斜率 −r', '电压表分流：E测、r测偏小']
+          lines: [
+            'U = E − Ir',
+            '纵截距为 E，斜率绝对值为 r',
+            '电压表分流：E测、r测偏小'
+          ]
         }
       ]
     }
