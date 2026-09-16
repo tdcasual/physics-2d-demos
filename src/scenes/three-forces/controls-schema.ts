@@ -1,4 +1,5 @@
 import type { ControlsSchema } from '../../platform/controls-schema';
+import { threeForcesConstants as C } from './scene.sim';
 
 export const threeForcesControlsSchema: ControlsSchema = {
   sections: [
@@ -27,30 +28,56 @@ export const threeForcesControlsSchema: ControlsSchema = {
           type: 'slider',
           key: 'mass',
           label: '质量 m',
-          min: 1,
-          max: 6,
+          min: C.massMin,
+          max: C.massMax,
           step: 0.5,
-          value: 3,
+          value: C.massDefault,
           unit: 'kg'
         },
         {
           type: 'slider',
           key: 'inclineAngle',
           label: '斜面角 θ',
-          min: 10,
-          max: 55,
+          min: C.angleMin,
+          max: C.angleMax,
           step: 1,
-          value: 30,
+          value: C.angleDefault,
           unit: '°'
         },
         {
           type: 'slider',
           key: 'mu',
           label: '摩擦因数 μ',
-          min: 0,
-          max: 1,
+          min: C.muMin,
+          max: C.muMax,
           step: 0.05,
-          value: 0.4
+          value: C.muDefault
+        }
+      ]
+    },
+    {
+      title: '弹簧',
+      collapsed: false,
+      fields: [
+        {
+          type: 'slider',
+          key: 'springK',
+          label: '劲度系数 k',
+          min: C.springKMin,
+          max: C.springKMax,
+          step: 1,
+          value: C.springKDefault,
+          unit: 'N/m'
+        },
+        {
+          type: 'slider',
+          key: 'springX',
+          label: '形变量 x',
+          min: C.springXMin,
+          max: C.springXMax,
+          step: 0.01,
+          value: C.springXDefault,
+          unit: 'm'
         }
       ]
     },
@@ -68,13 +95,19 @@ export const threeForcesControlsSchema: ControlsSchema = {
       ]
     },
     {
-      title: '结论',
+      title: '要点',
       collapsed: true,
       fields: [
         {
           type: 'hint',
           key: 'formula',
-          lines: ['G = mg', 'G₁ = G sinθ', 'G₂ = G cosθ']
+          lines: [
+            'G = mg',
+            'G₁ = G sinθ',
+            'G₂ = G cosθ',
+            'f ≤ μN',
+            'F弹 = −kx，|F弹| = kx'
+          ]
         }
       ]
     }

@@ -25,7 +25,7 @@
 |  10 | 双动式风箱工作原理演示                                | 力学 | [`bellows`](../src/scenes/bellows/scene.meta.ts)                                                   | [详情](https://app.svgzhenli.com/resource/c79a2708-0d3c-4073-a283-38fda18be645) · [封面](https://img.svgzhenli.com/gallery-assets/covers/xtwc0u5essg1776333366610.png)  |  ✅  |
 |  11 | 匀变速直线运动 - 速度与时间关系                       | 力学 | [`uniformly-varied-motion`](../src/scenes/uniformly-varied-motion/scene.meta.ts)                   | [详情](https://app.svgzhenli.com/resource/a0834791-f1a8-4673-aa23-4bb5f7df5271) · [封面](https://img.svgzhenli.com/gallery-assets/covers/gw9dhetax9f1774676803350.png)  |  ✅  |
 |  12 | 竖直平面内圆周运动临界状态                            | 力学 | [`vertical-circle`](../src/scenes/vertical-circle/scene.meta.ts)                                   | [详情](https://app.svgzhenli.com/resource/d53c6251-b24c-4a6c-a6b9-9e104a3995b8) · [封面](https://img.svgzhenli.com/gallery-assets/covers/s3fq03sft9n1775626003953.png)  |  ✅  |
-|  13 | 三大性质力交互课件                                    | 力学 | [`three-forces`](../src/scenes/three-forces/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/a6e3e383-482e-4ad1-a69b-f7ddaeaf8aee) · [封面](https://img.svgzhenli.com/gallery-assets/covers/ihldajl8mpl1781095386830.png)  |  ☐   |
+|  13 | 三大性质力交互课件                                    | 力学 | [`three-forces`](../src/scenes/three-forces/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/a6e3e383-482e-4ad1-a69b-f7ddaeaf8aee) · [封面](https://img.svgzhenli.com/gallery-assets/covers/ihldajl8mpl1781095386830.png)  |  ✅  |
 |  14 | 原子核比结合能与质量数关系                            | 近代 | [`binding-energy`](../src/scenes/binding-energy/scene.meta.ts)                                     | [详情](https://app.svgzhenli.com/resource/56ab7ed1-01c6-4cfa-89d3-cae38e24c433) · [封面](https://img.svgzhenli.com/gallery-assets/covers/hlgy1dsu9wh1774799292161.png)  |  ☐   |
 |  15 | 探究加速度与力质量关系实验                            | 力学 | [`accel-force`](../src/scenes/accel-force/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/fe4a9b83-9f96-4f06-9ad6-d64ebd75c515) · [封面](https://img.svgzhenli.com/gallery-assets/covers/qgo9e87x771787678068367.png)   |  ☐   |
 |  16 | 单缝衍射条纹分布                                      | 光学 | [`single-slit`](../src/scenes/single-slit/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/50754223-e2c0-405d-9098-cfa3d2fedaca) · [封面](https://img.svgzhenli.com/gallery-assets/covers/7jar1z9ybu81774773489050.png)  |  ☐   |
@@ -227,6 +227,15 @@
 - 交互与布局验证：Grok Build Playwright 复核 `1280×720`、`1024×768`、`900×768`、`768×768`、`390×844`，动画与 transport/浮动读数无遮挡，控制/数据分区无横纵溢出，绳低速脱轨、杆受压、读数展开、暂停冻结、深色主题、演示模式和 URL 恢复通过；我独立复核桌面/移动端同样无溢出，console 无 error/warning，动画区无数据卡/公式卡。
 - 工程验证：远程 Grok Build 明确返回 `CONSENSUS: PASS`；专项 `26/26`（sim `22` + view `4`）通过；`pnpm verify:scene vertical-circle` 全 `7/7` 步骤通过（3145 passed，133 skipped）；tsc、ESLint、构建、bundle 预算和 `git diff --check` 通过。
 - 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/d53c6251-b24c-4a6c-a6b9-9e104a3995b8.md` · [原始详情](https://app.svgzhenli.com/resource/d53c6251-b24c-4a6c-a6b9-9e104a3995b8) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/s3fq03sft9n1775626003953.png)
+
+### 13. 三大性质力交互课件 (`three-forces`)
+
+- 状态：✅ Codex / Grok Build 交叉审计通过（2026-09-16）。
+- 修复：按封面重构米白网格动画区，重力/摩擦力模块仅保留斜面、物块、G、FN、Ff、G₁、G₂、θ 等短符号矢量；弹力模块仅保留墙、弹簧、物块、F弹、x。移除 canvas 内侧栏、公式卡、状态卡和数值表；参数、公式、状态和数值进入标准控制区/折叠数据区，`preferredLayout:'split-right'`、`hasGraph:false`，移动端控制/数据标签分离，文案精简。
+- 物理核验：`G=mg`、`G₁=G sinθ`、`G₂=G cosθ`、`FN=G₂`；静摩擦 `f=G₁≤μFN`，等号显示“临界静止”，滑动时 `f=μFN` 向上且 `a=(G₁−f)/m`；弹力采用带方向的 `F弹=−kx`，数据区同时标注大小 `|F弹|=kx`，箭头始终反抗形变；暂停/重置/拖拽/参数夹取由专项测试覆盖。
+- 交互与布局验证：桌面 `1280×720`、`1024×768`、`900×768`、`768×768` 与移动 `390×844` 无横纵溢出；动画区无公式/数据面板，展开数据区仍在画布外；重力/摩擦/弹力切换、μ 静止/下滑与临界逻辑、弹簧参数、播放暂停冻结、重置、深色主题、演示模式和 URL 恢复通过；浏览器 console 无 error/warning。
+- 工程验证：远程 Grok Build 两轮均明确返回 `CONSENSUS: PASS`；专项单测 `28/28`（sim `23` + view `5`）通过；与 `verify:scene` 相同目标集单线程复跑 `3148 passed / 132 skipped`，tsc、ESLint、`git diff --check`、构建和 bundle 预算通过。默认并行 `verify:scene` 的第 5 步曾随机命中无关场景 5 秒超时，目标场景测试本身无失败。
+- 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/a6e3e383-482e-4ad1-a69b-f7ddaeaf8aee.md` · [原始详情](https://app.svgzhenli.com/resource/a6e3e383-482e-4ad1-a69b-f7ddaeaf8aee) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/ihldajl8mpl1781095386830.png)
 
 ## 复审记录模板
 

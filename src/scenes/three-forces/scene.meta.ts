@@ -1,9 +1,10 @@
-import type { SceneMeta } from '../types';
 import type { SceneDemoProfile } from '../../platform/demo-profile';
+import type { SceneMeta } from '../../platform/scene-contract';
+import { threeForcesConstants as C } from './scene.sim';
 
 const demoProfile: SceneDemoProfile = {
   lessonTask: 'process',
-  readoutKeys: ['tab', 'gravity', 'normal', 'friction', 'status'],
+  readoutKeys: ['tab', 'gravity', 'g1', 'g2', 'normal', 'friction', 'status'],
   renderHints: { contentScale: 1.2 },
   interactionHints: {
     touchTargetMinSize: 48,
@@ -18,19 +19,19 @@ export const threeForcesMeta: SceneMeta = {
   subject: '力学',
   concept: '重力、摩擦力与弹力',
   subConcepts: ['受力分析', '力的分解'],
-  keywords: ['重力', '摩擦力', '弹力', '斜面'],
-  objective: '切换三种性质力，观察受力与分解结果',
-  description: '调节质量、斜面角和摩擦因数，联动查看力的矢量关系',
+  keywords: ['重力', '摩擦力', '弹力', '斜面', '胡克定律'],
+  objective: '切换重力、摩擦、弹力，观察斜面分解与胡克恢复力',
+  description: '调节质量、斜面角、摩擦因数和弹簧参数，联动查看力的矢量关系',
   difficulty: 2,
   icon: '⚖️',
   category: 'mechanics',
   featured: false,
   defaultParams: {
-    tab: 0,
-    mass: 3,
-    inclineAngle: 30,
-    mu: 0.4,
-    springX: 0.2,
+    mass: C.massDefault,
+    inclineAngle: C.angleDefault,
+    mu: C.muDefault,
+    springK: C.springKDefault,
+    springX: C.springXDefault,
     autoRun: 1,
     showComponents: 1
   },
@@ -39,6 +40,8 @@ export const threeForcesMeta: SceneMeta = {
     'mass',
     'inclineAngle',
     'mu',
+    'springK',
+    'springX',
     'autoRun',
     'showComponents'
   ],
