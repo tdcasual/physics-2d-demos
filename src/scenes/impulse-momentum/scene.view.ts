@@ -1,65 +1,29 @@
+import {
+  applyCanvasSize,
+  getResponsiveScale,
+  scaledSize
+} from '../../core/canvas-sizing';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import {
-  impulseMomentumConstants,
+  forceAt,
+  impulseMomentumConstants as C,
   type ImpulseMomentumState
 } from './scene.sim';
 
 export type CreateImpulseMomentumViewOptions = {
   canvas?: HTMLCanvasElement;
+  graphCanvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
   mode?: TeachingMode;
   demoHints?: DemoRenderHints;
+  onTimeScrub?: (time: number) => void;
 };
-
-const {
-  baseWidth: BASE_W,
-  baseHeight: BASE_H,
-  fieldWidth: FIELD_W,
-  panelX: PANEL_X,
-  panelWidth: PANEL_W,
-  fieldLeft: FIELD_LEFT,
-  fieldRight: FIELD_RIGHT,
-  fieldTop: FIELD_TOP,
-  fieldBottom: FIELD_BOTTOM,
-  trackY: TRACK_Y,
-  trackLeft: TRACK_LEFT,
-  trackRight: TRACK_RIGHT,
-  cartWidth: CART_W,
-  cartHeight: CART_H,
-  wheelRadius: WHEEL_R,
-  graphX: GRAPH_X,
-  graphY: GRAPH_Y,
-  graphWidth: GRAPH_W,
-  graphHeight: GRAPH_H,
-  graphLeft: GRAPH_LEFT,
-  graphRight: GRAPH_RIGHT,
-  graphTop: GRAPH_TOP,
-  graphBottom: GRAPH_BOTTOM,
-  timeMin: TIME_MIN,
-  timeMax: TIME_MAX,
-  forceMin: FORCE_MIN,
-  forceMax: FORCE_MAX,
-  graphGridStep: GRID_STEP,
-  cardX: CARD_X,
-  cardWidth: CARD_W,
-  headerRuleY: HEADER_RULE_Y,
-  modelY: MODEL_Y,
-  modelHeight: MODEL_H,
-  readoutY: READOUT_Y,
-  readoutHeight: READOUT_H,
-  formulaY: FORMULA_Y,
-  formulaHeight: FORMULA_H,
-  forceArrowScale: FORCE_ARROW_SCALE,
-  velocityArrowScale: VELOCITY_ARROW_SCALE,
-  positionScale: POSITION_SCALE
-} = impulseMomentumConstants;
 
 type Palette = {
   bg: string;
   panel: string;
-  soft: string;
   ink: string;
   muted: string;
   border: string;
@@ -68,15 +32,16 @@ type Palette = {
   blue: string;
   teal: string;
   gold: string;
-  purple: string;
   wire: string;
+  cart: string;
 };
+
+type PlotBox = { left: number; right: number; top: number; bottom: number };
 
 const PALETTE: Record<TeachingTheme, Palette> = {
   light: {
-    bg: '#fbfaf7',
+    bg: '#f4f7fb',
     panel: '#ffffff',
-    soft: '#f1f3f4',
     ink: '#303744',
     muted: '#7d8997',
     border: '#d8dfe5',
@@ -85,13 +50,12 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     blue: '#2d82d0',
     teal: '#168a79',
     gold: '#d99416',
-    purple: '#7b34c7',
-    wire: '#586270'
+    wire: '#586270',
+    cart: '#1fa39a'
   },
   dark: {
     bg: '#101827',
     panel: '#172235',
-    soft: '#253249',
     ink: '#eef2f7',
     muted: '#a8b4c5',
     border: '#3e4d64',
@@ -100,10 +64,59 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     blue: '#65b6ef',
     teal: '#4ed9c0',
     gold: '#fbbf24',
-    purple: '#bb86fc',
-    wire: '#c2cedc'
+    wire: '#c2cedc',
+    cart: '#2ec4b6'
   }
 };
+
+function contentBoxSize(host: HTMLElement): { width: number; height: number } {
+  const cs = getComputedStyle(host);
+  const rect = host.getBoundingClientRect();
+  const padX =
+    (Number.parseFloat(cs.paddingLeft) || 0) +
+    (Number.parseFloat(cs.paddingRight) || 0);
+  const padY =
+    (Number.parseFloat(cs.paddingTop) || 0) +
+    (Number.parseFloat(cs.paddingBottom) || 0);
+  return {
+    width: Math.max(1, Math.floor(rect.width - padX)),
+    height: Math.max(1, Math.floor(rect.height - padY))
+  };
+}
+
+export function sizeGraphCanvasToHost(canvas: HTMLCanvasElement): {
+  ctx: CanvasRenderingContext2D;
+  cssWidth: number;
+  cssHeight: number;
+  responsiveScale: number;
+} {
+  const host = canvas.parentElement;
+  let cssWidth: number;
+  let cssHeight: number;
+  if (host) {
+    const box = contentBoxSize(host);
+    cssWidth = box.width;
+    cssHeight = box.height;
+  } else {
+    const rect = canvas.getBoundingClientRect();
+    cssWidth = Math.max(1, Math.floor(rect.width || C.graphFallbackWidth));
+    cssHeight = Math.max(1, Math.floor(rect.height || C.graphFallbackHeight));
+  }
+  const dpr = Math.min(
+    2,
+    typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1
+  );
+  const responsiveScale = getResponsiveScale(cssWidth, cssHeight);
+  const ctx = applyCanvasSize(canvas, {
+    width: Math.max(1, Math.floor(cssWidth * dpr)),
+    height: Math.max(1, Math.floor(cssHeight * dpr)),
+    cssWidth,
+    cssHeight,
+    dpr,
+    responsiveScale
+  });
+  return { ctx, cssWidth, cssHeight, responsiveScale };
+}
 
 function text(
   ctx: CanvasRenderingContext2D,
@@ -128,14 +141,12 @@ function rounded(
   y: number,
   width: number,
   height: number,
-  radius = 12
+  radius: number
 ): void {
   ctx.beginPath();
-  if (typeof ctx.roundRect === 'function') {
+  if (typeof ctx.roundRect === 'function')
     ctx.roundRect(x, y, width, height, radius);
-  } else {
-    ctx.rect(x, y, width, height);
-  }
+  else ctx.rect(x, y, width, height);
 }
 
 function arrow(
@@ -145,423 +156,309 @@ function arrow(
   x2: number,
   y2: number,
   color: string,
-  width = 5
+  width: number,
+  head: number
 ): void {
-  const angle = Math.atan2(y2 - y1, x2 - x1);
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const len = Math.hypot(dx, dy);
+  if (len < 2) return;
+  const ux = dx / len;
+  const uy = dy / len;
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
   ctx.lineWidth = width;
+  ctx.lineCap = 'round';
   ctx.beginPath();
   ctx.moveTo(x1, y1);
-  ctx.lineTo(x2, y2);
+  ctx.lineTo(x2 - ux * head * 0.4, y2 - uy * head * 0.4);
   ctx.stroke();
   ctx.beginPath();
   ctx.moveTo(x2, y2);
   ctx.lineTo(
-    x2 - 14 * Math.cos(angle - Math.PI / 6),
-    y2 - 14 * Math.sin(angle - Math.PI / 6)
+    x2 - ux * head - uy * head * 0.45,
+    y2 - uy * head + ux * head * 0.45
   );
   ctx.lineTo(
-    x2 - 14 * Math.cos(angle + Math.PI / 6),
-    y2 - 14 * Math.sin(angle + Math.PI / 6)
+    x2 - ux * head + uy * head * 0.45,
+    y2 - uy * head - ux * head * 0.45
   );
   ctx.closePath();
   ctx.fill();
 }
 
-function timeToPx(time: number): number {
-  return (
-    GRAPH_LEFT +
-    ((time - TIME_MIN) / (TIME_MAX - TIME_MIN)) * (GRAPH_RIGHT - GRAPH_LEFT)
-  );
+function mapX(
+  x: number,
+  left: number,
+  right: number,
+  x0: number,
+  x1: number
+): number {
+  const span = x1 - x0 || 1;
+  return left + ((x - x0) / span) * (right - left);
 }
 
-function forceToPx(force: number): number {
-  return (
-    GRAPH_BOTTOM -
-    ((force - FORCE_MIN) / (FORCE_MAX - FORCE_MIN)) * (GRAPH_BOTTOM - GRAPH_TOP)
-  );
+function mapPx(
+  px: number,
+  left: number,
+  right: number,
+  x0: number,
+  x1: number
+): number {
+  if (right <= left) return x0;
+  return x0 + ((px - left) / (right - left)) * (x1 - x0);
 }
 
-function drawStage(
+function forceAxisMax(peakForce: number): number {
+  const need = Math.max(peakForce * 1.2, 8);
+  const mag = 10 ** Math.floor(Math.log10(need));
+  const residual = need / mag;
+  const nice = residual <= 1 ? 1 : residual <= 2 ? 2 : residual <= 5 ? 5 : 10;
+  return nice * mag;
+}
+
+function plotBox(width: number, height: number): PlotBox {
+  return {
+    left: Math.max(36, width * 0.1),
+    right: width - Math.max(28, width * 0.06),
+    top: Math.max(22, height * 0.16),
+    bottom: height - Math.max(28, height * 0.18)
+  };
+}
+
+function drawApparatus(
   ctx: CanvasRenderingContext2D,
   state: ImpulseMomentumState,
-  p: Palette
+  width: number,
+  height: number,
+  p: Palette,
+  scale: number,
+  font: (n: number) => number
 ): void {
-  rounded(
-    ctx,
-    FIELD_LEFT,
-    FIELD_TOP,
-    FIELD_RIGHT - FIELD_LEFT,
-    FIELD_BOTTOM - FIELD_TOP,
-    12
-  );
-  ctx.fillStyle = p.soft;
-  ctx.fill();
-  ctx.strokeStyle = p.border;
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-  text(
-    ctx,
-    '光滑水平面质点模型（非实验测量）',
-    FIELD_LEFT + 18,
-    FIELD_TOP + 30,
-    p.ink,
-    18,
-    'left',
-    700
-  );
-  text(
-    ctx,
-    '取水平向右为正；箭头仅表示方向，单点不影响动量',
-    FIELD_LEFT + 18,
-    FIELD_TOP + 62,
-    p.muted,
-    13,
-    'left',
-    600
-  );
+  ctx.fillStyle = p.bg;
+  ctx.fillRect(0, 0, width, height);
+  const padX = Math.max(24 * scale, width * 0.06);
+  const trackY = height * 0.62;
+  const trackLeft = padX;
+  const trackRight = width - padX;
+  const cartW = Math.max(48 * scale, width * 0.11);
+  const cartH = Math.max(28 * scale, height * 0.16);
+  const wheelR = Math.max(6 * scale, 6);
   ctx.strokeStyle = p.wire;
-  ctx.lineWidth = 8;
+  ctx.lineWidth = Math.max(3, 5 * scale);
+  ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.moveTo(TRACK_LEFT, TRACK_Y);
-  ctx.lineTo(TRACK_RIGHT, TRACK_Y);
+  ctx.moveTo(trackLeft, trackY);
+  ctx.lineTo(trackRight, trackY);
   ctx.stroke();
-  ctx.strokeStyle = p.border;
-  ctx.lineWidth = 2;
-  for (let x = TRACK_LEFT; x <= TRACK_RIGHT; x += 28) {
-    ctx.beginPath();
-    ctx.moveTo(x, TRACK_Y + 8);
-    ctx.lineTo(x + 14, TRACK_Y + 20);
-    ctx.stroke();
-  }
+  ctx.lineCap = 'butt';
+  ctx.lineWidth = Math.max(3, 4 * scale);
+  ctx.beginPath();
+  ctx.moveTo(trackLeft, trackY - 12 * scale);
+  ctx.lineTo(trackLeft, trackY + 4 * scale);
+  ctx.moveTo(trackRight, trackY - 12 * scale);
+  ctx.lineTo(trackRight, trackY + 4 * scale);
+  ctx.stroke();
+  const span = trackRight - trackLeft - cartW;
+  const origin = trackLeft + cartW / 2 + span * 0.18;
+  const metersPerPx = 48 / Math.max(span, 1);
   const cartCenter = Math.max(
-    TRACK_LEFT + CART_W / 2,
-    Math.min(
-      TRACK_RIGHT - CART_W / 2,
-      TRACK_LEFT + state.position * POSITION_SCALE
-    )
+    trackLeft + cartW / 2,
+    Math.min(trackRight - cartW / 2, origin + state.position / metersPerPx)
   );
-  const cartTop = TRACK_Y - CART_H;
-  rounded(ctx, cartCenter - CART_W / 2, cartTop, CART_W, CART_H, 8);
-  ctx.fillStyle = p.blue;
+  const cartTop = trackY - cartH - wheelR * 0.15;
+  rounded(ctx, cartCenter - cartW / 2, cartTop, cartW, cartH, 8 * scale);
+  ctx.fillStyle = p.cart;
   ctx.fill();
-  ctx.strokeStyle = p.wire;
-  ctx.lineWidth = 2;
-  ctx.stroke();
   ctx.fillStyle = p.wire;
   ctx.beginPath();
-  ctx.arc(cartCenter - 28, TRACK_Y + 2, WHEEL_R, 0, Math.PI * 2);
-  ctx.arc(cartCenter + 28, TRACK_Y + 2, WHEEL_R, 0, Math.PI * 2);
+  ctx.arc(cartCenter - cartW * 0.28, trackY, wheelR, 0, Math.PI * 2);
+  ctx.arc(cartCenter + cartW * 0.28, trackY, wheelR, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = p.panel;
   ctx.beginPath();
-  ctx.arc(cartCenter - 28, TRACK_Y + 2, 4, 0, Math.PI * 2);
-  ctx.arc(cartCenter + 28, TRACK_Y + 2, 4, 0, Math.PI * 2);
+  ctx.arc(cartCenter - cartW * 0.28, trackY, wheelR * 0.35, 0, Math.PI * 2);
+  ctx.arc(cartCenter + cartW * 0.28, trackY, wheelR * 0.35, 0, Math.PI * 2);
   ctx.fill();
   text(
     ctx,
-    `m = ${state.params.mass.toFixed(1)} kg`,
+    `m=${state.params.mass.toFixed(1)} kg`,
     cartCenter,
-    cartTop + CART_H / 2,
+    cartTop + cartH / 2,
     '#ffffff',
-    15,
+    font(13),
     'center',
     700
   );
-  arrow(
-    ctx,
-    cartCenter + CART_W / 2,
-    cartTop + 18,
-    cartCenter + CART_W / 2 + Math.max(32, state.force * FORCE_ARROW_SCALE),
-    cartTop + 18,
-    p.red,
-    5
+  const forceLen = Math.max(
+    22 * scale,
+    Math.min(width * 0.18, 8 * scale * Math.max(state.force, 1))
   );
-  text(
-    ctx,
-    `Fₓ = ${state.force.toFixed(1)} N`,
-    cartCenter + CART_W / 2 + 20,
-    cartTop - 2,
-    p.red,
-    14,
-    'left',
-    700
-  );
-  arrow(
-    ctx,
-    cartCenter - 20,
-    cartTop - 26,
-    cartCenter - 20 + state.velocity * VELOCITY_ARROW_SCALE,
-    cartTop - 26,
-    p.teal,
-    4
-  );
-  text(
-    ctx,
-    `v = ${state.velocity.toFixed(2)} m/s`,
-    cartCenter - 20,
-    cartTop - 48,
-    p.teal,
-    14,
-    'left',
-    700
-  );
+  const forceDir = state.force >= 0 ? 1 : -1;
+  if (Math.abs(state.force) > 1e-6) {
+    arrow(
+      ctx,
+      cartCenter + forceDir * (cartW / 2),
+      cartTop + cartH * 0.38,
+      cartCenter + forceDir * (cartW / 2 + forceLen),
+      cartTop + cartH * 0.38,
+      p.red,
+      Math.max(2.4, 3.2 * scale),
+      8 * scale
+    );
+    text(
+      ctx,
+      'Fₓ',
+      cartCenter + forceDir * (cartW / 2 + forceLen + 10 * scale),
+      cartTop + cartH * 0.38,
+      p.red,
+      font(12),
+      'left',
+      700
+    );
+  }
+  if (Math.abs(state.velocity) > 1e-6) {
+    const vDir = state.velocity > 0 ? 1 : -1;
+    const vLen = Math.max(
+      16 * scale,
+      Math.min(width * 0.16, 10 * scale * Math.abs(state.velocity))
+    );
+    arrow(
+      ctx,
+      cartCenter,
+      cartTop - 14 * scale,
+      cartCenter + vDir * vLen,
+      cartTop - 14 * scale,
+      p.teal,
+      Math.max(2, 2.6 * scale),
+      7 * scale
+    );
+    text(
+      ctx,
+      'v',
+      cartCenter + vDir * (vLen + 10 * scale),
+      cartTop - 14 * scale,
+      p.teal,
+      font(12),
+      vDir > 0 ? 'left' : 'right',
+      700
+    );
+  }
 }
 
-function drawGraph(
+function drawForceCurve(
   ctx: CanvasRenderingContext2D,
   state: ImpulseMomentumState,
-  p: Palette
+  box: PlotBox,
+  fMax: number,
+  upTo: number
 ): void {
-  rounded(ctx, GRAPH_X, GRAPH_Y, GRAPH_W, GRAPH_H, 12);
+  const n = 120;
+  ctx.beginPath();
+  for (let i = 0; i <= n; i += 1) {
+    const t = (upTo * i) / n;
+    const x = mapX(t, box.left, box.right, C.timeMin, C.timeMax);
+    const y = mapX(
+      forceAt(state.params.forceModel, t, state.params.peakForce),
+      box.bottom,
+      box.top,
+      0,
+      fMax
+    );
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+}
+
+function drawGraphs(
+  ctx: CanvasRenderingContext2D,
+  state: ImpulseMomentumState,
+  width: number,
+  height: number,
+  p: Palette,
+  font: (n: number) => number
+): void {
   ctx.fillStyle = p.panel;
-  ctx.fill();
-  ctx.strokeStyle = p.border;
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-  text(
-    ctx,
-    'Fₓ-t 图象：相对 t 轴的有向面积 = 冲量 Iₓ',
-    GRAPH_LEFT + 18,
-    GRAPH_Y + 28,
-    p.ink,
-    18,
-    'left',
-    700
-  );
+  ctx.fillRect(0, 0, width, height);
+  const box = plotBox(width, height);
+  const fMax = forceAxisMax(state.params.peakForce);
   ctx.strokeStyle = p.grid;
   ctx.lineWidth = 1;
-  for (let x = GRAPH_LEFT; x <= GRAPH_RIGHT; x += GRID_STEP) {
+  for (let t = 0; t <= C.timeMax + 1e-9; t += 1) {
+    const x = mapX(t, box.left, box.right, C.timeMin, C.timeMax);
     ctx.beginPath();
-    ctx.moveTo(x, GRAPH_TOP);
-    ctx.lineTo(x, GRAPH_BOTTOM);
+    ctx.moveTo(x, box.top);
+    ctx.lineTo(x, box.bottom);
     ctx.stroke();
+    text(ctx, String(t), x, box.bottom + 12, p.muted, font(10), 'center', 600);
   }
-  for (let y = GRAPH_TOP; y <= GRAPH_BOTTOM; y += GRID_STEP) {
+  const yTicks = 4;
+  for (let i = 0; i <= yTicks; i += 1) {
+    const f = (fMax * i) / yTicks;
+    const y = mapX(f, box.bottom, box.top, 0, fMax);
     ctx.beginPath();
-    ctx.moveTo(GRAPH_LEFT, y);
-    ctx.lineTo(GRAPH_RIGHT, y);
+    ctx.moveTo(box.left, y);
+    ctx.lineTo(box.right, y);
     ctx.stroke();
+    text(ctx, String(f), box.left - 6, y, p.muted, font(10), 'right', 600);
   }
   ctx.strokeStyle = p.ink;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 1.6;
   ctx.beginPath();
-  ctx.moveTo(GRAPH_LEFT, GRAPH_BOTTOM);
-  ctx.lineTo(GRAPH_RIGHT + 18, GRAPH_BOTTOM);
-  ctx.moveTo(GRAPH_LEFT, GRAPH_BOTTOM);
-  ctx.lineTo(GRAPH_LEFT, GRAPH_TOP - 12);
+  ctx.moveTo(box.left, box.top - 4);
+  ctx.lineTo(box.left, box.bottom);
+  ctx.lineTo(box.right + 8, box.bottom);
   ctx.stroke();
-  text(ctx, 'Fₓ / N', GRAPH_LEFT - 12, GRAPH_TOP - 18, p.ink, 12, 'right', 700);
-  text(ctx, 't / s', GRAPH_RIGHT + 20, GRAPH_BOTTOM, p.ink, 12, 'left', 700);
-  text(ctx, '0', GRAPH_LEFT - 10, GRAPH_BOTTOM + 4, p.muted, 10, 'right', 600);
-  text(
-    ctx,
-    TIME_MAX.toFixed(1),
-    GRAPH_RIGHT,
-    GRAPH_BOTTOM + 16,
-    p.muted,
-    10,
-    'center',
-    600
-  );
-  text(
-    ctx,
-    String(FORCE_MAX),
-    GRAPH_LEFT - 10,
-    GRAPH_TOP,
-    p.muted,
-    10,
-    'right',
-    600
-  );
-  if (state.params.showArea) {
-    ctx.fillStyle = `${p.red}35`;
+  text(ctx, 'Fₓ / N', box.left, box.top - 12, p.ink, font(12), 'left', 700);
+  text(ctx, 't / s', box.right + 6, box.bottom, p.ink, font(11), 'left', 700);
+  if (state.params.showArea && state.time > 0) {
+    ctx.fillStyle = `${p.red}33`;
     ctx.beginPath();
-    ctx.moveTo(timeToPx(TIME_MIN), GRAPH_BOTTOM);
-    for (let index = 0; index <= 80; index += 1) {
-      const time = (state.time * index) / 80;
-      const force =
-        state.params.forceModel === 'constant'
-          ? state.params.peakForce
-          : state.params.forceModel === 'triangle'
-            ? index <= 40
-              ? state.params.peakForce * (time / 2)
-              : state.params.peakForce * Math.max(0, (4 - time) / 2)
-            : state.params.forceModel === 'halfSine'
-              ? state.params.peakForce * Math.sin((Math.PI * time) / 4)
-              : state.params.peakForce * Math.min(1, time / 2);
-      ctx.lineTo(timeToPx(time), forceToPx(force));
+    ctx.moveTo(mapX(0, box.left, box.right, C.timeMin, C.timeMax), box.bottom);
+    const n = 80;
+    for (let i = 0; i <= n; i += 1) {
+      const t = (state.time * i) / n;
+      ctx.lineTo(
+        mapX(t, box.left, box.right, C.timeMin, C.timeMax),
+        mapX(
+          forceAt(state.params.forceModel, t, state.params.peakForce),
+          box.bottom,
+          box.top,
+          0,
+          fMax
+        )
+      );
     }
-    ctx.lineTo(timeToPx(state.time), GRAPH_BOTTOM);
+    ctx.lineTo(
+      mapX(state.time, box.left, box.right, C.timeMin, C.timeMax),
+      box.bottom
+    );
     ctx.closePath();
     ctx.fill();
   }
   ctx.strokeStyle = p.red;
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  for (let index = 0; index <= 100; index += 1) {
-    const time = TIME_MIN + ((TIME_MAX - TIME_MIN) * index) / 100;
-    const force =
-      state.params.forceModel === 'constant'
-        ? state.params.peakForce
-        : state.params.forceModel === 'triangle'
-          ? time <= 2
-            ? state.params.peakForce * (time / 2)
-            : time <= 4
-              ? state.params.peakForce * ((4 - time) / 2)
-              : 0
-          : state.params.forceModel === 'halfSine'
-            ? time <= 4
-              ? state.params.peakForce * Math.sin((Math.PI * time) / 4)
-              : 0
-            : state.params.peakForce * Math.min(1, time / 2);
-    const x = timeToPx(time);
-    const y = forceToPx(force);
-    if (index === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
+  ctx.lineWidth = 2.6;
+  drawForceCurve(ctx, state, box, fMax, C.timeMax);
   ctx.stroke();
-  const cursorX = timeToPx(state.time);
+  const probeX = mapX(state.time, box.left, box.right, C.timeMin, C.timeMax);
   ctx.strokeStyle = p.blue;
-  ctx.lineWidth = 3;
+  ctx.lineWidth = 1.6;
   ctx.setLineDash([5, 4]);
   ctx.beginPath();
-  ctx.moveTo(cursorX, GRAPH_TOP);
-  ctx.lineTo(cursorX, GRAPH_BOTTOM);
+  ctx.moveTo(probeX, box.top);
+  ctx.lineTo(probeX, box.bottom);
   ctx.stroke();
   ctx.setLineDash([]);
   ctx.fillStyle = p.blue;
   ctx.beginPath();
-  ctx.arc(cursorX, forceToPx(state.force), 8, 0, Math.PI * 2);
+  ctx.arc(
+    probeX,
+    mapX(state.force, box.bottom, box.top, 0, fMax),
+    5,
+    0,
+    Math.PI * 2
+  );
   ctx.fill();
-  rounded(
-    ctx,
-    Math.max(GRAPH_LEFT + 16, cursorX - 70),
-    GRAPH_TOP + 20,
-    140,
-    32,
-    8
-  );
-  ctx.fillStyle = p.red;
-  ctx.fill();
-  text(
-    ctx,
-    `Iₓ = ${state.impulse.toFixed(2)} N·s`,
-    Math.max(GRAPH_LEFT + 86, cursorX),
-    GRAPH_TOP + 36,
-    '#ffffff',
-    13,
-    'center',
-    700
-  );
-}
-
-function drawPanel(
-  ctx: CanvasRenderingContext2D,
-  state: ImpulseMomentumState,
-  p: Palette
-): void {
-  ctx.fillStyle = p.panel;
-  ctx.fillRect(FIELD_W, 0, BASE_W - FIELD_W, BASE_H);
-  text(ctx, '动量定理实时计算', PANEL_X + 18, 38, p.ink, 20, 'left', 700);
-  ctx.strokeStyle = p.teal;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(PANEL_X + 18, HEADER_RULE_Y);
-  ctx.lineTo(PANEL_X + PANEL_W - 22, HEADER_RULE_Y);
-  ctx.stroke();
-  rounded(ctx, CARD_X, MODEL_Y, CARD_W, MODEL_H, 12);
-  ctx.fillStyle = p.panel;
-  ctx.fill();
-  ctx.strokeStyle = p.border;
-  ctx.stroke();
-  text(ctx, '外力模型', CARD_X + 16, MODEL_Y + 24, p.blue, 15, 'left', 700);
-  text(
-    ctx,
-    state.modelLabel,
-    CARD_X + 16,
-    MODEL_Y + 58,
-    p.ink,
-    18,
-    'left',
-    700
-  );
-  text(
-    ctx,
-    'Fₓ ≥ 0，冲量面积在 t 轴上方',
-    CARD_X + 16,
-    MODEL_Y + 88,
-    p.muted,
-    12,
-    'left',
-    600
-  );
-  rounded(ctx, CARD_X, READOUT_Y, CARD_W, READOUT_H, 12);
-  ctx.fillStyle = p.panel;
-  ctx.fill();
-  ctx.strokeStyle = p.border;
-  ctx.stroke();
-  text(ctx, '当前状态', CARD_X + 16, READOUT_Y + 24, p.teal, 15, 'left', 700);
-  const rows: Array<[string, string, string]> = [
-    ['时间 t', `${state.time.toFixed(2)} s`, p.ink],
-    ['水平合外力 Fₓ', `${state.force.toFixed(2)} N`, p.red],
-    ['有向面积 Iₓ', `${state.impulse.toFixed(2)} N·s`, p.red],
-    ['动量变化 Δpₓ', `${state.momentumChange.toFixed(2)} kg·m/s`, p.teal],
-    ['瞬时速度 v', `${state.velocity.toFixed(2)} m/s`, p.teal],
-    ['末动量 pₓ', `${state.momentum.toFixed(2)} kg·m/s`, p.ink]
-  ];
-  rows.forEach(([label, value, color], index) => {
-    const y = READOUT_Y + 54 + index * 25;
-    text(ctx, label, CARD_X + 16, y, p.muted, 12, 'left', 600);
-    text(ctx, value, CARD_X + CARD_W - 16, y, color, 13, 'right', 700);
-  });
-  rounded(ctx, CARD_X, FORMULA_Y, CARD_W, FORMULA_H, 12);
-  ctx.fillStyle = p.soft;
-  ctx.fill();
-  ctx.strokeStyle = p.border;
-  ctx.stroke();
-  text(ctx, '动量定理', CARD_X + 16, FORMULA_Y + 24, p.gold, 15, 'left', 700);
-  text(
-    ctx,
-    'Iₓ = ∫Fₓdt = Δpₓ',
-    CARD_X + 16,
-    FORMULA_Y + 62,
-    p.ink,
-    20,
-    'left',
-    700
-  );
-  text(
-    ctx,
-    `p₀ₓ = ${state.initialMomentum.toFixed(2)} kg·m/s`,
-    CARD_X + 16,
-    FORMULA_Y + 98,
-    p.muted,
-    12,
-    'left',
-    600
-  );
-  text(
-    ctx,
-    '匀强外力：Iₓ = Fₓt',
-    CARD_X + 16,
-    FORMULA_Y + 128,
-    p.blue,
-    13,
-    'left',
-    600
-  );
-  text(
-    ctx,
-    '拖动参数或播放观察面积与速度同步',
-    CARD_X + 16,
-    FORMULA_Y + 152,
-    p.teal,
-    12,
-    'left',
-    600
-  );
 }
 
 export function createImpulseMomentumView(
@@ -569,58 +466,162 @@ export function createImpulseMomentumView(
 ) {
   const stage = createCanvasViewport({
     canvas: options.canvas ?? null,
-    sizing: { mode: 'clamped', fallbackWidth: BASE_W, fallbackHeight: BASE_H },
-    initialWidth: BASE_W,
-    initialHeight: BASE_H,
+    sizing: {
+      mode: 'clamped',
+      fallbackWidth: C.stageFallbackWidth,
+      fallbackHeight: C.stageFallbackHeight
+    },
+    initialWidth: C.stageFallbackWidth,
+    initialHeight: C.stageFallbackHeight,
     eagerContext: true
   });
+  const graph = {
+    canvas: (options.graphCanvas ?? null) as HTMLCanvasElement | null,
+    ctx: null as CanvasRenderingContext2D | null,
+    cssWidth: C.graphFallbackWidth as number,
+    cssHeight: C.graphFallbackHeight as number,
+    responsiveScale: 1,
+    resize(): void {
+      if (!graph.canvas) return;
+      const sized = sizeGraphCanvasToHost(graph.canvas);
+      graph.ctx = sized.ctx;
+      graph.cssWidth = sized.cssWidth;
+      graph.cssHeight = sized.cssHeight;
+      graph.responsiveScale = sized.responsiveScale;
+    },
+    attach(canvas: HTMLCanvasElement): void {
+      graph.canvas = canvas;
+      graph.resize();
+    },
+    release(): void {
+      graph.canvas = null;
+      graph.ctx = null;
+    }
+  };
+  if (graph.canvas) graph.resize();
   const env = createViewEnvironment({
     theme: options.theme ?? 'light',
     mode: options.mode ?? 'normal',
     demoHints: options.demoHints
   });
   let snapshot: ImpulseMomentumState | null = null;
-  function draw(state: ImpulseMomentumState): void {
+  let dragging = false;
+
+  function paint(state: ImpulseMomentumState): void {
     const ctx = stage.ctx;
     if (!ctx) return;
     const width = stage.cssWidth;
     const height = stage.cssHeight;
-    const fit = Math.min(width / BASE_W, height / BASE_H);
-    const offsetY = (height - BASE_H * fit) / 2;
-    const responsiveScale = stage.responsiveScale;
+    const rs = stage.responsiveScale;
+    const typeScale = env.fontScale() * Math.min(env.contentScale(), 1.25);
+    const font = (base: number): number =>
+      scaledSize(base * typeScale, Math.max(rs, 0.3), 10);
     ctx.clearRect(0, 0, width, height);
-    ctx.save();
-    ctx.translate(0, offsetY);
-    ctx.scale(fit, fit);
-    const p = PALETTE[env.theme];
-    ctx.fillStyle = p.bg;
-    ctx.fillRect(0, 0, BASE_W, BASE_H);
-    ctx.lineWidth = responsiveScale;
-    drawStage(ctx, state, p);
-    drawGraph(ctx, state, p);
-    drawPanel(ctx, state, p);
-    ctx.restore();
+    drawApparatus(ctx, state, width, height, PALETTE[env.theme], rs, font);
+    if (graph.canvas) {
+      if (!graph.ctx) graph.resize();
+      const gctx = graph.ctx;
+      if (gctx) {
+        const gFont = (base: number): number =>
+          scaledSize(
+            base * typeScale,
+            Math.max(graph.responsiveScale, 0.3),
+            10
+          );
+        drawGraphs(
+          gctx,
+          state,
+          graph.cssWidth,
+          graph.cssHeight,
+          PALETTE[env.theme],
+          gFont
+        );
+      }
+    }
   }
+
+  function timeFromEvent(event: PointerEvent): number | null {
+    const canvas = graph.canvas;
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const box = plotBox(graph.cssWidth, graph.cssHeight);
+    if (!dragging && (x < box.left - 8 || x > box.right + 8)) return null;
+    return mapPx(x, box.left, box.right, C.timeMin, C.timeMax);
+  }
+
+  function handlePointerDown(event: PointerEvent): void {
+    const t = timeFromEvent(event);
+    if (t === null) return;
+    dragging = true;
+    graph.canvas?.setPointerCapture?.(event.pointerId);
+    options.onTimeScrub?.(t);
+  }
+
+  function handlePointerMove(event: PointerEvent): void {
+    if (!dragging) return;
+    const t = timeFromEvent(event);
+    if (t === null) return;
+    options.onTimeScrub?.(t);
+  }
+
+  function handlePointerUp(event: PointerEvent): void {
+    if (!dragging) return;
+    dragging = false;
+    try {
+      graph.canvas?.releasePointerCapture?.(event.pointerId);
+    } catch {
+      /* already released */
+    }
+  }
+
+  function bindGraph(canvas: HTMLCanvasElement): void {
+    canvas.style.touchAction = 'none';
+    canvas.style.cursor = 'ew-resize';
+    canvas.addEventListener('pointerdown', handlePointerDown);
+    canvas.addEventListener('pointermove', handlePointerMove);
+    canvas.addEventListener('pointerup', handlePointerUp);
+    canvas.addEventListener('pointercancel', handlePointerUp);
+  }
+
+  function unbindGraph(canvas: HTMLCanvasElement): void {
+    canvas.removeEventListener('pointerdown', handlePointerDown);
+    canvas.removeEventListener('pointermove', handlePointerMove);
+    canvas.removeEventListener('pointerup', handlePointerUp);
+    canvas.removeEventListener('pointercancel', handlePointerUp);
+  }
+
+  if (graph.canvas) bindGraph(graph.canvas);
+
   return {
     render(state: ImpulseMomentumState): void {
       snapshot = state;
       stage.ensureSized();
-      draw(state);
+      paint(state);
     },
     resize(): void {
       stage.resize();
-      if (snapshot) draw(snapshot);
+      if (graph.canvas) graph.resize();
+      if (snapshot) paint(snapshot);
     },
     setTheme(theme: TeachingTheme): void {
       env.setTheme(theme);
-      if (snapshot) draw(snapshot);
+      if (snapshot) paint(snapshot);
     },
     setMode(mode: TeachingMode, hints?: DemoRenderHints): void {
       env.setMode(mode, hints);
-      if (snapshot) draw(snapshot);
+      if (snapshot) paint(snapshot);
+    },
+    attachGraphCanvas(canvas: HTMLCanvasElement): void {
+      if (graph.canvas) unbindGraph(graph.canvas);
+      graph.attach(canvas);
+      bindGraph(canvas);
+      if (snapshot) paint(snapshot);
     },
     dispose(): void {
+      if (graph.canvas) unbindGraph(graph.canvas);
       snapshot = null;
+      graph.release();
       stage.release();
     }
   };

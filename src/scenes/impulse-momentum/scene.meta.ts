@@ -4,7 +4,7 @@ import type { SceneMeta } from '../../platform/scene-contract';
 const demoProfile: SceneDemoProfile = {
   lessonTask: 'process',
   transport: 'visible',
-  readoutKeys: ['time', 'force', 'impulse', 'velocity'],
+  readoutKeys: ['time', 'force', 'impulse', 'p0', 'dp', 'p', 'velocity'],
   renderHints: { contentScale: 1.02 },
   interactionHints: {
     touchTargetMinSize: 48,
@@ -13,7 +13,6 @@ const demoProfile: SceneDemoProfile = {
       'mass',
       'initialVelocity',
       'peakForce',
-      'autoRun',
       'showArea'
     ]
   }
@@ -37,7 +36,7 @@ export const impulseMomentumMeta: SceneMeta = {
     mass: 2,
     initialVelocity: 0,
     peakForce: 10,
-    autoRun: 1,
+    autoRun: 0,
     showArea: 1
   },
   urlSyncKeys: [
@@ -49,7 +48,7 @@ export const impulseMomentumMeta: SceneMeta = {
     'showArea'
   ],
   testProfile: {
-    hasGraph: false,
+    hasGraph: true,
     hasTransport: true,
     supportsPresentation: true
   },

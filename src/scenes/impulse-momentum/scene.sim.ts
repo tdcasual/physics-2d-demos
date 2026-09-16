@@ -1,6 +1,7 @@
 import { clamp } from '../../core/math';
 
 export type ImpulseForceModel = 'constant' | 'triangle' | 'halfSine' | 'ramp';
+
 export type ImpulseMomentumParams = {
   forceModel: ImpulseForceModel;
   mass: number;
@@ -9,6 +10,7 @@ export type ImpulseMomentumParams = {
   autoRun: boolean;
   showArea: boolean;
 };
+
 export type ImpulseMomentumState = {
   params: ImpulseMomentumParams;
   time: number;
@@ -19,104 +21,55 @@ export type ImpulseMomentumState = {
   momentum: number;
   velocity: number;
   position: number;
-  modelLabel: string;
-  phase: number;
+  finished: boolean;
 };
 
 export const impulseMomentumConstants = {
-  baseWidth: 1200,
-  baseHeight: 760,
-  fieldWidth: 760,
-  panelX: 786,
-  panelWidth: 382,
-  fieldLeft: 42,
-  fieldRight: 730,
-  fieldTop: 72,
-  fieldBottom: 300,
-  trackY: 248,
-  trackLeft: 86,
-  trackRight: 704,
-  cartWidth: 94,
-  cartHeight: 54,
-  wheelRadius: 10,
-  graphX: 42,
-  graphY: 332,
-  graphWidth: 688,
-  graphHeight: 376,
-  graphLeft: 86,
-  graphRight: 704,
-  graphTop: 384,
-  graphBottom: 668,
   timeMin: 0,
-  timeMax: 5.2,
-  forceMin: 0,
-  forceMax: 20,
-  graphGridStep: 64,
-  cardX: 786,
-  cardWidth: 382,
-  headerRuleY: 72,
-  modelY: 100,
-  modelHeight: 112,
-  readoutY: 228,
-  readoutHeight: 214,
-  formulaY: 464,
-  formulaHeight: 166,
+  timeMax: 5,
+  pulseEnd: 4,
+  rampEnd: 2,
   massMin: 0.5,
   massMax: 4,
   velocityMin: -4,
   velocityMax: 8,
   forceMinControl: 2,
   forceMaxControl: 20,
-  animationPeriod: 5.2,
-  forceArrowScale: 7,
-  velocityArrowScale: 7,
-  positionScale: 22
+  graphFallbackWidth: 640,
+  graphFallbackHeight: 240,
+  stageFallbackWidth: 800,
+  stageFallbackHeight: 320
 } as const;
+
+const C = impulseMomentumConstants;
 
 const DEFAULTS: ImpulseMomentumParams = {
   forceModel: 'constant',
   mass: 2,
   initialVelocity: 0,
   peakForce: 10,
-  autoRun: true,
+  autoRun: false,
   showArea: true
 };
+
+const MODELS: ImpulseForceModel[] = [
+  'constant',
+  'triangle',
+  'halfSine',
+  'ramp'
+];
 
 function finite(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
-function normalize(
-  input: Partial<ImpulseMomentumParams>,
-  previous = DEFAULTS
-): ImpulseMomentumParams {
-  const forceModel =
-    input.forceModel === 'triangle' ||
-    input.forceModel === 'halfSine' ||
-    input.forceModel === 'ramp' ||
-    input.forceModel === 'constant'
-      ? input.forceModel
-      : previous.forceModel;
-  return {
-    forceModel,
-    mass: clamp(
-      finite(input.mass, previous.mass),
-      impulseMomentumConstants.massMin,
-      impulseMomentumConstants.massMax
-    ),
-    initialVelocity: clamp(
-      finite(input.initialVelocity, previous.initialVelocity),
-      impulseMomentumConstants.velocityMin,
-      impulseMomentumConstants.velocityMax
-    ),
-    peakForce: clamp(
-      finite(input.peakForce, previous.peakForce),
-      impulseMomentumConstants.forceMinControl,
-      impulseMomentumConstants.forceMaxControl
-    ),
-    autoRun: input.autoRun ?? previous.autoRun,
-    showArea: input.showArea ?? previous.showArea
-  };
+function asBool(value: unknown, fallback: boolean): boolean {
+  if (value === true || value === 1 || value === '1') return true;
+  if (value === false || value === 0 || value === '0') return false;
+  if (typeof value === 'string' && value.toLowerCase() === 'true') return true;
+  if (typeof value === 'string' && value.toLowerCase() === 'false')
+    return false;
+  return fallback;
 }
 
 export function asImpulseForceModel(
@@ -127,99 +80,134 @@ export function asImpulseForceModel(
     value === 'triangle' ||
     value === 'halfSine' ||
     value === 'ramp'
-  )
+  ) {
     return value;
-  if (typeof value === 'number') {
-    return (['constant', 'triangle', 'halfSine', 'ramp'][value] ??
-      undefined) as ImpulseForceModel | undefined;
+  }
+  if (typeof value === 'number' && Number.isInteger(value) && MODELS[value]) {
+    return MODELS[value];
+  }
+  if (typeof value === 'string' && /^\d+$/.test(value)) {
+    const index = Number(value);
+    return MODELS[index];
   }
   return undefined;
 }
 
-export function forceModelLabel(model: ImpulseForceModel): string {
-  return {
-    constant: '恒力',
-    triangle: '三角形碰撞力',
-    halfSine: '正弦半波冲击',
-    ramp: '先增后恒力'
-  }[model];
+export function parseForceModel(
+  value: unknown,
+  fallback: ImpulseForceModel = 'constant'
+): ImpulseForceModel {
+  return asImpulseForceModel(value) ?? fallback;
 }
 
+function normalize(
+  input: Partial<ImpulseMomentumParams>,
+  previous = DEFAULTS
+): ImpulseMomentumParams {
+  return {
+    forceModel: parseForceModel(input.forceModel, previous.forceModel),
+    mass: clamp(finite(input.mass, previous.mass), C.massMin, C.massMax),
+    initialVelocity: clamp(
+      finite(input.initialVelocity, previous.initialVelocity),
+      C.velocityMin,
+      C.velocityMax
+    ),
+    peakForce: clamp(
+      finite(input.peakForce, previous.peakForce),
+      C.forceMinControl,
+      C.forceMaxControl
+    ),
+    autoRun: asBool(input.autoRun, previous.autoRun),
+    showArea: asBool(input.showArea, previous.showArea)
+  };
+}
+
+/** Horizontal force F_x(t) ≥ 0 for the four source-supported models. */
 export function forceAt(
   model: ImpulseForceModel,
   time: number,
   peakForce: number
 ): number {
-  const t = clamp(
-    time,
-    impulseMomentumConstants.timeMin,
-    impulseMomentumConstants.timeMax
-  );
-  if (model === 'constant') return peakForce;
+  const t = Math.max(0, time);
+  const F = Math.max(0, peakForce);
+  if (model === 'constant') return F;
   if (model === 'triangle') {
-    if (t <= 2) return peakForce * (t / 2);
-    if (t <= 4) return peakForce * ((4 - t) / 2);
+    if (t <= C.rampEnd) return F * (t / C.rampEnd);
+    if (t <= C.pulseEnd) return F * ((C.pulseEnd - t) / C.rampEnd);
     return 0;
   }
   if (model === 'halfSine') {
-    return t <= 4 ? peakForce * Math.sin((Math.PI * t) / 4) : 0;
+    return t <= C.pulseEnd ? F * Math.sin((Math.PI * t) / C.pulseEnd) : 0;
   }
-  return peakForce * Math.min(1, t / 2);
+  return F * Math.min(1, t / C.rampEnd);
 }
 
-function integrateKinematics(
-  params: ImpulseMomentumParams,
-  time: number
-): {
-  impulse: number;
-  position: number;
-  velocity: number;
-} {
-  const end = clamp(
-    time,
-    impulseMomentumConstants.timeMin,
-    impulseMomentumConstants.timeMax
-  );
-  const steps = Math.max(1, Math.ceil(end * 120));
-  const dt = end / steps;
-  let impulse = 0;
-  let position = 0;
-  let velocity = params.initialVelocity;
-  for (let index = 0; index < steps; index += 1) {
-    const midpoint = (index + 0.5) * dt;
-    const nextImpulse =
-      impulse + forceAt(params.forceModel, midpoint, params.peakForce) * dt;
-    const nextVelocity = params.initialVelocity + nextImpulse / params.mass;
-    position += ((velocity + nextVelocity) / 2) * dt;
-    impulse = nextImpulse;
-    velocity = nextVelocity;
+/**
+ * Closed-form I_x(0→t) = ∫ F_x dτ for each model.
+ * Triangle 0–2 s rise / 2–4 s fall; half-sine pulse ends at 4 s;
+ * ramp reaches F_max at 2 s then stays constant.
+ */
+export function impulseAt(
+  model: ImpulseForceModel,
+  time: number,
+  peakForce: number
+): number {
+  const t = clamp(time, C.timeMin, C.timeMax);
+  const F = Math.max(0, peakForce);
+  if (model === 'constant') return F * t;
+  if (model === 'triangle') {
+    if (t <= C.rampEnd) return (F * t * t) / 4;
+    if (t <= C.pulseEnd) return F + (F / 2) * (4 * t - (t * t) / 2 - 6);
+    return 2 * F;
   }
-  return { impulse, position, velocity };
+  if (model === 'halfSine') {
+    if (t <= C.pulseEnd) {
+      return (
+        F * (C.pulseEnd / Math.PI) * (1 - Math.cos((Math.PI * t) / C.pulseEnd))
+      );
+    }
+    return (F * 8) / Math.PI;
+  }
+  if (t <= C.rampEnd) return (F * t * t) / 4;
+  return F * (t - 1);
+}
+
+function integratePosition(params: ImpulseMomentumParams, end: number): number {
+  if (end <= 0) return 0;
+  const steps = Math.max(1, Math.ceil(end * 200));
+  const dt = end / steps;
+  let position = 0;
+  let previous = params.initialVelocity;
+  for (let index = 1; index <= steps; index += 1) {
+    const time = index * dt;
+    const velocity =
+      params.initialVelocity +
+      impulseAt(params.forceModel, time, params.peakForce) / params.mass;
+    position += ((previous + velocity) / 2) * dt;
+    previous = velocity;
+  }
+  return position;
 }
 
 function derive(
   params: ImpulseMomentumParams,
   time: number
 ): ImpulseMomentumState {
-  const t = clamp(
-    time,
-    impulseMomentumConstants.timeMin,
-    impulseMomentumConstants.timeMax
-  );
-  const kinematics = integrateKinematics(params, t);
+  const t = clamp(time, C.timeMin, C.timeMax);
+  const impulse = impulseAt(params.forceModel, t, params.peakForce);
   const initialMomentum = params.mass * params.initialVelocity;
+  const velocity = params.initialVelocity + impulse / params.mass;
   return {
     params: { ...params },
     time: t,
     force: forceAt(params.forceModel, t, params.peakForce),
-    impulse: kinematics.impulse,
+    impulse,
     initialMomentum,
-    momentumChange: kinematics.impulse,
-    momentum: initialMomentum + kinematics.impulse,
-    velocity: kinematics.velocity,
-    position: kinematics.position,
-    modelLabel: forceModelLabel(params.forceModel),
-    phase: t / impulseMomentumConstants.animationPeriod
+    momentumChange: impulse,
+    momentum: initialMomentum + impulse,
+    velocity,
+    position: integratePosition(params, t),
+    finished: t >= C.timeMax - 1e-9
   };
 }
 
@@ -236,17 +224,42 @@ export function createImpulseMomentumSim(
       params = normalize({ ...params, ...next }, params);
       return { ...params };
     },
+    setTime(next: number): number {
+      time = clamp(finite(next, time), C.timeMin, C.timeMax);
+      if (time < C.timeMax - 1e-9) return time;
+      params = { ...params, autoRun: false };
+      return time;
+    },
     step(dt: number): void {
-      if (params.autoRun) {
-        time = Math.min(
-          impulseMomentumConstants.timeMax,
-          time + Math.max(0, finite(dt, 0))
-        );
+      const delta = finite(dt, 0);
+      if (!params.autoRun || delta <= 0) return;
+      time = Math.min(C.timeMax, time + delta);
+      if (time >= C.timeMax - 1e-9) {
+        time = C.timeMax;
+        params = { ...params, autoRun: false };
       }
     },
     reset(): void {
       params = { ...DEFAULTS };
       time = 0;
     }
+  };
+}
+
+export function restoredUrlParams(params: ImpulseMomentumParams): {
+  forceModel: ImpulseForceModel;
+  mass: number;
+  initialVelocity: number;
+  peakForce: number;
+  showArea: 0 | 1;
+  autoRun: 0 | 1;
+} {
+  return {
+    forceModel: params.forceModel,
+    mass: params.mass,
+    initialVelocity: params.initialVelocity,
+    peakForce: params.peakForce,
+    showArea: params.showArea ? 1 : 0,
+    autoRun: params.autoRun ? 1 : 0
   };
 }

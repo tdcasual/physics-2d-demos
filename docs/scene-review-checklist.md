@@ -40,7 +40,7 @@
 |  25 | 高精度测量工具读数原理（游标卡尺&螺旋测微器）         | 力学 | [`precision-tools`](../src/scenes/precision-tools/scene.meta.ts)                                   | [详情](https://app.svgzhenli.com/resource/db871107-556d-4e2f-936e-52ebd2767a54) · [封面](https://img.svgzhenli.com/gallery-assets/covers/08nk6xz5mriq1778077856552.png) |  ☑   |
 |  26 | 测电源电动势和内阻实验                                | 电磁 | [`emf-internal-resistance`](../src/scenes/emf-internal-resistance/scene.meta.ts)                   | [详情](https://app.svgzhenli.com/resource/11ed455d-d6bc-4ac7-82a3-0a57b2ef969f) · [封面](https://img.svgzhenli.com/gallery-assets/covers/h7646etm75j1787678239426.png)  |  ☑   |
 |  27 | 电势电势能与E-x和φ-x图象                              | 电磁 | [`potential-energy-graphs`](../src/scenes/potential-energy-graphs/scene.meta.ts)                   | [详情](https://app.svgzhenli.com/resource/ff3b0997-708a-4845-8ce1-1f8a1a198337) · [封面](https://img.svgzhenli.com/gallery-assets/covers/gqj6h49siwi1787678193054.png)  |  ☑   |
-|  28 | 冲量动量定理与F-t图象                                 | 力学 | [`impulse-momentum`](../src/scenes/impulse-momentum/scene.meta.ts)                                 | [详情](https://app.svgzhenli.com/resource/55c5259d-0e1f-4ff8-b491-791c7df3c02e) · [封面](https://img.svgzhenli.com/gallery-assets/covers/tpvaff7fej91787660726259.png)  |  ☐   |
+|  28 | 冲量动量定理与F-t图象                                 | 力学 | [`impulse-momentum`](../src/scenes/impulse-momentum/scene.meta.ts)                                 | [详情](https://app.svgzhenli.com/resource/55c5259d-0e1f-4ff8-b491-791c7df3c02e) · [封面](https://img.svgzhenli.com/gallery-assets/covers/tpvaff7fej91787660726259.png)  |  ☑   |
 |  29 | 单匝线框穿过有界匀强磁场                              | 电磁 | [`single-loop`](../src/scenes/single-loop/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/4c98b69d-8854-45ad-9914-82c68b961368) · [封面](https://img.svgzhenli.com/gallery-assets/covers/86no26fi9ne1774713114955.png)  |  ☐   |
 |  30 | 电磁感应 - 电容棒与电阻棒模型                         | 电磁 | [`rod-model`](../src/scenes/rod-model/scene.meta.ts)                                               | [详情](https://app.svgzhenli.com/resource/58836693-454f-4300-aa52-0b99316f1c26) · [封面](https://img.svgzhenli.com/gallery-assets/covers/6hlwqwk5c7i1786857749323.png)  |  ☐   |
 |  31 | 匀速圆周运动与向心力模型                              | 力学 | [`centripetal-motion`](../src/scenes/centripetal-motion/scene.meta.ts)                             | [详情](https://app.svgzhenli.com/resource/2b810c0c-11fe-4d31-933f-770b06d1a88e) · [封面](https://img.svgzhenli.com/gallery-assets/covers/7e91dq40i21775496835830.png)   |  ☐   |
@@ -362,6 +362,15 @@
 - 交互与布局验证：分段匀强场、单正点电荷、等量异种电荷；探针正负、电量、位置、φ-x 切线和 E-x 有向面积可调；重置写回默认 URL 且保留审计参数，播放/暂停与探针位置同步。浏览器逐项核对图表/控制/数据分区及 x=3/7 折点、点电荷/偶极场坐标，无动画区图表或数据卡。
 - 工程验证：专项 sim/view `25/25`；`pnpm verify:scene potential-energy-graphs` 全 `7/7` 步骤通过，场景结构 `120` 项、布局契约 `4` 项、ESLint、全量 TypeScript、生产构建、bundle 预算与 `git diff --check` 通过。远程 Grok Build 最终返回 `AGREE`。
 - 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/ff3b0997-708a-4845-8ce1-1f8a1a198337.md` · [原始详情](https://app.svgzhenli.com/resource/ff3b0997-708a-4845-8ce1-1f8a1a198337) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/gqj6h49siwi1787678193054.png)
+
+### 28. 冲量动量定理与 F-t 图象 (`impulse-momentum`)
+
+- 状态：✅ Codex / Grok Build 交叉审计通过（2026-09-17）。
+- 修复：动画区只保留滑块、轨道、质量标记及必要的力/速度矢量；Fₓ-t 曲线、探针和可选面积移入独立图表区，t、Fₓ、Iₓ、p₀、Δpₓ、pₓ、v 进入数据区；控件与说明精简，采用 `split-right-graph-bottom`。修复静止时误画右向 v 矢量。
+- 物理核验：`Iₓ=∫Fₓdt=Δpₓ=m(vₓ−v₀)`、`pₓ=p₀+Iₓ`；恒力、三角脉冲、半正弦脉冲及先增后恒四模型的闭式冲量与独立数值积分一致；检查 2 s、4 s 分段边界、脉冲结束后力为零/冲量封顶、负初速度与速度过零。
+- 交互与布局验证：拖动 F-t 图探针联动时间、力、冲量、动量和速度；播放/暂停与重置同步 URL，重置恢复默认并保留 `audit` 查询。实际浏览器核对动画、图表、数据分区；`1280×720` 与 `390×844` 无横向溢出，移动端图表完整可见，console 无 error/warning。
+- 工程验证：专项 sim/view `13/13`；`pnpm verify:scene impulse-momentum` 全 `7/7` 步骤通过（`3138 passed / 127 skipped`），场景结构 `120` 项、布局契约 `4` 项、ESLint、全量 TypeScript、生产构建、bundle 预算及 `git diff --check` 通过。Grok Build 最终返回 `AGREE`。
+- 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/55c5259d-0e1f-4ff8-b491-791c7df3c02e.md` · [原始详情](https://app.svgzhenli.com/resource/55c5259d-0e1f-4ff8-b491-791c7df3c02e) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/tpvaff7fej91787660726259.png)
 
 ## 复审记录模板
 

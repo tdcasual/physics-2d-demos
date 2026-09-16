@@ -21,7 +21,7 @@ export const impulseMomentumControlsSchema: ControlsSchema = {
       ]
     },
     {
-      title: '参数设定',
+      title: '参数',
       collapsed: false,
       fields: [
         {
@@ -53,25 +53,23 @@ export const impulseMomentumControlsSchema: ControlsSchema = {
           step: 1,
           value: 10,
           unit: 'N'
+        },
+        {
+          type: 'toggle',
+          key: 'showArea',
+          label: '显示有向面积',
+          value: true
         }
       ]
     },
     {
-      title: '播放',
-      collapsed: false,
-      fields: [
-        { type: 'toggle', key: 'autoRun', label: '自动播放', value: true },
-        { type: 'toggle', key: 'showArea', label: '显示有向面积', value: true }
-      ]
-    },
-    {
-      title: '规律',
+      title: '关系',
       collapsed: true,
       fields: [
         {
           type: 'hint',
           key: 'formula',
-          lines: ['Iₓ = ∫Fₓdt = Δpₓ', 'v = v₀ + Iₓ / m']
+          lines: ['Iₓ = ∫Fₓ dt = Δpₓ = m(vₓ − v₀)', 'pₓ = p₀ + Iₓ']
         }
       ]
     }
