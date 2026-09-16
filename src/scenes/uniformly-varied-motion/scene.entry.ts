@@ -1,8 +1,9 @@
-import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import type { DemoRenderHints } from '../../platform/demo-profile';
+import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createStandardSceneEntry } from '../scene-entry-helpers';
 import { createUvtSim, type UvtParams, type UvtState } from './scene.sim';
 import { createUvtView } from './scene.view';
+
 export type CreateUvtSceneOptions = {
   canvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
@@ -10,6 +11,7 @@ export type CreateUvtSceneOptions = {
   demoHints?: DemoRenderHints;
   onReadout?: (state: UvtState) => void;
 };
+
 export function createUvtScene(options: CreateUvtSceneOptions = {}) {
   const sim = createUvtSim();
   const view = createUvtView({
@@ -24,22 +26,39 @@ export function createUvtScene(options: CreateUvtSceneOptions = {}) {
     getState: () => sim.getState(),
     onReadout: options.onReadout
   });
+
   function getReadoutItems() {
     const s = sim.getState();
     return [
-      { key: 'time', label: '时间', value: `${s.time.toFixed(2)} s` },
+      { key: 'time', label: 't', value: `${s.time.toFixed(2)} s` },
       {
         key: 'velocity',
-        label: '瞬时速度',
+        label: 'v',
         value: `${s.velocity.toFixed(2)} m/s`
       },
       {
         key: 'displacement',
-        label: '累计位移',
+        label: 'x',
         value: `${s.displacement.toFixed(2)} m`
+      },
+      {
+        key: 'status',
+        label: '状态',
+        value: s.stopped ? '瞬时静止' : '运动中'
+      },
+      {
+        key: 'formulaV',
+        label: 'v(t)',
+        value: 'v₀ + at'
+      },
+      {
+        key: 'formulaX',
+        label: 'x(t)',
+        value: 'v₀t + ½at²'
       }
     ];
   }
+
   return {
     ...base,
     getState: (): UvtState => sim.getState(),
@@ -48,6 +67,7 @@ export function createUvtScene(options: CreateUvtSceneOptions = {}) {
     setParams: base.wrapAction(
       (next: Partial<UvtParams>): UvtParams => sim.setParams(next)
     ),
+    stepFrame: base.wrapAction((dt?: number) => sim.stepFrame(dt)),
     getReadoutItems
   };
 }

@@ -1,14 +1,16 @@
-import type { SceneMeta } from '../../platform/scene-contract';
 import type { SceneDemoProfile } from '../../platform/demo-profile';
+import type { SceneMeta } from '../../platform/scene-contract';
+
 const demoProfile: SceneDemoProfile = {
   lessonTask: 'lecture',
-  readoutKeys: ['time', 'velocity', 'displacement'],
+  readoutKeys: ['time', 'velocity', 'displacement', 'status'],
   renderHints: { contentScale: 1.2 },
   interactionHints: {
     touchTargetMinSize: 48,
     visibleControlKeys: ['v0', 'acceleration']
   }
 };
+
 export const uvtMeta: SceneMeta = {
   id: 'uniformly-varied-motion',
   title: '匀变速直线运动 - 速度与时间关系',

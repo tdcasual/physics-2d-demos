@@ -1,4 +1,6 @@
 import type { ControlsSchema } from '../../platform/controls-schema';
+import { uvtConstants as C } from './scene.sim';
+
 export const uvtControlsSchema: ControlsSchema = {
   sections: [
     {
@@ -9,20 +11,20 @@ export const uvtControlsSchema: ControlsSchema = {
           type: 'slider',
           key: 'v0',
           label: '初速度 v₀',
-          min: -10,
-          max: 20,
+          min: C.v0Min,
+          max: C.v0Max,
           step: 1,
-          value: 10,
+          value: C.v0Default,
           unit: 'm/s'
         },
         {
           type: 'slider',
           key: 'acceleration',
           label: '加速度 a',
-          min: -4,
-          max: 4,
+          min: C.accelerationMin,
+          max: C.accelerationMax,
           step: 1,
-          value: -3,
+          value: C.accelerationDefault,
           unit: 'm/s²'
         }
       ]
@@ -31,18 +33,18 @@ export const uvtControlsSchema: ControlsSchema = {
       title: '显示',
       collapsed: false,
       fields: [
-        { type: 'toggle', key: 'autoRun', label: '自动播放', value: true },
+        { type: 'toggle', key: 'autoRun', label: '自动运行', value: true },
         { type: 'toggle', key: 'showArea', label: '显示面积', value: true }
       ]
     },
     {
-      title: '结论',
-      collapsed: false,
+      title: '要点',
+      collapsed: true,
       fields: [
         {
           type: 'hint',
-          key: 'formula',
-          lines: ['v = v₀ + at', '图线斜率 = a', '图线面积 = 位移']
+          key: 'rule',
+          lines: ['斜率 = a，面积 = x']
         }
       ]
     }

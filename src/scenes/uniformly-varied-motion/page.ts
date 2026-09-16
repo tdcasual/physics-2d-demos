@@ -5,13 +5,24 @@ import { createUvtScene } from './scene.entry';
 import { uvtMeta } from './scene.meta';
 import { uvtControlsSchema } from './controls-schema';
 import type { UvtParams } from './scene.sim';
+
+function asBoolean(value: unknown): boolean {
+  return (
+    value === true ||
+    value === 1 ||
+    value === '1' ||
+    String(value).toLowerCase() === 'true'
+  );
+}
+
 bootScenePage({
   meta: uvtMeta,
+  autoPlay: true,
   preferredLayout: 'split-right',
   layoutConfig: {
-    defaultLeftRatio: 0.34,
-    leftMinWidth: 300,
-    leftMaxWidth: 520,
+    defaultLeftRatio: 0.32,
+    leftMinWidth: 280,
+    leftMaxWidth: 460,
     controlColumns: 'auto',
     readoutCollapsed: true,
     readoutLabel: '数据读数',
@@ -40,17 +51,24 @@ bootScenePage({
       mount,
       schema: uvtControlsSchema,
       onChange: (key, value) => {
-        if (key === 'v0' || key === 'acceleration')
-          uvtScene.setParams({ [key]: Number(value) } as Partial<UvtParams>);
-        else if (key === 'autoRun' || key === 'showArea')
-          uvtScene.setParams({ [key]: Boolean(value) } as Partial<UvtParams>);
+        if (key === 'autoRun' || key === 'showArea') {
+          uvtScene.setParams({
+            [key]: asBoolean(value)
+          } as Partial<UvtParams>);
+        } else if (key === 'v0' || key === 'acceleration') {
+          const number = Number(value);
+          if (!Number.isFinite(number)) return;
+          uvtScene.setParams({
+            [key]: number
+          } as Partial<UvtParams>);
+        }
         render();
         writeParam?.(key, value);
       },
       onAction: () => {}
     });
     return {
-      setValue(key: string, value: number | string): void {
+      setValue(key: string, value: number | string | boolean): void {
         renderer.setValue(key, value);
       },
       setActive(key: string, value: string): void {
@@ -60,5 +78,23 @@ bootScenePage({
         renderer.dispose();
       }
     };
+  },
+  paramSync: {
+    applyParam: (key, value, ctx) => {
+      if (key === 'autoRun' || key === 'showArea') {
+        const on = asBoolean(value);
+        ctx.scene.setParams({ [key]: on } as Partial<UvtParams>);
+        ctx.setControlValue(key, on);
+        return true;
+      }
+      if (key === 'v0' || key === 'acceleration') {
+        const number = Number(value);
+        if (!Number.isFinite(number)) return false;
+        ctx.scene.setParams({ [key]: number } as Partial<UvtParams>);
+        ctx.setControlValue(key, number);
+        return true;
+      }
+      return false;
+    }
   }
 });
