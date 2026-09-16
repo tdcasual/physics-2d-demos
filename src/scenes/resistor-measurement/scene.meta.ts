@@ -14,6 +14,8 @@ const demoProfile: SceneDemoProfile = {
       'targetResistance',
       'rheostatPosition',
       'supplyVoltage',
+      'ammeterResistance',
+      'voltmeterResistance',
       'autoRun'
     ]
   }
@@ -37,6 +39,8 @@ export const resistorMeta: SceneMeta = {
     circuitMode: 0,
     meterMode: 0,
     targetResistance: 25,
+    ammeterResistance: 1,
+    voltmeterResistance: 250,
     supplyVoltage: 6,
     rheostatPosition: 0.9,
     autoRun: 1
@@ -45,6 +49,8 @@ export const resistorMeta: SceneMeta = {
     'circuitMode',
     'meterMode',
     'targetResistance',
+    'ammeterResistance',
+    'voltmeterResistance',
     'supplyVoltage',
     'rheostatPosition',
     'autoRun'

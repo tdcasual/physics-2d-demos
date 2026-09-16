@@ -1,14 +1,56 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
+import { readSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { resistorControlsSchema } from './controls-schema';
 import { asCircuitMode, asMeterMode, createResistorScene } from './scene.entry';
 import { resistorMeta } from './scene.meta';
-import type { ResistorParams } from './scene.sim';
+import { asBool, type ResistorParams } from './scene.sim';
+
+const NUMBER_KEYS = [
+  'targetResistance',
+  'ammeterResistance',
+  'voltmeterResistance',
+  'supplyVoltage',
+  'rheostatPosition'
+] as const;
+
+function paramsFromUrl(
+  raw: Record<string, number | string>
+): Partial<ResistorParams> {
+  const next: Partial<ResistorParams> = {};
+  const circuit = asCircuitMode(raw.circuitMode);
+  if (circuit) next.circuitMode = circuit;
+  const meter = asMeterMode(raw.meterMode);
+  if (meter) next.meterMode = meter;
+  for (const key of NUMBER_KEYS) {
+    if (raw[key] === undefined) continue;
+    const n = Number(raw[key]);
+    if (Number.isFinite(n)) next[key] = n;
+  }
+  if (raw.autoRun !== undefined) next.autoRun = asBool(raw.autoRun, true);
+  return next;
+}
+
+const initialParams = paramsFromUrl(readSceneParams(resistorMeta));
+
+function syncControls(
+  renderer: ReturnType<typeof renderSchema>,
+  params: ResistorParams
+): void {
+  renderer.setActive('circuitMode', params.circuitMode);
+  renderer.setActive('meterMode', params.meterMode);
+  renderer.setValue('targetResistance', params.targetResistance);
+  renderer.setValue('ammeterResistance', params.ammeterResistance);
+  renderer.setValue('voltmeterResistance', params.voltmeterResistance);
+  renderer.setValue('supplyVoltage', params.supplyVoltage);
+  renderer.setValue('rheostatPosition', params.rheostatPosition);
+  renderer.setValue('autoRun', params.autoRun);
+}
 
 bootScenePage({
   meta: resistorMeta,
-  autoPlay: true,
+  autoPlay: initialParams.autoRun !== false,
   preferredLayout: 'split-right',
   layoutConfig: {
     defaultLeftRatio: 0.34,
@@ -21,7 +63,13 @@ bootScenePage({
   },
   createScene: ({ canvas, theme, mode, demoHints }) => {
     if (!canvas) throw new Error('resistor-measurement requires a canvas');
-    const scene = createResistorScene({ canvas, theme, mode, demoHints });
+    const scene = createResistorScene({
+      canvas,
+      theme,
+      mode,
+      demoHints,
+      initialParams
+    });
     const scheduler = createRenderScheduler(() => scene.render());
     const dispose = scene.dispose.bind(scene);
     return {
@@ -37,27 +85,26 @@ bootScenePage({
     };
   },
   createControls: ({ mount, scene, scheduleRender, writeParam }) => {
-    const render = scheduleRender ?? (() => scene.render());
+    const resistorScene = scene as ReturnType<typeof createResistorScene>;
+    const render = scheduleRender ?? (() => resistorScene.render());
     const renderer = renderSchema({
       mount,
       schema: resistorControlsSchema,
       onChange: (key, value) => {
         if (key === 'circuitMode') {
           const mode = asCircuitMode(value) ?? 'divider';
-          scene.setParams({ circuitMode: mode });
+          resistorScene.setParams({ circuitMode: mode });
           renderer.setActive(key, mode);
         } else if (key === 'meterMode') {
           const mode = asMeterMode(value) ?? 'external';
-          scene.setParams({ meterMode: mode });
+          resistorScene.setParams({ meterMode: mode });
           renderer.setActive(key, mode);
         } else if (key === 'autoRun') {
-          scene.setParams({ autoRun: Boolean(value) });
-        } else if (
-          key === 'targetResistance' ||
-          key === 'supplyVoltage' ||
-          key === 'rheostatPosition'
-        ) {
-          scene.setParams({ [key]: Number(value) } as Partial<ResistorParams>);
+          resistorScene.setParams({ autoRun: asBool(value, true) });
+        } else if ((NUMBER_KEYS as readonly string[]).includes(key)) {
+          resistorScene.setParams({
+            [key]: Number(value)
+          } as Partial<ResistorParams>);
         }
         render();
         writeParam?.(key, value);
@@ -68,6 +115,7 @@ bootScenePage({
       setValue: (key: string, value: number | string | boolean) =>
         renderer.setValue(key, value),
       setActive: (key: string, value: string) => renderer.setActive(key, value),
+      refresh: () => syncControls(renderer, resistorScene.getParams()),
       dispose: () => renderer.dispose()
     };
   },
@@ -86,16 +134,12 @@ bootScenePage({
         return true;
       }
       if (key === 'autoRun') {
-        const on = Number(value) > 0;
+        const on = asBool(value, true);
         ctx.scene.setParams({ autoRun: on });
         ctx.setControlValue(key, on);
         return true;
       }
-      if (
-        key === 'targetResistance' ||
-        key === 'supplyVoltage' ||
-        key === 'rheostatPosition'
-      ) {
+      if ((NUMBER_KEYS as readonly string[]).includes(key)) {
         const n = Number(value);
         if (Number.isFinite(n)) {
           ctx.scene.setParams({ [key]: n } as Partial<ResistorParams>);

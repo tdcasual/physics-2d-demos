@@ -10,50 +10,7 @@ export type CreateResistorViewOptions = {
   demoHints?: DemoRenderHints;
 };
 
-const {
-  baseWidth: BASE_W,
-  baseHeight: BASE_H,
-  fieldWidth: FIELD_W,
-  panelX: PANEL_X,
-  panelWidth: PANEL_W,
-  fieldLeft: FIELD_LEFT,
-  fieldRight: FIELD_RIGHT,
-  fieldTop: FIELD_TOP,
-  fieldBottom: FIELD_BOTTOM,
-  flowPeriod: FLOW_PERIOD,
-  comparisonLineOffset: COMPARISON_LINE_OFFSET,
-  cardX: CARD_X,
-  cardWidth: CARD_W,
-  headerRuleY: HEADER_RULE_Y,
-  readoutY: READOUT_Y,
-  readoutHeight: READOUT_H,
-  formulaY: FORMULA_Y,
-  formulaHeight: FORMULA_H
-} = resistorConstants;
-
-const GEOMETRY = {
-  sourceX: 390,
-  sourceY: 620,
-  sourceWidth: 150,
-  sourceHeight: 62,
-  targetX: 470,
-  targetY: 300,
-  targetWidth: 122,
-  rheostatX: 292,
-  rheostatY: 438,
-  rheostatWidth: 230,
-  meterAX: 222,
-  meterAY: 300,
-  meterVX: 531,
-  meterVY: 168,
-  meterRadius: 38,
-  busLeft: 108,
-  busRight: 690,
-  panelBottomY: 748,
-  comparisonY: 428,
-  comparisonHeight: 112,
-  flowSpacing: 34
-} as const;
+const { baseWidth: BASE_W, baseHeight: BASE_H } = resistorConstants;
 
 type Palette = {
   bg: string;
@@ -69,23 +26,25 @@ type Palette = {
   gold: string;
   blue: string;
   grid: string;
+  face: string;
 };
 
 const PALETTE: Record<TeachingTheme, Palette> = {
   light: {
-    bg: '#fbfaf7',
+    bg: '#f7f4ee',
     panel: '#ffffff',
-    soft: '#f1f3f4',
-    ink: '#303744',
-    muted: '#7d8997',
-    border: '#d8dfe5',
-    wire: '#3e4854',
-    flow: '#f3b21a',
-    teal: '#23a99a',
-    red: '#ef4050',
+    soft: '#f1eee6',
+    ink: '#2f3640',
+    muted: '#7a8490',
+    border: '#d5dbe1',
+    wire: '#3a4450',
+    flow: '#f0b429',
+    teal: '#1f9d8f',
+    red: '#e94b4b',
     gold: '#d99416',
-    blue: '#3a80c0',
-    grid: '#e6e9e7'
+    blue: '#3a7fc0',
+    grid: '#e4e7e2',
+    face: '#fbfaf6'
   },
   dark: {
     bg: '#101827',
@@ -100,9 +59,12 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     red: '#ff707c',
     gold: '#fbbf24',
     blue: '#65b6ef',
-    grid: '#2a394d'
+    grid: '#2a394d',
+    face: '#1a2638'
   }
 };
+
+type Pt = [number, number];
 
 function text(
   ctx: CanvasRenderingContext2D,
@@ -137,13 +99,16 @@ function rounded(
 
 function wire(
   ctx: CanvasRenderingContext2D,
-  points: Array<[number, number]>,
+  points: Pt[],
   color: string,
+  width: number,
   dashed = false
 ): void {
   ctx.strokeStyle = color;
-  ctx.lineWidth = dashed ? 2 : 5;
-  ctx.setLineDash(dashed ? [7, 7] : []);
+  ctx.lineWidth = width;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.setLineDash(dashed ? [8, 7] : []);
   ctx.beginPath();
   points.forEach(([x, y], index) => {
     if (index === 0) ctx.moveTo(x, y);
@@ -153,65 +118,78 @@ function wire(
   ctx.setLineDash([]);
 }
 
+function pathLength(points: Pt[]): number {
+  let len = 0;
+  for (let i = 1; i < points.length; i += 1) {
+    len += Math.hypot(
+      points[i][0] - points[i - 1][0],
+      points[i][1] - points[i - 1][1]
+    );
+  }
+  return len;
+}
+
+function pointAt(points: Pt[], distance: number): Pt {
+  let remain = distance;
+  for (let i = 1; i < points.length; i += 1) {
+    const dx = points[i][0] - points[i - 1][0];
+    const dy = points[i][1] - points[i - 1][1];
+    const seg = Math.hypot(dx, dy);
+    if (remain <= seg) {
+      const t = seg < 1e-6 ? 0 : remain / seg;
+      return [points[i - 1][0] + dx * t, points[i - 1][1] + dy * t];
+    }
+    remain -= seg;
+  }
+  return points[points.length - 1];
+}
+
 function flowDots(
   ctx: CanvasRenderingContext2D,
-  points: Array<[number, number]>,
+  points: Pt[],
   phase: number,
-  p: Palette
+  p: Palette,
+  radius: number
 ): void {
+  const len = pathLength(points);
+  if (len < 8) return;
+  const spacing = Math.max(28, len / 14);
+  const offset = (((phase * 40) % spacing) + spacing) % spacing;
   ctx.fillStyle = p.flow;
-  for (let i = 0; i < points.length; i += 1) {
-    const [x, y] = points[i];
-    const offset =
-      ((phase * GEOMETRY.flowSpacing + i * GEOMETRY.flowSpacing) %
-        FLOW_PERIOD) -
-      FLOW_PERIOD / 2;
-    if (Math.abs(offset) < 40) {
-      ctx.beginPath();
-      ctx.arc(x + offset * 0.12, y + offset * 0.12, 4, 0, Math.PI * 2);
-      ctx.fill();
-    }
+  for (let d = offset; d < len; d += spacing) {
+    const [x, y] = pointAt(points, d);
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
   }
 }
 
-function drawMeter(
+function drawCircleMeter(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
+  r: number,
   letter: string,
-  value: string,
   p: Palette,
-  accent: string
+  accent: string,
+  s: number
 ): void {
   ctx.fillStyle = p.panel;
   ctx.strokeStyle = p.wire;
-  ctx.lineWidth = 4;
+  ctx.lineWidth = 3.2 * s;
   ctx.beginPath();
-  ctx.arc(x, y, GEOMETRY.meterRadius, 0, Math.PI * 2);
+  ctx.arc(x, y, r, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
-  text(ctx, letter, x, y - 3, p.ink, 26, 'center', 700);
+  text(ctx, letter, x, y, p.ink, 22 * s, 'center', 700);
   ctx.fillStyle = accent;
   ctx.beginPath();
-  ctx.arc(
-    x - GEOMETRY.meterRadius + 2,
-    y + GEOMETRY.meterRadius - 3,
-    6,
-    0,
-    Math.PI * 2
-  );
+  ctx.arc(x - r + 3 * s, y + r - 2 * s, 5 * s, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = p.wire;
   ctx.beginPath();
-  ctx.arc(
-    x + GEOMETRY.meterRadius - 2,
-    y + GEOMETRY.meterRadius - 3,
-    6,
-    0,
-    Math.PI * 2
-  );
+  ctx.arc(x + r - 3 * s, y + r - 2 * s, 5 * s, 0, Math.PI * 2);
   ctx.fill();
-  text(ctx, value, x, y + GEOMETRY.meterRadius + 21, accent, 14, 'center', 700);
 }
 
 function drawResistor(
@@ -219,427 +197,335 @@ function drawResistor(
   x: number,
   y: number,
   width: number,
-  label: string,
-  p: Palette
+  height: number,
+  p: Palette,
+  s: number
 ): void {
   ctx.fillStyle = p.soft;
   ctx.strokeStyle = p.wire;
-  ctx.lineWidth = 4;
-  rounded(ctx, x, y - 16, width, 32, 7);
+  ctx.lineWidth = 3.2 * s;
+  rounded(ctx, x, y - height / 2, width, height, 6);
   ctx.fill();
   ctx.stroke();
-  const stripeWidth = width / 5;
-  [p.red, p.teal, p.gold, p.blue].forEach((color, index) => {
+  const stripeW = 5 * s;
+  const colors = [p.red, p.teal, p.gold, p.blue];
+  colors.forEach((color, i) => {
     ctx.fillStyle = color;
-    ctx.fillRect(x + stripeWidth * (index + 0.5), y - 14, 5, 28);
+    ctx.fillRect(
+      x + width * (0.18 + i * 0.18),
+      y - height / 2 + 2 * s,
+      stripeW,
+      height - 4 * s
+    );
   });
-  text(ctx, label, x + width / 2, y + 48, p.muted, 14, 'center', 700);
 }
 
 function drawRheostat(
   ctx: CanvasRenderingContext2D,
-  state: ResistorState,
-  p: Palette
-): void {
-  const x = GEOMETRY.rheostatX;
-  const y = GEOMETRY.rheostatY;
-  const width = GEOMETRY.rheostatWidth;
+  x: number,
+  y: number,
+  width: number,
+  position: number,
+  p: Palette,
+  s: number
+): { sliderX: number } {
   ctx.strokeStyle = p.wire;
-  ctx.lineWidth = 3;
+  ctx.lineWidth = 2.6 * s;
   ctx.beginPath();
   ctx.moveTo(x, y);
   ctx.lineTo(x + width, y);
   ctx.stroke();
   ctx.strokeStyle = p.muted;
-  ctx.lineWidth = 12;
+  ctx.lineWidth = 10 * s;
   ctx.beginPath();
-  ctx.moveTo(x + 18, y);
-  ctx.lineTo(x + width - 18, y);
+  ctx.moveTo(x + 16 * s, y);
+  ctx.lineTo(x + width - 16 * s, y);
   ctx.stroke();
+  const sliderX = x + 16 * s + position * (width - 32 * s);
   ctx.strokeStyle = p.gold;
-  ctx.lineWidth = 4;
-  const activeEnd = x + 18 + state.params.rheostatPosition * (width - 36);
+  ctx.lineWidth = 3.4 * s;
   ctx.beginPath();
-  ctx.moveTo(x + 18, y);
-  ctx.lineTo(activeEnd, y);
+  ctx.moveTo(x + 16 * s, y);
+  ctx.lineTo(sliderX, y);
   ctx.stroke();
   ctx.fillStyle = p.teal;
-  rounded(ctx, activeEnd - 12, y - 22, 24, 20, 5);
+  rounded(ctx, sliderX - 11 * s, y - 20 * s, 22 * s, 18 * s, 4);
   ctx.fill();
   ctx.fillStyle = p.wire;
   ctx.beginPath();
-  ctx.arc(x, y, 7, 0, Math.PI * 2);
-  ctx.arc(x + width, y, 7, 0, Math.PI * 2);
+  ctx.arc(x, y, 6 * s, 0, Math.PI * 2);
+  ctx.arc(x + width, y, 6 * s, 0, Math.PI * 2);
   ctx.fill();
-  text(ctx, '滑动变阻器 R', x + width / 2, y + 32, p.muted, 14, 'center', 700);
-  text(ctx, 'A', x - 16, y + 3, p.ink, 12, 'right', 700);
-  text(ctx, 'B', x + width + 16, y + 3, p.ink, 12, 'left', 700);
-  text(ctx, 'C', activeEnd, y - 33, p.teal, 12, 'center', 700);
+  text(ctx, 'A', x - 14 * s, y, p.ink, 11 * s, 'right', 700);
+  text(ctx, 'B', x + width + 14 * s, y, p.ink, 11 * s, 'left', 700);
+  return { sliderX };
 }
 
 function drawSource(
   ctx: CanvasRenderingContext2D,
-  state: ResistorState,
-  p: Palette
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  p: Palette,
+  s: number
 ): void {
-  const x = GEOMETRY.sourceX;
-  const y = GEOMETRY.sourceY;
   ctx.fillStyle = p.soft;
   ctx.strokeStyle = p.wire;
-  ctx.lineWidth = 4;
-  rounded(
-    ctx,
-    x - GEOMETRY.sourceWidth / 2,
-    y - GEOMETRY.sourceHeight / 2,
-    GEOMETRY.sourceWidth,
-    GEOMETRY.sourceHeight,
-    10
-  );
+  ctx.lineWidth = 3.2 * s;
+  rounded(ctx, x - w / 2, y - h / 2, w, h, 10);
   ctx.fill();
   ctx.stroke();
   ctx.strokeStyle = p.red;
-  ctx.lineWidth = 7;
+  ctx.lineWidth = 6 * s;
   ctx.beginPath();
-  ctx.moveTo(x - 34, y - 18);
-  ctx.lineTo(x - 34, y + 18);
+  ctx.moveTo(x - 28 * s, y - 16 * s);
+  ctx.lineTo(x - 28 * s, y + 16 * s);
   ctx.stroke();
   ctx.strokeStyle = p.wire;
-  ctx.lineWidth = 7;
+  ctx.lineWidth = 6 * s;
   ctx.beginPath();
-  ctx.moveTo(x + 28, y - 15);
-  ctx.lineTo(x + 28, y + 15);
+  ctx.moveTo(x + 24 * s, y - 13 * s);
+  ctx.lineTo(x + 24 * s, y + 13 * s);
   ctx.stroke();
-  text(ctx, '+', x - 55, y - 23, p.red, 18, 'center', 700);
-  text(ctx, '−', x + 55, y - 23, p.ink, 18, 'center', 700);
-  text(
-    ctx,
-    `直流电源 E=${state.params.supplyVoltage.toFixed(1)} V`,
-    x,
-    y + 56,
-    p.muted,
-    14,
-    'center',
-    700
-  );
+  text(ctx, '+', x - 46 * s, y - 20 * s, p.red, 16 * s, 'center', 700);
+  text(ctx, '−', x + 46 * s, y - 20 * s, p.ink, 16 * s, 'center', 700);
+}
+
+function drawAnalogMeter(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  value: number,
+  max: number,
+  letter: string,
+  p: Palette,
+  s: number
+): void {
+  ctx.fillStyle = p.panel;
+  ctx.strokeStyle = p.wire;
+  ctx.lineWidth = 3.4 * s;
+  rounded(ctx, x - w / 2, y - h / 2, w, h, 12);
+  ctx.fill();
+  ctx.stroke();
+  const cx = x;
+  const cy = y + h * 0.22;
+  const r = w * 0.38;
+  ctx.fillStyle = p.face;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, Math.PI, 0);
+  ctx.fill();
+  ctx.strokeStyle = p.border;
+  ctx.lineWidth = 1.4 * s;
+  ctx.stroke();
+  const t = Math.max(0, Math.min(1, value / max));
+  const ang = Math.PI + t * Math.PI;
+  ctx.strokeStyle = p.red;
+  ctx.lineWidth = 2.4 * s;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(ang) * r * 0.82, cy + Math.sin(ang) * r * 0.82);
+  ctx.stroke();
+  ctx.fillStyle = p.ink;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 4 * s, 0, Math.PI * 2);
+  ctx.fill();
+  text(ctx, letter, cx, y - h / 2 + 16 * s, p.muted, 12 * s, 'center', 700);
 }
 
 function drawCircuit(
   ctx: CanvasRenderingContext2D,
   state: ResistorState,
-  p: Palette
+  p: Palette,
+  s: number
 ): void {
-  const tx = GEOMETRY.targetX;
-  const ty = GEOMETRY.targetY;
-  const targetRight = tx + GEOMETRY.targetWidth;
-  const leftMeterRight = GEOMETRY.meterAX + GEOMETRY.meterRadius;
-  const mainPath: Array<[number, number]> = [
-    [GEOMETRY.busLeft, GEOMETRY.sourceY],
-    [GEOMETRY.busLeft, ty],
-    [GEOMETRY.meterAX - GEOMETRY.meterRadius, ty],
-    [leftMeterRight, ty],
-    [tx, ty],
-    [targetRight, ty],
-    [GEOMETRY.busRight, ty],
-    [GEOMETRY.busRight, GEOMETRY.sourceY],
-    [GEOMETRY.sourceX + GEOMETRY.sourceWidth / 2, GEOMETRY.sourceY]
+  const source = { x: 480, y: 610 };
+  const analogV = { x: 168, y: 610 };
+  const analogA = { x: 792, y: 610 };
+  const rheostat = { x: 250, y: 430, w: 380 };
+  const rx = { x: 430, y: 268, w: 132, h: 34 };
+  const meterA = { x: 250, y: 268, r: 36 };
+  const meterV = { x: 548, y: 132, r: 36 };
+  const busL = 108;
+  const busR = 820;
+  const rxRight = rx.x + rx.w;
+  const sliderX =
+    rheostat.x + 16 * s + state.params.rheostatPosition * (rheostat.w - 32 * s);
+  const lw = 4.2 * s;
+
+  const main: Pt[] = [
+    [source.x - 78, source.y],
+    [busL, source.y],
+    [busL, meterA.y],
+    [meterA.x - meterA.r, meterA.y],
+    [meterA.x + meterA.r, meterA.y],
+    [rx.x, rx.y],
+    [rxRight, rx.y],
+    [busR, rx.y],
+    [busR, source.y],
+    [source.x + 78, source.y]
   ];
-  wire(ctx, mainPath, p.wire);
-  const rheostatPath: Array<[number, number]> = [
-    [GEOMETRY.busLeft, GEOMETRY.sourceY],
-    [GEOMETRY.busLeft, GEOMETRY.rheostatY],
-    [GEOMETRY.rheostatX, GEOMETRY.rheostatY]
+  wire(ctx, main, p.wire, lw);
+
+  const rheoFeed: Pt[] = [
+    [busL, source.y],
+    [busL, rheostat.y],
+    [rheostat.x, rheostat.y]
   ];
-  wire(
-    ctx,
-    rheostatPath,
-    state.params.circuitMode === 'limiting' ? p.gold : p.teal
-  );
-  const activeEnd =
-    GEOMETRY.rheostatX +
-    18 +
-    state.params.rheostatPosition * (GEOMETRY.rheostatWidth - 36);
-  wire(
-    ctx,
-    [
-      [activeEnd, GEOMETRY.rheostatY],
-      [activeEnd, ty + 60],
-      [tx, ty + 60],
-      [tx, ty]
-    ],
-    state.params.circuitMode === 'limiting' ? p.gold : p.teal,
-    state.params.circuitMode === 'divider'
-  );
+  wire(ctx, rheoFeed, p.wire, lw);
+
   if (state.params.circuitMode === 'divider') {
     wire(
       ctx,
       [
-        [GEOMETRY.rheostatX + GEOMETRY.rheostatWidth, GEOMETRY.rheostatY],
-        [GEOMETRY.rheostatX + GEOMETRY.rheostatWidth + 34, GEOMETRY.rheostatY],
-        [GEOMETRY.rheostatX + GEOMETRY.rheostatWidth + 34, GEOMETRY.sourceY]
+        [rheostat.x + rheostat.w, rheostat.y],
+        [busR, rheostat.y],
+        [busR, source.y]
+      ],
+      p.wire,
+      lw
+    );
+    wire(
+      ctx,
+      [
+        [sliderX, rheostat.y],
+        [sliderX, rx.y + 72],
+        [rx.x, rx.y + 72],
+        [rx.x, rx.y]
       ],
       p.teal,
+      3.2 * s,
       true
     );
+  } else {
+    wire(
+      ctx,
+      [
+        [sliderX, rheostat.y],
+        [sliderX, rx.y + 72],
+        [rx.x, rx.y + 72],
+        [rx.x, rx.y]
+      ],
+      p.gold,
+      lw
+    );
   }
-  const vLeft =
-    state.params.meterMode === 'internal' ? GEOMETRY.meterAX + 8 : tx;
-  const vRight = targetRight;
+
+  const vLeft = state.params.meterMode === 'internal' ? meterA.x + 8 : rx.x;
   wire(
     ctx,
     [
-      [vLeft, ty],
-      [vLeft, GEOMETRY.meterVY + GEOMETRY.meterRadius],
-      [GEOMETRY.meterVX - 20, GEOMETRY.meterVY + GEOMETRY.meterRadius]
+      [vLeft, rx.y],
+      [vLeft, meterV.y + meterV.r],
+      [meterV.x - 18, meterV.y + meterV.r]
     ],
     p.blue,
+    2.4 * s,
     true
   );
   wire(
     ctx,
     [
-      [vRight, ty],
-      [vRight, GEOMETRY.meterVY + GEOMETRY.meterRadius],
-      [GEOMETRY.meterVX + 20, GEOMETRY.meterVY + GEOMETRY.meterRadius]
+      [rxRight, rx.y],
+      [rxRight, meterV.y + meterV.r],
+      [meterV.x + 18, meterV.y + meterV.r]
     ],
     p.blue,
+    2.4 * s,
     true
   );
-  flowDots(ctx, mainPath, state.flowPhase, p);
-  drawRheostat(ctx, state, p);
-  drawResistor(
+
+  flowDots(ctx, main, state.flowPhase, p, 3.4 * s);
+
+  drawRheostat(
     ctx,
-    tx,
-    ty,
-    GEOMETRY.targetWidth,
-    `Rx=${state.params.targetResistance.toFixed(0)} Ω`,
-    p
-  );
-  drawMeter(
-    ctx,
-    GEOMETRY.meterAX,
-    GEOMETRY.meterAY,
-    'A',
-    `${state.measuredCurrent.toFixed(3)} A`,
+    rheostat.x,
+    rheostat.y,
+    rheostat.w,
+    state.params.rheostatPosition,
     p,
-    p.red
+    s
   );
-  drawMeter(
+  drawResistor(ctx, rx.x, rx.y, rx.w, rx.h, p, s);
+  drawCircleMeter(ctx, meterA.x, meterA.y, meterA.r, 'A', p, p.red, s);
+  drawCircleMeter(ctx, meterV.x, meterV.y, meterV.r, 'V', p, p.blue, s);
+  drawSource(ctx, source.x, source.y, 148, 58, p, s);
+  drawAnalogMeter(
     ctx,
-    GEOMETRY.meterVX,
-    GEOMETRY.meterVY,
+    analogV.x,
+    analogV.y,
+    168,
+    118,
+    state.voltageMeasured,
+    Math.max(6, state.params.supplyVoltage),
     'V',
-    `${state.voltageMeasured.toFixed(2)} V`,
     p,
-    p.blue
+    s
   );
-  drawSource(ctx, state, p);
+  drawAnalogMeter(
+    ctx,
+    analogA.x,
+    analogA.y,
+    168,
+    118,
+    state.measuredCurrent,
+    1,
+    'A',
+    p,
+    s
+  );
+
   text(
     ctx,
-    state.params.circuitMode === 'divider' ? '分压接法' : '限流接法',
-    FIELD_RIGHT - 12,
-    FIELD_TOP + 4,
-    p.teal,
-    18,
-    'right',
+    '电压表',
+    meterV.x,
+    meterV.y - meterV.r - 14 * s,
+    p.ink,
+    13 * s,
+    'center',
     700
   );
   text(
     ctx,
-    state.params.meterMode === 'external' ? '电流表外接' : '电流表内接',
-    FIELD_RIGHT - 12,
-    FIELD_TOP + 30,
-    p.blue,
-    14,
-    'right',
+    '电流表',
+    meterA.x,
+    meterA.y - meterA.r - 14 * s,
+    p.ink,
+    13 * s,
+    'center',
     700
   );
   text(
     ctx,
     '待测电阻 Rx',
-    tx + GEOMETRY.targetWidth / 2,
-    ty - 42,
+    rx.x + rx.w / 2,
+    rx.y - 28 * s,
     p.ink,
-    14,
-    'center',
-    700
-  );
-}
-
-function drawComparison(
-  ctx: CanvasRenderingContext2D,
-  state: ResistorState,
-  p: Palette,
-  scale: number
-): void {
-  rounded(
-    ctx,
-    CARD_X,
-    GEOMETRY.comparisonY,
-    CARD_W,
-    GEOMETRY.comparisonHeight,
-    12
-  );
-  ctx.fillStyle = p.panel;
-  ctx.fill();
-  ctx.strokeStyle = p.border;
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-  text(
-    ctx,
-    '误差方向',
-    CARD_X + 16,
-    GEOMETRY.comparisonY + 22,
-    p.muted,
-    14 * scale,
-    'left',
-    700
-  );
-  const lineX = CARD_X + 18;
-  const lineY = GEOMETRY.comparisonY + COMPARISON_LINE_OFFSET;
-  const lineWidth = CARD_W - 36;
-  ctx.strokeStyle = p.border;
-  ctx.lineWidth = 8;
-  ctx.beginPath();
-  ctx.moveTo(lineX, lineY);
-  ctx.lineTo(lineX + lineWidth, lineY);
-  ctx.stroke();
-  const actualX = lineX + lineWidth * 0.5;
-  const measuredX =
-    lineX +
-    lineWidth *
-      (0.5 + Math.max(-0.45, Math.min(0.45, (state.errorPercent / 100) * 0.5)));
-  ctx.strokeStyle = p.ink;
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(actualX, lineY - 16);
-  ctx.lineTo(actualX, lineY + 16);
-  ctx.stroke();
-  ctx.fillStyle = state.errorPercent < 0 ? p.teal : p.red;
-  ctx.beginPath();
-  ctx.arc(measuredX, lineY, 8, 0, Math.PI * 2);
-  ctx.fill();
-  text(ctx, 'Rx', actualX, lineY + 28, p.ink, 12 * scale, 'center', 700);
-  text(
-    ctx,
-    'R测',
-    measuredX,
-    lineY - 28,
-    state.errorPercent < 0 ? p.teal : p.red,
-    12 * scale,
+    13 * s,
     'center',
     700
   );
   text(
     ctx,
-    `${state.errorPercent >= 0 ? '+' : ''}${state.errorPercent.toFixed(1)}%`,
-    CARD_X + CARD_W - 16,
-    GEOMETRY.comparisonY + 22,
-    state.errorPercent < 0 ? p.teal : p.red,
-    15 * scale,
-    'right',
-    700
-  );
-}
-
-function drawPanel(
-  ctx: CanvasRenderingContext2D,
-  state: ResistorState,
-  p: Palette,
-  scale: number
-): void {
-  ctx.fillStyle = p.panel;
-  ctx.fillRect(FIELD_W, 0, BASE_W - FIELD_W, BASE_H);
-  text(ctx, '电阻测量', PANEL_X + 18, 38, p.ink, 20 * scale, 'left', 700);
-  ctx.strokeStyle = p.teal;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(PANEL_X + 18, HEADER_RULE_Y);
-  ctx.lineTo(PANEL_X + PANEL_W - 22, HEADER_RULE_Y);
-  ctx.stroke();
-  rounded(ctx, CARD_X, READOUT_Y, CARD_W, READOUT_H, 12);
-  ctx.fillStyle = p.panel;
-  ctx.fill();
-  ctx.strokeStyle = p.border;
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-  const rows = [
-    ['电压表读数 U测', `${state.voltageMeasured.toFixed(2)} V`, p.blue],
-    ['电流表读数 I测', `${state.measuredCurrent.toFixed(3)} A`, p.red],
-    ['电阻测量值 R测', `${state.measuredResistance.toFixed(2)} Ω`, p.ink],
-    ['真实电阻 Rx', `${state.params.targetResistance.toFixed(2)} Ω`, p.ink]
-  ];
-  rows.forEach(([label, value, color], index) => {
-    const y = READOUT_Y + 24 + index * 37;
-    text(ctx, label, CARD_X + 16, y, p.muted, 13 * scale, 'left', 600);
-    text(ctx, value, CARD_X + CARD_W - 16, y, color, 16 * scale, 'right', 700);
-    if (index < rows.length - 1) {
-      ctx.strokeStyle = p.border;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(CARD_X + 16, y + 18);
-      ctx.lineTo(CARD_X + CARD_W - 16, y + 18);
-      ctx.stroke();
-    }
-  });
-  rounded(ctx, CARD_X, FORMULA_Y, CARD_W, FORMULA_H, 12);
-  ctx.fillStyle = p.panel;
-  ctx.fill();
-  ctx.strokeStyle = p.border;
-  ctx.stroke();
-  text(
-    ctx,
-    '接法结论',
-    CARD_X + 16,
-    FORMULA_Y + 22,
+    '滑动变阻器 R',
+    rheostat.x + rheostat.w / 2,
+    rheostat.y + 28 * s,
     p.muted,
-    14 * scale,
-    'left',
+    13 * s,
+    'center',
     700
   );
   text(
     ctx,
-    state.status,
-    CARD_X + 16,
-    FORMULA_Y + 50,
-    state.errorPercent < 0 ? p.teal : p.red,
-    15 * scale,
-    'left',
-    700
-  );
-  const relation =
-    state.params.meterMode === 'external' ? 'R测 = Rx ∥ RV' : 'R测 = Rx + RA';
-  text(
-    ctx,
-    relation,
-    CARD_X + 16,
-    FORMULA_Y + 76,
-    p.ink,
-    16 * scale,
-    'left',
-    700
-  );
-  text(
-    ctx,
-    state.params.circuitMode === 'divider'
-      ? '分压：U 可从 0 起'
-      : '限流：串联控流',
-    CARD_X + 16,
-    FORMULA_Y + 102,
+    '直流电源 E',
+    source.x,
+    source.y + 44 * s,
     p.muted,
-    13 * scale,
-    'left',
-    600
-  );
-  drawComparison(ctx, state, p, scale);
-  text(
-    ctx,
-    `E=${state.params.supplyVoltage.toFixed(1)} V · R滑=${state.rheostatResistance.toFixed(1)} Ω`,
-    CARD_X + 16,
-    GEOMETRY.panelBottomY - 18,
-    p.muted,
-    13 * scale,
-    'left',
-    600
+    13 * s,
+    'center',
+    700
   );
 }
 
@@ -663,31 +549,32 @@ export function createResistorView(options: CreateResistorViewOptions = {}) {
     const width = stage.cssWidth;
     const height = stage.cssHeight;
     const fit = Math.min(width / BASE_W, height / BASE_H);
+    const offsetX = (width - BASE_W * fit) / 2;
     const offsetY = (height - BASE_H * fit) / 2;
-    const scale = env.contentScale() * stage.responsiveScale;
+    const s =
+      env.contentScale() * Math.max(0.85, Math.min(1.2, stage.responsiveScale));
     const p = PALETTE[env.theme];
     ctx.clearRect(0, 0, width, height);
     ctx.save();
-    ctx.translate(0, offsetY);
+    ctx.translate(offsetX, offsetY);
     ctx.scale(fit, fit);
     ctx.fillStyle = p.bg;
     ctx.fillRect(0, 0, BASE_W, BASE_H);
     ctx.strokeStyle = p.grid;
     ctx.lineWidth = 1;
-    for (let x = FIELD_LEFT; x <= FIELD_RIGHT; x += 42) {
+    for (let x = 24; x <= BASE_W - 24; x += 28) {
       ctx.beginPath();
-      ctx.moveTo(x, FIELD_TOP);
-      ctx.lineTo(x, FIELD_BOTTOM);
+      ctx.moveTo(x, 24);
+      ctx.lineTo(x, BASE_H - 24);
       ctx.stroke();
     }
-    for (let y = FIELD_TOP; y <= FIELD_BOTTOM; y += 42) {
+    for (let y = 24; y <= BASE_H - 24; y += 28) {
       ctx.beginPath();
-      ctx.moveTo(FIELD_LEFT, y);
-      ctx.lineTo(FIELD_RIGHT, y);
+      ctx.moveTo(24, y);
+      ctx.lineTo(BASE_W - 24, y);
       ctx.stroke();
     }
-    drawCircuit(ctx, state, p);
-    drawPanel(ctx, state, p, scale);
+    drawCircuit(ctx, state, p, s);
     ctx.restore();
   }
   return {

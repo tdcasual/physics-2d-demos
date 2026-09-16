@@ -1,9 +1,11 @@
 import type { DemoRenderHints } from '../../platform/demo-profile';
-import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import type { SceneLifecycle } from '../../platform/scene-contract';
+import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createStandardSceneEntry } from '../scene-entry-helpers';
 import { createResistorView } from './scene.view';
 import {
+  asCircuitMode,
+  asMeterMode,
   createResistorSim,
   type ResistorCircuitMode,
   type ResistorMeterMode,
@@ -17,19 +19,10 @@ export type CreateResistorSceneOptions = {
   mode?: TeachingMode;
   demoHints?: DemoRenderHints;
   onReadout?: (state: ResistorState) => void;
+  initialParams?: Partial<ResistorParams>;
 };
 
-export function asCircuitMode(value: unknown): ResistorCircuitMode | undefined {
-  if (value === 'divider' || value === 'limiting') return value;
-  if (typeof value === 'number') return value > 0 ? 'limiting' : 'divider';
-  return undefined;
-}
-
-export function asMeterMode(value: unknown): ResistorMeterMode | undefined {
-  if (value === 'external' || value === 'internal') return value;
-  if (typeof value === 'number') return value > 0 ? 'internal' : 'external';
-  return undefined;
-}
+export { asCircuitMode, asMeterMode };
 
 export function createResistorScene(
   options: CreateResistorSceneOptions = {}
@@ -44,7 +37,7 @@ export function createResistorScene(
   getReadoutItems(): Array<{ key: string; label: string; value: string }>;
   subscribe(listener: () => void): () => void;
 } {
-  const sim = createResistorSim();
+  const sim = createResistorSim(options.initialParams);
   const view = createResistorView({
     canvas: options.canvas,
     theme: options.theme ?? 'light',
@@ -97,3 +90,5 @@ export function createResistorScene(
     getReadoutItems
   };
 }
+
+export type { ResistorCircuitMode, ResistorMeterMode };

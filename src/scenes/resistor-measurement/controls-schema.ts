@@ -15,6 +15,11 @@ export const resistorControlsSchema: ControlsSchema = {
             { id: 'divider', label: '分压接法' },
             { id: 'limiting', label: '限流接法' }
           ]
+        },
+        {
+          type: 'hint',
+          key: 'circuitHint',
+          lines: ['分压：U 可从近零起；限流：串联控流']
         }
       ]
     },
@@ -66,6 +71,26 @@ export const resistorControlsSchema: ControlsSchema = {
           step: 0.5,
           value: 6,
           unit: 'V'
+        },
+        {
+          type: 'slider',
+          key: 'ammeterResistance',
+          label: '电流表内阻 RA',
+          min: 0.1,
+          max: 10,
+          step: 0.1,
+          value: 1,
+          unit: 'Ω'
+        },
+        {
+          type: 'slider',
+          key: 'voltmeterResistance',
+          label: '电压表内阻 RV',
+          min: 50,
+          max: 2000,
+          step: 10,
+          value: 250,
+          unit: 'Ω'
         }
       ]
     },
@@ -84,8 +109,8 @@ export const resistorControlsSchema: ControlsSchema = {
           type: 'hint',
           key: 'formula',
           lines: [
-            '外接：R测 = Rx ∥ RV',
-            '内接：R测 = Rx + RA',
+            '外接：R测 = Rx ∥ RV < Rx',
+            '内接：R测 = Rx + RA > Rx',
             '分压调 U，限流调 I'
           ]
         }

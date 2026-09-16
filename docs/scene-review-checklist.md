@@ -36,7 +36,7 @@
 |  21 | 打点计时器原理演示                                    | 力学 | [`ticker-timer`](../src/scenes/ticker-timer/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/0e146679-df0c-429f-b982-9e3c1c0c2367) · [封面](https://img.svgzhenli.com/gallery-assets/covers/aorki9og3yq1783606121977.png)  |  ✅  |
 |  22 | 带电粒子在匀强磁场中的圆周运动                        | 电磁 | [`charged-particle-circle`](../src/scenes/charged-particle-circle/scene.meta.ts)                   | [详情](https://app.svgzhenli.com/resource/bcf1789c-95eb-480d-9b4e-e9eb1ee6210c) · [封面](https://img.svgzhenli.com/gallery-assets/covers/ohou8hat4jj1774711562323.png)  |  ✅  |
 |  23 | 小球落到竖直弹簧与简谐运动                            | 力学 | [`spring-ball`](../src/scenes/spring-ball/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/75ac35a6-d777-4e05-b192-5ab524c74832) · [封面](https://img.svgzhenli.com/gallery-assets/covers/532og1b4u851788370155234.png)  |  ☑   |
-|  24 | 电阻测量法设计（限流接法、分压接法、电流表的内外接）  | 电磁 | [`resistor-measurement`](../src/scenes/resistor-measurement/scene.meta.ts)                         | [详情](https://app.svgzhenli.com/resource/250ca6cd-36d9-4ed5-9983-d4a2e9058251) · [封面](https://img.svgzhenli.com/gallery-assets/covers/zq29kqwn07m1781283130413.png)  |  ☐   |
+|  24 | 电阻测量法设计（限流接法、分压接法、电流表的内外接）  | 电磁 | [`resistor-measurement`](../src/scenes/resistor-measurement/scene.meta.ts)                         | [详情](https://app.svgzhenli.com/resource/250ca6cd-36d9-4ed5-9983-d4a2e9058251) · [封面](https://img.svgzhenli.com/gallery-assets/covers/zq29kqwn07m1781283130413.png)  |  ☑   |
 |  25 | 高精度测量工具读数原理（游标卡尺&螺旋测微器）         | 力学 | [`precision-tools`](../src/scenes/precision-tools/scene.meta.ts)                                   | [详情](https://app.svgzhenli.com/resource/db871107-556d-4e2f-936e-52ebd2767a54) · [封面](https://img.svgzhenli.com/gallery-assets/covers/08nk6xz5mriq1778077856552.png) |  ☐   |
 |  26 | 测电源电动势和内阻实验                                | 电磁 | [`emf-internal-resistance`](../src/scenes/emf-internal-resistance/scene.meta.ts)                   | [详情](https://app.svgzhenli.com/resource/11ed455d-d6bc-4ac7-82a3-0a57b2ef969f) · [封面](https://img.svgzhenli.com/gallery-assets/covers/h7646etm75j1787678239426.png)  |  ☐   |
 |  27 | 电势电势能与E-x和φ-x图象                              | 电磁 | [`potential-energy-graphs`](../src/scenes/potential-energy-graphs/scene.meta.ts)                   | [详情](https://app.svgzhenli.com/resource/ff3b0997-708a-4845-8ce1-1f8a1a198337) · [封面](https://img.svgzhenli.com/gallery-assets/covers/gqj6h49siwi1787678193054.png)  |  ☐   |
@@ -326,6 +326,15 @@
 - 交互与布局验证：深色/浅色与演示模式通过；h=2x₀ 预设、自动播放/慢动作、播放暂停、重置、图表/控制/数据 tab 和 URL 初值通过。浏览器复核确认动画区无图表/数据卡，图表完整显示 h=0.50 m 的负位移自由落体段，数据读数与物理推导一致，无重叠或溢出。
 - 工程验证：专项 sim/view `9/9`；`pnpm verify:scene spring-ball` 全 `7/7` 步骤通过（`3132 passed / 129 skipped`），tsc、ESLint、生产构建、布局契约、bundle 预算通过（场景页 JS `135.13 kB / 180 kB`）。最终只读 Grok Build 返回 `AGREED: spring-ball is ready to commit.`
 - 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/75ac35a6-d777-4e05-b192-5ab524c74832.md` · [原始详情](https://app.svgzhenli.com/resource/75ac35a6-d777-4e05-b192-5ab524c74832) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/532og1b4u851788370155234.png)
+
+### 24. 电阻测量法设计（限流、分压与电表接法） (`resistor-measurement`)
+
+- 状态：✅ Codex / Grok Build 交叉审计通过（2026-09-16）。
+- 修复：按 SVGZhenli 参考重构电源、滑动变阻器、Rx、电流表/电压表、导线和动态电流；动画 canvas 只保留电路装置与必要短标签，移除画布内数据卡、公式卡、结论卡和误差比较图；读数进入标准数据区，公式进入折叠控制区，`hasGraph:false`，采用 `split-right` 与响应式缩放。
+- 物理核验：外接电压表分流，`R测=Rx∥RV<Rx`；内接电流表分压，`R测=Rx+RA>Rx`；分压滑片 p=0 输出近零、p=1 接近 E，限流接法串联控流；Rx、RA、RV、E 与滑片有限值夹取，电压/电流/测量电阻/误差读数一致。
+- 交互与布局验证：URL 0/1 和数字参数首帧生效，重置恢复进入页面基线并同步控件；内外接与分压/限流切换改变接线及读数，分压 p=0 显示 0.00 V/0.000 A，p=1 显示 6.00 V；浅色/深色、演示模式、暂停/播放、控制/数据 tab 均通过，动画区无数据/公式泄漏且无溢出重叠。
+- 工程验证：专项 sim/view `11/11`；`pnpm verify:scene resistor-measurement` 全 `7/7` 步骤通过（`3134 passed / 129 skipped`），tsc、ESLint、生产构建、布局契约、bundle 预算与 `git diff --check` 通过（场景页 JS `135.65 kB / 180 kB`）。最终只读 Grok Build 返回 `AGREED: resistor-measurement is ready to commit.`
+- 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/250ca6cd-36d9-4ed5-9983-d4a2e9058251.md` · [原始详情](https://app.svgzhenli.com/resource/250ca6cd-36d9-4ed5-9983-d4a2e9058251) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/zq29kqwn07m1781283130413.png)
 
 ## 复审记录模板
 
