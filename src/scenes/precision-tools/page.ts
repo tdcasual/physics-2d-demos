@@ -1,14 +1,42 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
+import { readSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { precisionToolControlsSchema } from './controls-schema';
 import { asPrecisionMode, createPrecisionToolScene } from './scene.entry';
 import { precisionToolMeta } from './scene.meta';
-import type { PrecisionToolParams } from './scene.sim';
+import { asBool, type PrecisionToolParams } from './scene.sim';
+
+function asFiniteNumber(value: unknown): number | undefined {
+  const n = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+const rawInitialParams = readSceneParams(precisionToolMeta);
+const initialParams: Partial<PrecisionToolParams> = {};
+const initialMode = asPrecisionMode(rawInitialParams.mode);
+if (initialMode !== undefined) initialParams.mode = initialMode;
+const initialAdj = asFiniteNumber(rawInitialParams.adjustment);
+if (initialAdj !== undefined) initialParams.adjustment = initialAdj;
+for (const key of ['autoRun', 'showGuides', 'showReading'] as const) {
+  if (rawInitialParams[key] !== undefined)
+    initialParams[key] = asBool(rawInitialParams[key], true);
+}
+
+function syncControls(
+  renderer: ReturnType<typeof renderSchema>,
+  params: PrecisionToolParams
+): void {
+  renderer.setActive('mode', params.mode);
+  renderer.setValue('adjustment', params.adjustment);
+  renderer.setValue('autoRun', params.autoRun);
+  renderer.setValue('showGuides', params.showGuides);
+  renderer.setValue('showReading', params.showReading);
+}
 
 bootScenePage({
   meta: precisionToolMeta,
-  autoPlay: true,
+  autoPlay: initialParams.autoRun !== false,
   preferredLayout: 'split-right',
   layoutConfig: {
     defaultLeftRatio: 0.34,
@@ -21,7 +49,13 @@ bootScenePage({
   },
   createScene: ({ canvas, theme, mode, demoHints }) => {
     if (!canvas) throw new Error('precision-tools requires a canvas');
-    const scene = createPrecisionToolScene({ canvas, theme, mode, demoHints });
+    const scene = createPrecisionToolScene({
+      canvas,
+      theme,
+      mode,
+      demoHints,
+      initialParams
+    });
     const scheduler = createRenderScheduler(() => scene.render());
     const dispose = scene.dispose.bind(scene);
     return {
@@ -37,28 +71,33 @@ bootScenePage({
     };
   },
   createControls: ({ mount, scene, scheduleRender, writeParam }) => {
-    const render = scheduleRender ?? (() => scene.render());
+    const toolScene = scene as ReturnType<typeof createPrecisionToolScene>;
+    const render = scheduleRender ?? (() => toolScene.render());
     const renderer = renderSchema({
       mount,
       schema: precisionToolControlsSchema,
       onChange: (key, value) => {
         if (key === 'mode') {
-          const mode = asPrecisionMode(value) ?? 'caliper50';
-          scene.setParams({ mode });
-          renderer.setActive(key, mode);
+          const next = asPrecisionMode(value) ?? 'caliper50';
+          toolScene.setParams({ mode: next });
+          renderer.setActive(key, next);
+          writeParam?.(key, next);
         } else if (key === 'adjustment') {
-          scene.setParams({ adjustment: Number(value) });
+          const n = Number(value);
+          if (Number.isFinite(n)) {
+            toolScene.setParams({ adjustment: n });
+            writeParam?.(key, n);
+          }
         } else if (
           key === 'autoRun' ||
           key === 'showGuides' ||
           key === 'showReading'
         ) {
-          scene.setParams({
-            [key]: Boolean(value)
-          } as Partial<PrecisionToolParams>);
+          const on = asBool(value, true);
+          toolScene.setParams({ [key]: on } as Partial<PrecisionToolParams>);
+          writeParam?.(key, on ? 1 : 0);
         }
         render();
-        writeParam?.(key, value);
       },
       onAction: () => {}
     });
@@ -66,15 +105,16 @@ bootScenePage({
       setValue: (key: string, value: number | string | boolean) =>
         renderer.setValue(key, value),
       setActive: (key: string, value: string) => renderer.setActive(key, value),
+      refresh: () => syncControls(renderer, toolScene.getParams()),
       dispose: () => renderer.dispose()
     };
   },
   paramSync: {
     applyParam: (key, value, ctx) => {
       if (key === 'mode') {
-        const mode = asPrecisionMode(value) ?? 'caliper50';
-        ctx.scene.setParams({ mode });
-        ctx.setControlActive('mode', mode);
+        const next = asPrecisionMode(value) ?? 'caliper50';
+        ctx.scene.setParams({ mode: next });
+        ctx.setControlActive('mode', next);
         return true;
       }
       if (key === 'adjustment') {
@@ -86,7 +126,7 @@ bootScenePage({
         return true;
       }
       if (key === 'autoRun' || key === 'showGuides' || key === 'showReading') {
-        const on = Number(value) > 0;
+        const on = asBool(value, true);
         ctx.scene.setParams({ [key]: on } as Partial<PrecisionToolParams>);
         ctx.setControlValue(key, on);
         return true;

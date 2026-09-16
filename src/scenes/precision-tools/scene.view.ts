@@ -10,98 +10,50 @@ export type CreatePrecisionToolViewOptions = {
   demoHints?: DemoRenderHints;
 };
 
-const {
-  baseWidth: BASE_W,
-  baseHeight: BASE_H,
-  fieldWidth: FIELD_W,
-  panelX: PANEL_X,
-  panelWidth: PANEL_W,
-  fieldLeft: FIELD_LEFT,
-  fieldRight: FIELD_RIGHT,
-  fieldTop: FIELD_TOP,
-  fieldBottom: FIELD_BOTTOM,
-  scaleY: SCALE_Y,
-  scaleHeight: SCALE_H,
-  scaleSpanMm: SCALE_SPAN,
-  zoomY: ZOOM_Y,
-  zoomHeight: ZOOM_H,
-  zoomX: ZOOM_X,
-  zoomWidth: ZOOM_W,
-  cardX: CARD_X,
-  cardWidth: CARD_W,
-  headerRuleY: HEADER_RULE_Y,
-  readoutY: READOUT_Y,
-  readoutHeight: READOUT_H,
-  formulaY: FORMULA_Y,
-  formulaHeight: FORMULA_H,
-  detailY: DETAIL_Y,
-  detailHeight: DETAIL_H,
-  micrometerDivisions: MICROMETER_DIVISIONS,
-  caliperBodyInset: CALIPER_BODY_INSET,
-  caliperBodyTopOffset: CALIPER_BODY_TOP_OFFSET,
-  caliperBodyHeight: CALIPER_BODY_HEIGHT,
-  caliperJawInset: CALIPER_JAW_INSET,
-  caliperJawTopOffset: CALIPER_JAW_TOP_OFFSET,
-  caliperJawHeight: CALIPER_JAW_HEIGHT,
-  caliperTipTopOffset: CALIPER_TIP_TOP_OFFSET,
-  caliperTipReach: CALIPER_TIP_REACH,
-  caliperUpperTipInset: CALIPER_UPPER_TIP_INSET,
-  caliperCursorLineTopOffset: CALIPER_CURSOR_LINE_TOP_OFFSET,
-  zoomCenterLineOffset: ZOOM_CENTER_LINE_OFFSET,
-  zoomPrimaryTickHeight: ZOOM_PRIMARY_TICK_HEIGHT,
-  micrometerZoomMajorHeight: MICROMETER_ZOOM_MAJOR_HEIGHT
-} = precisionToolConstants;
-
 type Palette = {
   bg: string;
-  panel: string;
   soft: string;
   ink: string;
   muted: string;
   border: string;
   metal: string;
+  metalHi: string;
   metalEdge: string;
   tick: string;
   accent: string;
   blue: string;
-  red: string;
-  grid: string;
 };
 
 const PALETTE: Record<TeachingTheme, Palette> = {
   light: {
-    bg: '#fbfaf7',
-    panel: '#ffffff',
-    soft: '#edf1f3',
-    ink: '#303744',
-    muted: '#7d8997',
-    border: '#d8dfe5',
-    metal: '#d9e0e5',
+    bg: '#f7f8fa',
+    soft: '#edf1f4',
+    ink: '#2c3544',
+    muted: '#7a8694',
+    border: '#d5dde4',
+    metal: '#dce3e8',
+    metalHi: '#f4f7f9',
     metalEdge: '#7c8996',
-    tick: '#3f4a56',
-    accent: '#ef4050',
-    blue: '#2d9ed0',
-    red: '#ef4050',
-    grid: '#e6e9e7'
+    tick: '#3a4552',
+    accent: '#e23b4a',
+    blue: '#2b9ccf'
   },
   dark: {
     bg: '#101827',
-    panel: '#172235',
-    soft: '#26364b',
+    soft: '#1c2a3d',
     ink: '#eef2f7',
     muted: '#a8b4c5',
     border: '#3d4d63',
-    metal: '#94a3b8',
+    metal: '#8ea0b4',
+    metalHi: '#c5d2e0',
     metalEdge: '#d4dce5',
     tick: '#eef2f7',
     accent: '#ffb84d',
-    blue: '#5ed0f5',
-    red: '#ff6971',
-    grid: '#2b3b52'
+    blue: '#5ed0f5'
   }
 };
 
-function text(
+function label(
   ctx: CanvasRenderingContext2D,
   value: string,
   x: number,
@@ -109,7 +61,7 @@ function text(
   color: string,
   size: number,
   align: CanvasTextAlign = 'left',
-  weight = 600
+  weight = 650
 ): void {
   ctx.fillStyle = color;
   ctx.font = `${weight} ${size}px sans-serif`;
@@ -124,7 +76,7 @@ function rounded(
   y: number,
   width: number,
   height: number,
-  radius = 12
+  radius: number
 ): void {
   ctx.beginPath();
   if (typeof ctx.roundRect === 'function')
@@ -132,433 +84,396 @@ function rounded(
   else ctx.rect(x, y, width, height);
 }
 
-function modeLabel(state: PrecisionToolState): string {
-  if (state.params.mode === 'caliper10') return '游标卡尺 · 10 分度';
-  if (state.params.mode === 'caliper20') return '游标卡尺 · 20 分度';
-  if (state.params.mode === 'caliper50') return '游标卡尺 · 50 分度';
-  return '螺旋测微器';
+function metalFill(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  p: Palette,
+  vertical = false
+): void {
+  const g = vertical
+    ? ctx.createLinearGradient(x, y, x + w, y)
+    : ctx.createLinearGradient(x, y, x, y + h);
+  g.addColorStop(0, p.metalHi);
+  g.addColorStop(0.45, p.metal);
+  g.addColorStop(1, p.metalEdge);
+  ctx.fillStyle = g;
+  ctx.fillRect(x, y, w, h);
 }
 
-function drawScale(
-  ctx: CanvasRenderingContext2D,
-  state: PrecisionToolState,
-  p: Palette
-): void {
-  const pxPerMm = (FIELD_RIGHT - FIELD_LEFT) / SCALE_SPAN;
-  const jawX = FIELD_LEFT + state.actualSize * pxPerMm;
-  ctx.fillStyle = p.metal;
-  ctx.strokeStyle = p.metalEdge;
-  ctx.lineWidth = 2;
-  ctx.fillRect(FIELD_LEFT, SCALE_Y, FIELD_RIGHT - FIELD_LEFT, SCALE_H);
-  ctx.strokeRect(FIELD_LEFT, SCALE_Y, FIELD_RIGHT - FIELD_LEFT, SCALE_H);
-  ctx.strokeStyle = p.tick;
-  for (let mm = 0; mm <= SCALE_SPAN; mm += 1) {
-    const x = FIELD_LEFT + mm * pxPerMm;
-    const tickHeight = mm % 5 === 0 ? 19 : 11;
-    ctx.lineWidth = mm % 5 === 0 ? 2 : 1;
-    ctx.beginPath();
-    ctx.moveTo(x, SCALE_Y + SCALE_H);
-    ctx.lineTo(x, SCALE_Y + SCALE_H - tickHeight);
-    ctx.stroke();
-    text(ctx, String(mm), x, SCALE_Y - 14, p.ink, 14, 'center', 700);
-  }
-  ctx.fillStyle = p.soft;
-  ctx.strokeStyle = p.metalEdge;
-  ctx.lineWidth = 2;
-  ctx.fillRect(
-    FIELD_LEFT + CALIPER_BODY_INSET,
-    SCALE_Y - CALIPER_BODY_TOP_OFFSET,
-    Math.max(70, jawX - FIELD_LEFT - CALIPER_BODY_INSET),
-    CALIPER_BODY_HEIGHT
-  );
-  ctx.strokeRect(
-    FIELD_LEFT + CALIPER_BODY_INSET,
-    SCALE_Y - CALIPER_BODY_TOP_OFFSET,
-    Math.max(70, jawX - FIELD_LEFT - CALIPER_BODY_INSET),
-    CALIPER_BODY_HEIGHT
-  );
-  ctx.fillStyle = p.metalEdge;
-  ctx.fillRect(
-    FIELD_LEFT + CALIPER_JAW_INSET,
-    SCALE_Y - CALIPER_JAW_TOP_OFFSET,
-    16,
-    CALIPER_JAW_HEIGHT
-  );
-  ctx.fillRect(
-    jawX - 8,
-    SCALE_Y - CALIPER_JAW_TOP_OFFSET,
-    16,
-    CALIPER_JAW_HEIGHT
-  );
-  ctx.strokeStyle = p.metalEdge;
-  ctx.lineWidth = 5;
-  ctx.beginPath();
-  ctx.moveTo(FIELD_LEFT + 36, SCALE_Y - CALIPER_JAW_TOP_OFFSET);
-  ctx.lineTo(FIELD_LEFT + 36, SCALE_Y - CALIPER_TIP_TOP_OFFSET);
-  ctx.lineTo(FIELD_LEFT + CALIPER_UPPER_TIP_INSET, SCALE_Y - CALIPER_TIP_REACH);
-  ctx.moveTo(jawX, SCALE_Y - CALIPER_JAW_TOP_OFFSET);
-  ctx.lineTo(jawX, SCALE_Y - CALIPER_TIP_TOP_OFFSET);
-  ctx.lineTo(jawX - 24, SCALE_Y - CALIPER_TIP_REACH);
-  ctx.stroke();
-  ctx.fillStyle = p.red;
-  ctx.beginPath();
-  ctx.arc((FIELD_LEFT + jawX) / 2, SCALE_Y - 36, 14, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = p.accent;
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(jawX, SCALE_Y - CALIPER_CURSOR_LINE_TOP_OFFSET);
-  ctx.lineTo(jawX, SCALE_Y + SCALE_H + 22);
-  ctx.stroke();
-  text(ctx, '主尺', FIELD_LEFT + 20, SCALE_Y + 54, p.muted, 13, 'left', 600);
-  text(ctx, '游标', jawX, SCALE_Y + 54, p.accent, 13, 'center', 700);
+function layout(width: number, height: number, scale: number) {
+  const pad = 16 * scale;
+  const zoomH = Math.max(height * 0.34, 88 * scale);
+  const zoomY = height - pad - zoomH;
+  const top = pad;
+  const instrumentH = Math.max(72 * scale, zoomY - top - 14 * scale);
+  return {
+    pad,
+    top,
+    instrumentH,
+    zoomX: pad,
+    zoomY,
+    zoomW: width - pad * 2,
+    zoomH,
+    left: pad,
+    right: width - pad,
+    width,
+    height,
+    scale
+  };
 }
 
-function drawZoom(
+function drawZoomFrame(
   ctx: CanvasRenderingContext2D,
-  state: PrecisionToolState,
-  p: Palette
+  box: ReturnType<typeof layout>,
+  p: Palette,
+  title: string
 ): void {
-  rounded(ctx, ZOOM_X, ZOOM_Y, ZOOM_W, ZOOM_H, 12);
+  rounded(ctx, box.zoomX, box.zoomY, box.zoomW, box.zoomH, 10 * box.scale);
   ctx.fillStyle = p.soft;
   ctx.fill();
   ctx.strokeStyle = p.border;
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = Math.max(1, 1.4 * box.scale);
   ctx.stroke();
-  text(
+  label(
     ctx,
-    '放大观察区 · 精准对齐',
-    ZOOM_X + 20,
-    ZOOM_Y + 24,
-    p.red,
-    16,
+    title,
+    box.zoomX + 12 * box.scale,
+    box.zoomY + 16 * box.scale,
+    p.accent,
+    13 * box.scale,
     'left',
     700
   );
-  const center = ZOOM_X + ZOOM_W * 0.52;
-  const spacing = ZOOM_W / Math.max(10, state.divisions * 0.42);
-  ctx.strokeStyle = p.muted;
-  ctx.lineWidth = 2;
+}
+
+function drawCaliper(
+  ctx: CanvasRenderingContext2D,
+  state: PrecisionToolState,
+  p: Palette,
+  box: ReturnType<typeof layout>
+): void {
+  const s = box.scale;
+  const span = precisionToolConstants.scaleSpanMm;
+  const beamY = box.top + box.instrumentH * 0.42;
+  const beamH = 28 * s;
+  const beamX = box.left + 36 * s;
+  const beamW = box.right - beamX - 8 * s;
+  const pxPerMm = beamW / span;
+  const zeroX = beamX;
+  const jawGap = state.totalReading * pxPerMm;
+  const slideX = zeroX + jawGap;
+
+  ctx.fillStyle = p.metal;
   ctx.beginPath();
-  ctx.moveTo(ZOOM_X + 18, ZOOM_Y + ZOOM_CENTER_LINE_OFFSET);
-  ctx.lineTo(ZOOM_X + ZOOM_W - 18, ZOOM_Y + ZOOM_CENTER_LINE_OFFSET);
+  ctx.moveTo(box.left + 8 * s, beamY - 18 * s);
+  ctx.lineTo(box.left + 48 * s, box.top + 8 * s);
+  ctx.lineTo(box.left + 48 * s + 30 * s, box.top + 8 * s);
+  ctx.lineTo(box.left + 48 * s + 10 * s, beamY);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = p.metalEdge;
   ctx.stroke();
-  for (let k = -6; k <= 6; k += 1) {
-    const x = center + k * spacing;
-    const height = k === 0 ? ZOOM_PRIMARY_TICK_HEIGHT : 48;
-    ctx.strokeStyle = k === 0 && state.params.showGuides ? p.accent : p.ink;
-    ctx.lineWidth = k === 0 ? 4 : 2;
+
+  metalFill(ctx, beamX, beamY, beamW, beamH, p);
+  ctx.strokeStyle = p.metalEdge;
+  ctx.strokeRect(beamX, beamY, beamW, beamH);
+
+  ctx.strokeStyle = p.tick;
+  for (let mm = 0; mm <= span; mm += 1) {
+    const x = zeroX + mm * pxPerMm;
+    const major = mm % 5 === 0;
+    const th = major ? 16 * s : 9 * s;
+    ctx.lineWidth = major ? 2 : 1;
     ctx.beginPath();
-    ctx.moveTo(x, ZOOM_Y + ZOOM_CENTER_LINE_OFFSET - height / 2);
-    ctx.lineTo(x, ZOOM_Y + ZOOM_CENTER_LINE_OFFSET + height / 2);
+    ctx.moveTo(x, beamY + beamH);
+    ctx.lineTo(x, beamY + beamH - th);
     ctx.stroke();
+    if (major)
+      label(ctx, String(mm), x, beamY - 10 * s, p.ink, 12 * s, 'center', 700);
   }
+
+  const slideW = Math.max(72 * s, state.vernierLength * pxPerMm + 18 * s);
+  metalFill(ctx, slideX, beamY - 6 * s, slideW, beamH + 22 * s, p);
+  ctx.strokeStyle = p.metalEdge;
+  ctx.strokeRect(slideX, beamY - 6 * s, slideW, beamH + 22 * s);
+
+  const vernierPitch = (state.vernierLength / state.divisions) * pxPerMm;
+  ctx.strokeStyle = p.tick;
+  for (let i = 0; i <= state.divisions; i += 1) {
+    const x = slideX + 8 * s + i * vernierPitch;
+    const major = i % 5 === 0 || i === state.divisions;
+    ctx.lineWidth = i === state.alignmentIndex ? 2.4 : 1;
+    ctx.beginPath();
+    ctx.moveTo(x, beamY + beamH + 16 * s);
+    ctx.lineTo(x, beamY + beamH + 16 * s - (major ? 14 * s : 9 * s));
+    ctx.stroke();
+    if (major)
+      label(
+        ctx,
+        String(i),
+        x,
+        beamY + beamH + 24 * s,
+        i === state.alignmentIndex ? p.accent : p.muted,
+        10 * s,
+        'center',
+        650
+      );
+  }
+
+  ctx.fillStyle = p.metalEdge;
+  ctx.fillRect(zeroX - 8 * s, beamY - 38 * s, 10 * s, 38 * s);
+  ctx.fillRect(slideX - 4 * s, beamY - 38 * s, 10 * s, 38 * s);
+  ctx.strokeStyle = p.metalEdge;
+  ctx.lineWidth = 4 * s;
+  ctx.beginPath();
+  ctx.moveTo(zeroX - 3 * s, beamY - 38 * s);
+  ctx.lineTo(zeroX - 3 * s, box.top + 10 * s);
+  ctx.lineTo(zeroX + 14 * s, box.top + 4 * s);
+  ctx.moveTo(slideX + 1 * s, beamY - 38 * s);
+  ctx.lineTo(slideX + 1 * s, box.top + 10 * s);
+  ctx.lineTo(slideX - 16 * s, box.top + 4 * s);
+  ctx.stroke();
+
   if (state.params.showGuides) {
-    ctx.strokeStyle = p.red;
-    ctx.setLineDash([6, 6]);
+    ctx.strokeStyle = p.accent;
+    ctx.lineWidth = 2 * s;
     ctx.beginPath();
-    ctx.moveTo(center, ZOOM_Y + 42);
-    ctx.lineTo(center, ZOOM_Y + ZOOM_H - 16);
+    ctx.moveTo(slideX + 8 * s, beamY - 8 * s);
+    ctx.lineTo(slideX + 8 * s, beamY + beamH + 18 * s);
     ctx.stroke();
-    ctx.setLineDash([]);
   }
-  text(
+
+  label(ctx, '主尺', beamX + 6 * s, beamY + beamH + 36 * s, p.muted, 12 * s);
+  label(
     ctx,
-    `第 ${state.alignmentIndex} 格对齐`,
-    center,
-    ZOOM_Y + 148,
+    '游标',
+    slideX + slideW * 0.5,
+    beamY + beamH + 36 * s,
     p.accent,
-    14,
+    12 * s,
     'center',
     700
   );
+
+  drawZoomFrame(ctx, box, p, '放大观察区');
+  const midY = box.zoomY + box.zoomH * 0.58;
+  const center = box.zoomX + box.zoomW * 0.42;
+  const spacing = Math.min(28 * s, box.zoomW / 16);
+  ctx.strokeStyle = p.muted;
+  ctx.lineWidth = 2 * s;
+  ctx.beginPath();
+  ctx.moveTo(box.zoomX + 14 * s, midY);
+  ctx.lineTo(box.zoomX + box.zoomW - 14 * s, midY);
+  ctx.stroke();
+  const alignShift = (state.alignmentIndex % 5) * 0.12 * spacing;
+  for (let k = -6; k <= 8; k += 1) {
+    const xMain = center + k * spacing;
+    const h = k === 0 ? 36 * s : 22 * s;
+    ctx.strokeStyle = p.ink;
+    ctx.lineWidth = k === 0 ? 3 : 1.6;
+    ctx.beginPath();
+    ctx.moveTo(xMain, midY - h);
+    ctx.lineTo(xMain, midY);
+    ctx.stroke();
+    const xV = center + k * spacing * (1 - state.precision) + alignShift;
+    ctx.strokeStyle = k === 0 ? p.accent : p.tick;
+    ctx.lineWidth = k === 0 ? 3 : 1.4;
+    ctx.beginPath();
+    ctx.moveTo(xV, midY);
+    ctx.lineTo(xV, midY + h * 0.9);
+    ctx.stroke();
+  }
+  if (state.params.showGuides) {
+    ctx.strokeStyle = p.accent;
+    ctx.setLineDash([5 * s, 5 * s]);
+    ctx.lineWidth = 2 * s;
+    ctx.beginPath();
+    ctx.moveTo(center, box.zoomY + 28 * s);
+    ctx.lineTo(center, box.zoomY + box.zoomH - 10 * s);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    label(ctx, '对齐', center + 10 * s, box.zoomY + 32 * s, p.accent, 12 * s);
+  }
 }
 
 function drawMicrometer(
   ctx: CanvasRenderingContext2D,
   state: PrecisionToolState,
-  p: Palette
+  p: Palette,
+  box: ReturnType<typeof layout>
 ): void {
-  const sleeveX = FIELD_LEFT + 54;
-  const sleeveY = 274;
-  const sleeveW = 430;
-  const sleeveH = 64;
-  const thimbleX = sleeveX + sleeveW - 18;
-  const thimbleW = 160;
-  ctx.fillStyle = p.metal;
+  const s = box.scale;
+  const C = precisionToolConstants;
+  const frameY = box.top + 8 * s;
+  const frameH = box.instrumentH - 16 * s;
+  const anvilX = box.left + 22 * s;
+  const sleeveX = box.left + box.width * 0.28;
+  const sleeveY = frameY + frameH * 0.38;
+  const sleeveH = 36 * s;
+  const sleeveW = box.width * 0.38;
+  const gap = Math.min(state.totalReading * 18 * s, 48 * s);
+
   ctx.strokeStyle = p.metalEdge;
-  ctx.lineWidth = 3;
-  rounded(ctx, sleeveX, sleeveY, sleeveW, sleeveH, 8);
-  ctx.fill();
-  ctx.stroke();
-  ctx.fillStyle = p.metalEdge;
+  ctx.lineWidth = 10 * s;
+  ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.moveTo(thimbleX, sleeveY - 26);
-  ctx.lineTo(thimbleX + thimbleW, sleeveY - 26);
-  ctx.lineTo(thimbleX + thimbleW, sleeveY + sleeveH + 26);
-  ctx.lineTo(thimbleX, sleeveY + sleeveH + 26);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-  const pxPerMm = 42;
-  const windowStart = Math.max(0, Math.floor(state.actualSize) - 2);
-  for (let mm = windowStart; mm <= windowStart + 8; mm += 1) {
-    const x = sleeveX + (mm - windowStart) * pxPerMm;
-    ctx.strokeStyle = p.tick;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(x, sleeveY + 4);
-    ctx.lineTo(x, sleeveY + 28);
-    ctx.stroke();
-    text(ctx, String(mm), x, sleeveY - 15, p.ink, 13, 'center', 700);
-    const half = x + pxPerMm / 2;
-    ctx.beginPath();
-    ctx.moveTo(half, sleeveY + sleeveH - 4);
-    ctx.lineTo(half, sleeveY + sleeveH - 26);
-    ctx.stroke();
-  }
-  ctx.strokeStyle = p.red;
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(sleeveX, sleeveY + sleeveH / 2);
-  ctx.lineTo(thimbleX + 22, sleeveY + sleeveH / 2);
-  ctx.stroke();
-  const tickSpacing = (thimbleW - 36) / 10;
-  for (let k = 0; k <= 10; k += 1) {
-    const x = thimbleX + 18 + k * tickSpacing;
-    ctx.strokeStyle =
-      k === Math.round(state.fineReading / 5) ? p.accent : p.tick;
-    ctx.lineWidth = k === Math.round(state.fineReading / 5) ? 4 : 2;
-    ctx.beginPath();
-    ctx.moveTo(x, sleeveY + sleeveH / 2 - 24);
-    ctx.lineTo(x, sleeveY + sleeveH / 2 + 24);
-    ctx.stroke();
-  }
-  text(
-    ctx,
-    '固定刻度',
-    sleeveX + 12,
-    sleeveY + sleeveH + 48,
-    p.muted,
-    14,
-    'left',
-    600
+  ctx.moveTo(anvilX, sleeveY + sleeveH * 0.5);
+  ctx.arc(
+    anvilX + 36 * s,
+    sleeveY + sleeveH * 0.5,
+    36 * s,
+    Math.PI * 0.85,
+    Math.PI * 1.15,
+    true
   );
-  text(
+  ctx.stroke();
+
+  ctx.fillStyle = p.metalEdge;
+  ctx.fillRect(anvilX + 28 * s, sleeveY + 8 * s, 10 * s, sleeveH - 16 * s);
+  ctx.fillRect(
+    anvilX + 42 * s + gap,
+    sleeveY + 8 * s,
+    10 * s,
+    sleeveH - 16 * s
+  );
+
+  metalFill(ctx, sleeveX, sleeveY, sleeveW, sleeveH, p, true);
+  ctx.strokeStyle = p.metalEdge;
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(sleeveX, sleeveY, sleeveW, sleeveH);
+
+  const pxPerHalf = 22 * s;
+  const windowStart = Math.max(
+    0,
+    Math.floor(state.mainScaleReading / C.micrometerPitchMm) - 2
+  );
+  ctx.strokeStyle = p.tick;
+  for (let i = 0; i <= 8; i += 1) {
+    const halfMm = (windowStart + i) * C.micrometerPitchMm;
+    const x = sleeveX + 12 * s + i * pxPerHalf;
+    const upper = i % 2 === 0;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    if (upper) {
+      ctx.moveTo(x, sleeveY + 3 * s);
+      ctx.lineTo(x, sleeveY + 16 * s);
+    } else {
+      ctx.moveTo(x, sleeveY + sleeveH - 3 * s);
+      ctx.lineTo(x, sleeveY + sleeveH - 16 * s);
+    }
+    ctx.stroke();
+    if (upper)
+      label(
+        ctx,
+        String(Math.round(halfMm)),
+        x,
+        sleeveY - 10 * s,
+        p.ink,
+        11 * s,
+        'center',
+        700
+      );
+  }
+
+  ctx.strokeStyle = p.accent;
+  ctx.lineWidth = 2 * s;
+  ctx.beginPath();
+  ctx.moveTo(sleeveX + 8 * s, sleeveY + sleeveH * 0.5);
+  ctx.lineTo(sleeveX + sleeveW - 4 * s, sleeveY + sleeveH * 0.5);
+  ctx.stroke();
+
+  const thimbleX = sleeveX + sleeveW - 8 * s;
+  const thimbleW = Math.min(96 * s, box.right - thimbleX - 8 * s);
+  const g = ctx.createLinearGradient(
+    thimbleX,
+    sleeveY - 14 * s,
+    thimbleX + thimbleW,
+    sleeveY - 14 * s
+  );
+  g.addColorStop(0, p.metalHi);
+  g.addColorStop(1, p.metalEdge);
+  ctx.fillStyle = g;
+  rounded(ctx, thimbleX, sleeveY - 14 * s, thimbleW, sleeveH + 28 * s, 8 * s);
+  ctx.fill();
+  ctx.strokeStyle = p.metalEdge;
+  ctx.stroke();
+
+  const vis = 10;
+  const tickSpace = (thimbleW - 16 * s) / vis;
+  const centerTick = 5;
+  for (let k = 0; k <= vis; k += 1) {
+    const idx =
+      (state.fineReading - centerTick + k + C.micrometerDivisions) %
+      C.micrometerDivisions;
+    const x = thimbleX + 8 * s + k * tickSpace;
+    const major = idx % 5 === 0;
+    ctx.strokeStyle = k === centerTick ? p.accent : p.tick;
+    ctx.lineWidth = k === centerTick ? 2.4 : 1.2;
+    ctx.beginPath();
+    ctx.moveTo(x, sleeveY + sleeveH * 0.5 - (major ? 16 * s : 10 * s));
+    ctx.lineTo(x, sleeveY + sleeveH * 0.5 + (major ? 16 * s : 10 * s));
+    ctx.stroke();
+    if (major)
+      label(
+        ctx,
+        String(idx),
+        x,
+        sleeveY + sleeveH + 22 * s,
+        k === centerTick ? p.accent : p.muted,
+        10 * s,
+        'center',
+        650
+      );
+  }
+
+  label(ctx, '固定刻度', sleeveX, sleeveY + sleeveH + 28 * s, p.muted, 12 * s);
+  label(
     ctx,
     '微分筒',
-    thimbleX + thimbleW / 2,
-    sleeveY + sleeveH + 48,
+    thimbleX + thimbleW * 0.5,
+    sleeveY + sleeveH + 28 * s,
     p.accent,
-    14,
+    12 * s,
     'center',
     700
   );
-  rounded(ctx, ZOOM_X, ZOOM_Y, ZOOM_W, ZOOM_H, 12);
-  ctx.fillStyle = p.soft;
-  ctx.fill();
-  ctx.strokeStyle = p.border;
-  ctx.stroke();
-  text(
-    ctx,
-    '螺纹传动：转一圈，螺杆前进 0.5 mm',
-    ZOOM_X + 20,
-    ZOOM_Y + 28,
-    p.blue,
-    16,
-    'left',
-    700
-  );
-  const startX = ZOOM_X + 42;
-  const endX = ZOOM_X + ZOOM_W - 42;
+
+  drawZoomFrame(ctx, box, p, '放大观察区');
+  const midY = box.zoomY + box.zoomH * 0.58;
+  const startX = box.zoomX + 20 * s;
+  const endX = box.zoomX + box.zoomW - 20 * s;
   ctx.strokeStyle = p.muted;
-  ctx.lineWidth = 3;
+  ctx.lineWidth = 2 * s;
   ctx.beginPath();
-  ctx.moveTo(startX, ZOOM_Y + ZOOM_CENTER_LINE_OFFSET);
-  ctx.lineTo(endX, ZOOM_Y + ZOOM_CENTER_LINE_OFFSET);
+  ctx.moveTo(startX, midY);
+  ctx.lineTo(endX, midY);
   ctx.stroke();
-  for (let i = 0; i <= MICROMETER_DIVISIONS; i += 1) {
-    const x = startX + ((endX - startX) * i) / MICROMETER_DIVISIONS;
-    const h = i % 5 === 0 ? MICROMETER_ZOOM_MAJOR_HEIGHT : 30;
+  const n = C.micrometerDivisions;
+  for (let i = 0; i <= n; i += 1) {
+    const x = startX + ((endX - startX) * i) / n;
+    const major = i % 5 === 0;
+    const h = major ? 22 * s : 12 * s;
     ctx.strokeStyle = i === state.fineReading ? p.accent : p.ink;
-    ctx.lineWidth = i === state.fineReading ? 4 : 1.5;
+    ctx.lineWidth = i === state.fineReading ? 2.6 : 1.1;
     ctx.beginPath();
-    ctx.moveTo(x, ZOOM_Y + ZOOM_CENTER_LINE_OFFSET - h / 2);
-    ctx.lineTo(x, ZOOM_Y + ZOOM_CENTER_LINE_OFFSET + h / 2);
+    ctx.moveTo(x, midY - h);
+    ctx.lineTo(x, midY + h);
     ctx.stroke();
   }
-  text(
-    ctx,
-    `微分筒 ${state.fineReading} 格`,
-    endX,
-    ZOOM_Y + 148,
-    p.accent,
-    14,
-    'right',
-    700
-  );
-}
-
-function drawPanel(
-  ctx: CanvasRenderingContext2D,
-  state: PrecisionToolState,
-  p: Palette,
-  scale: number
-): void {
-  ctx.fillStyle = p.panel;
-  ctx.fillRect(FIELD_W, 0, BASE_W - FIELD_W, BASE_H);
-  text(ctx, '测量工具', PANEL_X + 18, 38, p.ink, 21 * scale, 'left', 700);
-  ctx.strokeStyle = p.blue;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(PANEL_X + 18, HEADER_RULE_Y);
-  ctx.lineTo(PANEL_X + PANEL_W - 22, HEADER_RULE_Y);
-  ctx.stroke();
-  rounded(ctx, CARD_X, READOUT_Y, CARD_W, READOUT_H, 12);
-  ctx.fillStyle = p.panel;
-  ctx.fill();
-  ctx.strokeStyle = p.border;
-  ctx.stroke();
-  text(
-    ctx,
-    modeLabel(state),
-    CARD_X + 16,
-    READOUT_Y + 22,
-    p.blue,
-    15 * scale,
-    'left',
-    700
-  );
-  const rows = [
-    ['真实尺寸', `${state.actualSize.toFixed(2)} mm`, p.ink],
-    ['主尺读数', `${state.mainScaleReading.toFixed(2)} mm`, p.ink],
-    [
-      state.params.mode === 'micrometer' ? '微分筒读数' : '对齐格数',
-      state.params.mode === 'micrometer'
-        ? `${state.fineReading} 格`
-        : `${state.alignmentIndex} 格`,
-      p.accent
-    ],
-    ['最终读数', `${state.totalReading.toFixed(2)} mm`, p.red]
-  ];
-  rows.forEach(([label, value, color], index) => {
-    const y = READOUT_Y + 50 + index * 24;
-    text(ctx, label, CARD_X + 16, y, p.muted, 13 * scale, 'left', 600);
-    text(ctx, value, CARD_X + CARD_W - 16, y, color, 15 * scale, 'right', 700);
-  });
-  rounded(ctx, CARD_X, FORMULA_Y, CARD_W, FORMULA_H, 12);
-  ctx.fillStyle = p.panel;
-  ctx.fill();
-  ctx.strokeStyle = p.border;
-  ctx.stroke();
-  text(
-    ctx,
-    '读数关系',
-    CARD_X + 16,
-    FORMULA_Y + 22,
-    p.muted,
-    14 * scale,
-    'left',
-    700
-  );
-  if (state.params.mode === 'micrometer') {
-    text(
-      ctx,
-      '主尺 + 微分筒 × 0.01 mm',
-      CARD_X + 16,
-      FORMULA_Y + 54,
-      p.ink,
-      15 * scale,
-      'left',
-      700
-    );
-    text(
-      ctx,
-      '0.5 mm ÷ 50 格 = 0.01 mm',
-      CARD_X + 16,
-      FORMULA_Y + 84,
-      p.blue,
-      14 * scale,
-      'left',
-      600
-    );
-    text(
-      ctx,
-      `转动约 ${state.drumRotation.toFixed(2)} 圈`,
-      CARD_X + 16,
-      FORMULA_Y + 110,
-      p.accent,
-      13 * scale,
-      'left',
-      600
-    );
-  } else {
-    text(
-      ctx,
-      '主尺 + 对齐格 × 分度值',
-      CARD_X + 16,
-      FORMULA_Y + 54,
-      p.ink,
-      15 * scale,
-      'left',
-      700
-    );
-    text(
-      ctx,
-      `1 mm − 1 格 = ${state.precision.toFixed(2)} mm`,
-      CARD_X + 16,
-      FORMULA_Y + 84,
-      p.blue,
-      14 * scale,
-      'left',
-      600
-    );
-    text(
-      ctx,
-      state.status,
-      CARD_X + 16,
-      FORMULA_Y + 110,
-      p.accent,
-      13 * scale,
-      'left',
-      600
-    );
+  if (state.params.showGuides) {
+    const x = startX + ((endX - startX) * state.fineReading) / n;
+    ctx.strokeStyle = p.accent;
+    ctx.setLineDash([5 * s, 5 * s]);
+    ctx.beginPath();
+    ctx.moveTo(x, box.zoomY + 28 * s);
+    ctx.lineTo(x, box.zoomY + box.zoomH - 10 * s);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    label(ctx, '对齐', x + 8 * s, box.zoomY + 32 * s, p.accent, 12 * s);
   }
-  rounded(ctx, CARD_X, DETAIL_Y, CARD_W, DETAIL_H, 12);
-  ctx.fillStyle = p.panel;
-  ctx.fill();
-  ctx.strokeStyle = p.border;
-  ctx.stroke();
-  text(
-    ctx,
-    state.params.showReading ? '读数解析已显示' : '读数解析已隐藏',
-    CARD_X + 16,
-    DETAIL_Y + 24,
-    state.params.showReading ? p.blue : p.muted,
-    15 * scale,
-    'left',
-    700
-  );
-  text(
-    ctx,
-    state.params.showGuides ? '红线：基准 / 对齐提示' : '提示线已隐藏',
-    CARD_X + 16,
-    DETAIL_Y + 54,
-    state.params.showGuides ? p.red : p.muted,
-    13 * scale,
-    'left',
-    600
-  );
-  text(
-    ctx,
-    '拖动滑片或旋钮改变读数',
-    CARD_X + 16,
-    DETAIL_Y + 86,
-    p.muted,
-    13 * scale,
-    'left',
-    600
-  );
 }
 
 export function createPrecisionToolView(
@@ -566,9 +481,7 @@ export function createPrecisionToolView(
 ) {
   const stage = createCanvasViewport({
     canvas: options.canvas ?? null,
-    sizing: { mode: 'clamped', fallbackWidth: BASE_W, fallbackHeight: BASE_H },
-    initialWidth: BASE_W,
-    initialHeight: BASE_H,
+    sizing: { mode: 'clamped', fallbackWidth: 800, fallbackHeight: 600 },
     eagerContext: true
   });
   const env = createViewEnvironment({
@@ -577,43 +490,22 @@ export function createPrecisionToolView(
     demoHints: options.demoHints
   });
   let snapshot: PrecisionToolState | null = null;
+
   function draw(state: PrecisionToolState): void {
     const ctx = stage.ctx;
     if (!ctx) return;
     const width = stage.cssWidth;
     const height = stage.cssHeight;
-    const fit = Math.min(width / BASE_W, height / BASE_H);
-    const offsetY = (height - BASE_H * fit) / 2;
     const scale = env.contentScale() * stage.responsiveScale;
     const p = PALETTE[env.theme];
+    const box = layout(width, height, scale);
     ctx.clearRect(0, 0, width, height);
-    ctx.save();
-    ctx.translate(0, offsetY);
-    ctx.scale(fit, fit);
     ctx.fillStyle = p.bg;
-    ctx.fillRect(0, 0, BASE_W, BASE_H);
-    ctx.strokeStyle = p.grid;
-    ctx.lineWidth = 1;
-    for (let x = FIELD_LEFT; x <= FIELD_RIGHT; x += 42) {
-      ctx.beginPath();
-      ctx.moveTo(x, FIELD_TOP);
-      ctx.lineTo(x, FIELD_BOTTOM);
-      ctx.stroke();
-    }
-    for (let y = FIELD_TOP; y <= FIELD_BOTTOM; y += 42) {
-      ctx.beginPath();
-      ctx.moveTo(FIELD_LEFT, y);
-      ctx.lineTo(FIELD_RIGHT, y);
-      ctx.stroke();
-    }
-    if (state.params.mode === 'micrometer') drawMicrometer(ctx, state, p);
-    else {
-      drawScale(ctx, state, p);
-      drawZoom(ctx, state, p);
-    }
-    drawPanel(ctx, state, p, scale);
-    ctx.restore();
+    ctx.fillRect(0, 0, width, height);
+    if (state.params.mode === 'micrometer') drawMicrometer(ctx, state, p, box);
+    else drawCaliper(ctx, state, p, box);
   }
+
   return {
     render(state: PrecisionToolState): void {
       snapshot = state;

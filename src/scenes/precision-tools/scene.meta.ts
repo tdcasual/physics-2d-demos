@@ -27,18 +27,19 @@ export const precisionToolMeta: SceneMeta = {
   subConcepts: ['游标卡尺读数', '螺旋测微器读数'],
   keywords: ['游标卡尺', '螺旋测微器', '分度值', '对齐读数', '长度测量'],
   objective: '通过对齐关系掌握两种高精度测量工具的读数',
-  description: '拖动滑片或旋钮，观察主尺与精细刻度的合成读数',
+  description: '主尺与游标或微分筒对齐，合成高精度长度读数',
   difficulty: 2,
   icon: '📏',
   category: 'method',
   featured: false,
+  // 字符串默认值让 URL 的 mode=micrometer 不被 parseInt 成 NaN。
   defaultParams: {
-    mode: 2,
+    mode: 'caliper50',
     adjustment: 0.32,
     autoRun: 1,
     showGuides: 1,
     showReading: 1
-  },
+  } as unknown as SceneMeta['defaultParams'],
   urlSyncKeys: ['mode', 'adjustment', 'autoRun', 'showGuides', 'showReading'],
   testProfile: {
     hasGraph: false,

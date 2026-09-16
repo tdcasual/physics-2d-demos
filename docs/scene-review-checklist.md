@@ -37,7 +37,7 @@
 |  22 | 带电粒子在匀强磁场中的圆周运动                        | 电磁 | [`charged-particle-circle`](../src/scenes/charged-particle-circle/scene.meta.ts)                   | [详情](https://app.svgzhenli.com/resource/bcf1789c-95eb-480d-9b4e-e9eb1ee6210c) · [封面](https://img.svgzhenli.com/gallery-assets/covers/ohou8hat4jj1774711562323.png)  |  ✅  |
 |  23 | 小球落到竖直弹簧与简谐运动                            | 力学 | [`spring-ball`](../src/scenes/spring-ball/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/75ac35a6-d777-4e05-b192-5ab524c74832) · [封面](https://img.svgzhenli.com/gallery-assets/covers/532og1b4u851788370155234.png)  |  ☑   |
 |  24 | 电阻测量法设计（限流接法、分压接法、电流表的内外接）  | 电磁 | [`resistor-measurement`](../src/scenes/resistor-measurement/scene.meta.ts)                         | [详情](https://app.svgzhenli.com/resource/250ca6cd-36d9-4ed5-9983-d4a2e9058251) · [封面](https://img.svgzhenli.com/gallery-assets/covers/zq29kqwn07m1781283130413.png)  |  ☑   |
-|  25 | 高精度测量工具读数原理（游标卡尺&螺旋测微器）         | 力学 | [`precision-tools`](../src/scenes/precision-tools/scene.meta.ts)                                   | [详情](https://app.svgzhenli.com/resource/db871107-556d-4e2f-936e-52ebd2767a54) · [封面](https://img.svgzhenli.com/gallery-assets/covers/08nk6xz5mriq1778077856552.png) |  ☐   |
+|  25 | 高精度测量工具读数原理（游标卡尺&螺旋测微器）         | 力学 | [`precision-tools`](../src/scenes/precision-tools/scene.meta.ts)                                   | [详情](https://app.svgzhenli.com/resource/db871107-556d-4e2f-936e-52ebd2767a54) · [封面](https://img.svgzhenli.com/gallery-assets/covers/08nk6xz5mriq1778077856552.png) |  ☑   |
 |  26 | 测电源电动势和内阻实验                                | 电磁 | [`emf-internal-resistance`](../src/scenes/emf-internal-resistance/scene.meta.ts)                   | [详情](https://app.svgzhenli.com/resource/11ed455d-d6bc-4ac7-82a3-0a57b2ef969f) · [封面](https://img.svgzhenli.com/gallery-assets/covers/h7646etm75j1787678239426.png)  |  ☐   |
 |  27 | 电势电势能与E-x和φ-x图象                              | 电磁 | [`potential-energy-graphs`](../src/scenes/potential-energy-graphs/scene.meta.ts)                   | [详情](https://app.svgzhenli.com/resource/ff3b0997-708a-4845-8ce1-1f8a1a198337) · [封面](https://img.svgzhenli.com/gallery-assets/covers/gqj6h49siwi1787678193054.png)  |  ☐   |
 |  28 | 冲量动量定理与F-t图象                                 | 力学 | [`impulse-momentum`](../src/scenes/impulse-momentum/scene.meta.ts)                                 | [详情](https://app.svgzhenli.com/resource/55c5259d-0e1f-4ff8-b491-791c7df3c02e) · [封面](https://img.svgzhenli.com/gallery-assets/covers/tpvaff7fej91787660726259.png)  |  ☐   |
@@ -335,6 +335,15 @@
 - 交互与布局验证：URL 0/1 和数字参数首帧生效，重置恢复进入页面基线并同步控件；内外接与分压/限流切换改变接线及读数，分压 p=0 显示 0.00 V/0.000 A，p=1 显示 6.00 V；浅色/深色、演示模式、暂停/播放、控制/数据 tab 均通过，动画区无数据/公式泄漏且无溢出重叠。
 - 工程验证：专项 sim/view `11/11`；`pnpm verify:scene resistor-measurement` 全 `7/7` 步骤通过（`3134 passed / 129 skipped`），tsc、ESLint、生产构建、布局契约、bundle 预算与 `git diff --check` 通过（场景页 JS `135.65 kB / 180 kB`）。最终只读 Grok Build 返回 `AGREED: resistor-measurement is ready to commit.`
 - 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/250ca6cd-36d9-4ed5-9983-d4a2e9058251.md` · [原始详情](https://app.svgzhenli.com/resource/250ca6cd-36d9-4ed5-9983-d4a2e9058251) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/zq29kqwn07m1781283130413.png)
+
+### 25. 高精度测量工具读数原理（游标卡尺&螺旋测微器） (`precision-tools`)
+
+- 状态：✅ Codex / Grok Build 交叉审计通过（2026-09-17）。
+- 修复：按 SVGZhenli 封面重构游标卡尺主尺/游标与螺旋测微器固定刻度/微分筒，主画布铺满器械和放大对齐区；动画区只保留器械、刻度、对齐基准线和短标签，移除 canvas 内读数、公式、解析和说明卡；数值与解析进入标准数据 tab，控件文案精简，采用响应式 `split-right`、`hasGraph:false`、演示模式。
+- 物理核验：游标 10/20/50 分度分别为 0.10/0.05/0.02 mm（游标总长 9/19/49 mm）；螺旋测微器螺距 0.5 mm、50 格，分度值 0.01 mm，读数为主尺加微分筒格数；端点、非法值、四模式切换和刻度/对齐格有限归一化。
+- 交互与布局验证：直接 URL 的 `mode=micrometer`、`caliper10` 及 `0/1/2/3` 均正确初始化；`autoRun=0` 首帧暂停，播放/暂停有效；`showGuides` 只控制基准线，`showReading` 只控制数据区解析；修改后重置恢复 URL 基线并同步模式、滑块和开关；浅色/深色、演示模式、移动窄视口均无动画区数据泄漏、遮挡或横向溢出。
+- 工程验证：专项单测 `6/6 sim + 5/5 view`；`pnpm verify:scene precision-tools` 全 `7/7` 步骤通过（`3134 passed / 129 skipped`），tsc、ESLint、生产构建、布局契约、bundle 预算与 `git diff --check` 通过（场景页 JS `134.92 kB / 180 kB`）。远程 Grok Build 最终返回 `AGREED: precision-tools is ready to commit.`
+- 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/db871107-556d-4e2f-936e-52ebd2767a54.md` · [原始详情](https://app.svgzhenli.com/resource/db871107-556d-4e2f-936e-52ebd2767a54) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/08nk6xz5mriq1778077856552.png)
 
 ## 复审记录模板
 
