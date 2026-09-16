@@ -32,7 +32,7 @@
 |  17 | 磁镜与磁约束交互                                      | 电磁 | [`magnetic-mirror`](../src/scenes/magnetic-mirror/scene.meta.ts)                                   | [详情](https://app.svgzhenli.com/resource/c540be11-ba80-4952-8a22-570504fe1d69) · [封面](https://img.svgzhenli.com/gallery-assets/covers/q2ltmtzvpg1786796521171.png)   |  ✅  |
 |  18 | 匀变速直线运动位移与时间关系                          | 力学 | [`displacement-time`](../src/scenes/displacement-time/scene.meta.ts)                               | [详情](https://app.svgzhenli.com/resource/f8d783bf-0b36-425f-ae53-a692dba4aff9) · [封面](https://img.svgzhenli.com/gallery-assets/covers/noonxbfliw1774676556531.png)   |  ✅  |
 |  19 | 木块与木板相对滑动物理模型                            | 力学 | [`block-board`](../src/scenes/block-board/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/ccd3490a-6854-4a58-942e-2dc8e81a4fd9) · [封面](https://img.svgzhenli.com/gallery-assets/covers/6pvv1payb171774685383168.png)  |  ✅  |
-|  20 | 示波管的原理与波形同步                                | 电磁 | [`oscilloscope`](../src/scenes/oscilloscope/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/5a841fe8-5060-47af-a132-cf4511d2d4eb) · [封面](https://img.svgzhenli.com/gallery-assets/covers/pfv1s8rnxzg1778497322822.png)  |  ☐   |
+|  20 | 示波管的原理与波形同步                                | 电磁 | [`oscilloscope`](../src/scenes/oscilloscope/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/5a841fe8-5060-47af-a132-cf4511d2d4eb) · [封面](https://img.svgzhenli.com/gallery-assets/covers/pfv1s8rnxzg1778497322822.png)  |  ✅  |
 |  21 | 打点计时器原理演示                                    | 力学 | [`ticker-timer`](../src/scenes/ticker-timer/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/0e146679-df0c-429f-b982-9e3c1c0c2367) · [封面](https://img.svgzhenli.com/gallery-assets/covers/aorki9og3yq1783606121977.png)  |  ☐   |
 |  22 | 带电粒子在匀强磁场中的圆周运动                        | 电磁 | [`charged-particle-circle`](../src/scenes/charged-particle-circle/scene.meta.ts)                   | [详情](https://app.svgzhenli.com/resource/bcf1789c-95eb-480d-9b4e-e9eb1ee6210c) · [封面](https://img.svgzhenli.com/gallery-assets/covers/ohou8hat4jj1774711562323.png)  |  ☐   |
 |  23 | 小球落到竖直弹簧与简谐运动                            | 力学 | [`spring-ball`](../src/scenes/spring-ball/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/75ac35a6-d777-4e05-b192-5ab524c74832) · [封面](https://img.svgzhenli.com/gallery-assets/covers/532og1b4u851788370155234.png)  |  ☐   |
@@ -290,6 +290,15 @@
 - 交互与布局验证：URL 参数在首帧直接进入 sim（极端 URL 读数为 `t_c=22.86 s`，`autoRun=0` 保持 `t=0`）；共速标记在设计框外不绘制，长程播放时装置采用有界视觉投影并保持木块在木板可视范围，真实状态/读数不变。标准 `1280×720`、演示模式和移动 `390×844` 均通过，移动端无横向溢出；动画区无图表/数据卡，图表和数据独立呈现；浏览器无 error/warning。
 - 工程验证：专项单测 `25/25`（sim `16` + view `9`）；`pnpm verify:scene block-board` 全 `7/7` 步骤通过（`3147 passed / 130 skipped`）；tsc、ESLint、生产构建、布局契约和 bundle 预算通过。
 - 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/ccd3490a-6854-4a58-942e-2dc8e81a4fd9.md` · [原始详情](https://app.svgzhenli.com/resource/ccd3490a-6854-4a58-942e-2dc8e81a4fd9) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/6pvv1payb171774685383168.png)
+
+### 20. 示波管的原理与波形同步 (`oscilloscope`)
+
+- 状态：✅ Codex / Grok Build 交叉审计通过（2026-09-16）。
+- 修复：按 SVGZhenli 参考重建电子枪、Y/Y′ 与 X/X′ 偏转板、荧光屏和示波屏；动画 canvas 只保留装置、电子束和必要短标签，Uy/Ux 波形进入独立图表区，公式/参数进入控制区，实时数值进入数据区；文案精简，采用项目布局系统并保留移动端堆叠。
+- 物理核验：电子束屏上位置由 Uy 与 Ux 偏转决定；扫描关闭时为竖直轨迹；扫描开启时 Ux 为锯齿扫描；波形稳定条件为 fᵧ/fₓ 为正整数，非整数显示移动；URL 参数、自动播放/暂停、边界夹取和重置由专项测试覆盖。
+- 交互与布局验证：动画区无图表/数据/说明卡；移动端 `390×844` 的图表、控制、数据 tab 独立且无横向溢出；桌面 split-right / graph-bottom 与实验台的浮动数据面板均通过几何避让，不遮挡电子枪、偏转板、荧光屏和示波屏；演示模式、暗色主题和无扫描状态通过，浏览器 console 无 error/warning。
+- 工程验证：专项单测 `27/27`（sim `17` + view `10`）；`pnpm verify:scene oscilloscope` 全 `7/7` 步骤通过（`3150 passed / 129 skipped`）；tsc、ESLint、生产构建、布局契约和 bundle 预算通过（场景页 JS 141.32 kB / 180 kB）。
+- 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/5a841fe8-5060-47af-a132-cf4511d2d4eb.md` · [原始详情](https://app.svgzhenli.com/resource/5a841fe8-5060-47af-a132-cf4511d2d4eb) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/pfv1s8rnxzg1778497322822.png)
 
 ## 复审记录模板
 

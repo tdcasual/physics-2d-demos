@@ -1,89 +1,137 @@
-import type { TeachingMode, TeachingTheme } from '../../platform/standards';
+import {
+  applyCanvasSize,
+  getResponsiveScale,
+  scaledSize
+} from '../../core/canvas-sizing';
 import type { DemoRenderHints } from '../../platform/demo-profile';
+import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
-import { oscilloscopeConstants, type OscilloscopeState } from './scene.sim';
+import {
+  apparatusLayout,
+  findOverlayPanels,
+  graphCursor,
+  graphFrames,
+  graphSeries,
+  graphToPx,
+  graphWindow,
+  OSCILLOSCOPE_FLOATING_LAYOUT_SELECTOR,
+  OSCILLOSCOPE_SCAN_TITLE,
+  OSCILLOSCOPE_SIGNAL_TITLE,
+  oscilloscopeConstants as C,
+  stageLayoutFrom,
+  stageTransform,
+  sweepWaveform,
+  type GraphFrame,
+  type OscilloscopeGraphPoint,
+  type OscilloscopeState
+} from './scene.sim';
 
 export type CreateOscilloscopeViewOptions = {
   canvas?: HTMLCanvasElement;
+  graphCanvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
   mode?: TeachingMode;
   demoHints?: DemoRenderHints;
 };
 
-const {
-  baseWidth: BASE_W,
-  baseHeight: BASE_H,
-  fieldWidth: FIELD_W,
-  panelWidth: PANEL_W,
-  panelInset: INSET,
-  tubeLeft: TUBE_LEFT,
-  tubeRight: TUBE_RIGHT,
-  tubeCenterY: TUBE_CENTER_Y,
-  tubeHeight: TUBE_HEIGHT,
-  scopeCenterX: SCOPE_CX,
-  scopeCenterY: SCOPE_CY,
-  scopeRadius: SCOPE_R,
-  plateX: PLATE_X,
-  plateYTop: PLATE_Y_TOP,
-  plateWidth: PLATE_WIDTH,
-  xPlateX: X_PLATE_X,
-  xPlateY: X_PLATE_Y,
-  xPlateHeight: X_PLATE_HEIGHT,
-  waveLeft: WAVE_LEFT,
-  waveRight: WAVE_RIGHT,
-  signalWaveY: SIGNAL_WAVE_Y,
-  scanWaveY: SCAN_WAVE_Y,
-  waveHeight: WAVE_HEIGHT,
-  visualTimeScale: VISUAL_TIME_SCALE,
-  gridStep: GRID_STEP,
-  stableCardY: STABLE_CARD_Y,
-  stableCardHeight: STABLE_CARD_HEIGHT,
-  formulaCardY: FORMULA_CARD_Y,
-  formulaCardHeight: FORMULA_CARD_HEIGHT
-} = oscilloscopeConstants;
-
 type Palette = {
   bg: string;
-  panel: string;
   ink: string;
   muted: string;
   blue: string;
   cyan: string;
   pink: string;
   green: string;
-  border: string;
+  tube: string;
+  tubeStroke: string;
+  anode: string;
   scopeBg: string;
   scopeGrid: string;
+  hatch: string;
 };
 
 const PALETTE: Record<TeachingTheme, Palette> = {
   light: {
-    bg: '#ffffff',
-    panel: '#ffffff',
+    bg: '#fbfaf7',
     ink: '#303744',
-    muted: '#8793a2',
+    muted: '#8b97a5',
     blue: '#4388ff',
     cyan: '#39c2e9',
     pink: '#ee1977',
     green: '#1aa082',
-    border: '#d4dce5',
+    tube: 'rgba(235,242,247,0.55)',
+    tubeStroke: '#a8b3bf',
+    anode: '#3e4650',
     scopeBg: '#081820',
-    scopeGrid: '#1d3a4a'
+    scopeGrid: '#1d3a4a',
+    hatch: '#d4dce5'
   },
   dark: {
     bg: '#101827',
-    panel: '#172235',
     ink: '#eef2f7',
-    muted: '#a8b4c5',
+    muted: '#9eabbc',
     blue: '#79a9ff',
     cyan: '#59d8f5',
     pink: '#ff4e9e',
     green: '#4dd4c0',
-    border: '#3d4d63',
+    tube: 'rgba(23,34,53,0.7)',
+    tubeStroke: '#3d4d63',
+    anode: '#c5d0dc',
     scopeBg: '#06141c',
-    scopeGrid: '#244358'
+    scopeGrid: '#244358',
+    hatch: '#3c4b61'
   }
 };
+
+function contentBoxSize(host: HTMLElement): { width: number; height: number } {
+  const cs = getComputedStyle(host);
+  const rect = host.getBoundingClientRect();
+  const padX =
+    (Number.parseFloat(cs.paddingLeft) || 0) +
+    (Number.parseFloat(cs.paddingRight) || 0);
+  const padY =
+    (Number.parseFloat(cs.paddingTop) || 0) +
+    (Number.parseFloat(cs.paddingBottom) || 0);
+  return {
+    width: Math.max(1, Math.floor(rect.width - padX)),
+    height: Math.max(1, Math.floor(rect.height - padY))
+  };
+}
+
+/** Size the graph canvas to the host content box, not the padded border box. */
+export function sizeGraphCanvasToHost(canvas: HTMLCanvasElement): {
+  ctx: CanvasRenderingContext2D;
+  cssWidth: number;
+  cssHeight: number;
+  responsiveScale: number;
+} {
+  const host = canvas.parentElement;
+  let cssWidth: number;
+  let cssHeight: number;
+  if (host) {
+    const box = contentBoxSize(host);
+    cssWidth = box.width;
+    cssHeight = box.height;
+  } else {
+    const rect = canvas.getBoundingClientRect();
+    cssWidth = Math.max(1, Math.floor(rect.width || C.graphFallbackWidth));
+    cssHeight = Math.max(1, Math.floor(rect.height || C.graphFallbackHeight));
+  }
+  const dpr = Math.min(
+    2,
+    typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1
+  );
+  const responsiveScale = getResponsiveScale(cssWidth, cssHeight);
+  const ctx = applyCanvasSize(canvas, {
+    width: Math.max(1, Math.floor(cssWidth * dpr)),
+    height: Math.max(1, Math.floor(cssHeight * dpr)),
+    cssWidth,
+    cssHeight,
+    dpr,
+    responsiveScale
+  });
+  return { ctx, cssWidth, cssHeight, responsiveScale };
+}
 
 function text(
   ctx: CanvasRenderingContext2D,
@@ -102,394 +150,327 @@ function text(
   ctx.fillText(value, x, y);
 }
 
+function rounded(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number
+): void {
+  ctx.beginPath();
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(x, y, w, h, r);
+    return;
+  }
+  ctx.rect(x, y, w, h);
+}
+
 function drawTube(
   ctx: CanvasRenderingContext2D,
   state: OscilloscopeState,
   p: Palette,
-  scale: number
+  font: (n: number) => number
 ): void {
-  ctx.fillStyle = 'rgba(235,242,247,0.38)';
-  ctx.strokeStyle = '#a8b3bf';
-  ctx.lineWidth = 3;
+  const layout = apparatusLayout(state);
+  const { tube } = layout;
+  const half = tube.height / 2;
+  ctx.fillStyle = p.tube;
+  ctx.strokeStyle = p.tubeStroke;
+  ctx.lineWidth = 2.4;
   ctx.beginPath();
-  ctx.moveTo(TUBE_LEFT + 24, TUBE_CENTER_Y - TUBE_HEIGHT / 2);
+  ctx.moveTo(tube.left + 24, tube.centerY - half);
+  ctx.quadraticCurveTo(tube.left, tube.centerY - half, tube.left, tube.centerY);
   ctx.quadraticCurveTo(
-    TUBE_LEFT,
-    TUBE_CENTER_Y - TUBE_HEIGHT / 2,
-    TUBE_LEFT,
-    TUBE_CENTER_Y
+    tube.left,
+    tube.centerY + half,
+    tube.left + 24,
+    tube.centerY + half
+  );
+  ctx.lineTo(tube.right - 28, tube.centerY + half);
+  ctx.quadraticCurveTo(
+    tube.right,
+    tube.centerY + half,
+    tube.right,
+    tube.centerY
   );
   ctx.quadraticCurveTo(
-    TUBE_LEFT,
-    TUBE_CENTER_Y + TUBE_HEIGHT / 2,
-    TUBE_LEFT + 24,
-    TUBE_CENTER_Y + TUBE_HEIGHT / 2
-  );
-  ctx.lineTo(TUBE_RIGHT - 30, TUBE_CENTER_Y + TUBE_HEIGHT / 2);
-  ctx.quadraticCurveTo(
-    TUBE_RIGHT,
-    TUBE_CENTER_Y + TUBE_HEIGHT / 2,
-    TUBE_RIGHT,
-    TUBE_CENTER_Y
-  );
-  ctx.quadraticCurveTo(
-    TUBE_RIGHT,
-    TUBE_CENTER_Y - TUBE_HEIGHT / 2,
-    TUBE_RIGHT - 30,
-    TUBE_CENTER_Y - TUBE_HEIGHT / 2
+    tube.right,
+    tube.centerY - half,
+    tube.right - 28,
+    tube.centerY - half
   );
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
-  ctx.strokeStyle = '#aab7c3';
-  ctx.lineWidth = 1.5;
-  ctx.setLineDash([9, 9]);
+
+  ctx.strokeStyle = p.tubeStroke;
+  ctx.lineWidth = 1.2;
+  ctx.setLineDash([8, 8]);
   ctx.beginPath();
-  ctx.moveTo(TUBE_LEFT + 30, TUBE_CENTER_Y);
-  ctx.lineTo(TUBE_RIGHT - 20, TUBE_CENTER_Y);
+  ctx.moveTo(tube.left + 28, tube.centerY);
+  ctx.lineTo(tube.right - 16, tube.centerY);
   ctx.stroke();
   ctx.setLineDash([]);
-  for (let i = 0; i < 3; i += 1) {
-    ctx.fillStyle = '#3e4650';
-    ctx.fillRect(
-      TUBE_LEFT + 42 + i * 26,
-      TUBE_CENTER_Y - 25 + i * 5,
-      15,
-      50 - i * 10
-    );
+
+  ctx.fillStyle = p.anode;
+  for (const anode of layout.anodes) {
+    ctx.fillRect(anode.x, anode.y, anode.w, anode.h);
   }
   ctx.fillStyle = p.cyan;
   ctx.beginPath();
-  ctx.arc(TUBE_LEFT + 24, TUBE_CENTER_Y, 8, 0, Math.PI * 2);
+  ctx.arc(layout.gun.x - 8, layout.gun.y, 7, 0, Math.PI * 2);
   ctx.fill();
+
   ctx.fillStyle = p.blue;
-  ctx.beginPath();
-  ctx.roundRect(PLATE_X, TUBE_CENTER_Y - PLATE_Y_TOP, PLATE_WIDTH, 14, 5);
-  ctx.roundRect(PLATE_X, TUBE_CENTER_Y + 44, PLATE_WIDTH, 14, 5);
+  rounded(
+    ctx,
+    layout.yPlateTop.x,
+    layout.yPlateTop.y,
+    layout.yPlateTop.w,
+    layout.yPlateTop.h,
+    4
+  );
   ctx.fill();
+  rounded(
+    ctx,
+    layout.yPlateBottom.x,
+    layout.yPlateBottom.y,
+    layout.yPlateBottom.w,
+    layout.yPlateBottom.h,
+    4
+  );
+  ctx.fill();
+
   ctx.fillStyle = p.pink;
-  ctx.fillRect(X_PLATE_X, TUBE_CENTER_Y - X_PLATE_Y, 34, X_PLATE_HEIGHT);
-  ctx.fillStyle = p.cyan;
-  const beamX =
-    TUBE_LEFT + 30 + (TUBE_RIGHT - TUBE_LEFT - 60) * state.electronX;
-  const beamY = TUBE_CENTER_Y + state.electronY * 62;
+  ctx.fillRect(
+    layout.xPlate.x,
+    layout.xPlate.y,
+    layout.xPlate.w,
+    layout.xPlate.h
+  );
+
   ctx.strokeStyle = p.cyan;
-  ctx.lineWidth = 5;
+  ctx.lineWidth = 3.2;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.moveTo(TUBE_LEFT + 30, TUBE_CENTER_Y);
-  ctx.lineTo(beamX, beamY);
+  layout.beam.forEach((pt, index) => {
+    if (index === 0) ctx.moveTo(pt.x, pt.y);
+    else ctx.lineTo(pt.x, pt.y);
+  });
   ctx.stroke();
   ctx.fillStyle = '#ffffff';
   ctx.beginPath();
-  ctx.arc(beamX, beamY, 8, 0, Math.PI * 2);
+  ctx.arc(layout.screenHit.x, layout.screenHit.y, 6, 0, Math.PI * 2);
   ctx.fill();
-  text(ctx, 'Y', 274, TUBE_CENTER_Y - 78, p.blue, 17 * scale, 'center', 700);
-  text(ctx, 'Y′', 274, TUBE_CENTER_Y + 83, p.blue, 17 * scale, 'center', 700);
-  text(ctx, 'X', 374, TUBE_CENTER_Y - 72, p.pink, 17 * scale, 'center', 700);
-  text(ctx, 'X′', 374, TUBE_CENTER_Y + 75, p.pink, 17 * scale, 'center', 700);
-  text(
-    ctx,
-    '电子枪',
-    TUBE_LEFT + 74,
-    TUBE_CENTER_Y + 104,
-    p.muted,
-    14 * scale,
-    'center'
-  );
-  text(
-    ctx,
-    '荧光屏',
-    TUBE_RIGHT - 2,
-    TUBE_CENTER_Y + 4,
-    p.muted,
-    14 * scale,
-    'left'
-  );
+
+  for (const label of layout.labels) {
+    if (label.text === '示波屏') continue;
+    const color =
+      label.text === 'Y' || label.text === 'Y′'
+        ? p.blue
+        : label.text === 'X' || label.text === 'X′'
+          ? p.pink
+          : p.muted;
+    const weight = label.text.length <= 2 ? 700 : 600;
+    text(
+      ctx,
+      label.text,
+      label.x,
+      label.y,
+      color,
+      font(label.text.length <= 2 ? 16 : 13),
+      'center',
+      weight
+    );
+  }
 }
 
 function drawScope(
   ctx: CanvasRenderingContext2D,
   state: OscilloscopeState,
   p: Palette,
-  scale: number
+  font: (n: number) => number
 ): void {
+  const layout = apparatusLayout(state);
+  const { cx, cy, r } = layout.scope;
+  const usable = r - 14;
   ctx.fillStyle = p.scopeBg;
   ctx.beginPath();
-  ctx.arc(SCOPE_CX, SCOPE_CY, SCOPE_R, 0, Math.PI * 2);
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.fill();
   ctx.save();
   ctx.beginPath();
-  ctx.arc(SCOPE_CX, SCOPE_CY, SCOPE_R - 8, 0, Math.PI * 2);
+  ctx.arc(cx, cy, r - 7, 0, Math.PI * 2);
   ctx.clip();
   ctx.strokeStyle = p.scopeGrid;
   ctx.lineWidth = 1;
-  for (let x = SCOPE_CX - SCOPE_R; x <= SCOPE_CX + SCOPE_R; x += GRID_STEP) {
+  const grid = 22;
+  for (let x = cx - r; x <= cx + r; x += grid) {
     ctx.beginPath();
-    ctx.moveTo(x, SCOPE_CY - SCOPE_R);
-    ctx.lineTo(x, SCOPE_CY + SCOPE_R);
+    ctx.moveTo(x, cy - r);
+    ctx.lineTo(x, cy + r);
     ctx.stroke();
   }
-  for (let y = SCOPE_CY - SCOPE_R; y <= SCOPE_CY + SCOPE_R; y += GRID_STEP) {
+  for (let y = cy - r; y <= cy + r; y += grid) {
     ctx.beginPath();
-    ctx.moveTo(SCOPE_CX - SCOPE_R, y);
-    ctx.lineTo(SCOPE_CX + SCOPE_R, y);
+    ctx.moveTo(cx - r, y);
+    ctx.lineTo(cx + r, y);
     ctx.stroke();
   }
   ctx.strokeStyle = '#738b98';
   ctx.beginPath();
-  ctx.moveTo(SCOPE_CX - SCOPE_R, SCOPE_CY);
-  ctx.lineTo(SCOPE_CX + SCOPE_R, SCOPE_CY);
-  ctx.moveTo(SCOPE_CX, SCOPE_CY - SCOPE_R);
-  ctx.lineTo(SCOPE_CX, SCOPE_CY + SCOPE_R);
+  ctx.moveTo(cx - r, cy);
+  ctx.lineTo(cx + r, cy);
+  ctx.moveTo(cx, cy - r);
+  ctx.lineTo(cx, cy + r);
   ctx.stroke();
+
+  const axSpan =
+    (0.55 + (0.45 * state.params.scanAmplitude) / C.ampMax) * usable;
+  const toX = (s: number): number =>
+    state.params.scanEnabled ? cx + (s - 0.5) * 2 * axSpan : cx;
+  const toY = (ny: number): number => cy - ny * usable;
+  const wave = sweepWaveform(state.params, state.time, C.traceSamples);
   ctx.strokeStyle = p.cyan;
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  if (state.params.scanEnabled) {
-    const cycles = Math.max(1, Math.min(8, Math.round(state.cyclesPerScan)));
-    for (let i = 0; i <= 220; i += 1) {
-      const normalized = i / 220;
-      const x = SCOPE_CX - SCOPE_R + normalized * SCOPE_R * 2;
-      const y =
-        SCOPE_CY -
-        Math.sin(normalized * Math.PI * 2 * cycles) *
-          state.params.signalAmplitude *
-          1.8;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-  } else {
-    ctx.moveTo(SCOPE_CX, SCOPE_CY - state.params.signalAmplitude * 1.8);
-    ctx.lineTo(SCOPE_CX, SCOPE_CY + state.params.signalAmplitude * 1.8);
-  }
-  ctx.stroke();
-  ctx.restore();
-  ctx.strokeStyle = '#344752';
-  ctx.lineWidth = 8;
-  ctx.beginPath();
-  ctx.arc(SCOPE_CX, SCOPE_CY, SCOPE_R, 0, Math.PI * 2);
-  ctx.stroke();
-  text(
-    ctx,
-    'Y',
-    SCOPE_CX,
-    SCOPE_CY - SCOPE_R + 20,
-    p.blue,
-    16 * scale,
-    'center',
-    700
-  );
-  text(
-    ctx,
-    'X',
-    SCOPE_CX + SCOPE_R - 16,
-    SCOPE_CY,
-    p.pink,
-    16 * scale,
-    'center',
-    700
-  );
-  text(
-    ctx,
-    '示波屏',
-    SCOPE_CX,
-    SCOPE_CY + SCOPE_R + 22,
-    p.muted,
-    15 * scale,
-    'center'
-  );
-}
-
-function drawWave(
-  ctx: CanvasRenderingContext2D,
-  state: OscilloscopeState,
-  p: Palette,
-  scale: number
-): void {
-  const drawAxis = (y: number, label: string, color: string): void => {
-    ctx.strokeStyle = '#909aa6';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(WAVE_LEFT, y);
-    ctx.lineTo(WAVE_RIGHT + 12, y);
-    ctx.stroke();
-    text(
-      ctx,
-      label,
-      WAVE_LEFT - 8,
-      y - WAVE_HEIGHT - 12,
-      color,
-      14 * scale,
-      'right',
-      700
-    );
-    text(ctx, 't', WAVE_RIGHT + 22, y, p.ink, 13 * scale, 'center');
-  };
-  text(
-    ctx,
-    '信号展开原理（波形同步）',
-    (WAVE_LEFT + WAVE_RIGHT) / 2,
-    360,
-    p.ink,
-    17 * scale,
-    'center',
-    700
-  );
-  drawAxis(SIGNAL_WAVE_Y, 'Uy', p.blue);
-  drawAxis(SCAN_WAVE_Y, 'Ux', p.pink);
-  ctx.strokeStyle = p.blue;
   ctx.lineWidth = 3;
   ctx.beginPath();
-  for (let i = 0; i <= 120; i += 1) {
-    const t = i / 120;
-    const x = WAVE_LEFT + t * (WAVE_RIGHT - WAVE_LEFT);
-    const y =
-      SIGNAL_WAVE_Y -
-      Math.sin(
-        t *
-          Math.PI *
-          2 *
-          Math.max(1, Math.min(7, Math.round(state.cyclesPerScan)))
-      ) *
-        WAVE_HEIGHT *
-        0.5;
-    if (i === 0) ctx.moveTo(x, y);
+  wave.forEach((pt, index) => {
+    const x = toX(pt.x);
+    const y = toY(pt.y);
+    if (index === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
-  }
+  });
   ctx.stroke();
-  ctx.strokeStyle = p.pink;
-  ctx.lineWidth = 3;
+  ctx.fillStyle = '#ffffff';
   ctx.beginPath();
-  for (let i = 0; i <= 120; i += 1) {
-    const t = i / 120;
-    const x = WAVE_LEFT + t * (WAVE_RIGHT - WAVE_LEFT);
-    const y = SCAN_WAVE_Y + WAVE_HEIGHT * 0.55 - t * WAVE_HEIGHT;
-    if (i % 40 === 0) {
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    } else if (i % 40 === 1) {
-      ctx.moveTo(x, SCAN_WAVE_Y - WAVE_HEIGHT * 0.45);
-    } else {
-      ctx.lineTo(x, y);
-    }
-  }
-  ctx.stroke();
-  const cursorX =
-    WAVE_LEFT +
-    ((state.time * state.params.scanFrequency * VISUAL_TIME_SCALE) % 1) *
-      (WAVE_RIGHT - WAVE_LEFT);
-  ctx.strokeStyle = p.green;
-  ctx.lineWidth = 2;
-  ctx.setLineDash([8, 8]);
+  ctx.arc(toX(state.electronX), toY(state.electronY), 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.strokeStyle = '#344752';
+  ctx.lineWidth = 7;
   ctx.beginPath();
-  ctx.moveTo(cursorX, SIGNAL_WAVE_Y - WAVE_HEIGHT);
-  ctx.lineTo(cursorX, SCAN_WAVE_Y + WAVE_HEIGHT);
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.stroke();
-  ctx.setLineDash([]);
+  text(ctx, 'Y', cx, cy - r + 16, p.blue, font(14), 'center', 700);
+  text(ctx, 'X', cx + r - 14, cy, p.pink, font(14), 'center', 700);
+  text(ctx, '示波屏', cx, cy + r + 18, p.muted, font(13), 'center');
 }
 
-function drawPanel(
+function drawPlot(
   ctx: CanvasRenderingContext2D,
-  state: OscilloscopeState,
+  frame: GraphFrame,
+  points: OscilloscopeGraphPoint[],
+  tMax: number,
+  uMin: number,
+  uMax: number,
+  color: string,
+  yLabel: string,
   p: Palette,
-  scale: number
+  font: (n: number) => number,
+  showTimeAxis: boolean
 ): void {
-  const x = FIELD_W;
-  ctx.fillStyle = p.panel;
-  ctx.fillRect(x, 0, PANEL_W, BASE_H);
-  ctx.strokeStyle = p.border;
+  ctx.strokeStyle = p.hatch;
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(x, 0);
-  ctx.lineTo(x, BASE_H);
+  ctx.moveTo(frame.left, frame.top);
+  ctx.lineTo(frame.left, frame.bottom);
+  ctx.lineTo(frame.right, frame.bottom);
   ctx.stroke();
-  text(ctx, '参数控制台', x + INSET, 42, p.ink, 20 * scale, 'left', 700);
-  text(ctx, '波形同步条件', x + INSET, 84, p.muted, 14 * scale, 'left', 700);
-  const rows: Array<[string, string, string]> = [
-    ['振幅 Aᵧ', `${state.params.signalAmplitude.toFixed(0)}`, p.blue],
-    ['频率 fᵧ', `${state.params.signalFrequency.toFixed(0)} Hz`, p.blue],
-    ['扫描幅度 Aₓ', `${state.params.scanAmplitude.toFixed(0)}`, p.pink],
-    ['扫描频率 fₓ', `${state.params.scanFrequency.toFixed(0)} Hz`, p.pink]
-  ];
-  rows.forEach(([label, value, color], index) => {
-    const y = 128 + index * 52;
-    ctx.fillStyle = p.scopeBg === '#081820' ? '#f8fafc' : p.scopeBg;
-    ctx.beginPath();
-    ctx.roundRect(x + INSET, y - 19, PANEL_W - INSET * 2, 38, 9);
-    ctx.fill();
-    text(ctx, label, x + INSET + 14, y, p.ink, 13 * scale);
-    text(
-      ctx,
-      value,
-      x + PANEL_W - INSET - 14,
-      y,
-      color,
-      14 * scale,
-      'right',
-      700
-    );
-  });
-  ctx.fillStyle = state.stable ? '#e1f7ef' : '#fff3df';
+  const zero = graphToPx(0, 0, frame, tMax, uMin, uMax);
+  ctx.strokeStyle = p.muted;
+  ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.roundRect(
-    x + INSET,
-    STABLE_CARD_Y,
-    PANEL_W - INSET * 2,
-    STABLE_CARD_HEIGHT,
-    10
-  );
-  ctx.fill();
+  ctx.moveTo(frame.left, zero.y);
+  ctx.lineTo(frame.right, zero.y);
+  ctx.stroke();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  points.forEach((pt, index) => {
+    const xy = graphToPx(pt.t, pt.u, frame, tMax, uMin, uMax);
+    if (index === 0) ctx.moveTo(xy.x, xy.y);
+    else ctx.lineTo(xy.x, xy.y);
+  });
+  ctx.stroke();
   text(
     ctx,
-    state.stable ? '✓ 波形稳定' : '调整 fᵧ / fₓ',
-    x + INSET + 16,
-    386,
-    state.stable ? p.green : p.pink,
-    15 * scale,
-    'left',
+    yLabel,
+    frame.left - 8,
+    frame.top + 8,
+    color,
+    font(12),
+    'right',
     700
   );
-  text(
+  if (showTimeAxis) {
+    text(ctx, 't', frame.right + 10, frame.bottom, p.ink, font(12), 'left');
+  }
+}
+
+function drawGraphCanvas(
+  ctx: CanvasRenderingContext2D,
+  state: OscilloscopeState,
+  width: number,
+  height: number,
+  p: Palette,
+  font: (n: number) => number
+): void {
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = p.bg;
+  ctx.fillRect(0, 0, width, height);
+  const frames = graphFrames(width, height);
+  const tMax = graphWindow(state.params);
+  const signal = graphSeries(state.params, state.time, 'signal');
+  const scan = graphSeries(state.params, state.time, 'scan');
+  drawPlot(
     ctx,
-    `fᵧ / fₓ = ${state.cyclesPerScan.toFixed(2)}`,
-    x + INSET + 16,
-    416,
-    p.ink,
-    13 * scale,
-    'left'
+    frames.signal,
+    signal,
+    tMax,
+    -C.ampMax,
+    C.ampMax,
+    p.blue,
+    OSCILLOSCOPE_SIGNAL_TITLE,
+    p,
+    font,
+    false
   );
-  text(
+  drawPlot(
     ctx,
-    state.stable
-      ? `显示 ${Math.round(state.cyclesPerScan)} 个完整波`
-      : '波形缓慢移动',
-    x + INSET + 16,
-    440,
-    p.muted,
-    12 * scale,
-    'left'
+    frames.scan,
+    scan,
+    tMax,
+    0,
+    C.ampMax,
+    p.pink,
+    OSCILLOSCOPE_SCAN_TITLE,
+    p,
+    font,
+    true
   );
-  ctx.fillStyle = p.panel;
+  const cursorT = graphCursor(state.params, state.time) * tMax;
+  const top = graphToPx(
+    cursorT,
+    C.ampMax,
+    frames.signal,
+    tMax,
+    -C.ampMax,
+    C.ampMax
+  );
+  const bottom = graphToPx(cursorT, 0, frames.scan, tMax, 0, C.ampMax);
+  ctx.strokeStyle = p.green;
+  ctx.lineWidth = 1.4;
+  ctx.setLineDash([6, 6]);
   ctx.beginPath();
-  ctx.roundRect(
-    x + INSET,
-    FORMULA_CARD_Y,
-    PANEL_W - INSET * 2,
-    FORMULA_CARD_HEIGHT,
-    10
-  );
-  ctx.fill();
-  text(ctx, '核心关系', x + INSET + 16, 506, p.muted, 13 * scale, 'left', 700);
-  text(ctx, 'fᵧ = n · fₓ', x + INSET + 16, 540, p.ink, 18 * scale, 'left', 700);
-  text(
-    ctx,
-    'X 轴展开时间，Y 轴输入信号',
-    x + INSET + 16,
-    576,
-    p.green,
-    12 * scale,
-    'left'
-  );
+  ctx.moveTo(top.x, frames.signal.top);
+  ctx.lineTo(top.x, frames.signal.bottom);
+  ctx.moveTo(bottom.x, frames.scan.top);
+  ctx.lineTo(bottom.x, frames.scan.bottom);
+  ctx.stroke();
+  ctx.setLineDash([]);
 }
 
 export function createOscilloscopeView(
@@ -497,69 +478,169 @@ export function createOscilloscopeView(
 ) {
   const stage = createCanvasViewport({
     canvas: options.canvas ?? null,
-    sizing: { mode: 'clamped', fallbackWidth: BASE_W, fallbackHeight: BASE_H },
-    initialWidth: BASE_W,
-    initialHeight: BASE_H,
+    sizing: {
+      mode: 'clamped',
+      fallbackWidth: C.baseWidth,
+      fallbackHeight: C.baseHeight
+    },
+    initialWidth: C.baseWidth,
+    initialHeight: C.baseHeight,
     eagerContext: true
   });
+  const graph = {
+    canvas: (options.graphCanvas ?? null) as HTMLCanvasElement | null,
+    ctx: null as CanvasRenderingContext2D | null,
+    cssWidth: C.graphFallbackWidth as number,
+    cssHeight: C.graphFallbackHeight as number,
+    responsiveScale: 1,
+    resize(): void {
+      if (!graph.canvas) return;
+      const sized = sizeGraphCanvasToHost(graph.canvas);
+      graph.ctx = sized.ctx;
+      graph.cssWidth = sized.cssWidth;
+      graph.cssHeight = sized.cssHeight;
+      graph.responsiveScale = sized.responsiveScale;
+    },
+    attach(canvas: HTMLCanvasElement): void {
+      graph.canvas = canvas;
+      graph.resize();
+    },
+    release(): void {
+      graph.canvas = null;
+      graph.ctx = null;
+    }
+  };
+  if (graph.canvas) graph.resize();
   const env = createViewEnvironment({
     theme: options.theme ?? 'light',
     mode: options.mode ?? 'normal',
     demoHints: options.demoHints
   });
   let snapshot: OscilloscopeState | null = null;
+  let drawing = false;
+  const overlayObservers: Array<{ disconnect(): void }> = [];
+  const observedOverlayNodes = new Set<Element>();
+
+  function paint(state: OscilloscopeState): void {
+    if (drawing) return;
+    drawing = true;
+    try {
+      draw(state);
+    } finally {
+      drawing = false;
+    }
+  }
+
+  function redraw(): void {
+    if (snapshot) paint(snapshot);
+  }
+
+  function observeOverlayNode(node: Element): void {
+    if (observedOverlayNodes.has(node)) return;
+    observedOverlayNodes.add(node);
+    if (typeof ResizeObserver !== 'undefined') {
+      const resize = new ResizeObserver(() => redraw());
+      resize.observe(node);
+      overlayObservers.push(resize);
+    }
+    if (typeof MutationObserver !== 'undefined') {
+      const mutate = new MutationObserver(() => redraw());
+      mutate.observe(node, {
+        attributes: true,
+        childList: true,
+        subtree: true,
+        attributeFilter: ['class', 'style']
+      });
+      overlayObservers.push(mutate);
+    }
+  }
+
+  function watchOverlay(): void {
+    if (!stage.canvas) return;
+    const parent = stage.canvas.parentElement;
+    if (parent) observeOverlayNode(parent);
+    const layout = stage.canvas.closest(OSCILLOSCOPE_FLOATING_LAYOUT_SELECTOR);
+    if (layout) observeOverlayNode(layout);
+    for (const panel of findOverlayPanels(stage.canvas)) {
+      observeOverlayNode(panel);
+    }
+  }
+
   function draw(state: OscilloscopeState): void {
     const ctx = stage.ctx;
     if (!ctx) return;
     const width = stage.cssWidth;
     const height = stage.cssHeight;
-    const fit = Math.min(width / BASE_W, height / BASE_H);
-    const offsetY = (height - BASE_H * fit) / 2;
-    const scale = env.contentScale() * stage.responsiveScale;
-    const p = PALETTE[env.theme];
-    ctx.clearRect(0, 0, width, height);
-    ctx.save();
-    ctx.translate(0, offsetY);
-    ctx.scale(fit, fit);
-    ctx.fillStyle = p.bg;
-    ctx.fillRect(0, 0, BASE_W, BASE_H);
-    text(
-      ctx,
-      '示波管原理与波形同步',
-      FIELD_W / 2,
-      34,
-      p.ink,
-      20 * scale,
-      'center',
-      700
+    const layout = stageLayoutFrom(stage.canvas);
+    const { fit, offsetX, offsetY, scaleX } = stageTransform(
+      width,
+      height,
+      layout
     );
-    drawTube(ctx, state, p, scale);
-    drawScope(ctx, state, p, scale);
-    drawWave(ctx, state, p, scale);
-    drawPanel(ctx, state, p, scale);
+    const p = PALETTE[env.theme];
+    const rs = stage.responsiveScale;
+    const typeScale = env.fontScale() * Math.min(env.contentScale(), 1.25);
+    const font = (base: number): number =>
+      scaledSize(base * typeScale, Math.max(rs, 0.3), 11) / Math.max(fit, 0.05);
+
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = p.bg;
+    ctx.fillRect(0, 0, width, height);
+    ctx.save();
+    ctx.translate(offsetX, offsetY);
+    ctx.scale(fit * scaleX, fit);
+    ctx.fillStyle = p.bg;
+    ctx.fillRect(0, 0, C.baseWidth, C.baseHeight);
+    drawTube(ctx, state, p, font);
+    drawScope(ctx, state, p, font);
     ctx.restore();
+
+    if (graph.canvas) {
+      if (!graph.ctx) graph.resize();
+      const gctx = graph.ctx;
+      if (gctx) {
+        const gFont = (base: number): number =>
+          scaledSize(
+            base * typeScale,
+            Math.max(graph.responsiveScale, 0.3),
+            10
+          );
+        drawGraphCanvas(gctx, state, graph.cssWidth, graph.cssHeight, p, gFont);
+      }
+    }
+    watchOverlay();
   }
+
   return {
     render(state: OscilloscopeState): void {
       snapshot = state;
       stage.ensureSized();
-      draw(state);
+      paint(state);
     },
     resize(): void {
       stage.resize();
-      if (snapshot) draw(snapshot);
+      if (graph.canvas) graph.resize();
+      if (snapshot) paint(snapshot);
     },
     setTheme(theme: TeachingTheme): void {
       env.setTheme(theme);
-      if (snapshot) draw(snapshot);
+      if (snapshot) paint(snapshot);
     },
     setMode(mode: TeachingMode, hints?: DemoRenderHints): void {
       env.setMode(mode, hints);
-      if (snapshot) draw(snapshot);
+      if (snapshot) paint(snapshot);
+    },
+    attachGraphCanvas(canvas: HTMLCanvasElement): void {
+      graph.attach(canvas);
+      if (snapshot) paint(snapshot);
     },
     dispose(): void {
       snapshot = null;
+      overlayObservers.forEach((observer) => observer.disconnect());
+      overlayObservers.length = 0;
+      observedOverlayNodes.clear();
       stage.release();
+      graph.release();
     }
   };
 }

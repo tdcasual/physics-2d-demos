@@ -1,9 +1,16 @@
-import type { SceneMeta } from '../../platform/scene-contract';
 import type { SceneDemoProfile } from '../../platform/demo-profile';
+import type { SceneMeta } from '../../platform/scene-contract';
+import { oscilloscopeConstants as C } from './scene.sim';
 
 const demoProfile: SceneDemoProfile = {
   lessonTask: 'process',
-  readoutKeys: ['cycles-per-scan', 'stable', 'screen-y'],
+  readoutKeys: [
+    'signal-frequency',
+    'scan-frequency',
+    'cycles-per-scan',
+    'stable',
+    'screen-y'
+  ],
   renderHints: { contentScale: 1.05 },
   interactionHints: {
     touchTargetMinSize: 48,
@@ -26,17 +33,17 @@ export const oscilloscopeMeta: SceneMeta = {
   subConcepts: ['电子束偏转', '扫描电压'],
   keywords: ['示波管', '示波器', '波形同步', '扫描电压'],
   objective: '观察 X 轴扫描如何展开 Y 轴信号',
-  description: '同步显示电子束、荧光屏和稳定条件',
+  description: '电子束、荧光屏与 fᵧ = n · fₓ 稳定条件',
   difficulty: 3,
   icon: '📺',
   category: 'electromagnetism',
   featured: false,
   defaultParams: {
-    signalAmplitude: 35,
-    signalFrequency: 210,
+    signalAmplitude: C.signalAmpDefault,
+    signalFrequency: C.signalFreqDefault,
     scanEnabled: 1,
-    scanAmplitude: 40,
-    scanFrequency: 70,
+    scanAmplitude: C.scanAmpDefault,
+    scanFrequency: C.scanFreqDefault,
     autoRun: 1
   },
   urlSyncKeys: [
@@ -48,7 +55,7 @@ export const oscilloscopeMeta: SceneMeta = {
     'autoRun'
   ],
   testProfile: {
-    hasGraph: false,
+    hasGraph: true,
     hasTransport: true,
     supportsPresentation: true
   },
