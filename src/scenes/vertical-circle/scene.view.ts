@@ -1,7 +1,13 @@
-import type { TeachingMode, TeachingTheme } from '../../platform/standards';
+import { scaledSize } from '../../core/canvas-sizing';
 import type { DemoRenderHints } from '../../platform/demo-profile';
+import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
-import { verticalCircleConstants, type VerticalCircleState } from './scene.sim';
+import {
+  stageLayoutFrom,
+  stageTransform,
+  verticalCircleConstants as C,
+  type VerticalCircleState
+} from './scene.sim';
 
 export type CreateVerticalCircleViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -9,47 +15,6 @@ export type CreateVerticalCircleViewOptions = {
   mode?: TeachingMode;
   demoHints?: DemoRenderHints;
 };
-
-const {
-  baseWidth: BASE_W,
-  baseHeight: BASE_H,
-  fieldWidth: FIELD_W,
-  centerX: CENTER_X,
-  centerY: CENTER_Y,
-  orbitRadius: ORBIT_RADIUS,
-  panelWidth: PANEL_W,
-  panelInset: PANEL_INSET,
-  titleY: TITLE_Y,
-  modelY: MODEL_Y,
-  modelLineY: MODEL_LINE_Y,
-  formulaTop: FORMULA_TOP,
-  formulaHeight: FORMULA_HEIGHT,
-  formulaLineOneY: FORMULA_LINE_ONE_Y,
-  formulaLineTwoY: FORMULA_LINE_TWO_Y,
-  statusTop: STATUS_TOP,
-  statusHeight: STATUS_HEIGHT,
-  statusTitleY: STATUS_TITLE_Y,
-  statusBodyY: STATUS_BODY_Y,
-  valuesTop: VALUES_TOP,
-  valuesHeight: VALUES_HEIGHT,
-  valuesStartY: VALUES_START_Y,
-  valuesRowGap: VALUES_ROW_GAP,
-  constantsY: CONSTANTS_Y,
-  canvasTitleY: CANVAS_TITLE_Y,
-  topLabelY: TOP_LABEL_Y,
-  bottomLabelY: BOTTOM_LABEL_Y,
-  leftLabelX: LEFT_LABEL_X,
-  rightLabelX: RIGHT_LABEL_X,
-  statusPillY: STATUS_PILL_Y,
-  statusPillLeft: STATUS_PILL_LEFT,
-  statusPillWidth: STATUS_PILL_WIDTH,
-  statusPillHeight: STATUS_PILL_HEIGHT,
-  statusPillRadius: STATUS_PILL_RADIUS,
-  gridStep: GRID_STEP,
-  vectorScale: VECTOR_SCALE,
-  ballRadius: BALL_RADIUS,
-  maxVectorLength: MAX_VECTOR_LENGTH
-} = verticalCircleConstants;
 
 type Palette = {
   bg: string;
@@ -60,9 +25,10 @@ type Palette = {
   red: string;
   blue: string;
   teal: string;
+  green: string;
   gold: string;
   border: string;
-  soft: string;
+  slack: string;
 };
 
 const PALETTE: Record<TeachingTheme, Palette> = {
@@ -75,9 +41,10 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     red: '#ef4050',
     blue: '#3c80a8',
     teal: '#1f9b8f',
+    green: '#2f9e44',
     gold: '#e49a1b',
-    border: '#d2d9e2',
-    soft: '#f0f2f5'
+    border: '#c5ced8',
+    slack: '#9aa7b5'
   },
   dark: {
     bg: '#101827',
@@ -88,9 +55,10 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     red: '#fb7185',
     blue: '#60a5fa',
     teal: '#34d399',
+    green: '#4ade80',
     gold: '#fbbf24',
     border: '#3c4b61',
-    soft: '#253249'
+    slack: '#64748b'
   }
 };
 
@@ -118,7 +86,8 @@ function arrow(
   x2: number,
   y2: number,
   color: string,
-  width = 4
+  width: number,
+  head: number
 ): void {
   const dx = x2 - x1;
   const dy = y2 - y1;
@@ -129,33 +98,52 @@ function arrow(
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
   ctx.lineWidth = width;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
   ctx.beginPath();
   ctx.moveTo(x1, y1);
   ctx.lineTo(x2, y2);
   ctx.stroke();
   ctx.beginPath();
   ctx.moveTo(x2, y2);
-  ctx.lineTo(x2 - ux * 13 - uy * 6, y2 - uy * 13 + ux * 6);
-  ctx.lineTo(x2 - ux * 13 + uy * 6, y2 - uy * 13 - ux * 6);
+  ctx.lineTo(
+    x2 - ux * head - uy * head * 0.45,
+    y2 - uy * head + ux * head * 0.45
+  );
+  ctx.lineTo(
+    x2 - ux * head + uy * head * 0.45,
+    y2 - uy * head - ux * head * 0.45
+  );
   ctx.closePath();
   ctx.fill();
 }
 
+function scaled(
+  magnitude: number,
+  minLength: number,
+  maxLength: number
+): number {
+  return Math.min(
+    maxLength,
+    Math.max(minLength, Math.abs(magnitude) * C.vectorScale)
+  );
+}
+
 function drawGrid(ctx: CanvasRenderingContext2D, p: Palette): void {
   ctx.fillStyle = p.bg;
-  ctx.fillRect(0, 0, FIELD_W, BASE_H);
+  ctx.fillRect(0, 0, C.baseWidth, C.baseHeight);
   ctx.strokeStyle = p.grid;
   ctx.lineWidth = 1;
-  for (let x = 0; x <= FIELD_W; x += GRID_STEP) {
+  for (let x = 0; x <= C.baseWidth; x += C.gridStep) {
     ctx.beginPath();
     ctx.moveTo(x, 0);
-    ctx.lineTo(x, BASE_H);
+    ctx.lineTo(x, C.baseHeight);
     ctx.stroke();
   }
-  for (let y = 0; y <= BASE_H; y += GRID_STEP) {
+  for (let y = 0; y <= C.baseHeight; y += C.gridStep) {
     ctx.beginPath();
     ctx.moveTo(0, y);
-    ctx.lineTo(FIELD_W, y);
+    ctx.lineTo(C.baseWidth, y);
     ctx.stroke();
   }
 }
@@ -164,124 +152,135 @@ function drawOrbit(
   ctx: CanvasRenderingContext2D,
   state: VerticalCircleState,
   p: Palette,
-  scale: number
+  font: (n: number) => number
 ): void {
-  ctx.strokeStyle = p.border;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(CENTER_X, CENTER_Y, ORBIT_RADIUS, 0, Math.PI * 2);
-  ctx.stroke();
-  if (state.params.showPath) {
-    ctx.strokeStyle = p.muted;
-    ctx.setLineDash([8, 8]);
-    ctx.beginPath();
-    ctx.arc(CENTER_X, CENTER_Y, ORBIT_RADIUS, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
+  const tick = C.orbitRadius * 0.08;
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(CENTER_X, CENTER_Y - ORBIT_RADIUS - 22);
-  ctx.lineTo(CENTER_X, CENTER_Y + ORBIT_RADIUS + 22);
-  ctx.moveTo(CENTER_X - ORBIT_RADIUS - 22, CENTER_Y);
-  ctx.lineTo(CENTER_X + ORBIT_RADIUS + 22, CENTER_Y);
+  ctx.moveTo(C.centerX, C.centerY - C.orbitRadius - tick);
+  ctx.lineTo(C.centerX, C.centerY + C.orbitRadius + tick);
+  ctx.moveTo(C.centerX - C.orbitRadius - tick, C.centerY);
+  ctx.lineTo(C.centerX + C.orbitRadius + tick, C.centerY);
   ctx.stroke();
+
+  if (state.params.showPath) {
+    ctx.strokeStyle = p.muted;
+    ctx.lineWidth = 1.6;
+    ctx.setLineDash([7, 7]);
+    ctx.beginPath();
+    ctx.arc(C.centerX, C.centerY, C.orbitRadius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  const label = font(13);
   text(
     ctx,
     '0°（最高点）',
-    CENTER_X,
-    TOP_LABEL_Y,
+    C.centerX,
+    C.centerY - C.orbitRadius - tick - 10,
     p.muted,
-    14 * scale,
+    label,
     'center',
     700
   );
   text(
     ctx,
     '±180°（最低点）',
-    CENTER_X,
-    BOTTOM_LABEL_Y,
+    C.centerX,
+    C.centerY + C.orbitRadius + tick + 12,
     p.muted,
-    14 * scale,
+    label,
     'center',
     700
   );
-  text(ctx, '−90°', LEFT_LABEL_X, CENTER_Y, p.muted, 14 * scale, 'center', 700);
-  text(ctx, '90°', RIGHT_LABEL_X, CENTER_Y, p.muted, 14 * scale, 'center', 700);
+  text(
+    ctx,
+    '−90°',
+    C.centerX - C.orbitRadius - tick - 18,
+    C.centerY,
+    p.muted,
+    label,
+    'center',
+    700
+  );
+  text(
+    ctx,
+    '90°',
+    C.centerX + C.orbitRadius + tick + 16,
+    C.centerY,
+    p.muted,
+    label,
+    'center',
+    700
+  );
 }
 
-function drawVectors(
+function drawConstraint(
   ctx: CanvasRenderingContext2D,
   state: VerticalCircleState,
   p: Palette,
-  scale: number
+  font: (n: number) => number
 ): void {
-  if (!state.params.showVectors) return;
   const { x, y } = state.position;
+  const slack = state.params.model === 'rope' && state.constraintForce < -0.01;
+  ctx.strokeStyle = slack ? p.slack : p.ink;
+  ctx.lineWidth = state.params.model === 'rod' ? 6 : 4.5;
+  ctx.setLineDash(slack ? [5, 5] : []);
+  ctx.beginPath();
+  ctx.moveTo(C.centerX, C.centerY);
+  ctx.lineTo(x, y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  const mx = (C.centerX + x) / 2;
+  const my = (C.centerY + y) / 2;
+  const nx = (C.centerY - y) / C.orbitRadius;
+  const ny = (x - C.centerX) / C.orbitRadius;
+  text(ctx, 'R', mx + nx * 14, my + ny * 14, p.muted, font(13), 'center', 700);
+
   const angle = state.angle * (Math.PI / 180);
-  const inwardX = (CENTER_X - x) / ORBIT_RADIUS;
-  const inwardY = (CENTER_Y - y) / ORBIT_RADIUS;
-  const tangentX = Math.cos(angle);
-  const tangentY = Math.sin(angle);
-  const gravityLength = 72;
-  const normalLength = Math.min(
-    MAX_VECTOR_LENGTH,
-    Math.max(26, state.normalForce * VECTOR_SCALE)
+  const arcR = C.orbitRadius * 0.22;
+  ctx.strokeStyle = p.muted;
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.arc(
+    C.centerX,
+    C.centerY,
+    arcR,
+    -Math.PI / 2,
+    -Math.PI / 2 + angle,
+    angle < 0
   );
-  const velocityLength = Math.min(
-    MAX_VECTOR_LENGTH,
-    Math.max(26, state.speed * VECTOR_SCALE)
-  );
-  arrow(ctx, x, y, x, y + gravityLength, p.teal, 5);
+  ctx.stroke();
+  const mid = -Math.PI / 2 + angle / 2;
   text(
     ctx,
-    'G',
-    x - 16,
-    y + gravityLength + 14,
-    p.teal,
-    17 * scale,
+    'θ',
+    C.centerX + Math.cos(mid) * (arcR + 12),
+    C.centerY + Math.sin(mid) * (arcR + 12),
+    p.muted,
+    font(14),
     'center',
     700
   );
-  arrow(
-    ctx,
-    x,
-    y,
-    x + inwardX * normalLength,
-    y + inwardY * normalLength,
-    p.gold,
-    5
-  );
-  text(
-    ctx,
-    'Fₙ',
-    x + inwardX * (normalLength + 16),
-    y + inwardY * (normalLength + 16),
-    p.gold,
-    16 * scale,
-    'center',
-    700
-  );
-  arrow(
-    ctx,
-    x,
-    y,
-    x + tangentX * velocityLength,
-    y + tangentY * velocityLength,
-    p.blue,
-    5
-  );
-  text(
-    ctx,
-    'v',
-    x + tangentX * (velocityLength + 15),
-    y + tangentY * (velocityLength + 15),
-    p.blue,
-    17 * scale,
-    'center',
-    700
-  );
+}
+
+function drawPivot(ctx: CanvasRenderingContext2D, p: Palette): void {
+  ctx.fillStyle = p.border;
+  ctx.beginPath();
+  ctx.arc(C.centerX, C.centerY, C.pivotRadius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = p.panel;
+  ctx.beginPath();
+  ctx.arc(C.centerX, C.centerY, C.pivotHub, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = p.ink;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(C.centerX, C.centerY, C.pivotHub * 0.45, 0, Math.PI * 2);
+  ctx.stroke();
 }
 
 function drawBall(
@@ -290,182 +289,156 @@ function drawBall(
   p: Palette
 ): void {
   const { x, y } = state.position;
-  ctx.strokeStyle = p.ink;
-  ctx.lineWidth = 5;
-  ctx.beginPath();
-  ctx.moveTo(CENTER_X, CENTER_Y);
-  ctx.lineTo(x, y);
-  ctx.stroke();
-  ctx.fillStyle = p.ink;
-  ctx.beginPath();
-  ctx.arc(CENTER_X, CENTER_Y, 22, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = p.panel;
-  ctx.beginPath();
-  ctx.arc(CENTER_X, CENTER_Y, 9, 0, Math.PI * 2);
-  ctx.fill();
-  const gradient = ctx.createRadialGradient(x - 6, y - 7, 2, x, y, BALL_RADIUS);
+  const gradient = ctx.createRadialGradient(
+    x - 6,
+    y - 7,
+    2,
+    x,
+    y,
+    C.ballRadius
+  );
   gradient.addColorStop(0, '#f7fbff');
   gradient.addColorStop(0.42, p.muted);
   gradient.addColorStop(1, p.ink);
   ctx.fillStyle = gradient;
   ctx.beginPath();
-  ctx.arc(x, y, BALL_RADIUS, 0, Math.PI * 2);
+  ctx.arc(x, y, C.ballRadius, 0, Math.PI * 2);
   ctx.fill();
   ctx.strokeStyle = p.ink;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 1.6;
   ctx.stroke();
 }
 
-function drawStatusPill(
+function drawVectors(
   ctx: CanvasRenderingContext2D,
   state: VerticalCircleState,
   p: Palette,
-  scale: number
+  font: (n: number) => number
 ): void {
-  const width = STATUS_PILL_WIDTH;
-  const left = STATUS_PILL_LEFT;
-  ctx.fillStyle = p.panel;
+  if (!state.params.showVectors) return;
+  const { x, y } = state.position;
+  const angle = state.angle * (Math.PI / 180);
+  const inwardX = (C.centerX - x) / C.orbitRadius;
+  const inwardY = (C.centerY - y) / C.orbitRadius;
+  const tangentX = Math.cos(angle);
+  const tangentY = Math.sin(angle);
+  const gLen = C.gravityLength;
+  const minL = C.minVectorLength;
+  const maxL = C.maxVectorLength;
+  const label = font(14);
+
+  const grLen = scaled(state.gravityRadial, 12, maxL);
+  const gtLen = scaled(state.gravityTangential, 12, maxL);
+  const grX = Math.sign(state.gravityRadial || 1) * grLen * inwardX;
+  const grY = Math.sign(state.gravityRadial || 1) * grLen * inwardY;
+  const gtX = Math.sign(state.gravityTangential || 1) * gtLen * tangentX;
+  const gtY = Math.sign(state.gravityTangential || 1) * gtLen * tangentY;
+
+  ctx.save();
+  ctx.setLineDash([5, 4]);
+  ctx.strokeStyle = p.green;
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.roundRect(
-    left,
-    STATUS_PILL_Y - STATUS_PILL_RADIUS,
-    width,
-    STATUS_PILL_HEIGHT,
-    STATUS_PILL_RADIUS
-  );
-  ctx.fill();
-  ctx.strokeStyle = p.border;
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + grX, y + grY);
+  ctx.lineTo(x + grX + gtX, y + grY + gtY);
+  ctx.lineTo(x + gtX, y + gtY);
+  ctx.closePath();
   ctx.stroke();
-  const color =
-    state.status === '绳子松弛' || state.status === '最高点脱轨'
-      ? p.red
-      : p.teal;
+  ctx.restore();
+  if (Math.abs(state.gravityRadial) > 0.05) {
+    arrow(ctx, x, y, x + grX, y + grY, p.green, 2, 8);
+    text(
+      ctx,
+      'G_r',
+      x + grX * 0.55 + gtX * 0.12,
+      y + grY * 0.55 + gtY * 0.12,
+      p.green,
+      font(12),
+      'center',
+      700
+    );
+  }
+  if (Math.abs(state.gravityTangential) > 0.05) {
+    arrow(ctx, x, y, x + gtX, y + gtY, p.green, 2, 8);
+    text(
+      ctx,
+      'G_t',
+      x + gtX * 0.62,
+      y + gtY * 0.62,
+      p.green,
+      font(12),
+      'center',
+      700
+    );
+  }
+
+  arrow(ctx, x, y, x, y + gLen, p.teal, 4.5, 11);
+  text(ctx, 'G', x - 16, y + gLen + 12, p.teal, label, 'center', 700);
+
+  const fnLen = scaled(state.normalForce, minL, maxL);
+  arrow(ctx, x, y, x + inwardX * fnLen, y + inwardY * fnLen, p.gold, 4.5, 11);
   text(
     ctx,
-    state.status,
-    left + width / 2,
-    STATUS_PILL_Y,
-    color,
-    15 * scale,
+    'Fₙ',
+    x + inwardX * (fnLen + 16),
+    y + inwardY * (fnLen + 16),
+    p.gold,
+    label,
     'center',
     700
   );
-}
 
-function drawPanel(
-  ctx: CanvasRenderingContext2D,
-  state: VerticalCircleState,
-  p: Palette,
-  scale: number
-): void {
-  const x = FIELD_W;
-  ctx.fillStyle = p.panel;
-  ctx.fillRect(x, 0, BASE_W - FIELD_W, BASE_H);
-  ctx.strokeStyle = p.border;
-  ctx.beginPath();
-  ctx.moveTo(x, 0);
-  ctx.lineTo(x, BASE_H);
-  ctx.stroke();
-  text(
-    ctx,
-    '竖直圆周临界',
-    x + PANEL_INSET,
-    TITLE_Y,
-    p.ink,
-    20 * scale,
-    'left',
-    700
-  );
-  text(
-    ctx,
-    state.params.model === 'rope' ? '绳模型（只能拉）' : '杆模型（拉与推）',
-    x + PANEL_INSET,
-    MODEL_Y,
-    state.params.model === 'rope' ? p.red : p.blue,
-    15 * scale,
-    'left',
-    700
-  );
-  text(
-    ctx,
-    `R = 10 m  ·  g = 10 m/s²`,
-    x + PANEL_INSET,
-    MODEL_LINE_Y,
-    p.muted,
-    13 * scale
-  );
-  ctx.fillStyle = p.soft;
-  ctx.beginPath();
-  ctx.roundRect(x + PANEL_INSET, FORMULA_TOP, PANEL_W, FORMULA_HEIGHT, 10);
-  ctx.fill();
-  text(
-    ctx,
-    'v² = v₀² − 2gR(1+cosθ)',
-    x + 42,
-    FORMULA_LINE_ONE_Y,
-    p.ink,
-    13 * scale,
-    'left',
-    700
-  );
-  text(
-    ctx,
-    'T = mv²/R − mg cosθ',
-    x + 42,
-    FORMULA_LINE_TWO_Y,
-    p.ink,
-    13 * scale,
-    'left',
-    700
-  );
-  const statusColor = state.status === '杆受压' ? p.blue : p.red;
-  ctx.fillStyle = p.soft;
-  ctx.beginPath();
-  ctx.roundRect(x + PANEL_INSET, STATUS_TOP, PANEL_W, STATUS_HEIGHT, 10);
-  ctx.fill();
-  ctx.fillStyle = statusColor;
-  ctx.fillRect(x + PANEL_INSET, STATUS_TOP, 5, STATUS_HEIGHT);
-  text(
-    ctx,
-    state.status,
-    x + 42,
-    STATUS_TITLE_Y,
-    statusColor,
-    15 * scale,
-    'left',
-    700
-  );
-  const detail =
-    state.status === '绳子松弛' || state.status === '最高点脱轨'
-      ? '拉力不足，约束失效'
-      : state.status === '杆受压'
-        ? '杆提供背离圆心的支撑'
-        : '约束力指向圆心';
-  text(ctx, detail, x + 42, STATUS_BODY_Y, p.muted, 12 * scale, 'left');
-  ctx.strokeStyle = p.border;
-  ctx.beginPath();
-  ctx.roundRect(x + PANEL_INSET, VALUES_TOP, PANEL_W, VALUES_HEIGHT, 10);
-  ctx.stroke();
-  const rows: Array<[string, string, string]> = [
-    ['当前速度 v', `${state.speed.toFixed(1)} m/s`, p.ink],
-    ['最高点速度', `${state.topSpeed.toFixed(1)} m/s`, p.blue],
-    ['径向力 Fₙ', `${state.normalForce.toFixed(1)} N`, p.gold],
-    ['约束力 T', `${state.constraintForce.toFixed(1)} N`, statusColor]
-  ];
-  rows.forEach(([label, value, color], index) => {
-    const y = VALUES_START_Y + index * VALUES_ROW_GAP;
-    text(ctx, label, x + 42, y, p.ink, 13 * scale, 'left');
-    text(ctx, value, x + 224, y, color, 14 * scale, 'right', 700);
-  });
-  text(
-    ctx,
-    `临界最低速度：${state.criticalBottomSpeed.toFixed(1)} m/s`,
-    x + PANEL_INSET,
-    CONSTANTS_Y,
-    p.muted,
-    12 * scale
-  );
+  const slack = state.params.model === 'rope' && state.constraintForce < -0.01;
+  if (!slack && Math.abs(state.constraintForce) > 0.05) {
+    const tSign = Math.sign(state.constraintForce);
+    const tLen = scaled(state.constraintForce, minL, maxL);
+    arrow(
+      ctx,
+      x,
+      y,
+      x + tSign * inwardX * tLen,
+      y + tSign * inwardY * tLen,
+      p.red,
+      4.2,
+      11
+    );
+    text(
+      ctx,
+      'T',
+      x + tSign * inwardX * (tLen * 0.55) - tangentX * 16,
+      y + tSign * inwardY * (tLen * 0.55) - tangentY * 16,
+      p.red,
+      label,
+      'center',
+      700
+    );
+  }
+
+  if (state.speed > 0.05) {
+    const vSign = state.sense;
+    const vLen = scaled(state.speed, minL, maxL);
+    arrow(
+      ctx,
+      x,
+      y,
+      x + vSign * tangentX * vLen,
+      y + vSign * tangentY * vLen,
+      p.blue,
+      4.2,
+      11
+    );
+    text(
+      ctx,
+      'v',
+      x + vSign * tangentX * (vLen + 14),
+      y + vSign * tangentY * (vLen + 14),
+      p.blue,
+      label,
+      'center',
+      700
+    );
+  }
 }
 
 export function createVerticalCircleView(
@@ -473,9 +446,13 @@ export function createVerticalCircleView(
 ) {
   const stage = createCanvasViewport({
     canvas: options.canvas ?? null,
-    sizing: { mode: 'clamped', fallbackWidth: BASE_W, fallbackHeight: BASE_H },
-    initialWidth: BASE_W,
-    initialHeight: BASE_H,
+    sizing: {
+      mode: 'clamped',
+      fallbackWidth: C.baseWidth,
+      fallbackHeight: C.baseHeight
+    },
+    initialWidth: C.baseWidth,
+    initialHeight: C.baseHeight,
     eagerContext: true
   });
   const env = createViewEnvironment({
@@ -484,36 +461,81 @@ export function createVerticalCircleView(
     demoHints: options.demoHints
   });
   let snapshot: VerticalCircleState | null = null;
+  let parentObserved = false;
+  let panelObserved = false;
+  let drawing = false;
+  const overlayObservers: Array<{ disconnect(): void }> = [];
+
+  function paint(state: VerticalCircleState): void {
+    if (drawing) return;
+    drawing = true;
+    try {
+      draw(state);
+    } finally {
+      drawing = false;
+    }
+  }
+
+  function redraw(): void {
+    if (snapshot) paint(snapshot);
+  }
+
+  function watchOverlay(): void {
+    if (!stage.canvas) return;
+    const parent = stage.canvas.parentElement;
+    if (!parent) return;
+    if (!parentObserved && typeof ResizeObserver !== 'undefined') {
+      parentObserved = true;
+      const resize = new ResizeObserver(() => redraw());
+      resize.observe(parent);
+      overlayObservers.push(resize);
+    }
+    if (panelObserved) return;
+    const panel = parent.querySelector(
+      '.teaching-readout-panel, .srgb-readout-panel, .readout-panel'
+    );
+    if (!(panel instanceof HTMLElement)) return;
+    panelObserved = true;
+    if (typeof ResizeObserver !== 'undefined') {
+      const resize = new ResizeObserver(() => redraw());
+      resize.observe(panel);
+      overlayObservers.push(resize);
+    }
+    if (typeof MutationObserver !== 'undefined') {
+      const mutate = new MutationObserver(() => redraw());
+      mutate.observe(panel, {
+        attributes: true,
+        attributeFilter: ['class', 'style']
+      });
+      overlayObservers.push(mutate);
+    }
+  }
 
   function draw(state: VerticalCircleState): void {
     const ctx = stage.ctx;
     if (!ctx) return;
     const width = stage.cssWidth;
     const height = stage.cssHeight;
-    const fit = Math.min(width / BASE_W, height / BASE_H);
-    const offsetY = (height - BASE_H * fit) / 2;
+    const layout = stageLayoutFrom(stage.canvas);
+    const { fit, offsetX, offsetY } = stageTransform(width, height, layout);
     const p = PALETTE[env.theme];
-    const scale = env.contentScale() * stage.responsiveScale;
+    const rs = stage.responsiveScale;
+    const typeScale = env.fontScale() * Math.min(env.contentScale(), 1.25);
+    const font = (base: number): number =>
+      scaledSize(base * typeScale, Math.max(rs, 0.3), 11) / Math.max(fit, 0.05);
+
     ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = p.bg;
+    ctx.fillRect(0, 0, width, height);
     ctx.save();
-    ctx.translate(0, offsetY);
+    ctx.translate(offsetX, offsetY);
     ctx.scale(fit, fit);
     drawGrid(ctx, p);
-    text(
-      ctx,
-      '竖直面圆周运动',
-      CENTER_X,
-      CANVAS_TITLE_Y,
-      p.muted,
-      16 * scale,
-      'center',
-      700
-    );
-    drawOrbit(ctx, state, p, scale);
+    drawOrbit(ctx, state, p, font);
+    drawConstraint(ctx, state, p, font);
+    drawPivot(ctx, p);
+    drawVectors(ctx, state, p, font);
     drawBall(ctx, state, p);
-    drawVectors(ctx, state, p, scale);
-    drawStatusPill(ctx, state, p, scale);
-    drawPanel(ctx, state, p, scale);
     ctx.restore();
   }
 
@@ -521,22 +543,27 @@ export function createVerticalCircleView(
     render(state: VerticalCircleState): void {
       snapshot = state;
       stage.ensureSized();
-      draw(state);
+      watchOverlay();
+      paint(state);
     },
     resize(): void {
       stage.resize();
-      if (snapshot) draw(snapshot);
+      if (snapshot) paint(snapshot);
     },
     setTheme(theme: TeachingTheme): void {
       env.setTheme(theme);
-      if (snapshot) draw(snapshot);
+      if (snapshot) paint(snapshot);
     },
     setMode(mode: TeachingMode, hints?: DemoRenderHints): void {
       env.setMode(mode, hints);
-      if (snapshot) draw(snapshot);
+      if (snapshot) paint(snapshot);
     },
     dispose(): void {
       snapshot = null;
+      for (const observer of overlayObservers) observer.disconnect();
+      overlayObservers.length = 0;
+      parentObserved = false;
+      panelObserved = false;
       stage.release();
     }
   };

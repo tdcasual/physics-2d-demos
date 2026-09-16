@@ -24,7 +24,7 @@
 |   9 | 双星系统运动轨道-万有引力定律与航天                   | 力学 | [`binary-stars`](../src/scenes/binary-stars/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/cf938b0c-3fba-4a89-a76f-eceaf07397f5) · [封面](https://img.svgzhenli.com/gallery-assets/covers/9q4r2plqgqo1774679828854.png)  |  ✅  |
 |  10 | 双动式风箱工作原理演示                                | 力学 | [`bellows`](../src/scenes/bellows/scene.meta.ts)                                                   | [详情](https://app.svgzhenli.com/resource/c79a2708-0d3c-4073-a283-38fda18be645) · [封面](https://img.svgzhenli.com/gallery-assets/covers/xtwc0u5essg1776333366610.png)  |  ✅  |
 |  11 | 匀变速直线运动 - 速度与时间关系                       | 力学 | [`uniformly-varied-motion`](../src/scenes/uniformly-varied-motion/scene.meta.ts)                   | [详情](https://app.svgzhenli.com/resource/a0834791-f1a8-4673-aa23-4bb5f7df5271) · [封面](https://img.svgzhenli.com/gallery-assets/covers/gw9dhetax9f1774676803350.png)  |  ✅  |
-|  12 | 竖直平面内圆周运动临界状态                            | 力学 | [`vertical-circle`](../src/scenes/vertical-circle/scene.meta.ts)                                   | [详情](https://app.svgzhenli.com/resource/d53c6251-b24c-4a6c-a6b9-9e104a3995b8) · [封面](https://img.svgzhenli.com/gallery-assets/covers/s3fq03sft9n1775626003953.png)  |  ☐   |
+|  12 | 竖直平面内圆周运动临界状态                            | 力学 | [`vertical-circle`](../src/scenes/vertical-circle/scene.meta.ts)                                   | [详情](https://app.svgzhenli.com/resource/d53c6251-b24c-4a6c-a6b9-9e104a3995b8) · [封面](https://img.svgzhenli.com/gallery-assets/covers/s3fq03sft9n1775626003953.png)  |  ✅  |
 |  13 | 三大性质力交互课件                                    | 力学 | [`three-forces`](../src/scenes/three-forces/scene.meta.ts)                                         | [详情](https://app.svgzhenli.com/resource/a6e3e383-482e-4ad1-a69b-f7ddaeaf8aee) · [封面](https://img.svgzhenli.com/gallery-assets/covers/ihldajl8mpl1781095386830.png)  |  ☐   |
 |  14 | 原子核比结合能与质量数关系                            | 近代 | [`binding-energy`](../src/scenes/binding-energy/scene.meta.ts)                                     | [详情](https://app.svgzhenli.com/resource/56ab7ed1-01c6-4cfa-89d3-cae38e24c433) · [封面](https://img.svgzhenli.com/gallery-assets/covers/hlgy1dsu9wh1774799292161.png)  |  ☐   |
 |  15 | 探究加速度与力质量关系实验                            | 力学 | [`accel-force`](../src/scenes/accel-force/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/fe4a9b83-9f96-4f06-9ad6-d64ebd75c515) · [封面](https://img.svgzhenli.com/gallery-assets/covers/qgo9e87x771787678068367.png)   |  ☐   |
@@ -218,6 +218,15 @@
 - 交互与布局验证：桌面 `1280×720` 默认/读数展开、负加速至零、跨零负速度、面积开关、播放暂停与重置无数据卡叠在动画区、transport/读数不遮挡；移动 `390×844` 控制/数据标签分离、无水平溢出；console 无 error/warning。
 - 工程验证：远程 Grok Build 明确返回 `CONSENSUS: PASS`；专项 `18/18`、`pnpm verify:scene uniformly-varied-motion` `7/7` 通过；tsc/eslint、构建和 bundle 预算通过。
 - 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/a0834791-f1a8-4673-aa23-4bb5f7df5271.md` · [原始详情](https://app.svgzhenli.com/resource/a0834791-f1a8-4673-aa23-4bb5f7df5271) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/gw9dhetax9f1774676803350.png)
+
+### 12. 竖直平面内圆周运动临界状态 (`vertical-circle`)
+
+- 状态：✅ Codex / Grok Build 交叉审计通过（2026-09-16）。
+- 修复：按 SVGZhenli 封面重构米白网格动画区，仅保留竖直圆轨道、中心支点、绳/杆约束、小球、G、Fₙ、T、v 与简短 G_r/G_t 分解；移除 canvas 参数表、公式卡、状态和数值读数。模型、滑块、状态与公式进入标准控制区/折叠读数区，`preferredLayout:'split-right'`、`hasGraph:false`，移动端控制/数据标签分离，文案精简。
+- 物理核验：采用 `v²=v₀²−2gR(1+cosθ)`、`v_top=√max(0,v_bottom²−4gR)`、`T=mv²/R−mg cosθ`；θ=0° 最高点、±180° 最低点、±90° 侧点；绳临界 `v_top=√gR`、`v_bottom=√5gR`，负约束显示松弛/脱轨，杆模型允许受压；不足能量在转折角反向，暂停/重置/拖拽/夹取均覆盖。
+- 交互与布局验证：Grok Build Playwright 复核 `1280×720`、`1024×768`、`900×768`、`768×768`、`390×844`，动画与 transport/浮动读数无遮挡，控制/数据分区无横纵溢出，绳低速脱轨、杆受压、读数展开、暂停冻结、深色主题、演示模式和 URL 恢复通过；我独立复核桌面/移动端同样无溢出，console 无 error/warning，动画区无数据卡/公式卡。
+- 工程验证：远程 Grok Build 明确返回 `CONSENSUS: PASS`；专项 `26/26`（sim `22` + view `4`）通过；`pnpm verify:scene vertical-circle` 全 `7/7` 步骤通过（3145 passed，133 skipped）；tsc、ESLint、构建、bundle 预算和 `git diff --check` 通过。
+- 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/d53c6251-b24c-4a6c-a6b9-9e104a3995b8.md` · [原始详情](https://app.svgzhenli.com/resource/d53c6251-b24c-4a6c-a6b9-9e104a3995b8) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/s3fq03sft9n1775626003953.png)
 
 ## 复审记录模板
 
