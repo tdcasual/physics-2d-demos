@@ -126,6 +126,8 @@ const GRAPH_PAD_B = 44;
 const GRAPH_MAX_FORCE = 1.4;
 const GRAPH_MAX_INV_MASS = 5.2;
 const GRAPH_MAX_ACCEL = 3.5;
+const GRAPH_FALLBACK_WIDTH = 400;
+const GRAPH_FALLBACK_HEIGHT = 200;
 
 const DEFAULTS: AccelForceParams = {
   mode: 'force',
@@ -179,6 +181,8 @@ export const accelForceConstants = {
   graphMaxForce: GRAPH_MAX_FORCE,
   graphMaxInvMass: GRAPH_MAX_INV_MASS,
   graphMaxAccel: GRAPH_MAX_ACCEL,
+  graphFallbackWidth: GRAPH_FALLBACK_WIDTH,
+  graphFallbackHeight: GRAPH_FALLBACK_HEIGHT,
   gridStep: 40,
   tableThickness: 14,
   tableLeg: 36,
@@ -564,8 +568,8 @@ export function tapeDotPositions(
 }
 
 export function graphFrame(width: number, height: number): GraphFrame {
-  const w = Math.max(1, finite(width, 400));
-  const h = Math.max(1, finite(height, 200));
+  const w = Math.max(1, finite(width, GRAPH_FALLBACK_WIDTH));
+  const h = Math.max(1, finite(height, GRAPH_FALLBACK_HEIGHT));
   return {
     left: GRAPH_PAD_L,
     right: Math.max(GRAPH_PAD_L + 48, w - GRAPH_PAD_R),

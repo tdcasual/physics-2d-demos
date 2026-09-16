@@ -114,8 +114,8 @@ export function sizeGraphCanvasToHost(canvas: HTMLCanvasElement): {
     cssHeight = box.height;
   } else {
     const rect = canvas.getBoundingClientRect();
-    cssWidth = Math.max(1, Math.floor(rect.width || 400));
-    cssHeight = Math.max(1, Math.floor(rect.height || 200));
+    cssWidth = Math.max(1, Math.floor(rect.width || C.graphFallbackWidth));
+    cssHeight = Math.max(1, Math.floor(rect.height || C.graphFallbackHeight));
   }
   const dpr = Math.min(
     2,
@@ -682,8 +682,8 @@ export function createAccelForceView(
   const graph = {
     canvas: (options.graphCanvas ?? null) as HTMLCanvasElement | null,
     ctx: null as CanvasRenderingContext2D | null,
-    cssWidth: 400,
-    cssHeight: 200,
+    cssWidth: C.graphFallbackWidth as number,
+    cssHeight: C.graphFallbackHeight as number,
     responsiveScale: 1,
     resize(): void {
       if (!graph.canvas) return;
