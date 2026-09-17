@@ -1,23 +1,47 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
+import { readSceneParams, writeSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { createControlCard } from '../../ui/components/ControlCard';
 import { mechanicalEnergyControlsSchema } from './controls-schema';
+import {
+  createChromeScheduler,
+  createMechanicalEnergyDataPanel,
+  findMechanicalEnergyDataHost,
+  mountDataPanel,
+  syncDataPanelCollapsed
+} from './data-panel';
+import { asEnvironment, createMechanicalEnergyScene } from './scene.entry';
 import { mechanicalEnergyMeta } from './scene.meta';
-import { createMechanicalEnergyScene } from './scene.entry';
-import type { MechanicalEnergyParams } from './scene.sim';
+import {
+  asBool,
+  restoredUrlParams,
+  shouldShowResistance,
+  type MechanicalEnergyParams
+} from './scene.sim';
+
+const rawInitial = readSceneParams(mechanicalEnergyMeta);
+const NUMBER_KEYS = ['resistance', 'mass', 'gravity', 'pointPeriod'] as const;
 
 bootScenePage({
   meta: mechanicalEnergyMeta,
-  autoPlay: true,
-  preferredLayout: 'split-right',
+  autoPlay: asBool(rawInitial.autoRun, false),
+  preferredLayout:
+    typeof window !== 'undefined' && window.innerWidth <= 720
+      ? 'mobile-stack'
+      : 'split-right-graph-bottom',
   layoutConfig: {
-    defaultLeftRatio: 0.34,
+    defaultLeftRatio: 0.32,
     leftMinWidth: 300,
     leftMaxWidth: 450,
     controlColumns: 'auto',
     readoutCollapsed: true,
     readoutLabel: '数据读数',
-    hasGraph: false
+    hasGraph: true,
+    graphHeight: 230,
+    graphMinHeight: 160,
+    graphMaxHeight: 340,
+    graphColumns: 1
   },
   createScene: ({ canvas, theme, mode, demoHints }) => {
     if (!canvas) throw new Error('mechanical-energy requires a canvas');
@@ -29,82 +53,173 @@ bootScenePage({
     });
     const scheduler = createRenderScheduler(() => scene.render());
     const dispose = scene.dispose.bind(scene);
+    const originalReset = scene.reset.bind(scene);
+    const originalStartAll = scene.startAll.bind(scene);
+    const originalPauseAll = scene.pauseAll.bind(scene);
+    const syncUrl = (): void => {
+      writeSceneParams(restoredUrlParams(scene.getParams()));
+    };
     return {
       ...scene,
-      step(dt: number) {
+      step(dt: number): void {
         scene.step(dt);
         scheduler.schedule();
       },
-      dispose() {
+      dispose(): void {
         scheduler.dispose();
         dispose();
+      },
+      reset(): void {
+        originalReset();
+        syncUrl();
+      },
+      startAll(): void {
+        originalStartAll();
+        syncUrl();
+      },
+      pauseAll(): void {
+        originalPauseAll();
+        syncUrl();
       }
     };
   },
   createControls: ({ mount, scene, scheduleRender, writeParam }) => {
     const render = scheduleRender ?? (() => scene.render());
+    const energyScene = scene as ReturnType<typeof createMechanicalEnergyScene>;
+    let applying = false;
+    let last = energyScene.getParams();
+
     const renderer = renderSchema({
       mount,
       schema: mechanicalEnergyControlsSchema,
       onChange: (key, value) => {
+        if (applying) return;
         if (key === 'environment') {
-          scene.setParams({
-            environment: String(value) === 'ideal' ? 'ideal' : 'resist'
-          });
-          renderer.setActive(key, String(value));
-        } else if (key === 'autoRun') {
-          scene.setParams({ autoRun: Boolean(value) });
-        } else {
-          scene.setParams({
+          const environment = asEnvironment(value) ?? 'resist';
+          energyScene.setParams({ environment });
+          renderer.setActive(key, environment);
+          renderer.setVisible('resistance', shouldShowResistance(environment));
+          writeParam?.(key, environment === 'ideal' ? 0 : 1);
+        } else if ((NUMBER_KEYS as readonly string[]).includes(key)) {
+          energyScene.setParams({
             [key]: Number(value)
           } as Partial<MechanicalEnergyParams>);
+          writeParam?.(key, value);
         }
+        last = energyScene.getParams();
         render();
-        writeParam?.(key, value);
       },
-      onAction: (key) => {
-        if (key === 'release') scene.release();
-        if (key === 'reset') {
-          scene.reset();
-          renderer.setActive('environment', 'resist');
-          renderer.setValue('resistance', 0.06);
-          renderer.setValue('mass', 1);
-          renderer.setValue('gravity', 9.8);
-          renderer.setValue('pointPeriod', 0.04);
-          renderer.setValue('autoRun', false);
-        }
-        render();
-      }
+      onAction: () => undefined
     });
+    renderer.setVisible(
+      'resistance',
+      shouldShowResistance(energyScene.getParams().environment)
+    );
+
+    const panel = createMechanicalEnergyDataPanel();
+    panel.update(energyScene.getState());
+    let fallback: ReturnType<typeof createControlCard> | null = null;
+    let disposed = false;
+
+    function attachPanel(): void {
+      if (disposed) return;
+      const host = findMechanicalEnergyDataHost();
+      if (host) {
+        if (fallback) {
+          fallback.element.remove();
+          fallback = null;
+        }
+        mountDataPanel(host, panel.element);
+        panel.update(energyScene.getState());
+        syncDataPanelCollapsed(panel.element);
+        return;
+      }
+      if (!fallback) {
+        fallback = createControlCard('计数点', { span: 'full' });
+        fallback.element.dataset.span = 'full';
+        fallback.body.appendChild(panel.element);
+        mount.appendChild(fallback.element);
+      }
+      panel.update(energyScene.getState());
+    }
+
+    attachPanel();
+    const unsubscribe = energyScene.subscribe(() => {
+      if (disposed) return;
+      const p = energyScene.getParams();
+      applying = true;
+      if (p.environment !== last.environment) {
+        renderer.setActive('environment', p.environment);
+        renderer.setVisible('resistance', shouldShowResistance(p.environment));
+      }
+      if (p.resistance !== last.resistance) {
+        renderer.setValue('resistance', p.resistance);
+      }
+      if (p.mass !== last.mass) renderer.setValue('mass', p.mass);
+      if (p.gravity !== last.gravity) renderer.setValue('gravity', p.gravity);
+      if (p.pointPeriod !== last.pointPeriod) {
+        renderer.setValue('pointPeriod', p.pointPeriod);
+      }
+      applying = false;
+      last = p;
+      panel.update(energyScene.getState());
+      syncDataPanelCollapsed(panel.element);
+    });
+    const onChrome = () => {
+      if (disposed) return;
+      attachPanel();
+    };
+    window.addEventListener('resize', onChrome);
+    const chrome = createChromeScheduler(onChrome);
+    chrome.start();
+
     return {
       setValue: (key: string, value: number | string | boolean) =>
         renderer.setValue(key, value),
       setActive: (key: string, value: string) => renderer.setActive(key, value),
-      dispose: () => renderer.dispose()
+      refresh: () => {
+        const p = energyScene.getParams();
+        applying = true;
+        renderer.setActive('environment', p.environment);
+        renderer.setVisible('resistance', shouldShowResistance(p.environment));
+        renderer.setValue('resistance', p.resistance);
+        renderer.setValue('mass', p.mass);
+        renderer.setValue('gravity', p.gravity);
+        renderer.setValue('pointPeriod', p.pointPeriod);
+        applying = false;
+        last = p;
+      },
+      dispose: () => {
+        disposed = true;
+        unsubscribe();
+        chrome.dispose();
+        window.removeEventListener('resize', onChrome);
+        panel.dispose();
+        fallback?.element.remove();
+        renderer.dispose();
+      }
     };
   },
   paramSync: {
     applyParam: (key, value, ctx) => {
       if (key === 'environment') {
-        const environment =
-          String(value) === '0' || String(value) === 'ideal'
-            ? 'ideal'
-            : 'resist';
+        const environment = asEnvironment(value) ?? 'resist';
         ctx.scene.setParams({ environment });
-        ctx.setControlValue(key, environment);
+        ctx.setControlActive(key, environment);
+        return true;
+      }
+      if ((NUMBER_KEYS as readonly string[]).includes(key)) {
+        const n = Number(value);
+        if (!Number.isFinite(n)) return false;
+        ctx.scene.setParams({ [key]: n } as Partial<MechanicalEnergyParams>);
+        ctx.setControlValue(key, n);
         return true;
       }
       if (key === 'autoRun') {
-        const autoRun = Number(value) > 0;
-        ctx.scene.setParams({ autoRun });
-        ctx.setControlValue(key, autoRun);
+        ctx.scene.setParams({ autoRun: asBool(value, false) });
         return true;
       }
-      const number = Number(value);
-      if (!Number.isFinite(number)) return false;
-      ctx.scene.setParams({ [key]: number } as Partial<MechanicalEnergyParams>);
-      ctx.setControlValue(key, number);
-      return true;
+      return false;
     }
   }
 });

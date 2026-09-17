@@ -1,10 +1,18 @@
 import type { SceneDemoProfile } from '../../platform/demo-profile';
 import type { SceneMeta } from '../../platform/scene-contract';
+import { mechanicalEnergyConstants as C } from './scene.sim';
 
 const demoProfile: SceneDemoProfile = {
   lessonTask: 'process',
   transport: 'visible',
-  readoutKeys: ['acceleration', 'points', 'graphPoints'],
+  readoutKeys: [
+    'acceleration',
+    'height',
+    'speed',
+    'potentialLoss',
+    'kineticGain',
+    'dissipation'
+  ],
   renderHints: { contentScale: 1.02 },
   interactionHints: {
     touchTargetMinSize: 48,
@@ -13,8 +21,7 @@ const demoProfile: SceneDemoProfile = {
       'resistance',
       'mass',
       'gravity',
-      'pointPeriod',
-      'autoRun'
+      'pointPeriod'
     ]
   }
 };
@@ -35,10 +42,10 @@ export const mechanicalEnergyMeta: SceneMeta = {
   featured: false,
   defaultParams: {
     environment: 1,
-    resistance: 0.06,
-    mass: 1,
-    gravity: 9.8,
-    pointPeriod: 0.04,
+    resistance: C.defaultResistance,
+    mass: C.defaultMass,
+    gravity: C.defaultGravity,
+    pointPeriod: C.defaultPointPeriod,
     autoRun: 0
   },
   urlSyncKeys: [
@@ -50,7 +57,7 @@ export const mechanicalEnergyMeta: SceneMeta = {
     'autoRun'
   ],
   testProfile: {
-    hasGraph: false,
+    hasGraph: true,
     hasTransport: true,
     supportsPresentation: true
   },

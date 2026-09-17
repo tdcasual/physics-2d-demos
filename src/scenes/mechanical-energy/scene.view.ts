@@ -1,83 +1,25 @@
+import {
+  applyCanvasSize,
+  getResponsiveScale,
+  scaledSize
+} from '../../core/canvas-sizing';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import {
-  mechanicalEnergyConstants,
+  endTime,
+  heightAt,
+  mechanicalEnergyConstants as C,
   type MechanicalEnergyState
 } from './scene.sim';
 
 export type CreateMechanicalEnergyViewOptions = {
   canvas?: HTMLCanvasElement;
+  graphCanvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
   mode?: TeachingMode;
   demoHints?: DemoRenderHints;
 };
-
-const {
-  baseWidth: BASE_W,
-  baseHeight: BASE_H,
-  fieldWidth: FIELD_W,
-  panelX: PANEL_X,
-  panelWidth: PANEL_W,
-  panelInset: INSET,
-  apparatusTitleY: TITLE_Y,
-  tapeTopY: TAPE_TOP,
-  tapeBottomY: TAPE_BOTTOM,
-  tapeX: TAPE_X,
-  rulerY: RULER_Y,
-  rulerWidth: RULER_W,
-  rulerHeight: RULER_H,
-  graphX: GRAPH_X,
-  graphWidth: GRAPH_W,
-  graphHeight: GRAPH_H,
-  graphTop: GRAPH_TOP,
-  panelRuleY: PANEL_RULE_Y,
-  coreCardY: CORE_Y,
-  coreCardHeight: CORE_H,
-  parameterCardY: PARAM_Y,
-  parameterCardHeight: PARAM_H,
-  actionCardY: ACTION_Y,
-  actionCardHeight: ACTION_H,
-  tableCardY: TABLE_Y,
-  tableCardHeight: TABLE_H,
-  rowGap: ROW_GAP,
-  tapeSpacing: TAPE_SPACING,
-  tapeDotRadius: TAPE_DOT_RADIUS,
-  gridStep: GRID_STEP,
-  standX: STAND_X,
-  standTop: STAND_TOP,
-  standHeight: STAND_HEIGHT,
-  deviceX: DEVICE_X,
-  deviceY: DEVICE_Y,
-  deviceWidth: DEVICE_W,
-  deviceHeight: DEVICE_H,
-  deviceTopX: DEVICE_TOP_X,
-  deviceTopY: DEVICE_TOP_Y,
-  deviceTopWidth: DEVICE_TOP_W,
-  wheelX: WHEEL_X,
-  wheelY: WHEEL_Y,
-  ropeRedStartX: ROPE_RED_START_X,
-  ropeRedStartY: ROPE_RED_START_Y,
-  ropeRedEndX: ROPE_RED_END_X,
-  ropeRedEndY: ROPE_RED_END_Y,
-  ropeBlackStartX: ROPE_BLACK_START_X,
-  ropeBlackStartY: ROPE_BLACK_START_Y,
-  ropeBlackEndX: ROPE_BLACK_END_X,
-  ropeBlackEndY: ROPE_BLACK_END_Y,
-  weightBlockWidth: WEIGHT_BLOCK_W,
-  weightBlockHeight: WEIGHT_BLOCK_H,
-  baseX: BASE_X,
-  baseY: BASE_Y,
-  apparatusBaseWidth: APPARATUS_BASE_W,
-  footX: FOOT_X,
-  footY: FOOT_Y,
-  footWidth: FOOT_W,
-  rulerX: RULER_X,
-  rulerLabelX: RULER_LABEL_X,
-  tableColumnOffsets: TABLE_COLUMN_OFFSETS
-} = mechanicalEnergyConstants;
-
-const CARD_RADIUS = 12;
 
 type Palette = {
   bg: string;
@@ -86,43 +28,134 @@ type Palette = {
   muted: string;
   border: string;
   grid: string;
-  soft: string;
-  blue: string;
-  red: string;
+  stand: string;
+  timer: string;
+  timerDark: string;
   gold: string;
-  teal: string;
-  dark: string;
+  red: string;
+  blue: string;
+  tape: string;
+  base: string;
 };
+
+type PlotBox = { left: number; right: number; top: number; bottom: number };
+
+export type StripLayout = {
+  left: number;
+  right: number;
+  tapeTop: number;
+  tapeH: number;
+  rulerTop: number;
+  rulerH: number;
+  span: number;
+  cmMax: number;
+};
+
+export type ApparatusLayout = {
+  tapeX: number;
+  tapeTop: number;
+  tapeBottom: number;
+  standX: number;
+  standTop: number;
+  standBottom: number;
+  timerX: number;
+  timerY: number;
+  timerW: number;
+  timerH: number;
+  wheelX: number;
+  wheelY: number;
+  wheelR: number;
+  weightX: number;
+  weightY: number;
+  weightW: number;
+  weightH: number;
+  heightRef: number;
+  strip: StripLayout;
+};
+
 const PALETTE: Record<TeachingTheme, Palette> = {
   light: {
-    bg: '#fbfaf7',
-    panel: '#fff',
-    ink: '#303744',
-    muted: '#8b97a5',
-    border: '#d3dbe4',
-    grid: '#e5e9ee',
-    soft: '#f1f4f7',
-    blue: '#3977a8',
-    red: '#ef4050',
-    gold: '#ef9b1a',
-    teal: '#2a7c91',
-    dark: '#253249'
+    bg: '#f4f7fb',
+    panel: '#ffffff',
+    ink: '#2c3544',
+    muted: '#7d8997',
+    border: '#d5dde6',
+    grid: '#e7ebf0',
+    stand: '#4b5563',
+    timer: '#3b7aa8',
+    timerDark: '#2f628a',
+    gold: '#e6b035',
+    red: '#e24b57',
+    blue: '#2f7ab8',
+    tape: '#fffdf6',
+    base: '#6b7380'
   },
   dark: {
     bg: '#101827',
     panel: '#172235',
-    ink: '#eef2f7',
-    muted: '#aab6c8',
+    ink: '#e8eef6',
+    muted: '#9aa7b8',
     border: '#3c4b61',
-    grid: '#2d3e57',
-    soft: '#253249',
-    blue: '#60a5fa',
-    red: '#fb7185',
-    gold: '#fbbf24',
-    teal: '#34d399',
-    dark: '#e6edf5'
+    grid: '#243246',
+    stand: '#9aa6b6',
+    timer: '#4f92c4',
+    timerDark: '#3b74a0',
+    gold: '#f3c14a',
+    red: '#ff6f7c',
+    blue: '#6eb0e6',
+    tape: '#e9eef5',
+    base: '#7d8a9c'
   }
 };
+
+function contentBoxSize(host: HTMLElement): { width: number; height: number } {
+  const cs = getComputedStyle(host);
+  const rect = host.getBoundingClientRect();
+  const padX =
+    (Number.parseFloat(cs.paddingLeft) || 0) +
+    (Number.parseFloat(cs.paddingRight) || 0);
+  const padY =
+    (Number.parseFloat(cs.paddingTop) || 0) +
+    (Number.parseFloat(cs.paddingBottom) || 0);
+  return {
+    width: Math.max(1, Math.floor(rect.width - padX)),
+    height: Math.max(1, Math.floor(rect.height - padY))
+  };
+}
+
+export function sizeGraphCanvasToHost(canvas: HTMLCanvasElement): {
+  ctx: CanvasRenderingContext2D;
+  cssWidth: number;
+  cssHeight: number;
+  responsiveScale: number;
+} {
+  const host = canvas.parentElement;
+  let cssWidth: number;
+  let cssHeight: number;
+  if (host) {
+    const box = contentBoxSize(host);
+    cssWidth = box.width;
+    cssHeight = box.height;
+  } else {
+    const rect = canvas.getBoundingClientRect();
+    cssWidth = Math.max(1, Math.floor(rect.width || C.graphFallbackWidth));
+    cssHeight = Math.max(1, Math.floor(rect.height || C.graphFallbackHeight));
+  }
+  const dpr = Math.min(
+    2,
+    typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1
+  );
+  const responsiveScale = getResponsiveScale(cssWidth, cssHeight);
+  const ctx = applyCanvasSize(canvas, {
+    width: Math.max(1, Math.floor(cssWidth * dpr)),
+    height: Math.max(1, Math.floor(cssHeight * dpr)),
+    cssWidth,
+    cssHeight,
+    dpr,
+    responsiveScale
+  });
+  return { ctx, cssWidth, cssHeight, responsiveScale };
+}
 
 function text(
   ctx: CanvasRenderingContext2D,
@@ -140,376 +173,590 @@ function text(
   ctx.textBaseline = 'middle';
   ctx.fillText(value, x, y);
 }
+
 function rounded(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
   width: number,
-  height: number
+  height: number,
+  radius: number
 ): void {
   ctx.beginPath();
-  ctx.roundRect(x, y, width, height, CARD_RADIUS);
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(x, y, width, height, radius);
+  } else {
+    ctx.rect(x, y, width, height);
+  }
 }
-function drawGrid(ctx: CanvasRenderingContext2D, p: Palette): void {
-  ctx.fillStyle = p.bg;
-  ctx.fillRect(0, 0, FIELD_W, BASE_H);
-  ctx.strokeStyle = p.grid;
-  ctx.lineWidth = 1;
-  for (let x = 0; x <= FIELD_W; x += GRID_STEP) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, BASE_H);
-    ctx.stroke();
-  }
-  for (let y = 0; y <= BASE_H; y += GRID_STEP) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(FIELD_W, y);
-    ctx.stroke();
-  }
+
+export function plotBox(width: number, height: number, scale: number): PlotBox {
+  return {
+    left: Math.max(44 * scale, width * 0.12),
+    right: width - Math.max(28 * scale, width * 0.08),
+    top: Math.max(36 * scale, height * 0.32),
+    bottom: height - Math.max(24 * scale, height * 0.2)
+  };
+}
+
+export function plotChrome(
+  width: number,
+  height: number,
+  scale: number
+): {
+  box: PlotBox;
+  title: { x: number; y: number };
+  yUnit: { x: number; y: number };
+} {
+  const box = plotBox(width, height, scale);
+  const titleY = Math.max(11 * scale, 10);
+  return {
+    box,
+    title: { x: Math.max(10 * scale, 8), y: titleY },
+    yUnit: {
+      x: box.left,
+      y: Math.max(titleY + Math.max(16 * scale, 14), box.top - 8 * scale)
+    }
+  };
+}
+
+/** Cover composition stays 0–20 cm; extreme g/T₀ expand to fit A–E. */
+export function stripRangeCm(state: MechanicalEnergyState): number {
+  const tE = C.countPointCount * state.params.pointPeriod;
+  const fromE = heightAt(state.acceleration, tE) * 100;
+  const fromLabels = stripDotCandidates(state).reduce((max, dot) => {
+    if (!dot.label) return max;
+    return Math.max(max, dot.height * 100);
+  }, 0);
+  const need = Math.max(fromE, fromLabels);
+  if (need <= C.rulerCentimetres + 1e-6) return C.rulerCentimetres;
+  const step = need <= 40 ? 5 : need <= 100 ? 10 : 20;
+  return Math.ceil((need + 1e-6) / step) * step;
+}
+
+export function stripTickStep(cmMax: number): {
+  minor: number;
+  major: number;
+} {
+  if (cmMax <= 20) return { minor: 1, major: 5 };
+  if (cmMax <= 50) return { minor: 2, major: 10 };
+  if (cmMax <= 100) return { minor: 5, major: 20 };
+  return { minor: 10, major: 50 };
+}
+
+export function stripLayout(
+  width: number,
+  height: number,
+  scale: number,
+  cmMax = C.rulerCentimetres
+): StripLayout {
+  const overlayReserve = width / Math.max(height, 1) > 1.55 ? width * 0.3 : 0;
+  const padX = Math.max(14 * scale, width * 0.04);
+  const padBottom = Math.max(6 * scale, height * 0.016);
+  const rulerH = Math.max(18 * scale, height * 0.06);
+  const tapeH = Math.max(22 * scale, height * 0.08);
+  const gap = Math.max(4 * scale, height * 0.01);
+  const rulerTop = height - padBottom - rulerH;
+  const tapeTop = rulerTop - gap - tapeH;
+  const left = padX;
+  const right = width - padX - overlayReserve;
+  return {
+    left,
+    right,
+    tapeTop,
+    tapeH,
+    rulerTop,
+    rulerH,
+    span: Math.max(1, right - left),
+    cmMax
+  };
+}
+
+export function heightToStripX(heightM: number, strip: StripLayout): number {
+  const cm = Math.max(0, heightM * 100);
+  const u = Math.min(1, cm / strip.cmMax);
+  return strip.left + u * strip.span;
+}
+
+export function stripDotCandidates(state: MechanicalEnergyState): Array<{
+  height: number;
+  counting: boolean;
+  label: string | null;
+  time: number;
+}> {
+  const dots =
+    state.tapeDots.length > 0
+      ? state.tapeDots
+      : [{ height: 0, counting: false, label: 'O' as const, time: 0 }];
+  const hasO = dots.some((dot) => dot.label === 'O' || dot.height === 0);
+  return hasO
+    ? dots
+    : [{ height: 0, counting: false, label: 'O', time: 0 }, ...dots];
+}
+
+export function visibleStripDots(
+  state: MechanicalEnergyState,
+  strip: StripLayout
+): ReturnType<typeof stripDotCandidates> {
+  return stripDotCandidates(state).filter(
+    (dot) => dot.height * 100 <= strip.cmMax + 1e-6
+  );
+}
+
+/** Neighbor ticks past the teaching ruler (e.g. F for v_E). Not counting points. */
+export function clippedStripDots(
+  state: MechanicalEnergyState,
+  strip: StripLayout
+): ReturnType<typeof stripDotCandidates> {
+  return stripDotCandidates(state).filter(
+    (dot) => dot.height * 100 > strip.cmMax + 1e-6
+  );
+}
+
+export function apparatusLayout(
+  width: number,
+  height: number,
+  scale: number,
+  state: MechanicalEnergyState
+): ApparatusLayout {
+  const overlayReserve = width / Math.max(height, 1) > 1.55 ? width * 0.3 : 0;
+  const padX = Math.max(16 * scale, width * 0.06);
+  const transportClear = Math.max(48 * scale, height * 0.2);
+  const strip = stripLayout(width, height, scale, stripRangeCm(state));
+  const fieldRight = width - padX - overlayReserve;
+  const fieldLeft = padX;
+  const fieldW = Math.max(1, fieldRight - fieldLeft);
+  const standX = fieldLeft + fieldW * 0.62;
+  const standTop = transportClear;
+  const standBottom = strip.tapeTop - Math.max(8 * scale, height * 0.02);
+  const timerW = Math.max(56 * scale, fieldW * 0.28);
+  const timerH = Math.max(32 * scale, height * 0.14);
+  const timerX = standX - timerW - 4 * scale;
+  const timerY = standTop;
+  const tapeX = timerX + timerW * 0.34;
+  const tapeTop = timerY + timerH;
+  const tapeBottom = standBottom - Math.max(24 * scale, height * 0.07);
+  const weightW = Math.max(30 * scale, fieldW * 0.1);
+  const weightH = Math.max(36 * scale, height * 0.12);
+  const heightRef = Math.max(
+    heightAt(state.acceleration, endTime(state.params)),
+    1e-6
+  );
+  const travel = Math.max(1, tapeBottom - tapeTop - weightH);
+  const u = Math.min(1, state.height / heightRef);
+  const weightY = tapeTop + u * travel;
+  const wheelR = Math.max(8 * scale, timerH * 0.28);
+  return {
+    tapeX,
+    tapeTop,
+    tapeBottom,
+    standX,
+    standTop,
+    standBottom,
+    timerX,
+    timerY,
+    timerW,
+    timerH,
+    wheelX: timerX + timerW * 0.68,
+    wheelY: timerY + timerH * 0.52,
+    wheelR,
+    weightX: tapeX,
+    weightY,
+    weightW,
+    weightH,
+    heightRef,
+    strip
+  };
+}
+
+export function tapeDotY(height: number, layout: ApparatusLayout): number {
+  const travel = Math.max(
+    1,
+    layout.tapeBottom - layout.tapeTop - layout.weightH
+  );
+  const u = Math.min(1, height / layout.heightRef);
+  return layout.tapeTop + u * travel;
 }
 
 function drawApparatus(
   ctx: CanvasRenderingContext2D,
   state: MechanicalEnergyState,
+  width: number,
+  height: number,
   p: Palette,
-  scale: number
+  scale: number,
+  font: (n: number) => number
 ): void {
-  text(
+  ctx.fillStyle = p.bg;
+  ctx.fillRect(0, 0, width, height);
+  const g = apparatusLayout(width, height, scale, state);
+  const poleW = Math.max(10 * scale, width * 0.018);
+
+  const baseW = Math.max(70 * scale, width * 0.16);
+  const baseH = Math.max(10 * scale, height * 0.025);
+  const footH = Math.max(6 * scale, 6);
+  const baseY = g.standBottom - baseH - footH;
+  ctx.fillStyle = p.stand;
+  rounded(
     ctx,
-    '实验装置区（机械能守恒模型）',
-    30,
-    TITLE_Y,
-    p.ink,
-    22 * scale,
-    'left',
-    700
+    g.standX,
+    g.standTop,
+    poleW,
+    Math.max(1, baseY - g.standTop),
+    3 * scale
   );
-  ctx.fillStyle = p.dark;
-  ctx.fillRect(STAND_X, STAND_TOP, 20, STAND_HEIGHT);
-  ctx.fillStyle = p.blue;
-  ctx.fillRect(DEVICE_X, DEVICE_Y, DEVICE_W, DEVICE_H);
-  ctx.fillStyle = p.ink;
-  ctx.fillRect(DEVICE_TOP_X, DEVICE_TOP_Y, DEVICE_TOP_W, 18);
-  ctx.fillStyle = p.soft;
-  ctx.strokeStyle = p.ink;
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.arc(WHEEL_X, WHEEL_Y, 20, 0, Math.PI * 2);
   ctx.fill();
+  rounded(
+    ctx,
+    g.standX + poleW / 2 - baseW / 2,
+    baseY,
+    baseW,
+    baseH,
+    3 * scale
+  );
+  ctx.fillStyle = p.base;
+  ctx.fill();
+  ctx.fillRect(
+    g.standX + poleW / 2 - baseW * 0.42,
+    baseY + baseH * 0.7,
+    baseW * 0.84,
+    footH
+  );
+
+  ctx.fillStyle = p.stand;
+  ctx.fillRect(
+    g.timerX + g.timerW - 2 * scale,
+    g.timerY + g.timerH * 0.28,
+    g.standX + poleW - (g.timerX + g.timerW - 2 * scale),
+    Math.max(10 * scale, g.timerH * 0.22)
+  );
+  rounded(ctx, g.timerX, g.timerY, g.timerW, g.timerH, 8 * scale);
+  ctx.fillStyle = p.timer;
+  ctx.fill();
+  ctx.strokeStyle = p.timerDark;
+  ctx.lineWidth = Math.max(1.5, 2 * scale);
   ctx.stroke();
+  rounded(
+    ctx,
+    g.timerX + 6 * scale,
+    g.timerY + 5 * scale,
+    g.timerW - 12 * scale,
+    g.timerH - 10 * scale,
+    5 * scale
+  );
+  ctx.fillStyle = p.timerDark;
+  ctx.globalAlpha = 0.22;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.beginPath();
+  ctx.arc(g.wheelX, g.wheelY, g.wheelR, 0, Math.PI * 2);
+  ctx.fillStyle = p.bg;
+  ctx.fill();
+  ctx.strokeStyle = p.ink;
+  ctx.lineWidth = Math.max(1.6, 2.2 * scale);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(g.wheelX, g.wheelY, Math.max(2.4 * scale, 3), 0, Math.PI * 2);
   ctx.fillStyle = p.red;
-  ctx.beginPath();
-  ctx.arc(WHEEL_X, WHEEL_Y, 5, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = p.red;
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(ROPE_RED_START_X, ROPE_RED_START_Y);
-  ctx.lineTo(ROPE_RED_END_X, ROPE_RED_END_Y);
-  ctx.stroke();
-  ctx.strokeStyle = p.ink;
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(ROPE_BLACK_START_X, ROPE_BLACK_START_Y);
-  ctx.lineTo(ROPE_BLACK_END_X, ROPE_BLACK_END_Y);
-  ctx.stroke();
-  for (let index = 0; index < state.tapeDots.length; index += 1) {
-    const y = TAPE_TOP + index * TAPE_SPACING;
-    ctx.fillStyle = index % 2 === 0 ? p.ink : p.red;
+
+  const tapeW = Math.max(5 * scale, 5);
+  const tapeBottom = g.weightY + 4 * scale;
+  ctx.fillStyle = p.tape;
+  ctx.fillRect(
+    g.tapeX - tapeW / 2,
+    g.tapeTop - 2 * scale,
+    tapeW,
+    tapeBottom - g.tapeTop
+  );
+  ctx.strokeStyle = p.border;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(
+    g.tapeX - tapeW / 2,
+    g.tapeTop - 2 * scale,
+    tapeW,
+    tapeBottom - g.tapeTop
+  );
+
+  const dotR = Math.max(2.2 * scale, 2.4);
+  for (const dot of state.tapeDots) {
+    const y = tapeDotY(dot.height, g);
+    if (y > g.weightY - 2) continue;
     ctx.beginPath();
-    ctx.arc(TAPE_X, y, TAPE_DOT_RADIUS, 0, Math.PI * 2);
+    ctx.arc(
+      g.tapeX,
+      y,
+      dot.counting ? dotR + 0.6 * scale : dotR,
+      0,
+      Math.PI * 2
+    );
+    ctx.fillStyle = dot.counting ? p.red : p.ink;
     ctx.fill();
   }
+
+  const wx = g.weightX - g.weightW / 2;
+  rounded(ctx, wx, g.weightY, g.weightW, g.weightH, 5 * scale);
   ctx.fillStyle = p.gold;
+  ctx.fill();
   ctx.strokeStyle = p.ink;
-  ctx.lineWidth = 2;
-  ctx.fillRect(TAPE_X - 22, TAPE_BOTTOM, WEIGHT_BLOCK_W, WEIGHT_BLOCK_H);
-  ctx.strokeRect(TAPE_X - 22, TAPE_BOTTOM, WEIGHT_BLOCK_W, WEIGHT_BLOCK_H);
-  text(ctx, 'm', TAPE_X, TAPE_BOTTOM + 30, p.ink, 18 * scale, 'center', 700);
-  ctx.fillStyle = p.dark;
-  ctx.fillRect(BASE_X, BASE_Y, APPARATUS_BASE_W, 20);
-  ctx.fillRect(FOOT_X, FOOT_Y, FOOT_W, 18);
-  ctx.strokeStyle = p.border;
-  ctx.lineWidth = 2;
-  ctx.fillStyle = p.soft;
-  ctx.fillRect(RULER_X, RULER_Y, RULER_W, RULER_H);
-  ctx.strokeRect(RULER_X, RULER_Y, RULER_W, RULER_H);
-  for (let centimeter = 0; centimeter <= 20; centimeter += 1) {
-    const x = RULER_X + 2 + centimeter * 30;
-    ctx.strokeStyle = p.ink;
-    ctx.beginPath();
-    ctx.moveTo(x, RULER_Y);
-    ctx.lineTo(x, RULER_Y + (centimeter % 5 === 0 ? 26 : 16));
-    ctx.stroke();
-    if (centimeter % 5 === 0)
-      text(ctx, `${centimeter}`, x, RULER_Y + 38, p.ink, 12 * scale, 'center');
-  }
+  ctx.lineWidth = Math.max(1.2, 1.6 * scale);
+  ctx.stroke();
   text(
     ctx,
-    '左右拖拽下方刻度尺读取 h',
-    RULER_LABEL_X,
-    RULER_Y - 12,
-    p.muted,
-    13 * scale,
-    'center'
+    'm',
+    g.weightX,
+    g.weightY + g.weightH / 2,
+    p.ink,
+    font(13),
+    'center',
+    700
   );
-  drawEnergyGraph(ctx, state, p, scale);
+  drawStrip(ctx, state, p, scale, font, g.strip);
 }
 
-function drawEnergyGraph(
+function drawStrip(
   ctx: CanvasRenderingContext2D,
   state: MechanicalEnergyState,
   p: Palette,
-  scale: number
+  scale: number,
+  font: (n: number) => number,
+  strip: StripLayout
 ): void {
-  text(
-    ctx,
-    '图像分析：v²/2 - h 关系图',
-    GRAPH_X,
-    GRAPH_TOP - 12,
-    p.ink,
-    16 * scale,
-    'left',
-    700
-  );
+  const tapeY = strip.tapeTop;
+  const tapeH = strip.tapeH;
+  const midY = tapeY + tapeH * 0.55;
+  rounded(ctx, strip.left, tapeY, strip.span, tapeH, 4 * scale);
+  ctx.fillStyle = p.tape;
+  ctx.fill();
   ctx.strokeStyle = p.border;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(GRAPH_X, GRAPH_TOP);
-  ctx.lineTo(GRAPH_X, GRAPH_TOP + GRAPH_H);
-  ctx.lineTo(GRAPH_X + GRAPH_W, GRAPH_TOP + GRAPH_H);
+  ctx.lineWidth = Math.max(1, 1.2 * scale);
   ctx.stroke();
-  const maxH = Math.max(0.2, state.graphPoints.at(-1)?.height ?? 0.2);
-  const maxV = Math.max(0.2, state.graphPoints.at(-1)?.halfV2 ?? 0.2);
-  ctx.strokeStyle = p.blue;
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  state.graphPoints.forEach((point, index) => {
-    const x = GRAPH_X + (point.height / maxH) * (GRAPH_W - 34);
-    const y = GRAPH_TOP + GRAPH_H - (point.halfV2 / maxV) * (GRAPH_H - 18);
-    if (index === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-  ctx.stroke();
-  state.graphPoints.forEach((point) => {
-    const x = GRAPH_X + (point.height / maxH) * (GRAPH_W - 34);
-    const y = GRAPH_TOP + GRAPH_H - (point.halfV2 / maxV) * (GRAPH_H - 18);
-    ctx.fillStyle = p.red;
+
+  // Expanded ticker tape: physical h on the paper, not a chart or data table.
+  const drawn = visibleStripDots(state, strip);
+  const dotR = Math.max(2.2 * scale, 2.4);
+  for (const dot of drawn) {
+    const x = heightToStripX(dot.height, strip);
     ctx.beginPath();
-    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.arc(
+      x,
+      midY,
+      dot.counting || dot.label === 'O' ? dotR + 0.5 * scale : dotR,
+      0,
+      Math.PI * 2
+    );
+    ctx.fillStyle = dot.counting ? p.red : p.ink;
     ctx.fill();
-  });
-  text(
-    ctx,
-    'h',
-    GRAPH_X + GRAPH_W - 16,
-    GRAPH_TOP + GRAPH_H + 6,
-    p.muted,
-    12 * scale,
-    'center'
-  );
-  text(ctx, 'v²/2', GRAPH_X - 18, GRAPH_TOP + 4, p.muted, 12 * scale, 'center');
-}
+  }
 
-function drawPanel(
-  ctx: CanvasRenderingContext2D,
-  state: MechanicalEnergyState,
-  p: Palette,
-  scale: number
-): void {
-  ctx.fillStyle = p.panel;
-  ctx.fillRect(PANEL_X, 0, BASE_W - PANEL_X, BASE_H);
-  ctx.strokeStyle = p.border;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(PANEL_X, 0);
-  ctx.lineTo(PANEL_X, BASE_H);
-  ctx.stroke();
-  text(
-    ctx,
-    '验证机械能守恒定律',
-    PANEL_X + INSET,
-    TITLE_Y,
-    p.ink,
-    20 * scale,
-    'left',
-    700
-  );
-  ctx.strokeStyle = p.border;
-  ctx.beginPath();
-  ctx.moveTo(PANEL_X + INSET, PANEL_RULE_Y);
-  ctx.lineTo(PANEL_X + PANEL_W - INSET, PANEL_RULE_Y);
-  ctx.stroke();
-  rounded(ctx, PANEL_X + INSET, CORE_Y, PANEL_W - INSET * 2, CORE_H);
-  ctx.fillStyle = p.soft;
-  ctx.fill();
-  text(
-    ctx,
-    '核心原理与参数',
-    PANEL_X + INSET + 16,
-    CORE_Y + 22,
-    p.ink,
-    17 * scale,
-    'left',
-    700
-  );
-  text(
-    ctx,
-    'ΔEₚ = mgh    ΔEₖ = ½mv²',
-    PANEL_X + INSET + 16,
-    CORE_Y + 52,
-    p.blue,
-    15 * scale,
-    'left',
-    700
-  );
-  text(
-    ctx,
-    '阻力使 a < g，机械能产生耗散',
-    PANEL_X + INSET + 16,
-    CORE_Y + 82,
-    p.muted,
-    13 * scale,
-    'left'
-  );
-  rounded(ctx, PANEL_X + INSET, PARAM_Y, PANEL_W - INSET * 2, PARAM_H);
+  const labelSize = font(10);
+  const above = midY - tapeH * 0.42;
+  const below = midY + tapeH * 0.42;
+  const minX = strip.left + 6 * scale;
+  const maxX = strip.right - 6 * scale;
+  for (const dot of drawn) {
+    if (!dot.label) continue;
+    const x = Math.max(minX, Math.min(maxX, heightToStripX(dot.height, strip)));
+    const y =
+      dot.label === 'A' || dot.label === 'C' || dot.label === 'E'
+        ? below
+        : above;
+    const color = dot.counting ? p.red : p.ink;
+    text(ctx, dot.label, x, y, color, labelSize, 'center', 700);
+  }
+
+  rounded(ctx, strip.left, strip.rulerTop, strip.span, strip.rulerH, 3 * scale);
   ctx.fillStyle = p.panel;
   ctx.fill();
-  ctx.strokeStyle = p.border;
+  ctx.strokeStyle = p.ink;
+  ctx.lineWidth = Math.max(1.2, 1.5 * scale);
   ctx.stroke();
-  text(
-    ctx,
-    `实验环境：${state.params.environment === 'ideal' ? '只有重力' : '包含摩擦阻力'}`,
-    PANEL_X + INSET + 16,
-    PARAM_Y + 24,
-    p.ink,
-    16 * scale,
-    'left',
-    700
-  );
-  text(
-    ctx,
-    `阻力 ${state.params.resistance.toFixed(2)}    a = ${state.acceleration.toFixed(2)} m/s²`,
-    PANEL_X + INSET + 16,
-    PARAM_Y + 54,
-    p.gold,
-    14 * scale,
-    'left',
-    700
-  );
-  text(
-    ctx,
-    `m = ${state.params.mass.toFixed(1)} kg    g = ${state.params.gravity.toFixed(2)} m/s²`,
-    PANEL_X + INSET + 16,
-    PARAM_Y + 84,
-    p.ink,
-    13 * scale,
-    'left'
-  );
-  text(
-    ctx,
-    `T₀ = ${state.params.pointPeriod.toFixed(2)} s（每隔一个点取样）`,
-    PANEL_X + INSET + 16,
-    PARAM_Y + 114,
-    p.blue,
-    13 * scale,
-    'left',
-    700
-  );
-  text(
-    ctx,
-    '释放重锤后记录 A–E 计数点',
-    PANEL_X + INSET + 16,
-    PARAM_Y + 144,
-    p.muted,
-    12 * scale,
-    'left'
-  );
-  rounded(ctx, PANEL_X + INSET, ACTION_Y, PANEL_W - INSET * 2, ACTION_H);
-  ctx.fillStyle = p.soft;
-  ctx.fill();
-  text(
-    ctx,
-    state.params.autoRun ? '自动演示中' : '点击“释放重锤”开始',
-    PANEL_X + INSET + 16,
-    ACTION_Y + 28,
-    p.red,
-    15 * scale,
-    'left',
-    700
-  );
-  text(
-    ctx,
-    '纸带数据与能量表同步更新',
-    PANEL_X + INSET + 16,
-    ACTION_Y + 56,
-    p.muted,
-    12 * scale,
-    'left'
-  );
-  rounded(ctx, PANEL_X + INSET, TABLE_Y, PANEL_W - INSET * 2, TABLE_H);
-  ctx.fillStyle = p.panel;
-  ctx.fill();
-  ctx.strokeStyle = p.border;
-  ctx.stroke();
-  text(
-    ctx,
-    '分析数据表',
-    PANEL_X + INSET + 16,
-    TABLE_Y + 22,
-    p.ink,
-    17 * scale,
-    'left',
-    700
-  );
-  const headers = ['点', 'h (cm)', 'v (m/s)', 'ΔEₚ (J)', 'ΔEₖ (J)'];
-  headers.forEach((header, index) =>
-    text(
-      ctx,
-      header,
-      PANEL_X + INSET + TABLE_COLUMN_OFFSETS[index],
-      TABLE_Y + 54,
-      p.muted,
-      11 * scale,
-      'center',
-      700
-    )
-  );
-  state.points.forEach((point, index) => {
-    const y = TABLE_Y + 84 + index * ROW_GAP;
-    const values = [
-      point.label,
-      (point.height * 100).toFixed(2),
-      point.speed.toFixed(3),
-      point.potentialLoss.toFixed(3),
-      point.kineticGain.toFixed(3)
-    ];
-    values.forEach((value, valueIndex) =>
+  const tickTop = strip.rulerTop;
+  const tickMax = strip.rulerH * 0.55;
+  const tickMin = strip.rulerH * 0.32;
+  const ticks = stripTickStep(strip.cmMax);
+  for (let cm = 0; cm <= strip.cmMax + 1e-9; cm += ticks.minor) {
+    const x = strip.left + (cm / strip.cmMax) * strip.span;
+    const major =
+      cm < 1e-9 ||
+      Math.abs(cm - strip.cmMax) < 1e-9 ||
+      Math.abs(cm / ticks.major - Math.round(cm / ticks.major)) < 1e-6;
+    ctx.beginPath();
+    ctx.moveTo(x, tickTop);
+    ctx.lineTo(x, tickTop + (major ? tickMax : tickMin));
+    ctx.strokeStyle = p.ink;
+    ctx.lineWidth = major ? Math.max(1.3, 1.6 * scale) : 1;
+    ctx.stroke();
+    if (major) {
       text(
         ctx,
-        value,
-        PANEL_X + INSET + TABLE_COLUMN_OFFSETS[valueIndex],
-        y,
-        valueIndex === 3 ? p.blue : valueIndex === 4 ? p.red : p.ink,
-        12 * scale,
+        String(Math.round(cm)),
+        x,
+        strip.rulerTop + strip.rulerH * 0.78,
+        p.ink,
+        font(9),
         'center',
-        700
-      )
+        600
+      );
+    }
+  }
+
+  if (clippedStripDots(state, strip).length > 0) {
+    const tipX = strip.right - Math.max(3 * scale, 3);
+    const wing = Math.max(4 * scale, 4);
+    ctx.beginPath();
+    ctx.moveTo(tipX - wing, midY - wing * 0.7);
+    ctx.lineTo(tipX, midY);
+    ctx.lineTo(tipX - wing, midY + wing * 0.7);
+    ctx.strokeStyle = p.muted;
+    ctx.lineWidth = Math.max(1.2, 1.4 * scale);
+    ctx.stroke();
+    text(
+      ctx,
+      '…',
+      Math.max(minX, tipX - wing * 1.6),
+      above,
+      p.muted,
+      font(9),
+      'right',
+      600
     );
-  });
+  }
+}
+
+function axisMax(value: number, floor = 0.05): number {
+  const need = Math.max(value * 1.15, floor);
+  const mag = 10 ** Math.floor(Math.log10(need));
+  const residual = need / mag;
+  const nice = residual <= 1 ? 1 : residual <= 2 ? 2 : residual <= 5 ? 5 : 10;
+  return nice * mag;
+}
+
+function mapX(
+  x: number,
+  left: number,
+  right: number,
+  x0: number,
+  x1: number
+): number {
+  const span = x1 - x0 || 1;
+  return left + ((x - x0) / span) * (right - left);
+}
+
+function drawGraphs(
+  ctx: CanvasRenderingContext2D,
+  state: MechanicalEnergyState,
+  width: number,
+  height: number,
+  p: Palette,
+  scale: number,
+  font: (n: number) => number
+): void {
+  ctx.fillStyle = p.panel;
+  ctx.fillRect(0, 0, width, height);
+  const chrome = plotChrome(width, height, scale);
+  const box = chrome.box;
+  const hRef = heightAt(state.acceleration, endTime(state.params));
+  const hMax = axisMax(hRef, 0.05);
+  const vMax = axisMax(state.acceleration * hRef, 0.2);
   text(
     ctx,
-    state.params.environment === 'ideal'
-      ? '实验结论：ΔEₚ ≈ ΔEₖ，机械能守恒'
-      : '实验结论：ΔEₚ > ΔEₖ，存在能量耗散',
-    PANEL_X + INSET + 16,
-    TABLE_Y + TABLE_H - 18,
-    state.params.environment === 'ideal' ? p.teal : p.red,
-    13 * scale,
+    'v²/2 − h',
+    chrome.title.x,
+    chrome.title.y,
+    p.ink,
+    font(12),
     'left',
     700
   );
+  text(
+    ctx,
+    'v²/2 / m²/s²',
+    chrome.yUnit.x,
+    chrome.yUnit.y,
+    p.muted,
+    font(10),
+    'left',
+    600
+  );
+
+  ctx.strokeStyle = p.grid;
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i += 1) {
+    const hTick = (hMax * i) / 4;
+    const x = mapX(hTick, box.left, box.right, 0, hMax);
+    ctx.beginPath();
+    ctx.moveTo(x, box.top);
+    ctx.lineTo(x, box.bottom);
+    ctx.stroke();
+    if (i > 0 && i < 4) {
+      text(
+        ctx,
+        hTick.toFixed(2),
+        x,
+        box.bottom + 10 * scale,
+        p.muted,
+        font(10),
+        'center',
+        600
+      );
+    }
+    const vTick = (vMax * i) / 4;
+    const y = mapX(vTick, box.bottom, box.top, 0, vMax);
+    ctx.beginPath();
+    ctx.moveTo(box.left, y);
+    ctx.lineTo(box.right, y);
+    ctx.stroke();
+    text(
+      ctx,
+      vTick.toFixed(2),
+      box.left - 6 * scale,
+      y,
+      p.muted,
+      font(10),
+      'right',
+      600
+    );
+  }
+
+  ctx.strokeStyle = p.ink;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(box.left, box.top - 4);
+  ctx.lineTo(box.left, box.bottom);
+  ctx.lineTo(box.right + 6, box.bottom);
+  ctx.stroke();
+  text(
+    ctx,
+    'h / m',
+    box.right,
+    Math.min(height - 8 * scale, box.bottom + 12 * scale),
+    p.ink,
+    font(10),
+    'right',
+    700
+  );
+
+  const xEnd = mapX(hMax, box.left, box.right, 0, hMax);
+  const yEnd = Math.max(
+    box.top,
+    mapX(state.acceleration * hMax, box.bottom, box.top, 0, vMax)
+  );
+  ctx.strokeStyle = p.blue;
+  ctx.lineWidth = Math.max(1.8, 2.4 * scale);
+  ctx.beginPath();
+  ctx.moveTo(box.left, box.bottom);
+  ctx.lineTo(xEnd, yEnd);
+  ctx.stroke();
+
+  for (const point of state.graphPoints) {
+    const x = mapX(point.height, box.left, box.right, 0, hMax);
+    const y = mapX(point.halfV2, box.bottom, box.top, 0, vMax);
+    ctx.beginPath();
+    ctx.arc(x, y, Math.max(3 * scale, 3), 0, Math.PI * 2);
+    ctx.fillStyle = p.red;
+    ctx.fill();
+  }
 }
 
 export function createMechanicalEnergyView(
@@ -517,55 +764,112 @@ export function createMechanicalEnergyView(
 ) {
   const stage = createCanvasViewport({
     canvas: options.canvas ?? null,
-    sizing: { mode: 'clamped', fallbackWidth: BASE_W, fallbackHeight: BASE_H },
-    initialWidth: BASE_W,
-    initialHeight: BASE_H,
+    sizing: {
+      mode: 'clamped',
+      fallbackWidth: C.stageFallbackWidth,
+      fallbackHeight: C.stageFallbackHeight
+    },
+    initialWidth: C.stageFallbackWidth,
+    initialHeight: C.stageFallbackHeight,
     eagerContext: true
   });
+  const graph = {
+    canvas: (options.graphCanvas ?? null) as HTMLCanvasElement | null,
+    ctx: null as CanvasRenderingContext2D | null,
+    cssWidth: C.graphFallbackWidth as number,
+    cssHeight: C.graphFallbackHeight as number,
+    responsiveScale: 1,
+    resize(): void {
+      if (!graph.canvas) return;
+      const sized = sizeGraphCanvasToHost(graph.canvas);
+      graph.ctx = sized.ctx;
+      graph.cssWidth = sized.cssWidth;
+      graph.cssHeight = sized.cssHeight;
+      graph.responsiveScale = sized.responsiveScale;
+    },
+    attach(canvas: HTMLCanvasElement): void {
+      graph.canvas = canvas;
+      graph.resize();
+    },
+    release(): void {
+      graph.canvas = null;
+      graph.ctx = null;
+    }
+  };
+  if (graph.canvas) graph.resize();
   const env = createViewEnvironment({
     theme: options.theme ?? 'light',
     mode: options.mode ?? 'normal',
     demoHints: options.demoHints
   });
   let snapshot: MechanicalEnergyState | null = null;
-  function draw(state: MechanicalEnergyState): void {
+
+  function paint(state: MechanicalEnergyState): void {
     const ctx = stage.ctx;
     if (!ctx) return;
     const width = stage.cssWidth;
     const height = stage.cssHeight;
-    const fit = Math.min(width / BASE_W, height / BASE_H);
-    const offsetY = (height - BASE_H * fit) / 2;
-    const scale = env.contentScale() * stage.responsiveScale;
-    const p = PALETTE[env.theme];
+    const rs = stage.responsiveScale;
+    const typeScale = env.fontScale() * Math.min(env.contentScale(), 1.25);
+    const font = (base: number): number =>
+      scaledSize(base * typeScale, Math.max(rs, 0.3), 10);
     ctx.clearRect(0, 0, width, height);
-    ctx.save();
-    ctx.translate(0, offsetY);
-    ctx.scale(fit, fit);
-    drawGrid(ctx, p);
-    drawApparatus(ctx, state, p, scale);
-    drawPanel(ctx, state, p, scale);
-    ctx.restore();
+    drawApparatus(ctx, state, width, height, PALETTE[env.theme], rs, font);
+    if (stage.canvas) {
+      stage.canvas.dataset.simTime = state.time.toFixed(4);
+      stage.canvas.dataset.playing =
+        state.params.autoRun && !state.finished ? '1' : '0';
+      stage.canvas.dataset.finished = state.finished ? '1' : '0';
+    }
+    if (graph.canvas) {
+      if (!graph.ctx) graph.resize();
+      const gctx = graph.ctx;
+      if (gctx) {
+        const gFont = (base: number): number =>
+          scaledSize(
+            base * typeScale,
+            Math.max(graph.responsiveScale, 0.3),
+            10
+          );
+        drawGraphs(
+          gctx,
+          state,
+          graph.cssWidth,
+          graph.cssHeight,
+          PALETTE[env.theme],
+          graph.responsiveScale,
+          gFont
+        );
+      }
+    }
   }
+
   return {
-    render(state: MechanicalEnergyState) {
+    render(state: MechanicalEnergyState): void {
       snapshot = state;
       stage.ensureSized();
-      draw(state);
+      paint(state);
     },
-    resize() {
+    resize(): void {
       stage.resize();
-      if (snapshot) draw(snapshot);
+      if (graph.canvas) graph.resize();
+      if (snapshot) paint(snapshot);
     },
-    setTheme(theme: TeachingTheme) {
+    setTheme(theme: TeachingTheme): void {
       env.setTheme(theme);
-      if (snapshot) draw(snapshot);
+      if (snapshot) paint(snapshot);
     },
-    setMode(mode: TeachingMode, hints?: DemoRenderHints) {
+    setMode(mode: TeachingMode, hints?: DemoRenderHints): void {
       env.setMode(mode, hints);
-      if (snapshot) draw(snapshot);
+      if (snapshot) paint(snapshot);
     },
-    dispose() {
+    attachGraphCanvas(canvas: HTMLCanvasElement): void {
+      graph.attach(canvas);
+      if (snapshot) paint(snapshot);
+    },
+    dispose(): void {
       snapshot = null;
+      graph.release();
       stage.release();
     }
   };

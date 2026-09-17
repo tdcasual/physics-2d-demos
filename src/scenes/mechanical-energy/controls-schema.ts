@@ -1,10 +1,10 @@
 import type { ControlsSchema } from '../../platform/controls-schema';
-import { mechanicalEnergyConstants } from './scene.sim';
+import { formatResistance, mechanicalEnergyConstants } from './scene.sim';
 
 export const mechanicalEnergyControlsSchema: ControlsSchema = {
   sections: [
     {
-      title: '实验环境',
+      title: '环境',
       collapsed: false,
       fields: [
         {
@@ -12,30 +12,31 @@ export const mechanicalEnergyControlsSchema: ControlsSchema = {
           key: 'environment',
           columns: 2,
           presets: [
-            { id: 'resist', label: '包含阻力', desc: 'a < g，能量耗散' },
-            { id: 'ideal', label: '只有重力', desc: '机械能守恒' }
+            { id: 'resist', label: '含阻力' },
+            { id: 'ideal', label: '仅重力' }
           ],
           initialActive: 'resist'
         },
         {
           type: 'slider',
           key: 'resistance',
-          label: '阻力调节',
+          label: '阻力系数 k',
           min: mechanicalEnergyConstants.resistanceMin,
           max: mechanicalEnergyConstants.resistanceMax,
-          step: 0.01,
-          value: mechanicalEnergyConstants.defaultResistance
+          step: 0.0001,
+          value: mechanicalEnergyConstants.defaultResistance,
+          formatValue: formatResistance
         }
       ]
     },
     {
-      title: '实验参数',
+      title: '参数',
       collapsed: false,
       fields: [
         {
           type: 'slider',
           key: 'mass',
-          label: '质量 m',
+          label: 'm',
           min: mechanicalEnergyConstants.massMin,
           max: mechanicalEnergyConstants.massMax,
           step: 0.1,
@@ -45,7 +46,7 @@ export const mechanicalEnergyControlsSchema: ControlsSchema = {
         {
           type: 'slider',
           key: 'gravity',
-          label: '重力加速度 g',
+          label: 'g',
           min: mechanicalEnergyConstants.gravityMin,
           max: mechanicalEnergyConstants.gravityMax,
           step: 0.1,
@@ -55,32 +56,28 @@ export const mechanicalEnergyControlsSchema: ControlsSchema = {
         {
           type: 'slider',
           key: 'pointPeriod',
-          label: '计数点间隔 T₀',
+          label: 'T₀',
           min: mechanicalEnergyConstants.pointPeriodMin,
           max: mechanicalEnergyConstants.pointPeriodMax,
-          step: 0.01,
+          step: 0.02,
           value: mechanicalEnergyConstants.defaultPointPeriod,
           unit: 's'
         }
       ]
     },
     {
-      title: '实验控制',
-      collapsed: false,
-      fields: [
-        { type: 'toggle', key: 'autoRun', label: '自动演示', value: false },
-        { type: 'button', key: 'release', label: '释放重锤' },
-        { type: 'button', key: 'reset', label: '重置装置', variant: 'danger' }
-      ]
-    },
-    {
-      title: '公式',
+      title: '关系',
       collapsed: true,
       fields: [
         {
           type: 'hint',
           key: 'formula',
-          lines: ['ΔEₚ = mgh', 'v = (hₙ₊₁ − hₙ₋₁) / 2T₀', 'v²/2 ∝ h']
+          lines: [
+            'a = g(1 − k)，理想时 k = 0',
+            'ΔEₚ = mgh，ΔEₖ = ½mv²',
+            'vₙ = (hₙ₊₁ − hₙ₋₁) / 2T₀',
+            'T = 0.02 s；计数间隔 T₀ = nT'
+          ]
         }
       ]
     }

@@ -46,7 +46,7 @@
 |  31 | 匀速圆周运动与向心力模型                              | 力学 | [`centripetal-motion`](../src/scenes/centripetal-motion/scene.meta.ts)                             | [详情](https://app.svgzhenli.com/resource/2b810c0c-11fe-4d31-933f-770b06d1a88e) · [封面](https://img.svgzhenli.com/gallery-assets/covers/7e91dq40i21775496835830.png)   |  ☑   |
 |  32 | 安培力方向与导体平衡                                  | 电磁 | [`ampere-balance`](../src/scenes/ampere-balance/scene.meta.ts)                                     | [详情](https://app.svgzhenli.com/resource/1bfccf2e-a260-4be5-9a1d-d3dcd3e6cb00) · [封面](https://img.svgzhenli.com/gallery-assets/covers/t5xsdch4bs1787678015468.png)   |  ☑   |
 |  33 | 平抛运动轨迹与速度分解                                | 力学 | [`projectile-components`](../src/scenes/projectile-components/scene.meta.ts)                       | [详情](https://app.svgzhenli.com/resource/724243b0-b597-4b30-892c-02f52445e87c) · [封面](https://img.svgzhenli.com/gallery-assets/covers/r5hjy0ygx11775457276819.png)   |  ✅  |
-|  34 | 验证机械能守恒定律实验系统                            | 力学 | [`mechanical-energy`](../src/scenes/mechanical-energy/scene.meta.ts)                               | [详情](https://app.svgzhenli.com/resource/accd8e75-e538-4cc8-a3a4-72f659012fb7) · [封面](https://img.svgzhenli.com/gallery-assets/covers/r1qrtw5ywfb1778949039759.png)  |  ☐   |
+|  34 | 验证机械能守恒定律实验系统                            | 力学 | [`mechanical-energy`](../src/scenes/mechanical-energy/scene.meta.ts)                               | [详情](https://app.svgzhenli.com/resource/accd8e75-e538-4cc8-a3a4-72f659012fb7) · [封面](https://img.svgzhenli.com/gallery-assets/covers/r1qrtw5ywfb1778949039759.png)  |  ☑   |
 |  35 | 变力做功与功率图象                                    | 力学 | [`variable-work`](../src/scenes/variable-work/scene.meta.ts)                                       | [详情](https://app.svgzhenli.com/resource/3e754beb-820e-46e2-aba2-e8e2f17d53b7) · [封面](https://img.svgzhenli.com/gallery-assets/covers/yssbb3t6byf1787660702811.png)  |  ☐   |
 |  36 | 改变内能的两种方式：做功和热传递                      | 热学 | [`internal-energy`](../src/scenes/internal-energy/scene.meta.ts)                                   | [详情](https://app.svgzhenli.com/resource/a6439cdd-f64d-44a8-b9d8-6d4f58084cd2) · [封面](https://img.svgzhenli.com/gallery-assets/covers/rrffimvatn1788264065323.png)   |  ☐   |
 |  37 | 牛顿第二定律瞬时性与连接体                            | 力学 | [`connected-bodies`](../src/scenes/connected-bodies/scene.meta.ts)                                 | [详情](https://app.svgzhenli.com/resource/d1966def-ff07-4040-9a92-8797d985b5c1) · [封面](https://img.svgzhenli.com/gallery-assets/covers/aukje30n3ob1787678163979.png)  |  ☐   |
@@ -415,6 +415,15 @@
 - 交互与布局验证：桌面 `1280px`、移动 `390px` 默认态及移动数据页无横向溢出、标题/数值不重复、数据表不压动画；极值态表格保持在可滚动数据区。播放、暂停冻结、继续、速度调节与重置均经浏览器验证；Playwright 报告 `failures: []`，控制台无错误。
 - 工程验证：场景专项 sim/chrome 测试通过；串行目标集（contract、scene entries、projectile sim/chrome）`8` 个测试文件通过（`3149 passed / 124 skipped`）。结构、布局契约、ESLint、TypeScript、生产构建、bundle 预算、Prettier 与 `git diff --check` 通过。`pnpm verify:scene projectile-components` 的并行测试步骤受共享主机上其他场景 5 秒超时及 Vitest worker RPC 超时影响，未能报告全 `7/7`；该结果不记作全量门禁通过。Codex 与 Grok Build 在复核画面、物理和代码后仍一致同意场景内容可提交。
 - 证据：截图 `/tmp/projectile-components-audit/`（`desktop-default`、`mobile-default`、`mobile-data`、`desktop-extrema-land`、`desktop-transport`）；浏览器报告 `/tmp/projectile-components-audit/report.json`；[原始详情](https://app.svgzhenli.com/resource/724243b0-b597-4b30-892c-02f52445e87c) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/r5hjy0ygx11775457276819.png)
+
+### 34. 验证机械能守恒定律实验系统 (`mechanical-energy`)
+
+- 状态：✅ Codex / Grok Build 交叉审计一致通过（2026-09-17，AGREE）。
+- 修复：动画画布仅装置、重锤、打点带与短标记；关系图在独立图表槽，A–E 表及实时读数在数据区。
+- 物理核验：阻力模型 Fᵣ=kmg、a=g(1−k)，理想 a=g；中心差分 vₙ=(hₙ₊₁−hₙ₋₁)/(2T₀)。默认 A–E 物理数值及 ΔEₚ−ΔEₖ=Wᵣ 经专项测例核验。F 是计算 E 所需真实右邻样本，不冒充计数点；默认 20 cm 纸带末端以续接符号提示，极值扩展标尺。
+- 交互与布局验证：桌面/手机 Playwright overflowX=0、数据表 5 行、真实 error arrays 空；手机图表 tab 366×430。
+- 工程验证：24/24 专项 sim/view/chrome tests 与 Prettier/`git diff --check` 通过。`pnpm verify:scene` 与全量构建本轮未运行。原交互课件不可下载，未声称像素级复刻原互动页。
+- 证据：截图 `/tmp/mechanical-energy-audit/`；浏览器报告 `/tmp/mechanical-energy-audit/visual-report.json`；远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/accd8e75-e538-4cc8-a3a4-72f659012fb7.md` · [原始详情](https://app.svgzhenli.com/resource/accd8e75-e538-4cc8-a3a4-72f659012fb7) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/r1qrtw5ywfb1778949039759.png)
 
 ## 复审记录模板
 
