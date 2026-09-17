@@ -18,49 +18,47 @@ export type CentripetalState = {
   phase: number;
 };
 
+export type Vec2 = { x: number; y: number };
+
 export const centripetalConstants = {
-  baseWidth: 1200,
+  baseWidth: 760,
   baseHeight: 760,
-  fieldWidth: 760,
-  panelX: 786,
-  panelWidth: 382,
-  diagramX: 42,
-  diagramY: 48,
-  diagramWidth: 688,
-  diagramHeight: 660,
-  centerX: 390,
-  centerY: 382,
-  radiusScale: 78,
+  centerX: 380,
+  centerY: 380,
+  radiusScale: 58,
   radiusMin: 1,
   radiusMax: 4,
   massMin: 0.5,
   massMax: 5,
   angularVelocityMin: 0.5,
   angularVelocityMax: 3,
-  graphGridStep: 64,
-  panelCardX: 786,
-  panelCardWidth: 382,
-  headerRuleY: 72,
-  formulaY: 100,
-  formulaHeight: 150,
-  formulaSecondRowOffset: 76,
-  controlY: 270,
-  controlHeight: 240,
-  readoutY: 530,
-  readoutHeight: 178,
+  gridStep: 48,
   animationPeriod: 12,
   initialAngle: Math.PI * 1.08,
-  arrowBaseSpeed: 70,
-  arrowBaseForce: 82,
   defaultMass: 2,
   defaultRadius: 2.5,
-  defaultAngularVelocity: 1.5
+  defaultAngularVelocity: 1.5,
+  ballRadius: 16,
+  hubRadius: 7,
+  arrowHead: 11,
+  markerSize: 24,
+  markerMinPeek: 8,
+  speedPxPerUnit: 18,
+  forcePxPerUnit: 5,
+  minVisibleArrow: 4,
+  framePad: 18,
+  labelGap: 16,
+  labelMinBallGap: 26,
+  forceClearance: 10,
+  speedClearance: 22
 } as const;
 
+const C = centripetalConstants;
+
 const DEFAULTS: CentripetalParams = {
-  mass: centripetalConstants.defaultMass,
-  radius: centripetalConstants.defaultRadius,
-  angularVelocity: centripetalConstants.defaultAngularVelocity,
+  mass: C.defaultMass,
+  radius: C.defaultRadius,
+  angularVelocity: C.defaultAngularVelocity,
   autoRun: true
 };
 
@@ -73,20 +71,16 @@ function normalize(
   previous = DEFAULTS
 ): CentripetalParams {
   return {
-    mass: clamp(
-      finite(input.mass, previous.mass),
-      centripetalConstants.massMin,
-      centripetalConstants.massMax
-    ),
+    mass: clamp(finite(input.mass, previous.mass), C.massMin, C.massMax),
     radius: clamp(
       finite(input.radius, previous.radius),
-      centripetalConstants.radiusMin,
-      centripetalConstants.radiusMax
+      C.radiusMin,
+      C.radiusMax
     ),
     angularVelocity: clamp(
       finite(input.angularVelocity, previous.angularVelocity),
-      centripetalConstants.angularVelocityMin,
-      centripetalConstants.angularVelocityMax
+      C.angularVelocityMin,
+      C.angularVelocityMax
     ),
     autoRun: input.autoRun ?? previous.autoRun
   };
@@ -108,6 +102,19 @@ export function period(params: CentripetalParams): number {
   return (2 * Math.PI) / params.angularVelocity;
 }
 
+/**
+ * Screen-space unit tangent for increasing angle.
+ * Position is (cos θ, sin θ) with y down, so d/dθ = (−sin θ, cos θ).
+ */
+export function tangentUnit(angle: number): Vec2 {
+  return { x: -Math.sin(angle), y: Math.cos(angle) };
+}
+
+/** Screen-space unit inward radial, from the mass toward the origin. */
+export function radialInwardUnit(angle: number): Vec2 {
+  return { x: -Math.cos(angle), y: -Math.sin(angle) };
+}
+
 function derive(
   params: CentripetalParams,
   time: number,
@@ -121,14 +128,14 @@ function derive(
     centripetalAcceleration: centripetalAcceleration(params),
     centripetalForce: centripetalForce(params),
     period: period(params),
-    phase: time / centripetalConstants.animationPeriod
+    phase: time / C.animationPeriod
   };
 }
 
 export function createCentripetalSim(initial: Partial<CentripetalParams> = {}) {
   let params = normalize(initial);
   let time = 0;
-  let angle = centripetalConstants.initialAngle;
+  let angle = C.initialAngle;
   return {
     getState: (): CentripetalState => derive(params, time, angle),
     getSnapshot: (): CentripetalState => derive(params, time, angle),
@@ -146,7 +153,7 @@ export function createCentripetalSim(initial: Partial<CentripetalParams> = {}) {
     reset(): void {
       params = { ...DEFAULTS };
       time = 0;
-      angle = centripetalConstants.initialAngle;
+      angle = C.initialAngle;
     }
   };
 }

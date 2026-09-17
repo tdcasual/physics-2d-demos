@@ -29,6 +29,9 @@ export function createCentripetalScene(
   setParams(params: Partial<CentripetalParams>): CentripetalParams;
   getReadoutItems(): Array<{ key: string; label: string; value: string }>;
   subscribe(listener: () => void): () => void;
+  startAll(): void;
+  pauseAll(): void;
+  getTransportState(): { isPlaying: boolean; speed: number };
 } {
   const sim = createCentripetalSim();
   const view = createCentripetalView({
@@ -62,7 +65,7 @@ export function createCentripetalScene(
       },
       {
         key: 'centripetalForce',
-        label: '向心力 Fₙ',
+        label: '向心合力 Fₙ',
         value: `${state.centripetalForce.toFixed(2)} N`
       },
       {
@@ -80,6 +83,15 @@ export function createCentripetalScene(
     setParams: base.wrapAction((next: Partial<CentripetalParams>) =>
       sim.setParams(next)
     ),
+    startAll: base.wrapAction(() => {
+      sim.setParams({ autoRun: true });
+    }),
+    pauseAll: base.wrapAction(() => {
+      sim.setParams({ autoRun: false });
+    }),
+    getTransportState(): { isPlaying: boolean; speed: number } {
+      return { isPlaying: sim.getParams().autoRun, speed: 1 };
+    },
     getReadoutItems
   };
 }

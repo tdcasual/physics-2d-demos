@@ -39,20 +39,13 @@ export const centripetalControlsSchema: ControlsSchema = {
       ]
     },
     {
-      title: '播放',
-      collapsed: false,
-      fields: [
-        { type: 'toggle', key: 'autoRun', label: '自动播放', value: true }
-      ]
-    },
-    {
       title: '规律',
       collapsed: true,
       fields: [
         {
           type: 'hint',
           key: 'formula',
-          lines: ['v = ωr', 'aₙ = ω²r', 'Fₙ = mω²r']
+          lines: ['v = ωr', 'aₙ = ω²r', 'Fₙ = mω²r 向心合力']
         }
       ]
     }

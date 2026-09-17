@@ -58,6 +58,12 @@ bootScenePage({
       setValue: (key: string, value: number | string | boolean) =>
         renderer.setValue(key, value),
       setActive: (key: string, value: string) => renderer.setActive(key, value),
+      refresh: () => {
+        const params = scene.getParams();
+        renderer.setValue('mass', params.mass);
+        renderer.setValue('radius', params.radius);
+        renderer.setValue('angularVelocity', params.angularVelocity);
+      },
       dispose: () => renderer.dispose()
     };
   },

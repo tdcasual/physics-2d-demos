@@ -43,7 +43,7 @@
 |  28 | 冲量动量定理与F-t图象                                 | 力学 | [`impulse-momentum`](../src/scenes/impulse-momentum/scene.meta.ts)                                 | [详情](https://app.svgzhenli.com/resource/55c5259d-0e1f-4ff8-b491-791c7df3c02e) · [封面](https://img.svgzhenli.com/gallery-assets/covers/tpvaff7fej91787660726259.png)  |  ☑   |
 |  29 | 单匝线框穿过有界匀强磁场                              | 电磁 | [`single-loop`](../src/scenes/single-loop/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/4c98b69d-8854-45ad-9914-82c68b961368) · [封面](https://img.svgzhenli.com/gallery-assets/covers/86no26fi9ne1774713114955.png)  |  ☑   |
 |  30 | 电磁感应 - 电容棒与电阻棒模型                         | 电磁 | [`rod-model`](../src/scenes/rod-model/scene.meta.ts)                                               | [详情](https://app.svgzhenli.com/resource/58836693-454f-4300-aa52-0b99316f1c26) · [封面](https://img.svgzhenli.com/gallery-assets/covers/6hlwqwk5c7i1786857749323.png)  |  ☑   |
-|  31 | 匀速圆周运动与向心力模型                              | 力学 | [`centripetal-motion`](../src/scenes/centripetal-motion/scene.meta.ts)                             | [详情](https://app.svgzhenli.com/resource/2b810c0c-11fe-4d31-933f-770b06d1a88e) · [封面](https://img.svgzhenli.com/gallery-assets/covers/7e91dq40i21775496835830.png)   |  ☐   |
+|  31 | 匀速圆周运动与向心力模型                              | 力学 | [`centripetal-motion`](../src/scenes/centripetal-motion/scene.meta.ts)                             | [详情](https://app.svgzhenli.com/resource/2b810c0c-11fe-4d31-933f-770b06d1a88e) · [封面](https://img.svgzhenli.com/gallery-assets/covers/7e91dq40i21775496835830.png)   |  ☑   |
 |  32 | 安培力方向与导体平衡                                  | 电磁 | [`ampere-balance`](../src/scenes/ampere-balance/scene.meta.ts)                                     | [详情](https://app.svgzhenli.com/resource/1bfccf2e-a260-4be5-9a1d-d3dcd3e6cb00) · [封面](https://img.svgzhenli.com/gallery-assets/covers/t5xsdch4bs1787678015468.png)   |  ☐   |
 |  33 | 平抛运动轨迹与速度分解                                | 力学 | [`projectile-components`](../src/scenes/projectile-components/scene.meta.ts)                       | [详情](https://app.svgzhenli.com/resource/724243b0-b597-4b30-892c-02f52445e87c) · [封面](https://img.svgzhenli.com/gallery-assets/covers/r5hjy0ygx11775457276819.png)   |  ☐   |
 |  34 | 验证机械能守恒定律实验系统                            | 力学 | [`mechanical-energy`](../src/scenes/mechanical-energy/scene.meta.ts)                               | [详情](https://app.svgzhenli.com/resource/accd8e75-e538-4cc8-a3a4-72f659012fb7) · [封面](https://img.svgzhenli.com/gallery-assets/covers/r1qrtw5ywfb1778949039759.png)  |  ☐   |
@@ -388,6 +388,15 @@
 - 物理核验：电阻棒 γ=B²L²/R，`m dv/dt=F−γv`，`v=vₘ(1−e^{−t/τ})`；电容棒 `a=F/(m+B²L²C)` 匀加速。切换模型或物理参数从静止重启；到达导轨端点或 t_max 时画面与数据一同冻结；Pause/Reset 正确。
 - 工程验证：Grok 专项 `rod-model.sim.spec.ts` 16 项、`rod-model.view.spec.ts` 12 项通过；`PATH=/tmp/codex-emf-pnpm-bin:... corepack pnpm verify:scene rod-model` 全 7/7 通过（`3155 passed / 125 skipped`）；Grok 用项目 Prettier 格式化 `src/scenes/rod-model/scene.view.ts` 后 `prettier --check`、专项 28 项、`git diff --check` 均通过。未提交、未推送。Playwright 自核以 `/tmp/rod-final-*.png`（项目 5185）为准，不用 `/tmp/rod-model-audit`。桌面 1280×720 动画 862×393、图表 846×177；移动 390×844 点「图表」后 366×430、`overflowX=0`（隐藏 tab 下图表 canvas 为 0×0）。
 - 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/58836693-454f-4300-aa52-0b99316f1c26.md` · [原始详情](https://app.svgzhenli.com/resource/58836693-454f-4300-aa52-0b99316f1c26) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/6hlwqwk5c7i1786857749323.png)
+
+### 31. 匀速圆周运动与向心力模型 (`centripetal-motion`)
+
+- 状态：✅ Codex / Grok Build 交叉审计通过（2026-09-17）。
+- 修复：动画区只保留轨道、质点、圆心、半径与 v / Fₙ 矢量及固定直角标记；公式与实时量走标准控件/数据槽；读数默认收起，桌面「展开」与移动「数据」页可用。
+- 物理核验：`v=ωr`、`aₙ=ω²r`、`Fₙ=mω²r`、`T=2π/ω`；切向与轨迹同向，Fₙ 指向圆心且与 v 正交；标记不盖质点；最小/最大参数与 16 个相位下标签不碰球、彼此或圆心。
+- 交互与布局验证：5185 桌面/移动无横向溢出；空格暂停画面冻结；默认不展开读数以免挡轨道。
+- 工程验证：专项 18 项；`pnpm verify:scene centripetal-motion` 全 `7/7` 通过（`3146 passed / 124 skipped`）。Codex 与远程 Grok Build 均 `AGREE`。
+- 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/2b810c0c-11fe-4d31-933f-770b06d1a88e.md` · [原始详情](https://app.svgzhenli.com/resource/2b810c0c-11fe-4d31-933f-770b06d1a88e) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/7e91dq40i21775496835830.png)
 
 ## 复审记录模板
 

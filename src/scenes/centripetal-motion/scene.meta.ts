@@ -13,7 +13,7 @@ const demoProfile: SceneDemoProfile = {
   renderHints: { contentScale: 1.02 },
   interactionHints: {
     touchTargetMinSize: 48,
-    visibleControlKeys: ['mass', 'radius', 'angularVelocity', 'autoRun']
+    visibleControlKeys: ['mass', 'radius', 'angularVelocity']
   }
 };
 
