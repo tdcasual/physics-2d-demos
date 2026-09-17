@@ -8,32 +8,33 @@ export const ampereBalanceControlsSchema: ControlsSchema = {
       collapsed: false,
       fields: [
         {
-          type: 'button-grid',
+          type: 'preset-group',
           key: 'fieldDirection',
           columns: 3,
-          buttons: [
-            { key: 'up', label: '竖直向上 ↑' },
-            { key: 'down', label: '竖直向下 ↓' },
-            { key: 'right', label: '水平向右 →' },
-            { key: 'left', label: '水平向左 ←' },
-            { key: 'normalUp', label: '垂直斜面 ↗' },
-            { key: 'normalDown', label: '垂直斜面 ↙' }
-          ]
+          presets: [
+            { id: 'up', label: '竖直向上 ↑' },
+            { id: 'down', label: '竖直向下 ↓' },
+            { id: 'right', label: '水平向右 →' },
+            { id: 'left', label: '水平向左 ←' },
+            { id: 'normalUp', label: '垂直斜面 ↗' },
+            { id: 'normalDown', label: '垂直斜面 ↙' }
+          ],
+          initialActive: 'down'
         },
         {
           type: 'preset-group',
           key: 'currentDirection',
           columns: 2,
           presets: [
-            { id: 'out', label: '⊙ 垂直纸面向外' },
-            { id: 'in', label: '⊗ 垂直纸面向内' }
+            { id: 'out', label: '⊙ 向外' },
+            { id: 'in', label: '⊗ 向内' }
           ],
           initialActive: 'out'
         }
       ]
     },
     {
-      title: '典型平衡情景',
+      title: '典型情景',
       collapsed: false,
       fields: [
         {
@@ -41,8 +42,8 @@ export const ampereBalanceControlsSchema: ControlsSchema = {
           key: 'preset',
           columns: 2,
           buttons: [
-            { key: 'balance', label: '近似平衡' },
-            { key: 'support-zero', label: '支持力为 0' },
+            { key: 'balance', label: '水平向左（近似平衡）' },
+            { key: 'support-zero', label: '竖直向上（支持力为 0）' },
             { key: 'detach', label: '脱离斜面示例' },
             { key: 'reset', label: '恢复初始' }
           ]
@@ -50,7 +51,7 @@ export const ampereBalanceControlsSchema: ControlsSchema = {
       ]
     },
     {
-      title: '物理量微调',
+      title: '物理量',
       collapsed: false,
       fields: [
         {
@@ -69,24 +70,24 @@ export const ampereBalanceControlsSchema: ControlsSchema = {
           label: '磁感应强度 B',
           min: ampereBalanceConstants.magneticFieldMin,
           max: ampereBalanceConstants.magneticFieldMax,
-          step: 0.1,
+          step: 0.01,
           value: ampereBalanceConstants.defaultMagneticField,
           unit: 'T'
         },
         {
           type: 'slider',
           key: 'current',
-          label: '导体棒电流 I',
+          label: '电流 I',
           min: ampereBalanceConstants.currentMin,
           max: ampereBalanceConstants.currentMax,
-          step: 0.1,
+          step: 0.01,
           value: ampereBalanceConstants.defaultCurrent,
           unit: 'A'
         },
         {
           type: 'slider',
           key: 'mass',
-          label: '导体棒质量 m',
+          label: '质量 m',
           min: ampereBalanceConstants.massMin,
           max: ampereBalanceConstants.massMax,
           step: 0.1,
@@ -96,14 +97,17 @@ export const ampereBalanceControlsSchema: ControlsSchema = {
       ]
     },
     {
-      title: '播放',
-      collapsed: false,
+      title: '规律',
+      collapsed: true,
       fields: [
-        { type: 'toggle', key: 'autoRun', label: '自动播放', value: true },
         {
           type: 'hint',
           key: 'formula',
-          lines: ['Fₐ = BIL', '沿斜面合力 → 运动趋势']
+          lines: [
+            'Fₐ = BIL（L⊥B）',
+            '左手定则：B 穿掌心，四指沿 I',
+            'f需 沿斜面平衡所需；N<0 则脱离'
+          ]
         }
       ]
     }

@@ -44,7 +44,7 @@
 |  29 | 单匝线框穿过有界匀强磁场                              | 电磁 | [`single-loop`](../src/scenes/single-loop/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/4c98b69d-8854-45ad-9914-82c68b961368) · [封面](https://img.svgzhenli.com/gallery-assets/covers/86no26fi9ne1774713114955.png)  |  ☑   |
 |  30 | 电磁感应 - 电容棒与电阻棒模型                         | 电磁 | [`rod-model`](../src/scenes/rod-model/scene.meta.ts)                                               | [详情](https://app.svgzhenli.com/resource/58836693-454f-4300-aa52-0b99316f1c26) · [封面](https://img.svgzhenli.com/gallery-assets/covers/6hlwqwk5c7i1786857749323.png)  |  ☑   |
 |  31 | 匀速圆周运动与向心力模型                              | 力学 | [`centripetal-motion`](../src/scenes/centripetal-motion/scene.meta.ts)                             | [详情](https://app.svgzhenli.com/resource/2b810c0c-11fe-4d31-933f-770b06d1a88e) · [封面](https://img.svgzhenli.com/gallery-assets/covers/7e91dq40i21775496835830.png)   |  ☑   |
-|  32 | 安培力方向与导体平衡                                  | 电磁 | [`ampere-balance`](../src/scenes/ampere-balance/scene.meta.ts)                                     | [详情](https://app.svgzhenli.com/resource/1bfccf2e-a260-4be5-9a1d-d3dcd3e6cb00) · [封面](https://img.svgzhenli.com/gallery-assets/covers/t5xsdch4bs1787678015468.png)   |  ☐   |
+|  32 | 安培力方向与导体平衡                                  | 电磁 | [`ampere-balance`](../src/scenes/ampere-balance/scene.meta.ts)                                     | [详情](https://app.svgzhenli.com/resource/1bfccf2e-a260-4be5-9a1d-d3dcd3e6cb00) · [封面](https://img.svgzhenli.com/gallery-assets/covers/t5xsdch4bs1787678015468.png)   |  ☑   |
 |  33 | 平抛运动轨迹与速度分解                                | 力学 | [`projectile-components`](../src/scenes/projectile-components/scene.meta.ts)                       | [详情](https://app.svgzhenli.com/resource/724243b0-b597-4b30-892c-02f52445e87c) · [封面](https://img.svgzhenli.com/gallery-assets/covers/r5hjy0ygx11775457276819.png)   |  ☐   |
 |  34 | 验证机械能守恒定律实验系统                            | 力学 | [`mechanical-energy`](../src/scenes/mechanical-energy/scene.meta.ts)                               | [详情](https://app.svgzhenli.com/resource/accd8e75-e538-4cc8-a3a4-72f659012fb7) · [封面](https://img.svgzhenli.com/gallery-assets/covers/r1qrtw5ywfb1778949039759.png)  |  ☐   |
 |  35 | 变力做功与功率图象                                    | 力学 | [`variable-work`](../src/scenes/variable-work/scene.meta.ts)                                       | [详情](https://app.svgzhenli.com/resource/3e754beb-820e-46e2-aba2-e8e2f17d53b7) · [封面](https://img.svgzhenli.com/gallery-assets/covers/yssbb3t6byf1787660702811.png)  |  ☐   |
@@ -397,6 +397,15 @@
 - 交互与布局验证：5185 桌面/移动无横向溢出；空格暂停画面冻结；默认不展开读数以免挡轨道。
 - 工程验证：专项 18 项；`pnpm verify:scene centripetal-motion` 全 `7/7` 通过（`3146 passed / 124 skipped`）。Codex 与远程 Grok Build 均 `AGREE`。
 - 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/2b810c0c-11fe-4d31-933f-770b06d1a88e.md` · [原始详情](https://app.svgzhenli.com/resource/2b810c0c-11fe-4d31-933f-770b06d1a88e) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/7e91dq40i21775496835830.png)
+
+### 32. 安培力方向与导体平衡 (`ampere-balance`)
+
+- 状态：✅ Codex / Grok Build 交叉审计通过（2026-09-17）。
+- 修复：静力分析图；无假振荡；动画区只留斜面、棒截面 ⊙/⊗、静止 B 箭头、G/Fₐ/Fₙ/f需 与 θ、+x。无网格；B 箭头仅空气侧。f需 渲染原点与标签沿外法向抬升 14px，不改方向/比例尺/模拟值。传输条隐藏。`fieldDirection` 改为 `preset-group`（`initialActive: 'down'`）以便 URL 回写选中态；`paramSync` 对方向键走 `setControlActive`。预设一次写入六键（方向为 0–5/0–1）；重置删除这六键并保留无关 query。力箭头共用比例尺。平衡预设 B=1.00 T、I=4.62 A，使 f需与 a∥ 同为 0.00；近零读数规范为 `0.00`。
+- 物理核验：`Fₐ=Iẑ×B`（屏幕 y 向下，⊙ 时 F=(B_y,−B_x)），`|Fₐ|=BIL`。接触力为零时无摩擦；在接触时 f需=|slopeNet|。支持力为 0：B=1.74，N=0 且不误标脱离。
+- 交互与布局验证：5185 无溢出/无 console error；B 哈希不变；无传输条。手动点「水平向左」+「⊗ 向内」后 URL `fieldDirection=3&currentDirection=1`，选择器高亮 left/in，Fₐ 向上、棒截面 ⊗，读数 Fₙ=2.94 N、f需=1.70 N、a∥=2.13 m/s²；重载后 ids、高亮、箭头与读数保持。平衡 URL `current=4.62&fieldDirection=0`，重载后 Fₐ 向左、f需=0.00、a∥=0.00、无摩擦箭头。支持力为 0 读数 a∥=0.00、状态近似平衡。重置保留 `?audit=keep`。
+- 工程验证：专项 26 项（sim 15 + view 11）通过。Codex 独立复验：8 个串行目标文件 `3154 passed / 124 skipped`；typecheck、lint、prettier、build、bundle-budget 均通过；`git diff --check` 干净。Playwright 12 态 `failures: []`。Codex 与远程 Grok Build 均 `AGREE`。
+- 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/1bfccf2e-a260-4be5-9a1d-d3dcd3e6cb00.md` · [原始详情](https://app.svgzhenli.com/resource/1bfccf2e-a260-4be5-9a1d-d3dcd3e6cb00) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/t5xsdch4bs1787678015468.png) · 截图 `/tmp/ampere-audit-v2/`
 
 ## 复审记录模板
 

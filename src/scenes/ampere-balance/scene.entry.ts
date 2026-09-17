@@ -1,13 +1,15 @@
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
+import type { SceneLifecycle } from '../../platform/scene-contract';
 import { createStandardSceneEntry } from '../scene-entry-helpers';
 import { createAmpereBalanceView } from './scene.view';
 import {
   createAmpereBalanceSim,
+  formatFixed,
   type AmpereBalanceParams,
   type AmpereBalanceState,
-  type AmpereFieldDirection,
-  type AmpereCurrentDirection
+  type AmpereCurrentDirection,
+  type AmpereFieldDirection
 } from './scene.sim';
 
 export type CreateAmpereBalanceSceneOptions = {
@@ -20,7 +22,19 @@ export type CreateAmpereBalanceSceneOptions = {
 
 export function createAmpereBalanceScene(
   options: CreateAmpereBalanceSceneOptions = {}
-) {
+): SceneLifecycle & {
+  resize(): void;
+  setTheme(theme: TeachingTheme): void;
+  setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
+  getState(): AmpereBalanceState;
+  getSnapshot(): AmpereBalanceState;
+  getParams(): AmpereBalanceParams;
+  setParams(params: Partial<AmpereBalanceParams>): AmpereBalanceParams;
+  setFieldDirection(value: AmpereFieldDirection): void;
+  setCurrentDirection(value: AmpereCurrentDirection): void;
+  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  subscribe(listener: () => void): () => void;
+} {
   const sim = createAmpereBalanceSim();
   const view = createAmpereBalanceView({
     canvas: options.canvas,
@@ -34,28 +48,32 @@ export function createAmpereBalanceScene(
     getState: () => sim.getState(),
     onReadout: options.onReadout
   });
-  function getReadoutItems() {
+  function getReadoutItems(): Array<{
+    key: string;
+    label: string;
+    value: string;
+  }> {
     const state = sim.getState();
     return [
       {
         key: 'ampereForce',
         label: '安培力 Fₐ',
-        value: `${state.ampereForce.toFixed(2)} N`
+        value: `${formatFixed(state.ampereForce)} N`
       },
       {
         key: 'normalForce',
-        label: '支持力 FN',
-        value: `${state.normalForce.toFixed(2)} N`
+        label: '支持力 Fₙ',
+        value: `${formatFixed(state.normalForce)} N`
       },
       {
         key: 'frictionRequired',
-        label: '所需摩擦力',
-        value: `${state.frictionRequired.toFixed(2)} N`
+        label: '所需摩擦力 f需',
+        value: `${formatFixed(state.frictionRequired)} N`
       },
       {
         key: 'acceleration',
-        label: '光滑斜面加速度',
-        value: `${state.acceleration.toFixed(2)} m/s²`
+        label: '沿斜面分量 a∥',
+        value: `${formatFixed(state.acceleration)} m/s²`
       },
       {
         key: 'trend',
@@ -66,19 +84,18 @@ export function createAmpereBalanceScene(
   }
   return {
     ...base,
-    getState: (): AmpereBalanceState => sim.getState(),
-    getSnapshot: (): AmpereBalanceState => sim.getSnapshot(),
-    getParams: (): AmpereBalanceParams => sim.getParams(),
+    getState: () => sim.getState(),
+    getSnapshot: () => sim.getSnapshot(),
+    getParams: () => sim.getParams(),
     setParams: base.wrapAction((next: Partial<AmpereBalanceParams>) =>
       sim.setParams(next)
     ),
-    setFieldDirection: base.wrapAction((value: AmpereFieldDirection) =>
-      sim.setParams({ fieldDirection: value })
-    ),
-    setCurrentDirection: base.wrapAction((value: AmpereCurrentDirection) =>
-      sim.setParams({ currentDirection: value })
-    ),
-    reset: base.wrapAction(() => sim.reset()),
+    setFieldDirection: base.wrapAction((value: AmpereFieldDirection) => {
+      sim.setParams({ fieldDirection: value });
+    }),
+    setCurrentDirection: base.wrapAction((value: AmpereCurrentDirection) => {
+      sim.setParams({ currentDirection: value });
+    }),
     getReadoutItems
   };
 }

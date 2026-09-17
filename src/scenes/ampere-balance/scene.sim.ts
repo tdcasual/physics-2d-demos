@@ -24,10 +24,10 @@ export type AmpereVector = { x: number; y: number };
 export type AmpereBalanceState = {
   params: AmpereBalanceParams;
   time: number;
-  blockOffset: number;
   ampereForce: number;
   weight: number;
   normalForce: number;
+  rawNormal: number;
   frictionRequired: number;
   slopeNet: number;
   acceleration: number;
@@ -38,59 +38,43 @@ export type AmpereBalanceState = {
   weightVector: AmpereVector;
   normalVector: AmpereVector;
   frictionVector: AmpereVector;
+  slope: AmpereVector;
+  outwardNormal: AmpereVector;
 };
 
 const GRAVITY = 10;
 const ROD_LENGTH = 1;
 const DEG = Math.PI / 180;
+const FIELD_IDS: AmpereFieldDirection[] = [
+  'up',
+  'down',
+  'right',
+  'left',
+  'normalUp',
+  'normalDown'
+];
 
 export const ampereBalanceConstants = {
-  baseWidth: 1200,
-  baseHeight: 760,
-  fieldWidth: 760,
-  panelWidth: 382,
-  panelX: 786,
-  panelInset: 22,
-  titleY: 42,
-  ruleX: 54,
-  ruleY: 70,
-  ruleWidth: 510,
-  ruleHeight: 68,
-  fieldTop: 168,
-  fieldBottom: 610,
-  fieldArrowStartX: 112,
-  fieldArrowEndX: 706,
-  fieldArrowStartY: 194,
-  fieldArrowEndY: 578,
+  gravity: GRAVITY,
+  rodLength: ROD_LENGTH,
+  baseWidth: 760,
+  baseHeight: 660,
+  gridStep: 48,
+  planeTopX: 88,
+  planeTopY: 118,
+  planeEndX: 700,
+  planeBaseY: 596,
+  blockT: 0.57,
+  blockRadius: 22,
+  vectorScale: 28,
+  contactEps: 5e-3,
+  fieldArrowLength: 36,
   fieldColumnGap: 118,
   fieldRowGap: 96,
-  gridStep: 64,
-  planeTopX: 100,
-  planeTopY: 300,
-  planeEndX: 700,
-  planeEndY: 646,
-  planeBaseY: 646,
-  blockT: 0.57,
-  blockRadius: 24,
-  vectorScale: 34,
-  forceVectorCap: 166,
-  weightVectorCap: 148,
-  panelCardX: 808,
-  panelCardWidth: 338,
-  headerRuleY: 74,
-  fieldCardY: 92,
-  fieldCardHeight: 154,
-  presetCardY: 258,
-  presetCardHeight: 104,
-  paramCardY: 374,
-  paramCardHeight: 222,
-  readoutCardY: 608,
-  readoutCardHeight: 136,
-  readoutRowGap: 26,
-  axisDashLength: 74,
-  axisLabelDistance: 88,
-  angleMarkerOffset: 92,
-  groundExtension: 54,
+  fieldPad: 72,
+  frictionLift: 14,
+  axisDashLength: 64,
+  axisLabelDistance: 78,
   defaultInclineAngle: 30,
   defaultMagneticField: 1,
   defaultCurrent: 4.6,
@@ -103,14 +87,16 @@ export const ampereBalanceConstants = {
   currentMax: 8,
   massMin: 0.2,
   massMax: 3,
-  animationPeriod: 4.5
+  balanceSlopeEps: 0.08
 } as const;
 
+const C = ampereBalanceConstants;
+
 const DEFAULTS: AmpereBalanceParams = {
-  inclineAngle: ampereBalanceConstants.defaultInclineAngle,
-  magneticField: ampereBalanceConstants.defaultMagneticField,
-  current: ampereBalanceConstants.defaultCurrent,
-  mass: ampereBalanceConstants.defaultMass,
+  inclineAngle: C.defaultInclineAngle,
+  magneticField: C.defaultMagneticField,
+  current: C.defaultCurrent,
+  mass: C.defaultMass,
   fieldDirection: 'down',
   currentDirection: 'out',
   autoRun: true
@@ -120,18 +106,28 @@ function finite(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
-function fieldDirection(value: unknown): AmpereFieldDirection {
-  return value === 'up' ||
-    value === 'right' ||
-    value === 'left' ||
-    value === 'normalUp' ||
-    value === 'normalDown'
-    ? value
-    : 'down';
+export function parseFieldDirection(
+  value: unknown,
+  fallback: AmpereFieldDirection = 'down'
+): AmpereFieldDirection {
+  if (typeof value === 'number' && Number.isInteger(value)) {
+    return FIELD_IDS[value] ?? fallback;
+  }
+  if (typeof value === 'string' && /^\d+$/.test(value)) {
+    return FIELD_IDS[Number(value)] ?? fallback;
+  }
+  return FIELD_IDS.includes(value as AmpereFieldDirection)
+    ? (value as AmpereFieldDirection)
+    : fallback;
 }
 
-function currentDirection(value: unknown): AmpereCurrentDirection {
-  return value === 'in' ? 'in' : 'out';
+export function parseCurrentDirection(
+  value: unknown,
+  fallback: AmpereCurrentDirection = 'out'
+): AmpereCurrentDirection {
+  if (value === 'in' || value === 1 || value === '1') return 'in';
+  if (value === 'out' || value === 0 || value === '0') return 'out';
+  return fallback;
 }
 
 function normalize(
@@ -141,57 +137,80 @@ function normalize(
   return {
     inclineAngle: clamp(
       finite(input.inclineAngle, previous.inclineAngle),
-      ampereBalanceConstants.inclineAngleMin,
-      ampereBalanceConstants.inclineAngleMax
+      C.inclineAngleMin,
+      C.inclineAngleMax
     ),
     magneticField: clamp(
       finite(input.magneticField, previous.magneticField),
-      ampereBalanceConstants.magneticFieldMin,
-      ampereBalanceConstants.magneticFieldMax
+      C.magneticFieldMin,
+      C.magneticFieldMax
     ),
     current: clamp(
       finite(input.current, previous.current),
-      ampereBalanceConstants.currentMin,
-      ampereBalanceConstants.currentMax
+      C.currentMin,
+      C.currentMax
     ),
-    mass: clamp(
-      finite(input.mass, previous.mass),
-      ampereBalanceConstants.massMin,
-      ampereBalanceConstants.massMax
+    mass: clamp(finite(input.mass, previous.mass), C.massMin, C.massMax),
+    fieldDirection: parseFieldDirection(
+      input.fieldDirection,
+      previous.fieldDirection
     ),
-    fieldDirection: fieldDirection(
-      input.fieldDirection ?? previous.fieldDirection
-    ),
-    currentDirection: currentDirection(
-      input.currentDirection ?? previous.currentDirection
+    currentDirection: parseCurrentDirection(
+      input.currentDirection,
+      previous.currentDirection
     ),
     autoRun: input.autoRun ?? previous.autoRun
   };
 }
 
-function directionVector(
-  direction: AmpereFieldDirection,
-  angle: number
-): AmpereVector {
-  const theta = angle * DEG;
-  if (direction === 'up') return { x: 0, y: -1 };
-  if (direction === 'right') return { x: 1, y: 0 };
-  if (direction === 'left') return { x: -1, y: 0 };
-  if (direction === 'normalUp')
-    return { x: Math.sin(theta), y: -Math.cos(theta) };
-  if (direction === 'normalDown')
-    return { x: -Math.sin(theta), y: Math.cos(theta) };
-  return { x: 0, y: 1 };
-}
-
-function unit(vector: AmpereVector): AmpereVector {
+export function unit(vector: AmpereVector): AmpereVector {
   const length = Math.hypot(vector.x, vector.y);
   if (length < 1e-9) return { x: 0, y: 0 };
   return { x: vector.x / length, y: vector.y / length };
 }
 
-function dot(a: AmpereVector, b: AmpereVector): number {
+export function dot(a: AmpereVector, b: AmpereVector): number {
   return a.x * b.x + a.y * b.y;
+}
+
+/** Screen-space downslope unit: +x right, +y down, θ from +x toward +y. */
+export function slopeUnit(angleDeg: number): AmpereVector {
+  const theta = angleDeg * DEG;
+  return { x: Math.cos(theta), y: Math.sin(theta) };
+}
+
+/** Outward normal (away from the wedge). */
+export function outwardNormalUnit(angleDeg: number): AmpereVector {
+  const theta = angleDeg * DEG;
+  return { x: Math.sin(theta), y: -Math.cos(theta) };
+}
+
+export function fieldUnit(
+  direction: AmpereFieldDirection,
+  angleDeg: number
+): AmpereVector {
+  if (direction === 'up') return { x: 0, y: -1 };
+  if (direction === 'right') return { x: 1, y: 0 };
+  if (direction === 'left') return { x: -1, y: 0 };
+  if (direction === 'normalUp') return outwardNormalUnit(angleDeg);
+  if (direction === 'normalDown') {
+    const n = outwardNormalUnit(angleDeg);
+    return { x: -n.x, y: -n.y };
+  }
+  return { x: 0, y: 1 };
+}
+
+/**
+ * Screen y-down, rod along +z_physics with ⊙ = current out.
+ * Physics (y up, z out): F = Iẑ × B = (−Iz By_up, Iz Bx).
+ * Screen: By_up = −By, Fy_screen = −Fy_up ⇒ F = (Iz By, −Iz Bx).
+ */
+export function ampereDirectionScreen(
+  field: AmpereVector,
+  current: AmpereCurrentDirection
+): AmpereVector {
+  const iz = current === 'out' ? 1 : -1;
+  return unit({ x: iz * field.y, y: -iz * field.x });
 }
 
 export function ampereForceMagnitude(params: AmpereBalanceParams): number {
@@ -199,76 +218,218 @@ export function ampereForceMagnitude(params: AmpereBalanceParams): number {
 }
 
 export function ampereBalanceValues(params: AmpereBalanceParams) {
-  const theta = params.inclineAngle * DEG;
-  const fieldVector = directionVector(
-    params.fieldDirection,
-    params.inclineAngle
-  );
-  const currentSign = params.currentDirection === 'out' ? 1 : -1;
-  const ampereDirection = unit({
-    x: fieldVector.y * currentSign,
-    y: -fieldVector.x * currentSign
-  });
+  const fieldVector = fieldUnit(params.fieldDirection, params.inclineAngle);
+  const ampereDir = ampereDirectionScreen(fieldVector, params.currentDirection);
   const ampereForce = ampereForceMagnitude(params);
   const ampereVector = {
-    x: ampereDirection.x * ampereForce,
-    y: ampereDirection.y * ampereForce
+    x: ampereDir.x * ampereForce,
+    y: ampereDir.y * ampereForce
   };
   const weight = params.mass * GRAVITY;
   const weightVector = { x: 0, y: weight };
-  const slope = { x: Math.cos(theta), y: Math.sin(theta) };
-  const normal = { x: Math.sin(theta), y: -Math.cos(theta) };
+  const slope = slopeUnit(params.inclineAngle);
+  const outwardNormal = outwardNormalUnit(params.inclineAngle);
   const external = {
     x: weightVector.x + ampereVector.x,
     y: weightVector.y + ampereVector.y
   };
-  const rawNormal = -dot(external, normal);
-  const normalForce = Math.max(0, rawNormal);
+  const rawNormal = -dot(external, outwardNormal);
+  const contact =
+    rawNormal > -C.contactEps && rawNormal < C.contactEps ? 0 : rawNormal;
+  const normalForce = Math.max(0, contact);
   const slopeNet = dot(external, slope);
-  const frictionRequired = Math.abs(slopeNet);
-  const acceleration = slopeNet / Math.max(params.mass, 0.01);
-  const detached = rawNormal < -0.02;
+  const detached = contact < 0;
+  const frictionRequired = normalForce < C.contactEps ? 0 : Math.abs(slopeNet);
+  const parallelAccel = slopeNet / Math.max(params.mass, 1e-6);
   const trend: AmpereBalanceState['trend'] =
-    Math.abs(slopeNet) < 0.08
+    Math.abs(slopeNet) < C.balanceSlopeEps
       ? '近似平衡'
       : slopeNet > 0
         ? '下滑趋势'
         : '上滑趋势';
-  const frictionDirection = slopeNet >= 0 ? -1 : 1;
+  const frictionSign = slopeNet > 0 ? -1 : 1;
   return {
     fieldVector,
     ampereVector,
     ampereForce,
     weight,
     weightVector,
+    rawNormal,
     normalForce,
     frictionRequired,
     slopeNet,
-    acceleration,
+    acceleration: parallelAccel,
     detached,
     trend,
-    normalVector: { x: normal.x * normalForce, y: normal.y * normalForce },
+    slope,
+    outwardNormal,
+    normalVector: {
+      x: outwardNormal.x * normalForce,
+      y: outwardNormal.y * normalForce
+    },
     frictionVector: {
-      x: slope.x * frictionRequired * frictionDirection,
-      y: slope.y * frictionRequired * frictionDirection
+      x: slope.x * frictionRequired * frictionSign,
+      y: slope.y * frictionRequired * frictionSign
     }
   };
+}
+
+/** B = mg tanθ / (IL) with FA horizontal left (B up, I out). */
+export const BALANCE_B =
+  (C.defaultMass *
+    GRAVITY *
+    Math.tan((C.defaultInclineAngle * Math.PI) / 180)) /
+  (C.defaultCurrent * ROD_LENGTH);
+
+/** Slider-representable I (0.01 A) so B=1.00 T balances G sinθ. */
+export const BALANCE_I = Number(
+  (
+    (C.defaultMass *
+      GRAVITY *
+      Math.sin((C.defaultInclineAngle * Math.PI) / 180)) /
+    (C.defaultMagneticField *
+      Math.cos((C.defaultInclineAngle * Math.PI) / 180) *
+      ROD_LENGTH)
+  ).toFixed(2)
+);
+
+/** FA vertical up cancels mg ⇒ N ≈ 0. B right, I out. */
+export const SUPPORT_ZERO_B =
+  (C.defaultMass * GRAVITY) / (C.defaultCurrent * ROD_LENGTH);
+
+export const ampereBalancePresets = {
+  balance: {
+    inclineAngle: 30,
+    magneticField: 1,
+    current: BALANCE_I,
+    mass: 0.8,
+    fieldDirection: 'up' as const,
+    currentDirection: 'out' as const
+  },
+  supportZero: {
+    inclineAngle: 30,
+    magneticField: 1.74,
+    current: 4.6,
+    mass: 0.8,
+    fieldDirection: 'right' as const,
+    currentDirection: 'out' as const
+  },
+  detach: {
+    inclineAngle: 30,
+    magneticField: 2.4,
+    current: 4.6,
+    mass: 0.8,
+    fieldDirection: 'right' as const,
+    currentDirection: 'out' as const
+  }
+} as const;
+
+export const ampereBalanceUrlKeys = [
+  'inclineAngle',
+  'magneticField',
+  'current',
+  'mass',
+  'fieldDirection',
+  'currentDirection'
+] as const;
+
+/** Two-decimal readout without "-0.00". */
+export function formatFixed(value: number, digits = 2): string {
+  const threshold = 0.5 * 10 ** -digits;
+  if (!Number.isFinite(value) || Math.abs(value) < threshold) {
+    return (0).toFixed(digits);
+  }
+  return value.toFixed(digits);
+}
+
+export function encodeFieldDirection(direction: AmpereFieldDirection): number {
+  const index = FIELD_IDS.indexOf(direction);
+  return index < 0 ? 1 : index;
+}
+
+export function encodeCurrentDirection(
+  direction: AmpereCurrentDirection
+): number {
+  return direction === 'in' ? 1 : 0;
+}
+
+export function ampereBalanceUrlPayload(
+  params: AmpereBalanceParams
+): Record<string, number | string> {
+  return {
+    inclineAngle: params.inclineAngle,
+    magneticField: params.magneticField,
+    current: params.current,
+    mass: params.mass,
+    fieldDirection: encodeFieldDirection(params.fieldDirection),
+    currentDirection: encodeCurrentDirection(params.currentDirection)
+  };
+}
+
+export function ampereBalanceUrlReset(): Record<string, undefined> {
+  return {
+    inclineAngle: undefined,
+    magneticField: undefined,
+    current: undefined,
+    mass: undefined,
+    fieldDirection: undefined,
+    currentDirection: undefined
+  };
+}
+
+/** URL apply for selectors uses setControlActive with parsed ids, not setControlValue. */
+export function applyAmpereBalanceUrlParam(
+  key: string,
+  value: number | string,
+  ctx: {
+    scene: { setParams: (partial: Partial<AmpereBalanceParams>) => unknown };
+    setControlActive: (key: string, id: string) => void;
+    setControlValue: (key: string, value: number | string | boolean) => void;
+  }
+): boolean {
+  if (key === 'fieldDirection') {
+    const direction = parseFieldDirection(value);
+    ctx.scene.setParams({ fieldDirection: direction });
+    ctx.setControlActive(key, direction);
+    return true;
+  }
+  if (key === 'currentDirection') {
+    const direction = parseCurrentDirection(value);
+    ctx.scene.setParams({ currentDirection: direction });
+    ctx.setControlActive(key, direction);
+    return true;
+  }
+  if (key === 'autoRun') {
+    ctx.scene.setParams({ autoRun: Number(value) > 0 });
+    return true;
+  }
+  if (
+    key === 'inclineAngle' ||
+    key === 'magneticField' ||
+    key === 'current' ||
+    key === 'mass'
+  ) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return false;
+    ctx.scene.setParams({ [key]: number } as Partial<AmpereBalanceParams>);
+    ctx.setControlValue(key, number);
+    return true;
+  }
+  return false;
 }
 
 export function createAmpereBalanceSim(
   initial: Partial<AmpereBalanceParams> = {}
 ) {
-  const defaults = normalize(initial);
-  let params = { ...defaults };
+  const seed = normalize(initial);
+  let params = { ...seed };
   let time = 0;
   function getState(): AmpereBalanceState {
-    const values = ampereBalanceValues(params);
-    const blockOffset = params.autoRun
-      ? Math.sin(
-          (time / ampereBalanceConstants.animationPeriod) * Math.PI * 2
-        ) * 0.14
-      : 0;
-    return { params: { ...params }, time, blockOffset, ...values };
+    return {
+      params: { ...params },
+      time,
+      ...ampereBalanceValues(params)
+    };
   }
   return {
     getState,
@@ -278,12 +439,11 @@ export function createAmpereBalanceSim(
       params = normalize({ ...params, ...next }, params);
       return { ...params };
     },
-    step(dt: number): void {
-      if (!params.autoRun) return;
-      time += Math.max(0, finite(dt, 0));
+    step(_dt: number): void {
+      /* Static force diagram: no time evolution. */
     },
     reset(): void {
-      params = { ...defaults };
+      params = { ...DEFAULTS };
       time = 0;
     }
   };

@@ -3,7 +3,7 @@ import type { SceneMeta } from '../../platform/scene-contract';
 
 const demoProfile: SceneDemoProfile = {
   lessonTask: 'process',
-  transport: 'visible',
+  transport: 'hidden',
   readoutKeys: [
     'ampereForce',
     'normalForce',
@@ -20,8 +20,7 @@ const demoProfile: SceneDemoProfile = {
       'inclineAngle',
       'magneticField',
       'current',
-      'mass',
-      'autoRun'
+      'mass'
     ]
   }
 };
@@ -60,7 +59,7 @@ export const ampereBalanceMeta: SceneMeta = {
   ],
   testProfile: {
     hasGraph: false,
-    hasTransport: true,
+    hasTransport: false,
     supportsPresentation: true
   },
   demoProfile
