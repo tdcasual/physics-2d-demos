@@ -42,7 +42,7 @@
 |  27 | 电势电势能与E-x和φ-x图象                              | 电磁 | [`potential-energy-graphs`](../src/scenes/potential-energy-graphs/scene.meta.ts)                   | [详情](https://app.svgzhenli.com/resource/ff3b0997-708a-4845-8ce1-1f8a1a198337) · [封面](https://img.svgzhenli.com/gallery-assets/covers/gqj6h49siwi1787678193054.png)  |  ☑   |
 |  28 | 冲量动量定理与F-t图象                                 | 力学 | [`impulse-momentum`](../src/scenes/impulse-momentum/scene.meta.ts)                                 | [详情](https://app.svgzhenli.com/resource/55c5259d-0e1f-4ff8-b491-791c7df3c02e) · [封面](https://img.svgzhenli.com/gallery-assets/covers/tpvaff7fej91787660726259.png)  |  ☑   |
 |  29 | 单匝线框穿过有界匀强磁场                              | 电磁 | [`single-loop`](../src/scenes/single-loop/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/4c98b69d-8854-45ad-9914-82c68b961368) · [封面](https://img.svgzhenli.com/gallery-assets/covers/86no26fi9ne1774713114955.png)  |  ☑   |
-|  30 | 电磁感应 - 电容棒与电阻棒模型                         | 电磁 | [`rod-model`](../src/scenes/rod-model/scene.meta.ts)                                               | [详情](https://app.svgzhenli.com/resource/58836693-454f-4300-aa52-0b99316f1c26) · [封面](https://img.svgzhenli.com/gallery-assets/covers/6hlwqwk5c7i1786857749323.png)  |  ☐   |
+|  30 | 电磁感应 - 电容棒与电阻棒模型                         | 电磁 | [`rod-model`](../src/scenes/rod-model/scene.meta.ts)                                               | [详情](https://app.svgzhenli.com/resource/58836693-454f-4300-aa52-0b99316f1c26) · [封面](https://img.svgzhenli.com/gallery-assets/covers/6hlwqwk5c7i1786857749323.png)  |  ☑   |
 |  31 | 匀速圆周运动与向心力模型                              | 力学 | [`centripetal-motion`](../src/scenes/centripetal-motion/scene.meta.ts)                             | [详情](https://app.svgzhenli.com/resource/2b810c0c-11fe-4d31-933f-770b06d1a88e) · [封面](https://img.svgzhenli.com/gallery-assets/covers/7e91dq40i21775496835830.png)   |  ☐   |
 |  32 | 安培力方向与导体平衡                                  | 电磁 | [`ampere-balance`](../src/scenes/ampere-balance/scene.meta.ts)                                     | [详情](https://app.svgzhenli.com/resource/1bfccf2e-a260-4be5-9a1d-d3dcd3e6cb00) · [封面](https://img.svgzhenli.com/gallery-assets/covers/t5xsdch4bs1787678015468.png)   |  ☐   |
 |  33 | 平抛运动轨迹与速度分解                                | 力学 | [`projectile-components`](../src/scenes/projectile-components/scene.meta.ts)                       | [详情](https://app.svgzhenli.com/resource/724243b0-b597-4b30-892c-02f52445e87c) · [封面](https://img.svgzhenli.com/gallery-assets/covers/r5hjy0ygx11775457276819.png)   |  ☐   |
@@ -380,6 +380,14 @@
 - 交互与布局验证：参数调整从起点重播；Reset 恢复默认且 URL 五个参数同步、保留 `audit=scene29`。真实浏览器点击 Reset 验证 B 从 3 回到 1.5；桌面/移动布局图表与数据分区清楚且无横溢，console 无修复后新增错误。
 - 工程验证：专项 sim/view 与真实 Reset 集成测试通过；`pnpm verify:scene single-loop` 全 `7/7` 步骤通过（`3147 passed / 126 skipped`），结构、布局契约、ESLint、TypeScript、构建和 bundle 预算通过；Prettier、`git diff --check` 通过。远程 Grok Build 最终返回 `AGREE`。
 - 证据：远程审计报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/4c98b69d-8854-45ad-9914-82c68b961368.md` · [原始详情](https://app.svgzhenli.com/resource/4c98b69d-8854-45ad-9914-82c68b961368) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/86no26fi9ne1774713114955.png)
+
+### 30. 电磁感应 - 电容棒与电阻棒模型 (`rod-model`)
+
+- 状态：✅ Codex / Grok Build 交叉审计通过（2026-09-16）。
+- 修复：v-t 对比移入 `split-right-graph-bottom` 图表区；模型/v/a/F安/I/P/vₘ/m\* 经 `getReadoutItems` 进入数据区；动画区只保留导轨、导体棒、R/C 回路、磁场 ⊗ 与 F/F安/v 矢量。两条比较曲线由同一组 B、L、F、m、R、C 闭式求解，不依赖当前模型的 `terminalVelocity`。靠右时 F 与正向 v 改到棒左侧仍朝右；846×177 图把「v–t 对比」与「v / (m·s⁻¹)」拆开；B ⊗ 移到磁场顶沿中央以避开标准 readout 浮层。
+- 物理核验：电阻棒 γ=B²L²/R，`m dv/dt=F−γv`，`v=vₘ(1−e^{−t/τ})`；电容棒 `a=F/(m+B²L²C)` 匀加速。切换模型或物理参数从静止重启；到达导轨端点或 t_max 时画面与数据一同冻结；Pause/Reset 正确。
+- 工程验证：Grok 专项 `rod-model.sim.spec.ts` 16 项、`rod-model.view.spec.ts` 12 项通过；`PATH=/tmp/codex-emf-pnpm-bin:... corepack pnpm verify:scene rod-model` 全 7/7 通过（`3155 passed / 125 skipped`）；Grok 用项目 Prettier 格式化 `src/scenes/rod-model/scene.view.ts` 后 `prettier --check`、专项 28 项、`git diff --check` 均通过。未提交、未推送。Playwright 自核以 `/tmp/rod-final-*.png`（项目 5185）为准，不用 `/tmp/rod-model-audit`。桌面 1280×720 动画 862×393、图表 846×177；移动 390×844 点「图表」后 366×430、`overflowX=0`（隐藏 tab 下图表 canvas 为 0×0）。
+- 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/58836693-454f-4300-aa52-0b99316f1c26.md` · [原始详情](https://app.svgzhenli.com/resource/58836693-454f-4300-aa52-0b99316f1c26) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/6hlwqwk5c7i1786857749323.png)
 
 ## 复审记录模板
 

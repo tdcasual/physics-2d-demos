@@ -3,7 +3,7 @@ import type { ControlsSchema } from '../../platform/controls-schema';
 export const rodModelControlsSchema: ControlsSchema = {
   sections: [
     {
-      title: '切换回路模型',
+      title: '模型',
       collapsed: false,
       fields: [
         {
@@ -12,20 +12,20 @@ export const rodModelControlsSchema: ControlsSchema = {
           columns: 2,
           initialActive: 'resistor',
           presets: [
-            { id: 'resistor', label: '纯电阻棒模型' },
-            { id: 'capacitor', label: '纯电容棒模型' }
+            { id: 'resistor', label: '纯电阻棒' },
+            { id: 'capacitor', label: '纯电容棒' }
           ]
         }
       ]
     },
     {
-      title: '实验参数',
+      title: '参数',
       collapsed: false,
       fields: [
         {
           type: 'slider',
           key: 'fieldStrength',
-          label: '磁感应强度 B',
+          label: 'B',
           min: 0.2,
           max: 3,
           step: 0.1,
@@ -35,7 +35,7 @@ export const rodModelControlsSchema: ControlsSchema = {
         {
           type: 'slider',
           key: 'railGap',
-          label: '导轨间距 L',
+          label: 'L',
           min: 0.5,
           max: 2,
           step: 0.1,
@@ -45,7 +45,7 @@ export const rodModelControlsSchema: ControlsSchema = {
         {
           type: 'slider',
           key: 'externalForce',
-          label: '恒定外力 F',
+          label: 'F',
           min: 0.5,
           max: 6,
           step: 0.5,
@@ -55,7 +55,7 @@ export const rodModelControlsSchema: ControlsSchema = {
         {
           type: 'slider',
           key: 'mass',
-          label: '导体棒质量 m',
+          label: 'm',
           min: 0.2,
           max: 2,
           step: 0.1,
@@ -65,7 +65,7 @@ export const rodModelControlsSchema: ControlsSchema = {
         {
           type: 'slider',
           key: 'resistance',
-          label: '回路总电阻 R',
+          label: 'R',
           min: 0.2,
           max: 4,
           step: 0.1,
@@ -75,7 +75,7 @@ export const rodModelControlsSchema: ControlsSchema = {
         {
           type: 'slider',
           key: 'capacitance',
-          label: '电容 C',
+          label: 'C',
           min: 0.1,
           max: 2,
           step: 0.1,
@@ -85,20 +85,16 @@ export const rodModelControlsSchema: ControlsSchema = {
       ]
     },
     {
-      title: '播放',
-      collapsed: false,
-      fields: [
-        { type: 'toggle', key: 'autoRun', label: '自动播放', value: true }
-      ]
-    },
-    {
-      title: '规律',
+      title: '关系',
       collapsed: true,
       fields: [
         {
           type: 'hint',
           key: 'formula',
-          lines: ['电阻棒：a=(F−B²L²v/R)/m', '电容棒：a=F/(m+B²L²C)']
+          lines: [
+            '电阻棒：γ=B²L²/R，m dv/dt=F−γv，vₘ=F/γ',
+            '电容棒：a=F/(m+B²L²C)'
+          ]
         }
       ]
     }

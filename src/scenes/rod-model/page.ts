@@ -1,29 +1,43 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
+import { readSceneParams, writeSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { rodModelControlsSchema } from './controls-schema';
 import { asRodModel, createRodModelScene } from './scene.entry';
 import { rodModelMeta } from './scene.meta';
-import type { RodParams } from './scene.sim';
+import { asBool, restoredUrlParams, type RodParams } from './scene.sim';
+
+const rawInitial = readSceneParams(rodModelMeta);
 
 bootScenePage({
   meta: rodModelMeta,
-  autoPlay: true,
-  preferredLayout: 'split-right',
+  autoPlay:
+    rawInitial.autoRun === undefined ? true : asBool(rawInitial.autoRun, true),
+  preferredLayout: 'split-right-graph-bottom',
   layoutConfig: {
-    defaultLeftRatio: 0.34,
+    defaultLeftRatio: 0.32,
     leftMinWidth: 300,
     leftMaxWidth: 450,
     controlColumns: 'auto',
-    readoutCollapsed: true,
+    readoutCollapsed: false,
     readoutLabel: '数据读数',
-    hasGraph: false
+    hasGraph: true,
+    graphHeight: 250,
+    graphMinHeight: 180,
+    graphMaxHeight: 340,
+    graphColumns: 1
   },
   createScene: ({ canvas, theme, mode, demoHints }) => {
     if (!canvas) throw new Error('rod-model requires a canvas');
     const scene = createRodModelScene({ canvas, theme, mode, demoHints });
     const scheduler = createRenderScheduler(() => scene.render());
     const dispose = scene.dispose.bind(scene);
+    const originalReset = scene.reset.bind(scene);
+    const originalStartAll = scene.startAll.bind(scene);
+    const originalPauseAll = scene.pauseAll.bind(scene);
+    const syncUrl = (): void => {
+      writeSceneParams(restoredUrlParams(scene.getParams()));
+    };
     return {
       ...scene,
       step(dt: number): void {
@@ -33,6 +47,18 @@ bootScenePage({
       dispose(): void {
         scheduler.dispose();
         dispose();
+      },
+      reset(): void {
+        originalReset();
+        syncUrl();
+      },
+      startAll(): void {
+        originalStartAll();
+        syncUrl();
+      },
+      pauseAll(): void {
+        originalPauseAll();
+        syncUrl();
       }
     };
   },
@@ -46,6 +72,7 @@ bootScenePage({
           const model = asRodModel(value) ?? 'resistor';
           scene.setParams({ model });
           renderer.setActive(key, model);
+          writeParam?.(key, model === 'capacitor' ? 1 : 0);
         } else if (
           key === 'fieldStrength' ||
           key === 'railGap' ||
@@ -55,11 +82,9 @@ bootScenePage({
           key === 'capacitance'
         ) {
           scene.setParams({ [key]: Number(value) } as Partial<RodParams>);
-        } else if (key === 'autoRun') {
-          scene.setParams({ autoRun: Boolean(value) });
+          writeParam?.(key, value);
         }
         render();
-        writeParam?.(key, value);
       },
       onAction: () => {}
     });
@@ -93,9 +118,7 @@ bootScenePage({
         return true;
       }
       if (key === 'autoRun') {
-        const on = Number(value) > 0;
-        ctx.scene.setParams({ autoRun: on });
-        ctx.setControlValue(key, on);
+        ctx.scene.setParams({ autoRun: asBool(value, false) });
         return true;
       }
       return false;

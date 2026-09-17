@@ -6,10 +6,14 @@ const demoProfile: SceneDemoProfile = {
   transport: 'visible',
   readoutKeys: [
     'model',
+    'time',
     'velocity',
     'acceleration',
     'magneticForce',
-    'current'
+    'current',
+    'heatingPower',
+    'terminalVelocity',
+    'equivalentMass'
   ],
   renderHints: { contentScale: 1.02 },
   interactionHints: {
@@ -21,8 +25,7 @@ const demoProfile: SceneDemoProfile = {
       'externalForce',
       'mass',
       'resistance',
-      'capacitance',
-      'autoRun'
+      'capacitance'
     ]
   }
 };

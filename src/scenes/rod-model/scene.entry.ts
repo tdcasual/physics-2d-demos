@@ -1,9 +1,10 @@
 import type { DemoRenderHints } from '../../platform/demo-profile';
-import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import type { SceneLifecycle } from '../../platform/scene-contract';
+import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createStandardSceneEntry } from '../scene-entry-helpers';
 import { createRodModelView } from './scene.view';
 import {
+  asRodModel,
   createRodModelSim,
   type RodModel,
   type RodParams,
@@ -12,11 +13,14 @@ import {
 
 export type CreateRodModelSceneOptions = {
   canvas?: HTMLCanvasElement;
+  graphCanvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
   mode?: TeachingMode;
   demoHints?: DemoRenderHints;
   onReadout?: (state: RodState) => void;
 };
+
+export { asRodModel };
 
 export function createRodModelScene(
   options: CreateRodModelSceneOptions = {}
@@ -30,10 +34,15 @@ export function createRodModelScene(
   setParams(params: Partial<RodParams>): RodParams;
   getReadoutItems(): Array<{ key: string; label: string; value: string }>;
   subscribe(listener: () => void): () => void;
+  attachGraphCanvas(canvas: HTMLCanvasElement): void;
+  startAll(): void;
+  pauseAll(): void;
+  getTransportState(): { isPlaying: boolean; speed: number };
 } {
   const sim = createRodModelSim();
   const view = createRodModelView({
     canvas: options.canvas,
+    graphCanvas: options.graphCanvas,
     theme: options.theme ?? 'light',
     mode: options.mode,
     demoHints: options.demoHints
@@ -44,40 +53,6 @@ export function createRodModelScene(
     getState: () => sim.getState(),
     onReadout: options.onReadout
   });
-  function getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string;
-  }> {
-    const state = sim.getState();
-    return [
-      {
-        key: 'model',
-        label: '模型',
-        value: state.params.model === 'resistor' ? '纯电阻棒' : '纯电容棒'
-      },
-      {
-        key: 'velocity',
-        label: '速度 v',
-        value: `${state.velocity.toFixed(2)} m/s`
-      },
-      {
-        key: 'acceleration',
-        label: '加速度 a',
-        value: `${state.acceleration.toFixed(2)} m/s²`
-      },
-      {
-        key: 'magneticForce',
-        label: '安培力 F安',
-        value: `${state.magneticForce.toFixed(2)} N`
-      },
-      {
-        key: 'current',
-        label: '感应电流 I',
-        value: `${state.current.toFixed(2)} A`
-      }
-    ];
-  }
   return {
     ...base,
     getState: () => sim.getState(),
@@ -86,12 +61,86 @@ export function createRodModelScene(
     setParams: base.wrapAction((next: Partial<RodParams>) =>
       sim.setParams(next)
     ),
-    getReadoutItems
+    attachGraphCanvas(canvas: HTMLCanvasElement): void {
+      view.attachGraphCanvas(canvas);
+      base.renderAndEmit();
+    },
+    startAll: base.wrapAction(() => {
+      if (sim.getState().finished) sim.rewind();
+      sim.setParams({ autoRun: true });
+    }),
+    pauseAll: base.wrapAction(() => {
+      sim.setParams({ autoRun: false });
+    }),
+    getTransportState(): { isPlaying: boolean; speed: number } {
+      const state = sim.getState();
+      return {
+        isPlaying: state.params.autoRun && !state.finished,
+        speed: 1
+      };
+    },
+    getReadoutItems(): Array<{
+      key: string;
+      label: string;
+      value: string;
+    }> {
+      const state = sim.getState();
+      const items: Array<{ key: string; label: string; value: string }> = [
+        {
+          key: 'model',
+          label: '模型',
+          value: state.params.model === 'resistor' ? '纯电阻棒' : '纯电容棒'
+        },
+        {
+          key: 'time',
+          label: 't',
+          value: `${state.time.toFixed(2)} s`
+        },
+        {
+          key: 'velocity',
+          label: 'v',
+          value: `${state.velocity.toFixed(2)} m/s`
+        },
+        {
+          key: 'acceleration',
+          label: 'a',
+          value: `${state.acceleration.toFixed(2)} m/s²`
+        },
+        {
+          key: 'magneticForce',
+          label: 'F安',
+          value: `${state.magneticForce.toFixed(2)} N`
+        },
+        {
+          key: 'current',
+          label: 'I',
+          value: `${state.current.toFixed(2)} A`
+        },
+        {
+          key: 'heatingPower',
+          label: 'P',
+          value: `${state.heatingPower.toFixed(2)} W`
+        }
+      ];
+      if (
+        state.params.model === 'resistor' &&
+        state.terminalVelocity !== null
+      ) {
+        items.push({
+          key: 'terminalVelocity',
+          label: 'vₘ',
+          value: `${state.terminalVelocity.toFixed(2)} m/s`
+        });
+      } else {
+        items.push({
+          key: 'equivalentMass',
+          label: 'm*',
+          value: `${state.equivalentMass.toFixed(2)} kg`
+        });
+      }
+      return items;
+    }
   };
 }
 
-export function asRodModel(value: unknown): RodModel | null {
-  if (value === 'resistor' || value === 0 || value === '0') return 'resistor';
-  if (value === 'capacitor' || value === 1 || value === '1') return 'capacitor';
-  return null;
-}
+export type { RodModel };

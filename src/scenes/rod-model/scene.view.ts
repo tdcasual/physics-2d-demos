@@ -1,69 +1,32 @@
+import {
+  applyCanvasSize,
+  getResponsiveScale,
+  scaledSize
+} from '../../core/canvas-sizing';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
-import { accelerationAt, rodModelConstants, type RodState } from './scene.sim';
+import {
+  capacitorVelocityAt,
+  motionEndTime,
+  resistorTerminalVelocity,
+  resistorVelocityAt,
+  rodModelConstants as C,
+  type RodParams,
+  type RodState
+} from './scene.sim';
 
 export type CreateRodModelViewOptions = {
   canvas?: HTMLCanvasElement;
+  graphCanvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
   mode?: TeachingMode;
   demoHints?: DemoRenderHints;
 };
 
-const {
-  baseWidth: BASE_W,
-  baseHeight: BASE_H,
-  fieldWidth: FIELD_W,
-  panelX: PANEL_X,
-  panelWidth: PANEL_W,
-  diagramX: DIAGRAM_X,
-  diagramY: DIAGRAM_Y,
-  diagramWidth: DIAGRAM_W,
-  diagramHeight: DIAGRAM_H,
-  railLeft: RAIL_LEFT,
-  railRight: RAIL_RIGHT,
-  railTop: RAIL_TOP,
-  railBottom: RAIL_BOTTOM,
-  fieldLeft: FIELD_LEFT,
-  fieldRight: FIELD_RIGHT,
-  fieldTop: FIELD_TOP,
-  fieldBottom: FIELD_BOTTOM,
-  graphX: GRAPH_X,
-  graphY: GRAPH_Y,
-  graphWidth: GRAPH_W,
-  graphHeight: GRAPH_H,
-  graphLeft: GRAPH_LEFT,
-  graphRight: GRAPH_RIGHT,
-  graphTop: GRAPH_TOP,
-  graphBottom: GRAPH_BOTTOM,
-  graphGridStep: GRAPH_GRID_STEP,
-  circuitComponentHeight: CIRCUIT_COMPONENT_H,
-  legendPanelX: LEGEND_PANEL_X,
-  legendPanelY: LEGEND_PANEL_Y,
-  legendPanelWidth: LEGEND_PANEL_W,
-  legendPanelHeight: LEGEND_PANEL_H,
-  legendLineStartX: LEGEND_LINE_START_X,
-  legendLineEndX: LEGEND_LINE_END_X,
-  legendTextX: LEGEND_TEXT_X,
-  legendLineY: LEGEND_LINE_Y,
-  panelCardX: CARD_X,
-  panelCardWidth: CARD_W,
-  headerRuleY: HEADER_RULE_Y,
-  readoutY: READOUT_Y,
-  readoutHeight: READOUT_H,
-  formulaY: FORMULA_Y,
-  formulaHeight: FORMULA_H,
-  noteY: NOTE_Y,
-  noteHeight: NOTE_H,
-  positionScale: POSITION_SCALE,
-  timeMax: TIME_MAX,
-  velocityMax: VELOCITY_MAX
-} = rodModelConstants;
-
 type Palette = {
   bg: string;
   panel: string;
-  soft: string;
   ink: string;
   muted: string;
   border: string;
@@ -72,17 +35,39 @@ type Palette = {
   blue: string;
   teal: string;
   gold: string;
-  purple: string;
   field: string;
+  fieldFill: string;
   rail: string;
   rod: string;
+};
+
+type PlotBox = { left: number; right: number; top: number; bottom: number };
+
+type StageMetrics = {
+  left: number;
+  right: number;
+  railTop: number;
+  railBottom: number;
+  fieldLeft: number;
+  fieldRight: number;
+  fieldTop: number;
+  fieldBottom: number;
+  circuitX: number;
+  rodHalf: number;
+};
+
+export type HorizontalArrowGeom = {
+  x1: number;
+  x2: number;
+  y: number;
+  labelX: number;
+  labelAlign: CanvasTextAlign;
 };
 
 const PALETTE: Record<TeachingTheme, Palette> = {
   light: {
     bg: '#fbfaf7',
     panel: '#ffffff',
-    soft: '#f1f3f4',
     ink: '#303744',
     muted: '#7d8997',
     border: '#d8dfe5',
@@ -91,15 +76,14 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     blue: '#2d6fe0',
     teal: '#159f8b',
     gold: '#d99416',
-    purple: '#7040db',
     field: '#80adff',
+    fieldFill: '#eef4ff',
     rail: '#5b6673',
     rod: '#e68b00'
   },
   dark: {
     bg: '#101827',
     panel: '#172235',
-    soft: '#253249',
     ink: '#eef2f7',
     muted: '#a8b4c5',
     border: '#3e4d64',
@@ -108,12 +92,61 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     blue: '#70a8ff',
     teal: '#4ed9c0',
     gold: '#fbbf24',
-    purple: '#bb86fc',
     field: '#83aefe',
+    fieldFill: '#1b3348',
     rail: '#9aa7ba',
     rod: '#ffb52e'
   }
 };
+
+function contentBoxSize(host: HTMLElement): { width: number; height: number } {
+  const cs = getComputedStyle(host);
+  const rect = host.getBoundingClientRect();
+  const padX =
+    (Number.parseFloat(cs.paddingLeft) || 0) +
+    (Number.parseFloat(cs.paddingRight) || 0);
+  const padY =
+    (Number.parseFloat(cs.paddingTop) || 0) +
+    (Number.parseFloat(cs.paddingBottom) || 0);
+  return {
+    width: Math.max(1, Math.floor(rect.width - padX)),
+    height: Math.max(1, Math.floor(rect.height - padY))
+  };
+}
+
+export function sizeGraphCanvasToHost(canvas: HTMLCanvasElement): {
+  ctx: CanvasRenderingContext2D;
+  cssWidth: number;
+  cssHeight: number;
+  responsiveScale: number;
+} {
+  const host = canvas.parentElement;
+  let cssWidth: number;
+  let cssHeight: number;
+  if (host) {
+    const box = contentBoxSize(host);
+    cssWidth = box.width;
+    cssHeight = box.height;
+  } else {
+    const rect = canvas.getBoundingClientRect();
+    cssWidth = Math.max(1, Math.floor(rect.width || C.graphFallbackWidth));
+    cssHeight = Math.max(1, Math.floor(rect.height || C.graphFallbackHeight));
+  }
+  const dpr = Math.min(
+    2,
+    typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1
+  );
+  const responsiveScale = getResponsiveScale(cssWidth, cssHeight);
+  const ctx = applyCanvasSize(canvas, {
+    width: Math.max(1, Math.floor(cssWidth * dpr)),
+    height: Math.max(1, Math.floor(cssHeight * dpr)),
+    cssWidth,
+    cssHeight,
+    dpr,
+    responsiveScale
+  });
+  return { ctx, cssWidth, cssHeight, responsiveScale };
+}
 
 function text(
   ctx: CanvasRenderingContext2D,
@@ -132,20 +165,6 @@ function text(
   ctx.fillText(value, x, y);
 }
 
-function rounded(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  radius = 12
-): void {
-  ctx.beginPath();
-  if (typeof ctx.roundRect === 'function')
-    ctx.roundRect(x, y, width, height, radius);
-  else ctx.rect(x, y, width, height);
-}
-
 function arrow(
   ctx: CanvasRenderingContext2D,
   x1: number,
@@ -153,677 +172,834 @@ function arrow(
   x2: number,
   y2: number,
   color: string,
-  width = 4
+  width: number,
+  head: number
 ): void {
-  const angle = Math.atan2(y2 - y1, x2 - x1);
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const len = Math.hypot(dx, dy);
+  if (len < 2) return;
+  const ux = dx / len;
+  const uy = dy / len;
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
   ctx.lineWidth = width;
+  ctx.lineCap = 'round';
   ctx.beginPath();
   ctx.moveTo(x1, y1);
-  ctx.lineTo(x2, y2);
+  ctx.lineTo(x2 - ux * head * 0.4, y2 - uy * head * 0.4);
   ctx.stroke();
   ctx.beginPath();
   ctx.moveTo(x2, y2);
   ctx.lineTo(
-    x2 - 12 * Math.cos(angle - Math.PI / 6),
-    y2 - 12 * Math.sin(angle - Math.PI / 6)
+    x2 - ux * head - uy * head * 0.45,
+    y2 - uy * head + ux * head * 0.45
   );
   ctx.lineTo(
-    x2 - 12 * Math.cos(angle + Math.PI / 6),
-    y2 - 12 * Math.sin(angle + Math.PI / 6)
+    x2 - ux * head + uy * head * 0.45,
+    y2 - uy * head - ux * head * 0.45
   );
   ctx.closePath();
   ctx.fill();
 }
 
-function clampGraphY(value: number): number {
-  return Math.max(GRAPH_TOP, Math.min(GRAPH_BOTTOM, value));
+function mapX(
+  x: number,
+  left: number,
+  right: number,
+  x0: number,
+  x1: number
+): number {
+  const span = x1 - x0 || 1;
+  return left + ((x - x0) / span) * (right - left);
 }
 
-function positionToPx(position: number): number {
-  return Math.min(RAIL_RIGHT - 18, FIELD_LEFT + position * POSITION_SCALE);
+export function stageMetrics(
+  width: number,
+  height: number,
+  scale: number
+): StageMetrics {
+  const padX = Math.max(16 * scale, width * 0.04);
+  const padY = Math.max(18 * scale, height * 0.08);
+  const left = padX;
+  const right = width - padX;
+  const railTop = height * 0.34;
+  const railBottom = height * 0.7;
+  const circuitX = left + Math.max(22 * scale, width * 0.05);
+  const fieldLeft = circuitX + Math.max(28 * scale, width * 0.06);
+  const fieldRight = right - Math.max(10 * scale, width * 0.02);
+  return {
+    left,
+    right,
+    railTop,
+    railBottom,
+    fieldLeft,
+    fieldRight,
+    fieldTop: padY,
+    fieldBottom: height - padY * 0.55,
+    circuitX,
+    rodHalf: Math.max(7 * scale, width * 0.012)
+  };
 }
 
-function timeToPx(time: number): number {
-  return (
-    GRAPH_LEFT +
-    (Math.max(0, Math.min(TIME_MAX, time)) / TIME_MAX) *
-      (GRAPH_RIGHT - GRAPH_LEFT)
-  );
+export function rodXToPx(position: number, m: StageMetrics): number {
+  const span = Math.max(1, m.right - m.rodHalf - m.fieldLeft);
+  const u = clamp01(position / C.railLength);
+  return m.fieldLeft + u * span;
 }
 
-function velocityToPx(velocity: number): number {
-  return (
-    GRAPH_BOTTOM -
-    (Math.max(0, Math.min(VELOCITY_MAX, velocity)) / VELOCITY_MAX) *
-      (GRAPH_BOTTOM - GRAPH_TOP)
-  );
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value));
 }
 
-function resistorVelocity(state: RodState, time: number): number {
-  const params = state.params;
-  const k =
-    (params.fieldStrength *
-      params.fieldStrength *
-      params.railGap *
-      params.railGap) /
-    (params.mass * params.resistance);
-  const terminal = state.terminalVelocity ?? 0;
-  return terminal * (1 - Math.exp(-k * time));
-}
-
-function capacitorVelocity(state: RodState, time: number): number {
-  return accelerationAt({ ...state.params, model: 'capacitor' }, 0) * time;
-}
-
-function drawFieldMarks(ctx: CanvasRenderingContext2D, p: Palette): void {
-  ctx.fillStyle = `${p.field}18`;
-  ctx.fillRect(
-    FIELD_LEFT,
-    FIELD_TOP,
-    FIELD_RIGHT - FIELD_LEFT,
-    FIELD_BOTTOM - FIELD_TOP
-  );
-  ctx.strokeStyle = p.field;
-  ctx.setLineDash([7, 5]);
-  ctx.strokeRect(
-    FIELD_LEFT,
-    FIELD_TOP,
-    FIELD_RIGHT - FIELD_LEFT,
-    FIELD_BOTTOM - FIELD_TOP
-  );
-  ctx.setLineDash([]);
-  for (let x = FIELD_LEFT + 22; x < FIELD_RIGHT; x += 54) {
-    for (let y = FIELD_TOP + 30; y < FIELD_BOTTOM; y += 48) {
-      text(ctx, '×', x, y, p.field, 22, 'center', 700);
-    }
+/**
+ * Draw F / +v as a rightward arrow. When the rod is near the right rail,
+ * shift the whole shaft to the rod's left instead of reversing the vector.
+ */
+export function rightwardRodArrow(options: {
+  rodX: number;
+  rodHalf: number;
+  stageLeft: number;
+  stageRight: number;
+  scale: number;
+  length: number;
+  y: number;
+  fromFace: boolean;
+}): HorizontalArrowGeom {
+  const { rodX, rodHalf, stageLeft, stageRight, scale, length, y, fromFace } =
+    options;
+  const gap = 4 * scale;
+  const labelGap = 8 * scale;
+  const minLen = Math.max(16 * scale, 14);
+  const shaft = Math.max(minLen, length);
+  const rightStart = fromFace ? rodX + rodHalf + gap : rodX;
+  const roomRight = stageRight - rightStart;
+  if (roomRight >= shaft + labelGap + 10 * scale) {
+    const x1 = rightStart;
+    const x2 = x1 + shaft;
+    return { x1, x2, y, labelX: x2 + labelGap, labelAlign: 'left' };
   }
-  text(
-    ctx,
-    '磁感应强度 B（垂直纸面向里 ⊗）',
-    FIELD_RIGHT - 8,
-    FIELD_TOP - 16,
-    p.blue,
-    16,
-    'right',
-    700
+  const x2 = fromFace ? rodX - rodHalf - gap : rodX - gap;
+  let x1 = x2 - shaft;
+  const minX = stageLeft + 4 * scale;
+  if (x1 < minX) x1 = minX;
+  const x2Final = Math.max(x1 + minLen, x2);
+  return {
+    x1,
+    x2: x2Final,
+    y,
+    labelX: x1 - 4 * scale,
+    labelAlign: 'right'
+  };
+}
+
+export function forceArrowGeom(
+  position: number,
+  force: number,
+  width: number,
+  height: number,
+  scale: number
+): HorizontalArrowGeom {
+  const m = stageMetrics(width, height, scale);
+  const rodX = rodXToPx(position, m);
+  const midY = (m.railTop + m.railBottom) / 2;
+  const fLen = Math.max(
+    22 * scale,
+    Math.min(width * 0.12, 18 * scale + 6 * scale * Math.max(0, force))
   );
+  return rightwardRodArrow({
+    rodX,
+    rodHalf: m.rodHalf,
+    stageLeft: m.left,
+    stageRight: m.right,
+    scale,
+    length: fLen,
+    y: midY - 16 * scale,
+    fromFace: true
+  });
+}
+
+export function velocityArrowGeom(
+  position: number,
+  velocity: number,
+  width: number,
+  height: number,
+  scale: number
+): HorizontalArrowGeom {
+  const m = stageMetrics(width, height, scale);
+  const rodX = rodXToPx(position, m);
+  const rodTop = m.railTop - 12 * scale;
+  const vLen = Math.max(
+    18 * scale,
+    Math.min(width * 0.1, 16 * scale + 4 * scale * Math.max(0, velocity))
+  );
+  return rightwardRodArrow({
+    rodX,
+    rodHalf: m.rodHalf,
+    stageLeft: m.left,
+    stageRight: m.right,
+    scale,
+    length: vLen,
+    y: rodTop + 18 * scale,
+    fromFace: false
+  });
 }
 
 function drawResistor(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
-  p: Palette
+  p: Palette,
+  scale: number,
+  font: (n: number) => number
 ): void {
-  ctx.strokeStyle = p.rod;
-  ctx.lineWidth = 3;
-  ctx.strokeRect(x - 11, y - CIRCUIT_COMPONENT_H / 2, 22, CIRCUIT_COMPONENT_H);
-  text(ctx, 'R', x - 28, y, p.rod, 16, 'right', 700);
+  const hw = 10 * scale;
+  const hh = 22 * scale;
+  ctx.strokeStyle = p.gold;
+  ctx.lineWidth = Math.max(2, 2.6 * scale);
+  ctx.strokeRect(x - hw, y - hh, hw * 2, hh * 2);
+  text(ctx, 'R', x - hw - 8 * scale, y, p.gold, font(13), 'right', 700);
 }
 
 function drawCapacitor(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
-  p: Palette
+  p: Palette,
+  scale: number,
+  font: (n: number) => number
 ): void {
+  const gap = 8 * scale;
+  const hh = 22 * scale;
   ctx.strokeStyle = p.teal;
-  ctx.lineWidth = 5;
+  ctx.lineWidth = Math.max(3, 4 * scale);
   ctx.beginPath();
-  ctx.moveTo(x - 10, y - 32);
-  ctx.lineTo(x - 10, y + 32);
-  ctx.moveTo(x + 10, y - 32);
-  ctx.lineTo(x + 10, y + 32);
+  ctx.moveTo(x - gap, y - hh);
+  ctx.lineTo(x - gap, y + hh);
+  ctx.moveTo(x + gap, y - hh);
+  ctx.lineTo(x + gap, y + hh);
   ctx.stroke();
-  text(ctx, 'C', x - 28, y, p.teal, 16, 'right', 700);
+  text(ctx, 'C', x - gap - 8 * scale, y, p.teal, font(13), 'right', 700);
 }
 
-function drawScene(
+function drawApparatus(
   ctx: CanvasRenderingContext2D,
   state: RodState,
-  p: Palette
+  width: number,
+  height: number,
+  p: Palette,
+  scale: number,
+  font: (n: number) => number
 ): void {
-  rounded(ctx, DIAGRAM_X, DIAGRAM_Y, DIAGRAM_W, DIAGRAM_H, 12);
-  ctx.fillStyle = p.panel;
-  ctx.fill();
-  ctx.strokeStyle = p.border;
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
+  ctx.fillStyle = p.bg;
+  ctx.fillRect(0, 0, width, height);
+  const m = stageMetrics(width, height, scale);
+  const fieldH = m.fieldBottom - m.fieldTop;
+  const fieldW = m.fieldRight - m.fieldLeft;
+
+  ctx.fillStyle = `${p.fieldFill}`;
+  ctx.fillRect(m.fieldLeft, m.fieldTop, fieldW, fieldH);
+  ctx.strokeStyle = p.field;
+  ctx.lineWidth = Math.max(1.2, 1.6 * scale);
+  ctx.setLineDash([6 * scale, 4 * scale]);
+  ctx.strokeRect(m.fieldLeft, m.fieldTop, fieldW, fieldH);
+  ctx.setLineDash([]);
+
+  const cols = Math.max(6, Math.round(fieldW / (26 * scale)));
+  const rows = Math.max(3, Math.round(fieldH / (28 * scale)));
+  ctx.fillStyle = p.field;
+  ctx.font = `700 ${font(14)}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (let c = 0; c < cols; c += 1) {
+    for (let r = 0; r < rows; r += 1) {
+      const x = m.fieldLeft + ((c + 0.5) * fieldW) / cols;
+      const y = m.fieldTop + ((r + 0.5) * fieldH) / rows;
+      ctx.fillText('×', x, y);
+    }
+  }
   text(
     ctx,
-    '物理情景演示区',
-    DIAGRAM_X + 18,
-    DIAGRAM_Y + 28,
-    p.ink,
-    19,
-    'left',
+    'B ⊗',
+    (m.fieldLeft + m.fieldRight) / 2,
+    m.fieldTop + 12 * scale,
+    p.blue,
+    font(13),
+    'center',
     700
   );
-  drawFieldMarks(ctx, p);
 
   ctx.strokeStyle = p.rail;
-  ctx.lineWidth = 8;
+  ctx.lineWidth = Math.max(5, 7 * scale);
   ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.moveTo(RAIL_LEFT, RAIL_TOP);
-  ctx.lineTo(RAIL_RIGHT, RAIL_TOP);
-  ctx.moveTo(RAIL_LEFT, RAIL_BOTTOM);
-  ctx.lineTo(RAIL_RIGHT, RAIL_BOTTOM);
+  ctx.moveTo(m.left, m.railTop);
+  ctx.lineTo(m.right, m.railTop);
+  ctx.moveTo(m.left, m.railBottom);
+  ctx.lineTo(m.right, m.railBottom);
   ctx.stroke();
   ctx.lineCap = 'butt';
 
-  const rodX = positionToPx(state.position);
-  const rodTop = RAIL_TOP - 20;
-  const rodBottom = RAIL_BOTTOM + 20;
+  const rodX = rodXToPx(state.position, m);
+  const rodTop = m.railTop - 12 * scale;
+  const rodBottom = m.railBottom + 12 * scale;
+  const rodW = m.rodHalf * 2;
   ctx.fillStyle = p.rod;
+  ctx.fillRect(rodX - m.rodHalf, rodTop, rodW, rodBottom - rodTop);
   ctx.strokeStyle = p.rod;
-  ctx.lineWidth = 2;
-  ctx.fillRect(rodX - 10, rodTop, 20, rodBottom - rodTop);
-  ctx.strokeRect(rodX - 10, rodTop, 20, rodBottom - rodTop);
-  text(ctx, '导体棒 (m)', rodX, rodTop - 18, p.rod, 15, 'center', 700);
+  ctx.lineWidth = Math.max(1.4, 1.8 * scale);
+  ctx.strokeRect(rodX - m.rodHalf, rodTop, rodW, rodBottom - rodTop);
+  text(ctx, '+', rodX, rodTop + 12 * scale, '#ffffff', font(13), 'center', 700);
+  text(
+    ctx,
+    '−',
+    rodX,
+    rodBottom - 12 * scale,
+    '#ffffff',
+    font(13),
+    'center',
+    700
+  );
+  const rodLabelY = Math.max(m.fieldTop + 10 * scale, rodTop - 14 * scale);
+  const rodLabelRight = m.right - rodX < Math.max(36 * scale, width * 0.08);
+  text(
+    ctx,
+    '导体棒',
+    rodLabelRight ? rodX - m.rodHalf - 6 * scale : rodX,
+    rodLabelY,
+    p.rod,
+    font(12),
+    rodLabelRight ? 'right' : 'center',
+    700
+  );
 
   ctx.strokeStyle = p.muted;
-  ctx.lineWidth = 3;
-  ctx.setLineDash([8, 6]);
+  ctx.lineWidth = Math.max(2, 2.6 * scale);
+  ctx.setLineDash([7 * scale, 5 * scale]);
   ctx.beginPath();
-  ctx.moveTo(ROD_CIRCUIT_X, RAIL_TOP);
-  ctx.lineTo(rodX, RAIL_TOP);
-  ctx.moveTo(ROD_CIRCUIT_X, RAIL_BOTTOM);
-  ctx.lineTo(rodX, RAIL_BOTTOM);
+  ctx.moveTo(m.circuitX, m.railTop);
+  ctx.lineTo(rodX, m.railTop);
+  ctx.moveTo(m.circuitX, m.railBottom);
+  ctx.lineTo(rodX, m.railBottom);
   ctx.stroke();
   ctx.setLineDash([]);
   ctx.beginPath();
-  ctx.moveTo(ROD_CIRCUIT_X, RAIL_TOP);
-  ctx.lineTo(ROD_CIRCUIT_X, RAIL_BOTTOM);
+  ctx.moveTo(m.circuitX, m.railTop);
+  ctx.lineTo(m.circuitX, m.railBottom);
   ctx.stroke();
-  if (state.params.model === 'resistor')
-    drawResistor(ctx, ROD_CIRCUIT_X, (RAIL_TOP + RAIL_BOTTOM) / 2, p);
-  else drawCapacitor(ctx, ROD_CIRCUIT_X, (RAIL_TOP + RAIL_BOTTOM) / 2, p);
+  const midY = (m.railTop + m.railBottom) / 2;
+  if (state.params.model === 'resistor') {
+    drawResistor(ctx, m.circuitX, midY, p, scale, font);
+  } else {
+    drawCapacitor(ctx, m.circuitX, midY, p, scale, font);
+  }
 
+  const forceArrow = forceArrowGeom(
+    state.position,
+    state.params.externalForce,
+    width,
+    height,
+    scale
+  );
   arrow(
     ctx,
-    rodX + 18,
-    (RAIL_TOP + RAIL_BOTTOM) / 2 - 22,
-    rodX + 82,
-    (RAIL_TOP + RAIL_BOTTOM) / 2 - 22,
+    forceArrow.x1,
+    forceArrow.y,
+    forceArrow.x2,
+    forceArrow.y,
     p.red,
-    4
+    Math.max(2.2, 3 * scale),
+    8 * scale
   );
   text(
     ctx,
     'F',
-    rodX + 92,
-    (RAIL_TOP + RAIL_BOTTOM) / 2 - 22,
+    forceArrow.labelX,
+    forceArrow.y,
     p.red,
-    16,
-    'left',
+    font(13),
+    forceArrow.labelAlign,
     700
   );
-  if (Math.abs(state.magneticForce) > 0.01) {
+
+  if (state.velocity > 0.02) {
+    const velArrow = velocityArrowGeom(
+      state.position,
+      state.velocity,
+      width,
+      height,
+      scale
+    );
     arrow(
       ctx,
-      rodX - 18,
-      (RAIL_TOP + RAIL_BOTTOM) / 2 + 24,
-      rodX - 78,
-      (RAIL_TOP + RAIL_BOTTOM) / 2 + 24,
-      p.blue,
-      4
+      velArrow.x1,
+      velArrow.y,
+      velArrow.x2,
+      velArrow.y,
+      p.teal,
+      Math.max(1.8, 2.4 * scale),
+      7 * scale
     );
     text(
       ctx,
-      'F安',
-      rodX - 88,
-      (RAIL_TOP + RAIL_BOTTOM) / 2 + 24,
-      p.blue,
-      15,
-      'right',
+      'v',
+      velArrow.labelX,
+      velArrow.y,
+      p.teal,
+      font(12),
+      velArrow.labelAlign,
       700
     );
   }
-  arrow(ctx, rodX + 18, RAIL_TOP + 28, rodX + 72, RAIL_TOP + 28, p.teal, 3);
-  text(ctx, 'v', rodX + 82, RAIL_TOP + 28, p.teal, 15, 'left', 700);
-  text(
-    ctx,
-    state.params.model === 'resistor' ? '纯电阻棒' : '纯电容棒',
-    DIAGRAM_X + 18,
-    DIAGRAM_Y + DIAGRAM_H - 20,
-    state.params.model === 'resistor' ? p.gold : p.teal,
-    15,
-    'left',
-    700
-  );
+
+  if (Math.abs(state.magneticForce) > 0.02) {
+    const minAmp = Math.max(20 * scale, 16);
+    const ampLen = Math.max(
+      minAmp,
+      Math.min(
+        width * 0.16,
+        16 * scale + 8 * scale * Math.abs(state.magneticForce)
+      )
+    );
+    const labelOffset = Math.max(11 * scale, 10);
+    const ampY = Math.min(
+      rodBottom + Math.max(16 * scale, height * 0.045),
+      Math.max(
+        rodBottom + 8 * scale,
+        Math.min(m.fieldBottom, height) - labelOffset - 4 * scale
+      )
+    );
+    const leftLimit = m.left + Math.max(8 * scale, 6);
+    let ampStart = rodX;
+    let ampEnd = ampStart - ampLen;
+    if (ampEnd < leftLimit) {
+      ampEnd = leftLimit;
+      ampStart = Math.max(ampEnd + minAmp, rodX + m.rodHalf);
+    }
+    if (ampStart - ampEnd > 2) {
+      arrow(
+        ctx,
+        ampStart,
+        ampY,
+        ampEnd,
+        ampY,
+        p.blue,
+        Math.max(2, 2.8 * scale),
+        8 * scale
+      );
+      text(
+        ctx,
+        'F安',
+        (ampStart + ampEnd) / 2,
+        ampY + labelOffset,
+        p.blue,
+        font(12),
+        'center',
+        700
+      );
+    }
+  }
 }
 
-function renderGraph(
+export function plotBox(width: number, height: number, scale: number): PlotBox {
+  return {
+    left: Math.max(36 * scale, width * 0.11),
+    right: width - Math.max(28 * scale, width * 0.07),
+    top: Math.max(32 * scale, height * 0.26),
+    bottom: height - Math.max(24 * scale, height * 0.16)
+  };
+}
+
+export function plotChrome(
+  width: number,
+  height: number,
+  scale: number
+): {
+  box: PlotBox;
+  title: { x: number; y: number };
+  yUnit: { x: number; y: number };
+} {
+  const box = plotBox(width, height, scale);
+  const titleY = Math.max(12 * scale, 10);
+  return {
+    box,
+    title: {
+      x: Math.max(8 * scale, 8),
+      y: titleY
+    },
+    yUnit: {
+      x: box.left + 6 * scale,
+      y: Math.max(
+        titleY + Math.max(16 * scale, 14),
+        box.top - Math.max(12 * scale, 12)
+      )
+    }
+  };
+}
+
+function modelEndTime(params: RodParams, model: RodParams['model']): number {
+  return motionEndTime({ ...params, model });
+}
+
+export function plotTimeMax(params: RodParams): number {
+  const span = Math.max(
+    modelEndTime(params, 'resistor'),
+    modelEndTime(params, 'capacitor')
+  );
+  return Math.min(C.timeMax, Math.max(1, span * 1.15));
+}
+
+export function velocityAxisMax(params: RodParams): number {
+  const tPlot = plotTimeMax(params);
+  const tRes = Math.min(tPlot, modelEndTime(params, 'resistor'));
+  const tCap = Math.min(tPlot, modelEndTime(params, 'capacitor'));
+  const peak = Math.max(
+    resistorVelocityAt(params, tRes),
+    capacitorVelocityAt(params, tCap)
+  );
+  return Math.max(2, peak * 1.2);
+}
+
+function timeTickStep(tMax: number): number {
+  if (tMax <= 1.2) return 0.2;
+  if (tMax <= 2.5) return 0.5;
+  if (tMax <= 6) return 1;
+  return 2;
+}
+
+function formatTick(value: number, digits: number): string {
+  return String(Number(value.toFixed(digits)));
+}
+
+function drawGraphs(
   ctx: CanvasRenderingContext2D,
   state: RodState,
-  p: Palette
+  width: number,
+  height: number,
+  p: Palette,
+  scale: number,
+  font: (n: number) => number
 ): void {
-  rounded(ctx, GRAPH_X, GRAPH_Y, GRAPH_W, GRAPH_H, 12);
   ctx.fillStyle = p.panel;
-  ctx.fill();
-  ctx.strokeStyle = p.border;
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
+  ctx.fillRect(0, 0, width, height);
+  const chrome = plotChrome(width, height, scale);
+  const box = chrome.box;
+  const tMax = plotTimeMax(state.params);
+  const vMax = velocityAxisMax(state.params);
   text(
     ctx,
-    '实时 v–t 运动图象对比',
-    GRAPH_LEFT + 18,
-    GRAPH_Y + 25,
+    'v–t 对比',
+    chrome.title.x,
+    chrome.title.y,
     p.ink,
-    18,
+    font(13),
     'left',
     700
   );
-  const plotTop = GRAPH_TOP;
-  const plotBottom = GRAPH_BOTTOM;
   ctx.strokeStyle = p.grid;
   ctx.lineWidth = 1;
-  for (let x = GRAPH_LEFT; x <= GRAPH_RIGHT; x += GRAPH_GRID_STEP) {
+  const tStep = timeTickStep(tMax);
+  const tDigits = tStep < 1 ? 1 : 0;
+  for (let t = 0; t < tMax - tStep * 0.45; t += tStep) {
+    const x = mapX(t, box.left, box.right, 0, tMax);
     ctx.beginPath();
-    ctx.moveTo(x, plotTop);
-    ctx.lineTo(x, plotBottom);
+    ctx.moveTo(x, box.top);
+    ctx.lineTo(x, box.bottom);
     ctx.stroke();
+    text(
+      ctx,
+      formatTick(t, tDigits),
+      x,
+      box.bottom + 12 * scale,
+      p.muted,
+      font(10),
+      'center',
+      600
+    );
   }
-  for (let y = plotTop; y <= plotBottom; y += GRAPH_GRID_STEP) {
+  {
+    const x = mapX(tMax, box.left, box.right, 0, tMax);
     ctx.beginPath();
-    ctx.moveTo(GRAPH_LEFT, y);
-    ctx.lineTo(GRAPH_RIGHT, y);
+    ctx.moveTo(x, box.top);
+    ctx.lineTo(x, box.bottom);
     ctx.stroke();
+    text(
+      ctx,
+      formatTick(tMax, tDigits),
+      x,
+      box.bottom + 12 * scale,
+      p.muted,
+      font(10),
+      'center',
+      600
+    );
+  }
+  const yTicks = 5;
+  const vDigits = vMax >= 10 ? 0 : 1;
+  for (let i = 0; i <= yTicks; i += 1) {
+    const v = (vMax * i) / yTicks;
+    const y = mapX(v, box.bottom, box.top, 0, vMax);
+    ctx.beginPath();
+    ctx.moveTo(box.left, y);
+    ctx.lineTo(box.right, y);
+    ctx.stroke();
+    text(
+      ctx,
+      formatTick(v, vDigits),
+      box.left - 6 * scale,
+      y,
+      p.muted,
+      font(10),
+      'right',
+      600
+    );
   }
   ctx.strokeStyle = p.ink;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = Math.max(1.4, 1.6 * scale);
   ctx.beginPath();
-  ctx.moveTo(GRAPH_LEFT, plotBottom);
-  ctx.lineTo(GRAPH_RIGHT + 14, plotBottom);
-  ctx.moveTo(GRAPH_LEFT, plotBottom);
-  ctx.lineTo(GRAPH_LEFT, plotTop - 12);
+  ctx.moveTo(box.left, box.top - 4 * scale);
+  ctx.lineTo(box.left, box.bottom);
+  ctx.lineTo(box.right + 8 * scale, box.bottom);
   ctx.stroke();
   text(
     ctx,
     'v / (m·s⁻¹)',
-    GRAPH_LEFT - 10,
-    plotTop - 18,
+    chrome.yUnit.x,
+    chrome.yUnit.y,
     p.ink,
-    13,
-    'right',
+    font(11),
+    'left',
     700
   );
-  text(ctx, 't / s', GRAPH_RIGHT + 18, plotBottom, p.ink, 13, 'left', 700);
-  text(ctx, '0', GRAPH_LEFT - 10, plotBottom + 4, p.muted, 11, 'right', 600);
-  text(ctx, '10', GRAPH_RIGHT, plotBottom + 18, p.muted, 11, 'center', 600);
   text(
     ctx,
-    String(VELOCITY_MAX),
-    GRAPH_LEFT - 10,
-    plotTop,
-    p.muted,
-    11,
-    'right',
-    600
+    't / s',
+    box.right + 6 * scale,
+    box.bottom,
+    p.ink,
+    font(11),
+    'left',
+    700
   );
 
-  const curves: Array<{ color: string; fn: (time: number) => number }> = [
-    { color: p.gold, fn: (time) => resistorVelocity(state, time) },
-    { color: p.teal, fn: (time) => capacitorVelocity(state, time) }
-  ];
-  curves.forEach(({ color, fn }) => {
+  const n = 120;
+  const drawCurve = (
+    color: string,
+    fn: (time: number) => number,
+    endTime: number,
+    active: boolean
+  ): void => {
     ctx.strokeStyle = color;
-    ctx.lineWidth =
-      state.params.model === (color === p.gold ? 'resistor' : 'capacitor')
-        ? 4
-        : 2;
-    ctx.setLineDash(
-      state.params.model === (color === p.gold ? 'resistor' : 'capacitor')
-        ? []
-        : [7, 5]
-    );
+    ctx.lineWidth = active
+      ? Math.max(2.6, 3.2 * scale)
+      : Math.max(1.6, 2 * scale);
+    ctx.setLineDash(active ? [] : [7 * scale, 4 * scale]);
     ctx.beginPath();
-    for (let index = 0; index <= 100; index += 1) {
-      const time = (TIME_MAX * index) / 100;
-      const x = timeToPx(time);
-      const y = clampGraphY(velocityToPx(fn(time)));
-      if (index === 0) ctx.moveTo(x, y);
+    const span = Math.max(0, Math.min(tMax, endTime));
+    for (let i = 0; i <= n; i += 1) {
+      const t = (span * i) / n;
+      const x = mapX(t, box.left, box.right, 0, tMax);
+      const y = mapX(Math.max(0, fn(t)), box.bottom, box.top, 0, vMax);
+      if (i === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
     }
     ctx.stroke();
     ctx.setLineDash([]);
-  });
+  };
+  drawCurve(
+    p.gold,
+    (t) => resistorVelocityAt(state.params, t),
+    modelEndTime(state.params, 'resistor'),
+    state.params.model === 'resistor'
+  );
+  drawCurve(
+    p.teal,
+    (t) => capacitorVelocityAt(state.params, t),
+    modelEndTime(state.params, 'capacitor'),
+    state.params.model === 'capacitor'
+  );
 
-  if (state.params.model === 'resistor' && state.terminalVelocity !== null) {
-    const y = clampGraphY(velocityToPx(state.terminalVelocity));
+  const terminal = resistorTerminalVelocity(state.params);
+  if (terminal > 0 && terminal <= vMax) {
+    const y = mapX(terminal, box.bottom, box.top, 0, vMax);
     ctx.strokeStyle = p.red;
-    ctx.lineWidth = 2;
-    ctx.setLineDash([7, 5]);
+    ctx.lineWidth = Math.max(1.2, 1.6 * scale);
+    ctx.setLineDash([6 * scale, 4 * scale]);
     ctx.beginPath();
-    ctx.moveTo(GRAPH_LEFT, y);
-    ctx.lineTo(GRAPH_RIGHT, y);
+    ctx.moveTo(box.left, y);
+    ctx.lineTo(box.right, y);
     ctx.stroke();
     ctx.setLineDash([]);
     text(
       ctx,
-      `vₘ = ${state.terminalVelocity.toFixed(2)}`,
-      GRAPH_RIGHT - 4,
-      y - 12,
+      `vₘ=${terminal.toFixed(2)}`,
+      box.right - 4 * scale,
+      y - 10 * scale,
       p.red,
-      12,
+      font(10),
       'right',
       700
     );
   }
-  const cursorX = timeToPx(state.time);
-  const cursorY = clampGraphY(velocityToPx(state.velocity));
+
+  const cursorX = mapX(state.time, box.left, box.right, 0, tMax);
+  const cursorY = mapX(
+    Math.max(0, state.velocity),
+    box.bottom,
+    box.top,
+    0,
+    vMax
+  );
   ctx.strokeStyle = p.blue;
-  ctx.lineWidth = 2;
-  ctx.setLineDash([5, 4]);
+  ctx.lineWidth = Math.max(1.2, 1.6 * scale);
+  ctx.setLineDash([4 * scale, 3 * scale]);
   ctx.beginPath();
-  ctx.moveTo(cursorX, plotTop);
-  ctx.lineTo(cursorX, plotBottom);
+  ctx.moveTo(cursorX, box.top);
+  ctx.lineTo(cursorX, box.bottom);
   ctx.stroke();
   ctx.setLineDash([]);
   ctx.fillStyle = p.blue;
   ctx.beginPath();
-  ctx.arc(cursorX, cursorY, 7, 0, Math.PI * 2);
+  ctx.arc(cursorX, cursorY, 4.5 * scale, 0, Math.PI * 2);
   ctx.fill();
 
-  rounded(
-    ctx,
-    GRAPH_X + LEGEND_PANEL_X,
-    GRAPH_Y + LEGEND_PANEL_Y,
-    LEGEND_PANEL_W,
-    LEGEND_PANEL_H,
-    9
-  );
-  ctx.fillStyle = p.soft;
-  ctx.fill();
+  const legendY = box.top + 8 * scale;
+  const legendX = box.left + Math.max(8 * scale, width * 0.22);
+  ctx.strokeStyle = p.gold;
+  ctx.lineWidth = Math.max(2, 2.4 * scale);
+  ctx.beginPath();
+  ctx.moveTo(legendX, legendY);
+  ctx.lineTo(legendX + 16 * scale, legendY);
+  ctx.stroke();
   text(
     ctx,
-    '— 纯电阻棒（变加速，趋于 vₘ）',
-    GRAPH_X + LEGEND_PANEL_X + 20,
-    GRAPH_Y + LEGEND_PANEL_Y + 19,
+    '电阻棒 趋于 vₘ',
+    legendX + 20 * scale,
+    legendY,
     p.gold,
-    13,
+    font(11),
     'left',
     700
   );
-  ctx.setLineDash([7, 5]);
+  ctx.setLineDash([6 * scale, 4 * scale]);
   ctx.strokeStyle = p.teal;
-  ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.moveTo(GRAPH_X + LEGEND_LINE_START_X, GRAPH_Y + LEGEND_LINE_Y);
-  ctx.lineTo(GRAPH_X + LEGEND_LINE_END_X, GRAPH_Y + LEGEND_LINE_Y);
+  ctx.moveTo(legendX + width * 0.28, legendY);
+  ctx.lineTo(legendX + width * 0.28 + 16 * scale, legendY);
   ctx.stroke();
   ctx.setLineDash([]);
   text(
     ctx,
-    '纯电容棒（匀加速，a 恒定）',
-    GRAPH_X + LEGEND_TEXT_X,
-    GRAPH_Y + LEGEND_LINE_Y,
+    '电容棒 匀加速',
+    legendX + width * 0.28 + 20 * scale,
+    legendY,
     p.teal,
-    13,
+    font(11),
     'left',
     700
   );
 }
-
-function drawPanel(
-  ctx: CanvasRenderingContext2D,
-  state: RodState,
-  p: Palette
-): void {
-  ctx.fillStyle = p.panel;
-  ctx.fillRect(FIELD_W, 0, BASE_W - FIELD_W, BASE_H);
-  text(ctx, '实验参数与图象', PANEL_X + 18, 38, p.ink, 20, 'left', 700);
-  ctx.strokeStyle = p.teal;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(PANEL_X + 18, HEADER_RULE_Y);
-  ctx.lineTo(PANEL_X + PANEL_W - 22, HEADER_RULE_Y);
-  ctx.stroke();
-
-  rounded(ctx, CARD_X, READOUT_Y, CARD_W, READOUT_H, 12);
-  ctx.fillStyle = p.panel;
-  ctx.fill();
-  ctx.strokeStyle = p.border;
-  ctx.stroke();
-  text(
-    ctx,
-    '实时物理量看板',
-    CARD_X + 16,
-    READOUT_Y + 24,
-    p.teal,
-    15,
-    'left',
-    700
-  );
-  const rows: Array<[string, string, string]> = [
-    [
-      '模型',
-      state.params.model === 'resistor' ? '纯电阻棒' : '纯电容棒',
-      state.params.model === 'resistor' ? p.gold : p.teal
-    ],
-    ['速度 v', `${state.velocity.toFixed(2)} m/s`, p.teal],
-    ['加速度 a', `${state.acceleration.toFixed(2)} m/s²`, p.purple],
-    ['安培力 F安', `${state.magneticForce.toFixed(2)} N`, p.blue],
-    ['感应电流 I', `${state.current.toFixed(2)} A`, p.gold],
-    ['发热功率 P', `${state.heatingPower.toFixed(2)} W`, p.red]
-  ];
-  rows.forEach(([label, value, color], index) => {
-    const y = READOUT_Y + 55 + index * 21;
-    text(ctx, label, CARD_X + 16, y, p.muted, 12, 'left', 600);
-    text(ctx, value, CARD_X + CARD_W - 16, y, color, 13, 'right', 700);
-  });
-
-  rounded(ctx, CARD_X, FORMULA_Y, CARD_W, FORMULA_H, 12);
-  ctx.fillStyle = p.soft;
-  ctx.fill();
-  ctx.strokeStyle = p.border;
-  ctx.stroke();
-  text(ctx, '模型关系', CARD_X + 16, FORMULA_Y + 24, p.gold, 15, 'left', 700);
-  text(
-    ctx,
-    'E = BLv，F安 = BIL',
-    CARD_X + 16,
-    FORMULA_Y + 59,
-    p.ink,
-    17,
-    'left',
-    700
-  );
-  if (state.params.model === 'resistor') {
-    text(
-      ctx,
-      'I = BLv / R',
-      CARD_X + 16,
-      FORMULA_Y + 94,
-      p.gold,
-      15,
-      'left',
-      700
-    );
-    text(
-      ctx,
-      'a = (F − B²L²v/R) / m',
-      CARD_X + 16,
-      FORMULA_Y + 128,
-      p.red,
-      14,
-      'left',
-      600
-    );
-    text(
-      ctx,
-      'vₘ = FR / B²L²',
-      CARD_X + 16,
-      FORMULA_Y + 161,
-      p.teal,
-      14,
-      'left',
-      600
-    );
-  } else {
-    text(
-      ctx,
-      'I = CBL a',
-      CARD_X + 16,
-      FORMULA_Y + 94,
-      p.teal,
-      15,
-      'left',
-      700
-    );
-    text(
-      ctx,
-      'a = F / (m + B²L²C)',
-      CARD_X + 16,
-      FORMULA_Y + 128,
-      p.red,
-      14,
-      'left',
-      600
-    );
-    text(
-      ctx,
-      'm* = m + B²L²C',
-      CARD_X + 16,
-      FORMULA_Y + 161,
-      p.purple,
-      14,
-      'left',
-      600
-    );
-  }
-
-  rounded(ctx, CARD_X, NOTE_Y, CARD_W, NOTE_H, 12);
-  ctx.fillStyle = p.panel;
-  ctx.fill();
-  ctx.strokeStyle = p.border;
-  ctx.stroke();
-  text(ctx, '观察', CARD_X + 16, NOTE_Y + 24, p.gold, 15, 'left', 700);
-  if (state.params.model === 'resistor') {
-    text(
-      ctx,
-      '电阻棒：安培力随 v 增大',
-      CARD_X + 16,
-      NOTE_Y + 62,
-      p.ink,
-      13,
-      'left',
-      600
-    );
-    text(
-      ctx,
-      '速度趋于稳定值 vₘ',
-      CARD_X + 16,
-      NOTE_Y + 91,
-      p.teal,
-      13,
-      'left',
-      600
-    );
-  } else {
-    text(
-      ctx,
-      '电容棒：电流维持充电过程',
-      CARD_X + 16,
-      NOTE_Y + 62,
-      p.ink,
-      13,
-      'left',
-      600
-    );
-    text(
-      ctx,
-      'B、C 增大，等效质量增大',
-      CARD_X + 16,
-      NOTE_Y + 91,
-      p.teal,
-      13,
-      'left',
-      600
-    );
-  }
-  text(
-    ctx,
-    state.params.autoRun ? '导体棒运动中' : '打开自动播放观察',
-    CARD_X + 16,
-    NOTE_Y + 130,
-    p.teal,
-    12,
-    'left',
-    600
-  );
-  text(
-    ctx,
-    `B=${state.params.fieldStrength.toFixed(1)} T · L=${state.params.railGap.toFixed(1)} m`,
-    CARD_X + 16,
-    NOTE_Y + 165,
-    p.muted,
-    12,
-    'left',
-    600
-  );
-}
-
-const ROD_CIRCUIT_X = 104;
 
 export function createRodModelView(options: CreateRodModelViewOptions = {}) {
   const stage = createCanvasViewport({
     canvas: options.canvas ?? null,
-    sizing: { mode: 'clamped', fallbackWidth: BASE_W, fallbackHeight: BASE_H },
-    initialWidth: BASE_W,
-    initialHeight: BASE_H,
+    sizing: {
+      mode: 'clamped',
+      fallbackWidth: C.stageFallbackWidth,
+      fallbackHeight: C.stageFallbackHeight
+    },
+    initialWidth: C.stageFallbackWidth,
+    initialHeight: C.stageFallbackHeight,
     eagerContext: true
   });
+  const graph = {
+    canvas: (options.graphCanvas ?? null) as HTMLCanvasElement | null,
+    ctx: null as CanvasRenderingContext2D | null,
+    cssWidth: C.graphFallbackWidth as number,
+    cssHeight: C.graphFallbackHeight as number,
+    responsiveScale: 1,
+    resize(): void {
+      if (!graph.canvas) return;
+      const sized = sizeGraphCanvasToHost(graph.canvas);
+      graph.ctx = sized.ctx;
+      graph.cssWidth = sized.cssWidth;
+      graph.cssHeight = sized.cssHeight;
+      graph.responsiveScale = sized.responsiveScale;
+    },
+    attach(canvas: HTMLCanvasElement): void {
+      graph.canvas = canvas;
+      graph.resize();
+    },
+    release(): void {
+      graph.canvas = null;
+      graph.ctx = null;
+    }
+  };
+  if (graph.canvas) graph.resize();
   const env = createViewEnvironment({
     theme: options.theme ?? 'light',
     mode: options.mode ?? 'normal',
     demoHints: options.demoHints
   });
   let snapshot: RodState | null = null;
-  function draw(state: RodState): void {
+
+  function paint(state: RodState): void {
     const ctx = stage.ctx;
     if (!ctx) return;
     const width = stage.cssWidth;
     const height = stage.cssHeight;
-    const fit = Math.min(width / BASE_W, height / BASE_H);
-    const offsetY = (height - BASE_H * fit) / 2;
-    const responsiveScale = stage.responsiveScale;
-    const p = PALETTE[env.theme];
+    const rs = stage.responsiveScale;
+    const typeScale = env.fontScale() * Math.min(env.contentScale(), 1.25);
+    const font = (base: number): number =>
+      scaledSize(base * typeScale, Math.max(rs, 0.3), 10);
     ctx.clearRect(0, 0, width, height);
-    ctx.save();
-    ctx.translate(0, offsetY);
-    ctx.scale(fit, fit);
-    ctx.lineWidth = responsiveScale;
-    ctx.fillStyle = p.bg;
-    ctx.fillRect(0, 0, BASE_W, BASE_H);
-    drawScene(ctx, state, p);
-    renderGraph(ctx, state, p);
-    drawPanel(ctx, state, p);
-    ctx.restore();
+    drawApparatus(ctx, state, width, height, PALETTE[env.theme], rs, font);
+    if (graph.canvas) {
+      if (!graph.ctx) graph.resize();
+      const gctx = graph.ctx;
+      if (gctx) {
+        const gScale = graph.responsiveScale;
+        const gFont = (base: number): number =>
+          scaledSize(base * typeScale, Math.max(gScale, 0.3), 10);
+        drawGraphs(
+          gctx,
+          state,
+          graph.cssWidth,
+          graph.cssHeight,
+          PALETTE[env.theme],
+          gScale,
+          gFont
+        );
+      }
+    }
   }
+
   return {
     render(state: RodState): void {
       snapshot = state;
       stage.ensureSized();
-      draw(state);
+      paint(state);
     },
     resize(): void {
       stage.resize();
-      if (snapshot) draw(snapshot);
+      if (graph.canvas) graph.resize();
+      if (snapshot) paint(snapshot);
     },
     setTheme(theme: TeachingTheme): void {
       env.setTheme(theme);
-      if (snapshot) draw(snapshot);
+      if (snapshot) paint(snapshot);
     },
     setMode(mode: TeachingMode, hints?: DemoRenderHints): void {
       env.setMode(mode, hints);
-      if (snapshot) draw(snapshot);
+      if (snapshot) paint(snapshot);
+    },
+    attachGraphCanvas(canvas: HTMLCanvasElement): void {
+      graph.attach(canvas);
+      if (snapshot) paint(snapshot);
     },
     dispose(): void {
       snapshot = null;
+      graph.release();
       stage.release();
     }
   };
