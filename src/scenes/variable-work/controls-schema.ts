@@ -1,5 +1,6 @@
 import type { ControlsSchema } from '../../platform/controls-schema';
 import { variableWorkConstants } from './scene.sim';
+
 export const variableWorkControlsSchema: ControlsSchema = {
   sections: [
     {
@@ -16,8 +17,7 @@ export const variableWorkControlsSchema: ControlsSchema = {
             { id: 'piecewise', label: '分段渐减力' }
           ],
           initialActive: 'linear'
-        },
-        { type: 'toggle', key: 'autoRun', label: '自动播放', value: true }
+        }
       ]
     },
     {
@@ -46,8 +46,18 @@ export const variableWorkControlsSchema: ControlsSchema = {
         },
         {
           type: 'slider',
+          key: 'power',
+          label: '恒定功率 P₀',
+          min: variableWorkConstants.powerMin,
+          max: variableWorkConstants.powerMax,
+          step: 1,
+          value: variableWorkConstants.defaultPower,
+          unit: 'W'
+        },
+        {
+          type: 'slider',
           key: 'microsteps',
-          label: '微元分割数 n',
+          label: '微元 n',
           min: variableWorkConstants.microstepsMin,
           max: variableWorkConstants.microstepsMax,
           step: 1,
@@ -56,13 +66,20 @@ export const variableWorkControlsSchema: ControlsSchema = {
       ]
     },
     {
-      title: '公式',
+      title: '关系',
       collapsed: true,
       fields: [
         {
           type: 'hint',
           key: 'formula',
-          lines: ['W = ∫F dx', 'P = Fv', '图象面积 = 功']
+          lines: [
+            'W = ∫ F dx = 图象面积',
+            'P = Fv，W = ∫ P dt',
+            '动能定理 ΔEₖ = W',
+            '微元为左端点矩形（F=kx 低估）',
+            '恒功率从 v₀=1 m/s 起步，W=P₀t',
+            '舞台 F、v 为趋势示意'
+          ]
         }
       ]
     }

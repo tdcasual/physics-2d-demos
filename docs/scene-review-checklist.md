@@ -47,7 +47,7 @@
 |  32 | 安培力方向与导体平衡                                  | 电磁 | [`ampere-balance`](../src/scenes/ampere-balance/scene.meta.ts)                                     | [详情](https://app.svgzhenli.com/resource/1bfccf2e-a260-4be5-9a1d-d3dcd3e6cb00) · [封面](https://img.svgzhenli.com/gallery-assets/covers/t5xsdch4bs1787678015468.png)   |  ☑   |
 |  33 | 平抛运动轨迹与速度分解                                | 力学 | [`projectile-components`](../src/scenes/projectile-components/scene.meta.ts)                       | [详情](https://app.svgzhenli.com/resource/724243b0-b597-4b30-892c-02f52445e87c) · [封面](https://img.svgzhenli.com/gallery-assets/covers/r5hjy0ygx11775457276819.png)   |  ✅  |
 |  34 | 验证机械能守恒定律实验系统                            | 力学 | [`mechanical-energy`](../src/scenes/mechanical-energy/scene.meta.ts)                               | [详情](https://app.svgzhenli.com/resource/accd8e75-e538-4cc8-a3a4-72f659012fb7) · [封面](https://img.svgzhenli.com/gallery-assets/covers/r1qrtw5ywfb1778949039759.png)  |  ☑   |
-|  35 | 变力做功与功率图象                                    | 力学 | [`variable-work`](../src/scenes/variable-work/scene.meta.ts)                                       | [详情](https://app.svgzhenli.com/resource/3e754beb-820e-46e2-aba2-e8e2f17d53b7) · [封面](https://img.svgzhenli.com/gallery-assets/covers/yssbb3t6byf1787660702811.png)  |  ☐   |
+|  35 | 变力做功与功率图象                                    | 力学 | [`variable-work`](../src/scenes/variable-work/scene.meta.ts)                                       | [详情](https://app.svgzhenli.com/resource/3e754beb-820e-46e2-aba2-e8e2f17d53b7) · [封面](https://img.svgzhenli.com/gallery-assets/covers/yssbb3t6byf1787660702811.png)  |  ☑   |
 |  36 | 改变内能的两种方式：做功和热传递                      | 热学 | [`internal-energy`](../src/scenes/internal-energy/scene.meta.ts)                                   | [详情](https://app.svgzhenli.com/resource/a6439cdd-f64d-44a8-b9d8-6d4f58084cd2) · [封面](https://img.svgzhenli.com/gallery-assets/covers/rrffimvatn1788264065323.png)   |  ☐   |
 |  37 | 牛顿第二定律瞬时性与连接体                            | 力学 | [`connected-bodies`](../src/scenes/connected-bodies/scene.meta.ts)                                 | [详情](https://app.svgzhenli.com/resource/d1966def-ff07-4040-9a92-8797d985b5c1) · [封面](https://img.svgzhenli.com/gallery-assets/covers/aukje30n3ob1787678163979.png)  |  ☐   |
 |  38 | 双绝缘绳悬挂小球在电场中的往复摆动-26广东高考物理真题 | 电磁 | [`electric-pendulum`](../src/scenes/electric-pendulum/scene.meta.ts)                               | [详情](https://app.svgzhenli.com/resource/90e270b2-bbed-4d9c-967a-e6f4d8525f4a) · [封面](https://img.svgzhenli.com/gallery-assets/covers/pqk9l911k5h1787049257765.png)  |  ☐   |
@@ -424,6 +424,15 @@
 - 交互与布局验证：桌面/手机 Playwright overflowX=0、数据表 5 行、真实 error arrays 空；手机图表 tab 366×430。
 - 工程验证：24/24 专项 sim/view/chrome tests 与 Prettier/`git diff --check` 通过。`pnpm verify:scene` 与全量构建本轮未运行。原交互课件不可下载，未声称像素级复刻原互动页。
 - 证据：截图 `/tmp/mechanical-energy-audit/`；浏览器报告 `/tmp/mechanical-energy-audit/visual-report.json`；远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/accd8e75-e538-4cc8-a3a4-72f659012fb7.md` · [原始详情](https://app.svgzhenli.com/resource/accd8e75-e538-4cc8-a3a4-72f659012fb7) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/r1qrtw5ywfb1778949039759.png)
+
+### 35. 变力做功与功率图象 (`variable-work`)
+
+- 状态：✅ Codex / Grok Build 交叉审计一致通过（2026-09-17，AGREE）。
+- 修复：动画区仅小车、轨道与必要 F/v 箭头，不含图表、数据表或长说明。控制区含质量、k/P、微元数与折叠「关系」。图表区 F-x / P-t。数据区 F、v、P、W、ΔEₖ、左矩形 Wₙ 与误差。箭头最小可见长度与轨道末端限幅为必要示意特例；控制区写明「舞台 F、v 为趋势示意」，精确值在数据区。
+- 物理核验：线性 F=kx 从静止，W=½k(x²−x₀²)=ΔEₖ。恒功率 P=Fv 且 v₀=1 m/s 避免奇点，W=Pt=½m(v²−v₀²)。分段力用解析运动。左端 Riemann 对递增 F=kx 低估并随 n 收敛。
+- 交互与布局验证：桌面/移动 11:48 fresh 截图分区干净，overflowX=0，无 console 错误。
+- 工程验证：首轮 pre-commit 因未使用声明 `cartW`、`timeToXForTest` 失败；删除死代码后 9 个 variable-work TS 文件 ESLint、Prettier 通过。专项 21/21（sim 10 + view 6 + chrome 5）与 `git diff --check` 通过。未跑全量测试/全量门禁。原课件不可像素比对，未声称像素级复刻。
+- 证据：`/tmp/variable-work-audit/report.json`；截图 `desktop-idle.png`、`desktop-extrema.png`、`desktop-url.png`、`mobile-graph.png`、`mobile-data.png`（11:48 fresh）；远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/3e754beb-820e-46e2-aba2-e8e2f17d53b7.md` · [原始详情](https://app.svgzhenli.com/resource/3e754beb-820e-46e2-aba2-e8e2f17d53b7) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/yssbb3t6byf1787660702811.png)
 
 ## 复审记录模板
 

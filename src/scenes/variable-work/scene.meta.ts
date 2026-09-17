@@ -1,15 +1,17 @@
 import type { SceneDemoProfile } from '../../platform/demo-profile';
 import type { SceneMeta } from '../../platform/scene-contract';
+
 const demoProfile: SceneDemoProfile = {
   lessonTask: 'process',
   transport: 'visible',
-  readoutKeys: ['force', 'velocity', 'power', 'work'],
+  readoutKeys: ['force', 'velocity', 'power', 'work', 'kinetic'],
   renderHints: { contentScale: 1.02 },
   interactionHints: {
     touchTargetMinSize: 48,
-    visibleControlKeys: ['mode', 'mass', 'k', 'microsteps', 'autoRun']
+    visibleControlKeys: ['mode', 'mass', 'k', 'power', 'microsteps']
   }
 };
+
 export const variableWorkMeta: SceneMeta = {
   id: 'variable-work',
   title: '变力做功与功率图象',
@@ -24,10 +26,17 @@ export const variableWorkMeta: SceneMeta = {
   icon: '∫',
   category: 'mechanics',
   featured: false,
-  defaultParams: { mass: 2, k: 2, microsteps: 0, autoRun: 1 },
-  urlSyncKeys: ['mode', 'mass', 'k', 'microsteps', 'autoRun'],
+  defaultParams: {
+    mode: 0,
+    mass: 2,
+    k: 2,
+    power: 10,
+    microsteps: 0,
+    autoRun: 0
+  },
+  urlSyncKeys: ['mode', 'mass', 'k', 'power', 'microsteps', 'autoRun'],
   testProfile: {
-    hasGraph: false,
+    hasGraph: true,
     hasTransport: true,
     supportsPresentation: true
   },
