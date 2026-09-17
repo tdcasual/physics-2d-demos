@@ -45,7 +45,7 @@
 |  30 | 电磁感应 - 电容棒与电阻棒模型                         | 电磁 | [`rod-model`](../src/scenes/rod-model/scene.meta.ts)                                               | [详情](https://app.svgzhenli.com/resource/58836693-454f-4300-aa52-0b99316f1c26) · [封面](https://img.svgzhenli.com/gallery-assets/covers/6hlwqwk5c7i1786857749323.png)  |  ☑   |
 |  31 | 匀速圆周运动与向心力模型                              | 力学 | [`centripetal-motion`](../src/scenes/centripetal-motion/scene.meta.ts)                             | [详情](https://app.svgzhenli.com/resource/2b810c0c-11fe-4d31-933f-770b06d1a88e) · [封面](https://img.svgzhenli.com/gallery-assets/covers/7e91dq40i21775496835830.png)   |  ☑   |
 |  32 | 安培力方向与导体平衡                                  | 电磁 | [`ampere-balance`](../src/scenes/ampere-balance/scene.meta.ts)                                     | [详情](https://app.svgzhenli.com/resource/1bfccf2e-a260-4be5-9a1d-d3dcd3e6cb00) · [封面](https://img.svgzhenli.com/gallery-assets/covers/t5xsdch4bs1787678015468.png)   |  ☑   |
-|  33 | 平抛运动轨迹与速度分解                                | 力学 | [`projectile-components`](../src/scenes/projectile-components/scene.meta.ts)                       | [详情](https://app.svgzhenli.com/resource/724243b0-b597-4b30-892c-02f52445e87c) · [封面](https://img.svgzhenli.com/gallery-assets/covers/r5hjy0ygx11775457276819.png)   |  ☐   |
+|  33 | 平抛运动轨迹与速度分解                                | 力学 | [`projectile-components`](../src/scenes/projectile-components/scene.meta.ts)                       | [详情](https://app.svgzhenli.com/resource/724243b0-b597-4b30-892c-02f52445e87c) · [封面](https://img.svgzhenli.com/gallery-assets/covers/r5hjy0ygx11775457276819.png)   |  ✅  |
 |  34 | 验证机械能守恒定律实验系统                            | 力学 | [`mechanical-energy`](../src/scenes/mechanical-energy/scene.meta.ts)                               | [详情](https://app.svgzhenli.com/resource/accd8e75-e538-4cc8-a3a4-72f659012fb7) · [封面](https://img.svgzhenli.com/gallery-assets/covers/r1qrtw5ywfb1778949039759.png)  |  ☐   |
 |  35 | 变力做功与功率图象                                    | 力学 | [`variable-work`](../src/scenes/variable-work/scene.meta.ts)                                       | [详情](https://app.svgzhenli.com/resource/3e754beb-820e-46e2-aba2-e8e2f17d53b7) · [封面](https://img.svgzhenli.com/gallery-assets/covers/yssbb3t6byf1787660702811.png)  |  ☐   |
 |  36 | 改变内能的两种方式：做功和热传递                      | 热学 | [`internal-energy`](../src/scenes/internal-energy/scene.meta.ts)                                   | [详情](https://app.svgzhenli.com/resource/a6439cdd-f64d-44a8-b9d8-6d4f58084cd2) · [封面](https://img.svgzhenli.com/gallery-assets/covers/rrffimvatn1788264065323.png)   |  ☐   |
@@ -406,6 +406,15 @@
 - 交互与布局验证：5185 无溢出/无 console error；B 哈希不变；无传输条。手动点「水平向左」+「⊗ 向内」后 URL `fieldDirection=3&currentDirection=1`，选择器高亮 left/in，Fₐ 向上、棒截面 ⊗，读数 Fₙ=2.94 N、f需=1.70 N、a∥=2.13 m/s²；重载后 ids、高亮、箭头与读数保持。平衡 URL `current=4.62&fieldDirection=0`，重载后 Fₐ 向左、f需=0.00、a∥=0.00、无摩擦箭头。支持力为 0 读数 a∥=0.00、状态近似平衡。重置保留 `?audit=keep`。
 - 工程验证：专项 26 项（sim 15 + view 11）通过。Codex 独立复验：8 个串行目标文件 `3154 passed / 124 skipped`；typecheck、lint、prettier、build、bundle-budget 均通过；`git diff --check` 干净。Playwright 12 态 `failures: []`。Codex 与远程 Grok Build 均 `AGREE`。
 - 证据：远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/1bfccf2e-a260-4be5-9a1d-d3dcd3e6cb00.md` · [原始详情](https://app.svgzhenli.com/resource/1bfccf2e-a260-4be5-9a1d-d3dcd3e6cb00) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/t5xsdch4bs1787678015468.png) · 截图 `/tmp/ampere-audit-v2/`
+
+### 33. 平抛运动轨迹与速度分解 (`projectile-components`)
+
+- 状态：✅ Codex / 远程 Grok Build 交叉审计一致通过（2026-09-17；Grok 最终确认 `CONSENSUS: AGREED`）。
+- 动画与分区：按源场景保留平抛轨迹、水平/竖直分速度及合速度矢量和必要投影标记；动画区不放数据表、公式卡或说明段落。六项实时读数仅在数据区显示一次，打点表归数据区；本场景无独立图表，因此图表浮层隐藏。桌面 `lab-stage` 与移动 `mobile-stack` 布局均按项目槽位呈现，动画比例和标签在默认及极端参数下保持可读。
+- 物理核验：`x=v₀t`、`y=½gt²`、`vₓ=v₀`、`vᵧ=gt`；检查屏幕 y 向下时重力方向、分速度与合速度箭头、轨迹采样/投影和最高参数范围；`v₀=25 m/s`、`h₀=60 m`、`g=5 m/s²` 极值下轨迹与标签不裁切。
+- 交互与布局验证：桌面 `1280px`、移动 `390px` 默认态及移动数据页无横向溢出、标题/数值不重复、数据表不压动画；极值态表格保持在可滚动数据区。播放、暂停冻结、继续、速度调节与重置均经浏览器验证；Playwright 报告 `failures: []`，控制台无错误。
+- 工程验证：场景专项 sim/chrome 测试通过；串行目标集（contract、scene entries、projectile sim/chrome）`8` 个测试文件通过（`3149 passed / 124 skipped`）。结构、布局契约、ESLint、TypeScript、生产构建、bundle 预算、Prettier 与 `git diff --check` 通过。`pnpm verify:scene projectile-components` 的并行测试步骤受共享主机上其他场景 5 秒超时及 Vitest worker RPC 超时影响，未能报告全 `7/7`；该结果不记作全量门禁通过。Codex 与 Grok Build 在复核画面、物理和代码后仍一致同意场景内容可提交。
+- 证据：截图 `/tmp/projectile-components-audit/`（`desktop-default`、`mobile-default`、`mobile-data`、`desktop-extrema-land`、`desktop-transport`）；浏览器报告 `/tmp/projectile-components-audit/report.json`；[原始详情](https://app.svgzhenli.com/resource/724243b0-b597-4b30-892c-02f52445e87c) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/r5hjy0ygx11775457276819.png)
 
 ## 复审记录模板
 

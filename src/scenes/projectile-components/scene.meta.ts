@@ -4,7 +4,7 @@ import type { SceneMeta } from '../../platform/scene-contract';
 const demoProfile: SceneDemoProfile = {
   lessonTask: 'process',
   transport: 'visible',
-  readoutKeys: ['time', 'x', 'verticalDisplacement', 'speed'],
+  readoutKeys: ['time', 'x', 'vx', 'verticalDisplacement', 'vy', 'speed'],
   renderHints: { contentScale: 1.02 },
   interactionHints: {
     touchTargetMinSize: 48,
@@ -13,8 +13,10 @@ const demoProfile: SceneDemoProfile = {
       'initialHeight',
       'gravity',
       'samplePeriod',
-      'autoRun',
-      'showVectors'
+      'showTrajectory',
+      'showVectors',
+      'showShadows',
+      'showStrobe'
     ]
   }
 };

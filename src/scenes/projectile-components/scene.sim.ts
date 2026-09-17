@@ -5,7 +5,6 @@ export type ProjectileComponentsParams = {
   initialHeight: number;
   gravity: number;
   samplePeriod: number;
-  autoRun: boolean;
   showTrajectory: boolean;
   showVectors: boolean;
   showShadows: boolean;
@@ -31,6 +30,7 @@ export type ProjectileComponentsState = {
   vx: number;
   vy: number;
   speed: number;
+  landed: boolean;
   points: ProjectileComponentsPoint[];
 };
 
@@ -38,37 +38,17 @@ export const projectileComponentsConstants = {
   baseWidth: 1200,
   baseHeight: 760,
   fieldWidth: 760,
-  panelX: 786,
-  panelWidth: 382,
-  panelInset: 22,
-  originX: 88,
-  groundY: 646,
-  axisTopY: 82,
-  xScale: 8.6,
-  yScale: 8.6,
+  padLeft: 44,
+  padRight: 36,
+  padTop: 28,
+  padBottom: 36,
   gridMeters: 10,
-  trajectorySamples: 72,
-  pointRadius: 9,
-  shadowRadius: 8,
-  currentRadius: 15,
-  vectorScale: 5.5,
-  vectorCap: 172,
-  titleY: 42,
-  formulaX: 54,
-  formulaY: 70,
-  formulaWidth: 514,
-  formulaHeight: 72,
-  metricsCardX: 808,
-  metricsCardY: 82,
-  metricsCardWidth: 338,
-  metricsCardHeight: 286,
-  tableCardY: 384,
-  tableCardHeight: 222,
-  optionsCardY: 620,
-  optionsCardHeight: 124,
-  panelRuleY: 72,
-  rowGap: 34,
-  tableRowGap: 30,
+  minXDomain: 100,
+  trajectorySamples: 48,
+  pointRadius: 7,
+  shadowRadius: 6,
+  currentRadius: 12,
+  holdAfterLanding: 0.8,
   defaultSpeed: 15,
   defaultInitialHeight: 45,
   defaultGravity: 10,
@@ -80,16 +60,16 @@ export const projectileComponentsConstants = {
   gravityMin: 5,
   gravityMax: 15,
   samplePeriodMin: 0.25,
-  samplePeriodMax: 0.75,
-  animationExtraTime: 0.6
+  samplePeriodMax: 0.75
 } as const;
 
+const C = projectileComponentsConstants;
+
 const DEFAULTS: ProjectileComponentsParams = {
-  speed: projectileComponentsConstants.defaultSpeed,
-  initialHeight: projectileComponentsConstants.defaultInitialHeight,
-  gravity: projectileComponentsConstants.defaultGravity,
-  samplePeriod: projectileComponentsConstants.defaultSamplePeriod,
-  autoRun: true,
+  speed: C.defaultSpeed,
+  initialHeight: C.defaultInitialHeight,
+  gravity: C.defaultGravity,
+  samplePeriod: C.defaultSamplePeriod,
   showTrajectory: true,
   showVectors: true,
   showShadows: true,
@@ -100,36 +80,52 @@ function finite(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
+export function asBool(value: unknown, fallback: boolean): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'string') {
+    const text = value.trim().toLowerCase();
+    if (text === '1' || text === 'true' || text === 'on' || text === 'yes') {
+      return true;
+    }
+    if (
+      text === '0' ||
+      text === 'false' ||
+      text === 'off' ||
+      text === 'no' ||
+      text === ''
+    ) {
+      return false;
+    }
+  }
+  return fallback;
+}
+
 function normalize(
   input: Partial<ProjectileComponentsParams>,
   previous = DEFAULTS
 ): ProjectileComponentsParams {
   return {
-    speed: clamp(
-      finite(input.speed, previous.speed),
-      projectileComponentsConstants.speedMin,
-      projectileComponentsConstants.speedMax
-    ),
+    speed: clamp(finite(input.speed, previous.speed), C.speedMin, C.speedMax),
     initialHeight: clamp(
       finite(input.initialHeight, previous.initialHeight),
-      projectileComponentsConstants.heightMin,
-      projectileComponentsConstants.heightMax
+      C.heightMin,
+      C.heightMax
     ),
     gravity: clamp(
       finite(input.gravity, previous.gravity),
-      projectileComponentsConstants.gravityMin,
-      projectileComponentsConstants.gravityMax
+      C.gravityMin,
+      C.gravityMax
     ),
     samplePeriod: clamp(
       finite(input.samplePeriod, previous.samplePeriod),
-      projectileComponentsConstants.samplePeriodMin,
-      projectileComponentsConstants.samplePeriodMax
+      C.samplePeriodMin,
+      C.samplePeriodMax
     ),
-    autoRun: input.autoRun ?? previous.autoRun,
-    showTrajectory: input.showTrajectory ?? previous.showTrajectory,
-    showVectors: input.showVectors ?? previous.showVectors,
-    showShadows: input.showShadows ?? previous.showShadows,
-    showStrobe: input.showStrobe ?? previous.showStrobe
+    showTrajectory: asBool(input.showTrajectory, previous.showTrajectory),
+    showVectors: asBool(input.showVectors, previous.showVectors),
+    showShadows: asBool(input.showShadows, previous.showShadows),
+    showStrobe: asBool(input.showStrobe, previous.showStrobe)
   };
 }
 
@@ -138,6 +134,16 @@ export function projectileFlightTime(
   gravity: number
 ): number {
   return Math.sqrt((2 * Math.max(0, initialHeight)) / Math.max(0.01, gravity));
+}
+
+export function projectileRange(params: {
+  speed: number;
+  initialHeight: number;
+  gravity: number;
+}): number {
+  return (
+    params.speed * projectileFlightTime(params.initialHeight, params.gravity)
+  );
 }
 
 export function projectileComponentsPoint(
@@ -160,6 +166,30 @@ export function projectileComponentsPoint(
   };
 }
 
+/** Inclusive sample instants: 0, Δt, 2Δt, … and a landing sample when Δt does not divide T. */
+export function strobeTimes(flightTime: number, period: number): number[] {
+  const duration = Math.max(0, flightTime);
+  const step = Math.max(1e-6, period);
+  const times: number[] = [];
+  const count = Math.floor(duration / step + 1e-9);
+  for (let index = 0; index <= count; index += 1) {
+    times.push(index * step);
+  }
+  if (times.length === 0) times.push(0);
+  const last = times[times.length - 1] ?? 0;
+  if (duration - last > 1e-6) times.push(duration);
+  else times[times.length - 1] = duration;
+  return times;
+}
+
+export function formatFixed(value: number, digits = 1): string {
+  const threshold = 0.5 * 10 ** -digits;
+  if (!Number.isFinite(value) || Math.abs(value) < threshold) {
+    return (0).toFixed(digits);
+  }
+  return value.toFixed(digits);
+}
+
 export function createProjectileComponentsSim(
   initial: Partial<ProjectileComponentsParams> = {}
 ) {
@@ -167,32 +197,28 @@ export function createProjectileComponentsSim(
   let params = { ...defaults };
   let time = 0;
 
+  function flightTime(): number {
+    return projectileFlightTime(params.initialHeight, params.gravity);
+  }
+
   function getState(): ProjectileComponentsState {
-    const flightTime = projectileFlightTime(
-      params.initialHeight,
-      params.gravity
-    );
-    const currentTime = Math.min(flightTime, time);
+    const total = flightTime();
+    const currentTime = Math.min(total, Math.max(0, time));
     const current = projectileComponentsPoint(params, currentTime);
-    const points = Array.from(
-      { length: Math.ceil(flightTime / params.samplePeriod) + 1 },
-      (_, index) =>
-        projectileComponentsPoint(
-          params,
-          Math.min(flightTime, index * params.samplePeriod),
-          index
-        )
+    const points = strobeTimes(total, params.samplePeriod).map((stamp, index) =>
+      projectileComponentsPoint(params, stamp, index)
     );
     return {
       params: { ...params },
       time: currentTime,
-      flightTime,
+      flightTime: total,
       x: current.x,
       height: current.height,
       verticalDisplacement: current.verticalDisplacement,
       vx: params.speed,
       vy: current.vy,
       speed: Math.hypot(params.speed, current.vy),
+      landed: currentTime >= total - 1e-9,
       points
     };
   }
@@ -204,15 +230,20 @@ export function createProjectileComponentsSim(
     setParams(
       next: Partial<ProjectileComponentsParams>
     ): ProjectileComponentsParams {
+      const previous = params;
       params = normalize({ ...params, ...next }, params);
+      if (
+        previous.speed !== params.speed ||
+        previous.initialHeight !== params.initialHeight ||
+        previous.gravity !== params.gravity
+      ) {
+        time = 0;
+      }
       return { ...params };
     },
     step(dt: number): void {
-      if (!params.autoRun) return;
       time += Math.max(0, finite(dt, 0));
-      const cycle =
-        projectileFlightTime(params.initialHeight, params.gravity) +
-        projectileComponentsConstants.animationExtraTime;
+      const cycle = flightTime() + C.holdAfterLanding;
       if (time > cycle) time = 0;
     },
     reset(): void {

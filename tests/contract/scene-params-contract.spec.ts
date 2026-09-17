@@ -34,7 +34,12 @@ const PARAM_KEY_MAP: Record<string, Record<string, string>> = {
 // 豁免：不经过 sim setParams 的键（必须注明承载方式）
 // ---------------------------------------------------------------------------
 
-const NON_SIM_KEYS: Record<string, Record<string, string>> = {};
+const NON_SIM_KEYS: Record<string, Record<string, string>> = {
+  'projectile-components': {
+    autoRun:
+      'URL autoPlay only; global transport drives step; not a sim kinematic param'
+  }
+};
 
 // 无对象式 setParams 的场景（entry 暴露专用 setter，须注明承载方式）
 const NO_PARAMS_API: Record<string, string> = {

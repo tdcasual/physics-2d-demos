@@ -53,48 +53,31 @@ export const projectileComponentsControlsSchema: ControlsSchema = {
       title: '显示',
       collapsed: false,
       fields: [
-        { type: 'toggle', key: 'autoRun', label: '自动播放', value: true },
         {
           type: 'toggle',
           key: 'showTrajectory',
-          label: '显示抛物线预期轨迹',
+          label: '抛物线轨迹',
           value: true
         },
         {
           type: 'toggle',
           key: 'showVectors',
-          label: '显示速度正交分解',
+          label: '速度分解',
           value: true
         },
         {
           type: 'toggle',
           key: 'showShadows',
-          label: '显示分运动影子球',
+          label: '分运动影子球',
           value: true
         },
         {
           type: 'toggle',
           key: 'showStrobe',
-          label: '显示频闪采样点',
+          label: '频闪采样',
           value: true
         }
       ]
-    },
-    {
-      title: '公式',
-      collapsed: true,
-      fields: [
-        {
-          type: 'hint',
-          key: 'formula',
-          lines: ['x = v₀t    vₓ = v₀', 'y = ½gt²    vᵧ = gt']
-        }
-      ]
-    },
-    {
-      title: '播放',
-      collapsed: false,
-      fields: [{ type: 'button', key: 'reset', label: '重新开始' }]
     }
   ]
 };

@@ -4,6 +4,7 @@ import { createStandardSceneEntry } from '../scene-entry-helpers';
 import { createProjectileComponentsView } from './scene.view';
 import {
   createProjectileComponentsSim,
+  formatFixed,
   type ProjectileComponentsParams,
   type ProjectileComponentsState
 } from './scene.sim';
@@ -35,17 +36,35 @@ export function createProjectileComponentsScene(
   function getReadoutItems() {
     const state = sim.getState();
     return [
-      { key: 'time', label: '时间 t', value: `${state.time.toFixed(2)} s` },
-      { key: 'x', label: '水平位移 x', value: `${state.x.toFixed(1)} m` },
+      {
+        key: 'time',
+        label: 't / T',
+        value: `${formatFixed(state.time, 2)} / ${formatFixed(state.flightTime, 2)} s`
+      },
+      {
+        key: 'x',
+        label: 'x = v₀t',
+        value: `${formatFixed(state.x)} m`
+      },
+      {
+        key: 'vx',
+        label: 'vₓ = v₀',
+        value: `${formatFixed(state.vx)} m/s`
+      },
       {
         key: 'verticalDisplacement',
-        label: '竖直位移 y',
-        value: `${state.verticalDisplacement.toFixed(1)} m`
+        label: 'y = ½gt²',
+        value: `${formatFixed(state.verticalDisplacement)} m`
+      },
+      {
+        key: 'vy',
+        label: 'vᵧ = gt',
+        value: `${formatFixed(state.vy)} m/s`
       },
       {
         key: 'speed',
-        label: '合速度 v',
-        value: `${state.speed.toFixed(1)} m/s`
+        label: 'v = √(vₓ²+vᵧ²)',
+        value: `${formatFixed(state.speed)} m/s`
       }
     ];
   }

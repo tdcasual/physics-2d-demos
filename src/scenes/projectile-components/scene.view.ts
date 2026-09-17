@@ -1,8 +1,10 @@
+import { scaledSize } from '../../core/canvas-sizing';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import {
-  projectileComponentsConstants,
+  projectileComponentsConstants as C,
+  projectileRange,
   type ProjectileComponentsPoint,
   type ProjectileComponentsState
 } from './scene.sim';
@@ -14,91 +16,52 @@ export type CreateProjectileComponentsViewOptions = {
   demoHints?: DemoRenderHints;
 };
 
-const {
-  baseWidth: BASE_W,
-  baseHeight: BASE_H,
-  fieldWidth: FIELD_W,
-  panelX: PANEL_X,
-  panelWidth: PANEL_W,
-  panelInset: PANEL_INSET,
-  originX: ORIGIN_X,
-  groundY: GROUND_Y,
-  axisTopY: AXIS_TOP_Y,
-  xScale: X_SCALE,
-  yScale: Y_SCALE,
-  gridMeters: GRID_METERS,
-  trajectorySamples: TRAJECTORY_SAMPLES,
-  pointRadius: POINT_RADIUS,
-  shadowRadius: SHADOW_RADIUS,
-  currentRadius: CURRENT_RADIUS,
-  vectorScale: VECTOR_SCALE,
-  vectorCap: VECTOR_CAP,
-  titleY: TITLE_Y,
-  formulaX: FORMULA_X,
-  formulaY: FORMULA_Y,
-  formulaWidth: FORMULA_W,
-  formulaHeight: FORMULA_H,
-  metricsCardX: METRICS_X,
-  metricsCardY: METRICS_Y,
-  metricsCardWidth: METRICS_W,
-  metricsCardHeight: METRICS_H,
-  tableCardY: TABLE_Y,
-  tableCardHeight: TABLE_H,
-  optionsCardY: OPTIONS_Y,
-  optionsCardHeight: OPTIONS_H,
-  panelRuleY: PANEL_RULE_Y,
-  rowGap: ROW_GAP,
-  tableRowGap: TABLE_ROW_GAP
-} = projectileComponentsConstants;
-
-const GRID_COLOR_ALPHA = '28';
-const DASH = 7;
-const GAP = 6;
-const ARROW_HEAD = 12;
-const CARD_RADIUS = 12;
-const STROBE_DASH = 5;
-const STROBE_GAP = 4;
+export type PlotLayout = {
+  width: number;
+  height: number;
+  originX: number;
+  originY: number;
+  groundY: number;
+  scale: number;
+  xMax: number;
+  yExtent: number;
+  rs: number;
+};
 
 type Palette = {
   bg: string;
-  panel: string;
   ink: string;
   muted: string;
-  border: string;
   grid: string;
-  soft: string;
   blue: string;
   red: string;
   teal: string;
   gold: string;
+  hatch: string;
 };
 
 const PALETTE: Record<TeachingTheme, Palette> = {
   light: {
     bg: '#fbfaf7',
-    panel: '#ffffff',
     ink: '#303744',
     muted: '#7c8796',
-    border: '#d3dbe4',
     grid: '#d7dfe7',
-    soft: '#f1f4f7',
     blue: '#4b6ff2',
     red: '#ef4050',
     teal: '#249c8f',
-    gold: '#ee950f'
+    gold: '#ee950f',
+    hatch: '#9aa3ad'
   },
   dark: {
     bg: '#101827',
-    panel: '#172235',
     ink: '#eef2f7',
     muted: '#aab6c8',
-    border: '#3c4b61',
     grid: '#2d3e57',
-    soft: '#253249',
     blue: '#6d8bff',
     red: '#fb7185',
     teal: '#34d399',
-    gold: '#fbbf24'
+    gold: '#fbbf24',
+    hatch: '#6b7a8d'
   }
 };
 
@@ -119,17 +82,6 @@ function text(
   ctx.fillText(value, x, y);
 }
 
-function rounded(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number
-): void {
-  ctx.beginPath();
-  ctx.roundRect(x, y, width, height, CARD_RADIUS);
-}
-
 function arrow(
   ctx: CanvasRenderingContext2D,
   x1: number,
@@ -137,7 +89,7 @@ function arrow(
   x2: number,
   y2: number,
   color: string,
-  width = 4,
+  width: number,
   dashed = false
 ): void {
   const dx = x2 - x1;
@@ -146,169 +98,317 @@ function arrow(
   if (length < 2) return;
   const ux = dx / length;
   const uy = dy / length;
+  const head = Math.min(12, length * 0.28);
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
   ctx.lineWidth = width;
-  ctx.setLineDash(dashed ? [DASH, GAP] : []);
+  ctx.lineCap = 'round';
+  ctx.setLineDash(dashed ? [6, 5] : []);
   ctx.beginPath();
   ctx.moveTo(x1, y1);
-  ctx.lineTo(x2, y2);
+  ctx.lineTo(x2 - ux * head * 0.35, y2 - uy * head * 0.35);
   ctx.stroke();
   ctx.setLineDash([]);
   ctx.beginPath();
   ctx.moveTo(x2, y2);
-  ctx.lineTo(x2 - ux * ARROW_HEAD - uy * 6, y2 - uy * ARROW_HEAD + ux * 6);
-  ctx.lineTo(x2 - ux * ARROW_HEAD + uy * 6, y2 - uy * ARROW_HEAD - ux * 6);
+  ctx.lineTo(
+    x2 - ux * head - uy * head * 0.45,
+    y2 - uy * head + ux * head * 0.45
+  );
+  ctx.lineTo(
+    x2 - ux * head + uy * head * 0.45,
+    y2 - uy * head - ux * head * 0.45
+  );
   ctx.closePath();
   ctx.fill();
 }
 
-function launchY(state: ProjectileComponentsState): number {
-  return GROUND_Y - state.params.initialHeight * Y_SCALE;
+export function plotLayout(
+  state: ProjectileComponentsState,
+  width: number,
+  height: number,
+  responsiveScale = 1
+): PlotLayout {
+  const rs = Math.max(0.3, Math.min(1.5, responsiveScale));
+  const padL = scaledSize(C.padLeft, rs, 28);
+  const padR = scaledSize(C.padRight, rs, 20);
+  const padT = scaledSize(C.padTop, rs, 16);
+  const padB = scaledSize(C.padBottom, rs, 22);
+  const range = projectileRange(state.params);
+  const xMax = Math.max(range * 1.08 + 8, C.minXDomain);
+  const extraBelow = Math.max(state.params.initialHeight, 45);
+  const yExtent = state.params.initialHeight + extraBelow;
+  const innerW = Math.max(40, width - padL - padR);
+  const innerH = Math.max(40, height - padT - padB);
+  const scale = Math.min(innerW / xMax, innerH / yExtent);
+  const originX = padL;
+  const originY = padT;
+  return {
+    width,
+    height,
+    originX,
+    originY,
+    groundY: originY + state.params.initialHeight * scale,
+    scale,
+    xMax,
+    yExtent,
+    rs
+  };
 }
 
-function pointPosition(
-  state: ProjectileComponentsState,
-  point: ProjectileComponentsPoint
+export function worldToScreen(
+  layout: PlotLayout,
+  xMeters: number,
+  yDownMeters: number
 ): { x: number; y: number } {
-  const startY = launchY(state);
   return {
-    x: ORIGIN_X + point.x * X_SCALE,
-    y: startY + point.verticalDisplacement * Y_SCALE
+    x: layout.originX + xMeters * layout.scale,
+    y: layout.originY + yDownMeters * layout.scale
   };
+}
+
+function pointScreen(
+  layout: PlotLayout,
+  point: Pick<ProjectileComponentsPoint, 'x' | 'verticalDisplacement'>
+): { x: number; y: number } {
+  return worldToScreen(layout, point.x, point.verticalDisplacement);
+}
+
+function fontSize(layout: PlotLayout, base: number, min = 9): number {
+  return scaledSize(base, layout.rs, min);
 }
 
 function drawGrid(
   ctx: CanvasRenderingContext2D,
-  state: ProjectileComponentsState,
+  layout: PlotLayout,
   p: Palette
 ): void {
   ctx.fillStyle = p.bg;
-  ctx.fillRect(0, 0, FIELD_W, BASE_H);
-  const startY = launchY(state);
-  ctx.strokeStyle = `${p.grid}${GRID_COLOR_ALPHA}`;
+  ctx.fillRect(0, 0, layout.width, layout.height);
+  ctx.strokeStyle = `${p.grid}55`;
   ctx.lineWidth = 1;
-  const gridXStep = GRID_METERS * X_SCALE;
-  const gridYStep = GRID_METERS * Y_SCALE;
-  for (let x = ORIGIN_X; x <= FIELD_W; x += gridXStep) {
+  const step = C.gridMeters * layout.scale;
+  if (step < 6) return;
+  const xEnd = layout.originX + layout.xMax * layout.scale;
+  const yEnd = layout.originY + layout.yExtent * layout.scale;
+  for (
+    let x = layout.originX;
+    x <= xEnd + 0.5 && x < layout.width - 4;
+    x += step
+  ) {
     ctx.beginPath();
-    ctx.moveTo(x, AXIS_TOP_Y);
-    ctx.lineTo(x, GROUND_Y);
+    ctx.moveTo(x, layout.originY);
+    ctx.lineTo(x, Math.min(yEnd, layout.height - 4));
     ctx.stroke();
   }
-  for (let y = Math.max(AXIS_TOP_Y, startY); y <= GROUND_Y; y += gridYStep) {
+  for (
+    let y = layout.originY;
+    y <= yEnd + 0.5 && y < layout.height - 4;
+    y += step
+  ) {
     ctx.beginPath();
-    ctx.moveTo(ORIGIN_X, y);
-    ctx.lineTo(FIELD_W, y);
+    ctx.moveTo(layout.originX, y);
+    ctx.lineTo(Math.min(xEnd, layout.width - 4), y);
     ctx.stroke();
   }
 }
 
 function drawAxes(
   ctx: CanvasRenderingContext2D,
-  state: ProjectileComponentsState,
-  p: Palette,
-  scale: number
+  layout: PlotLayout,
+  p: Palette
 ): void {
-  const startY = launchY(state);
-  ctx.strokeStyle = p.ink;
-  ctx.fillStyle = p.ink;
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(ORIGIN_X, startY);
-  ctx.lineTo(FIELD_W - 28, startY);
-  ctx.stroke();
-  arrow(ctx, FIELD_W - 58, startY, FIELD_W - 18, startY, p.ink, 3);
-  ctx.beginPath();
-  ctx.moveTo(ORIGIN_X, AXIS_TOP_Y);
-  ctx.lineTo(ORIGIN_X, GROUND_Y + 22);
-  ctx.stroke();
-  arrow(ctx, ORIGIN_X, GROUND_Y - 18, ORIGIN_X, GROUND_Y + 22, p.ink, 3);
-  ctx.strokeStyle = p.muted;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(ORIGIN_X, GROUND_Y);
-  ctx.lineTo(FIELD_W - 32, GROUND_Y);
-  ctx.stroke();
-  text(ctx, 'x', FIELD_W - 14, startY - 12, p.ink, 17 * scale, 'center', 700);
+  const xEnd = Math.min(
+    layout.originX + layout.xMax * layout.scale,
+    layout.width - 10
+  );
+  const yEnd = Math.min(
+    layout.originY + layout.yExtent * layout.scale,
+    layout.height - 8
+  );
+  const tick = fontSize(layout, 12, 9);
+  arrow(ctx, layout.originX, layout.originY, xEnd, layout.originY, p.ink, 2.4);
+  arrow(ctx, layout.originX, layout.originY, layout.originX, yEnd, p.ink, 2.4);
+  text(ctx, 'x', xEnd + 10, layout.originY - 12, p.ink, tick, 'center', 700);
+  text(ctx, 'y', layout.originX - 14, yEnd + 2, p.ink, tick, 'center', 700);
   text(
     ctx,
-    'y',
-    ORIGIN_X - 14,
-    GROUND_Y + 22,
-    p.ink,
-    17 * scale,
-    'center',
-    700
+    '0',
+    layout.originX - 12,
+    layout.originY - 12,
+    p.muted,
+    tick,
+    'center'
   );
-  text(ctx, '0', ORIGIN_X - 16, startY - 18, p.muted, 13 * scale, 'center');
-  text(ctx, 'h₀', ORIGIN_X + 20, startY - 24, p.muted, 13 * scale, 'left', 700);
+  ctx.strokeStyle = p.ink;
+  ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  ctx.moveTo(layout.originX, layout.groundY);
+  ctx.lineTo(Math.min(xEnd, layout.width - 12), layout.groundY);
+  ctx.stroke();
+  const hatch = scaledSize(7, layout.rs, 5);
+  ctx.strokeStyle = p.hatch;
+  ctx.lineWidth = 1.4;
+  for (
+    let x = layout.originX + 8;
+    x < Math.min(xEnd, layout.width - 16);
+    x += 9
+  ) {
+    ctx.beginPath();
+    ctx.moveTo(x, layout.groundY);
+    ctx.lineTo(x - 5, layout.groundY + hatch);
+    ctx.stroke();
+  }
+  const label = fontSize(layout, 11, 8);
+  const stepPx = C.gridMeters * layout.scale;
+  if (stepPx >= 18) {
+    for (
+      let meters = C.gridMeters;
+      meters < layout.xMax - 2;
+      meters += C.gridMeters
+    ) {
+      const x = layout.originX + meters * layout.scale;
+      if (x > xEnd - 18) break;
+      ctx.strokeStyle = p.ink;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(x, layout.originY - 4);
+      ctx.lineTo(x, layout.originY + 4);
+      ctx.stroke();
+      text(
+        ctx,
+        String(meters),
+        x,
+        layout.originY - 12,
+        p.muted,
+        label,
+        'center'
+      );
+    }
+    for (
+      let meters = C.gridMeters;
+      meters < layout.yExtent - 2;
+      meters += C.gridMeters
+    ) {
+      const y = layout.originY + meters * layout.scale;
+      if (y > yEnd - 10) break;
+      ctx.strokeStyle = p.ink;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(layout.originX - 4, y);
+      ctx.lineTo(layout.originX + 4, y);
+      ctx.stroke();
+      text(
+        ctx,
+        String(meters),
+        layout.originX - 10,
+        y,
+        p.muted,
+        label,
+        'right'
+      );
+    }
+  }
 }
 
 function drawTrajectory(
   ctx: CanvasRenderingContext2D,
   state: ProjectileComponentsState,
+  layout: PlotLayout,
   p: Palette
 ): void {
   if (!state.params.showTrajectory) return;
   ctx.strokeStyle = p.teal;
-  ctx.lineWidth = 5;
+  ctx.lineWidth = scaledSize(4, layout.rs, 2.4);
+  ctx.lineJoin = 'round';
   ctx.beginPath();
-  for (let index = 0; index <= TRAJECTORY_SAMPLES; index += 1) {
-    const point = {
-      ...state.points[0],
-      time: (state.flightTime * index) / TRAJECTORY_SAMPLES,
-      index
-    };
-    const positioned = pointPosition(state, {
-      ...point,
-      x: state.params.speed * point.time,
-      verticalDisplacement: 0.5 * state.params.gravity * point.time * point.time
-    });
-    if (index === 0) ctx.moveTo(positioned.x, positioned.y);
-    else ctx.lineTo(positioned.x, positioned.y);
+  for (let index = 0; index <= C.trajectorySamples; index += 1) {
+    const t = (state.flightTime * index) / C.trajectorySamples;
+    const pos = worldToScreen(
+      layout,
+      state.params.speed * t,
+      0.5 * state.params.gravity * t * t
+    );
+    if (index === 0) ctx.moveTo(pos.x, pos.y);
+    else ctx.lineTo(pos.x, pos.y);
   }
   ctx.stroke();
 }
 
-function drawStrobePoints(
+function drawCorrespondence(
+  ctx: CanvasRenderingContext2D,
+  layout: PlotLayout,
+  pos: { x: number; y: number },
+  p: Palette,
+  strong: boolean
+): void {
+  ctx.setLineDash([2, 4]);
+  ctx.lineWidth = strong ? 1.4 : 1;
+  ctx.strokeStyle = p.blue;
+  ctx.beginPath();
+  ctx.moveTo(pos.x, pos.y);
+  ctx.lineTo(pos.x, layout.originY);
+  ctx.stroke();
+  ctx.strokeStyle = p.red;
+  ctx.beginPath();
+  ctx.moveTo(pos.x, pos.y);
+  ctx.lineTo(layout.originX, pos.y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawBall(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius: number,
+  color: string,
+  alpha = 1
+): void {
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+function drawStrobe(
   ctx: CanvasRenderingContext2D,
   state: ProjectileComponentsState,
+  layout: PlotLayout,
   p: Palette
 ): void {
+  const r = scaledSize(C.pointRadius, layout.rs, 4);
+  const sr = scaledSize(C.shadowRadius, layout.rs, 3.5);
+  const label = fontSize(layout, 11, 8);
   state.points.forEach((point) => {
-    const positioned = pointPosition(state, point);
+    const pos = pointScreen(layout, point);
+    const isNow = Math.abs(point.time - state.time) < 0.04;
+    if (state.params.showStrobe || isNow) {
+      drawCorrespondence(ctx, layout, pos, p, isNow);
+    }
     if (state.params.showShadows) {
-      ctx.globalAlpha = 0.35;
-      ctx.fillStyle = p.blue;
-      ctx.beginPath();
-      ctx.arc(positioned.x, launchY(state), SHADOW_RADIUS, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = p.red;
-      ctx.beginPath();
-      ctx.arc(ORIGIN_X, positioned.y, SHADOW_RADIUS, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
+      drawBall(ctx, pos.x, layout.originY, sr, p.blue, isNow ? 0.95 : 0.35);
+      drawBall(ctx, layout.originX, pos.y, sr, p.red, isNow ? 0.95 : 0.35);
     }
     if (state.params.showStrobe) {
       ctx.strokeStyle = p.gold;
-      ctx.lineWidth = 2;
-      ctx.setLineDash([STROBE_DASH, STROBE_GAP]);
+      ctx.lineWidth = 1.6;
+      ctx.setLineDash([4, 3]);
       ctx.beginPath();
-      ctx.arc(positioned.x, positioned.y, POINT_RADIUS + 5, 0, Math.PI * 2);
+      ctx.arc(pos.x, pos.y, r + 4, 0, Math.PI * 2);
       ctx.stroke();
       ctx.setLineDash([]);
-      ctx.fillStyle = p.gold;
-      ctx.beginPath();
-      ctx.arc(positioned.x, positioned.y, POINT_RADIUS, 0, Math.PI * 2);
-      ctx.fill();
+      drawBall(ctx, pos.x, pos.y, r, p.gold, isNow ? 1 : 0.82);
+      const ly = pos.y < layout.originY + 16 ? pos.y + 14 : pos.y - 14;
       text(
         ctx,
         `${point.time.toFixed(1)}s`,
-        positioned.x + 16,
-        positioned.y - 18,
+        pos.x + 8,
+        ly,
         p.gold,
-        14,
+        label,
         'left',
         700
       );
@@ -316,359 +416,127 @@ function drawStrobePoints(
   });
 }
 
+export type VectorMarks = {
+  origin: { x: number; y: number };
+  vxTip: { x: number; y: number };
+  vyTip: { x: number; y: number };
+  vTip: { x: number; y: number };
+  vxLabel: { x: number; y: number };
+  vyLabel: { x: number; y: number };
+  vLabel: { x: number; y: number };
+};
+
+function clampCoord(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+export function vectorMarks(
+  state: ProjectileComponentsState,
+  layout: PlotLayout
+): VectorMarks | null {
+  if (!state.params.showVectors) return null;
+  const pos = worldToScreen(layout, state.x, state.verticalDisplacement);
+  const fs = fontSize(layout, 13, 9);
+  const edge = 8;
+  const labelRoom = fs * 1.8;
+  const roomX = Math.max(16, layout.width - pos.x - edge - labelRoom);
+  const roomY = Math.max(16, layout.height - pos.y - edge - labelRoom);
+  const k = Math.min(
+    state.vx > 1e-6 ? roomX / state.vx : 1e9,
+    state.vy > 1e-6 ? roomY / state.vy : 1e9,
+    scaledSize(5.2, layout.rs, 3.2)
+  );
+  const hx = Math.max(12, state.vx * k);
+  const hy = Math.max(12, state.vy * k);
+  let vxLabel = { x: pos.x + hx + 8, y: pos.y - 10 };
+  let vyLabel = { x: pos.x - 8, y: pos.y + hy + 12 };
+  let vLabel = { x: pos.x + hx + 10, y: pos.y + hy + 4 };
+  if (vxLabel.x > layout.width - edge) {
+    vxLabel = { x: pos.x + hx * 0.55, y: pos.y - fs - 4 };
+  }
+  if (vyLabel.y > layout.height - edge) {
+    vyLabel = { x: pos.x - fs * 1.4, y: pos.y + hy * 0.55 };
+  }
+  if (vLabel.x > layout.width - edge || vLabel.y > layout.height - edge) {
+    vLabel = { x: pos.x + hx * 0.55, y: pos.y + hy * 0.55 };
+  }
+  const fit = (point: { x: number; y: number }) => ({
+    x: clampCoord(point.x, edge, layout.width - edge),
+    y: clampCoord(point.y, edge, layout.height - edge)
+  });
+  return {
+    origin: pos,
+    vxTip: { x: pos.x + hx, y: pos.y },
+    vyTip: { x: pos.x, y: pos.y + hy },
+    vTip: { x: pos.x + hx, y: pos.y + hy },
+    vxLabel: fit(vxLabel),
+    vyLabel: fit(vyLabel),
+    vLabel: fit(vLabel)
+  };
+}
+
 function drawVectors(
   ctx: CanvasRenderingContext2D,
   state: ProjectileComponentsState,
-  p: Palette,
-  scale: number
+  layout: PlotLayout,
+  p: Palette
 ): void {
-  if (!state.params.showVectors) return;
-  const current = pointPosition(state, {
-    index: 0,
-    time: state.time,
-    x: state.x,
-    verticalDisplacement: state.verticalDisplacement,
-    height: state.height,
-    vy: state.vy
-  });
-  const horizontalLength = Math.min(
-    VECTOR_CAP,
-    Math.max(18, state.vx * VECTOR_SCALE)
+  const marks = vectorMarks(state, layout);
+  if (!marks) return;
+  const { origin: pos, vxTip, vyTip, vTip, vxLabel, vyLabel, vLabel } = marks;
+  ctx.setLineDash([4, 4]);
+  ctx.strokeStyle = p.muted;
+  ctx.lineWidth = 1.3;
+  ctx.strokeRect(
+    Math.min(pos.x, vxTip.x),
+    Math.min(pos.y, vyTip.y),
+    Math.abs(vxTip.x - pos.x),
+    Math.abs(vyTip.y - pos.y)
   );
-  const verticalLength = Math.min(
-    VECTOR_CAP,
-    Math.max(18, state.vy * VECTOR_SCALE)
-  );
-  arrow(
-    ctx,
-    current.x,
-    current.y,
-    current.x + horizontalLength,
-    current.y,
-    p.blue,
-    5
-  );
-  arrow(
-    ctx,
-    current.x,
-    current.y,
-    current.x,
-    current.y + verticalLength,
-    p.red,
-    5
-  );
-  arrow(
-    ctx,
-    current.x,
-    current.y,
-    current.x + horizontalLength,
-    current.y + verticalLength,
-    p.teal,
-    5
-  );
-  text(
-    ctx,
-    'vₓ',
-    current.x + horizontalLength + 16,
-    current.y - 14,
-    p.blue,
-    16 * scale,
-    'left',
-    700
-  );
-  text(
-    ctx,
-    'vᵧ',
-    current.x - 18,
-    current.y + verticalLength + 16,
-    p.red,
-    16 * scale,
-    'right',
-    700
-  );
-  text(
-    ctx,
-    'v',
-    current.x + horizontalLength + 20,
-    current.y + verticalLength + 6,
-    p.teal,
-    17 * scale,
-    'left',
-    700
-  );
+  ctx.setLineDash([]);
+  arrow(ctx, pos.x, pos.y, vxTip.x, vxTip.y, p.blue, 3.4);
+  arrow(ctx, pos.x, pos.y, vyTip.x, vyTip.y, p.red, 3.4);
+  arrow(ctx, pos.x, pos.y, vTip.x, vTip.y, p.teal, 3.6);
+  const fs = fontSize(layout, 13, 9);
+  text(ctx, 'vₓ', vxLabel.x, vxLabel.y, p.blue, fs, 'left', 700);
+  text(ctx, 'vᵧ', vyLabel.x, vyLabel.y, p.red, fs, 'right', 700);
+  text(ctx, 'v', vLabel.x, vLabel.y, p.teal, fs, 'left', 700);
 }
 
 function drawCurrent(
   ctx: CanvasRenderingContext2D,
   state: ProjectileComponentsState,
-  p: Palette,
-  scale: number
+  layout: PlotLayout,
+  p: Palette
 ): void {
-  const current = pointPosition(state, {
-    index: 0,
-    time: state.time,
-    x: state.x,
-    verticalDisplacement: state.verticalDisplacement,
-    height: state.height,
-    vy: state.vy
-  });
-  ctx.fillStyle = p.gold;
-  ctx.strokeStyle = p.gold;
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.arc(current.x, current.y, CURRENT_RADIUS, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-  const onSample = state.points.some(
-    (point) => Math.abs(point.time - state.time) < 0.02
-  );
-  if (!state.params.showStrobe || !onSample) {
-    text(
+  const pos = worldToScreen(layout, state.x, state.verticalDisplacement);
+  const radius = scaledSize(C.currentRadius, layout.rs, 7);
+  if (state.params.showShadows) {
+    drawBall(
       ctx,
-      `${state.time.toFixed(1)}s`,
-      current.x + 22,
-      current.y - 24,
-      p.gold,
-      15 * scale,
-      'left',
-      700
+      pos.x,
+      layout.originY,
+      scaledSize(C.shadowRadius, layout.rs, 4),
+      p.blue,
+      1
+    );
+    drawBall(
+      ctx,
+      layout.originX,
+      pos.y,
+      scaledSize(C.shadowRadius, layout.rs, 4),
+      p.red,
+      1
     );
   }
-}
-
-function drawMetrics(
-  ctx: CanvasRenderingContext2D,
-  state: ProjectileComponentsState,
-  p: Palette,
-  scale: number
-): void {
-  rounded(ctx, METRICS_X, METRICS_Y, METRICS_W, METRICS_H);
-  ctx.fillStyle = p.panel;
-  ctx.fill();
-  ctx.strokeStyle = p.border;
-  ctx.stroke();
-  text(
-    ctx,
-    '运动读数',
-    METRICS_X + 16,
-    METRICS_Y + 24,
-    p.ink,
-    17 * scale,
-    'left',
-    700
-  );
-  const flight = `${state.time.toFixed(2)} / ${state.flightTime.toFixed(2)} s`;
-  const rows: Array<[string, string, string]> = [
-    ['飞行时长 t / T', flight, p.ink],
-    ['[水平] 位移  x = v₀t', `${state.x.toFixed(1)} m`, p.blue],
-    ['[水平] 速度  vₓ = v₀', `${state.vx.toFixed(1)} m/s`, p.blue],
-    [
-      '[竖直] 位移  y = ½gt²',
-      `${state.verticalDisplacement.toFixed(1)} m`,
-      p.red
-    ],
-    ['[竖直] 速度  vᵧ = gt', `${state.vy.toFixed(1)} m/s`, p.red]
-  ];
-  rows.forEach(([label, value, color], index) => {
-    const y = METRICS_Y + 58 + index * ROW_GAP;
-    text(ctx, label, METRICS_X + 16, y, p.ink, 13 * scale, 'left');
-    text(
-      ctx,
-      value,
-      METRICS_X + METRICS_W - 16,
-      y,
-      color,
-      14 * scale,
-      'right',
-      700
-    );
-  });
-  rounded(ctx, METRICS_X + 14, METRICS_Y + METRICS_H - 46, METRICS_W - 28, 34);
-  ctx.fillStyle = `${p.teal}18`;
-  ctx.fill();
-  text(
-    ctx,
-    '合速度  v',
-    METRICS_X + 28,
-    METRICS_Y + METRICS_H - 29,
-    p.ink,
-    14 * scale,
-    'left',
-    700
-  );
-  text(
-    ctx,
-    '√(vₓ² + vᵧ²)',
-    METRICS_X + 108,
-    METRICS_Y + METRICS_H - 29,
-    p.muted,
-    12 * scale,
-    'left',
-    600
-  );
-  text(
-    ctx,
-    `${state.speed.toFixed(1)} m/s`,
-    METRICS_X + METRICS_W - 28,
-    METRICS_Y + METRICS_H - 29,
-    p.teal,
-    16 * scale,
-    'right',
-    700
-  );
-}
-
-function drawTable(
-  ctx: CanvasRenderingContext2D,
-  state: ProjectileComponentsState,
-  p: Palette,
-  scale: number
-): void {
-  rounded(ctx, METRICS_X, TABLE_Y, METRICS_W, TABLE_H);
-  ctx.fillStyle = p.panel;
-  ctx.fill();
-  ctx.strokeStyle = p.border;
-  ctx.stroke();
-  text(
-    ctx,
-    '频闪采样记录',
-    METRICS_X + 16,
-    TABLE_Y + 24,
-    p.gold,
-    17 * scale,
-    'left',
-    700
-  );
-  const headerY = TABLE_Y + 56;
-  ctx.fillStyle = p.soft;
-  ctx.fillRect(METRICS_X + 14, headerY - 16, METRICS_W - 28, 30);
-  const columns: Array<[string, number]> = [
-    ['t (s)', 52],
-    ['x (m)', 126],
-    ['y (m)', 204],
-    ['vᵧ (m/s)', 292]
-  ];
-  columns.forEach(([label, offset]) =>
-    text(
-      ctx,
-      label,
-      METRICS_X + offset,
-      headerY,
-      p.muted,
-      12 * scale,
-      'center',
-      700
-    )
-  );
-  state.points.slice(0, 6).forEach((point, index) => {
-    const y = headerY + 32 + index * TABLE_ROW_GAP;
-    ctx.strokeStyle = p.border;
-    ctx.beginPath();
-    ctx.moveTo(METRICS_X + 14, y + 15);
-    ctx.lineTo(METRICS_X + METRICS_W - 14, y + 15);
-    ctx.stroke();
-    text(
-      ctx,
-      point.time.toFixed(2),
-      METRICS_X + 52,
-      y,
-      p.ink,
-      12 * scale,
-      'center'
-    );
-    text(
-      ctx,
-      point.x.toFixed(1),
-      METRICS_X + 126,
-      y,
-      p.ink,
-      12 * scale,
-      'center'
-    );
-    text(
-      ctx,
-      point.verticalDisplacement.toFixed(1),
-      METRICS_X + 204,
-      y,
-      p.ink,
-      12 * scale,
-      'center'
-    );
-    text(
-      ctx,
-      point.vy.toFixed(1),
-      METRICS_X + 292,
-      y,
-      p.red,
-      12 * scale,
-      'center',
-      700
-    );
-  });
-}
-
-function drawOptions(
-  ctx: CanvasRenderingContext2D,
-  state: ProjectileComponentsState,
-  p: Palette,
-  scale: number
-): void {
-  rounded(ctx, METRICS_X, OPTIONS_Y, METRICS_W, OPTIONS_H);
-  ctx.fillStyle = p.soft;
-  ctx.fill();
-  ctx.strokeStyle = p.border;
-  ctx.stroke();
-  const options: Array<[boolean, string]> = [
-    [state.params.showStrobe, '开启频闪采样'],
-    [state.params.showTrajectory, '显示抛物线预期轨迹'],
-    [state.params.showVectors, '显示速度正交分解矢量 (vₓ, vᵧ)'],
-    [state.params.showShadows, '显示分运动影子球']
-  ];
-  options.forEach(([enabled, label], index) => {
-    const y = OPTIONS_Y + 24 + index * 24;
-    ctx.fillStyle = enabled ? p.ink : p.panel;
-    ctx.strokeStyle = p.ink;
-    ctx.lineWidth = 2;
-    ctx.fillRect(METRICS_X + 18, y - 8, 16, 16);
-    ctx.strokeRect(METRICS_X + 18, y - 8, 16, 16);
-    if (enabled)
-      text(ctx, '✓', METRICS_X + 26, y, p.panel, 13 * scale, 'center', 700);
-    text(ctx, label, METRICS_X + 44, y, p.ink, 12 * scale, 'left', 600);
-  });
-}
-
-function drawPanel(
-  ctx: CanvasRenderingContext2D,
-  state: ProjectileComponentsState,
-  p: Palette,
-  scale: number
-): void {
-  ctx.fillStyle = p.panel;
-  ctx.fillRect(PANEL_X, 0, BASE_W - PANEL_X, BASE_H);
-  ctx.strokeStyle = p.border;
-  ctx.lineWidth = 1;
+  drawCorrespondence(ctx, layout, pos, p, true);
+  ctx.fillStyle = p.gold;
+  ctx.strokeStyle = p.gold;
+  ctx.lineWidth = 2.4;
   ctx.beginPath();
-  ctx.moveTo(PANEL_X, 0);
-  ctx.lineTo(PANEL_X, BASE_H);
+  ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
+  ctx.fill();
   ctx.stroke();
-  text(
-    ctx,
-    '平抛运动分解',
-    PANEL_X + PANEL_INSET,
-    TITLE_Y,
-    p.ink,
-    20 * scale,
-    'left',
-    700
-  );
-  ctx.strokeStyle = p.border;
-  ctx.beginPath();
-  ctx.moveTo(PANEL_X + PANEL_INSET, PANEL_RULE_Y);
-  ctx.lineTo(PANEL_X + PANEL_W - PANEL_INSET, PANEL_RULE_Y);
-  ctx.stroke();
-  drawMetrics(ctx, state, p, scale);
-  drawTable(ctx, state, p, scale);
-  drawOptions(ctx, state, p, scale);
 }
 
 export function createProjectileComponentsView(
@@ -676,9 +544,7 @@ export function createProjectileComponentsView(
 ) {
   const stage = createCanvasViewport({
     canvas: options.canvas ?? null,
-    sizing: { mode: 'clamped', fallbackWidth: BASE_W, fallbackHeight: BASE_H },
-    initialWidth: BASE_W,
-    initialHeight: BASE_H,
+    sizing: { mode: 'clamped', fallbackWidth: 800, fallbackHeight: 600 },
     eagerContext: true
   });
   const env = createViewEnvironment({
@@ -687,61 +553,37 @@ export function createProjectileComponentsView(
     demoHints: options.demoHints
   });
   let snapshot: ProjectileComponentsState | null = null;
+
   function draw(state: ProjectileComponentsState): void {
     const ctx = stage.ctx;
     if (!ctx) return;
     const width = stage.cssWidth;
     const height = stage.cssHeight;
-    const fit = Math.min(width / BASE_W, height / BASE_H);
-    const offsetY = (height - BASE_H * fit) / 2;
-    const scale = env.contentScale() * stage.responsiveScale;
+    const fit = Math.min(width / C.baseWidth, height / C.baseHeight);
+    const offsetX = (width - C.baseWidth * fit) / 2;
+    const offsetY = (height - C.baseHeight * fit) / 2;
+    const layout = plotLayout(
+      state,
+      C.fieldWidth,
+      C.baseHeight,
+      stage.responsiveScale
+    );
     const p = PALETTE[env.theme];
     ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = p.bg;
+    ctx.fillRect(0, 0, width, height);
     ctx.save();
-    ctx.translate(0, offsetY);
+    ctx.translate(offsetX, offsetY);
     ctx.scale(fit, fit);
-    drawGrid(ctx, state, p);
-    drawAxes(ctx, state, p, scale);
-    drawTrajectory(ctx, state, p);
-    drawStrobePoints(ctx, state, p);
-    drawVectors(ctx, state, p, scale);
-    drawCurrent(ctx, state, p, scale);
-    text(
-      ctx,
-      '运动的独立性：水平匀速，竖直自由落体',
-      FORMULA_X,
-      FORMULA_Y,
-      p.ink,
-      17 * scale,
-      'left',
-      700
-    );
-    rounded(ctx, FORMULA_X, FORMULA_Y + 24, FORMULA_W, FORMULA_H - 24);
-    ctx.fillStyle = p.soft;
-    ctx.fill();
-    text(
-      ctx,
-      'x = v₀t    vₓ = v₀',
-      FORMULA_X + 18,
-      FORMULA_Y + 48,
-      p.blue,
-      16 * scale,
-      'left',
-      700
-    );
-    text(
-      ctx,
-      'y = ½gt²    vᵧ = gt',
-      FORMULA_X + 252,
-      FORMULA_Y + 48,
-      p.red,
-      16 * scale,
-      'left',
-      700
-    );
-    drawPanel(ctx, state, p, scale);
+    drawGrid(ctx, layout, p);
+    drawAxes(ctx, layout, p);
+    drawTrajectory(ctx, state, layout, p);
+    drawStrobe(ctx, state, layout, p);
+    drawVectors(ctx, state, layout, p);
+    drawCurrent(ctx, state, layout, p);
     ctx.restore();
   }
+
   return {
     render(state: ProjectileComponentsState): void {
       snapshot = state;
