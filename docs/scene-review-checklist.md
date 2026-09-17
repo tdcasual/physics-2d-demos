@@ -8,6 +8,7 @@
 - 本地项目：`/home/tdcasual/codework/physics-2d-demos`。
 - 每项已完成本轮场景接入验证；本清单中的复选框用于后续重点复审，不代表复审已完成。
 - 复审时优先检查：动画区像素级一致性、物理模型与数值、控件交互、响应式布局、精简文案、截图证据。
+- 进度：已改进并完成 Codex/Grok Build 交叉审计 #1–36。尚未重点审计 #37–104；下一项 #37「牛顿第二定律瞬时性与连接体」。
 
 ## 场景清单
 
@@ -48,7 +49,7 @@
 |  33 | 平抛运动轨迹与速度分解                                | 力学 | [`projectile-components`](../src/scenes/projectile-components/scene.meta.ts)                       | [详情](https://app.svgzhenli.com/resource/724243b0-b597-4b30-892c-02f52445e87c) · [封面](https://img.svgzhenli.com/gallery-assets/covers/r5hjy0ygx11775457276819.png)   |  ✅  |
 |  34 | 验证机械能守恒定律实验系统                            | 力学 | [`mechanical-energy`](../src/scenes/mechanical-energy/scene.meta.ts)                               | [详情](https://app.svgzhenli.com/resource/accd8e75-e538-4cc8-a3a4-72f659012fb7) · [封面](https://img.svgzhenli.com/gallery-assets/covers/r1qrtw5ywfb1778949039759.png)  |  ☑   |
 |  35 | 变力做功与功率图象                                    | 力学 | [`variable-work`](../src/scenes/variable-work/scene.meta.ts)                                       | [详情](https://app.svgzhenli.com/resource/3e754beb-820e-46e2-aba2-e8e2f17d53b7) · [封面](https://img.svgzhenli.com/gallery-assets/covers/yssbb3t6byf1787660702811.png)  |  ☑   |
-|  36 | 改变内能的两种方式：做功和热传递                      | 热学 | [`internal-energy`](../src/scenes/internal-energy/scene.meta.ts)                                   | [详情](https://app.svgzhenli.com/resource/a6439cdd-f64d-44a8-b9d8-6d4f58084cd2) · [封面](https://img.svgzhenli.com/gallery-assets/covers/rrffimvatn1788264065323.png)   |  ☐   |
+|  36 | 改变内能的两种方式：做功和热传递                      | 热学 | [`internal-energy`](../src/scenes/internal-energy/scene.meta.ts)                                   | [详情](https://app.svgzhenli.com/resource/a6439cdd-f64d-44a8-b9d8-6d4f58084cd2) · [封面](https://img.svgzhenli.com/gallery-assets/covers/rrffimvatn1788264065323.png)   |  ☑   |
 |  37 | 牛顿第二定律瞬时性与连接体                            | 力学 | [`connected-bodies`](../src/scenes/connected-bodies/scene.meta.ts)                                 | [详情](https://app.svgzhenli.com/resource/d1966def-ff07-4040-9a92-8797d985b5c1) · [封面](https://img.svgzhenli.com/gallery-assets/covers/aukje30n3ob1787678163979.png)  |  ☐   |
 |  38 | 双绝缘绳悬挂小球在电场中的往复摆动-26广东高考物理真题 | 电磁 | [`electric-pendulum`](../src/scenes/electric-pendulum/scene.meta.ts)                               | [详情](https://app.svgzhenli.com/resource/90e270b2-bbed-4d9c-967a-e6f4d8525f4a) · [封面](https://img.svgzhenli.com/gallery-assets/covers/pqk9l911k5h1787049257765.png)  |  ☐   |
 |  39 | 晾衣杆模型                                            | 力学 | [`clothes-rod`](../src/scenes/clothes-rod/scene.meta.ts)                                           | [详情](https://app.svgzhenli.com/resource/12ca103e-6862-4298-9b57-8b3328f95aa3) · [封面](https://img.svgzhenli.com/gallery-assets/covers/px0kt1tunbs1788340634002.png)  |  ☐   |
@@ -433,6 +434,15 @@
 - 交互与布局验证：桌面/移动 11:48 fresh 截图分区干净，overflowX=0，无 console 错误。
 - 工程验证：首轮 pre-commit 因未使用声明 `cartW`、`timeToXForTest` 失败；删除死代码后 9 个 variable-work TS 文件 ESLint、Prettier 通过。专项 21/21（sim 10 + view 6 + chrome 5）与 `git diff --check` 通过。未跑全量测试/全量门禁。原课件不可像素比对，未声称像素级复刻。
 - 证据：`/tmp/variable-work-audit/report.json`；截图 `desktop-idle.png`、`desktop-extrema.png`、`desktop-url.png`、`mobile-graph.png`、`mobile-data.png`（11:48 fresh）；远程报告 `/home/tdcasual/Downloads/物理演示/高中物理全量审计/report/items/3e754beb-820e-46e2-aba2-e8e2f17d53b7.md` · [原始详情](https://app.svgzhenli.com/resource/3e754beb-820e-46e2-aba2-e8e2f17d53b7) · [原始封面](https://img.svgzhenli.com/gallery-assets/covers/yssbb3t6byf1787660702811.png)
+
+### 36. 改变内能的两种方式：做功和热传递 (`internal-energy`)
+
+- 状态：✅ Codex / Grok Build 交叉审计通过（2026-09-17）。
+- 物理关系：理想气体可逆绝热近似；ΔU=W+Q，W 为外界对系统做功（正）、Q 为系统吸热（正）；压缩 W>0、膨胀 W<0；湿空气且 T<露点才凝结；180°C 仅为封面示意；热传递 Teq 按热容加权，Q左+Q右=0。
+- 分区与文案：动画区只保留气体/两块/粒子/热流；温度图在独立图表区；读数在预留右数据带。演示态只显示三个模式选择，参数留普通控制区。文案精简。
+- 布局特例：process 默认 `docked-bottom` 会与本场景 `graph-bottom` 争空间；已在不盖住动画的右侧留白内用 overlay 数据带解决。手机图表/控制/数据为独立 tab。
+- 工程验证：专项 33/33、ESLint、Prettier、`git diff --check` 通过。未运行全量测试/build/`verify:scene`。
+- 证据：`/tmp/internal-energy-audit/report.json`、`presentation-report.json`；截图 `/tmp/internal-energy-audit/presentation-desktop-compress.png`、`presentation-desktop-expand.png`、`presentation-desktop-heat-swapped.png`、`presentation-mobile-heat-data.png`。原交互页未能进行像素级对照，不宣称像素级一致。
 
 ## 复审记录模板
 
