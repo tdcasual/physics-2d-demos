@@ -22,3 +22,23 @@ test('homepage renders hero, experiments, and theme toggle', async ({
   await page.getByRole('button', { name: '切换到暗色模式' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 });
+
+test('experiment cards become visible after jumping to the directory', async ({
+  page
+}) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/');
+  await waitForHomepageReady(page);
+  await page.locator('#experiments').waitFor();
+
+  await page.getByRole('link', { name: '浏览全部实验' }).click();
+
+  await expect(page.locator('#experiments .section-header')).toHaveCSS(
+    'opacity',
+    '1'
+  );
+  await expect(page.locator('#experiments .experiment-card').first()).toHaveCSS(
+    'opacity',
+    '1'
+  );
+});

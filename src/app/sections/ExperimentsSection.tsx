@@ -13,7 +13,9 @@ import { useScrollReveal } from '../hooks';
 type FilterCategory = 'all' | 'mechanics' | 'electromagnetism' | 'method';
 
 export const ExperimentsSection: React.FC = () => {
-  const { ref: sectionRef, isVisible } = useScrollReveal({ threshold: 0.1 });
+  // The directory height grows with the catalog; a 10% threshold can exceed
+  // any viewport and leave all cards permanently hidden.
+  const { ref: sectionRef, isVisible } = useScrollReveal({ threshold: 0 });
   const [activeFilter, setActiveFilter] = useState<FilterCategory>('all');
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
