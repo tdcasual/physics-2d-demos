@@ -22,14 +22,18 @@ function writeDistFile(
 }
 
 function makeDist(options: {
-  assets: Record<string, number>;
+  assets: Record<string, number | string>;
   htmlEntries: Record<string, string>;
 }): string {
   const root = mkdtempSync(join(tmpdir(), 'bundle-budget-'));
   tempDirs.push(root);
 
   for (const [relativePath, bytes] of Object.entries(options.assets)) {
-    writeDistFile(root, relativePath, 'x'.repeat(bytes));
+    writeDistFile(
+      root,
+      relativePath,
+      typeof bytes === 'number' ? 'x'.repeat(bytes) : bytes
+    );
   }
 
   for (const [relativePath, html] of Object.entries(options.htmlEntries)) {
@@ -78,6 +82,7 @@ describe('bundle budget check', () => {
   it('passes when each HTML entry fits its own initial payload budget even if total emitted JS is large', () => {
     const distDir = makeDist({
       assets: {
+        'assets/experiments-section.js': '选择实验开始探索 experiment-card',
         'assets/vendor-a.js': 80 * 1024,
         'assets/shared-a.js': 40 * 1024,
         'assets/home-a.js': 20 * 1024,
@@ -136,6 +141,7 @@ describe('bundle budget check', () => {
   it('reports every violated entry and shared budget in a stable human-readable format', () => {
     const distDir = makeDist({
       assets: {
+        'assets/experiments-section.js': '选择实验开始探索 experiment-card',
         'assets/vendor-a.js': 101 * 1024,
         'assets/shared-a.js': 91 * 1024,
         'assets/home-a.js': 20 * 1024,
@@ -179,6 +185,14 @@ describe('bundle budget check', () => {
   });
 
   it('keeps default budgets aligned with the current multi-entry build envelope', () => {
+    const distDir = makeDist({
+      assets: {
+        'assets/experiments-section.js': '选择实验开始探索 experiment-card'
+      },
+      htmlEntries: {}
+    });
+
+    const report = analyzeBundleBudget(distDir);
     expect(defaultBundleBudget).toEqual({
       maxHomeEntryJsKb: 190,
       maxHomeEntryCssKb: 25,
@@ -187,5 +201,6 @@ describe('bundle budget check', () => {
       maxVendorJsKb: 160,
       maxSharedJsKb: 150
     });
+    expect(report.ok).toBe(true);
   });
 });

@@ -63,11 +63,11 @@ src/
       selector.ts              # 布局选择器（策略插件化）
       container.ts             # 场景容器（生命周期 + 布局切换）
       auto-register.ts         # 统一注册所有内置布局
-      capabilities/            # 可装配布局能力（读数、控制条、主题、模式等）
+      capabilities/            # 可装配布局能力（读数、控制条、主题、模式、data-workspace 等）
       layouts/                 # 具体布局实现
     main.tsx                   # React 导航首页入口
   catalog/
-    scene-registry.ts          # 场景元数据注册表（单一数据源）
+    scene-registry.ts          # 场景元数据注册表（import.meta.glob 自动发现，单一数据源）
   core/
     fixed-step.ts              # 固定步长步进器
     canvas-sizing.ts           # 高 DPI + 响应式画布缩放
@@ -151,6 +151,7 @@ docs/
 │  SceneContainer + ILayout               │
 │  split-right / mobile-stack / …         │
 │  Capability：transport / readout / 主题  │
+│  可选 data-workspace（独立数据处理工作区） │
 │  场景不 import 布局实现                  │
 └─────────────────────────────────────────┘
 ```
@@ -172,7 +173,7 @@ bootScenePage({
 });
 ```
 
-布局注册、容器创建、场景挂载、主题切换、响应式适配全部由 `bootScenePage()` 自动处理。场景代码**不感知**具体布局类型。
+布局注册、容器创建、场景挂载、主题切换、响应式适配全部由 `bootScenePage()` 自动处理。数据处理工作区通过 `layoutConfig.dataWorkspace` opt-in，未设置时不会挂载入口或改变默认 DOM。场景代码**不感知**具体布局类型。
 
 ### 布局自动选择
 
@@ -203,7 +204,7 @@ bootScenePage({
 
 - `src/scenes/**` — 除 `page.ts` 与 legacy `controls.ts` 外，**不允许**导入 `src/app/` 与 `src/ui/`
 - `src/core/**` — 底层通用能力，**不允许**导入 `src/app/` 或 `src/scenes/**/page*`
-- 场景导航数据以 `src/catalog/scene-registry.ts` 作为**单一数据源**
+- 场景导航数据以 `src/catalog/scene-registry.ts` 作为**单一数据源**（`import.meta.glob` 自动发现；生产构建由 Rollup 聚合为 `scene-registry` chunk）
 
 新增场景时如果触发这些限制，优先通过分层拆分模块解决，而不是放宽规则。
 
@@ -214,7 +215,7 @@ bootScenePage({
 1. 新建 `src/scenes/<scene-id>/`
 2. 拆分 `scene.meta.ts` / `scene.sim.ts` / `scene.view.ts` / `scene.entry.ts` / `controls-schema.ts` / `page.ts`（共 6 个 TS 文件）
 3. 场景页 HTML 入口**无需创建**：由 `scripts/vite-plugin-scene-pages.ts` 从 `scene.meta.ts` 自动虚拟生成；**禁止**在 `src/pages/` 手写场景 HTML（`pnpm check:scenes` 会拒绝）
-4. 无需手动注册；`src/catalog/scene-registry.ts` 通过 `import.meta.glob` 自动发现
+4. 无需手动注册；`src/catalog/scene-registry.ts` 通过 `import.meta.glob` 自动发现。需要数据处理能力的场景在布局配置中显式设置 `dataWorkspace`，能力运行时按需加载
 5. 补齐测试：
    - 至少 1 个 unit test（数值或状态）
    - 至少 1 个 E2E test（页面截图或控件交互）

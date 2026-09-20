@@ -34,10 +34,11 @@ catalog/       — 场景注册表（自动发现）
                — 仅依赖 platform/
 app/           — 布局系统、场景引导器、首页
                — 可依赖 platform/core/ui
+               — data-workspace 是可选布局能力；仅 opt-in 场景挂载数据处理工作区
 ui/            — 共享组件库（DOM widgets）
                — 可依赖 platform/core
 scenes/        — 120 个物理场景（每个: meta/sim/view/entry/controls/page）
-               — 场景由 catalog/scene-registry.ts 自动发现（import.meta.glob）
+               — 场景由 catalog/scene-registry.ts 通过 import.meta.glob 自动发现；dev 时由 Vite 插件聚合注册表
                — 非 page.ts 不依赖 app/ui；可依赖 instruments
 instruments/   — 3 个可按需加载的仪器组件（meta/sim/entry/controls-schema）
                — 可被 scenes 依赖；不依赖 app/ui/scenes
