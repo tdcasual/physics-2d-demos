@@ -248,7 +248,7 @@ export function stripLayout(
   width: number,
   height: number,
   scale: number,
-  cmMax = C.rulerCentimetres
+  cmMax: number = C.rulerCentimetres
 ): StripLayout {
   const overlayReserve = width / Math.max(height, 1) > 1.55 ? width * 0.3 : 0;
   const padX = Math.max(14 * scale, width * 0.04);
