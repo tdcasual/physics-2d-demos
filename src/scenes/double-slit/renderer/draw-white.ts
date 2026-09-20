@@ -21,6 +21,45 @@ export function createWhiteFringeCache(): WhiteFringeCache {
   return { cvs: null, ctx: null, key: '' };
 }
 
+export function computeWhiteFringeRgb(
+  wavelengths: number[],
+  slitDistance: number,
+  L: number,
+  halfWidth: number
+): Uint8Array {
+  const len = halfWidth * 2 + 1;
+  const rgbBuf = new Float32Array(len * 3);
+
+  for (const wl of wavelengths) {
+    const [wr, wg, wb] = lambdaToRgb(wl);
+    const fringeSpacingPx = computeFringeSpacingPx(wl, slitDistance, L);
+    const visualFringePx = fringeSpacingPx * 0.7;
+    const envelopeSpacingPx = visualFringePx * 8;
+    for (let x = -halfWidth; x <= halfWidth; x++) {
+      const phase = (Math.PI * x) / visualFringePx;
+      const cos2 = Math.cos(phase) * Math.cos(phase);
+      const beta = (Math.PI * x) / envelopeSpacingPx;
+      const sinc = Math.abs(beta) < 1e-6 ? 1 : Math.sin(beta) / beta;
+      const intensity = cos2 * sinc * sinc;
+      const off = (x + halfWidth) * 3;
+      rgbBuf[off] += (wr * intensity) / 255;
+      rgbBuf[off + 1] += (wg * intensity) / 255;
+      rgbBuf[off + 2] += (wb * intensity) / 255;
+    }
+  }
+
+  let maxI = 0;
+  for (let i = 0; i < len * 3; i += 3) {
+    maxI = Math.max(maxI, rgbBuf[i], rgbBuf[i + 1], rgbBuf[i + 2]);
+  }
+  const norm = maxI > 0 ? 1 / maxI : 0;
+  const rgb = new Uint8Array(len * 3);
+  for (let i = 0; i < rgb.length; i++) {
+    rgb[i] = Math.min(255, Math.round(rgbBuf[i] * norm * 255));
+  }
+  return rgb;
+}
+
 export function drawWhiteInterferenceOverlay(
   c: CanvasRenderingContext2D,
   startX: number,

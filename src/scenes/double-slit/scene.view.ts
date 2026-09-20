@@ -189,7 +189,8 @@ export function createDoubleSlitView(
         isDark,
         L,
         env.contentScale(),
-        hideLabels
+        hideLabels,
+        white && !next.params.filterColor ? { wavelengths } : null
       );
     } else {
       // 步骤 1–5：完整光路 + 仪器
