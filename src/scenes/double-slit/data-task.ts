@@ -207,21 +207,14 @@ export function doubleSlitKnowns(
 ): DataWorkspaceKnown[] {
   const dMm = slitDistanceMm(params.slitDistance);
   const Lcm = screenDistanceM(params) * 100;
-  const instrument =
-    params.activeInstrument === 'micrometer'
-      ? '高精度干涉测微仪'
-      : '干涉读数游标卡尺';
   return [
     { key: 'd', label: '双缝间距 d', value: `${dMm.toFixed(2)} mm` },
-    { key: 'L', label: '缝屏距 L', value: `${Lcm.toFixed(0)} cm` },
-    { key: 'instrument', label: '当前仪器', value: instrument }
+    { key: 'L', label: '缝屏距 L', value: `${Lcm.toFixed(0)} cm` }
   ];
 }
 
-export function doubleSlitHint(params: DoubleSlitParams): string {
-  const instrument =
-    params.activeInstrument === 'micrometer' ? '测微仪' : '游标卡尺';
-  return `对准亮纹后读 x1、x2；n 为两端间隔数。单位 mm，与${instrument}一致。`;
+export function doubleSlitHint(_params: DoubleSlitParams): string {
+  return '单位 mm，与仪器一致。';
 }
 
 function rangeFeedback(

@@ -19,6 +19,41 @@ import {
 } from './data-workspace-generic.fixture';
 
 describe('generic data-workspace fixture', () => {
+  it('renders knowns as chips, hides empty hints, and marks the result field', () => {
+    const { host } = createKinematicsHost();
+    host.getHint = () => '';
+    const panel = createDataWorkspacePanel({
+      host,
+      onExit() {},
+      onChange() {}
+    });
+    const knowns = panel.root.querySelector('.data-workspace-knowns');
+    const chips = knowns?.querySelectorAll('.data-workspace-known-chip');
+    const hint = panel.root.querySelector(
+      '.data-workspace-hint'
+    ) as HTMLElement;
+    const resultField = panel.root.querySelector(
+      '.data-workspace-result-field'
+    );
+
+    expect(chips).toHaveLength(1);
+    expect(chips?.[0]?.textContent).toBe('g 9.8 m/s²');
+    expect(
+      chips?.[0]?.querySelector('.data-workspace-known-label')
+    ).toBeTruthy();
+    expect(
+      chips?.[0]?.querySelector('.data-workspace-known-value')
+    ).toBeTruthy();
+    expect(hint.hidden).toBe(true);
+    expect(resultField?.querySelector('[data-field="meanSpeed"]')).toBeTruthy();
+
+    host.getEligibility = () => ({ ok: false, reason: '尚未就绪' });
+    panel.update();
+    expect(hint.hidden).toBe(false);
+    expect(hint.textContent).toBe('尚未就绪');
+    panel.dispose();
+  });
+
   it('renders unrelated field ids and stages meanSpeed', () => {
     const { host } = createKinematicsHost();
     const panel = createDataWorkspacePanel({

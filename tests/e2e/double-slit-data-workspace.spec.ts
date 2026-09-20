@@ -495,7 +495,7 @@ test.describe('double-slit data workspace', () => {
     expect(pageText).not.toMatch(/Δx\s*≈/);
     expect(pageText).not.toMatch(/532\s*nm/);
     expect(pageText).not.toMatch(/游标卡尺读数/);
-    expect(pageText).toMatch(/双缝间距 d 0\.20 mm/);
+    expect(pageText).toMatch(/双缝间距 d\s+0\.20 mm/);
 
     await page.locator('.teaching-stage-canvas').screenshot({
       path: join(SHOT_DIR, 'desktop-stage-canvas.png')

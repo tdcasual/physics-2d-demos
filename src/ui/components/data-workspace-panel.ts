@@ -73,7 +73,7 @@ export function createDataWorkspacePanel(options: {
   });
   header.append(title, exitBtn);
 
-  const knownsEl = document.createElement('p');
+  const knownsEl = document.createElement('div');
   knownsEl.className = 'data-workspace-knowns';
   const hintEl = document.createElement('p');
   hintEl.className = 'data-workspace-hint';
@@ -341,7 +341,7 @@ export function createDataWorkspacePanel(options: {
   >();
   let tableSignature = '';
   let summaryBuilt = false;
-  let contextEl: HTMLParagraphElement | null = null;
+  let contextEl: HTMLDivElement | null = null;
 
   function setFieldEnabled(
     input: HTMLInputElement | null,
@@ -409,7 +409,7 @@ export function createDataWorkspacePanel(options: {
   function ensureSummary(specNow: DataWorkspaceSpec): void {
     if (summaryBuilt) return;
     summary.replaceChildren();
-    contextEl = document.createElement('p');
+    contextEl = document.createElement('div');
     contextEl.className =
       'data-workspace-knowns data-workspace-summary-context';
     contextEl.hidden = true;
@@ -417,7 +417,10 @@ export function createDataWorkspacePanel(options: {
 
     for (const def of specNow.summaryFields) {
       const row = document.createElement('div');
-      row.className = 'data-workspace-summary-row';
+      row.className =
+        def.id === specNow.result?.field
+          ? 'data-workspace-summary-row data-workspace-result-field'
+          : 'data-workspace-summary-row';
       const lab = document.createElement('label');
       lab.textContent = headerLabel(def);
       const input = document.createElement('input');
@@ -466,9 +469,7 @@ export function createDataWorkspacePanel(options: {
     );
     if (contextEl) {
       contextEl.hidden = contextItems.length === 0;
-      contextEl.textContent = contextItems
-        .map((item) => `${item.label} ${item.value}`)
-        .join('　');
+      renderKnownsInto(contextEl, contextItems);
     }
 
     for (const def of specNow.summaryFields) {
@@ -528,17 +529,38 @@ export function createDataWorkspacePanel(options: {
     addBtn.title = atMax ? `最多 ${maxRows} 组` : '添加一组测量';
   }
 
+  function renderKnownsInto(
+    container: HTMLElement,
+    knowns: readonly DataWorkspaceKnown[]
+  ): void {
+    const chips = knowns.map((known) => {
+      const chip = document.createElement('span');
+      chip.className = 'data-workspace-known-chip';
+      const label = document.createElement('span');
+      label.className = 'data-workspace-known-label';
+      label.textContent = `${known.label} `;
+      const value = document.createElement('strong');
+      value.className = 'data-workspace-known-value';
+      value.textContent = known.value;
+      chip.append(label, value);
+      return chip;
+    });
+    container.replaceChildren(...chips);
+  }
+
+  function renderKnowns(knowns: readonly DataWorkspaceKnown[]): void {
+    renderKnownsInto(knownsEl, knowns);
+  }
+
   function update(): void {
     const session = options.host.getSession();
     const specNow = options.host.getSpec();
     const eligibility: DataWorkspaceEligibility = options.host.getEligibility();
-    knownsEl.textContent = options.host
-      .getKnowns()
-      .map((item) => `${item.label} ${item.value}`)
-      .join('　');
-    hintEl.textContent = eligibility.ok
-      ? options.host.getHint()
-      : eligibility.reason;
+    const knowns = options.host.getKnowns();
+    const hint = eligibility.ok ? options.host.getHint() : eligibility.reason;
+    renderKnowns(knowns);
+    hintEl.textContent = hint;
+    hintEl.hidden = hint === '';
     syncAddButton(session, specNow);
     if (tableSignature !== rowsSignature(session)) {
       renderTable(session, specNow);
@@ -563,7 +585,7 @@ export function createDataWorkspacePanel(options: {
         }
       });
     }
-    syncSummary(session, specNow, options.host.getKnowns());
+    syncSummary(session, specNow, knowns);
     renderResult(session, specNow);
   }
 

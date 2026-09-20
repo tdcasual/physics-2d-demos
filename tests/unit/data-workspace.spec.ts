@@ -46,6 +46,8 @@ import {
   MICROMETER_READING_STRATEGY,
   doubleSlitDataWorkspaceSpec,
   doubleSlitEligibility,
+  doubleSlitHint,
+  doubleSlitKnowns,
   evaluateDoubleSlitField,
   expectedQuantities,
   slitDistanceMm
@@ -90,6 +92,26 @@ const SNAPSHOT: MeasurementSnapshot = withDoubleSlitFringeOrder(
 );
 
 describe('chartAnalysis opt-in / opt-out', () => {
+  it('exposes only d and L as knowns and keeps the concise unit hint', () => {
+    const params = {
+      step: 6,
+      lambda: 532,
+      slitDistance: 20,
+      isPlaying: false,
+      activeInstrument: 'caliper' as const,
+      showInstrumentReadout: true,
+      micrometerOffset: 0,
+      stripeOffset: 0,
+      L: 0.7,
+      lightMode: 'mono' as const
+    };
+    expect(doubleSlitKnowns(params).map((known) => known.key)).toEqual([
+      'd',
+      'L'
+    ]);
+    expect(doubleSlitHint(params)).toBe('单位 mm，与仪器一致。');
+  });
+
   it('hides chart analysis when the spec does not enable it', () => {
     expect(doubleSlitDataWorkspaceSpec.chartAnalysis).toBe(false);
     expect(doubleSlitDataWorkspaceSpec.enabledSteps).not.toContain(
