@@ -266,6 +266,17 @@ export function analyzeBundleBudget(
   const sharedJsKb = computeSharedJsKb(entries, assetMap);
   const vendorJsKb = computeVendorJsKb(assetMap, entries);
   const violations: BundleBudgetViolation[] = [];
+  const perSceneMetaAssets = assets.filter(
+    (asset) =>
+      asset.type === 'js' &&
+      /^assets\/scene-meta-.*\.js$/.test(asset.relativePath)
+  );
+
+  if (perSceneMetaAssets.length > 0) {
+    violations.push({
+      message: `Found ${perSceneMetaAssets.length} per-scene metadata chunks in dist/assets; expected 0.`
+    });
+  }
 
   for (const entry of entries) {
     const override = ENTRY_BUDGET_OVERRIDES[entry.htmlPath];

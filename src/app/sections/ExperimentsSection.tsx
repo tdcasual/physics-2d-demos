@@ -2,7 +2,7 @@
  * 实验展示区域
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   sceneRegistry,
   categoryInfo,
@@ -17,10 +17,13 @@ export const ExperimentsSection: React.FC = () => {
   // any viewport and leave all cards permanently hidden.
   const { ref: sectionRef, isVisible } = useScrollReveal({ threshold: 0 });
   const [activeFilter, setActiveFilter] = useState<FilterCategory>('all');
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
-  const filteredScenes = sceneRegistry.filter(
-    (scene) => activeFilter === 'all' || scene.category === activeFilter
+  const filteredScenes = useMemo(
+    () =>
+      sceneRegistry.filter(
+        (scene) => activeFilter === 'all' || scene.category === activeFilter
+      ),
+    [activeFilter]
   );
 
   const filters: { id: FilterCategory; label: string }[] = [
@@ -66,10 +69,9 @@ export const ExperimentsSection: React.FC = () => {
               <a
                 key={scene.id}
                 href={`/src/pages/${scene.id}.html`}
-                className={`experiment-card ${isVisible ? 'visible' : ''} ${hoveredId === scene.id ? 'hovered' : ''}`}
+                className={`experiment-card ${isVisible ? 'visible' : ''}`}
                 style={{ transitionDelay: `${Math.min(index * 0.05, 0.5)}s` }}
                 onMouseEnter={() => {
-                  setHoveredId(scene.id);
                   // 预加载场景页面（hover 时提前拉取，点击后秒开）
                   const pageUrl = `/src/pages/${scene.id}.html`;
                   if (
@@ -83,7 +85,6 @@ export const ExperimentsSection: React.FC = () => {
                     document.head.appendChild(link);
                   }
                 }}
-                onMouseLeave={() => setHoveredId(null)}
               >
                 <div className="card-meta">
                   <span className="card-number">

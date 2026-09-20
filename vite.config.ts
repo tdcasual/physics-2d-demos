@@ -1,6 +1,7 @@
 import { resolve } from 'node:path';
-import { readdirSync } from 'node:fs';
-import { defineConfig } from 'vite';
+import { readFileSync, readdirSync } from 'node:fs';
+import { defineConfig, type Plugin } from 'vite';
+import { build as buildWithEsbuild } from 'esbuild';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { analyzer } from 'vite-bundle-analyzer';
@@ -31,10 +32,100 @@ function discoverPageEntries(pagesDir: string): Record<string, string> {
   return entries;
 }
 
+function isolateCatalogSceneDependencies(): Plugin {
+  return {
+    name: 'isolate-catalog-scene-dependencies',
+    enforce: 'pre',
+    async resolveId(source, importer) {
+      if (
+        !importer?.endsWith('/scene.meta.ts?catalog') ||
+        source !== './scene.sim'
+      ) {
+        return null;
+      }
+
+      const resolved = await this.resolve(
+        source,
+        importer.slice(0, -'?catalog'.length),
+        { skipSelf: true }
+      );
+      return resolved ? `${resolved.id}?catalog` : null;
+    }
+  };
+}
+
+function bundleDevSceneRegistry(): Plugin {
+  const registryPath = resolve(__dirname, 'src/catalog/scene-registry.ts');
+  const scenesDir = resolve(__dirname, 'src/scenes');
+
+  return {
+    name: 'bundle-dev-scene-registry',
+    apply: 'serve',
+    enforce: 'pre',
+    async load(id) {
+      if (process.env.VITEST || id.split('?')[0] !== registryPath) {
+        return null;
+      }
+
+      const sceneIds = readdirSync(scenesDir, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name)
+        .sort((a, b) => a.localeCompare(b));
+      const imports = sceneIds.map(
+        (sceneId, index) =>
+          `import * as sceneMeta${index} from ${JSON.stringify(
+            resolve(scenesDir, sceneId, 'scene.meta.ts')
+          )};`
+      );
+      const moduleEntries = sceneIds.map(
+        (sceneId, index) =>
+          `${JSON.stringify(`/src/scenes/${sceneId}/scene.meta.ts`)}: sceneMeta${index}`
+      );
+      const source = readFileSync(registryPath, 'utf8');
+      const globStart = source.indexOf('const modules = import.meta.glob');
+      const globEnd = source.indexOf(';\n\nfunction extractMeta', globStart);
+
+      if (globStart < 0 || globEnd < 0) {
+        throw new Error('Unable to locate the scene registry glob.');
+      }
+
+      const bundledSource = [
+        ...imports,
+        source.slice(0, globStart),
+        `const modules = {${moduleEntries.join(',')}} as Record<string, Record<string, unknown>>`,
+        source.slice(globEnd + 1)
+      ].join('\n');
+      const result = await buildWithEsbuild({
+        absWorkingDir: __dirname,
+        bundle: true,
+        format: 'esm',
+        metafile: true,
+        platform: 'browser',
+        stdin: {
+          contents: bundledSource,
+          loader: 'ts',
+          resolveDir: __dirname,
+          sourcefile: registryPath
+        },
+        target: 'es2022',
+        write: false
+      });
+
+      for (const input of Object.keys(result.metafile.inputs)) {
+        this.addWatchFile(resolve(__dirname, input));
+      }
+
+      return result.outputFiles[0]?.text ?? null;
+    }
+  };
+}
+
 export default defineConfig({
   plugins: [
     themeNoFlash(),
     scenePages(__dirname),
+    isolateCatalogSceneDependencies(),
+    bundleDevSceneRegistry(),
     tailwindcss(),
     react(),
     process.env.ANALYZE === 'true' &&
@@ -160,14 +251,12 @@ export default defineConfig({
               return `instrument-${instrumentId}`;
             }
           }
-          // Scene metadata: one chunk per scene so scene pages only preload
-          // their own meta. The home page still gets the full set through the
-          // scene-registry aggregation chunk.
-          const sceneMetaMatch = id.match(
-            /\/src\/scenes\/([^/]+)\/scene\.meta\./
-          );
-          if (sceneMetaMatch) {
-            return `scene-meta-${sceneMetaMatch[1]}`;
+          // The catalog query creates build-only module instances so scene
+          // pages can keep their own metadata without preloading this chunk.
+          if (
+            /\/src\/scenes\/[^/]+\/scene\.(?:meta|sim)\.ts\?catalog$/.test(id)
+          ) {
+            return 'scene-registry';
           }
           // Scene bootstrapper shared across entries
           if (

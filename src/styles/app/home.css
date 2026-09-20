@@ -567,7 +567,7 @@
   transition: border-color var(--transition-fast);
 }
 
-.experiment-card.hovered .card-border {
+.experiment-card:hover .card-border {
   border-color: var(--text-primary);
 }
 

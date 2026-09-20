@@ -30,7 +30,8 @@ const SUBJECT_TO_CATEGORY: Record<string, { category: string; label: string }> =
 
 const modules = import.meta.glob('/src/scenes/*/scene.meta.ts', {
   eager: true,
-  import: '*'
+  import: '*',
+  query: '?catalog'
 }) as Record<string, Record<string, unknown>>;
 
 function extractMeta(mod: Record<string, unknown>): SceneMeta | null {
