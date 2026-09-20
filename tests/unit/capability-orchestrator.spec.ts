@@ -35,7 +35,8 @@ vi.mock('../../src/app/layouts/capabilities', () => {
     'sidebar-toggle': 'layout',
     resizer: 'layout',
     'debug-overlay': 'container',
-    'layout-switch': 'layout'
+    'layout-switch': 'layout',
+    'data-workspace': 'layout'
   };
 
   const factories: Record<CapabilityId, FactoryFn> = {} as Record<

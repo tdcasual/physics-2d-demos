@@ -14,6 +14,7 @@ import type {
 } from '../../types';
 import { enterLayout, exitLayout } from '../../_shared/layout-transition';
 import { shouldEnableDebugOverlay } from '../../capabilities/debug-overlay';
+import { dataWorkspaceDeclarations } from '../../capabilities/data-workspace-declarations';
 import { makeDraggable, makeResizable } from '../../../../ui/utils/draggable';
 
 export interface LabStageConfig extends LayoutConfig {
@@ -60,6 +61,7 @@ export class LabStageLayout implements ILayout {
               config: { mountSlot: 'animation' as const }
             }
           ]),
+      ...dataWorkspaceDeclarations(config),
       { id: 'theme-toggle' },
       { id: 'mode-toggle' },
       { id: 'layout-switch' },

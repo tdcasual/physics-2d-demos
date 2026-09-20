@@ -39,6 +39,7 @@ function createViewState(overrides: Partial<MicrometerViewState> = {}) {
     simLastCrosshairAngle: 0,
     sysX: 0,
     sysY: 0,
+    systemScale: 1.5,
     ...overrides
   };
   return state;
@@ -527,6 +528,23 @@ describe('micrometer-eyepiece renderer', () => {
       unbind();
     });
 
+    it('does not case-drag on a narrow host so the viewport can pan', () => {
+      const { viewState, elements, unbind } = setup();
+      const root = document.createElement('div');
+      root.className = 'micrometer-root is-narrow';
+      root.appendChild(elements.caseEl);
+      document.body.appendChild(root);
+      elements.caseEl.dispatchEvent(
+        new MouseEvent('mousedown', { bubbles: true, clientX: 10, clientY: 10 })
+      );
+      document.dispatchEvent(
+        new MouseEvent('mousemove', { bubbles: true, clientX: 40, clientY: 0 })
+      );
+      expect(viewState.sysX).toBe(0);
+      expect(viewState.sysY).toBe(0);
+      unbind();
+    });
+
     it('case arrow keys pan by 30px per press', () => {
       const { viewState, elements, unbind } = setup();
       elements.caseEl.dispatchEvent(
@@ -559,9 +577,88 @@ describe('micrometer-eyepiece renderer', () => {
       expect(
         wrapper.shadowRoot!.getElementById('thimble-group')
       ).not.toBeNull();
+      expect((wrapper as HTMLElement).dataset.instrumentScroll).toBe('true');
       view.dispose();
       expect(canvas.style.display).toBe('');
       expect(wrapper.parentElement).toBeNull();
+    });
+
+    it('narrow resize left-aligns the system and enables a horizontal viewport', () => {
+      const { parent, canvas } = createHost();
+      parent.getBoundingClientRect = () =>
+        ({
+          left: 0,
+          right: 360,
+          top: 0,
+          bottom: 180,
+          width: 360,
+          height: 180,
+          x: 0,
+          y: 0,
+          toJSON() {
+            return {};
+          }
+        }) as DOMRect;
+      Object.defineProperty(window, 'innerWidth', {
+        configurable: true,
+        value: 375
+      });
+      const view = createMicrometerEyepieceView({ canvas, theme: 'dark' });
+      view.resize();
+      const wrapper = parent.querySelector(
+        '[data-instrument-scroll="true"]'
+      ) as HTMLElement;
+      const root = wrapper.shadowRoot!.querySelector(
+        '.micrometer-root'
+      ) as HTMLElement;
+      const system = wrapper.shadowRoot!.querySelector(
+        '.micrometer-system'
+      ) as HTMLElement;
+      expect(root.classList.contains('is-narrow')).toBe(true);
+      expect(wrapper.style.overflowX).toMatch(/auto|scroll/);
+      expect(system.style.transform).toContain('translate(0px, 0px)');
+      expect(system.style.transform).toContain('scale(1)');
+      expect(
+        wrapper.shadowRoot!.querySelector('[data-instrument-pan="true"]')
+      ).not.toBeNull();
+      expect(root.style.transform).toMatch(/scale\(/);
+      view.dispose();
+    });
+
+    it('tablet-narrow resize does not collapse when the host height is a sliver', () => {
+      const { parent, canvas } = createHost();
+      parent.getBoundingClientRect = () =>
+        ({
+          left: 0,
+          right: 639,
+          top: 0,
+          bottom: 24,
+          width: 639,
+          height: 24,
+          x: 0,
+          y: 0,
+          toJSON() {
+            return {};
+          }
+        }) as DOMRect;
+      Object.defineProperty(window, 'innerWidth', {
+        configurable: true,
+        value: 639
+      });
+      const view = createMicrometerEyepieceView({ canvas, theme: 'dark' });
+      view.resize();
+      const wrapper = parent.querySelector(
+        '[data-instrument-scroll="true"]'
+      ) as HTMLElement;
+      const root = wrapper.shadowRoot!.querySelector(
+        '.micrometer-root'
+      ) as HTMLElement;
+      expect(root.classList.contains('is-narrow')).toBe(true);
+      const match = /scale\(([^)]+)\)/.exec(root.style.transform);
+      expect(match).toBeTruthy();
+      expect(Number(match![1])).toBeGreaterThanOrEqual(0.3);
+      expect(Number(match![1])).toBeCloseTo(1, 5);
+      view.dispose();
     });
 
     it('throws when canvas has no parent element', () => {

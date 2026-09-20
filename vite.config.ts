@@ -189,8 +189,25 @@ export default defineConfig({
   },
   build: {
     chunkSizeWarningLimit: 200,
-    // 目标浏览器均支持 modulepreload（Safari 17+），省掉 polyfill 请求
-    modulePreload: { polyfill: false },
+    // 目标浏览器均支持 modulepreload（Safari 17+），省掉 polyfill 请求。
+    // 双缝仪器仅步骤 6 动态 import：不要把仪器 chunk 算进首包。
+    modulePreload: {
+      polyfill: false,
+      resolveDependencies(filename, deps) {
+        // Optional data-workspace runtime is dynamically imported from the
+        // shared layouts chunk. Do not modulepreload it on non-opt-in pages.
+        const withoutDataWorkspace = deps.filter(
+          (dep) => !dep.includes('data-workspace')
+        );
+        if (!filename.includes('double-slit')) return withoutDataWorkspace;
+        return deps.filter(
+          (dep) =>
+            !dep.includes('instrument-interference-vernier-caliper') &&
+            !dep.includes('instrument-micrometer-eyepiece') &&
+            !dep.includes('instruments-core')
+        );
+      }
+    },
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
@@ -205,6 +222,17 @@ export default defineConfig({
           // 分组时首页会被迫预载整个布局系统。
           if (id.includes('preload-helper')) {
             return 'preload-helper';
+          }
+          // Optional data-workspace runtime (engine + panel + capability).
+          // Must stay out of layouts/ui/core or every scene pays for it.
+          // data-workspace-declarations.ts / data-workspace-lazy.ts stay
+          // in the layouts chunk (their filenames do not match this).
+          if (
+            id.includes('/src/app/layouts/capabilities/data-workspace.') ||
+            id.includes('/src/ui/components/data-workspace-panel.') ||
+            id.includes('/src/platform/data-workspace.')
+          ) {
+            return 'data-workspace';
           }
           // Vendor chunk: React ecosystem
           if (

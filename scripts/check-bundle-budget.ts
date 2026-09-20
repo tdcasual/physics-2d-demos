@@ -67,6 +67,42 @@ const ENTRY_BUDGET_OVERRIDES: Record<
   { maxJsKb?: number; maxCssKb?: number }
 > = {};
 
+/** ExperimentsSection must not import per-scene scene-meta chunks. */
+export function checkExperimentsSectionCatalogFanout(
+  distRoot: string,
+  assets: BundleAsset[]
+): BundleBudgetViolation[] {
+  const hits: { relativePath: string; text: string }[] = [];
+  for (const asset of assets) {
+    if (asset.type !== 'js') continue;
+    const text = readFileSync(join(distRoot, asset.relativePath), 'utf8');
+    if (text.includes('选择实验开始探索') && text.includes('experiment-card')) {
+      hits.push({ relativePath: asset.relativePath, text });
+    }
+  }
+  if (hits.length === 0) {
+    return [
+      {
+        message:
+          'ExperimentsSection chunk not found in dist (looked for 选择实验开始探索).'
+      }
+    ];
+  }
+  const violations: BundleBudgetViolation[] = [];
+  for (const hit of hits) {
+    const sceneMetaImports = hit.text.match(/scene-meta-[A-Za-z0-9_-]+/g) ?? [];
+    // main keeps the eager import.meta.glob catalog in the aggregate registry;
+    // its source paths are expected in this chunk. Only per-scene chunk names
+    // indicate catalog fanout under the main build's accounting.
+    if (sceneMetaImports.length > 0) {
+      violations.push({
+        message: `ExperimentsSection (${hit.relativePath}) depends on ${sceneMetaImports.length} scene-meta chunks; expected 0.`
+      });
+    }
+  }
+  return violations;
+}
+
 function toKb(bytes: number): number {
   return bytes / 1024;
 }
@@ -323,6 +359,8 @@ export function analyzeBundleBudget(
       )}.`
     });
   }
+
+  violations.push(...checkExperimentsSectionCatalogFanout(root, assets));
 
   return {
     assets,

@@ -51,4 +51,5 @@ export type MicrometerViewState = {
   simLastCrosshairAngle: number;
   sysX: number;
   sysY: number;
+  systemScale: number;
 };

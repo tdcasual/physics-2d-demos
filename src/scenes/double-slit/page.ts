@@ -4,6 +4,7 @@
  * 支持步骤切换时动态更换控制区 schema
  */
 
+import '../../styles/capability/data-workspace.css';
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { doubleSlitMeta } from './scene.meta';
 import { createDoubleSlitScene } from './scene.entry';
@@ -30,7 +31,8 @@ bootScenePage<ReturnType<typeof createDoubleSlitScene>>({
     hideHeader: true,
     readoutLabel: '实验状态',
     hideTransport: true,
-    hasGraph: false
+    hasGraph: false,
+    dataWorkspace: true
   },
   paramSync: {
     // 批量应用（单次 setParams，避免中间 notify 触发 schema 重建），
@@ -136,9 +138,6 @@ bootScenePage<ReturnType<typeof createDoubleSlitScene>>({
             dsScene.setParams({
               viewMode: String(value) as 'crosshair' | 'fringe'
             });
-          } else if (key === 'inputLambda') {
-            dsScene.setInputLambda(Number(value));
-            return;
           } else if (key === 'lightMode') {
             const mode = String(value) as 'mono' | 'white';
             dsScene.setParams({ lightMode: mode, filterColor: null });
@@ -167,10 +166,8 @@ bootScenePage<ReturnType<typeof createDoubleSlitScene>>({
           scheduleRender();
           writeParam(key, value);
         },
-        onAction: (key) => {
-          if (key === 'verifyLambda') {
-            dsScene.verifyWavelength();
-          }
+        onAction: () => {
+          // 无 action 按钮
         }
       });
       currentSchemaId = schemaId;

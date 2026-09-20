@@ -4,6 +4,7 @@
 
 import { computeFringeSpacingPx } from '../scene.sim';
 import type { ScenePalette, WavePalette } from './palette';
+import { computeWhiteFringeRgb } from './draw-white';
 
 // 步骤6干涉图样 offscreen 缓存
 let _step6Cvs: HTMLCanvasElement | null = null;
@@ -170,7 +171,8 @@ export function drawStep6Pattern(
   isDark: boolean,
   L: number,
   contentScale: number,
-  verification?: { ok: boolean; lambdaNm: number } | null
+  hideNumericLabels = false,
+  whiteSpectrum?: { wavelengths: number[] } | null
 ): void {
   const topH = H * 0.3;
   const patternX = W * 0.15;
@@ -183,7 +185,10 @@ export function drawStep6Pattern(
   const envelopeSpacingPx = visualFringePx * 8;
 
   // offscreen 缓存（步骤6不降低精度）
-  const key = `${lambda}_${slitDistance}_${L}_${palette.screen}_${isDark ? 1 : 0}`;
+  const spectrumKey = whiteSpectrum
+    ? `white:${whiteSpectrum.wavelengths.join(',')}`
+    : 'mono';
+  const key = `${lambda}_${slitDistance}_${L}_${palette.screen}_${isDark ? 1 : 0}_${spectrumKey}`;
   if (!_step6Cvs || _step6Key !== key) {
     const pw = Math.ceil(patternW);
     const ph = Math.ceil(patternH);
@@ -200,24 +205,41 @@ export function drawStep6Pattern(
     }
     const fc = _step6Ctx!;
     const n = Math.ceil(pw * 0.5);
-    let maxI = 1e-6;
-    const intensities = new Float64Array(n * 2 + 1);
-    for (let x = -n; x <= n; x++) {
-      const phase = (Math.PI * x) / visualFringePx;
-      const cos2 = Math.cos(phase) * Math.cos(phase);
-      const beta = (Math.PI * x) / envelopeSpacingPx;
-      const sinc = Math.abs(beta) < 1e-6 ? 1 : Math.sin(beta) / beta;
-      const v = cos2 * sinc * sinc;
-      intensities[x + n] = v;
-      if (v > maxI) maxI = v;
-    }
-    for (let i = 0; i < intensities.length; i++) {
-      const x = i - n;
-      const px = pw * 0.5 + x;
-      if (px < 1 || px > pw - 1) continue;
-      const alpha = Math.min((intensities[i] / maxI) * 0.95, 0.95);
-      fc.fillStyle = `rgba(${palette.screen}, ${alpha})`;
-      fc.fillRect(px, 2, 1, ph - 4);
+    if (whiteSpectrum) {
+      const rgb = computeWhiteFringeRgb(
+        whiteSpectrum.wavelengths,
+        slitDistance,
+        L,
+        n
+      );
+      for (let i = 0; i < n * 2 + 1; i++) {
+        const x = i - n;
+        const px = pw * 0.5 + x;
+        if (px < 1 || px > pw - 1) continue;
+        const off = i * 3;
+        fc.fillStyle = `rgb(${rgb[off]},${rgb[off + 1]},${rgb[off + 2]})`;
+        fc.fillRect(px, 2, 1, ph - 4);
+      }
+    } else {
+      let maxI = 1e-6;
+      const intensities = new Float64Array(n * 2 + 1);
+      for (let x = -n; x <= n; x++) {
+        const phase = (Math.PI * x) / visualFringePx;
+        const cos2 = Math.cos(phase) * Math.cos(phase);
+        const beta = (Math.PI * x) / envelopeSpacingPx;
+        const sinc = Math.abs(beta) < 1e-6 ? 1 : Math.sin(beta) / beta;
+        const v = cos2 * sinc * sinc;
+        intensities[x + n] = v;
+        if (v > maxI) maxI = v;
+      }
+      for (let i = 0; i < intensities.length; i++) {
+        const x = i - n;
+        const px = pw * 0.5 + x;
+        if (px < 1 || px > pw - 1) continue;
+        const alpha = Math.min((intensities[i] / maxI) * 0.95, 0.95);
+        fc.fillStyle = `rgba(${palette.screen}, ${alpha})`;
+        fc.fillRect(px, 2, 1, ph - 4);
+      }
     }
     _step6Key = key;
   }
@@ -234,22 +256,11 @@ export function drawStep6Pattern(
   c.textAlign = 'left';
   c.fillText('干涉条纹', patternX, patternY - 6);
 
-  // 物理参数标注与校验成功后的计算结果直接绘制在主画布，不进入条纹缓存
-  c.font = `${11 * contentScale}px sans-serif`;
-  c.fillStyle = scene.guide;
-  c.textAlign = 'right';
-  c.fillText(
-    `L = ${(L * 100).toFixed(0)} cm · d = ${(slitDistance * 0.01).toFixed(2)} mm`,
-    patternX + patternW,
-    patternY - 6
-  );
-  if (verification?.ok) {
-    c.textAlign = 'center';
-    c.fillText(
-      `λ = d·Δx/L = ${verification.lambdaNm.toFixed(0)} nm ✓`,
-      patternX + patternW * 0.5,
-      patternY + patternH + 16 * contentScale
-    );
+  if (!hideNumericLabels) {
+    c.font = `${11 * contentScale}px sans-serif`;
+    c.fillStyle = scene.guide;
+    const deltaXmm = (fringeSpacingPx * 0.01).toFixed(3);
+    c.fillText(`Δx ≈ ${deltaXmm} mm`, patternX + patternW - 120, patternY - 6);
   }
 
   // 辅助虚线（分隔上下区域）

@@ -25,9 +25,21 @@ import { createInstrumentDom } from './renderer/dom';
 import { initMainRuler, initVernier } from './renderer/ticks';
 import { buildStripeTile } from './renderer/stripes';
 import {
+  applyInstrumentTransform,
   attachInteractions,
-  createInteractionState
+  createInteractionState,
+  CALIPER_VISUAL_SELECTORS,
+  DEFAULT_VISUAL_SCALE,
+  INSTRUMENT_LAYOUT_WIDTH,
+  fitInstrumentRootScale
 } from './renderer/interactions';
+import {
+  applyFitTransform,
+  fitTransformToParent,
+  unionClientRects
+} from '../_utils/fit-visual';
+import { caliperFringeAlignment } from './renderer/alignment';
+import type { FringeAlignment } from '../_utils/fringe-alignment';
 
 export type InterferenceVernierCaliperView =
   InstrumentView<InterferenceVernierCaliperState> &
@@ -36,6 +48,8 @@ export type InterferenceVernierCaliperView =
     CalibratableInstrument & {
       /** 显示/隐藏仪器内部读数浮层（宿主场景统一在外部显示读数时可隐藏） */
       setReadoutVisible(visible: boolean): void;
+      getAlignment(): FringeAlignment;
+      setReading(readingCm: number): void;
     };
 
 export function createInterferenceVernierCaliperView(options: {
@@ -55,11 +69,13 @@ export function createInterferenceVernierCaliperView(options: {
   canvas.style.display = 'none';
 
   const wrapper = document.createElement('div');
+  wrapper.dataset.instrumentScroll = 'true';
   wrapper.style.cssText = `
     position: absolute;
     left: 0; top: 0;
     width: 100%; height: 100%;
     overflow: visible;
+    box-sizing: border-box;
   `;
   parent.style.position = 'relative';
   parent.appendChild(wrapper);
@@ -120,6 +136,7 @@ export function createInterferenceVernierCaliperView(options: {
   };
 
   let wasAtLimit = false;
+  let wasAligned = false;
 
   // ── 条纹配置 ──
   const fringeConfig = {
@@ -184,6 +201,28 @@ export function createInterferenceVernierCaliperView(options: {
     // 3. 更新读数
     const totalReading = interaction.currentReadingCm + zeroOffset;
     readoutDisplay.innerText = `${totalReading.toFixed(3)} cm`;
+    slider.setAttribute('role', 'slider');
+    slider.setAttribute('aria-label', '游标卡尺读数');
+    slider.setAttribute('aria-valuemin', '0');
+    slider.setAttribute('aria-valuemax', String(MAX_CM));
+    slider.setAttribute('aria-valuenow', totalReading.toFixed(3));
+    slider.setAttribute(
+      'aria-valuetext',
+      `${(totalReading * 10).toFixed(3)} mm`
+    );
+
+    const alignment = caliperFringeAlignment({
+      readingCm: interaction.currentReadingCm,
+      fringeSpacingSimPx:
+        rawSpacing || fringeConfig.spacing / LENS_VISUAL_SCALE,
+      viewMode,
+      crosshairRefCm,
+      stripeOffsetMm
+    });
+    if (alignment.aligned && !wasAligned) {
+      listeners.align.forEach((cb) => cb());
+    }
+    wasAligned = alignment.aligned;
 
     // 4. 边界检测
     const atLimit =
@@ -211,7 +250,7 @@ export function createInterferenceVernierCaliperView(options: {
   );
 
   // ── 启动 ──
-  instrumentEl.style.transform = `translate(${interaction.sysX}px, ${interaction.sysY}px) scale(2)`;
+  applyInstrumentTransform(instrumentEl, interaction);
   initMainRuler(mainTicksContainer);
   initVernier(vernierTicksContainer);
   updatePattern();
@@ -266,17 +305,67 @@ export function createInterferenceVernierCaliperView(options: {
       }
     },
     resize() {
-      const rect = parent.getBoundingClientRect();
-      const scaleX = rect.width / (695 * 2);
-      const scaleY = rect.height / (250 * 2);
-      const s = Math.min(scaleX, scaleY, 1.0);
-      if (s < 1.0) {
-        root.style.transform = `scale(${s})`;
-        root.style.transformOrigin = 'top center';
-      } else {
-        root.style.transform = '';
-        root.style.transformOrigin = '';
-      }
+      const applyFit = () => {
+        if (disposed) return;
+        const rect = parent.getBoundingClientRect();
+        const hostWidth = Math.max(rect.width, 1);
+        const narrow =
+          (typeof window !== 'undefined' && window.innerWidth <= 720) ||
+          hostWidth < INSTRUMENT_LAYOUT_WIDTH + 24;
+        if (narrow) {
+          interaction.sysX = 0;
+          interaction.sysY = 0;
+          interaction.visualScale = 1;
+          applyInstrumentTransform(instrumentEl, interaction);
+          wrapper.style.overflowX = 'auto';
+          wrapper.style.overflowY = 'hidden';
+          wrapper.style.pointerEvents = 'auto';
+          wrapper.style.touchAction = 'pan-x';
+          mainRuler.style.touchAction = 'pan-x';
+          const fitWidth = Math.max(
+            wrapper.clientWidth,
+            Math.min(
+              hostWidth,
+              typeof window !== 'undefined' ? window.innerWidth : hostWidth
+            )
+          );
+          const s = Math.min(
+            1,
+            Math.max(0.3, (fitWidth - 8) / INSTRUMENT_LAYOUT_WIDTH)
+          );
+          root.style.transform = `scale(${s})`;
+          root.style.transformOrigin = 'top left';
+          root.classList.add('is-narrow');
+          return;
+        }
+        renderView();
+        interaction.visualScale = DEFAULT_VISUAL_SCALE;
+        interaction.sysX = 0;
+        interaction.sysY = 0;
+        applyInstrumentTransform(instrumentEl, interaction);
+        wrapper.style.overflow = 'visible';
+        wrapper.style.pointerEvents = '';
+        wrapper.style.touchAction = '';
+        mainRuler.style.touchAction = '';
+        root.classList.remove('is-narrow');
+        root.style.transform = 'none';
+        root.style.transformOrigin = 'top left';
+        void root.offsetWidth;
+        const union = unionClientRects(root, CALIPER_VISUAL_SELECTORS);
+        if (union) {
+          applyFitTransform(
+            root,
+            fitTransformToParent(parent, union, { root })
+          );
+        } else {
+          const s = fitInstrumentRootScale(rect.width, rect.height);
+          root.style.transform = `scale(${s})`;
+        }
+      };
+      applyFit();
+      requestAnimationFrame(() => {
+        requestAnimationFrame(applyFit);
+      });
     },
     setTheme() {
       // 固定配色
@@ -298,7 +387,25 @@ export function createInterferenceVernierCaliperView(options: {
 
     // ── MeasurableInstrument ──
     getReading() {
-      return interaction.currentReadingCm + zeroOffset;
+      const raw = interaction.currentReadingCm + zeroOffset;
+      const snappedPx =
+        Math.round((raw * UNIT_PX) / LEAST_COUNT_PX) * LEAST_COUNT_PX;
+      return snappedPx / UNIT_PX;
+    },
+    getAlignment() {
+      return caliperFringeAlignment({
+        readingCm: interaction.currentReadingCm,
+        fringeSpacingSimPx:
+          rawSpacing || fringeConfig.spacing / LENS_VISUAL_SCALE,
+        viewMode,
+        crosshairRefCm,
+        stripeOffsetMm
+      });
+    },
+    setReading(readingCm: number) {
+      interaction.currentReadingCm = Math.max(0, Math.min(readingCm, MAX_CM));
+      renderView();
+      emitReading();
     },
     onReadingChange(callback) {
       listeners.reading.push(callback);
@@ -360,7 +467,7 @@ export function createInterferenceVernierCaliperView(options: {
           fringeConfig.color = data.fringeColor;
         if (typeof data.sysX === 'number') interaction.sysX = data.sysX;
         if (typeof data.sysY === 'number') interaction.sysY = data.sysY;
-        instrumentEl.style.transform = `translate(${interaction.sysX}px, ${interaction.sysY}px) scale(2)`;
+        applyInstrumentTransform(instrumentEl, interaction);
         updatePattern();
         renderView();
       } catch {

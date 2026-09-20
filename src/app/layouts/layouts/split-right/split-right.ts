@@ -21,6 +21,7 @@ import {
 import { buildSplitLayoutDOM } from '../../_shared/split-layout-base';
 import { enterLayout, exitLayout } from '../../_shared/layout-transition';
 import { shouldEnableDebugOverlay } from '../../capabilities/debug-overlay';
+import { dataWorkspaceDeclarations } from '../../capabilities/data-workspace-declarations';
 
 export interface SplitRightConfig extends LayoutConfig {
   defaultLeftRatio?: number;
@@ -70,6 +71,7 @@ export class SplitRightLayout implements ILayout {
               config: { mountSlot: 'animation' as const }
             }
           ]),
+      ...dataWorkspaceDeclarations(config),
       {
         id: 'readout-panel',
         config: {

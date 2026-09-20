@@ -29,6 +29,37 @@ export const CSS = `
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   user-select: none;
   overflow: visible;
+  position: relative;
+}
+
+.pan-hint {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 16;
+  margin: 0;
+  padding: 6px 8px;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 12px;
+  color: #475569;
+  background: rgba(248, 250, 252, 0.92);
+  pointer-events: auto;
+  touch-action: pan-x;
+  white-space: nowrap;
+}
+
+.micrometer-root.is-narrow .pan-hint {
+  display: block;
+  position: sticky;
+  left: 0;
+  width: var(--instrument-viewport, 100%);
+  max-width: 100%;
+}
+
+.micrometer-root.is-narrow .dashboard {
+  display: none;
 }
 
 .micrometer-system {
@@ -37,6 +68,10 @@ export const CSS = `
   position: relative;
   transform-origin: top left;
   margin-left: var(--instrument-offset, 0px);
+}
+
+.micrometer-root.is-narrow .micrometer-system {
+  min-width: 915px;
 }
 
 .case {

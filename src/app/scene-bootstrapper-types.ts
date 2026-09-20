@@ -34,6 +34,9 @@ export type SceneInstance = {
   getState?(): unknown;
   getSnapshot?(): unknown;
   getReadoutItems?(): ReadoutItem[];
+  getDataWorkspace?():
+    | import('../platform/data-workspace').DataWorkspaceHost
+    | null;
   getTransportState?(): TransportState;
   subscribe?(listener: () => void): () => void;
   /** 布局切换时把渲染面绑到新槽，禁止 dispose+init。 */

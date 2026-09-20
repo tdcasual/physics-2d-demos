@@ -9,6 +9,7 @@ import type {
   MicrometerViewState,
   StripeConfig
 } from './types';
+import { repeatingOffsetAlignment } from '../../_utils/fringe-alignment';
 
 export function createViewRenderer(options: {
   viewState: MicrometerViewState;
@@ -45,11 +46,7 @@ export function createViewRenderer(options: {
   let wasAtLimit = false;
 
   function checkAlign(viewOffset: number, spacing: number) {
-    const dist = Math.abs(
-      ((((viewOffset - spacing / 2) % spacing) + spacing) % spacing) -
-        spacing / 2
-    );
-    return dist < 2;
+    return repeatingOffsetAlignment(viewOffset, spacing).aligned;
   }
 
   function checkLimit(reading: number) {

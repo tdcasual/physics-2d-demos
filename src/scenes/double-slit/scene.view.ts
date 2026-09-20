@@ -67,21 +67,23 @@ const POS = {
   eyepiece: 920
 } as const;
 
+// ── 模块级缓存 ──
+let _paletteKey = '';
+let _cachedPalette: WavePalette | null = null;
+let _sceneKey = '';
+let _cachedScene: (typeof SCENE_PALETTE)['dark'] | null = null;
+let _wlKey = '';
+let _cachedWl: number[] = [];
+
 export function createDoubleSlitView(
   options: CreateDoubleSlitViewOptions = {}
 ) {
-  let paletteKey = '';
-  let cachedPalette: WavePalette | null = null;
-  let sceneKey = '';
-  let cachedScene: (typeof SCENE_PALETTE)['dark'] | null = null;
-  let wavelengthKey = '';
-  let cachedWavelengths: number[] = [];
-  let verification: { ok: boolean; lambdaNm: number } | null = null;
   const env = createViewEnvironment({
     theme: options.theme,
     mode: options.mode,
     demoHints: options.demoHints
   });
+  let hideNumericHints = false;
   // 1000×500 逻辑画布：尺寸取自 style（sizeCanvasToFill 刚写入），
   // scale 限制为逻辑画布 fit 进 CSS 容器的系数与 responsiveScale 的较小者
   const stage = createCanvasViewport({
@@ -119,24 +121,31 @@ export function createDoubleSlitView(
     const lambda = next.params.lambda;
     // 缓存 palette
     const pk = `${lambda}_${isDark ? 1 : 0}`;
-    if (pk !== paletteKey) {
-      cachedPalette = getWavePalette(lambda, isDark);
-      paletteKey = pk;
+    if (pk !== _paletteKey) {
+      _cachedPalette = getWavePalette(lambda, isDark);
+      _paletteKey = pk;
     }
-    const palette = cachedPalette!;
+    const palette = _cachedPalette!;
     // 缓存 scene palette
     const sk = isDark ? 'd' : 'l';
-    if (sk !== sceneKey) {
-      cachedScene = SCENE_PALETTE[isDark ? 'dark' : 'light'];
-      sceneKey = sk;
+    if (sk !== _sceneKey) {
+      _cachedScene = SCENE_PALETTE[isDark ? 'dark' : 'light'];
+      _sceneKey = sk;
     }
-    const scene = cachedScene!;
+    const scene = _cachedScene!;
     const d = next.params.slitDistance;
     const L = next.params.L ?? DEFAULT_L;
     const gap = lambdaToGap(lambda);
 
     const W = 1000;
     const H = 500;
+    const hideLabels =
+      hideNumericHints ||
+      canvas
+        .closest('.layout-master')
+        ?.classList.contains('is-data-workspace') === true;
+    if (hideLabels) canvas.dataset.hideNumericHints = '1';
+    else delete canvas.dataset.hideNumericHints;
 
     // 以像素坐标清除整个 canvas
     c.setTransform(1, 0, 0, 1, 0, 0);
@@ -153,18 +162,19 @@ export function createDoubleSlitView(
       c,
       white ? effectiveLambda : lambda,
       isDark,
-      env.contentScale()
+      env.contentScale(),
+      hideLabels
     );
 
     const CY = H * 0.5;
 
     // 缓存 wavelengths
     const wk = `${next.params.lightMode}_${next.params.filterColor}_${lambda}`;
-    if (wk !== wavelengthKey) {
-      cachedWavelengths = getActiveWavelengths(next.params);
-      wavelengthKey = wk;
+    if (wk !== _wlKey) {
+      _cachedWl = getActiveWavelengths(next.params);
+      _wlKey = wk;
     }
-    const wavelengths = cachedWavelengths;
+    const wavelengths = _cachedWl;
 
     // 步骤6：上方大干涉图样，下方由仪器组件接管
     if (step === 6) {
@@ -179,7 +189,8 @@ export function createDoubleSlitView(
         isDark,
         L,
         env.contentScale(),
-        verification
+        hideLabels,
+        white && !next.params.filterColor ? { wavelengths } : null
       );
     } else {
       // 步骤 1–5：完整光路 + 仪器
@@ -396,8 +407,12 @@ export function createDoubleSlitView(
     setMode(newMode: TeachingMode, hints?: DemoRenderHints) {
       env.setMode(newMode, hints);
     },
-    setVerification(next: { ok: boolean; lambdaNm: number } | null) {
-      verification = next;
+    setHideNumericHints(hide: boolean) {
+      hideNumericHints = hide;
+      if (stage.canvas) {
+        if (hide) stage.canvas.dataset.hideNumericHints = '1';
+        else delete stage.canvas.dataset.hideNumericHints;
+      }
     },
     dispose() {
       stage.release();
@@ -407,6 +422,12 @@ export function createDoubleSlitView(
       resetInstrumentCaches();
       whiteFringeCache.cvs = whiteFringeCache.ctx = null;
       whiteFringeCache.key = '';
+      _paletteKey = '';
+      _cachedPalette = null;
+      _sceneKey = '';
+      _cachedScene = null;
+      _wlKey = '';
+      _cachedWl = [];
     }
   };
 }

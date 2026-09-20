@@ -64,6 +64,13 @@ export function bindInteractions(options: {
     thimbleGroup.style.cursor = 'grab';
   };
 
+  function isNarrowHost(): boolean {
+    return (
+      caseEl.closest('.micrometer-root')?.classList.contains('is-narrow') ===
+      true
+    );
+  }
+
   // ── 整体仪器拖拽（拖动目镜）──
   const handleSysDragStart = (clientX: number, clientY: number) => {
     sysDragging = true;
@@ -78,7 +85,7 @@ export function bindInteractions(options: {
     viewState.sysY += clientY - sysStartY;
     sysStartX = clientX;
     sysStartY = clientY;
-    systemEl.style.transform = `translate(${viewState.sysX}px, ${viewState.sysY}px) scale(1.5)`;
+    systemEl.style.transform = `translate(${viewState.sysX}px, ${viewState.sysY}px) scale(${viewState.systemScale})`;
   };
 
   const handleSysDragEnd = () => {
@@ -100,10 +107,12 @@ export function bindInteractions(options: {
   };
 
   const onCaseMouseDown = (e: MouseEvent) => {
+    if (isNarrowHost()) return;
     e.stopPropagation();
     handleSysDragStart(e.clientX, e.clientY);
   };
   const onCaseTouchStart = (e: TouchEvent) => {
+    if (isNarrowHost()) return;
     e.stopPropagation();
     handleSysDragStart(e.touches[0].clientX, e.touches[0].clientY);
   };
@@ -208,7 +217,7 @@ export function bindInteractions(options: {
         return;
     }
     e.preventDefault();
-    systemEl.style.transform = `translate(${viewState.sysX}px, ${viewState.sysY}px) scale(1.5)`;
+    systemEl.style.transform = `translate(${viewState.sysX}px, ${viewState.sysY}px) scale(${viewState.systemScale})`;
   };
 
   thimbleGroup.addEventListener('mousedown', onMouseDown);

@@ -31,6 +31,28 @@ export const CSS = `
   position: relative;
 }
 
+.pan-hint {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 16;
+  margin: 0;
+  padding: 6px 8px;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 12px;
+  color: #475569;
+  background: rgba(248, 250, 252, 0.92);
+  pointer-events: auto;
+  touch-action: pan-x;
+  white-space: nowrap;
+}
+
+.microscope-root.is-narrow .pan-hint {
+  display: block;
+}
+
 .header-panel {
   position: absolute;
   top: 6px;

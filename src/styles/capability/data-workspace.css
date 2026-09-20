@@ -1,0 +1,306 @@
+.data-workspace-entry {
+  cursor: pointer;
+  border-radius: 0.375rem;
+  border: 1px solid var(--border-color);
+  background: var(--btn-bg);
+  color: var(--text-secondary);
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  min-width: 44px;
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+.data-workspace-entry:hover:not(:disabled) {
+  background: var(--btn-hover-bg);
+  color: var(--text-primary);
+  border-color: var(--accent-color);
+}
+
+.data-workspace-entry:disabled,
+.data-workspace-entry[aria-disabled='true'] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.data-workspace-entry[aria-pressed='true'] {
+  border-color: var(--accent-color);
+  color: var(--text-primary);
+}
+
+.data-workspace-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  padding: 0.75rem 1rem 1rem;
+  gap: 0.5rem;
+}
+
+.data-workspace-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.data-workspace-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: var(--text-primary);
+}
+
+.data-workspace-exit,
+.data-workspace-check {
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 0.375rem;
+  border: 1px solid var(--border-color);
+  background: var(--btn-bg);
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.data-workspace-exit:hover:not(:disabled),
+.data-workspace-check:hover:not(:disabled) {
+  background: var(--btn-hover-bg);
+  border-color: var(--accent-color);
+}
+
+.data-workspace-knowns,
+.data-workspace-hint,
+.data-workspace-summary-note {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.data-workspace-table-wrap {
+  min-width: 0;
+  min-height: min-content;
+  flex: none;
+}
+
+.data-workspace-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.data-workspace-table th,
+.data-workspace-table td {
+  border: 1px solid var(--border-color);
+  padding: 0.35rem 0.4rem;
+  vertical-align: top;
+  text-align: left;
+  color: var(--text-primary);
+}
+
+.data-workspace-table th {
+  background: var(--bg-primary);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.data-workspace-field,
+.data-workspace-summary-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.data-workspace-input {
+  min-height: 44px;
+  min-width: 4.5rem;
+  width: 6.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.375rem;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+.data-workspace-status {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.data-workspace-status.is-ok {
+  color: var(--accent-color);
+}
+
+.data-workspace-status.is-error,
+.data-workspace-status.is-stale {
+  color: var(--danger, #b42318);
+}
+
+.data-workspace-result {
+  border: 1px solid var(--accent-color);
+  border-radius: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  color: var(--text-primary);
+  font-weight: 650;
+}
+
+.teaching-demo.split-right-shell.is-data-workspace,
+.layout-srgb-graph-bottom.is-data-workspace {
+  grid-template-columns: 0 0 1fr !important;
+}
+
+.layout-master.is-data-workspace
+  :is(
+    .layout-left-panel,
+    .sidebar-toggle-btn,
+    .readout-panel,
+    .teaching-readout-panel,
+    .srgb-readout-panel,
+    .lab-readout-slot,
+    [aria-label='实验状态']
+  ),
+.teaching-demo.split-right-shell.is-data-workspace [role='separator'],
+.layout-srgb-graph-bottom.is-data-workspace .srgb-resizer-v,
+.layout-master.is-data-workspace:not(.is-data-workspace-chart)
+  :is(.teaching-graph-section, .srgb-graph-section, .lab-float-graph),
+.lab-stage-layout.is-data-workspace .lab-control-section,
+.mobile-stack-layout.is-data-workspace
+  :is(.mobile-tab-bar, .mobile-tab-content) {
+  display: none !important;
+}
+
+.layout-master.is-data-workspace
+  :is(
+    .teaching-stage-slot,
+    .mobile-stage-slot,
+    .lab-stage-slot,
+    .srgb-stage-slot
+  ) {
+  overflow: hidden;
+}
+
+.layout-master.is-data-workspace [data-double-slit-instruments='true'] {
+  overflow: hidden !important;
+  --instrument-offset: 0 !important;
+  top: 0 !important;
+  height: 100% !important;
+}
+
+.layout-master.is-data-workspace [data-instrument-scroll='true'] {
+  overflow: auto hidden !important;
+}
+
+:is(
+    .teaching-demo.split-right-shell,
+    .layout-srgb-graph-bottom
+  ).is-data-workspace
+  [data-testid='right-panel'] {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.layout-master.is-data-workspace
+  :is(.teaching-stage-frame, .srgb-stage-frame, .lab-stage-anim) {
+  flex: 1 1 auto;
+  min-height: 260px;
+}
+
+.layout-master.is-data-workspace .data-workspace-panel {
+  flex: 0 1 auto;
+  max-height: 46%;
+}
+
+.layout-master.is-data-workspace-instrument-only .teaching-stage-canvas {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.data-workspace-row-actions,
+.data-workspace-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.data-workspace-confirm[hidden] {
+  display: none;
+}
+
+.layout-master.is-data-workspace.is-data-workspace-chart .data-workspace-panel {
+  max-height: none;
+}
+
+.mobile-stack-layout.is-data-workspace .mobile-animation-section {
+  flex: 0 0 auto;
+  min-height: 140px !important;
+  height: var(--dw-h, 160px) !important;
+}
+
+.mobile-stack-layout.is-data-workspace .data-workspace-panel {
+  flex: 1 1 auto;
+  max-height: none;
+}
+
+@media (max-width: 720px) {
+  .layout-master.is-data-workspace .data-workspace-panel {
+    max-height: none;
+    overflow-x: hidden;
+  }
+
+  .data-workspace-table-wrap {
+    overflow-x: hidden;
+  }
+
+  .data-workspace-table thead {
+    display: none;
+  }
+
+  .data-workspace-table,
+  .data-workspace-table tbody,
+  .data-workspace-table tr,
+  .data-workspace-table th,
+  .data-workspace-table td {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .data-workspace-table tr {
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--border-color);
+    padding: 0.5rem;
+  }
+
+  .data-workspace-table td {
+    border: none;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .data-workspace-table td::before {
+    content: attr(data-label);
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+    color: var(--text-secondary);
+  }
+
+  .data-workspace-input {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .data-workspace-field {
+    width: 100%;
+  }
+}

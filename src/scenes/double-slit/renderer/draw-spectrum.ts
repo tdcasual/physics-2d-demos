@@ -18,7 +18,8 @@ export function drawSpectrumBar(
   c: CanvasRenderingContext2D,
   lambda: number,
   isDark: boolean,
-  contentScale: number
+  contentScale: number,
+  hideNumericLabels = false
 ): void {
   const barX = 20;
   const barY = 15;
@@ -59,9 +60,10 @@ export function drawSpectrumBar(
   c.closePath();
   c.fill();
 
-  // 波长数值
-  c.fillStyle = isDark ? '#e2e8f0' : '#1e293b';
-  c.font = `${11 * contentScale}px sans-serif`;
-  c.textAlign = 'left';
-  c.fillText(`${Math.round(lambda)} nm`, barX + barW + 8, barY + 9);
+  if (!hideNumericLabels) {
+    c.fillStyle = isDark ? '#e2e8f0' : '#1e293b';
+    c.font = `${11 * contentScale}px sans-serif`;
+    c.textAlign = 'left';
+    c.fillText(`${Math.round(lambda)} nm`, barX + barW + 8, barY + 9);
+  }
 }
