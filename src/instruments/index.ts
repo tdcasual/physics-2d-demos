@@ -24,3 +24,10 @@ export type {
 
 // ── 工具函数 ──
 export { withViewport, toAbsoluteViewport } from './_utils/viewport';
+export { createInstrumentHost } from './mount';
+export type {
+  CreateInstrumentHostOptions,
+  InstrumentHost,
+  InstrumentHostDefinition,
+  InstrumentPlacement
+} from './mount';

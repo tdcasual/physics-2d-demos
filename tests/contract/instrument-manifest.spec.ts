@@ -1,22 +1,26 @@
 import { describe, expect, it } from 'vitest';
 import { instrumentManifest } from '../../src/instruments/_manifest/manifest';
-import { micrometerEyepieceMeta } from '../../src/instruments/micrometer-eyepiece/instrument.meta';
-import { interferenceVernierCaliperMeta } from '../../src/instruments/interference-vernier-caliper/instrument.meta';
-import { vernierCaliperGuideMeta } from '../../src/instruments/vernier-caliper-guide/instrument.meta';
+import type { InstrumentMeta } from '../../src/instruments/_contract/instrument-contract';
+
+const metaModules = import.meta.glob('/src/instruments/*/instrument.meta.ts', {
+  eager: true
+}) as Record<string, Record<string, unknown>>;
+
+const metas = Object.values(metaModules).map((module) => {
+  const meta = Object.values(module).find(
+    (value): value is InstrumentMeta<Record<string, unknown>> =>
+      typeof value === 'object' && value !== null && 'id' in value
+  );
+  if (!meta) throw new Error('instrument.meta.ts must export InstrumentMeta');
+  return meta;
+});
 
 describe('instrument manifest contract', () => {
   it('keeps manifest metadata and defaults aligned with instrument.meta', () => {
-    const metas = [
-      micrometerEyepieceMeta,
-      interferenceVernierCaliperMeta,
-      vernierCaliperGuideMeta
-    ];
-
     expect(
       instrumentManifest,
       'manifest 条目数与仪器数不一致：新增仪器后请在 ' +
-        'src/instruments/_manifest/manifest.ts 注册条目，' +
-        '并在本文件中 import 对应 instrument.meta 加入校验列表'
+        'src/instruments/_manifest/manifest.ts 注册条目'
     ).toHaveLength(metas.length);
     for (const meta of metas) {
       const manifestEntry = instrumentManifest.find(

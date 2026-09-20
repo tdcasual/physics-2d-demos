@@ -9,10 +9,11 @@
 ```
 src/instruments/<id>/
 ├── index.ts              # 统一导出 InstrumentFactory（必须）
-├── <id>.sim.ts           # 模拟逻辑（必须）
-├── <id>.view.ts          # 渲染（SVG 或 Canvas，按第 3 节密度规则选择）
-├── <id>.meta.ts          # 元数据（必须）
-└── <id>.controls.ts      # 控制面板 schema（可选）
+├── instrument.entry.ts   # 组装 InstrumentFactory（必须）
+├── instrument.sim.ts     # 模拟逻辑（必须）
+├── instrument.view.ts    # 渲染（SVG 或 Canvas，按第 3 节密度规则选择）
+├── instrument.meta.ts    # 元数据（必须）
+└── controls-schema.ts    # 控制面板 schema（可选）
 ```
 
 此外，必须在清单中注册：
@@ -104,10 +105,10 @@ export function createMySim(
 - SVG 仪器的视口内交互（如拖动游标）：view **不直接持有 sim**，改为在
   `<svg>` 节点上派发
   `CustomEvent('instrument-param', { detail: { key, value }, bubbles: true })`，
-  由宿主页面监听并回写 `sim.setParams({ [key]: value })`（参考实现：
-  `src/app/instrument-library/instrument-library.ts`）。事件必须冒泡，
+  由 `createInstrumentHost` 统一监听并回写 `sim.setParams({ [key]: value })`。
+  事件必须冒泡，
   `key` 为 sim 参数名，`value` 为数值或字符串。
-- 现有 4 个 Canvas 仪器不强制迁移；新仪器按上表选择，违反默认方向
+- 现有仪器共 3 个（2 个 Canvas/DOM 密集图案仪器、1 个 SVG 仪器）；新仪器按上表选择，违反默认方向
   需在 PR 中说明理由。
 
 ### 职责边界
@@ -213,7 +214,7 @@ function render(state) {
 export const myMeta: InstrumentMeta<MyParams> = {
   id: 'my-instrument', // kebab-case，全局唯一
   title: '我的仪器', // 中文显示名称
-  category: 'measurement', // 必须是：measurement | electronics | optics | mechanics
+  category: 'measurement', // measurement | timing | optical | electrical | mechanical
   description: '一句话描述仪器的用途',
   defaultParams: { reading: 0 }, // 所有参数必须有默认值
   unit: 'mm', // 可选：测量单位
@@ -227,9 +228,10 @@ export const myMeta: InstrumentMeta<MyParams> = {
 | 分类          | 说明     | 示例                       |
 | ------------- | -------- | -------------------------- |
 | `measurement` | 测量仪器 | 螺旋测微器、游标卡尺、秒表 |
-| `electronics` | 电子仪器 | 示波器、万用表             |
-| `optics`      | 光学仪器 | 光具座、干涉仪             |
-| `mechanics`   | 力学仪器 | 气垫导轨、打点计时器       |
+| `timing`      | 计时仪器 | 秒表、计时器               |
+| `electrical`  | 电子仪器 | 示波器、万用表             |
+| `optical`     | 光学仪器 | 光具座、干涉仪             |
+| `mechanical`  | 力学仪器 | 气垫导轨、打点计时器       |
 
 新增分类需修改 `InstrumentCategory` 类型定义。
 
@@ -238,11 +240,11 @@ export const myMeta: InstrumentMeta<MyParams> = {
 ### 组装方式
 
 ```typescript
-// instruments/my-instrument/index.ts
+// instruments/my-instrument/instrument.entry.ts
 import type { InstrumentFactory } from '../_contract/instrument-contract';
-import { myMeta } from './my-instrument.meta';
-import { createMySim } from './my-instrument.sim';
-import { createMyView } from './my-instrument.view';
+import { myMeta } from './instrument.meta';
+import { createMySim } from './instrument.sim';
+import { createMyView } from './instrument.view';
 
 export const myInstrument: InstrumentFactory<MyState, MyParams> = {
   meta: myMeta,
@@ -251,8 +253,8 @@ export const myInstrument: InstrumentFactory<MyState, MyParams> = {
 };
 
 // 可选：额外导出类型和子模块
-export * from './my-instrument.sim';
-export * from './my-instrument.meta';
+export * from './instrument.sim';
+export * from './instrument.meta';
 ```
 
 ### 注册
@@ -350,7 +352,38 @@ instruments/<id>/*.ts
 
 ESLint 已配置此规则，违反会导致构建失败。
 
-## 8. 性能与扩展性
+## 8. 场景接入
+
+场景统一使用 `src/instruments/mount.ts` 的 `createInstrumentHost`，不自行复制
+容器、懒加载、状态缓存、事件监听或布局重挂逻辑。每个仪器的场景胶水应只包含
+importer、`placement`、`visible` 与 `mapParams`，通常不超过 30 行：
+
+```typescript
+const host = createInstrumentHost({
+  attachTo: canvas,
+  theme,
+  instruments: [
+    {
+      id: 'my-instrument',
+      loadFactory: () =>
+        import('./my-instrument/instrument.entry').then(
+          (module) => module.myInstrumentFactory
+        ),
+      placement: 'full',
+      visible: (params) => params.showInstrument,
+      mapParams: (params) => ({ reading: params.measuredValue })
+    }
+  ]
+});
+```
+
+场景生命周期调用 `host.sync(params)`、`host.setTheme(theme)`、
+`host.resize()` 与 `host.dispose()`。物理量到仪器参数的换算只放在
+`mapParams`。host 会统一处理动态 import 去重、serialize/deserialize（未实现时
+降级为 sim state 快照）、`instrument-param` 冒泡事件、可见性强制重绘和 canvas
+父节点变化后的自动重挂。
+
+## 9. 性能与扩展性
 
 ### 代码分割
 
@@ -382,11 +415,11 @@ dist/assets/instrument-micrometer-xxx.js      # 螺旋测微器代码
 - 预览单个仪器：1 个 Sim + 1 个 View + 1 个 Canvas
 - 切换仪器：旧的 Sim/View 被 dispose，内存释放
 
-## 9. 审查清单
+## 10. 审查清单
 
 新增仪器 PR 必须通过以下检查：
 
-- [ ] 目录结构符合规范（index.ts / sim.ts / view.ts / meta.ts）
+- [ ] 目录结构符合规范（index.ts / instrument.entry.ts / instrument.sim.ts / instrument.view.ts / instrument.meta.ts）
 - [ ] 已在 `_manifest/manifest.ts` 中注册
 - [ ] Sim 不依赖 DOM/Canvas
 - [ ] View 渲染技术符合密度规则（刻度盘类 svg / 密集条纹类 canvas），且与 `meta.renderTech` 声明一致
@@ -398,3 +431,4 @@ dist/assets/instrument-micrometer-xxx.js      # 螺旋测微器代码
 - [ ] `pnpm build` 无错误，生成独立的 `instrument-<id>.js` chunk
 - [ ] `pnpm test` 全部通过
 - [ ] 组件库审计页面 (`/instruments.html`) 能正确显示新仪器
+- [ ] 场景通过 `createInstrumentHost` 接入，物理换算只位于 `mapParams`

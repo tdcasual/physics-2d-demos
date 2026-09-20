@@ -6,58 +6,67 @@ import {
   getManifest,
   validateManifest
 } from '../../src/instruments/instrument-registry';
+import type { InstrumentMeta } from '../../src/instruments/_contract/instrument-contract';
+
+const discoveredMetaModules = import.meta.glob(
+  '/src/instruments/*/instrument.meta.ts',
+  { eager: true }
+) as Record<string, Record<string, unknown>>;
+
+const discoveredMetas = Object.values(discoveredMetaModules).map((module) => {
+  const meta = Object.values(module).find(
+    (value): value is InstrumentMeta<Record<string, unknown>> =>
+      typeof value === 'object' && value !== null && 'id' in value
+  );
+  if (!meta) throw new Error('instrument.meta.ts must export InstrumentMeta');
+  return meta;
+});
 
 describe('instrument-registry', () => {
   it('builds manifest-backed entries with lazy factories', async () => {
     const entries = buildInstrumentRegistry();
 
-    expect(entries.map((entry) => entry.id).sort()).toEqual([
-      'interference-vernier-caliper',
-      'micrometer-eyepiece',
-      'vernier-caliper-guide'
-    ]);
+    expect(entries.map((entry) => entry.id).sort()).toEqual(
+      discoveredMetas.map((meta) => meta.id).sort()
+    );
 
-    const eyepiece = entries.find(
-      (entry) => entry.id === 'micrometer-eyepiece'
-    )!;
-    const factory = await eyepiece.loadFactory();
-    expect(factory.meta.id).toBe('micrometer-eyepiece');
-    expect(factory.createSim).toBeTypeOf('function');
-    expect(factory.createView).toBeTypeOf('function');
+    for (const entry of entries) {
+      const factory = await entry.loadFactory();
+      expect(factory.meta.id).toBe(entry.id);
+      expect(factory.createSim).toBeTypeOf('function');
+      expect(factory.createView).toBeTypeOf('function');
+    }
   });
 
   it('sorts entries by semantic category order and localized title', () => {
     const entries = buildInstrumentRegistry();
-
-    // 分类顺序确定：measurement 全部在 optical 之前
-    expect(entries.map((entry) => entry.category)).toEqual([
+    const categoryOrder = [
       'measurement',
-      'measurement',
-      'optical'
-    ]);
-    const measurementTitles = entries
-      .filter((entry) => entry.category === 'measurement')
-      .map((entry) => entry.title)
-      .sort();
-    expect(measurementTitles).toEqual(
-      ['游标卡尺使用演示', '高精度干涉测微仪'].sort()
-    );
-    expect(entries.find((entry) => entry.category === 'optical')?.title).toBe(
-      '干涉读数游标卡尺'
-    );
+      'timing',
+      'optical',
+      'electrical',
+      'mechanical'
+    ];
+    const expected = [...entries].sort((a, b) => {
+      const categoryDifference =
+        categoryOrder.indexOf(a.category) - categoryOrder.indexOf(b.category);
+      return categoryDifference || a.title.localeCompare(b.title, 'zh-CN');
+    });
+    expect(entries).toEqual(expected);
   });
 
   it('groups entries by category and exposes localized labels', () => {
     const grouped = buildRegistryByCategory();
 
-    expect(Object.keys(grouped).sort()).toEqual(['measurement', 'optical']);
-    expect(grouped.measurement?.map((entry) => entry.id).sort()).toEqual([
-      'micrometer-eyepiece',
-      'vernier-caliper-guide'
-    ]);
-    expect(grouped.optical?.map((entry) => entry.id)).toEqual([
-      'interference-vernier-caliper'
-    ]);
+    expect(Object.keys(grouped).sort()).toEqual(
+      [...new Set(discoveredMetas.map((meta) => meta.category))].sort()
+    );
+    expect(
+      Object.values(grouped)
+        .flat()
+        .map((entry) => entry.id)
+        .sort()
+    ).toEqual(discoveredMetas.map((meta) => meta.id).sort());
 
     expect(getCategoryLabel('measurement')).toBe('测量仪器');
     expect(getCategoryLabel('optical')).toBe('光学仪器');
@@ -72,11 +81,11 @@ describe('instrument-registry', () => {
       getManifest()
         .map((entry) => entry.modulePath)
         .sort()
-    ).toEqual([
-      '/src/instruments/interference-vernier-caliper/index.ts',
-      '/src/instruments/micrometer-eyepiece/index.ts',
-      '/src/instruments/vernier-caliper-guide/index.ts'
-    ]);
+    ).toEqual(
+      discoveredMetas
+        .map((meta) => `/src/instruments/${meta.id}/index.ts`)
+        .sort()
+    );
     expect(validateManifest()).toEqual({ ok: true, errors: [] });
   });
 });

@@ -35,11 +35,21 @@ type AnyInstrumentFactory = {
   };
 };
 
-const allFactories: AnyInstrumentFactory[] = [
-  interferenceVernierCaliperFactory,
-  micrometerEyepieceFactory,
-  vernierCaliperGuideFactory
-] as unknown as AnyInstrumentFactory[];
+const entryModules = import.meta.glob(
+  '/src/instruments/*/instrument.entry.ts',
+  { eager: true }
+) as Record<string, Record<string, unknown>>;
+
+const allFactories = Object.values(entryModules).map((module) => {
+  const factory = Object.values(module).find(
+    (value): value is AnyInstrumentFactory =>
+      typeof value === 'object' && value !== null && 'meta' in value
+  );
+  if (!factory) {
+    throw new Error('instrument.entry.ts must export an InstrumentFactory');
+  }
+  return factory;
+});
 
 describe('instrument entries', () => {
   describe('interference-vernier-caliper', () => {

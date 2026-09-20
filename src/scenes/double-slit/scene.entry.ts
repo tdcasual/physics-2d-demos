@@ -7,6 +7,7 @@
 import type { TeachingTheme, TeachingMode } from '../../platform/standards';
 import type { SceneLifecycle } from '../../platform/scene-contract';
 import type { DemoRenderHints } from '../../platform/demo-profile';
+import { createInstrumentHost } from '../../instruments/mount';
 
 import { createStandardSceneEntry } from '../scene-entry-helpers';
 import {
@@ -22,13 +23,10 @@ import {
   lambdaToRgb,
   isWhiteLight,
   getEffectiveLambda,
+  validateWavelength,
   FILTERS
 } from './scene.sim';
 import { createDoubleSlitView } from './scene.view';
-// 仪器组件体积较大且仅在步骤 6 使用，运行时通过 dynamic import 按需加载；
-// 此处保留 type-only 引用（不产生运行时 chunk 边）用于实例类型推导
-import type { createInterferenceVernierCaliper } from '../../instruments/interference-vernier-caliper/instrument.entry';
-import type { createMicrometerEyepiece } from '../../instruments/micrometer-eyepiece/instrument.entry';
 
 export type CreateDoubleSlitSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -48,6 +46,8 @@ export function createDoubleSlitScene(
   setParams(params: Partial<DoubleSlitParams>): DoubleSlitParams;
   getReadoutItems(): Array<{ key: string; label: string; value: string }>;
   getStepInfo(): { id: number; title: string; desc: string };
+  setInputLambda(value: number): void;
+  verifyWavelength(): { ok: boolean; errorPct: number };
   subscribe(listener: () => void): () => void;
 } {
   const sim = createDoubleSlitSim({
@@ -81,251 +81,118 @@ export function createDoubleSlitScene(
     onReadout: options.onReadout
   });
 
-  // ── 仪器实例管理 ──
-  let instrumentWrap: HTMLDivElement | null = null;
-  let leftContainer: HTMLDivElement | null = null;
-  let rightContainer: HTMLDivElement | null = null;
-  let leftCanvas: HTMLCanvasElement | null = null;
-  let rightCanvas: HTMLCanvasElement | null = null;
-  let leftInstrument: ReturnType<
-    typeof createInterferenceVernierCaliper
-  > | null = null;
-  let rightInstrument: ReturnType<typeof createMicrometerEyepiece> | null =
-    null;
-  let lastStep = -1;
-  let parentOriginalPosition: string | null = null;
-  const instrumentStateCache = new Map<string, Record<string, unknown>>();
-  let instrumentUnsubscribers: Array<() => void> = [];
-  // 仪器模块异步加载的 dedup 缓存：并发 initInstruments 调用共享同一 Promise
-  let instrumentsLoadPromise: Promise<void> | null = null;
+  let inputLambda = 532;
+  let wavelengthVerification: {
+    ok: boolean;
+    errorPct: number;
+    lambdaNm: number;
+  } | null = null;
 
-  function ensureInstrumentCanvases(): void {
-    if (instrumentWrap) return;
-    const parent = options.canvas?.parentElement;
-    if (!parent) return;
-
-    parentOriginalPosition = parent.style.position;
-    parent.style.position = 'relative';
-    instrumentWrap = document.createElement('div');
-    instrumentWrap.style.cssText =
-      'position:absolute;top:30%;left:0;width:100%;height:70%;' +
-      'display:flex;gap:8px;padding:8px;box-sizing:border-box;' +
-      'pointer-events:none;z-index:10;overflow:visible;';
-    // 传递 CSS 自定义属性给仪器组件，取消居中并设置默认左侧偏移
-    instrumentWrap.style.setProperty('--instrument-justify', 'flex-start');
-    instrumentWrap.style.setProperty('--instrument-align', 'flex-start');
-    instrumentWrap.style.setProperty('--instrument-offset', '100px');
-    parent.appendChild(instrumentWrap);
-
-    // 左容器：游标卡尺
-    leftContainer = document.createElement('div');
-    leftContainer.style.cssText =
-      'width:50%;height:100%;position:relative;pointer-events:auto;border-radius:4px;overflow:visible;';
-    instrumentWrap.appendChild(leftContainer);
-
-    leftCanvas = document.createElement('canvas');
-    leftCanvas.style.cssText = 'width:100%;height:100%;display:block;';
-    leftContainer.appendChild(leftCanvas);
-
-    // 右容器：测微仪
-    rightContainer = document.createElement('div');
-    rightContainer.style.cssText =
-      'flex:1;height:100%;position:relative;pointer-events:auto;border-radius:4px;overflow:visible;';
-    instrumentWrap.appendChild(rightContainer);
-
-    rightCanvas = document.createElement('canvas');
-    rightCanvas.style.cssText = 'width:100%;height:100%;display:block;';
-    rightContainer.appendChild(rightCanvas);
+  function clearWavelengthVerification(): void {
+    wavelengthVerification = null;
+    view.setVerification(null);
   }
 
-  function initInstruments(theme: TeachingTheme): void {
-    if (!leftContainer || !rightContainer || !leftCanvas || !rightCanvas)
-      return;
-    // 已初始化或正在加载：并发调用去重
-    if (leftInstrument && rightInstrument) return;
-    if (instrumentsLoadPromise) return;
+  function setInputLambda(value: number): void {
+    inputLambda = value;
+  }
 
-    instrumentsLoadPromise = Promise.all([
-      import('../../instruments/interference-vernier-caliper/instrument.entry'),
-      import('../../instruments/micrometer-eyepiece/instrument.entry')
-    ])
-      .then(([caliperModule, micrometerModule]) => {
-        // 加载期间已离开步骤 6（disposeInstruments 清空了容器与 canvas），
-        // 直接丢弃本次加载结果，避免在游离 DOM 上创建仪器
-        if (!leftContainer || !rightContainer || !leftCanvas || !rightCanvas)
-          return;
+  function verifyWavelength(): { ok: boolean; errorPct: number } {
+    const result = validateWavelength(
+      inputLambda,
+      getEffectiveLambda(sim.getState().params)
+    );
+    wavelengthVerification = { ...result, lambdaNm: inputLambda };
+    view.setVerification(wavelengthVerification);
+    base.renderAndEmit();
+    base.notify();
+    return result;
+  }
 
-        leftInstrument = caliperModule.createInterferenceVernierCaliper({
-          canvas: leftCanvas,
-          theme,
-          showHints: false
-        });
-        const cachedCaliper = instrumentStateCache.get('caliper');
-        if (cachedCaliper) leftInstrument.sim.setParams(cachedCaliper);
-        // 订阅读数变化，同步到实验状态区
-        instrumentUnsubscribers.push(
-          leftInstrument.view.onReadingChange(() => base.notify())
-        );
-
-        rightInstrument = micrometerModule.createMicrometerEyepiece({
-          canvas: rightCanvas,
-          theme,
-          showHints: false
-        });
-        const cachedMicrometer = instrumentStateCache.get('micrometer');
-        if (cachedMicrometer) rightInstrument.sim.setParams(cachedMicrometer);
-        // 订阅读数变化，同步到实验状态区
-        instrumentUnsubscribers.push(
-          rightInstrument.view.onReadingChange(() => base.notify())
-        );
-
-        // 加载期间 syncInstrumentParams 的脏检查可能已消费当前参数 key，
-        // 重置以强制向新建实例推送一次参数
-        _lastInstrKey = '';
-        // 仪器异步就绪后主动刷新，保证立即渲染
-        syncInstruments();
-        base.notify();
+  const placement = {
+    top: '30%',
+    left: 0,
+    width: '100%',
+    height: '70%',
+    padding: 8
+  };
+  const instrumentHost = options.canvas
+    ? createInstrumentHost({
+        attachTo: options.canvas,
+        theme: options.theme ?? 'dark',
+        cssVariables: {
+          '--instrument-justify': 'flex-start',
+          '--instrument-align': 'flex-start',
+          '--instrument-offset': '100px'
+        },
+        instruments: [
+          {
+            id: 'interference-vernier-caliper',
+            loadFactory: () =>
+              import('../../instruments/interference-vernier-caliper/instrument.entry').then(
+                (module) => module.interferenceVernierCaliperFactory
+              ),
+            placement,
+            visible: (p: DoubleSlitParams) =>
+              p.step === 6 && p.activeInstrument === 'caliper',
+            mapParams: mapCaliperParams,
+            viewOptions: { showHints: false }
+          },
+          {
+            id: 'micrometer-eyepiece',
+            loadFactory: () =>
+              import('../../instruments/micrometer-eyepiece/instrument.entry').then(
+                (module) => module.micrometerEyepieceFactory
+              ),
+            placement,
+            visible: (p: DoubleSlitParams) =>
+              p.step === 6 && p.activeInstrument === 'micrometer',
+            mapParams: mapMicrometerParams,
+            viewOptions: { showHints: false }
+          }
+        ],
+        onReadingChange: () => base.notify()
       })
-      .catch((error: unknown) => {
-        // 仪器加载失败不阻断主场景，降级为无仪器模式
-        console.error('[double-slit] 仪器模块加载失败', error);
-      })
-      .finally(() => {
-        instrumentsLoadPromise = null;
-      });
+    : null;
+
+  function instrumentPhysics(p: DoubleSlitParams) {
+    const wavelength = getEffectiveLambda(p);
+    const [r, g, b] = lambdaToRgb(wavelength);
+    const deltaX = computeRealDeltaXmm(
+      wavelength,
+      p.slitDistance,
+      p.L ?? DEFAULT_L
+    );
+    return { r, g, b, deltaX };
   }
 
-  function disposeInstruments(): void {
-    instrumentUnsubscribers.forEach((unsub) => unsub());
-    instrumentUnsubscribers = [];
-    if (leftInstrument) {
-      instrumentStateCache.set('caliper', { ...leftInstrument.sim.getState() });
-      leftInstrument.view.dispose();
-    }
-    if (rightInstrument) {
-      instrumentStateCache.set('micrometer', {
-        ...rightInstrument.sim.getState()
-      });
-      rightInstrument.view.dispose();
-    }
-    leftInstrument = null;
-    rightInstrument = null;
-
-    if (instrumentWrap && instrumentWrap.parentElement) {
-      instrumentWrap.parentElement.removeChild(instrumentWrap);
-    }
-    instrumentWrap = null;
-    leftContainer = null;
-    rightContainer = null;
-    leftCanvas = null;
-    rightCanvas = null;
-
-    const parent = options.canvas?.parentElement;
-    if (parent && parentOriginalPosition !== null) {
-      parent.style.position = parentOriginalPosition;
-      parentOriginalPosition = null;
-    }
+  function mapCaliperParams(p: DoubleSlitParams) {
+    const physics = instrumentPhysics(p);
+    const spacing = computeCaliperFringePx(physics.deltaX);
+    return {
+      fringeSpacing: spacing,
+      fringeColor: `rgba(${physics.r},${physics.g},${physics.b},0.85)`,
+      fringeEnvelopeWidth: spacing * 8,
+      crosshairAngle: p.crosshairAngle ?? 0,
+      viewMode: p.viewMode ?? 'fringe'
+    };
   }
 
-  let lastActiveInstrument = '';
-
-  function syncActiveInstrumentLayout(): void {
-    const active = sim.getState().params.activeInstrument;
-    if (!leftContainer || !rightContainer) return;
-
-    const leftShouldShow = active === 'caliper';
-    const rightShouldShow = active === 'micrometer';
-    const leftVisible = leftContainer.style.display !== 'none';
-    const rightVisible = rightContainer.style.display !== 'none';
-
-    if (leftVisible === leftShouldShow && rightVisible === rightShouldShow)
-      return;
-
-    leftContainer.style.display = leftShouldShow ? 'block' : 'none';
-    leftContainer.style.width = leftShouldShow ? '100%' : '50%';
-    rightContainer.style.display = rightShouldShow ? 'block' : 'none';
-    rightContainer.style.flex = rightShouldShow ? '1' : 'none';
-  }
-
-  let _lastInstrKey = '';
-
-  function syncInstrumentParams(): void {
-    const p = sim.getState().params;
-    const { lambda, slitDistance, micrometerOffset, stripeOffset } = p;
-    const L = p.L ?? DEFAULT_L;
-    const crosshairAngle = p.crosshairAngle ?? 0;
-    const viewMode = p.viewMode ?? 'fringe';
-
-    // 脏检查：参数未变则跳过
-    const key = `${lambda}_${slitDistance}_${L}_${crosshairAngle}_${viewMode}_${micrometerOffset}_${stripeOffset}`;
-    if (key === _lastInstrKey) return;
-    _lastInstrKey = key;
-
-    const effectiveLambda = getEffectiveLambda(p);
-    const [r, g, b] = lambdaToRgb(effectiveLambda);
-    const fringeColor = `rgba(${r},${g},${b},0.85)`;
-    const realDeltaXmm = computeRealDeltaXmm(effectiveLambda, slitDistance, L);
-    const caliperFringePx = computeCaliperFringePx(realDeltaXmm);
-    const micrometerStripePx = computeMicrometerStripePx(realDeltaXmm);
-    const micrometerSpeed = computeMicrometerSpeed(realDeltaXmm);
-    leftInstrument?.sim.setParams({
-      fringeSpacing: caliperFringePx,
-      fringeColor,
-      fringeEnvelopeWidth: caliperFringePx * 8,
-      crosshairAngle,
-      viewMode
-    });
-    rightInstrument?.sim.setParams({
-      stripeSpacing: micrometerStripePx,
-      stripeColor: `rgb(${r},${g},${b})`,
-      zeroOffset: micrometerOffset,
-      stripeAngle: 90,
-      stripeOffset,
-      crosshairSpeed: micrometerSpeed,
+  function mapMicrometerParams(p: DoubleSlitParams) {
+    const physics = instrumentPhysics(p);
+    return {
+      stripeSpacing: computeMicrometerStripePx(physics.deltaX),
+      stripeColor: `rgb(${physics.r},${physics.g},${physics.b})`,
+      zeroOffset: p.micrometerOffset,
+      stripeOffset: p.stripeOffset,
+      crosshairSpeed: computeMicrometerSpeed(physics.deltaX),
       scaleInverted: true,
-      crosshairAngle,
-      viewMode
-    });
+      crosshairAngle: p.crosshairAngle ?? 0,
+      viewMode: p.viewMode ?? 'fringe'
+    };
   }
 
-  function syncInstrumentReadout(): void {
-    // 读数统一显示在实验状态区，仪器内部读数始终隐藏
-    leftInstrument?.view.setReadoutVisible(false);
-    rightInstrument?.view.setReadoutVisible(false);
-  }
-
-  function syncInstruments(): void {
-    const state = sim.getState();
-    if (state.params.step === 6) {
-      if (lastStep !== 6) {
-        ensureInstrumentCanvases();
-        syncActiveInstrumentLayout();
-        initInstruments(options.theme ?? 'dark');
-        lastActiveInstrument = '';
-      }
-      syncActiveInstrumentLayout();
-      syncInstrumentParams();
-      syncInstrumentReadout();
-
-      // display:none → block 切换后需要强制渲染，绕过 view 内部的 needRender 守卫
-      const active = state.params.activeInstrument;
-      const switched = active !== lastActiveInstrument;
-      lastActiveInstrument = active;
-
-      leftInstrument?.view.render(leftInstrument.sim.getState());
-      rightInstrument?.view.render(rightInstrument.sim.getState());
-
-      if (switched) {
-        // 激活的仪器从 display:none 恢复为 block 后，DOM 布局需要刷新
-        // 通过调用 resize() 触发完整的重排和重绘
-        if (active === 'micrometer') rightInstrument?.view.resize();
-        else leftInstrument?.view.resize();
-      }
-    } else if (lastStep === 6) {
-      disposeInstruments();
-    }
-    lastStep = state.params.step;
-  }
+  const syncInstruments = () => instrumentHost?.sync(sim.getState().params);
 
   function getReadoutItems(): Array<{
     key: string;
@@ -363,34 +230,32 @@ export function createDoubleSlitScene(
         label: '当前仪器',
         value: instrumentName
       });
-      const effectiveLambda = getEffectiveLambda(s.params);
-      const realDeltaXmm = computeRealDeltaXmm(
-        effectiveLambda,
-        d,
-        s.params.L ?? DEFAULT_L
-      );
+      const active = s.params.activeInstrument;
+      const measuredDeltaXmm =
+        active === 'caliper'
+          ? instrumentHost?.getReading('interference-vernier-caliper')
+          : instrumentHost?.getReading('micrometer-eyepiece');
+      const normalizedDeltaXmm =
+        measuredDeltaXmm === undefined
+          ? null
+          : active === 'caliper'
+            ? measuredDeltaXmm * 10
+            : measuredDeltaXmm;
       items.push({
         key: 'delta-x',
-        label: '条纹间距 Δx',
-        value: `${realDeltaXmm.toFixed(3)} mm`
+        label: '测得 Δx',
+        value:
+          normalizedDeltaXmm === null
+            ? '等待仪器读数'
+            : `${normalizedDeltaXmm.toFixed(3)} mm`
       });
-      // 从当前激活仪器获取读数，统一显示在实验状态区
-      const active = s.params.activeInstrument;
-      if (active === 'caliper' && leftInstrument) {
-        const reading = leftInstrument.view.getReading();
-        items.push({
-          key: 'caliper',
-          label: '游标卡尺读数',
-          value: `${(reading * 10).toFixed(3)} mm`
-        });
-      } else if (active === 'micrometer' && rightInstrument) {
-        const reading = rightInstrument.view.getReading();
-        items.push({
-          key: 'micrometer',
-          label: '螺旋测微仪读数',
-          value: `${reading.toFixed(3)} mm`
-        });
-      }
+      items.push({
+        key: 'lambda-check',
+        label: '波长校验',
+        value: wavelengthVerification
+          ? `${wavelengthVerification.ok ? '✓' : '✗'} 相对误差 ${wavelengthVerification.errorPct.toFixed(2)}%`
+          : '尚未校验'
+      });
     }
     return items;
   }
@@ -403,10 +268,24 @@ export function createDoubleSlitScene(
 
   return {
     ...base,
+    reset() {
+      clearWavelengthVerification();
+      base.reset();
+      syncInstruments();
+    },
     getState() {
       return sim.getState();
     },
     setParams(params: Partial<DoubleSlitParams>): DoubleSlitParams {
+      if (
+        params.lambda !== undefined ||
+        params.slitDistance !== undefined ||
+        params.L !== undefined ||
+        params.lightMode !== undefined ||
+        params.filterColor !== undefined
+      ) {
+        clearWavelengthVerification();
+      }
       const result = sim.setParams(params);
       // 主画布与仪器画布相互独立：先绘主场景再同步仪器（历史顺序）。
       // wrapAction 会把 syncInstruments 放到 renderAndEmit 之前，此处显式保持旧序。
@@ -422,25 +301,23 @@ export function createDoubleSlitScene(
     },
     resize() {
       view.resize();
-      leftInstrument?.view.resize();
-      rightInstrument?.view.resize();
+      instrumentHost?.resize();
       base.renderAndEmit();
       syncInstruments();
     },
     setTheme(theme: TeachingTheme) {
       view.setTheme(theme);
-      if (sim.getState().params.step === 6) {
-        leftInstrument?.view.setTheme(theme);
-        rightInstrument?.view.setTheme(theme);
-      }
+      instrumentHost?.setTheme(theme);
       base.renderAndEmit();
       syncInstruments();
       base.notify();
     },
     dispose() {
-      disposeInstruments();
+      instrumentHost?.dispose();
       base.dispose();
     },
+    setInputLambda,
+    verifyWavelength,
     getReadoutItems,
     getStepInfo
   };
