@@ -136,6 +136,9 @@ bootScenePage<ReturnType<typeof createDoubleSlitScene>>({
             dsScene.setParams({
               viewMode: String(value) as 'crosshair' | 'fringe'
             });
+          } else if (key === 'inputLambda') {
+            dsScene.setInputLambda(Number(value));
+            return;
           } else if (key === 'lightMode') {
             const mode = String(value) as 'mono' | 'white';
             dsScene.setParams({ lightMode: mode, filterColor: null });
@@ -164,8 +167,10 @@ bootScenePage<ReturnType<typeof createDoubleSlitScene>>({
           scheduleRender();
           writeParam(key, value);
         },
-        onAction: () => {
-          // 无 action 按钮
+        onAction: (key) => {
+          if (key === 'verifyLambda') {
+            dsScene.verifyWavelength();
+          }
         }
       });
       currentSchemaId = schemaId;

@@ -169,7 +169,8 @@ export function drawStep6Pattern(
   scene: ScenePalette,
   isDark: boolean,
   L: number,
-  contentScale: number
+  contentScale: number,
+  verification?: { ok: boolean; lambdaNm: number } | null
 ): void {
   const topH = H * 0.3;
   const patternX = W * 0.15;
@@ -233,11 +234,23 @@ export function drawStep6Pattern(
   c.textAlign = 'left';
   c.fillText('干涉条纹', patternX, patternY - 6);
 
-  // 物理参数标注
+  // 物理参数标注与校验成功后的计算结果直接绘制在主画布，不进入条纹缓存
   c.font = `${11 * contentScale}px sans-serif`;
   c.fillStyle = scene.guide;
-  const deltaXmm = (fringeSpacingPx * 0.01).toFixed(3);
-  c.fillText(`Δx ≈ ${deltaXmm} mm`, patternX + patternW - 120, patternY - 6);
+  c.textAlign = 'right';
+  c.fillText(
+    `L = ${(L * 100).toFixed(0)} cm · d = ${(slitDistance * 0.01).toFixed(2)} mm`,
+    patternX + patternW,
+    patternY - 6
+  );
+  if (verification?.ok) {
+    c.textAlign = 'center';
+    c.fillText(
+      `λ = d·Δx/L = ${verification.lambdaNm.toFixed(0)} nm ✓`,
+      patternX + patternW * 0.5,
+      patternY + patternH + 16 * contentScale
+    );
+  }
 
   // 辅助虚线（分隔上下区域）
   c.setLineDash([6, 6]);

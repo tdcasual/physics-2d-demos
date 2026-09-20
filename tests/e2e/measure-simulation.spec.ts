@@ -1,11 +1,5 @@
 import { test, expect } from '@playwright/test';
 
-const LAMBDA_NM = 532;
-const D_MM = 0.2;
-const L_M = 0.7;
-const THEORETICAL_DELTA_X_MM =
-  ((LAMBDA_NM * 1e-9 * L_M) / (D_MM * 1e-3)) * 1000;
-
 async function collapseReadout(page: import('@playwright/test').Page) {
   const toggle = page.locator(
     '[aria-label="实验状态"] button:has-text("折叠")'
@@ -16,7 +10,7 @@ async function collapseReadout(page: import('@playwright/test').Page) {
   }
 }
 
-test('double-slit step 6: theoretical fringe spacing is correct', async ({
+test('double-slit step 6: wavelength answer is verified and invalidated', async ({
   page
 }) => {
   await page.goto('/src/pages/double-slit.html');
@@ -26,14 +20,30 @@ test('double-slit step 6: theoretical fringe spacing is correct', async ({
   await page.locator('button:has-text("6. 目镜观察")').click();
   await page.waitForTimeout(1200);
 
-  const fringeSpacingLabel = page
-    .locator('.teaching-readout-label:has-text("条纹间距 Δx")')
+  const measuredSpacingLabel = page
+    .locator('.teaching-readout-label:has-text("测得 Δx")')
     .first();
-  await expect(fringeSpacingLabel).toBeVisible();
-  const fringeSpacingValue = await fringeSpacingLabel
-    .locator('+ strong')
-    .textContent();
-  expect(fringeSpacingValue).toBe(`${THEORETICAL_DELTA_X_MM.toFixed(3)} mm`);
+  await expect(measuredSpacingLabel).toBeVisible();
+
+  const lambdaInput = page.locator(
+    '[data-control-key="inputLambda"] input[type="number"]'
+  );
+  const checkValue = page.locator(
+    '.teaching-readout-label:has-text("波长校验") + strong'
+  );
+  await lambdaInput.fill('532');
+  await page.locator('button:has-text("校验波长")').click();
+  await expect(checkValue).toContainText('✓');
+  await expect(checkValue).toContainText('0.00%');
+
+  await lambdaInput.fill('600');
+  await page.locator('button:has-text("校验波长")').click();
+  await expect(checkValue).toContainText('✗');
+
+  await page
+    .locator('[data-control-key="lambda"] input[type="range"]')
+    .fill('600');
+  await expect(checkValue).toHaveText('尚未校验');
 });
 
 test('double-slit step 6: caliper drag changes reading correctly', async ({
@@ -52,7 +62,7 @@ test('double-slit step 6: caliper drag changes reading correctly', async ({
   await expect(caliper).toBeVisible();
 
   const initialReadout = await page
-    .locator('.teaching-readout-label:has-text("游标卡尺读数") + strong')
+    .locator('.teaching-readout-label:has-text("测得 Δx") + strong')
     .textContent();
   const initialReading = parseFloat(
     initialReadout?.replace('mm', '').trim() ?? '0'
@@ -69,7 +79,7 @@ test('double-slit step 6: caliper drag changes reading correctly', async ({
   await page.waitForTimeout(300);
 
   const newReadout = await page
-    .locator('.teaching-readout-label:has-text("游标卡尺读数") + strong')
+    .locator('.teaching-readout-label:has-text("测得 Δx") + strong')
     .textContent();
   const newReading = parseFloat(newReadout?.replace('mm', '').trim() ?? '0');
 
@@ -103,7 +113,7 @@ test('double-slit step 6: micrometer drag changes reading correctly', async ({
   await expect(micrometer).toBeVisible();
 
   const initialReadout = await page
-    .locator('.teaching-readout-label:has-text("螺旋测微仪读数") + strong')
+    .locator('.teaching-readout-label:has-text("测得 Δx") + strong')
     .textContent();
   const initialReading = parseFloat(
     initialReadout?.replace('mm', '').trim() ?? '0'
@@ -120,7 +130,7 @@ test('double-slit step 6: micrometer drag changes reading correctly', async ({
   await page.waitForTimeout(300);
 
   const newReadout = await page
-    .locator('.teaching-readout-label:has-text("螺旋测微仪读数") + strong')
+    .locator('.teaching-readout-label:has-text("测得 Δx") + strong')
     .textContent();
   const newReading = parseFloat(newReadout?.replace('mm', '').trim() ?? '0');
 

@@ -146,6 +146,39 @@ const instrumentSection = {
   ]
 };
 
+const wavelengthMeasurementSection = {
+  title: '波长测量与计算',
+  collapsed: false,
+  span: 'full' as const,
+  fields: [
+    {
+      type: 'hint' as const,
+      key: 'wavelengthFormula',
+      lines: [
+        'λ = d·Δx/L',
+        '先用仪器测量 Δx，再结合实验状态中的 d、L 计算波长并输入校验。',
+        '白光模式以有效波长（滤光片中心波长）为真值。'
+      ]
+    },
+    {
+      type: 'number' as const,
+      key: 'inputLambda',
+      label: '计算波长 λ',
+      value: 532,
+      min: 380,
+      max: 780,
+      step: 1,
+      unit: 'nm'
+    },
+    {
+      type: 'button' as const,
+      key: 'verifyLambda',
+      label: '校验波长',
+      variant: 'primary' as const
+    }
+  ]
+};
+
 // 步骤 1–5 的 schema
 export const doubleSlitControlsSchema: ControlsSchema = {
   sections: [
@@ -189,6 +222,7 @@ export const doubleSlitStep6ControlsSchema: ControlsSchema = {
         }
       ]
     },
-    instrumentSection
+    instrumentSection,
+    wavelengthMeasurementSection
   ]
 };

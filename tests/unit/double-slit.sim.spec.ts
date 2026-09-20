@@ -9,6 +9,9 @@ import {
   lambdaToRgb,
   wavelengthToColor,
   computeFringeSpacingPx,
+  computeRealDeltaXmm,
+  computeWavelengthNm,
+  validateWavelength,
   DEFAULT_L,
   PHYSICAL_D_SCALE,
   PIXEL_TO_MM
@@ -157,6 +160,50 @@ describe('computeFringeSpacingPx', () => {
     const px400 = computeFringeSpacingPx(400, 40);
     const px700 = computeFringeSpacingPx(700, 40);
     expect(px700).toBeGreaterThan(px400);
+  });
+});
+
+describe('wavelength measurement', () => {
+  it.each([
+    { lambda: 380, slitDistance: 16, L: 0.3 },
+    { lambda: 532, slitDistance: 20, L: DEFAULT_L },
+    { lambda: 780, slitDistance: 43, L: 2 }
+  ])('round-trips λ=$lambda nm through Δx', ({ lambda, slitDistance, L }) => {
+    const deltaXmm = computeRealDeltaXmm(lambda, slitDistance, L);
+    expect(computeWavelengthNm(deltaXmm, slitDistance, L)).toBeCloseTo(
+      lambda,
+      10
+    );
+  });
+
+  it('supports the visible-range input boundaries', () => {
+    expect(computeWavelengthNm(computeRealDeltaXmm(380, 20), 20)).toBeCloseTo(
+      380,
+      10
+    );
+    expect(computeWavelengthNm(computeRealDeltaXmm(780, 20), 20)).toBeCloseTo(
+      780,
+      10
+    );
+  });
+
+  it.each([0.1, 1.862, 5])(
+    'round-trips a boundary Δx=%s mm through wavelength',
+    (deltaXmm) => {
+      const wavelengthNm = computeWavelengthNm(deltaXmm, 20);
+      expect(computeRealDeltaXmm(wavelengthNm, 20)).toBeCloseTo(deltaXmm, 10);
+    }
+  );
+
+  it('accepts values exactly at the default 5% tolerance boundary', () => {
+    expect(validateWavelength(525, 500)).toEqual({ ok: true, errorPct: 5 });
+    expect(validateWavelength(475, 500)).toEqual({ ok: true, errorPct: 5 });
+    expect(validateWavelength(532 * 1.05, 532).ok).toBe(true);
+  });
+
+  it('rejects values outside the tolerance and supports a custom tolerance', () => {
+    expect(validateWavelength(526, 500).ok).toBe(false);
+    expect(validateWavelength(510, 500, 2).ok).toBe(true);
   });
 });
 

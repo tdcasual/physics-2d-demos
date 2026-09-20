@@ -38,6 +38,14 @@ const NON_SIM_KEYS: Record<string, Record<string, string>> = {
   'projectile-components': {
     autoRun:
       'URL autoPlay only; global transport drives step; not a sim kinematic param'
+  },
+  'variable-work': {
+    autoRun:
+      'URL autoPlay only; global transport drives step; not a sim kinematic param'
+  },
+  'internal-energy': {
+    autoRun:
+      'URL autoPlay only; global transport drives step; not a sim kinematic param'
   }
 };
 
@@ -74,7 +82,9 @@ const NON_PARAM_KEYS: Record<string, Record<string, string>> = {
     // 仅步骤 6 schema 使用；page.ts: setParams({crosshairAngle})
     crosshairAngle: 'sim param via setParams (step-6 schema only)',
     // 仅步骤 6 schema 使用；page.ts: setParams({stripeOffset})
-    stripeOffset: 'sim param via setParams (step-6 schema only)'
+    stripeOffset: 'sim param via setParams (step-6 schema only)',
+    // 学生输入的待校验波长，page.ts: setInputLambda 专用 API（非 sim 参数，不入 URL）
+    inputLambda: 'setInputLambda dedicated API (step-6 verification input)'
   },
   'emf-analogy': {
     // NO_PARAMS_API 场景；page.ts: setTapOpening 专用 API
