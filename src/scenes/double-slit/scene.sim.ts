@@ -55,37 +55,6 @@ export function computeRealDeltaXmm(
   return ((lambdaM * L) / d) * 1000;
 }
 
-/**
- * 根据测得的条纹间距反算波长 (nm)
- * λ = dΔx/L
- */
-export function computeWavelengthNm(
-  deltaXmm: number,
-  slitDistance: number,
-  L: number = DEFAULT_L
-): number {
-  const d = slitDistance * PHYSICAL_D_SCALE;
-  const deltaXM = deltaXmm * 1e-3;
-  return ((d * deltaXM) / L) * 1e9;
-}
-
-export function validateWavelength(
-  inputNm: number,
-  actualNm: number,
-  tolerancePct = 5
-): { ok: boolean; errorPct: number } {
-  const errorPct =
-    actualNm === 0
-      ? inputNm === 0
-        ? 0
-        : Number.POSITIVE_INFINITY
-      : (Math.abs(inputNm - actualNm) / Math.abs(actualNm)) * 100;
-  return {
-    ok: Number.isFinite(errorPct) && errorPct <= tolerancePct + 1e-12,
-    errorPct
-  };
-}
-
 /** 主画布像素比例：1px = 0.01mm */
 export const PIXEL_TO_MM = 0.01;
 

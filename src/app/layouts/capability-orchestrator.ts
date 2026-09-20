@@ -48,6 +48,10 @@ const SCENE_BINDINGS: Record<string, SceneBinding> = {
   'readout-panel': {
     isSupported: (scene) => typeof scene.getReadoutItems === 'function',
     getData: (scene) => scene.getReadoutItems!()
+  },
+  'data-workspace': {
+    isSupported: () => true,
+    getData: (scene) => ({ host: scene.getDataWorkspace?.() ?? null })
   }
 };
 

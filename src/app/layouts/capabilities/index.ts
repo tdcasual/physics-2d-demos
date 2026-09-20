@@ -42,6 +42,13 @@ export type { DebugOverlayConfig } from './debug-overlay';
 export { createLayoutSwitch } from './layout-switch';
 export type { LayoutSwitchConfig } from './layout-switch';
 
+export { dataWorkspaceDeclarations } from './data-workspace-declarations';
+export type {
+  DataWorkspaceConfig,
+  DataWorkspaceUpdateData
+} from './data-workspace-declarations';
+export { createDataWorkspace } from './data-workspace-lazy';
+
 // Capability factory registry — map of id → factory function
 import type {
   CapabilityDeclaration,
@@ -63,6 +70,10 @@ import type { SidebarToggleConfig } from './sidebar-toggle';
 import type { ResizerConfig } from './resizer';
 import type { DebugOverlayConfig } from './debug-overlay';
 import type { LayoutSwitchConfig } from './layout-switch';
+import type {
+  DataWorkspaceConfig,
+  DataWorkspaceUpdateData
+} from './data-workspace-declarations';
 
 import { createTransportBar } from './transport-bar';
 import { createReadoutPanel } from './readout-panel';
@@ -73,6 +84,7 @@ import { createSidebarToggle } from './sidebar-toggle';
 import { createResizer } from './resizer';
 import { createDebugOverlay } from './debug-overlay';
 import { createLayoutSwitch } from './layout-switch';
+import { createDataWorkspace } from './data-workspace-lazy';
 
 export interface CapabilityConfigMap {
   'transport-bar': TransportBarConfig;
@@ -84,6 +96,7 @@ export interface CapabilityConfigMap {
   resizer: ResizerConfig;
   'debug-overlay': DebugOverlayConfig;
   'layout-switch': LayoutSwitchConfig;
+  'data-workspace': DataWorkspaceConfig;
 }
 
 export interface CapabilityDataMap {
@@ -96,6 +109,7 @@ export interface CapabilityDataMap {
   resizer: unknown;
   'debug-overlay': unknown;
   'layout-switch': unknown;
+  'data-workspace': DataWorkspaceUpdateData;
 }
 
 export interface CapabilityCallbacksMap {
@@ -108,6 +122,7 @@ export interface CapabilityCallbacksMap {
   resizer: unknown;
   'debug-overlay': unknown;
   'layout-switch': unknown;
+  'data-workspace': unknown;
 }
 
 export type CapabilityFactory<K extends CapabilityId> = (
@@ -136,7 +151,8 @@ export const capabilityFactories = {
   'sidebar-toggle': createSidebarToggle,
   resizer: createResizer,
   'debug-overlay': createDebugOverlay,
-  'layout-switch': createLayoutSwitch
+  'layout-switch': createLayoutSwitch,
+  'data-workspace': createDataWorkspace
 } satisfies CapabilityFactoryRegistry;
 
 export function createCapabilityDefinition(
@@ -161,6 +177,8 @@ export function createCapabilityDefinition(
       return createDebugOverlay(declaration.config as DebugOverlayConfig);
     case 'layout-switch':
       return createLayoutSwitch(declaration.config as LayoutSwitchConfig);
+    case 'data-workspace':
+      return createDataWorkspace(declaration.config as DataWorkspaceConfig);
   }
 }
 
@@ -174,7 +192,8 @@ export const CAPABILITY_SCOPES: Record<CapabilityId, CapabilityScope> = {
   'sidebar-toggle': 'layout',
   resizer: 'layout',
   'debug-overlay': 'container',
-  'layout-switch': 'layout'
+  'layout-switch': 'layout',
+  'data-workspace': 'layout'
 };
 
 export function getCapabilityScope(id: CapabilityId): CapabilityScope {

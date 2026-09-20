@@ -82,9 +82,7 @@ const NON_PARAM_KEYS: Record<string, Record<string, string>> = {
     // 仅步骤 6 schema 使用；page.ts: setParams({crosshairAngle})
     crosshairAngle: 'sim param via setParams (step-6 schema only)',
     // 仅步骤 6 schema 使用；page.ts: setParams({stripeOffset})
-    stripeOffset: 'sim param via setParams (step-6 schema only)',
-    // 学生输入的待校验波长，page.ts: setInputLambda 专用 API（非 sim 参数，不入 URL）
-    inputLambda: 'setInputLambda dedicated API (step-6 verification input)'
+    stripeOffset: 'sim param via setParams (step-6 schema only)'
   },
   'emf-analogy': {
     // NO_PARAMS_API 场景；page.ts: setTapOpening 专用 API

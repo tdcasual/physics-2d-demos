@@ -11,6 +11,7 @@ export function buildMicrometerDom(shadow: ShadowRoot): MicrometerElements {
 
   // ── DOM 结构（与原始 HTML 完全一致）──
   root.innerHTML = `
+    <p class="pan-hint" data-instrument-pan="true">左右滑查看目镜与读数刻度</p>
     <div class="micrometer-system">
       <div class="case">
         <div class="lens-outer-ring">

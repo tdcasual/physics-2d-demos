@@ -21,6 +21,7 @@ export function createInstrumentDom(
   shadow: ShadowRoot
 ): InterferenceVernierCaliperDom {
   root.innerHTML = `
+    <p class="pan-hint" data-instrument-pan="true">左右滑查看完整卡尺</p>
     <div class="header-panel">
       <div class="readout-display" id="readout">0.840 cm</div>
       <div class="tips" id="tips-text">

@@ -15,7 +15,13 @@
 
 export type Theme = 'light' | 'dark';
 
-export type SlotName = 'header' | 'control' | 'animation' | 'graph' | 'readout';
+export type SlotName =
+  | 'header'
+  | 'control'
+  | 'animation'
+  | 'graph'
+  | 'readout'
+  | 'data-workspace';
 
 /** Layout interaction model used by generic and capability-specific tests. */
 export type LayoutInteractionModel =
@@ -50,6 +56,7 @@ export interface LayoutSlots {
   animation: HTMLElement;
   graph?: HTMLElement;
   readout?: HTMLElement;
+  'data-workspace'?: HTMLElement;
 }
 
 export interface SlotConfig {
@@ -71,6 +78,13 @@ export interface LayoutConfig {
   preservedCanvas?: HTMLCanvasElement | null;
   /** 隐藏 transport 浮动控制条（适用于静态推导类场景） */
   hideTransport?: boolean;
+  /**
+   * Opt-in 数据处理工作区。未设置时不挂载入口、不改变默认 DOM。
+   * 图表分析是否出现由场景 DataWorkspaceSpec.chartAnalysis 决定。
+   */
+  dataWorkspace?:
+    | boolean
+    | import('../../platform/data-workspace').DataWorkspaceLayoutConfig;
   /** 场景标题（由 bootstrapper 注入），用于 canvas aria-label 等无障碍文本 */
   title?: string;
   __managedByContainer?: boolean;
@@ -110,7 +124,8 @@ export type CapabilityId =
   | 'sidebar-toggle'
   | 'resizer'
   | 'debug-overlay'
-  | 'layout-switch';
+  | 'layout-switch'
+  | 'data-workspace';
 
 /** Capability 上下文事件 */
 export interface CapabilityEvents {
@@ -240,6 +255,9 @@ export interface Scene {
 
   getTransportState?(): TransportState;
   getReadoutItems?(): ReadoutItem[];
+  getDataWorkspace?():
+    | import('../../platform/data-workspace').DataWorkspaceHost
+    | null;
   subscribe?(listener: SceneStateListener): () => void;
   getDemoProfile?():
     | import('../../platform/demo-profile').SceneDemoProfile

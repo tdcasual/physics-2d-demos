@@ -14,9 +14,25 @@ export async function waitForFirstFrame(
   });
   await page.waitForFunction(() => {
     const canvases = Array.from(document.querySelectorAll('canvas')).filter(
-      (c) =>
-        !c.closest('.mobile-tab-panel') ||
-        c.closest('.mobile-tab-panel')?.classList.contains('active')
+      (c) => {
+        if (
+          c.closest('.mobile-tab-panel') &&
+          !c.closest('.mobile-tab-panel')?.classList.contains('active')
+        ) {
+          return false;
+        }
+        const style = window.getComputedStyle(c);
+        if (style.display === 'none' || style.visibility === 'hidden') {
+          return false;
+        }
+        let parent = c.parentElement;
+        while (parent) {
+          const parentStyle = window.getComputedStyle(parent);
+          if (parentStyle.display === 'none') return false;
+          parent = parent.parentElement;
+        }
+        return true;
+      }
     );
     if (canvases.length === 0) return false;
     return canvases.every((c) => {

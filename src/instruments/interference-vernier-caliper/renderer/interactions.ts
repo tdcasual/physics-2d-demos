@@ -9,6 +9,45 @@ import { interferenceVernierCaliperMeta } from '../instrument.meta';
  * 视图与交互共享的可变状态。
  * 主文件（渲染/序列化）与本模块（拖拽）通过同一对象读写，语义与拆分前闭包共享一致。
  */
+export const DEFAULT_VISUAL_SCALE = 2;
+export const INSTRUMENT_LAYOUT_WIDTH = 695;
+/** CSS box of `.instrument-container`. */
+export const INSTRUMENT_LAYOUT_HEIGHT = 250;
+/**
+ * Visible height at scale 1: layout box + slider/lens drop-shadow (~15)
+ * + `.scroll-wrapper` padding-top (10). 250 was too short and cropped the
+ * eyepiece whenever root scale was not height-limited.
+ */
+export const INSTRUMENT_VISUAL_HEIGHT = 275;
+/**
+ * Visible width at scale 1 including slider travel (MAX_X) + body + shaft/knob
+ * (`right: -88px`). 695 is only the ruler box and clips the knob at default 1.4 cm.
+ */
+export const INSTRUMENT_VISUAL_WIDTH = 860;
+export const SLIDER_LAYOUT_WIDTH = 566;
+
+export const CALIPER_VISUAL_SELECTORS = [
+  '.main-ruler',
+  '.slider-assembly',
+  '.slider-body',
+  '.lens-assembly',
+  '.screw-assembly',
+  '.knob',
+  '.vernier-ruler'
+] as const;
+
+export function fitInstrumentRootScale(
+  availW: number,
+  availH: number,
+  visualScale: number = DEFAULT_VISUAL_SCALE,
+  maxScale = 1.25
+): number {
+  const designW = INSTRUMENT_VISUAL_WIDTH * visualScale;
+  const designH = INSTRUMENT_VISUAL_HEIGHT * visualScale;
+  if (!(availW > 0) || !(availH > 0)) return 1;
+  return Math.min(availW / designW, availH / designH, maxScale);
+}
+
 export type InteractionState = {
   currentReadingCm: number;
   isDragging: boolean;
@@ -20,16 +59,28 @@ export type InteractionState = {
   sysStartY: number;
   sysX: number;
   sysY: number;
+  visualScale: number;
 };
+
+export function applyInstrumentTransform(
+  instrumentEl: HTMLElement,
+  state: InteractionState
+): void {
+  instrumentEl.style.transformOrigin =
+    state.visualScale === DEFAULT_VISUAL_SCALE ? '' : 'top left';
+  instrumentEl.style.transform = `translate(${state.sysX}px, ${state.sysY}px) scale(${state.visualScale})`;
+}
 
 export function createInteractionState(parent: HTMLElement): InteractionState {
   const parentRect = parent.getBoundingClientRect();
-  const scaledW = 695 * 2;
-  const scaledH = 250 * 2;
+  const scaledW = INSTRUMENT_VISUAL_WIDTH * DEFAULT_VISUAL_SCALE;
+  const scaledH = INSTRUMENT_VISUAL_HEIGHT * DEFAULT_VISUAL_SCALE;
   const sysX =
-    parentRect.width > 100
+    parentRect.width >= scaledW
       ? Math.round((parentRect.width - scaledW) / 2)
-      : -100;
+      : parentRect.width > 100
+        ? 0
+        : -100;
   const sysY =
     parentRect.height > 100
       ? Math.max(0, Math.round((parentRect.height - scaledH) / 2))
@@ -45,7 +96,8 @@ export function createInteractionState(parent: HTMLElement): InteractionState {
     sysStartX: 0,
     sysStartY: 0,
     sysX,
-    sysY
+    sysY,
+    visualScale: DEFAULT_VISUAL_SCALE
   };
 }
 
@@ -130,17 +182,29 @@ export function attachInteractions(
     state.sysY += clientY - state.sysStartY;
     state.sysStartX = clientX;
     state.sysStartY = clientY;
-    instrumentEl.style.transform = `translate(${state.sysX}px, ${state.sysY}px) scale(2)`;
+    applyInstrumentTransform(instrumentEl, state);
   };
   const handleSysDragEnd = () => {
     state.sysDragging = false;
   };
 
+  function isNarrowHost(): boolean {
+    const rootNode = instrumentEl.getRootNode();
+    if (!(rootNode instanceof ShadowRoot)) return false;
+    return (
+      rootNode
+        .querySelector('.microscope-root')
+        ?.classList.contains('is-narrow') === true
+    );
+  }
+
   const onRulerMouseDown = (e: MouseEvent) => {
+    if (isNarrowHost()) return;
     e.stopPropagation();
     handleSysDragStart(e.clientX, e.clientY);
   };
   const onRulerTouchStart = (e: TouchEvent) => {
+    if (isNarrowHost()) return;
     e.stopPropagation();
     handleSysDragStart(e.touches[0].clientX, e.touches[0].clientY);
   };
@@ -206,7 +270,7 @@ export function attachInteractions(
         return;
     }
     e.preventDefault();
-    instrumentEl.style.transform = `translate(${state.sysX}px, ${state.sysY}px) scale(2)`;
+    applyInstrumentTransform(instrumentEl, state);
   };
   mainRuler.addEventListener('keydown', onRulerKeyDown);
 

@@ -15,6 +15,7 @@ import type {
   SlotName
 } from '../../types';
 import { enterLayout, exitLayout } from '../../_shared/layout-transition';
+import { dataWorkspaceDeclarations } from '../../capabilities/data-workspace-declarations';
 
 export interface MobileStackConfig extends LayoutConfig {
   animationHeightVh?: number;
@@ -71,6 +72,7 @@ export class MobileStackLayout implements ILayout {
       ...(config.hideTransport
         ? []
         : [{ id: 'transport-bar' as const, config: {} }]),
+      ...dataWorkspaceDeclarations(config),
       {
         id: 'readout-panel',
         config: {

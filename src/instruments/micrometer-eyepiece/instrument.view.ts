@@ -24,6 +24,28 @@ import { createStripeUpdater } from './renderer/stripes';
 import { createThimbleTicks, initSleeve } from './renderer/scales';
 import { createViewRenderer } from './renderer/render-view';
 import { bindInteractions } from './renderer/interactions';
+import { micrometerFringeAlignment } from './renderer/alignment';
+import type { FringeAlignment } from '../_utils/fringe-alignment';
+import {
+  applyFitTransform,
+  fitTransformToParent,
+  narrowInstrumentScale,
+  unionClientRects
+} from '../_utils/fit-visual';
+
+const MICROMETER_SYSTEM_SCALE = 1.5;
+/** Sleeve left (215) + initSleeve width (700) at layout scale 1. */
+const MICROMETER_LAYOUT_WIDTH = 915;
+/** Case (240) + thimble/ratchet (~185) — student workflow, not the unused far sleeve. */
+const MICROMETER_FUNCTIONAL_WIDTH = 425;
+const MICROMETER_VISUAL_SELECTORS = [
+  '.case',
+  '.lens-outer-ring',
+  '.sleeve-container',
+  '.thimble-group',
+  '.thimble-body',
+  '.ratchet'
+] as const;
 
 export type MicrometerEyepieceView = InstrumentView<MicrometerEyepieceState> &
   MeasurableInstrument &
@@ -31,6 +53,8 @@ export type MicrometerEyepieceView = InstrumentView<MicrometerEyepieceState> &
   CalibratableInstrument & {
     /** 显示/隐藏仪器内部读数浮层（宿主场景统一在外部显示读数时可隐藏） */
     setReadoutVisible(visible: boolean): void;
+    getAlignment(): FringeAlignment;
+    setReading(readingMm: number): void;
   };
 
 export function createMicrometerEyepieceView(options: {
@@ -50,11 +74,13 @@ export function createMicrometerEyepieceView(options: {
   canvas.style.display = 'none';
 
   const wrapper = document.createElement('div');
+  wrapper.dataset.instrumentScroll = 'true';
   wrapper.style.cssText = `
     position: absolute;
     left: 0; top: 0;
     width: 100%; height: 100%;
     overflow: visible;
+    box-sizing: border-box;
   `;
   parent.style.position = 'relative';
   parent.appendChild(wrapper);
@@ -103,10 +129,10 @@ export function createMicrometerEyepieceView(options: {
     tickGapY: 12
   };
 
-  // 整体仪器初始位置（基于父容器居中）
+  // 整体仪器初始位置：宽屏居中；窄屏从目镜/读数端起，避免把镜头推出视口
   const parentRect = parent.getBoundingClientRect();
-  const scaledW = 915 * 1.5;
-  const scaledH = 450 * 1.5;
+  const scaledW = MICROMETER_LAYOUT_WIDTH * MICROMETER_SYSTEM_SCALE;
+  const scaledH = 270 * MICROMETER_SYSTEM_SCALE;
 
   // 跨渲染子模块共享的可变视图状态（原为工厂闭包 let 变量，语义不变）
   const viewState: MicrometerViewState = {
@@ -117,13 +143,16 @@ export function createMicrometerEyepieceView(options: {
     disposed: false,
     simLastCrosshairAngle: 0,
     sysX:
-      parentRect.width > 100
+      parentRect.width >= scaledW
         ? Math.round((parentRect.width - scaledW) / 2)
-        : -100,
+        : parentRect.width > 100
+          ? 0
+          : -100,
     sysY:
       parentRect.height > 100
         ? Math.max(0, Math.round((parentRect.height - scaledH) / 2))
-        : 0
+        : 0,
+    systemScale: MICROMETER_SYSTEM_SCALE
   };
 
   let simLastZero = 0;
@@ -183,7 +212,7 @@ export function createMicrometerEyepieceView(options: {
   caseEl.setAttribute('role', 'button');
   caseEl.setAttribute('aria-label', '目镜壳体，拖动可移动整个仪器');
   caseEl.tabIndex = 0;
-  systemEl.style.transform = `translate(${viewState.sysX}px, ${viewState.sysY}px) scale(1.5)`;
+  systemEl.style.transform = `translate(${viewState.sysX}px, ${viewState.sysY}px) scale(${viewState.systemScale})`;
 
   // ── 副尺键盘操作 ──
   thimbleGroup.tabIndex = 0;
@@ -246,12 +275,75 @@ export function createMicrometerEyepieceView(options: {
       }
     },
     resize() {
-      const rect = parent.getBoundingClientRect();
-      const scaleX = rect.width / 700;
-      const scaleY = rect.height / 450;
-      const s = Math.min(scaleX, scaleY, 2.0);
-      root.style.transform = `scale(${s})`;
-      root.style.transformOrigin = 'top center';
+      const applyFit = () => {
+        if (viewState.disposed) return;
+        const rect = parent.getBoundingClientRect();
+        const systemScale = MICROMETER_SYSTEM_SCALE;
+        const narrow =
+          (typeof window !== 'undefined' && window.innerWidth <= 720) ||
+          rect.width < 400;
+        viewState.sysY = 0;
+        if (narrow) {
+          viewState.sysX = 0;
+          viewState.systemScale = 1;
+          systemEl.style.transform = 'translate(0px, 0px) scale(1)';
+          wrapper.style.overflowX = 'auto';
+          wrapper.style.overflowY = 'hidden';
+          wrapper.style.pointerEvents = 'auto';
+          wrapper.style.touchAction = 'pan-x';
+          root.classList.add('is-narrow');
+          root.style.minWidth = `${MICROMETER_LAYOUT_WIDTH}px`;
+          systemEl.style.minWidth = `${MICROMETER_LAYOUT_WIDTH}px`;
+          const fitWidth = Math.max(
+            wrapper.clientWidth,
+            Math.min(
+              Math.max(rect.width, 1),
+              typeof window !== 'undefined' ? window.innerWidth : rect.width
+            )
+          );
+          wrapper.style.setProperty(
+            '--instrument-viewport',
+            `${Math.max(fitWidth, 1)}px`
+          );
+          const s = narrowInstrumentScale(
+            fitWidth,
+            MICROMETER_FUNCTIONAL_WIDTH
+          );
+          root.style.transform = `scale(${s})`;
+          root.style.transformOrigin = 'top left';
+          return;
+        }
+        viewState.sysX = 0;
+        viewState.systemScale = systemScale;
+        systemEl.style.transform = `translate(0px, 0px) scale(${systemScale})`;
+        wrapper.style.overflow = 'visible';
+        wrapper.style.pointerEvents = '';
+        wrapper.style.touchAction = '';
+        root.classList.remove('is-narrow');
+        root.style.minWidth = '';
+        systemEl.style.minWidth = '';
+        wrapper.style.removeProperty('--instrument-viewport');
+        renderView();
+        root.style.transform = 'none';
+        root.style.transformOrigin = 'top left';
+        void root.offsetWidth;
+        const union = unionClientRects(root, MICROMETER_VISUAL_SELECTORS);
+        if (union) {
+          applyFitTransform(
+            root,
+            fitTransformToParent(parent, union, { root })
+          );
+        } else {
+          const visualW = MICROMETER_LAYOUT_WIDTH * systemScale;
+          const visualH = 270 * systemScale;
+          const s = Math.min(rect.width / visualW, rect.height / visualH, 1.25);
+          root.style.transform = `scale(${s})`;
+        }
+      };
+      applyFit();
+      requestAnimationFrame(() => {
+        requestAnimationFrame(applyFit);
+      });
     },
     setTheme(_theme: TeachingTheme) {
       // 固定工业配色
@@ -274,6 +366,23 @@ export function createMicrometerEyepieceView(options: {
     // ── MeasurableInstrument ──
     getReading() {
       return viewState.currentReading + viewState.zeroOffset;
+    },
+    getAlignment() {
+      return micrometerFringeAlignment({
+        readingMm: viewState.currentReading,
+        initialReading: config.initialReading,
+        stripeOffsetMm: stripeConfig.offset,
+        crosshairSpeed: viewState.crosshairSpeed,
+        stripeSpacingPx: stripeConfig.spacing
+      });
+    },
+    setReading(readingMm: number) {
+      viewState.currentReading = Math.max(
+        0,
+        Math.min(readingMm, config.maxReading)
+      );
+      renderView();
+      emitReading();
     },
     onReadingChange(callback) {
       listeners.reading.push(callback);
@@ -343,7 +452,7 @@ export function createMicrometerEyepieceView(options: {
         }
         if (typeof data.sysX === 'number') viewState.sysX = data.sysX;
         if (typeof data.sysY === 'number') viewState.sysY = data.sysY;
-        systemEl.style.transform = `translate(${viewState.sysX}px, ${viewState.sysY}px) scale(1.5)`;
+        systemEl.style.transform = `translate(${viewState.sysX}px, ${viewState.sysY}px) scale(${viewState.systemScale})`;
         updateStripes(stripeConfig);
         renderView();
       } catch {

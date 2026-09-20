@@ -249,6 +249,7 @@ export function applyResponsiveColumns(
   // Detect sidebar-hidden state (set by sidebar-toggle capability)
   const currentColumns = container.style.gridTemplateColumns;
   const isSidebarHidden = currentColumns.startsWith('0px');
+  const isDataWorkspace = container.classList.contains('is-data-workspace');
 
   if (width < mobileBreakpoint) {
     container.style.gridTemplateColumns = '1fr';
@@ -259,10 +260,12 @@ export function applyResponsiveColumns(
       leftPanel.style.borderBottom = '1px solid var(--border-color)';
     }
   } else if (width < tabletBreakpoint) {
-    const sidebarWidth = width < 900 ? 240 : 280;
-    container.style.gridTemplateColumns = isSidebarHidden
-      ? '0px 8px 1fr'
-      : `${sidebarWidth}px 8px 1fr`;
+    if (!isDataWorkspace) {
+      const sidebarWidth = width < 900 ? 240 : 280;
+      container.style.gridTemplateColumns = isSidebarHidden
+        ? '0px 8px 1fr'
+        : `${sidebarWidth}px 8px 1fr`;
+    }
     container.style.gridTemplateRows = '';
     if (leftPanel) {
       leftPanel.style.maxHeight = '';
@@ -270,16 +273,18 @@ export function applyResponsiveColumns(
       leftPanel.style.borderBottom = 'none';
     }
   } else {
-    if (isSidebarHidden) {
-      container.style.gridTemplateColumns = '0px 8px 1fr';
-    } else {
-      const leftMinWidth = cfg.leftMinWidth ?? 260;
-      const leftMaxWidth = Math.min(cfg.leftMaxWidth ?? 960, width * 0.5);
-      const leftWidth = Math.max(
-        leftMinWidth,
-        Math.min(leftMaxWidth, width * leftRatio)
-      );
-      container.style.gridTemplateColumns = `${leftWidth}px 8px 1fr`;
+    if (!isDataWorkspace) {
+      if (isSidebarHidden) {
+        container.style.gridTemplateColumns = '0px 8px 1fr';
+      } else {
+        const leftMinWidth = cfg.leftMinWidth ?? 260;
+        const leftMaxWidth = Math.min(cfg.leftMaxWidth ?? 960, width * 0.5);
+        const leftWidth = Math.max(
+          leftMinWidth,
+          Math.min(leftMaxWidth, width * leftRatio)
+        );
+        container.style.gridTemplateColumns = `${leftWidth}px 8px 1fr`;
+      }
     }
     container.style.gridTemplateRows = '';
     if (leftPanel) {

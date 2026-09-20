@@ -615,6 +615,10 @@ export class SceneAdapter<
     return { isPlaying, speed };
   }
 
+  getDataWorkspace() {
+    return this.scene?.getDataWorkspace?.() ?? null;
+  }
+
   getReadoutItems(): ReadoutItem[] {
     let items: ReadoutItem[];
     if (this.scene?.getReadoutItems) {

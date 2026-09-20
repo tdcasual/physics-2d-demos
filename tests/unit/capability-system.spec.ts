@@ -65,10 +65,11 @@ describe('Capability factory registry', () => {
     'sidebar-toggle',
     'resizer',
     'debug-overlay',
-    'layout-switch'
+    'layout-switch',
+    'data-workspace'
   ];
 
-  it('has all 8 factories registered', () => {
+  it('has all factories registered', () => {
     for (const id of expectedIds) {
       expect(capabilityFactories[id]).toBeDefined();
     }

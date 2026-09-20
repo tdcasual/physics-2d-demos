@@ -21,11 +21,17 @@ import {
 import {
   attachInteractions,
   createInteractionState,
+  DEFAULT_VISUAL_SCALE,
+  INSTRUMENT_LAYOUT_WIDTH,
+  INSTRUMENT_VISUAL_HEIGHT,
+  INSTRUMENT_VISUAL_WIDTH,
+  fitInstrumentRootScale,
   type InteractionElements
 } from '../../src/instruments/interference-vernier-caliper/renderer/interactions';
 import { createInterferenceVernierCaliperView } from '../../src/instruments/interference-vernier-caliper/instrument.view';
 import { createInterferenceVernierCaliperSim } from '../../src/instruments/interference-vernier-caliper/instrument.sim';
 import { interferenceVernierCaliperMeta } from '../../src/instruments/interference-vernier-caliper/instrument.meta';
+import { sampleCaliperAlignedReadingsCm } from '../../src/instruments/interference-vernier-caliper/renderer/alignment';
 
 function createHost() {
   const parent = document.createElement('div');
@@ -149,6 +155,32 @@ describe('interference-vernier-caliper renderer', () => {
     });
   });
 
+  describe('fitInstrumentRootScale', () => {
+    it('uses visual height 275 and width including the knob overhang', () => {
+      expect(INSTRUMENT_VISUAL_HEIGHT).toBe(275);
+      expect(INSTRUMENT_VISUAL_HEIGHT).toBeGreaterThan(250);
+      expect(INSTRUMENT_VISUAL_WIDTH).toBeGreaterThan(INSTRUMENT_LAYOUT_WIDTH);
+      const wide = fitInstrumentRootScale(
+        INSTRUMENT_VISUAL_WIDTH * DEFAULT_VISUAL_SCALE,
+        INSTRUMENT_VISUAL_HEIGHT * DEFAULT_VISUAL_SCALE,
+        DEFAULT_VISUAL_SCALE
+      );
+      expect(wide).toBeCloseTo(1, 5);
+      const short = fitInstrumentRootScale(
+        4000,
+        INSTRUMENT_VISUAL_HEIGHT * DEFAULT_VISUAL_SCALE * 0.5,
+        DEFAULT_VISUAL_SCALE
+      );
+      expect(short).toBeCloseTo(0.5, 5);
+      const byWidth = fitInstrumentRootScale(
+        INSTRUMENT_VISUAL_WIDTH * DEFAULT_VISUAL_SCALE * 0.4,
+        4000,
+        DEFAULT_VISUAL_SCALE
+      );
+      expect(byWidth).toBeCloseTo(0.4, 5);
+    });
+  });
+
   describe('createInteractionState', () => {
     it('centers the instrument when parent is large enough', () => {
       const parent = document.createElement('div');
@@ -158,9 +190,9 @@ describe('interference-vernier-caliper renderer', () => {
           height: 800
         }) as DOMRect;
       const state = createInteractionState(parent);
-      // scaledW = 695*2 = 1390, scaledH = 250*2 = 500
-      expect(state.sysX).toBe(Math.round((2000 - 1390) / 2));
-      expect(state.sysY).toBe(Math.round((800 - 500) / 2));
+      // scaledW = 860*2 = 1720, scaledH = 275*2 = 550
+      expect(state.sysX).toBe(Math.round((2000 - 1720) / 2));
+      expect(state.sysY).toBe(Math.round((800 - 550) / 2));
       // 初始读数取自 meta.defaultParams，与 sim 保持一致
       expect(state.currentReadingCm).toBe(
         interferenceVernierCaliperMeta.defaultParams.initialReading
@@ -347,6 +379,36 @@ describe('interference-vernier-caliper renderer', () => {
       expect(view.getReading()).toBeCloseTo(1.45, 10);
       expect(view.getZero()).toBe(0.05);
       expect(view.getCalibrationOffset()).toBe(0.05);
+      view.dispose();
+    });
+
+    it('fires onAlign when setReading crosses a bright fringe', () => {
+      const { canvas } = createHost();
+      const view = createInterferenceVernierCaliperView({
+        canvas,
+        theme: 'dark'
+      });
+      const sim = createInterferenceVernierCaliperSim(
+        interferenceVernierCaliperMeta.defaultParams
+      );
+      view.render(sim.getState());
+      const align = vi.fn();
+      view.onAlign(align);
+      const spacing = sim.getState().fringeSpacing;
+      const samples = sampleCaliperAlignedReadingsCm(spacing, 2);
+      expect(samples.length).toBeGreaterThanOrEqual(2);
+      view.setReading(samples[0].readingCm + 0.05);
+      expect(view.getAlignment().aligned).toBe(false);
+      expect(align).not.toHaveBeenCalled();
+      view.setReading(samples[0].readingCm);
+      expect(view.getAlignment().aligned).toBe(true);
+      expect(align).toHaveBeenCalledTimes(1);
+      view.setReading(samples[0].readingCm);
+      expect(align).toHaveBeenCalledTimes(1);
+      view.setReading(samples[0].readingCm + 0.05);
+      expect(view.getAlignment().aligned).toBe(false);
+      view.setReading(samples[1].readingCm);
+      expect(align).toHaveBeenCalledTimes(2);
       view.dispose();
     });
 
