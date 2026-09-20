@@ -266,3 +266,22 @@ codex 交叉审计（只读模式）确认了主线证据，并提出以下实�
 - 每个 WO 完成后跑对应验收命令并附输出摘要；失败不得进入下一 WO。
 - 改动 `vite.config.ts`、`scripts/check-bundle-budget.ts`、`tests/contract/*` 前注意这些文件可能受 CODEOWNERS 保护，需在报告中显式声明改动理由。
 - 新增代码默认不写注释（项目规范），除非解释非常规决策。
+
+---
+
+## 9. 执行结果与遗留事项（2026-09-20 收尾）
+
+**WO-1/2/3 全部完成并验收通过**，已推送 main（`107afd8..29e9c9b`，5 个提交）：
+
+1. `1d60ec5` fix(scene)：mechanical-energy 视图类型标注（HEAD 既有 strict 报错）。
+2. `112eab6` feat(double-slit)：波长教学闭环（WO-1）；顺带登记 variable-work/internal-energy 的 `autoRun` 契约豁免（HEAD 既有漂移）。
+3. `29240ed` perf(home)：首页请求链 ~123 → 3（WO-2），registry 聚合 chunk gzip 29.1 kB。
+4. `b480380` feat(instruments)：`createInstrumentHost` 挂载层（WO-3），修 R1/R2，double-slit 胶水 244 → ~90 行。
+5. `29e9c9b` docs：本方案文档。
+
+验收证据：`pnpm quality:core` 全绿（exit 0）；单测+契约 7096 通过；e2e 全套 425 通过；`pnpm verify:scene double-slit` 7 步全绿；`tests/e2e/measure-simulation.spec.ts` 4/4（含波长校验全路径）。
+
+**遗留事项（随后处理，优先级从高到低）**：
+
+1. **视觉基线欠账**（与本次改动无关，容器两轮实测确认本次改动像素干净）：仓库仅提交了 19/121 个场景的 linux/darwin 基线（各 38 张 PNG），另有 17 个既有基线已随渲染栈/字体漂移而变红。处理方式：走 CI `update_snapshots` workflow_dispatch 做全量基线重建（容器脚本同 CI 一致），不要在宿主机 `--update-snapshots`。
+2. §6 延期路线图 12 项（meta 解耦 sim、AST 棘轮堵逃逸、emf-analogy hints、page.ts 样板下沉等），按文档逐项派单执行。
