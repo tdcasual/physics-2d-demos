@@ -223,8 +223,13 @@
   padding: 0.35rem 0.75rem !important;
 }
 
-.graph-section.is-collapsed-demo,
-.layout-graph-section.is-collapsed-demo {
+.graph-section.is-collapsed-demo {
   max-height: 3rem;
   overflow: hidden;
+}
+
+/* Native fullscreen: hide layout chrome rows; keep transport. */
+.layout-master.is-native-fullscreen
+  :is(.stage-toolbar, .mobile-transport-toggles) {
+  display: none;
 }

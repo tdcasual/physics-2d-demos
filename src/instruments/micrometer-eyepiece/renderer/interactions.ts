@@ -10,6 +10,7 @@ import type {
   MicrometerElements,
   MicrometerViewState
 } from './types';
+import { localPointerDelta } from '../../../core/canvas-sizing';
 
 /**
  * 绑定全部交互事件，返回解绑函数（供 dispose 调用，移除逻辑与原 dispose 一致）。
@@ -44,8 +45,12 @@ export function bindInteractions(options: {
 
   const handleDragMove = (clientX: number, clientY: number) => {
     if (!isDragging) return;
-    const deltaX = clientX - startX;
-    const deltaY = clientY - startY;
+    // 屏幕 delta → 局部坐标：stage panzoom 缩放时按 viewport 的 k 归一化
+    const { dx: deltaX, dy: deltaY } = localPointerDelta(
+      thimbleGroup,
+      clientX - startX,
+      clientY - startY
+    );
     const deltaReadingX = (deltaX / 1.8 / config.tickGapX) * 0.5;
     const deltaReadingY = (deltaY / 1.8 / config.tickGapY) * 0.01;
     const newReading = Math.max(
@@ -81,8 +86,13 @@ export function bindInteractions(options: {
 
   const handleSysDragMove = (clientX: number, clientY: number) => {
     if (!sysDragging) return;
-    viewState.sysX += clientX - sysStartX;
-    viewState.sysY += clientY - sysStartY;
+    const { dx, dy } = localPointerDelta(
+      systemEl,
+      clientX - sysStartX,
+      clientY - sysStartY
+    );
+    viewState.sysX += dx;
+    viewState.sysY += dy;
     sysStartX = clientX;
     sysStartY = clientY;
     systemEl.style.transform = `translate(${viewState.sysX}px, ${viewState.sysY}px) scale(${viewState.systemScale})`;

@@ -20,8 +20,8 @@ import {
 } from '../../_shared/split-helpers';
 import { buildSplitLayoutDOM } from '../../_shared/split-layout-base';
 import { enterLayout, exitLayout } from '../../_shared/layout-transition';
-import { shouldEnableDebugOverlay } from '../../capabilities/debug-overlay';
-import { dataWorkspaceDeclarations } from '../../capabilities/data-workspace-declarations';
+import { buildBaseCapabilities } from '../../capabilities/base-declarations';
+import { READOUT_OVERLAY_ATTR } from '../../../../platform/stage-readout';
 
 export interface SplitRightConfig extends LayoutConfig {
   defaultLeftRatio?: number;
@@ -62,43 +62,35 @@ export class SplitRightLayout implements ILayout {
     this.leftRatio = config.defaultLeftRatio ?? 0.38;
     this._container = container;
 
-    this.capabilities = [
-      ...(config.hideTransport
-        ? []
-        : [
-            {
-              id: 'transport-bar' as const,
-              config: { mountSlot: 'animation' as const }
-            }
-          ]),
-      ...dataWorkspaceDeclarations(config),
-      {
-        id: 'readout-panel',
-        config: {
-          position: 'top-right',
-          collapsed: config.readoutCollapsed ?? true,
-          cssPrefix: PREFIX,
-          label: config.readoutLabel ?? '数据读数'
-        }
-      },
-      { id: 'theme-toggle' },
-      { id: 'mode-toggle' },
-      { id: 'layout-switch' },
-      { id: 'sidebar-toggle' },
-      {
-        id: 'resizer',
-        config: {
-          direction: 'vertical',
-          targetSelector: '.teaching-left-panel',
-          selector: '.teaching-panel-resizer',
-          onResize: (r: number) => {
-            this.leftRatio = r;
+    this.capabilities = buildBaseCapabilities(config, {
+      transportConfig: { mountSlot: 'animation' as const },
+      afterDataWorkspace: [
+        {
+          id: 'readout-panel',
+          config: {
+            position: 'top-right',
+            collapsed: config.readoutCollapsed ?? true,
+            cssPrefix: PREFIX,
+            label: config.readoutLabel ?? '数据读数'
           }
         }
-      },
-      { id: 'demo-profile' },
-      ...(shouldEnableDebugOverlay() ? [{ id: 'debug-overlay' as const }] : [])
-    ];
+      ],
+      beforeDemoProfile: [
+        { id: 'layout-switch' },
+        { id: 'sidebar-toggle' },
+        {
+          id: 'resizer',
+          config: {
+            direction: 'vertical',
+            targetSelector: '.teaching-left-panel',
+            selector: '.teaching-panel-resizer',
+            onResize: (r: number) => {
+              this.leftRatio = r;
+            }
+          }
+        }
+      ]
+    });
   }
 
   async mount(): Promise<LayoutSlots> {
@@ -121,6 +113,11 @@ export class SplitRightLayout implements ILayout {
     });
 
     this._container.dataset.hasGraph = String(this.cfg.hasGraph !== false);
+    if (this.cfg.graphInitiallyHidden) {
+      const section = slots.graph?.closest('.graph-section');
+      if (section instanceof HTMLElement) section.hidden = true;
+      this._container.dataset.graphInitiallyHidden = 'true';
+    }
     this.slots = slots;
     return this.slots as LayoutSlots;
   }
@@ -135,6 +132,8 @@ export class SplitRightLayout implements ILayout {
     delete this._container.dataset.theme;
     delete this._container.dataset.mode;
     delete this._container.dataset.hasGraph;
+    delete this._container.dataset.graphInitiallyHidden;
+    this._container.removeAttribute(READOUT_OVERLAY_ATTR);
     try {
       this._container.replaceChildren();
     } catch {

@@ -194,13 +194,17 @@ export default defineConfig({
     modulePreload: {
       polyfill: false,
       resolveDependencies(filename, deps) {
-        // Optional data-workspace runtime is dynamically imported from the
-        // shared layouts chunk. Do not modulepreload it on non-opt-in pages.
-        const withoutDataWorkspace = deps.filter(
+        // Panel + capability runtime is dynamically imported. Never
+        // modulepreload it: opt-in pages already pay for the engine via
+        // data-task, and the panel grew past the scene-entry JS budget.
+        const withoutRuntime = deps.filter(
+          (dep) => !dep.includes('data-workspace-runtime')
+        );
+        const withoutDataWorkspace = withoutRuntime.filter(
           (dep) => !dep.includes('data-workspace')
         );
         if (!filename.includes('double-slit')) return withoutDataWorkspace;
-        return deps.filter(
+        return withoutRuntime.filter(
           (dep) =>
             !dep.includes('instrument-interference-vernier-caliper') &&
             !dep.includes('instrument-micrometer-eyepiece') &&
@@ -223,16 +227,23 @@ export default defineConfig({
           if (id.includes('preload-helper')) {
             return 'preload-helper';
           }
-          // Optional data-workspace runtime (engine + panel + capability).
-          // Must stay out of layouts/ui/core or every scene pays for it.
+          // Engine is statically imported by opt-in scene data-task modules.
+          // Panel + capability stay on the lazy import so they are not
+          // forced into the same preloaded chunk as the engine.
           // data-workspace-declarations.ts / data-workspace-lazy.ts stay
           // in the layouts chunk (their filenames do not match this).
           if (
-            id.includes('/src/app/layouts/capabilities/data-workspace.') ||
-            id.includes('/src/ui/components/data-workspace-panel.') ||
-            id.includes('/src/platform/data-workspace.')
+            id.includes('/src/platform/data-workspace.') ||
+            id.includes('/src/platform/data-workspace/')
           ) {
             return 'data-workspace';
+          }
+          if (
+            id.includes('/src/app/layouts/capabilities/data-workspace.') ||
+            id.includes('/src/ui/components/data-workspace-panel.') ||
+            id.includes('/src/ui/components/data-workspace-panel/')
+          ) {
+            return 'data-workspace-runtime';
           }
           // Vendor chunk: React ecosystem
           if (

@@ -23,8 +23,8 @@ import {
 } from '../../_shared/split-helpers';
 import { buildSplitLayoutDOM } from '../../_shared/split-layout-base';
 import { enterLayout, exitLayout } from '../../_shared/layout-transition';
-import { shouldEnableDebugOverlay } from '../../capabilities/debug-overlay';
-import { dataWorkspaceDeclarations } from '../../capabilities/data-workspace-declarations';
+import { buildBaseCapabilities } from '../../capabilities/base-declarations';
+import { READOUT_OVERLAY_ATTR } from '../../../../platform/stage-readout';
 
 export interface SplitRightGraphBottomConfig extends LayoutConfig {
   defaultLeftRatio?: number;
@@ -74,58 +74,50 @@ export class SplitRightGraphBottomLayout implements ILayout {
     this.graphHeight = config.graphHeight ?? 220;
     this._container = container;
 
-    this.capabilities = [
-      ...(config.hideTransport
-        ? []
-        : [
-            {
-              id: 'transport-bar' as const,
-              config: { mountSlot: 'animation' as const }
+    this.capabilities = buildBaseCapabilities(config, {
+      transportConfig: { mountSlot: 'animation' as const },
+      afterDataWorkspace: [
+        {
+          id: 'readout-panel',
+          config: {
+            position: 'top-right',
+            collapsed: true,
+            cssPrefix: PREFIX,
+            label: config.readoutLabel ?? '数据读数'
+          }
+        }
+      ],
+      beforeDemoProfile: [
+        { id: 'layout-switch' },
+        { id: 'sidebar-toggle' },
+        {
+          id: 'resizer',
+          config: {
+            direction: 'vertical',
+            targetSelector: '.srgb-left-panel',
+            selector: '.srgb-resizer-v',
+            onResize: (r: number) => {
+              this.leftRatio = r;
             }
-          ]),
-      ...dataWorkspaceDeclarations(config),
-      {
-        id: 'readout-panel',
-        config: {
-          position: 'top-right',
-          collapsed: true,
-          cssPrefix: PREFIX,
-          label: config.readoutLabel ?? '数据读数'
-        }
-      },
-      { id: 'theme-toggle' },
-      { id: 'mode-toggle' },
-      { id: 'layout-switch' },
-      { id: 'sidebar-toggle' },
-      {
-        id: 'resizer',
-        config: {
-          direction: 'vertical',
-          targetSelector: '.srgb-left-panel',
-          selector: '.srgb-resizer-v',
-          onResize: (r: number) => {
-            this.leftRatio = r;
+          }
+        },
+        {
+          id: 'resizer',
+          config: {
+            direction: 'horizontal',
+            targetSelector: '.srgb-graph-section',
+            selector: '.srgb-resizer-h',
+            minSize: 120,
+            maxSize: 480,
+            onResize: (r: number) => {
+              this.graphHeight = Math.round(
+                r * (this._container.clientHeight || window.innerHeight || 800)
+              );
+            }
           }
         }
-      },
-      {
-        id: 'resizer',
-        config: {
-          direction: 'horizontal',
-          targetSelector: '.srgb-graph-section',
-          selector: '.srgb-resizer-h',
-          minSize: 120,
-          maxSize: 480,
-          onResize: (r: number) => {
-            this.graphHeight = Math.round(
-              r * (this._container.clientHeight || window.innerHeight || 800)
-            );
-          }
-        }
-      },
-      { id: 'demo-profile' },
-      ...(shouldEnableDebugOverlay() ? [{ id: 'debug-overlay' as const }] : [])
-    ];
+      ]
+    });
   }
 
   async mount(): Promise<LayoutSlots> {
@@ -180,6 +172,12 @@ export class SplitRightGraphBottomLayout implements ILayout {
     graph.slot.setAttribute('data-columns', String(graphColumns));
     rightPanel.appendChild(this.graphSection);
 
+    if (cfg.graphInitiallyHidden) {
+      this.graphSection.hidden = true;
+      this.resizerH.hidden = true;
+      container.dataset.graphInitiallyHidden = 'true';
+    }
+
     this.slots = { ...slots, graph: graph.slot };
     return this.slots as LayoutSlots;
   }
@@ -193,6 +191,8 @@ export class SplitRightGraphBottomLayout implements ILayout {
     delete this._container.dataset.theme;
     delete this._container.dataset.mode;
     delete this._container.dataset.graphCollapsed;
+    delete this._container.dataset.graphInitiallyHidden;
+    this._container.removeAttribute(READOUT_OVERLAY_ATTR);
     try {
       this._container.replaceChildren();
     } catch {
@@ -212,10 +212,12 @@ export class SplitRightGraphBottomLayout implements ILayout {
     applyResponsiveColumns(this._container, width, this.cfg, this.leftRatio);
 
     if (width < (this.cfg.mobileBreakpoint ?? 768)) {
-      if (this.resizerH) this.resizerH.style.display = 'none';
+      if (this.resizerH && !this.cfg.graphInitiallyHidden)
+        this.resizerH.style.display = 'none';
       if (this.graphSection) this.graphSection.style.maxHeight = '35vh';
     } else {
-      if (this.resizerH) this.resizerH.style.display = 'block';
+      if (this.resizerH && !this.cfg.graphInitiallyHidden)
+        this.resizerH.style.display = 'block';
       if (this.graphSection) {
         this.graphSection.style.maxHeight = this.cfg.graphMaxHeight
           ? `${this.cfg.graphMaxHeight}px`

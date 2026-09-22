@@ -41,6 +41,8 @@ export function registerAllLayouts(): void {
         constraints: { minWidth: 768, orientation: 'any' },
         priority: 100,
         autoSelectable: true,
+        graphAdoptTarget: 'section',
+        demoCapable: true,
         layoutTestProfile: {
           viewports: [
             { width: 1280, height: 720 },
@@ -72,6 +74,11 @@ export function registerAllLayouts(): void {
         constraints: { maxWidth: 768, orientation: 'any' },
         priority: 100,
         autoSelectable: true,
+        // mobile 的 graph 是 tab 面板内的裸 slot（无 section 层），收养即
+        // 收养 slots.graph 本身
+        graphAdoptTarget: 'slot',
+        // 图 tab 默认不激活即不可见，graphInitiallyHidden 对 mobile 无意义
+        honorsGraphInitiallyHidden: false,
         layoutTestProfile: {
           viewports: [
             { width: 320, height: 568 },
@@ -104,6 +111,8 @@ export function registerAllLayouts(): void {
         constraints: { minWidth: 900, orientation: 'any' },
         priority: 90,
         autoSelectable: true,
+        graphAdoptTarget: 'section',
+        demoCapable: true,
         layoutTestProfile: {
           viewports: [
             { width: 1280, height: 720 },
@@ -134,6 +143,8 @@ export function registerAllLayouts(): void {
         constraints: { minWidth: 320, orientation: 'any' },
         priority: 40,
         autoSelectable: false,
+        graphAdoptTarget: 'section',
+        demoCapable: true,
         layoutTestProfile: {
           viewports: [
             { width: 1280, height: 720 },

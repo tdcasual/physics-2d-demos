@@ -9,7 +9,7 @@
 
 import { createEventEmitter, type EventEmitter } from './event-emitter';
 import { getBreakpoints } from './viewport-detection';
-import { layoutRegistry, saveLayoutPreference } from './registry';
+import { layoutRegistry } from './registry';
 
 import { layoutSelector } from './selector';
 import type { LayoutSelectionContext } from './selector';
@@ -42,6 +42,61 @@ import type {
   CapabilityContext,
   ILayout
 } from './types';
+
+/**
+ * Stable data attributes used by controls to identify the same focus target
+ * after a layout rebuild. Class names describe styling and are not an
+ * identity contract, so they must not be used for focus restoration.
+ */
+const FOCUS_ID_ATTRIBUTES = [
+  'data-focus-key',
+  'data-control-key',
+  'data-key',
+  'data-tab',
+  'data-preset-id',
+  'data-role',
+  'data-testid'
+] as const;
+
+type FocusIdentity = {
+  tagName: string;
+  attribute: (typeof FOCUS_ID_ATTRIBUTES)[number];
+  value: string;
+};
+
+function captureFocusIdentity(
+  element: HTMLElement | null,
+  container: HTMLElement
+): FocusIdentity | null {
+  if (!element || !container.contains(element)) return null;
+
+  for (const attribute of FOCUS_ID_ATTRIBUTES) {
+    const value = element.getAttribute(attribute);
+    if (value) {
+      return { tagName: element.tagName, attribute, value };
+    }
+  }
+  return null;
+}
+
+function findFocusTarget(
+  container: HTMLElement,
+  identity: FocusIdentity
+): HTMLElement | null {
+  const candidates = container.querySelectorAll<HTMLElement>(
+    `[${identity.attribute}]`
+  );
+  for (const candidate of candidates) {
+    if (
+      candidate.tagName === identity.tagName &&
+      candidate.getAttribute(identity.attribute) === identity.value &&
+      typeof candidate.focus === 'function'
+    ) {
+      return candidate;
+    }
+  }
+  return null;
+}
 
 /**
  * 场景容器实现类
@@ -321,8 +376,7 @@ export class SceneContainerImpl implements SceneContainer {
 
     // Save focused element before tearing down DOM (avoid focus loss to <body>)
     const activeEl = document.activeElement as HTMLElement | null;
-    const focusClass =
-      activeEl && this.container.contains(activeEl) ? activeEl.className : null;
+    const focusIdentity = captureFocusIdentity(activeEl, this.container);
 
     try {
       await this._notifyLayoutWillChange(fromId, layoutId);
@@ -357,16 +411,9 @@ export class SceneContainerImpl implements SceneContainer {
         savePreference
       );
 
-      // Restore focus to a similar element in the new layout
-      if (focusClass) {
-        try {
-          const el = this.container.querySelector(
-            `.${focusClass.split(/\s+/).join('.')}`
-          ) as HTMLElement | null;
-          if (el && typeof el.focus === 'function') el.focus();
-        } catch {
-          /* invalid selector from className — non-critical */
-        }
+      // Restore focus to the equivalent data-identified control in the new layout.
+      if (focusIdentity) {
+        findFocusTarget(this.container, focusIdentity)?.focus();
       }
     } catch (err) {
       console.error('[SceneContainer] Layout switch failed:', err);
@@ -554,7 +601,6 @@ export class SceneContainerImpl implements SceneContainer {
   setUserPreferredLayout(layoutId: string): void {
     if (this._disposed) return;
     this._userPreferredLayout = layoutId;
-    saveLayoutPreference(layoutId);
     this.persistState();
   }
 

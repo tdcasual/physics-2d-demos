@@ -51,6 +51,11 @@
   background: var(--bg-primary);
 }
 
+/* graphInitiallyHidden：slot 保留作工作区收养锚点，区域默认不渲染 */
+.srgb-graph-section[hidden] {
+  display: none;
+}
+
 .srgb-graph-section[data-collapsed='true'] .srgb-graph-grid {
   display: none;
 }

@@ -6,6 +6,34 @@
  * graph    = 可选图表区（仅当任务显式 chartAnalysis 时使用）
  */
 
+import {
+  exactDiscreteEqual,
+  estimatedRangeContains,
+  looksLikeWrongUnit,
+  quantizeExactDiscreteMm,
+  readingStrategyOf
+} from './data-workspace/tolerance';
+import { assertAcyclicDependencies } from './data-workspace/validation';
+import { cloneSession, createTrialRecord } from './data-workspace/session';
+
+export {
+  calculationTolerance,
+  exactDiscreteEqual,
+  estimatedRangeContains,
+  instrumentToleranceMm,
+  looksLikeWrongUnit,
+  quantizeExactDiscreteMm,
+  readingStrategyOf,
+  readingsAgree
+} from './data-workspace/tolerance';
+export { assertAcyclicDependencies } from './data-workspace/validation';
+export {
+  cloneSession,
+  createEmptySession,
+  createTrialRecord,
+  freezeSession
+} from './data-workspace/session';
+
 export const DATA_WORKSPACE_STEPS = [
   'reading',
   'data',
@@ -14,11 +42,6 @@ export const DATA_WORKSPACE_STEPS = [
 ] as const;
 
 export type DataWorkspaceStepKind = (typeof DATA_WORKSPACE_STEPS)[number];
-
-export type DataWorkspaceLayoutConfig = {
-  /** Reserved; chart visibility is owned by DataWorkspaceSpec.chartAnalysis. */
-  chartAnalysis?: boolean;
-};
 
 export type DataWorkspaceStageMode = 'full' | 'instrument-only';
 
@@ -31,6 +54,8 @@ export type FieldDependency = {
   field: string;
 };
 
+export type DataWorkspaceTableOrientation = 'trials' | 'fields';
+
 export type DataWorkspaceFieldSpec = {
   id: string;
   label: string;
@@ -41,6 +66,8 @@ export type DataWorkspaceFieldSpec = {
   gated?: boolean;
   readinessHint?: string;
   readinessHintOne?: string;
+  /** Chart-analysis summary fields only. Default is the data step. */
+  step?: 'chartAnalysis';
 };
 
 /** Optional calculation-section presentation. Keys refer to getKnowns(). */
@@ -67,6 +94,18 @@ export type DataWorkspaceSpec = {
   initialRows?: number;
   /** full = keep the scene canvas; instrument-only = hide it (per-spec). */
   stageMode?: DataWorkspaceStageMode;
+  /** trials = one trial per row (default). fields = one field per row. */
+  tableOrientation?: DataWorkspaceTableOrientation;
+  /** When true, the capability locks stage pointer events while the workspace is open. */
+  stageLock?: boolean;
+  /**
+   * Stage pan/zoom while the workspace is open. Default true (architecture
+   * capability). Set false to opt out. Scene widgets that must keep their
+   * own pointer drag should mark `data-panzoom-ignore`.
+   */
+  stagePanZoom?: boolean;
+  /** Per-trial display labels (e.g. counting points 0..6). Default: 1-based 组号. */
+  trialLabels?: readonly string[];
   rowFields: readonly DataWorkspaceFieldSpec[];
   summaryFields: readonly DataWorkspaceFieldSpec[];
   summary?: DataWorkspaceSummarySpec;
@@ -213,6 +252,11 @@ export function shouldShowChartAnalysis(spec: DataWorkspaceSpec): boolean {
   );
 }
 
+/** Stage pan/zoom is on unless the spec explicitly opts out. */
+export function shouldEnableStagePanZoom(spec: DataWorkspaceSpec): boolean {
+  return spec.stagePanZoom !== false;
+}
+
 export function resolveRowLimits(spec: DataWorkspaceSpec): {
   minRows: number;
   maxRows: number;
@@ -228,6 +272,10 @@ export function resolveRowLimits(spec: DataWorkspaceSpec): {
     Math.max(minRows, Math.floor(spec.initialRows ?? minRows))
   );
   return { minRows, maxRows, initialRows };
+}
+
+export function trialLabel(spec: DataWorkspaceSpec, index: number): string {
+  return spec.trialLabels?.[index] ?? String(index + 1);
 }
 
 export function fieldIsOk(field: FieldCheckState | undefined): boolean {
@@ -264,6 +312,28 @@ export function findFieldSpec(
     spec.rowFields.find((field) => field.id === id) ??
     spec.summaryFields.find((field) => field.id === id)
   );
+}
+
+export function isChartField(
+  spec: DataWorkspaceSpec,
+  fieldId: string
+): boolean {
+  const field = findFieldSpec(spec, fieldId);
+  return field?.step === 'chartAnalysis';
+}
+
+export function chartStepReady(
+  session: DataWorkspaceSession,
+  spec: DataWorkspaceSpec
+): boolean {
+  if (session.trials.length === 0) return false;
+  const rowsOk = session.trials.every((trial) =>
+    spec.rowFields.every((field) => fieldIsOk(trial.fields[field.id]))
+  );
+  if (!rowsOk) return false;
+  return spec.summaryFields
+    .filter((field) => field.step !== 'chartAnalysis')
+    .every((field) => fieldIsOk(session.summary[field.id]));
 }
 
 function allFieldIds(spec: DataWorkspaceSpec): Set<string> {
@@ -333,25 +403,58 @@ export function assertSpecGraph(spec: DataWorkspaceSpec): void {
       `[data-workspace] lockInstrumentFromField "${spec.lockInstrumentFromField}" must be a row field in spec "${spec.id}"`
     );
   }
-  const visiting = new Set<string>();
-  const visited = new Set<string>();
-  const edges = (id: string): string[] => {
-    const field = findFieldSpec(spec, id);
-    return (field?.dependsOn ?? []).map((dep) => dep.field);
-  };
-  const visit = (id: string): void => {
-    if (visited.has(id)) return;
-    if (visiting.has(id)) {
+  const orientation = spec.tableOrientation;
+  if (
+    orientation !== undefined &&
+    orientation !== 'trials' &&
+    orientation !== 'fields'
+  ) {
+    throw new Error(
+      `[data-workspace] tableOrientation must be "trials" or "fields" in spec "${spec.id}"`
+    );
+  }
+  if (spec.stageLock !== undefined && typeof spec.stageLock !== 'boolean') {
+    throw new Error(
+      `[data-workspace] stageLock must be a boolean in spec "${spec.id}"`
+    );
+  }
+  if (
+    spec.stagePanZoom !== undefined &&
+    typeof spec.stagePanZoom !== 'boolean'
+  ) {
+    throw new Error(
+      `[data-workspace] stagePanZoom must be a boolean in spec "${spec.id}"`
+    );
+  }
+  if (spec.trialLabels !== undefined) {
+    const { minRows } = resolveRowLimits(spec);
+    if (!Array.isArray(spec.trialLabels) || spec.trialLabels.length < minRows) {
       throw new Error(
-        `[data-workspace] cyclic field dependencies involving "${id}" in spec "${spec.id}"`
+        `[data-workspace] trialLabels.length must be >= minRows (${minRows}) in spec "${spec.id}"`
       );
     }
-    visiting.add(id);
-    for (const next of edges(id)) visit(next);
-    visiting.delete(id);
-    visited.add(id);
-  };
-  for (const id of ids) visit(id);
+  }
+  for (const field of spec.rowFields) {
+    if (field.step != null) {
+      throw new Error(
+        `[data-workspace] step is only allowed on summaryFields (field "${field.id}" in spec "${spec.id}")`
+      );
+    }
+  }
+  for (const field of spec.summaryFields) {
+    if (field.step == null) continue;
+    if (field.step !== 'chartAnalysis') {
+      throw new Error(
+        `[data-workspace] unsupported step "${String(field.step)}" on field "${field.id}" in spec "${spec.id}"`
+      );
+    }
+    if (!shouldShowChartAnalysis(spec)) {
+      throw new Error(
+        `[data-workspace] field "${field.id}" cannot set step when chartAnalysis is off in spec "${spec.id}"`
+      );
+    }
+  }
+  assertAcyclicDependencies(spec);
 }
 
 type GraphNode = { loc: 'row' | 'summary'; id: string };
@@ -405,73 +508,6 @@ function collectDownstream(
     queue.push(...dependentsOf(spec, node));
   }
   return result;
-}
-
-export function createTrialRecord(id: string): TrialRecord {
-  return { id, fields: {} };
-}
-
-export function cloneSession(
-  session: DataWorkspaceSession
-): DataWorkspaceSession {
-  const cloneField = (
-    field: FieldCheckState | undefined
-  ): FieldCheckState | undefined => (field ? { ...field } : undefined);
-  return {
-    active: session.active,
-    currentTrial: session.currentTrial,
-    completed: session.completed,
-    lockedInstrumentId: session.lockedInstrumentId,
-    nextRowSeq: session.nextRowSeq,
-    summary: Object.fromEntries(
-      Object.entries(session.summary).map(([key, value]) => [
-        key,
-        cloneField(value)
-      ])
-    ),
-    trials: session.trials.map((trial) => ({
-      id: trial.id,
-      fields: Object.fromEntries(
-        Object.entries(trial.fields).map(([key, value]) => [
-          key,
-          cloneField(value)
-        ])
-      )
-    }))
-  };
-}
-
-export function freezeSession(
-  session: DataWorkspaceSession
-): DataWorkspaceSession {
-  for (const trial of session.trials) {
-    Object.freeze(trial.fields);
-    Object.freeze(trial);
-  }
-  Object.freeze(session.summary);
-  Object.freeze(session.trials);
-  return Object.freeze(session);
-}
-
-export function createEmptySession(
-  specOrCount: DataWorkspaceSpec | number = 1
-): DataWorkspaceSession {
-  if (typeof specOrCount !== 'number') assertSpecGraph(specOrCount);
-  const count =
-    typeof specOrCount === 'number'
-      ? Math.max(1, Math.floor(specOrCount))
-      : resolveRowLimits(specOrCount).initialRows;
-  return {
-    active: false,
-    trials: Array.from({ length: count }, (_, i) =>
-      createTrialRecord(`row-${i + 1}`)
-    ),
-    currentTrial: 0,
-    summary: {},
-    completed: false,
-    lockedInstrumentId: undefined,
-    nextRowSeq: count + 1
-  };
 }
 
 export type PositionFormatKind = 'caliper' | 'micrometer';
@@ -587,86 +623,6 @@ export function parseStudentNumber(
     return { ok: true, value, unit };
   }
   return { ok: true, value };
-}
-
-export function calculationTolerance(displayDigits: number): number {
-  const digits = Number.isFinite(displayDigits)
-    ? Math.max(0, Math.min(6, Math.round(displayDigits)))
-    : 3;
-  return 2 * 10 ** -digits;
-}
-
-export function instrumentToleranceMm(precisionMm: number): number {
-  return Number.isFinite(precisionMm) && precisionMm > 0 ? precisionMm : 0.02;
-}
-
-export function quantizeExactDiscreteMm(rawMm: number, stepMm: number): number {
-  const step = stepMm > 0 && Number.isFinite(stepMm) ? stepMm : 0.02;
-  const q = Math.round(rawMm / step) * step;
-  const decimals = Math.max(0, Math.min(8, Math.ceil(-Math.log10(step)) + 1));
-  return Number(q.toFixed(decimals));
-}
-
-export function exactDiscreteEqual(
-  submittedMm: number,
-  canonicalMm: number
-): boolean {
-  return Math.abs(submittedMm - canonicalMm) < 5e-7;
-}
-
-export function estimatedRangeContains(
-  submittedMm: number,
-  centerMm: number,
-  halfRangeMm: number,
-  minMm?: number,
-  maxMm?: number
-): boolean {
-  const half = halfRangeMm > 0 ? halfRangeMm : 0;
-  let low = centerMm - half;
-  let high = centerMm + half;
-  if (typeof minMm === 'number') low = Math.max(low, minMm);
-  if (typeof maxMm === 'number') high = Math.min(high, maxMm);
-  const eps = 1e-9;
-  return submittedMm + eps >= low && submittedMm - eps <= high;
-}
-
-export function readingStrategyOf(
-  snapshot: MeasurementSnapshot
-): ReadingStrategy {
-  if (snapshot.readingStrategy) return snapshot.readingStrategy;
-  return {
-    kind: 'exact-discrete',
-    stepMm: instrumentToleranceMm(snapshot.precisionMm)
-  };
-}
-
-export function readingsAgree(
-  submittedMm: number,
-  actualMm: number,
-  precisionMm: number
-): boolean {
-  return (
-    Math.abs(submittedMm - actualMm) <=
-    instrumentToleranceMm(precisionMm) + 1e-12
-  );
-}
-
-export function looksLikeWrongUnit(
-  submitted: number,
-  actualMm: number,
-  precisionMm: number
-): boolean {
-  const tol = instrumentToleranceMm(precisionMm);
-  if (readingsAgree(submitted, actualMm, precisionMm)) return false;
-  if (readingsAgree(submitted * 10, actualMm, precisionMm)) return true;
-  if (readingsAgree(submitted / 10, actualMm, precisionMm)) return true;
-  if (Math.abs(actualMm) > tol && Math.abs(submitted / actualMm - 0.1) < 0.05) {
-    return true;
-  }
-  if (Math.abs(actualMm) > tol && Math.abs(submitted / actualMm - 10) < 0.05) {
-    return true;
-  }
-  return false;
 }
 
 export function checkInstrumentReading(

@@ -7,6 +7,10 @@
  */
 
 import { makeDraggable } from './utils/draggable';
+import {
+  STAGE_CHROME_ATTR,
+  STAGE_TOOLBAR_HOST_ATTR
+} from '../platform/stage-chrome';
 
 export interface FloatingControls extends HTMLElement {
   dispose(): void;
@@ -26,6 +30,10 @@ export function createFloatingControls(options: {
   ) as unknown as FloatingControls;
   container.className =
     'teaching-stage-floating-controls stage-floating-controls';
+  container.setAttribute(STAGE_CHROME_ATTR, '');
+  // transport 浮条是 split/srgb/lab 的舞台工具条宿主（单一宿主语义；
+  // 布局 mount 时不预打标，否则属性优先会抢走浮条上的按钮）
+  container.setAttribute(STAGE_TOOLBAR_HOST_ATTR, '');
   container.style.cssText = `
     position: absolute;
     top: var(--transport-top, 12px);

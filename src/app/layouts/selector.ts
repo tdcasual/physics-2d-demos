@@ -7,6 +7,7 @@
  */
 
 import type { LayoutMetadata } from './registry';
+import { satisfiesConstraints } from './layout-constraints';
 
 /** 布局选择上下文 */
 export interface LayoutSelectionContext {
@@ -60,9 +61,20 @@ class LayoutSelector {
       }
     }
 
-    // 兜底：返回第一个可用布局
-    const first = ctx.availableLayouts[0]?.id;
-    if (first) return first;
+    // 兜底：两分支都必须满足视口约束（含 maxWidth——mobile 只有
+    // maxWidth，只看 minWidth 会让宽屏落到 mobile）；按 priority 取最大，
+    // 并列按注册顺序（sort 稳定）。第一分支限 autoSelectable；空集时
+    // 放宽到全部可用布局（仍须满足约束）。
+    const pickByPriority = (layouts: LayoutMetadata[]): string | undefined =>
+      layouts
+        .filter((l) => satisfiesConstraints(l, ctx.viewport, ctx.orientation))
+        .sort((a, b) => (b.priority || 0) - (a.priority || 0))[0]?.id;
+
+    const fallback =
+      pickByPriority(
+        ctx.availableLayouts.filter((l) => l.autoSelectable !== false)
+      ) ?? pickByPriority(ctx.availableLayouts);
+    if (fallback) return fallback;
 
     throw new Error('No layouts available in registry');
   }

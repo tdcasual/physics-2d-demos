@@ -7,6 +7,7 @@
  */
 
 import type { Theme } from '../types';
+import { READOUT_OVERLAY_ATTR } from '../../../platform/stage-readout';
 import {
   type CssPrefix,
   type SplitConfig,
@@ -96,6 +97,8 @@ export function buildSplitLayoutDOM(
   container.dataset.testid = testId;
   container.dataset.theme = currentTheme;
   container.dataset.mode = 'normal';
+  // split 系读数是遮挡舞台的浮层（场景留白契约，见 platform/stage-readout）
+  container.setAttribute(READOUT_OVERLAY_ATTR, 'true');
   // Set individual properties to avoid wiping container-level inline styles
   // (position, width, height) set by SceneContainerImpl constructor.
   container.style.display = 'grid';

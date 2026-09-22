@@ -45,6 +45,13 @@ export interface LayoutMetadata {
   autoSelectable?: boolean;
   /** Layout-agnostic and interaction-model-specific test capabilities. */
   layoutTestProfile?: LayoutTestProfile;
+
+  /** 工作区收养图区的目标层级：'section'（缺省默认）= 收养 [data-graph-section]；'slot' = 收养 slots.graph 本身 */
+  graphAdoptTarget?: 'section' | 'slot';
+  /** 是否消费 LayoutConfig.graphInitiallyHidden。false = 显式忽略（须注释理由）。缺省 true */
+  honorsGraphInitiallyHidden?: boolean;
+  /** 演示模式是否应用几何改造（侧栏折叠/图过继/读数放大）。缺省 false */
+  demoCapable?: boolean;
 }
 
 const LAYOUT_INTERACTION_MODELS = new Set([
@@ -376,67 +383,4 @@ export function registerLazyLayout(
   metadata: Omit<LayoutMetadata, 'id'>
 ): void {
   layoutRegistry.registerLazy(id, loader, metadata);
-}
-
-/**
- * 获取默认布局ID
- * 如果用户有偏好设置，返回偏好布局；否则返回第一个可用布局
- */
-const LAYOUT_PREF_KEY = 'physics-demos-preferred-layout';
-const LAYOUT_SCHEMA_VERSION = 1;
-
-interface LayoutPrefSchema {
-  v: number;
-  layoutId: string;
-}
-
-function migrateLayoutPref(raw: string | null): string | null {
-  if (!raw) return null;
-  // 兼容旧版：直接存储的 layoutId 字符串
-  if (layoutRegistry.has(raw)) {
-    return raw;
-  }
-  try {
-    const parsed = JSON.parse(raw) as LayoutPrefSchema;
-    if (parsed.v === LAYOUT_SCHEMA_VERSION && parsed.layoutId) {
-      if (layoutRegistry.has(parsed.layoutId)) {
-        return parsed.layoutId;
-      }
-    }
-  } catch {
-    // 数据损坏，忽略
-  }
-  return null;
-}
-
-export function getDefaultLayoutId(): string | null {
-  // 尝试从 localStorage 读取用户偏好
-  try {
-    const userPref = migrateLayoutPref(localStorage.getItem(LAYOUT_PREF_KEY));
-    if (userPref) {
-      return userPref;
-    }
-  } catch {
-    // localStorage 不可用
-  }
-
-  // 返回第一个可用布局，若注册表为空则返回 null
-  const available = layoutRegistry.list();
-  return available[0] || null;
-}
-
-/**
- * 保存用户布局偏好
- * @param layoutId - 布局ID
- */
-export function saveLayoutPreference(layoutId: string): void {
-  try {
-    const payload: LayoutPrefSchema = {
-      v: LAYOUT_SCHEMA_VERSION,
-      layoutId
-    };
-    localStorage.setItem(LAYOUT_PREF_KEY, JSON.stringify(payload));
-  } catch {
-    // localStorage 不可用，忽略
-  }
 }

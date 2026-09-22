@@ -4,6 +4,8 @@
 
 import { UNIT_PX } from './constants';
 import { interferenceVernierCaliperMeta } from '../instrument.meta';
+import { ancestorZoomScale } from '../../_utils/fit-visual';
+import { localPointerDelta } from '../../../core/canvas-sizing';
 
 /**
  * 视图与交互共享的可变状态。
@@ -72,19 +74,22 @@ export function applyInstrumentTransform(
 }
 
 export function createInteractionState(parent: HTMLElement): InteractionState {
+  // Normalize to layout space: an ancestor stage panzoom zoom must not
+  // change the instrument's internal placement.
+  const zoomK = ancestorZoomScale(parent);
   const parentRect = parent.getBoundingClientRect();
+  const parentW = parentRect.width / zoomK;
+  const parentH = parentRect.height / zoomK;
   const scaledW = INSTRUMENT_VISUAL_WIDTH * DEFAULT_VISUAL_SCALE;
   const scaledH = INSTRUMENT_VISUAL_HEIGHT * DEFAULT_VISUAL_SCALE;
   const sysX =
-    parentRect.width >= scaledW
-      ? Math.round((parentRect.width - scaledW) / 2)
-      : parentRect.width > 100
+    parentW >= scaledW
+      ? Math.round((parentW - scaledW) / 2)
+      : parentW > 100
         ? 0
         : -100;
   const sysY =
-    parentRect.height > 100
-      ? Math.max(0, Math.round((parentRect.height - scaledH) / 2))
-      : 0;
+    parentH > 100 ? Math.max(0, Math.round((parentH - scaledH) / 2)) : 0;
   return {
     currentReadingCm:
       interferenceVernierCaliperMeta.defaultParams.initialReading,
@@ -145,7 +150,12 @@ export function attachInteractions(
     if ('touches' in e && e.cancelable) {
       e.preventDefault();
     }
-    const deltaX = getPointerX(e) - state.startPointerX;
+    // 屏幕 delta → 局部坐标：stage panzoom 缩放时按 viewport 的 k 归一化
+    const { dx: deltaX } = localPointerDelta(
+      slider,
+      getPointerX(e) - state.startPointerX,
+      0
+    );
     if (state.dragMode === 'slider') {
       state.currentReadingCm = state.startReadingCm + deltaX / 2 / UNIT_PX;
     } else if (state.dragMode === 'knob') {
@@ -178,8 +188,13 @@ export function attachInteractions(
   };
   const handleSysDragMove = (clientX: number, clientY: number) => {
     if (!state.sysDragging) return;
-    state.sysX += clientX - state.sysStartX;
-    state.sysY += clientY - state.sysStartY;
+    const { dx, dy } = localPointerDelta(
+      instrumentEl,
+      clientX - state.sysStartX,
+      clientY - state.sysStartY
+    );
+    state.sysX += dx;
+    state.sysY += dy;
     state.sysStartX = clientX;
     state.sysStartY = clientY;
     applyInstrumentTransform(instrumentEl, state);

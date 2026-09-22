@@ -15,13 +15,7 @@
 
 export type Theme = 'light' | 'dark';
 
-export type SlotName =
-  | 'header'
-  | 'control'
-  | 'animation'
-  | 'graph'
-  | 'readout'
-  | 'data-workspace';
+export type SlotName = 'header' | 'control' | 'animation' | 'graph' | 'readout';
 
 /** Layout interaction model used by generic and capability-specific tests. */
 export type LayoutInteractionModel =
@@ -56,20 +50,10 @@ export interface LayoutSlots {
   animation: HTMLElement;
   graph?: HTMLElement;
   readout?: HTMLElement;
-  'data-workspace'?: HTMLElement;
-}
-
-export interface SlotConfig {
-  visible?: boolean;
-  collapsed?: boolean;
-  minSize?: number;
-  maxSize?: number;
-  defaultSize?: number;
 }
 
 export interface LayoutConfig {
   theme?: Theme;
-  slots?: Partial<Record<SlotName, SlotConfig>>;
   mobileBreakpoint?: number;
   tabletBreakpoint?: number;
   /** 按布局 ID 覆盖共享配置，例如仅在 mobile-stack 中启用图表。 */
@@ -82,12 +66,24 @@ export interface LayoutConfig {
    * Opt-in 数据处理工作区。未设置时不挂载入口、不改变默认 DOM。
    * 图表分析是否出现由场景 DataWorkspaceSpec.chartAnalysis 决定。
    */
-  dataWorkspace?:
-    | boolean
-    | import('../../platform/data-workspace').DataWorkspaceLayoutConfig;
+  dataWorkspace?: boolean;
+  /**
+   * lab-stage：实验数据浮窗是否可见。默认 true。
+   * false 时仍创建 slot（graph 收养需要锚点）但 panel 为 hidden，且不挂拖拽。
+   */
+  floatData?: boolean;
+  /**
+   * lab-stage：数据图表浮窗是否可见。默认 true。语义同 floatData。
+   */
+  floatGraph?: boolean;
+  /**
+   * split 系布局：图表区默认隐藏（slot 仍创建，作工作区图像分析的收养
+   * 锚点；收养时 data-workspace 自动 unhide 并在退出时还原）。默认 false。
+   * 用于"实验阶段不需要图表、仅图像分析步需要"的场景。
+   */
+  graphInitiallyHidden?: boolean;
   /** 场景标题（由 bootstrapper 注入），用于 canvas aria-label 等无障碍文本 */
   title?: string;
-  __managedByContainer?: boolean;
 }
 
 export interface ReadoutItem {
@@ -110,9 +106,6 @@ export type SceneStateListener = () => void;
 // ============================================================================
 // Capability 系统（新架构核心）
 // ============================================================================
-
-/** Capability 作用域 — container 作用域的能力在布局切换时保留，layout 作用域的会被销毁重建 */
-export type CapabilityScope = 'container' | 'layout';
 
 /** Capability 标识符 — 新增 Capability 只需添加到此联合类型 */
 export type CapabilityId =
@@ -158,6 +151,12 @@ export interface CapabilityContext {
     event: K,
     handler: (payload: CapabilityEvents[K]) => void
   ): () => void;
+  /**
+   * 请求舞台重绘（完整 scene.resize()+render()，rAF 合帧）。
+   * 供 stage panzoom 等能力在 zoom settle / dispose 时触发，
+   * 替代伪造的 window resize 事件。
+   */
+  requestStageRepaint(): void;
 }
 
 /** Capability 实例 — 挂载后返回 */
@@ -253,6 +252,12 @@ export interface Scene {
   reset?(): void;
   setTimeScale?(scale: number): void;
 
+  /**
+   * 舞台视口（panzoom boost / dispose）请求一次完整 resize+render。
+   * 实现方应复用既有 rAF 合帧 resize 通道，不得另起 rAF。
+   */
+  requestStageRepaint(): void;
+
   getTransportState?(): TransportState;
   getReadoutItems?(): ReadoutItem[];
   getDataWorkspace?():
@@ -309,7 +314,6 @@ export interface SwitchOptions {
 
 export interface CreateContainerOptions {
   mount: HTMLElement;
-  defaultLayout?: string;
   defaultTheme?: Theme;
   storageKey?: string;
   onResize?: (width: number, height: number) => void;

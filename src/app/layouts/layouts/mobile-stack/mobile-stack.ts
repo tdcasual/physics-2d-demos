@@ -15,7 +15,10 @@ import type {
   SlotName
 } from '../../types';
 import { enterLayout, exitLayout } from '../../_shared/layout-transition';
-import { dataWorkspaceDeclarations } from '../../capabilities/data-workspace-declarations';
+import { buildBaseCapabilities } from '../../capabilities/base-declarations';
+import { buildStageToolbar } from '../../../../ui/stage-toolbar';
+import { STAGE_FRAME_ATTR } from '../../../../platform/stage-chrome';
+import { READOUT_OVERLAY_ATTR } from '../../../../platform/stage-readout';
 
 export interface MobileStackConfig extends LayoutConfig {
   animationHeightVh?: number;
@@ -68,24 +71,19 @@ export class MobileStackLayout implements ILayout {
     this.cfg = config;
     this._container = container;
 
-    this.capabilities = [
-      ...(config.hideTransport
-        ? []
-        : [{ id: 'transport-bar' as const, config: {} }]),
-      ...dataWorkspaceDeclarations(config),
-      {
-        id: 'readout-panel',
-        config: {
-          position: 'inline',
-          collapsed: false,
-          cssPrefix: 'mobile',
-          label: config.readoutLabel ?? '数据读数'
+    this.capabilities = buildBaseCapabilities(config, {
+      afterDataWorkspace: [
+        {
+          id: 'readout-panel',
+          config: {
+            position: 'inline',
+            collapsed: false,
+            cssPrefix: 'mobile',
+            label: config.readoutLabel ?? '数据读数'
+          }
         }
-      },
-      { id: 'theme-toggle' },
-      { id: 'mode-toggle' },
-      { id: 'demo-profile' }
-    ];
+      ]
+    });
   }
 
   // ========================================================================
@@ -102,6 +100,8 @@ export class MobileStackLayout implements ILayout {
     container.dataset.testid = 'mobile-stack-layout';
     container.dataset.theme = this.currentTheme;
     container.dataset.mode = 'normal';
+    // mobile 读数在舞台下方的 tab 面板，不遮挡舞台（场景留白契约为 false）
+    container.setAttribute(READOUT_OVERLAY_ATTR, 'false');
     container.style.height = '100dvh';
 
     // ---- Control bar skeleton (transport + toggles) ----
@@ -111,23 +111,27 @@ export class MobileStackLayout implements ILayout {
     const controlBar = document.createElement('div');
     controlBar.className = 'mobile-control-bar';
 
-    const togglesGroup = document.createElement('div');
-    togglesGroup.className = 'mobile-transport-toggles';
-
-    const themeBtn = document.createElement('button');
-    themeBtn.type = 'button';
-    themeBtn.className =
-      'theme-toggle-btn shell-theme-toggle mobile-toggle-btn';
-    themeBtn.setAttribute('aria-label', '切换到夜间主题');
-    themeBtn.textContent = '☾';
-
-    const modeBtn = document.createElement('button');
-    modeBtn.type = 'button';
-    modeBtn.className = 'mode-toggle-btn mode-toggle mobile-toggle-btn';
-    modeBtn.setAttribute('aria-label', '切换到演示模式');
-    modeBtn.textContent = '演示';
-
-    togglesGroup.append(themeBtn, modeBtn);
+    // mobile 的舞台工具条宿主（compact transport 不造浮条；该节点 mount
+    // 即存在，经 buildStageToolbar 的 toolbarHost 在创建点打标）。mobile
+    // 没有 layout-switch 能力，骨架只建 theme/mode 两个按钮位
+    const { toolbar: togglesGroup } = buildStageToolbar({
+      className: 'mobile-transport-toggles',
+      toolbarHost: true,
+      buttons: [
+        {
+          key: 'theme',
+          className: 'theme-toggle-btn shell-theme-toggle mobile-toggle-btn',
+          ariaLabel: '切换到夜间主题',
+          text: '☾'
+        },
+        {
+          key: 'mode',
+          className: 'mode-toggle-btn mode-toggle mobile-toggle-btn',
+          ariaLabel: '切换到演示模式',
+          text: '演示'
+        }
+      ]
+    });
     controlBar.appendChild(togglesGroup);
     container.appendChild(controlBar);
 
@@ -159,6 +163,7 @@ export class MobileStackLayout implements ILayout {
 
     const animationSection = document.createElement('div');
     animationSection.className = 'mobile-animation-section';
+    animationSection.setAttribute(STAGE_FRAME_ATTR, '');
     animationSection.style.height = `${animVh}${vhUnit}`;
     animationSection.style.minHeight = `${animMinH}px`;
 
@@ -321,6 +326,7 @@ export class MobileStackLayout implements ILayout {
     delete this._container.dataset.testid;
     delete this._container.dataset.theme;
     delete this._container.dataset.mode;
+    this._container.removeAttribute(READOUT_OVERLAY_ATTR);
     try {
       this._container.replaceChildren();
     } catch {
@@ -339,8 +345,8 @@ export class MobileStackLayout implements ILayout {
 
   setTheme(theme: Theme): void {
     this.currentTheme = theme;
+    // document.documentElement 的主题由 container.ts 统一写，布局只标容器
     this._container.setAttribute('data-theme', theme);
-    document.documentElement.setAttribute('data-theme', theme);
   }
 
   handleResize(width: number, height: number): void {

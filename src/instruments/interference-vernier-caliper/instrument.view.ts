@@ -34,6 +34,7 @@ import {
   fitInstrumentRootScale
 } from './renderer/interactions';
 import {
+  ancestorZoomScale,
   applyFitTransform,
   fitTransformToParent,
   unionClientRects
@@ -307,8 +308,12 @@ export function createInterferenceVernierCaliperView(options: {
     resize() {
       const applyFit = () => {
         if (disposed) return;
+        // Stage panzoom zooms an ancestor; normalize to layout space so the
+        // narrow check and fit widths don't change with view zoom.
+        const zoomK = ancestorZoomScale(parent);
         const rect = parent.getBoundingClientRect();
-        const hostWidth = Math.max(rect.width, 1);
+        const hostWidth = Math.max(rect.width / zoomK, 1);
+        const hostHeight = Math.max(rect.height / zoomK, 1);
         const narrow =
           (typeof window !== 'undefined' && window.innerWidth <= 720) ||
           hostWidth < INSTRUMENT_LAYOUT_WIDTH + 24;
@@ -358,7 +363,7 @@ export function createInterferenceVernierCaliperView(options: {
             fitTransformToParent(parent, union, { root })
           );
         } else {
-          const s = fitInstrumentRootScale(rect.width, rect.height);
+          const s = fitInstrumentRootScale(hostWidth, hostHeight);
           root.style.transform = `scale(${s})`;
         }
       };

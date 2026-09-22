@@ -5,12 +5,66 @@
  * knob / micrometer thimble, so callers must pass a live union of real parts.
  */
 
+// ancestorZoomScale 已迁至 core/canvas-sizing.ts（与 stageZoomOf /
+// localPointerDelta 同处一套测量 API），此处 re-export 保持既有调用方不变。
+export { ancestorZoomScale } from '../../core/canvas-sizing';
+
 export type VisualBox = {
   left: number;
   right: number;
   top: number;
   bottom: number;
 };
+
+type BoxConverter = (box: VisualBox) => VisualBox;
+
+const IDENTITY_CONVERT: BoxConverter = (box) => box;
+
+type FitSpace = {
+  convert: BoxConverter;
+  /** The transformed ancestor; clip ancestors above it must be ignored. */
+  boundary: HTMLElement | null;
+};
+
+const LOCAL_FIT_SPACE: FitSpace = { convert: IDENTITY_CONVERT, boundary: null };
+
+/**
+ * Fit measurements come from getBoundingClientRect (screen space), but the
+ * resulting fit transform is applied in the root's local coordinate space.
+ * A transformed ancestor (stage panzoom viewport) mixes the two spaces and
+ * makes every refit drift; and the slot's overflow clip above the viewport
+ * is merely the zoom window — fitting into it would cancel the zoom.
+ * Detect the nearest transformed ancestor, convert screen boxes back into
+ * its local space, and stop clip intersection at it, so a refit under zoom
+ * is idempotent and the zoom stays a pure view transform.
+ */
+function localFitSpace(el: HTMLElement): FitSpace {
+  let node = el.parentElement;
+  while (node) {
+    const t = getComputedStyle(node).transform;
+    if (t && t !== 'none') {
+      const r = node.getBoundingClientRect();
+      const w = node.offsetWidth;
+      const k = w > 0 ? r.width / w : 1;
+      if (!Number.isFinite(k) || k <= 0 || Math.abs(k - 1) <= 1e-6) {
+        return LOCAL_FIT_SPACE;
+      }
+      const mx = r.left;
+      const my = r.top;
+      return {
+        boundary: node,
+        convert: (box) => ({
+          left: (box.left - mx) / k,
+          right: (box.right - mx) / k,
+          top: (box.top - my) / k,
+          bottom: (box.bottom - my) / k
+        })
+      };
+    }
+    node = node.parentElement;
+  }
+  return LOCAL_FIT_SPACE;
+}
 
 export function unionClientRects(
   root: ParentNode,
@@ -34,8 +88,12 @@ export function unionClientRects(
 }
 
 /** Parent box intersected with overflow-clip ancestors (stage/wrap). */
-export function visibleClipRect(el: HTMLElement): VisualBox {
-  const self = el.getBoundingClientRect();
+export function visibleClipRect(
+  el: HTMLElement,
+  convert: BoxConverter = IDENTITY_CONVERT,
+  stopAt?: HTMLElement | null
+): VisualBox {
+  const self = convert(el.getBoundingClientRect());
   let left = self.left;
   let right = self.right;
   let top = self.top;
@@ -43,7 +101,7 @@ export function visibleClipRect(el: HTMLElement): VisualBox {
   let node: HTMLElement | null = el.parentElement;
   while (node) {
     const style = getComputedStyle(node);
-    const r = node.getBoundingClientRect();
+    const r = convert(node.getBoundingClientRect());
     if (style.overflowX !== 'visible') {
       left = Math.max(left, r.left);
       right = Math.min(right, r.right);
@@ -52,6 +110,7 @@ export function visibleClipRect(el: HTMLElement): VisualBox {
       top = Math.max(top, r.top);
       bottom = Math.min(bottom, r.bottom);
     }
+    if (node === stopAt) break;
     node = node.parentElement;
   }
   return { left, right, top, bottom };
@@ -64,20 +123,29 @@ export function fitTransformToParent(
 ): { scale: number; tx: number; ty: number } {
   const pad = options?.pad ?? 8;
   const maxScale = options?.maxScale ?? 1.25;
-  const clip = visibleClipRect(parent);
-  const origin = options?.root?.getBoundingClientRect() ?? {
-    left: clip.left,
-    top: clip.top
-  };
+  const space = localFitSpace(parent);
+  const convert = space.convert;
+  const clip = visibleClipRect(parent, convert, space.boundary);
+  const rootRect = options?.root?.getBoundingClientRect();
+  const origin =
+    rootRect != null
+      ? convert({
+          left: rootRect.left,
+          right: rootRect.right,
+          top: rootRect.top,
+          bottom: rootRect.bottom
+        })
+      : { left: clip.left, top: clip.top };
+  const local = convert(union);
   const availW = Math.max(clip.right - clip.left - pad * 2, 1);
   const availH = Math.max(clip.bottom - clip.top - pad * 2, 1);
-  const unionW = Math.max(union.right - union.left, 1);
-  const unionH = Math.max(union.bottom - union.top, 1);
+  const unionW = Math.max(local.right - local.left, 1);
+  const unionH = Math.max(local.bottom - local.top, 1);
   const scale = Math.min(availW / unionW, availH / unionH, maxScale);
   const targetLeft = clip.left + pad + (availW - unionW * scale) / 2;
   const targetTop = clip.top + pad + (availH - unionH * scale) / 2;
-  const tx = targetLeft - origin.left - (union.left - origin.left) * scale;
-  const ty = targetTop - origin.top - (union.top - origin.top) * scale;
+  const tx = targetLeft - origin.left - (local.left - origin.left) * scale;
+  const ty = targetTop - origin.top - (local.top - origin.top) * scale;
   return { scale, tx, ty };
 }
 
@@ -100,17 +168,27 @@ export function fitFunctionalUnionToParent(
   const pad = options?.pad ?? 8;
   const maxScale = options?.maxScale ?? 1.25;
   const minFunctionalPx = options?.minFunctionalPx ?? 140;
-  const clip = visibleClipRect(parent);
-  const origin = options?.root?.getBoundingClientRect() ?? {
-    left: clip.left,
-    top: clip.top
-  };
+  const space = localFitSpace(parent);
+  const convert = space.convert;
+  const clip = visibleClipRect(parent, convert, space.boundary);
+  const rootRect = options?.root?.getBoundingClientRect();
+  const origin =
+    rootRect != null
+      ? convert({
+          left: rootRect.left,
+          right: rootRect.right,
+          top: rootRect.top,
+          bottom: rootRect.bottom
+        })
+      : { left: clip.left, top: clip.top };
+  const fullBox = convert(full);
+  const funcBox = convert(functional);
   const availW = Math.max(clip.right - clip.left - pad * 2, 1);
   const availH = Math.max(clip.bottom - clip.top - pad * 2, 1);
-  const fullW = Math.max(full.right - full.left, 1);
-  const fullH = Math.max(full.bottom - full.top, 1);
-  const funcW = Math.max(functional.right - functional.left, 1);
-  const funcH = Math.max(functional.bottom - functional.top, 1);
+  const fullW = Math.max(fullBox.right - fullBox.left, 1);
+  const fullH = Math.max(fullBox.bottom - fullBox.top, 1);
+  const funcW = Math.max(funcBox.right - funcBox.left, 1);
+  const funcH = Math.max(funcBox.bottom - funcBox.top, 1);
   const containFull = Math.min(availW / fullW, availH / fullH, maxScale);
   const functionalScale = Math.min(availW / funcW, availH / funcH, maxScale);
   // Only contain the unused far sleeve when that does not shrink the
@@ -129,8 +207,8 @@ export function fitFunctionalUnionToParent(
   const scale = functionalScale;
   const targetLeft = clip.left + pad;
   const targetTop = clip.top + pad;
-  const tx = targetLeft - origin.left - (functional.left - origin.left) * scale;
-  const ty = targetTop - origin.top - (functional.top - origin.top) * scale;
+  const tx = targetLeft - origin.left - (funcBox.left - origin.left) * scale;
+  const ty = targetTop - origin.top - (funcBox.top - origin.top) * scale;
   return { scale, tx, ty };
 }
 

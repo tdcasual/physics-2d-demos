@@ -43,10 +43,7 @@ export { createLayoutSwitch } from './layout-switch';
 export type { LayoutSwitchConfig } from './layout-switch';
 
 export { dataWorkspaceDeclarations } from './data-workspace-declarations';
-export type {
-  DataWorkspaceConfig,
-  DataWorkspaceUpdateData
-} from './data-workspace-declarations';
+export type { DataWorkspaceUpdateData } from './data-workspace-declarations';
 export { createDataWorkspace } from './data-workspace-lazy';
 
 // Capability factory registry — map of id → factory function
@@ -54,7 +51,6 @@ import type {
   CapabilityDeclaration,
   CapabilityDefinition,
   CapabilityId,
-  CapabilityScope,
   ReadoutItem,
   TransportState
 } from '../types';
@@ -70,10 +66,7 @@ import type { SidebarToggleConfig } from './sidebar-toggle';
 import type { ResizerConfig } from './resizer';
 import type { DebugOverlayConfig } from './debug-overlay';
 import type { LayoutSwitchConfig } from './layout-switch';
-import type {
-  DataWorkspaceConfig,
-  DataWorkspaceUpdateData
-} from './data-workspace-declarations';
+import type { DataWorkspaceUpdateData } from './data-workspace-declarations';
 
 import { createTransportBar } from './transport-bar';
 import { createReadoutPanel } from './readout-panel';
@@ -96,7 +89,7 @@ export interface CapabilityConfigMap {
   resizer: ResizerConfig;
   'debug-overlay': DebugOverlayConfig;
   'layout-switch': LayoutSwitchConfig;
-  'data-workspace': DataWorkspaceConfig;
+  'data-workspace': unknown;
 }
 
 export interface CapabilityDataMap {
@@ -158,44 +151,9 @@ export const capabilityFactories = {
 export function createCapabilityDefinition(
   declaration: CapabilityDeclaration
 ): CapabilityDefinition {
-  switch (declaration.id) {
-    case 'transport-bar':
-      return createTransportBar(declaration.config as TransportBarConfig);
-    case 'readout-panel':
-      return createReadoutPanel(declaration.config as ReadoutPanelConfig);
-    case 'demo-profile':
-      return createDemoProfile(declaration.config as DemoProfileConfig);
-    case 'theme-toggle':
-      return createThemeToggle(declaration.config as ThemeToggleConfig);
-    case 'mode-toggle':
-      return createModeToggle(declaration.config as ModeToggleConfig);
-    case 'sidebar-toggle':
-      return createSidebarToggle(declaration.config as SidebarToggleConfig);
-    case 'resizer':
-      return createResizer(declaration.config as ResizerConfig);
-    case 'debug-overlay':
-      return createDebugOverlay(declaration.config as DebugOverlayConfig);
-    case 'layout-switch':
-      return createLayoutSwitch(declaration.config as LayoutSwitchConfig);
-    case 'data-workspace':
-      return createDataWorkspace(declaration.config as DataWorkspaceConfig);
-  }
-}
-
-/** Capability 作用域映射 — container 作用域在布局切换时保留，layout 作用域会被销毁重建 */
-export const CAPABILITY_SCOPES: Record<CapabilityId, CapabilityScope> = {
-  'transport-bar': 'layout',
-  'readout-panel': 'layout',
-  'demo-profile': 'container',
-  'theme-toggle': 'container',
-  'mode-toggle': 'container',
-  'sidebar-toggle': 'layout',
-  resizer: 'layout',
-  'debug-overlay': 'container',
-  'layout-switch': 'layout',
-  'data-workspace': 'layout'
-};
-
-export function getCapabilityScope(id: CapabilityId): CapabilityScope {
-  return CAPABILITY_SCOPES[id] ?? 'layout';
+  // 单一工厂表：存在性判断与创建都走 capabilityFactories，cast 集中在此
+  const factory = capabilityFactories[declaration.id] as (
+    config?: unknown
+  ) => CapabilityDefinition;
+  return factory(declaration.config);
 }

@@ -275,13 +275,3 @@ export function resolveDemoProfile(
     ...keys
   };
 }
-
-export const DESKTOP_DEMO_LAYOUTS = [
-  'split-right',
-  'split-right-graph-bottom',
-  'lab-stage'
-] as const;
-
-export function isDesktopDemoLayout(layoutId: string): boolean {
-  return (DESKTOP_DEMO_LAYOUTS as readonly string[]).includes(layoutId);
-}

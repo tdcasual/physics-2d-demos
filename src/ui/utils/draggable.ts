@@ -3,7 +3,13 @@
  *
  * 使元素可拖拽，支持指定拖拽手柄。
  * 使用 Pointer Events API 统一鼠标和触摸输入。
+ *
+ * 屏幕指针 delta 一律经 localPointerDelta 归一化（stage panzoom 缩放时
+ * 屏幕位移是局部位移的 k 倍）；尺寸测量用 offsetWidth/offsetHeight，
+ * 免疫祖先 CSS transform（getBoundingClientRect 会把 scale 算进去）。
  */
+import { localPointerDelta } from '../../core/canvas-sizing';
+
 export function makeDraggable(
   element: HTMLElement,
   handle?: HTMLElement,
@@ -44,23 +50,24 @@ export function makeDraggable(
   function onPointerMove(e: PointerEvent) {
     if (!isDragging) return;
 
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
+    const { dx, dy } = localPointerDelta(
+      element,
+      e.clientX - startX,
+      e.clientY - startY
+    );
 
     let nextLeft = initialLeft + dx;
     let nextTop = initialTop + dy;
     if (options.clampToParent) {
       const parent = element.offsetParent as HTMLElement | null;
       if (parent) {
-        const parentRect = parent.getBoundingClientRect();
-        const elemRect = element.getBoundingClientRect();
         nextLeft = Math.max(
           0,
-          Math.min(nextLeft, parentRect.width - elemRect.width)
+          Math.min(nextLeft, parent.offsetWidth - element.offsetWidth)
         );
         nextTop = Math.max(
           0,
-          Math.min(nextTop, parentRect.height - elemRect.height)
+          Math.min(nextTop, parent.offsetHeight - element.offsetHeight)
         );
       }
     }
@@ -125,8 +132,9 @@ export function makeResizable(
     dragging = true;
     startX = e.clientX;
     startY = e.clientY;
-    startW = element.getBoundingClientRect().width;
-    startH = element.getBoundingClientRect().height;
+    // 起点尺寸用布局尺寸（offset），免疫祖先 transform 放大
+    startW = element.offsetWidth;
+    startH = element.offsetHeight;
     handle.setPointerCapture(e.pointerId);
     e.preventDefault();
     e.stopPropagation();
@@ -134,8 +142,13 @@ export function makeResizable(
 
   function onPointerMove(e: PointerEvent): void {
     if (!dragging) return;
-    const width = Math.max(minWidth, startW + (e.clientX - startX));
-    const height = Math.max(minHeight, startH + (e.clientY - startY));
+    const { dx, dy } = localPointerDelta(
+      element,
+      e.clientX - startX,
+      e.clientY - startY
+    );
+    const width = Math.max(minWidth, startW + dx);
+    const height = Math.max(minHeight, startH + dy);
     element.style.width = `${width}px`;
     element.style.height = `${height}px`;
     element.style.maxHeight = 'none';

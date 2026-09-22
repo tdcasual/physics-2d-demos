@@ -13,6 +13,11 @@ import type {
   ReadoutItem
 } from '../types';
 import { makeDraggable } from '../../../ui/utils/draggable';
+import { localPointerDelta } from '../../../core/canvas-sizing';
+import {
+  STAGE_CHROME_ATTR,
+  READOUT_SLOT_ATTR
+} from '../../../platform/stage-chrome';
 
 export interface ReadoutPanelConfig {
   position?:
@@ -150,8 +155,11 @@ function initResizeHandle(
     startHeight: number,
     headerHeight: number
   ) {
-    const dx = clientX - startX;
-    const dy = clientY - startY;
+    const { dx, dy } = localPointerDelta(
+      panel,
+      clientX - startX,
+      clientY - startY
+    );
     const newWidth = Math.max(180, Math.min(450, startWidth + dx));
     const newHeight = Math.max(100, Math.min(500, startHeight + dy));
     panel.style.width = `${newWidth}px`;
@@ -259,6 +267,9 @@ export function createReadoutPanel(
       // Create DOM
       const panel = document.createElement('div');
       panel.className = `${cssPrefix}-readout-panel readout-panel ${collapsed ? 'is-collapsed' : ''}`;
+      // 浮动形态会成为 stage slot 的直接子节点（chrome），创建点即自标；
+      // inline 形态挂在 readout slot，该属性无害。
+      panel.setAttribute(STAGE_CHROME_ATTR, '');
       if (isInline) panel.classList.add(`${cssPrefix}-readout-panel--inline`);
       panel.setAttribute('role', 'region');
       panel.setAttribute('aria-label', label);
@@ -275,6 +286,11 @@ export function createReadoutPanel(
       slot.setAttribute('data-columns', 'auto');
       // 可滚动区域必须可被键盘聚焦（WCAG 2.1.1 / axe scrollable-region-focusable）
       slot.setAttribute('tabindex', '0');
+      // 读数挂载点：split/srgb 只打内部 ul（mountDataPanel 认 UL 或
+      // readout-slot class，打在 panel 上表会插到 div 外面）；mobile
+      // (inline) 打 panel——布局清 slot 会抹掉后挂内容
+      if (isInline) panel.setAttribute(READOUT_SLOT_ATTR, '');
+      else slot.setAttribute(READOUT_SLOT_ATTR, '');
 
       let toggleCleanup: (() => void) | null = null;
 

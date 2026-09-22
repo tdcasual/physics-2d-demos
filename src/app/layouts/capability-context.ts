@@ -96,7 +96,8 @@ export function buildCapabilityContext(
         );
       }
       return () => {};
-    }
+    },
+    requestStageRepaint: () => scene?.requestStageRepaint()
   };
 }
 

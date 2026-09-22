@@ -11,6 +11,7 @@ import type {
   CapabilityContext,
   LayoutSlots
 } from '../types';
+import { requestLayoutResize } from '../request-layout-resize';
 
 export interface SidebarToggleConfig {
   /** 侧边栏元素 CSS 选择器 */
@@ -129,9 +130,7 @@ export function createSidebarToggle(
         }
 
         // Trigger scene resize after layout settles so canvas picks up new container dimensions
-        requestAnimationFrame(() => {
-          window.dispatchEvent(new Event('resize'));
-        });
+        requestLayoutResize();
       };
 
       btn.addEventListener('click', handler);

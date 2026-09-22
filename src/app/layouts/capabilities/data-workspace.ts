@@ -3,11 +3,13 @@
  *
  * Opt-in via LayoutConfig.dataWorkspace. Does not replace readout or graph.
  * Entry is a shared stage-toolbar action, independent of transport-bar.
- * Scene pages that enable this capability must import
- * `src/styles/capability/data-workspace.css` from their page.ts so non-opt-in
- * scenes do not pay the CSS budget.
+ * The capability stylesheet travels with this lazily loaded runtime chunk, so
+ * non-opt-in scenes and opt-in page entry bundles do not pay its initial CSS
+ * cost. Awaiting Vite's dynamic CSS import before defining the runtime also
+ * ensures the runtime-created entry button is styled when it appears.
  */
 
+await import('../../../styles/capability/data-workspace.css');
 import type {
   CapabilityDefinition,
   CapabilityInstance,
@@ -15,24 +17,66 @@ import type {
   LayoutSlots
 } from '../types';
 import {
+  shouldEnableStagePanZoom,
   shouldShowChartAnalysis,
   type DataWorkspaceHost
 } from '../../../platform/data-workspace';
-import { createDataWorkspacePanel } from '../../../ui/components/data-workspace-panel';
+import {
+  createDataWorkspacePanel,
+  type DataWorkspacePanelStep
+} from '../../../ui/components/data-workspace-panel';
 import {
   ensureStageToolbar,
   releaseStageToolbar
 } from '../../../ui/stage-toolbar';
-import type {
-  DataWorkspaceConfig,
-  DataWorkspaceUpdateData
-} from './data-workspace-declarations';
+import type { DataWorkspaceUpdateData } from './data-workspace-declarations';
+import { createStagePanzoom, type StagePanzoomHandle } from './stage-panzoom';
+import { layoutRegistry } from '../registry';
+import { requestLayoutResize } from '../request-layout-resize';
+import { moveNode, type MovedNode } from '../../../ui/utils/node-mover';
+import {
+  GRAPH_SECTION_ATTR,
+  STAGE_FRAME_ATTR
+} from '../../../platform/stage-chrome';
 
-export type { DataWorkspaceConfig, DataWorkspaceUpdateData };
+export type { DataWorkspaceUpdateData };
 
 const WORKSPACE_CLASS = 'is-data-workspace';
 const CHART_CLASS = 'is-data-workspace-chart';
 const INSTRUMENT_ONLY_CLASS = 'is-data-workspace-instrument-only';
+const STAGE_LOCK_CLASS = 'is-data-workspace-stage-lock';
+
+/** Inline geometry written by makeDraggable / makeResizable (and CSS fallbacks). */
+const GRAPH_GEOMETRY_PROPS = [
+  'position',
+  'top',
+  'left',
+  'right',
+  'bottom',
+  'inset',
+  'width',
+  'height',
+  'max-width',
+  'max-height',
+  'min-width',
+  'min-height',
+  'z-index'
+] as const;
+
+function readInlineStyle(el: HTMLElement): string {
+  return el.getAttribute('style') ?? '';
+}
+
+function clearInlineGeometry(el: HTMLElement): void {
+  for (const prop of GRAPH_GEOMETRY_PROPS) {
+    el.style.removeProperty(prop);
+  }
+}
+
+function writeInlineStyle(el: HTMLElement, saved: string): void {
+  if (saved) el.setAttribute('style', saved);
+  else el.removeAttribute('style');
+}
 
 function placeWorkspaceHost(
   slots: LayoutSlots,
@@ -41,9 +85,11 @@ function placeWorkspaceHost(
 ): void {
   const animation = slots.animation;
   const stageFrame =
+    container.querySelector<HTMLElement>(`[${STAGE_FRAME_ATTR}]`) ??
     animation?.closest(
       '.teaching-stage-frame, .srgb-stage-frame, .mobile-animation-section, .lab-stage-anim'
-    ) ?? animation;
+    ) ??
+    animation;
   if (stageFrame?.parentElement) {
     stageFrame.parentElement.insertBefore(hostEl, stageFrame.nextSibling);
     return;
@@ -51,33 +97,30 @@ function placeWorkspaceHost(
   container.appendChild(hostEl);
 }
 
-function requestLayoutResize(): void {
-  requestAnimationFrame(() => {
-    window.dispatchEvent(new Event('resize'));
-  });
-}
-
-export function createDataWorkspace(
-  cfg: DataWorkspaceConfig = {}
-): CapabilityDefinition<DataWorkspaceConfig, DataWorkspaceUpdateData, unknown> {
+export function createDataWorkspace(): CapabilityDefinition<
+  unknown,
+  DataWorkspaceUpdateData,
+  unknown
+> {
   return {
     id: 'data-workspace',
 
     mount(
       slots: LayoutSlots,
-      config: DataWorkspaceConfig,
+      config: unknown,
       ctx: CapabilityContext
     ): CapabilityInstance<DataWorkspaceUpdateData> {
-      void cfg;
-      void config;
       const ac = new AbortController();
       let host: DataWorkspaceHost | null = null;
       let chromeOpen = false;
       let panel: ReturnType<typeof createDataWorkspacePanel> | null = null;
+      let panzoom: StagePanzoomHandle | null = null;
       let adoptedGraph: {
         node: HTMLElement;
-        parent: HTMLElement;
-        next: ChildNode | null;
+        mover: MovedNode;
+        hidden: boolean;
+        collapsed: boolean;
+        inlineStyle: string;
       } | null = null;
       const toolbar = ensureStageToolbar({
         animation: slots.animation ?? null,
@@ -124,28 +167,67 @@ export function createDataWorkspace(
       }
 
       function adoptGraphIfNeeded(chartMount: HTMLElement | null): void {
+        if (adoptedGraph) return;
         if (!host || !shouldShowChartAnalysis(host.getSpec())) return;
         const graph = slots.graph;
         if (!graph || !chartMount) return;
+        // 收养层级由布局元数据决定：'slot'（mobile）收养 slots.graph 本身；
+        // 缺省 'section' 收养外层图区（属性优先，class 旧链兜底）。
+        // getCurrentLayoutId 为空串时元数据为 undefined，走 'section' 兜底。
+        const adoptTarget =
+          layoutRegistry.getMetadata(ctx.getCurrentLayoutId())
+            ?.graphAdoptTarget ?? 'section';
         const section =
-          (graph.closest(
-            '.srgb-graph-section, .teaching-graph-section, .lab-float-graph, .graph-section'
-          ) as HTMLElement | null) ?? graph;
+          adoptTarget === 'slot'
+            ? graph
+            : ((graph.closest(
+                `[${GRAPH_SECTION_ATTR}]`
+              ) as HTMLElement | null) ??
+              (graph.closest(
+                '.srgb-graph-section, .teaching-graph-section, .lab-float-graph, .graph-section'
+              ) as HTMLElement | null) ??
+              graph);
         if (!section.parentElement) return;
-        adoptedGraph = {
-          node: section,
-          parent: section.parentElement,
-          next: section.nextSibling
-        };
-        chartMount.appendChild(section);
+        // parent/next 快照与还原由 node-mover 负责；hidden/collapsed/
+        // inlineStyle/geometry 清理是本能力的收养语义，留在调用方
+        const hidden = section.hasAttribute('hidden') || section.hidden;
+        const collapsed = section.classList.contains('is-collapsed');
+        const inlineStyle = readInlineStyle(section);
+        const mover = moveNode(section, chartMount);
+        adoptedGraph = { node: section, mover, hidden, collapsed, inlineStyle };
+        section.hidden = false;
+        section.removeAttribute('hidden');
+        section.classList.remove('is-collapsed');
+        clearInlineGeometry(section);
       }
 
       function restoreGraph(): void {
         if (!adoptedGraph) return;
-        const { node, parent, next } = adoptedGraph;
-        if (next && next.parentNode === parent) parent.insertBefore(node, next);
-        else parent.appendChild(node);
+        const { node, mover, hidden, collapsed, inlineStyle } = adoptedGraph;
+        mover.restore();
+        if (hidden) {
+          node.hidden = true;
+          node.setAttribute('hidden', '');
+        }
+        if (collapsed) node.classList.add('is-collapsed');
+        writeInlineStyle(node, inlineStyle);
         adoptedGraph = null;
+      }
+
+      function applyChartStep(step: DataWorkspacePanelStep): void {
+        if (step === 'chartAnalysis') {
+          ctx.container.classList.add(CHART_CLASS);
+          adoptGraphIfNeeded(panel?.chartMount ?? null);
+        } else {
+          restoreGraph();
+          ctx.container.classList.remove(CHART_CLASS);
+        }
+        requestLayoutResize();
+      }
+
+      function teardownPanzoom(): void {
+        panzoom?.dispose();
+        panzoom = null;
       }
 
       function enterWorkspace(): void {
@@ -161,19 +243,27 @@ export function createDataWorkspace(
         if (host.getSpec().stageMode === 'instrument-only') {
           ctx.container.classList.add(INSTRUMENT_ONLY_CLASS);
         }
-        if (shouldShowChartAnalysis(host.getSpec())) {
-          ctx.container.classList.add(CHART_CLASS);
+        if (host.getSpec().stageLock) {
+          ctx.container.classList.add(STAGE_LOCK_CLASS);
+        }
+        if (shouldEnableStagePanZoom(host.getSpec()) && slots.animation) {
+          panzoom = createStagePanzoom({
+            slot: slots.animation,
+            onZoomSettled: () => ctx.requestStageRepaint(),
+            stageLock: Boolean(host.getSpec().stageLock)
+          });
         }
         host.setActive(true);
         panel = createDataWorkspacePanel({
           host,
-          onExit: () => exitWorkspace(true),
           onChange: () => {
             panel?.update();
+          },
+          onStepChange: (step) => {
+            applyChartStep(step);
           }
         });
         placeWorkspaceHost(slots, ctx.container, panel.root);
-        adoptGraphIfNeeded(panel.chartMount);
         syncButton();
         requestLayoutResize();
       }
@@ -181,13 +271,15 @@ export function createDataWorkspace(
       function exitWorkspace(clearActive: boolean): void {
         if (!chromeOpen) return;
         chromeOpen = false;
+        teardownPanzoom();
         restoreGraph();
         panel?.dispose();
         panel = null;
         ctx.container.classList.remove(
           WORKSPACE_CLASS,
           CHART_CLASS,
-          INSTRUMENT_ONLY_CLASS
+          INSTRUMENT_ONLY_CLASS,
+          STAGE_LOCK_CLASS
         );
         if (clearActive) host?.setActive(false);
         syncButton();
@@ -219,13 +311,15 @@ export function createDataWorkspace(
         dispose() {
           ac.abort();
           unsubMode();
+          teardownPanzoom();
           restoreGraph();
           panel?.dispose();
           panel = null;
           ctx.container.classList.remove(
             WORKSPACE_CLASS,
             CHART_CLASS,
-            INSTRUMENT_ONLY_CLASS
+            INSTRUMENT_ONLY_CLASS,
+            STAGE_LOCK_CLASS
           );
           chromeOpen = false;
           btn.remove();

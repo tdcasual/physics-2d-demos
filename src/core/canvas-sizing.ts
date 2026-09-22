@@ -102,10 +102,115 @@ function computeFillSize(
   };
 }
 
+/** renderBoost 允许范围：舞台 CSS zoom 清晰化钩子，缺省 1。 */
+const RENDER_BOOST_MIN = 0.5;
+const RENDER_BOOST_MAX = 4;
+
+function clampRenderBoost(value: number): number {
+  if (!Number.isFinite(value)) return 1;
+  return Math.min(RENDER_BOOST_MAX, Math.max(RENDER_BOOST_MIN, value));
+}
+
+/**
+ * 读取元素的布局尺寸（offsetWidth/offsetHeight）。
+ *
+ * 布局尺寸免疫祖先 CSS transform（舞台 pan/zoom 的 scale），
+ * 而 getBoundingClientRect 会把 scale 算进去。offset 为 0 时回退
+ * getBoundingClientRect：happy-dom 单测里 offsetWidth 常为 0，既有
+ * 测试靠 mock rect，不能破坏。
+ */
+export function readElementLayoutSize(el: HTMLElement): {
+  width: number;
+  height: number;
+} {
+  let width = el.offsetWidth;
+  let height = el.offsetHeight;
+  if (width > 0 && height > 0) {
+    return { width, height };
+  }
+  const rect = el.getBoundingClientRect();
+  if (width <= 0) width = rect.width;
+  if (height <= 0) height = rect.height;
+  return { width, height };
+}
+
+/**
+ * 读取 canvas.dataset.renderBoost（缺省 1，clamp [0.5, 4]）。
+ * 未设置或非法值视为 1，保持历史 sizeCanvasToFill 行为。
+ */
+export function readRenderBoost(canvas: HTMLCanvasElement): number {
+  const raw = canvas.dataset?.renderBoost;
+  if (raw == null || raw === '') return 1;
+  return clampRenderBoost(Number(raw));
+}
+
+/**
+ * 写入 renderBoost 到 dataset，不改 CSS 尺寸。
+ * 场景重绘仍走标准 resize 链（sizeCanvasToFill / applyCanvasSize）。
+ */
+export function setRenderBoost(canvas: HTMLCanvasElement, boost: number): void {
+  canvas.dataset.renderBoost = String(clampRenderBoost(boost));
+}
+
+/**
+ * Accumulated CSS-transform zoom acting on an element from its ancestors
+ * (e.g. the data-workspace stage panzoom viewport). getBoundingClientRect
+ * includes ancestor transforms while offsetWidth does not, so the ratio
+ * isolates ancestor zoom. The element itself must be untransformed.
+ */
+export function ancestorZoomScale(el: HTMLElement): number {
+  const w = el.offsetWidth;
+  if (!(w > 0)) return 1;
+  const k = el.getBoundingClientRect().width / w;
+  return Number.isFinite(k) && k > 0 ? k : 1;
+}
+
+/**
+ * 沿 composed 树向上找最近的 [data-stage-zoom]（stage panzoom 写在
+ * .stage-viewport 上），缺省 1。parentElement 到顶后若根是 open
+ * ShadowRoot 则跳到 host 继续攀；文档根/游离节点返回 1。找到属性但
+ * 值非法或 ≤0 时降级 1。只读属性、不测量元素，无强制布局。
+ */
+export function stageZoomOf(el: Element): number {
+  let node: Element | null = el;
+  while (node) {
+    if (node instanceof HTMLElement) {
+      const raw = node.dataset.stageZoom;
+      if (raw !== undefined) {
+        const k = Number(raw);
+        return Number.isFinite(k) && k > 0 ? k : 1;
+      }
+    }
+    let next: Element | null = node.parentElement;
+    if (!next) {
+      const root = node.getRootNode();
+      next = root instanceof ShadowRoot ? root.host : null;
+    }
+    node = next;
+  }
+  return 1;
+}
+
+/**
+ * 屏幕指针 delta → 舞台局部坐标 delta（除以 stage zoom k）。
+ * el 必须是拖拽闭包内的稳定节点（slider/systemEl/被拖元素本身），
+ * 禁止用 document 级 move 事件的 target——指针可能已移到 chrome 上。
+ */
+export function localPointerDelta(
+  el: Element,
+  dx: number,
+  dy: number
+): { dx: number; dy: number } {
+  const k = stageZoomOf(el);
+  return { dx: dx / k, dy: dy / k };
+}
+
 /**
  * 应用计算好的尺寸到 canvas
  *
  * 同时更新 CSS 尺寸和内部像素尺寸，并设置正确的 DPR 缩放。
+ * dataset.renderBoost（缺省 1）放大背衬与 ctx.scale，responsiveScale
+ * 仍按 CSS 尺寸计算，场景绘制代码无需改动。
  */
 export function applyCanvasSize(
   canvas: HTMLCanvasElement,
@@ -127,17 +232,21 @@ export function applyCanvasSize(
     throw new Error('Failed to get 2D context');
   }
 
+  const boost = readRenderBoost(canvas);
+  const backingWidth = Math.max(1, Math.round(sizing.width * boost));
+  const backingHeight = Math.max(1, Math.round(sizing.height * boost));
+
   // 只在内部像素尺寸真正变化时才赋值，避免 Canvas API 强制清空画布
   const sizeChanged =
-    canvas.width !== sizing.width || canvas.height !== sizing.height;
+    canvas.width !== backingWidth || canvas.height !== backingHeight;
   if (sizeChanged) {
-    canvas.width = sizing.width;
-    canvas.height = sizing.height;
+    canvas.width = backingWidth;
+    canvas.height = backingHeight;
   }
 
-  // 重置 transform 并应用 DPR 缩放
+  // 重置 transform 并应用 DPR × boost 缩放
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.scale(sizing.dpr, sizing.dpr);
+  ctx.scale(sizing.dpr * boost, sizing.dpr * boost);
 
   return ctx;
 }
@@ -162,6 +271,10 @@ function getSizingTarget(
 /**
  * 从容器元素自动计算并应用尺寸（填满策略）
  *
+ * 容器尺寸取布局盒（offsetWidth/offsetHeight），免疫祖先 CSS
+ * transform；canvas.style.width/height 始终写成该未放大布局值。
+ * renderBoost 只放大背衬与 ctx.scale，不改 CSS。
+ *
  * 这是所有场景动画区的标准用法：
  * ```ts
  * const ctx = sizeCanvasToFill(canvas);
@@ -183,14 +296,13 @@ export function sizeCanvasToFill(
       responsiveScale: 1
     });
   }
+  const size = readElementLayoutSize(target);
   if (target === canvas) {
-    // 使用 canvas 自身尺寸
-    const rect = canvas.getBoundingClientRect();
-    const sizing = computeFillSize(rect.width || 800, rect.height || 600);
+    // 使用 canvas 自身布局尺寸（无父元素时）
+    const sizing = computeFillSize(size.width || 800, size.height || 600);
     return applyCanvasSize(canvas, sizing);
   }
-  const rect = target.getBoundingClientRect();
-  const sizing = computeFillSize(rect.width, rect.height);
+  const sizing = computeFillSize(size.width, size.height);
   return applyCanvasSize(canvas, sizing);
 }
 

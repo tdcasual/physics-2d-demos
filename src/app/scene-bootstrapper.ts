@@ -113,7 +113,6 @@ export function bootScenePage<TScene extends SceneInstance>(
   // 创建场景容器
   const container = createSceneContainer({
     mount,
-    defaultLayout: preferredLayout ?? 'split-right',
     defaultTheme,
     layoutConfig: {
       ...options.layoutConfig,

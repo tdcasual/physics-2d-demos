@@ -13,10 +13,7 @@ import type {
   CapabilityContext,
   LayoutSlots
 } from '../types';
-import type {
-  DataWorkspaceConfig,
-  DataWorkspaceUpdateData
-} from './data-workspace-declarations';
+import type { DataWorkspaceUpdateData } from './data-workspace-declarations';
 
 export type DataWorkspaceRuntimeModule = typeof import('./data-workspace');
 
@@ -44,15 +41,17 @@ function loadRuntime(): Promise<DataWorkspaceRuntimeModule> {
   return runtimePromise;
 }
 
-export function createDataWorkspace(
-  cfg: DataWorkspaceConfig = {}
-): CapabilityDefinition<DataWorkspaceConfig, DataWorkspaceUpdateData, unknown> {
+export function createDataWorkspace(): CapabilityDefinition<
+  unknown,
+  DataWorkspaceUpdateData,
+  unknown
+> {
   return {
     id: 'data-workspace',
 
     mount(
       slots: LayoutSlots,
-      config: DataWorkspaceConfig,
+      config: unknown,
       ctx: CapabilityContext
     ): CapabilityInstance<DataWorkspaceUpdateData> {
       let disposed = false;
@@ -63,7 +62,7 @@ export function createDataWorkspace(
       void loadRuntime()
         .then((mod) => {
           if (disposed) return;
-          inner = mod.createDataWorkspace(cfg).mount(slots, config, ctx);
+          inner = mod.createDataWorkspace().mount(slots, config, ctx);
           if (disposed) {
             inner.dispose();
             inner = null;

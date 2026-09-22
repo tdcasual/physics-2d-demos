@@ -24,7 +24,6 @@ import {
 import { createSceneShell } from './scene-shell';
 import { KeyboardShortcutManager } from '../platform/input/keyboard-shortcuts';
 import { PerformanceMonitor } from '../core/performance-monitor';
-import { createAdaptiveFpsController } from './adaptive-fps';
 import { createPageLifecycle } from './page-lifecycle';
 import { createKeyboardHelpOverlay } from '../ui/components/KeyboardHelp';
 import type { KeyboardHelpOverlay } from '../ui/components/KeyboardHelp';
@@ -32,6 +31,11 @@ import type {
   SceneInstance,
   ScenePageOptions
 } from './scene-bootstrapper-types';
+import { filterPresentationReadout } from './scene-adapter/readout-filter';
+import { registerSceneKeyboardShortcuts } from './scene-adapter/keyboard-shortcuts';
+import { createScenePerformanceRuntime } from './scene-adapter/perf-monitor';
+
+export { filterPresentationReadout } from './scene-adapter/readout-filter';
 
 export class SceneAdapter<
   TScene extends SceneInstance = SceneInstance
@@ -58,6 +62,7 @@ export class SceneAdapter<
   private _scheduleResize: (() => void) | null = null;
   private _mode: 'normal' | 'presentation' = 'normal';
   private _resolvedProfile: ResolvedDemoProfile | null = null;
+  private _fullscreenHost: HTMLElement | null = null;
 
   constructor(
     private options: ScenePageOptions<TScene>,
@@ -98,6 +103,37 @@ export class SceneAdapter<
       this.slots?.animation?.closest('.layout-master') ??
       document.querySelector('.layout-master')
     );
+  }
+
+  private _resolveFullscreenHost(): HTMLElement | null {
+    const fromSlot = this.slots?.animation?.closest('.layout-master');
+    if (fromSlot instanceof HTMLElement) return fromSlot;
+    return this._fullscreenHost;
+  }
+
+  private _syncNativeFullscreenClass(): void {
+    const host = this._resolveFullscreenHost();
+    if (host) this._fullscreenHost = host;
+    const active = Boolean(document.fullscreenElement);
+    if (host) host.classList.toggle('is-native-fullscreen', active);
+  }
+
+  private _bindNativeFullscreen(): void {
+    const ac = new AbortController();
+    const onChange = () => {
+      if (ac.signal.aborted) return;
+      this._syncNativeFullscreenClass();
+    };
+    document.addEventListener('fullscreenchange', onChange, {
+      signal: ac.signal
+    });
+    this.lifecycle.onDispose(() => {
+      ac.abort();
+      document.removeEventListener('fullscreenchange', onChange);
+      this._fullscreenHost?.classList.remove('is-native-fullscreen');
+      this._fullscreenHost = null;
+    });
+    this._syncNativeFullscreenClass();
   }
 
   private _clearFirstFrame(): void {
@@ -216,24 +252,16 @@ export class SceneAdapter<
     this.keyboardHelp = createKeyboardHelpOverlay();
     this.lifecycle.onDispose(() => this.keyboardHelp?.dispose());
 
-    this.keyboard.registerMultiple({
-      ' ': () => {
-        // 统一走 startAll/pauseAll：transport 循环与场景的
-        // startAll/pauseAll 钩子（播放状态、读数文案）保持同步
-        if (this.transport?.transport.isPlaying) {
-          this.pauseAll();
-        } else {
-          this.startAll();
-        }
-      },
-      r: () => {
+    registerSceneKeyboardShortcuts(this.keyboard, this.keyboardHelp, {
+      isPlaying: () => this.transport?.transport.isPlaying ?? false,
+      start: () => this.startAll(),
+      pause: () => this.pauseAll(),
+      reset: () => {
         this.transport?.reset?.();
         this.perfMonitor?.stop();
         this.scene?.reset?.();
       },
-      t: () => {
-        const current = document.documentElement.getAttribute('data-theme');
-        const next = (current === 'dark' ? 'light' : 'dark') as Theme;
+      toggleTheme: (next) => {
         if (this.options.onToggleTheme) {
           // 统一走 container.setTheme：同步 container 状态、布局与持久化
           this.options.onToggleTheme(next);
@@ -242,33 +270,27 @@ export class SceneAdapter<
         this.scene?.setTheme(next);
         document.documentElement.setAttribute('data-theme', next);
       },
-      arrowleft: () => this.scene?.step?.(-0.016),
-      arrowright: () => this.scene?.step?.(0.016),
-      a: () => {
-        const next = Math.min(3, (this.scene?.getTimeScale?.() ?? 1) + 0.25);
+      step: (delta) => this.scene?.step?.(delta),
+      adjustTimeScale: (delta) => {
+        const next = Math.min(
+          3,
+          Math.max(0.25, (this.scene?.getTimeScale?.() ?? 1) + delta)
+        );
         this.scene?.setTimeScale?.(next);
       },
-      d: () => {
-        const next = Math.max(0.25, (this.scene?.getTimeScale?.() ?? 1) - 0.25);
-        this.scene?.setTimeScale?.(next);
-      },
-      f: () => {
+      toggleFullscreen: () => {
         if (document.fullscreenElement) {
           document.exitFullscreen().catch(() => {});
         } else {
           document.documentElement.requestFullscreen().catch(() => {});
         }
       },
-      l: () => {
+      switchLayout: () => {
         document
           .querySelector('.layout-switch-btn')
           ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       },
-      '?': () => {
-        this.keyboardHelp?.toggle();
-      },
-      escape: () => {
-        this.keyboardHelp?.hide();
+      exitPresentation: () => {
         const layoutEl = document.querySelector('.layout-master');
         if (layoutEl?.getAttribute('data-mode') !== 'presentation') return;
         if (this.options.onSetMode) {
@@ -287,24 +309,15 @@ export class SceneAdapter<
     });
     this.keyboard.init();
     this.lifecycle.onDispose(() => this.keyboard?.dispose());
+    this._bindNativeFullscreen();
 
     // 性能监控不再常驻采样：仅播放时运行（startAll/键盘空格/autoPlay 启动，
     // pauseAll/reset 停止），dispose 时彻底停止。
-    this.perfMonitor = new PerformanceMonitor();
-    (window as unknown as Record<string, unknown>).__perfMonitor =
-      this.perfMonitor;
-    this.lifecycle.onDispose(() => {
-      this.perfMonitor?.stop();
-      delete (window as unknown as Record<string, unknown>).__perfMonitor;
-    });
-
-    const adaptiveFps = createAdaptiveFpsController({
-      getRecommendedFps: () => this.perfMonitor?.getRecommendedFps() ?? 60,
+    this.perfMonitor = createScenePerformanceRuntime({
+      registerCleanup: (cleanup) => this.lifecycle.onDispose(cleanup),
       getTargetFps: () => this.transport?.getTargetFps() ?? 60,
       setTargetFps: (fps) => this.transport?.setTargetFps(fps)
     });
-    adaptiveFps.start();
-    this.lifecycle.onDispose(() => adaptiveFps.dispose());
 
     if (!this._resizeHandlerAdded) {
       // rAF 合帧：同帧内多次触发（window resize + ResizeObserver）只执行一次
@@ -436,6 +449,7 @@ export class SceneAdapter<
     this._observeAnimationSurface(canvas, container);
     this._disconnectGraphVisibility();
     this._graphRendered = false;
+    this._syncNativeFullscreenClass();
 
     this.scene?.resize();
     this.scene?.render();
@@ -509,6 +523,12 @@ export class SceneAdapter<
     // 读数由 getReadoutItems() 提供，由 SceneContainer 统一刷新
   }
 
+  requestStageRepaint(): void {
+    // 复用既有 rAF 合帧通道（resize+render 一次、dispose 取消挂起），
+    // 不在此另起 rAF——双 rAF 两套 cancel，布局切换时旧 rAF 可能打到新槽。
+    this._scheduleResize?.();
+  }
+
   mount(): void {
     // 场景已在 renderAnimation 中初始化
   }
@@ -526,6 +546,7 @@ export class SceneAdapter<
     this.keyboard = null;
     this.perfMonitor = null;
     this.slots = null;
+    this._fullscreenHost = null;
     this.keyboardHelp = null;
     this.currentState = null;
     this._readoutItems = [];
@@ -674,22 +695,4 @@ export class SceneAdapter<
       }
     });
   }
-}
-
-const READOUT_DENYLIST = ['显示模式', '主题', 'T / Δt', 'T/Δt'];
-
-export function filterPresentationReadout(
-  items: ReadoutItem[],
-  mode: 'normal' | 'presentation',
-  resolved: ResolvedDemoProfile | null
-): ReadoutItem[] {
-  if (mode !== 'presentation' || !resolved) return items;
-  if (resolved.readoutKeys.length > 0) {
-    return items.filter(
-      (it) => it.key != null && resolved.readoutKeys.includes(it.key)
-    );
-  }
-  return items.filter(
-    (it) => !READOUT_DENYLIST.some((deny) => it.label.includes(deny))
-  );
 }

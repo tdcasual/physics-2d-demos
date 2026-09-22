@@ -34,7 +34,8 @@ catalog/       — 场景注册表（自动发现）
                — 仅依赖 platform/
 app/           — 布局系统、场景引导器、首页
                — 可依赖 platform/core/ui
-               — data-workspace 是可选布局能力；仅 opt-in 场景挂载数据处理工作区
+               — data-workspace 是可选布局能力；仅 opt-in 场景挂载两步工作区
+               （数据处理步必有，图像分析步可选）
 ui/            — 共享组件库（DOM widgets）
                — 可依赖 platform/core
 scenes/        — 120 个物理场景（每个: meta/sim/view/entry/controls/page）
@@ -202,6 +203,33 @@ DOM: [场景选择] [预设按钮] [观察点管理] → [含滑块的参数区 
 ```typescript
 { title: '原理说明', collapsed: true, span: 'full', fields: [{ type: 'custom', ... }] }
 ```
+
+## 数据处理工作区（两步标准）
+
+data-workspace 是可选布局能力，仅 `layoutConfig.dataWorkspace: true` 的场景挂载入口。标准结构：
+
+- **数据处理步必有**：knowns + hint + 表格 + 数据类 `summaryFields`
+- **图像分析步可选**：`spec.chartAnalysis: true` 时面板出现步骤条 `[1 数据处理] [2 图像分析]`。图表形态由场景 graph slot 自定（散点 / 直线 / 柱状 / 波形皆可），工作区只在切到图像分析步时收养 slot 内容
+- `tableOrientation?: 'trials' | 'fields'`（默认 `'trials'`；`'fields'` 为转置表：行=字段、列=trial）
+- `trialLabels?: readonly string[]`（列/行显示标签；缺省 1 基组号。纸带计数点用 `['0','1',…]`）
+- `stageLock?: boolean`（默认 false；true 时工作区打开锁定舞台指针事件，不阻止纯视口 pan/zoom）
+- `stagePanZoom?: boolean`（默认 true；进入工作区时舞台可平移/缩放。场景自有拖拽控件标 `data-panzoom-ignore`，滚轮/空白拖拽归视口。退出工作区还原 transform 与 DOM）
+  - 逃生口细分：`data-panzoom-ignore` 同时挡平移和滚轮；`data-panzoom-pan-ignore`（常量 `PANZOOM_PAN_IGNORE_ATTR`）**只挡平移、不挡滚轮**——用于占满舞台但仍需滚轮缩放的仪器宿主（如 double-slit 的仪器 wrap）
+- 清晰化钩子：`canvas.dataset.renderBoost` / `setRenderBoost(canvas, boost)`（clamp `[0.5, 4]`）。`sizeCanvasToFill` 用容器 `offsetWidth/offsetHeight` 测布局尺寸（免疫 CSS transform；为 0 时回退 `getBoundingClientRect`），`canvas.style` 始终写未放大 CSS；背衬 = css × dpr × boost，`ctx.scale(dpr × boost)`；`responsiveScale` 仍按 CSS 尺寸。缺省无 dataset 时行为与历史一致
+- `DataWorkspaceFieldSpec.step?: 'chartAnalysis'` 把 summary 字段划到图像分析步（缺省数据步）
+- lab-stage `floatData` / `floatGraph`（默认 true）：false 时仍创建 slot（收养需要锚点）但 panel 为 `hidden`、不参与拖拽
+- split 系布局 `graphInitiallyHidden`（默认 false）：true 时图表区默认不渲染（section 置 `hidden`、容器标 `data-graph-initially-hidden`），slot 仍创建作收养锚点；工作区图像分析步收养时自动 unhide、退出还原。用于"实验阶段不需要图表"的场景（如 ticker-tape）
+- CSS 由能力 runtime 惰性携带（`src/app/layouts/capabilities/data-workspace.ts` 动态 import），**page.ts 不要 import 工作区 CSS**
+
+## 舞台缩放坐标纪律（强制）
+
+data-workspace 的舞台 pan/zoom 是纯视图层 CSS transform（`stage-panzoom.ts`）。以下规则防止屏幕空间与局部空间混用（历史 bug：仪器 fit 漂移、panzoom 控件变遮罩）：
+
+- **布局测量**：只用 `readElementLayoutSize` / `sizeCanvasToFill`（offsetWidth 系，免疫祖先 transform）；禁止用 `getBoundingClientRect` 当布局盒去写 `style.transform` / 窄屏判断 / fit 计算。仪器 fit 统一走 `src/instruments/_utils/fit-visual.ts`（内部经 `localFitSpace` 归一化）
+- **指针 delta**：进局部坐标前必须经 `localPointerDelta(el, dx, dy)`（`core/canvas-sizing.ts`）；k 读自 panzoom 写入的 `.stage-viewport[data-stage-zoom]`，`stageZoomOf` 沿 composed 树攀爬（穿透仪器 open shadow root）。`el` 必须用闭包内稳定节点，禁止用 document 级 move 事件的 `event.target`；禁止对被 transform 的元素取 GBCR 比值当 k
+- **舞台 chrome 自标**：往 animation slot 插入的 chrome（panzoom 控件、transport 浮条、readout 面板、demo 过继图表）必须在创建点标 `data-stage-chrome`（常量见 `platform/stage-chrome.ts`）。split-right 的 slot 子元素撑满规则与 panzoom `wrap()` 都以该属性为唯一事实源；`stage-chrome-contract.spec.ts` 契约测试兜底。`.stage-viewport` 与场景内容不打标
+- **工作区画布命中**：场景画布指针命中（如拖尺）必须自行用 `localPointerDelta`/offset 系归一化，或在 DataWorkspaceSpec 设 `stageLock: true`（注意 stageLock 不是全局默认，double-slit 就没锁）
+- **清晰化信号**：boost 变化经 `onZoomSettled → ctx.requestStageRepaint() → SceneAdapter._scheduleResize` 定点重绘；panzoom 不再派发 `window.resize`。其余真实布局变化（进/出工作区、侧栏开合）仍走 `window.resize`
 
 ## 关键类型
 
@@ -376,6 +404,7 @@ function resize() {
 - 新布局至少要用一个无 graph 场景、一个有 graph 场景和一个带控件/读数的场景验证，并覆盖 profile 声明的 viewport。
 - 可使用 `?layout=<registered-id>` 强制浏览器测试某个已注册布局；未知 id 必须回退到页面默认布局。
 - 布局矩阵会自动检查活跃 Canvas 非空、尺寸达标、处于 slot 水平边界内且 `responsiveScale` 在 `[0.3, 1.5]`；tab 布局会先激活对应面板再检查 graph。
+- **挂载点打标（强制）**：新布局必须在创建点为承载层打上 `platform/stage-chrome.ts` 的语义属性——舞台外层 frame 打 `data-stage-frame`；有 graph 且收养目标为 section 的布局打 `data-graph-section`（被收养/过继的那一层）与 `data-graph-body`（包住 slot、不含 header 的内容体，自身须是 `flex:1; min-height:0; display:flex; flex-direction:column` 的中间层，**禁止打在 slot 上**，scene-adapter 会 replaceChildren 清空 slot）；工具条宿主按单一宿主语义打 `data-stage-toolbar-host`（有 transport 浮条的布局由浮条创建点打标，mount 时不预打标）；读数挂载点打 `data-readout-slot`。元数据须同步声明 `graphAdoptTarget`（缺省 `'section'`）与 `honorsGraphInitiallyHidden`（缺省 true，显式 false 须注释理由）。`stage-mount-attrs-contract.spec.ts` 契约测试兜底。
 
 详细的代理工作流、允许修改范围和失败报告格式见 [`docs/new-scene-agent-contract.md`](docs/new-scene-agent-contract.md)。
 

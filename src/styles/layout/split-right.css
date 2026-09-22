@@ -34,6 +34,16 @@
   background: var(--bg-primary);
 }
 
+/* graphInitiallyHidden：slot 保留作工作区收养锚点，区域默认不渲染 */
+.teaching-graph-section[hidden] {
+  display: none;
+}
+
+/* 图表区默认隐藏时，控制区不再受 60% 上限约束 */
+.teaching-demo[data-graph-initially-hidden='true'] .teaching-control-section {
+  max-height: none;
+}
+
 .teaching-graph-section .teaching-section-title {
   font-size: 0.75rem;
   font-weight: 600;
@@ -94,10 +104,9 @@
 }
 
 /* ---- Stage slot child sizing ---- */
-.teaching-stage-slot
-  > *:not(canvas):not(.teaching-stage-floating-controls):not(
-    .teaching-readout-panel
-  ):not(.graph-section) {
+/* chrome 以创建点自标 data-stage-chrome 豁免（单一事实源，见
+   src/platform/stage-chrome.ts）；.stage-viewport 自有 inset:0，不在豁免列 */
+.teaching-stage-slot > *:not(canvas):not([data-stage-chrome]) {
   height: 100%;
   max-height: 100%;
   width: 100%;

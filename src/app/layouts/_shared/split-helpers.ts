@@ -6,6 +6,12 @@
  */
 
 import type { Theme } from '../types';
+import {
+  GRAPH_BODY_ATTR,
+  GRAPH_SECTION_ATTR,
+  STAGE_FRAME_ATTR
+} from '../../../platform/stage-chrome';
+import { buildStageToolbar } from '../../../ui/stage-toolbar';
 
 export type CssPrefix = 'teaching' | 'srgb';
 
@@ -92,6 +98,7 @@ export function buildGraphSection(
 ): GraphSectionResult {
   const section = document.createElement('section');
   section.className = `${prefix}-graph-section graph-section`;
+  section.setAttribute(GRAPH_SECTION_ATTR, '');
   section.setAttribute('data-collapsed', 'false');
 
   const header = document.createElement('div');
@@ -117,7 +124,15 @@ export function buildGraphSection(
 
   const slot = document.createElement('div');
   slot.className = `${prefix}-graph-slot graph-slot`;
-  section.appendChild(slot);
+  // 图区内容体（data-graph-body）：包住 slot、不含 header 的中间层。
+  // 自身必须是 section 的 flex 填充子；slot 的 flex:1 相对这一层。
+  // 禁止把该属性打在 slot 上（scene-adapter 会 replaceChildren 清空 slot）。
+  const body = document.createElement('div');
+  body.setAttribute(GRAPH_BODY_ATTR, '');
+  body.style.cssText =
+    'flex: 1; min-height: 0; display: flex; flex-direction: column;';
+  body.appendChild(slot);
+  section.appendChild(body);
   return { section, slot };
 }
 
@@ -130,41 +145,44 @@ export interface ToolbarElements {
 }
 
 export function buildToolbar(prefix: CssPrefix): ToolbarElements {
-  const toolbar = document.createElement('div');
-  toolbar.className = `${prefix}-stage-toolbar stage-toolbar`;
-
-  const sidebarBtn = document.createElement('button');
-  sidebarBtn.type = 'button';
-  sidebarBtn.className = `${prefix}-sidebar-toggle sidebar-toggle sidebar-toggle-btn`;
-  sidebarBtn.setAttribute('aria-label', '隐藏控制面板');
-  sidebarBtn.textContent = '隐藏控制面板';
-  toolbar.appendChild(sidebarBtn);
-
-  const actions = document.createElement('div');
-  actions.className = `${prefix}-toolbar-actions`;
-
-  const themeBtn = document.createElement('button');
-  themeBtn.type = 'button';
-  themeBtn.className = `shell-theme-toggle theme-toggle-btn`;
-  themeBtn.setAttribute('aria-label', '切换到夜间主题');
-  themeBtn.textContent = '夜间';
-  actions.appendChild(themeBtn);
-
-  const modeBtn = document.createElement('button');
-  modeBtn.type = 'button';
-  modeBtn.className = `${prefix}-mode-toggle mode-toggle mode-toggle-btn`;
-  modeBtn.setAttribute('aria-label', '切换到演示模式');
-  modeBtn.textContent = '演示';
-  actions.appendChild(modeBtn);
-
-  const layoutBtn = document.createElement('button');
-  layoutBtn.type = 'button';
-  layoutBtn.className = 'layout-switch-btn';
-  layoutBtn.setAttribute('aria-label', '切换布局');
-  actions.appendChild(layoutBtn);
-
-  toolbar.appendChild(actions);
-  return { toolbar, sidebarBtn, themeBtn, modeBtn, layoutBtn };
+  const { toolbar, buttons } = buildStageToolbar({
+    className: `${prefix}-stage-toolbar stage-toolbar`,
+    leadingButtons: [
+      {
+        key: 'sidebar',
+        className: `${prefix}-sidebar-toggle sidebar-toggle sidebar-toggle-btn`,
+        ariaLabel: '隐藏控制面板',
+        text: '隐藏控制面板'
+      }
+    ],
+    actionsClassName: `${prefix}-toolbar-actions`,
+    buttons: [
+      {
+        key: 'theme',
+        className: 'shell-theme-toggle theme-toggle-btn',
+        ariaLabel: '切换到夜间主题',
+        text: '夜间'
+      },
+      {
+        key: 'mode',
+        className: `${prefix}-mode-toggle mode-toggle mode-toggle-btn`,
+        ariaLabel: '切换到演示模式',
+        text: '演示'
+      },
+      {
+        key: 'layout',
+        className: 'layout-switch-btn',
+        ariaLabel: '切换布局'
+      }
+    ]
+  });
+  return {
+    toolbar,
+    sidebarBtn: buttons.sidebar,
+    themeBtn: buttons.theme,
+    modeBtn: buttons.mode,
+    layoutBtn: buttons.layout
+  };
 }
 
 export interface StageElements {
@@ -180,6 +198,7 @@ export function buildStage(
 ): StageElements {
   const stageFrame = document.createElement('div');
   stageFrame.className = `${prefix}-stage-frame`;
+  stageFrame.setAttribute(STAGE_FRAME_ATTR, '');
 
   const stageSlot = document.createElement('div');
   stageSlot.className = `${prefix}-stage-slot`;
@@ -213,8 +232,8 @@ export function buildResizer(
 // === Shared ILayout methods ===
 
 export function applySplitTheme(container: HTMLElement, theme: Theme): void {
+  // document.documentElement 的主题由 container.ts 统一写，布局只标容器
   container.setAttribute('data-theme', theme);
-  document.documentElement.setAttribute('data-theme', theme);
 }
 
 export function getSplitLayoutState(

@@ -27,6 +27,7 @@ import { bindInteractions } from './renderer/interactions';
 import { micrometerFringeAlignment } from './renderer/alignment';
 import type { FringeAlignment } from '../_utils/fringe-alignment';
 import {
+  ancestorZoomScale,
   applyFitTransform,
   fitTransformToParent,
   narrowInstrumentScale,
@@ -130,7 +131,11 @@ export function createMicrometerEyepieceView(options: {
   };
 
   // 整体仪器初始位置：宽屏居中；窄屏从目镜/读数端起，避免把镜头推出视口
+  // （rect 归一化到布局空间，防止舞台 panzoom 缩放逐层污染）
   const parentRect = parent.getBoundingClientRect();
+  const parentZoomK = ancestorZoomScale(parent);
+  const parentW = parentRect.width / parentZoomK;
+  const parentH = parentRect.height / parentZoomK;
   const scaledW = MICROMETER_LAYOUT_WIDTH * MICROMETER_SYSTEM_SCALE;
   const scaledH = 270 * MICROMETER_SYSTEM_SCALE;
 
@@ -143,15 +148,12 @@ export function createMicrometerEyepieceView(options: {
     disposed: false,
     simLastCrosshairAngle: 0,
     sysX:
-      parentRect.width >= scaledW
-        ? Math.round((parentRect.width - scaledW) / 2)
-        : parentRect.width > 100
+      parentW >= scaledW
+        ? Math.round((parentW - scaledW) / 2)
+        : parentW > 100
           ? 0
           : -100,
-    sysY:
-      parentRect.height > 100
-        ? Math.max(0, Math.round((parentRect.height - scaledH) / 2))
-        : 0,
+    sysY: parentH > 100 ? Math.max(0, Math.round((parentH - scaledH) / 2)) : 0,
     systemScale: MICROMETER_SYSTEM_SCALE
   };
 
@@ -277,11 +279,16 @@ export function createMicrometerEyepieceView(options: {
     resize() {
       const applyFit = () => {
         if (viewState.disposed) return;
+        // Stage panzoom zooms an ancestor; normalize to layout space so the
+        // narrow check and fit widths don't change with view zoom.
+        const zoomK = ancestorZoomScale(parent);
         const rect = parent.getBoundingClientRect();
+        const rectW = rect.width / zoomK;
+        const rectH = rect.height / zoomK;
         const systemScale = MICROMETER_SYSTEM_SCALE;
         const narrow =
           (typeof window !== 'undefined' && window.innerWidth <= 720) ||
-          rect.width < 400;
+          rectW < 400;
         viewState.sysY = 0;
         if (narrow) {
           viewState.sysX = 0;
@@ -297,8 +304,8 @@ export function createMicrometerEyepieceView(options: {
           const fitWidth = Math.max(
             wrapper.clientWidth,
             Math.min(
-              Math.max(rect.width, 1),
-              typeof window !== 'undefined' ? window.innerWidth : rect.width
+              Math.max(rectW, 1),
+              typeof window !== 'undefined' ? window.innerWidth : rectW
             )
           );
           wrapper.style.setProperty(
@@ -336,7 +343,7 @@ export function createMicrometerEyepieceView(options: {
         } else {
           const visualW = MICROMETER_LAYOUT_WIDTH * systemScale;
           const visualH = 270 * systemScale;
-          const s = Math.min(rect.width / visualW, rect.height / visualH, 1.25);
+          const s = Math.min(rectW / visualW, rectH / visualH, 1.25);
           root.style.transform = `scale(${s})`;
         }
       };

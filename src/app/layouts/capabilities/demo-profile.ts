@@ -10,10 +10,20 @@ import type {
   CapabilityContext,
   LayoutSlots
 } from '../types';
+import type { ResolvedDemoProfile } from '../../../platform/demo-profile';
+import { layoutRegistry } from '../registry';
+import { GRAPH_SECTION_ATTR } from '../../../platform/stage-chrome';
+import { requestLayoutResize } from '../request-layout-resize';
 import {
-  isDesktopDemoLayout,
-  type ResolvedDemoProfile
-} from '../../../platform/demo-profile';
+  adoptDemoGraph,
+  restoreDemoGraph,
+  type GraphAdoptionState
+} from './demo-profile/graph-adoption';
+import {
+  mountDemoChips,
+  restoreDemoChips,
+  type DemoChipsState
+} from './demo-profile/chips';
 
 export interface DemoProfileUpdateData {
   mode: 'normal' | 'presentation';
@@ -54,7 +64,8 @@ export function createDemoProfile(
       const merged = { ...cfg, ...config };
       const sidebarSel = merged.sidebarSelector ?? '.layout-left-panel';
       const graphSel =
-        merged.graphSectionSelector ?? '.graph-section, .layout-graph-section';
+        merged.graphSectionSelector ??
+        `[${GRAPH_SECTION_ATTR}], .graph-section`;
 
       let currentProfile: ResolvedDemoProfile | null = null;
       let savedSidebarDisplay: string | null = null;
@@ -70,31 +81,29 @@ export function createDemoProfile(
       } | null = null;
       let savedGridColumns: string | null = null;
       let savedResizerDisplay: string | null = null;
-      let savedGraphParent: HTMLElement | null = null;
-      let savedGraphNext: ChildNode | null = null;
-      let savedGraphHeight: string | null = null;
+      let graphAdoption: GraphAdoptionState | null = null;
       let savedTransportDisplay: string | null = null;
       const savedControlDisplays = new Map<HTMLElement, string>();
       const savedControlSectionDisplays = new Map<HTMLElement, string>();
       const savedChromeDisplays = new Map<HTMLElement, string>();
-      const savedChipHomes = new Map<
-        HTMLElement,
-        { parent: HTMLElement; next: ChildNode | null }
-      >();
-      let chipSlot: HTMLElement | null = null;
+      const chips: DemoChipsState = {
+        slot: null,
+        movers: new Map()
+      };
 
-      const geometryOn = () => isDesktopDemoLayout(ctx.getCurrentLayoutId());
+      // 演示几何改造由布局元数据声明（demoCapable）；查找留在 app 能力层
+      // （platform 不可 import registry）。空 layout id → 元数据 undefined
+      // → false，与旧 DESKTOP_DEMO_LAYOUTS 名单的缺省一致。
+      const geometryOn = () =>
+        layoutRegistry.getMetadata(ctx.getCurrentLayoutId())?.demoCapable ===
+        true;
 
       const resizerOf = () =>
         ctx.container.querySelector(
           '[role="separator"][aria-orientation="vertical"]'
         ) as HTMLElement | null;
 
-      const notifyResize = () => {
-        requestAnimationFrame(() => {
-          window.dispatchEvent(new Event('resize'));
-        });
-      };
+      const notifyResize = requestLayoutResize;
 
       const collapseGridSidebar = (zero: boolean) => {
         if (!geometryOn()) return;
@@ -270,92 +279,17 @@ export function createDemoProfile(
         savedTransportDisplay = null;
       };
 
-      const reparentGraphIfNeeded = (profile: ResolvedDemoProfile) => {
-        if (!geometryOn() || profile.graphPanel !== 'visible') return;
-        if (
-          profile.controlPanel !== 'hidden' &&
-          profile.controlPanel !== 'collapsed'
-        ) {
-          return;
-        }
-        if (ctx.container.dataset.hasGraph === 'false') return;
-        const graph = ctx.container.querySelector(
-          graphSel
-        ) as HTMLElement | null;
-        if (!graph || !graph.closest('.layout-left-panel')) return;
-        if (!_slots.animation) return;
-        savedGraphParent = graph.parentElement;
-        savedGraphNext = graph.nextSibling;
-        savedGraphHeight = graph.style.height;
-        graph.classList.add('is-demo-stage-graph');
-        _slots.animation.classList.add('is-demo-stage-with-graph');
-        _slots.animation.appendChild(graph);
-        notifyResize();
-      };
-
-      const restoreGraphHome = () => {
-        const graph = ctx.container.querySelector(
-          graphSel
-        ) as HTMLElement | null;
-        if (graph && savedGraphParent) {
-          graph.classList.remove('is-demo-stage-graph');
-          _slots.animation?.classList.remove('is-demo-stage-with-graph');
-          if (savedGraphHeight !== null) graph.style.height = savedGraphHeight;
-          if (
-            savedGraphNext &&
-            savedGraphNext.parentNode === savedGraphParent
-          ) {
-            savedGraphParent.insertBefore(graph, savedGraphNext);
-          } else {
-            savedGraphParent.appendChild(graph);
-          }
-        }
-        savedGraphParent = null;
-        savedGraphNext = null;
-        savedGraphHeight = null;
-      };
-
       const mountChips = (profile: ResolvedDemoProfile) => {
-        if (
-          !geometryOn() ||
-          profile.controlPanel !== 'hidden' ||
-          !profile.visibleControlKeys.length
-        ) {
-          return;
-        }
-        const rp = ctx.container.querySelector(
-          '[class*="-readout-panel"]'
-        ) as HTMLElement | null;
-        const controlRoot = _slots.control;
-        if (!rp || !controlRoot) return;
-        chipSlot = document.createElement('div');
-        chipSlot.className = 'demo-chip-slot';
-        rp.appendChild(chipSlot);
-        profile.visibleControlKeys.forEach((key) => {
-          const node = controlRoot.querySelector<HTMLElement>(
-            `[data-control-key="${key}"]`
-          );
-          if (!node || !node.parentElement) return;
-          savedChipHomes.set(node, {
-            parent: node.parentElement,
-            next: node.nextSibling
-          });
-          chipSlot?.appendChild(node);
-          node.style.display = '';
+        mountDemoChips(chips, {
+          profile,
+          geometryEnabled: geometryOn(),
+          container: ctx.container,
+          controlRoot: _slots.control ?? null
         });
       };
 
       const restoreChips = () => {
-        savedChipHomes.forEach((home, node) => {
-          if (home.next && home.next.parentNode === home.parent) {
-            home.parent.insertBefore(node, home.next);
-          } else {
-            home.parent.appendChild(node);
-          }
-        });
-        savedChipHomes.clear();
-        chipSlot?.remove();
-        chipSlot = null;
+        restoreDemoChips(chips);
       };
 
       const apply = (profile: ResolvedDemoProfile) => {
@@ -420,19 +354,29 @@ export function createDemoProfile(
                 graph.setAttribute('data-collapsed', 'true');
                 graph.classList.add('is-collapsed-demo');
                 break;
-              case 'visible':
+              case 'visible': {
                 graph.style.display = savedGraphDisplay ?? '';
                 graph.setAttribute('data-collapsed', 'false');
                 graph.classList.remove('is-collapsed-demo');
-                reparentGraphIfNeeded(profile);
+                const nextGraphAdoption = adoptDemoGraph({
+                  profile,
+                  geometryEnabled: geometry,
+                  container: ctx.container,
+                  graphSelector: graphSel,
+                  animationSlot: _slots.animation ?? null,
+                  hasGraph: ctx.container.dataset.hasGraph !== 'false',
+                  notifyResize
+                });
+                if (nextGraphAdoption) graphAdoption = nextGraphAdoption;
                 break;
+              }
             }
           }
         }
 
         if (profile.readoutPanel) {
           const rp = ctx.container.querySelector(
-            '[class*="-readout-panel"]'
+            '.readout-panel'
           ) as HTMLElement | null;
           if (rp) {
             if (savedReadoutCollapsed === null) {
@@ -529,7 +473,8 @@ export function createDemoProfile(
         }
         restoreGridSidebar();
         resetMinimalControls();
-        restoreGraphHome();
+        restoreDemoGraph(graphAdoption, _slots.animation ?? null);
+        graphAdoption = null;
 
         const graph = ctx.container.querySelector(
           graphSel
@@ -542,7 +487,7 @@ export function createDemoProfile(
         }
 
         const rp = ctx.container.querySelector(
-          '[class*="-readout-panel"]'
+          '.readout-panel'
         ) as HTMLElement | null;
         if (rp) {
           const prefix = Array.from(rp.classList)
