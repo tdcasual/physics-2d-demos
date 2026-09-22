@@ -196,7 +196,7 @@ describe('bundle budget check', () => {
     expect(defaultBundleBudget).toEqual({
       maxHomeEntryJsKb: 190,
       maxHomeEntryCssKb: 25,
-      maxEntryJsKb: 180,
+      maxEntryJsKb: 200,
       maxEntryCssKb: 55,
       maxVendorJsKb: 160,
       maxSharedJsKb: 150

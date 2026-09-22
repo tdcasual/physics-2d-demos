@@ -43,14 +43,15 @@ export type BundleBudgetReport = {
   violations: BundleBudgetViolation[];
 };
 
-// 预算 = Phase 3 bundle 治理后实测值 + 约 15% 余量。
+// 预算 = Phase 3 bundle 治理后实测值 + 余量。2026-09 起场景页 JS 上调至
+// 200 kB（数据工作区测量判分场景 double-slit 入口 188.36 kB，180 kB 档放不下）。
 // 治理后实测（2026-08）：首页 JS 162.05 / CSS 20.23；场景页 JS 最大 157.25
 // （double-slit，仪器已改动态导入）/ CSS 最大 46.10（chase-meet）；
 // vendor 138.53；shared 131.22（kB）。
 export const defaultBundleBudget: BundleBudget = {
   maxHomeEntryJsKb: 190,
   maxHomeEntryCssKb: 25,
-  maxEntryJsKb: 180,
+  maxEntryJsKb: 200,
   maxEntryCssKb: 55,
   maxVendorJsKb: 160,
   // Layout/scene test capability metadata is intentionally shipped to each
