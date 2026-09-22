@@ -4,6 +4,7 @@ import {
   allTrialsComplete,
   calculationTolerance,
   checkInstrumentReading,
+  checkNumericFormat,
   checkPositionRawFormat,
   createEmptySession,
   estimatedRangeContains,
@@ -229,9 +230,90 @@ describe('student input parsing and units', () => {
     expect(parseStudentNumber('abc', 'mm').ok).toBe(false);
   });
 
+  it('rejects scientific notation by default with an opt-in escape hatch', () => {
+    expect(parseStudentNumber('3.02e0', 'mm').ok).toBe(false);
+    expect(parseStudentNumber('1.2e-3', 'mm').ok).toBe(false);
+    expect(parseStudentNumber('14.02E1', 'mm').ok).toBe(false);
+    const allowed = parseStudentNumber('1.2e-3', 'mm', {
+      allowScientific: true
+    });
+    expect(allowed.ok).toBe(true);
+    if (allowed.ok) expect(allowed.value).toBeCloseTo(0.0012, 10);
+  });
+
+  it('keeps full-width comma normalization and pins half-width rejection', () => {
+    const full = parseStudentNumber('3，02', 'mm');
+    expect(full.ok).toBe(true);
+    if (full.ok) expect(full.value).toBe(3.02);
+    expect(parseStudentNumber('3,02', 'mm').ok).toBe(false);
+    expect(parseStudentNumber('3。02', 'mm').ok).toBe(false);
+  });
+
   it('detects cm/mm decade confusion against an instrument reading', () => {
     expect(looksLikeWrongUnit(1.402, 14.02, CALIPER_PRECISION_MM)).toBe(true);
     expect(looksLikeWrongUnit(14.02, 14.02, CALIPER_PRECISION_MM)).toBe(false);
+  });
+});
+
+describe('checkNumericFormat', () => {
+  it('enforces exact decimal places via thin delegation parity', () => {
+    expect(checkNumericFormat('3.02', { decimalPlaces: 2 })).toBeNull();
+    expect(checkNumericFormat('-0.005', { decimalPlaces: 3 })).toBeNull();
+    for (const raw of ['3.0', '3.020', '3', '3.', '.02', '01.02']) {
+      const fb = checkNumericFormat(raw, {
+        decimalPlaces: 2,
+        formatMessage: '须两位小数'
+      });
+      expect(fb?.layer, raw).toBe('format');
+      expect(fb?.message, raw).toBe('须两位小数');
+    }
+    expect(checkNumericFormat('3.02 mm', { decimalPlaces: 2 })).toBeNull();
+  });
+
+  it('gates integer literals with optional unit suffix', () => {
+    expect(checkNumericFormat('5', { integer: true })).toBeNull();
+    expect(checkNumericFormat('-7', { integer: true })).toBeNull();
+    expect(checkNumericFormat('05', { integer: true })).toBeNull();
+    expect(checkNumericFormat('5 mm', { integer: true })).toBeNull();
+    expect(checkNumericFormat('3.0', { integer: true })?.layer).toBe('format');
+    expect(
+      checkNumericFormat('5 mm', { integer: true, allowUnitSuffix: false })
+        ?.layer
+    ).toBe('format');
+  });
+
+  it('rejects scientific notation anywhere unless allowed', () => {
+    for (const raw of ['1.402e1', '14.02e0', '1.40E+1', '1e2']) {
+      expect(checkNumericFormat(raw, {})?.layer, raw).toBe('format');
+    }
+    expect(checkNumericFormat('1e2', { allowScientific: true })).toBeNull();
+    // 语法-only 模式不判小数位数，语法判断交给 parseStudentNumber。
+    expect(checkNumericFormat('abc', {})).toBeNull();
+    expect(checkNumericFormat('3.020', {})).toBeNull();
+  });
+
+  it('rejects e anywhere, including inside unit words (preserved behaviour)', () => {
+    expect(checkPositionRawFormat('14.02 meter', 'caliper')?.layer).toBe(
+      'format'
+    );
+    expect(checkNumericFormat('3.02 sec', { decimalPlaces: 2 })?.layer).toBe(
+      'format'
+    );
+  });
+
+  it('normalizes full-width commas and uses distinct empty-input message', () => {
+    expect(checkNumericFormat('3，02', { decimalPlaces: 2 })).toBeNull();
+    const empty = checkNumericFormat('   ', {
+      emptyMessage: '请先输入',
+      formatMessage: '格式不对'
+    });
+    expect(empty?.message).toBe('请先输入');
+    const bad = checkNumericFormat('3.0', {
+      decimalPlaces: 2,
+      emptyMessage: '请先输入',
+      formatMessage: '格式不对'
+    });
+    expect(bad?.message).toBe('格式不对');
   });
 });
 
@@ -935,6 +1017,38 @@ describe('x1/x2 raw format matrix', () => {
       expected: CALIPER_EXPECTED
     });
     expect(n.feedback.layer).not.toBe('format');
+  });
+
+  it('gates n on integer literals: 3.0 / 3e0 rejected, 05 still accepted', () => {
+    const session = createEmptySession(doubleSlitDataWorkspaceSpec);
+    for (const raw of ['3.0', '3e0', '3.5']) {
+      const n = evaluateDoubleSlitField({
+        session,
+        submit: { field: 'n', trialIndex: 0, raw },
+        snapshot: SNAPSHOT,
+        expected: CALIPER_EXPECTED
+      });
+      expect(n.feedback.layer, raw).toBe('format');
+      expect(n.feedback.message, raw).toBe('n 应为正整数');
+    }
+    // 前导零整数一路穿过格式闸、整数校验与量程，停在依赖未满足的 relation 层。
+    const leadingZero = evaluateDoubleSlitField({
+      session,
+      submit: { field: 'n', trialIndex: 0, raw: '05' },
+      snapshot: SNAPSHOT,
+      expected: CALIPER_EXPECTED
+    });
+    expect(leadingZero.feedback.layer).toBe('relation');
+    // 带单位后缀的 n 由 parsed.unit 检查落在 unit 层，绝不能判通过。
+    const withUnit = evaluateDoubleSlitField({
+      session,
+      submit: { field: 'n', trialIndex: 0, raw: '5 mm' },
+      snapshot: SNAPSHOT,
+      expected: CALIPER_EXPECTED
+    });
+    expect(withUnit.feedback.ok).toBe(false);
+    expect(withUnit.feedback.layer).toBe('unit');
+    expect(withUnit.feedback.message).toContain('不要带长度单位');
   });
 
   it('lets signed exact-digit x1 reach range instead of format', () => {

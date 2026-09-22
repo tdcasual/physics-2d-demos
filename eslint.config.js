@@ -324,6 +324,67 @@ export default tseslint.config(
     }
   },
   {
+    // 测量判分契约（docs/plans/2026-09-22-measurement-grading-contract.md）：
+    // data-task.ts 只做容差声明与字段编排——输入解析/格式闸统一走
+    // platform/data-workspace 的 parseStudentNumber / checkNumericFormat，
+    // 容差一律来自文件顶部常量块（由 measurement-grading-contract 契约测试
+    // 钉住）。新增带数据工作区的场景按 glob 自动纳入本门禁。
+    // 注意不得波及 view 层的 parseFloat(canvas.dataset.responsiveScale) 范式。
+    files: ['src/scenes/*/data-task.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "CallExpression[callee.name='parseFloat']",
+          message:
+            '判分文件禁止 parseFloat；输入解析统一走 platform parseStudentNumber。'
+        },
+        {
+          selector: "CallExpression[callee.name='parseInt']",
+          message:
+            '判分文件禁止 parseInt；整数校验用 checkNumericFormat({ integer: true })。'
+        },
+        {
+          selector: "CallExpression[callee.name='Number']",
+          message:
+            '判分文件禁止 Number(x) 强转；输入解析统一走 platform parseStudentNumber。'
+        },
+        {
+          selector:
+            "CallExpression[callee.object.name='Number'][callee.property.name='parseFloat']",
+          message:
+            '判分文件禁止 Number.parseFloat；输入解析统一走 platform parseStudentNumber。'
+        },
+        {
+          selector:
+            "CallExpression[callee.object.name='Number'][callee.property.name='parseInt']",
+          message:
+            '判分文件禁止 Number.parseInt；整数校验用 checkNumericFormat({ integer: true })。'
+        },
+        {
+          selector: "UnaryExpression[operator='+']",
+          message:
+            '判分文件禁止一元 + 号转数；输入解析统一走 platform parseStudentNumber。'
+        },
+        {
+          selector: "BinaryExpression[operator='-'][right.raw='0']",
+          message:
+            '判分文件禁止 `x - 0` 式强转；输入解析统一走 platform parseStudentNumber。'
+        },
+        {
+          selector: "NewExpression[callee.name='RegExp']",
+          message:
+            '判分文件禁止拼装正则；格式校验统一走 platform checkNumericFormat。'
+        },
+        {
+          selector: 'Literal[regex]',
+          message:
+            '判分文件禁止正则字面量；格式校验统一走 platform checkNumericFormat。'
+        }
+      ]
+    }
+  },
+  {
     // 深度说明见 scenes 规则注释。instruments 最深文件位于
     // src/instruments/<id>/renderer/（深度 3，需 `../../../`）。
     files: ['src/instruments/**/*.ts'],

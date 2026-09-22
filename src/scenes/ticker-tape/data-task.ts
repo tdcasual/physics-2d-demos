@@ -6,6 +6,9 @@
  */
 
 import {
+  checkNumericFormat,
+  withinEpsilon,
+  withinTickTolerance,
   addSessionTrial,
   applyFieldDrafts,
   cloneSession,
@@ -101,6 +104,27 @@ export const tickerTapeDataWorkspaceSpec: DataWorkspaceSpec = {
 
 export type TickerTapePlotStatus = { hasFit: boolean };
 
+/**
+ * 测量判分契约（docs/plans/2026-09-22-measurement-grading-contract.md）：
+ * 容差与小数位只允许出现在此常量块；hint 与失败文案必须由这些常量拼装，
+ * 不得在判分分支写容差字面量。x 真值经 roundCm 量化在 0.01 cm 网格上，
+ * 因此 x/Δx 走整数刻度比较；v 的期望含 /100 换算（可 3-4 位小数），走绝对比较。
+ */
+const X_DECIMALS = 2;
+const X_TOLERANCE_CM = 0.03;
+const DELTA_X_TOLERANCE_CM = 0.02;
+const V_TOLERANCE_MS = 0.01;
+const A_TOLERANCE = { abs: 0.05, relDiff: 0.02, relFit: 0.05 } as const;
+/** mm↔cm↔m 的倍率混淆提示窗口（长度量：cm 计）。 */
+const LENGTH_UNIT_RATIOS = [10, 100] as const;
+/** cm/s↔m/s、cm/s²↔m/s² 的倍率窗口（SI 换算量只有 ×100 一档）。 */
+const SI_UNIT_RATIOS = [100] as const;
+const TICKS_PER_CM = 100;
+
+const X_FORMAT_MESSAGE = `x 须为恰好 ${X_DECIMALS} 位小数（估读到 0.01 cm），不支持指数记法`;
+const DELTA_X_FORMAT_MESSAGE = `Δx 须为恰好 ${X_DECIMALS} 位小数，不支持指数记法`;
+const NO_SCIENTIFIC_MESSAGE = '不支持指数记法，请填普通小数';
+
 export type TickerTapeMeasurementSource = {
   getState(): TickerTapeState;
   getPlotStatus(): TickerTapePlotStatus;
@@ -185,18 +209,32 @@ function magnitudeFeedback(
   value: number,
   expected: number,
   tolerance: number,
-  unit: string
+  unit: string,
+  options: { ticksPerUnit?: number; ratios?: readonly number[] } = {}
 ): FieldFeedback {
-  if (Math.abs(value - expected) <= tolerance + 1e-9) return ok();
-  if (
-    Math.abs(value * 100 - expected) <= tolerance + 1e-9 ||
-    Math.abs(value / 100 - expected) <= tolerance + 1e-9
-  ) {
-    return {
-      ok: false,
-      layer: 'unit',
-      message: `数值与答案相差 100 倍，请确认单位是 ${unit}`
-    };
+  const ticksPerUnit = options.ticksPerUnit;
+  const ratios = options.ratios ?? LENGTH_UNIT_RATIOS;
+  const matches = (candidate: number): boolean =>
+    ticksPerUnit == null
+      ? withinEpsilon(candidate, expected, tolerance)
+      : withinTickTolerance(
+          candidate,
+          expected,
+          Math.round(tolerance * ticksPerUnit),
+          ticksPerUnit
+        );
+  if (matches(value)) return ok();
+  // 近零真值上「10 倍的 0 仍是 0」，倍率启发必然误标，直接落 range 层。
+  if (Math.abs(expected) > tolerance) {
+    for (const ratio of ratios) {
+      if (matches(value * ratio) || matches(value / ratio)) {
+        return {
+          ok: false,
+          layer: 'unit',
+          message: `数值与答案相差 ${ratio} 倍，请确认单位是 ${unit}`
+        };
+      }
+    }
   }
   return {
     ok: false,
@@ -256,9 +294,17 @@ export function evaluateTickerTapeField(options: {
   if (field === 'x') {
     const parsed = parsedOrFailure(submit.raw, 'cm');
     const expected = state.tapeXCm[index] ?? Number.NaN;
-    const feedback = parsed.feedback.ok
-      ? magnitudeFeedback(parsed.value, expected, 0.05, 'cm')
-      : parsed.feedback;
+    const formatFb = checkNumericFormat(submit.raw, {
+      decimalPlaces: X_DECIMALS,
+      formatMessage: X_FORMAT_MESSAGE
+    });
+    const feedback = formatFb
+      ? formatFb
+      : parsed.feedback.ok
+        ? magnitudeFeedback(parsed.value, expected, X_TOLERANCE_CM, 'cm', {
+            ticksPerUnit: TICKS_PER_CM
+          })
+        : parsed.feedback;
     session = writeField(
       session,
       index,
@@ -272,15 +318,20 @@ export function evaluateTickerTapeField(options: {
     const parsed = parsedOrFailure(submit.raw, 'cm');
     const prev = getTrialField(session.trials[index - 1], 'x');
     const current = getTrialField(trial, 'x');
-    let feedback = parsed.feedback;
+    const formatFb = checkNumericFormat(submit.raw, {
+      decimalPlaces: X_DECIMALS,
+      formatMessage: DELTA_X_FORMAT_MESSAGE
+    });
+    let feedback: FieldFeedback = formatFb ?? parsed.feedback;
     if (feedback.ok && (!fieldIsOk(prev) || !fieldIsOk(current))) {
       feedback = relation('请先校对相邻点的 x');
     } else if (feedback.ok) {
       feedback = magnitudeFeedback(
         parsed.value,
         current!.value - prev!.value,
-        0.02,
-        'cm'
+        DELTA_X_TOLERANCE_CM,
+        'cm',
+        { ticksPerUnit: TICKS_PER_CM }
       );
     }
     session = writeField(
@@ -296,15 +347,19 @@ export function evaluateTickerTapeField(options: {
     const parsed = parsedOrFailure(submit.raw, 'm/s');
     const prev = getTrialField(session.trials[index - 1], 'x');
     const next = getTrialField(session.trials[index + 1], 'x');
-    let feedback = parsed.feedback;
+    const formatFb = checkNumericFormat(submit.raw, {
+      formatMessage: NO_SCIENTIFIC_MESSAGE
+    });
+    let feedback: FieldFeedback = formatFb ?? parsed.feedback;
     if (feedback.ok && (!fieldIsOk(prev) || !fieldIsOk(next))) {
       feedback = relation('请先校对相邻点的 x');
     } else if (feedback.ok) {
       feedback = magnitudeFeedback(
         parsed.value,
         (next!.value - prev!.value) / 100 / (2 * state.T),
-        0.01,
-        'm/s'
+        V_TOLERANCE_MS,
+        'm/s',
+        { ratios: SI_UNIT_RATIOS }
       );
     }
     session = writeField(
@@ -318,7 +373,10 @@ export function evaluateTickerTapeField(options: {
     if (feedback.ok) source.writeBack.setV(index, parsed.value);
   } else if (field === 'aDiff') {
     const parsed = parsedOrFailure(submit.raw, 'm/s²');
-    let feedback = parsed.feedback;
+    const formatFb = checkNumericFormat(submit.raw, {
+      formatMessage: NO_SCIENTIFIC_MESSAGE
+    });
+    let feedback: FieldFeedback = formatFb ?? parsed.feedback;
     if (feedback.ok && !allRowsFieldComplete(session, 'x')) {
       feedback = relation('请先完成全部 7 个 x 校对');
     } else if (feedback.ok) {
@@ -332,8 +390,12 @@ export function evaluateTickerTapeField(options: {
           : magnitudeFeedback(
               parsed.value,
               expected,
-              Math.max(0.05, Math.abs(expected) * 0.02),
-              'm/s²'
+              Math.max(
+                A_TOLERANCE.abs,
+                Math.abs(expected) * A_TOLERANCE.relDiff
+              ),
+              'm/s²',
+              { ratios: SI_UNIT_RATIOS }
             );
     }
     session = writeField(
@@ -346,7 +408,10 @@ export function evaluateTickerTapeField(options: {
     );
   } else if (field === 'aFit') {
     const parsed = parsedOrFailure(submit.raw, 'm/s²');
-    let feedback = parsed.feedback;
+    const formatFb = checkNumericFormat(submit.raw, {
+      formatMessage: NO_SCIENTIFIC_MESSAGE
+    });
+    let feedback: FieldFeedback = formatFb ?? parsed.feedback;
     if (feedback.ok && !allRowsFieldComplete(session, 'v')) {
       feedback = relation('请先完成各行 v 校对');
     } else if (feedback.ok && !source.getPlotStatus().hasFit) {
@@ -367,8 +432,12 @@ export function evaluateTickerTapeField(options: {
           : magnitudeFeedback(
               parsed.value,
               expected,
-              Math.max(0.05, Math.abs(expected) * 0.05),
-              'm/s²'
+              Math.max(
+                A_TOLERANCE.abs,
+                Math.abs(expected) * A_TOLERANCE.relFit
+              ),
+              'm/s²',
+              { ratios: SI_UNIT_RATIOS }
             );
     }
     session = writeField(
@@ -431,7 +500,8 @@ export function createTickerTapeDataWorkspace(
       },
       { key: 'points', label: '计数点', value: '7 个' }
     ],
-    getHint: () => 'x 单位 cm（毫米尺估读到 0.01 cm）；v 单位 m/s。',
+    getHint: () =>
+      `x 单位 cm（毫米尺估读到 0.01 cm，填两位小数；与纸带读数相差不超过 ${X_TOLERANCE_CM.toFixed(2)} cm 判通过）；v 单位 m/s。`,
     setActive(active: boolean) {
       session = { ...session, active };
     },

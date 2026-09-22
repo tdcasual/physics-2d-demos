@@ -177,13 +177,13 @@ test.describe('ticker-tape data workspace', () => {
       page.locator(
         `.data-workspace-field:has(.data-workspace-input[data-field="${field}"][data-trial="${row}"]) .data-workspace-status`
       );
-    const check = async (field: string, row: number, value: number) => {
+    const check = async (field: string, row: number, value: string) => {
       const el = input(field, row);
-      await el.fill(String(value));
+      await el.fill(value);
       await el.press('Enter');
     };
 
-    await check('x', 0, x(0));
+    await check('x', 0, x(0).toFixed(2));
     await expect(fieldStatus('x', 0)).toHaveClass(/is-ok/);
 
     const box = await stageCanvas.boundingBox();
@@ -215,10 +215,10 @@ test.describe('ticker-tape data workspace', () => {
       page.locator('[role="tab"][data-step="data"]')
     ).toHaveAttribute('aria-selected', 'true');
 
-    for (let i = 1; i < 7; i += 1) await check('x', i, x(i));
+    for (let i = 1; i < 7; i += 1) await check('x', i, x(i).toFixed(2));
     for (let i = 1; i < 7; i += 1) {
       await expect(input('deltaX', i)).toBeEnabled();
-      await input('deltaX', i).fill(String(x(i) - x(i - 1)));
+      await input('deltaX', i).fill((x(i) - x(i - 1)).toFixed(2));
     }
     await page.locator('[aria-label="校对Δx"]').click();
     await expect(fieldStatus('deltaX', 1)).toHaveClass(/is-ok/);

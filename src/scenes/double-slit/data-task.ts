@@ -9,6 +9,7 @@ import {
   allTrialsComplete,
   applyFieldDrafts,
   checkInstrumentReading,
+  checkNumericFormat,
   checkPositionRawFormat,
   cloneSession,
   createEmptySession,
@@ -50,6 +51,7 @@ import {
   computeRealDeltaXmm,
   DEFAULT_L,
   isWhiteLight,
+  PHYSICAL_D_SCALE,
   type DoubleSlitParams
 } from './scene.sim';
 import {
@@ -161,7 +163,8 @@ export type DoubleSlitMeasurementSource = {
 };
 
 export function slitDistanceMm(slitDistance: number): number {
-  return slitDistance * 0.01;
+  // PHYSICAL_D_SCALE 以米/单位计（scene.sim），此处口径为 mm：m→mm 须 ×1000。
+  return slitDistance * PHYSICAL_D_SCALE * 1000;
 }
 
 export function screenDistanceM(params: DoubleSlitParams): number {
@@ -306,6 +309,32 @@ export function evaluateDoubleSlitField(options: {
   const precisionMm = snapshot?.precisionMm ?? CALIPER_PRECISION_MM;
 
   const expectedUnit = field === 'lambda' ? 'nm' : 'mm';
+  if (field === 'n') {
+    // n 是亮纹间隔数：整数字面量闸拒 "3.0" / "3e0"；带单位后缀的输入
+    // 放行到下方 parsed.unit 检查，保住「不要带长度单位」的 unit 层文案。
+    const integerFb = checkNumericFormat(submit.raw, {
+      integer: true,
+      formatMessage: 'n 应为正整数'
+    });
+    if (integerFb) {
+      return {
+        feedback: integerFb,
+        session: writeCheckedField(
+          session,
+          trialIndex,
+          field,
+          {
+            raw: submit.raw,
+            value: Number.NaN,
+            checked: false,
+            stale: false,
+            feedback: integerFb
+          },
+          doubleSlitDataWorkspaceSpec
+        )
+      };
+    }
+  }
   if (field === 'x1' || field === 'x2') {
     const kind = positionFormatKindFromSnapshot(snapshot);
     if (kind) {

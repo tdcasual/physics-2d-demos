@@ -24,7 +24,9 @@ export {
   looksLikeWrongUnit,
   quantizeExactDiscreteMm,
   readingStrategyOf,
-  readingsAgree
+  readingsAgree,
+  withinEpsilon,
+  withinTickTolerance
 } from './data-workspace/tolerance';
 export { assertAcyclicDependencies } from './data-workspace/validation';
 export {
@@ -530,44 +532,84 @@ const POSITION_FORMAT_MESSAGE: Record<PositionFormatKind, string> = {
   micrometer: '测微仪读数须恰好三位小数'
 };
 
+export type NumericFormatOptions = {
+  /** Require exactly this many fractional digits (implies a decimal point). */
+  decimalPlaces?: number;
+  /** Require an integer literal (`/^[+-]?\d+$/` after trim; leading zeros ok). */
+  integer?: boolean;
+  /** Allow scientific notation. Default rejects any `e`/`E` anywhere. */
+  allowScientific?: boolean;
+  /** Allow a trailing letter-like unit suffix (`mm`, `cm`, …). Default true. */
+  allowUnitSuffix?: boolean;
+  /** Message for empty/blank input. Default 「请输入有效数值」. */
+  emptyMessage?: string;
+  /** Message for format / decimal-place / scientific failures. */
+  formatMessage?: string;
+};
+
+const EMPTY_INPUT_MESSAGE = '请输入有效数值';
+
 /**
- * Strict position raw-string format. Optional literal `mm` only.
- * Rejects shortened/padded fractionals and scientific notation.
+ * Declarative numeric format gate for measurement inputs, shared by all
+ * data-workspace scenes. Returns null when `raw` passes; otherwise a
+ * `format`-layer feedback. Decimal-place counting works on the raw string
+ * (never through binary floats). Scenes must not assemble their own regexes.
+ */
+export function checkNumericFormat(
+  raw: string,
+  options: NumericFormatOptions = {}
+): FieldFeedback | null {
+  const emptyMessage = options.emptyMessage ?? EMPTY_INPUT_MESSAGE;
+  const formatMessage = options.formatMessage ?? emptyMessage;
+  const trimmed = raw.trim().replace(/，/g, '.');
+  if (!trimmed) {
+    return { ok: false, layer: 'format', message: emptyMessage };
+  }
+  if (!options.allowScientific && /[eE]/.test(trimmed)) {
+    return { ok: false, layer: 'format', message: formatMessage };
+  }
+  if (options.integer) {
+    const suffix =
+      options.allowUnitSuffix === false ? '' : '(?:\\s*[A-Za-zµμ]+)?';
+    if (!new RegExp(`^[+-]?\\d+${suffix}$`).test(trimmed)) {
+      return { ok: false, layer: 'format', message: formatMessage };
+    }
+    return null;
+  }
+  if (options.decimalPlaces == null) {
+    // Syntax-only mode: emptiness and scientific notation checked above;
+    // remaining grammar is parseStudentNumber's business.
+    return null;
+  }
+  const suffix =
+    options.allowUnitSuffix === false ? '' : '(?:\\s*([A-Za-zµμ]+))?';
+  const match = trimmed.match(
+    new RegExp(`^[+-]?(0|[1-9]\\d*)\\.(\\d+)${suffix}$`)
+  );
+  if (!match) {
+    return { ok: false, layer: 'format', message: formatMessage };
+  }
+  if (match[2].length !== options.decimalPlaces) {
+    return { ok: false, layer: 'format', message: formatMessage };
+  }
+  return null;
+}
+
+/**
+ * Strict position raw-string format for instrument-read positions: exactly
+ * the instrument's fractional digit count, optional letter-like unit suffix
+ * (suffix spelling is NOT validated to be `mm` — historically shape-only),
+ * no scientific notation, no leading zeros in the integer part.
+ * Thin delegate over {@link checkNumericFormat}; keep behaviour in lockstep.
  */
 export function checkPositionRawFormat(
   raw: string,
   kind: PositionFormatKind
 ): FieldFeedback | null {
-  const digits = positionFormatDigits(kind);
-  const trimmed = raw.trim().replace(/，/g, '.');
-  if (!trimmed) {
-    return { ok: false, layer: 'format', message: '请输入有效数值' };
-  }
-  if (/[eE]/.test(trimmed)) {
-    return {
-      ok: false,
-      layer: 'format',
-      message: POSITION_FORMAT_MESSAGE[kind]
-    };
-  }
-  const match = trimmed.match(
-    /^[+-]?(0|[1-9]\d*)\.(\d+)(?:\s*([A-Za-zμµ]+))?$/
-  );
-  if (!match) {
-    return {
-      ok: false,
-      layer: 'format',
-      message: POSITION_FORMAT_MESSAGE[kind]
-    };
-  }
-  if (match[2].length !== digits) {
-    return {
-      ok: false,
-      layer: 'format',
-      message: POSITION_FORMAT_MESSAGE[kind]
-    };
-  }
-  return null;
+  return checkNumericFormat(raw, {
+    decimalPlaces: positionFormatDigits(kind),
+    formatMessage: POSITION_FORMAT_MESSAGE[kind]
+  });
 }
 
 export function nextFailedAttempts(
@@ -591,23 +633,38 @@ export function withAttemptReference(
   };
 }
 
+export type ParseStudentNumberOptions = {
+  /** Accept scientific notation (`1.2e-3`). Default rejects it. */
+  allowScientific?: boolean;
+};
+
+// 全角逗号静默归一为小数点是既有行为（CJK 输入习惯），由测试钉住；
+// 半角逗号/全角句点不在归一范围内，保持「请输入有效数值」。
+// 测量读数默认拒绝科学计数法；`allowScientific` 仅供非读数场景逃生。
+const STUDENT_NUMBER_PATTERN = /^([+-]?\d+(?:\.\d+)?)\s*([A-Za-zµμ]+)?$/i;
+const STUDENT_NUMBER_SCIENTIFIC_PATTERN =
+  /^([+-]?\d+(?:\.\d+)?(?:e[+-]?\d+)?)\s*([A-Za-zµμ]+)?$/i;
+
 export function parseStudentNumber(
   raw: string,
-  expectedUnit: string
+  expectedUnit: string,
+  options: ParseStudentNumberOptions = {}
 ): ParsedStudentNumber {
   const trimmed = raw.trim().replace(/，/g, '.');
   if (!trimmed) {
-    return { ok: false, layer: 'format', message: '请输入有效数值' };
+    return { ok: false, layer: 'format', message: EMPTY_INPUT_MESSAGE };
   }
   const match = trimmed.match(
-    /^([+-]?\d+(?:\.\d+)?(?:e[+-]?\d+)?)\s*([A-Za-zμµ]+)?$/i
+    options.allowScientific
+      ? STUDENT_NUMBER_SCIENTIFIC_PATTERN
+      : STUDENT_NUMBER_PATTERN
   );
   if (!match) {
-    return { ok: false, layer: 'format', message: '请输入有效数值' };
+    return { ok: false, layer: 'format', message: EMPTY_INPUT_MESSAGE };
   }
   const value = Number(match[1]);
   if (!Number.isFinite(value)) {
-    return { ok: false, layer: 'format', message: '请输入有效数值' };
+    return { ok: false, layer: 'format', message: EMPTY_INPUT_MESSAGE };
   }
   const unitToken = match[2];
   if (unitToken) {

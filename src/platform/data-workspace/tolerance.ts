@@ -11,11 +11,58 @@ type MeasurementSnapshot = {
   readingStrategy?: ReadingStrategy;
 };
 
+/**
+ * 数值比较的 epsilon 纪律：本模块内三个既有常量各自内聚在唯一函数里，
+ * 不得新增散落的 epsilon ——
+ * - exactDiscreteEqual：5e-7（离散刻度等值）
+ * - estimatedRangeContains：1e-9（闭区间端点）
+ * - readingsAgree：1e-12（仪器读数一致）
+ * 场景层判分一律改用 withinTickTolerance（网格量）或 withinEpsilon（绝对量），
+ * 不允许再手写 `<= tol + 1e-9` 之类的比较。
+ */
+
 export function calculationTolerance(displayDigits: number): number {
   const digits = Number.isFinite(displayDigits)
     ? Math.max(0, Math.min(6, Math.round(displayDigits)))
     : 3;
   return 2 * 10 ** -digits;
+}
+
+/**
+ * Compare two values that both live on a fixed tick grid (e.g. 0.01 cm) by
+ * rounding each onto integer ticks first. Exact on-grid; never use this for
+ * quantities that are not guaranteed to be multiples of 1/ticksPerUnit.
+ */
+export function withinTickTolerance(
+  value: number,
+  expected: number,
+  toleranceTicks: number,
+  ticksPerUnit: number
+): boolean {
+  const scale =
+    ticksPerUnit > 0 && Number.isFinite(ticksPerUnit) ? ticksPerUnit : 100;
+  const tolerance =
+    Number.isFinite(toleranceTicks) && toleranceTicks > 0 ? toleranceTicks : 0;
+  return (
+    Math.abs(Math.round(value * scale) - Math.round(expected * scale)) <=
+    tolerance
+  );
+}
+
+/**
+ * Absolute-boundary comparison with the single epsilon used by scene graders
+ * (matches the historical `<= tolerance + 1e-9` semantics). Values need not
+ * live on a tick grid. Non-finite tolerance rejects, mirroring the old
+ * `<= NaN` behaviour.
+ */
+export function withinEpsilon(
+  value: number,
+  expected: number,
+  tolerance: number
+): boolean {
+  if (!Number.isFinite(tolerance)) return false;
+  const toleranceAbs = tolerance > 0 ? tolerance : 0;
+  return Math.abs(value - expected) <= toleranceAbs + 1e-9;
 }
 
 export function instrumentToleranceMm(precisionMm: number): number {
