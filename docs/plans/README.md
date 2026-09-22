@@ -28,6 +28,12 @@
 | [legacy-parity-checklist.md](legacy-parity-checklist.md)                                                               | 03-04 | Legacy 一致性检查清单                                  | 🗄️ 已归档 |
 | [2026-05-07-audit-remediation-plan.md](2026-05-07-audit-remediation-plan.md)                                           | 05-07 | 审计整改（预算/覆盖率/文档/仪器/样式）                 | ✅ 已完成 |
 | [2026-08-30-audit-remediation-plan.md](2026-08-30-audit-remediation-plan.md)                                           | 08-30 | 全项目审计整改（正确性/文档/测试/样板/性能）           | ✅ 已完成 |
+| [2026-09-20-data-workspace-compact-ticker-tape.md](2026-09-20-data-workspace-compact-ticker-tape.md)                   | 09-20 | 数据工作区紧凑化与 ticker-tape 接入                    | ✅ 已完成 |
+| [2026-09-20-data-workspace-two-step-standard.md](2026-09-20-data-workspace-two-step-standard.md)                       | 09-20 | 数据处理/图像分析两步工作区标准化                      | ✅ 已完成 |
+| [2026-09-21-stage-panzoom-and-polish.md](2026-09-21-stage-panzoom-and-polish.md)                                       | 09-21 | 工作区打磨与舞台 Pan/Zoom                              | ✅ 已完成 |
+| [2026-09-21-stage-viewport-hardening.md](2026-09-21-stage-viewport-hardening.md)                                       | 09-21 | 舞台视口加固与坐标空间治理                             | ✅ 已完成 |
+| [2026-09-21-arch-refactor-backlog.md](2026-09-21-arch-refactor-backlog.md)                                             | 09-21 | 布局系统与实验模式架构重构清单                         | ✅ 已完成 |
+| [2026-09-22-arch-refactor-implementation.md](2026-09-22-arch-refactor-implementation.md)                               | 09-22 | 布局系统与实验模式架构重构实施                         | ✅ 已完成 |
 
 ---
 
