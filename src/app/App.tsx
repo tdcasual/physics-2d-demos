@@ -4,6 +4,7 @@
  */
 
 import React, {
+  useRef,
   useEffect,
   useLayoutEffect,
   useState,
@@ -12,6 +13,11 @@ import React, {
 } from 'react';
 import { useTheme } from './hooks';
 import { featuredScenes } from './data/featured-scenes';
+import {
+  CURRICULUM_DOMAIN_INFO,
+  CURRICULUM_DOMAINS,
+  SCENE_CURRICULUM
+} from '../platform/curriculum';
 
 const ExperimentsSection = lazy(() => import('./sections/ExperimentsSection'));
 
@@ -21,6 +27,16 @@ import '../styles/app/home.css';
 const App: React.FC = () => {
   const { resolvedTheme, toggleTheme } = useTheme();
   const [navOpen, setNavOpen] = useState(false);
+  const navToggleRef = useRef<HTMLButtonElement>(null);
+  const navRef = useRef<HTMLElement>(null);
+
+  const domainCounts = CURRICULUM_DOMAINS.map((domain) => ({
+    id: domain,
+    label: CURRICULUM_DOMAIN_INFO[domain].label,
+    count: Object.values(SCENE_CURRICULUM).filter(
+      (scene) => scene.domain === domain
+    ).length
+  }));
 
   useLayoutEffect(() => {
     const placeholder = document.getElementById('loading-placeholder');
@@ -42,8 +58,43 @@ const App: React.FC = () => {
     }
   }, [resolvedTheme]);
 
+  useEffect(() => {
+    if (!navOpen) return;
+
+    const firstLink = navRef.current?.querySelector<HTMLAnchorElement>('a');
+    firstLink?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setNavOpen(false);
+        navToggleRef.current?.focus();
+      }
+    };
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (
+        !navRef.current?.contains(target) &&
+        !navToggleRef.current?.contains(target)
+      ) {
+        setNavOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('pointerdown', handlePointerDown);
+    };
+  }, [navOpen]);
+
+  const closeNav = () => setNavOpen(false);
+
   return (
     <div className="app">
+      <a className="skip-link" href="#main-content">
+        跳到主要内容
+      </a>
       {/* 点阵网格背景 */}
       <div className="dot-grid" />
 
@@ -56,23 +107,27 @@ const App: React.FC = () => {
           <button
             type="button"
             className="nav-toggle"
+            ref={navToggleRef}
             aria-label={navOpen ? '关闭导航菜单' : '打开导航菜单'}
             aria-expanded={navOpen}
+            aria-controls="main-navigation"
             onClick={() => setNavOpen((open) => !open)}
           >
             {navOpen ? '×' : '☰'}
           </button>
-          <nav className={`nav${navOpen ? ' is-open' : ''}`}>
-            <a href="#experiments" onClick={() => setNavOpen(false)}>
+          <nav
+            id="main-navigation"
+            ref={navRef}
+            className={`nav${navOpen ? ' is-open' : ''}`}
+            aria-label="主导航"
+          >
+            <a href="#experiments" onClick={closeNav}>
               实验
             </a>
-            <a
-              href="/src/pages/instruments.html"
-              onClick={() => setNavOpen(false)}
-            >
+            <a href="/src/pages/instruments.html" onClick={closeNav}>
               组件库
             </a>
-            <a href="#about" onClick={() => setNavOpen(false)}>
+            <a href="#about" onClick={closeNav}>
               关于
             </a>
           </nav>
@@ -89,7 +144,7 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main>
+      <main id="main-content">
         {/* Hero 区域 - 内容丰富 */}
         <section className="hero">
           <div className="container hero-inner">
@@ -100,7 +155,7 @@ const App: React.FC = () => {
                 <span className="line line-2">物理演示</span>
               </h1>
               <p className="hero-subtitle">
-                力学 · 电磁学 · 可视化模拟 · 交互式学习
+                六大课程领域 · 120 个交互实验 · 面向高中物理学习
               </p>
             </div>
 
@@ -134,10 +189,29 @@ const App: React.FC = () => {
                 了解更多 →
               </a>
             </div>
+
+            <aside className="hero-index" aria-label="课程领域导航">
+              <div className="hero-index-heading">
+                <span className="section-label">课程索引</span>
+                <span className="hero-index-count">120 个演示</span>
+              </div>
+              <div className="hero-index-list">
+                {domainCounts.map((domain) => (
+                  <a
+                    key={domain.id}
+                    href={`/?domain=${domain.id}#experiments`}
+                    className="hero-index-item"
+                  >
+                    <span>{domain.label}</span>
+                    <span>{String(domain.count).padStart(2, '0')}</span>
+                  </a>
+                ))}
+              </div>
+            </aside>
           </div>
 
           {/* 右侧垂直标签 */}
-          <div className="side-label">
+          <div className="side-label" aria-hidden="true">
             <span>P</span>
             <span>H</span>
             <span>Y</span>
@@ -170,7 +244,7 @@ const App: React.FC = () => {
             </h2>
             <p className="about-text">
               通过可视化的模拟实验，让抽象的物理概念变得直观易懂。
-              从力学到电磁学，每个实验都经过精心设计，
+              从力学、电磁学到光学、热学与近代物理，每个实验都经过精心设计，
               帮助学习者深入理解物理原理。
             </p>
           </div>

@@ -73,10 +73,14 @@ export function checkExperimentsSectionCatalogFanout(
   assets: BundleAsset[]
 ): BundleBudgetViolation[] {
   const hits: { relativePath: string; text: string }[] = [];
+  const sectionMarkers = ['选择实验开始探索', '按课程章节浏览'];
   for (const asset of assets) {
     if (asset.type !== 'js') continue;
     const text = readFileSync(join(distRoot, asset.relativePath), 'utf8');
-    if (text.includes('选择实验开始探索') && text.includes('experiment-card')) {
+    if (
+      sectionMarkers.some((marker) => text.includes(marker)) &&
+      text.includes('experiment-card')
+    ) {
       hits.push({ relativePath: asset.relativePath, text });
     }
   }
@@ -84,7 +88,7 @@ export function checkExperimentsSectionCatalogFanout(
     return [
       {
         message:
-          'ExperimentsSection chunk not found in dist (looked for 选择实验开始探索).'
+          'ExperimentsSection chunk not found in dist (looked for directory section markers).'
       }
     ];
   }

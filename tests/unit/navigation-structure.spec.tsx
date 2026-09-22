@@ -1,6 +1,8 @@
-import { describe, expect, it } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
+import { cleanup, render, screen, fireEvent } from '@testing-library/react';
 import { ExperimentsSection } from '../../src/app/sections/ExperimentsSection';
+
+afterEach(() => cleanup());
 
 describe('Navigation structure', () => {
   it('should render section header with correct labels', () => {
@@ -8,7 +10,7 @@ describe('Navigation structure', () => {
 
     expect(screen.getByText('实践')).toBeTruthy();
     expect(screen.getByText('物理实验')).toBeTruthy();
-    expect(screen.getByText('选择实验开始探索')).toBeTruthy();
+    expect(screen.getByText(/按课程章节浏览/)).toBeTruthy();
   });
 
   it('should render all filter buttons', () => {
@@ -58,6 +60,34 @@ describe('Navigation structure', () => {
 
     fireEvent.click(allBtn);
     expect(allBtn.classList.contains('active')).toBe(true);
+    expect(allBtn.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('should search by title and keep the query in the URL', () => {
+    window.history.replaceState({}, '', '/');
+    render(<ExperimentsSection />);
+
+    const search = screen.getByRole('searchbox', { name: '搜索实验' });
+    fireEvent.change(search, { target: { value: '抛体' } });
+
+    expect(
+      document.querySelectorAll('.experiment-card').length
+    ).toBeGreaterThan(0);
+    expect(document.querySelector('.directory-status')?.textContent).toContain(
+      '搜索“抛体”'
+    );
+    expect(window.location.search).toContain('q=%E6%8A%9B%E4%BD%93');
+  });
+
+  it('should initialize the domain filter from the URL', () => {
+    window.history.replaceState({}, '', '/?domain=optics');
+    render(<ExperimentsSection />);
+
+    const opticsButton = screen.getByRole('button', { name: '光学' });
+    expect(opticsButton.getAttribute('aria-pressed')).toBe('true');
+    expect(document.querySelector('.directory-status')?.textContent).toContain(
+      '个实验'
+    );
   });
 
   it('should render cards with correct structure', () => {

@@ -104,7 +104,9 @@ function bundleDevSceneRegistry(): Plugin {
         stdin: {
           contents: bundledSource,
           loader: 'ts',
-          resolveDir: __dirname,
+          // The generated source keeps scene-registry.ts imports intact. Its
+          // relative imports therefore resolve from src/catalog, not repo root.
+          resolveDir: resolve(__dirname, 'src/catalog'),
           sourcefile: registryPath
         },
         target: 'es2022',

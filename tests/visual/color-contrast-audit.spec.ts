@@ -178,3 +178,25 @@ for (const target of MOBILE_PAGES) {
     ).toBe(0);
   });
 }
+
+test('color contrast (dark theme): home', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto(`http://127.0.0.1:${PORT}/`, {
+    waitUntil: 'domcontentloaded'
+  });
+  await expect(page.locator('body')).toBeVisible();
+  await page.getByRole('button', { name: '切换到暗色模式' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+
+  const results = await new AxeBuilder({ page })
+    .withTags(['wcag2aa'])
+    .analyze();
+  const contrastViolations = results.violations.filter(
+    (violation) => violation.id === 'color-contrast'
+  );
+  expect(
+    contrastViolations,
+    'homepage dark theme should have no color-contrast violations'
+  ).toEqual([]);
+});
