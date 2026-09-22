@@ -36,6 +36,8 @@ export const closedPowerMeta: SceneMeta = {
   difficulty: 2,
   icon: 'P',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'circuit',
   featured: false,
   defaultParams: {
     emf: 8,

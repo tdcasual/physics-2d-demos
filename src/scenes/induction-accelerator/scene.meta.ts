@@ -36,6 +36,8 @@ export const inductionAcceleratorMeta: SceneMeta = {
   difficulty: 3,
   icon: 'B',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'electromagnetic-induction',
   featured: false,
   defaultParams: { dBdt: 3, showVectors: 1, autoRun: 1, slowMode: 0 },
   urlSyncKeys: ['dBdt', 'showVectors', 'autoRun', 'slowMode'],

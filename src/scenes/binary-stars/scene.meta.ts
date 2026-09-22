@@ -24,6 +24,8 @@ export const binaryStarsMeta: SceneMeta = {
   difficulty: 3,
   icon: '✦',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'gravity',
   featured: false,
   defaultParams: { m1: 4, m2: 2, distance: 30, autoRun: 1, showVectors: 1 },
   urlSyncKeys: ['m1', 'm2', 'distance', 'autoRun', 'showVectors'],

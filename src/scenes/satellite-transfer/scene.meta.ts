@@ -25,6 +25,8 @@ export const satelliteMeta: SceneMeta = {
   difficulty: 2,
   icon: '◌',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'gravity',
   featured: false,
   defaultParams: { progress: 72.7, autoRun: 1 },
   urlSyncKeys: ['orbit', 'progress', 'autoRun'],

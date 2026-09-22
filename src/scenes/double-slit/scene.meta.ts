@@ -44,6 +44,8 @@ export const doubleSlitMeta: SceneMeta = {
   difficulty: 2,
   icon: '💡',
   category: 'method',
+  curriculumDomain: 'optics',
+  curriculumChapter: 'physical-optics',
   featured: false,
   defaultParams: {
     step: 1,

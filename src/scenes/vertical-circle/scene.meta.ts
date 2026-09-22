@@ -24,6 +24,8 @@ export const verticalCircleMeta: SceneMeta = {
   difficulty: 3,
   icon: '🎢',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'forces',
   featured: false,
   defaultParams: {
     vBottom: 23.5,

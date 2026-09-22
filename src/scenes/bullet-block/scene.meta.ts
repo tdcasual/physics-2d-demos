@@ -24,6 +24,8 @@ export const bulletBlockMeta: SceneMeta = {
   difficulty: 3,
   icon: '🎯',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'momentum',
   featured: false,
   defaultParams: { speed: 25, bulletMass: 1, blockMass: 5, resistance: 50 },
   urlSyncKeys: ['speed', 'bulletMass', 'blockMass', 'resistance'],

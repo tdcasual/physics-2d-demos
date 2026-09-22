@@ -24,6 +24,8 @@ export const uvtMeta: SceneMeta = {
   difficulty: 2,
   icon: '↗️',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'kinematics',
   featured: false,
   defaultParams: { v0: 10, acceleration: -3, autoRun: 1, showArea: 1 },
   urlSyncKeys: ['v0', 'acceleration', 'autoRun', 'showArea'],

@@ -29,6 +29,8 @@ export const magneticMirrorMeta: SceneMeta = {
   difficulty: 3,
   icon: '🧲',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'magnetic-field',
   featured: false,
   defaultParams: {
     pitchAngle: 35,

@@ -30,6 +30,8 @@ export const singleLoopMeta: SceneMeta = {
   difficulty: 3,
   icon: '⊗',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'electromagnetic-induction',
   featured: false,
   defaultParams: {
     initialVelocity: 10,

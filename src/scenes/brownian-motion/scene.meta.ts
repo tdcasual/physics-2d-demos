@@ -32,6 +32,8 @@ export const brownianMotionMeta: SceneMeta = {
   difficulty: 3,
   icon: '⌁',
   category: 'mechanics',
+  curriculumDomain: 'thermal',
+  curriculumChapter: 'kinetic-theory',
   featured: false,
   defaultParams: {
     temperature: 15,

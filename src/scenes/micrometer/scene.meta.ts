@@ -31,6 +31,8 @@ export const micrometerMeta: SceneMeta = {
   difficulty: 1,
   icon: '🔩',
   category: 'method',
+  curriculumDomain: 'experimental',
+  curriculumChapter: 'measurement',
   featured: false,
   defaultParams: {
     reading: 4.593

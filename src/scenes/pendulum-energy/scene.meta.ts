@@ -38,6 +38,8 @@ export const pendulumEnergyMeta: SceneMeta = {
   difficulty: 2,
   icon: 'E',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'energy',
   featured: false,
   defaultParams: {
     amplitude: 45,

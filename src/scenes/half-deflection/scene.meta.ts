@@ -31,6 +31,8 @@ export const halfDeflectionMeta: SceneMeta = {
   difficulty: 3,
   icon: 'A',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'circuit',
   featured: false,
   defaultParams: {
     mainSwitch: 1,

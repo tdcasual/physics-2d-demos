@@ -23,6 +23,8 @@ export const radioactiveMeta: SceneMeta = {
   difficulty: 2,
   icon: 'N(t)',
   category: 'electromagnetism',
+  curriculumDomain: 'modern',
+  curriculumChapter: 'modern-physics',
   featured: false,
   defaultParams: { halfLife: 2, autoRun: 1 },
   urlSyncKeys: ['halfLife', 'autoRun'],

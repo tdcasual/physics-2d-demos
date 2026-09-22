@@ -45,6 +45,8 @@ export const internalEnergyMeta: SceneMeta = {
   difficulty: 2,
   icon: 'ΔU',
   category: 'mechanics',
+  curriculumDomain: 'thermal',
+  curriculumChapter: 'thermodynamics',
   featured: false,
   defaultParams: {
     mode: 0,

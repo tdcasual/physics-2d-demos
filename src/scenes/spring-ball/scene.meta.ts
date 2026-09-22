@@ -34,6 +34,8 @@ export const springBallMeta: SceneMeta = {
   difficulty: 3,
   icon: '🌀',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'oscillation-waves',
   featured: false,
   defaultParams: { releaseHeight: 0, mode: 0, preset: 0, autoRun: 1, slow: 0 },
   urlSyncKeys: ['releaseHeight', 'mode', 'preset', 'autoRun', 'slow'],

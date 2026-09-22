@@ -24,6 +24,8 @@ export const projectileDataMeta: SceneMeta = {
   difficulty: 3,
   icon: '📈',
   category: 'mechanics',
+  curriculumDomain: 'experimental',
+  curriculumChapter: 'data-analysis',
   featured: false,
   defaultParams: { v0: 2, gravity: 10, period: 0.15, showVectors: 1 },
   urlSyncKeys: ['v0', 'gravity', 'period', 'mode', 'showVectors'],

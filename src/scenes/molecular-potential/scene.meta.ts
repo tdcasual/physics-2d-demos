@@ -30,6 +30,8 @@ export const molecularMeta: SceneMeta = {
   difficulty: 3,
   icon: 'r₀',
   category: 'mechanics',
+  curriculumDomain: 'thermal',
+  curriculumChapter: 'kinetic-theory',
   featured: false,
   defaultParams: {
     distanceRatio: 1.55,

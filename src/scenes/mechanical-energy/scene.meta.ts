@@ -39,6 +39,8 @@ export const mechanicalEnergyMeta: SceneMeta = {
   difficulty: 3,
   icon: '⚖',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'energy',
   featured: false,
   defaultParams: {
     environment: 1,

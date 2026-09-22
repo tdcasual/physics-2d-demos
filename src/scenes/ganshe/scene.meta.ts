@@ -31,6 +31,8 @@ export const gansheMeta: SceneMeta = {
   difficulty: 2,
   icon: '〰️',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'oscillation-waves',
   featured: true,
   defaultParams: {
     freq1: 4,

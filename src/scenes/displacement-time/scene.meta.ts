@@ -24,6 +24,8 @@ export const displacementTimeMeta: SceneMeta = {
   difficulty: 2,
   icon: '📈',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'kinematics',
   featured: false,
   defaultParams: { v0: 5, acceleration: 4, showArea: 1, autoRun: 1 },
   urlSyncKeys: ['v0', 'acceleration', 'showArea', 'autoRun'],

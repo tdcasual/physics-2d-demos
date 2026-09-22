@@ -34,6 +34,8 @@ export const parallelogramMeta: SceneMeta = {
   difficulty: 2,
   icon: '🧭',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'forces',
   featured: false,
   defaultParams: { f1: 1.82, f2: 1.82, angle: 90 },
   urlSyncKeys: ['f1', 'f2', 'angle', 'stage'],

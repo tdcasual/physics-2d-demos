@@ -32,6 +32,8 @@ export const metalRodMeta: SceneMeta = {
   difficulty: 2,
   icon: 'Bv',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'electromagnetic-induction',
   featured: false,
   defaultParams: {
     magneticField: 1,

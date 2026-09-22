@@ -32,6 +32,8 @@ export const galileoInclineMeta: SceneMeta = {
   difficulty: 3,
   icon: '↘',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'forces',
   featured: false,
   defaultParams: { theta2: 36, mu: 0, autoRun: 1, showVectors: 1 },
   urlSyncKeys: ['theta2', 'mu', 'autoRun', 'showVectors'],

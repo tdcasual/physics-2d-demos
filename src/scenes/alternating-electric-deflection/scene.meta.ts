@@ -32,6 +32,8 @@ export const alternatingElectricDeflectionMeta: SceneMeta = {
   difficulty: 3,
   icon: '⇄',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'electric-field',
   featured: false,
   defaultParams: {
     voltageAmplitude: 1,

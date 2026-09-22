@@ -37,6 +37,8 @@ export const oscilloscopeMeta: SceneMeta = {
   difficulty: 3,
   icon: '📺',
   category: 'electromagnetism',
+  curriculumDomain: 'experimental',
+  curriculumChapter: 'measurement',
   featured: false,
   defaultParams: {
     signalAmplitude: C.signalAmpDefault,

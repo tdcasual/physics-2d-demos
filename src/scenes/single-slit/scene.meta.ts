@@ -30,6 +30,8 @@ export const singleSlitMeta: SceneMeta = {
   difficulty: 2,
   icon: '🌈',
   category: 'method',
+  curriculumDomain: 'optics',
+  curriculumChapter: 'physical-optics',
   featured: false,
   defaultParams: {
     lambda: 670,

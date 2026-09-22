@@ -123,6 +123,10 @@
   --category-mechanics: #1d4ed8;
   --category-electromagnetism: #b45309;
   --category-method: #7c3aed;
+  --category-optics: #0f766e;
+  --category-thermal: #c2410c;
+  --category-modern: #9333ea;
+  --category-experimental: #475569;
   --difficulty-level-1-text: #1d4ed8;
   --difficulty-level-1-bg: rgba(59, 130, 246, 0.1);
   --difficulty-level-2-text: #b45309;
@@ -187,6 +191,10 @@
   --category-mechanics: #60a5fa;
   --category-electromagnetism: #fbbf24;
   --category-method: #a78bfa;
+  --category-optics: #2dd4bf;
+  --category-thermal: #fb923c;
+  --category-modern: #d8b4fe;
+  --category-experimental: #cbd5e1;
   --difficulty-level-1-text: #60a5fa;
   --difficulty-level-1-bg: rgba(96, 165, 250, 0.15);
   --difficulty-level-2-text: #fbbf24;

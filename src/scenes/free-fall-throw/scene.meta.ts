@@ -33,6 +33,8 @@ export const freeFallMeta: SceneMeta = {
   difficulty: 2,
   icon: '↑',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'kinematics',
   featured: false,
   defaultParams: {
     initialSpeed: 20,

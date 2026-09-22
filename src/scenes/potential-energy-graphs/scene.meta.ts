@@ -40,6 +40,8 @@ export const potentialGraphMeta: SceneMeta = {
   difficulty: 3,
   icon: '∿',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'electric-field',
   featured: false,
   defaultParams: {
     probeCharge: 1,

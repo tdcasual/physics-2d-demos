@@ -31,6 +31,8 @@ export const boundedMagneticMeta: SceneMeta = {
   difficulty: 3,
   icon: 'qB',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'magnetic-field',
   featured: false,
   defaultParams: {
     entryAngle: 30,

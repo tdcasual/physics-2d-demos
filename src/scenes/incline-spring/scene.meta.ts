@@ -30,6 +30,8 @@ export const inclineSpringMeta: SceneMeta = {
   difficulty: 2,
   icon: '⌁',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'energy',
   featured: false,
   defaultParams: {
     friction: 0.2,

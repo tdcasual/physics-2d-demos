@@ -23,6 +23,8 @@ export const electricPendulumMeta: SceneMeta = {
   difficulty: 3,
   icon: 'qE',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'electric-field',
   featured: false,
   defaultParams: { voltage: 0.5, showForces: 1, showVelocity: 1 },
   urlSyncKeys: ['mode', 'voltage', 'showForces', 'showVelocity'],

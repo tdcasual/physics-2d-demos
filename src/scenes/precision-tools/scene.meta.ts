@@ -31,6 +31,8 @@ export const precisionToolMeta: SceneMeta = {
   difficulty: 2,
   icon: '📏',
   category: 'method',
+  curriculumDomain: 'experimental',
+  curriculumChapter: 'measurement',
   featured: false,
   // 字符串默认值让 URL 的 mode=micrometer 不被 parseInt 成 NaN。
   defaultParams: {

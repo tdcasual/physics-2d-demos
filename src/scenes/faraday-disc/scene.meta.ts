@@ -24,6 +24,8 @@ export const faradayMeta: SceneMeta = {
   difficulty: 3,
   icon: '🧲',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'electromagnetic-induction',
   featured: false,
   defaultParams: {
     B: 1,

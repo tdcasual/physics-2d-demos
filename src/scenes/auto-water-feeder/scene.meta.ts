@@ -37,6 +37,8 @@ export const feederMeta: SceneMeta = {
   difficulty: 3,
   icon: '♒',
   category: 'mechanics',
+  curriculumDomain: 'experimental',
+  curriculumChapter: 'data-analysis',
   featured: false,
   defaultParams: {
     waterDepth: 0.9,

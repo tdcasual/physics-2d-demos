@@ -43,6 +43,8 @@ export const rodModelMeta: SceneMeta = {
   difficulty: 3,
   icon: '⊗',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'electromagnetic-induction',
   featured: false,
   defaultParams: {
     model: 0,

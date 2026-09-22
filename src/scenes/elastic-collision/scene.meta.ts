@@ -29,6 +29,8 @@ export const collisionMeta: SceneMeta = {
   difficulty: 2,
   icon: '↔',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'momentum',
   featured: false,
   defaultParams: { massA: 5, massB: 4, velocityA: 5, velocityB: -5 },
   urlSyncKeys: ['massA', 'massB', 'velocityA', 'velocityB'],

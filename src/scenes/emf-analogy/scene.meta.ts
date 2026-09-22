@@ -31,6 +31,8 @@ export const emfAnalogyMeta: SceneMeta = {
   difficulty: 2,
   icon: '💧',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'electromagnetic-induction',
   featured: false,
   defaultParams: {},
   testProfile: {

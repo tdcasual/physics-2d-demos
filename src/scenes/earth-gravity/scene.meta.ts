@@ -31,6 +31,8 @@ export const earthGravityMeta: SceneMeta = {
   difficulty: 3,
   icon: '⊕',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'gravity',
   featured: false,
   defaultParams: {
     latitude: 35.2,

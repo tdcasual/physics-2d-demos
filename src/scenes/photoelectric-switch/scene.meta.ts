@@ -37,6 +37,8 @@ export const photoelectricSwitchMeta: SceneMeta = {
   difficulty: 3,
   icon: 'hν',
   category: 'electromagnetism',
+  curriculumDomain: 'modern',
+  curriculumChapter: 'modern-physics',
   featured: false,
   defaultParams: {
     material: 0,

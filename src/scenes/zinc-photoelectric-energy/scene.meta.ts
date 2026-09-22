@@ -24,6 +24,8 @@ export const zincPhotoelectricMeta: SceneMeta = {
   difficulty: 2,
   icon: 'hν',
   category: 'electromagnetism',
+  curriculumDomain: 'modern',
+  curriculumChapter: 'modern-physics',
   featured: false,
   defaultParams: { wavelength: 247, intensity: 80, autoRun: 1 },
   urlSyncKeys: ['wavelength', 'intensity', 'chargeState', 'autoRun'],

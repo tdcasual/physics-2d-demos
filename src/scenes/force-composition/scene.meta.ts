@@ -24,6 +24,8 @@ export const forceCompositionMeta: SceneMeta = {
   difficulty: 2,
   icon: '📐',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'forces',
   featured: false,
   defaultParams: {
     f1: 40,

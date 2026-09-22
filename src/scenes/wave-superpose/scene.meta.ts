@@ -34,6 +34,8 @@ export const waveSuperposeMeta: SceneMeta = {
   difficulty: 2,
   icon: '∿',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'oscillation-waves',
   featured: false,
   defaultParams: {
     amplitude1: 1.5,

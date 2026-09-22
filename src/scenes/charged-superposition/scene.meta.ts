@@ -34,6 +34,8 @@ export const chargedSuperpositionMeta: SceneMeta = {
   difficulty: 3,
   icon: 'qE',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'electric-field',
   featured: false,
   defaultParams: {
     particle: 0,

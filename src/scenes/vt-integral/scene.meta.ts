@@ -40,6 +40,8 @@ export const vtIntegralMeta: SceneMeta = {
   difficulty: 3,
   icon: '📐',
   category: 'method',
+  curriculumDomain: 'experimental',
+  curriculumChapter: 'data-analysis',
   featured: true,
   defaultParams: {
     n: 10,

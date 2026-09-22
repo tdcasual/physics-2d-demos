@@ -30,6 +30,8 @@ export const tirMeta: SceneMeta = {
   difficulty: 2,
   icon: '⌒',
   category: 'method',
+  curriculumDomain: 'optics',
+  curriculumChapter: 'geometrical-optics',
   featured: false,
   defaultParams: { refractiveIndex: 1.5, height: 5.24 },
   urlSyncKeys: ['refractiveIndex', 'height', 'autoRun'],

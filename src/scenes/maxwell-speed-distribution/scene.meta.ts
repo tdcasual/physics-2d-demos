@@ -23,6 +23,8 @@ export const maxwellMeta: SceneMeta = {
   difficulty: 3,
   icon: 'f(v)',
   category: 'mechanics',
+  curriculumDomain: 'thermal',
+  curriculumChapter: 'kinetic-theory',
   featured: false,
   defaultParams: { temperature: 600, molarMass: 28, autoRun: 1 },
   urlSyncKeys: ['temperature', 'molarMass', 'autoRun'],

@@ -31,6 +31,8 @@ export const locomotiveMeta: SceneMeta = {
   difficulty: 2,
   icon: 'P',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'energy',
   featured: false,
   defaultParams: {
     ratedPower: 18,

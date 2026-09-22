@@ -25,6 +25,8 @@ export const bindingEnergyMeta: SceneMeta = {
   difficulty: 3,
   icon: '⚛️',
   category: 'electromagnetism',
+  curriculumDomain: 'modern',
+  curriculumChapter: 'modern-physics',
   featured: false,
   defaultParams: {
     A: C.aDefault,

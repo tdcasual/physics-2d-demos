@@ -38,6 +38,8 @@ export const momentumComparisonMeta: SceneMeta = {
   difficulty: 3,
   icon: 'p',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'momentum',
   featured: false,
   defaultParams: {
     massA: 2,

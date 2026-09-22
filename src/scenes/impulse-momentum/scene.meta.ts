@@ -31,6 +31,8 @@ export const impulseMomentumMeta: SceneMeta = {
   difficulty: 3,
   icon: '↗',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'momentum',
   featured: false,
   defaultParams: {
     mass: 2,

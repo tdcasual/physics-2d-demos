@@ -11,6 +11,7 @@ export type ScenePlacardMeta = {
 };
 
 import type { SceneDemoProfile } from './demo-profile';
+import type { CurriculumChapter, CurriculumDomain } from './curriculum';
 
 /** Test capabilities declared by the scene, independent of any layout. */
 export type SceneTestProfile = {
@@ -31,6 +32,10 @@ export type SceneMeta = ScenePlacardMeta & {
   difficulty?: 1 | 2 | 3;
   icon?: string;
   category?: 'mechanics' | 'electromagnetism' | 'method';
+  /** 人教版高中物理课程体系一级分类。真实场景必须声明。 */
+  curriculumDomain?: CurriculumDomain;
+  /** 人教版高中物理课程体系二级章节。真实场景必须声明。 */
+  curriculumChapter?: CurriculumChapter;
   featured?: boolean;
   /** 额外允许通过 URL query string 同步的参数（不在 defaultParams 中） */
   urlSyncKeys?: string[];

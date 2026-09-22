@@ -30,6 +30,8 @@ export const energyMeta: SceneMeta = {
   difficulty: 2,
   icon: '↔',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'momentum',
   featured: false,
   defaultParams: { massA: 1, massB: 1, velocityA: 4, velocityB: 0 },
   urlSyncKeys: ['massA', 'massB', 'velocityA', 'slowMotion'],

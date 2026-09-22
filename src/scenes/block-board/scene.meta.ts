@@ -39,6 +39,8 @@ export const blockBoardMeta: SceneMeta = {
   difficulty: 3,
   icon: '🧱',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'forces',
   featured: false,
   defaultParams: {
     blockMass: C.blockMassDefault,

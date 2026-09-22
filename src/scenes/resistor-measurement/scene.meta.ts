@@ -34,6 +34,8 @@ export const resistorMeta: SceneMeta = {
   difficulty: 3,
   icon: '⚡',
   category: 'electromagnetism',
+  curriculumDomain: 'experimental',
+  curriculumChapter: 'measurement',
   featured: false,
   defaultParams: {
     circuitMode: 0,

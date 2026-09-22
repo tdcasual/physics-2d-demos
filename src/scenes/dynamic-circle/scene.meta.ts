@@ -24,6 +24,8 @@ export const dynamicCircleMeta: SceneMeta = {
   difficulty: 3,
   icon: '🧲',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'magnetic-field',
   featured: false,
   defaultParams: {
     B: 0.1,

@@ -24,6 +24,8 @@ export const tortoiseHareMeta: SceneMeta = {
   difficulty: 2,
   icon: '🐢',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'kinematics',
   featured: false,
   defaultParams: {
     speed: 1

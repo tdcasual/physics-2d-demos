@@ -36,6 +36,8 @@ export const carBankMeta: SceneMeta = {
   difficulty: 3,
   icon: '↻',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'forces',
   featured: false,
   defaultParams: { bankAngle: 30, speed: 28.5, autoRun: 1, showVectors: 1 },
   urlSyncKeys: ['bankAngle', 'speed', 'autoRun', 'showVectors'],

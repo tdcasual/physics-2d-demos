@@ -32,6 +32,8 @@ export const laserSpeedMeta: SceneMeta = {
   difficulty: 2,
   icon: '↗',
   category: 'mechanics',
+  curriculumDomain: 'experimental',
+  curriculumChapter: 'data-analysis',
   featured: false,
   defaultParams: {
     velocity: 20,

@@ -40,6 +40,8 @@ export const electrostaticShieldingMeta: SceneMeta = {
   difficulty: 3,
   icon: 'E₀',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'electric-field',
   featured: false,
   defaultParams: {
     externalField: 1,

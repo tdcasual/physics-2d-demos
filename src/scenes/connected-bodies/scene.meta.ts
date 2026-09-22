@@ -23,6 +23,8 @@ export const connectedBodiesMeta: SceneMeta = {
   difficulty: 3,
   icon: 'Σ',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'forces',
   featured: false,
   defaultParams: { massA: 2, massB: 1 },
   urlSyncKeys: ['arrangement', 'massA', 'massB', 'cut'],

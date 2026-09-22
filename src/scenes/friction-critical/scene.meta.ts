@@ -23,6 +23,8 @@ export const frictionMeta: SceneMeta = {
   difficulty: 3,
   icon: 'f',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'forces',
   featured: false,
   defaultParams: {
     force: 21.5,

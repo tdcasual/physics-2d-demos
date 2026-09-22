@@ -32,6 +32,8 @@ export const electrificationMeta: SceneMeta = {
   difficulty: 1,
   icon: '⚡',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'electric-field',
   featured: false,
   defaultParams: {
     step: 0

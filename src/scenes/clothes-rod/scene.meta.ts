@@ -23,6 +23,8 @@ export const clothesRodMeta: SceneMeta = {
   difficulty: 2,
   icon: 'T',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'forces',
   featured: false,
   defaultParams: { distance: 6, length: 10, height: 0.8, weight: 40 },
   urlSyncKeys: ['model', 'distance', 'length', 'height', 'weight'],

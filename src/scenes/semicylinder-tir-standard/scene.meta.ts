@@ -31,6 +31,8 @@ export const semicylinderStandardMeta: SceneMeta = {
   difficulty: 3,
   icon: '⌒',
   category: 'method',
+  curriculumDomain: 'optics',
+  curriculumChapter: 'geometrical-optics',
   featured: false,
   defaultParams: {
     refractiveIndex: 1.5,

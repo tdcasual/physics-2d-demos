@@ -23,6 +23,8 @@ export const mechanicalEnergyTwoBallMeta: SceneMeta = {
   difficulty: 3,
   icon: 'E',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'energy',
   featured: false,
   defaultParams: { length: 1, angle: 0.9, massA: 1, massB: 1, autoRun: 1 },
   urlSyncKeys: ['length', 'angle', 'massA', 'massB', 'autoRun'],

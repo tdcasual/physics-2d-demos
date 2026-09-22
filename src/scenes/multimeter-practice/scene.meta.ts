@@ -33,6 +33,8 @@ export const multimeterMeta: SceneMeta = {
   difficulty: 3,
   icon: 'Ω',
   category: 'electromagnetism',
+  curriculumDomain: 'experimental',
+  curriculumChapter: 'measurement',
   featured: false,
   defaultParams: { mode: 0, target: 0, range: 0, connected: 0, autoRun: 1 },
   urlSyncKeys: ['mode', 'target', 'range', 'connected', 'autoRun'],

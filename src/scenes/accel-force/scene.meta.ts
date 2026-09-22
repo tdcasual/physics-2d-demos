@@ -32,6 +32,8 @@ export const accelForceMeta: SceneMeta = {
   difficulty: 3,
   icon: '🛒',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'forces',
   featured: false,
   defaultParams: {
     cartMass: C.cartDefault,

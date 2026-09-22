@@ -30,6 +30,8 @@ export const mechanicalWaveMeta: SceneMeta = {
   difficulty: 2,
   icon: '🌊',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'oscillation-waves',
   featured: false,
   defaultParams: {
     waveSpeed: 2,

@@ -38,6 +38,8 @@ export const electrostaticInductionMeta: SceneMeta = {
   difficulty: 3,
   icon: '±',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'electric-field',
   featured: false,
   defaultParams: { mode: 0, rodPolarity: 0, showCharges: 1, autoRun: 1 },
   urlSyncKeys: ['mode', 'rodPolarity', 'showCharges', 'autoRun'],

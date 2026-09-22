@@ -38,6 +38,8 @@ export const ampereBalanceMeta: SceneMeta = {
   difficulty: 3,
   icon: '⊗',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'magnetic-field',
   featured: false,
   defaultParams: {
     inclineAngle: 30,

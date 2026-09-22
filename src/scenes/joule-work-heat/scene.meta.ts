@@ -41,6 +41,8 @@ export const jouleMeta: SceneMeta = {
   difficulty: 3,
   icon: 'W→ΔU',
   category: 'mechanics',
+  curriculumDomain: 'thermal',
+  curriculumChapter: 'thermodynamics',
   featured: false,
   defaultParams: {
     mode: 0,

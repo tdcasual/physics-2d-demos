@@ -37,6 +37,8 @@ export const pendulumPeriodMeta: SceneMeta = {
   difficulty: 3,
   icon: 'T',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'oscillation-waves',
   featured: false,
   defaultParams: {
     length: pendulumConstants.defaultLength,

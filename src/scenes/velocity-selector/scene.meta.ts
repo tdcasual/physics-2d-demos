@@ -31,6 +31,8 @@ export const velocitySelectorMeta: SceneMeta = {
   difficulty: 3,
   icon: '⊥',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'magnetic-field',
   featured: false,
   defaultParams: {
     electricField: 1,

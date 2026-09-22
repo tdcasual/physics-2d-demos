@@ -33,6 +33,8 @@ export const chaseMeetMeta: SceneMeta = {
   difficulty: 2,
   icon: '🏃',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'kinematics',
   featured: true,
   defaultParams: {
     totalTime: 10,

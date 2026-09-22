@@ -34,6 +34,8 @@ export const projectileComponentsMeta: SceneMeta = {
   difficulty: 2,
   icon: '↘',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'kinematics',
   featured: false,
   defaultParams: {
     speed: 15,

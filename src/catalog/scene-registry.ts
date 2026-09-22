@@ -4,6 +4,11 @@ import type {
   ScenePlacardMeta,
   SceneTestProfile
 } from '../platform/scene-contract';
+import {
+  CURRICULUM_DOMAIN_INFO,
+  type CurriculumChapter,
+  type CurriculumDomain
+} from '../platform/curriculum';
 
 export type SceneRegistryEntry = ScenePlacardMeta & {
   id: string;
@@ -15,18 +20,15 @@ export type SceneRegistryEntry = ScenePlacardMeta & {
   icon: string;
   category: string;
   categoryLabel: string;
+  /** 人教版课程体系一级分类（category 的规范化别名） */
+  curriculumDomain: CurriculumDomain;
+  /** 人教版课程体系二级章节 */
+  curriculumChapter: CurriculumChapter;
   featured: boolean;
   source: 'modern';
   dimension: '2d' | '3d';
   testProfile?: SceneTestProfile;
 };
-
-const SUBJECT_TO_CATEGORY: Record<string, { category: string; label: string }> =
-  {
-    力学: { category: 'mechanics', label: '力学' },
-    电磁学: { category: 'electromagnetism', label: '电磁学' },
-    方法: { category: 'method', label: '方法' }
-  };
 
 const modules = import.meta.glob('/src/scenes/*/scene.meta.ts', {
   eager: true,
@@ -46,10 +48,17 @@ export const sceneRegistry: SceneRegistryEntry[] = Object.values(modules)
   .map(extractMeta)
   .filter((m): m is SceneMeta => m !== null)
   .map((meta) => {
-    const mapped = SUBJECT_TO_CATEGORY[meta.subject] ?? {
-      category: 'method',
-      label: '方法'
+    if (!meta.curriculumDomain || !meta.curriculumChapter) {
+      throw new Error(
+        `Scene "${meta.id}" is missing curriculumDomain/curriculumChapter. ` +
+          'Add both fields to its scene.meta.ts before registering it.'
+      );
+    }
+    const curriculum = {
+      domain: meta.curriculumDomain,
+      chapter: meta.curriculumChapter
     };
+    const domainInfo = CURRICULUM_DOMAIN_INFO[curriculum.domain];
     return {
       id: meta.id,
       title: meta.title,
@@ -61,8 +70,13 @@ export const sceneRegistry: SceneRegistryEntry[] = Object.values(modules)
       description: meta.description ?? meta.objective,
       difficulty: meta.difficulty ?? 2,
       icon: meta.icon ?? '📐',
-      category: meta.category ?? mapped.category,
-      categoryLabel: mapped.label,
+      // Keep category for consumers that still use the legacy field. It is
+      // deliberately normalized to the curriculum domain so new scenes do
+      // not need to duplicate taxonomy data.
+      category: curriculum.domain,
+      categoryLabel: domainInfo.label,
+      curriculumDomain: curriculum.domain,
+      curriculumChapter: curriculum.chapter,
       featured: meta.featured ?? false,
       source: 'modern' as const,
       dimension: '2d' as const,

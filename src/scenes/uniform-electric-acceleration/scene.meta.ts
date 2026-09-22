@@ -25,6 +25,8 @@ export const uniformElectricAccelerationMeta: SceneMeta = {
   difficulty: 2,
   icon: '⊕',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'electric-field',
   featured: false,
   defaultParams: {
     voltage: 50,

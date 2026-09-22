@@ -31,6 +31,8 @@ export const ringPendulumMeta: SceneMeta = {
   difficulty: 3,
   icon: 'Pₓ',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'momentum',
   featured: false,
   defaultParams: {
     ringMass: 2,

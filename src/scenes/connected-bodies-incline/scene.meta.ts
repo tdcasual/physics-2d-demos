@@ -34,6 +34,8 @@ export const connectedBodiesInclineMeta: SceneMeta = {
   difficulty: 3,
   icon: 'Σ',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'forces',
   featured: false,
   defaultParams: {
     mode: 0,

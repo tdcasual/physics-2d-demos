@@ -32,6 +32,8 @@ export const lenzLawMeta: SceneMeta = {
   difficulty: 2,
   icon: 'L',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'electromagnetic-induction',
   featured: false,
   defaultParams: {
     speed: 0.55,

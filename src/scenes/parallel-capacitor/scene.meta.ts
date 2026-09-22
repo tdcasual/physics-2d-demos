@@ -28,6 +28,8 @@ export const parallelCapacitorMeta: SceneMeta = {
   difficulty: 2,
   icon: 'C',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'electric-field',
   featured: false,
   defaultParams: { distance: 3, area: 0.5, dielectric: 1.7 },
   urlSyncKeys: ['probe', 'distance', 'area', 'dielectric'],

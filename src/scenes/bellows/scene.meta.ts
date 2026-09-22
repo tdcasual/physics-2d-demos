@@ -29,6 +29,8 @@ export const bellowsMeta: SceneMeta = {
   difficulty: 2,
   icon: '↔️',
   category: 'mechanics',
+  curriculumDomain: 'thermal',
+  curriculumChapter: 'thermodynamics',
   featured: false,
   defaultParams: { autoRun: 1, showFlow: 1 },
   urlSyncKeys: ['motion', 'autoRun', 'showFlow'],

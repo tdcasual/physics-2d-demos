@@ -34,6 +34,8 @@ export const rutherfordMeta: SceneMeta = {
   difficulty: 3,
   icon: 'α',
   category: 'mechanics',
+  curriculumDomain: 'modern',
+  curriculumChapter: 'modern-physics',
   featured: false,
   defaultParams: { model: 1, aim: 0, beamEnergy: 1, autoRun: 1, showForces: 1 },
   urlSyncKeys: ['model', 'aim', 'beamEnergy', 'autoRun', 'showForces'],

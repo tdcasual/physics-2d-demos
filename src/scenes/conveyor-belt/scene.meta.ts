@@ -32,6 +32,8 @@ export const conveyorBeltMeta: SceneMeta = {
   difficulty: 3,
   icon: '↗',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'kinematics',
   featured: false,
   defaultParams: { angle: 30, beltSpeed: 4, mu: 0.8 },
   urlSyncKeys: ['angle', 'beltSpeed', 'direction', 'mu', 'blockMass'],

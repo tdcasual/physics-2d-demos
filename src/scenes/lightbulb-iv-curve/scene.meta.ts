@@ -29,6 +29,8 @@ export const lightbulbMeta: SceneMeta = {
   difficulty: 3,
   icon: 'I–U',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'circuit',
   featured: false,
   defaultParams: { voltage: 2.9, showIdeal: 1, autoRun: 0 },
   urlSyncKeys: ['voltage', 'showIdeal', 'autoRun'],

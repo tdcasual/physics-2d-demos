@@ -30,6 +30,8 @@ export const closedCircuitMeta: SceneMeta = {
   difficulty: 2,
   icon: 'E',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'circuit',
   featured: false,
   defaultParams: {
     emf: 12,

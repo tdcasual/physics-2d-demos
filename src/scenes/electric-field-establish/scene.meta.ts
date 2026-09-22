@@ -29,6 +29,8 @@ export const electricFieldMeta: SceneMeta = {
   difficulty: 2,
   icon: 'E',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'circuit',
   featured: false,
   defaultParams: {
     voltage: 3,

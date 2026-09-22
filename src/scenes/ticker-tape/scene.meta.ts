@@ -26,6 +26,8 @@ export const tickerTapeMeta: SceneMeta = {
   difficulty: 2,
   icon: '📏',
   category: 'mechanics',
+  curriculumDomain: 'experimental',
+  curriculumChapter: 'data-analysis',
   featured: false,
   defaultParams: {
     speed: 1,

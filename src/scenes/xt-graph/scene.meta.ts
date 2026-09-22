@@ -24,6 +24,8 @@ export const xtGraphMeta: SceneMeta = {
   difficulty: 1,
   icon: '📈',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'kinematics',
   featured: false,
   defaultParams: {
     speed: 1

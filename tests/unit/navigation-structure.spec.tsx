@@ -17,7 +17,15 @@ describe('Navigation structure', () => {
     const filterBar = document.querySelector('.filter-bar');
     expect(filterBar).toBeTruthy();
 
-    const filters = ['全部', '力学', '电磁学', '方法'];
+    const filters = [
+      '全部',
+      '力学',
+      '电磁学',
+      '光学',
+      '热学',
+      '近代物理',
+      '实验与方法'
+    ];
     for (const label of filters) {
       // Use querySelector within filter-bar to avoid matching card categories
       const btn =

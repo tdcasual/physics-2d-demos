@@ -31,6 +31,8 @@ export const vernierCaliperMeta: SceneMeta = {
   difficulty: 1,
   icon: '📏',
   category: 'method',
+  curriculumDomain: 'experimental',
+  curriculumChapter: 'measurement',
   featured: false,
   defaultParams: {
     precision: 0.02,

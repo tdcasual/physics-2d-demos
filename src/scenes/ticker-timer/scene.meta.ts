@@ -37,6 +37,8 @@ export const tickerTimerMeta: SceneMeta = {
   difficulty: 2,
   icon: '📍',
   category: 'mechanics',
+  curriculumDomain: 'experimental',
+  curriculumChapter: 'measurement',
   featured: false,
   defaultParams: {
     model: 1,

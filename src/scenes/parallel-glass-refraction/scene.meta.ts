@@ -35,6 +35,8 @@ export const glassMeta: SceneMeta = {
   difficulty: 2,
   icon: '◇',
   category: 'method',
+  curriculumDomain: 'optics',
+  curriculumChapter: 'geometrical-optics',
   featured: false,
   defaultParams: { incidentAngle: 48, refractiveIndex: 1.5, thickness: 5 },
   urlSyncKeys: ['incidentAngle', 'refractiveIndex', 'thickness', 'autoRun'],

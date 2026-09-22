@@ -31,6 +31,8 @@ export const springOscillatorMeta: SceneMeta = {
   difficulty: 2,
   icon: '🔄',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'oscillation-waves',
   featured: true,
   defaultParams: {
     k: 10,

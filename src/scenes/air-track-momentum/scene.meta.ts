@@ -43,6 +43,8 @@ export const airTrackMomentumMeta: SceneMeta = {
   difficulty: 3,
   icon: 'p',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'momentum',
   featured: false,
   defaultParams: {
     mode: 0,

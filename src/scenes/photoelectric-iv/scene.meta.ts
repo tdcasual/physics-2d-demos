@@ -30,6 +30,8 @@ export const photoelectricMeta: SceneMeta = {
   difficulty: 3,
   icon: 'hν',
   category: 'electromagnetism',
+  curriculumDomain: 'modern',
+  curriculumChapter: 'modern-physics',
   featured: false,
   defaultParams: { wavelength: 411, intensity: 80, voltage: 0, autoRun: 1 },
   urlSyncKeys: ['wavelength', 'intensity', 'voltage', 'cathode', 'autoRun'],

@@ -33,6 +33,8 @@ export const microDeformationMeta: SceneMeta = {
   difficulty: 3,
   icon: 'Δ',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'forces',
   featured: false,
   defaultParams: {
     loadKg: 0,

@@ -32,6 +32,8 @@ export const emfInternalMeta: SceneMeta = {
   difficulty: 3,
   icon: '🔋',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'circuit',
   featured: false,
   defaultParams: {
     sourceVoltage: 1.5,

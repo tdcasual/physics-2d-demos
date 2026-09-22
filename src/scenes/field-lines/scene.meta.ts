@@ -34,6 +34,8 @@ export const fieldLinesMeta: SceneMeta = {
   difficulty: 2,
   icon: '⚡',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'electric-field',
   featured: true,
   defaultParams: {
     n: PROBE_N_DEFAULT,

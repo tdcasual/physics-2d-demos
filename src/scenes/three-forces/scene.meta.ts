@@ -25,6 +25,8 @@ export const threeForcesMeta: SceneMeta = {
   difficulty: 2,
   icon: '⚖️',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'forces',
   featured: false,
   defaultParams: {
     mass: C.massDefault,

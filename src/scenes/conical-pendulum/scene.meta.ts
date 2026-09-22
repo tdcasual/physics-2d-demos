@@ -25,6 +25,8 @@ export const conicalPendulumMeta: SceneMeta = {
   difficulty: 3,
   icon: '↻',
   category: 'mechanics',
+  curriculumDomain: 'mechanics',
+  curriculumChapter: 'forces',
   featured: false,
   defaultParams: { height: 3, theta: 57, autoRun: 1, showVectors: 1 },
   urlSyncKeys: ['height', 'theta', 'autoRun', 'showVectors'],

@@ -31,6 +31,8 @@ export const chargedParticleMeta: SceneMeta = {
   difficulty: 2,
   icon: '⊕',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'magnetic-field',
   featured: false,
   defaultParams: {
     mass: 4,

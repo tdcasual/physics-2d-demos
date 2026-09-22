@@ -34,6 +34,8 @@ export const massSpectrometerMeta: SceneMeta = {
   difficulty: 2,
   icon: 'm',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'magnetic-field',
   featured: false,
   defaultParams: {
     voltage: 31,

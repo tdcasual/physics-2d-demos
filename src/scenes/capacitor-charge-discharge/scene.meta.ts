@@ -38,6 +38,8 @@ export const capacitorMeta: SceneMeta = {
   difficulty: 3,
   icon: 'RC',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'circuit',
   featured: false,
   defaultParams: {
     mode: 1,

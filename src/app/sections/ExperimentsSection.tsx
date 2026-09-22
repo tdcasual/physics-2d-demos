@@ -8,9 +8,14 @@ import {
   categoryInfo,
   getDifficultyLabel
 } from '../data/scenes';
+import {
+  CURRICULUM_DOMAINS,
+  CURRICULUM_DOMAIN_INFO,
+  type CurriculumDomain
+} from '../../platform/curriculum';
 import { useScrollReveal } from '../hooks';
 
-type FilterCategory = 'all' | 'mechanics' | 'electromagnetism' | 'method';
+type FilterCategory = 'all' | CurriculumDomain;
 
 export const ExperimentsSection: React.FC = () => {
   // The directory height grows with the catalog; a 10% threshold can exceed
@@ -21,16 +26,18 @@ export const ExperimentsSection: React.FC = () => {
   const filteredScenes = useMemo(
     () =>
       sceneRegistry.filter(
-        (scene) => activeFilter === 'all' || scene.category === activeFilter
+        (scene) =>
+          activeFilter === 'all' || scene.curriculumDomain === activeFilter
       ),
     [activeFilter]
   );
 
   const filters: { id: FilterCategory; label: string }[] = [
     { id: 'all', label: '全部' },
-    { id: 'mechanics', label: '力学' },
-    { id: 'electromagnetism', label: '电磁学' },
-    { id: 'method', label: '方法' }
+    ...CURRICULUM_DOMAINS.map((id) => ({
+      id,
+      label: CURRICULUM_DOMAIN_INFO[id].label
+    }))
   ];
 
   return (
@@ -61,10 +68,11 @@ export const ExperimentsSection: React.FC = () => {
 
         <div className="experiments-grid">
           {filteredScenes.map((scene, index) => {
-            // 未注册的 category（未来新增分类但未配置元信息）回退到 method，
-            // 避免首页直接崩溃
+            // 注册表已经强制校验课程分类；这里保留实验域回退，避免未来
+            // 新增分类文案未同步时首页直接崩溃。
             const category =
-              categoryInfo[scene.category] ?? categoryInfo.method;
+              categoryInfo[scene.curriculumDomain] ??
+              CURRICULUM_DOMAIN_INFO.experimental;
             return (
               <a
                 key={scene.id}

@@ -31,6 +31,8 @@ export const magneticConvergenceMeta: SceneMeta = {
   difficulty: 2,
   icon: '✣',
   category: 'electromagnetism',
+  curriculumDomain: 'electromagnetism',
+  curriculumChapter: 'magnetic-field',
   featured: false,
   defaultParams: {
     radiusRatio: 1,
