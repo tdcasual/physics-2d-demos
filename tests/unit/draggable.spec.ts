@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { makeDraggable } from '../../src/ui/utils/draggable';
+import { makeDraggable, makeResizable } from '../../src/ui/utils/draggable';
 
 function pointerDown(el: Element, x: number, y: number) {
   el.dispatchEvent(
@@ -130,5 +130,147 @@ describe('makeDraggable', () => {
 
     cleanup();
     element.remove();
+  });
+
+  it('normalizes drag deltas by the ancestor stage zoom (k=2)', () => {
+    const viewport = document.createElement('div');
+    viewport.dataset.stageZoom = '2';
+    const element = document.createElement('div');
+    element.style.position = 'absolute';
+    viewport.appendChild(element);
+    document.body.appendChild(viewport);
+
+    Object.defineProperty(element, 'offsetLeft', {
+      value: 100,
+      writable: true
+    });
+    Object.defineProperty(element, 'offsetTop', { value: 100, writable: true });
+
+    const cleanup = makeDraggable(element);
+
+    // 屏幕位移 (20, 10) → 局部 (10, 5)
+    pointerDown(element, 0, 0);
+    pointerMove(element, 20, 10);
+    pointerUp(element);
+
+    expect(element.style.left).toBe('110px');
+    expect(element.style.top).toBe('105px');
+
+    cleanup();
+    viewport.remove();
+  });
+
+  it('clamps to parent using transform-immune offset sizes', () => {
+    const viewport = document.createElement('div');
+    viewport.dataset.stageZoom = '2';
+    const parent = document.createElement('div');
+    const element = document.createElement('div');
+    element.style.position = 'absolute';
+    parent.appendChild(element);
+    viewport.appendChild(parent);
+    document.body.appendChild(viewport);
+
+    Object.defineProperty(element, 'offsetParent', {
+      configurable: true,
+      value: parent
+    });
+    Object.defineProperty(element, 'offsetLeft', {
+      value: 0,
+      writable: true
+    });
+    Object.defineProperty(element, 'offsetTop', { value: 0, writable: true });
+    // 布局尺寸 400×300 / 100×50；GBCR 带上 k=2 的祖先放大，不得用于 clamp
+    Object.defineProperty(parent, 'offsetWidth', {
+      configurable: true,
+      value: 400
+    });
+    Object.defineProperty(parent, 'offsetHeight', {
+      configurable: true,
+      value: 300
+    });
+    Object.defineProperty(element, 'offsetWidth', {
+      configurable: true,
+      value: 100
+    });
+    Object.defineProperty(element, 'offsetHeight', {
+      configurable: true,
+      value: 50
+    });
+    const scaledRect = (width: number, height: number) =>
+      ({
+        x: 0,
+        y: 0,
+        left: 0,
+        top: 0,
+        width: width * 2,
+        height: height * 2,
+        right: width * 2,
+        bottom: height * 2,
+        toJSON() {}
+      }) as DOMRect;
+    parent.getBoundingClientRect = () => scaledRect(400, 300);
+    element.getBoundingClientRect = () => scaledRect(100, 50);
+
+    const cleanup = makeDraggable(element, undefined, {
+      clampToParent: true
+    });
+
+    // 屏幕 (1000, 1000) → 局部 (500, 500) → clamp 到 (400-100, 300-50)
+    pointerDown(element, 0, 0);
+    pointerMove(element, 1000, 1000);
+    pointerUp(element);
+
+    expect(element.style.left).toBe('300px');
+    expect(element.style.top).toBe('250px');
+
+    cleanup();
+    viewport.remove();
+  });
+});
+
+describe('makeResizable', () => {
+  it('starts from offset sizes and normalizes deltas by the stage zoom (k=2)', () => {
+    const viewport = document.createElement('div');
+    viewport.dataset.stageZoom = '2';
+    const element = document.createElement('div');
+    viewport.appendChild(element);
+    document.body.appendChild(viewport);
+
+    Object.defineProperty(element, 'offsetWidth', {
+      configurable: true,
+      value: 200
+    });
+    Object.defineProperty(element, 'offsetHeight', {
+      configurable: true,
+      value: 120
+    });
+    // GBCR 带上 k=2 的祖先放大，不得作为起点尺寸
+    element.getBoundingClientRect = () =>
+      ({
+        x: 0,
+        y: 0,
+        left: 0,
+        top: 0,
+        width: 400,
+        height: 240,
+        right: 400,
+        bottom: 240,
+        toJSON() {}
+      }) as DOMRect;
+
+    const cleanup = makeResizable(element, { minWidth: 100, minHeight: 60 });
+    const handle = element.querySelector('.lab-float-resize') as HTMLElement;
+    expect(handle).toBeTruthy();
+
+    // 屏幕 (40, 20) → 局部 (20, 10)
+    pointerDown(handle, 0, 0);
+    pointerMove(handle, 40, 20);
+    pointerUp(handle);
+
+    expect(element.style.width).toBe('220px');
+    expect(element.style.height).toBe('130px');
+
+    cleanup();
+    viewport.remove();
   });
 });

@@ -34,7 +34,7 @@ export const energyMeta: SceneMeta = {
   defaultParams: { massA: 1, massB: 1, velocityA: 4, velocityB: 0 },
   urlSyncKeys: ['massA', 'massB', 'velocityA', 'slowMotion'],
   testProfile: {
-    hasGraph: true,
+    hasGraph: false,
     hasTransport: true,
     supportsPresentation: true
   },

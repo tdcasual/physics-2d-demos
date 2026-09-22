@@ -35,8 +35,8 @@ export const TAPE_OUTLIER_COUNT: Record<NoiseLevel, number> = {
 /** 误差点沿纸带的位移（cm），大到在 v–t 上明显偏离直线。 */
 export const TAPE_OUTLIER_SHIFT_CM: Record<NoiseLevel, number> = {
   off: 0,
-  typical: 1.6,
-  large: 2.8
+  typical: 0.32,
+  large: 0.56
 };
 
 export type TickerTapeParams = {
@@ -256,22 +256,22 @@ function emptyRow(n: number): Array<number | null> {
   return Array.from({ length: n }, () => null);
 }
 
-/** 从静止出发的 x(t)（cm）。variable 用分段加速度，Δx 不等差。 */
+/** x(t)（cm）。variable 用分段加速度，Δx 不等差。 */
 export function xCmAt(kind: TapeKind, t: number): number {
   const tClamped = Math.max(0, t);
   switch (kind) {
     case 'uniform':
-      return 40 * tClamped;
+      return 8 * tClamped;
     case 'ua':
-      return 100 * tClamped * tClamped;
+      return 20 * tClamped * tClamped;
     case 'ud': {
-      // v0=1.6 m/s, a=−1.6 m/s²，停于 t=1 s，之后保持静止，避免纸带回头
+      // v0=0.32 m/s, a=−0.32 m/s²，停于 t=1 s，之后保持静止，避免纸带回头
       const tStop = Math.min(tClamped, 1);
-      return 160 * tStop - 80 * tStop * tStop;
+      return 32 * tStop - 16 * tStop * tStop;
     }
     case 'variable':
-      if (tClamped <= 0.5) return 50 * tClamped * tClamped;
-      return 12.5 + 50 * (tClamped - 0.5) + 200 * (tClamped - 0.5) ** 2;
+      if (tClamped <= 0.5) return 10 * tClamped * tClamped;
+      return 2.5 + 10 * (tClamped - 0.5) + 40 * (tClamped - 0.5) ** 2;
     default: {
       const _never: never = kind;
       return _never;
@@ -288,17 +288,44 @@ function buildTimingDots(kind: TapeKind): TimingDot[] {
   return dots;
 }
 
+/** 毫米尺量程（cm）。O 拖拽上限保证 7 个计数点都落在尺内，一次读出。 */
+export const RULER_RANGE_CM = 15;
+
+/** 全局上限：计数段不超出纸带末尾。 */
 export function maxOriginTickIndex(): number {
   return LAST_TICK - (COUNTING_POINT_COUNT - 1) * COUNTING_INTERVAL_TICKS;
 }
 
-export function clampOriginTickIndex(index: number): number {
-  const rounded = Math.round(index);
-  return Math.max(0, Math.min(maxOriginTickIndex(), rounded));
+/**
+ * 按纸带种类的 O 点拖拽上限：最大的 originTickIndex，使计数段跨度
+ * x(originT + 0.6 s) − x(originT) 不超过尺量程 RULER_RANGE_CM。
+ * uniform/ud 跨度恒定或有界，上限即全局 maxOriginTickIndex()；
+ * ua/variable 跨度随 originT 增大，上限收紧。
+ */
+export function maxOriginTickIndexFor(kind: TapeKind): number {
+  const global = maxOriginTickIndex();
+  const spanS =
+    (COUNTING_POINT_COUNT - 1) * countingPeriodS(COUNTING_INTERVAL_TICKS);
+  let result = 0;
+  for (let origin = 0; origin <= global; origin += 1) {
+    const originT = origin * TICK_PERIOD_S;
+    const span = xCmAt(kind, originT + spanS) - xCmAt(kind, originT);
+    if (span > RULER_RANGE_CM + 1e-9) break;
+    result = origin;
+  }
+  return result;
 }
 
-export function countingTickIndices(originTickIndex: number): number[] {
-  const origin = clampOriginTickIndex(originTickIndex);
+export function clampOriginTickIndex(index: number, kind: TapeKind): number {
+  const rounded = Math.round(index);
+  return Math.max(0, Math.min(maxOriginTickIndexFor(kind), rounded));
+}
+
+export function countingTickIndices(
+  originTickIndex: number,
+  kind: TapeKind
+): number[] {
+  const origin = clampOriginTickIndex(originTickIndex, kind);
   return Array.from(
     { length: COUNTING_POINT_COUNT },
     (_, n) => origin + n * COUNTING_INTERVAL_TICKS
@@ -306,7 +333,7 @@ export function countingTickIndices(originTickIndex: number): number[] {
 }
 
 function trueCountingXCm(kind: TapeKind, originTickIndex: number): number[] {
-  const origin = clampOriginTickIndex(originTickIndex);
+  const origin = clampOriginTickIndex(originTickIndex, kind);
   const originT = origin * TICK_PERIOD_S;
   const originX = xCmAt(kind, originT);
   const T = countingPeriodS(COUNTING_INTERVAL_TICKS);
@@ -378,7 +405,7 @@ export function createTickerTapeSim(initial: Partial<TickerTapeParams> = {}) {
   }
 
   function dotsNow(): TimingDot[] {
-    const countingIdx = countingTickIndices(originTickIndex);
+    const countingIdx = countingTickIndices(originTickIndex, params.tapeKind);
     // 误差是打点打偏，不是尺的估读；按尺填入读的是打偏后的点迹。
     return applyTapeOutliers(
       buildTimingDots(params.tapeKind),
@@ -393,7 +420,7 @@ export function createTickerTapeSim(initial: Partial<TickerTapeParams> = {}) {
   function snapshot(): TickerTapeState {
     // 表与 T 固定按每 5 个打点（高考纸带题）；countEvery 只改点迹视觉。
     const T = countingPeriodS(COUNTING_INTERVAL_TICKS);
-    const countingIdx = countingTickIndices(originTickIndex);
+    const countingIdx = countingTickIndices(originTickIndex, params.tapeKind);
     const timingDots = dotsNow();
     const trueXCm = trueCountingXCm(params.tapeKind, originTickIndex);
     const tapeXCm = countingXFromDots(timingDots, countingIdx);
@@ -440,7 +467,7 @@ export function createTickerTapeSim(initial: Partial<TickerTapeParams> = {}) {
       return { ...params };
     },
     fillFromRuler(): void {
-      const countingIdx = countingTickIndices(originTickIndex);
+      const countingIdx = countingTickIndices(originTickIndex, params.tapeKind);
       measuredXCm = countingXFromDots(dotsNow(), countingIdx);
       // Δx / v 留给学生手算，不在填尺时代填。
       deltaXCm = emptyRow(COUNTING_POINT_COUNT);
@@ -464,7 +491,7 @@ export function createTickerTapeSim(initial: Partial<TickerTapeParams> = {}) {
           : Math.round(value * 1000) / 1000;
     },
     setOriginTickIndex(index: number): void {
-      const next = clampOriginTickIndex(index);
+      const next = clampOriginTickIndex(index, params.tapeKind);
       if (next === originTickIndex) return;
       originTickIndex = next;
       clearStudentTable();

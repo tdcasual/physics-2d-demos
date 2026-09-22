@@ -313,6 +313,29 @@ describe('interference-vernier-caliper renderer', () => {
       detach();
     });
 
+    it('normalizes slider and ruler drag deltas by ancestor stage zoom (k=2)', () => {
+      const { slider, mainRuler, instrumentEl, state, detach } = setup();
+      const viewport = document.createElement('div');
+      viewport.dataset.stageZoom = '2';
+      viewport.append(slider, mainRuler, instrumentEl);
+      document.body.appendChild(viewport);
+
+      // 滑块读数：屏幕 192px → 局部 96px → 96/2/UNIT_PX = 0.5 cm
+      mouse(slider, 'mousedown', 100);
+      mouse(document, 'mousemove', 100 + 192);
+      expect(state.currentReadingCm).toBeCloseTo(1.4 + 0.5, 10);
+      mouse(document, 'mouseup', 100 + 192);
+
+      // 主尺整机拖拽：屏幕 +60px → 局部 +30px
+      const startX = state.sysX;
+      mouse(mainRuler, 'mousedown', 0);
+      mouse(document, 'mousemove', 60);
+      expect(state.sysX).toBe(startX + 30);
+      mouse(document, 'mouseup', 60);
+      detach();
+      viewport.remove();
+    });
+
     it('arrow keys pan the instrument by 30px per press', () => {
       const { mainRuler, state, detach } = setup();
       const x0 = state.sysX;

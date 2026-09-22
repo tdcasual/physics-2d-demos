@@ -29,8 +29,7 @@ vi.mock('../../src/app/layouts/registry', () => ({
     getAllMetadata: vi.fn(() => []),
     returnInstance: vi.fn(),
     clearPool: vi.fn()
-  },
-  saveLayoutPreference: vi.fn()
+  }
 }));
 
 // Mock layout selector
@@ -264,15 +263,53 @@ describe('SceneContainerImpl', () => {
   });
 
   it('should save layout preference when requested', async () => {
-    const { saveLayoutPreference } =
-      await import('../../src/app/layouts/registry');
     const container = createSceneContainer({ mount });
 
     await container.switchLayout('split-right', {
       animate: false,
       savePreference: true
     });
-    expect(saveLayoutPreference).toHaveBeenCalledWith('split-right');
+    expect(container.getUserPreferredLayout()).toBe('split-right');
+  });
+
+  it('should restore focus by stable data identity across layout rebuilds', async () => {
+    const { layoutRegistry } = await import('../../src/app/layouts/registry');
+    const container = createSceneContainer({ mount });
+
+    await container.switchLayout('split-right', { animate: false });
+
+    const outgoing = document.createElement('button');
+    outgoing.className = 'control-[contains-special-selector-chars]';
+    outgoing.dataset.controlKey = 'velocity';
+    mount.appendChild(outgoing);
+    outgoing.focus();
+
+    const incoming = document.createElement('button');
+    incoming.className = 'new-layout-control';
+    incoming.dataset.controlKey = 'velocity';
+    vi.mocked(layoutRegistry.create).mockImplementationOnce(
+      async (id: string, target: HTMLElement) => ({
+        id,
+        name: id,
+        description: 'test layout',
+        supportedSlots: [] as never[],
+        capabilities: [],
+        mount: vi.fn().mockImplementation(async () => {
+          target.appendChild(incoming);
+        }),
+        unmount: vi.fn().mockResolvedValue(undefined),
+        enter: vi.fn().mockResolvedValue(undefined),
+        exit: vi.fn().mockResolvedValue(undefined),
+        setTheme: vi.fn(),
+        handleResize: vi.fn(),
+        _updateConfig: vi.fn(),
+        getSlots: vi.fn(() => ({}))
+      })
+    );
+
+    await container.switchLayout('mobile-stack', { animate: false });
+
+    expect(document.activeElement).toBe(incoming);
   });
 
   it('should set scene and mount it', async () => {

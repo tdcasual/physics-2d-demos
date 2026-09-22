@@ -51,9 +51,7 @@ vi.mock('../../src/app/layouts/container-resize-observer', () => ({
 }));
 
 vi.mock('../../src/app/layouts/capabilities', () => ({
-  capabilityFactories: {},
-  getCapabilityScope: vi.fn(() => 'layout'),
-  CAPABILITY_SCOPES: {}
+  capabilityFactories: {}
 }));
 
 import { createSceneContainer } from '../../src/app/layouts/container';

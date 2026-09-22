@@ -1,4 +1,8 @@
 import { clamp } from '../../core/math';
+import {
+  READOUT_OVERLAY_ATTR,
+  readoutOccludesStage
+} from '../../platform/stage-readout';
 
 export type OscilloscopeParams = {
   signalAmplitude: number;
@@ -676,16 +680,6 @@ export const OSCILLOSCOPE_OVERLAY_PANEL_SELECTOR = [
   '.lab-float-data'
 ].join(', ');
 
-function isMobileStack(node: Element): boolean {
-  return Boolean(
-    node.closest('.mobile-stack-layout, [data-testid="mobile-stack-layout"]')
-  );
-}
-
-function isFloatingLayout(node: Element): boolean {
-  return Boolean(node.closest(OSCILLOSCOPE_FLOATING_LAYOUT_SELECTOR));
-}
-
 /** Layout-local floating 数据读数 cards, including lab floats off the canvas parent. */
 export function findOverlayPanels(anchor?: Element | null): HTMLElement[] {
   if (!(anchor instanceof Element)) return [];
@@ -704,8 +698,12 @@ export function findOverlayPanels(anchor?: Element | null): HTMLElement[] {
 export function hasFloatingReadout(anchor?: Element | null): boolean {
   if (typeof document === 'undefined') return true;
   const node = anchor ?? document.body;
-  if (isMobileStack(node)) return false;
-  if (isFloatingLayout(node)) return true;
+  // 复合判断：布局根打了 data-readout-overlay 的以属性为准
+  // （mobile=false、split/srgb/lab=true）；无布局祖先的游离 DOM
+  // 维持浮窗实测（findOverlayPanels），像素行为不变
+  if (node.closest(`[${READOUT_OVERLAY_ATTR}]`)) {
+    return readoutOccludesStage(node);
+  }
   return findOverlayPanels(node instanceof Element ? node : null).length > 0;
 }
 

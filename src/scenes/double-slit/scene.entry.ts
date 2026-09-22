@@ -7,6 +7,7 @@
 import type { TeachingTheme, TeachingMode } from '../../platform/standards';
 import type { SceneLifecycle } from '../../platform/scene-contract';
 import type { DemoRenderHints } from '../../platform/demo-profile';
+import { STAGE_FRAME_ATTR } from '../../platform/stage-chrome';
 
 import { createStandardSceneEntry } from '../scene-entry-helpers';
 import {
@@ -139,6 +140,8 @@ export function createDoubleSlitScene(
     instrumentWrap.style.setProperty('--instrument-align', 'flex-start');
     instrumentWrap.style.setProperty('--instrument-offset', '100px');
     instrumentWrap.dataset.doubleSlitInstruments = 'true';
+    // 平移忽略标记（只挡平移、不挡滚轮；滚轮缩放必须保留）
+    instrumentWrap.dataset.panzoomPanIgnore = 'true';
     instrumentWrap.addEventListener('instrument-set-reading', (event) => {
       const mm = (event as CustomEvent<{ mm?: number }>).detail?.mm;
       if (typeof mm !== 'number' || !Number.isFinite(mm)) return;
@@ -458,8 +461,11 @@ export function createDoubleSlitScene(
 
   function syncInstrumentStageFit(): void {
     const canvas = options.canvas;
+    // 舞台 frame（mobile 是 .mobile-animation-section）。桌面 frame 上
+    // 会多写一个无人读的内联变量：--dw-h 的唯一消费规则
+    // （data-workspace.css 的 --dw-h 段）锁在 .mobile-animation-section 上。
     const section = canvas?.closest(
-      '.mobile-animation-section'
+      `[${STAGE_FRAME_ATTR}]`
     ) as HTMLElement | null;
     if (!section) return;
     if (!workspaceChromeOpen || !instrumentWrap) {

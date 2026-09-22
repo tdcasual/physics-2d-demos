@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createEventEmitter } from '../../src/app/layouts/event-emitter';
 import { buildCapabilityContext } from '../../src/app/layouts/capability-context';
 import type { SceneContainerEvents } from '../../src/app/layouts/types';
@@ -27,7 +27,8 @@ describe('buildCapabilityContext', () => {
         preferredLayout: 'split-right',
         renderControl() {},
         renderAnimation() {},
-        setMode: (mode) => modes.push(mode)
+        setMode: (mode) => modes.push(mode),
+        requestStageRepaint() {}
       }
     });
 
@@ -37,5 +38,34 @@ describe('buildCapabilityContext', () => {
     expect(events).toEqual([{ mode: 'presentation', profile: null }]);
     expect(updates).toEqual([{ mode: 'presentation', profile: null }]);
     expect(modes).toEqual(['presentation']);
+  });
+
+  it('forwards requestStageRepaint to the scene and tolerates a null scene', () => {
+    const base = {
+      container: document.createElement('div'),
+      getTheme: () => 'light' as const,
+      setTheme: () => {},
+      getCurrentLayoutId: () => 'split-right',
+      switchLayout: () => {},
+      getAvailableLayouts: () => [],
+      emit: () => {},
+      updateDemoProfileInstances: () => {}
+    };
+    const requestStageRepaint = vi.fn();
+    const ctx = buildCapabilityContext({
+      ...base,
+      scene: {
+        id: 'scene',
+        preferredLayout: 'split-right',
+        renderControl() {},
+        renderAnimation() {},
+        requestStageRepaint
+      }
+    });
+    ctx.requestStageRepaint();
+    expect(requestStageRepaint).toHaveBeenCalledTimes(1);
+
+    const sceneless = buildCapabilityContext({ ...base, scene: null });
+    expect(() => sceneless.requestStageRepaint()).not.toThrow();
   });
 });

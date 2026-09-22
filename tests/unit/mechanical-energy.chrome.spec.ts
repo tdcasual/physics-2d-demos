@@ -116,6 +116,8 @@ describe('mechanical-energy chrome scheduler', () => {
     mobile.className = 'mobile-stack-layout';
     const inner = document.createElement('div');
     inner.className = 'mobile-readout-panel';
+    // mobile 读数挂载点由 readout 能力创建点打标
+    inner.setAttribute('data-readout-slot', '');
     mobile.appendChild(inner);
     document.body.appendChild(mobile);
     expect(findMechanicalEnergyDataHost()).toBe(inner);

@@ -55,7 +55,7 @@ export const alternatingElectricDeflectionMeta: SceneMeta = {
     'showGhosts'
   ],
   testProfile: {
-    hasGraph: true,
+    hasGraph: false,
     hasTransport: true,
     supportsPresentation: true
   },

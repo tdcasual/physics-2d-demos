@@ -94,9 +94,11 @@ export function createProjectileDataPanel(): DataPanelHandle {
 export function findProjectileDataHost(): HTMLElement | null {
   const lab = document.querySelector('[data-lab-data-slot]');
   if (lab instanceof HTMLElement) return lab;
-  // Do not use .mobile-readout-slot: layout slot clear wipes it after createControls.
+  // mobile 落点 = 打在 .mobile-readout-panel 上的 [data-readout-slot]
+  // （readout 能力创建点打标；不用 .mobile-readout-slot——布局清 slot
+  // 会抹掉后挂内容）
   const mobilePanel = document.querySelector(
-    '.mobile-stack-layout .mobile-readout-panel'
+    '.mobile-stack-layout [data-readout-slot]'
   );
   if (mobilePanel instanceof HTMLElement) return mobilePanel;
   const tab = document.querySelector('#mobile-panel-readout');

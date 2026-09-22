@@ -334,6 +334,7 @@ describe('oscilloscope floating readout geometry', () => {
   it('treats mobile-stack as non-floating and split-right / lab as floating', () => {
     const mobile = document.createElement('div');
     mobile.className = 'mobile-stack-layout';
+    mobile.setAttribute('data-readout-overlay', 'false');
     mobile.dataset.testid = 'mobile-stack-layout';
     const mobileCanvas = document.createElement('canvas');
     mobile.appendChild(mobileCanvas);
@@ -347,6 +348,7 @@ describe('oscilloscope floating readout geometry', () => {
 
     const split = document.createElement('div');
     split.className = 'layout-srgb-graph-bottom';
+    split.setAttribute('data-readout-overlay', 'true');
     split.dataset.testid = 'split-right-graph-bottom-layout';
     const splitCanvas = document.createElement('canvas');
     split.appendChild(splitCanvas);
@@ -358,6 +360,7 @@ describe('oscilloscope floating readout geometry', () => {
 
     const lab = document.createElement('div');
     lab.className = 'lab-stage-layout';
+    lab.setAttribute('data-readout-overlay', 'true');
     lab.dataset.testid = 'lab-stage-layout';
     const labCanvas = document.createElement('canvas');
     lab.appendChild(labCanvas);
@@ -369,6 +372,7 @@ describe('oscilloscope floating readout geometry', () => {
   it('measures an expanded split-right panel that is a canvas sibling', () => {
     const root = document.createElement('div');
     root.className = 'layout-srgb-graph-bottom';
+    root.setAttribute('data-readout-overlay', 'true');
     root.dataset.testid = 'split-right-graph-bottom-layout';
     const slot = document.createElement('div');
     const canvas = document.createElement('canvas');
@@ -394,6 +398,7 @@ describe('oscilloscope floating readout geometry', () => {
   it('measures a lab 数据读数 float that is not a canvas sibling', () => {
     const root = document.createElement('div');
     root.className = 'lab-stage-layout';
+    root.setAttribute('data-readout-overlay', 'true');
     root.dataset.testid = 'lab-stage-layout';
     const anim = document.createElement('div');
     anim.className = 'lab-stage-slot';
@@ -419,6 +424,7 @@ describe('oscilloscope floating readout geometry', () => {
   it('reserves the fallback gutter when the collapsed chip is narrower', () => {
     const root = document.createElement('div');
     root.className = 'layout-srgb-graph-bottom';
+    root.setAttribute('data-readout-overlay', 'true');
     const slot = document.createElement('div');
     const canvas = document.createElement('canvas');
     const panel = document.createElement('div');

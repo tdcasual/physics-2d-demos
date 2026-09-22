@@ -422,6 +422,7 @@ describe('three-forces stage layout', () => {
   it('does not treat mobile-stack as a floating readout overlay', () => {
     const root = document.createElement('div');
     root.className = 'mobile-stack-layout';
+    root.setAttribute('data-readout-overlay', 'false');
     document.body.append(root);
     expect(hasFloatingReadout(root)).toBe(false);
     expect(stageLayoutFrom(root).floatingReadout).toBe(false);

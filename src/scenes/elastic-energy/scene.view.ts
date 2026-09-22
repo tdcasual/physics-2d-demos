@@ -576,14 +576,3 @@ export function createEnergyView(options: CreateEnergyViewOptions = {}) {
     }
   };
 }
-
-/** Standard graph entry point for external graph hosts and visual tests. */
-export function renderGraph(
-  ctx: CanvasRenderingContext2D,
-  state: EnergyState,
-  theme: TeachingTheme = 'light'
-): void {
-  const palette = PALETTE[theme];
-  drawVelocityGraph(ctx, state, palette, 1);
-  drawEnergyGraph(ctx, state, palette, 1);
-}

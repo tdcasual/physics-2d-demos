@@ -535,7 +535,6 @@ describe('bootScenePage', () => {
     expect(createSceneContainer).toHaveBeenCalledWith(
       expect.objectContaining({
         mount: appDiv,
-        defaultLayout: 'split-right',
         defaultTheme: 'light',
         layoutConfig: expect.objectContaining({
           title: '测试标题',
@@ -562,11 +561,7 @@ describe('bootScenePage', () => {
       createScene: () => createMockScene() as never
     });
 
-    expect(createSceneContainer).toHaveBeenCalledWith(
-      expect.objectContaining({
-        defaultLayout: 'split-right'
-      })
-    );
+    expect(createSceneContainer).toHaveBeenCalled();
   });
 
   it('should accept a registered layout override from the URL', () => {
@@ -589,9 +584,10 @@ describe('bootScenePage', () => {
       preferredLayout: 'split-right'
     });
 
-    expect(createSceneContainer).toHaveBeenCalledWith(
-      expect.objectContaining({ defaultLayout: 'mobile-stack' })
-    );
+    const mockContainer = vi.mocked(createSceneContainer).mock.results[0]
+      .value as { setScene: MockFn };
+    const adapter = mockContainer.setScene.mock.calls[0][0] as SceneAdapter;
+    expect(adapter.preferredLayout).toBe('mobile-stack');
     window.history.replaceState({}, '', '/');
   });
 
@@ -615,9 +611,10 @@ describe('bootScenePage', () => {
       preferredLayout: 'split-right'
     });
 
-    expect(createSceneContainer).toHaveBeenCalledWith(
-      expect.objectContaining({ defaultLayout: 'split-right' })
-    );
+    const mockContainer = vi.mocked(createSceneContainer).mock.results[0]
+      .value as { setScene: MockFn };
+    const adapter = mockContainer.setScene.mock.calls[0][0] as SceneAdapter;
+    expect(adapter.preferredLayout).toBe('split-right');
     window.history.replaceState({}, '', '/');
   });
 

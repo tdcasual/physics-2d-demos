@@ -528,6 +528,52 @@ describe('micrometer-eyepiece renderer', () => {
       unbind();
     });
 
+    it('normalizes thimble and case drag deltas by ancestor stage zoom (k=2)', () => {
+      const { viewState, elements, unbind } = setup({ currentReading: 2 });
+      const viewport = document.createElement('div');
+      viewport.dataset.stageZoom = '2';
+      viewport.append(
+        elements.thimbleGroup,
+        elements.caseEl,
+        elements.systemEl
+      );
+      document.body.appendChild(viewport);
+
+      // 读数拖拽：屏幕 +36px → 局部 18px → 18/1.8/10*0.5 = 0.5mm
+      elements.thimbleGroup.dispatchEvent(
+        new MouseEvent('mousedown', {
+          bubbles: true,
+          clientX: 100,
+          clientY: 100
+        })
+      );
+      document.dispatchEvent(
+        new MouseEvent('mousemove', {
+          bubbles: true,
+          clientX: 136,
+          clientY: 100
+        })
+      );
+      expect(viewState.currentReading).toBeCloseTo(2.5, 10);
+      document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+
+      // 整机拖拽：屏幕 (+60, +40) → 局部 (+30, +20)
+      elements.caseEl.dispatchEvent(
+        new MouseEvent('mousedown', { bubbles: true, clientX: 0, clientY: 0 })
+      );
+      document.dispatchEvent(
+        new MouseEvent('mousemove', { bubbles: true, clientX: 60, clientY: 40 })
+      );
+      expect(viewState.sysX).toBe(30);
+      expect(viewState.sysY).toBe(20);
+      expect(elements.systemEl.style.transform).toBe(
+        'translate(30px, 20px) scale(1.5)'
+      );
+      document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+      unbind();
+      viewport.remove();
+    });
+
     it('does not case-drag on a narrow host so the viewport can pan', () => {
       const { viewState, elements, unbind } = setup();
       const root = document.createElement('div');

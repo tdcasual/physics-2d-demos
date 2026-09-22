@@ -1,8 +1,7 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
-import { createControlCard } from '../../ui/components/ControlCard';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { GRAPH_BODY_ATTR } from '../../platform/stage-chrome';
 import { tickerTapeControlsSchema } from './controls-schema';
-import { createLabTable } from './lab-table';
 import { createTickerTapeScene } from './scene.entry';
 import { tickerTapeMeta } from './scene.meta';
 
@@ -13,8 +12,9 @@ bootScenePage({
     controlColumns: 'auto',
     readoutCollapsed: true,
     hasGraph: true,
-    graphCollapsed: true,
-    dataCollapsed: false
+    graphInitiallyHidden: true,
+    floatData: false,
+    dataWorkspace: true
   },
   createScene: ({ canvas, theme, mode, demoHints }) =>
     createTickerTapeScene({ canvas, theme, mode, demoHints }),
@@ -65,48 +65,13 @@ bootScenePage({
           tape.setParams({ showA: Boolean(value) });
           writeParam?.('showA', value ? 1 : 0);
         }
-        syncTable();
         render();
       },
       onAction: (key) => {
         if (key === 'fillRuler') tape.fillFromRuler();
-        syncTable();
         render();
       }
     });
-
-    const table = createLabTable((row, index, value) => {
-      if (row === 'x') tape.setMeasuredX(index, value);
-      else if (row === 'delta') tape.setDeltaX(index, value);
-      else tape.setV(index, value);
-      syncTable();
-      render();
-    });
-    const dataSlot = document.querySelector('[data-lab-data-slot]');
-    let tableCard: ReturnType<typeof createControlCard> | null = null;
-    if (dataSlot instanceof HTMLElement) {
-      dataSlot.replaceChildren();
-      dataSlot.appendChild(table.element);
-    } else {
-      tableCard = createControlCard('实验数据', { span: 'full' });
-      tableCard.element.dataset.span = 'full';
-      tableCard.body.appendChild(table.element);
-      mount.appendChild(tableCard.element);
-    }
-
-    function syncTable(): void {
-      const s = tape.getState();
-      table.setModel({
-        labels: s.trueXCm.map((_, i) => String(i)),
-        xCm: s.measuredXCm,
-        deltaXCm: s.deltaXCm,
-        vMs: s.vMs,
-        aMs2: s.aMs2,
-        showA: s.showA
-      });
-    }
-
-    syncTable();
 
     const plotBar = document.createElement('div');
     plotBar.className = 'lab-plot-toolbar';
@@ -124,9 +89,9 @@ bootScenePage({
     dirtyNote.hidden = true;
     dirtyNote.textContent = '数据已改';
     plotBar.append(scatterBtn, fitBtn, dirtyNote);
-    const graphBody = document.querySelector(
-      '#lab-panel-graph .lab-float-body'
-    );
+    // 描点工具条锚点 = 布局契约的 [data-graph-body]（lab 的 .lab-float-body
+    // 由布局创建点打标）；查不到时显式 no-op，不落回其他层级
+    const graphBody = document.querySelector(`[${GRAPH_BODY_ATTR}]`);
     const graphSlot = document.querySelector(
       '#lab-panel-graph .lab-graph-slot'
     );
@@ -155,7 +120,6 @@ bootScenePage({
     syncPlotBar();
 
     const unsub = tape.subscribe(() => {
-      if (!tape.getState().playing) syncTable();
       syncPlotBar();
     });
 
@@ -168,8 +132,6 @@ bootScenePage({
       },
       dispose: () => {
         unsub();
-        table.dispose();
-        tableCard?.dispose();
         renderer.dispose();
         plotBar.remove();
       }

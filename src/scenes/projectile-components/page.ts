@@ -110,8 +110,10 @@ bootScenePage({
     let disposed = false;
     function ensureLabReadout(): void {
       if (disposed) return;
+      // lab 的读数挂载点 = 布局创建点打标的 [data-readout-slot]
+      // （.lab-readout-slot）；限定 lab scope 保持本函数 lab-only 语义
       const slot = document.querySelector(
-        '.lab-stage-layout .lab-readout-slot'
+        '.lab-stage-layout [data-readout-slot]'
       );
       if (!(slot instanceof HTMLElement)) return;
       if (!slot.querySelector('.readout-panel')) {

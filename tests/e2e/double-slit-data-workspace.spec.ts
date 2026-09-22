@@ -11,6 +11,12 @@ import {
 } from '../../src/scenes/double-slit/scene.sim';
 import { sampleCaliperAlignedReadingsCm } from '../../src/instruments/interference-vernier-caliper/renderer/alignment';
 import { slitDistanceMm } from '../../src/scenes/double-slit/data-task';
+import {
+  expectCanvasLayoutNotInflated,
+  expectCanvasNotBlank,
+  readStageZoomMetrics,
+  waitForBoost
+} from '../helpers/stage-zoom-metrics';
 
 const SHOT_DIR = join(process.cwd(), 'artifacts', 'data-workspace');
 const LAMBDA_NM = 532;
@@ -344,10 +350,7 @@ async function checkField(
 ) {
   const input = page.locator(`[data-field="${field}"][data-trial="${trial}"]`);
   await input.fill(raw);
-  await page
-    .locator(`button[aria-label*="校对第 ${trial + 1} 组"]`)
-    .nth(['x1', 'x2', 'n', 'D', 'deltaX'].indexOf(field))
-    .click();
+  await input.press('Enter');
 }
 
 test.describe('double-slit data workspace', () => {
@@ -408,10 +411,11 @@ test.describe('double-slit data workspace', () => {
     await expect(page.locator('[data-slot="data-workspace"]')).toBeVisible();
     await expect(page.locator('.data-workspace-table')).toBeVisible();
     await expect(page.locator('[data-data-workspace-chart]')).toHaveCount(0);
-    await expect(page.locator('.data-workspace-summary-context')).toContainText(
+    await expect(page.locator('.data-workspace-summary-context')).toBeHidden();
+    await expect(page.locator('.data-workspace-knowns').first()).toContainText(
       /0\.20\s*mm/
     );
-    await expect(page.locator('.data-workspace-summary-context')).toContainText(
+    await expect(page.locator('.data-workspace-knowns').first()).toContainText(
       /70\s*cm/
     );
     await expect(page.locator('[aria-label="平均 Δx（mm）"]')).toBeVisible();
@@ -505,7 +509,7 @@ test.describe('double-slit data workspace', () => {
       fullPage: true
     });
 
-    await page.locator('.data-workspace-leave').click();
+    await page.locator('.data-workspace-entry').click();
     await expect(page.locator('[data-slot="data-workspace"]')).toHaveCount(0);
     const after = await page.evaluate(() => {
       const el = document.querySelector('.layout-master') as HTMLElement | null;
@@ -570,7 +574,7 @@ test.describe('double-slit data workspace', () => {
     await page
       .locator('[data-field="x1"][data-trial="0"]')
       .fill(dragged.mm.toFixed(2));
-    await page.locator('button[aria-label="校对第 1 组 x₁"]').click();
+    await page.locator('[data-field="x1"][data-trial="0"]').press('Enter');
     await expect(page.locator('.data-workspace-status').first()).toContainText(
       /亮纹|不符/
     );
@@ -580,7 +584,7 @@ test.describe('double-slit data workspace', () => {
     await checkField(page, 'x1', 0, x1Drag.mm.toFixed(2));
 
     // Different instrument: student leaves, switches, returns; old x1 is stale.
-    await page.locator('.data-workspace-leave').click();
+    await page.locator('.data-workspace-entry').click();
     await page.locator('button[data-preset-id="micrometer"]').click();
     await expect(
       page.locator('button[data-preset-id="micrometer"]')
@@ -599,14 +603,14 @@ test.describe('double-slit data workspace', () => {
     await page
       .locator('[data-field="x2"][data-trial="0"]')
       .fill(micrometer.mm.toFixed(3));
-    await page.locator('button[aria-label="校对第 1 组 x₂"]').click();
+    await page.locator('[data-field="x2"][data-trial="0"]').press('Enter');
     await expect(
       page.locator(
         '.data-workspace-field:has([data-field="x2"][data-trial="0"]) .data-workspace-status'
       )
     ).toHaveText('x1 与 x2 须用同一台仪器、同一单位基准');
 
-    await page.locator('.data-workspace-leave').click();
+    await page.locator('.data-workspace-entry').click();
     await page.locator('button[data-preset-id="caliper"]').click();
     await expect(
       page.locator('button[data-preset-id="caliper"]')
@@ -692,7 +696,7 @@ test.describe('double-slit data workspace', () => {
 
     const x1Input = page.locator('[data-field="x1"][data-trial="0"]');
     await x1Input.fill('1.00');
-    await page.locator('button[aria-label="校对第 1 组 x₁"]').click();
+    await x1Input.press('Enter');
     await expect(page.locator('.data-workspace-result')).toBeHidden();
     await expect(page.locator('[aria-label="平均 Δx（mm）"]')).toBeDisabled();
     await expect(
@@ -700,7 +704,7 @@ test.describe('double-slit data workspace', () => {
     ).toBeDisabled();
     await expect(page.locator('.data-workspace-summary')).toBeVisible();
 
-    await page.locator('.data-workspace-leave').click();
+    await page.locator('.data-workspace-entry').click();
     await expect(page.locator('[data-slot="data-workspace"]')).toHaveCount(0);
     await expect(
       page.locator('.teaching-readout-panel, .readout-panel')
@@ -760,7 +764,7 @@ test.describe('double-slit data workspace', () => {
       );
     expect(ids).toEqual(['row-1', 'row-2', 'row-3']);
 
-    const row2Check = page.locator('button[aria-label="校对第 2 组 x₁"]');
+    const row2Check = page.locator('button[aria-label="校对第 2 组"]');
     await row2Check.scrollIntoViewIfNeeded();
     const checkBox = await row2Check.boundingBox();
     const actionsBox = await page
@@ -878,7 +882,8 @@ test.describe('double-slit data workspace', () => {
     await expect(page.locator('.data-workspace-summary-note')).toContainText(
       /当前 2 组/
     );
-    await expect(page.locator('.data-workspace-summary-context')).toContainText(
+    await expect(page.locator('.data-workspace-summary-context')).toBeHidden();
+    await expect(page.locator('.data-workspace-knowns').first()).toContainText(
       /70\s*cm/
     );
     await page.locator('[aria-label="删除第 2 组"]').click();
@@ -898,7 +903,7 @@ test.describe('double-slit data workspace', () => {
     expect(aligned.aligned).toBe(true);
     const nearbyTick = (Math.round(aligned.mm / 0.02) * 0.02 + 0.02).toFixed(2);
     await page.locator('[data-field="x1"][data-trial="0"]').fill(nearbyTick);
-    await page.locator('button[aria-label="校对第 1 组 x₁"]').click();
+    await page.locator('[data-field="x1"][data-trial="0"]').press('Enter');
     await expect(
       page.locator(
         '.data-workspace-field:has([data-field="x1"][data-trial="0"]) .data-workspace-status'
@@ -1056,17 +1061,17 @@ test.describe('double-slit data workspace', () => {
     await page
       .locator('[data-field="x1"][data-trial="0"]')
       .fill(center.toFixed(2));
-    await page.locator('button[aria-label="校对第 1 组 x₁"]').click();
+    await page.locator('[data-field="x1"][data-trial="0"]').press('Enter');
     await expect(x1Status).toContainText(/三位小数/);
     await page
       .locator('[data-field="x1"][data-trial="0"]')
       .fill(`${low.toFixed(3)} mm`);
-    await page.locator('button[aria-label="校对第 1 组 x₁"]').click();
+    await page.locator('[data-field="x1"][data-trial="0"]').press('Enter');
     await expect(x1Status).toHaveText('估读在合理范围内');
     await page
       .locator('[data-field="x1"][data-trial="0"]')
       .fill((center + 0.006).toFixed(3));
-    await page.locator('button[aria-label="校对第 1 组 x₁"]').click();
+    await page.locator('[data-field="x1"][data-trial="0"]').press('Enter');
     const error = page.locator(
       '.data-workspace-field:has([data-field="x1"][data-trial="0"]) .data-workspace-status'
     );
@@ -1087,7 +1092,7 @@ test.describe('double-slit data workspace', () => {
 
     await page.locator('.data-workspace-entry').click();
     await expect(toggle).toBeHidden();
-    await page.locator('.data-workspace-leave').click();
+    await page.locator('.data-workspace-entry').click();
     await expect(toggle).toBeVisible();
     await expect(toggle).toHaveText('隐藏控制面板');
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
@@ -1106,7 +1111,7 @@ test.describe('double-slit data workspace', () => {
     );
     await page.locator('.data-workspace-entry').click();
     await expect(toggle).toBeHidden();
-    await page.locator('.data-workspace-leave').click();
+    await page.locator('.data-workspace-entry').click();
     await expect(toggle).toBeVisible();
     await expect(toggle).toHaveText('显示控制面板');
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
@@ -1293,7 +1298,7 @@ test.describe('double-slit data workspace', () => {
         expect(knobBox.x).toBeLessThan(hostBox!.x + hostBox!.width);
       }
 
-      await page.locator('.data-workspace-leave').click();
+      await page.locator('.data-workspace-entry').click();
       await expect(page.locator('.mobile-tab-bar')).toBeVisible();
     });
 
@@ -1505,8 +1510,106 @@ test.describe('double-slit data workspace', () => {
   });
 });
 
+test('entry button text stays inside its box and the workspace stays single-step', async ({
+  page
+}) => {
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 375, height: 812 }
+  ]) {
+    await page.setViewportSize(viewport);
+    await gotoStep6Mono(page);
+    const btn = page.locator('.data-workspace-entry');
+    await expect(btn).toBeVisible();
+    const overflow = await btn.evaluate((el) => ({
+      clientWidth: el.clientWidth,
+      scrollWidth: el.scrollWidth,
+      clientHeight: el.clientHeight,
+      scrollHeight: el.scrollHeight
+    }));
+    expect(
+      overflow.scrollWidth,
+      `${viewport.width}px width`
+    ).toBeLessThanOrEqual(overflow.clientWidth + 1);
+    expect(
+      overflow.scrollHeight,
+      `${viewport.width}px height`
+    ).toBeLessThanOrEqual(overflow.clientHeight + 1);
+    await btn.click();
+    await expect(page.locator('[data-slot="data-workspace"]')).toBeVisible();
+    await expect(
+      page.locator('.data-workspace-panel [role="tablist"]')
+    ).toHaveCount(0);
+    await expect(page.locator('.layout-master')).not.toHaveClass(
+      /is-data-workspace-stage-lock/
+    );
+    await expect(page.locator('.data-workspace-table')).toHaveAttribute(
+      'data-orientation',
+      'trials'
+    );
+    await page.locator('.data-workspace-entry').click();
+  }
+});
+
 test('opt-out scenes do not gain a data-workspace entry', async ({ page }) => {
   await page.goto(scenePage('projectile'), { waitUntil: 'domcontentloaded' });
   await waitForFirstFrame(page, { remainderMs: 400 });
   await expect(page.locator('.data-workspace-entry')).toHaveCount(0);
+});
+
+test('workspace pan/zoom scales the stage while instruments stay draggable', async ({
+  page
+}) => {
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await gotoStep6Mono(page);
+  await page.locator('.data-workspace-entry').click();
+  const viewport = page.locator('.stage-viewport');
+  await expect(viewport).toBeVisible();
+
+  // 防回归：panzoom 控件必须保持小按钮簇。split-right 的
+  // 「槽位直接子元素撑满 100%」规则曾把它拉成覆盖全舞台的
+  // 不透明遮罩（不透明背景 + z-20 + pointer-events:none），
+  // 仪器在数据处理页整片"消失"但几何断言全部通过。
+  const controlsBox = await page
+    .locator('.stage-panzoom-controls')
+    .boundingBox();
+  expect(controlsBox).not.toBeNull();
+  expect(controlsBox!.width).toBeLessThan(220);
+  expect(controlsBox!.height).toBeLessThan(120);
+
+  const before = await readInstrument(page);
+  await dragCaliperSlider(page, 18);
+  const dragged = await readInstrument(page);
+  expect(dragged.mm).not.toBe(before.mm);
+
+  const box = await page.locator('.teaching-stage-slot').boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + 24, box!.y + 20);
+  await page.mouse.wheel(0, -240);
+  await expect
+    .poll(async () => {
+      const transform = await viewport.evaluate(
+        (el) => (el as HTMLElement).style.transform
+      );
+      const match = transform.match(/scale\(([^)]+)\)/);
+      return match ? Number(match[1]) : 0;
+    })
+    .toBeGreaterThan(1);
+
+  await waitForBoost(page, '.teaching-stage-canvas');
+  const zoomed = await readStageZoomMetrics(
+    page,
+    '.teaching-stage-canvas',
+    '.teaching-stage-slot'
+  );
+  expectCanvasLayoutNotInflated(zoomed);
+  expectCanvasNotBlank(zoomed);
+  const geo = await instrumentVisualGeo(page);
+  expect(geo.visual.bottom - geo.visual.top).toBeGreaterThan(40);
+  expect(geo.visual.right - geo.visual.left).toBeGreaterThan(40);
+
+  const mid = await readInstrument(page);
+  await dragCaliperSlider(page, -16);
+  const afterZoom = await readInstrument(page);
+  expect(afterZoom.mm).not.toBe(mid.mm);
 });

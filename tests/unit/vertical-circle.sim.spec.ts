@@ -417,6 +417,7 @@ describe('vertical-circle stage transform', () => {
   it('treats mobile-stack as a non-floating readout', () => {
     const root = document.createElement('div');
     root.className = 'mobile-stack-layout';
+    root.setAttribute('data-readout-overlay', 'false');
     root.setAttribute('data-testid', 'mobile-stack-layout');
     const canvas = document.createElement('canvas');
     root.appendChild(canvas);
@@ -432,6 +433,7 @@ describe('vertical-circle stage transform', () => {
   it('keeps the stage left of a desktop floating overlay', () => {
     const root = document.createElement('div');
     root.className = 'split-right-shell';
+    root.setAttribute('data-readout-overlay', 'true');
     root.setAttribute('data-testid', 'split-right-layout');
     const canvas = document.createElement('canvas');
     root.appendChild(canvas);

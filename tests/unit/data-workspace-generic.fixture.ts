@@ -59,12 +59,71 @@ export const kinematicsWorkspaceSpec: DataWorkspaceSpec = {
   completionField: 'meanSpeed'
 };
 
-export function createKinematicsHost(): {
+/** Two-step + transposed + fixed rows. No scene-specific copy. */
+export const kinematicsChartWorkspaceSpec: DataWorkspaceSpec = {
+  id: 'kinematics-chart',
+  title: '测平均速率',
+  chartAnalysis: true,
+  enabledSteps: ['data', 'calculation', 'chartAnalysis'],
+  trialCount: 3,
+  minRows: 3,
+  maxRows: 3,
+  initialRows: 3,
+  stageMode: 'full',
+  tableOrientation: 'fields',
+  stageLock: true,
+  rowFields: kinematicsWorkspaceSpec.rowFields,
+  summaryFields: [
+    ...kinematicsWorkspaceSpec.summaryFields,
+    {
+      id: 'fitSlope',
+      label: '图线斜率',
+      unit: 'm/s²',
+      inputMode: 'decimal',
+      gated: true,
+      step: 'chartAnalysis',
+      dependsOn: [{ scope: 'summary', field: 'meanSpeed' }],
+      readinessHint: '请先完成数据处理后再校对'
+    }
+  ],
+  result: {
+    field: 'fitSlope',
+    template: '图线斜率 = {value} {unit}',
+    digits: 2
+  },
+  completionField: 'fitSlope'
+};
+
+export function createSpecHost(
+  spec: DataWorkspaceSpec,
+  options?: {
+    naCells?: ReadonlyArray<{ trialIndex: number; field: string }>;
+  }
+): {
   host: DataWorkspaceHost;
   getLiveSession: () => ReturnType<typeof createEmptySession>;
 } {
-  const spec = kinematicsWorkspaceSpec;
-  let session = createEmptySession(spec);
+  const naCells = options?.naCells ?? [];
+  const naState = {
+    raw: '—',
+    value: Number.NaN,
+    checked: true as const,
+    stale: false,
+    feedback: { ok: true, message: '无需填写' }
+  };
+  const restoreNa = (
+    current: ReturnType<typeof createEmptySession>
+  ): ReturnType<typeof createEmptySession> => {
+    if (naCells.length === 0) return current;
+    const next = cloneSession(current);
+    for (const cell of naCells) {
+      const trial = next.trials[cell.trialIndex];
+      if (!trial) continue;
+      trial.fields[cell.field] = { ...naState };
+    }
+    return next;
+  };
+  let session = restoreNa(createEmptySession(spec));
   const host: DataWorkspaceHost = {
     getSpec: () => spec,
     getEligibility: () => ({ ok: true }),
@@ -76,25 +135,27 @@ export function createKinematicsHost(): {
     },
     submitField(input) {
       const value = Number(input.raw);
-      session = writeCheckedField(
-        session,
-        input.trialIndex,
-        input.field,
-        {
-          raw: input.raw,
-          value,
-          checked: Number.isFinite(value),
-          stale: false,
-          feedback: Number.isFinite(value)
-            ? { ok: true, message: 'ok' }
-            : { ok: false, layer: 'format', message: '无效' }
-        },
-        spec
+      session = restoreNa(
+        writeCheckedField(
+          session,
+          input.trialIndex,
+          input.field,
+          {
+            raw: input.raw,
+            value,
+            checked: Number.isFinite(value),
+            stale: false,
+            feedback: Number.isFinite(value)
+              ? { ok: true, message: 'ok' }
+              : { ok: false, layer: 'format', message: '无效' }
+          },
+          spec
+        )
       );
       return { feedback: { ok: true, message: 'ok' }, session };
     },
     applyDrafts(drafts: readonly DataWorkspaceDraft[]) {
-      session = applyFieldDrafts(session, spec, drafts);
+      session = restoreNa(applyFieldDrafts(session, spec, drafts));
       return freezeSession(cloneSession(session));
     },
     resetSession() {
@@ -118,6 +179,22 @@ export function createKinematicsHost(): {
     host,
     getLiveSession: () => session
   };
+}
+
+export function createKinematicsHost(): {
+  host: DataWorkspaceHost;
+  getLiveSession: () => ReturnType<typeof createEmptySession>;
+} {
+  return createSpecHost(kinematicsWorkspaceSpec);
+}
+
+export function createKinematicsChartHost(): {
+  host: DataWorkspaceHost;
+  getLiveSession: () => ReturnType<typeof createEmptySession>;
+} {
+  return createSpecHost(kinematicsChartWorkspaceSpec, {
+    naCells: [{ trialIndex: 0, field: 'speed' }]
+  });
 }
 
 export function kinematicsReady(

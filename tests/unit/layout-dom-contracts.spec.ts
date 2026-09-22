@@ -23,7 +23,8 @@ describe('layout DOM compatibility contracts', () => {
       switchLayout() {},
       getCurrentLayoutId: () => 'split-right',
       getAvailableLayouts: () => [],
-      on: () => () => {}
+      on: () => () => {},
+      requestStageRepaint() {}
     };
   }
 

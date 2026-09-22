@@ -339,6 +339,7 @@ describe('oscilloscope view contract', () => {
 
     const split = document.createElement('div');
     split.className = 'layout-srgb-graph-bottom';
+    split.setAttribute('data-readout-overlay', 'true');
     split.dataset.testid = 'split-right-graph-bottom-layout';
     const splitSlot = document.createElement('div');
     const splitCanvas = mockCanvas(1280, 720);
@@ -368,6 +369,7 @@ describe('oscilloscope view contract', () => {
 
     const lab = document.createElement('div');
     lab.className = 'lab-stage-layout';
+    lab.setAttribute('data-readout-overlay', 'true');
     lab.dataset.testid = 'lab-stage-layout';
     const labSlot = document.createElement('div');
     labSlot.className = 'lab-stage-slot';

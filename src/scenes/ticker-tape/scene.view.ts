@@ -1,4 +1,4 @@
-import { scaledSize } from '../../core/canvas-sizing';
+import { readElementLayoutSize, scaledSize } from '../../core/canvas-sizing';
 import { getThemeColors } from '../../core/colors';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import { getRenderTokens } from '../../platform/standards';
@@ -8,8 +8,12 @@ import {
   clampOriginTickIndex,
   fitLineDroppingOutliers,
   fitQuadratic,
+  RULER_RANGE_CM,
   type TickerTapeState
 } from './scene.sim';
+
+/** 纸带第一个打点左侧的小前置量（cm），纸带左端不贴画布内边。 */
+const TAPE_LEAD_CM = 0.5;
 
 export type CreateTickerTapeViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -50,10 +54,10 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     canvas,
     sizing: { mode: 'raw' },
     measure: (c) => {
-      const rect = c.getBoundingClientRect();
+      const size = readElementLayoutSize(c);
       return {
-        width: Math.max(1, Math.floor(rect.width)),
-        height: Math.max(1, Math.floor(rect.height))
+        width: Math.max(1, Math.floor(size.width)),
+        height: Math.max(1, Math.floor(size.height))
       };
     }
   });
@@ -61,10 +65,10 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     canvas: null,
     sizing: { mode: 'raw' },
     measure: (c) => {
-      const rect = c.getBoundingClientRect();
+      const size = readElementLayoutSize(c);
       return {
-        width: Math.max(1, Math.floor(rect.width)),
-        height: Math.max(1, Math.floor(rect.height))
+        width: Math.max(1, Math.floor(size.width)),
+        height: Math.max(1, Math.floor(size.height))
       };
     }
   });
@@ -72,6 +76,8 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
   let onOriginDrag: ((tickIndex: number) => void) | null = null;
   let draggingOrigin = false;
   let hoverOrigin = false;
+  /** 抓取点相对尺零刻度线的偏移（px）：拖动时尺随手走，不在按下瞬间跳吸。 */
+  let grabOffsetPx = 0;
   type TapeHit = {
     originPx: number;
     tapeTop: number;
@@ -80,6 +86,8 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     hitR: number;
     rulerLeft: number;
     rulerRight: number;
+    tapeBandY: number;
+    tapeBandH: number;
     nearestTick: (px: number) => number;
   };
   let tapeHit: TapeHit | null = null;
@@ -162,35 +170,51 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     ctx.fillRect(0, 0, w, h);
 
     const pad = scaledSize(16, scale, 8);
-    const tapeH = Math.max(tokens.pointRadiusPx * 1.45, h * 0.072);
-    const rulerH = Math.max(tokens.pointRadiusPx * 4.2, h * 0.185);
     const gap = scaledSize(8, scale, 5);
-    const tapeY = h * 0.3;
+    const topReserve = scaledSize(20, scale, 12);
+    const captionGap = scaledSize(18, scale, 12);
+    const chromeTop = scaledSize(52, scale, 48);
+    const minTapeH = tokens.pointRadiusPx * 1.45;
+    const minRulerH = tokens.pointRadiusPx * 4.2;
+    const capPx = scaledSize(28, scale, 20);
+    const endPadPx = scaledSize(14, scale, 10);
     const originDot = state.timingDots[state.originTickIndex];
     const firstDot = state.timingDots[0];
-    const lastDot = state.timingDots[state.timingDots.length - 1];
-    if (!originDot || !firstDot || !lastDot) return;
-    const minXCm = firstDot.xCm;
-    const tapeInset = Math.max(scaledSize(12, scale, 8), rulerH * 0.14);
+    if (!originDot || !firstDot) return;
+    // 窗口锚定纸带：纸带在屏幕上静止，拖尺时尺沿纸带滑动，
+    // 尺零刻度吸附在所选计数点（O）上。
+    const minXCm = firstDot.xCm - TAPE_LEAD_CM;
+    const tapeInset = Math.max(scaledSize(12, scale, 8), capPx);
     const tapeLeft = pad + tapeInset;
     const tapeW = Math.max(scaledSize(24, scale, 16), w - pad - tapeLeft);
-    // 纸带按原画贴合：70 cm 铺满舞台，点迹密度与原画一致，不随尺放大。
-    const tapeFitCm = 70;
-    const tapeCmToPx = tapeW / (tapeFitCm * 1.04);
-    // 尺单独放大：1 mm 像素 = 原画 1 mm 的 5 倍；量程 15 cm。
-    const rulerMmPxGain = 5;
-    const rulerLengthCm = 15;
-    const rulerCmToPx = tapeCmToPx * rulerMmPxGain;
-    const capPx = Math.max(scaledSize(28, scale, 20), rulerH * 0.42);
-    const endPadPx = scaledSize(14, scale, 10);
-    const xPx = (xCm: number) => tapeLeft + (xCm - minXCm) * tapeCmToPx;
+    // 纸带与尺共用同一厘米比例：学生把点垂直投影到尺上读数，
+    // 读数必须等于纸带真值（cm）。可视窗口约 19 cm，桌面端 1 mm 数像素可估读。
+    const tapeFitCm = 18.7;
+    const cmToPx = tapeW / (tapeFitCm * 1.04);
+    const rulerLengthCm = RULER_RANGE_CM;
+    const xPx = (xCm: number) => tapeLeft + (xCm - minXCm) * cmToPx;
     const originPx = xPx(originDot.xCm);
     const rulerLeft = originPx - capPx;
-    const rulerBodyW = rulerLengthCm * rulerCmToPx;
+    const rulerBodyW = rulerLengthCm * cmToPx;
     const rulerW = capPx + rulerBodyW + endPadPx;
     const rulerRight = rulerLeft + rulerW;
     const maxRelCm = rulerLengthCm;
     const rulerEndPx = originPx + rulerBodyW;
+    // 15 cm 实尺：高度约为尺长的 1/8~1/10；纸带约为尺高的一半，
+    // 明显更薄但点迹上下有喘息空间。不随舞台高度拉伸。
+    const rulerAspect = 10;
+    const naturalRulerH = Math.max(minRulerH, rulerBodyW / rulerAspect);
+    const naturalTapeH = Math.max(minTapeH, naturalRulerH * 0.5);
+    const chromeAndCaption = chromeTop + pad + topReserve + gap + captionGap;
+    const availableBars = Math.max(minTapeH + minRulerH, h - chromeAndCaption);
+    const naturalBars = naturalTapeH + naturalRulerH;
+    const barFit =
+      naturalBars > 0 ? Math.min(1, availableBars / naturalBars) : 1;
+    const tapeH = naturalTapeH * barFit;
+    const rulerH = naturalRulerH * barFit;
+    const blockH = topReserve + tapeH + gap + rulerH + captionGap;
+    const leftover = h - chromeTop - pad - blockH;
+    const tapeY = chromeTop + topReserve + Math.max(0, leftover / 2);
 
     roundRectPath(ctx, tapeLeft, tapeY, tapeW, tapeH, scaledSize(4, scale, 2));
     ctx.fillStyle = colors.tape;
@@ -235,8 +259,8 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     ctx.clip();
     const maxMm = Math.ceil(maxRelCm * 10);
     for (let cm = 0; cm * 10 <= maxMm; cm += 2) {
-      const px0 = originPx + cm * rulerCmToPx;
-      const px1 = originPx + (cm + 1) * rulerCmToPx;
+      const px0 = originPx + cm * cmToPx;
+      const px1 = originPx + (cm + 1) * cmToPx;
       if (px1 < rulerLeft || px0 > rulerRight) continue;
       ctx.fillStyle = colors.rulerAlt;
       ctx.fillRect(px0, rulerY, px1 - px0, rulerH);
@@ -256,7 +280,7 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     ctx.textAlign = 'center';
     ctx.lineWidth = Math.max(1, tokens.strokePx * 0.12);
     for (let mm = 0; mm <= maxMm; mm++) {
-      const px = originPx + (mm / 10) * rulerCmToPx;
+      const px = originPx + (mm / 10) * cmToPx;
       if (px < originPx - 0.5 || px > rulerEndPx + 0.5) continue;
       const isCm = mm % 10 === 0;
       const isHalf = mm % 5 === 0;
@@ -371,6 +395,8 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
       hitR,
       rulerLeft,
       rulerRight,
+      tapeBandY: tapeY,
+      tapeBandH: tapeH,
       nearestTick: (px: number) => {
         let best = state.originTickIndex;
         let bestDist = Number.POSITIVE_INFINITY;
@@ -381,7 +407,7 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
             best = i;
           }
         }
-        return clampOriginTickIndex(best);
+        return clampOriginTickIndex(best, state.tapeKind);
       }
     };
   }
@@ -673,9 +699,10 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     if (px === null || py === null || !tapeHit) return;
     if (!hitOrigin(px, py)) return;
     draggingOrigin = true;
+    grabOffsetPx = px - tapeHit.originPx;
     stage.canvas?.setPointerCapture(e.pointerId);
     updateCursor(px, py);
-    onOriginDrag?.(tapeHit.nearestTick(px));
+    onOriginDrag?.(tapeHit.nearestTick(px - grabOffsetPx));
   }
 
   function handlePointerMove(e: PointerEvent): void {
@@ -684,11 +711,12 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     if (px === null || py === null) return;
     updateCursor(px, py);
     if (!draggingOrigin || !tapeHit) return;
-    onOriginDrag?.(tapeHit.nearestTick(px));
+    onOriginDrag?.(tapeHit.nearestTick(px - grabOffsetPx));
   }
 
   function handlePointerUp(e: PointerEvent): void {
     draggingOrigin = false;
+    grabOffsetPx = 0;
     const px = canvasLocalX(e);
     const py = canvasLocalY(e);
     if (px !== null && py !== null) updateCursor(px, py);
@@ -713,8 +741,21 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
   }
 
   function render(state: TickerTapeState): void {
+    if (stage.canvas) {
+      stage.canvas.dataset.originTickIndex = String(state.originTickIndex);
+    }
     stage.ensureSized();
     drawTape(state);
+    if (stage.canvas && tapeHit) {
+      // e2e 拖尺/纸带静止断言用的几何快照（CSS px，画布局部坐标）
+      stage.canvas.dataset.originPx = tapeHit.originPx.toFixed(1);
+      stage.canvas.dataset.rulerMidY = (
+        (tapeHit.rulerTop + tapeHit.tapeBottom) /
+        2
+      ).toFixed(1);
+      stage.canvas.dataset.tapeBandY = tapeHit.tapeBandY.toFixed(1);
+      stage.canvas.dataset.tapeBandH = tapeHit.tapeBandH.toFixed(1);
+    }
     if (graphStage.canvas) drawGraphs(state);
   }
 

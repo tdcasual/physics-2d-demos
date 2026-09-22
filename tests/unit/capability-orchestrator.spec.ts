@@ -62,9 +62,7 @@ vi.mock('../../src/app/layouts/capabilities', () => {
     createCapabilityDefinition: (decl: {
       id: CapabilityId;
       config?: unknown;
-    }) => factories[decl.id]?.(decl.config),
-    getCapabilityScope: (id: CapabilityId) => scopeMap[id] ?? 'layout',
-    CAPABILITY_SCOPES: scopeMap
+    }) => factories[decl.id]?.(decl.config)
   };
 });
 
@@ -88,7 +86,8 @@ function createCtx(): CapabilityContext {
     switchLayout: () => {},
     getCurrentLayoutId: () => 'test',
     getAvailableLayouts: () => [],
-    on: () => () => {}
+    on: () => () => {},
+    requestStageRepaint() {}
   };
 }
 

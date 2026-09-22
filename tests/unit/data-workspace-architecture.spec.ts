@@ -14,7 +14,16 @@ const FORBIDDEN = [
   'd·平均Δx',
   '测得波长',
   'Δx = D / n',
-  'D = x₂'
+  'D = x₂',
+  'aDiff',
+  'aFit',
+  'tapeX',
+  '逐差',
+  '纸带',
+  '计数点',
+  '打点计时器',
+  'ticker-tape',
+  'tickerTape'
 ];
 
 describe('data-workspace panel architecture', () => {
@@ -29,11 +38,15 @@ describe('data-workspace panel architecture', () => {
     expect(source).toContain('rowFields');
     expect(source).toContain('summaryFields');
     expect(source).toContain('applyDrafts');
+    expect(source).toContain('1 数据处理');
+    expect(source).toContain('2 图像分析');
+    expect(source).toContain('请先完成数据处理');
   });
 });
 
 const RUNTIME_MODULES = new Set([
   'src/app/layouts/capabilities/data-workspace',
+  'src/app/layouts/capabilities/stage-panzoom',
   'src/ui/components/data-workspace-panel',
   'src/platform/data-workspace',
   'src/scenes/double-slit/data-task',

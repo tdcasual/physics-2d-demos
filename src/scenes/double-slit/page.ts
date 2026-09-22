@@ -4,7 +4,6 @@
  * 支持步骤切换时动态更换控制区 schema
  */
 
-import '../../styles/capability/data-workspace.css';
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { doubleSlitMeta } from './scene.meta';
 import { createDoubleSlitScene } from './scene.entry';

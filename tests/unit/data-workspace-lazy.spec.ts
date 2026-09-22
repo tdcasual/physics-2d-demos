@@ -30,7 +30,8 @@ function createCtx(): CapabilityContext {
     switchLayout() {},
     getCurrentLayoutId: () => 'split-right',
     getAvailableLayouts: () => [],
-    on: () => () => {}
+    on: () => () => {},
+    requestStageRepaint() {}
   };
 }
 

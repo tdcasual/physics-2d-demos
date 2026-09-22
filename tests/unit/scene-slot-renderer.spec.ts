@@ -37,6 +37,7 @@ describe('renderSceneToSlots', () => {
     const scene: Scene = {
       id: 'test-scene',
       preferredLayout: 'test-layout',
+      requestStageRepaint() {},
       renderControl(container) {
         container.textContent = 'new control';
       },

@@ -1,5 +1,6 @@
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import type { DemoRenderHints } from '../../platform/demo-profile';
+import { readoutOccludesStage } from '../../platform/stage-readout';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import { magneticMirrorConstants, type MagneticMirrorState } from './scene.sim';
 
@@ -113,28 +114,7 @@ function containStage(
 }
 
 function hasFloatingReadout(canvas?: Element | null): boolean {
-  const anchor = canvas ?? document.body;
-  if (
-    anchor.closest('.mobile-stack-layout, [data-testid="mobile-stack-layout"]')
-  ) {
-    return false;
-  }
-  if (
-    anchor.closest('.split-right-shell, [data-testid="split-right-layout"]')
-  ) {
-    return true;
-  }
-  const panel = document.querySelector(
-    '.teaching-readout-panel, .srgb-readout-panel, .readout-panel'
-  );
-  if (panel instanceof HTMLElement && canvas?.parentElement) {
-    const position = getComputedStyle(panel).position;
-    return (
-      (position === 'absolute' || position === 'fixed') &&
-      panel.parentElement === canvas.parentElement
-    );
-  }
-  return true;
+  return readoutOccludesStage(canvas);
 }
 
 export function magneticMirrorStageLayoutFrom(

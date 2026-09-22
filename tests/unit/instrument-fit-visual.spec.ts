@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
+  ancestorZoomScale,
   fitFunctionalUnionToParent,
   fitTransformToParent,
   narrowInstrumentScale,
@@ -193,5 +194,107 @@ describe('fit-visual', () => {
     expect(narrowInstrumentScale(639, 425)).toBeCloseTo(1, 6);
     expect(narrowInstrumentScale(375, 425)).toBeCloseTo((375 - 8) / 425, 6);
     expect(narrowInstrumentScale(100, 425)).toBeCloseTo(0.3, 6);
+  });
+
+  it('ancestorZoomScale isolates ancestor transform zoom', () => {
+    const el = document.createElement('div');
+    // happy-dom: offsetWidth is 0 → falls back to 1
+    expect(ancestorZoomScale(el)).toBe(1);
+    Object.defineProperty(el, 'offsetWidth', { value: 400 });
+    el.getBoundingClientRect = () =>
+      ({
+        left: 20,
+        right: 820,
+        top: 40,
+        bottom: 440,
+        width: 800,
+        height: 400
+      }) as DOMRect;
+    expect(ancestorZoomScale(el)).toBe(2);
+  });
+
+  it('normalizes screen-space measurements under an ancestor zoom', () => {
+    // Stage panzoom viewport at k=2: every measured rect is 2× layout size.
+    // The slot above the viewport clips overflow — it is the zoom *window*
+    // and must not shrink the fit.
+    const slot = document.createElement('div');
+    slot.getBoundingClientRect = () =>
+      ({
+        left: 0,
+        right: 600,
+        top: 30,
+        bottom: 330,
+        width: 600,
+        height: 300
+      }) as DOMRect;
+    const viewport = document.createElement('div');
+    slot.appendChild(viewport);
+    Object.defineProperty(viewport, 'offsetWidth', { value: 400 });
+    viewport.getBoundingClientRect = () =>
+      ({
+        left: 0,
+        right: 800,
+        top: 0,
+        bottom: 400,
+        width: 800,
+        height: 400
+      }) as DOMRect;
+    // happy-dom getComputedStyle returns '' for transform/overflow; mock the
+    // resolved values a real browser would report.
+    const original = window.getComputedStyle.bind(window);
+    const spy = vi
+      .spyOn(window, 'getComputedStyle')
+      .mockImplementation((el: Element, pseudo?: string | null) => {
+        const cs = original(el, pseudo);
+        if (el === viewport) {
+          return Object.create(cs, {
+            transform: { value: 'matrix(2, 0, 0, 2, 0, 0)' },
+            overflowX: { value: 'visible' },
+            overflowY: { value: 'visible' }
+          }) as CSSStyleDeclaration;
+        }
+        if (el === slot) {
+          return Object.create(cs, {
+            overflowX: { value: 'hidden' },
+            overflowY: { value: 'hidden' }
+          }) as CSSStyleDeclaration;
+        }
+        return cs;
+      });
+    try {
+      const parent = document.createElement('div');
+      viewport.appendChild(parent);
+      parent.getBoundingClientRect = () =>
+        ({
+          left: 20,
+          right: 820,
+          top: 40,
+          bottom: 440,
+          width: 800,
+          height: 400
+        }) as DOMRect;
+      const root = document.createElement('div');
+      root.getBoundingClientRect = () =>
+        ({
+          left: 20,
+          right: 820,
+          top: 40,
+          bottom: 440,
+          width: 800,
+          height: 400
+        }) as DOMRect;
+      const fit = fitTransformToParent(
+        parent,
+        { left: 20, right: 1620, top: 40, bottom: 440 },
+        { pad: 0, maxScale: 2, root }
+      );
+      // Identical to the unzoomed 400×200 parent with an 800×200 union:
+      // scale 0.5, horizontally flush, vertically centered (ty = 50).
+      expect(fit.scale).toBeCloseTo(0.5, 6);
+      expect(fit.tx).toBeCloseTo(0, 6);
+      expect(fit.ty).toBeCloseTo(50, 6);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

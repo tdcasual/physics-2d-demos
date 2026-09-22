@@ -5,6 +5,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { capabilityFactories } from '../../src/app/layouts/capabilities';
+import { STAGE_CHROME_ATTR } from '../../src/platform/stage-chrome';
 import { SplitRightLayout } from '../../src/app/layouts/layouts/split-right/split-right';
 import { MobileStackLayout } from '../../src/app/layouts/layouts/mobile-stack/mobile-stack';
 import { SplitRightGraphBottomLayout } from '../../src/app/layouts/layouts/split-right-graph-bottom/split-right-graph-bottom';
@@ -47,6 +48,7 @@ function createTestContext(
     switchLayout: () => {},
     getCurrentLayoutId: () => 'test',
     getAvailableLayouts: () => [],
+    requestStageRepaint() {},
     ...overrides
   };
 }
@@ -77,7 +79,7 @@ describe('Capability factory registry', () => {
 
   it('each factory returns definition with correct id', () => {
     for (const id of expectedIds) {
-      const def = capabilityFactories[id]({});
+      const def = capabilityFactories[id]();
       expect(def.id).toBe(id);
       expect(typeof def.mount).toBe('function');
     }
@@ -504,7 +506,14 @@ describe('demo-profile capability', () => {
 
     expect(graph.parentElement).toBe(animation);
     expect(graph.classList.contains('is-demo-stage-graph')).toBe(true);
+    // 过继进 animation slot 期间是 slot 内 chrome，必须带自标属性
+    expect(graph.hasAttribute(STAGE_CHROME_ATTR)).toBe(true);
     expect(animation.classList.contains('is-demo-stage-with-graph')).toBe(true);
+
+    // 还原时移除自标属性，避免污染它在侧栏的常驻地
+    instance.update?.({ mode: 'normal', profile: null });
+    expect(graph.parentElement).toBe(sidebar);
+    expect(graph.hasAttribute(STAGE_CHROME_ATTR)).toBe(false);
     instance.dispose();
   });
 });
@@ -797,11 +806,15 @@ vi.mock('../../src/app/layouts/registry', () => {
         capabilities: [] as Array<{ id: string; config?: unknown }>
       })),
       getAllMetadata: vi.fn(() => []),
+      // demo-profile 能力的 demoCapable 查询：split-right 为 true，其余缺省 false
+      getMetadata: vi.fn((id: string) =>
+        id === 'split-right'
+          ? ({ id, demoCapable: true } as Record<string, unknown>)
+          : undefined
+      ),
       returnInstance: vi.fn(),
       clearPool: vi.fn()
-    },
-    saveLayoutPreference: vi.fn(),
-    getDefaultLayoutId: vi.fn(() => null)
+    }
   };
 });
 
@@ -892,11 +905,11 @@ describe('SplitRightLayout', () => {
     expect(slots.header).toBeInstanceOf(HTMLElement);
   });
 
-  it('setTheme syncs to document', async () => {
+  it('setTheme syncs to the container (documentElement is container-owned)', async () => {
     const layout = new SplitRightLayout(container, { hideHeader: true });
     await layout.mount();
     layout.setTheme('dark');
-    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    expect(container.getAttribute('data-theme')).toBe('dark');
   });
 
   it('getLayoutState / restoreLayoutState round-trip', async () => {

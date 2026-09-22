@@ -236,7 +236,8 @@ describe('internal-energy chrome', () => {
       switchLayout: () => undefined,
       getCurrentLayoutId: () => 'split-right-graph-bottom',
       getAvailableLayouts: () => [],
-      on: () => () => undefined
+      on: () => () => undefined,
+      requestStageRepaint: () => undefined
     };
     const instance = createDemoProfile().mount(
       {

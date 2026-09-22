@@ -1,6 +1,14 @@
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import {
+  cloneSession,
+  createEmptySession,
+  freezeSession,
+  type DataWorkspaceFieldResult,
+  type DataWorkspaceHost,
+  type DataWorkspaceSession
+} from '../../platform/data-workspace';
+import {
   clampTimeScale,
   createStandardSceneEntry
 } from '../scene-entry-helpers';
@@ -13,6 +21,7 @@ import {
   type TickerTapeState
 } from './scene.sim';
 import { createTickerTapeView } from './scene.view';
+import type { createTickerTapeDataWorkspace } from './data-task';
 
 const KIND_BY_INDEX: TapeKind[] = ['uniform', 'ua', 'ud', 'variable'];
 const NOISE_BY_INDEX: NoiseLevel[] = ['off', 'typical', 'large'];
@@ -71,8 +80,137 @@ export function createTickerTapeScene(
     getState: () => sim.getState(),
     resetView: () => view.reset()
   });
+
+  type InnerWorkspace = ReturnType<typeof createTickerTapeDataWorkspace>;
+  let innerWorkspace: InnerWorkspace | null = null;
+  let workspaceLoadPromise: Promise<void> | null = null;
+  let workspaceChromeOpen = false;
+  let hostRef: InnerWorkspace | null = null;
+
+  function emptyHostSession(): DataWorkspaceSession {
+    const session = createEmptySession(7);
+    session.active = workspaceChromeOpen;
+    return freezeSession(cloneSession(session));
+  }
+
+  function ensureDataWorkspace(): void {
+    if (innerWorkspace || workspaceLoadPromise) return;
+    workspaceLoadPromise = import('./data-task')
+      .then((mod) => {
+        innerWorkspace = mod.createTickerTapeDataWorkspace({
+          getState: () => sim.getState(),
+          getPlotStatus: () => view.getPlotStatus(sim.getState()),
+          writeBack: {
+            setMeasuredX: (index, value) => sim.setMeasuredX(index, value),
+            setDeltaX: (index, value) => sim.setDeltaX(index, value),
+            setV: (index, value) => sim.setV(index, value)
+          }
+        });
+        hostRef = innerWorkspace;
+        innerWorkspace.setActive(workspaceChromeOpen);
+        base.notify();
+      })
+      .catch((error: unknown) => {
+        console.error('[ticker-tape] 数据任务模块加载失败', error);
+      })
+      .finally(() => {
+        workspaceLoadPromise = null;
+      });
+  }
+
+  const inactiveEligibility = () => {
+    if (sim.getState().playing) {
+      return { ok: false as const, reason: '请先暂停纸带播放再处理数据' };
+    }
+    return { ok: false as const, reason: '数据任务加载中…' };
+  };
+
+  const dataWorkspace: DataWorkspaceHost & {
+    invalidateAll(reason: string): void;
+  } = {
+    getSpec() {
+      if (!innerWorkspace) {
+        throw new Error('[ticker-tape] data workspace not ready');
+      }
+      return innerWorkspace.getSpec();
+    },
+    getEligibility() {
+      return innerWorkspace?.getEligibility() ?? inactiveEligibility();
+    },
+    getSession() {
+      const session = innerWorkspace?.getSession() ?? emptyHostSession();
+      if (session.active === workspaceChromeOpen) return session;
+      return freezeSession(
+        cloneSession({ ...session, active: workspaceChromeOpen })
+      );
+    },
+    getKnowns() {
+      return innerWorkspace?.getKnowns() ?? [];
+    },
+    getHint() {
+      return innerWorkspace?.getHint() ?? '';
+    },
+    setActive(active: boolean) {
+      workspaceChromeOpen = active;
+      if (active) ensureDataWorkspace();
+      innerWorkspace?.setActive(active);
+      base.renderAndEmit();
+      base.notify();
+    },
+    submitField(input) {
+      ensureDataWorkspace();
+      if (!innerWorkspace) {
+        return {
+          feedback: { ok: false, message: '数据任务加载中…' },
+          session: emptyHostSession()
+        } satisfies DataWorkspaceFieldResult;
+      }
+      const result = innerWorkspace.submitField(input);
+      base.renderAndEmit();
+      base.notify();
+      return result;
+    },
+    applyDrafts(drafts) {
+      ensureDataWorkspace();
+      if (!innerWorkspace) return emptyHostSession();
+      const session = innerWorkspace.applyDrafts(drafts);
+      base.notify();
+      return session;
+    },
+    resetSession() {
+      innerWorkspace?.resetSession();
+      base.notify();
+    },
+    invalidateAll(reason: string) {
+      innerWorkspace?.invalidateAll(reason);
+      base.notify();
+    },
+    syncInstrument() {
+      // Paper tape has no instrument to synchronize.
+    },
+    addTrial() {
+      ensureDataWorkspace();
+      if (!innerWorkspace) return emptyHostSession();
+      return innerWorkspace.addTrial();
+    },
+    removeTrial(rowId: string, confirmed = false) {
+      if (!innerWorkspace) {
+        return { session: emptyHostSession(), needsConfirm: false };
+      }
+      return innerWorkspace.removeTrial(rowId, confirmed);
+    }
+  };
+
+  // The task is small but must be ready before the shared toolbar enables entry.
+  ensureDataWorkspace();
+
   view.setOnOriginDrag((tickIndex) => {
+    if (dataWorkspace.getSession().active) return;
+    const before = sim.getState().originTickIndex;
     sim.setOriginTickIndex(tickIndex);
+    if (sim.getState().originTickIndex !== before) {
+      hostRef?.invalidateAll('纸带已更换，请重新测量校对');
+    }
     base.renderAndEmit();
     base.notify();
   });
@@ -94,6 +232,7 @@ export function createTickerTapeScene(
     reset(): void {
       sim.reset();
       view.reset();
+      hostRef?.invalidateAll('纸带已重置，请重新测量校对');
       base.renderAndEmit();
       base.notify();
     },
@@ -172,7 +311,12 @@ export function createTickerTapeScene(
       if (noise) patch.noise = noise;
       if (typeof next.showA === 'boolean') patch.showA = next.showA;
       else if (typeof next.showA === 'number') patch.showA = next.showA > 0;
+      const before = sim.getParams();
       sim.setParams(patch);
+      const after = sim.getParams();
+      if (before.tapeKind !== after.tapeKind || before.noise !== after.noise) {
+        hostRef?.invalidateAll('纸带已更换，请重新测量校对');
+      }
       base.renderAndEmit();
       base.notify();
       return sim.getParams();
@@ -198,6 +342,9 @@ export function createTickerTapeScene(
     getState(): TickerTapeState {
       return sim.getState();
     },
+    getDataWorkspace() {
+      return dataWorkspace;
+    },
     getReadoutItems() {
       const s = sim.getState();
       const items = [
@@ -213,6 +360,11 @@ export function createTickerTapeScene(
         });
       }
       return items;
+    },
+    dispose(): void {
+      hostRef?.resetSession();
+      dataWorkspace.setActive(false);
+      base.dispose();
     }
   };
 }

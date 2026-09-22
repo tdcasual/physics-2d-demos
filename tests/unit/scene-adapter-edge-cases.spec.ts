@@ -287,4 +287,50 @@ describe('SceneAdapter edge cases', () => {
 
     expect(createControls).toHaveBeenCalled();
   });
+
+  it('toggles is-native-fullscreen on layout-master and clears it on unmount', () => {
+    const adapter = createAdapter();
+    const { container } = mountAdapter(adapter);
+    container.classList.add('layout-master');
+    appDiv.appendChild(container);
+    const previous = Object.getOwnPropertyDescriptor(
+      document,
+      'fullscreenElement'
+    );
+
+    const defineFullscreen = (el: Element | null) => {
+      Object.defineProperty(document, 'fullscreenElement', {
+        configurable: true,
+        get: () => el
+      });
+    };
+
+    try {
+      defineFullscreen(document.documentElement);
+      document.dispatchEvent(new Event('fullscreenchange'));
+      expect(container.classList.contains('is-native-fullscreen')).toBe(true);
+
+      defineFullscreen(null);
+      document.dispatchEvent(new Event('fullscreenchange'));
+      expect(container.classList.contains('is-native-fullscreen')).toBe(false);
+
+      defineFullscreen(document.documentElement);
+      document.dispatchEvent(new Event('fullscreenchange'));
+      expect(container.classList.contains('is-native-fullscreen')).toBe(true);
+
+      adapter.unmount();
+      expect(container.classList.contains('is-native-fullscreen')).toBe(false);
+
+      defineFullscreen(document.documentElement);
+      document.dispatchEvent(new Event('fullscreenchange'));
+      expect(container.classList.contains('is-native-fullscreen')).toBe(false);
+    } finally {
+      if (previous) {
+        Object.defineProperty(document, 'fullscreenElement', previous);
+      } else {
+        delete (document as unknown as { fullscreenElement?: unknown })
+          .fullscreenElement;
+      }
+    }
+  });
 });

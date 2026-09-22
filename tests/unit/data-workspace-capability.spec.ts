@@ -19,6 +19,7 @@ import type {
   LayoutSlots
 } from '../../src/app/layouts/types';
 import { createDataWorkspacePanel } from '../../src/ui/components/data-workspace-panel';
+import { createKinematicsChartHost } from './data-workspace-generic.fixture';
 
 function specWithChart(on: boolean): DataWorkspaceSpec {
   return {
@@ -83,7 +84,8 @@ function createCtx(container: HTMLElement): CapabilityContext {
     switchLayout() {},
     getCurrentLayoutId: () => 'split-right',
     getAvailableLayouts: () => [],
-    on: () => () => {}
+    on: () => () => {},
+    requestStageRepaint() {}
   };
 }
 
@@ -141,6 +143,10 @@ describe('data-workspace capability lifecycle', () => {
       container.querySelector('[data-slot="data-workspace"]')
     ).toBeTruthy();
     expect(container.querySelector('[data-data-workspace-chart]')).toBeNull();
+    expect(container.querySelector('[role="tablist"]')).toBeNull();
+    expect(container.classList.contains('is-data-workspace-stage-lock')).toBe(
+      false
+    );
     expect(host.getSession().active).toBe(true);
 
     const spy = vi.spyOn(host, 'setActive');
@@ -158,11 +164,12 @@ describe('data-workspace capability lifecycle', () => {
     expect(shouldShowChartAnalysis(host.getSpec())).toBe(false);
     const panel = createDataWorkspacePanel({
       host,
-      onExit() {},
       onChange() {}
     });
     expect(panel.chartMount).toBeNull();
+    expect(panel.getStep()).toBe('data');
     expect(panel.root.querySelector('[data-data-workspace-chart]')).toBeNull();
+    expect(panel.root.querySelector('[role="tablist"]')).toBeNull();
     panel.dispose();
   });
 
@@ -194,7 +201,9 @@ describe('data-workspace capability lifecycle', () => {
     btn.click();
     const chart = container.querySelector('[data-data-workspace-chart]');
     expect(chart).toBeTruthy();
-    expect(chart?.contains(graphSection)).toBe(true);
+    expect(chart?.contains(graphSection)).toBe(false);
+    expect(graphSection.parentElement).toBe(container);
+    expect(container.classList.contains('is-data-workspace-chart')).toBe(false);
     const table = container.querySelector('.data-workspace-table');
     expect(table).toBeTruthy();
     const panel = container.querySelector('.data-workspace-panel');
@@ -202,13 +211,155 @@ describe('data-workspace capability lifecycle', () => {
     expect(
       table!.compareDocumentPosition(chart!) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    (
+      container.querySelector(
+        '[role="tab"][data-step="chartAnalysis"]'
+      ) as HTMLButtonElement
+    ).click();
+    expect(chart?.contains(graphSection)).toBe(false);
+    expect(container.classList.contains('is-data-workspace-chart')).toBe(false);
 
-    const exitBtn = container.querySelector(
-      '.data-workspace-exit'
-    ) as HTMLButtonElement;
-    exitBtn.click();
+    btn.click();
     expect(container.querySelector('[data-data-workspace-chart]')).toBeNull();
     expect(graphSection.parentElement).toBe(container);
+    instance.dispose();
+  });
+
+  it('locks the stage and adopts the graph only on the chart step', () => {
+    const container = document.createElement('div');
+    const animation = document.createElement('div');
+    animation.className = 'teaching-stage-frame';
+    const graphSection = document.createElement('div');
+    graphSection.className = 'teaching-graph-section';
+    graphSection.hidden = true;
+    graphSection.classList.add('is-collapsed');
+    const graph = document.createElement('div');
+    graph.className = 'graph-slot';
+    graphSection.appendChild(graph);
+    container.append(animation, graphSection);
+    const slots: LayoutSlots = {
+      control: document.createElement('div'),
+      animation,
+      graph
+    };
+    const { host } = createKinematicsChartHost();
+    for (let i = 0; i < 3; i += 1) {
+      host.submitField({ field: 'mass', trialIndex: i, raw: '2' });
+      host.submitField({ field: 'time', trialIndex: i, raw: '1' });
+      if (i !== 0) {
+        host.submitField({ field: 'speed', trialIndex: i, raw: '2' });
+      }
+    }
+    host.submitField({ field: 'meanSpeed', raw: '2' });
+    const instance = createDataWorkspace().mount(
+      slots,
+      {},
+      createCtx(container)
+    );
+    instance.update?.({ host });
+    const btn = container.querySelector(
+      '.data-workspace-entry'
+    ) as HTMLButtonElement;
+    btn.click();
+    expect(container.classList.contains('is-data-workspace-stage-lock')).toBe(
+      true
+    );
+    expect(container.classList.contains('is-data-workspace-chart')).toBe(false);
+    expect(graphSection.parentElement).toBe(container);
+    expect(graphSection.hidden).toBe(true);
+    (
+      container.querySelector(
+        '[role="tab"][data-step="chartAnalysis"]'
+      ) as HTMLButtonElement
+    ).click();
+    const chart = container.querySelector('[data-data-workspace-chart]');
+    expect(container.classList.contains('is-data-workspace-chart')).toBe(true);
+    expect(chart?.contains(graphSection)).toBe(true);
+    expect(graphSection.hidden).toBe(false);
+    expect(graphSection.classList.contains('is-collapsed')).toBe(false);
+    (
+      container.querySelector(
+        '[role="tab"][data-step="data"]'
+      ) as HTMLButtonElement
+    ).click();
+    expect(container.classList.contains('is-data-workspace-chart')).toBe(false);
+    expect(graphSection.parentElement).toBe(container);
+    expect(graphSection.hidden).toBe(true);
+    expect(graphSection.classList.contains('is-collapsed')).toBe(true);
+    btn.click();
+    expect(container.classList.contains('is-data-workspace-stage-lock')).toBe(
+      false
+    );
+    expect(graphSection.parentElement).toBe(container);
+    instance.dispose();
+    expect(container.classList.contains('is-data-workspace-stage-lock')).toBe(
+      false
+    );
+  });
+
+  it('clears adopted graph float geometry and restores it on the data step', () => {
+    const container = document.createElement('div');
+    const animation = document.createElement('div');
+    animation.className = 'teaching-stage-frame';
+    const graphSection = document.createElement('div');
+    graphSection.className = 'lab-float lab-float-graph is-collapsed';
+    graphSection.hidden = true;
+    graphSection.style.cssText =
+      'position:absolute;top:568px;left:788px;width:400px;height:200px;z-index:20';
+    const graph = document.createElement('div');
+    graph.className = 'graph-slot';
+    graphSection.appendChild(graph);
+    container.append(animation, graphSection);
+    const slots: LayoutSlots = {
+      control: document.createElement('div'),
+      animation,
+      graph
+    };
+    const { host } = createKinematicsChartHost();
+    for (let i = 0; i < 3; i += 1) {
+      host.submitField({ field: 'mass', trialIndex: i, raw: '2' });
+      host.submitField({ field: 'time', trialIndex: i, raw: '1' });
+      if (i !== 0) {
+        host.submitField({ field: 'speed', trialIndex: i, raw: '2' });
+      }
+    }
+    host.submitField({ field: 'meanSpeed', raw: '2' });
+    const instance = createDataWorkspace().mount(
+      slots,
+      {},
+      createCtx(container)
+    );
+    instance.update?.({ host });
+    (
+      container.querySelector('.data-workspace-entry') as HTMLButtonElement
+    ).click();
+    expect(graphSection.style.top).toBe('568px');
+    expect(graphSection.style.left).toBe('788px');
+    (
+      container.querySelector(
+        '[role="tab"][data-step="chartAnalysis"]'
+      ) as HTMLButtonElement
+    ).click();
+    const chart = container.querySelector('[data-data-workspace-chart]');
+    expect(chart?.contains(graphSection)).toBe(true);
+    expect(graphSection.style.position).toBe('');
+    expect(graphSection.style.top).toBe('');
+    expect(graphSection.style.left).toBe('');
+    expect(graphSection.style.width).toBe('');
+    expect(graphSection.style.height).toBe('');
+    expect(graphSection.style.zIndex).toBe('');
+    (
+      container.querySelector(
+        '[role="tab"][data-step="data"]'
+      ) as HTMLButtonElement
+    ).click();
+    expect(graphSection.parentElement).toBe(container);
+    expect(graphSection.style.position).toBe('absolute');
+    expect(graphSection.style.top).toBe('568px');
+    expect(graphSection.style.left).toBe('788px');
+    expect(graphSection.style.width).toBe('400px');
+    expect(graphSection.style.height).toBe('200px');
+    expect(graphSection.style.zIndex).toBe('20');
     instance.dispose();
   });
 
@@ -285,9 +436,7 @@ describe('data-workspace capability lifecycle', () => {
     expect(
       getComputedStyle(container.querySelector('.sidebar-toggle-btn')!).display
     ).toBe('none');
-    (
-      container.querySelector('.data-workspace-leave') as HTMLButtonElement
-    ).click();
+    entry.click();
     expect(snapshotSidebar(container, sidebar)).toEqual(before);
     expect(
       getComputedStyle(container.querySelector('.sidebar-toggle-btn')!).display
@@ -311,9 +460,64 @@ describe('data-workspace capability lifecycle', () => {
     ).click();
     expect(snapshotSidebar(container, sidebar)).toEqual(before);
     (
-      container.querySelector('.data-workspace-leave') as HTMLButtonElement
+      container.querySelector('.data-workspace-entry') as HTMLButtonElement
     ).click();
     expect(snapshotSidebar(container, sidebar)).toEqual(before);
+  });
+
+  it('wraps the stage for pan/zoom on enter and unwraps on exit', () => {
+    const container = document.createElement('div');
+    const animation = document.createElement('div');
+    const canvas = document.createElement('canvas');
+    animation.appendChild(canvas);
+    container.appendChild(animation);
+    const slots: LayoutSlots = {
+      control: document.createElement('div'),
+      animation
+    };
+    const host = createHost({ stageMode: 'full' });
+    const instance = createDataWorkspace().mount(
+      slots,
+      {},
+      createCtx(container)
+    );
+    instance.update?.({ host });
+    const btn = container.querySelector(
+      '.data-workspace-entry'
+    ) as HTMLButtonElement;
+    btn.click();
+    const viewport = animation.querySelector('.stage-viewport') as HTMLElement;
+    expect(viewport).toBeTruthy();
+    expect(viewport.contains(canvas)).toBe(true);
+    expect(animation.querySelector('button[aria-label="放大"]')).toBeTruthy();
+    btn.click();
+    expect(animation.querySelector('.stage-viewport')).toBeNull();
+    expect(canvas.parentElement).toBe(animation);
+    instance.dispose();
+  });
+
+  it('skips pan/zoom when the spec opts out', () => {
+    const container = document.createElement('div');
+    const animation = document.createElement('div');
+    animation.appendChild(document.createElement('canvas'));
+    container.appendChild(animation);
+    const slots: LayoutSlots = {
+      control: document.createElement('div'),
+      animation
+    };
+    const host = createHost({ stagePanZoom: false, stageMode: 'full' });
+    const instance = createDataWorkspace().mount(
+      slots,
+      {},
+      createCtx(container)
+    );
+    instance.update?.({ host });
+    (
+      container.querySelector('.data-workspace-entry') as HTMLButtonElement
+    ).click();
+    expect(container.classList.contains('is-data-workspace')).toBe(true);
+    expect(animation.querySelector('.stage-viewport')).toBeNull();
+    instance.dispose();
   });
 
   it('does not add the instrument-only class when the spec keeps a full stage', () => {
@@ -413,7 +617,6 @@ describe('data-workspace panel dynamic rows', () => {
     });
     const panel = createDataWorkspacePanel({
       host,
-      onExit() {},
       onChange() {}
     });
     expect(panel.root.querySelectorAll('tbody tr')).toHaveLength(1);
@@ -507,7 +710,6 @@ describe('data-workspace panel dynamic rows', () => {
     };
     const panel = createDataWorkspacePanel({
       host,
-      onExit() {},
       onChange() {}
     });
     const avg = panel.root.querySelector(
@@ -542,17 +744,19 @@ describe('data-workspace panel dynamic rows', () => {
     host.submitField = submit;
     const panel = createDataWorkspacePanel({
       host,
-      onExit() {},
       onChange() {}
     });
     const context = panel.root.querySelector(
       '.data-workspace-summary-context'
     ) as HTMLElement;
-    expect(context.hidden).toBe(false);
-    expect(context.textContent).toMatch(/0\.20 mm/);
-    expect(context.textContent).toMatch(/70 cm/);
-    expect(context.textContent).toMatch(/双缝间距 d/);
-    expect(context.textContent).toMatch(/缝屏距 L/);
+    expect(context.hidden).toBe(true);
+    expect(context.textContent).toBe('');
+    expect(
+      panel.root.querySelector('.data-workspace-knowns')?.textContent
+    ).toMatch(/0\.20 mm/);
+    expect(
+      panel.root.querySelector('.data-workspace-knowns')?.textContent
+    ).toMatch(/70 cm/);
 
     const avg = panel.root.querySelector(
       '[aria-label="平均 Δx（mm）"]'
@@ -621,7 +825,7 @@ describe('data-workspace panel dynamic rows', () => {
     panel.update();
     expect(avg.disabled).toBe(true);
     expect(lambda.disabled).toBe(true);
-    expect(context.hidden).toBe(false);
+    expect(context.hidden).toBe(true);
     panel.dispose();
   });
 
@@ -656,7 +860,6 @@ describe('data-workspace panel dynamic rows', () => {
     host.getSession = () => session;
     const panel = createDataWorkspacePanel({
       host,
-      onExit() {},
       onChange() {}
     });
     const avg = panel.root.querySelector(

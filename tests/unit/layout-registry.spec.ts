@@ -4,9 +4,7 @@ import {
   layoutRegistry,
   registerLayout,
   registerLazyLayout,
-  registerLayoutTestAdapter,
-  getDefaultLayoutId,
-  saveLayoutPreference
+  registerLayoutTestAdapter
 } from '../../src/app/layouts/registry';
 import { registerAllLayouts } from '../../src/app/layouts/auto-register';
 
@@ -356,72 +354,5 @@ describe('registerAllLayouts', () => {
     const first = layoutRegistry.list().length;
     registerAllLayouts();
     expect(layoutRegistry.list().length).toBe(first);
-  });
-});
-
-describe('getDefaultLayoutId', () => {
-  beforeEach(() => {
-    layoutRegistry.clear();
-    try {
-      localStorage.removeItem('physics-demos-preferred-layout');
-    } catch {
-      /* ignore */
-    }
-  });
-
-  afterEach(() => {
-    layoutRegistry.clear();
-    try {
-      localStorage.removeItem('physics-demos-preferred-layout');
-    } catch {
-      /* ignore */
-    }
-  });
-
-  it('should return first available layout when no preference', () => {
-    layoutRegistry.register('first', FakeLayout, fakeMeta);
-    layoutRegistry.register('second', FakeLayout, fakeMeta);
-    expect(getDefaultLayoutId()).toBe('first');
-  });
-
-  it('should return null when registry is empty', () => {
-    expect(getDefaultLayoutId()).toBeNull();
-  });
-
-  it('should return user preference when valid', () => {
-    layoutRegistry.register('preferred', FakeLayout, fakeMeta);
-    saveLayoutPreference('preferred');
-    expect(getDefaultLayoutId()).toBe('preferred');
-  });
-
-  it('should ignore invalid preference', () => {
-    layoutRegistry.register('real', FakeLayout, fakeMeta);
-    saveLayoutPreference('nonexistent');
-    expect(getDefaultLayoutId()).toBe('real');
-  });
-});
-
-describe('saveLayoutPreference', () => {
-  afterEach(() => {
-    try {
-      localStorage.removeItem('physics-demos-preferred-layout');
-    } catch {
-      /* ignore */
-    }
-  });
-
-  it('should save to localStorage as versioned schema', () => {
-    saveLayoutPreference('my-layout');
-    const raw = localStorage.getItem('physics-demos-preferred-layout');
-    expect(raw).toBeTruthy();
-    const parsed = JSON.parse(raw!);
-    expect(parsed.v).toBe(1);
-    expect(parsed.layoutId).toBe('my-layout');
-  });
-
-  it('should migrate old plain string preference', () => {
-    layoutRegistry.register('legacy', FakeLayout, fakeMeta);
-    localStorage.setItem('physics-demos-preferred-layout', 'legacy');
-    expect(getDefaultLayoutId()).toBe('legacy');
   });
 });

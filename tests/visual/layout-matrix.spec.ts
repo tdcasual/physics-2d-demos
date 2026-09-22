@@ -57,10 +57,13 @@ for (const layout of layouts) {
               document.querySelectorAll('canvas')
             ).filter(
               (canvas) =>
-                !canvas.closest('.mobile-tab-panel') ||
-                canvas
-                  .closest('.mobile-tab-panel')
-                  ?.classList.contains('active')
+                (!canvas.closest('.mobile-tab-panel') ||
+                  canvas
+                    .closest('.mobile-tab-panel')
+                    ?.classList.contains('active')) &&
+                // graphInitiallyHidden 等场景：隐藏 section 内的 canvas 是
+                // 工作区收养锚点，display:none 尺寸为 0 属设计如此
+                !canvas.closest('[hidden]')
             );
             const inspectCanvas = (canvas: HTMLCanvasElement) => {
               const rect = canvas.getBoundingClientRect();
@@ -204,7 +207,12 @@ for (const layout of layouts) {
         const hasGraph = await page
           .locator('[data-scene-has-graph="true"]')
           .count();
-        if (hasGraph > 0) {
+        // graphInitiallyHidden / floatGraph:false：图表 slot 仅作工作区
+        // 收养锚点，默认隐藏属设计如此，跳过"图表可见"断言
+        const graphHiddenByDesign = await page
+          .locator('[data-graph-initially-hidden="true"]')
+          .count();
+        if (hasGraph > 0 && graphHiddenByDesign === 0) {
           const graphTab = page.locator('[role="tab"][data-tab="graph"]');
           if (profile.requiresGraphActivation) {
             if (await graphTab.count()) {

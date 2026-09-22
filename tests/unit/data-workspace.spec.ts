@@ -20,7 +20,12 @@ import {
   removeSessionTrial,
   resolveRowLimits,
   shouldShowChartAnalysis,
+  shouldEnableStagePanZoom,
+  isChartField,
+  chartStepReady,
+  assertSpecGraph,
   summaryContextItems,
+  trialLabel,
   trialHasContent,
   withAttemptReference,
   writeCheckedField,
@@ -118,6 +123,13 @@ describe('chartAnalysis opt-in / opt-out', () => {
       'chartAnalysis'
     );
     expect(shouldShowChartAnalysis(doubleSlitDataWorkspaceSpec)).toBe(false);
+    expect(doubleSlitDataWorkspaceSpec.tableOrientation).toBeUndefined();
+    expect(doubleSlitDataWorkspaceSpec.stageLock).toBeUndefined();
+    expect(
+      doubleSlitDataWorkspaceSpec.summaryFields.every(
+        (field) => field.step == null
+      )
+    ).toBe(true);
   });
 
   it('shows chart analysis only when the task explicitly opts in', () => {
@@ -1144,5 +1156,119 @@ describe('per-row per-field failed attempts and third-error reference', () => {
       expected: CALIPER_EXPECTED
     });
     expect(last.feedback.message).toMatch(/参考 12\.345/);
+  });
+});
+
+describe('chart field helpers and spec guards', () => {
+  const spec: DataWorkspaceSpec = {
+    id: 'chart-helpers',
+    title: 't',
+    chartAnalysis: true,
+    enabledSteps: ['data', 'chartAnalysis'],
+    trialCount: 1,
+    minRows: 1,
+    maxRows: 1,
+    initialRows: 1,
+    rowFields: [{ id: 'x', label: '位移', unit: 'm' }],
+    summaryFields: [
+      { id: 'avg', label: '平均', unit: 'm' },
+      { id: 'slope', label: '斜率', unit: 'm/s', step: 'chartAnalysis' }
+    ]
+  };
+
+  const ok = {
+    raw: '1',
+    value: 1,
+    checked: true as const,
+    stale: false,
+    feedback: { ok: true, message: 'ok' }
+  };
+
+  it('classifies chart summary fields and ignores unknown ids', () => {
+    expect(isChartField(spec, 'slope')).toBe(true);
+    expect(isChartField(spec, 'avg')).toBe(false);
+    expect(isChartField(spec, 'x')).toBe(false);
+    expect(isChartField(spec, 'missing')).toBe(false);
+  });
+
+  it('requires every row field and data summary field before the chart step', () => {
+    let session = createEmptySession(spec);
+    expect(chartStepReady(session, spec)).toBe(false);
+    session = writeCheckedField(session, 0, 'x', ok, spec);
+    expect(chartStepReady(session, spec)).toBe(false);
+    session = writeCheckedField(session, undefined, 'avg', ok, spec);
+    expect(chartStepReady(session, spec)).toBe(true);
+    session = writeCheckedField(session, undefined, 'slope', ok, spec);
+    expect(chartStepReady(session, spec)).toBe(true);
+  });
+
+  it('rejects step on row fields, invalid orientation, and step when chart is off', () => {
+    expect(() => assertSpecGraph(spec)).not.toThrow();
+    expect(() =>
+      assertSpecGraph({
+        ...spec,
+        rowFields: [{ id: 'x', label: '位移', step: 'chartAnalysis' }]
+      })
+    ).toThrow(/step is only allowed on summaryFields/);
+    expect(() =>
+      assertSpecGraph({
+        ...spec,
+        tableOrientation: 'sideways' as DataWorkspaceSpec['tableOrientation']
+      })
+    ).toThrow(/tableOrientation/);
+    expect(() =>
+      assertSpecGraph({
+        ...spec,
+        stageLock: 'yes' as unknown as boolean
+      })
+    ).toThrow(/stageLock/);
+    expect(() =>
+      assertSpecGraph({
+        ...spec,
+        stagePanZoom: 'yes' as unknown as boolean
+      })
+    ).toThrow(/stagePanZoom/);
+    expect(() =>
+      assertSpecGraph({ ...spec, stagePanZoom: false })
+    ).not.toThrow();
+    expect(shouldEnableStagePanZoom(spec)).toBe(true);
+    expect(shouldEnableStagePanZoom({ ...spec, stagePanZoom: false })).toBe(
+      false
+    );
+    expect(() =>
+      assertSpecGraph({
+        ...doubleSlitDataWorkspaceSpec,
+        summaryFields: doubleSlitDataWorkspaceSpec.summaryFields.map(
+          (field, index) =>
+            index === 0 ? { ...field, step: 'chartAnalysis' } : field
+        )
+      })
+    ).toThrow(/chartAnalysis is off/);
+  });
+
+  it('requires trialLabels to cover minRows and defaults to 1-based indices', () => {
+    expect(trialLabel(spec, 0)).toBe('1');
+    expect(trialLabel(spec, 3)).toBe('4');
+    expect(trialLabel({ ...spec, trialLabels: ['0'] }, 0)).toBe('0');
+    expect(trialLabel({ ...spec, trialLabels: ['0'] }, 2)).toBe('3');
+    expect(() =>
+      assertSpecGraph({ ...spec, trialLabels: ['0'] })
+    ).not.toThrow();
+    expect(() =>
+      assertSpecGraph({
+        ...spec,
+        minRows: 3,
+        maxRows: 3,
+        initialRows: 3,
+        trialCount: 3,
+        trialLabels: ['0', '1']
+      })
+    ).toThrow(/trialLabels/);
+    expect(() =>
+      assertSpecGraph({
+        ...spec,
+        trialLabels: '0' as unknown as readonly string[]
+      })
+    ).toThrow(/trialLabels/);
   });
 });

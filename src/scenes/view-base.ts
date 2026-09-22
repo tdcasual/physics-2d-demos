@@ -14,7 +14,7 @@
  * 可只使用部分 helper 或完全不使用。
  */
 
-import { sizeCanvasToFill } from '../core/canvas-sizing';
+import { readElementLayoutSize, sizeCanvasToFill } from '../core/canvas-sizing';
 import type { TeachingMode, TeachingTheme } from '../platform/standards';
 import type { DemoRenderHints } from '../platform/demo-profile';
 
@@ -71,7 +71,7 @@ export type CanvasViewportOptions = {
   initialHeight?: number;
   /** 构造时即 canvas.getContext('2d') 建立 ctx（不等首次 resize） */
   eagerContext?: boolean;
-  /** 尺寸测量来源，默认 getBoundingClientRect */
+  /** 尺寸测量来源，默认布局盒（offsetWidth，免疫 CSS transform） */
   measure?: (canvas: HTMLCanvasElement) => { width: number; height: number };
   /** scale 计算，默认读 canvas.dataset.responsiveScale */
   resolveScale?: (
@@ -86,10 +86,7 @@ export function createCanvasViewport(
   const sizing: ViewportSizing = options.sizing ?? { mode: 'clamped' };
   const measure =
     options.measure ??
-    ((canvas: HTMLCanvasElement) => {
-      const rect = canvas.getBoundingClientRect();
-      return { width: rect.width, height: rect.height };
-    });
+    ((canvas: HTMLCanvasElement) => readElementLayoutSize(canvas));
   const resolveScale =
     options.resolveScale ??
     ((canvas: HTMLCanvasElement) =>

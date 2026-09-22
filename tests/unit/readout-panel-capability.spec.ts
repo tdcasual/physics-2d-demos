@@ -44,6 +44,7 @@ function createTestContext(
     switchLayout: () => {},
     getCurrentLayoutId: () => 'test',
     getAvailableLayouts: () => [],
+    requestStageRepaint() {},
     ...overrides
   };
 }

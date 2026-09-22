@@ -17,7 +17,7 @@ bootScenePage({
     controlColumns: 'auto',
     readoutCollapsed: false,
     readoutLabel: '实时读数',
-    hasGraph: true
+    hasGraph: false
   },
   createScene: ({ canvas, theme, mode, demoHints }) => {
     if (!canvas) throw new Error('elastic-energy requires a canvas');

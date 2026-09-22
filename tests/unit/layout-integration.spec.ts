@@ -309,6 +309,44 @@ describe('Graph slot completeness', () => {
     await layout.unmount();
     container.remove();
   });
+
+  it('lab-stage: floatData/floatGraph false hide panels but keep slots', async () => {
+    const container = createContainer();
+    const layout = new LabStageLayout(container, {
+      floatData: false,
+      floatGraph: false
+    });
+    const slots = await layout.mount();
+
+    const dataPanel = container.querySelector('#lab-panel-data');
+    const graphPanel = container.querySelector('#lab-panel-graph');
+    expect(dataPanel).toBeInstanceOf(HTMLElement);
+    expect(graphPanel).toBeInstanceOf(HTMLElement);
+    expect((dataPanel as HTMLElement).hidden).toBe(true);
+    expect((graphPanel as HTMLElement).hidden).toBe(true);
+    expect(dataPanel?.hasAttribute('hidden')).toBe(true);
+    expect(graphPanel?.hasAttribute('hidden')).toBe(true);
+    expect(slots.graph).toBeDefined();
+    expect(graphPanel?.contains(slots.graph!)).toBe(true);
+    expect(container.querySelector('[data-lab-data-slot]')).not.toBeNull();
+    expect(
+      (
+        container.querySelector(
+          '#lab-panel-data .lab-float-header'
+        ) as HTMLElement | null
+      )?.style.cursor
+    ).not.toBe('move');
+    expect(
+      (
+        container.querySelector(
+          '#lab-panel-graph .lab-float-header'
+        ) as HTMLElement | null
+      )?.style.cursor
+    ).not.toBe('move');
+
+    await layout.unmount();
+    container.remove();
+  });
 });
 
 // ============================================================================
@@ -727,6 +765,7 @@ describe('Layout-switch capability', () => {
       on: () => () => {},
       getCurrentLayoutId: () => currentId,
       getAvailableLayouts: () => available,
+      requestStageRepaint() {},
       switchLayout: (id: string) => {
         switchCalls.push(id);
         currentId = id;

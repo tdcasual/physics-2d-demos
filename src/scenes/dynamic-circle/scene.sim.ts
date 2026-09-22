@@ -1,3 +1,4 @@
+import { readoutOccludesStage } from '../../platform/stage-readout';
 import { clamp } from '../../core/math';
 
 export type DynamicCircleTab =
@@ -630,26 +631,7 @@ export function clampLaunchAngle(dx: number, dy: number): number {
 }
 
 export function hasFloatingReadout(anchor?: Element | null): boolean {
-  if (typeof document === 'undefined') return true;
-  const node = anchor ?? document.body;
-  if (
-    node.closest('.mobile-stack-layout, [data-testid="mobile-stack-layout"]')
-  ) {
-    return false;
-  }
-  if (node.closest('.split-right-shell, [data-testid="split-right-layout"]')) {
-    return true;
-  }
-  const panel = document.querySelector(
-    '.teaching-readout-panel, .srgb-readout-panel'
-  );
-  if (panel instanceof HTMLElement && anchor?.parentElement) {
-    const overlay =
-      getComputedStyle(panel).position === 'absolute' ||
-      getComputedStyle(panel).position === 'fixed';
-    return overlay && panel.parentElement === anchor.parentElement;
-  }
-  return true;
+  return readoutOccludesStage(anchor);
 }
 
 export function stageLayoutFrom(canvas?: Element | null): StageLayoutHint {

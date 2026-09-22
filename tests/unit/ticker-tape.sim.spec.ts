@@ -11,7 +11,12 @@ import {
   fitLineDroppingOutliers,
   fitQuadratic,
   maxOriginTickIndex,
-  xCmAt
+  maxOriginTickIndexFor,
+  RULER_RANGE_CM,
+  TAPE_KINDS,
+  TICK_PERIOD_S,
+  xCmAt,
+  type TapeKind
 } from '../../src/scenes/ticker-tape/scene.sim';
 
 describe('ticker-tape kinematics helpers', () => {
@@ -48,8 +53,8 @@ describe('ticker-tape kinematics helpers', () => {
     expect(v[v.length - 1]).toBeNull();
   });
 
-  it('ua x(t)=100 t² cm is uniformly accelerated: Δx arithmetic with d = a T²', () => {
-    // a = 2 m/s², T = 0.1 s → a T² = 0.02 m = 2 cm
+  it('ua x(t)=20 t² cm is uniformly accelerated: Δx arithmetic with d = a T²', () => {
+    // a = 0.4 m/s², T = 0.1 s → a T² = 0.004 m = 0.4 cm
     const originT = 0.2;
     const originX = xCmAt('ua', originT);
     const x = [0, 1, 2, 3, 4, 5, 6].map(
@@ -58,7 +63,7 @@ describe('ticker-tape kinematics helpers', () => {
     const d = computeDeltaXCm(x);
     const gaps = d.slice(1) as number[];
     for (let i = 1; i < gaps.length; i++) {
-      expect(gaps[i] - gaps[i - 1]).toBeCloseTo(2, 8);
+      expect(gaps[i] - gaps[i - 1]).toBeCloseTo(0.4, 8);
     }
   });
 
@@ -150,8 +155,8 @@ describe('ticker-tape kinematics helpers', () => {
     expect(gaps[0]).toBeGreaterThan(gaps[gaps.length - 1]);
   });
 
-  it('noise off: ua v–t collinear with slope = a = 2 m/s²', () => {
-    // ua: x = 100 t² cm = t² m ⇒ a = 2 m/s²。中间时刻 v 应落在 v = a t_mid。
+  it('noise off: ua v–t collinear with slope = a = 0.4 m/s²', () => {
+    // ua: x = 20 t² cm = 0.2 t² m ⇒ a = 0.4 m/s²。中间时刻 v 应落在 v = a t_mid。
     const originT = 0.2;
     const originX = xCmAt('ua', originT);
     const T = 0.1;
@@ -170,7 +175,7 @@ describe('ticker-tape kinematics helpers', () => {
       )
     );
     expect(maxDevOff).toBeLessThan(1e-9);
-    expect(fitOff!.slope).toBeCloseTo(2, 6);
+    expect(fitOff!.slope).toBeCloseTo(0.4, 6);
   });
 });
 
@@ -275,12 +280,36 @@ describe('ticker-tape sim', () => {
     );
   });
 
-  it('origin index is clamped to the tape', () => {
+  it('origin index is clamped per tape kind', () => {
     const sim = createTickerTapeSim({ tapeKind: 'ua' });
     sim.setOriginTickIndex(-4);
     expect(sim.getState().originTickIndex).toBe(0);
     sim.setOriginTickIndex(400);
-    expect(sim.getState().originTickIndex).toBe(maxOriginTickIndex());
+    expect(sim.getState().originTickIndex).toBe(maxOriginTickIndexFor('ua'));
+    const uniform = createTickerTapeSim({ tapeKind: 'uniform' });
+    uniform.setOriginTickIndex(400);
+    expect(uniform.getState().originTickIndex).toBe(maxOriginTickIndex());
+  });
+
+  it('per-kind origin上限保证计数段跨度不超过尺量程（15 cm）', () => {
+    const spanCm = (kind: TapeKind, origin: number) => {
+      const originT = origin * TICK_PERIOD_S;
+      return xCmAt(kind, originT + 0.6) - xCmAt(kind, originT);
+    };
+    for (const kind of TAPE_KINDS) {
+      const max = maxOriginTickIndexFor(kind);
+      expect(spanCm(kind, max)).toBeLessThanOrEqual(RULER_RANGE_CM + 1e-9);
+      if (max < maxOriginTickIndex()) {
+        expect(spanCm(kind, max + 1)).toBeGreaterThan(RULER_RANGE_CM);
+      }
+    }
+    // 跨度恒定或有界的纸带保持全局上限；加速类收紧
+    expect(maxOriginTickIndexFor('uniform')).toBe(maxOriginTickIndex());
+    expect(maxOriginTickIndexFor('ud')).toBe(maxOriginTickIndex());
+    expect(maxOriginTickIndexFor('ua')).toBeLessThan(maxOriginTickIndex());
+    expect(maxOriginTickIndexFor('variable')).toBeLessThan(
+      maxOriginTickIndex()
+    );
   });
 
   it('reset restores the default origin after a drag', () => {

@@ -473,19 +473,6 @@ function drawVelocityGraph(
   label(ctx, 't / T', right, bottom + 2, p.muted, 11, 'right', 600);
 }
 
-/** Standard graph entry point used by the scene capability contract. */
-export function renderGraph(
-  ctx: CanvasRenderingContext2D,
-  state: AlternatingElectricDeflectionState,
-  theme: TeachingTheme = 'light',
-  x = GRAPH_RIGHT,
-  y = C.graphTop,
-  width = C.graphWidth,
-  height = C.graphHeight
-): void {
-  drawVelocityGraph(ctx, state, PALETTE[theme], x, y, width, height);
-}
-
 function drawPanel(
   ctx: CanvasRenderingContext2D,
   state: AlternatingElectricDeflectionState,

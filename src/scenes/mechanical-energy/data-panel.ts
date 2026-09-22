@@ -87,16 +87,12 @@ export function createMechanicalEnergyDataPanel(): DataPanelHandle {
 export function findMechanicalEnergyDataHost(): HTMLElement | null {
   const lab = document.querySelector('[data-lab-data-slot]');
   if (lab instanceof HTMLElement) return lab;
-  const mobilePanel = document.querySelector(
-    '.mobile-stack-layout .mobile-readout-panel'
-  );
-  if (mobilePanel instanceof HTMLElement) return mobilePanel;
+  // 读数挂载点统一走创建点打标的 [data-readout-slot]：mobile 是 readout
+  // 能力的 inline panel（.mobile-readout-panel），split/srgb 是其内部 ul
+  const readoutSlot = document.querySelector('[data-readout-slot]');
+  if (readoutSlot instanceof HTMLElement) return readoutSlot;
   const tab = document.querySelector('#mobile-panel-readout');
   if (tab instanceof HTMLElement) return tab;
-  const slot = document.querySelector(
-    '.srgb-readout-slot, .teaching-readout-slot'
-  );
-  if (slot instanceof HTMLElement) return slot;
   const overlay = document.querySelector(
     '.srgb-readout-panel, .teaching-readout-panel'
   );

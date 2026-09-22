@@ -1,3 +1,4 @@
+import { readoutOccludesStage } from '../../platform/stage-readout';
 import { clamp } from '../../core/math';
 
 export type ProjectileDataMode = 'trajectory' | 'strobe';
@@ -201,26 +202,7 @@ function betterPose(a: StagePose, b: StagePose): StagePose {
  * 项目断点 width<768 → mobile-stack（读数在 Tab）；≥768 → split-right（读数叠在动画区）。
  */
 export function hasFloatingReadout(anchor?: Element | null): boolean {
-  if (typeof document === 'undefined') return true;
-  const node = anchor ?? document.body;
-  if (
-    node.closest('.mobile-stack-layout, [data-testid="mobile-stack-layout"]')
-  ) {
-    return false;
-  }
-  if (node.closest('.split-right-shell, [data-testid="split-right-layout"]')) {
-    return true;
-  }
-  const panel = document.querySelector(
-    '.teaching-readout-panel, .srgb-readout-panel'
-  );
-  if (panel instanceof HTMLElement && anchor?.parentElement) {
-    const overlay =
-      getComputedStyle(panel).position === 'absolute' ||
-      getComputedStyle(panel).position === 'fixed';
-    return overlay && panel.parentElement === anchor.parentElement;
-  }
-  return true;
+  return readoutOccludesStage(anchor);
 }
 
 /** view 共用：从布局 DOM 读浮动读数与叠占宽度。 */
