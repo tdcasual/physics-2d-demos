@@ -744,26 +744,21 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
         minPoints: 2
       }
     ];
-    const boxes = defs.map((def, index) => {
-      if (kinds.length === 1) {
-        return { x: gap, y: gap, w: w - gap * 2, h: h - gap * 2 };
-      }
-      const sideBySide = w >= h;
-      const full = sideBySide ? w : h;
-      const along = (full - gap * 3) / 2;
-      return sideBySide
-        ? {
-            x: gap + index * (along + gap),
-            y: gap,
-            w: along,
-            h: h - gap * 2
-          }
-        : {
-            x: gap,
-            y: gap + index * (along + gap),
-            w: w - gap * 2,
-            h: along
-          };
+    // 固定网格排布：每张图占一个格子（2 列，按需扩行），格子尺寸不随
+    // 选中数量变化——只选一张时也画在第一格，不做放大。未来新增图表
+    // （如 a–t）自动落到下一格，超出画布高度的行数由绘图区滚动条承接。
+    const gridCols = 2;
+    const cellW = (w - gap * (gridCols + 1)) / gridCols;
+    const cellH = h - gap * 2;
+    const boxes = defs.map((_, index) => {
+      const col = index % gridCols;
+      const row = Math.floor(index / gridCols);
+      return {
+        x: gap + col * (cellW + gap),
+        y: gap + row * (cellH + gap),
+        w: cellW,
+        h: cellH
+      };
     });
     defs.forEach((def, index) => {
       if (!selected[def.kind]) return;

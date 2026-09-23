@@ -779,6 +779,8 @@ export function createDataWorkspacePanel(options: {
     const chartOn = shouldShowChartAnalysis(specNow);
     const onChart = chartOn && currentStep === 'chartAnalysis';
     knownsEl.hidden = onChart;
+    // 图像分析环节只有两个组成区域：上方只读表、下方绘图区。
+    if (onChart) hintEl.hidden = true;
     tableWrap.hidden = onChart;
     rowActions.hidden = onChart || isFixedRowCount(specNow);
     if (onChart) confirmEl.hidden = true;

@@ -201,6 +201,57 @@
   background: transparent;
 }
 
+/*
+ * 图像分析环节的两个组成区域（分开的独立部分）：
+ * 上方 = 只读回顾表（约 1/2），下方 = 绘图区（约 1/2，网格排布、
+ * 图多时滚动）。区域仅在 chart 模式撑开，数据处理模式不受影响。
+ */
+.layout-master.is-data-workspace.is-data-workspace-chart .data-workspace-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  /* 图像分析环节固定为纵向两区（上表/下图），不受 ≥1100px 横向 wrap 影响 */
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+}
+
+.layout-master.is-data-workspace.is-data-workspace-chart
+  .data-workspace-panel
+  > :is(
+    .data-workspace-header,
+    .data-workspace-summary,
+    .data-workspace-result
+  ) {
+  flex: 0 0 auto;
+}
+
+.layout-master.is-data-workspace.is-data-workspace-chart
+  .data-workspace-panel
+  > .data-workspace-review {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: auto;
+  margin: 0.5rem 0.75rem 0.35rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  background: var(--bg-primary);
+}
+
+.layout-master.is-data-workspace.is-data-workspace-chart
+  .data-workspace-panel
+  > .data-workspace-chart {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: auto;
+  margin: 0 0.75rem 0.6rem;
+  padding: 0.35rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  background: var(--bg-primary);
+}
+
 .data-workspace-chart {
   display: flex;
   flex-direction: column;
@@ -438,6 +489,12 @@
   display: none !important;
 }
 
+.layout-master.is-data-workspace.is-data-workspace-chart .lab-stage-slot {
+  flex: 0 0 auto;
+  height: 4.5rem;
+  min-height: 0;
+}
+
 .layout-master.is-data-workspace.is-data-workspace-chart
   .stage-panzoom-controls {
   display: none !important;
@@ -445,7 +502,7 @@
 
 .layout-master.is-data-workspace.is-data-workspace-chart .lab-stage-anim {
   flex: 0 0 auto;
-  min-height: 3.25rem;
+  min-height: 4.5rem;
 }
 
 .mobile-stack-layout.is-data-workspace.is-data-workspace-chart

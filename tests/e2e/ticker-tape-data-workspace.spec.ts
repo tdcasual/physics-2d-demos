@@ -293,6 +293,18 @@ test.describe('ticker-tape data workspace', () => {
     );
     expect(graphBox!.width).toBeGreaterThan(chartBox!.width * 0.9);
 
+    // 图像分析环节占满工具条以下空间：只读表与绘图区是上下两个独立
+    // 区域，各约占一半（弹性分割，允许头部/汇总行的少量占位偏差）。
+    const panelBox = await page.locator('.data-workspace-panel').boundingBox();
+    const viewport = page.viewportSize();
+    expect(panelBox!.height).toBeGreaterThan(viewport!.height * 0.7);
+    const reviewArea = await page
+      .locator('.data-workspace-panel > .data-workspace-review')
+      .boundingBox();
+    const split = reviewArea!.height / chartBox!.height;
+    expect(split).toBeGreaterThan(0.75);
+    expect(split).toBeLessThan(1.3);
+
     await page
       .locator('.lab-plot-toolbar button', { hasText: '描点' })
       .evaluate((button) =>
