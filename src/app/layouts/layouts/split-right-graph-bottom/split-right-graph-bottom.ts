@@ -168,7 +168,9 @@ export class SplitRightGraphBottomLayout implements ILayout {
     this.graphSection.style.minHeight = `${graphMinHeight}px`;
     this.graphSection.style.maxHeight = `${graphMaxHeight}px`;
 
-    graph.slot.className = 'srgb-graph-grid';
+    // 追加而非覆盖：保留 buildGraphSection 的通用 graph-slot 类，
+    // 图像分析工具条等按该类定位图表插槽。
+    graph.slot.classList.add('srgb-graph-grid');
     graph.slot.setAttribute('data-columns', String(graphColumns));
     rightPanel.appendChild(this.graphSection);
 

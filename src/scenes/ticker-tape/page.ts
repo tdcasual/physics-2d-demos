@@ -1,6 +1,9 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { GRAPH_BODY_ATTR } from '../../platform/stage-chrome';
+import {
+  GRAPH_BODY_ATTR,
+  GRAPH_SECTION_ATTR
+} from '../../platform/stage-chrome';
 import { tickerTapeControlsSchema } from './controls-schema';
 import { createTickerTapeScene } from './scene.entry';
 import { tickerTapeMeta } from './scene.meta';
@@ -125,14 +128,43 @@ bootScenePage({
     dirtyNote.textContent = '数据已改';
     plotBar.append(...chips, scatterBtn, fitBtn, dirtyNote);
     // 描点工具条锚点 = 布局契约的 [data-graph-body]（lab 的 .lab-float-body
-    // 由布局创建点打标）；查不到时显式 no-op，不落回其他层级
-    const graphBody = document.querySelector(`[${GRAPH_BODY_ATTR}]`);
-    const graphSlot = document.querySelector(
-      '#lab-panel-graph .lab-graph-slot'
-    );
-    if (graphBody instanceof HTMLElement && graphSlot instanceof HTMLElement) {
-      graphBody.insertBefore(plotBar, graphSlot);
+    // 由布局创建点打标）；split 系布局无 body 层，回退到收养目标
+    // [data-graph-section] 内、slot 之前。
+    //
+    // createControls 会随每次布局挂载重新执行，且执行点位于布局切换的
+    // 中途——此时新布局节点未必已入树、旧布局节点尚未清完，任何全局
+    // 查询都可能命中旧节点并让 insertBefore 抛 NotFoundError（整个布局
+    // 切换失败）。因此挂载动作必须幂等且延迟到布局稳定后：场景每次
+    // notify（subscribe）与首帧 rAF 时重试，成功插入即不再动。
+    function placePlotBar(): void {
+      if (plotBar.isConnected) return;
+      const layoutRoot = mount.closest('.layout-master');
+      if (!layoutRoot) return; // 布局切换中途，等下一次重试
+      const graphBody = layoutRoot.querySelector(`[${GRAPH_BODY_ATTR}]`);
+      // 所有布局的图表 slot 都带通用 graph-slot 类（lab=lab-graph-slot
+      // graph-slot、split=teaching-graph-slot graph-slot）。
+      const anchor = graphBody
+        ? graphBody.querySelector('.graph-slot')
+        : layoutRoot.querySelector(`[${GRAPH_SECTION_ATTR}] .graph-slot`);
+      // 插到 slot 之前。锚点查询是后代匹配，anchor 未必是查询起点的
+      // 直接子级，因此以 anchor 的真实父节点为宿主，保证 insertBefore
+      // 合法；布局切换中途命中的旧布局节点即将销毁，重试循环会在
+      // 新布局里重新挂载。
+      if (anchor?.parentNode && layoutRoot.contains(anchor.parentNode)) {
+        anchor.parentNode.insertBefore(plotBar, anchor);
+      }
     }
+
+    let plotBarRetries = 0;
+    function placePlotBarWhenReady(): void {
+      if (plotBar.isConnected || plotBarRetries >= 300) return;
+      plotBarRetries += 1;
+      placePlotBar();
+      if (!plotBar.isConnected && typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => placePlotBarWhenReady());
+      }
+    }
+    placePlotBarWhenReady();
 
     function syncPlotBar(): void {
       const status = tape.getPlotStatus();
@@ -155,6 +187,7 @@ bootScenePage({
     syncPlotBar();
 
     const unsub = tape.subscribe(() => {
+      placePlotBarWhenReady(); // 布局切换完成后兜底重挂（幂等）
       syncPlotBar();
     });
 

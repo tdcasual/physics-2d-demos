@@ -286,11 +286,23 @@
 }
 
 .data-workspace-chart
-  :is(.lab-float-header, .lab-float-resize, .lab-float-fold) {
+  :is(
+    .lab-float-header,
+    .lab-float-resize,
+    .lab-float-fold,
+    .teaching-section-header,
+    .srgb-section-header
+  ) {
   display: none;
 }
 
-.data-workspace-chart :is(.lab-float-body, .lab-graph-slot) {
+.data-workspace-chart
+  :is(
+    .lab-float-body,
+    .lab-graph-slot,
+    .teaching-graph-slot,
+    .srgb-graph-slot
+  ) {
   min-height: 160px;
   flex: 1 1 auto;
 }
@@ -481,18 +493,17 @@
   max-height: none;
 }
 
-/* 图像分析是独立环节：舞台画布整体收起，仅保留悬浮工具条宿主，
-   让「返回数据处理 / 返回实验」入口始终可见可点。 */
+/* 图像分析是独立环节：舞台画布在所有布局下整体收起，仅保留悬浮工具
+   条宿主，让「返回数据处理 / 返回实验」入口始终可见可点。 */
 .layout-master.is-data-workspace.is-data-workspace-chart
-  .lab-stage-slot
+  :is(
+    .teaching-stage-slot,
+    .mobile-stage-slot,
+    .srgb-stage-slot,
+    .lab-stage-slot
+  )
   canvas {
   display: none !important;
-}
-
-.layout-master.is-data-workspace.is-data-workspace-chart .lab-stage-slot {
-  flex: 0 0 auto;
-  height: 4.5rem;
-  min-height: 0;
 }
 
 .layout-master.is-data-workspace.is-data-workspace-chart
@@ -500,9 +511,22 @@
   display: none !important;
 }
 
-.layout-master.is-data-workspace.is-data-workspace-chart .lab-stage-anim {
+.layout-master.is-data-workspace.is-data-workspace-chart
+  :is(
+    .teaching-stage-frame,
+    .srgb-stage-frame,
+    .lab-stage-anim,
+    .teaching-stage-slot,
+    .srgb-stage-slot,
+    .lab-stage-slot
+  ) {
   flex: 0 0 auto;
   min-height: 4.5rem;
+}
+
+.layout-master.is-data-workspace.is-data-workspace-chart
+  :is(.teaching-stage-slot, .srgb-stage-slot, .lab-stage-slot) {
+  height: 4.5rem;
 }
 
 .mobile-stack-layout.is-data-workspace.is-data-workspace-chart
