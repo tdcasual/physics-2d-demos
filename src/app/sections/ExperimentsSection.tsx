@@ -173,7 +173,7 @@ export const ExperimentsSection: React.FC = () => {
       <div className="container">
         <div className={`section-header ${isVisible ? 'visible' : ''}`}>
           <span className="section-label">实践</span>
-          <h2 className="section-title">物理实验</h2>
+          <h1 className="section-title">物理实验</h1>
           <p className="section-desc">
             按课程章节浏览，或直接搜索一个概念、实验或关键词。
           </p>
@@ -289,7 +289,7 @@ export const ExperimentsSection: React.FC = () => {
                   </div>
 
                   <div className="card-content">
-                    <h3 className="card-title">{scene.title}</h3>
+                    <h2 className="card-title">{scene.title}</h2>
                     <p className="card-desc">{scene.description}</p>
                   </div>
 

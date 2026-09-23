@@ -3,7 +3,7 @@ import { waitForHomepageReady } from '../helpers/wait-homepage-ready';
 
 const PORT = 5177;
 
-test('homepage renders hero, experiments, and theme toggle', async ({
+test('homepage renders the directory first, with theme toggle', async ({
   page
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -12,26 +12,30 @@ test('homepage renders hero, experiments, and theme toggle', async ({
   });
   await waitForHomepageReady(page);
 
-  await expect(page.locator('.hero-title .line-1')).toHaveText('交互式');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('物理实验');
   await expect(page.locator('#experiments')).toBeVisible();
   await expect(
     page.getByRole('button', { name: '切换到暗色模式' })
   ).toBeVisible();
-  await expect(page.locator('.experiment-card').first()).toBeVisible();
+  // 目录即首页：首屏（无需滚动）即可见筛选工具与实验卡片
+  const firstCard = page.locator('.experiment-card').first();
+  await expect(firstCard).toBeVisible();
+  const cardInView = await firstCard.evaluate((el) => {
+    const box = el.getBoundingClientRect();
+    return box.top >= 0 && box.top < window.innerHeight;
+  });
+  expect(cardInView).toBe(true);
 
   await page.getByRole('button', { name: '切换到暗色模式' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 });
 
-test('experiment cards become visible after jumping to the directory', async ({
+test('experiment cards reveal without any interaction on direct load', async ({
   page
 }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/');
   await waitForHomepageReady(page);
-  await page.locator('#experiments').waitFor();
-
-  await page.getByRole('link', { name: '浏览全部实验' }).click();
 
   await expect(page.locator('#experiments .section-header')).toHaveCSS(
     'opacity',
@@ -51,9 +55,12 @@ test('homepage directory supports URL filters and search', async ({ page }) => {
   await expect(
     page.getByRole('button', { name: '光学', pressed: true })
   ).toBeVisible();
-  await expect
-    .poll(() => page.evaluate(() => window.scrollY))
-    .toBeGreaterThan(0);
+  // 目录即首页：#experiments 无需滚动即可见
+  const sectionInView = await page.locator('#experiments').evaluate((el) => {
+    const box = el.getBoundingClientRect();
+    return box.top >= 0 && box.top < window.innerHeight * 0.5;
+  });
+  expect(sectionInView).toBe(true);
   await expect(page.locator('.directory-status')).toContainText('个实验');
 
   await page.getByRole('searchbox', { name: '搜索实验' }).fill('折射');
