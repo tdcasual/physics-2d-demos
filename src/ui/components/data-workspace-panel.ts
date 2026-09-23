@@ -26,9 +26,6 @@ import {
   type FieldCheckState
 } from '../../platform/data-workspace';
 import { renderDataWorkspaceReview } from './data-workspace-panel/review';
-import { buildWorkspaceStepTabs } from './data-workspace-panel/steps';
-
-// Step labels are rendered by steps.ts: "1 数据处理" and "2 图像分析".
 
 export type DataWorkspacePanelStep = 'data' | 'chartAnalysis';
 
@@ -36,6 +33,8 @@ export type DataWorkspacePanel = {
   root: HTMLElement;
   chartMount: HTMLElement | null;
   getStep(): DataWorkspacePanelStep;
+  /** 进入/退出图像分析模式（入口在悬浮工具条，由 capability 门控）。 */
+  setChartMode(on: boolean): void;
   update(): void;
   dispose(): void;
 };
@@ -88,27 +87,7 @@ export function createDataWorkspacePanel(options: {
   title.textContent = spec.title;
   header.append(title);
 
-  let dataTab: HTMLButtonElement | null = null;
-  let chartTab: HTMLButtonElement | null = null;
   let currentStep: DataWorkspacePanelStep = 'data';
-  let stepAlert: HTMLParagraphElement | null = null;
-  let blockedHintTimer: ReturnType<typeof setTimeout> | null = null;
-  const BLOCKED_STEP_HINT = '请先完成数据处理';
-  const BLOCKED_HINT_MS = 3000;
-
-  if (shouldShowChartAnalysis(spec)) {
-    const steps = buildWorkspaceStepTabs({
-      signal: ac.signal,
-      setStep: (step) => setStep(step)
-    });
-    dataTab = steps.dataTab;
-    chartTab = steps.chartTab;
-    header.appendChild(steps.element);
-    stepAlert = document.createElement('p');
-    stepAlert.className = 'data-workspace-step-alert';
-    stepAlert.setAttribute('role', 'alert');
-    stepAlert.hidden = true;
-  }
 
   const knownsEl = document.createElement('div');
   knownsEl.className = 'data-workspace-knowns';
@@ -202,7 +181,6 @@ export function createDataWorkspacePanel(options: {
 
   root.append(
     header,
-    ...(stepAlert ? [stepAlert] : []),
     knownsEl,
     hintEl,
     tableWrap,
@@ -258,43 +236,16 @@ export function createDataWorkspacePanel(options: {
     options.host.applyDrafts(drafts);
   }
 
-  function hideBlockedStepAlert(): void {
-    if (blockedHintTimer != null) {
-      clearTimeout(blockedHintTimer);
-      blockedHintTimer = null;
-    }
-    if (!stepAlert) return;
-    stepAlert.hidden = true;
-    stepAlert.classList.remove('is-flash');
-    stepAlert.textContent = '';
-  }
-
-  function showBlockedStepAlert(): void {
-    if (!stepAlert) return;
-    stepAlert.textContent = BLOCKED_STEP_HINT;
-    stepAlert.hidden = false;
-    stepAlert.classList.remove('is-flash');
-    void stepAlert.offsetWidth;
-    stepAlert.classList.add('is-flash');
-    if (blockedHintTimer != null) clearTimeout(blockedHintTimer);
-    blockedHintTimer = setTimeout(() => {
-      blockedHintTimer = null;
-      hideBlockedStepAlert();
-    }, BLOCKED_HINT_MS);
-  }
-
-  function setStep(next: DataWorkspacePanelStep): void {
+  /**
+   * 进入/退出图像分析模式。ready 门控由 capability 的悬浮入口按钮负责；
+   * 这里保留一道防御：未就绪时拒绝进入。
+   */
+  function setChartMode(on: boolean): void {
     const specNow = options.host.getSpec();
+    const next: DataWorkspacePanelStep = on ? 'chartAnalysis' : 'data';
     if (next === currentStep) return;
-    if (
-      next === 'chartAnalysis' &&
-      !chartStepReady(options.host.getSession(), specNow)
-    ) {
-      showBlockedStepAlert();
-      return;
-    }
+    if (on && !chartStepReady(options.host.getSession(), specNow)) return;
     harvestDrafts();
-    hideBlockedStepAlert();
     currentStep = next;
     options.onStepChange?.(next);
     update();
@@ -821,25 +772,6 @@ export function createDataWorkspacePanel(options: {
     renderKnownsInto(knownsEl, knowns);
   }
 
-  function syncStepTabs(
-    session: DataWorkspaceSession,
-    specNow: DataWorkspaceSpec
-  ): void {
-    if (!dataTab || !chartTab) return;
-    dataTab.setAttribute('aria-selected', String(currentStep === 'data'));
-    chartTab.setAttribute(
-      'aria-selected',
-      String(currentStep === 'chartAnalysis')
-    );
-    const locked = !chartStepReady(session, specNow);
-    chartTab.classList.toggle('is-locked', locked);
-    if (locked) {
-      chartTab.setAttribute('aria-disabled', 'true');
-    } else {
-      chartTab.removeAttribute('aria-disabled');
-    }
-  }
-
   function applyStepVisibility(
     session: DataWorkspaceSession,
     specNow: DataWorkspaceSpec
@@ -852,7 +784,6 @@ export function createDataWorkspacePanel(options: {
     if (onChart) confirmEl.hidden = true;
     if (reviewEl) reviewEl.hidden = !onChart;
     if (chartMount) chartMount.hidden = !onChart;
-    syncStepTabs(session, specNow);
   }
 
   function patchTableCells(
@@ -912,9 +843,9 @@ export function createDataWorkspacePanel(options: {
     root,
     chartMount,
     getStep: () => currentStep,
+    setChartMode,
     update,
     dispose() {
-      hideBlockedStepAlert();
       ac.abort();
       root.replaceChildren();
       root.remove();

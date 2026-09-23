@@ -72,81 +72,6 @@
   flex-wrap: wrap;
 }
 
-.data-workspace-steps {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  margin: 0;
-  padding: 0;
-}
-
-.data-workspace-step {
-  min-width: 44px;
-  min-height: 36px;
-  border-radius: 0.375rem;
-  border: 1px solid var(--border-color);
-  background: var(--btn-bg);
-  color: var(--text-secondary);
-  padding: 0.2rem 0.65rem;
-  font-size: 0.8125rem;
-  cursor: pointer;
-}
-
-.data-workspace-step:hover {
-  background: var(--btn-hover-bg);
-  color: var(--text-primary);
-}
-
-.data-workspace-step[aria-selected='true'] {
-  border-color: var(--accent-color);
-  color: var(--text-primary);
-  font-weight: 650;
-}
-
-.data-workspace-step[aria-disabled='true'],
-.data-workspace-step.is-locked {
-  opacity: 0.55;
-  cursor: not-allowed;
-  color: var(--text-secondary);
-}
-
-.data-workspace-step[aria-disabled='true']:hover,
-.data-workspace-step.is-locked:hover {
-  background: var(--btn-bg);
-  color: var(--text-secondary);
-}
-
-.data-workspace-step[aria-disabled='true']::before,
-.data-workspace-step.is-locked::before {
-  content: '🔒';
-  margin-right: 0.2rem;
-}
-
-.data-workspace-step-alert {
-  margin: 0;
-  padding: 0.45rem 0.7rem;
-  border-radius: 0.375rem;
-  border: 1px solid var(--danger, #b42318);
-  background: color-mix(in srgb, var(--danger, #b42318) 14%, var(--bg-primary));
-  color: var(--danger, #b42318);
-  font-size: 0.8125rem;
-  font-weight: 650;
-  line-height: 1.4;
-}
-
-.data-workspace-step-alert.is-flash {
-  animation: data-workspace-step-alert-in 0.45s ease;
-}
-
-@keyframes data-workspace-step-alert-in {
-  0% {
-    filter: brightness(1.35);
-  }
-  100% {
-    filter: brightness(1);
-  }
-}
-
 .data-workspace-title {
   margin: 0;
   font-size: 0.95rem;
@@ -481,8 +406,7 @@
 .data-workspace-review[hidden],
 .data-workspace-chart[hidden],
 .data-workspace-summary-row[hidden],
-.data-workspace-result[hidden],
-.data-workspace-step-alert[hidden] {
+.data-workspace-result[hidden] {
   display: none !important;
 }
 
@@ -504,6 +428,29 @@
 
 .layout-master.is-data-workspace.is-data-workspace-chart .data-workspace-panel {
   max-height: none;
+}
+
+/* 图像分析是独立环节：舞台画布整体收起，仅保留悬浮工具条宿主，
+   让「返回数据处理 / 返回实验」入口始终可见可点。 */
+.layout-master.is-data-workspace.is-data-workspace-chart
+  .lab-stage-slot
+  canvas {
+  display: none !important;
+}
+
+.layout-master.is-data-workspace.is-data-workspace-chart
+  .stage-panzoom-controls {
+  display: none !important;
+}
+
+.layout-master.is-data-workspace.is-data-workspace-chart .lab-stage-anim {
+  flex: 0 0 auto;
+  min-height: 3.25rem;
+}
+
+.mobile-stack-layout.is-data-workspace.is-data-workspace-chart
+  .mobile-animation-section {
+  display: none !important;
 }
 
 .mobile-stack-layout.is-data-workspace .mobile-animation-section {
@@ -603,18 +550,6 @@
     order: 3;
     flex: 1 1 12rem;
     min-width: 0;
-  }
-
-  .data-workspace-header .data-workspace-steps {
-    order: 4;
-    flex: 0 0 auto;
-    flex-wrap: nowrap;
-    margin-left: auto;
-  }
-
-  .data-workspace-panel > .data-workspace-step-alert {
-    order: 5;
-    flex: 1 1 100%;
   }
 
   .data-workspace-table-wrap,

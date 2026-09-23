@@ -47,7 +47,7 @@ export type TickerTapeParams = {
   countEvery: 1 | 5;
   noise: NoiseLevel;
   showA: boolean;
-  /** v 列判分要求的有效数字位数（2–4，默认 3）。 */
+  /** 派生量（v、逐差 a、拟合斜率 a）判分要求的有效数字位数（2–4，默认 3）。 */
   vSigFigs: number;
 };
 
@@ -75,7 +75,8 @@ export type TickerTapeState = {
   deltaXCm: Array<number | null>;
   vMs: Array<number | null>;
   aMs2: number | null;
-  vSignificantDigits: number;
+  /** 派生量（v、逐差 a、拟合斜率 a）判分要求的有效数字位数。 */
+  significantDigits: number;
 };
 
 const DEFAULTS: TickerTapeParams = {
@@ -87,14 +88,14 @@ const DEFAULTS: TickerTapeParams = {
   vSigFigs: 3
 };
 
-/** v 有效位数设置的合法范围（含端点）。 */
-export const V_SIG_FIGS_RANGE = { min: 2, max: 4 } as const;
+/** 有效位数设置的合法范围（含端点）。 */
+export const SIG_FIGS_RANGE = { min: 2, max: 4 } as const;
 
 export function clampVSignificantDigits(value: number): number {
   if (!Number.isFinite(value)) return DEFAULTS.vSigFigs;
   return Math.max(
-    V_SIG_FIGS_RANGE.min,
-    Math.min(V_SIG_FIGS_RANGE.max, Math.round(value))
+    SIG_FIGS_RANGE.min,
+    Math.min(SIG_FIGS_RANGE.max, Math.round(value))
   );
 }
 
@@ -461,7 +462,7 @@ export function createTickerTapeSim(initial: Partial<TickerTapeParams> = {}) {
       deltaXCm: [...deltaXCm],
       vMs: [...vMs],
       aMs2: params.showA ? computeSuccessiveAMs2(measuredXCm, T) : null,
-      vSignificantDigits: params.vSigFigs
+      significantDigits: params.vSigFigs
     };
   }
 

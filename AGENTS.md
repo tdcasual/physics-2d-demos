@@ -34,8 +34,8 @@ catalog/       — 场景注册表（自动发现）
                — 仅依赖 platform/
 app/           — 布局系统、场景引导器、首页
                — 可依赖 platform/core/ui
-               — data-workspace 是可选布局能力；仅 opt-in 场景挂载两步工作区
-               （数据处理步必有，图像分析步可选）
+               — data-workspace 是可选布局能力；仅 opt-in 场景挂载工作区
+               （数据处理必有，图像分析为完成后的独立环节，可选）
 ui/            — 共享组件库（DOM widgets）
                — 可依赖 platform/core
 scenes/        — 120 个物理场景（每个: meta/sim/view/entry/controls/page）
@@ -204,21 +204,22 @@ DOM: [场景选择] [预设按钮] [观察点管理] → [含滑块的参数区 
 { title: '原理说明', collapsed: true, span: 'full', fields: [{ type: 'custom', ... }] }
 ```
 
-## 数据处理工作区（两步标准）
+## 数据处理工作区与图像分析环节
 
 data-workspace 是可选布局能力，仅 `layoutConfig.dataWorkspace: true` 的场景挂载入口。标准结构：
 
-- **数据处理步必有**：knowns + hint + 表格 + 数据类 `summaryFields`
-- **图像分析步可选**：`spec.chartAnalysis: true` 时面板出现步骤条 `[1 数据处理] [2 图像分析]`。图表形态由场景 graph slot 自定（散点 / 直线 / 柱状 / 波形皆可），工作区只在切到图像分析步时收养 slot 内容
+- **数据处理必有**：knowns + hint + 表格 + 数据类 `summaryFields`
+- **图像分析是数据处理之后的独立环节（非面板内步骤）**：`spec.chartAnalysis: true` 时悬浮工具条出现「图像分析」入口按钮（`.graph-analysis-entry`），`chartStepReady`（行字段 + 非选填数据步 summary 全通过）之前 disabled；点击进入后舞台画布收起（工具条宿主保留），面板切换为「只读回顾表 + 收养的图区」，再次点击返回数据处理。双缝等 `chartAnalysis: false` 场景没有该环节、也不创建按钮。图表形态由场景 graph slot 自定（散点 / 直线 / 柱状 / 波形皆可），进入环节时收养 slot 内容
+- `DataWorkspaceFieldSpec.optional?: boolean`（仅 summaryFields）标记选填汇总字段：不填不阻塞 `chartStepReady`（如 ticker-tape 的逐差法 a），填了仍按依赖与判分校验
 - `tableOrientation?: 'trials' | 'fields'`（默认 `'trials'`；`'fields'` 为转置表：行=字段、列=trial）
 - `trialLabels?: readonly string[]`（列/行显示标签；缺省 1 基组号。纸带计数点用 `['0','1',…]`）
 - `stageLock?: boolean`（默认 false；true 时工作区打开锁定舞台指针事件，不阻止纯视口 pan/zoom）
 - `stagePanZoom?: boolean`（默认 true；进入工作区时舞台可平移/缩放。场景自有拖拽控件标 `data-panzoom-ignore`，滚轮/空白拖拽归视口。退出工作区还原 transform 与 DOM）
   - 逃生口细分：`data-panzoom-ignore` 同时挡平移和滚轮；`data-panzoom-pan-ignore`（常量 `PANZOOM_PAN_IGNORE_ATTR`）**只挡平移、不挡滚轮**——用于占满舞台但仍需滚轮缩放的仪器宿主（如 double-slit 的仪器 wrap）
 - 清晰化钩子：`canvas.dataset.renderBoost` / `setRenderBoost(canvas, boost)`（clamp `[0.5, 4]`）。`sizeCanvasToFill` 用容器 `offsetWidth/offsetHeight` 测布局尺寸（免疫 CSS transform；为 0 时回退 `getBoundingClientRect`），`canvas.style` 始终写未放大 CSS；背衬 = css × dpr × boost，`ctx.scale(dpr × boost)`；`responsiveScale` 仍按 CSS 尺寸。缺省无 dataset 时行为与历史一致
-- `DataWorkspaceFieldSpec.step?: 'chartAnalysis'` 把 summary 字段划到图像分析步（缺省数据步）
+- `DataWorkspaceFieldSpec.step?: 'chartAnalysis'` 把 summary 字段划到图像分析环节显示（缺省数据步；图像分析模式下仅显示该类字段）
 - lab-stage `floatData` / `floatGraph`（默认 true）：false 时仍创建 slot（收养需要锚点）但 panel 为 `hidden`、不参与拖拽
-- split 系布局 `graphInitiallyHidden`（默认 false）：true 时图表区默认不渲染（section 置 `hidden`、容器标 `data-graph-initially-hidden`），slot 仍创建作收养锚点；工作区图像分析步收养时自动 unhide、退出还原。用于"实验阶段不需要图表"的场景（如 ticker-tape）
+- split 系布局 `graphInitiallyHidden`（默认 false）：true 时图表区默认不渲染（section 置 `hidden`、容器标 `data-graph-initially-hidden`），slot 仍创建作收养锚点；工作区图像分析环节收养时自动 unhide、退出还原。用于"实验阶段不需要图表"的场景（如 ticker-tape）
 - CSS 由能力 runtime 惰性携带（`src/app/layouts/capabilities/data-workspace.ts` 动态 import），**page.ts 不要 import 工作区 CSS**
 
 ## 舞台缩放坐标纪律（强制）

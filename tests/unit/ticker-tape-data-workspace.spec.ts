@@ -185,7 +185,14 @@ describe('ticker-tape data workspace', () => {
     }
     const a = source.getState().tapeXCm;
     const aExpected = (a[6] - 2 * a[3] + a[0]) / 100 / (0.3 * 0.3);
-    let result = submit(session, source, 'aDiff', String(aExpected), undefined);
+    // aDiff 与 v 一样按有效位数判分（默认 3 位）。
+    let result = submit(
+      session,
+      source,
+      'aDiff',
+      aExpected.toPrecision(3),
+      undefined
+    );
     expect(result.feedback.ok).toBe(true);
     session = result.session;
     for (let i = 1; i <= 5; i += 1) {
@@ -241,7 +248,7 @@ describe('ticker-tape data workspace', () => {
   it('honors a per-scene 2-significant-digit v setting', () => {
     const { sim, source } = makeSource();
     sim.setParams({ vSigFigs: 2 });
-    expect(sim.getState().vSignificantDigits).toBe(2);
+    expect(sim.getState().significantDigits).toBe(2);
     let session = createTickerTapeDataWorkspace(source).getSession();
     const truth = source.getState().tapeXCm;
     session = submit(session, source, 'x', truth[0].toFixed(2), 0).session;
@@ -254,7 +261,7 @@ describe('ticker-tape data workspace', () => {
     expect(wrongDigits.feedback.message).toContain('2 位有效数字');
     // 越界设置钳到上限 4 位。
     sim.setParams({ vSigFigs: 9 });
-    expect(sim.getState().vSignificantDigits).toBe(4);
+    expect(sim.getState().significantDigits).toBe(4);
   });
 
   it('invalidates only the v column and aFit on invalidateVColumn', () => {
@@ -274,7 +281,7 @@ describe('ticker-tape data workspace', () => {
       host.submitField({ field: 'v', trialIndex: i, raw: v.toPrecision(3) });
     }
     plot.hasFit = true;
-    const aFit = host.submitField({ field: 'aFit', raw: '0.4' });
+    const aFit = host.submitField({ field: 'aFit', raw: '0.400' });
     expect(aFit.feedback.ok).toBe(true);
     host.invalidateVColumn('v 有效位数要求已改为 2 位，请重新校对');
     const after = host.getSession();

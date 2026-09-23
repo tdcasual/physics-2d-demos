@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createTickerTapeDataWorkspace,
   evaluateTickerTapeField,
+  tickerTapeDataWorkspaceSpec,
   type TickerTapeMeasurementSource
 } from '../../src/scenes/ticker-tape/data-task';
 import {
@@ -19,6 +20,7 @@ import {
 } from '../../src/scenes/double-slit/data-task';
 import {
   assertSpecGraph,
+  chartStepReady,
   createEmptySession,
   type DataWorkspaceSession
 } from '../../src/platform/data-workspace';
@@ -174,7 +176,7 @@ describe('ticker-tape grading contract', () => {
     expect(fail.feedback.message).toContain('x_i − x_{i−1}');
   });
 
-  it('pins the ±0.05 absolute floor of the aDiff tolerance', () => {
+  it('grades aDiff by the significant-digit contract with half-unit rounding', () => {
     const { source } = makeTickerSource();
     let session = createTickerTapeDataWorkspace(source).getSession();
     const truth = source.getState().tapeXCm;
@@ -190,24 +192,89 @@ describe('ticker-tape grading contract', () => {
     const expected = computeSuccessiveAMs2(
       truth,
       source.getState().T
-    ) as number;
+    ) as number; // ua 纸带 = 0.4（2 位有效）
+    // 恰好 3 位有效数字（含末尾零）通过。
     const pass = submitTicker(
       session,
       source,
       'aDiff',
-      String(expected + 0.04),
+      expected.toPrecision(3),
       undefined
     );
     expect(pass.feedback.ok).toBe(true);
-    const fail = submitTicker(
-      session,
-      source,
-      'aDiff',
-      String(expected + 0.06),
-      undefined
-    );
-    expect(fail.feedback.ok).toBe(false);
-    expect(fail.feedback.layer).toBe('range');
+    // 3 位有效但超出半单位舍入（0.401 差 0.001 > 0.0005）落 range 层。
+    const off = submitTicker(session, source, 'aDiff', '0.401', undefined);
+    expect(off.feedback.ok).toBe(false);
+    expect(off.feedback.layer).toBe('range');
+    // 位数不符（0.4 = 2 位有效）落 format 层。
+    const few = submitTicker(session, source, 'aDiff', '0.4', undefined);
+    expect(few.feedback.layer).toBe('format');
+  });
+
+  it('exposes the current significant-digit requirement via knowns', () => {
+    const host = createTickerTapeDataWorkspace(makeTickerSource().source);
+    const sig = host.getKnowns().find((known) => known.key === 'sigFigs');
+    expect(sig?.value).toBe('3 位');
+  });
+
+  it('lets students skip the optional aDiff and still reach chart analysis', () => {
+    const { source } = makeTickerSource();
+    let session = createTickerTapeDataWorkspace(source).getSession();
+    const truth = source.getState().tapeXCm;
+    for (let i = 0; i < truth.length; i += 1) {
+      session = submitTicker(
+        session,
+        source,
+        'x',
+        truth[i].toFixed(2),
+        i
+      ).session;
+    }
+    for (let i = 1; i < truth.length; i += 1) {
+      session = submitTicker(
+        session,
+        source,
+        'deltaX',
+        (truth[i] - truth[i - 1]).toFixed(2),
+        i
+      ).session;
+    }
+    for (let i = 1; i <= 5; i += 1) {
+      const v = (truth[i + 1] - truth[i - 1]) / 100 / 0.2;
+      session = submitTicker(session, source, 'v', v.toPrecision(3), i).session;
+    }
+    // aDiff 选填：行字段全通过而 aDiff 未填时，chartStepReady 已经为真。
+    expect(chartStepReady(session, tickerTapeDataWorkspaceSpec)).toBe(true);
+  });
+
+  it('degrades the aDiff digit gate to syntax-only for uniform tape (a ≈ 0)', () => {
+    const sim = createTickerTapeSim({ tapeKind: 'uniform', noise: 'off' });
+    const source: TickerTapeMeasurementSource = {
+      getState: () => sim.getState(),
+      getPlotStatus: () => ({ hasFit: false }),
+      writeBack: {
+        setMeasuredX: (i, value) => sim.setMeasuredX(i, value),
+        setDeltaX: (i, value) => sim.setDeltaX(i, value),
+        setV: (i, value) => sim.setV(i, value)
+      }
+    };
+    let session = createTickerTapeDataWorkspace(source).getSession();
+    const truth = source.getState().tapeXCm;
+    for (let i = 0; i < truth.length; i += 1) {
+      session = submitTicker(
+        session,
+        source,
+        'x',
+        truth[i].toFixed(2),
+        i
+      ).session;
+    }
+    // 匀速纸带 a 期望为 0：'0' 无有效位数概念，语法级放行；非 0 值拒绝。
+    const zero = submitTicker(session, source, 'aDiff', '0', undefined);
+    expect(zero.feedback.ok).toBe(true);
+    const off = submitTicker(session, source, 'aDiff', '0.01', undefined);
+    expect(off.feedback.ok).toBe(false);
+    expect(off.feedback.layer).toBe('range');
   });
 
   it('grades v by 3 significant digits with a half-unit rounding window', () => {

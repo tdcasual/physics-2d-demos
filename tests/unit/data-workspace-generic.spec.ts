@@ -499,7 +499,7 @@ describe('transposed table and two-step shell', () => {
     panel.dispose();
   });
 
-  it('keeps the data step locked until rows and data summaries are ok', () => {
+  it('keeps chart mode gated until rows and data summaries are ok', () => {
     const { host } = createKinematicsChartHost();
     const onStepChange = vi.fn();
     const panel = createDataWorkspacePanel({
@@ -508,21 +508,11 @@ describe('transposed table and two-step shell', () => {
       onStepChange
     });
     expect(panel.getStep()).toBe('data');
-    const tabs = panel.root.querySelectorAll('[role="tab"]');
-    expect(tabs).toHaveLength(2);
-    expect(tabs[0]?.textContent).toBe('1 数据处理');
-    expect(tabs[1]?.textContent).toBe('2 图像分析');
-    expect(tabs[0]?.getAttribute('aria-selected')).toBe('true');
-    expect(tabs[1]?.getAttribute('aria-disabled')).toBe('true');
-    expect(tabs[1]?.classList.contains('is-locked')).toBe(true);
-    (tabs[1] as HTMLButtonElement).click();
+    // 图像分析不再有面板内步骤条；进出由 capability 经 setChartMode 驱动。
+    expect(panel.root.querySelectorAll('[role="tab"]')).toHaveLength(0);
+    panel.setChartMode(true);
     expect(panel.getStep()).toBe('data');
     expect(onStepChange).not.toHaveBeenCalled();
-    const stepAlert = panel.root.querySelector(
-      '.data-workspace-step-alert'
-    ) as HTMLElement;
-    expect(stepAlert.hidden).toBe(false);
-    expect(stepAlert.textContent).toBe('请先完成数据处理');
     expect(panel.root.querySelector('.data-workspace-hint')?.textContent).toBe(
       '填写质量、时间和速率'
     );
@@ -539,13 +529,9 @@ describe('transposed table and two-step shell', () => {
     }
     host.submitField({ field: 'meanSpeed', raw: '2' });
     panel.update();
-    expect(tabs[1]?.getAttribute('aria-disabled')).toBeNull();
-    expect(tabs[1]?.classList.contains('is-locked')).toBe(false);
-    (tabs[1] as HTMLButtonElement).click();
+    panel.setChartMode(true);
     expect(panel.getStep()).toBe('chartAnalysis');
     expect(onStepChange).toHaveBeenCalledWith('chartAnalysis');
-    expect(tabs[1]?.getAttribute('aria-selected')).toBe('true');
-    expect(stepAlert.hidden).toBe(true);
     expect(
       (panel.root.querySelector('.data-workspace-table-wrap') as HTMLElement)
         .hidden
@@ -568,7 +554,7 @@ describe('transposed table and two-step shell', () => {
       ?.closest('.data-workspace-summary-row') as HTMLElement;
     expect(meanRow.hidden).toBe(true);
     expect(slopeRow.hidden).toBe(false);
-    (tabs[0] as HTMLButtonElement).click();
+    panel.setChartMode(false);
     expect(panel.getStep()).toBe('data');
     expect(onStepChange).toHaveBeenCalledWith('data');
     expect(meanRow.hidden).toBe(false);
@@ -639,30 +625,17 @@ describe('transposed table and two-step shell', () => {
     trialsPanel.dispose();
   });
 
-  it('auto-hides the locked chart-step alert after a short delay', () => {
-    vi.useFakeTimers();
+  it('renders no in-panel step chrome now that chart mode lives in the toolbar', () => {
     const { host } = createKinematicsChartHost();
     const panel = createDataWorkspacePanel({
       host,
       onChange() {}
     });
     try {
-      const chartTab = panel.root.querySelector(
-        '[role="tab"][data-step="chartAnalysis"]'
-      ) as HTMLButtonElement;
-      const alert = panel.root.querySelector(
-        '.data-workspace-step-alert'
-      ) as HTMLElement;
-      expect(alert.hidden).toBe(true);
-      chartTab.click();
-      expect(alert.hidden).toBe(false);
-      expect(alert.textContent).toBe('请先完成数据处理');
-      vi.advanceTimersByTime(3000);
-      expect(alert.hidden).toBe(true);
-      expect(alert.textContent).toBe('');
+      expect(panel.root.querySelector('[role="tablist"]')).toBeNull();
+      expect(panel.root.querySelector('.data-workspace-step-alert')).toBeNull();
     } finally {
       panel.dispose();
-      vi.useRealTimers();
     }
   });
 });

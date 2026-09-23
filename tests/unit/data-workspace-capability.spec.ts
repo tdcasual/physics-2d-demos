@@ -212,9 +212,7 @@ describe('data-workspace capability lifecycle', () => {
       table!.compareDocumentPosition(chart!) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     (
-      container.querySelector(
-        '[role="tab"][data-step="chartAnalysis"]'
-      ) as HTMLButtonElement
+      container.querySelector('.graph-analysis-entry') as HTMLButtonElement
     ).click();
     expect(chart?.contains(graphSection)).toBe(false);
     expect(container.classList.contains('is-data-workspace-chart')).toBe(false);
@@ -268,9 +266,7 @@ describe('data-workspace capability lifecycle', () => {
     expect(graphSection.parentElement).toBe(container);
     expect(graphSection.hidden).toBe(true);
     (
-      container.querySelector(
-        '[role="tab"][data-step="chartAnalysis"]'
-      ) as HTMLButtonElement
+      container.querySelector('.graph-analysis-entry') as HTMLButtonElement
     ).click();
     const chart = container.querySelector('[data-data-workspace-chart]');
     expect(container.classList.contains('is-data-workspace-chart')).toBe(true);
@@ -278,9 +274,7 @@ describe('data-workspace capability lifecycle', () => {
     expect(graphSection.hidden).toBe(false);
     expect(graphSection.classList.contains('is-collapsed')).toBe(false);
     (
-      container.querySelector(
-        '[role="tab"][data-step="data"]'
-      ) as HTMLButtonElement
+      container.querySelector('.graph-analysis-entry') as HTMLButtonElement
     ).click();
     expect(container.classList.contains('is-data-workspace-chart')).toBe(false);
     expect(graphSection.parentElement).toBe(container);
@@ -336,9 +330,7 @@ describe('data-workspace capability lifecycle', () => {
     expect(graphSection.style.top).toBe('568px');
     expect(graphSection.style.left).toBe('788px');
     (
-      container.querySelector(
-        '[role="tab"][data-step="chartAnalysis"]'
-      ) as HTMLButtonElement
+      container.querySelector('.graph-analysis-entry') as HTMLButtonElement
     ).click();
     const chart = container.querySelector('[data-data-workspace-chart]');
     expect(chart?.contains(graphSection)).toBe(true);
@@ -349,9 +341,7 @@ describe('data-workspace capability lifecycle', () => {
     expect(graphSection.style.height).toBe('');
     expect(graphSection.style.zIndex).toBe('');
     (
-      container.querySelector(
-        '[role="tab"][data-step="data"]'
-      ) as HTMLButtonElement
+      container.querySelector('.graph-analysis-entry') as HTMLButtonElement
     ).click();
     expect(graphSection.parentElement).toBe(container);
     expect(graphSection.style.position).toBe('absolute');

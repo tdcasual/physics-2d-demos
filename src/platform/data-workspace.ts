@@ -72,6 +72,12 @@ export type DataWorkspaceFieldSpec = {
   readinessHintOne?: string;
   /** Chart-analysis summary fields only. Default is the data step. */
   step?: 'chartAnalysis';
+  /**
+   * Summary fields only: the field may stay empty without blocking
+   * chartStepReady (e.g. an alternative evaluation method). Grading and
+   * dependsOn still apply whenever the student does fill it in.
+   */
+  optional?: boolean;
 };
 
 /** Optional calculation-section presentation. Keys refer to getKnowns(). */
@@ -336,7 +342,9 @@ export function chartStepReady(
   );
   if (!rowsOk) return false;
   return spec.summaryFields
-    .filter((field) => field.step !== 'chartAnalysis')
+    .filter(
+      (field) => field.step !== 'chartAnalysis' && field.optional !== true
+    )
     .every((field) => fieldIsOk(session.summary[field.id]));
 }
 
@@ -442,6 +450,11 @@ export function assertSpecGraph(spec: DataWorkspaceSpec): void {
     if (field.step != null) {
       throw new Error(
         `[data-workspace] step is only allowed on summaryFields (field "${field.id}" in spec "${spec.id}")`
+      );
+    }
+    if (field.optional) {
+      throw new Error(
+        `[data-workspace] optional is only allowed on summaryFields (field "${field.id}" in spec "${spec.id}")`
       );
     }
   }

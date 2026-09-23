@@ -93,7 +93,83 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
   let tapeHit: TapeHit | null = null;
   let plottedXCm: Array<number | null> | null = null;
   let plottedVMs: Array<number | null> | null = null;
-  let showFit = false;
+  /** 每张图独立的描点/拟合状态：x–t 与 v–t 可分别描点、拟合。 */
+  type GraphKind = 'x' | 'v';
+  const plotted: Record<GraphKind, boolean> = { x: false, v: false };
+  const fitted: Record<GraphKind, boolean> = { x: false, v: false };
+  /** 绘图选择：勾选哪些图（可多选）。 */
+  const selected: Record<GraphKind, boolean> = { x: true, v: true };
+  /** 描点/拟合动画（纯视觉，状态在触发瞬间已置位）。 */
+  type PlotAnim = {
+    mode: 'scatter' | 'fit';
+    start: number;
+    state: TickerTapeState;
+  };
+  const anims: Partial<Record<GraphKind, PlotAnim>> = {};
+  let animFrame: number | null = null;
+  const SCATTER_STEP_MS = 180;
+  const FIT_DURATION_MS = 600;
+
+  function prefersReducedMotion(): boolean {
+    return (
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    );
+  }
+
+  function selectedKinds(): GraphKind[] {
+    return (['x', 'v'] as const).filter((k) => selected[k]);
+  }
+
+  function animProgress(
+    kind: GraphKind,
+    mode: PlotAnim['mode'],
+    pointCount: number,
+    now: number
+  ): number {
+    const anim = anims[kind];
+    if (!anim || anim.mode !== mode) return 1;
+    if (prefersReducedMotion()) return 1;
+    const duration =
+      mode === 'scatter' ? pointCount * SCATTER_STEP_MS : FIT_DURATION_MS;
+    if (duration <= 0) return 1;
+    return Math.min(1, (now - anim.start) / duration);
+  }
+
+  function startAnim(
+    kind: GraphKind,
+    mode: PlotAnim['mode'],
+    state: TickerTapeState
+  ): void {
+    anims[kind] = { mode, start: performance.now(), state };
+    animState = state;
+    startAnimLoop();
+  }
+
+  function anyAnimActive(now: number): boolean {
+    return (['x', 'v'] as const).some((kind) => {
+      const anim = anims[kind];
+      if (!anim) return false;
+      const points = anim.mode === 'scatter' ? 7 : 1;
+      return animProgress(kind, anim.mode, points, now) < 1;
+    });
+  }
+
+  function startAnimLoop(): void {
+    if (animFrame != null) return;
+    if (typeof requestAnimationFrame !== 'function') return;
+    const tick = () => {
+      animFrame = null;
+      const now = performance.now();
+      if (!anyAnimActive(now)) return;
+      if (animState) drawGraphs(animState);
+      animFrame = requestAnimationFrame(tick);
+    };
+    animFrame = requestAnimationFrame(tick);
+  }
+
+  let animState: TickerTapeState | null = null;
 
   function copySeries(
     values: ReadonlyArray<number | null>
@@ -120,23 +196,41 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
   }
 
   function plotStatus(state: TickerTapeState): {
-    hasScatter: boolean;
+    x: { plotted: boolean; fitted: boolean; canFit: boolean };
+    v: { plotted: boolean; fitted: boolean; canFit: boolean };
+    /** 兼容字段：v–t 已拟合且数据未变（aFit 判分依据）。 */
     hasFit: boolean;
+    /** 任一图已描点（工具条状态）。 */
+    hasScatter: boolean;
     dirty: boolean;
     canFit: boolean;
   } {
-    const hasScatter = plottedXCm !== null && plottedVMs !== null;
     const dirty =
-      hasScatter &&
-      (!seriesEqual(plottedXCm, state.measuredXCm) ||
-        !seriesEqual(plottedVMs, state.vMs));
+      (plotted.x &&
+        plottedXCm !== null &&
+        !seriesEqual(plottedXCm, state.measuredXCm)) ||
+      (plotted.v && plottedVMs !== null && !seriesEqual(plottedVMs, state.vMs));
     const xPts = plottedXCm ? toPoints(plottedXCm, state.T, 0.01) : [];
     const vPts = plottedVMs ? toPoints(plottedVMs, state.T, 1) : [];
+    const series = (kind: GraphKind, pointCount: number) => ({
+      plotted: plotted[kind],
+      fitted: fitted[kind] && plotted[kind] && !dirty,
+      canFit:
+        plotted[kind] && !dirty
+          ? kind === 'x'
+            ? pointCount >= 3
+            : pointCount >= 2
+          : false
+    });
+    const x = series('x', xPts.length);
+    const v = series('v', vPts.length);
     return {
-      hasScatter,
-      hasFit: showFit && hasScatter && !dirty,
+      x,
+      v,
+      hasFit: v.fitted,
+      hasScatter: plotted.x || plotted.v,
       dirty,
-      canFit: hasScatter && !dirty && (xPts.length >= 3 || vPts.length >= 2)
+      canFit: x.canFit || v.canFit
     };
   }
 
@@ -441,7 +535,12 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     scale: number,
     colors: ReturnType<typeof palette>,
     fitKind: 'line' | 'quadratic',
-    stage: { showPoints: boolean; showFit: boolean }
+    stage: {
+      showPoints: boolean;
+      showFit: boolean;
+      pointProgress: number;
+      fitProgress: number;
+    }
   ): void {
     const tokens = getRenderTokens(scale);
     ctx.save();
@@ -549,6 +648,7 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     }
 
     const outlierSet = new Set<number>();
+    const fitProgress = Math.max(0, Math.min(1, stage.fitProgress));
     if (stage.showFit && fitKind === 'quadratic' && points.length >= 3) {
       const q = fitQuadratic(points);
       if (q) {
@@ -560,7 +660,8 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
         ctx.lineWidth = tokens.strokePx * 0.7;
         ctx.beginPath();
         const steps = 24;
-        for (let i = 0; i <= steps; i++) {
+        const drawn = Math.max(1, Math.round(steps * fitProgress));
+        for (let i = 0; i <= drawn; i++) {
           const t = (tMax * i) / steps;
           const y = q.a * t * t + q.b * t + q.c;
           if (i === 0) ctx.moveTo(xOf(t), yOf(y));
@@ -581,13 +682,18 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
         ctx.lineWidth = tokens.strokePx * 0.7;
         ctx.beginPath();
         ctx.moveTo(xOf(0), yOf(fit.intercept));
-        ctx.lineTo(xOf(tMax), yOf(fit.intercept + fit.slope * tMax));
+        const endT = tMax * fitProgress;
+        ctx.lineTo(xOf(endT), yOf(fit.intercept + fit.slope * endT));
         ctx.stroke();
         ctx.restore();
       }
     }
 
-    points.forEach((p, i) => {
+    // 描点动画：点按表格顺序逐个出现（progress 从 0 到 1）。
+    const visible = Math.ceil(
+      points.length * Math.max(0, Math.min(1, stage.pointProgress))
+    );
+    points.slice(0, visible).forEach((p, i) => {
       ctx.fillStyle = outlierSet.has(i) ? colors.outlier : colors.scatter;
       ctx.beginPath();
       ctx.arc(xOf(p.t), yOf(p.y), tokens.pointRadiusPx * 0.65, 0, Math.PI * 2);
@@ -610,48 +716,82 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     ctx.fillRect(0, 0, w, h);
     const gap = scaledSize(10, scale, 6);
     const status = plotStatus(state);
-    const xPts = plottedXCm ? toPoints(plottedXCm, state.T, 0.01) : [];
-    const vPts = plottedVMs ? toPoints(plottedVMs, state.T, 1) : [];
-    const stage = { showPoints: status.hasScatter, showFit: status.hasFit };
-    const sideBySide = w >= h;
-    const xBox = sideBySide
-      ? { x: gap, y: gap, w: (w - gap * 3) / 2, h: h - gap * 2 }
-      : { x: gap, y: gap, w: w - gap * 2, h: (h - gap * 3) / 2 };
-    const vBox = sideBySide
-      ? {
-          x: gap * 2 + xBox.w,
-          y: gap,
-          w: xBox.w,
-          h: xBox.h
+    const now = performance.now();
+    const kinds = selectedKinds();
+    if (kinds.length === 0) return;
+    const defs: Array<{
+      kind: GraphKind;
+      title: string;
+      points: Array<{ t: number; y: number }>;
+      yLabel: string;
+      fitKind: 'line' | 'quadratic';
+      minPoints: number;
+    }> = [
+      {
+        kind: 'x',
+        title: 'x–t',
+        points: plottedXCm ? toPoints(plottedXCm, state.T, 0.01) : [],
+        yLabel: 'x / m',
+        fitKind: 'quadratic',
+        minPoints: 3
+      },
+      {
+        kind: 'v',
+        title: 'v–t',
+        points: plottedVMs ? toPoints(plottedVMs, state.T, 1) : [],
+        yLabel: 'v / (m/s)',
+        fitKind: 'line',
+        minPoints: 2
+      }
+    ];
+    const boxes = defs.map((def, index) => {
+      if (kinds.length === 1) {
+        return { x: gap, y: gap, w: w - gap * 2, h: h - gap * 2 };
+      }
+      const sideBySide = w >= h;
+      const full = sideBySide ? w : h;
+      const along = (full - gap * 3) / 2;
+      return sideBySide
+        ? {
+            x: gap + index * (along + gap),
+            y: gap,
+            w: along,
+            h: h - gap * 2
+          }
+        : {
+            x: gap,
+            y: gap + index * (along + gap),
+            w: w - gap * 2,
+            h: along
+          };
+    });
+    defs.forEach((def, index) => {
+      if (!selected[def.kind]) return;
+      const ser = status[def.kind];
+      const pointProgress =
+        ser.plotted && plotted[def.kind]
+          ? animProgress(def.kind, 'scatter', def.points.length || 1, now)
+          : 1;
+      const fitProgress = ser.fitted
+        ? animProgress(def.kind, 'fit', 1, now)
+        : 1;
+      drawPanel(
+        ctx,
+        boxes[index],
+        def.title,
+        def.points,
+        def.yLabel,
+        scale,
+        colors,
+        def.fitKind,
+        {
+          showPoints: ser.plotted,
+          showFit: ser.fitted && def.points.length >= def.minPoints,
+          pointProgress,
+          fitProgress
         }
-      : {
-          x: gap,
-          y: gap * 2 + xBox.h,
-          w: xBox.w,
-          h: xBox.h
-        };
-    drawPanel(
-      ctx,
-      xBox,
-      'x–t',
-      xPts,
-      'x / m',
-      scale,
-      colors,
-      'quadratic',
-      stage
-    );
-    drawPanel(
-      ctx,
-      vBox,
-      'v–t',
-      vPts,
-      'v / (m/s)',
-      scale,
-      colors,
-      'line',
-      stage
-    );
+      );
+    });
   }
 
   function canvasLocalX(e: PointerEvent): number | null {
@@ -771,18 +911,42 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     reset(): void {
       plottedXCm = null;
       plottedVMs = null;
-      showFit = false;
+      plotted.x = false;
+      plotted.v = false;
+      fitted.x = false;
+      fitted.v = false;
+      delete anims.x;
+      delete anims.v;
     },
     plotScatter(state: TickerTapeState): void {
-      plottedXCm = copySeries(state.measuredXCm);
-      plottedVMs = copySeries(state.vMs);
-      showFit = false;
+      const kinds = selectedKinds();
+      if (kinds.length === 0) return;
+      if (kinds.includes('x')) {
+        plottedXCm = copySeries(state.measuredXCm);
+        plotted.x = true;
+        fitted.x = false;
+        startAnim('x', 'scatter', state);
+      }
+      if (kinds.includes('v')) {
+        plottedVMs = copySeries(state.vMs);
+        plotted.v = true;
+        fitted.v = false;
+        startAnim('v', 'scatter', state);
+      }
     },
     plotFit(state: TickerTapeState): boolean {
       const status = plotStatus(state);
-      if (!status.canFit) return false;
-      showFit = true;
+      const kinds = selectedKinds().filter((kind) => status[kind].canFit);
+      if (kinds.length === 0) return false;
+      for (const kind of kinds) {
+        fitted[kind] = true;
+        startAnim(kind, 'fit', state);
+      }
       return true;
+    },
+    setSelectedGraphs(kinds: readonly GraphKind[]): void {
+      selected.x = kinds.includes('x');
+      selected.v = kinds.includes('v');
     },
     getPlotStatus(state: TickerTapeState) {
       return plotStatus(state);

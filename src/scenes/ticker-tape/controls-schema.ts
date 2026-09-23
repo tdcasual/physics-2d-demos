@@ -38,7 +38,7 @@ export const tickerTapeControlsSchema: ControlsSchema = {
         {
           type: 'select',
           key: 'vSigFigs',
-          label: 'v 有效位数',
+          label: '有效位数',
           value: '3',
           options: [
             { label: '2 位', value: '2' },

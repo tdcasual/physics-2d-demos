@@ -255,6 +255,11 @@ export function createTickerTapeScene(
     getPlotStatus() {
       return view.getPlotStatus(sim.getState());
     },
+    setSelectedGraphs(kinds: ReadonlyArray<'x' | 'v'>): void {
+      view.setSelectedGraphs(kinds);
+      base.renderAndEmit();
+      base.notify();
+    },
     setTimeScale(scale: number): void {
       timeScale = clampTimeScale(scale);
       base.notify();
@@ -327,7 +332,7 @@ export function createTickerTapeScene(
         hostRef?.invalidateAll('纸带已更换，请重新测量校对');
       } else if (before.vSigFigs !== after.vSigFigs) {
         dataWorkspace.invalidateVColumn(
-          `v 有效位数要求已改为 ${after.vSigFigs} 位，请按新要求重新填写校对`
+          `有效位数要求已改为 ${after.vSigFigs} 位，请按新要求重新填写校对`
         );
       }
       base.renderAndEmit();

@@ -127,7 +127,9 @@ test.describe('ticker-tape data workspace', () => {
     await expect(page.locator('#lab-panel-data')).toBeHidden();
     await expect(page.locator('#lab-panel-graph')).toBeHidden();
 
-    const entry = page.locator('.data-workspace-entry');
+    const entry = page.locator(
+      '.data-workspace-entry:not(.graph-analysis-entry)'
+    );
     await expect(entry).toHaveText('数据处理');
     await expect(entry).toBeEnabled();
     await entry.click();
@@ -202,18 +204,18 @@ test.describe('ticker-tape data workspace', () => {
     await expect(fieldStatus('x', 0)).toHaveClass(/is-ok/);
     await expect(fieldStatus('x', 0)).not.toHaveClass(/is-stale/);
 
-    const chartTab = page.locator('[role="tab"][data-step="chartAnalysis"]');
-    await expect(chartTab).toHaveAttribute('aria-disabled', 'true');
-    await chartTab.click({ force: true });
-    const stepAlert = page.locator('.data-workspace-step-alert');
-    await expect(stepAlert).toBeVisible();
-    await expect(stepAlert).toContainText('请先完成数据处理');
+    // 图像分析是悬浮工具条上的独立环节入口：未完成数据处理时禁用。
+    const chartEntry = page.locator('.graph-analysis-entry');
+    await expect(chartEntry).toBeVisible();
+    await expect(chartEntry).toBeDisabled();
+    await expect(chartEntry).toHaveAttribute('title', /请先完成数据处理/);
+    await expect(page.locator('[role="tab"][data-step]')).toHaveCount(0);
     await expect(page.locator('.data-workspace-hint')).toContainText(
       'x 单位 cm'
     );
     await expect(
-      page.locator('[role="tab"][data-step="data"]')
-    ).toHaveAttribute('aria-selected', 'true');
+      page.locator('.data-workspace-panel > .data-workspace-knowns')
+    ).toContainText('有效位数（v、a）');
 
     for (let i = 1; i < 7; i += 1) await check('x', i, x(i).toFixed(2));
     for (let i = 1; i < 7; i += 1) {
@@ -230,9 +232,13 @@ test.describe('ticker-tape data workspace', () => {
     await page.locator('[aria-label="校对v"]').click();
     await expect(fieldStatus('v', 1)).toHaveClass(/is-ok/);
 
+    // aDiff 选填：行字段全通过后，图像分析入口即可用（不必先填 aDiff）。
+    await expect(chartEntry).toBeEnabled();
+
     const aDiff = page.locator('.data-workspace-input[data-field="aDiff"]');
     await expect(aDiff).toBeEnabled();
-    await aDiff.fill('0.4');
+    // aDiff 同样按 3 位有效数字判分。
+    await aDiff.fill('0.400');
     await aDiff.press('Enter');
     await expect(
       page.locator(
@@ -240,10 +246,9 @@ test.describe('ticker-tape data workspace', () => {
       )
     ).toBeVisible();
 
-    await page.locator('[role="tab"][data-step="chartAnalysis"]').click();
-    await expect(
-      page.locator('[role="tab"][data-step="chartAnalysis"]')
-    ).toHaveAttribute('aria-selected', 'true');
+    await chartEntry.click();
+    await expect(chartEntry).toHaveAttribute('aria-pressed', 'true');
+    await expect(chartEntry).toHaveText('返回数据处理');
     await expect(page.locator('.data-workspace-review')).toBeVisible();
     const adoptedGraph = page.locator('.data-workspace-chart .lab-float-graph');
     await expect(adoptedGraph).toBeVisible();
@@ -263,6 +268,9 @@ test.describe('ticker-tape data workspace', () => {
     await expect(
       page.locator('.data-workspace-chart .lab-plot-toolbar')
     ).toBeVisible();
+    // 图像分析环节无动画区：舞台画布收起，悬浮工具条宿主保留。
+    await expect(page.locator('.lab-stage-slot canvas')).toBeHidden();
+    await expect(entry).toBeVisible();
 
     const recap = page.locator(
       '.data-workspace-panel .data-workspace-review-table'
@@ -301,13 +309,23 @@ test.describe('ticker-tape data workspace', () => {
 
     const aFit = page.locator('.data-workspace-input[data-field="aFit"]');
     await expect(aFit).toBeVisible();
-    await aFit.fill('0.4');
+    // aFit 同样按 3 位有效数字判分。
+    await aFit.fill('0.400');
     await aFit.press('Enter');
     await expect(page.locator('.data-workspace-result')).toContainText(
       'v–t 图像斜率 a'
     );
 
-    await expect(page.locator('.data-workspace-entry')).toHaveText('返回实验');
+    // 图像分析 → 数据处理 → 退出，逐级返回。
+    await expect(chartEntry).toHaveText('返回数据处理');
+    await chartEntry.click();
+    await expect(chartEntry).toHaveText('图像分析');
+    await expect(page.locator('.layout-master')).not.toHaveClass(
+      /is-data-workspace-chart/
+    );
+    await expect(page.locator('.data-workspace-review')).toBeHidden();
+    await expect(page.locator('.lab-stage-slot canvas')).toBeVisible();
+    await expect(entry).toHaveText('返回实验');
     await entry.click();
     await expect(page.locator('.data-workspace-panel')).toHaveCount(0);
     await expect(page.locator('#lab-panel-graph')).toBeHidden();
@@ -328,7 +346,9 @@ test.describe('ticker-tape data workspace', () => {
     });
     await waitForFirstFrame(page, { remainderMs: 500 });
 
-    const entry = page.locator('.data-workspace-entry');
+    const entry = page.locator(
+      '.data-workspace-entry:not(.graph-analysis-entry)'
+    );
     await entry.click();
     const viewport = page.locator('.stage-viewport');
     await expect(viewport).toBeVisible();

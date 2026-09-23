@@ -38,9 +38,16 @@ describe('data-workspace panel architecture', () => {
     expect(source).toContain('rowFields');
     expect(source).toContain('summaryFields');
     expect(source).toContain('applyDrafts');
-    expect(source).toContain('1 数据处理');
-    expect(source).toContain('2 图像分析');
-    expect(source).toContain('请先完成数据处理');
+    // 图像分析是独立环节：面板无步骤条，入口在悬浮工具条（capability）。
+    expect(source).toContain('setChartMode');
+    expect(source).not.toContain('1 数据处理');
+    expect(source).not.toContain('2 图像分析');
+    const capabilitySource = readFileSync(
+      join(root, 'src/app/layouts/capabilities/data-workspace.ts'),
+      'utf8'
+    );
+    expect(capabilitySource).toContain('图像分析');
+    expect(capabilitySource).toContain('请先完成数据处理');
   });
 });
 

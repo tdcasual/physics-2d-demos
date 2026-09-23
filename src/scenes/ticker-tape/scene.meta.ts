@@ -7,7 +7,7 @@ const demoProfile: SceneDemoProfile = {
   renderHints: { contentScale: 1.3 },
   interactionHints: {
     touchTargetMinSize: 48,
-    visibleControlKeys: ['preset', 'countEvery', 'fillRuler']
+    visibleControlKeys: ['preset', 'countEvery', 'fillRuler', 'vSigFigs']
   }
 };
 

@@ -77,10 +77,11 @@ export const tickerTapeDataWorkspaceSpec: DataWorkspaceSpec = {
   summaryFields: [
     {
       id: 'aDiff',
-      label: '逐差法 a',
+      label: '逐差法 a（选填）',
       unit: 'm/s²',
       inputMode: 'decimal',
       gated: true,
+      optional: true,
       dependsOn: [{ scope: 'all-rows', field: 'x' }],
       readinessHint: '请先完成全部 7 个 x 校对'
     },
@@ -112,17 +113,19 @@ export type TickerTapePlotStatus = { hasFit: boolean };
  * 不得在判分分支写容差字面量。x 真值经 roundCm 量化在 0.01 cm 网格上，
  * 因此 x 走整数刻度比较。
  *
- * 派生行（Δx/v）的期望完全由学生已校对的 x 决定，读数误差已在 x 校对时
- * 吸收，故不存在独立容差：Δx 是同网格纯减法，按 0 刻度精确比较；v 按
- * 教师设定的有效位数（sim.vSigFigs，2–4 位，默认 3）做半单位舍入比较。
+ * 派生量（Δx/v/aDiff/aFit）的期望完全由学生已校对的数据决定，读数误差
+ * 已在校对时吸收，故不存在独立容差：Δx 是同网格纯减法，按 0 刻度精确
+ * 比较；v/a 按教师设定的有效位数（sim.vSigFigs，2–4 位，默认 3）做半
+ * 单位舍入比较，期望近零时（匀速 a≈0）位数闸退化为语法级。
  */
 const X_DECIMALS = 2;
 const X_TOLERANCE_CM = 0.03;
 /** Δx = x_i − x_{i−1}：0.01 cm 网格上的纯减法，合法偏差为 0 刻度。 */
 const DELTA_X_TOLERANCE_CM = 0;
-/** v 判分的兜底有效位数（sim 未提供 vSignificantDigits 时使用）。 */
-const V_DEFAULT_SIG_FIGS = 3;
-const A_TOLERANCE = { abs: 0.05, relDiff: 0.02, relFit: 0.05 } as const;
+/** 派生量判分的兜底有效位数（sim 未提供 significantDigits 时使用）。 */
+const DEFAULT_SIG_FIGS = 3;
+const SIG_FIGS_MIN = 2;
+const SIG_FIGS_MAX = 4;
 /** mm↔cm↔m 的倍率混淆提示窗口（长度量：cm 计）。 */
 const LENGTH_UNIT_RATIOS = [10, 100] as const;
 /** cm/s↔m/s、cm/s²↔m/s² 的倍率窗口（SI 换算量只有 ×100 一档）。 */
@@ -134,22 +137,60 @@ const DELTA_X_FORMAT_MESSAGE = `Δx 须为恰好 ${X_DECIMALS} 位小数，不�
 const DELTA_X_RANGE_DETAIL =
   'Δx = x_i − x_{i−1}，须与本行与前一行的已校对 x 之差精确相等';
 const NO_SCIENTIFIC_MESSAGE = '不支持指数记法，请填普通小数';
-const V_SIG_FIGS_FALLBACK = V_DEFAULT_SIG_FIGS;
+const SIG_FIGS_FALLBACK = DEFAULT_SIG_FIGS;
+/** 期望的数值零判据：低于此值视为「期望为 0」（有效位数无定义）。 */
+const NEAR_ZERO_EXPECTATION = 1e-12;
 
-function vSignificantDigitsOf(state: TickerTapeState): number {
-  const sig = state.vSignificantDigits;
-  return Number.isFinite(sig) && sig >= 2 && sig <= 4
+function significantDigitsOf(state: TickerTapeState): number {
+  const sig = state.significantDigits;
+  return Number.isFinite(sig) && sig >= SIG_FIGS_MIN && sig <= SIG_FIGS_MAX
     ? sig
-    : V_SIG_FIGS_FALLBACK;
+    : SIG_FIGS_FALLBACK;
 }
 
-function vFormatMessage(sigFigs: number): string {
-  return `v 应为恰好 ${sigFigs} 位有效数字，不支持指数记法`;
+function derivedFormatMessage(what: string, sigFigs: number): string {
+  return `${what} 应为恰好 ${sigFigs} 位有效数字，不支持指数记法`;
 }
 
-function vRangeDetail(sigFigs: number, expected: number): string {
-  return `v = (x_{i+1} − x_{i−1}) / (2T)，按 ${sigFigs} 位有效数字舍入（允许误差 ±${significantRoundingHalfUnit(expected, sigFigs)} m/s）`;
+/**
+ * 派生量格式闸：期望非零时要求恰好 N 位有效数字；期望近零（匀速 a≈0，
+ * 数值上等同于 0）时有效数字无定义，退化为语法级（仅禁科学计数法）。
+ * `expected` 传 null 表示依赖尚未就绪、无法计算期望，同样只查语法。
+ */
+function derivedFormatFeedback(
+  raw: string,
+  what: string,
+  sigFigs: number,
+  expected: number | null
+): FieldFeedback | null {
+  const nearZero =
+    expected == null || Math.abs(expected) < NEAR_ZERO_EXPECTATION;
+  return checkNumericFormat(
+    raw,
+    nearZero
+      ? { formatMessage: NO_SCIENTIFIC_MESSAGE }
+      : {
+          significantDigits: sigFigs,
+          formatMessage: derivedFormatMessage(what, sigFigs)
+        }
+  );
 }
+
+function derivedRangeDetail(
+  formula: string,
+  sigFigs: number,
+  expected: number,
+  unit: string
+): string {
+  if (Math.abs(expected) < NEAR_ZERO_EXPECTATION) {
+    return `${formula}，本组期望为 0（匀速），须填 0`;
+  }
+  return `${formula}，按 ${sigFigs} 位有效数字舍入（允许误差 ±${significantRoundingHalfUnit(expected, sigFigs)} ${unit}）`;
+}
+
+const V_FORMULA = 'v = (x_{i+1} − x_{i−1}) / (2T)';
+const A_DIFF_FORMULA = 'a = (x_6 − 2·x_3 + x_0) / (9T²)';
+const A_FIT_FORMULA = 'a = v–t 图拟合斜率';
 
 export type TickerTapeMeasurementSource = {
   getState(): TickerTapeState;
@@ -163,7 +204,7 @@ export type TickerTapeMeasurementSource = {
 
 export type TickerTapeDataWorkspaceHost = DataWorkspaceHost & {
   invalidateAll(reason: string): void;
-  /** 仅失效 v 列与依赖它的 aFit（v 有效位数要求变更时使用）。 */
+  /** 仅失效 v 列与依赖它的 aFit（有效位数要求变更时使用）。 */
   invalidateVColumn(reason: string): void;
 };
 
@@ -385,24 +426,24 @@ export function evaluateTickerTapeField(options: {
     const parsed = parsedOrFailure(submit.raw, 'm/s');
     const prev = getTrialField(session.trials[index - 1], 'x');
     const next = getTrialField(session.trials[index + 1], 'x');
-    const sigFigs = vSignificantDigitsOf(state);
-    const formatFb = checkNumericFormat(submit.raw, {
-      significantDigits: sigFigs,
-      formatMessage: vFormatMessage(sigFigs)
-    });
+    const sigFigs = significantDigitsOf(state);
+    const depsOk = fieldIsOk(prev) && fieldIsOk(next);
+    const expected = depsOk
+      ? (next!.value - prev!.value) / 100 / (2 * state.T)
+      : null;
+    const formatFb = derivedFormatFeedback(submit.raw, 'v', sigFigs, expected);
     let feedback: FieldFeedback = formatFb ?? parsed.feedback;
-    if (feedback.ok && (!fieldIsOk(prev) || !fieldIsOk(next))) {
+    if (feedback.ok && !depsOk) {
       feedback = relation('请先校对相邻点的 x');
     } else if (feedback.ok) {
-      const expected = (next!.value - prev!.value) / 100 / (2 * state.T);
       feedback = magnitudeFeedback(
         parsed.value,
-        expected,
-        significantRoundingHalfUnit(expected, sigFigs),
+        expected!,
+        significantRoundingHalfUnit(expected!, sigFigs),
         'm/s',
         {
           ratios: SI_UNIT_RATIOS,
-          rangeDetail: vRangeDetail(sigFigs, expected)
+          rangeDetail: derivedRangeDetail(V_FORMULA, sigFigs, expected!, 'm/s')
         }
       );
     }
@@ -417,30 +458,34 @@ export function evaluateTickerTapeField(options: {
     if (feedback.ok) source.writeBack.setV(index, parsed.value);
   } else if (field === 'aDiff') {
     const parsed = parsedOrFailure(submit.raw, 'm/s²');
-    const formatFb = checkNumericFormat(submit.raw, {
-      formatMessage: NO_SCIENTIFIC_MESSAGE
-    });
+    const sigFigs = significantDigitsOf(state);
+    const depsOk = allRowsFieldComplete(session, 'x');
+    const expected = depsOk
+      ? computeSuccessiveAMs2(
+          session.trials.map((row) => getTrialField(row, 'x')?.value ?? null),
+          state.T
+        )
+      : null;
+    const formatFb = derivedFormatFeedback(submit.raw, 'a', sigFigs, expected);
     let feedback: FieldFeedback = formatFb ?? parsed.feedback;
-    if (feedback.ok && !allRowsFieldComplete(session, 'x')) {
+    if (feedback.ok && expected == null) {
       feedback = relation('请先完成全部 7 个 x 校对');
     } else if (feedback.ok) {
-      const expected = computeSuccessiveAMs2(
-        session.trials.map((row) => getTrialField(row, 'x')?.value ?? null),
-        state.T
+      feedback = magnitudeFeedback(
+        parsed.value,
+        expected!,
+        significantRoundingHalfUnit(expected!, sigFigs),
+        'm/s²',
+        {
+          ratios: SI_UNIT_RATIOS,
+          rangeDetail: derivedRangeDetail(
+            A_DIFF_FORMULA,
+            sigFigs,
+            expected!,
+            'm/s²'
+          )
+        }
       );
-      feedback =
-        expected == null
-          ? relation('请先完成全部 7 个 x 校对')
-          : magnitudeFeedback(
-              parsed.value,
-              expected,
-              Math.max(
-                A_TOLERANCE.abs,
-                Math.abs(expected) * A_TOLERANCE.relDiff
-              ),
-              'm/s²',
-              { ratios: SI_UNIT_RATIOS }
-            );
     }
     session = writeField(
       session,
@@ -452,15 +497,15 @@ export function evaluateTickerTapeField(options: {
     );
   } else if (field === 'aFit') {
     const parsed = parsedOrFailure(submit.raw, 'm/s²');
-    const formatFb = checkNumericFormat(submit.raw, {
-      formatMessage: NO_SCIENTIFIC_MESSAGE
-    });
-    let feedback: FieldFeedback = formatFb ?? parsed.feedback;
-    if (feedback.ok && !allRowsFieldComplete(session, 'v')) {
+    const sigFigs = significantDigitsOf(state);
+    const depsOk = allRowsFieldComplete(session, 'v');
+    let feedback: FieldFeedback;
+    let expected: number | null = null;
+    if (!depsOk) {
       feedback = relation('请先完成各行 v 校对');
-    } else if (feedback.ok && !source.getPlotStatus().hasFit) {
-      feedback = relation('请先在图像区点击「描点」「拟合」');
-    } else if (feedback.ok) {
+    } else if (!source.getPlotStatus().hasFit) {
+      feedback = relation('请先在图像区描点并拟合 v–t 图');
+    } else {
       const points = session.trials
         .map((row, i) => ({
           t: i * state.T,
@@ -469,20 +514,34 @@ export function evaluateTickerTapeField(options: {
         .filter((point): point is { t: number; y: number } =>
           Number.isFinite(point.y)
         );
-      const expected = fitLineDroppingOutliers(points).fit?.slope;
-      feedback =
-        expected == null
-          ? relation('请先在图像区点击「描点」「拟合」')
-          : magnitudeFeedback(
-              parsed.value,
+      expected = fitLineDroppingOutliers(points).fit?.slope ?? null;
+      const formatFb = derivedFormatFeedback(
+        submit.raw,
+        'a',
+        sigFigs,
+        expected
+      );
+      if (formatFb) {
+        feedback = formatFb;
+      } else if (expected == null) {
+        feedback = relation('请先在图像区描点并拟合 v–t 图');
+      } else {
+        feedback = magnitudeFeedback(
+          parsed.value,
+          expected,
+          significantRoundingHalfUnit(expected, sigFigs),
+          'm/s²',
+          {
+            ratios: SI_UNIT_RATIOS,
+            rangeDetail: derivedRangeDetail(
+              A_FIT_FORMULA,
+              sigFigs,
               expected,
-              Math.max(
-                A_TOLERANCE.abs,
-                Math.abs(expected) * A_TOLERANCE.relFit
-              ),
-              'm/s²',
-              { ratios: SI_UNIT_RATIOS }
-            );
+              'm/s²'
+            )
+          }
+        );
+      }
     }
     session = writeField(
       session,
@@ -542,11 +601,16 @@ export function createTickerTapeDataWorkspace(
         label: '计数间隔 T',
         value: `${source.getState().T.toFixed(2)} s`
       },
-      { key: 'points', label: '计数点', value: '7 个' }
+      { key: 'points', label: '计数点', value: '7 个' },
+      {
+        key: 'sigFigs',
+        label: '有效位数（v、a）',
+        value: `${significantDigitsOf(source.getState())} 位`
+      }
     ],
     getHint: () => {
-      const sigFigs = vSignificantDigitsOf(source.getState());
-      return `x 单位 cm（毫米尺估读到 0.01 cm，填两位小数；与纸带读数相差不超过 ${X_TOLERANCE_CM.toFixed(2)} cm 判通过）；v 单位 m/s，保留 ${sigFigs} 位有效数字。`;
+      const sigFigs = significantDigitsOf(source.getState());
+      return `x 单位 cm（毫米尺估读到 0.01 cm，填两位小数；与纸带读数相差不超过 ${X_TOLERANCE_CM.toFixed(2)} cm 判通过）；v 与 a 单位分别为 m/s、m/s²，均保留 ${sigFigs} 位有效数字（逐差法 a 为选填）。`;
     },
     setActive(active: boolean) {
       session = { ...session, active };

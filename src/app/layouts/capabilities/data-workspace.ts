@@ -17,6 +17,7 @@ import type {
   LayoutSlots
 } from '../types';
 import {
+  chartStepReady,
   shouldEnableStagePanZoom,
   shouldShowChartAnalysis,
   type DataWorkspaceHost
@@ -113,6 +114,7 @@ export function createDataWorkspace(): CapabilityDefinition<
       const ac = new AbortController();
       let host: DataWorkspaceHost | null = null;
       let chromeOpen = false;
+      let chartMode = false;
       let panel: ReturnType<typeof createDataWorkspacePanel> | null = null;
       let panzoom: StagePanzoomHandle | null = null;
       let adoptedGraph: {
@@ -135,6 +137,30 @@ export function createDataWorkspace(): CapabilityDefinition<
       btn.setAttribute('aria-pressed', 'false');
       toolbar.host.appendChild(btn);
 
+      // 图像分析环节入口（独立环节，非面板内步骤）。仅在场景声明
+      // chartAnalysis 时创建——非图像分析场景的 DOM 里没有第二个按钮。
+      // disabled = 数据处理未完成（chartStepReady，忽略选填项）。
+      let chartBtn: HTMLButtonElement | null = null;
+      function ensureChartButton(): HTMLButtonElement {
+        if (!chartBtn) {
+          chartBtn = document.createElement('button');
+          chartBtn.type = 'button';
+          chartBtn.className = 'data-workspace-entry graph-analysis-entry';
+          chartBtn.textContent = '图像分析';
+          chartBtn.setAttribute('aria-pressed', 'false');
+          toolbar.host.appendChild(chartBtn);
+          chartBtn.addEventListener(
+            'click',
+            () => {
+              if (chartMode) exitChartMode();
+              else enterChartMode();
+            },
+            { signal: ac.signal }
+          );
+        }
+        return chartBtn;
+      }
+
       const unsubMode = ctx.on('modechange', (payload) => {
         if (payload.mode === 'presentation' && chromeOpen) {
           exitWorkspace(false);
@@ -149,6 +175,56 @@ export function createDataWorkspace(): CapabilityDefinition<
         return eligibility.ok ? '' : eligibility.reason;
       }
 
+      function chartReady(): boolean {
+        if (!host || !chromeOpen) return false;
+        return chartStepReady(host.getSession(), host.getSpec());
+      }
+
+      function syncChartButton(): void {
+        if (!host || !shouldShowChartAnalysis(host.getSpec())) {
+          if (chartBtn) chartBtn.hidden = true;
+          return;
+        }
+        const cb = ensureChartButton();
+        cb.hidden = false;
+        if (!chromeOpen || !chartMode) {
+          const ready = chartReady();
+          cb.disabled = !ready;
+          cb.setAttribute('aria-disabled', String(!ready));
+          cb.setAttribute('aria-pressed', 'false');
+          cb.textContent = '图像分析';
+          cb.title = ready
+            ? '进入图像分析环节'
+            : '请先完成数据处理再进入图像分析';
+        } else {
+          cb.disabled = false;
+          cb.setAttribute('aria-disabled', 'false');
+          cb.setAttribute('aria-pressed', 'true');
+          cb.textContent = '返回数据处理';
+          cb.title = '返回数据处理工作区';
+        }
+      }
+
+      function enterChartMode(): void {
+        if (!chromeOpen || chartMode || !host) return;
+        if (!chartStepReady(host.getSession(), host.getSpec())) {
+          syncChartButton();
+          return;
+        }
+        chartMode = true;
+        panel?.setChartMode(true);
+        syncButton();
+        syncChartButton();
+      }
+
+      function exitChartMode(): void {
+        if (!chartMode) return;
+        chartMode = false;
+        panel?.setChartMode(false);
+        syncButton();
+        syncChartButton();
+      }
+
       function syncButton(): void {
         const reason = eligibilityReason();
         const inPresentation = ctx.getMode() === 'presentation';
@@ -156,9 +232,15 @@ export function createDataWorkspace(): CapabilityDefinition<
         btn.disabled = disabled;
         btn.setAttribute('aria-disabled', String(disabled));
         btn.setAttribute('aria-pressed', String(chromeOpen));
-        btn.textContent = chromeOpen ? '返回实验' : '数据处理';
+        btn.textContent = chartMode
+          ? '数据处理'
+          : chromeOpen
+            ? '返回实验'
+            : '数据处理';
         if (inPresentation) {
           btn.title = '演示模式下不可进入数据处理';
+        } else if (chartMode) {
+          btn.title = '返回数据处理工作区';
         } else if (reason && !chromeOpen) {
           btn.title = reason;
         } else {
@@ -265,12 +347,14 @@ export function createDataWorkspace(): CapabilityDefinition<
         });
         placeWorkspaceHost(slots, ctx.container, panel.root);
         syncButton();
+        syncChartButton();
         requestLayoutResize();
       }
 
       function exitWorkspace(clearActive: boolean): void {
         if (!chromeOpen) return;
         chromeOpen = false;
+        chartMode = false;
         teardownPanzoom();
         restoreGraph();
         panel?.dispose();
@@ -283,10 +367,15 @@ export function createDataWorkspace(): CapabilityDefinition<
         );
         if (clearActive) host?.setActive(false);
         syncButton();
+        syncChartButton();
         requestLayoutResize();
       }
 
       function toggle(): void {
+        if (chromeOpen && chartMode) {
+          exitChartMode();
+          return;
+        }
         if (chromeOpen) {
           exitWorkspace(true);
           return;
@@ -307,6 +396,7 @@ export function createDataWorkspace(): CapabilityDefinition<
             panel?.update();
           }
           syncButton();
+          syncChartButton();
         },
         dispose() {
           ac.abort();
@@ -322,12 +412,15 @@ export function createDataWorkspace(): CapabilityDefinition<
             STAGE_LOCK_CLASS
           );
           chromeOpen = false;
+          chartMode = false;
           btn.remove();
+          chartBtn?.remove();
           releaseStageToolbar(toolbar.host, toolbar.created);
         }
       };
 
       syncButton();
+      syncChartButton();
       return instance;
     }
   };
