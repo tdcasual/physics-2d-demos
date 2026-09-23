@@ -4,6 +4,7 @@
 
 import {
   calculationTolerance,
+  exactDiscreteEqual,
   instrumentToleranceMm,
   type FieldFeedback
 } from '../../platform/data-workspace';
@@ -99,11 +100,9 @@ export function checkIntervalCount(
 export function checkDifference(
   D: number,
   x1Mm: number,
-  x2Mm: number,
-  displayDigits: number
+  x2Mm: number
 ): FieldFeedback {
   const expected = x2Mm - x1Mm;
-  const tol = calculationTolerance(displayDigits);
   if (expected <= 0 && D > 0) {
     return {
       ok: false,
@@ -111,7 +110,11 @@ export function checkDifference(
       message: 'D = x2 − x1，请保证 x2 大于 x1'
     };
   }
-  if (Math.abs(D - expected) > tol) {
+  // D 是两笔已校对读数的纯减法，不存在独立读数误差：无论卡尺（0.02 mm
+  // 网格）还是测微仪（0.001 mm 估读），x1/x2 在校对通过时即已定格，差值
+  // 唯一。提交值须与其浮点相等（5e-7 只吸收二进制减法尾差），
+  // 0.001 量级的凑数也会被拒。
+  if (!exactDiscreteEqual(D, expected)) {
     return { ok: false, layer: 'relation', message: 'D 应为 x2 减去 x1' };
   }
   if (D <= 0) {
@@ -134,6 +137,8 @@ export function checkFringeSpacing(
     return { ok: false, layer: 'format', message: '请先得到有效的间隔数 n' };
   }
   const expected = D / n;
+  // calculationTolerance = 半单位舍入界（0.5×10^-displayDigits）：
+  // Δx = D/n 的唯一合法偏差是末位舍入。
   const tol = calculationTolerance(displayDigits);
   if (Math.abs(deltaX - expected) > tol) {
     return { ok: false, layer: 'relation', message: 'Δx 应为 D 除以 n' };
@@ -153,6 +158,7 @@ export function checkAverageSpacing(
     return { ok: false, layer: 'range', message: '请先完成各组 Δx' };
   }
   const expected = deltaXs.reduce((sum, v) => sum + v, 0) / deltaXs.length;
+  // 各组 Δx 都已按 displayDigits 舍入，均值的合法偏差仍是半单位。
   const tol = calculationTolerance(displayDigits);
   if (Math.abs(average - expected) > tol) {
     return {

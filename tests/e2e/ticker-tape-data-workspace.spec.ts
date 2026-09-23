@@ -224,7 +224,8 @@ test.describe('ticker-tape data workspace', () => {
     await expect(fieldStatus('deltaX', 1)).toHaveClass(/is-ok/);
     for (let i = 1; i <= 5; i += 1) {
       await expect(input('v', i)).toBeEnabled();
-      await input('v', i).fill(String(v(i)));
+      // v 按 3 位有效数字判分（默认设置），0.12 须写作 0.120。
+      await input('v', i).fill(v(i).toFixed(3));
     }
     await page.locator('[aria-label="校对v"]').click();
     await expect(fieldStatus('v', 1)).toHaveClass(/is-ok/);

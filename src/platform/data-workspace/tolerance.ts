@@ -21,11 +21,41 @@ type MeasurementSnapshot = {
  * 不允许再手写 `<= tol + 1e-9` 之类的比较。
  */
 
+/**
+ * Derived-row rounding window: half of the last kept fractional digit.
+ * Derived quantities (differences, quotients, means of already-checked
+ * readings) carry no reading error of their own — the only legitimate
+ * deviation from the exact expectation is the student's final rounding to
+ * the display precision, which never exceeds half a unit of that digit.
+ */
 export function calculationTolerance(displayDigits: number): number {
   const digits = Number.isFinite(displayDigits)
     ? Math.max(0, Math.min(6, Math.round(displayDigits)))
     : 3;
-  return 2 * 10 ** -digits;
+  return 0.5 * 10 ** -digits;
+}
+
+/** Round to `significant` significant digits (half away from zero). */
+export function roundToSignificantDigits(
+  value: number,
+  significant: number
+): number {
+  if (!Number.isFinite(value) || value === 0) return value;
+  const digits = Math.max(1, Math.min(12, Math.round(significant)));
+  const exponent = Math.floor(Math.log10(Math.abs(value)));
+  const factor = 10 ** (digits - 1 - exponent);
+  return Math.round(value * factor) / factor;
+}
+
+/** Half-unit window implied by rounding `value` to `significant` digits. */
+export function significantRoundingHalfUnit(
+  value: number,
+  significant: number
+): number {
+  if (!Number.isFinite(value) || value === 0) return 0;
+  const digits = Math.max(1, Math.min(12, Math.round(significant)));
+  const exponent = Math.floor(Math.log10(Math.abs(value)));
+  return 0.5 * 10 ** (exponent - digits + 1);
 }
 
 /**

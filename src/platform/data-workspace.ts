@@ -25,6 +25,8 @@ export {
   quantizeExactDiscreteMm,
   readingStrategyOf,
   readingsAgree,
+  roundToSignificantDigits,
+  significantRoundingHalfUnit,
   withinEpsilon,
   withinTickTolerance
 } from './data-workspace/tolerance';
@@ -535,6 +537,13 @@ const POSITION_FORMAT_MESSAGE: Record<PositionFormatKind, string> = {
 export type NumericFormatOptions = {
   /** Require exactly this many fractional digits (implies a decimal point). */
   decimalPlaces?: number;
+  /**
+   * Require exactly this many significant digits in the plain decimal
+   * literal (e.g. `0.120` = 3 digits, `0.12` = 2). Counted on the raw
+   * string, trailing zeros count, leading zeros do not. Incompatible with
+   * `integer`.
+   */
+  significantDigits?: number;
   /** Require an integer literal (`/^[+-]?\d+$/` after trim; leading zeros ok). */
   integer?: boolean;
   /** Allow scientific notation. Default rejects any `e`/`E` anywhere. */
@@ -572,6 +581,24 @@ export function checkNumericFormat(
     const suffix =
       options.allowUnitSuffix === false ? '' : '(?:\\s*[A-Za-zµμ]+)?';
     if (!new RegExp(`^[+-]?\\d+${suffix}$`).test(trimmed)) {
+      return { ok: false, layer: 'format', message: formatMessage };
+    }
+    return null;
+  }
+  if (options.significantDigits != null) {
+    // 统计在去符号、去单位后缀的裸字面量上进行：前导零不算有效数字，
+    // 末尾零算（0.120 = 3 位，0.12 = 2 位）。
+    const body = trimmed.replace(/^[+-]/, '').replace(/\s*[A-Za-zµμ]+$/, '');
+    const match = body.match(/^(0|[1-9]\d*)(?:\.(\d+))?$/);
+    if (
+      !match ||
+      `${match[1]}${match[2] ?? ''}`.replace(/^0+/, '').length !==
+        options.significantDigits
+    ) {
+      return { ok: false, layer: 'format', message: formatMessage };
+    }
+    if (options.decimalPlaces == null) return null;
+    if ((match[2] ?? '').length !== options.decimalPlaces) {
       return { ok: false, layer: 'format', message: formatMessage };
     }
     return null;
@@ -742,7 +769,7 @@ export function checkInstrumentReading(
   return { ok: true, message: '估读在合理范围内' };
 }
 
-function markStale(
+export function markFieldStale(
   field: FieldCheckState | undefined
 ): FieldCheckState | undefined {
   if (!field) return field;
@@ -778,9 +805,9 @@ export function invalidateDownstream(
   const trial = next.trials[trialIndex];
   for (const node of downstream) {
     if (node.loc === 'row' && trial) {
-      trial.fields[node.id] = markStale(trial.fields[node.id]);
+      trial.fields[node.id] = markFieldStale(trial.fields[node.id]);
     } else if (node.loc === 'summary') {
-      next.summary[node.id] = markStale(next.summary[node.id]);
+      next.summary[node.id] = markFieldStale(next.summary[node.id]);
     }
   }
   return next;
@@ -831,7 +858,7 @@ export function invalidateAllTrials(
   next.completed = false;
   next.lockedInstrumentId = undefined;
   for (const id of spec.summaryFields.map((field) => field.id)) {
-    next.summary[id] = markStale(next.summary[id]);
+    next.summary[id] = markFieldStale(next.summary[id]);
   }
   for (const trial of next.trials) {
     for (const id of spec.rowFields.map((field) => field.id)) {
@@ -870,7 +897,7 @@ export function invalidateSummary(
   const next = cloneSession(session);
   next.completed = false;
   for (const id of spec.summaryFields.map((field) => field.id)) {
-    next.summary[id] = markStale(next.summary[id]);
+    next.summary[id] = markFieldStale(next.summary[id]);
   }
   return next;
 }

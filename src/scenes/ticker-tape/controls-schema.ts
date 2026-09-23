@@ -34,6 +34,17 @@ export const tickerTapeControlsSchema: ControlsSchema = {
           type: 'button',
           key: 'fillRuler',
           label: '按尺填入 x'
+        },
+        {
+          type: 'select',
+          key: 'vSigFigs',
+          label: 'v 有效位数',
+          value: '3',
+          options: [
+            { label: '2 位', value: '2' },
+            { label: '3 位', value: '3' },
+            { label: '4 位', value: '4' }
+          ]
         }
       ]
     },

@@ -40,6 +40,14 @@ bootScenePage({
         ctx.setControlActive('noise', id);
         return true;
       }
+      if (key === 'vSigFigs') {
+        const sig = Number(value);
+        if (Number.isFinite(sig)) {
+          ctx.scene.setParams({ vSigFigs: sig });
+          ctx.setControlValue('vSigFigs', String(sig));
+        }
+        return true;
+      }
       return false;
     }
   },
@@ -64,6 +72,12 @@ bootScenePage({
         } else if (key === 'showA') {
           tape.setParams({ showA: Boolean(value) });
           writeParam?.('showA', value ? 1 : 0);
+        } else if (key === 'vSigFigs') {
+          const sig = Number(value);
+          if (Number.isFinite(sig)) {
+            tape.setParams({ vSigFigs: sig });
+            writeParam?.('vSigFigs', sig);
+          }
         }
         render();
       },

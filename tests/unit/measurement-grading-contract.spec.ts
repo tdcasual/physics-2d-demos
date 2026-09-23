@@ -58,12 +58,13 @@ function submitTicker(
 }
 
 describe('ticker-tape grading contract', () => {
-  it('binds the hint to the ±0.03 cm tolerance and two-decimal recording', () => {
+  it('binds the hint to the ±0.03 cm tolerance, two-decimal x and 3-sig-fig v', () => {
     const host = createTickerTapeDataWorkspace(makeTickerSource().source);
     const hint = host.getHint();
     expect(hint).toContain('0.03');
     expect(hint).toContain('两位小数');
     expect(hint).toContain('估读到 0.01 cm');
+    expect(hint).toContain('保留 3 位有效数字');
   });
 
   it('pins the timing model that the v expectation formula relies on', () => {
@@ -133,7 +134,7 @@ describe('ticker-tape grading contract', () => {
     expect(result.feedback.layer).toBe('range');
   });
 
-  it('pins the ±0.02 cm deltaX boundary on the student-grid', () => {
+  it('requires deltaX to equal the checked x difference exactly (0-tick)', () => {
     const { source } = makeTickerSource();
     let session = createTickerTapeDataWorkspace(source).getSession();
     const truth = source.getState().tapeXCm;
@@ -152,11 +153,12 @@ describe('ticker-tape grading contract', () => {
       1
     ).session;
     const expected = truth[1] - truth[0];
+    // Δx 是已校对 x 的纯减法：精确差通过，±0.01 即拒（无读数容差）。
     const pass = submitTicker(
       session,
       source,
       'deltaX',
-      (expected + 0.02).toFixed(2),
+      expected.toFixed(2),
       1
     );
     expect(pass.feedback.ok).toBe(true);
@@ -164,11 +166,12 @@ describe('ticker-tape grading contract', () => {
       session,
       source,
       'deltaX',
-      (expected + 0.03).toFixed(2),
+      (expected + 0.01).toFixed(2),
       1
     );
     expect(fail.feedback.ok).toBe(false);
     expect(fail.feedback.layer).toBe('range');
+    expect(fail.feedback.message).toContain('x_i − x_{i−1}');
   });
 
   it('pins the ±0.05 absolute floor of the aDiff tolerance', () => {
@@ -207,7 +210,7 @@ describe('ticker-tape grading contract', () => {
     expect(fail.feedback.layer).toBe('range');
   });
 
-  it('grades v by absolute tolerance, not tick rounding', () => {
+  it('grades v by 3 significant digits with a half-unit rounding window', () => {
     const { source } = makeTickerSource();
     let session = createTickerTapeDataWorkspace(source).getSession();
     const truth = source.getState().tapeXCm;
@@ -225,26 +228,24 @@ describe('ticker-tape grading contract', () => {
       truth[2].toFixed(2),
       2
     ).session;
-    const expected = (truth[2] - truth[0]) / 100 / 0.2;
-    // 鉴别器：期望值落在 0.01 网格的 .0/.5 刻度上，+0.011 在刻度比较下只差
-    // 1 tick 会假通过，绝对比较必须拒绝；+0.009 两侧都应通过。
-    const inside = submitTicker(
-      session,
-      source,
-      'v',
-      String(expected + 0.009),
-      1
-    );
-    expect(inside.feedback.ok).toBe(true);
-    const outside = submitTicker(
-      session,
-      source,
-      'v',
-      String(expected + 0.011),
-      1
-    );
-    expect(outside.feedback.ok).toBe(false);
-    expect(outside.feedback.layer).toBe('range');
+    // v 期望 = (truth[2] − truth[0]) / 100 / 0.2 = 0.12（2 位有效）。
+    // 恰好 3 位有效数字（含末尾零）通过。
+    const pass = submitTicker(session, source, 'v', '0.120', 1);
+    expect(pass.feedback.ok).toBe(true);
+    // 位数不符落 format 层；3 位有效但偏离舍入值（0.121 差 0.001 > 半单位
+    // 0.0005）落 range 层。
+    const fourDigits = submitTicker(session, source, 'v', '0.1204', 1);
+    expect(fourDigits.feedback.layer).toBe('format');
+    const few = submitTicker(session, source, 'v', '0.12', 1);
+    expect(few.feedback.layer).toBe('format');
+    const off = submitTicker(session, source, 'v', '0.121', 1);
+    expect(off.feedback.ok).toBe(false);
+    expect(off.feedback.layer).toBe('range');
+    // 鉴别器：旧 ±0.01 绝对容差会放行 0.13（差恰为 0.01），
+    // 新契约在格式层即拒——防止退化回绝对容差。
+    const legacy = submitTicker(session, source, 'v', '0.13', 1);
+    expect(legacy.feedback.ok).toBe(false);
+    expect(legacy.feedback.layer).toBe('format');
   });
 
   it('never writes back format-invalid values into the sim', () => {

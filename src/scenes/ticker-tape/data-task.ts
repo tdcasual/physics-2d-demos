@@ -7,6 +7,7 @@
 
 import {
   checkNumericFormat,
+  significantRoundingHalfUnit,
   withinEpsilon,
   withinTickTolerance,
   addSessionTrial,
@@ -18,6 +19,7 @@ import {
   getSummaryField,
   getTrialField,
   invalidateAllTrials,
+  markFieldStale,
   parseStudentNumber,
   removeSessionTrial,
   writeCheckedField,
@@ -108,12 +110,18 @@ export type TickerTapePlotStatus = { hasFit: boolean };
  * 测量判分契约（docs/plans/2026-09-22-measurement-grading-contract.md）：
  * 容差与小数位只允许出现在此常量块；hint 与失败文案必须由这些常量拼装，
  * 不得在判分分支写容差字面量。x 真值经 roundCm 量化在 0.01 cm 网格上，
- * 因此 x/Δx 走整数刻度比较；v 的期望含 /100 换算（可 3-4 位小数），走绝对比较。
+ * 因此 x 走整数刻度比较。
+ *
+ * 派生行（Δx/v）的期望完全由学生已校对的 x 决定，读数误差已在 x 校对时
+ * 吸收，故不存在独立容差：Δx 是同网格纯减法，按 0 刻度精确比较；v 按
+ * 教师设定的有效位数（sim.vSigFigs，2–4 位，默认 3）做半单位舍入比较。
  */
 const X_DECIMALS = 2;
 const X_TOLERANCE_CM = 0.03;
-const DELTA_X_TOLERANCE_CM = 0.02;
-const V_TOLERANCE_MS = 0.01;
+/** Δx = x_i − x_{i−1}：0.01 cm 网格上的纯减法，合法偏差为 0 刻度。 */
+const DELTA_X_TOLERANCE_CM = 0;
+/** v 判分的兜底有效位数（sim 未提供 vSignificantDigits 时使用）。 */
+const V_DEFAULT_SIG_FIGS = 3;
 const A_TOLERANCE = { abs: 0.05, relDiff: 0.02, relFit: 0.05 } as const;
 /** mm↔cm↔m 的倍率混淆提示窗口（长度量：cm 计）。 */
 const LENGTH_UNIT_RATIOS = [10, 100] as const;
@@ -123,7 +131,25 @@ const TICKS_PER_CM = 100;
 
 const X_FORMAT_MESSAGE = `x 须为恰好 ${X_DECIMALS} 位小数（估读到 0.01 cm），不支持指数记法`;
 const DELTA_X_FORMAT_MESSAGE = `Δx 须为恰好 ${X_DECIMALS} 位小数，不支持指数记法`;
+const DELTA_X_RANGE_DETAIL =
+  'Δx = x_i − x_{i−1}，须与本行与前一行的已校对 x 之差精确相等';
 const NO_SCIENTIFIC_MESSAGE = '不支持指数记法，请填普通小数';
+const V_SIG_FIGS_FALLBACK = V_DEFAULT_SIG_FIGS;
+
+function vSignificantDigitsOf(state: TickerTapeState): number {
+  const sig = state.vSignificantDigits;
+  return Number.isFinite(sig) && sig >= 2 && sig <= 4
+    ? sig
+    : V_SIG_FIGS_FALLBACK;
+}
+
+function vFormatMessage(sigFigs: number): string {
+  return `v 应为恰好 ${sigFigs} 位有效数字，不支持指数记法`;
+}
+
+function vRangeDetail(sigFigs: number, expected: number): string {
+  return `v = (x_{i+1} − x_{i−1}) / (2T)，按 ${sigFigs} 位有效数字舍入（允许误差 ±${significantRoundingHalfUnit(expected, sigFigs)} m/s）`;
+}
 
 export type TickerTapeMeasurementSource = {
   getState(): TickerTapeState;
@@ -137,6 +163,8 @@ export type TickerTapeMeasurementSource = {
 
 export type TickerTapeDataWorkspaceHost = DataWorkspaceHost & {
   invalidateAll(reason: string): void;
+  /** 仅失效 v 列与依赖它的 aFit（v 有效位数要求变更时使用）。 */
+  invalidateVColumn(reason: string): void;
 };
 
 const NA_MESSAGE = '端点无需填写';
@@ -210,7 +238,12 @@ function magnitudeFeedback(
   expected: number,
   tolerance: number,
   unit: string,
-  options: { ticksPerUnit?: number; ratios?: readonly number[] } = {}
+  options: {
+    ticksPerUnit?: number;
+    ratios?: readonly number[];
+    /** 失败文案中替换默认「允许误差 ±X 单位」的派生量专用说明。 */
+    rangeDetail?: string;
+  } = {}
 ): FieldFeedback {
   const ticksPerUnit = options.ticksPerUnit;
   const ratios = options.ratios ?? LENGTH_UNIT_RATIOS;
@@ -239,7 +272,9 @@ function magnitudeFeedback(
   return {
     ok: false,
     layer: 'range',
-    message: `与纸带读数不符（允许误差 ±${tolerance.toFixed(2)} ${unit}）`
+    message: `与纸带读数不符（${
+      options.rangeDetail ?? `允许误差 ±${tolerance.toFixed(2)} ${unit}`
+    }）`
   };
 }
 
@@ -331,7 +366,10 @@ export function evaluateTickerTapeField(options: {
         current!.value - prev!.value,
         DELTA_X_TOLERANCE_CM,
         'cm',
-        { ticksPerUnit: TICKS_PER_CM }
+        {
+          ticksPerUnit: TICKS_PER_CM,
+          rangeDetail: DELTA_X_RANGE_DETAIL
+        }
       );
     }
     session = writeField(
@@ -347,19 +385,25 @@ export function evaluateTickerTapeField(options: {
     const parsed = parsedOrFailure(submit.raw, 'm/s');
     const prev = getTrialField(session.trials[index - 1], 'x');
     const next = getTrialField(session.trials[index + 1], 'x');
+    const sigFigs = vSignificantDigitsOf(state);
     const formatFb = checkNumericFormat(submit.raw, {
-      formatMessage: NO_SCIENTIFIC_MESSAGE
+      significantDigits: sigFigs,
+      formatMessage: vFormatMessage(sigFigs)
     });
     let feedback: FieldFeedback = formatFb ?? parsed.feedback;
     if (feedback.ok && (!fieldIsOk(prev) || !fieldIsOk(next))) {
       feedback = relation('请先校对相邻点的 x');
     } else if (feedback.ok) {
+      const expected = (next!.value - prev!.value) / 100 / (2 * state.T);
       feedback = magnitudeFeedback(
         parsed.value,
-        (next!.value - prev!.value) / 100 / (2 * state.T),
-        V_TOLERANCE_MS,
+        expected,
+        significantRoundingHalfUnit(expected, sigFigs),
         'm/s',
-        { ratios: SI_UNIT_RATIOS }
+        {
+          ratios: SI_UNIT_RATIOS,
+          rangeDetail: vRangeDetail(sigFigs, expected)
+        }
       );
     }
     session = writeField(
@@ -500,8 +544,10 @@ export function createTickerTapeDataWorkspace(
       },
       { key: 'points', label: '计数点', value: '7 个' }
     ],
-    getHint: () =>
-      `x 单位 cm（毫米尺估读到 0.01 cm，填两位小数；与纸带读数相差不超过 ${X_TOLERANCE_CM.toFixed(2)} cm 判通过）；v 单位 m/s。`,
+    getHint: () => {
+      const sigFigs = vSignificantDigitsOf(source.getState());
+      return `x 单位 cm（毫米尺估读到 0.01 cm，填两位小数；与纸带读数相差不超过 ${X_TOLERANCE_CM.toFixed(2)} cm 判通过）；v 单位 m/s，保留 ${sigFigs} 位有效数字。`;
+    },
     setActive(active: boolean) {
       session = { ...session, active };
     },
@@ -534,6 +580,22 @@ export function createTickerTapeDataWorkspace(
       session = restoreEndpointPlaceholders(
         invalidateAllTrials(session, tickerTapeDataWorkspaceSpec, reason)
       );
+    },
+    invalidateVColumn(reason: string) {
+      const next = cloneSession(session);
+      next.completed = false;
+      for (const trial of next.trials) {
+        const current = trial.fields.v;
+        if (!current) continue;
+        trial.fields.v = {
+          ...current,
+          checked: false,
+          stale: true,
+          feedback: { ok: false, layer: 'relation', message: reason }
+        };
+      }
+      next.summary.aFit = markFieldStale(next.summary.aFit);
+      session = restoreEndpointPlaceholders(next);
     },
     syncInstrument() {
       // Paper tape has no instrument identity to synchronize.

@@ -127,6 +127,7 @@ export function createTickerTapeScene(
 
   const dataWorkspace: DataWorkspaceHost & {
     invalidateAll(reason: string): void;
+    invalidateVColumn(reason: string): void;
   } = {
     getSpec() {
       if (!innerWorkspace) {
@@ -183,6 +184,10 @@ export function createTickerTapeScene(
     },
     invalidateAll(reason: string) {
       innerWorkspace?.invalidateAll(reason);
+      base.notify();
+    },
+    invalidateVColumn(reason: string) {
+      innerWorkspace?.invalidateVColumn(reason);
       base.notify();
     },
     syncInstrument() {
@@ -293,6 +298,7 @@ export function createTickerTapeScene(
         noise: string | number;
         showA: number | boolean;
         tapeKind: string;
+        vSigFigs: number;
       }>
     ): TickerTapeParams {
       const patch: Partial<TickerTapeParams> = {};
@@ -311,11 +317,18 @@ export function createTickerTapeScene(
       if (noise) patch.noise = noise;
       if (typeof next.showA === 'boolean') patch.showA = next.showA;
       else if (typeof next.showA === 'number') patch.showA = next.showA > 0;
+      if (typeof next.vSigFigs === 'number') {
+        patch.vSigFigs = next.vSigFigs;
+      }
       const before = sim.getParams();
       sim.setParams(patch);
       const after = sim.getParams();
       if (before.tapeKind !== after.tapeKind || before.noise !== after.noise) {
         hostRef?.invalidateAll('纸带已更换，请重新测量校对');
+      } else if (before.vSigFigs !== after.vSigFigs) {
+        dataWorkspace.invalidateVColumn(
+          `v 有效位数要求已改为 ${after.vSigFigs} 位，请按新要求重新填写校对`
+        );
       }
       base.renderAndEmit();
       base.notify();
@@ -328,6 +341,7 @@ export function createTickerTapeScene(
       noise: number;
       showA: number;
       preset: TapeKind;
+      vSigFigs: number;
     } {
       const p = sim.getParams();
       return {
@@ -336,7 +350,8 @@ export function createTickerTapeScene(
         countEvery: p.countEvery,
         noise: NOISE_BY_INDEX.indexOf(p.noise),
         showA: p.showA ? 1 : 0,
-        preset: p.tapeKind
+        preset: p.tapeKind,
+        vSigFigs: p.vSigFigs
       };
     },
     getState(): TickerTapeState {

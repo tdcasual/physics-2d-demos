@@ -3,6 +3,8 @@
  * 位移以 cm 存储（对齐毫米尺读数）；速度/加速度在派生时换成 SI。
  */
 
+import { roundToSignificantDigits } from '../../platform/data-workspace';
+
 export const TICK_PERIOD_S = 0.02;
 export const COUNTING_POINT_COUNT = 7;
 export const COUNTING_INTERVAL_TICKS = 5;
@@ -45,6 +47,8 @@ export type TickerTapeParams = {
   countEvery: 1 | 5;
   noise: NoiseLevel;
   showA: boolean;
+  /** v 列判分要求的有效数字位数（2–4，默认 3）。 */
+  vSigFigs: number;
 };
 
 export type TimingDot = {
@@ -71,6 +75,7 @@ export type TickerTapeState = {
   deltaXCm: Array<number | null>;
   vMs: Array<number | null>;
   aMs2: number | null;
+  vSignificantDigits: number;
 };
 
 const DEFAULTS: TickerTapeParams = {
@@ -78,8 +83,20 @@ const DEFAULTS: TickerTapeParams = {
   tapeKind: 'ua',
   countEvery: 1,
   noise: 'off',
-  showA: false
+  showA: false,
+  vSigFigs: 3
 };
+
+/** v 有效位数设置的合法范围（含端点）。 */
+export const V_SIG_FIGS_RANGE = { min: 2, max: 4 } as const;
+
+export function clampVSignificantDigits(value: number): number {
+  if (!Number.isFinite(value)) return DEFAULTS.vSigFigs;
+  return Math.max(
+    V_SIG_FIGS_RANGE.min,
+    Math.min(V_SIG_FIGS_RANGE.max, Math.round(value))
+  );
+}
 
 export function countingPeriodS(countEvery: number): number {
   return TICK_PERIOD_S * countEvery;
@@ -443,7 +460,8 @@ export function createTickerTapeSim(initial: Partial<TickerTapeParams> = {}) {
       measuredXCm: [...measuredXCm],
       deltaXCm: [...deltaXCm],
       vMs: [...vMs],
-      aMs2: params.showA ? computeSuccessiveAMs2(measuredXCm, T) : null
+      aMs2: params.showA ? computeSuccessiveAMs2(measuredXCm, T) : null,
+      vSignificantDigits: params.vSigFigs
     };
   }
 
@@ -457,12 +475,22 @@ export function createTickerTapeSim(initial: Partial<TickerTapeParams> = {}) {
         next.tapeKind !== undefined && next.tapeKind !== params.tapeKind;
       const noiseChanged =
         next.noise !== undefined && next.noise !== params.noise;
-      params = { ...params, ...next };
+      const sigBefore = params.vSigFigs;
+      params = {
+        ...params,
+        ...next,
+        vSigFigs: clampVSignificantDigits(next.vSigFigs ?? params.vSigFigs)
+      };
       if (tapeChanged) {
         clearStudentTable();
       } else if (noiseChanged) {
         noiseSeed += 1;
         clearStudentTable();
+      } else if (params.vSigFigs !== sigBefore) {
+        // x/Δx 不受影响；已写的 v 按新位数重取整，表格校对由 data-task 失效。
+        vMs = vMs.map((v) =>
+          v === null ? null : roundToSignificantDigits(v, params.vSigFigs)
+        );
       }
       return { ...params };
     },
@@ -488,7 +516,7 @@ export function createTickerTapeSim(initial: Partial<TickerTapeParams> = {}) {
       vMs[index] =
         value === null || !Number.isFinite(value)
           ? null
-          : Math.round(value * 1000) / 1000;
+          : roundToSignificantDigits(value, params.vSigFigs);
     },
     setOriginTickIndex(index: number): void {
       const next = clampOriginTickIndex(index, params.tapeKind);

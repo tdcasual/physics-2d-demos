@@ -473,12 +473,16 @@ describe('double-slit derived checks', () => {
     expect(checkIntervalCountFromOrders(6, 2, 7).message).toMatch(/间隔数/);
   });
 
-  it('checks D = x2 − x1 and Δx = D/n within display rounding', () => {
-    expect(checkDifference(D, x1, x2, 3).ok).toBe(true);
-    expect(checkDifference(D + 0.05, x1, x2, 3).ok).toBe(false);
+  it('checks D = x2 − x1 and Δx = D/n within half-unit rounding', () => {
+    expect(checkDifference(D, x1, x2).ok).toBe(true);
+    expect(checkDifference(D + 0.05, x1, x2).ok).toBe(false);
+    // D 为已校对读数的纯减法：非精确差（含 0.001 量级凑数）一律拒绝。
+    expect(checkDifference(D + 0.001, x1, x2).ok).toBe(false);
     expect(checkFringeSpacing(D / n, D, n, 3).ok).toBe(true);
     expect(checkFringeSpacing(D / n + 0.05, D, n, 3).ok).toBe(false);
-    expect(calculationTolerance(3)).toBeCloseTo(0.002, 10);
+    // calculationTolerance = 半单位舍入界（派生行无独立读数误差）。
+    expect(calculationTolerance(3)).toBeCloseTo(0.0005, 10);
+    expect(calculationTolerance(2)).toBeCloseTo(0.005, 10);
   });
 
   it('checks the mean of three Δx values then wavelength', () => {

@@ -511,12 +511,7 @@ export function evaluateDoubleSlitField(options: {
     if (!x1?.checked || !x2?.checked || x1.stale || x2.stale) {
       feedback = { ok: false, layer: 'relation', message: '请先校对 x1 和 x2' };
     } else {
-      feedback = checkDifference(
-        value,
-        x1.value,
-        x2.value,
-        x1.snapshot?.displayDigits ?? displayDigits
-      );
+      feedback = checkDifference(value, x1.value, x2.value);
     }
     return {
       feedback,

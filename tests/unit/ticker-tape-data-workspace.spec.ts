@@ -18,19 +18,18 @@ import {
 
 function makeSource(kind: 'ua' | 'uniform' = 'ua') {
   const sim = createTickerTapeSim({ tapeKind: kind, noise: 'off' });
-  const hasFit = false;
+  const plot = { hasFit: false };
   const source = {
     getState: () => sim.getState(),
-    getPlotStatus: () => ({ hasFit }),
+    getPlotStatus: () => plot,
     writeBack: {
       setMeasuredX: (i: number, value: number) => sim.setMeasuredX(i, value),
       setDeltaX: (i: number, value: number) => sim.setDeltaX(i, value),
       setV: (i: number, value: number) => sim.setV(i, value)
     }
   };
-  return { sim, source };
+  return { sim, source, plot };
 }
-
 function submit(
   session: DataWorkspaceSession,
   source: ReturnType<typeof makeSource>['source'],
@@ -100,10 +99,11 @@ describe('ticker-tape data workspace', () => {
     expect(result.feedback.ok).toBe(true);
     expect(source.getState().deltaXCm[1]).toBeCloseTo(truth[1] - truth[0]);
     const expectedV = (truth[2] - truth[0]) / 100 / (2 * source.getState().T);
-    result = submit(session, source, String('v'), String(expectedV), 1);
+    // v 按 3 位有效数字判分（默认），0.12 须写作 0.120。
+    result = submit(session, source, String('v'), expectedV.toPrecision(3), 1);
     expect(result.feedback.layer).toBe('relation');
     result = submit(result.session, source, 'x', truth[2].toFixed(2), 2);
-    result = submit(result.session, source, 'v', String(expectedV), 1);
+    result = submit(result.session, source, 'v', expectedV.toPrecision(3), 1);
     expect(result.feedback.ok).toBe(true);
     expect(source.getState().vMs[1]).toBeCloseTo(expectedV);
   });
@@ -143,24 +143,36 @@ describe('ticker-tape data workspace', () => {
     expect(result.feedback.layer).toBe('format');
   });
 
-  it('accepts exact multi-decimal v and rejects scientific notation', () => {
+  it('grades v by significant-digit format and half-unit rounding', () => {
     const { source } = makeSource();
     let session = createTickerTapeDataWorkspace(source).getSession();
     const truth = source.getState().tapeXCm;
     session = submit(session, source, 'x', truth[0].toFixed(2), 0).session;
     session = submit(session, source, 'x', truth[2].toFixed(2), 2).session;
     const expectedV = (truth[2] - truth[0]) / 100 / 0.2;
-    // v 的期望含 /100 换算，可为 3-4 位小数：精确值必须能通过（不定小数位）。
-    const ok = submit(session, source, 'v', String(expectedV), 1);
+    // v 的期望含 /100 换算：恰好 3 位有效数字（含末尾零）必须通过。
+    const ok = submit(session, source, 'v', expectedV.toPrecision(3), 1);
     expect(ok.feedback.ok).toBe(true);
     const sci = submit(session, source, 'v', '0.15e-1', 1);
     expect(sci.feedback.layer).toBe('format');
-    // ±0.01 m/s 绝对容差：边界内通过、界外拒绝。
-    const boundary = submit(session, source, 'v', String(expectedV + 0.01), 1);
-    expect(boundary.feedback.ok).toBe(true);
-    const outside = submit(session, source, 'v', String(expectedV + 0.02), 1);
-    expect(outside.feedback.ok).toBe(false);
-    expect(outside.feedback.layer).toBe('range');
+    // 有效位数不符落 format 层（0.12 = 2 位、0.1200 = 4 位）。
+    const few = submit(session, source, 'v', '0.12', 1);
+    expect(few.feedback.layer).toBe('format');
+    const many = submit(session, source, 'v', '0.1200', 1);
+    expect(many.feedback.layer).toBe('format');
+    // 半单位舍入窗口与「恰好 N 位有效数字」格式联合语义：3 位有效输入中
+    // 唯一合法值是舍入值本身（相邻可表示值间隔 = 2×半单位）。
+    // 0.1204 是 4 位有效数字，落 format 层。
+    const fourDigits = submit(session, source, 'v', '0.1204', 1);
+    expect(fourDigits.feedback.layer).toBe('format');
+    // 3 位有效但偏离舍入值（0.121 差 0.001 > 0.0005）落 range 层。
+    const off = submit(session, source, 'v', '0.121', 1);
+    expect(off.feedback.ok).toBe(false);
+    expect(off.feedback.layer).toBe('range');
+    // 旧的 ±0.01 绝对容差会放行 0.13，现在它在格式层即被拒。
+    const legacy = submit(session, source, 'v', '0.13', 1);
+    expect(legacy.feedback.ok).toBe(false);
+    expect(legacy.feedback.layer).toBe('format');
   });
 
   it('checks summary acceleration and requires plot fitting for aFit', () => {
@@ -178,7 +190,7 @@ describe('ticker-tape data workspace', () => {
     session = result.session;
     for (let i = 1; i <= 5; i += 1) {
       const v = (truth[i + 1] - truth[i - 1]) / 100 / 0.2;
-      session = submit(session, source, 'v', String(v), i).session;
+      session = submit(session, source, 'v', v.toPrecision(3), i).session;
     }
     result = submit(session, source, 'aFit', '10', undefined);
     expect(result.feedback.layer).toBe('relation');
@@ -224,5 +236,54 @@ describe('ticker-tape data workspace', () => {
   it('uses the same fit helper as the scene for an accepted slope', () => {
     const points = [1, 2, 3, 4, 5].map((y, i) => ({ t: i * 0.1, y }));
     expect(fitLineDroppingOutliers(points).fit?.slope).toBeCloseTo(10);
+  });
+
+  it('honors a per-scene 2-significant-digit v setting', () => {
+    const { sim, source } = makeSource();
+    sim.setParams({ vSigFigs: 2 });
+    expect(sim.getState().vSignificantDigits).toBe(2);
+    let session = createTickerTapeDataWorkspace(source).getSession();
+    const truth = source.getState().tapeXCm;
+    session = submit(session, source, 'x', truth[0].toFixed(2), 0).session;
+    session = submit(session, source, 'x', truth[2].toFixed(2), 2).session;
+    // v 期望 0.12：2 位有效数字设置下 '0.12' 通过、'0.120' 反而格式拒绝。
+    const ok = submit(session, source, 'v', '0.12', 1);
+    expect(ok.feedback.ok).toBe(true);
+    const wrongDigits = submit(session, source, 'v', '0.120', 1);
+    expect(wrongDigits.feedback.layer).toBe('format');
+    expect(wrongDigits.feedback.message).toContain('2 位有效数字');
+    // 越界设置钳到上限 4 位。
+    sim.setParams({ vSigFigs: 9 });
+    expect(sim.getState().vSignificantDigits).toBe(4);
+  });
+
+  it('invalidates only the v column and aFit on invalidateVColumn', () => {
+    const { source, plot } = makeSource();
+    const host = createTickerTapeDataWorkspace(source);
+    const truth = source.getState().tapeXCm;
+    for (let i = 0; i < truth.length; i += 1) {
+      host.submitField({ field: 'x', trialIndex: i, raw: truth[i].toFixed(2) });
+    }
+    host.submitField({
+      field: 'deltaX',
+      trialIndex: 1,
+      raw: (truth[1] - truth[0]).toFixed(2)
+    });
+    for (let i = 1; i <= 5; i += 1) {
+      const v = (truth[i + 1] - truth[i - 1]) / 100 / 0.2;
+      host.submitField({ field: 'v', trialIndex: i, raw: v.toPrecision(3) });
+    }
+    plot.hasFit = true;
+    const aFit = host.submitField({ field: 'aFit', raw: '0.4' });
+    expect(aFit.feedback.ok).toBe(true);
+    host.invalidateVColumn('v 有效位数要求已改为 2 位，请重新校对');
+    const after = host.getSession();
+    expect(getTrialField(after.trials[1], 'v')?.stale).toBe(true);
+    expect(getSummaryField(after, 'aFit')?.stale).toBe(true);
+    expect(getTrialField(after.trials[0], 'x')?.checked).toBe(true);
+    expect(getTrialField(after.trials[1], 'deltaX')?.checked).toBe(true);
+    expect(getTrialField(after.trials[0], 'v')?.feedback?.message).toBe(
+      '端点无需填写'
+    );
   });
 });

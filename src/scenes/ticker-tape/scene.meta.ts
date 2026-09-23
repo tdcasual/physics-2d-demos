@@ -33,9 +33,10 @@ export const tickerTapeMeta: SceneMeta = {
     speed: 1,
     countEvery: 1,
     noise: 0,
-    showA: 0
+    showA: 0,
+    vSigFigs: 3
   },
-  urlSyncKeys: ['preset'],
+  urlSyncKeys: ['preset', 'vSigFigs'],
   testProfile: {
     hasGraph: true,
     hasTransport: true,
