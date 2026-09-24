@@ -422,11 +422,9 @@ test.describe('double-slit data workspace', () => {
     await expect(page.locator('.data-workspace-knowns').first()).toContainText(
       /70\s*cm/
     );
-    await expect(page.locator('[aria-label="平均 Δx（mm）"]')).toBeVisible();
-    await expect(page.locator('[aria-label="平均 Δx（mm）"]')).toBeDisabled();
-    await expect(
-      page.locator('[aria-label="λ = d·平均Δx / L（nm）"]')
-    ).toBeDisabled();
+    await expect(page.locator('[data-field="averageDeltaX"]')).toBeVisible();
+    await expect(page.locator('[data-field="averageDeltaX"]')).toBeDisabled();
+    await expect(page.locator('[data-field="lambda"]')).toBeDisabled();
 
     const layout = await page.evaluate(() => {
       const root = document.querySelector('.layout-master') as HTMLElement;
@@ -669,13 +667,13 @@ test.describe('double-slit data workspace', () => {
 
     const avg = deltaXs.reduce((sum, v) => sum + v, 0) / deltaXs.length;
     const lambda = (1000 * slitDistanceMm(SLIT_DISTANCE) * avg) / L_M;
-    await page.locator('[aria-label="平均 Δx（mm）"]').fill(avg.toPrecision(3));
+    await page.locator('[data-field="averageDeltaX"]').fill(avg.toPrecision(3));
     await page
       .locator('.data-workspace-summary-row')
       .first()
       .locator('.data-workspace-check')
       .click();
-    await page.locator('[aria-label="λ = d·平均Δx / L（nm）"]').fill('0.532');
+    await page.locator('[data-field="lambda"]').fill('0.532');
     await page
       .locator('.data-workspace-summary-row')
       .nth(1)
@@ -684,9 +682,7 @@ test.describe('double-slit data workspace', () => {
     await expect(page.locator('.data-workspace-status.is-error')).toHaveText(
       '✗ 不通过'
     );
-    await page
-      .locator('[aria-label="λ = d·平均Δx / L（nm）"]')
-      .fill(lambda.toPrecision(3));
+    await page.locator('[data-field="lambda"]').fill(lambda.toPrecision(3));
     await page
       .locator('.data-workspace-summary-row')
       .nth(1)
@@ -701,10 +697,8 @@ test.describe('double-slit data workspace', () => {
     await x1Input.fill('1.00');
     await x1Input.press('Enter');
     await expect(page.locator('.data-workspace-result')).toBeHidden();
-    await expect(page.locator('[aria-label="平均 Δx（mm）"]')).toBeDisabled();
-    await expect(
-      page.locator('[aria-label="λ = d·平均Δx / L（nm）"]')
-    ).toBeDisabled();
+    await expect(page.locator('[data-field="averageDeltaX"]')).toBeDisabled();
+    await expect(page.locator('[data-field="lambda"]')).toBeDisabled();
     await expect(page.locator('.data-workspace-summary')).toBeVisible();
 
     await page.locator('.data-workspace-entry').click();
@@ -773,7 +767,7 @@ test.describe('double-slit data workspace', () => {
     }
 
     const average = deltaXs.reduce((sum, value) => sum + value, 0) / 3;
-    const averageInput = page.locator('[aria-label="平均 Δx（mm）"]');
+    const averageInput = page.locator('[data-field="averageDeltaX"]');
     const averageStatus = page
       .locator('.data-workspace-summary-row')
       .first()
@@ -796,7 +790,7 @@ test.describe('double-slit data workspace', () => {
     await expect(averageStatus).toHaveClass(/is-ok/);
 
     const lambda = (1000 * slitDistanceMm(SLIT_DISTANCE) * average) / L_M;
-    const lambdaInput = page.locator('[aria-label="λ = d·平均Δx / L（nm）"]');
+    const lambdaInput = page.locator('[data-field="lambda"]');
     await lambdaInput.fill('0.532');
     await page
       .locator('.data-workspace-summary-row')
@@ -829,7 +823,8 @@ test.describe('double-slit data workspace', () => {
     await page.locator('.data-workspace-add').click();
     await page.locator('.data-workspace-add').click();
     await expect(page.locator('.data-workspace-table tbody tr')).toHaveCount(3);
-    await expect(page.locator('.data-workspace-summary-note')).toContainText(
+    await expect(page.locator('[data-field="averageDeltaX"]')).toHaveAttribute(
+      'aria-label',
       /当前 3 组/
     );
     await expect
@@ -942,21 +937,17 @@ test.describe('double-slit data workspace', () => {
     await checkField(page, 'n', 0, String(n));
     await checkField(page, 'D', 0, D.toFixed(2));
     await checkField(page, 'deltaX', 0, (D / n).toPrecision(3));
-    await expect(page.locator('[aria-label="平均 Δx（mm）"]')).toBeEnabled();
-    await expect(
-      page.locator('[aria-label="λ = d·平均Δx / L（nm）"]')
-    ).toBeDisabled();
+    await expect(page.locator('[data-field="averageDeltaX"]')).toBeEnabled();
+    await expect(page.locator('[data-field="lambda"]')).toBeDisabled();
     const avg = D / n;
-    await page.locator('[aria-label="平均 Δx（mm）"]').fill(avg.toPrecision(3));
+    await page.locator('[data-field="averageDeltaX"]').fill(avg.toPrecision(3));
     await page
       .locator('.data-workspace-summary-row')
       .first()
       .locator('.data-workspace-check')
       .click();
-    await expect(
-      page.locator('[aria-label="λ = d·平均Δx / L（nm）"]')
-    ).toBeEnabled();
-    await page.locator('[aria-label="λ = d·平均Δx / L（nm）"]').fill('0.532');
+    await expect(page.locator('[data-field="lambda"]')).toBeEnabled();
+    await page.locator('[data-field="lambda"]').fill('0.532');
     await page
       .locator('.data-workspace-summary-row')
       .nth(1)
@@ -966,9 +957,7 @@ test.describe('double-slit data workspace', () => {
       '✗ 不通过'
     );
     const lambda = (1000 * slitDistanceMm(SLIT_DISTANCE) * avg) / L_M;
-    await page
-      .locator('[aria-label="λ = d·平均Δx / L（nm）"]')
-      .fill(lambda.toPrecision(3));
+    await page.locator('[data-field="lambda"]').fill(lambda.toPrecision(3));
     await page
       .locator('.data-workspace-summary-row')
       .nth(1)
@@ -977,12 +966,11 @@ test.describe('double-slit data workspace', () => {
     await expect(page.locator('.data-workspace-result')).toBeVisible();
     await page.locator('.data-workspace-add').click();
     await expect(page.locator('.data-workspace-result')).toBeHidden();
-    await expect(page.locator('[aria-label="平均 Δx（mm）"]')).toBeVisible();
-    await expect(page.locator('[aria-label="平均 Δx（mm）"]')).toBeDisabled();
-    await expect(
-      page.locator('[aria-label="λ = d·平均Δx / L（nm）"]')
-    ).toBeDisabled();
-    await expect(page.locator('.data-workspace-summary-note')).toContainText(
+    await expect(page.locator('[data-field="averageDeltaX"]')).toBeVisible();
+    await expect(page.locator('[data-field="averageDeltaX"]')).toBeDisabled();
+    await expect(page.locator('[data-field="lambda"]')).toBeDisabled();
+    await expect(page.locator('[data-field="averageDeltaX"]')).toHaveAttribute(
+      'aria-label',
       /当前 2 组/
     );
     await expect(page.locator('.data-workspace-summary-context')).toBeHidden();
@@ -990,7 +978,7 @@ test.describe('double-slit data workspace', () => {
       /70\s*cm/
     );
     await page.locator('[aria-label="删除第 2 组"]').click();
-    await expect(page.locator('[aria-label="平均 Δx（mm）"]')).toBeEnabled();
+    await expect(page.locator('[data-field="averageDeltaX"]')).toBeEnabled();
   });
 
   test('row check advances through x₁, x₂+n, then D+Δx stages', async ({
@@ -1912,6 +1900,27 @@ test('step 6 instruments stay fully inside split-right, mobile-stack, and lab-st
           ' to ' +
           afterRows[key]
       ).toBeLessThanOrEqual(1);
+    }
+    if (layout.width === 1920 && layout.height === 1080) {
+      const twoRows = await page.evaluate(() => {
+        const inputs = [
+          ...document.querySelectorAll('.data-workspace-input[data-field="x1"]')
+        ].slice(0, 2);
+        const panel = document.querySelector('.data-workspace-panel');
+        return {
+          scroll: panel instanceof HTMLElement ? panel.scrollTop : -1,
+          pageScroll: document.scrollingElement?.scrollTop ?? 0,
+          bottoms: inputs.map((el) => el.getBoundingClientRect().bottom),
+          tops: inputs.map((el) => el.getBoundingClientRect().top)
+        };
+      });
+      expect(twoRows.scroll).toBe(0);
+      expect(twoRows.pageScroll).toBe(0);
+      expect(twoRows.bottoms).toHaveLength(2);
+      for (const top of twoRows.tops) expect(top).toBeGreaterThanOrEqual(0);
+      for (const bottom of twoRows.bottoms) {
+        expect(bottom).toBeLessThanOrEqual(layout.height);
+      }
     }
   }
 });

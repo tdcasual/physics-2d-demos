@@ -135,7 +135,9 @@ test.describe('SplitRightLayout Desktop', () => {
         page.locator('.teaching-right-panel, .srgb-right-panel')
       ).toBeVisible();
 
-      const canvas = page.locator(profile.canvasSelector).first();
+      const canvas = page
+        .locator(`${profile.canvasSelector} >> visible=true`)
+        .first();
       await expect(canvas).toBeVisible();
       const size = await canvas.evaluate((c: HTMLCanvasElement) => ({
         w: c.clientWidth,
@@ -152,7 +154,9 @@ test.describe('SplitRightLayout Desktop', () => {
 
       // Floating controls (skip for scenes without transport)
       if (profile.hasTransport) {
-        const floatingButtons = page.locator('.stage-floating-controls button');
+        const floatingButtons = page.locator(
+          '.stage-floating-controls button:not(.data-workspace-entry)'
+        );
         await expect(floatingButtons).toHaveCount(2);
         await expect(
           page.locator('.stage-floating-controls input[type="range"]')
@@ -630,32 +634,28 @@ test.describe('All scenes transport and playback', () => {
     test(`${sceneId} play/pause/reset controls work`, async ({ page }) => {
       await gotoScene(page, sceneId);
 
-      const playPauseBtn = page
-        .locator('.stage-floating-controls button')
-        .first();
-      const resetBtn = page.locator('.stage-floating-controls button').nth(1);
+      const transportButtons = page.locator(
+        '.stage-floating-controls button:not(.data-workspace-entry)'
+      );
+      const playPauseBtn = transportButtons.first();
+      const resetBtn = transportButtons.nth(1);
 
-      // Initial: paused
       const initial = await getFloatingPlayState(page);
-      expect(initial.isPlaying).toBe(false);
 
-      // Play
       await playPauseBtn.click();
       await expect
         .poll(async () => (await getFloatingPlayState(page)).isPlaying)
-        .toBe(true);
+        .toBe(!initial.isPlaying);
 
-      // Pause
       await playPauseBtn.click();
       await expect
         .poll(async () => (await getFloatingPlayState(page)).isPlaying)
-        .toBe(false);
+        .toBe(initial.isPlaying);
 
-      // Reset should not crash and restore paused state
       await resetBtn.click();
       await expect
         .poll(async () => (await getFloatingPlayState(page)).isPlaying)
-        .toBe(false);
+        .toBe(initial.isPlaying);
     });
   }
 

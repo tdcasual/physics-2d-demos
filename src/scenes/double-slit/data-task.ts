@@ -106,22 +106,19 @@ export const doubleSlitDataWorkspaceSpec: DataWorkspaceSpec = {
       id: 'x1',
       label: 'x₁',
       unit: 'mm',
-      inputMode: 'decimal',
-      formatHint: POSITION_FORMAT_HINT
+      inputMode: 'decimal'
     },
     {
       id: 'x2',
       label: 'x₂',
       unit: 'mm',
       inputMode: 'decimal',
-      formatHint: POSITION_FORMAT_HINT,
       dependsOn: [{ scope: 'row', field: 'x1' }]
     },
     {
       id: 'n',
       label: 'n',
       inputMode: 'numeric',
-      formatHint: '正整数',
       dependsOn: [
         { scope: 'row', field: 'x1' },
         { scope: 'row', field: 'x2' }
@@ -132,7 +129,6 @@ export const doubleSlitDataWorkspaceSpec: DataWorkspaceSpec = {
       label: 'D = x₂ − x₁',
       unit: 'mm',
       inputMode: 'decimal',
-      formatHint: '与读数同小数位',
       dependsOn: [
         { scope: 'row', field: 'x1' },
         { scope: 'row', field: 'x2' }
@@ -143,7 +139,6 @@ export const doubleSlitDataWorkspaceSpec: DataWorkspaceSpec = {
       label: 'Δx = D / n',
       unit: 'mm',
       inputMode: 'decimal',
-      formatHint: calcSigFigsHint(),
       dependsOn: [
         { scope: 'row', field: 'D' },
         { scope: 'row', field: 'n' }
@@ -156,7 +151,6 @@ export const doubleSlitDataWorkspaceSpec: DataWorkspaceSpec = {
       label: '平均 Δx',
       unit: 'mm',
       inputMode: 'decimal',
-      formatHint: calcSigFigsHint(),
       gated: true,
       dependsOn: [{ scope: 'all-rows', field: 'deltaX' }],
       readinessHint: '请先完成当前 {rowCount} 组 Δx 校对',
@@ -167,7 +161,6 @@ export const doubleSlitDataWorkspaceSpec: DataWorkspaceSpec = {
       label: 'λ = d·平均Δx / L',
       unit: 'nm',
       inputMode: 'decimal',
-      formatHint: `${calcSigFigsHint()}（nm）`,
       gated: true,
       dependsOn: [{ scope: 'summary', field: 'averageDeltaX' }],
       readinessHint: '请先校对平均 Δx'
@@ -263,7 +256,7 @@ export function doubleSlitKnowns(
 }
 
 export function doubleSlitHint(_params: DoubleSlitParams): string {
-  return `单位 mm，与仪器一致。读数按仪器最小分度（${POSITION_FORMAT_HINT}）；D = x₂ − x₁ 与读数同小数位；Δx、平均 Δx 与 λ 按 ${calcSigFigsHint()}填写（乘除法规则）。`;
+  return `x₁、x₂：${POSITION_FORMAT_HINT}；D 与读数同小数位；Δx、平均 Δx、λ 保留 ${calcSigFigsHint()}`;
 }
 
 function rangeFeedback(

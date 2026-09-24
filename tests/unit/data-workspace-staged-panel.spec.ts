@@ -127,9 +127,9 @@ describe('staged data-workspace panel', () => {
     const button = stageButton(panel.root);
     expect(button.textContent).toBe('1/3 校对 x₁');
     expect(button.getAttribute('aria-label')).toBe(
-      '校对第 1 组，阶段 1/3：校对 x₁'
+      '校对第 1 组，阶段 1/3：校对 x₁。对准第一条亮纹'
     );
-    expect(button.title).toBe('对准第一条亮纹');
+    expect(button.title).toBe('');
     expect(button.disabled).toBe(false);
     expect(inputOf(panel.root, 'x1').disabled).toBe(false);
     for (const field of ['x2', 'n', 'D', 'deltaX']) {

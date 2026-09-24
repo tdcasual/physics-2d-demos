@@ -63,7 +63,7 @@ async function getTransportState(page: Page): Promise<{ isPlaying: boolean }> {
 async function getCanvasChecksum(page: Page): Promise<number> {
   return page.evaluate(() => {
     const canvas = document.querySelector(
-      'canvas.stage-canvas, canvas.mobile-stage-canvas, canvas'
+      'canvas.stage-canvas, canvas.mobile-stage-canvas'
     ) as HTMLCanvasElement | null;
     if (!canvas) return 0;
     const ctx = canvas.getContext('2d');

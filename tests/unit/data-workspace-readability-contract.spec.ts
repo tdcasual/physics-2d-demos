@@ -169,14 +169,15 @@ describe('data-workspace readability contract', () => {
   });
 
   it('scopes the flat ticker ruler and keeps a short chart split usable', () => {
-    const clampAt = workspaceCss.indexOf('height: clamp(168px, 24vh, 220px)');
+    const clampAt = workspaceCss.indexOf('height: clamp(240px, 28vh, 320px)');
     expect(clampAt).toBeGreaterThan(0);
     expect(workspaceCss.slice(clampAt - 500, clampAt)).toContain(
       "[data-scene-id='ticker-tape']"
     );
     expect(
-      workspaceCss.match(/height: clamp\(168px, 24vh, 220px\)/g)
+      workspaceCss.match(/height: clamp\(240px, 28vh, 320px\)/g)
     ).toHaveLength(1);
+    expect(workspaceCss).not.toContain('height: max-content');
 
     const short = ruleBody(workspaceCss, '@media (max-height: 520px)');
     expect(short).not.toMatch(/overflow:\s*hidden/);
@@ -187,10 +188,8 @@ describe('data-workspace readability contract', () => {
     expect(short).toContain('flex: 0 0 var(--dw-split, 33%)');
     expect(short).toContain('max-height: none');
 
-    const projectionHug = workspaceCss.indexOf('flex: 0 1 auto;', clampAt);
-    expect(projectionHug).toBeGreaterThan(clampAt);
-    expect(workspaceCss.slice(projectionHug - 400, projectionHug)).toContain(
-      "[data-scene-id='ticker-tape']"
+    expect(workspaceCss.slice(clampAt, clampAt + 400)).toContain(
+      'max-height: none'
     );
   });
 

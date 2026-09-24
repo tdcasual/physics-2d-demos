@@ -10,7 +10,7 @@ export type E2ESceneProfile = {
   canvasSelector: string;
 };
 
-const CANVAS_SELECTOR = 'canvas.stage-canvas, canvas';
+const CANVAS_SELECTOR = 'canvas.stage-canvas, canvas.mobile-stage-canvas';
 
 /** Read layout-independent capabilities directly from the exported SceneMeta. */
 async function readProfile(

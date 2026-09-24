@@ -352,8 +352,11 @@ export function createDataWorkspace(): CapabilityDefinition<
         requestLayoutResize();
       }
 
+      let suppressing = false;
+
       function exitWorkspace(clearActive: boolean): void {
-        if (!chromeOpen) return;
+        if (!chromeOpen || suppressing) return;
+        suppressing = true;
         chromeOpen = false;
         chartMode = false;
         teardownPanzoom();
@@ -367,6 +370,7 @@ export function createDataWorkspace(): CapabilityDefinition<
           STAGE_LOCK_CLASS
         );
         if (clearActive) host?.setActive(false);
+        suppressing = false;
         syncButton();
         syncChartButton();
         requestLayoutResize();
@@ -389,6 +393,7 @@ export function createDataWorkspace(): CapabilityDefinition<
       const instance: CapabilityInstance<DataWorkspaceUpdateData> = {
         update(data: DataWorkspaceUpdateData) {
           host = data?.host ?? null;
+          if (suppressing) return;
           if (host?.getSession().active && !chromeOpen) {
             enterWorkspace();
           } else if (chromeOpen && host && !host.getSession().active) {
@@ -400,6 +405,7 @@ export function createDataWorkspace(): CapabilityDefinition<
           syncChartButton();
         },
         dispose() {
+          suppressing = true;
           ac.abort();
           unsubMode();
           teardownPanzoom();

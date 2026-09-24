@@ -611,7 +611,13 @@ describe('data-workspace panel dynamic rows', () => {
     });
     expect(panel.root.querySelectorAll('tbody tr')).toHaveLength(1);
     expect(panel.root.textContent).not.toMatch(/完成三组/);
-    expect(panel.root.textContent).toMatch(/完成本组 Δx/);
+    expect(
+      (
+        panel.root.querySelector(
+          '[data-field="averageDeltaX"]'
+        ) as HTMLInputElement
+      ).getAttribute('aria-label')
+    ).toMatch(/完成本组 Δx/);
     const add = panel.root.querySelector(
       '.data-workspace-add'
     ) as HTMLButtonElement;
@@ -619,8 +625,13 @@ describe('data-workspace panel dynamic rows', () => {
     add.click();
     add.click();
     expect(panel.root.querySelectorAll('tbody tr')).toHaveLength(3);
-    expect(panel.root.textContent).toMatch(/当前 3 组/);
-    expect(panel.root.textContent).not.toMatch(/完成本组 Δx/);
+    const averageAfterAdd = panel.root.querySelector(
+      '[data-field="averageDeltaX"]'
+    ) as HTMLInputElement;
+    expect(averageAfterAdd.getAttribute('aria-label')).toMatch(/当前 3 组/);
+    expect(averageAfterAdd.getAttribute('aria-label')).not.toMatch(
+      /完成本组 Δx/
+    );
     const rows = panel.root.querySelectorAll('tbody tr');
     expect(rows[0]?.querySelector('th')?.textContent).toBe('1');
     expect(rows[1]?.getAttribute('data-row-id')).toBe('row-2');
@@ -703,10 +714,10 @@ describe('data-workspace panel dynamic rows', () => {
       onChange() {}
     });
     const avg = panel.root.querySelector(
-      '[aria-label="平均 Δx（mm）"]'
+      '[data-field="averageDeltaX"]'
     ) as HTMLInputElement;
     const lambda = panel.root.querySelector(
-      '[aria-label="λ = d·平均Δx / L（nm）"]'
+      '[data-field="lambda"]'
     ) as HTMLInputElement;
     expect(avg).toBeTruthy();
     expect(avg.disabled).toBe(false);
@@ -714,10 +725,10 @@ describe('data-workspace panel dynamic rows', () => {
     (
       panel.root.querySelector('.data-workspace-add') as HTMLButtonElement
     ).click();
-    expect(panel.root.querySelector('[aria-label="平均 Δx（mm）"]')).toBe(avg);
+    expect(panel.root.querySelector('[data-field="averageDeltaX"]')).toBe(avg);
     expect(avg.disabled).toBe(true);
     expect(lambda.disabled).toBe(true);
-    expect(panel.root.textContent).toMatch(/当前 2 组/);
+    expect(avg.getAttribute('aria-label')).toMatch(/当前 2 组/);
     expect(panel.root.querySelector('.data-workspace-summary')).toBeTruthy();
     panel.dispose();
   });
@@ -749,13 +760,13 @@ describe('data-workspace panel dynamic rows', () => {
     ).toMatch(/70 cm/);
 
     const avg = panel.root.querySelector(
-      '[aria-label="平均 Δx（mm）"]'
+      '[data-field="averageDeltaX"]'
     ) as HTMLInputElement;
     const avgBtn = avg
       .closest('.data-workspace-summary-row')
       ?.querySelector('.data-workspace-check') as HTMLButtonElement;
     const lambda = panel.root.querySelector(
-      '[aria-label="λ = d·平均Δx / L（nm）"]'
+      '[data-field="lambda"]'
     ) as HTMLInputElement;
     const lambdaBtn = lambda
       .closest('.data-workspace-summary-row')
@@ -853,10 +864,10 @@ describe('data-workspace panel dynamic rows', () => {
       onChange() {}
     });
     const avg = panel.root.querySelector(
-      '[aria-label="平均 Δx（mm）"]'
+      '[data-field="averageDeltaX"]'
     ) as HTMLInputElement;
     const lambda = panel.root.querySelector(
-      '[aria-label="λ = d·平均Δx / L（nm）"]'
+      '[data-field="lambda"]'
     ) as HTMLInputElement;
     expect(avg.value).toBe('1.80');
     expect(lambda.value).toBe('514');

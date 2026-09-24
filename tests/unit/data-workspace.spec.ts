@@ -120,10 +120,10 @@ describe('chartAnalysis opt-in / opt-out', () => {
       'L'
     ]);
     // 提示必须把逐字段的有效位数/小数位要求写清楚（触摸与键盘用户看不到 title）。
-    expect(doubleSlitHint(params)).toContain('单位 mm');
     expect(doubleSlitHint(params)).toContain('卡尺 2 位小数');
     expect(doubleSlitHint(params)).toContain('测微仪 3 位小数');
     expect(doubleSlitHint(params)).toContain('3 位有效数字');
+    expect(doubleSlitHint(params)).not.toMatch(/单位 mm/);
     const formatHints = Object.fromEntries(
       [
         ...doubleSlitDataWorkspaceSpec.rowFields,
@@ -132,15 +132,7 @@ describe('chartAnalysis opt-in / opt-out', () => {
         .filter((field) => field.formatHint)
         .map((field) => [field.id, field.formatHint])
     );
-    expect(formatHints).toEqual({
-      x1: '卡尺 2 位小数 / 测微仪 3 位小数',
-      x2: '卡尺 2 位小数 / 测微仪 3 位小数',
-      n: '正整数',
-      D: '与读数同小数位',
-      deltaX: '3 位有效数字',
-      averageDeltaX: '3 位有效数字',
-      lambda: '3 位有效数字（nm）'
-    });
+    expect(formatHints).toEqual({});
   });
 
   it('hides chart analysis when the spec does not enable it', () => {
@@ -266,12 +258,17 @@ describe('student input parsing and units', () => {
     if (allowed.ok) expect(allowed.value).toBeCloseTo(0.0012, 10);
   });
 
-  it('keeps full-width comma normalization and pins half-width rejection', () => {
-    const full = parseStudentNumber('3，02', 'mm');
-    expect(full.ok).toBe(true);
-    if (full.ok) expect(full.value).toBe(3.02);
+  it('accepts CJK decimal points and full-width digits, rejects half-width commas', () => {
+    for (const raw of ['3，02', '3。02', '3．02', '３.０２', '−3.02']) {
+      const parsed = parseStudentNumber(raw, 'mm');
+      expect(parsed.ok, raw).toBe(true);
+      if (parsed.ok)
+        expect(parsed.value, raw).toBeCloseTo(
+          raw.startsWith('−') ? -3.02 : 3.02,
+          10
+        );
+    }
     expect(parseStudentNumber('3,02', 'mm').ok).toBe(false);
-    expect(parseStudentNumber('3。02', 'mm').ok).toBe(false);
   });
 
   it('detects cm/mm decade confusion against an instrument reading', () => {
@@ -326,8 +323,11 @@ describe('checkNumericFormat', () => {
     );
   });
 
-  it('normalizes full-width commas and uses distinct empty-input message', () => {
+  it('normalizes CJK numerals and uses distinct empty-input message', () => {
     expect(checkNumericFormat('3，02', { decimalPlaces: 2 })).toBeNull();
+    expect(checkNumericFormat('0。32', { decimalPlaces: 2 })).toBeNull();
+    expect(checkNumericFormat('３．９４', { decimalPlaces: 2 })).toBeNull();
+    expect(checkPositionRawFormat('0。32', 'caliper')).toBeNull();
     const empty = checkNumericFormat('   ', {
       emptyMessage: '请先输入',
       formatMessage: '格式不对'

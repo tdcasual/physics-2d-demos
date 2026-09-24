@@ -325,7 +325,8 @@ describe('generic data-workspace fixture', () => {
     expect(speed.disabled).toBe(true);
     expect(speed.getAttribute('aria-disabled')).toBe('true');
     expect(speedBtn.disabled).toBe(false);
-    expect(panel.root.textContent).toMatch(/请先校对质量和时间/);
+    expect(panel.root.textContent).not.toMatch(/请先校对质量和时间/);
+    expect(speed.getAttribute('aria-label')).toMatch(/请先校对质量和时间/);
     host.submitField({ field: 'mass', trialIndex: 0, raw: '2' });
     panel.update();
     expect(speed.disabled).toBe(true);

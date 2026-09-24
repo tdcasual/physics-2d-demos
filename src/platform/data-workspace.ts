@@ -853,6 +853,21 @@ export type NumericFormatOptions = {
 const EMPTY_INPUT_MESSAGE = '请输入有效数值';
 
 /**
+ * 把看起来是数字的 CJK 字面收成 ASCII，再交给位数规则。
+ * 中文输入法常把小数点打成「。」「．」，数字打成全角；半角逗号仍拒绝。
+ */
+export function normalizeStudentNumericLiteral(raw: string): string {
+  return raw
+    .trim()
+    .replace(/[０-９]/g, (digit) =>
+      String.fromCharCode(digit.charCodeAt(0) - 0xff10 + 0x30)
+    )
+    .replace(/＋/g, '+')
+    .replace(/[－−]/g, '-')
+    .replace(/[，。．｡]/g, '.');
+}
+
+/**
  * Declarative numeric format gate for measurement inputs, shared by all
  * data-workspace scenes. Returns null when `raw` passes; otherwise a
  * `format`-layer feedback. Decimal-place counting works on the raw string
@@ -864,7 +879,7 @@ export function checkNumericFormat(
 ): FieldFeedback | null {
   const emptyMessage = options.emptyMessage ?? EMPTY_INPUT_MESSAGE;
   const formatMessage = options.formatMessage ?? emptyMessage;
-  const trimmed = raw.trim().replace(/，/g, '.');
+  const trimmed = normalizeStudentNumericLiteral(raw);
   if (!trimmed) {
     return { ok: false, layer: 'format', message: emptyMessage };
   }
@@ -959,9 +974,9 @@ export type ParseStudentNumberOptions = {
   allowScientific?: boolean;
 };
 
-// 全角逗号静默归一为小数点是既有行为（CJK 输入习惯），由测试钉住；
-// 半角逗号/全角句点不在归一范围内，保持「请输入有效数值」。
-// 测量读数默认拒绝科学计数法；`allowScientific` 仅供非读数场景逃生。
+// 小数点的中文形态在 normalizeStudentNumericLiteral 里收成「.」。
+// 半角逗号不归一，避免和千分位混淆。测量读数默认拒绝科学计数法；
+// `allowScientific` 仅供非读数场景逃生。
 const STUDENT_NUMBER_PATTERN = /^([+-]?\d+(?:\.\d+)?)\s*([A-Za-zµμ]+)?$/i;
 const STUDENT_NUMBER_SCIENTIFIC_PATTERN =
   /^([+-]?\d+(?:\.\d+)?(?:e[+-]?\d+)?)\s*([A-Za-zµμ]+)?$/i;
@@ -971,7 +986,7 @@ export function parseStudentNumber(
   expectedUnit: string,
   options: ParseStudentNumberOptions = {}
 ): ParsedStudentNumber {
-  const trimmed = raw.trim().replace(/，/g, '.');
+  const trimmed = normalizeStudentNumericLiteral(raw);
   if (!trimmed) {
     return { ok: false, layer: 'format', message: EMPTY_INPUT_MESSAGE };
   }

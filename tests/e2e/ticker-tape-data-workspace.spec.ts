@@ -407,7 +407,7 @@ test.describe('ticker-tape data workspace', () => {
     await expect(chartEntry).toHaveAttribute('title', /请先完成数据处理/);
     await expect(page.locator('[role="tab"][data-step]')).toHaveCount(0);
     await expect(page.locator('.data-workspace-hint')).toContainText(
-      'x 单位 cm'
+      'x、Δx 保留 2 位小数'
     );
     await expect(
       page.locator('.data-workspace-panel > .data-workspace-knowns')
@@ -1238,8 +1238,8 @@ test.describe('ticker-tape data workspace', () => {
           .evaluate((el) => el.getBoundingClientRect().height);
         expect(stageHeight).toBeLessThanOrEqual(viewport.height * 0.4);
         if (viewport.width >= 1600 && viewport.height >= 900) {
-          expect(stageHeight).toBeGreaterThan(150);
-          expect(stageHeight).toBeLessThanOrEqual(240);
+          expect(stageHeight).toBeGreaterThan(240);
+          expect(stageHeight).toBeLessThanOrEqual(320);
         }
       }
       for (const theme of ['light', 'dark'] as const) {
@@ -1389,7 +1389,36 @@ test.describe('ticker-tape data workspace', () => {
             tableReach!.wrapClient
           );
           expect(tableReach!.actionWidth).toBeGreaterThanOrEqual(160);
-          expect(tableReach!.panelHeight).toBeLessThan(viewport.height * 0.65);
+          expect(tableReach!.wrapScroll).toBeLessThanOrEqual(
+            tableReach!.wrapClient + 2
+          );
+          const panelBottom = await page
+            .locator('.data-workspace-panel')
+            .evaluate((el) => el.getBoundingClientRect().bottom);
+          expect(viewport.height - panelBottom).toBeLessThan(8);
+          // 端点 Δx 是「—」，不是输入框。两行按字段行取各自第一个可输入格。
+          const twoRows = await page.evaluate(() => {
+            const inputs = ['x', 'deltaX'].map((field) =>
+              document.querySelector(
+                `tr[data-field="${field}"] .data-workspace-input`
+              )
+            );
+            const panel = document.querySelector('.data-workspace-panel');
+            return {
+              scroll: panel instanceof HTMLElement ? panel.scrollTop : -1,
+              pageScroll: document.scrollingElement?.scrollTop ?? 0,
+              boxes: inputs.map((el) =>
+                el instanceof HTMLElement ? el.getBoundingClientRect() : null
+              )
+            };
+          });
+          expect(twoRows.scroll).toBe(0);
+          expect(twoRows.pageScroll).toBe(0);
+          for (const box of twoRows.boxes) {
+            expect(box).not.toBeNull();
+            expect(box!.top).toBeGreaterThanOrEqual(0);
+            expect(box!.bottom).toBeLessThanOrEqual(viewport.height);
+          }
           const fitted = await page.evaluate(() => {
             const measure = (el: Element | null) => {
               if (!(el instanceof HTMLElement)) {
@@ -1427,7 +1456,9 @@ test.describe('ticker-tape data workspace', () => {
               check: measure(document.querySelector('.data-workspace-check'))
             };
           });
-          expect(fitted.tail).toBeLessThan(96);
+          // 面板贴齐视口后，三行字段和选填 a 短于面板。尾距是面板内剩余，
+          // 不再用 < 96 要求内容撑满；选填 a 仍要留在面板内。
+          expect(fitted.tail).toBeGreaterThanOrEqual(0);
           expect(fitted.input.contentH).toBeGreaterThanOrEqual(
             fitted.input.font
           );

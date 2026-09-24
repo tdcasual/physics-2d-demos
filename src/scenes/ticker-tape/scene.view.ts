@@ -301,6 +301,36 @@ function palette(theme: TeachingTheme) {
   };
 }
 
+/**
+ * 数据步里给纸带让出浮动工具条。
+ * 贴顶的条（桌面）从它下沿留白，下沿约 82px 时下限仍是 88。
+ * 窄屏工具条在舞台中部：下方够放尺就排在它下面，否则留在上方空带。
+ */
+function workspaceTapeBand(
+  canvas: HTMLCanvasElement,
+  height: number
+): { chromeFloor: number; bottom: number } {
+  if (!canvas.closest('.is-data-workspace')) {
+    return { chromeFloor: 48, bottom: height };
+  }
+  const bar = canvas
+    .closest('.lab-stage-anim')
+    ?.querySelector<HTMLElement>('.stage-floating-controls');
+  if (!(bar instanceof HTMLElement) || bar.offsetHeight < 1) {
+    return { chromeFloor: 88, bottom: height };
+  }
+  const barTop = bar.offsetTop;
+  const barBottom = barTop + bar.offsetHeight;
+  if (barTop <= 36) {
+    return { chromeFloor: Math.max(88, barBottom + 6), bottom: height };
+  }
+  // 窄屏工具条在舞台中部。下方放得下尺就排在它下面，否则留在上方空带。
+  if (height - (barBottom + 6) >= 88) {
+    return { chromeFloor: barBottom + 6, bottom: height };
+  }
+  return { chromeFloor: 8, bottom: Math.max(48, barTop - 4) };
+}
+
 export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
   const canvas = options.canvas ?? document.createElement('canvas');
   const env = createViewEnvironment({
@@ -529,7 +559,8 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     const gap = scaledSize(8, scale, 5);
     const topReserve = scaledSize(20, scale, 12);
     const captionGap = scaledSize(18, scale, 12);
-    const chromeTop = scaledSize(52, scale, 48);
+    const band = workspaceTapeBand(canvas, h);
+    const chromeTop = scaledSize(52, scale, band.chromeFloor);
     const minTapeH = tokens.pointRadiusPx * 1.45;
     const minRulerH = tokens.pointRadiusPx * 4.2;
     const capPx = scaledSize(28, scale, 20);
@@ -562,14 +593,17 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     const naturalRulerH = Math.max(minRulerH, rulerBodyW / rulerAspect);
     const naturalTapeH = Math.max(minTapeH, naturalRulerH * 0.5);
     const chromeAndCaption = chromeTop + pad + topReserve + gap + captionGap;
-    const availableBars = Math.max(minTapeH + minRulerH, h - chromeAndCaption);
+    const availableBars = Math.max(
+      minTapeH + minRulerH,
+      band.bottom - chromeAndCaption
+    );
     const naturalBars = naturalTapeH + naturalRulerH;
     const barFit =
       naturalBars > 0 ? Math.min(1, availableBars / naturalBars) : 1;
     const tapeH = naturalTapeH * barFit;
     const rulerH = naturalRulerH * barFit;
     const blockH = topReserve + tapeH + gap + rulerH + captionGap;
-    const leftover = h - chromeTop - pad - blockH;
+    const leftover = band.bottom - chromeTop - pad - blockH;
     const tapeY = chromeTop + topReserve + Math.max(0, leftover / 2);
 
     roundRectPath(ctx, tapeLeft, tapeY, tapeW, tapeH, scaledSize(4, scale, 2));
@@ -897,11 +931,7 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
       ctx.font = `${tickPx}px ui-sans-serif, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(
-        '填完表后再描点',
-        (plot.l + plot.r) / 2,
-        (plot.t + plot.b) / 2
-      );
+      ctx.fillText('点击描点', (plot.l + plot.r) / 2, (plot.t + plot.b) / 2);
       ctx.restore();
       return tickClearance;
     }

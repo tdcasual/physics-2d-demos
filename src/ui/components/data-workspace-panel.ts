@@ -104,21 +104,36 @@ function headerLabel(field: DataWorkspaceFieldSpec): string {
   return field.unit ? `${field.label} / ${field.unit}` : field.label;
 }
 
-/**
- * Field label + always-visible precision hint. The hint is a block-level
- * span so the projection table column width is driven by the label alone.
- */
+/** 表头只留字段名和单位。位数说明在标题下，不进表格。 */
 function fillFieldLabel(
   target: HTMLElement,
   field: DataWorkspaceFieldSpec
 ): void {
   target.textContent = headerLabel(field);
-  const hint = field.formatHint?.trim();
-  if (!hint) return;
-  const span = document.createElement('span');
-  span.className = 'data-workspace-field-hint';
-  span.textContent = hint;
-  target.appendChild(span);
+}
+
+function rememberAria(input: HTMLInputElement): void {
+  if (!input.dataset.dwAria) {
+    input.dataset.dwAria = input.getAttribute('aria-label') ?? '';
+  }
+}
+
+/** 未就绪说明只挂在禁用输入上，不写进单元格正文。 */
+function setReadinessOnInput(
+  input: HTMLInputElement | null,
+  hint: string
+): void {
+  if (!input) return;
+  rememberAria(input);
+  const base = input.dataset.dwAria ?? '';
+  input.title = hint;
+  input.setAttribute('aria-label', base ? `${base}。${hint}` : hint);
+}
+
+function clearReadinessOnInput(input: HTMLInputElement | null): void {
+  if (!input?.dataset.dwAria) return;
+  input.removeAttribute('title');
+  input.setAttribute('aria-label', input.dataset.dwAria);
 }
 
 function isFieldsOrientation(spec: DataWorkspaceSpec): boolean {
@@ -217,6 +232,30 @@ export function createDataWorkspacePanel(options: {
       pendingDeleteId = null;
       confirmEl.hidden = true;
       restoreConfirmFocus();
+    },
+    { signal: ac.signal }
+  );
+  confirmEl.addEventListener(
+    'keydown',
+    (event) => {
+      if (confirmEl.hidden) return;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        pendingDeleteId = null;
+        confirmEl.hidden = true;
+        restoreConfirmFocus();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const items = [confirmCancel, confirmOk];
+      const active = document.activeElement;
+      if (event.shiftKey && active === items[0]) {
+        event.preventDefault();
+        items[1]?.focus();
+      } else if (!event.shiftKey && active === items[1]) {
+        event.preventDefault();
+        items[0]?.focus();
+      }
     },
     { signal: ac.signal }
   );
@@ -465,13 +504,34 @@ export function createDataWorkspacePanel(options: {
       options.onChange();
       update();
     };
+    let submitAfterComposition = false;
+    input.addEventListener(
+      'compositionstart',
+      () => {
+        submitAfterComposition = false;
+      },
+      { signal: ac.signal }
+    );
+    input.addEventListener(
+      'compositionend',
+      () => {
+        if (!submitAfterComposition) return;
+        submitAfterComposition = false;
+        run();
+      },
+      { signal: ac.signal }
+    );
     input.addEventListener(
       'keydown',
       (event) => {
-        if (event.key === 'Enter') {
-          event.preventDefault();
-          run();
+        if (event.key !== 'Enter') return;
+        // 输入法用 Enter 上屏时，字面还没写进 value。等 compositionend 再校对。
+        if (event.isComposing) {
+          submitAfterComposition = true;
+          return;
         }
+        event.preventDefault();
+        run();
       },
       { signal: ac.signal }
     );
@@ -488,6 +548,10 @@ export function createDataWorkspacePanel(options: {
         const specNow = options.host.getSpec();
         if (isSummaryField(specNow, field)) return;
         if (specNow.rowCheckStages && input.disabled) return;
+        const sessionNow = options.host.getSession();
+        const trial = sessionNow.trials.find((item) => item.id === rowId);
+        const current = getTrialField(trial, field);
+        if (input.value === '' && current?.checked) return;
         drafts.push({ rowId, field, raw: input.value });
       });
     if (drafts.length === 0) return;
@@ -556,6 +620,7 @@ export function createDataWorkspacePanel(options: {
       `第 ${trialLabel(specNow, trialIndex)} 组 ${def.label}${def.unit ? `（${def.unit}）` : ''}`
     );
     input.value = current?.raw ?? '';
+    input.dataset.dwApplied = input.value;
     bindCheck(input, def.id, trialIndex);
 
     const status = document.createElement('span');
@@ -566,10 +631,15 @@ export function createDataWorkspacePanel(options: {
     const ready = isRowInputEnabled(session, specNow, def, trialIndex);
     setFieldEnabled(input, ready);
     if (!specNow.rowCheckStages && def.gated && !ready) {
-      status.className = 'data-workspace-status data-workspace-summary-note';
-      status.textContent = formatReadinessHint(def, session.trials.length);
+      status.className = 'data-workspace-status';
+      status.textContent = '';
       status.removeAttribute('title');
       status.removeAttribute('aria-label');
+      delete status.dataset.reason;
+      setReadinessOnInput(
+        input,
+        formatReadinessHint(def, session.trials.length)
+      );
     }
 
     wrap.append(input, status);
@@ -669,7 +739,7 @@ export function createDataWorkspacePanel(options: {
             pendingDeleteId = trial.id;
             confirmReturnFocus = delBtn;
             confirmEl.hidden = false;
-            confirmOk.focus();
+            confirmCancel.focus();
             return;
           }
           tableSignature = '';
@@ -886,12 +956,12 @@ export function createDataWorkspacePanel(options: {
       } else {
         button.disabled = false;
         button.textContent = `${state.index}/${state.total} ${state.stage.label}`;
+        const stageHint = state.stage.hint ? `。${state.stage.hint}` : '';
         button.setAttribute(
           'aria-label',
-          `校对第 ${group} 组，阶段 ${state.index}/${state.total}：${state.stage.label}`
+          `校对第 ${group} 组，阶段 ${state.index}/${state.total}：${state.stage.label}${stageHint}`
         );
-        if (state.stage.hint) button.title = state.stage.hint;
-        else button.removeAttribute('title');
+        button.removeAttribute('title');
       }
       button.setAttribute('aria-disabled', String(button.disabled));
       return;
@@ -922,7 +992,17 @@ export function createDataWorkspacePanel(options: {
     state: FieldCheckState | undefined
   ): void {
     if (!input || document.activeElement === input) return;
-    input.value = state?.raw ?? '';
+    const next = state?.raw ?? '';
+    const applied = input.dataset.dwApplied ?? '';
+    // 画面每帧都会刷新面板。未校对的输入不能被空的存档盖掉，
+    // 否则失焦后再点校对，读到的是空字符串，提示「请输入有效数值」。
+    if (input.value !== applied) {
+      if (next === input.value) input.dataset.dwApplied = next;
+      return;
+    }
+    if (input.value === next) return;
+    input.value = next;
+    input.dataset.dwApplied = next;
   }
 
   function fieldKey(field: string, trialIndex?: number): string {
@@ -1028,6 +1108,7 @@ export function createDataWorkspacePanel(options: {
         'aria-label',
         `${def.label}${def.unit ? `（${def.unit}）` : ''}`
       );
+      input.dataset.dwApplied = '';
       bindCheck(input, def.id);
       const btn = document.createElement('button');
       btn.type = 'button';
@@ -1087,14 +1168,17 @@ export function createDataWorkspacePanel(options: {
       const status = statusNodes.get(def.id);
       if (!status) continue;
       if (def.gated && !ready) {
-        status.className =
-          def === specNow.summaryFields[0]
-            ? 'data-workspace-status data-workspace-summary-note'
-            : 'data-workspace-status';
-        status.textContent = formatReadinessHint(def, session.trials.length);
+        status.className = 'data-workspace-status';
+        status.textContent = '';
         status.removeAttribute('title');
         status.removeAttribute('aria-label');
+        delete status.dataset.reason;
+        setReadinessOnInput(
+          nodes?.input ?? null,
+          formatReadinessHint(def, session.trials.length)
+        );
       } else {
+        clearReadinessOnInput(nodes?.input ?? null);
         setFieldStatus(status, state);
       }
     }
@@ -1192,12 +1276,17 @@ export function createDataWorkspacePanel(options: {
         setFieldEnabled(nodes?.input ?? null, ready);
         const status = statusNodes.get(key);
         if (!specNow.rowCheckStages && def.gated && !ready && status) {
-          status.className =
-            'data-workspace-status data-workspace-summary-note';
-          status.textContent = formatReadinessHint(def, session.trials.length);
+          status.className = 'data-workspace-status';
+          status.textContent = '';
           status.removeAttribute('title');
           status.removeAttribute('aria-label');
+          delete status.dataset.reason;
+          setReadinessOnInput(
+            nodes?.input ?? null,
+            formatReadinessHint(def, session.trials.length)
+          );
         } else {
+          clearReadinessOnInput(nodes?.input ?? null);
           patchStatus(key, getTrialField(trial, def.id));
         }
       }
@@ -1243,6 +1332,7 @@ export function createDataWorkspacePanel(options: {
     setChartMode,
     update,
     dispose() {
+      harvestDrafts();
       ac.abort();
       root.replaceChildren();
       root.remove();

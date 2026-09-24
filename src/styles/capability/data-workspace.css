@@ -614,13 +614,6 @@
   color: var(--danger, #b42318);
 }
 
-/* Keep the compact status token while showing a short reason without hover. */
-.data-workspace-status.is-error[data-reason]::after {
-  content: ' · ' attr(data-reason);
-  font-size: 0.86em;
-  font-weight: 500;
-}
-
 .layout-master.is-data-workspace .data-workspace-panel {
   font-size: var(--dw-type-table, 16px);
 }
@@ -740,6 +733,12 @@
   height: 100% !important;
 }
 
+/* lab-stage 工具条浮在舞台右上角。仪器下移到工具条之下，避免压住卡尺刻度。 */
+.lab-stage-layout.is-data-workspace [data-double-slit-instruments='true'] {
+  top: 5.5rem !important;
+  height: calc(100% - 5.5rem) !important;
+}
+
 .layout-master.is-data-workspace [data-instrument-scroll='true'] {
   overflow: auto hidden !important;
 }
@@ -779,9 +778,9 @@
     )
     .lab-stage-anim {
     flex: 0 1 auto;
-    min-height: 168px;
-    height: clamp(168px, 24vh, 220px);
-    max-height: 26vh;
+    min-height: 240px;
+    height: clamp(240px, 28vh, 320px);
+    max-height: none;
   }
 
   .lab-stage-layout.layout-master.is-data-workspace[data-scene-id='ticker-tape']:not(
@@ -794,18 +793,27 @@
   }
 }
 
-/* 1080p 纸带表按内容收高，避免投影档在表下留下整块空面板。
-   1280×720 仍由上面的规则把剩余高度交给表。 */
-@media (min-width: 1600px) and (min-height: 900px) {
+/* 窄屏顶栏和运输条叠在舞台中部。240px 舞台只能把尺挤进顶栏。
+   舞台加高到视口四成以内，纸带改画在运输条下面。宽屏 1080p 不进这条。 */
+@media (max-width: 720px) and (min-height: 640px) {
   .lab-stage-layout.layout-master.is-data-workspace[data-scene-id='ticker-tape']:not(
       .is-data-workspace-chart
     )
-    .data-workspace-panel {
-    flex: 0 1 auto;
-    max-height: none;
-    align-self: stretch;
-    width: 100%;
-    height: max-content;
+    .lab-stage-anim {
+    height: calc(40vh - 8px);
+    min-height: calc(40vh - 8px);
+    max-height: calc(40vh - 8px);
+  }
+
+  /* 缩放按钮默认贴舞台右下角，会压住窄屏纸带尺的右端。改到左上空白。 */
+  .lab-stage-layout.layout-master.is-data-workspace[data-scene-id='ticker-tape']:not(
+      .is-data-workspace-chart
+    )
+    .stage-panzoom-controls {
+    top: 0.35rem;
+    bottom: auto;
+    right: auto;
+    left: 0.35rem;
   }
 }
 

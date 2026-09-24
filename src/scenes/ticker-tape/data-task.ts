@@ -623,7 +623,7 @@ export function createTickerTapeDataWorkspace(
     ],
     getHint: () => {
       const sigFigs = significantDigitsOf(source.getState());
-      return `x 单位 cm（毫米尺估读到 0.01 cm，填两位小数；与纸带读数相差不超过 ${X_TOLERANCE_CM.toFixed(2)} cm 判通过）；v 与 a 单位分别为 m/s、m/s²，均保留 ${sigFigs} 位有效数字（逐差法 a 为选填）。`;
+      return `x、Δx 保留 2 位小数；v、a 保留 ${sigFigs} 位有效数字`;
     },
     setActive(active: boolean) {
       session = { ...session, active };
