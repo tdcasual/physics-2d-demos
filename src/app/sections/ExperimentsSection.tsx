@@ -47,7 +47,8 @@ function readDirectoryState(): DirectoryState {
     domain,
     chapter:
       chapter !== 'all' &&
-      (domain === 'all' || CURRICULUM_CHAPTER_INFO[chapter].domain !== domain)
+      domain !== 'all' &&
+      CURRICULUM_CHAPTER_INFO[chapter].domain !== domain
         ? 'all'
         : chapter,
     query: params.get('q')?.trim() ?? ''

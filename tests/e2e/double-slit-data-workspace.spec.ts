@@ -48,11 +48,15 @@ async function readInstrument(page: Page): Promise<InstrumentRead> {
     }));
 }
 
-async function dragCaliperSlider(page: Page, dx: number): Promise<void> {
+async function dragCaliperSlider(
+  page: Page,
+  dx: number,
+  xRatio = 0.4
+): Promise<void> {
   const slider = page.locator('.microscope-root .slider-assembly');
   const box = await slider.boundingBox();
   expect(box).not.toBeNull();
-  const fromX = Math.min(Math.max(box!.width * 0.4, 20), box!.width - 24);
+  const fromX = Math.min(Math.max(box!.width * xRatio, 20), box!.width - 24);
   const y = box!.height * 0.55;
   await slider.dragTo(slider, {
     sourcePosition: { x: fromX, y },
@@ -575,8 +579,8 @@ test.describe('double-slit data workspace', () => {
       .locator('[data-field="x1"][data-trial="0"]')
       .fill(dragged.mm.toFixed(2));
     await page.locator('[data-field="x1"][data-trial="0"]').press('Enter');
-    await expect(page.locator('.data-workspace-status').first()).toContainText(
-      /亮纹|不符/
+    await expect(page.locator('.data-workspace-status').first()).toHaveText(
+      '✗ 不通过'
     );
 
     const x1Drag = await dragUntilAligned(page, 1);
@@ -590,8 +594,8 @@ test.describe('double-slit data workspace', () => {
       page.locator('button[data-preset-id="micrometer"]')
     ).toHaveAttribute('aria-checked', 'true');
     await page.locator('.data-workspace-entry').click();
-    await expect(page.locator('.data-workspace-status').first()).toContainText(
-      /已切换仪器|同一台仪器/
+    await expect(page.locator('.data-workspace-status').first()).toHaveText(
+      '↻ 需重校'
     );
     await expect(page.locator('.micrometer-root')).toBeVisible();
     let micrometer = await readInstrument(page);
@@ -600,15 +604,14 @@ test.describe('double-slit data workspace', () => {
       micrometer = await readInstrument(page);
     }
     expect(micrometer.aligned).toBe(true);
-    await page
-      .locator('[data-field="x2"][data-trial="0"]')
-      .fill(micrometer.mm.toFixed(3));
-    await page.locator('[data-field="x2"][data-trial="0"]').press('Enter');
+    // Instrument switch invalidates x₁ and returns this row to stage 1;
+    // x₂ must remain disabled until x₁ is remeasured on the selected baseline.
     await expect(
-      page.locator(
-        '.data-workspace-field:has([data-field="x2"][data-trial="0"]) .data-workspace-status'
-      )
-    ).toHaveText('x1 与 x2 须用同一台仪器、同一单位基准');
+      page.locator('[data-field="x2"][data-trial="0"]')
+    ).toBeDisabled();
+    await expect(
+      page.locator('.data-workspace-check-row').first()
+    ).toHaveAttribute('aria-label', /阶段 1\/3/);
 
     await page.locator('.data-workspace-entry').click();
     await page.locator('button[data-preset-id="caliper"]').click();
@@ -632,8 +635,8 @@ test.describe('double-slit data workspace', () => {
     const n0 = Math.abs(x2Drag.order - x1Locked.order);
     const D0 = x2Drag.mm - x1Locked.mm;
     await checkField(page, 'n', 0, String(n0));
-    await checkField(page, 'D', 0, D0.toFixed(3));
-    await checkField(page, 'deltaX', 0, (D0 / n0).toFixed(3));
+    await checkField(page, 'D', 0, D0.toFixed(2));
+    await checkField(page, 'deltaX', 0, (D0 / n0).toPrecision(3));
     const deltaXs: number[] = [D0 / n0];
 
     const pairs = [
@@ -660,13 +663,13 @@ test.describe('double-slit data workspace', () => {
       await setInstrumentReadingMm(page, x2);
       await checkField(page, 'x2', trial, x2.toFixed(2));
       await checkField(page, 'n', trial, String(n));
-      await checkField(page, 'D', trial, D.toFixed(3));
-      await checkField(page, 'deltaX', trial, dx.toFixed(3));
+      await checkField(page, 'D', trial, D.toFixed(2));
+      await checkField(page, 'deltaX', trial, dx.toPrecision(3));
     }
 
     const avg = deltaXs.reduce((sum, v) => sum + v, 0) / deltaXs.length;
     const lambda = (1000 * slitDistanceMm(SLIT_DISTANCE) * avg) / L_M;
-    await page.locator('[aria-label="平均 Δx（mm）"]').fill(avg.toFixed(3));
+    await page.locator('[aria-label="平均 Δx（mm）"]').fill(avg.toPrecision(3));
     await page
       .locator('.data-workspace-summary-row')
       .first()
@@ -678,12 +681,12 @@ test.describe('double-slit data workspace', () => {
       .nth(1)
       .locator('.data-workspace-check')
       .click();
-    await expect(page.locator('.data-workspace-status.is-error')).toContainText(
-      /nm/
+    await expect(page.locator('.data-workspace-status.is-error')).toHaveText(
+      '✗ 不通过'
     );
     await page
       .locator('[aria-label="λ = d·平均Δx / L（nm）"]')
-      .fill(lambda.toFixed(0));
+      .fill(lambda.toPrecision(3));
     await page
       .locator('.data-workspace-summary-row')
       .nth(1)
@@ -713,6 +716,106 @@ test.describe('double-slit data workspace', () => {
       'aria-checked',
       'true'
     );
+  });
+
+  test('micrometer completes three-trial average Δx with stated precision', async ({
+    page
+  }) => {
+    test.setTimeout(90_000);
+    await page.setViewportSize({ width: 1400, height: 900 });
+    await openDoubleSlit(page, '?step=6&activeInstrument=micrometer');
+    await page.waitForSelector('.micrometer-root', { timeout: 15_000 });
+    await page.locator('.data-workspace-entry').click();
+    await page.locator('.data-workspace-add').click();
+    await page.locator('.data-workspace-add').click();
+    await expect(page.locator('.data-workspace-table tbody tr')).toHaveCount(3);
+
+    const samples = alignedSamples();
+    const pairs = [
+      { a: samples[1]!, b: samples[4]! },
+      { a: samples[2]!, b: samples[5]! },
+      { a: samples[3]!, b: samples[6]! }
+    ];
+    const deltaXs: number[] = [];
+    const alignAt = async (targetMm: number, differentOrder?: number) => {
+      await setInstrumentReadingMm(page, targetMm);
+      let reading = await readInstrument(page);
+      for (
+        let attempt = 0;
+        attempt < 120 &&
+        (!reading.aligned ||
+          (differentOrder != null && reading.order === differentOrder));
+        attempt += 1
+      ) {
+        await setInstrumentReadingMm(page, reading.mm + 0.02);
+        reading = await readInstrument(page);
+      }
+      expect(reading.aligned).toBe(true);
+      if (differentOrder != null)
+        expect(reading.order).not.toBe(differentOrder);
+      return reading;
+    };
+    for (let trial = 0; trial < pairs.length; trial += 1) {
+      const pair = pairs[trial]!;
+      const x1 = await alignAt(pair.a.readingCm * 10);
+      await checkField(page, 'x1', trial, x1.mm.toFixed(3));
+
+      const x2 = await alignAt(pair.b.readingCm * 10, x1.order);
+      const n = Math.abs(x2.order - x1.order);
+      const D = x2.mm - x1.mm;
+      expect(D).toBeGreaterThan(0);
+      await checkField(page, 'x2', trial, x2.mm.toFixed(3));
+      await checkField(page, 'n', trial, String(n));
+      await checkField(page, 'D', trial, D.toFixed(3));
+      const deltaX = D / n;
+      deltaXs.push(deltaX);
+      await checkField(page, 'deltaX', trial, deltaX.toPrecision(3));
+    }
+
+    const average = deltaXs.reduce((sum, value) => sum + value, 0) / 3;
+    const averageInput = page.locator('[aria-label="平均 Δx（mm）"]');
+    const averageStatus = page
+      .locator('.data-workspace-summary-row')
+      .first()
+      .locator('.data-workspace-status');
+    await averageInput.fill((average / 10).toPrecision(3) + ' cm');
+    await page
+      .locator('.data-workspace-summary-row')
+      .first()
+      .locator('.data-workspace-check')
+      .click();
+    await expect(averageStatus).toHaveClass(/is-error/);
+    await expect(averageStatus).toHaveAttribute('data-reason', '单位不符');
+
+    await averageInput.fill(average.toPrecision(3));
+    await page
+      .locator('.data-workspace-summary-row')
+      .first()
+      .locator('.data-workspace-check')
+      .click();
+    await expect(averageStatus).toHaveClass(/is-ok/);
+
+    const lambda = (1000 * slitDistanceMm(SLIT_DISTANCE) * average) / L_M;
+    const lambdaInput = page.locator('[aria-label="λ = d·平均Δx / L（nm）"]');
+    await lambdaInput.fill('0.532');
+    await page
+      .locator('.data-workspace-summary-row')
+      .nth(1)
+      .locator('.data-workspace-check')
+      .click();
+    await expect(
+      page
+        .locator('.data-workspace-summary-row')
+        .nth(1)
+        .locator('.data-workspace-status')
+    ).toHaveAttribute('data-reason', '单位不符');
+    await lambdaInput.fill(lambda.toPrecision(3));
+    await page
+      .locator('.data-workspace-summary-row')
+      .nth(1)
+      .locator('.data-workspace-check')
+      .click();
+    await expect(page.locator('.data-workspace-result')).toBeVisible();
   });
 
   test('dynamic rows keep stable ids and require confirm for filled deletes', async ({
@@ -764,7 +867,7 @@ test.describe('double-slit data workspace', () => {
       );
     expect(ids).toEqual(['row-1', 'row-2', 'row-3']);
 
-    const row2Check = page.locator('button[aria-label="校对第 2 组"]');
+    const row2Check = page.locator('button[aria-label^="校对第 2 组"]');
     await row2Check.scrollIntoViewIfNeeded();
     const checkBox = await row2Check.boundingBox();
     const actionsBox = await page
@@ -837,14 +940,14 @@ test.describe('double-slit data workspace', () => {
     const n = Math.abs(x2Drag.order - x1Drag.order);
     const D = x2Drag.mm - x1Drag.mm;
     await checkField(page, 'n', 0, String(n));
-    await checkField(page, 'D', 0, D.toFixed(3));
-    await checkField(page, 'deltaX', 0, (D / n).toFixed(3));
+    await checkField(page, 'D', 0, D.toFixed(2));
+    await checkField(page, 'deltaX', 0, (D / n).toPrecision(3));
     await expect(page.locator('[aria-label="平均 Δx（mm）"]')).toBeEnabled();
     await expect(
       page.locator('[aria-label="λ = d·平均Δx / L（nm）"]')
     ).toBeDisabled();
     const avg = D / n;
-    await page.locator('[aria-label="平均 Δx（mm）"]').fill(avg.toFixed(3));
+    await page.locator('[aria-label="平均 Δx（mm）"]').fill(avg.toPrecision(3));
     await page
       .locator('.data-workspace-summary-row')
       .first()
@@ -859,13 +962,13 @@ test.describe('double-slit data workspace', () => {
       .nth(1)
       .locator('.data-workspace-check')
       .click();
-    await expect(page.locator('.data-workspace-status.is-error')).toContainText(
-      /nm/
+    await expect(page.locator('.data-workspace-status.is-error')).toHaveText(
+      '✗ 不通过'
     );
     const lambda = (1000 * slitDistanceMm(SLIT_DISTANCE) * avg) / L_M;
     await page
       .locator('[aria-label="λ = d·平均Δx / L（nm）"]')
-      .fill(lambda.toFixed(0));
+      .fill(lambda.toPrecision(3));
     await page
       .locator('.data-workspace-summary-row')
       .nth(1)
@@ -890,6 +993,44 @@ test.describe('double-slit data workspace', () => {
     await expect(page.locator('[aria-label="平均 Δx（mm）"]')).toBeEnabled();
   });
 
+  test('row check advances through x₁, x₂+n, then D+Δx stages', async ({
+    page
+  }) => {
+    test.setTimeout(90_000);
+    await page.setViewportSize({ width: 1400, height: 900 });
+    await gotoStep6Mono(page);
+    await page.locator('.data-workspace-entry').click();
+
+    const check = page.locator('.data-workspace-check-row').first();
+    const x1 = await dragUntilAligned(page, 1);
+    await page
+      .locator('[data-field="x1"][data-trial="0"]')
+      .fill(x1.mm.toFixed(2));
+    await check.click();
+    await expect(
+      page.locator('[data-field="x2"][data-trial="0"]')
+    ).toBeEnabled();
+    await expect(check).toHaveAttribute('aria-label', /阶段 2\/3/);
+
+    const x2 = await dragUntilAligned(page, 1, x1.order);
+    const n = Math.abs(x2.order - x1.order);
+    const D = x2.mm - x1.mm;
+    await page
+      .locator('[data-field="x2"][data-trial="0"]')
+      .fill(x2.mm.toFixed(2));
+    await page.locator('[data-field="n"][data-trial="0"]').fill(String(n));
+    await check.click();
+    await expect(check).toHaveAttribute('aria-label', /阶段 3\/3/);
+
+    await page.locator('[data-field="D"][data-trial="0"]').fill(D.toFixed(2));
+    await page
+      .locator('[data-field="deltaX"][data-trial="0"]')
+      .fill((D / n).toPrecision(3));
+    await check.click();
+    await expect(check).toBeDisabled();
+    await expect(check).toHaveText('本组已完成');
+  });
+
   test('caliper unique tick rejects ±0.001 mm after a real drag', async ({
     page
   }) => {
@@ -908,18 +1049,13 @@ test.describe('double-slit data workspace', () => {
       page.locator(
         '.data-workspace-field:has([data-field="x1"][data-trial="0"]) .data-workspace-status'
       )
-    ).toContainText(/最小分度/);
-    await expect(
-      page.locator(
-        '.data-workspace-field:has([data-field="x1"][data-trial="0"]) .data-workspace-status'
-      )
-    ).not.toContainText(String(aligned.mm));
+    ).toHaveText('✗ 不通过');
     await checkField(page, 'x1', 0, aligned.mm.toFixed(2));
     await expect(
       page.locator(
         '.data-workspace-field:has([data-field="x1"][data-trial="0"]) .data-workspace-status'
       )
-    ).toContainText(/读数已校对/);
+    ).toHaveText('✓');
     expect(pageErrors).toEqual([]);
   });
 
@@ -951,22 +1087,16 @@ test.describe('double-slit data workspace', () => {
     for (let i = 0; i < 3; i += 1) {
       await checkField(page, 'x1', 0, '10.00');
     }
-    await expect(x1s(0)).toContainText(/亮纹|对准/);
-    await expect(x1s(0)).not.toContainText(/参考/);
+    await expect(x1s(0)).toHaveText('✗ 不通过');
 
     const aligned = await dragUntilAligned(page, 1);
     expect(aligned.aligned).toBe(true);
-    const canonical = (Math.round(aligned.mm / 0.02) * 0.02).toFixed(2);
-
     await checkField(page, 'x1', 0, '14.2');
-    await expect(x1s(0)).toContainText(/两位小数/);
-    await expect(x1s(0)).not.toContainText(/参考/);
+    await expect(x1s(0)).toHaveText('✗ 不通过');
     await checkField(page, 'x1', 0, '14.020');
-    await expect(x1s(0)).toContainText(/两位小数/);
-    await expect(x1s(0)).not.toContainText(/参考/);
+    await expect(x1s(0)).toHaveText('✗ 不通过');
     await checkField(page, 'x1', 0, '1.40e1');
-    await expect(x1s(0)).toContainText(/参考/);
-    await expect(x1s(0)).toContainText(canonical);
+    await expect(x1s(0)).toHaveText('✗ 不通过');
 
     const samples = alignedSamples();
     expect(samples.length).toBeGreaterThan(2);
@@ -984,18 +1114,15 @@ test.describe('double-slit data workspace', () => {
     expect(moved.aligned).toBe(true);
     const movedRef = (Math.round(moved.mm / 0.02) * 0.02).toFixed(2);
     await checkField(page, 'x1', 0, '10.00');
-    await expect(x1s(0)).toContainText(`参考 ${movedRef}`);
-    await expect(x1s(0)).not.toContainText(`参考 ${canonical}`);
+    await expect(x1s(0)).toHaveText('✗ 不通过');
 
     await checkField(page, 'x1', 0, `${movedRef} mm`);
-    await expect(x1s(0)).toContainText(/读数已校对/);
-    await expect(x1s(0)).not.toContainText(/参考/);
+    await expect(x1s(0)).toHaveText('✓');
 
     await checkField(page, 'x2', 0, '10.00');
-    await expect(x2s(0)).not.toContainText(/参考/);
+    await expect(x2s(0)).toHaveText('✗ 不通过');
     await checkField(page, 'x1', 1, '10.00');
-    await expect(x1s(1)).not.toContainText(/参考/);
-    expect(await x1s(0).innerText()).not.toMatch(/参考/);
+    await expect(x1s(1)).toHaveText('✗ 不通过');
   });
 
   test('micrometer estimate range uses a real thimble drag', async ({
@@ -1062,12 +1189,12 @@ test.describe('double-slit data workspace', () => {
       .locator('[data-field="x1"][data-trial="0"]')
       .fill(center.toFixed(2));
     await page.locator('[data-field="x1"][data-trial="0"]').press('Enter');
-    await expect(x1Status).toContainText(/三位小数/);
+    await expect(x1Status).toHaveText('✗ 不通过');
     await page
       .locator('[data-field="x1"][data-trial="0"]')
       .fill(`${low.toFixed(3)} mm`);
     await page.locator('[data-field="x1"][data-trial="0"]').press('Enter');
-    await expect(x1Status).toHaveText('估读在合理范围内');
+    await expect(x1Status).toHaveText('✓');
     await page
       .locator('[data-field="x1"][data-trial="0"]')
       .fill((center + 0.006).toFixed(3));
@@ -1075,9 +1202,7 @@ test.describe('double-slit data workspace', () => {
     const error = page.locator(
       '.data-workspace-field:has([data-field="x1"][data-trial="0"]) .data-workspace-status'
     );
-    await expect(error).toHaveText('请重新观察主尺和微分筒后再估读');
-    await expect(error).not.toContainText(center.toFixed(3));
-    await expect(error).not.toContainText('0.005');
+    await expect(error).toHaveText('✗ 不通过');
   });
 
   test('sidebar toggle stays consistent for both pre-enter states', async ({
@@ -1612,4 +1737,181 @@ test('workspace pan/zoom scales the stage while instruments stay draggable', asy
   await dragCaliperSlider(page, -16);
   const afterZoom = await readInstrument(page);
   expect(afterZoom.mm).not.toBe(mid.mm);
+});
+
+test('step 6 instruments survive responsive and manual layout reattachment', async ({
+  page
+}) => {
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await gotoStep6Mono(page);
+  const app = page.locator('#app');
+  await expect(app).toHaveAttribute('data-layout-id', 'split-right');
+
+  const wrap = page.locator('[data-double-slit-instruments="true"]');
+  const initial = await readInstrument(page);
+  await dragCaliperSlider(page, 18);
+  const measured = await readInstrument(page);
+  expect(measured.mm).not.toBe(initial.mm);
+
+  const expectLiveInstruments = async (layoutId: string, reading: number) => {
+    await expect(app).toHaveAttribute('data-layout-id', layoutId);
+    await expect(wrap).toHaveCount(1);
+    await expect(page.locator('.microscope-root')).toHaveCount(1);
+    await expect(page.locator('.micrometer-root')).toHaveCount(1);
+    await expect
+      .poll(async () => (await readInstrument(page)).mm)
+      .toBe(reading);
+    const attachedToMainCanvas = await wrap.evaluate((el) => {
+      const mainCanvas = document.querySelector(
+        '.layout-master canvas.stage-canvas'
+      );
+      return (
+        mainCanvas instanceof HTMLCanvasElement &&
+        el.parentElement === mainCanvas.parentElement
+      );
+    });
+    expect(attachedToMainCanvas).toBe(true);
+  };
+
+  const expectDraggable = async (xRatio = 0.4) => {
+    const before = await readInstrument(page);
+    await dragCaliperSlider(page, 18, xRatio);
+    await expect
+      .poll(async () => (await readInstrument(page)).mm)
+      .not.toBe(before.mm);
+  };
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expectLiveInstruments('mobile-stack', measured.mm);
+  await expectDraggable();
+  const mobileReading = await readInstrument(page);
+
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await expectLiveInstruments('split-right', mobileReading.mm);
+  await page.waitForTimeout(500);
+
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    if ((await app.getAttribute('data-layout-id')) === 'lab-stage') break;
+    await page.locator('.layout-switch-btn').click();
+    await page.waitForTimeout(350);
+  }
+  await expectLiveInstruments('lab-stage', mobileReading.mm);
+  await expectDraggable(0.15);
+  const labReading = await readInstrument(page);
+
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    if ((await app.getAttribute('data-layout-id')) === 'split-right') break;
+    await page.locator('.layout-switch-btn').click();
+    await page.waitForTimeout(350);
+  }
+  await expectLiveInstruments('split-right', labReading.mm);
+  await expectDraggable();
+});
+
+test('step 6 instruments stay fully inside split-right, mobile-stack, and lab-stage', async ({
+  page
+}) => {
+  test.setTimeout(120_000);
+  const shots = join(
+    process.cwd(),
+    'artifacts',
+    'data-workspace',
+    'screenshots'
+  );
+  mkdirSync(shots, { recursive: true });
+  const layouts = [
+    { id: 'split-right', width: 1400, height: 900 },
+    { id: 'mobile-stack', width: 390, height: 844 },
+    { id: 'lab-stage', width: 1400, height: 900 },
+    { id: 'lab-stage', width: 1920, height: 1080 }
+  ] as const;
+
+  for (const layout of layouts) {
+    await page.setViewportSize({ width: layout.width, height: layout.height });
+    await openDoubleSlit(page, `?step=6&layout=${layout.id}`);
+    await page.waitForSelector('.microscope-root', { timeout: 15_000 });
+    await page.waitForSelector('[data-double-slit-instruments="true"]');
+    await page.locator('.data-workspace-entry').click();
+    await expect(page.locator('#app')).toHaveAttribute(
+      'data-layout-id',
+      layout.id
+    );
+    await expect(page.locator('.layout-master')).toHaveClass(
+      /is-data-workspace/
+    );
+    await expect(
+      page.locator('[data-double-slit-instruments="true"]')
+    ).toHaveCount(1);
+    await expect(page.locator('.microscope-root')).toHaveCount(1);
+    await expect(page.locator('.micrometer-root')).toHaveCount(1);
+
+    if (layout.id === 'lab-stage') {
+      const stageHeight = await page
+        .locator('.lab-stage-anim')
+        .evaluate((el) => el.getBoundingClientRect().height);
+      expect(stageHeight).toBeGreaterThan(280);
+    }
+
+    await expect
+      .poll(async () => {
+        const geo = await instrumentVisualGeo(page);
+        return geo.visual.bottom - geo.visual.top;
+      })
+      .toBeGreaterThan(40);
+    const geo = await instrumentVisualGeo(page);
+    expect(geo.visual.bottom - geo.visual.top).toBeGreaterThan(80);
+    expect(geo.visual.top).toBeGreaterThanOrEqual(geo.stage.top - 2);
+    expect(geo.visual.bottom).toBeLessThanOrEqual(geo.stage.bottom + 2);
+    if (layout.id === 'mobile-stack') {
+      expectVisualInsideStage(geo);
+    } else {
+      expectVisualInsideStage(geo, { horizontal: true });
+    }
+    await page.screenshot({
+      path: join(
+        shots,
+        `audit-20260924-dense5-slit-${layout.id}-${layout.width}x${layout.height}.png`
+      )
+    });
+    const animationSelector =
+      layout.id === 'mobile-stack'
+        ? '.mobile-animation-section'
+        : layout.id === 'lab-stage'
+          ? '.lab-stage-anim'
+          : '.teaching-stage-slot';
+    const animation = page.locator(animationSelector).first();
+    const animationGeometry = () =>
+      animation.evaluate((el) => {
+        const box = el.getBoundingClientRect();
+        const app = document.querySelector('#app')!.getBoundingClientRect();
+        return {
+          x: box.left - app.left,
+          y: box.top - app.top,
+          width: box.width,
+          height: box.height
+        };
+      });
+    await expect(animation).toBeVisible();
+    const beforeRows = await animationGeometry();
+    for (let count = 2; count <= 4; count += 1) {
+      await page.locator('.data-workspace-add').click();
+      await expect(page.locator('.data-workspace-table tbody tr')).toHaveCount(
+        count
+      );
+    }
+    await page.waitForTimeout(250);
+    const afterRows = await animationGeometry();
+    for (const key of ['x', 'y', 'width', 'height'] as const) {
+      expect(
+        Math.abs(afterRows[key] - beforeRows[key]),
+        layout.id +
+          ' animation ' +
+          key +
+          ' changed from ' +
+          beforeRows[key] +
+          ' to ' +
+          afterRows[key]
+      ).toBeLessThanOrEqual(1);
+    }
+  }
 });

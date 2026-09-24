@@ -13,16 +13,19 @@ import {
   checkPositionRawFormat,
   cloneSession,
   createEmptySession,
+  fieldIsOk,
   freezeSession,
   getSummaryField,
   getTrialField,
   invalidateAllTrials,
   nextFailedAttempts,
   parseStudentNumber,
+  positionFormatDigits,
   positionFormatKindFromSnapshot,
   quantizeExactDiscreteMm,
   readingStrategyOf,
   removeSessionTrial,
+  stagedFieldReadiness,
   withAttemptReference,
   writeCheckedField,
   type DataWorkspaceDraft,
@@ -39,12 +42,15 @@ import {
 } from '../../platform/data-workspace';
 import { doubleSlitFringeOrder } from './snapshot-meta';
 import {
+  calcSigFigsHint,
   checkAverageSpacing,
+  checkCalculatedFormat,
   checkDifference,
   checkFringeSpacing,
   checkIntervalCountFromOrders,
-  checkSameInstrument,
+  checkPositionBaseline,
   checkWavelengthNm,
+  positionBaselinesCompatible,
   wavelengthNmFromAverage
 } from './wavelength';
 import {
@@ -75,6 +81,8 @@ export {
 
 const POSITION_MAX_MM = 40;
 const N_MAX = 30;
+/** 读数格式要求（面板逐字段提示；与 checkPositionRawFormat 文案同源）。 */
+const POSITION_FORMAT_HINT = '卡尺 2 位小数 / 测微仪 3 位小数';
 
 export type DataWorkspaceExpected = {
   dMm: number;
@@ -94,12 +102,26 @@ export const doubleSlitDataWorkspaceSpec: DataWorkspaceSpec = {
   initialRows: 1,
   stageMode: 'instrument-only',
   rowFields: [
-    { id: 'x1', label: 'x₁', unit: 'mm', inputMode: 'decimal' },
-    { id: 'x2', label: 'x₂', unit: 'mm', inputMode: 'decimal' },
+    {
+      id: 'x1',
+      label: 'x₁',
+      unit: 'mm',
+      inputMode: 'decimal',
+      formatHint: POSITION_FORMAT_HINT
+    },
+    {
+      id: 'x2',
+      label: 'x₂',
+      unit: 'mm',
+      inputMode: 'decimal',
+      formatHint: POSITION_FORMAT_HINT,
+      dependsOn: [{ scope: 'row', field: 'x1' }]
+    },
     {
       id: 'n',
       label: 'n',
       inputMode: 'numeric',
+      formatHint: '正整数',
       dependsOn: [
         { scope: 'row', field: 'x1' },
         { scope: 'row', field: 'x2' }
@@ -110,6 +132,7 @@ export const doubleSlitDataWorkspaceSpec: DataWorkspaceSpec = {
       label: 'D = x₂ − x₁',
       unit: 'mm',
       inputMode: 'decimal',
+      formatHint: '与读数同小数位',
       dependsOn: [
         { scope: 'row', field: 'x1' },
         { scope: 'row', field: 'x2' }
@@ -120,6 +143,7 @@ export const doubleSlitDataWorkspaceSpec: DataWorkspaceSpec = {
       label: 'Δx = D / n',
       unit: 'mm',
       inputMode: 'decimal',
+      formatHint: calcSigFigsHint(),
       dependsOn: [
         { scope: 'row', field: 'D' },
         { scope: 'row', field: 'n' }
@@ -132,6 +156,7 @@ export const doubleSlitDataWorkspaceSpec: DataWorkspaceSpec = {
       label: '平均 Δx',
       unit: 'mm',
       inputMode: 'decimal',
+      formatHint: calcSigFigsHint(),
       gated: true,
       dependsOn: [{ scope: 'all-rows', field: 'deltaX' }],
       readinessHint: '请先完成当前 {rowCount} 组 Δx 校对',
@@ -142,6 +167,7 @@ export const doubleSlitDataWorkspaceSpec: DataWorkspaceSpec = {
       label: 'λ = d·平均Δx / L',
       unit: 'nm',
       inputMode: 'decimal',
+      formatHint: `${calcSigFigsHint()}（nm）`,
       gated: true,
       dependsOn: [{ scope: 'summary', field: 'averageDeltaX' }],
       readinessHint: '请先校对平均 Δx'
@@ -154,7 +180,27 @@ export const doubleSlitDataWorkspaceSpec: DataWorkspaceSpec = {
     digits: 0
   },
   completionField: 'lambda',
-  lockInstrumentFromField: 'x1'
+  lockInstrumentFromField: 'x1',
+  rowCheckStages: [
+    {
+      id: 'first-reading',
+      label: '校对 x₁',
+      fields: ['x1'],
+      hint: '对准第一条亮纹，填写并校对 x₁'
+    },
+    {
+      id: 'second-reading',
+      label: '校对 x₂ 与 n',
+      fields: ['x2', 'n'],
+      hint: '移动到另一条亮纹，填写 x₂ 和两端间隔数 n'
+    },
+    {
+      id: 'calculation',
+      label: '校对 D 与 Δx',
+      fields: ['D', 'deltaX'],
+      hint: '用两次冻结读数完成本组计算'
+    }
+  ]
 };
 
 export type DoubleSlitMeasurementSource = {
@@ -217,7 +263,7 @@ export function doubleSlitKnowns(
 }
 
 export function doubleSlitHint(_params: DoubleSlitParams): string {
-  return '单位 mm，与仪器一致。';
+  return `单位 mm，与仪器一致。读数按仪器最小分度（${POSITION_FORMAT_HINT}）；D = x₂ − x₁ 与读数同小数位；Δx、平均 Δx 与 λ 按 ${calcSigFigsHint()}填写（乘除法规则）。`;
 }
 
 function rangeFeedback(
@@ -305,8 +351,18 @@ export function evaluateDoubleSlitField(options: {
   const field = submit.field;
   const trialIndex = submit.trialIndex ?? 0;
   const trial = session.trials[trialIndex];
-  const displayDigits = snapshot?.displayDigits ?? 3;
-  const precisionMm = snapshot?.precisionMm ?? CALIPER_PRECISION_MM;
+  const positionSnapshots = session.trials.map((row) => {
+    const x2 = getTrialField(row, 'x2');
+    const x1 = getTrialField(row, 'x1');
+    if (!fieldIsOk(x1) || !fieldIsOk(x2)) return undefined;
+    return x2?.snapshot ?? x1?.snapshot;
+  });
+  const validPositionSnapshots = positionSnapshots.filter(
+    (item): item is MeasurementSnapshot => Boolean(item)
+  );
+  const allPositionSnapshotsReady =
+    positionSnapshots.length > 0 && positionSnapshots.every(Boolean);
+  const baseline = positionBaselinesCompatible(validPositionSnapshots);
 
   const expectedUnit = field === 'lambda' ? 'nm' : 'mm';
   if (field === 'n') {
@@ -350,6 +406,51 @@ export function evaluateDoubleSlitField(options: {
           snapshot
         });
       }
+    }
+  }
+  if (field === 'D') {
+    // 加减法规则：D = x₂ − x₁ 与两次读数同小数位（卡尺 2 位、测微仪 3 位）。
+    const kind = positionFormatKindFromSnapshot(
+      getTrialField(trial, 'x2')?.snapshot ??
+        getTrialField(trial, 'x1')?.snapshot
+    );
+    const formatFb = kind
+      ? checkNumericFormat(submit.raw, {
+          decimalPlaces: positionFormatDigits(kind),
+          formatMessage: `D = x₂ − x₁ 须与读数同小数位（恰好 ${positionFormatDigits(kind)} 位小数）`
+        })
+      : checkNumericFormat(submit.raw, {
+          formatMessage: 'D 应为 x₂ 与 x₁ 的差，请先校对两次读数'
+        });
+    if (formatFb) {
+      return {
+        feedback: formatFb,
+        session: writeCheckedField(
+          session,
+          trialIndex,
+          field,
+          asState(submit.raw, Number.NaN, formatFb),
+          doubleSlitDataWorkspaceSpec
+        )
+      };
+    }
+  }
+  if (field === 'deltaX' || field === 'averageDeltaX' || field === 'lambda') {
+    // 乘除法规则：计算量按 3 位有效数字填写（与纸带 v/a 同一判分契约）。
+    const label =
+      field === 'deltaX' ? 'Δx' : field === 'averageDeltaX' ? '平均 Δx' : 'λ';
+    const formatFb = checkCalculatedFormat(submit.raw, label);
+    if (formatFb) {
+      return {
+        feedback: formatFb,
+        session: writeCheckedField(
+          session,
+          field === 'lambda' ? undefined : trialIndex,
+          field,
+          asState(submit.raw, Number.NaN, formatFb),
+          doubleSlitDataWorkspaceSpec
+        )
+      };
     }
   }
   const parsed = parseStudentNumber(submit.raw, expectedUnit);
@@ -417,10 +518,11 @@ export function evaluateDoubleSlitField(options: {
     );
     let feedback = range ?? checkInstrumentReading(value, snapshot);
     if (feedback.ok && field === 'x2') {
-      const mismatch = checkSameInstrument(
-        getTrialField(trial, 'x1')?.snapshot,
-        snapshot ?? undefined
-      );
+      const x1 = getTrialField(trial, 'x1');
+      const mismatch =
+        !x1 || !fieldIsOk(x1)
+          ? { ok: false, layer: 'relation' as const, message: '请先校对 x1' }
+          : checkPositionBaseline(x1.snapshot, snapshot ?? undefined);
       if (mismatch) feedback = mismatch;
     }
     if (
@@ -476,7 +578,7 @@ export function evaluateDoubleSlitField(options: {
     const order2 = doubleSlitFringeOrder(x2?.snapshot);
     let feedback: FieldFeedback;
     if (range) feedback = range;
-    else if (!x1?.checked || !x2?.checked || x1.stale || x2.stale) {
+    else if (!x1 || !x2 || !fieldIsOk(x1) || !fieldIsOk(x2)) {
       feedback = { ok: false, layer: 'relation', message: '请先校对 x1 和 x2' };
     } else if (
       order1 == null ||
@@ -489,6 +591,8 @@ export function evaluateDoubleSlitField(options: {
         layer: 'instrument',
         message: '请先对准亮纹后再数间隔'
       };
+    } else if (checkPositionBaseline(x1.snapshot, x2.snapshot)) {
+      feedback = checkPositionBaseline(x1.snapshot, x2.snapshot)!;
     } else {
       feedback = checkIntervalCountFromOrders(value, order1, order2);
     }
@@ -508,8 +612,10 @@ export function evaluateDoubleSlitField(options: {
     const x1 = getTrialField(trial, 'x1');
     const x2 = getTrialField(trial, 'x2');
     let feedback: FieldFeedback;
-    if (!x1?.checked || !x2?.checked || x1.stale || x2.stale) {
+    if (!x1 || !x2 || !fieldIsOk(x1) || !fieldIsOk(x2)) {
       feedback = { ok: false, layer: 'relation', message: '请先校对 x1 和 x2' };
+    } else if (checkPositionBaseline(x1.snapshot, x2.snapshot)) {
+      feedback = checkPositionBaseline(x1.snapshot, x2.snapshot)!;
     } else {
       feedback = checkDifference(value, x1.value, x2.value);
     }
@@ -529,10 +635,10 @@ export function evaluateDoubleSlitField(options: {
     const D = getTrialField(trial, 'D');
     const n = getTrialField(trial, 'n');
     let feedback: FieldFeedback;
-    if (!D?.checked || !n?.checked || D.stale || n.stale) {
+    if (!D || !n || !fieldIsOk(D) || !fieldIsOk(n)) {
       feedback = { ok: false, layer: 'relation', message: '请先校对 D 和 n' };
     } else {
-      feedback = checkFringeSpacing(value, D.value, n.value, displayDigits);
+      feedback = checkFringeSpacing(value, D.value, n.value);
     }
     return {
       feedback,
@@ -549,19 +655,21 @@ export function evaluateDoubleSlitField(options: {
   if (field === 'averageDeltaX') {
     const deltaXs = session.trials
       .map((row) => getTrialField(row, 'deltaX'))
-      .filter((item): item is FieldCheckState =>
-        Boolean(item?.checked && item.feedback?.ok && !item.stale)
-      )
+      .filter((item): item is FieldCheckState => fieldIsOk(item))
       .map((item) => item.value);
     let feedback: FieldFeedback;
-    if (!allTrialsComplete(session, doubleSlitDataWorkspaceSpec)) {
+    if (
+      !allTrialsComplete(session, doubleSlitDataWorkspaceSpec) ||
+      !allPositionSnapshotsReady ||
+      !baseline
+    ) {
       feedback = {
         ok: false,
         layer: 'relation',
         message: '请先完成当前各组 Δx 的校对'
       };
     } else {
-      feedback = checkAverageSpacing(value, deltaXs, displayDigits);
+      feedback = checkAverageSpacing(value, deltaXs);
     }
     return {
       feedback,
@@ -577,20 +685,20 @@ export function evaluateDoubleSlitField(options: {
 
   const avg = getSummaryField(session, 'averageDeltaX');
   let feedback: FieldFeedback;
-  if (!avg?.checked || avg.stale) {
+  if (!avg || !fieldIsOk(avg)) {
     feedback = {
       ok: false,
       layer: 'relation',
       message: '请先校对平均条纹间距'
     };
+  } else if (!allPositionSnapshotsReady || !baseline) {
+    feedback = {
+      ok: false,
+      layer: 'relation',
+      message: '各组 x₁、x₂ 必须使用兼容的有效仪器读数'
+    };
   } else {
-    feedback = checkWavelengthNm(
-      value,
-      expected.dMm,
-      avg.value,
-      expected.L_m,
-      precisionMm
-    );
+    feedback = checkWavelengthNm(value, expected.dMm, avg.value, expected.L_m);
   }
   return {
     feedback,
@@ -626,10 +734,34 @@ export function createDoubleSlitDataWorkspace(
       session = { ...session, active };
     },
     submitField(input: DataWorkspaceFieldSubmit): DataWorkspaceFieldResult {
-      const snapshot = source.capture();
+      const trialIndex = input.trialIndex ?? 0;
+      const isSummary = doubleSlitDataWorkspaceSpec.summaryFields.some(
+        (field) => field.id === input.field
+      );
+      if (!isSummary) {
+        const readiness = stagedFieldReadiness(
+          session,
+          doubleSlitDataWorkspaceSpec,
+          input.field,
+          trialIndex
+        );
+        if (!readiness.ready) {
+          const feedback: FieldFeedback = {
+            ok: false,
+            layer: 'relation',
+            message: readiness.reason
+          };
+          return {
+            feedback,
+            session: freezeSession(cloneSession(session))
+          };
+        }
+      }
+      const snapshot =
+        input.field === 'x1' || input.field === 'x2' ? source.capture() : null;
       const result = evaluateDoubleSlitField({
         session,
-        submit: input,
+        submit: { ...input, trialIndex },
         snapshot,
         expected: expectedQuantities(source.getParams())
       });

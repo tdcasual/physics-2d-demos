@@ -1,4 +1,46 @@
 import { describe, expect, it, vi } from 'vitest';
+
+const SPLIT_FIT_KEY = 'dw-split-fit-kinematics-chart';
+const SPLIT_LEGACY_KEY = 'dw-split-kinematics-chart';
+
+function splitRect(height: number, width = 200): DOMRect {
+  return {
+    x: 0,
+    y: 0,
+    top: 0,
+    left: 0,
+    right: width,
+    bottom: height,
+    width,
+    height,
+    toJSON() {
+      return {};
+    }
+  } as DOMRect;
+}
+
+function mockSplitHeights(
+  stage: HTMLElement,
+  review: HTMLElement,
+  stageHeight: number,
+  reviewHeight: number
+): void {
+  Object.defineProperty(stage, 'clientHeight', {
+    configurable: true,
+    get: () => stageHeight
+  });
+  stage.getBoundingClientRect = () => splitRect(stageHeight);
+  review.getBoundingClientRect = () => splitRect(reviewHeight);
+}
+
+function expectLegalSeparator(splitter: HTMLElement): void {
+  const now = Number(splitter.getAttribute('aria-valuenow'));
+  const min = Number(splitter.getAttribute('aria-valuemin'));
+  const max = Number(splitter.getAttribute('aria-valuemax'));
+  expect(Number.isFinite(now)).toBe(true);
+  expect(now).toBeGreaterThanOrEqual(min);
+  expect(now).toBeLessThanOrEqual(max);
+}
 import { createDataWorkspacePanel } from '../../src/ui/components/data-workspace-panel';
 import {
   addSessionTrial,
@@ -345,6 +387,22 @@ describe('generic data-workspace fixture', () => {
     panel.dispose();
   });
 
+  it('keeps detailed grading feedback available with compact visible status', () => {
+    const { host } = createKinematicsHost();
+    const panel = createDataWorkspacePanel({ host, onChange() {} });
+    host.submitField({ field: 'mass', trialIndex: 0, raw: 'bad' });
+    panel.update();
+
+    const status = panel.root.querySelector(
+      '.data-workspace-status.is-error'
+    ) as HTMLElement;
+    expect(status.textContent).toBe('✗ 不通过');
+    expect(status.dataset.reason).toBe('格式不符');
+    expect(status.title).toBeTruthy();
+    expect(status.getAttribute('aria-label')).toContain(status.title);
+    panel.dispose();
+  });
+
   it('rejects unknown ids, cycles, and unmodelable dependency scopes', () => {
     const base: DataWorkspaceSpec = {
       ...kinematicsWorkspaceSpec,
@@ -529,7 +587,25 @@ describe('transposed table and two-step shell', () => {
     }
     host.submitField({ field: 'meanSpeed', raw: '2' });
     panel.update();
-    panel.setChartMode(true);
+    // Simulate the live editor state corresponding to direct host submissions;
+    // chart-mode entry now correctly treats the DOM as authoritative drafts.
+    const liveSession = host.getSession();
+    for (let i = 0; i < 3; i += 1) {
+      for (const field of ['mass', 'time', 'speed']) {
+        const selector =
+          'input[data-field="' + field + '"][data-trial="' + i + '"]';
+        const input = panel.root.querySelector(
+          selector
+        ) as HTMLInputElement | null;
+        const raw = liveSession.trials[i]?.fields[field]?.raw;
+        if (input && raw != null) input.value = raw;
+      }
+    }
+    const meanInput = panel.root.querySelector(
+      'input[data-field="meanSpeed"]'
+    ) as HTMLInputElement | null;
+    if (meanInput) meanInput.value = liveSession.summary.meanSpeed?.raw ?? '';
+    expect(panel.setChartMode(true)).toBe(true);
     expect(panel.getStep()).toBe('chartAnalysis');
     expect(onStepChange).toHaveBeenCalledWith('chartAnalysis');
     expect(
@@ -623,6 +699,257 @@ describe('transposed table and two-step shell', () => {
       trialsPanel.root.querySelector('[aria-label="第 甲 组 质量（kg）"]')
     ).toBeTruthy();
     trialsPanel.dispose();
+  });
+
+  it('fits the review to content until keyboard or pointer enters the 18–72 manual range', () => {
+    window.localStorage.removeItem(SPLIT_FIT_KEY);
+    window.localStorage.removeItem(SPLIT_LEGACY_KEY);
+    const { host } = createKinematicsChartHost();
+    const panel = createDataWorkspacePanel({
+      host,
+      onChange() {}
+    });
+    const stage = panel.root.querySelector(
+      '.data-workspace-chart-stage'
+    ) as HTMLElement;
+    const splitter = panel.root.querySelector(
+      '.data-workspace-splitter'
+    ) as HTMLElement;
+    const review = panel.root.querySelector(
+      '.data-workspace-review'
+    ) as HTMLElement;
+    const tableWrap = panel.root.querySelector(
+      '.data-workspace-table-wrap'
+    ) as HTMLElement;
+    const summary = panel.root.querySelector(
+      '.data-workspace-summary'
+    ) as HTMLElement;
+    try {
+      expect(stage.getAttribute('data-split-mode')).toBe('content');
+      expect(stage.style.getPropertyValue('--dw-split')).toBe('');
+      expect(splitter.getAttribute('aria-valuemin')).toBe('18');
+      expect(splitter.getAttribute('aria-valuemax')).toBe('72');
+      expect(splitter.getAttribute('aria-valuetext')).toBe('按表格内容');
+      expect(splitter.tabIndex).toBe(0);
+      expect(tableWrap.tabIndex).toBe(0);
+      expect(review.tabIndex).toBe(0);
+      expectLegalSeparator(splitter);
+      expect(window.localStorage.getItem(SPLIT_FIT_KEY)).toBeNull();
+      expect(window.localStorage.getItem(SPLIT_LEGACY_KEY)).toBeNull();
+      const stageChildren = [...stage.children].map((el) =>
+        el.classList.contains('data-workspace-review')
+          ? 'review'
+          : el.classList.contains('data-workspace-splitter')
+            ? 'splitter'
+            : el.classList.contains('data-workspace-chart')
+              ? 'chart'
+              : el.className
+      );
+      expect(stageChildren).toEqual(['review', 'splitter', 'chart']);
+      const panelChildren = [...panel.root.children];
+      expect(panelChildren.indexOf(summary)).toBeGreaterThan(
+        panelChildren.indexOf(stage)
+      );
+
+      mockSplitHeights(stage, review, 400, 100);
+      panel.update();
+      expect(stage.getAttribute('data-split-mode')).toBe('content');
+      expect(stage.style.getPropertyValue('--dw-split')).toBe('');
+      expect(splitter.getAttribute('aria-valuenow')).toBe('25');
+      expect(splitter.getAttribute('aria-valuetext')).toBe('按表格内容');
+      expectLegalSeparator(splitter);
+
+      splitter.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })
+      );
+      expect(stage.getAttribute('data-split-mode')).toBe('manual');
+      expect(splitter.getAttribute('aria-valuenow')).toBe('26');
+      expect(splitter.getAttribute('aria-valuetext')).toBeNull();
+      expect(stage.style.getPropertyValue('--dw-split')).toBe('26.00%');
+      expect(window.localStorage.getItem(SPLIT_FIT_KEY)).toBe('0.26');
+      expectLegalSeparator(splitter);
+
+      splitter.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'PageUp', bubbles: true })
+      );
+      expect(Number(splitter.getAttribute('aria-valuenow'))).toBe(21);
+      expect(stage.style.getPropertyValue('--dw-split')).toBe('21.00%');
+
+      splitter.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Home', bubbles: true })
+      );
+      expect(splitter.getAttribute('aria-valuenow')).toBe('18');
+      expect(stage.style.getPropertyValue('--dw-split')).toBe('18.00%');
+      splitter.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'End', bubbles: true })
+      );
+      expect(splitter.getAttribute('aria-valuenow')).toBe('72');
+      expect(stage.style.getPropertyValue('--dw-split')).toBe('72.00%');
+
+      for (let i = 0; i < 80; i += 1) {
+        splitter.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true })
+        );
+      }
+      expect(splitter.getAttribute('aria-valuenow')).toBe('18');
+      expect(stage.style.getPropertyValue('--dw-split')).toBe('18.00%');
+      expectLegalSeparator(splitter);
+
+      splitter.dispatchEvent(
+        new PointerEvent('pointerdown', {
+          bubbles: true,
+          pointerId: 1,
+          clientY: 80
+        })
+      );
+      splitter.dispatchEvent(
+        new PointerEvent('pointermove', {
+          bubbles: true,
+          pointerId: 1,
+          clientY: 240
+        })
+      );
+      splitter.dispatchEvent(
+        new PointerEvent('pointerup', { bubbles: true, pointerId: 1 })
+      );
+      expect(splitter.getAttribute('aria-valuenow')).toBe('60');
+      expect(stage.style.getPropertyValue('--dw-split')).toBe('60.00%');
+      expect(window.localStorage.getItem(SPLIT_FIT_KEY)).toBe('0.6');
+
+      splitter.dispatchEvent(
+        new PointerEvent('pointerdown', {
+          bubbles: true,
+          pointerId: 1,
+          clientY: 400
+        })
+      );
+      splitter.dispatchEvent(
+        new PointerEvent('pointermove', {
+          bubbles: true,
+          pointerId: 1,
+          clientY: 390
+        })
+      );
+      expect(splitter.getAttribute('aria-valuenow')).toBe('72');
+      expectLegalSeparator(splitter);
+    } finally {
+      panel.dispose();
+      window.localStorage.removeItem(SPLIT_FIT_KEY);
+      window.localStorage.removeItem(SPLIT_LEGACY_KEY);
+    }
+  });
+
+  it('clamps the announced separator when content-fit is outside 18–72', () => {
+    window.localStorage.removeItem(SPLIT_FIT_KEY);
+    const { host } = createKinematicsChartHost();
+    const panel = createDataWorkspacePanel({
+      host,
+      onChange() {}
+    });
+    const stage = panel.root.querySelector(
+      '.data-workspace-chart-stage'
+    ) as HTMLElement;
+    const splitter = panel.root.querySelector(
+      '.data-workspace-splitter'
+    ) as HTMLElement;
+    const review = panel.root.querySelector(
+      '.data-workspace-review'
+    ) as HTMLElement;
+    try {
+      mockSplitHeights(stage, review, 400, 40);
+      panel.update();
+      expect(stage.getAttribute('data-split-mode')).toBe('content');
+      expect(stage.style.getPropertyValue('--dw-split')).toBe('');
+      expect(splitter.getAttribute('aria-valuenow')).toBe('18');
+      expect(splitter.getAttribute('aria-valuetext')).toBe('按表格内容');
+      expectLegalSeparator(splitter);
+
+      splitter.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })
+      );
+      expect(stage.getAttribute('data-split-mode')).toBe('manual');
+      expect(splitter.getAttribute('aria-valuenow')).toBe('18');
+      expect(stage.style.getPropertyValue('--dw-split')).toBe('18.00%');
+      expectLegalSeparator(splitter);
+    } finally {
+      panel.dispose();
+      window.localStorage.removeItem(SPLIT_FIT_KEY);
+    }
+
+    const above = createDataWorkspacePanel({
+      host,
+      onChange() {}
+    });
+    const aboveStage = above.root.querySelector(
+      '.data-workspace-chart-stage'
+    ) as HTMLElement;
+    const aboveSplitter = above.root.querySelector(
+      '.data-workspace-splitter'
+    ) as HTMLElement;
+    const aboveReview = above.root.querySelector(
+      '.data-workspace-review'
+    ) as HTMLElement;
+    try {
+      mockSplitHeights(aboveStage, aboveReview, 400, 360);
+      above.update();
+      expect(aboveStage.getAttribute('data-split-mode')).toBe('content');
+      expect(aboveSplitter.getAttribute('aria-valuenow')).toBe('72');
+      expect(aboveSplitter.getAttribute('aria-valuetext')).toBe('按表格内容');
+      expectLegalSeparator(aboveSplitter);
+      aboveSplitter.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true })
+      );
+      expect(aboveStage.getAttribute('data-split-mode')).toBe('manual');
+      expect(aboveSplitter.getAttribute('aria-valuenow')).toBe('72');
+      expect(aboveStage.style.getPropertyValue('--dw-split')).toBe('72.00%');
+      expectLegalSeparator(aboveSplitter);
+    } finally {
+      above.dispose();
+      window.localStorage.removeItem(SPLIT_FIT_KEY);
+    }
+  });
+
+  it('restores only the content-fit storage key and ignores the legacy 33% key', () => {
+    window.localStorage.setItem(SPLIT_LEGACY_KEY, '0.333');
+    window.localStorage.removeItem(SPLIT_FIT_KEY);
+    const ignored = createDataWorkspacePanel({
+      host: createKinematicsChartHost().host,
+      onChange() {}
+    });
+    try {
+      const stage = ignored.root.querySelector(
+        '.data-workspace-chart-stage'
+      ) as HTMLElement;
+      expect(stage.getAttribute('data-split-mode')).toBe('content');
+      expect(stage.style.getPropertyValue('--dw-split')).toBe('');
+      expect(window.localStorage.getItem(SPLIT_LEGACY_KEY)).toBe('0.333');
+      expect(window.localStorage.getItem(SPLIT_FIT_KEY)).toBeNull();
+    } finally {
+      ignored.dispose();
+      window.localStorage.removeItem(SPLIT_LEGACY_KEY);
+    }
+
+    window.localStorage.setItem(SPLIT_FIT_KEY, '0.6');
+    const restored = createDataWorkspacePanel({
+      host: createKinematicsChartHost().host,
+      onChange() {}
+    });
+    try {
+      const stage = restored.root.querySelector(
+        '.data-workspace-chart-stage'
+      ) as HTMLElement;
+      const splitter = restored.root.querySelector(
+        '.data-workspace-splitter'
+      ) as HTMLElement;
+      expect(stage.getAttribute('data-split-mode')).toBe('manual');
+      expect(stage.style.getPropertyValue('--dw-split')).toBe('60.00%');
+      expect(splitter.getAttribute('aria-valuenow')).toBe('60');
+      expect(splitter.getAttribute('aria-valuetext')).toBeNull();
+      expectLegalSeparator(splitter);
+    } finally {
+      restored.dispose();
+      window.localStorage.removeItem(SPLIT_FIT_KEY);
+    }
   });
 
   it('renders no in-panel step chrome now that chart mode lives in the toolbar', () => {

@@ -127,7 +127,7 @@ export function createTickerTapeScene(
 
   const dataWorkspace: DataWorkspaceHost & {
     invalidateAll(reason: string): void;
-    invalidateVColumn(reason: string): void;
+    invalidateSigFigsDerived(reason: string): void;
   } = {
     getSpec() {
       if (!innerWorkspace) {
@@ -186,8 +186,8 @@ export function createTickerTapeScene(
       innerWorkspace?.invalidateAll(reason);
       base.notify();
     },
-    invalidateVColumn(reason: string) {
-      innerWorkspace?.invalidateVColumn(reason);
+    invalidateSigFigsDerived(reason: string) {
+      innerWorkspace?.invalidateSigFigsDerived(reason);
       base.notify();
     },
     syncInstrument() {
@@ -331,7 +331,7 @@ export function createTickerTapeScene(
       if (before.tapeKind !== after.tapeKind || before.noise !== after.noise) {
         hostRef?.invalidateAll('纸带已更换，请重新测量校对');
       } else if (before.vSigFigs !== after.vSigFigs) {
-        dataWorkspace.invalidateVColumn(
+        dataWorkspace.invalidateSigFigsDerived(
           `有效位数要求已改为 ${after.vSigFigs} 位，请按新要求重新填写校对`
         );
       }

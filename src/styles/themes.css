@@ -115,6 +115,9 @@
   --accent-contrast: #0a0a0a;
   --accent-primary-light: rgba(255, 107, 107, 0.1);
   --accent-link: #b42318;
+  /* 工作区校对文字。浅色底上用深色，保证正文级对比。 */
+  --danger: #b42318;
+  --status-ok: #0f766e;
 
   /* 阴影 */
   --shadow-color: rgba(0, 0, 0, 0.1);
@@ -178,6 +181,8 @@
   --accent-contrast: #0a0a0a;
   --accent-primary-light: rgba(255, 107, 107, 0.15);
   --accent-link: #ff9b91;
+  --danger: #ffb4ab;
+  --status-ok: #5eead4;
 
   /* 阴影 */
   --shadow-color: rgba(0, 0, 0, 0.3);

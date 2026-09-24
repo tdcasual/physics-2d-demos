@@ -51,12 +51,24 @@ export type DataWorkspaceStageMode = 'full' | 'instrument-only';
 
 export type DataWorkspaceInputMode = 'decimal' | 'numeric' | 'text';
 
-export type FieldDependencyScope = 'row' | 'all-rows' | 'summary';
+export type FieldDependencyScope =
+  | 'row'
+  | 'neighbor-row'
+  | 'all-rows'
+  | 'summary';
 
-export type FieldDependency = {
-  scope: FieldDependencyScope;
-  field: string;
-};
+/**
+ * `row` / `all-rows` / `summary` read the field in the same row / every row /
+ * the summary block. `neighbor-row` additionally shifts the row window by
+ * `offset`: Δx_i = x_i − x_{i−1} is `{ scope: 'neighbor-row', field: 'x',
+ * offset: -1 }`, a centred difference v_i = (x_{i+1} − x_{i−1}) needs both
+ * −1 and +1. Invalidation follows the same edge, so editing one row's x
+ * expires the neighbouring rows' derived values instead of leaving them
+ * wrongly "checked".
+ */
+export type FieldDependency =
+  | { scope: 'row' | 'all-rows' | 'summary'; field: string }
+  | { scope: 'neighbor-row'; field: string; offset: number };
 
 export type DataWorkspaceTableOrientation = 'trials' | 'fields';
 
@@ -68,6 +80,12 @@ export type DataWorkspaceFieldSpec = {
   dependsOn?: readonly FieldDependency[];
   /** When true, native-disabled until dependsOn is satisfied. */
   gated?: boolean;
+  /**
+   * Always-visible, one-line precision/digit requirement for this field
+   * (e.g. 「3 位有效数字」). Rendered next to the field label so touch and
+   * keyboard users see the rule without hovering a title.
+   */
+  formatHint?: string;
   readinessHint?: string;
   readinessHintOne?: string;
   /** Chart-analysis summary fields only. Default is the data step. */
@@ -89,6 +107,14 @@ export type DataWorkspaceResultSpec = {
   field: string;
   template: string;
   digits?: number;
+};
+
+/** Ordered batch within one trial. Progress is derived, never stored. */
+export type DataWorkspaceRowCheckStage = {
+  id: string;
+  label: string;
+  fields: readonly DataWorkspaceFieldId[];
+  hint?: string;
 };
 
 export type DataWorkspaceSpec = {
@@ -117,6 +143,11 @@ export type DataWorkspaceSpec = {
   /** Per-trial display labels (e.g. counting points 0..6). Default: 1-based 组号. */
   trialLabels?: readonly string[];
   rowFields: readonly DataWorkspaceFieldSpec[];
+  /**
+   * Omit for legacy “check the whole row” batching. An empty array is illegal.
+   * When set, stages are the only check order and must cover every row field.
+   */
+  rowCheckStages?: readonly DataWorkspaceRowCheckStage[];
   summaryFields: readonly DataWorkspaceFieldSpec[];
   summary?: DataWorkspaceSummarySpec;
   result?: DataWorkspaceResultSpec;
@@ -342,10 +373,14 @@ export function chartStepReady(
   );
   if (!rowsOk) return false;
   return spec.summaryFields
-    .filter(
-      (field) => field.step !== 'chartAnalysis' && field.optional !== true
-    )
-    .every((field) => fieldIsOk(session.summary[field.id]));
+    .filter((field) => field.step !== 'chartAnalysis')
+    .every((field) => {
+      const state = session.summary[field.id];
+      // Optional fields are exempt only while genuinely empty. Once submitted,
+      // an optional value must pass the same grading contract as required data.
+      if (field.optional && !state?.raw?.trim()) return true;
+      return fieldIsOk(state);
+    });
 }
 
 function allFieldIds(spec: DataWorkspaceSpec): Set<string> {
@@ -374,6 +409,22 @@ export function assertSpecGraph(spec: DataWorkspaceSpec): void {
           `[data-workspace] row-scoped dependency "${dep.field}" is not a row field`
         );
       }
+      if (dep.scope === 'neighbor-row') {
+        if (!isRowField(spec, dep.field)) {
+          throw new Error(
+            `[data-workspace] neighbor-row dependency "${dep.field}" is not a row field`
+          );
+        }
+        if (
+          !Number.isInteger(dep.offset) ||
+          dep.offset === 0 ||
+          Math.abs(dep.offset) > NEIGHBOR_ROW_MAX_OFFSET
+        ) {
+          throw new Error(
+            `[data-workspace] neighbor-row dependency "${dep.field}" of "${field.id}" needs a non-zero integer offset within ±${NEIGHBOR_ROW_MAX_OFFSET} in spec "${spec.id}"`
+          );
+        }
+      }
       if (dep.scope === 'all-rows' && !isRowField(spec, dep.field)) {
         throw new Error(
           `[data-workspace] all-rows dependency "${dep.field}" is not a row field`
@@ -384,15 +435,20 @@ export function assertSpecGraph(spec: DataWorkspaceSpec): void {
           `[data-workspace] summary dependency "${dep.field}" is not a summary field`
         );
       }
-      // Invalidation only walks row→row, row→summary(all-rows), summary→summary.
-      if (rowOwner && dep.scope !== 'row') {
+      // Invalidation only walks row→row (same or neighbouring row),
+      // row→summary(all-rows), summary→summary.
+      if (rowOwner && dep.scope !== 'row' && dep.scope !== 'neighbor-row') {
         throw new Error(
           `[data-workspace] row field "${field.id}" cannot depend with scope "${dep.scope}" in spec "${spec.id}"`
         );
       }
-      if (!rowOwner && dep.scope === 'row') {
+      if (!rowOwner && (dep.scope === 'row' || dep.scope === 'neighbor-row')) {
         throw new Error(
-          `[data-workspace] summary field "${field.id}" cannot use row scope; use all-rows in spec "${spec.id}"`
+          '[data-workspace] summary field "' +
+            field.id +
+            '" cannot use row scope; use all-rows in spec "' +
+            spec.id +
+            '"'
         );
       }
     }
@@ -471,28 +527,253 @@ export function assertSpecGraph(spec: DataWorkspaceSpec): void {
       );
     }
   }
+  assertRowCheckStages(spec);
   assertAcyclicDependencies(spec);
 }
 
-type GraphNode = { loc: 'row' | 'summary'; id: string };
+function assertRowCheckStages(spec: DataWorkspaceSpec): void {
+  const stages = spec.rowCheckStages;
+  if (stages == null) return;
+  if (stages.length === 0) {
+    throw new Error(
+      `[data-workspace] rowCheckStages must be a non-empty array in spec "${spec.id}"`
+    );
+  }
+  const rowIds = spec.rowFields.map((field) => field.id);
+  const rowIdSet = new Set(rowIds);
+  const seenStageIds = new Set<string>();
+  const seenFields = new Set<string>();
+  const stageOf = new Map<string, { stageIndex: number; fieldIndex: number }>();
+
+  stages.forEach((stage, stageIndex) => {
+    const id = stage.id?.trim() ?? '';
+    const label = stage.label?.trim() ?? '';
+    if (!id) {
+      throw new Error(
+        `[data-workspace] rowCheckStages[${stageIndex}].id must be non-empty in spec "${spec.id}"`
+      );
+    }
+    if (!label) {
+      throw new Error(
+        `[data-workspace] rowCheckStages "${id}" label must be non-empty in spec "${spec.id}"`
+      );
+    }
+    if (seenStageIds.has(id)) {
+      throw new Error(
+        `[data-workspace] duplicate rowCheckStages id "${id}" in spec "${spec.id}"`
+      );
+    }
+    seenStageIds.add(id);
+    if (stage.fields.length === 0) {
+      throw new Error(
+        `[data-workspace] rowCheckStages "${id}" fields must be non-empty in spec "${spec.id}"`
+      );
+    }
+    stage.fields.forEach((fieldId, fieldIndex) => {
+      if (!rowIdSet.has(fieldId)) {
+        throw new Error(
+          `[data-workspace] rowCheckStages "${id}" field "${fieldId}" is not a row field in spec "${spec.id}"`
+        );
+      }
+      if (seenFields.has(fieldId)) {
+        throw new Error(
+          `[data-workspace] field "${fieldId}" is repeated in rowCheckStages of spec "${spec.id}"`
+        );
+      }
+      seenFields.add(fieldId);
+      stageOf.set(fieldId, { stageIndex, fieldIndex });
+    });
+  });
+
+  for (const fieldId of rowIds) {
+    if (!seenFields.has(fieldId)) {
+      throw new Error(
+        `[data-workspace] rowCheckStages must cover every row field; missing "${fieldId}" in spec "${spec.id}"`
+      );
+    }
+  }
+
+  for (const field of spec.rowFields) {
+    const owner = stageOf.get(field.id);
+    if (!owner) continue;
+    for (const dep of field.dependsOn ?? []) {
+      if (dep.scope !== 'row') continue;
+      const target = stageOf.get(dep.field);
+      if (!target) continue;
+      if (target.stageIndex > owner.stageIndex) {
+        throw new Error(
+          `[data-workspace] row dependency "${dep.field}" of "${field.id}" is in a later stage in spec "${spec.id}"`
+        );
+      }
+      if (
+        target.stageIndex === owner.stageIndex &&
+        target.fieldIndex >= owner.fieldIndex
+      ) {
+        throw new Error(
+          `[data-workspace] row dependency "${dep.field}" of "${field.id}" is not earlier in stage "${stages[owner.stageIndex]?.id}" in spec "${spec.id}"`
+        );
+      }
+    }
+  }
+}
+
+export type RowCheckStageState = {
+  /** First incomplete stage. Null when none are declared or the row is done. */
+  stage: DataWorkspaceRowCheckStage | null;
+  /**
+   * 1-based index of the first incomplete stage. Equals `total` when the
+   * row is complete. 0 when the spec declares no stages.
+   */
+  index: number;
+  total: number;
+  completed: boolean;
+};
+
+function stageFieldsOk(
+  session: DataWorkspaceSession,
+  stage: DataWorkspaceRowCheckStage,
+  trialIndex: number
+): boolean {
+  const trial = session.trials[trialIndex];
+  return stage.fields.every((fieldId) =>
+    fieldIsOk(getTrialField(trial, fieldId))
+  );
+}
+
+/** Derived stage cursor. Does not read or write any session phase. */
+export function rowCheckStageState(
+  session: DataWorkspaceSession,
+  spec: DataWorkspaceSpec,
+  trialIndex: number
+): RowCheckStageState {
+  const stages = spec.rowCheckStages;
+  if (!stages || stages.length === 0) {
+    return { stage: null, index: 0, total: 0, completed: false };
+  }
+  const incompleteAt = stages.findIndex(
+    (stage) => !stageFieldsOk(session, stage, trialIndex)
+  );
+  if (incompleteAt < 0) {
+    return {
+      stage: null,
+      index: stages.length,
+      total: stages.length,
+      completed: true
+    };
+  }
+  return {
+    stage: stages[incompleteAt] ?? null,
+    index: incompleteAt + 1,
+    total: stages.length,
+    completed: false
+  };
+}
+
+export type StagedFieldReadiness =
+  | { ready: true }
+  | { ready: false; reason: string };
+
+/**
+ * Stage submit gate. Independent of `gated` / `isFieldReady`.
+ * Specs without `rowCheckStages` stay ready so legacy batching is unchanged.
+ * Fields in an already completed earlier stage stay ready so they can be remeasured.
+ */
+export function stagedFieldReadiness(
+  session: DataWorkspaceSession,
+  spec: DataWorkspaceSpec,
+  fieldId: string,
+  trialIndex: number
+): StagedFieldReadiness {
+  const stages = spec.rowCheckStages;
+  if (!stages) return { ready: true };
+
+  let stageIndex = -1;
+  let fieldIndex = -1;
+  for (let i = 0; i < stages.length; i += 1) {
+    const at = stages[i]?.fields.indexOf(fieldId) ?? -1;
+    if (at >= 0) {
+      stageIndex = i;
+      fieldIndex = at;
+      break;
+    }
+  }
+  if (stageIndex < 0) {
+    return {
+      ready: false,
+      reason: `字段「${fieldId}」不在分阶段校验中`
+    };
+  }
+
+  for (let i = 0; i < stageIndex; i += 1) {
+    const earlier = stages[i];
+    if (!earlier || stageFieldsOk(session, earlier, trialIndex)) continue;
+    return {
+      ready: false,
+      reason: `先完成阶段「${earlier.label}」`
+    };
+  }
+
+  const current = stages[stageIndex];
+  const priorFields = current?.fields.slice(0, fieldIndex) ?? [];
+  const trial = session.trials[trialIndex];
+  for (const priorId of priorFields) {
+    if (fieldIsOk(getTrialField(trial, priorId))) continue;
+    const prior = findFieldSpec(spec, priorId);
+    return {
+      ready: false,
+      reason: `先校对${prior?.label ?? priorId}`
+    };
+  }
+
+  const field = findFieldSpec(spec, fieldId);
+  for (const dep of field?.dependsOn ?? []) {
+    if (dependencySatisfied(session, spec, dep, trialIndex)) continue;
+    const depField = findFieldSpec(spec, dep.field);
+    return {
+      ready: false,
+      reason: `先满足对${depField?.label ?? dep.field}的依赖`
+    };
+  }
+
+  return { ready: true };
+}
+
+type GraphNode =
+  | { loc: 'row'; id: string; rowOffset: number }
+  | { loc: 'summary'; id: string };
+
+/** Neighbour windows stay tiny; a larger offset is a modelling mistake. */
+const NEIGHBOR_ROW_MAX_OFFSET = 8;
 
 function nodeKey(node: GraphNode): string {
-  return `${node.loc}:${node.id}`;
+  return node.loc === 'row'
+    ? `row:${node.id}@${node.rowOffset}`
+    : `summary:${node.id}`;
 }
 
 function dependentsOf(spec: DataWorkspaceSpec, node: GraphNode): GraphNode[] {
   const out: GraphNode[] = [];
   if (node.loc === 'row') {
+    const { id, rowOffset } = node;
     for (const field of spec.rowFields) {
       for (const dep of field.dependsOn ?? []) {
-        if (dep.scope === 'row' && dep.field === node.id) {
-          out.push({ loc: 'row', id: field.id });
+        if (dep.field !== id) continue;
+        if (dep.scope === 'row') {
+          out.push({ loc: 'row', id: field.id, rowOffset });
+        } else if (dep.scope === 'neighbor-row') {
+          // F_i reads x_{i+offset}, so an edit to x_j expires F_{j−offset}:
+          // the dependent's row shifts by the negated offset.
+          out.push({
+            loc: 'row',
+            id: field.id,
+            rowOffset: rowOffset - dep.offset
+          });
         }
       }
     }
     for (const field of spec.summaryFields) {
       for (const dep of field.dependsOn ?? []) {
-        if (dep.scope === 'all-rows' && dep.field === node.id) {
+        if (dep.scope === 'all-rows' && dep.field === id) {
           out.push({ loc: 'summary', id: field.id });
         }
       }
@@ -797,7 +1078,7 @@ export function markFieldStale(
 }
 
 function requireKnownField(spec: DataWorkspaceSpec, field: string): GraphNode {
-  if (isRowField(spec, field)) return { loc: 'row', id: field };
+  if (isRowField(spec, field)) return { loc: 'row', id: field, rowOffset: 0 };
   if (isSummaryField(spec, field)) return { loc: 'summary', id: field };
   throw new Error(
     `[data-workspace] unknown field id "${field}" in spec "${spec.id}"`
@@ -815,11 +1096,11 @@ export function invalidateDownstream(
   next.completed = false;
   const start = requireKnownField(spec, field);
   const downstream = collectDownstream(spec, start);
-  const trial = next.trials[trialIndex];
   for (const node of downstream) {
-    if (node.loc === 'row' && trial) {
-      trial.fields[node.id] = markFieldStale(trial.fields[node.id]);
-    } else if (node.loc === 'summary') {
+    if (node.loc === 'row') {
+      const trial = next.trials[trialIndex + node.rowOffset];
+      if (trial) trial.fields[node.id] = markFieldStale(trial.fields[node.id]);
+    } else {
       next.summary[node.id] = markFieldStale(next.summary[node.id]);
     }
   }
@@ -988,8 +1269,10 @@ export function dependencySatisfied(
   dep: FieldDependency,
   trialIndex?: number
 ): boolean {
-  if (dep.scope === 'row') {
-    const trial = trialIndex != null ? session.trials[trialIndex] : undefined;
+  if (dep.scope === 'row' || dep.scope === 'neighbor-row') {
+    if (trialIndex == null) return false;
+    const offset = dep.scope === 'neighbor-row' ? dep.offset : 0;
+    const trial = session.trials[trialIndex + offset];
     return fieldIsOk(getTrialField(trial, dep.field));
   }
   if (dep.scope === 'all-rows') {

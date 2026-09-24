@@ -73,6 +73,7 @@ export function createDoubleSlitScene(
   getDataWorkspace(): DataWorkspaceHost;
   getStepInfo(): { id: number; title: string; desc: string };
   subscribe(listener: () => void): () => void;
+  reattach(opts?: { container?: HTMLElement }): void;
 } {
   const sim = createDoubleSlitSim({
     step: 1,
@@ -117,19 +118,58 @@ export function createDoubleSlitScene(
   let rightInstrument: ReturnType<typeof createMicrometerEyepiece> | null =
     null;
   let lastStep = -1;
-  let parentOriginalPosition: string | null = null;
+  let currentTheme: TeachingTheme = options.theme ?? 'dark';
+  let positionedParent: HTMLElement | null = null;
+  let positionedInline: string | null = null;
   const instrumentStateCache = new Map<string, Record<string, unknown>>();
   let instrumentUnsubscribers: Array<() => void> = [];
   // 仪器模块异步加载的 dedup 缓存：并发 initInstruments 调用共享同一 Promise
   let instrumentsLoadPromise: Promise<void> | null = null;
+  let instrumentGeneration = 0;
+  let instrumentLoadFailed = false;
+
+  function ensurePositioned(parent: HTMLElement): void {
+    let pos = '';
+    try {
+      pos = getComputedStyle(parent).position;
+    } catch {
+      pos = parent.style.position;
+    }
+    if (pos && pos !== 'static' && pos !== 'auto') return;
+    if (positionedParent === parent) return;
+    positionedParent = parent;
+    positionedInline = parent.style.position;
+    parent.style.position = 'relative';
+  }
+
+  function restorePositioned(): void {
+    if (positionedParent && positionedInline !== null) {
+      positionedParent.style.position = positionedInline;
+    }
+    positionedParent = null;
+    positionedInline = null;
+  }
+
+  /** 把同一份仪器树挂回当前画布的父节点。布局切换只保留主画布。 */
+  function rehomeInstrumentWrap(): boolean {
+    const parent = options.canvas?.parentElement;
+    if (!instrumentWrap || !parent) return false;
+    if (instrumentWrap.parentElement === parent) return false;
+    restorePositioned();
+    ensurePositioned(parent);
+    parent.appendChild(instrumentWrap);
+    return true;
+  }
 
   function ensureInstrumentCanvases(): void {
-    if (instrumentWrap) return;
     const parent = options.canvas?.parentElement;
+    if (instrumentWrap) {
+      rehomeInstrumentWrap();
+      return;
+    }
     if (!parent) return;
 
-    parentOriginalPosition = parent.style.position;
-    parent.style.position = 'relative';
+    ensurePositioned(parent);
     instrumentWrap = document.createElement('div');
     instrumentWrap.style.cssText =
       'position:absolute;top:30%;left:0;width:100%;height:70%;' +
@@ -151,6 +191,7 @@ export function createDoubleSlitScene(
       syncInstrumentHostAttrs();
       base.notify();
     });
+    // 追加在主画布之后，布局切换 querySelector('canvas') 仍先命中主画布。
     parent.appendChild(instrumentWrap);
 
     // 左容器：游标卡尺
@@ -174,70 +215,107 @@ export function createDoubleSlitScene(
     rightContainer.appendChild(rightCanvas);
   }
 
-  function initInstruments(theme: TeachingTheme): void {
+  function initInstruments(): void {
     if (!leftContainer || !rightContainer || !leftCanvas || !rightCanvas)
       return;
-    // 已初始化或正在加载：并发调用去重
     if (leftInstrument && rightInstrument) return;
-    if (instrumentsLoadPromise) return;
+    if (instrumentsLoadPromise || instrumentLoadFailed) return;
 
-    instrumentsLoadPromise = Promise.all([
+    const generation = instrumentGeneration;
+    const leftHost = leftCanvas;
+    const rightHost = rightCanvas;
+    const pending = Promise.all([
       import('../../instruments/interference-vernier-caliper/instrument.entry'),
       import('../../instruments/micrometer-eyepiece/instrument.entry')
     ])
       .then(([caliperModule, micrometerModule]) => {
-        // 加载期间已离开步骤 6（disposeInstruments 清空了容器与 canvas），
-        // 直接丢弃本次加载结果，避免在游离 DOM 上创建仪器
-        if (!leftContainer || !rightContainer || !leftCanvas || !rightCanvas)
+        // 加载期间已离开步骤 6，或布局切换已换代：丢弃这次结果。
+        if (generation !== instrumentGeneration) return;
+        if (
+          !leftContainer ||
+          !rightContainer ||
+          leftCanvas !== leftHost ||
+          rightCanvas !== rightHost
+        ) {
           return;
+        }
+        if (leftInstrument || rightInstrument) return;
 
-        leftInstrument = caliperModule.createInterferenceVernierCaliper({
-          canvas: leftCanvas,
-          theme,
-          showHints: false
-        });
+        let caliper: ReturnType<
+          typeof caliperModule.createInterferenceVernierCaliper
+        > | null = null;
+        let micrometer: ReturnType<
+          typeof micrometerModule.createMicrometerEyepiece
+        > | null = null;
+        try {
+          caliper = caliperModule.createInterferenceVernierCaliper({
+            canvas: leftHost,
+            theme: currentTheme,
+            showHints: false
+          });
+          micrometer = micrometerModule.createMicrometerEyepiece({
+            canvas: rightHost,
+            theme: currentTheme,
+            showHints: false
+          });
+        } catch (error: unknown) {
+          caliper?.view.dispose();
+          micrometer?.view.dispose();
+          if (generation === instrumentGeneration) {
+            instrumentLoadFailed = true;
+            console.error('[double-slit] 仪器实例化失败', error);
+          }
+          return;
+        }
+        if (!caliper || !micrometer) return;
+        if (generation !== instrumentGeneration) {
+          caliper.view.dispose();
+          micrometer.view.dispose();
+          return;
+        }
+
+        leftInstrument = caliper;
+        rightInstrument = micrometer;
         const cachedCaliper = instrumentStateCache.get('caliper');
         if (cachedCaliper) leftInstrument.sim.setParams(cachedCaliper);
-        // 订阅读数变化，同步到实验状态区
+        const cachedMicrometer = instrumentStateCache.get('micrometer');
+        if (cachedMicrometer) rightInstrument.sim.setParams(cachedMicrometer);
         instrumentUnsubscribers.push(
           leftInstrument.view.onReadingChange(() => {
             syncInstrumentHostAttrs();
             base.notify();
-          })
-        );
-
-        rightInstrument = micrometerModule.createMicrometerEyepiece({
-          canvas: rightCanvas,
-          theme,
-          showHints: false
-        });
-        const cachedMicrometer = instrumentStateCache.get('micrometer');
-        if (cachedMicrometer) rightInstrument.sim.setParams(cachedMicrometer);
-        // 订阅读数变化，同步到实验状态区
-        instrumentUnsubscribers.push(
+          }),
           rightInstrument.view.onReadingChange(() => {
             syncInstrumentHostAttrs();
             base.notify();
           })
         );
+        if (generation !== instrumentGeneration) return;
 
+        rehomeInstrumentWrap();
         // 加载期间 syncInstrumentParams 的脏检查可能已消费当前参数 key，
         // 重置以强制向新建实例推送一次参数
         _lastInstrKey = '';
-        // 仪器异步就绪后主动刷新，保证立即渲染
         syncInstruments();
+        leftInstrument?.view.resize();
+        rightInstrument?.view.resize();
         base.notify();
       })
       .catch((error: unknown) => {
-        // 仪器加载失败不阻断主场景，降级为无仪器模式
+        if (generation !== instrumentGeneration) return;
+        instrumentLoadFailed = true;
         console.error('[double-slit] 仪器模块加载失败', error);
       })
       .finally(() => {
-        instrumentsLoadPromise = null;
+        if (instrumentsLoadPromise === pending) instrumentsLoadPromise = null;
       });
+    instrumentsLoadPromise = pending;
   }
 
   function disposeInstruments(): void {
+    instrumentGeneration += 1;
+    instrumentLoadFailed = false;
+    instrumentsLoadPromise = null;
     instrumentUnsubscribers.forEach((unsub) => unsub());
     instrumentUnsubscribers = [];
     if (leftInstrument) {
@@ -261,12 +339,7 @@ export function createDoubleSlitScene(
     rightContainer = null;
     leftCanvas = null;
     rightCanvas = null;
-
-    const parent = options.canvas?.parentElement;
-    if (parent && parentOriginalPosition !== null) {
-      parent.style.position = parentOriginalPosition;
-      parentOriginalPosition = null;
-    }
+    restorePositioned();
   }
 
   let lastActiveInstrument = '';
@@ -339,12 +412,10 @@ export function createDoubleSlitScene(
   function syncInstruments(): void {
     const state = sim.getState();
     if (state.params.step === 6) {
-      if (lastStep !== 6) {
-        ensureInstrumentCanvases();
-        syncActiveInstrumentLayout();
-        initInstruments(options.theme ?? 'dark');
-        lastActiveInstrument = '';
-      }
+      if (lastStep !== 6) lastActiveInstrument = '';
+      const moved = rehomeInstrumentWrap();
+      ensureInstrumentCanvases();
+      if (!leftInstrument || !rightInstrument) initInstruments();
       syncActiveInstrumentLayout();
       syncInstrumentParams();
       syncInstrumentReadout();
@@ -357,11 +428,10 @@ export function createDoubleSlitScene(
       leftInstrument?.view.render(leftInstrument.sim.getState());
       rightInstrument?.view.render(rightInstrument.sim.getState());
 
-      if (switched) {
-        // 激活的仪器从 display:none 恢复为 block 后，DOM 布局需要刷新
-        // 通过调用 resize() 触发完整的重排和重绘
-        if (active === 'micrometer') rightInstrument?.view.resize();
-        else leftInstrument?.view.resize();
+      if (switched || moved) {
+        // 激活的仪器从 display:none 恢复，或整棵仪器树换了父节点。
+        leftInstrument?.view.resize();
+        rightInstrument?.view.resize();
       }
       syncInstrumentHostAttrs();
       if (workspaceChromeOpen) scheduleInstrumentStageFit();
@@ -749,7 +819,18 @@ export function createDoubleSlitScene(
       syncInstruments();
       base.notify();
     },
+    reattach() {
+      if (sim.getState().params.step !== 6) return;
+      // A layout reattach is also an explicit recovery point after a
+      // transient instrument module/constructor failure.
+      instrumentLoadFailed = false;
+      ensureInstrumentCanvases();
+      leftInstrument?.view.resize();
+      rightInstrument?.view.resize();
+      syncInstruments();
+    },
     resize() {
+      if (sim.getState().params.step === 6) ensureInstrumentCanvases();
       view.resize();
       leftInstrument?.view.resize();
       rightInstrument?.view.resize();
@@ -758,6 +839,7 @@ export function createDoubleSlitScene(
       scheduleInstrumentStageFit();
     },
     setTheme(theme: TeachingTheme) {
+      currentTheme = theme;
       view.setTheme(theme);
       if (sim.getState().params.step === 6) {
         leftInstrument?.view.setTheme(theme);

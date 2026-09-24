@@ -245,6 +245,13 @@ describe('ticker-tape grading contract', () => {
     }
     // aDiff 选填：行字段全通过而 aDiff 未填时，chartStepReady 已经为真。
     expect(chartStepReady(session, tickerTapeDataWorkspaceSpec)).toBe(true);
+
+    // 一旦填写选填字段，错误值仍必须阻止进入图像分析。
+    const invalid = submitTicker(session, source, 'aDiff', '0.401', undefined);
+    expect(invalid.feedback.ok).toBe(false);
+    expect(chartStepReady(invalid.session, tickerTapeDataWorkspaceSpec)).toBe(
+      false
+    );
   });
 
   it('degrades the aDiff digit gate to syntax-only for uniform tape (a ≈ 0)', () => {

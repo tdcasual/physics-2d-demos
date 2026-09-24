@@ -56,22 +56,31 @@ export const tickerTapeDataWorkspaceSpec: DataWorkspaceSpec = {
   rowFields: [
     { id: 'x', label: 'x', unit: 'cm', inputMode: 'decimal' },
     {
+      // Δx_i = x_i − x_{i−1}：本行与前一行都是依赖，改任一行都要失效本行。
       id: 'deltaX',
       label: 'Δx',
       unit: 'cm',
       inputMode: 'decimal',
-      dependsOn: [{ scope: 'row', field: 'x' }],
+      dependsOn: [
+        { scope: 'row', field: 'x' },
+        { scope: 'neighbor-row', field: 'x', offset: -1 }
+      ],
       gated: true,
-      readinessHint: '请先校对本行 x'
+      readinessHint: '请先校对相邻两点的 x'
     },
     {
+      // 中央差分 v_i = (x_{i+1} − x_{i−1}) / (2T)：前后两行都参与，改任一侧
+      // 都要失效本行。
       id: 'v',
       label: 'v',
       unit: 'm/s',
       inputMode: 'decimal',
-      dependsOn: [{ scope: 'row', field: 'x' }],
+      dependsOn: [
+        { scope: 'neighbor-row', field: 'x', offset: -1 },
+        { scope: 'neighbor-row', field: 'x', offset: 1 }
+      ],
       gated: true,
-      readinessHint: '请先校对本行 x'
+      readinessHint: '请先校对前后两点的 x'
     }
   ],
   summaryFields: [
@@ -204,8 +213,12 @@ export type TickerTapeMeasurementSource = {
 
 export type TickerTapeDataWorkspaceHost = DataWorkspaceHost & {
   invalidateAll(reason: string): void;
-  /** 仅失效 v 列与依赖它的 aFit（有效位数要求变更时使用）。 */
-  invalidateVColumn(reason: string): void;
+  /**
+   * 失效所有「格式与判分都取决于 sim.vSigFigs」的派生量：v 列、逐差法
+   * aDiff、图像拟合 aFit。有效位数设置变化时三者必须一起重校，只失效
+   * v/aFit 会让旧的 aDiff 继续按旧位数放行。
+   */
+  invalidateSigFigsDerived(reason: string): void;
 };
 
 const NA_MESSAGE = '端点无需填写';
@@ -645,7 +658,7 @@ export function createTickerTapeDataWorkspace(
         invalidateAllTrials(session, tickerTapeDataWorkspaceSpec, reason)
       );
     },
-    invalidateVColumn(reason: string) {
+    invalidateSigFigsDerived(reason: string) {
       const next = cloneSession(session);
       next.completed = false;
       for (const trial of next.trials) {
@@ -658,6 +671,8 @@ export function createTickerTapeDataWorkspace(
           feedback: { ok: false, layer: 'relation', message: reason }
         };
       }
+      // 逐差法 aDiff 的格式闸与判分窗口同样读 vSigFigs，必须一起失效。
+      next.summary.aDiff = markFieldStale(next.summary.aDiff);
       next.summary.aFit = markFieldStale(next.summary.aFit);
       session = restoreEndpointPlaceholders(next);
     },

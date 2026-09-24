@@ -7,8 +7,10 @@ import {
   checkNumericFormat,
   checkPositionRawFormat,
   createEmptySession,
+  dependencySatisfied,
   estimatedRangeContains,
   exactDiscreteEqual,
+  fieldIsOk,
   getSummaryField,
   getTrialField,
   invalidateDownstream,
@@ -20,6 +22,7 @@ import {
   readingsAgree,
   removeSessionTrial,
   resolveRowLimits,
+  significantRoundingHalfUnit,
   shouldShowChartAnalysis,
   shouldEnableStagePanZoom,
   isChartField,
@@ -35,6 +38,7 @@ import {
 } from '../../src/platform/data-workspace';
 import {
   checkAverageSpacing,
+  checkCalculatedFormat,
   checkDifference,
   checkFringeSpacing,
   checkIntervalCount,
@@ -115,7 +119,28 @@ describe('chartAnalysis opt-in / opt-out', () => {
       'd',
       'L'
     ]);
-    expect(doubleSlitHint(params)).toBe('单位 mm，与仪器一致。');
+    // 提示必须把逐字段的有效位数/小数位要求写清楚（触摸与键盘用户看不到 title）。
+    expect(doubleSlitHint(params)).toContain('单位 mm');
+    expect(doubleSlitHint(params)).toContain('卡尺 2 位小数');
+    expect(doubleSlitHint(params)).toContain('测微仪 3 位小数');
+    expect(doubleSlitHint(params)).toContain('3 位有效数字');
+    const formatHints = Object.fromEntries(
+      [
+        ...doubleSlitDataWorkspaceSpec.rowFields,
+        ...doubleSlitDataWorkspaceSpec.summaryFields
+      ]
+        .filter((field) => field.formatHint)
+        .map((field) => [field.id, field.formatHint])
+    );
+    expect(formatHints).toEqual({
+      x1: '卡尺 2 位小数 / 测微仪 3 位小数',
+      x2: '卡尺 2 位小数 / 测微仪 3 位小数',
+      n: '正整数',
+      D: '与读数同小数位',
+      deltaX: '3 位有效数字',
+      averageDeltaX: '3 位有效数字',
+      lambda: '3 位有效数字（nm）'
+    });
   });
 
   it('hides chart analysis when the spec does not enable it', () => {
@@ -473,35 +498,61 @@ describe('double-slit derived checks', () => {
     expect(checkIntervalCountFromOrders(6, 2, 7).message).toMatch(/间隔数/);
   });
 
-  it('checks D = x2 − x1 and Δx = D/n within half-unit rounding', () => {
+  it('checks D = x2 − x1 exactly (pure subtraction, no rounding slack)', () => {
     expect(checkDifference(D, x1, x2).ok).toBe(true);
     expect(checkDifference(D + 0.05, x1, x2).ok).toBe(false);
     // D 为已校对读数的纯减法：非精确差（含 0.001 量级凑数）一律拒绝。
     expect(checkDifference(D + 0.001, x1, x2).ok).toBe(false);
-    expect(checkFringeSpacing(D / n, D, n, 3).ok).toBe(true);
-    expect(checkFringeSpacing(D / n + 0.05, D, n, 3).ok).toBe(false);
-    // calculationTolerance = 半单位舍入界（派生行无独立读数误差）。
+  });
+
+  it('grades Δx with the 3-significant-digit half unit, not fixed decimals', () => {
+    const exact = D / n; // 1.862
+    expect(checkFringeSpacing(exact, D, n).ok).toBe(true);
+    expect(checkFringeSpacing(1.86, D, n).ok).toBe(true);
+    expect(checkFringeSpacing(1.87, D, n).ok).toBe(false);
+    // 固定小数位口径（旧的 0.0005 半单位）会误拒合法的 3 位有效数字答案。
     expect(calculationTolerance(3)).toBeCloseTo(0.0005, 10);
-    expect(calculationTolerance(2)).toBeCloseTo(0.005, 10);
+    expect(Math.abs(1.86 - exact)).toBeGreaterThan(calculationTolerance(3));
+    // 半末位边界本身必须通过（IEEE 754 尾差不得误拒）：8.79/6 = 1.4649999999999999，
+    // 于是 1.47 与期望的差距是 0.0050000000000001155，比半末位多出 1e-16。
+    const boundary = 8.79 / 6;
+    expect(significantRoundingHalfUnit(boundary, 3)).toBeCloseTo(0.005, 10);
+    expect(checkFringeSpacing(1.46, 8.79, 6).ok).toBe(true);
+    expect(checkFringeSpacing(1.47, 8.79, 6).ok).toBe(true);
+    expect(checkFringeSpacing(1.45, 8.79, 6).ok).toBe(false);
+    // 单位混淆落 unit 层（cm 值小 10 倍）。
+    const cm = checkFringeSpacing(0.186, D, n);
+    expect(cm.ok).toBe(false);
+    expect(cm.layer).toBe('unit');
+    expect(checkFringeSpacing(0, D, n).layer).toBe('range');
   });
 
   it('checks the mean of three Δx values then wavelength', () => {
     const samples = [deltaX, deltaX + 0.001, deltaX - 0.001];
     const mean = samples.reduce((a, b) => a + b, 0) / 3;
-    expect(checkAverageSpacing(mean, samples, 3).ok).toBe(true);
-    expect(checkAverageSpacing(mean + 0.05, samples, 3).ok).toBe(false);
-    expect(
-      checkWavelengthNm(532, 0.2, mean, 0.7, CALIPER_PRECISION_MM).ok
-    ).toBe(true);
-    const nmAsMm = checkWavelengthNm(
-      0.532,
-      0.2,
-      mean,
-      0.7,
-      CALIPER_PRECISION_MM
-    );
+    expect(checkAverageSpacing(mean, samples).ok).toBe(true);
+    expect(checkAverageSpacing(1.86, samples).ok).toBe(true);
+    expect(checkAverageSpacing(mean + 0.05, samples).ok).toBe(false);
+    expect(checkAverageSpacing(18.6, samples).layer).toBe('unit');
+    expect(checkWavelengthNm(532, 0.2, mean, 0.7).ok).toBe(true);
+    // 逐位正确的 3 位有效数字 λ 必须通过；错值拒绝。
+    expect(checkWavelengthNm(531, 0.2, 1.86, 0.7).ok).toBe(true);
+    expect(checkWavelengthNm(542, 0.2, 1.86, 0.7).ok).toBe(false);
+    const nmAsMm = checkWavelengthNm(0.532, 0.2, mean, 0.7);
     expect(nmAsMm.ok).toBe(false);
     expect(nmAsMm.layer).toBe('unit');
+  });
+
+  it('gates calculated values to exactly three significant digits', () => {
+    expect(checkCalculatedFormat('1.86', 'Δx')).toBeNull();
+    expect(checkCalculatedFormat('0.186', 'Δx')).toBeNull();
+    expect(checkCalculatedFormat('18.6', 'Δx')).toBeNull();
+    expect(checkCalculatedFormat('1.86 mm', 'Δx')).toBeNull();
+    expect(checkCalculatedFormat('1.862', 'Δx')?.layer).toBe('format');
+    expect(checkCalculatedFormat('1.9', 'Δx')?.layer).toBe('format');
+    expect(checkCalculatedFormat('1.860', 'Δx')?.layer).toBe('format');
+    expect(checkCalculatedFormat('1.86e2', 'Δx')?.layer).toBe('format');
+    expect(checkCalculatedFormat('', 'Δx')?.layer).toBe('format');
   });
 });
 
@@ -750,7 +801,7 @@ describe('sequential field evaluation and invalidation', () => {
     }).session;
     const dResult = evaluateDoubleSlitField({
       session,
-      submit: { field: 'D', trialIndex: 0, raw: '9.320' },
+      submit: { field: 'D', trialIndex: 0, raw: '9.32' },
       snapshot: SNAPSHOT,
       expected
     });
@@ -1012,7 +1063,7 @@ describe('x1/x2 raw format matrix', () => {
     }
   });
 
-  it('does not apply the position format gate to n / D / other fields', () => {
+  it('does not apply the position format gate to n', () => {
     const session = createEmptySession(doubleSlitDataWorkspaceSpec);
     const n = evaluateDoubleSlitField({
       session,
@@ -1021,6 +1072,36 @@ describe('x1/x2 raw format matrix', () => {
       expected: CALIPER_EXPECTED
     });
     expect(n.feedback.layer).not.toBe('format');
+  });
+
+  it('gates D on the frozen instrument decimals and Δx on three sig figs', () => {
+    let session = createEmptySession(doubleSlitDataWorkspaceSpec);
+    session = evaluateDoubleSlitField({
+      session,
+      submit: { field: 'x1', trialIndex: 0, raw: '10.00' },
+      snapshot: withDoubleSlitFringeOrder({ ...SNAPSHOT, readingMm: 10 }, 1),
+      expected: CALIPER_EXPECTED
+    }).session;
+    session = evaluateDoubleSlitField({
+      session,
+      submit: { field: 'x2', trialIndex: 0, raw: '19.32' },
+      snapshot: withDoubleSlitFringeOrder(
+        { ...SNAPSHOT, readingMm: 19.32, capturedAt: 2 },
+        6
+      ),
+      expected: CALIPER_EXPECTED
+    }).session;
+    const d = (raw: string) =>
+      evaluateDoubleSlitField({
+        session,
+        submit: { field: 'D', trialIndex: 0, raw },
+        snapshot: SNAPSHOT,
+        expected: CALIPER_EXPECTED
+      }).feedback;
+    // 卡尺两次读数都是 2 位小数 → D 也是 2 位小数（加减法规则）。
+    expect(d('9.32').ok).toBe(true);
+    expect(d('9.320').layer).toBe('format');
+    expect(d('9.3').layer).toBe('format');
   });
 
   it('gates n on integer literals: 3.0 / 3e0 rejected, 05 still accepted', () => {
@@ -1362,6 +1443,174 @@ describe('chart field helpers and spec guards', () => {
         )
       })
     ).toThrow(/chartAnalysis is off/);
+  });
+
+  it('validates neighbour-row dependency offsets and rejects them on summary fields', () => {
+    const neighbourSpec: DataWorkspaceSpec = {
+      ...spec,
+      rowFields: [
+        { id: 'x', label: 'x' },
+        {
+          id: 'slope2',
+          label: 'Δ',
+          dependsOn: [{ scope: 'neighbor-row', field: 'x', offset: -1 }]
+        }
+      ],
+      summaryFields: [{ id: 'avg', label: 'avg', dependsOn: [] }],
+      result: undefined,
+      completionField: undefined
+    };
+    expect(() => assertSpecGraph(neighbourSpec)).not.toThrow();
+    expect(() =>
+      assertSpecGraph({
+        ...neighbourSpec,
+        rowFields: [
+          { id: 'x', label: 'x' },
+          {
+            id: 'slope2',
+            label: 'Δ',
+            dependsOn: [{ scope: 'neighbor-row', field: 'x', offset: 0 }]
+          }
+        ]
+      })
+    ).toThrow(/non-zero integer offset/);
+    expect(() =>
+      assertSpecGraph({
+        ...neighbourSpec,
+        rowFields: [
+          { id: 'x', label: 'x' },
+          {
+            id: 'slope2',
+            label: 'Δ',
+            dependsOn: [{ scope: 'neighbor-row', field: 'x', offset: 1.5 }]
+          }
+        ]
+      })
+    ).toThrow(/non-zero integer offset/);
+    expect(() =>
+      assertSpecGraph({
+        ...neighbourSpec,
+        rowFields: [
+          { id: 'x', label: 'x' },
+          {
+            id: 'slope2',
+            label: 'Δ',
+            dependsOn: [{ scope: 'neighbor-row', field: 'x', offset: 99 }]
+          }
+        ]
+      })
+    ).toThrow(/non-zero integer offset/);
+    expect(() =>
+      assertSpecGraph({
+        ...neighbourSpec,
+        rowFields: [
+          { id: 'x', label: 'x' },
+          {
+            id: 'slope2',
+            label: 'Δ',
+            dependsOn: [{ scope: 'neighbor-row', field: 'avg', offset: -1 }]
+          }
+        ]
+      })
+    ).toThrow(/neighbor-row dependency "avg" is not a row field/);
+    expect(() =>
+      assertSpecGraph({
+        ...neighbourSpec,
+        summaryFields: [
+          {
+            id: 'avg',
+            label: 'avg',
+            dependsOn: [{ scope: 'neighbor-row', field: 'x', offset: -1 }]
+          }
+        ]
+      })
+    ).toThrow(/summary field .* cannot use row scope/);
+  });
+
+  it('expires neighbouring rows on edit and keeps offsets symmetric', () => {
+    const neighbourSpec: DataWorkspaceSpec = {
+      id: 'neighbour-probe',
+      title: 'neighbour',
+      chartAnalysis: false,
+      enabledSteps: ['data'],
+      trialCount: 3,
+      minRows: 3,
+      maxRows: 3,
+      initialRows: 3,
+      rowFields: [
+        { id: 'x', label: 'x' },
+        {
+          id: 'back',
+          label: 'Δ',
+          dependsOn: [{ scope: 'neighbor-row', field: 'x', offset: -1 }]
+        },
+        {
+          id: 'centre',
+          label: 'v',
+          dependsOn: [
+            { scope: 'neighbor-row', field: 'x', offset: -1 },
+            { scope: 'neighbor-row', field: 'x', offset: 1 }
+          ]
+        }
+      ],
+      summaryFields: [{ id: 'all', label: 'a', dependsOn: [] }]
+    };
+    let session = createEmptySession(neighbourSpec);
+    for (let i = 0; i < 3; i += 1) {
+      session = writeCheckedField(
+        session,
+        i,
+        'x',
+        { ...ok, value: i, raw: String(i) },
+        neighbourSpec
+      );
+    }
+    session = writeCheckedField(session, 1, 'back', ok, neighbourSpec);
+    session = writeCheckedField(session, 2, 'back', ok, neighbourSpec);
+    session = writeCheckedField(session, 0, 'centre', ok, neighbourSpec);
+    session = writeCheckedField(session, 1, 'centre', ok, neighbourSpec);
+    session = writeCheckedField(session, 2, 'centre', ok, neighbourSpec);
+    // 改第 2 行（索引 1）的 x：back 的第 1、2 行失效；centre 的第 0、2 行
+    // 失效（中央差分不含本行 x），第 1 行保持不变。
+    session = writeCheckedField(
+      session,
+      1,
+      'x',
+      { ...ok, value: 9, raw: '9' },
+      neighbourSpec
+    );
+    expect(fieldIsOk(getTrialField(session.trials[1], 'back'))).toBe(true);
+    expect(getTrialField(session.trials[2], 'back')?.stale).toBe(true);
+    expect(getTrialField(session.trials[0], 'centre')?.stale).toBe(true);
+    expect(getTrialField(session.trials[2], 'centre')?.stale).toBe(true);
+    expect(fieldIsOk(getTrialField(session.trials[1], 'centre'))).toBe(true);
+    // 越界邻居不写入、不抛错。
+    session = writeCheckedField(
+      session,
+      0,
+      'x',
+      { ...ok, value: 8, raw: '8' },
+      neighbourSpec
+    );
+    expect(session.trials.every((trial) => trial.fields !== undefined)).toBe(
+      true
+    );
+    expect(
+      dependencySatisfied(
+        session,
+        neighbourSpec,
+        { scope: 'neighbor-row', field: 'x', offset: -1 },
+        0
+      )
+    ).toBe(false);
+    expect(
+      dependencySatisfied(
+        session,
+        neighbourSpec,
+        { scope: 'neighbor-row', field: 'x', offset: 1 },
+        1
+      )
+    ).toBe(true);
   });
 
   it('requires trialLabels to cover minRows and defaults to 1-based indices', () => {

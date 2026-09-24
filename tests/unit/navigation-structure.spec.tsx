@@ -79,6 +79,24 @@ describe('Navigation structure', () => {
     expect(window.location.search).toContain('q=%E6%8A%9B%E4%BD%93');
   });
 
+  it('preserves a valid chapter-only URL on initial load and rerender', () => {
+    window.history.replaceState({}, '', '/?chapter=kinematics');
+    const { rerender } = render(<ExperimentsSection />);
+
+    const chapter = screen.getByRole('combobox', {
+      name: '按课程章节筛选'
+    }) as HTMLSelectElement;
+    expect(chapter.value).toBe('kinematics');
+    expect(window.location.search).toContain('chapter=kinematics');
+    expect(
+      document.querySelectorAll('.experiment-card').length
+    ).toBeGreaterThan(0);
+
+    rerender(<ExperimentsSection />);
+    expect(chapter.value).toBe('kinematics');
+    expect(window.location.search).toContain('chapter=kinematics');
+  });
+
   it('should initialize the domain filter from the URL', () => {
     window.history.replaceState({}, '', '/?domain=optics');
     render(<ExperimentsSection />);

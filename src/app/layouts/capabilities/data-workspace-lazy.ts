@@ -33,10 +33,16 @@ export function setDataWorkspaceRuntimeLoaderForTests(
 
 function loadRuntime(): Promise<DataWorkspaceRuntimeModule> {
   if (!runtimePromise) {
-    runtimePromise = loader().catch((error: unknown) => {
+    const pending = loader().catch((error: unknown) => {
+      // A transient chunk/network failure must not poison the capability for
+      // the lifetime of the tab. Clear only this generation's rejected
+      // promise so a later layout mount can retry while concurrent callers
+      // still share the original request.
+      if (runtimePromise === pending) runtimePromise = null;
       console.error('[data-workspace] failed to load runtime', error);
       throw error;
     });
+    runtimePromise = pending;
   }
   return runtimePromise;
 }

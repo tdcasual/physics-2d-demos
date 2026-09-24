@@ -10,9 +10,11 @@ import {
 } from '../../src/scenes/ticker-tape/scene.sim';
 import {
   assertSpecGraph,
+  chartStepReady,
   fieldIsOk,
   getSummaryField,
   getTrialField,
+  isFieldReady,
   type DataWorkspaceSession
 } from '../../src/platform/data-workspace';
 
@@ -264,7 +266,7 @@ describe('ticker-tape data workspace', () => {
     expect(sim.getState().significantDigits).toBe(4);
   });
 
-  it('invalidates only the v column and aFit on invalidateVColumn', () => {
+  it('invalidates every vSigFigs-dependent field on invalidateSigFigsDerived', () => {
     const { source, plot } = makeSource();
     const host = createTickerTapeDataWorkspace(source);
     const truth = source.getState().tapeXCm;
@@ -280,17 +282,102 @@ describe('ticker-tape data workspace', () => {
       const v = (truth[i + 1] - truth[i - 1]) / 100 / 0.2;
       host.submitField({ field: 'v', trialIndex: i, raw: v.toPrecision(3) });
     }
+    const aDiff = (truth[6] - 2 * truth[3] + truth[0]) / 100 / (0.3 * 0.3);
+    expect(
+      host.submitField({ field: 'aDiff', raw: aDiff.toPrecision(3) }).feedback
+        .ok
+    ).toBe(true);
     plot.hasFit = true;
     const aFit = host.submitField({ field: 'aFit', raw: '0.400' });
     expect(aFit.feedback.ok).toBe(true);
-    host.invalidateVColumn('v 有效位数要求已改为 2 位，请重新校对');
+    host.invalidateSigFigsDerived('v 有效位数要求已改为 2 位，请重新校对');
     const after = host.getSession();
     expect(getTrialField(after.trials[1], 'v')?.stale).toBe(true);
+    expect(getSummaryField(after, 'aDiff')?.stale).toBe(true);
     expect(getSummaryField(after, 'aFit')?.stale).toBe(true);
     expect(getTrialField(after.trials[0], 'x')?.checked).toBe(true);
     expect(getTrialField(after.trials[1], 'deltaX')?.checked).toBe(true);
     expect(getTrialField(after.trials[0], 'v')?.feedback?.message).toBe(
       '端点无需填写'
+    );
+  });
+
+  it('expires the neighbouring rows when one x changes', () => {
+    const { source, plot } = makeSource();
+    const host = createTickerTapeDataWorkspace(source);
+    const truth = source.getState().tapeXCm;
+    for (let i = 0; i < truth.length; i += 1) {
+      host.submitField({ field: 'x', trialIndex: i, raw: truth[i].toFixed(2) });
+    }
+    for (let i = 1; i <= 6; i += 1) {
+      host.submitField({
+        field: 'deltaX',
+        trialIndex: i,
+        raw: (truth[i] - truth[i - 1]).toFixed(2)
+      });
+    }
+    for (let i = 1; i <= 5; i += 1) {
+      const v = (truth[i + 1] - truth[i - 1]) / 100 / 0.2;
+      host.submitField({ field: 'v', trialIndex: i, raw: v.toPrecision(3) });
+    }
+    const aDiff = (truth[6] - 2 * truth[3] + truth[0]) / 100 / (0.3 * 0.3);
+    expect(
+      host.submitField({ field: 'aDiff', raw: aDiff.toPrecision(3) }).feedback
+        .ok
+    ).toBe(true);
+    expect(host.getSession().trials.every((t) => fieldIsOk(t.fields.v))).toBe(
+      true
+    );
+    expect(chartStepReady(host.getSession(), tickerTapeDataWorkspaceSpec)).toBe(
+      true
+    );
+    plot.hasFit = true;
+    expect(host.submitField({ field: 'aFit', raw: '0.400' }).feedback.ok).toBe(
+      true
+    );
+
+    // 改第 3 点的 x：Δx₃（本行）与 Δx₄（下一行）失效；v₂ 与 v₄（前后各一
+    // 行用中央差分）失效；v₃ 不含 x₃，保持不变。
+    host.submitField({
+      field: 'x',
+      trialIndex: 3,
+      raw: (truth[3] - 0.05).toFixed(2)
+    });
+    const after = host.getSession();
+    expect(fieldIsOk(getTrialField(after.trials[2], 'deltaX'))).toBe(true);
+    expect(fieldIsOk(getTrialField(after.trials[3], 'deltaX'))).toBe(false);
+    expect(getTrialField(after.trials[3], 'deltaX')?.stale).toBe(true);
+    expect(getTrialField(after.trials[4], 'deltaX')?.stale).toBe(true);
+    expect(getTrialField(after.trials[2], 'v')?.stale).toBe(true);
+    expect(fieldIsOk(getTrialField(after.trials[3], 'v'))).toBe(true);
+    expect(getTrialField(after.trials[4], 'v')?.stale).toBe(true);
+    // 逐差法与图像拟合都不能靠旧值放行。
+    expect(getSummaryField(after, 'aDiff')?.stale).toBe(true);
+    expect(getSummaryField(after, 'aFit')?.stale).toBe(true);
+    expect(chartStepReady(after, tickerTapeDataWorkspaceSpec)).toBe(false);
+  });
+
+  it('gates Δx and v on the neighbouring x readings', () => {
+    const { source } = makeSource();
+    const host = createTickerTapeDataWorkspace(source);
+    const truth = source.getState().tapeXCm;
+    host.submitField({ field: 'x', trialIndex: 1, raw: truth[1].toFixed(2) });
+    let session = host.getSession();
+    // Δx₁ 需要 x₀ 与 x₁；v₁ 需要 x₀ 与 x₂。
+    expect(
+      isFieldReady(session, tickerTapeDataWorkspaceSpec, 'deltaX', 1)
+    ).toBe(false);
+    expect(isFieldReady(session, tickerTapeDataWorkspaceSpec, 'v', 1)).toBe(
+      false
+    );
+    host.submitField({ field: 'x', trialIndex: 0, raw: truth[0].toFixed(2) });
+    host.submitField({ field: 'x', trialIndex: 2, raw: truth[2].toFixed(2) });
+    session = host.getSession();
+    expect(
+      isFieldReady(session, tickerTapeDataWorkspaceSpec, 'deltaX', 1)
+    ).toBe(true);
+    expect(isFieldReady(session, tickerTapeDataWorkspaceSpec, 'v', 1)).toBe(
+      true
     );
   });
 });

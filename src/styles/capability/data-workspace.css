@@ -6,7 +6,7 @@
   background: var(--btn-bg);
   color: var(--text-secondary);
   padding: 0.375rem 0.75rem;
-  font-size: 0.8125rem;
+  font-size: var(--dw-type-button, 16px);
   font-weight: 600;
   min-width: 44px;
   min-height: 44px;
@@ -60,8 +60,124 @@
   overflow: auto;
   background: var(--bg-secondary);
   border-top: 1px solid var(--border-color);
-  padding: 0.75rem 1rem 1rem;
-  gap: 0.5rem;
+  padding: 0.5rem 0.75rem 0.65rem;
+  gap: 0.35rem;
+}
+
+/* Classroom type scale. px values are the computed sizes tests lock.
+   Compact viewports keep a 16px floor. 1280×720 steps body text to 18px.
+   1920×1080: title 52px, key labels 36px, body/table 36px,
+   chart title/axis/tick 40/36/32. Inputs grow with the font so glyphs
+   are not clipped. Spacing on that tier stays tight. */
+.layout-master.is-data-workspace {
+  --dw-type-title: 20px;
+  --dw-type-known-label: 16px;
+  --dw-type-known-value: 18px;
+  --dw-type-hint: 16px;
+  --dw-type-table: 16px;
+  --dw-type-review: 16px;
+  --dw-type-input: 16px;
+  --dw-type-button: 16px;
+  --dw-type-status: 16px;
+  --dw-type-result: 16px;
+  --dw-type-result-value: 18px;
+  --dw-canvas-title: 18;
+  --dw-canvas-tick: 16;
+  --dw-canvas-axis: 16;
+}
+
+@media (min-width: 1100px) and (min-height: 640px) {
+  .layout-master.is-data-workspace {
+    --dw-type-title: 24px;
+    --dw-type-known-label: 18px;
+    --dw-type-known-value: 20px;
+    --dw-type-hint: 18px;
+    --dw-type-table: 18px;
+    --dw-type-review: 18px;
+    --dw-type-input: 18px;
+    --dw-type-button: 18px;
+    --dw-type-status: 18px;
+    --dw-type-result: 18px;
+    --dw-type-result-value: 20px;
+    --dw-canvas-title: 20;
+    --dw-canvas-tick: 18;
+    --dw-canvas-axis: 18;
+  }
+}
+
+@media (min-width: 1600px) and (min-height: 900px) {
+  .layout-master.is-data-workspace {
+    --dw-type-title: 52px;
+    --dw-type-known-label: 36px;
+    --dw-type-known-value: 42px;
+    --dw-type-hint: 34px;
+    --dw-type-table: 36px;
+    --dw-type-review: 36px;
+    --dw-type-input: 36px;
+    --dw-type-button: 36px;
+    --dw-type-status: 36px;
+    --dw-type-result: 36px;
+    --dw-type-result-value: 42px;
+    --dw-canvas-title: 40;
+    --dw-canvas-tick: 32;
+    --dw-canvas-axis: 36;
+  }
+
+  .layout-master.is-data-workspace .data-workspace-panel {
+    padding: 0.28rem 0.5rem 0.32rem;
+    gap: 0.2rem;
+  }
+
+  .layout-master.is-data-workspace .data-workspace-knowns {
+    gap: 0.25rem;
+  }
+
+  /* Projection-sized glyphs must not squeeze the action column into a
+     clipped strip. Let the table expose a deliberate horizontal scroll
+     surface while keeping every control intact and keyboard reachable. */
+  .layout-master.is-data-workspace .data-workspace-table-wrap {
+    overflow-x: auto;
+    flex: 0 1 100%;
+    width: 100%;
+    max-width: 100%;
+    align-self: stretch;
+  }
+
+  .layout-master.is-data-workspace .data-workspace-table {
+    width: max-content;
+    min-width: 100%;
+    table-layout: auto;
+  }
+
+  .layout-master.is-data-workspace
+    .data-workspace-table
+    td.data-workspace-actions {
+    min-width: 10rem;
+    white-space: nowrap;
+  }
+
+  .layout-master.is-data-workspace .data-workspace-input,
+  .layout-master.is-data-workspace
+    .data-workspace-table[data-orientation='fields']
+    .data-workspace-input,
+  .layout-master.is-data-workspace .data-workspace-check,
+  .layout-master.is-data-workspace .data-workspace-exit,
+  .layout-master.is-data-workspace .lab-plot-toolbar button {
+    box-sizing: border-box;
+    height: 58px;
+    min-height: 58px;
+    max-height: 58px;
+    line-height: 1;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  .layout-master.is-data-workspace
+    .data-workspace-table[data-orientation='fields']
+    .data-workspace-input {
+    width: 10rem;
+    min-width: 8.5rem;
+  }
 }
 
 .data-workspace-header {
@@ -74,22 +190,27 @@
 
 .data-workspace-title {
   margin: 0;
-  font-size: 0.95rem;
-  font-weight: 650;
+  font-size: var(--dw-type-title, 20px);
+  font-weight: 600;
+  line-height: 1.15;
   color: var(--text-primary);
 }
 
 .data-workspace-exit,
 .data-workspace-check {
+  box-sizing: border-box;
   min-width: 44px;
   min-height: 44px;
+  height: 44px;
   border-radius: 0.375rem;
   border: 1px solid var(--border-color);
   background: var(--btn-bg);
   color: var(--text-primary);
   cursor: pointer;
-  padding: 0.25rem 0.75rem;
-  font-size: 0.8125rem;
+  padding: 0 0.7rem;
+  font-size: var(--dw-type-button, 16px);
+  font-weight: 600;
+  line-height: 1;
 }
 
 .data-workspace-exit:hover:not(:disabled),
@@ -102,8 +223,8 @@
 .data-workspace-summary-note {
   margin: 0;
   color: var(--text-secondary);
-  font-size: 0.8125rem;
-  line-height: 1.45;
+  font-size: var(--dw-type-hint, 16px);
+  line-height: 1.3;
 }
 
 .data-workspace-knowns {
@@ -125,57 +246,68 @@
   border-radius: 999px;
   background: var(--bg-primary);
   color: var(--text-primary);
-  padding: 0.3rem 0.65rem;
-  line-height: 1.2;
+  padding: 0.1rem 0.55rem;
+  line-height: 1.15;
 }
 
 .data-workspace-known-label {
   color: var(--text-secondary);
-  font-size: 0.6875rem;
+  font-size: var(--dw-type-known-label, 14px);
   font-weight: 600;
 }
 
 .data-workspace-known-value {
   color: var(--text-primary);
-  font-size: 0.9375rem;
+  font-size: var(--dw-type-known-value, 18px);
   font-weight: 700;
 }
 
 .data-workspace-table-wrap {
   min-width: 0;
+  max-width: 100%;
   min-height: min-content;
   flex: none;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
 }
 
 .data-workspace-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.8125rem;
+  font-size: var(--dw-type-table, 16px);
+  line-height: 1.2;
 }
 
 .data-workspace-table th,
 .data-workspace-table td {
   border: 1px solid var(--border-color);
-  padding: 0.35rem 0.4rem;
-  vertical-align: top;
+  padding: 0.04rem 0.2rem;
+  vertical-align: middle;
   text-align: left;
   color: var(--text-primary);
 }
 
 .data-workspace-table[data-orientation='fields'] th,
 .data-workspace-table[data-orientation='fields'] td {
-  padding: 0.25rem 0.3rem;
+  padding: 0.02rem 0.14rem;
+}
+
+.data-workspace-table[data-orientation='fields'] .data-workspace-field {
+  flex-wrap: nowrap;
+  gap: 0.2rem;
 }
 
 .data-workspace-table[data-orientation='fields'] .data-workspace-input {
-  width: 3.5rem;
-  min-width: 3.5rem;
-  min-height: 36px;
+  width: 6.25rem;
+  min-width: 5rem;
+  height: 44px;
+  min-height: 44px;
 }
 
 .data-workspace-table[data-orientation='fields'] .data-workspace-status {
-  font-size: 0.65rem;
-  max-width: 4.5rem;
+  font-size: var(--dw-type-status, 16px);
+  max-width: none;
+  white-space: nowrap;
   line-height: 1.2;
 }
 
@@ -196,21 +328,20 @@
 .data-workspace-review-table td {
   border: none;
   border-bottom: 1px solid var(--border-color);
-  padding: 0.2rem 0.35rem;
-  font-size: 0.75rem;
+  padding: 0.02rem 0.22rem;
+  line-height: 1.15;
+  font-size: var(--dw-type-review, 16px);
   background: transparent;
+  white-space: nowrap;
 }
 
-/*
- * 图像分析环节的两个组成区域（分开的独立部分）：
- * 上方 = 只读回顾表（约 1/2），下方 = 绘图区（约 1/2，网格排布、
- * 图多时滚动）。区域仅在 chart 模式撑开，数据处理模式不受影响。
- */
+/* 图像分析在所有视口都是：只读表 → 分隔条 → 绘图区 → 汇总/结果。
+   默认 data-split-mode=content，表高贴住内容（最高 72%）。
+   用户拖动或按键后改为 manual，--dw-split 钳在 18%–72%。 */
 .layout-master.is-data-workspace.is-data-workspace-chart .data-workspace-panel {
   flex: 1 1 auto;
   min-height: 0;
   max-height: none;
-  /* 图像分析环节固定为纵向两区（上表/下图），不受 ≥1100px 横向 wrap 影响 */
   flex-direction: column;
   flex-wrap: nowrap;
   align-items: stretch;
@@ -218,38 +349,117 @@
 
 .layout-master.is-data-workspace.is-data-workspace-chart
   .data-workspace-panel
-  > :is(
-    .data-workspace-header,
-    .data-workspace-summary,
-    .data-workspace-result
-  ) {
+  > .data-workspace-header {
+  order: 0;
   flex: 0 0 auto;
 }
 
 .layout-master.is-data-workspace.is-data-workspace-chart
   .data-workspace-panel
-  > .data-workspace-review {
-  flex: 1 1 0;
+  > .data-workspace-chart-stage {
+  display: flex;
+  order: 1;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
   min-height: 0;
+  overflow: hidden;
+}
+
+.layout-master.is-data-workspace.is-data-workspace-chart
+  .data-workspace-panel
+  > .data-workspace-summary {
+  order: 2;
+  flex: 0 0 auto;
+}
+
+.layout-master.is-data-workspace.is-data-workspace-chart
+  .data-workspace-panel
+  > .data-workspace-result {
+  order: 3;
+  flex: 0 0 auto;
+}
+
+.layout-master.is-data-workspace.is-data-workspace-chart
+  .data-workspace-chart-stage
+  > .data-workspace-review {
+  order: 1;
+  flex: 0 0 auto;
+  height: auto;
+  max-height: 72%;
+  min-height: 0;
+  min-width: 0;
+  margin: 0.15rem 0.5rem 0;
+  padding: 0.1rem 0.35rem;
   overflow: auto;
-  margin: 0.5rem 0.75rem 0.35rem;
-  padding: 0.35rem 0.6rem;
+  overscroll-behavior: contain;
   border: 1px solid var(--border-color);
   border-radius: 0.5rem;
   background: var(--bg-primary);
 }
 
 .layout-master.is-data-workspace.is-data-workspace-chart
-  .data-workspace-panel
+  .data-workspace-chart-stage[data-split-mode='manual']
+  > .data-workspace-review {
+  flex: 0 0 var(--dw-split, 33%);
+  max-height: none;
+}
+
+.data-workspace-splitter {
+  order: 2;
+  position: relative;
+  box-sizing: border-box;
+  flex: 0 0 36px;
+  min-height: 36px;
+  margin: 0 0.5rem;
+  border: 0;
+  background: transparent;
+  cursor: row-resize;
+  touch-action: none;
+}
+
+.data-workspace-splitter::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  transform: translateY(-50%);
+  background: var(--border-color);
+  pointer-events: none;
+}
+
+.data-workspace-splitter:hover::before,
+.data-workspace-splitter:focus-visible::before {
+  background: var(--accent-color);
+}
+
+.data-workspace-splitter:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent-color) 45%, transparent);
+  outline-offset: 1px;
+}
+
+.layout-master.is-data-workspace.is-data-workspace-chart
+  .data-workspace-chart-stage
   > .data-workspace-chart {
-  flex: 1 1 0;
+  display: flex;
+  order: 3;
+  flex: 1 1 auto;
+  min-width: 0;
   min-height: 0;
+  margin: 0 0.5rem 0.4rem;
+  padding: 0.2rem;
   overflow: auto;
-  margin: 0 0.75rem 0.6rem;
-  padding: 0.35rem;
+  scrollbar-gutter: stable;
   border: 1px solid var(--border-color);
   border-radius: 0.5rem;
   background: var(--bg-primary);
+}
+
+.data-workspace-chart-stage[hidden],
+.data-workspace-splitter[hidden] {
+  display: none !important;
 }
 
 .data-workspace-chart {
@@ -307,10 +517,47 @@
   flex: 1 1 auto;
 }
 
+/* The scene canvas sets its own pixel size. A stacked chart taller than the
+   viewport grows this host so the chart panel can scroll. */
+.layout-master.is-data-workspace.is-data-workspace-chart
+  .data-workspace-chart
+  :is(
+    .lab-float,
+    .lab-float-graph,
+    .teaching-graph-section,
+    .srgb-graph-section,
+    .graph-section
+  ) {
+  flex: 0 0 auto;
+  width: 100%;
+  height: auto;
+  max-height: none;
+  min-height: 0;
+  overflow: visible;
+}
+
+.layout-master.is-data-workspace.is-data-workspace-chart
+  .data-workspace-chart
+  :is(
+    .lab-float-body,
+    .lab-graph-slot,
+    .teaching-graph-slot,
+    .srgb-graph-slot,
+    .graph-slot
+  ) {
+  overflow: visible;
+  width: 100%;
+  height: auto;
+  max-height: none;
+  min-height: 0;
+  flex: 0 0 auto;
+}
+
 .data-workspace-table th {
   background: var(--bg-primary);
   font-weight: 600;
   white-space: nowrap;
+  font-size: var(--dw-type-known-label, 16px);
 }
 
 .data-workspace-field,
@@ -318,28 +565,48 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.25rem;
 }
 
 .data-workspace-input {
+  box-sizing: border-box;
+  height: 44px;
   min-height: 44px;
-  min-width: 4.5rem;
-  width: 6.5rem;
+  min-width: 5.5rem;
+  width: 7rem;
   border: 1px solid var(--border-color);
   border-radius: 0.375rem;
   background: var(--bg-primary);
   color: var(--text-primary);
-  padding: 0.25rem 0.5rem;
-  font-size: 0.875rem;
+  padding: 0 0.45rem;
+  line-height: 1;
+  font-size: var(--dw-type-input, 16px);
 }
 
 .data-workspace-status {
-  font-size: 0.75rem;
+  font-size: var(--dw-type-status, 16px);
+  font-weight: 600;
+  white-space: nowrap;
+  max-width: none;
+  line-height: 1.2;
   color: var(--text-secondary);
 }
 
+/* 逐字段精度提示：块级、比标签小一号，既不撑宽列宽也不依赖悬停。 */
+.data-workspace-field-hint {
+  display: block;
+  font-size: 0.78em;
+  font-weight: 400;
+  line-height: 1.15;
+  color: var(--text-secondary);
+}
+
+.data-workspace-field-hint:empty {
+  display: none;
+}
+
 .data-workspace-status.is-ok {
-  color: var(--accent-color);
+  color: var(--status-ok, #0f766e);
 }
 
 .data-workspace-status.is-error,
@@ -347,32 +614,88 @@
   color: var(--danger, #b42318);
 }
 
+/* Keep the compact status token while showing a short reason without hover. */
+.data-workspace-status.is-error[data-reason]::after {
+  content: ' · ' attr(data-reason);
+  font-size: 0.86em;
+  font-weight: 500;
+}
+
+.layout-master.is-data-workspace .data-workspace-panel {
+  font-size: var(--dw-type-table, 16px);
+}
+
+.layout-master.is-data-workspace
+  .data-workspace-chart
+  :is(
+    .lab-float-graph,
+    .teaching-graph-section,
+    .srgb-graph-section,
+    .graph-section
+  ) {
+  /* The chart host must retain the full analysis width. The scene view owns
+     the internal grid/aspect ratio, while a host cap would create an
+     artificial narrow strip on desktop and violate the layout contract. */
+  width: 100%;
+  align-self: center;
+}
+
+.layout-master.is-data-workspace.is-data-workspace-chart
+  .data-workspace-review-table {
+  font-size: var(--dw-type-review, 16px);
+}
+
 .data-workspace-result-field {
   box-sizing: border-box;
   border: 1px solid var(--accent-color);
   border-radius: 0.5rem;
   background: var(--bg-primary);
-  padding: 0.55rem 0.65rem;
+  padding: 0.12rem 0.45rem;
 }
 
 .data-workspace-result-field > label {
-  color: var(--accent-color);
-  font-size: 0.9375rem;
+  color: var(--status-ok, #0f766e);
+  font-size: var(--dw-type-result, 16px);
   font-weight: 700;
 }
 
 .data-workspace-result-field > .data-workspace-input {
   border-color: var(--accent-color);
-  font-size: 1rem;
-  font-weight: 650;
+  font-size: var(--dw-type-result-value, 18px);
+  font-weight: 600;
 }
 
 .data-workspace-result {
   border: 1px solid var(--accent-color);
   border-radius: 0.5rem;
-  padding: 0.6rem 0.75rem;
+  padding: 0.15rem 0.5rem;
   color: var(--text-primary);
-  font-weight: 650;
+  font-size: var(--dw-type-result, 16px);
+  font-weight: 600;
+}
+
+.layout-master.is-data-workspace .lab-plot-toolbar button {
+  box-sizing: border-box;
+  font-size: var(--dw-type-button, 16px);
+  font-weight: 600;
+  height: 44px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 0.65rem;
+  line-height: 1;
+}
+
+.layout-master.is-data-workspace .lab-plot-dirty {
+  font-size: var(--dw-type-status, 16px);
+}
+
+.data-workspace-input:focus-visible,
+.data-workspace-check:focus-visible,
+.data-workspace-exit:focus-visible,
+.data-workspace-entry:focus-visible,
+.layout-master.is-data-workspace .lab-plot-toolbar button:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
 }
 
 .teaching-demo.split-right-shell.is-data-workspace,
@@ -438,8 +761,52 @@
 }
 
 .layout-master.is-data-workspace .data-workspace-panel {
-  flex: 0 1 auto;
+  /* Reserve a stable panel footprint so repeated row additions scroll inside
+     the workspace instead of resizing or nudging the animation above it. */
+  flex: 0 0 clamp(15rem, 42%, 26.25rem);
+  min-height: 0;
   max-height: 58%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* 纸带尺是一条扁仪器。只在 ticker-tape 的数据步把舞台收到能读尺的高度，
+   剩下的给表，避免尺在空白带里垂直居中。双缝等其他 lab-stage 场景保持
+   舞台 flex 增长，否则 220px 会裁掉第 6 步仪器。图像分析仍把舞台收成工具条。 */
+@media (min-height: 640px) {
+  .lab-stage-layout.layout-master.is-data-workspace[data-scene-id='ticker-tape']:not(
+      .is-data-workspace-chart
+    )
+    .lab-stage-anim {
+    flex: 0 1 auto;
+    min-height: 168px;
+    height: clamp(168px, 24vh, 220px);
+    max-height: 26vh;
+  }
+
+  .lab-stage-layout.layout-master.is-data-workspace[data-scene-id='ticker-tape']:not(
+      .is-data-workspace-chart
+    )
+    .data-workspace-panel {
+    flex: 1 1 auto;
+    max-height: none;
+    min-height: 0;
+  }
+}
+
+/* 1080p 纸带表按内容收高，避免投影档在表下留下整块空面板。
+   1280×720 仍由上面的规则把剩余高度交给表。 */
+@media (min-width: 1600px) and (min-height: 900px) {
+  .lab-stage-layout.layout-master.is-data-workspace[data-scene-id='ticker-tape']:not(
+      .is-data-workspace-chart
+    )
+    .data-workspace-panel {
+    flex: 0 1 auto;
+    max-height: none;
+    align-self: stretch;
+    width: 100%;
+    height: max-content;
+  }
 }
 
 .data-workspace-actions {
@@ -512,21 +879,22 @@
 }
 
 .layout-master.is-data-workspace.is-data-workspace-chart
-  :is(
-    .teaching-stage-frame,
-    .srgb-stage-frame,
-    .lab-stage-anim,
-    .teaching-stage-slot,
-    .srgb-stage-slot,
-    .lab-stage-slot
-  ) {
-  flex: 0 0 auto;
-  min-height: 4.5rem;
+  :is(.teaching-stage-frame, .srgb-stage-frame, .lab-stage-anim) {
+  flex: 0 0 4.5rem;
+  height: 4.5rem;
+  min-height: 0;
+  max-height: 4.5rem;
 }
 
 .layout-master.is-data-workspace.is-data-workspace-chart
-  :is(.teaching-stage-slot, .srgb-stage-slot, .lab-stage-slot) {
+  :is(
+    .teaching-stage-slot,
+    .srgb-stage-slot,
+    .lab-stage-slot,
+    .mobile-stage-slot
+  ) {
   height: 4.5rem;
+  min-height: 0;
 }
 
 .mobile-stack-layout.is-data-workspace.is-data-workspace-chart
@@ -590,7 +958,7 @@
   background: var(--btn-bg);
   color: var(--text-primary);
   font-size: 0.8125rem;
-  font-weight: 650;
+  font-weight: 600;
   line-height: 1;
   cursor: pointer;
 }
@@ -609,7 +977,8 @@
   .data-workspace-panel {
     flex-direction: row;
     flex-wrap: wrap;
-    align-items: center;
+    align-items: flex-start;
+    align-content: flex-start;
   }
 
   .data-workspace-header {
@@ -619,17 +988,24 @@
   .data-workspace-header .data-workspace-title {
     order: 1;
     flex: 0 0 auto;
+    align-self: center;
     white-space: nowrap;
   }
 
   .data-workspace-panel > .data-workspace-knowns {
     order: 2;
-    flex: 0 1 auto;
+    flex: 1 1 auto;
+    align-self: center;
+    min-width: 0;
   }
 
+  /* Hint spans the row under the title and known chips. A flex-basis of
+     12rem squeezed the 1080p hint into a narrow column beside the title. */
   .data-workspace-panel > .data-workspace-hint {
     order: 3;
-    flex: 1 1 12rem;
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: 100%;
     min-width: 0;
   }
 
@@ -639,24 +1015,45 @@
   .data-workspace-summary,
   .data-workspace-result,
   .data-workspace-review,
-  .data-workspace-chart {
+  .data-workspace-chart,
+  .data-workspace-chart-stage {
     order: 10;
     flex: 1 1 100%;
   }
 }
 
 @media (max-width: 720px) {
+  /* The teaching toolbar moves below the header on phones. Keep the
+     workspace/transport controls in a second row so the mode button cannot
+     intercept their hit area. */
+  .teaching-demo .teaching-stage-floating-controls {
+    top: 6.5rem !important;
+  }
+
+  /* Chart analysis intentionally collapses the stage to a toolbar strip.
+     The normal two-row mobile transport would sit below that strip and be
+     clipped by the stage frame, so keep only the two workspace navigation
+     actions and fit them inside the retained chrome. */
+  .layout-master.is-data-workspace.is-data-workspace-chart
+    .teaching-stage-floating-controls {
+    top: 0.5rem !important;
+    --transport-padding: 0.25rem 0.5rem;
+  }
+
+  .layout-master.is-data-workspace.is-data-workspace-chart
+    .teaching-stage-floating-controls
+    > :not(.data-workspace-entry) {
+    display: none !important;
+  }
+
+  .layout-master.is-data-workspace.is-data-workspace-chart .lab-stage-toolbar {
+    display: none !important;
+  }
+
   .layout-master.is-data-workspace .data-workspace-panel {
     max-height: none;
     overflow-x: hidden;
-  }
-
-  .data-workspace-table-wrap {
-    overflow-x: hidden;
-  }
-
-  .data-workspace-table-wrap:has([data-orientation='fields']) {
-    overflow-x: auto;
+    overflow-y: auto;
   }
 
   .data-workspace-table:not([data-orientation='fields']) thead {
@@ -709,5 +1106,94 @@
 
   .data-workspace-table[data-orientation='fields'] .data-workspace-field {
     width: auto;
+  }
+}
+
+/* Short chart analysis (844×390): content mode keeps a short recap so the
+   curve and plot controls sit on the first screen. A manual split still
+   tracks 18–72. The panel scrolls; summary, result, and toolbar are not
+   clipped by overflow:hidden or a negative splitter overlap. */
+@media (max-height: 520px) {
+  .layout-master.is-data-workspace.is-data-workspace-chart
+    .data-workspace-panel {
+    flex: 1 1 0%;
+    height: 0;
+    min-height: 0;
+    padding: 0.12rem 0.4rem 0.15rem;
+    gap: 0.1rem;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .layout-master.is-data-workspace.is-data-workspace-chart
+    .data-workspace-panel
+    > .data-workspace-chart-stage {
+    flex: 1 1 0%;
+    height: auto;
+    min-height: 13.5rem;
+  }
+
+  .layout-master.is-data-workspace.is-data-workspace-chart
+    .data-workspace-title {
+    line-height: 1.05;
+  }
+
+  .layout-master.is-data-workspace.is-data-workspace-chart
+    .data-workspace-chart-stage:not([data-split-mode='manual'])
+    > .data-workspace-review {
+    flex: 0 1 auto;
+    height: auto;
+    max-height: min(3.5rem, 26%);
+    overflow: auto;
+  }
+
+  .layout-master.is-data-workspace.is-data-workspace-chart
+    .data-workspace-chart-stage[data-split-mode='manual']
+    > .data-workspace-review {
+    flex: 0 0 var(--dw-split, 33%);
+    height: auto;
+    max-height: none;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  .layout-master.is-data-workspace.is-data-workspace-chart
+    .data-workspace-splitter {
+    flex: 0 0 36px;
+    min-height: 36px;
+    margin: 0 0.3rem;
+  }
+
+  .layout-master.is-data-workspace.is-data-workspace-chart
+    .data-workspace-summary,
+  .layout-master.is-data-workspace.is-data-workspace-chart
+    .data-workspace-result,
+  .layout-master.is-data-workspace.is-data-workspace-chart
+    .data-workspace-result-field {
+    flex: 0 0 auto;
+    padding-top: 0.08rem;
+    padding-bottom: 0.08rem;
+  }
+
+  .layout-master.is-data-workspace.is-data-workspace-chart
+    .data-workspace-chart-stage
+    > .data-workspace-chart,
+  .layout-master.is-data-workspace.is-data-workspace-chart
+    .data-workspace-chart {
+    flex: 1 1 auto;
+    min-height: 10rem;
+  }
+
+  .layout-master.is-data-workspace.is-data-workspace-chart
+    .data-workspace-chart-stage
+    > .data-workspace-chart {
+    margin: 0 0.3rem 0.1rem;
+    padding: 0.05rem 0.15rem;
+  }
+
+  .layout-master.is-data-workspace.is-data-workspace-chart .lab-plot-toolbar {
+    flex: 0 0 auto;
+    padding: 0.05rem 0.3rem;
+    gap: 0.25rem;
   }
 }

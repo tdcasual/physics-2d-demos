@@ -1,4 +1,9 @@
-import { readElementLayoutSize, scaledSize } from '../../core/canvas-sizing';
+import {
+  getResponsiveScale,
+  readElementLayoutSize,
+  scaledSize,
+  setCanvasSize
+} from '../../core/canvas-sizing';
 import { getThemeColors } from '../../core/colors';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import { getRenderTokens } from '../../platform/standards';
@@ -14,6 +19,259 @@ import {
 
 /** 纸带第一个打点左侧的小前置量（cm），纸带左端不贴画布内边。 */
 const TAPE_LEAD_CM = 0.5;
+/** 窄于该宽度时两图改为单列。 */
+const GRAPH_STACK_BELOW = 560;
+/** 中等宽度（含 880）下，可见高度矮于该值则单列滚动。 */
+const GRAPH_STACK_SHORT = 320;
+/**
+ * 可用宽屏（1280 课堂档的绘图区约在此之上）。宽度够时并排，
+ * 直到行高矮到刻度放不下。
+ */
+const GRAPH_WIDE_MIN = 960;
+const GRAPH_WIDE_SHORT = 168;
+const GRAPH_GAP_PX = 8;
+const TICK_CHAR_EM = 0.62;
+
+type GraphBox = { x: number; y: number; w: number; h: number };
+type GraphTypePx = { title: number; tick: number; axis: number };
+
+export type GraphPanelLayout = {
+  width: number;
+  height: number;
+  cols: number;
+  rows: number;
+  stacked: boolean;
+  boxes: GraphBox[];
+};
+
+function readCanvasTypeBase(
+  canvas: HTMLCanvasElement,
+  name: string,
+  fallback: number
+): number {
+  if (typeof getComputedStyle !== 'function') return fallback;
+  const raw = getComputedStyle(canvas).getPropertyValue(name).trim();
+  const value = Number(raw.replace(/px$/, ''));
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+/** Classroom targets live on --dw-canvas-*. Viewport tiers already set the floor. */
+function graphTypePx(canvas: HTMLCanvasElement): GraphTypePx {
+  return {
+    title: readCanvasTypeBase(canvas, '--dw-canvas-title', 18),
+    tick: readCanvasTypeBase(canvas, '--dw-canvas-tick', 16),
+    axis: readCanvasTypeBase(canvas, '--dw-canvas-axis', 16)
+  };
+}
+
+function graphsShouldStack(
+  availW: number,
+  visibleH: number,
+  count: number
+): boolean {
+  if (count <= 1) return false;
+  if (availW < GRAPH_STACK_BELOW) return true;
+  // A short but wide host (844×390) must keep both curves inside the
+  // visible canvas. Stacking here builds 160px rows and leaves only the
+  // title above the fold.
+  if (visibleH < 150) return false;
+  if (availW >= GRAPH_WIDE_MIN) return visibleH < GRAPH_WIDE_SHORT;
+  return visibleH < GRAPH_STACK_SHORT;
+}
+
+export function formatGraphTick(value: number): string {
+  if (!Number.isFinite(value)) return '0';
+  if (Math.abs(value) >= 10 - 1e-9) return String(Math.round(value));
+  const text = value.toFixed(2).replace(/\.?0+$/, '');
+  return text === '-0' ? '0' : text;
+}
+
+export function estimateTickLabelWidth(text: string, fontPx: number): number {
+  const font = Math.max(1, fontPx);
+  return Math.max(font * 0.9, text.length * font * TICK_CHAR_EM);
+}
+
+/** Center of the rotated y-axis title, in CSS px from the panel's left edge. */
+export function graphAxisAnchor(axisPx: number): number {
+  return Math.max(axisPx * 0.7, 10);
+}
+
+/**
+ * Plot insets that keep the title, y ticks, rotated axis title, and x ticks
+ * inside the panel at classroom sizes. Left is capped at 48% of the box so a
+ * narrow panel still has a plot.
+ */
+export function graphPlotInsets(
+  box: { w: number; h: number },
+  typePx: GraphTypePx,
+  tMax: number,
+  yMax: number,
+  tickLen: number
+): { left: number; top: number; right: number; bottom: number } {
+  const widestY = Math.max(
+    estimateTickLabelWidth(formatGraphTick(0), typePx.tick),
+    estimateTickLabelWidth(formatGraphTick(yMax), typePx.tick)
+  );
+  const axisBand = Math.ceil(typePx.axis * 1.35);
+  const left = Math.min(
+    box.w * 0.48,
+    Math.max(36, widestY + tickLen + axisBand + 10)
+  );
+  let top = 6 + typePx.title + 6;
+  const right = Math.max(
+    12,
+    Math.round(typePx.tick * 0.7),
+    Math.ceil(
+      estimateTickLabelWidth(formatGraphTick(tMax), typePx.tick) / 2 + 6
+    )
+  );
+  let bottom = Math.max(
+    typePx.tick + tickLen + 8,
+    Math.round(typePx.tick * 1.25)
+  );
+  // A short landscape box otherwise spends its height on the title and
+  // tick chrome, so the curve sits below the visible strip.
+  if (box.h < 160 && box.h - top - bottom < box.h * 0.42) {
+    const budget = box.h * 0.5;
+    const chrome = Math.max(1, top + bottom);
+    const scale = Math.min(1, budget / chrome);
+    top = Math.max(2, top * scale);
+    bottom = Math.max(2, bottom * scale);
+  }
+  return { left, top, right, bottom };
+}
+
+function niceStepAtLeast(raw: number): number {
+  if (!(raw > 0) || !Number.isFinite(raw)) return 1;
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  const residual = raw / mag;
+  const nice = residual <= 1 ? 1 : residual <= 2 ? 2 : residual <= 5 ? 5 : 10;
+  return nice * mag;
+}
+
+function nextNiceStep(step: number): number {
+  const mag = 10 ** Math.floor(Math.log10(step * (1 + 1e-9)));
+  const unit = step / mag;
+  if (unit < 1.5) return 2 * mag;
+  if (unit < 3.5) return 5 * mag;
+  if (unit < 7.5) return 10 * mag;
+  return 20 * mag;
+}
+
+/**
+ * Nice ticks whose labels fit `spanPx`. Horizontal pitch uses the formatted
+ * label width; vertical pitch uses the line box. The step only grows, so a
+ * wide axis cannot fall back to a 0.02 grid that collides at classroom sizes.
+ */
+export function axisTicksForSpan(
+  max: number,
+  spanPx: number,
+  fontPx: number,
+  orientation: 'horizontal' | 'vertical' = 'horizontal'
+): number[] {
+  if (!(max > 0) || !Number.isFinite(max)) return [0];
+  const span = Math.max(1, spanPx);
+  const font = Math.max(8, fontPx);
+  const minPitch = (step: number) => {
+    if (orientation === 'vertical') return font * 1.45;
+    const widest = Math.max(
+      estimateTickLabelWidth(formatGraphTick(0), font),
+      estimateTickLabelWidth(formatGraphTick(step), font),
+      estimateTickLabelWidth(formatGraphTick(Math.min(max, step * 2)), font),
+      estimateTickLabelWidth(formatGraphTick(max), font)
+    );
+    return widest + Math.max(4, font * 0.35);
+  };
+  const seed = Math.max(2, Math.floor(span / Math.max(font * 2.2, 28)));
+  let step = niceStepAtLeast(max / seed);
+  for (let guard = 0; guard < 8; guard += 1) {
+    const intervals = Math.max(1, max / step);
+    if (span / intervals >= minPitch(step)) break;
+    const next = nextNiceStep(step);
+    if (!(next > step)) break;
+    step = next;
+  }
+  const ticks: number[] = [];
+  const last = Math.ceil(max / step - 1e-9) * step;
+  const limit = last + step * 0.25;
+  for (let i = 0; i < 64; i += 1) {
+    const value = Math.round(i * step * 1e6) / 1e6;
+    if (value > limit + 1e-9) break;
+    ticks.push(value);
+  }
+  return ticks.length > 0 ? ticks : [0];
+}
+
+/**
+ * Selected graphs fill the chart panel. One graph uses the whole plot.
+ * Two graphs sit side by side and share the visible height on a usable
+ * widescreen, including a moderately short 1280×720 chart row. A narrow
+ * panel, or a mid-width panel shorter than 320px, stacks and scrolls.
+ * x–t / v–t are not forced into squares.
+ */
+export function layoutGraphPanels(
+  availW: number,
+  visibleH: number,
+  count: number
+): GraphPanelLayout | null {
+  if (count <= 0 || !(availW >= 8) || !(visibleH >= 8)) return null;
+  const gap = GRAPH_GAP_PX;
+  const stack = graphsShouldStack(availW, visibleH, count);
+  const cols = stack ? 1 : Math.min(count, 2);
+  const rows = Math.ceil(count / cols);
+  const boxW = (availW - gap * (cols + 1)) / cols;
+  const fittedH = (visibleH - gap * (rows + 1)) / rows;
+  let boxH = fittedH;
+  if (stack && visibleH >= 150) {
+    const readable = Math.min(280, Math.max(160, boxW * 0.62));
+    boxH = Math.max(fittedH, readable);
+  }
+  if (!(boxW > 1) || !(boxH > 1)) return null;
+  const contentH = gap + rows * (boxH + gap);
+  const height = stack ? Math.max(visibleH, contentH) : visibleH;
+  const boxes = Array.from({ length: count }, (_, index) => {
+    const col = index % cols;
+    const row = Math.floor(index / cols);
+    return {
+      x: gap + col * (boxW + gap),
+      y: gap + row * (boxH + gap),
+      w: boxW,
+      h: boxH
+    };
+  });
+  return { width: availW, height, cols, rows, stacked: stack, boxes };
+}
+
+function measureGraphViewport(canvas: HTMLCanvasElement): {
+  availW: number;
+  visibleH: number;
+} | null {
+  const slot = canvas.parentElement;
+  if (!slot) return null;
+  const slotSize = readElementLayoutSize(slot);
+  // clientWidth already excludes a scrollbar gutter. Measuring the offset
+  // box paints a canvas wider than the host, which adds a scrollbar and
+  // clips the axis labels.
+  const availW = slot.clientWidth > 0 ? slot.clientWidth : slotSize.width;
+  if (!(availW >= 8)) return null;
+  const host = canvas.closest('.data-workspace-chart');
+  const toolbar = host?.querySelector('.lab-plot-toolbar');
+  const toolbarH = toolbar instanceof HTMLElement ? toolbar.offsetHeight : 0;
+  let visibleH = slot.clientHeight > 0 ? slot.clientHeight : slotSize.height;
+  if (host instanceof HTMLElement && host.clientHeight > 0) {
+    const style = getComputedStyle(host);
+    const pad =
+      (Number.parseFloat(style.paddingTop) || 0) +
+      (Number.parseFloat(style.paddingBottom) || 0);
+    const available = host.clientHeight - pad - toolbarH;
+    // A dragged split can leave a little less than the old 160px floor.
+    // Fit the plot when the host can still show the axes; only a truly
+    // short host grows a scrollable canvas.
+    visibleH = available >= 96 ? available : Math.max(120, available);
+  }
+  if (!(visibleH >= 8)) return null;
+  return { availW, visibleH };
+}
 
 export type CreateTickerTapeViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -107,6 +365,10 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
   };
   const anims: Partial<Record<GraphKind, PlotAnim>> = {};
   let animFrame: number | null = null;
+  let graphLayoutRetries = 0;
+  let graphResizeObserver: ResizeObserver | null = null;
+  let graphResizeObservedHost: HTMLElement | null = null;
+  let lastGraphState: TickerTapeState | null = null;
   const SCATTER_STEP_MS = 180;
   const FIT_DURATION_MS = 600;
 
@@ -506,26 +768,6 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     };
   }
 
-  function axisTicks(max: number, approxCount: number): number[] {
-    if (!(max > 0)) return [0];
-    const raw = max / Math.max(2, approxCount);
-    const mag = 10 ** Math.floor(Math.log10(raw));
-    const residual = raw / mag;
-    const step = residual >= 5 ? 5 * mag : residual >= 2 ? 2 * mag : mag;
-    const ticks: number[] = [];
-    const last = Math.ceil(max / step - 1e-9) * step;
-    for (let v = 0; v <= last + step * 0.25; v += step) {
-      ticks.push(v);
-    }
-    return ticks;
-  }
-
-  function formatTick(value: number): string {
-    if (Math.abs(value) >= 10 - 1e-9) return String(Math.round(value));
-    const text = value.toFixed(2).replace(/\.?0+$/, '');
-    return text === '-0' ? '0' : text;
-  }
-
   function drawPanel(
     ctx: CanvasRenderingContext2D,
     box: { x: number; y: number; w: number; h: number },
@@ -535,38 +777,44 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     scale: number,
     colors: ReturnType<typeof palette>,
     fitKind: 'line' | 'quadratic',
+    typePx: GraphTypePx,
     stage: {
       showPoints: boolean;
       showFit: boolean;
       pointProgress: number;
       fitProgress: number;
     }
-  ): void {
+  ): number {
     const tokens = getRenderTokens(scale);
+    const titlePx = typePx.title;
+    const tickPx = typePx.tick;
+    const axisPx = typePx.axis;
     ctx.save();
     ctx.translate(box.x, box.y);
     ctx.strokeStyle = colors.tapeEdge;
-    ctx.strokeRect(0, 0, box.w, box.h);
+    ctx.strokeRect(0.5, 0.5, Math.max(1, box.w - 1), Math.max(1, box.h - 1));
     ctx.fillStyle = colors.text;
-    ctx.font = `${tokens.rightStage.secondaryFontPx * 0.62}px ui-sans-serif, sans-serif`;
+    ctx.font = `600 ${titlePx}px ui-sans-serif, sans-serif`;
     ctx.textAlign = 'left';
-    ctx.fillText(title, scaledSize(8, scale, 6), scaledSize(16, scale, 12));
+    ctx.textBaseline = 'top';
+    ctx.fillText(title, 8, 6);
 
+    const tMax = Math.max(0.1, ...points.map((p) => p.t), 0.6);
+    const yMax = Math.max(0.2, ...points.map((p) => p.y)) * 1.15;
+    const tickLen = scaledSize(4, scale, 3);
+    const insets = graphPlotInsets(box, typePx, tMax, yMax, tickLen);
     const plot = {
-      l: scaledSize(44, scale, 28),
-      r: box.w - scaledSize(16, scale, 10),
-      t: scaledSize(24, scale, 16),
-      b: box.h - scaledSize(28, scale, 18)
+      l: insets.left,
+      r: Math.max(insets.left + 8, box.w - insets.right),
+      t: insets.top,
+      b: Math.max(insets.top + 8, box.h - insets.bottom)
     };
     const pw = plot.r - plot.l;
     const ph = plot.b - plot.t;
-    const tMax = Math.max(0.1, ...points.map((p) => p.t), 0.6);
-    const yMax = Math.max(0.2, ...points.map((p) => p.y)) * 1.15;
     const xOf = (t: number) => plot.l + (t / tMax) * pw;
     const yOf = (y: number) => plot.b - (y / yMax) * ph;
-    const tTicks = axisTicks(tMax, 5);
-    const yTicks = axisTicks(yMax, 4);
-    const tickLen = scaledSize(4, scale, 3);
+    const tTicks = axisTicksForSpan(tMax, pw, tickPx, 'horizontal');
+    const yTicks = axisTicksForSpan(yMax, ph, tickPx, 'vertical');
 
     ctx.strokeStyle = colors.grid;
     ctx.lineWidth = Math.max(1, tokens.strokePx * 0.16);
@@ -596,18 +844,28 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
 
     ctx.strokeStyle = colors.tick;
     ctx.fillStyle = colors.muted;
-    ctx.font = `${tokens.rightStage.secondaryFontPx * 0.42}px ui-sans-serif, sans-serif`;
+    ctx.font = `${tickPx}px ui-sans-serif, sans-serif`;
     ctx.textBaseline = 'top';
     ctx.textAlign = 'center';
     ctx.lineWidth = Math.max(1, tokens.strokePx * 0.18);
+    let tickClearance = pw;
+    let previousRight = Number.NEGATIVE_INFINITY;
+    let drawnLabels = 0;
     for (const t of tTicks) {
       if (t > tMax + 1e-9) continue;
       const px = xOf(t);
+      const label = formatGraphTick(t);
+      const half = estimateTickLabelWidth(label, tickPx) / 2;
+      if (drawnLabels > 0) {
+        tickClearance = Math.min(tickClearance, px - half - previousRight);
+      }
+      previousRight = px + half;
+      drawnLabels += 1;
       ctx.beginPath();
       ctx.moveTo(px, plot.b);
       ctx.lineTo(px, plot.b + tickLen);
       ctx.stroke();
-      ctx.fillText(formatTick(t), px, plot.b + tickLen + 1);
+      ctx.fillText(label, px, plot.b + tickLen + 1);
     }
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
@@ -618,24 +876,25 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
       ctx.moveTo(plot.l, py);
       ctx.lineTo(plot.l - tickLen, py);
       ctx.stroke();
-      ctx.fillText(formatTick(y), plot.l - tickLen - 2, py);
+      ctx.fillText(formatGraphTick(y), plot.l - tickLen - 2, py);
     }
 
     ctx.fillStyle = colors.muted;
-    ctx.font = `${tokens.rightStage.secondaryFontPx * 0.48}px ui-sans-serif, sans-serif`;
+    ctx.font = `${axisPx}px ui-sans-serif, sans-serif`;
     ctx.textAlign = 'right';
     ctx.textBaseline = 'bottom';
     ctx.fillText('t / s', plot.r - 2, plot.b - scaledSize(3, scale, 2));
     ctx.save();
-    ctx.translate(scaledSize(11, scale, 7), (plot.t + plot.b) / 2);
+    ctx.translate(graphAxisAnchor(axisPx), (plot.t + plot.b) / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
     ctx.fillText(yLabel, 0, 0);
     ctx.restore();
 
     if (!stage.showPoints) {
       ctx.fillStyle = colors.muted;
-      ctx.font = `${tokens.rightStage.secondaryFontPx * 0.42}px ui-sans-serif, sans-serif`;
+      ctx.font = `${tickPx}px ui-sans-serif, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(
@@ -644,7 +903,7 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
         (plot.t + plot.b) / 2
       );
       ctx.restore();
-      return;
+      return tickClearance;
     }
 
     const outlierSet = new Set<number>();
@@ -700,12 +959,48 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
       ctx.fill();
     });
     ctx.restore();
+    return tickClearance;
+  }
+
+  function applyGraphCanvasSize(
+    canvas: HTMLCanvasElement,
+    width: number,
+    height: number
+  ): void {
+    const w = Math.max(1, Math.round(width));
+    const h = Math.max(1, Math.round(height));
+    const currentW = Math.round(parseFloat(canvas.style.width) || 0);
+    const currentH = Math.round(parseFloat(canvas.style.height) || 0);
+    if (!graphStage.ctx || currentW !== w || currentH !== h) {
+      graphStage.ctx = setCanvasSize(canvas, w, h);
+    }
+    const responsive = getResponsiveScale(w, h);
+    canvas.dataset.responsiveScale = String(responsive);
+    graphStage.cssWidth = w;
+    graphStage.cssHeight = h;
+    graphStage.responsiveScale = responsive;
+    graphStage.dpr = canvas.width / w;
   }
 
   function drawGraphs(state: TickerTapeState): void {
+    const canvas = graphStage.canvas;
+    if (!canvas) return;
+    const kinds = selectedKinds();
+    const measured = kinds.length > 0 ? measureGraphViewport(canvas) : null;
+    const layout = measured
+      ? layoutGraphPanels(measured.availW, measured.visibleH, kinds.length)
+      : null;
+    if (!layout) {
+      if (kinds.length > 0 && canvas.isConnected && graphLayoutRetries < 8) {
+        graphLayoutRetries += 1;
+        requestAnimationFrame(() => drawGraphs(state));
+      }
+      return;
+    }
+    graphLayoutRetries = 0;
+    applyGraphCanvasSize(canvas, layout.width, layout.height);
     const ctx = graphStage.ctx;
     if (!ctx) return;
-    graphStage.ensureSized();
     const w = graphStage.cssWidth;
     const h = graphStage.cssHeight;
     if (w <= 0 || h <= 0) return;
@@ -714,11 +1009,20 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     ctx.clearRect(0, 0, w, h);
     ctx.fillStyle = colors.bg;
     ctx.fillRect(0, 0, w, h);
-    const gap = scaledSize(10, scale, 6);
+    const typePx = graphTypePx(canvas);
+    const first = layout.boxes[0];
+    canvas.dataset.graphCols = String(layout.cols);
+    canvas.dataset.graphRows = String(layout.rows);
+    canvas.dataset.graphCount = String(kinds.length);
+    canvas.dataset.graphFill = layout.stacked ? 'stack' : 'fill';
+    canvas.dataset.graphBoxW = first ? first.w.toFixed(1) : '0';
+    canvas.dataset.graphBoxH = first ? first.h.toFixed(1) : '0';
+    canvas.dataset.graphTitlePx = String(Math.round(typePx.title));
+    canvas.dataset.graphTickPx = String(Math.round(typePx.tick));
+    canvas.dataset.graphAxisPx = String(Math.round(typePx.axis));
+    let tickClearance = Number.POSITIVE_INFINITY;
     const status = plotStatus(state);
     const now = performance.now();
-    const kinds = selectedKinds();
-    if (kinds.length === 0) return;
     const defs: Array<{
       kind: GraphKind;
       title: string;
@@ -744,24 +1048,10 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
         minPoints: 2
       }
     ];
-    // 固定网格排布：每张图占一个格子（2 列，按需扩行），格子尺寸不随
-    // 选中数量变化——只选一张时也画在第一格，不做放大。未来新增图表
-    // （如 a–t）自动落到下一格，超出画布高度的行数由绘图区滚动条承接。
-    const gridCols = 2;
-    const cellW = (w - gap * (gridCols + 1)) / gridCols;
-    const cellH = h - gap * 2;
-    const boxes = defs.map((_, index) => {
-      const col = index % gridCols;
-      const row = Math.floor(index / gridCols);
-      return {
-        x: gap + col * (cellW + gap),
-        y: gap + row * (cellH + gap),
-        w: cellW,
-        h: cellH
-      };
-    });
-    defs.forEach((def, index) => {
+    defs.forEach((def) => {
       if (!selected[def.kind]) return;
+      const box = layout.boxes[kinds.indexOf(def.kind)];
+      if (!box) return;
       const ser = status[def.kind];
       const pointProgress =
         ser.plotted && plotted[def.kind]
@@ -770,15 +1060,16 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
       const fitProgress = ser.fitted
         ? animProgress(def.kind, 'fit', 1, now)
         : 1;
-      drawPanel(
+      const clearance = drawPanel(
         ctx,
-        boxes[index],
+        box,
         def.title,
         def.points,
         def.yLabel,
         scale,
         colors,
         def.fitKind,
+        typePx,
         {
           showPoints: ser.plotted,
           showFit: ser.fitted && def.points.length >= def.minPoints,
@@ -786,7 +1077,13 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
           fitProgress
         }
       );
+      if (Number.isFinite(clearance)) {
+        tickClearance = Math.min(tickClearance, clearance);
+      }
     });
+    canvas.dataset.graphTickClearance = (
+      Number.isFinite(tickClearance) ? tickClearance : 0
+    ).toFixed(1);
   }
 
   function canvasLocalX(e: PointerEvent): number | null {
@@ -866,6 +1163,22 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     el.addEventListener('pointercancel', handlePointerUp);
   }
 
+  function observeGraphHost(canvas: HTMLCanvasElement): void {
+    const host = canvas.parentElement;
+    if (host === graphResizeObservedHost) return;
+    graphResizeObserver?.disconnect();
+    graphResizeObserver = null;
+    graphResizeObservedHost = host;
+    if (host && typeof ResizeObserver !== 'undefined') {
+      graphResizeObserver = new ResizeObserver(() => {
+        if (!lastGraphState) return;
+        graphStage.resize();
+        drawGraphs(lastGraphState);
+      });
+      graphResizeObserver.observe(host);
+    }
+  }
+
   function detachEvents(): void {
     const el = stage.canvas;
     if (!el) return;
@@ -876,6 +1189,7 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
   }
 
   function render(state: TickerTapeState): void {
+    lastGraphState = state;
     if (stage.canvas) {
       stage.canvas.dataset.originTickIndex = String(state.originTickIndex);
     }
@@ -901,7 +1215,11 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     render,
     resize: () => {
       stage.resize();
-      if (graphStage.canvas) graphStage.resize();
+      if (graphStage.canvas) {
+        observeGraphHost(graphStage.canvas);
+        graphStage.resize();
+        if (lastGraphState) drawGraphs(lastGraphState);
+      }
     },
     reset(): void {
       plottedXCm = null;
@@ -954,6 +1272,8 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     },
     attachGraphCanvas(graphCanvas: HTMLCanvasElement): void {
       graphStage.attach(graphCanvas);
+      graphResizeObservedHost = null;
+      observeGraphHost(graphCanvas);
     },
     setOnOriginDrag(cb: (tickIndex: number) => void): void {
       onOriginDrag = cb;
@@ -962,6 +1282,10 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
       detachEvents();
       stage.release();
       graphStage.release();
+      graphResizeObserver?.disconnect();
+      graphResizeObserver = null;
+      graphResizeObservedHost = null;
+      lastGraphState = null;
     }
   };
 }

@@ -167,4 +167,27 @@ describe('lazy data-workspace factory', () => {
     expect(() => instance.update?.({ host: null })).not.toThrow();
     expect(() => instance.dispose()).not.toThrow();
   });
+
+  it('allows a later mount to retry after a transient loader rejection', async () => {
+    const failure = new Error('temporary chunk failure');
+    const deferred = createDeferred<DataWorkspaceRuntimeModule>();
+    const load = vi
+      .fn<() => Promise<DataWorkspaceRuntimeModule>>()
+      .mockRejectedValueOnce(failure)
+      .mockReturnValueOnce(deferred.promise);
+    setDataWorkspaceRuntimeLoaderForTests(load);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    createDataWorkspace().mount(createSlots(), {}, createCtx());
+    await settle();
+    expect(load).toHaveBeenCalledTimes(1);
+
+    const { module, mount } = createRuntimeMock();
+    createDataWorkspace().mount(createSlots(), {}, createCtx());
+    deferred.resolve(module);
+    await settle();
+
+    expect(load).toHaveBeenCalledTimes(2);
+    expect(mount).toHaveBeenCalledTimes(1);
+  });
 });

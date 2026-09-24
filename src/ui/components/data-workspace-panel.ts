@@ -5,6 +5,7 @@
 
 import {
   chartStepReady,
+  fieldIsOk,
   formatReadinessHint,
   formatResultText,
   getSummaryField,
@@ -12,7 +13,9 @@ import {
   isFieldReady,
   isSummaryField,
   resolveRowLimits,
+  rowCheckStageState,
   shouldShowChartAnalysis,
+  stagedFieldReadiness,
   summaryContextItems,
   trialLabel,
   type DataWorkspaceDraft,
@@ -34,15 +37,18 @@ export type DataWorkspacePanel = {
   chartMount: HTMLElement | null;
   getStep(): DataWorkspacePanelStep;
   /** 进入/退出图像分析模式（入口在悬浮工具条，由 capability 门控）。 */
-  setChartMode(on: boolean): void;
+  setChartMode(on: boolean): boolean;
   update(): void;
   dispose(): void;
 };
 
+/** 校验结果保持简短；具体判分原因仍可悬停查看并由辅助技术读取。 */
 function fieldStatus(field: FieldCheckState | undefined): string {
-  if (!field) return '';
-  if (field.stale) return field.feedback?.message ?? '请重新校对';
-  return field.feedback?.message ?? '';
+  if (!field?.feedback) return '';
+  if (field.feedback.message === '端点无需填写') return '—';
+  if (field.stale) return '↻ 需重校';
+  if (!field.feedback.ok) return '✗ 不通过';
+  return '✓';
 }
 
 function statusClass(field: FieldCheckState | undefined): string {
@@ -51,8 +57,68 @@ function statusClass(field: FieldCheckState | undefined): string {
   return field.feedback.ok ? 'is-ok' : 'is-error';
 }
 
+function visibleFeedbackReason(
+  field: FieldCheckState | undefined
+): string | undefined {
+  if (!field?.feedback || field.stale || field.feedback.ok) return undefined;
+  switch (field.feedback.layer) {
+    case 'format':
+      return '格式不符';
+    case 'unit':
+      return '单位不符';
+    case 'range':
+      return '超出范围';
+    case 'instrument':
+      return '仪器读数不符';
+    case 'relation':
+      return '计算关系不符';
+  }
+}
+
+function setFieldStatus(
+  node: HTMLElement,
+  field: FieldCheckState | undefined
+): void {
+  node.className = `data-workspace-status ${statusClass(field)}`;
+  node.textContent = fieldStatus(field);
+  const reason = visibleFeedbackReason(field);
+  if (reason) node.dataset.reason = reason;
+  else delete node.dataset.reason;
+  const feedback = field?.feedback;
+  const message = feedback?.message.trim();
+  if (!field || !feedback || !message) {
+    node.removeAttribute('title');
+    node.removeAttribute('aria-label');
+    return;
+  }
+  const outcome = field.stale
+    ? '数据已变化，需要重新校对'
+    : feedback.ok
+      ? '校对通过'
+      : '校对未通过';
+  node.title = message;
+  node.setAttribute('aria-label', `${outcome}。${message}`);
+}
+
 function headerLabel(field: DataWorkspaceFieldSpec): string {
   return field.unit ? `${field.label} / ${field.unit}` : field.label;
+}
+
+/**
+ * Field label + always-visible precision hint. The hint is a block-level
+ * span so the projection table column width is driven by the label alone.
+ */
+function fillFieldLabel(
+  target: HTMLElement,
+  field: DataWorkspaceFieldSpec
+): void {
+  target.textContent = headerLabel(field);
+  const hint = field.formatHint?.trim();
+  if (!hint) return;
+  const span = document.createElement('span');
+  span.className = 'data-workspace-field-hint';
+  span.textContent = hint;
+  target.appendChild(span);
 }
 
 function isFieldsOrientation(spec: DataWorkspaceSpec): boolean {
@@ -96,6 +162,8 @@ export function createDataWorkspacePanel(options: {
 
   const tableWrap = document.createElement('div');
   tableWrap.className = 'data-workspace-table-wrap';
+  tableWrap.tabIndex = 0;
+  tableWrap.setAttribute('aria-label', '数据表，内容超出时可横向滚动');
 
   const rowActions = document.createElement('div');
   rowActions.className = 'data-workspace-row-actions';
@@ -122,6 +190,7 @@ export function createDataWorkspacePanel(options: {
   confirmEl.hidden = true;
   confirmEl.setAttribute('role', 'dialog');
   confirmEl.setAttribute('aria-label', '确认删除该组');
+  confirmEl.setAttribute('aria-modal', 'true');
   const confirmText = document.createElement('p');
   confirmText.textContent = '该组已有数据，确定删除？';
   const confirmOk = document.createElement('button');
@@ -134,12 +203,20 @@ export function createDataWorkspacePanel(options: {
   confirmCancel.textContent = '取消';
   confirmEl.append(confirmText, confirmCancel, confirmOk);
   let pendingDeleteId: string | null = null;
+  let confirmReturnFocus: HTMLElement | null = null;
+
+  function restoreConfirmFocus(): void {
+    const target = confirmReturnFocus;
+    confirmReturnFocus = null;
+    if (target?.isConnected && !target.hasAttribute('disabled')) target.focus();
+  }
 
   confirmCancel.addEventListener(
     'click',
     () => {
       pendingDeleteId = null;
       confirmEl.hidden = true;
+      restoreConfirmFocus();
     },
     { signal: ac.signal }
   );
@@ -151,6 +228,7 @@ export function createDataWorkspacePanel(options: {
       options.host.removeTrial(pendingDeleteId, true);
       pendingDeleteId = null;
       confirmEl.hidden = true;
+      restoreConfirmFocus();
       tableSignature = '';
       options.onChange();
       update();
@@ -167,16 +245,184 @@ export function createDataWorkspacePanel(options: {
 
   let reviewEl: HTMLElement | null = null;
   let chartMount: HTMLElement | null = null;
+  /** 图像分析环节的两区包裹层（表 + 分隔条 + 图），比例基准只含这三个。 */
+  let chartStage: HTMLElement | null = null;
+  let splitter: HTMLElement | null = null;
   if (shouldShowChartAnalysis(spec)) {
     reviewEl = document.createElement('div');
     reviewEl.className = 'data-workspace-review';
     reviewEl.hidden = true;
-    reviewEl.setAttribute('aria-label', '已校验数据');
+    reviewEl.tabIndex = 0;
+    reviewEl.setAttribute('aria-label', '已校验数据，内容超出时可滚动');
     chartMount = document.createElement('div');
     chartMount.className = 'data-workspace-chart';
     chartMount.dataset.dataWorkspaceChart = 'true';
     chartMount.setAttribute('data-data-workspace-chart', '');
     chartMount.hidden = true;
+    chartStage = document.createElement('div');
+    chartStage.className = 'data-workspace-chart-stage';
+    splitter = document.createElement('div');
+    splitter.className = 'data-workspace-splitter';
+    splitter.setAttribute('role', 'separator');
+    splitter.setAttribute('aria-orientation', 'horizontal');
+    splitter.setAttribute('aria-valuemin', '18');
+    splitter.setAttribute('aria-valuemax', '72');
+    splitter.setAttribute('aria-label', '调整表格与图表分界');
+    splitter.tabIndex = 0;
+    splitter.hidden = true;
+  }
+
+  const SPLIT_MIN = 0.18;
+  const SPLIT_MAX = 0.72;
+  const splitStorageKey = `dw-split-fit-${spec.id}`;
+  let splitMode: 'content' | 'manual' = 'content';
+
+  function readStoredSplit(): number | null {
+    try {
+      const stored = Number(window.localStorage.getItem(splitStorageKey));
+      if (
+        Number.isFinite(stored) &&
+        stored >= SPLIT_MIN &&
+        stored <= SPLIT_MAX
+      ) {
+        return stored;
+      }
+    } catch {
+      /* storage may be unavailable in private or embedded browsing contexts */
+    }
+    return null;
+  }
+
+  function measuredSplitRatio(stage: HTMLElement): number | null {
+    const review = stage.querySelector('.data-workspace-review');
+    const height = stage.clientHeight || stage.getBoundingClientRect().height;
+    if (!(review instanceof HTMLElement) || !(height > 0)) return null;
+    const reviewHeight = review.getBoundingClientRect().height;
+    if (!(reviewHeight > 0)) return null;
+    return reviewHeight / height;
+  }
+
+  function currentSplitRatio(stage: HTMLElement): number {
+    if (splitMode === 'manual') {
+      const parsed =
+        Number.parseFloat(stage.style.getPropertyValue('--dw-split')) / 100;
+      if (Number.isFinite(parsed)) return parsed;
+    }
+    return measuredSplitRatio(stage) ?? SPLIT_MIN;
+  }
+
+  function applySplitRatio(ratio: number, persist = true): void {
+    const clamped = Math.max(SPLIT_MIN, Math.min(SPLIT_MAX, ratio));
+    splitMode = 'manual';
+    chartStage?.setAttribute('data-split-mode', 'manual');
+    chartStage?.style.setProperty(
+      '--dw-split',
+      `${(clamped * 100).toFixed(2)}%`
+    );
+    announceSeparator(clamped, false);
+    if (!persist) return;
+    try {
+      window.localStorage.setItem(
+        splitStorageKey,
+        String(Math.round(clamped * 1000) / 1000)
+      );
+    } catch {
+      /* 私密模式等存储不可用时静默 */
+    }
+  }
+
+  /**
+   * aria-valuenow must stay inside aria-valuemin/max. Content-fit can be
+   * shorter than 18%; the announced value is clamped, and aria-valuetext
+   * still says the split is following the table.
+   */
+  function announceSeparator(ratio: number, content: boolean): void {
+    if (!splitter) return;
+    const announced = Math.max(SPLIT_MIN, Math.min(SPLIT_MAX, ratio));
+    splitter.setAttribute('aria-valuenow', String(Math.round(announced * 100)));
+    if (content) splitter.setAttribute('aria-valuetext', '按表格内容');
+    else splitter.removeAttribute('aria-valuetext');
+  }
+
+  function useContentSplit(): void {
+    splitMode = 'content';
+    chartStage?.setAttribute('data-split-mode', 'content');
+    chartStage?.style.removeProperty('--dw-split');
+    const measured = chartStage ? measuredSplitRatio(chartStage) : null;
+    announceSeparator(measured ?? SPLIT_MIN, true);
+  }
+
+  function syncContentSeparator(): void {
+    if (splitMode !== 'content') return;
+    const measured = chartStage ? measuredSplitRatio(chartStage) : null;
+    announceSeparator(measured ?? SPLIT_MIN, true);
+  }
+
+  function bindSplitter(handle: HTMLElement, stage: HTMLElement): void {
+    const ratioFromPointer = (clientY: number): number => {
+      const rect = stage.getBoundingClientRect();
+      // 相对「表+分隔条+图」包裹层的高度换算拖拽比例；包裹层不在
+      // 舞台 transform 内，不违反舞台缩放坐标纪律。
+      const height = stage.clientHeight || rect.height;
+      if (height <= 0) return SPLIT_MIN;
+      return Math.max(
+        SPLIT_MIN,
+        Math.min(SPLIT_MAX, (clientY - rect.top) / height)
+      );
+    };
+    handle.addEventListener(
+      'pointerdown',
+      (event) => {
+        try {
+          if (typeof handle.setPointerCapture === 'function') {
+            handle.setPointerCapture(event.pointerId);
+          }
+        } catch {
+          /* capture is optional; move events still update the ratio */
+        }
+        applySplitRatio(ratioFromPointer(event.clientY));
+        const move = (moveEvent: PointerEvent): void => {
+          applySplitRatio(ratioFromPointer(moveEvent.clientY));
+        };
+        const up = (): void => {
+          handle.removeEventListener('pointermove', move);
+          handle.removeEventListener('pointerup', up);
+          handle.removeEventListener('pointercancel', up);
+        };
+        handle.addEventListener('pointermove', move);
+        handle.addEventListener('pointerup', up);
+        handle.addEventListener('pointercancel', up);
+      },
+      { signal: ac.signal }
+    );
+    handle.addEventListener(
+      'keydown',
+      (event) => {
+        const current = currentSplitRatio(stage);
+        const step =
+          event.key === 'PageUp' || event.key === 'PageDown' ? 0.05 : 0.01;
+        if (event.key === 'ArrowUp' || event.key === 'PageUp') {
+          event.preventDefault();
+          applySplitRatio(current - step);
+        } else if (event.key === 'ArrowDown' || event.key === 'PageDown') {
+          event.preventDefault();
+          applySplitRatio(current + step);
+        } else if (event.key === 'Home') {
+          event.preventDefault();
+          applySplitRatio(SPLIT_MIN);
+        } else if (event.key === 'End') {
+          event.preventDefault();
+          applySplitRatio(SPLIT_MAX);
+        }
+      },
+      { signal: ac.signal }
+    );
+  }
+  if (chartStage && splitter) {
+    const storedSplit = readStoredSplit();
+    if (storedSplit == null) useContentSplit();
+    else applySplitRatio(storedSplit, false);
+    bindSplitter(splitter, chartStage);
   }
 
   root.append(
@@ -189,9 +435,9 @@ export function createDataWorkspacePanel(options: {
     summary,
     result
   );
-  if (reviewEl && chartMount) {
-    root.insertBefore(reviewEl, summary);
-    root.insertBefore(chartMount, summary);
+  if (reviewEl && chartMount && chartStage && splitter) {
+    chartStage.append(reviewEl, splitter, chartMount);
+    root.insertBefore(chartStage, summary);
   }
 
   function bindCheck(
@@ -201,6 +447,16 @@ export function createDataWorkspacePanel(options: {
   ): void {
     const run = () => {
       if (input.disabled) return;
+      const specNow = options.host.getSpec();
+      if (trialIndex != null && specNow.rowCheckStages) {
+        const readiness = stagedFieldReadiness(
+          options.host.getSession(),
+          specNow,
+          field,
+          trialIndex
+        );
+        if (!readiness.ready) return;
+      }
       options.host.submitField({
         field,
         trialIndex,
@@ -229,7 +485,9 @@ export function createDataWorkspacePanel(options: {
         const field = input.dataset.field;
         const rowId = input.dataset.rowId;
         if (!field || !rowId) return;
-        if (isSummaryField(options.host.getSpec(), field)) return;
+        const specNow = options.host.getSpec();
+        if (isSummaryField(specNow, field)) return;
+        if (specNow.rowCheckStages && input.disabled) return;
         drafts.push({ rowId, field, raw: input.value });
       });
     if (drafts.length === 0) return;
@@ -240,15 +498,22 @@ export function createDataWorkspacePanel(options: {
    * 进入/退出图像分析模式。ready 门控由 capability 的悬浮入口按钮负责；
    * 这里保留一道防御：未就绪时拒绝进入。
    */
-  function setChartMode(on: boolean): void {
+  function setChartMode(on: boolean): boolean {
     const specNow = options.host.getSpec();
     const next: DataWorkspacePanelStep = on ? 'chartAnalysis' : 'data';
-    if (next === currentStep) return;
-    if (on && !chartStepReady(options.host.getSession(), specNow)) return;
+    if (next === currentStep) return true;
+    // Capture current DOM values before either layer makes the readiness
+    // decision. Otherwise a stale checked session can pass the graph gate.
     harvestDrafts();
+    if (on && !chartStepReady(options.host.getSession(), specNow)) {
+      options.onChange();
+      update();
+      return false;
+    }
     currentStep = next;
     options.onStepChange?.(next);
     update();
+    return true;
   }
 
   function appendFieldControl(
@@ -294,16 +559,17 @@ export function createDataWorkspacePanel(options: {
     bindCheck(input, def.id, trialIndex);
 
     const status = document.createElement('span');
-    status.className = `data-workspace-status ${statusClass(current)}`;
-    status.textContent = fieldStatus(current);
+    setFieldStatus(status, current);
     const key = fieldKey(def.id, trialIndex);
     statusNodes.set(key, status);
     rowInputs.set(key, { input });
-    const ready = isFieldReady(session, specNow, def.id, trialIndex);
+    const ready = isRowInputEnabled(session, specNow, def, trialIndex);
     setFieldEnabled(input, ready);
-    if (def.gated && !ready) {
+    if (!specNow.rowCheckStages && def.gated && !ready) {
       status.className = 'data-workspace-status data-workspace-summary-note';
       status.textContent = formatReadinessHint(def, session.trials.length);
+      status.removeAttribute('title');
+      status.removeAttribute('aria-label');
     }
 
     wrap.append(input, status);
@@ -346,6 +612,10 @@ export function createDataWorkspacePanel(options: {
     checkRowBtn.addEventListener(
       'click',
       () => {
+        if (specNow.rowCheckStages) {
+          runStagedRowCheck(trialIndex);
+          return;
+        }
         const fields = specNow.rowFields
           .map((def) => ({
             def,
@@ -397,6 +667,7 @@ export function createDataWorkspacePanel(options: {
           const outcome = options.host.removeTrial(trial.id, false);
           if (outcome.needsConfirm) {
             pendingDeleteId = trial.id;
+            confirmReturnFocus = delBtn;
             confirmEl.hidden = false;
             confirmOk.focus();
             return;
@@ -424,7 +695,7 @@ export function createDataWorkspacePanel(options: {
     tr.dataset.field = def.id;
     const labelCell = document.createElement('th');
     labelCell.scope = 'row';
-    labelCell.textContent = headerLabel(def);
+    fillFieldLabel(labelCell, def);
     tr.appendChild(labelCell);
 
     for (
@@ -510,11 +781,121 @@ export function createDataWorkspacePanel(options: {
     }
   }
 
+  /** Stage editing ignores `gated`. Future stages stay disabled. */
+  function isRowInputEnabled(
+    session: DataWorkspaceSession,
+    specNow: DataWorkspaceSpec,
+    def: DataWorkspaceFieldSpec,
+    trialIndex: number
+  ): boolean {
+    const stages = specNow.rowCheckStages;
+    if (!stages || stages.length === 0) {
+      return isFieldReady(session, specNow, def.id, trialIndex);
+    }
+    const stageIndex = stages.findIndex((stage) =>
+      stage.fields.includes(def.id)
+    );
+    if (stageIndex < 0) return false;
+    const state = rowCheckStageState(session, specNow, trialIndex);
+    if (state.completed) return true;
+    return stageIndex < state.index;
+  }
+
+  function runStagedRowCheck(trialIndex: number): void {
+    const specNow = options.host.getSpec();
+    const stages = specNow.rowCheckStages;
+    if (!stages || stages.length === 0) return;
+    const before = rowCheckStageState(
+      options.host.getSession(),
+      specNow,
+      trialIndex
+    );
+    const through = before.completed ? stages.length : before.index;
+    const allowed = new Set(
+      stages.slice(0, through).flatMap((stage) => [...stage.fields])
+    );
+    const trial = options.host.getSession().trials[trialIndex];
+    const drafts: DataWorkspaceDraft[] = [];
+    if (trial) {
+      for (const def of specNow.rowFields) {
+        if (!allowed.has(def.id)) continue;
+        const input = rowInputs.get(fieldKey(def.id, trialIndex))?.input;
+        if (!input || input.disabled) continue;
+        drafts.push({ rowId: trial.id, field: def.id, raw: input.value });
+      }
+    }
+    if (drafts.length > 0) options.host.applyDrafts(drafts);
+
+    const state = rowCheckStageState(
+      options.host.getSession(),
+      specNow,
+      trialIndex
+    );
+    const stage = state.stage;
+    if (stage) {
+      for (const fieldId of stage.fields) {
+        const session = options.host.getSession();
+        const readiness = stagedFieldReadiness(
+          session,
+          specNow,
+          fieldId,
+          trialIndex
+        );
+        const input =
+          rowInputs.get(fieldKey(fieldId, trialIndex))?.input ?? null;
+        const domRaw = input?.value ?? '';
+        const current = getTrialField(session.trials[trialIndex], fieldId);
+        if (fieldIsOk(current) && current?.raw === domRaw) continue;
+        if (!readiness.ready || domRaw.trim() === '' || !input) {
+          input?.focus();
+          break;
+        }
+        const result = options.host.submitField({
+          field: fieldId,
+          trialIndex,
+          raw: domRaw
+        });
+        if (!result.feedback.ok) {
+          input.focus();
+          break;
+        }
+      }
+    }
+    options.onChange();
+    update();
+  }
+
   function syncRowCheckButton(
     button: HTMLButtonElement,
     specNow: DataWorkspaceSpec,
     trialIndex: number
   ): void {
+    const stages = specNow.rowCheckStages;
+    if (stages && stages.length > 0) {
+      const state = rowCheckStageState(
+        options.host.getSession(),
+        specNow,
+        trialIndex
+      );
+      const group = trialLabel(specNow, trialIndex);
+      if (state.completed || !state.stage) {
+        button.disabled = true;
+        button.textContent = '本组已完成';
+        button.setAttribute('aria-label', `第 ${group} 组已完成`);
+        button.removeAttribute('title');
+      } else {
+        button.disabled = false;
+        button.textContent = `${state.index}/${state.total} ${state.stage.label}`;
+        button.setAttribute(
+          'aria-label',
+          `校对第 ${group} 组，阶段 ${state.index}/${state.total}：${state.stage.label}`
+        );
+        if (state.stage.hint) button.title = state.stage.hint;
+        else button.removeAttribute('title');
+      }
+      button.setAttribute('aria-disabled', String(button.disabled));
+      return;
+    }
     const allDisabled = specNow.rowFields.every((def) => {
       const input = rowInputs.get(fieldKey(def.id, trialIndex))?.input;
       return !input || input.disabled;
@@ -552,10 +933,15 @@ export function createDataWorkspacePanel(options: {
     return session.trials.map((trial) => trial.id).join('|');
   }
 
-  function appendHeadCell(row: HTMLTableRowElement, label: string): void {
+  function appendHeadCell(
+    row: HTMLTableRowElement,
+    label: string,
+    field?: DataWorkspaceFieldSpec
+  ): void {
     const th = document.createElement('th');
     th.scope = 'col';
-    th.textContent = label;
+    if (field) fillFieldLabel(th, field);
+    else th.textContent = label;
     row.appendChild(th);
   }
 
@@ -577,6 +963,10 @@ export function createDataWorkspacePanel(options: {
     table.dataset.orientation = isFieldsOrientation(specNow)
       ? 'fields'
       : 'trials';
+    table.setAttribute(
+      'aria-label',
+      isFieldsOrientation(specNow) ? '按字段填写的数据表' : '按试次填写的数据表'
+    );
     const thead = document.createElement('thead');
     const headRow = document.createElement('tr');
     const tbody = document.createElement('tbody');
@@ -590,8 +980,9 @@ export function createDataWorkspacePanel(options: {
         tbody.appendChild(renderFieldRow(session, specNow, def));
       }
     } else {
-      const cols = ['组', ...specNow.rowFields.map(headerLabel), ''];
-      for (const label of cols) appendHeadCell(headRow, label);
+      appendHeadCell(headRow, '组');
+      for (const def of specNow.rowFields) appendHeadCell(headRow, '', def);
+      appendHeadCell(headRow, '');
       for (let i = 0; i < session.trials.length; i += 1) {
         tbody.appendChild(renderTrialRow(session, specNow, i));
       }
@@ -627,7 +1018,7 @@ export function createDataWorkspacePanel(options: {
           : 'data-workspace-summary-row';
       row.dataset.step = def.step ?? 'data';
       const lab = document.createElement('label');
-      lab.textContent = headerLabel(def);
+      fillFieldLabel(lab, def);
       const input = document.createElement('input');
       input.type = 'text';
       input.inputMode = def.inputMode === 'numeric' ? 'numeric' : 'decimal';
@@ -701,9 +1092,10 @@ export function createDataWorkspacePanel(options: {
             ? 'data-workspace-status data-workspace-summary-note'
             : 'data-workspace-status';
         status.textContent = formatReadinessHint(def, session.trials.length);
+        status.removeAttribute('title');
+        status.removeAttribute('aria-label');
       } else {
-        status.className = `data-workspace-status ${statusClass(state)}`;
-        status.textContent = fieldStatus(state);
+        setFieldStatus(status, state);
       }
     }
   }
@@ -734,8 +1126,7 @@ export function createDataWorkspacePanel(options: {
   function patchStatus(key: string, field: FieldCheckState | undefined): void {
     const node = statusNodes.get(key);
     if (!node) return;
-    node.className = `data-workspace-status ${statusClass(field)}`;
-    node.textContent = fieldStatus(field);
+    setFieldStatus(node, field);
   }
 
   function syncAddButton(
@@ -772,10 +1163,7 @@ export function createDataWorkspacePanel(options: {
     renderKnownsInto(knownsEl, knowns);
   }
 
-  function applyStepVisibility(
-    session: DataWorkspaceSession,
-    specNow: DataWorkspaceSpec
-  ): void {
+  function applyStepVisibility(specNow: DataWorkspaceSpec): void {
     const chartOn = shouldShowChartAnalysis(specNow);
     const onChart = chartOn && currentStep === 'chartAnalysis';
     knownsEl.hidden = onChart;
@@ -786,6 +1174,10 @@ export function createDataWorkspacePanel(options: {
     if (onChart) confirmEl.hidden = true;
     if (reviewEl) reviewEl.hidden = !onChart;
     if (chartMount) chartMount.hidden = !onChart;
+    if (splitter) {
+      splitter.hidden = !onChart;
+      splitter.classList.toggle('is-hidden', !onChart);
+    }
   }
 
   function patchTableCells(
@@ -796,13 +1188,15 @@ export function createDataWorkspacePanel(options: {
       for (const def of specNow.rowFields) {
         const key = fieldKey(def.id, index);
         const nodes = rowInputs.get(key);
-        const ready = isFieldReady(session, specNow, def.id, index);
+        const ready = isRowInputEnabled(session, specNow, def, index);
         setFieldEnabled(nodes?.input ?? null, ready);
         const status = statusNodes.get(key);
-        if (def.gated && !ready && status) {
+        if (!specNow.rowCheckStages && def.gated && !ready && status) {
           status.className =
             'data-workspace-status data-workspace-summary-note';
           status.textContent = formatReadinessHint(def, session.trials.length);
+          status.removeAttribute('title');
+          status.removeAttribute('aria-label');
         } else {
           patchStatus(key, getTrialField(trial, def.id));
         }
@@ -825,7 +1219,7 @@ export function createDataWorkspacePanel(options: {
     renderKnowns(knowns);
     hintEl.textContent = hint;
     hintEl.hidden = hint === '';
-    applyStepVisibility(session, specNow);
+    applyStepVisibility(specNow);
     syncAddButton(session, specNow);
     if (tableSignature !== rowsSignature(session)) {
       renderTable(session, specNow);
@@ -837,6 +1231,7 @@ export function createDataWorkspacePanel(options: {
     }
     syncSummary(session, specNow, knowns);
     renderResult(session, specNow);
+    syncContentSeparator();
   }
 
   update();

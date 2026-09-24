@@ -207,12 +207,13 @@ export function createDataWorkspace(): CapabilityDefinition<
 
       function enterChartMode(): void {
         if (!chromeOpen || chartMode || !host) return;
-        if (!chartStepReady(host.getSession(), host.getSpec())) {
+        // The panel first harvests live input drafts, then applies the same
+        // readiness guard. The session alone may still contain old checked data.
+        if (!panel?.setChartMode(true)) {
           syncChartButton();
           return;
         }
         chartMode = true;
-        panel?.setChartMode(true);
         syncButton();
         syncChartButton();
       }
