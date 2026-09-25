@@ -31,6 +31,9 @@ export function createFloatingControls(options: {
   container.className =
     'teaching-stage-floating-controls stage-floating-controls';
   container.setAttribute(STAGE_CHROME_ATTR, '');
+  // 舞台平移在 slot 上捕获指针。标忽略后，落在浮条上的拖动移动浮条，
+  // 落在动画内容上的拖动才平移画面。
+  container.dataset.panzoomIgnore = '';
   // transport 浮条是 split/srgb/lab 的舞台工具条宿主（单一宿主语义；
   // 布局 mount 时不预打标，否则属性优先会抢走浮条上的按钮）
   container.setAttribute(STAGE_TOOLBAR_HOST_ATTR, '');
@@ -241,7 +244,9 @@ export function createFloatingControls(options: {
   container.appendChild(speedSlider);
   container.appendChild(speedValue);
 
-  const cleanupDrag = makeDraggable(container);
+  const cleanupDrag = makeDraggable(container, undefined, {
+    clampToParent: true
+  });
 
   updatePlayPauseBtn();
 

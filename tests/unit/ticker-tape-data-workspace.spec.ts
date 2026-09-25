@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  findWorkspaceTransportBar,
+  tapeScaleCap
+} from '../../src/scenes/ticker-tape/scene.view';
+import {
   createTickerTapeDataWorkspace,
   evaluateTickerTapeField,
   tickerTapeDataWorkspaceSpec
@@ -45,6 +49,58 @@ function submit(
     submit: { field, raw, trialIndex }
   });
 }
+
+describe('workspace transport bar lookup', () => {
+  function stageWithCanvas(
+    frameClass: string,
+    withBar: boolean
+  ): HTMLCanvasElement {
+    const frame = document.createElement('div');
+    frame.className = frameClass;
+    const canvas = document.createElement('canvas');
+    frame.appendChild(canvas);
+    if (withBar) {
+      const bar = document.createElement('div');
+      bar.className = 'stage-floating-controls';
+      Object.defineProperty(bar, 'offsetHeight', { value: 70 });
+      frame.appendChild(bar);
+    }
+    document.body.appendChild(frame);
+    return canvas;
+  }
+
+  it('finds the transport bar in every desktop stage frame', () => {
+    for (const frameClass of [
+      'lab-stage-anim',
+      'teaching-stage-frame',
+      'srgb-stage-frame'
+    ]) {
+      const canvas = stageWithCanvas(frameClass, true);
+      expect(findWorkspaceTransportBar(canvas)?.className).toBe(
+        'stage-floating-controls'
+      );
+      canvas.parentElement?.remove();
+    }
+  });
+
+  it('returns null when the frame has no transport bar', () => {
+    const canvas = stageWithCanvas('teaching-stage-frame', false);
+    const outside = document.createElement('div');
+    outside.className = 'mobile-control-bar';
+    document.body.appendChild(outside);
+    expect(findWorkspaceTransportBar(canvas)).toBeNull();
+    canvas.parentElement?.remove();
+    outside.remove();
+  });
+});
+
+describe('ticker tape scale cap', () => {
+  it('keeps the pre-split stage height on wide and narrow viewports', () => {
+    expect(tapeScaleCap(1920, 1080)).toBeCloseTo(302.4, 5);
+    expect(tapeScaleCap(1280, 720)).toBe(240);
+    expect(tapeScaleCap(390, 844)).toBeCloseTo(844 * 0.4 - 8, 5);
+  });
+});
 
 describe('ticker-tape data workspace', () => {
   it('has the planned graph-enabled spec and a fixed seven-row session', () => {

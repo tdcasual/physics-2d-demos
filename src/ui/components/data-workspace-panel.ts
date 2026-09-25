@@ -4,7 +4,6 @@
  */
 
 import {
-  chartStepReady,
   fieldIsOk,
   formatReadinessHint,
   formatResultText,
@@ -314,7 +313,7 @@ export function createDataWorkspacePanel(options: {
   const SPLIT_MIN = 0.18;
   const SPLIT_MAX = 0.72;
   const splitStorageKey = `dw-split-fit-${spec.id}`;
-  let splitMode: 'content' | 'manual' = 'content';
+  let splitMode: 'content' | 'manual' | 'even' = 'content';
 
   function readStoredSplit(): number | null {
     try {
@@ -342,6 +341,7 @@ export function createDataWorkspacePanel(options: {
   }
 
   function currentSplitRatio(stage: HTMLElement): number {
+    if (splitMode === 'even') return 0.5;
     if (splitMode === 'manual') {
       const parsed =
         Number.parseFloat(stage.style.getPropertyValue('--dw-split')) / 100;
@@ -389,6 +389,37 @@ export function createDataWorkspacePanel(options: {
     chartStage?.style.removeProperty('--dw-split');
     const measured = chartStage ? measuredSplitRatio(chartStage) : null;
     announceSeparator(measured ?? SPLIT_MIN, true);
+  }
+
+  function useEvenSplit(): void {
+    splitMode = 'even';
+    chartStage?.setAttribute('data-split-mode', 'even');
+    chartStage?.style.removeProperty('--dw-split');
+    if (!splitter) return;
+    splitter.setAttribute('aria-valuenow', '50');
+    splitter.setAttribute('aria-valuetext', '上下各半');
+  }
+
+  function viewportAllowsEven(): boolean {
+    return typeof window !== 'undefined' && window.innerHeight >= 640;
+  }
+
+  /** Stored manual ratios win. Even is only the untouched default. */
+  function chooseIdleSplit(): void {
+    if (splitMode === 'manual') return;
+    const stored = readStoredSplit();
+    if (stored != null) {
+      applySplitRatio(stored, false);
+      return;
+    }
+    if (
+      options.host.getSpec().chartEvenSplit === true &&
+      viewportAllowsEven()
+    ) {
+      useEvenSplit();
+      return;
+    }
+    useContentSplit();
   }
 
   function syncContentSeparator(): void {
@@ -458,10 +489,9 @@ export function createDataWorkspacePanel(options: {
     );
   }
   if (chartStage && splitter) {
-    const storedSplit = readStoredSplit();
-    if (storedSplit == null) useContentSplit();
-    else applySplitRatio(storedSplit, false);
+    chooseIdleSplit();
     bindSplitter(splitter, chartStage);
+    window.addEventListener('resize', chooseIdleSplit, { signal: ac.signal });
   }
 
   root.append(
@@ -559,21 +589,13 @@ export function createDataWorkspacePanel(options: {
   }
 
   /**
-   * 进入/退出图像分析模式。ready 门控由 capability 的悬浮入口按钮负责；
-   * 这里保留一道防御：未就绪时拒绝进入。
+   * Enter or leave chart analysis. Plotting stays gated in the scene;
+   * this switch only changes the layout, after harvesting drafts.
    */
   function setChartMode(on: boolean): boolean {
-    const specNow = options.host.getSpec();
     const next: DataWorkspacePanelStep = on ? 'chartAnalysis' : 'data';
     if (next === currentStep) return true;
-    // Capture current DOM values before either layer makes the readiness
-    // decision. Otherwise a stale checked session can pass the graph gate.
     harvestDrafts();
-    if (on && !chartStepReady(options.host.getSession(), specNow)) {
-      options.onChange();
-      update();
-      return false;
-    }
     currentStep = next;
     options.onStepChange?.(next);
     update();

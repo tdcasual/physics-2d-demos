@@ -558,7 +558,7 @@ describe('transposed table and two-step shell', () => {
     panel.dispose();
   });
 
-  it('keeps chart mode gated until rows and data summaries are ok', () => {
+  it('opens chart layout before rows are complete and still renders the review', () => {
     const { host } = createKinematicsChartHost();
     const onStepChange = vi.fn();
     const panel = createDataWorkspacePanel({
@@ -569,15 +569,17 @@ describe('transposed table and two-step shell', () => {
     expect(panel.getStep()).toBe('data');
     // 图像分析不再有面板内步骤条；进出由 capability 经 setChartMode 驱动。
     expect(panel.root.querySelectorAll('[role="tab"]')).toHaveLength(0);
-    panel.setChartMode(true);
-    expect(panel.getStep()).toBe('data');
-    expect(onStepChange).not.toHaveBeenCalled();
     expect(panel.root.querySelector('.data-workspace-hint')?.textContent).toBe(
       '填写质量、时间和速率'
     );
+    expect(panel.setChartMode(true)).toBe(true);
+    expect(panel.getStep()).toBe('chartAnalysis');
+    expect(onStepChange).toHaveBeenCalledWith('chartAnalysis');
     expect(
       (panel.root.querySelector('.data-workspace-review') as HTMLElement).hidden
-    ).toBe(true);
+    ).toBe(false);
+    panel.setChartMode(false);
+    expect(panel.getStep()).toBe('data');
 
     for (let i = 0; i < 3; i += 1) {
       host.submitField({ field: 'mass', trialIndex: i, raw: '2' });
@@ -636,6 +638,50 @@ describe('transposed table and two-step shell', () => {
     expect(onStepChange).toHaveBeenCalledWith('data');
     expect(meanRow.hidden).toBe(false);
     expect(slopeRow.hidden).toBe(true);
+    panel.dispose();
+  });
+
+  it('uses an even chart split only when the spec asks and the viewport is tall', () => {
+    const created = createKinematicsChartHost();
+    const spec = { ...created.host.getSpec(), chartEvenSplit: true };
+    const host = { ...created.host, getSpec: () => spec };
+    localStorage.removeItem('dw-split-fit-kinematics-chart');
+    const previous = window.innerHeight;
+    Object.defineProperty(window, 'innerHeight', {
+      configurable: true,
+      value: 800
+    });
+    const panel = createDataWorkspacePanel({
+      host,
+      onChange() {}
+    });
+    const stage = panel.root.querySelector(
+      '.data-workspace-chart-stage'
+    ) as HTMLElement;
+    const splitter = panel.root.querySelector(
+      '.data-workspace-splitter'
+    ) as HTMLElement;
+    expect(stage.getAttribute('data-split-mode')).toBe('even');
+    expect(splitter.getAttribute('aria-valuenow')).toBe('50');
+    expect(splitter.getAttribute('aria-valuetext')).toBe('上下各半');
+    expect(stage.style.getPropertyValue('--dw-split')).toBe('');
+    Object.defineProperty(window, 'innerHeight', {
+      configurable: true,
+      value: 500
+    });
+    window.dispatchEvent(new Event('resize'));
+    expect(stage.getAttribute('data-split-mode')).toBe('content');
+    expect(splitter.getAttribute('aria-valuetext')).toBe('按表格内容');
+    Object.defineProperty(window, 'innerHeight', {
+      configurable: true,
+      value: 800
+    });
+    window.dispatchEvent(new Event('resize'));
+    expect(stage.getAttribute('data-split-mode')).toBe('even');
+    Object.defineProperty(window, 'innerHeight', {
+      configurable: true,
+      value: previous
+    });
     panel.dispose();
   });
 

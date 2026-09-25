@@ -60,13 +60,9 @@ function submitTicker(
 }
 
 describe('ticker-tape grading contract', () => {
-  it('binds the hint to the ±0.03 cm tolerance, two-decimal x and 3-sig-fig v', () => {
+  it('keeps the visible hint to decimal places and significant figures', () => {
     const host = createTickerTapeDataWorkspace(makeTickerSource().source);
-    const hint = host.getHint();
-    expect(hint).toContain('0.03');
-    expect(hint).toContain('两位小数');
-    expect(hint).toContain('估读到 0.01 cm');
-    expect(hint).toContain('保留 3 位有效数字');
+    expect(host.getHint()).toBe('x、Δx 保留 2 位小数；v、a 保留 3 位有效数字');
   });
 
   it('pins the timing model that the v expectation formula relies on', () => {

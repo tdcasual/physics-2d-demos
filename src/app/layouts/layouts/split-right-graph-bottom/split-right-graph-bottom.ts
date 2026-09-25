@@ -130,7 +130,7 @@ export class SplitRightGraphBottomLayout implements ILayout {
     const graphMaxHeight = cfg.graphMaxHeight ?? 480;
     const graphColumns = cfg.graphColumns ?? 3;
 
-    const { slots, rightPanel, stageSlot } = buildSplitLayoutDOM({
+    const { slots, rightPanel } = buildSplitLayoutDOM({
       container,
       cfg,
       prefix: PREFIX,
@@ -147,10 +147,8 @@ export class SplitRightGraphBottomLayout implements ILayout {
       existingCanvas: cfg.preservedCanvas ?? undefined
     });
 
-    // Make animation flex to fill available space above graph
-    stageSlot.parentElement!.style.cssText =
-      'flex: 1; overflow: hidden; position: relative;';
-
+    // Stage flex stays in the stylesheet. Inline flex:1 beats the chart-mode
+    // 4.5rem strip and collapses this frame once the canvas is hidden.
     container.dataset.graphCollapsed = 'false';
 
     // Horizontal resizer between animation and graph

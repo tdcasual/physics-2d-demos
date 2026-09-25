@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createStagePanzoom } from '../../src/app/layouts/capabilities/stage-panzoom';
 import { STAGE_CHROME_ATTR } from '../../src/platform/stage-chrome';
+import { makeDraggable } from '../../src/ui/utils/draggable';
 
 function mockRect(
   el: HTMLElement,
@@ -175,6 +176,42 @@ describe('stage pan/zoom controller', () => {
     const t = parseTransform(viewport);
     expect(t.x).toBeCloseTo(400 * 0.4, 5);
     expect(t.y).toBeCloseTo(300 * 0.4, 5);
+    handle.dispose();
+  });
+
+  it('drags a transport bar in place and still pans the stage from the canvas', () => {
+    const bar = document.createElement('div');
+    bar.setAttribute(STAGE_CHROME_ATTR, '');
+    bar.dataset.panzoomIgnore = '';
+    bar.style.position = 'absolute';
+    bar.style.left = '12px';
+    bar.style.top = '12px';
+    const label = document.createElement('span');
+    label.textContent = '速度';
+    bar.appendChild(label);
+    slot.appendChild(bar);
+    Object.defineProperty(bar, 'offsetLeft', { value: 12, writable: true });
+    Object.defineProperty(bar, 'offsetTop', { value: 12, writable: true });
+    const cleanup = makeDraggable(bar);
+    const handle = createStagePanzoom({ slot });
+    const viewport = slot.querySelector('.stage-viewport') as HTMLElement;
+
+    pointer('pointerdown', label, { x: 20, y: 20 });
+    pointer('pointermove', label, { x: 70, y: 50 });
+    pointer('pointerup', label, { x: 70, y: 50 });
+
+    expect(parseTransform(viewport)).toEqual({ x: 0, y: 0, zoom: 1 });
+    expect(bar.style.left).toBe('62px');
+    expect(bar.style.top).toBe('42px');
+
+    pointer('pointerdown', canvas, { x: 40, y: 40 });
+    pointer('pointermove', canvas, { x: 90, y: 70 });
+    pointer('pointerup', canvas, { x: 90, y: 70 });
+    expect(parseTransform(viewport).x).not.toBe(0);
+    expect(bar.style.left).toBe('62px');
+    expect(bar.style.top).toBe('42px');
+
+    cleanup();
     handle.dispose();
   });
 

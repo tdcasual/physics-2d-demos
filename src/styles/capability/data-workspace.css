@@ -180,6 +180,86 @@
   }
 }
 
+/* Data-step cells are left-aligned and only as tall as the line. Center the
+   ticker table at every tier; the 1080p size step is below. */
+.layout-master.is-data-workspace[data-scene-id='ticker-tape']
+  .data-workspace-table:not(.data-workspace-review-table)
+  :is(th, td) {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.layout-master.is-data-workspace[data-scene-id='ticker-tape']
+  .data-workspace-table:not(.data-workspace-review-table)
+  .data-workspace-field {
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.layout-master.is-data-workspace[data-scene-id='ticker-tape']
+  .data-workspace-table:not(.data-workspace-review-table)
+  .data-workspace-input {
+  text-align: center;
+}
+
+@media (min-width: 1600px) and (min-height: 900px) {
+  .layout-master.is-data-workspace[data-scene-id='ticker-tape']
+    .data-workspace-table:not(.data-workspace-review-table)
+    :is(th, td) {
+    font-size: 54px;
+    line-height: 1.15;
+  }
+
+  .layout-master.is-data-workspace[data-scene-id='ticker-tape']
+    .data-workspace-table:not(.data-workspace-review-table)
+    .data-workspace-input {
+    box-sizing: border-box;
+    width: 11rem;
+    min-width: 11rem;
+    height: 87px;
+    min-height: 87px;
+    max-height: 87px;
+    padding: 0 0.4rem;
+    font-size: 66px;
+    font-weight: 700;
+    line-height: 87px;
+    text-align: center;
+  }
+
+  .layout-master.is-data-workspace[data-scene-id='ticker-tape']
+    .data-workspace-table:not(.data-workspace-review-table)
+    .data-workspace-check {
+    box-sizing: border-box;
+    height: 87px;
+    min-height: 87px;
+    max-height: 87px;
+    min-width: 8rem;
+    padding: 0 0.8rem;
+    font-size: 54px;
+    line-height: 87px;
+  }
+
+  .layout-master.is-data-workspace[data-scene-id='ticker-tape']
+    .data-workspace-table:not(.data-workspace-review-table)
+    .data-workspace-status {
+    font-size: 54px;
+    line-height: 1.15;
+  }
+
+  .layout-master.is-data-workspace.is-data-workspace-chart[data-scene-id='ticker-tape']
+    .data-workspace-review-table {
+    font-size: 44px;
+    font-weight: 700;
+  }
+
+  .layout-master.is-data-workspace[data-scene-id='ticker-tape'] {
+    --dw-canvas-title: 48;
+    --dw-canvas-tick: 40;
+    --dw-canvas-axis: 44;
+  }
+}
+
 .data-workspace-header {
   display: flex;
   align-items: center;
@@ -440,6 +520,48 @@
   outline-offset: 1px;
 }
 
+.data-workspace-stage-splitter {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  box-sizing: border-box;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: row-resize;
+  touch-action: none;
+  transform: translateY(-50%);
+}
+
+.data-workspace-stage-splitter::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  transform: translateY(-50%);
+  background: var(--border-color);
+  pointer-events: none;
+}
+
+.data-workspace-stage-splitter:hover::before,
+.data-workspace-stage-splitter:focus-visible::before {
+  background: var(--accent-color);
+}
+
+.data-workspace-stage-splitter:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent-color) 45%, transparent);
+  outline-offset: 1px;
+}
+
+.data-workspace-stage-splitter[hidden] {
+  display: none !important;
+}
+
 .layout-master.is-data-workspace.is-data-workspace-chart
   .data-workspace-chart-stage
   > .data-workspace-chart {
@@ -455,6 +577,55 @@
   border: 1px solid var(--border-color);
   border-radius: 0.5rem;
   background: var(--bg-primary);
+}
+
+/* Below the 1080p tier, recap rows still match the 44px data inputs
+   instead of collapsing to a 1.15 line and 0.02rem of vertical padding. */
+@media (min-height: 640px) {
+  .layout-master.is-data-workspace[data-scene-id='ticker-tape']
+    .data-workspace-review-table
+    :is(th, td) {
+    box-sizing: border-box;
+    height: 44px;
+    padding-top: 0;
+    padding-bottom: 0;
+    vertical-align: middle;
+  }
+}
+
+/* After the 44px rule so 1080p cells stay 58px. Cells set font-size
+   themselves, so a table-level 44px does not reach the digits. */
+@media (min-width: 1600px) and (min-height: 900px) {
+  .layout-master.is-data-workspace[data-scene-id='ticker-tape']
+    .data-workspace-review-table
+    :is(th, td) {
+    box-sizing: border-box;
+    height: 58px;
+    padding-top: 0;
+    padding-bottom: 0;
+    font-size: 44px;
+    font-weight: 700;
+    line-height: 1.15;
+    vertical-align: middle;
+  }
+}
+
+@media (min-height: 640px) {
+  .layout-master.is-data-workspace.is-data-workspace-chart
+    .data-workspace-chart-stage[data-split-mode='even']
+    > .data-workspace-review {
+    flex: 1 1 0;
+    height: auto;
+    max-height: none;
+    min-height: 0;
+  }
+
+  .layout-master.is-data-workspace.is-data-workspace-chart
+    .data-workspace-chart-stage[data-split-mode='even']
+    > .data-workspace-chart {
+    flex: 1 1 0;
+    min-height: 0;
+  }
 }
 
 .data-workspace-chart-stage[hidden],
@@ -706,7 +877,7 @@
     .lab-readout-slot,
     [aria-label='实验状态']
   ),
-.teaching-demo.split-right-shell.is-data-workspace [role='separator'],
+.teaching-demo.split-right-shell.is-data-workspace .teaching-panel-resizer,
 .layout-srgb-graph-bottom.is-data-workspace .srgb-resizer-v,
 .layout-master.is-data-workspace:not(.is-data-workspace-chart)
   :is(.teaching-graph-section, .srgb-graph-section, .lab-float-graph),
@@ -769,21 +940,66 @@
   overflow-y: auto;
 }
 
-/* 纸带尺是一条扁仪器。只在 ticker-tape 的数据步把舞台收到能读尺的高度，
-   剩下的给表，避免尺在空白带里垂直居中。双缝等其他 lab-stage 场景保持
-   舞台 flex 增长，否则 220px 会裁掉第 6 步仪器。图像分析仍把舞台收成工具条。 */
+/* Specs that opt into stageHalfSplit set data-stage-half while the data
+   step is open and the viewport is at least 640px tall. The attribute is
+   absent for every other scene, so their stage keeps growing. */
 @media (min-height: 640px) {
-  .lab-stage-layout.layout-master.is-data-workspace[data-scene-id='ticker-tape']:not(
+  .lab-stage-layout.layout-master.is-data-workspace[data-stage-half='true']:not(
       .is-data-workspace-chart
     )
     .lab-stage-anim {
-    flex: 0 1 auto;
-    min-height: 240px;
-    height: clamp(240px, 28vh, 320px);
+    flex: 0 0 50%;
+    min-height: 0;
+    height: auto;
     max-height: none;
   }
 
-  .lab-stage-layout.layout-master.is-data-workspace[data-scene-id='ticker-tape']:not(
+  .lab-stage-layout.layout-master.is-data-workspace[data-stage-half='true']:not(
+      .is-data-workspace-chart
+    )
+    .data-workspace-panel {
+    flex: 1 1 auto;
+    max-height: none;
+    min-height: 0;
+  }
+
+  :is(
+      .teaching-demo.split-right-shell,
+      .layout-srgb-graph-bottom
+    ).layout-master.is-data-workspace[data-stage-half='true']:not(
+      .is-data-workspace-chart
+    )
+    :is(.teaching-stage-frame, .srgb-stage-frame) {
+    flex: 0 0 50%;
+    min-height: 0;
+    height: auto;
+    max-height: none;
+  }
+
+  :is(
+      .teaching-demo.split-right-shell,
+      .layout-srgb-graph-bottom
+    ).layout-master.is-data-workspace[data-stage-half='true']:not(
+      .is-data-workspace-chart
+    )
+    .data-workspace-panel {
+    flex: 1 1 auto;
+    max-height: none;
+    min-height: 0;
+  }
+
+  /* Inline height on the mobile stage must lose to the same half split. */
+  .mobile-stack-layout.layout-master.is-data-workspace[data-stage-half='true']:not(
+      .is-data-workspace-chart
+    )
+    .mobile-animation-section {
+    flex: 0 0 50% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+  }
+
+  .mobile-stack-layout.layout-master.is-data-workspace[data-stage-half='true']:not(
       .is-data-workspace-chart
     )
     .data-workspace-panel {
@@ -793,22 +1009,54 @@
   }
 }
 
-/* 窄屏顶栏和运输条叠在舞台中部。240px 舞台只能把尺挤进顶栏。
-   舞台加高到视口四成以内，纸带改画在运输条下面。宽屏 1080p 不进这条。 */
-@media (max-width: 720px) and (min-height: 640px) {
-  .lab-stage-layout.layout-master.is-data-workspace[data-scene-id='ticker-tape']:not(
-      .is-data-workspace-chart
-    )
-    .lab-stage-anim {
-    height: calc(40vh - 8px);
-    min-height: calc(40vh - 8px);
-    max-height: calc(40vh - 8px);
-  }
+/* Theme and layout buttons float on the stage, the same place as lab-stage.
+   A flex toolbar row would make the half split shorter than the viewport. */
+:is(
+    .teaching-demo.split-right-shell,
+    .layout-srgb-graph-bottom
+  ).layout-master.is-data-workspace[data-scene-id='ticker-tape']
+  :is(.teaching-right-panel, .srgb-right-panel) {
+  position: relative;
+}
 
-  /* 缩放按钮默认贴舞台右下角，会压住窄屏纸带尺的右端。改到左上空白。 */
-  .lab-stage-layout.layout-master.is-data-workspace[data-scene-id='ticker-tape']:not(
+:is(
+    .teaching-demo.split-right-shell,
+    .layout-srgb-graph-bottom
+  ).layout-master.is-data-workspace[data-scene-id='ticker-tape']
+  :is(.teaching-stage-toolbar, .srgb-stage-toolbar) {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  left: auto;
+  z-index: 30;
+  width: auto;
+  max-width: calc(100% - 1.5rem);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.mobile-stack-layout.layout-master.is-data-workspace[data-scene-id='ticker-tape'] {
+  position: relative;
+}
+
+.mobile-stack-layout.layout-master.is-data-workspace[data-scene-id='ticker-tape']
+  .mobile-control-bar {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  left: 0.35rem;
+  z-index: 40;
+  border: 0;
+  background: transparent;
+}
+
+/* 窄屏缩放按钮默认贴舞台右下角，会压住纸带尺的右端。改到左上空白。 */
+@media (max-width: 720px) and (min-height: 640px) {
+  .layout-master.is-data-workspace[data-scene-id='ticker-tape']:not(
       .is-data-workspace-chart
-    )
+    ):not(.mobile-stack-layout)
     .stage-panzoom-controls {
     top: 0.35rem;
     bottom: auto;
@@ -907,7 +1155,11 @@
 
 .mobile-stack-layout.is-data-workspace.is-data-workspace-chart
   .mobile-animation-section {
-  display: none !important;
+  display: block !important;
+  flex: 0 0 4.5rem !important;
+  height: 4.5rem !important;
+  min-height: 0 !important;
+  max-height: 4.5rem !important;
 }
 
 .mobile-stack-layout.is-data-workspace .mobile-animation-section {
@@ -1203,5 +1455,15 @@
     flex: 0 0 auto;
     padding: 0.05rem 0.3rem;
     gap: 0.25rem;
+  }
+
+  /* Show the whole compact recap. The shared 3.5rem cap left only the header. */
+  .layout-master.is-data-workspace.is-data-workspace-chart[data-scene-id='ticker-tape']
+    .data-workspace-chart-stage:not([data-split-mode='manual'])
+    > .data-workspace-review {
+    flex: 0 0 auto;
+    height: auto;
+    max-height: none;
+    overflow: visible;
   }
 }

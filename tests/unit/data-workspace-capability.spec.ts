@@ -214,13 +214,217 @@ describe('data-workspace capability lifecycle', () => {
     (
       container.querySelector('.graph-analysis-entry') as HTMLButtonElement
     ).click();
-    expect(chart?.contains(graphSection)).toBe(false);
+    expect(container.classList.contains('is-data-workspace-chart')).toBe(true);
+    expect(chart?.contains(graphSection)).toBe(true);
+    (
+      container.querySelector('.graph-analysis-entry') as HTMLButtonElement
+    ).click();
     expect(container.classList.contains('is-data-workspace-chart')).toBe(false);
+    expect(chart?.contains(graphSection)).toBe(false);
+    expect(graphSection.parentElement).toBe(container);
 
     btn.click();
     expect(container.querySelector('[data-data-workspace-chart]')).toBeNull();
     expect(graphSection.parentElement).toBe(container);
     instance.dispose();
+  });
+
+  it('keeps chart entry disabled when the scene is not eligible', () => {
+    const container = document.createElement('div');
+    const animation = document.createElement('div');
+    animation.className = 'teaching-stage-frame';
+    const graph = document.createElement('div');
+    graph.className = 'graph-slot';
+    container.append(animation, graph);
+    const slots: LayoutSlots = {
+      control: document.createElement('div'),
+      animation,
+      graph
+    };
+    const host = createHost(specWithChart(true));
+    host.getEligibility = () => ({ ok: false, reason: '请先暂停再处理数据' });
+    const instance = createDataWorkspace().mount(
+      slots,
+      {},
+      createCtx(container)
+    );
+    instance.update?.({ host });
+    const chart = container.querySelector(
+      '.graph-analysis-entry'
+    ) as HTMLButtonElement;
+    expect(chart.disabled).toBe(true);
+    expect(chart.title).toBe('请先暂停再处理数据');
+    chart.click();
+    expect(container.classList.contains('is-data-workspace')).toBe(false);
+    expect(container.classList.contains('is-data-workspace-chart')).toBe(false);
+    instance.dispose();
+  });
+
+  it('drags the stage boundary and drops an out-of-range stored ratio', () => {
+    const previous = window.innerHeight;
+    Object.defineProperty(window, 'innerHeight', {
+      configurable: true,
+      value: 800
+    });
+    localStorage.setItem('dw-stage-split-stage-half', '0.05');
+    const container = document.createElement('div');
+    container.className = 'lab-stage-layout';
+    const main = document.createElement('div');
+    main.className = 'lab-stage-main';
+    const anim = document.createElement('div');
+    anim.className = 'lab-stage-anim';
+    main.append(anim);
+    container.append(main);
+    document.body.append(container);
+    Object.defineProperty(main, 'clientHeight', {
+      configurable: true,
+      value: 1000
+    });
+    vi.spyOn(main, 'getBoundingClientRect').mockReturnValue({
+      x: 0,
+      y: 0,
+      top: 0,
+      left: 0,
+      right: 800,
+      bottom: 1000,
+      width: 800,
+      height: 1000,
+      toJSON() {
+        return {};
+      }
+    });
+    const host = createHost({
+      id: 'stage-half',
+      stageHalfSplit: true,
+      chartAnalysis: false
+    });
+    const slots: LayoutSlots = {
+      control: document.createElement('div'),
+      animation: anim
+    };
+    const instance = createDataWorkspace().mount(
+      slots,
+      {},
+      createCtx(container)
+    );
+    instance.update?.({ host });
+    (
+      container.querySelector('.data-workspace-entry') as HTMLButtonElement
+    ).click();
+    const splitter = container.querySelector(
+      '.data-workspace-stage-splitter'
+    ) as HTMLElement;
+    expect(splitter).toBeTruthy();
+    expect(splitter.style.touchAction).toBe('none');
+    expect(splitter.hidden).toBe(false);
+    expect(container.getAttribute('data-stage-half')).toBe('true');
+    expect(splitter.getAttribute('aria-valuemin')).toBe('28');
+    expect(splitter.getAttribute('aria-valuemax')).toBe('72');
+    expect(splitter.getAttribute('aria-valuenow')).toBe('50');
+    splitter.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        clientY: 400,
+        pointerId: 1,
+        bubbles: true
+      })
+    );
+    expect(anim.style.flex).toBe('0 0 40.00%');
+    expect(splitter.getAttribute('aria-valuenow')).toBe('40');
+    expect(localStorage.getItem('dw-stage-split-stage-half')).toBe('0.4');
+    instance.dispose();
+    expect(
+      container.querySelector('.data-workspace-stage-splitter')
+    ).toBeNull();
+    localStorage.removeItem('dw-stage-split-stage-half');
+    Object.defineProperty(window, 'innerHeight', {
+      configurable: true,
+      value: previous
+    });
+  });
+
+  it('excludes a toolbar sibling when dragging a split stage boundary', () => {
+    const previous = window.innerHeight;
+    Object.defineProperty(window, 'innerHeight', {
+      configurable: true,
+      value: 1080
+    });
+    localStorage.setItem('dw-stage-split-stage-half', '0.05');
+    const container = document.createElement('div');
+    container.className = 'teaching-demo split-right-shell layout-master';
+    const panel = document.createElement('section');
+    panel.className = 'teaching-right-panel';
+    const toolbar = document.createElement('div');
+    toolbar.className = 'teaching-stage-toolbar stage-toolbar';
+    const frame = document.createElement('div');
+    frame.className = 'teaching-stage-frame';
+    panel.append(toolbar, frame);
+    container.append(panel);
+    document.body.append(container);
+    Object.defineProperty(panel, 'clientHeight', {
+      configurable: true,
+      value: 1080
+    });
+    Object.defineProperty(frame, 'offsetTop', {
+      configurable: true,
+      value: 80
+    });
+    Object.defineProperty(frame, 'offsetHeight', {
+      configurable: true,
+      value: 500
+    });
+    vi.spyOn(panel, 'getBoundingClientRect').mockReturnValue({
+      x: 0,
+      y: 0,
+      top: 0,
+      left: 0,
+      right: 800,
+      bottom: 1080,
+      width: 800,
+      height: 1080,
+      toJSON() {
+        return {};
+      }
+    });
+    const host = createHost({
+      id: 'stage-half',
+      stageHalfSplit: true,
+      chartAnalysis: false
+    });
+    const instance = createDataWorkspace().mount(
+      {
+        control: document.createElement('div'),
+        animation: frame
+      },
+      {},
+      createCtx(container)
+    );
+    instance.update?.({ host });
+    (
+      container.querySelector('.data-workspace-entry') as HTMLButtonElement
+    ).click();
+    const splitter = container.querySelector(
+      '.data-workspace-stage-splitter'
+    ) as HTMLElement;
+    expect(splitter.parentElement).toBe(panel);
+    expect(container.getAttribute('data-stage-half')).toBe('true');
+    expect(frame.style.flex).toBe('');
+    expect(splitter.style.top).toBe('580px');
+    splitter.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        clientY: 480,
+        pointerId: 1,
+        bubbles: true
+      })
+    );
+    expect(frame.style.flex).toBe('0 0 400px');
+    expect(splitter.getAttribute('aria-valuenow')).toBe('40');
+    expect(localStorage.getItem('dw-stage-split-stage-half')).toBe('0.4');
+    instance.dispose();
+    localStorage.removeItem('dw-stage-split-stage-half');
+    Object.defineProperty(window, 'innerHeight', {
+      configurable: true,
+      value: previous
+    });
   });
 
   it('locks the stage and adopts the graph only on the chart step', () => {

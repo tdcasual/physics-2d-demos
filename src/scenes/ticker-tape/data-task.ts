@@ -44,6 +44,8 @@ export const tickerTapeDataWorkspaceSpec: DataWorkspaceSpec = {
   id: 'ticker-tape-vt',
   title: '纸带数据处理与 v–t 图像分析',
   chartAnalysis: true,
+  stageHalfSplit: true,
+  chartEvenSplit: true,
   enabledSteps: ['reading', 'data', 'calculation', 'chartAnalysis'],
   trialCount: 7,
   minRows: 7,

@@ -47,7 +47,8 @@ describe('data-workspace panel architecture', () => {
       'utf8'
     );
     expect(capabilitySource).toContain('图像分析');
-    expect(capabilitySource).toContain('请先完成数据处理');
+    expect(capabilitySource).toContain('进入图像分析环节');
+    expect(capabilitySource).not.toContain('请先完成数据处理再进入图像分析');
   });
 });
 

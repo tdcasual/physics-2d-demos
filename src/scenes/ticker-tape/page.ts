@@ -168,6 +168,10 @@ bootScenePage({
 
     function syncPlotBar(): void {
       const status = tape.getPlotStatus();
+      scatterBtn.disabled = !status.canScatter;
+      scatterBtn.title = status.canScatter
+        ? '按已校对的数据描点'
+        : '数据校对完成后才能描点';
       scatterBtn.setAttribute('aria-pressed', String(status.hasScatter));
       fitBtn.disabled = !status.canFit;
       fitBtn.setAttribute('aria-pressed', String(status.hasFit));

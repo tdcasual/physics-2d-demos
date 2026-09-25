@@ -140,6 +140,18 @@ export type DataWorkspaceSpec = {
    * own pointer drag should mark `data-panzoom-ignore`.
    */
   stagePanZoom?: boolean;
+  /**
+   * At height >= 640px, every layout that has a stage frame starts the
+   * animation and the panel at half height, with a draggable boundary.
+   * Absent keeps that layout's own stage height.
+   */
+  stageHalfSplit?: boolean;
+  /**
+   * Chart step starts with the review and the plot at equal height when the
+   * viewport is at least 640px and no split ratio is stored. Absent means
+   * the review follows its content.
+   */
+  chartEvenSplit?: boolean;
   /** Per-trial display labels (e.g. counting points 0..6). Default: 1-based 组号. */
   trialLabels?: readonly string[];
   rowFields: readonly DataWorkspaceFieldSpec[];

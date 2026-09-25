@@ -306,6 +306,41 @@ function palette(theme: TeachingTheme) {
  * 贴顶的条（桌面）从它下沿留白，下沿约 82px 时下限仍是 88。
  * 窄屏工具条在舞台中部：下方够放尺就排在它下面，否则留在上方空带。
  */
+const TAPE_SCALE_FLOOR = 240;
+const TAPE_SCALE_CEIL = 320;
+
+/** Height the data-step stage used before the half split, for glyph size. */
+export function tapeScaleCap(
+  viewportWidth: number,
+  viewportHeight: number
+): number {
+  if (viewportWidth <= 720) return viewportHeight * 0.4 - 8;
+  const fromViewport = viewportHeight * 0.28;
+  return Math.min(TAPE_SCALE_CEIL, Math.max(TAPE_SCALE_FLOOR, fromViewport));
+}
+
+function legacyTapeBox(canvas: HTMLCanvasElement, cssBox: number): number {
+  const root = canvas.closest('.layout-master');
+  if (!(root instanceof HTMLElement)) return cssBox;
+  if (!root.classList.contains('is-data-workspace')) return cssBox;
+  if (root.classList.contains('is-data-workspace-chart')) return cssBox;
+  if (typeof window === 'undefined' || window.innerHeight < 640) return cssBox;
+  return Math.min(cssBox, tapeScaleCap(window.innerWidth, window.innerHeight));
+}
+
+const WORKSPACE_STAGE_FRAME =
+  '.lab-stage-anim, .teaching-stage-frame, .srgb-stage-frame, .mobile-animation-section';
+
+/** Transport bar inside the stage frame. The mobile control bar is not one. */
+export function findWorkspaceTransportBar(
+  canvas: HTMLCanvasElement
+): HTMLElement | null {
+  const frame = canvas.closest(WORKSPACE_STAGE_FRAME);
+  const bar = frame?.querySelector('.stage-floating-controls');
+  if (!(bar instanceof HTMLElement) || bar.offsetHeight < 1) return null;
+  return bar;
+}
+
 function workspaceTapeBand(
   canvas: HTMLCanvasElement,
   height: number
@@ -313,10 +348,8 @@ function workspaceTapeBand(
   if (!canvas.closest('.is-data-workspace')) {
     return { chromeFloor: 48, bottom: height };
   }
-  const bar = canvas
-    .closest('.lab-stage-anim')
-    ?.querySelector<HTMLElement>('.stage-floating-controls');
-  if (!(bar instanceof HTMLElement) || bar.offsetHeight < 1) {
+  const bar = findWorkspaceTransportBar(canvas);
+  if (!bar) {
     return { chromeFloor: 88, bottom: height };
   }
   const barTop = bar.offsetTop;
@@ -333,6 +366,14 @@ function workspaceTapeBand(
 
 export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
   const canvas = options.canvas ?? document.createElement('canvas');
+  let readPointsOpen: () => boolean = () => false;
+  function pointsOpen(): boolean {
+    try {
+      return readPointsOpen();
+    } catch {
+      return false;
+    }
+  }
   const env = createViewEnvironment({
     theme: options.theme ?? 'light',
     mode: options.mode ?? 'normal',
@@ -494,6 +535,8 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     hasFit: boolean;
     /** 任一图已描点（工具条状态）。 */
     hasScatter: boolean;
+    /** 数据校对完成，允许描点。 */
+    canScatter: boolean;
     dirty: boolean;
     canFit: boolean;
   } {
@@ -516,13 +559,15 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     });
     const x = series('x', xPts.length);
     const v = series('v', vPts.length);
+    const open = pointsOpen();
     return {
       x,
       v,
       hasFit: v.fitted,
       hasScatter: plotted.x || plotted.v,
       dirty,
-      canFit: x.canFit || v.canFit
+      canScatter: open,
+      canFit: open && (x.canFit || v.canFit)
     };
   }
 
@@ -548,7 +593,10 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     const w = stage.cssWidth;
     const h = stage.cssHeight;
     if (w <= 0 || h <= 0) return;
-    const scale = stage.responsiveScale * env.contentScale();
+    const boxH = legacyTapeBox(canvas, h);
+    const scale =
+      (boxH === h ? stage.responsiveScale : getResponsiveScale(w, boxH)) *
+      env.contentScale();
     const tokens = getRenderTokens(scale);
     const colors = palette(env.theme);
     ctx.clearRect(0, 0, w, h);
@@ -559,7 +607,7 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     const gap = scaledSize(8, scale, 5);
     const topReserve = scaledSize(20, scale, 12);
     const captionGap = scaledSize(18, scale, 12);
-    const band = workspaceTapeBand(canvas, h);
+    const band = workspaceTapeBand(canvas, boxH);
     const chromeTop = scaledSize(52, scale, band.chromeFloor);
     const minTapeH = tokens.pointRadiusPx * 1.45;
     const minRulerH = tokens.pointRadiusPx * 4.2;
@@ -828,7 +876,7 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     ctx.strokeStyle = colors.tapeEdge;
     ctx.strokeRect(0.5, 0.5, Math.max(1, box.w - 1), Math.max(1, box.h - 1));
     ctx.fillStyle = colors.text;
-    ctx.font = `600 ${titlePx}px ui-sans-serif, sans-serif`;
+    ctx.font = `700 ${titlePx}px ui-sans-serif, sans-serif`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     ctx.fillText(title, 8, 6);
@@ -878,7 +926,7 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
 
     ctx.strokeStyle = colors.tick;
     ctx.fillStyle = colors.muted;
-    ctx.font = `${tickPx}px ui-sans-serif, sans-serif`;
+    ctx.font = `700 ${tickPx}px ui-sans-serif, sans-serif`;
     ctx.textBaseline = 'top';
     ctx.textAlign = 'center';
     ctx.lineWidth = Math.max(1, tokens.strokePx * 0.18);
@@ -914,7 +962,7 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     }
 
     ctx.fillStyle = colors.muted;
-    ctx.font = `${axisPx}px ui-sans-serif, sans-serif`;
+    ctx.font = `700 ${axisPx}px ui-sans-serif, sans-serif`;
     ctx.textAlign = 'right';
     ctx.textBaseline = 'bottom';
     ctx.fillText('t / s', plot.r - 2, plot.b - scaledSize(3, scale, 2));
@@ -928,10 +976,14 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
 
     if (!stage.showPoints) {
       ctx.fillStyle = colors.muted;
-      ctx.font = `${tickPx}px ui-sans-serif, sans-serif`;
+      ctx.font = `700 ${tickPx}px ui-sans-serif, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('点击描点', (plot.l + plot.r) / 2, (plot.t + plot.b) / 2);
+      ctx.fillText(
+        pointsOpen() ? '点击描点' : '数据校对完成后才能描点',
+        (plot.l + plot.r) / 2,
+        (plot.t + plot.b) / 2
+      );
       ctx.restore();
       return tickClearance;
     }
@@ -1050,6 +1102,9 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     canvas.dataset.graphTitlePx = String(Math.round(typePx.title));
     canvas.dataset.graphTickPx = String(Math.round(typePx.tick));
     canvas.dataset.graphAxisPx = String(Math.round(typePx.axis));
+    canvas.dataset.plotHint = pointsOpen()
+      ? '点击描点'
+      : '数据校对完成后才能描点';
     let tickClearance = Number.POSITIVE_INFINITY;
     const status = plotStatus(state);
     const now = performance.now();
@@ -1262,6 +1317,7 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
       delete anims.v;
     },
     plotScatter(state: TickerTapeState): void {
+      if (!pointsOpen()) return;
       const kinds = selectedKinds();
       if (kinds.length === 0) return;
       if (kinds.includes('x')) {
@@ -1278,6 +1334,7 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
       }
     },
     plotFit(state: TickerTapeState): boolean {
+      if (!pointsOpen()) return false;
       const status = plotStatus(state);
       const kinds = selectedKinds().filter((kind) => status[kind].canFit);
       if (kinds.length === 0) return false;
@@ -1293,6 +1350,9 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     },
     getPlotStatus(state: TickerTapeState) {
       return plotStatus(state);
+    },
+    setPlotGateReader(reader: () => boolean): void {
+      readPointsOpen = reader;
     },
     setTheme(t: TeachingTheme): void {
       env.setTheme(t);

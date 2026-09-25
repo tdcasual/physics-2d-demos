@@ -17,7 +17,6 @@ import type {
   LayoutSlots
 } from '../types';
 import {
-  chartStepReady,
   shouldEnableStagePanZoom,
   shouldShowChartAnalysis,
   type DataWorkspaceHost
@@ -117,6 +116,7 @@ export function createDataWorkspace(): CapabilityDefinition<
       let chartMode = false;
       let panel: ReturnType<typeof createDataWorkspacePanel> | null = null;
       let panzoom: StagePanzoomHandle | null = null;
+      let stageSplitter: HTMLElement | null = null;
       let adoptedGraph: {
         node: HTMLElement;
         mover: MovedNode;
@@ -139,7 +139,7 @@ export function createDataWorkspace(): CapabilityDefinition<
 
       // 图像分析环节入口（独立环节，非面板内步骤）。仅在场景声明
       // chartAnalysis 时创建——非图像分析场景的 DOM 里没有第二个按钮。
-      // disabled = 数据处理未完成（chartStepReady，忽略选填项）。
+      // 资格通过即可进入；描点仍由场景在数据完成后开放。
       let chartBtn: HTMLButtonElement | null = null;
       function ensureChartButton(): HTMLButtonElement {
         if (!chartBtn) {
@@ -166,6 +166,7 @@ export function createDataWorkspace(): CapabilityDefinition<
           exitWorkspace(false);
         } else {
           syncButton();
+          syncChartButton();
         }
       });
 
@@ -175,9 +176,10 @@ export function createDataWorkspace(): CapabilityDefinition<
         return eligibility.ok ? '' : eligibility.reason;
       }
 
-      function chartReady(): boolean {
-        if (!host || !chromeOpen) return false;
-        return chartStepReady(host.getSession(), host.getSpec());
+      function chartEntryAllowed(): boolean {
+        if (!host) return false;
+        if (ctx.getMode() === 'presentation') return false;
+        return host.getEligibility().ok;
       }
 
       function syncChartButton(): void {
@@ -187,15 +189,15 @@ export function createDataWorkspace(): CapabilityDefinition<
         }
         const cb = ensureChartButton();
         cb.hidden = false;
-        if (!chromeOpen || !chartMode) {
-          const ready = chartReady();
-          cb.disabled = !ready;
-          cb.setAttribute('aria-disabled', String(!ready));
+        if (!chartMode) {
+          const allowed = chartEntryAllowed();
+          cb.disabled = !allowed;
+          cb.setAttribute('aria-disabled', String(!allowed));
           cb.setAttribute('aria-pressed', 'false');
           cb.textContent = '图像分析';
-          cb.title = ready
+          cb.title = allowed
             ? '进入图像分析环节'
-            : '请先完成数据处理再进入图像分析';
+            : eligibilityReason() || '当前场景未提供数据任务';
         } else {
           cb.disabled = false;
           cb.setAttribute('aria-disabled', 'false');
@@ -206,16 +208,18 @@ export function createDataWorkspace(): CapabilityDefinition<
       }
 
       function enterChartMode(): void {
-        if (!chromeOpen || chartMode || !host) return;
-        // The panel first harvests live input drafts, then applies the same
-        // readiness guard. The session alone may still contain old checked data.
-        if (!panel?.setChartMode(true)) {
+        if (chartMode || !host || !chartEntryAllowed()) return;
+        if (!chromeOpen) enterWorkspace();
+        if (!chromeOpen || !panel) return;
+        if (!panel.setChartMode(true)) {
           syncChartButton();
+          syncStageSplitter();
           return;
         }
         chartMode = true;
         syncButton();
         syncChartButton();
+        syncStageSplitter();
       }
 
       function exitChartMode(): void {
@@ -224,6 +228,7 @@ export function createDataWorkspace(): CapabilityDefinition<
         panel?.setChartMode(false);
         syncButton();
         syncChartButton();
+        syncStageSplitter();
       }
 
       function syncButton(): void {
@@ -306,6 +311,224 @@ export function createDataWorkspace(): CapabilityDefinition<
           ctx.container.classList.remove(CHART_CLASS);
         }
         requestLayoutResize();
+        syncStageSplitter();
+      }
+
+      const STAGE_SPLIT_MIN = 0.28;
+      const STAGE_SPLIT_MAX = 0.72;
+
+      function stageSplitKey(): string {
+        const id = host?.getSpec().id ?? '';
+        return `dw-stage-split-${id}`;
+      }
+
+      function stageColumn(): HTMLElement | null {
+        const found =
+          ctx.container.querySelector('.lab-stage-main') ??
+          ctx.container.querySelector('.teaching-right-panel') ??
+          ctx.container.querySelector('.srgb-right-panel');
+        if (found instanceof HTMLElement) return found;
+        if (ctx.container.classList.contains('mobile-stack-layout')) {
+          return ctx.container;
+        }
+        return null;
+      }
+
+      function stageFrame(): HTMLElement | null {
+        const column = stageColumn();
+        if (!column) return null;
+        const found =
+          column.querySelector('.lab-stage-anim') ??
+          column.querySelector('.teaching-stage-frame') ??
+          column.querySelector('.srgb-stage-frame') ??
+          column.querySelector('.mobile-animation-section');
+        return found instanceof HTMLElement ? found : null;
+      }
+
+      function readStageSplit(): number | null {
+        try {
+          const stored = Number(window.localStorage.getItem(stageSplitKey()));
+          if (
+            Number.isFinite(stored) &&
+            stored >= STAGE_SPLIT_MIN &&
+            stored <= STAGE_SPLIT_MAX
+          ) {
+            return stored;
+          }
+        } catch {
+          /* storage may be unavailable */
+        }
+        return null;
+      }
+
+      function stageHalfActive(): boolean {
+        return (
+          Boolean(host?.getSpec().stageHalfSplit) &&
+          chromeOpen &&
+          !ctx.container.classList.contains(CHART_CLASS) &&
+          window.innerHeight >= 640 &&
+          stageFrame() !== null
+        );
+      }
+
+      function placeStageSplitter(ratio: number): void {
+        const frame = stageFrame();
+        if (!stageSplitter || !frame) return;
+        stageSplitter.hidden = false;
+        stageSplitter.setAttribute(
+          'aria-valuenow',
+          String(Math.round(ratio * 100))
+        );
+        stageSplitter.style.top = `${frame.offsetTop + frame.offsetHeight}px`;
+      }
+
+      function applyStageRatio(ratio: number, persist: boolean): void {
+        const frame = stageFrame();
+        const column = stageColumn();
+        if (!frame || !column) return;
+        const clamped = Math.max(
+          STAGE_SPLIT_MIN,
+          Math.min(STAGE_SPLIT_MAX, ratio)
+        );
+        const offsetTop = frame.offsetTop;
+        if (offsetTop > 0) {
+          const span = Math.max(0, column.clientHeight - offsetTop);
+          frame.style.flex = `0 0 ${(clamped * span).toFixed(2)}px`;
+        } else {
+          frame.style.flex = `0 0 ${(clamped * 100).toFixed(2)}%`;
+        }
+        placeStageSplitter(clamped);
+        if (!persist) return;
+        try {
+          window.localStorage.setItem(
+            stageSplitKey(),
+            String(Math.round(clamped * 1000) / 1000)
+          );
+        } catch {
+          /* private mode */
+        }
+      }
+
+      function useDefaultStageSplit(): void {
+        const frame = stageFrame();
+        if (frame) frame.style.flex = '';
+        if (stageSplitter) stageSplitter.removeAttribute('aria-valuetext');
+        placeStageSplitter(0.5);
+        requestAnimationFrame(() => {
+          if (!stageHalfActive()) return;
+          placeStageSplitter(0.5);
+        });
+      }
+
+      function bindStageSplitter(handle: HTMLElement): void {
+        const ratioFromPointer = (clientY: number): number => {
+          const column = stageColumn();
+          const frame = stageFrame();
+          if (!column || !frame) return STAGE_SPLIT_MIN;
+          const rect = column.getBoundingClientRect();
+          const span = (column.clientHeight || rect.height) - frame.offsetTop;
+          if (span <= 0) return STAGE_SPLIT_MIN;
+          return Math.max(
+            STAGE_SPLIT_MIN,
+            Math.min(
+              STAGE_SPLIT_MAX,
+              (clientY - rect.top - frame.offsetTop) / span
+            )
+          );
+        };
+        handle.addEventListener(
+          'pointerdown',
+          (event) => {
+            try {
+              if (typeof handle.setPointerCapture === 'function') {
+                handle.setPointerCapture(event.pointerId);
+              }
+            } catch {
+              /* capture is optional */
+            }
+            applyStageRatio(ratioFromPointer(event.clientY), true);
+            const move = (moveEvent: PointerEvent): void => {
+              applyStageRatio(ratioFromPointer(moveEvent.clientY), true);
+            };
+            const up = (): void => {
+              handle.removeEventListener('pointermove', move);
+              handle.removeEventListener('pointerup', up);
+              handle.removeEventListener('pointercancel', up);
+            };
+            handle.addEventListener('pointermove', move);
+            handle.addEventListener('pointerup', up);
+            handle.addEventListener('pointercancel', up);
+          },
+          { signal: ac.signal }
+        );
+        handle.addEventListener(
+          'keydown',
+          (event) => {
+            const frame = stageFrame();
+            const column = stageColumn();
+            const span = column
+              ? column.clientHeight - (frame?.offsetTop ?? 0)
+              : 0;
+            const current = frame && span > 0 ? frame.offsetHeight / span : 0.5;
+            const step =
+              event.key === 'PageUp' || event.key === 'PageDown' ? 0.05 : 0.01;
+            if (event.key === 'ArrowUp' || event.key === 'PageUp') {
+              event.preventDefault();
+              applyStageRatio(current - step, true);
+            } else if (event.key === 'ArrowDown' || event.key === 'PageDown') {
+              event.preventDefault();
+              applyStageRatio(current + step, true);
+            } else if (event.key === 'Home') {
+              event.preventDefault();
+              applyStageRatio(STAGE_SPLIT_MIN, true);
+            } else if (event.key === 'End') {
+              event.preventDefault();
+              applyStageRatio(STAGE_SPLIT_MAX, true);
+            }
+          },
+          { signal: ac.signal }
+        );
+      }
+
+      function ensureStageSplitter(): HTMLElement | null {
+        const column = stageColumn();
+        if (!column) return null;
+        if (!stageSplitter) {
+          stageSplitter = document.createElement('div');
+          stageSplitter.className = 'data-workspace-stage-splitter';
+          stageSplitter.setAttribute('role', 'separator');
+          stageSplitter.setAttribute('aria-orientation', 'horizontal');
+          stageSplitter.setAttribute('aria-valuemin', '28');
+          stageSplitter.setAttribute('aria-valuemax', '72');
+          stageSplitter.setAttribute('aria-label', '调整动画区与数据面板分界');
+          stageSplitter.tabIndex = 0;
+          stageSplitter.style.touchAction = 'none';
+          bindStageSplitter(stageSplitter);
+        }
+        if (stageSplitter.parentElement !== column)
+          column.appendChild(stageSplitter);
+        return stageSplitter;
+      }
+
+      function clearStageSplitInline(): void {
+        const frame = stageFrame();
+        if (frame) frame.style.flex = '';
+      }
+
+      function syncStageSplitter(): void {
+        if (!stageHalfActive()) {
+          ctx.container.removeAttribute('data-stage-half');
+          clearStageSplitInline();
+          if (stageSplitter) stageSplitter.hidden = true;
+          return;
+        }
+        ctx.container.setAttribute('data-stage-half', 'true');
+        const handle = ensureStageSplitter();
+        if (!handle) return;
+        handle.hidden = false;
+        const stored = readStageSplit();
+        if (stored == null) useDefaultStageSplit();
+        else applyStageRatio(stored, false);
       }
 
       function teardownPanzoom(): void {
@@ -350,6 +573,7 @@ export function createDataWorkspace(): CapabilityDefinition<
         syncButton();
         syncChartButton();
         requestLayoutResize();
+        syncStageSplitter();
       }
 
       let suppressing = false;
@@ -374,6 +598,7 @@ export function createDataWorkspace(): CapabilityDefinition<
         syncButton();
         syncChartButton();
         requestLayoutResize();
+        syncStageSplitter();
       }
 
       function toggle(): void {
@@ -403,6 +628,7 @@ export function createDataWorkspace(): CapabilityDefinition<
           }
           syncButton();
           syncChartButton();
+          syncStageSplitter();
         },
         dispose() {
           suppressing = true;
@@ -420,12 +646,18 @@ export function createDataWorkspace(): CapabilityDefinition<
           );
           chromeOpen = false;
           chartMode = false;
+          stageSplitter?.remove();
+          stageSplitter = null;
+          ctx.container.removeAttribute('data-stage-half');
           btn.remove();
           chartBtn?.remove();
           releaseStageToolbar(toolbar.host, toolbar.created);
         }
       };
 
+      window.addEventListener('resize', () => syncStageSplitter(), {
+        signal: ac.signal
+      });
       syncButton();
       syncChartButton();
       return instance;

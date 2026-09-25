@@ -59,15 +59,15 @@ function typeTargetsFor(viewport: { width: number; height: number }): {
       knownValue: '42px',
       hint: '34px',
       table: '36px',
-      review: '36px',
-      input: '36px',
-      button: '36px',
-      status: '36px',
+      review: '44px',
+      input: '66px',
+      button: '54px',
+      status: '54px',
       result: '36px',
       resultValue: '42px',
-      canvasTitle: '40',
-      canvasTick: '32',
-      canvasAxis: '36'
+      canvasTitle: '48',
+      canvasTick: '40',
+      canvasAxis: '44'
     };
   }
   if (viewport.width >= 1100 && viewport.height >= 640) {
@@ -400,11 +400,29 @@ test.describe('ticker-tape data workspace', () => {
     await expect(fieldStatus('x', 0)).toHaveClass(/is-ok/);
     await expect(fieldStatus('x', 0)).not.toHaveClass(/is-stale/);
 
-    // 图像分析是悬浮工具条上的独立环节入口：未完成数据处理时禁用。
+    // 图像分析不必等表填完。点进去看布局，再回到数据表继续填写。
     const chartEntry = page.locator('.graph-analysis-entry');
     await expect(chartEntry).toBeVisible();
-    await expect(chartEntry).toBeDisabled();
-    await expect(chartEntry).toHaveAttribute('title', /请先完成数据处理/);
+    await expect(chartEntry).toBeEnabled();
+    await expect(chartEntry).toHaveAttribute('title', '进入图像分析环节');
+    await chartEntry.click();
+    await expect(page.locator('.layout-master')).toHaveClass(
+      /is-data-workspace-chart/
+    );
+    await expect(page.locator('.lab-stage-slot canvas')).toBeHidden();
+    await expect(page.locator('.data-workspace-review')).toBeVisible();
+    await expect(page.locator('.data-workspace-chart')).toBeVisible();
+    await expect(
+      page.locator('.lab-plot-toolbar button', { hasText: '描点' })
+    ).toBeDisabled();
+    await expect(page.locator('.data-workspace-chart canvas')).toHaveAttribute(
+      'data-plot-hint',
+      '数据校对完成后才能描点'
+    );
+    await expect(page.locator('.theme-toggle-btn:visible')).toBeEnabled();
+    await chartEntry.click();
+    await expect(chartEntry).toHaveText('图像分析');
+    await expect(page.locator('.data-workspace-table').first()).toBeVisible();
     await expect(page.locator('[role="tab"][data-step]')).toHaveCount(0);
     await expect(page.locator('.data-workspace-hint')).toContainText(
       'x、Δx 保留 2 位小数'
@@ -464,15 +482,21 @@ test.describe('ticker-tape data workspace', () => {
     await page.locator('[aria-label="校对v"]').click();
     await expect(fieldStatus('v', 1)).toHaveClass(/is-ok/);
 
-    // An unsent raw x draft must be harvested before either graph-readiness
-    // guard runs. It invalidates dependent data and keeps the user on this page.
+    // An unsent raw x draft is harvested on the way into chart layout.
+    // Plotting stays disabled, then the test returns to the data table.
     await expect(chartEntry).toBeEnabled();
     await input('x', 0).fill('9.99');
     await chartEntry.click();
-    await expect(page.locator('.data-workspace-panel')).toBeVisible();
-    await expect(chartEntry).toHaveText('图像分析');
-    await expect(chartEntry).toBeDisabled();
+    await expect(page.locator('.layout-master')).toHaveClass(
+      /is-data-workspace-chart/
+    );
+    await expect(chartEntry).toHaveText('返回数据处理');
+    await expect(
+      page.locator('.lab-plot-toolbar button', { hasText: '描点' })
+    ).toBeDisabled();
     await expect(input('x', 0)).toHaveValue('9.99');
+    await chartEntry.click();
+    await expect(chartEntry).toHaveText('图像分析');
 
     await check('x', 0, x(0).toFixed(2));
     await expect(fieldStatus('x', 0)).toHaveClass(/is-ok/);
@@ -551,10 +575,11 @@ test.describe('ticker-tape data workspace', () => {
     const splitter = page.locator('.data-workspace-splitter');
     const chartStage = page.locator('.data-workspace-chart-stage');
     const graphCanvas = page.locator('.data-workspace-chart canvas');
-    await expect(chartStage).toHaveAttribute('data-split-mode', 'content');
+    await expect(chartStage).toHaveAttribute('data-split-mode', 'even');
     await expect(splitter).toHaveAttribute('aria-valuemin', '18');
     await expect(splitter).toHaveAttribute('aria-valuemax', '72');
-    await expect(splitter).toHaveAttribute('aria-valuetext', '按表格内容');
+    await expect(splitter).toHaveAttribute('aria-valuenow', '50');
+    await expect(splitter).toHaveAttribute('aria-valuetext', '上下各半');
     const contentAria = Number(await splitter.getAttribute('aria-valuenow'));
     const contentMin = Number(await splitter.getAttribute('aria-valuemin'));
     const contentMax = Number(await splitter.getAttribute('aria-valuemax'));
@@ -569,24 +594,12 @@ test.describe('ticker-tape data workspace', () => {
       )
     ).toBeNull();
     const reviewArea = await review.boundingBox();
-    const stageArea = await chartStage.boundingBox();
+    const chartArea = await page.locator('.data-workspace-chart').boundingBox();
     expect(reviewArea).not.toBeNull();
-    expect(stageArea).not.toBeNull();
-    const contentFit = await review.evaluate((el) => {
-      const table = el.querySelector('table');
-      return {
-        review: el.getBoundingClientRect().height,
-        table: table?.getBoundingClientRect().height ?? 0,
-        scroll: el.scrollHeight,
-        client: el.clientHeight
-      };
-    });
-    expect(contentFit.review).toBeGreaterThan(20);
-    expect(contentFit.review).toBeLessThanOrEqual(stageArea!.height * 0.72 + 4);
-    if (contentFit.table + 40 < stageArea!.height * 0.72) {
-      expect(Math.abs(contentFit.review - contentFit.table)).toBeLessThan(40);
-      expect(contentFit.scroll).toBeLessThanOrEqual(contentFit.client + 2);
-    }
+    expect(chartArea).not.toBeNull();
+    expect(
+      Math.abs(reviewArea!.height - chartArea!.height)
+    ).toBeLessThanOrEqual(8);
     await page.keyboard.press('Tab');
     await splitter.focus();
     const splitterHit = await splitter.evaluate((el) => {
@@ -766,6 +779,20 @@ test.describe('ticker-tape data workspace', () => {
       'font-size',
       projection.review
     );
+    await expect(page.locator('.data-workspace-review-table')).toHaveCSS(
+      'font-weight',
+      '700'
+    );
+    const reviewCell = page
+      .locator('.data-workspace-review-table tbody td')
+      .first();
+    await expect(reviewCell).toHaveCSS('font-size', '44px');
+    await expect(reviewCell).toHaveCSS('font-weight', '700');
+    const reviewRowH = await page
+      .locator('.data-workspace-review-table tbody tr')
+      .first()
+      .evaluate((el) => el.getBoundingClientRect().height);
+    expect(reviewRowH).toBeGreaterThanOrEqual(56);
     const projectionFit = await readPlotGeometry(page);
     expect(projectionFit.clearance).toBeGreaterThanOrEqual(1);
     expect(projectionFit.cols).toBe('2');
@@ -955,6 +982,14 @@ test.describe('ticker-tape data workspace', () => {
     expect(reviewReach.lastRight).toBeLessThanOrEqual(
       reviewReach.hostRight + 2
     );
+    // A drag that starts from the even 50% split is too tall for this
+    // 390px-high screen. The short-screen plot check uses the minimum
+    // split; Home is asserted again below.
+    await splitter.focus();
+    await splitter.press('Home');
+    await expect
+      .poll(async () => Number(await splitter.getAttribute('aria-valuenow')))
+      .toBe(18);
     const plotOnScreen = await page.evaluate(() => {
       const canvas = document.querySelector('.data-workspace-chart canvas');
       if (!(canvas instanceof HTMLElement)) {
@@ -1233,13 +1268,44 @@ test.describe('ticker-tape data workspace', () => {
         height: viewport.height
       });
       if (viewport.height >= 640) {
-        const stageHeight = await page
-          .locator('.lab-stage-anim')
-          .evaluate((el) => el.getBoundingClientRect().height);
-        expect(stageHeight).toBeLessThanOrEqual(viewport.height * 0.4);
+        const split = await page.evaluate(() => {
+          const stage = document.querySelector('.lab-stage-anim');
+          const panel = document.querySelector('.data-workspace-panel');
+          if (
+            !(stage instanceof HTMLElement) ||
+            !(panel instanceof HTMLElement)
+          ) {
+            return null;
+          }
+          return {
+            stage: stage.getBoundingClientRect().height,
+            panel: panel.getBoundingClientRect().height,
+            scrollTop: document.scrollingElement?.scrollTop ?? 0
+          };
+        });
+        expect(split).not.toBeNull();
+        expect(Math.abs(split!.stage - split!.panel)).toBeLessThanOrEqual(8);
+        expect(split!.scrollTop).toBe(0);
         if (viewport.width >= 1600 && viewport.height >= 900) {
-          expect(stageHeight).toBeGreaterThan(240);
-          expect(stageHeight).toBeLessThanOrEqual(320);
+          const rows = await page.evaluate(() => {
+            const boxes = ['x', 'deltaX'].map((field) => {
+              const row = document.querySelector(
+                `.data-workspace-table tr[data-field="${field}"]`
+              );
+              if (!(row instanceof HTMLElement)) return null;
+              const box = row.getBoundingClientRect();
+              return { top: box.top, bottom: box.bottom };
+            });
+            return {
+              boxes,
+              viewH: window.innerHeight
+            };
+          });
+          for (const box of rows.boxes) {
+            expect(box).not.toBeNull();
+            expect(box!.top).toBeGreaterThanOrEqual(0);
+            expect(box!.bottom).toBeLessThanOrEqual(rows.viewH);
+          }
         }
       }
       for (const theme of ['light', 'dark'] as const) {
@@ -1352,8 +1418,8 @@ test.describe('ticker-tape data workspace', () => {
           );
           expect(header!.hintWidth).toBeGreaterThan(header!.panelWidth * 0.8);
           expect(header!.hintLines).toBeLessThan(4);
-          expect(density.inputHeight).toBeGreaterThanOrEqual(56);
-          expect(density.inputHeight).toBeLessThanOrEqual(60);
+          expect(density.inputHeight).toBeGreaterThanOrEqual(84);
+          expect(density.inputHeight).toBeLessThanOrEqual(90);
           expect(
             density.rowHeight,
             `row=${density.rowHeight} input=${density.inputHeight} button=${density.buttonHeight} status=${density.statusHeight} label=${density.labelHeight}`

@@ -24,6 +24,7 @@ describe('createFloatingControls', () => {
     expect(playBtn()).not.toBeNull();
     expect(resetBtn()).not.toBeNull();
     expect(slider()).not.toBeNull();
+    expect(controls.hasAttribute('data-panzoom-ignore')).toBe(true);
   });
 
   it('invokes onTogglePlay and refreshes glyph on play click', () => {

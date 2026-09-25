@@ -168,29 +168,32 @@ describe('data-workspace readability contract', () => {
     );
   });
 
-  it('scopes the flat ticker ruler and keeps a short chart split usable', () => {
-    const clampAt = workspaceCss.indexOf('height: clamp(240px, 28vh, 320px)');
-    expect(clampAt).toBeGreaterThan(0);
-    expect(workspaceCss.slice(clampAt - 500, clampAt)).toContain(
-      "[data-scene-id='ticker-tape']"
-    );
-    expect(
-      workspaceCss.match(/height: clamp\(240px, 28vh, 320px\)/g)
-    ).toHaveLength(1);
+  it('scopes the half stage split and keeps a short chart split usable', () => {
+    expect(workspaceCss).not.toContain('height: clamp(240px, 28vh, 320px)');
     expect(workspaceCss).not.toContain('height: max-content');
+    expect(workspaceCss).toContain("[data-stage-half='true']");
+    expect(workspaceCss).toContain('flex: 0 0 50%');
+    const panzoomAt = workspaceCss.indexOf('.stage-panzoom-controls');
+    const panzoomHead = workspaceCss.slice(panzoomAt - 500, panzoomAt);
+    expect(panzoomHead).toContain("[data-scene-id='ticker-tape']");
+    expect(panzoomHead).toContain(':not(.mobile-stack-layout)');
+    expect(workspaceCss).toContain('touch-action: none');
+    expect(workspaceCss).toMatch(
+      /\.data-workspace-stage-splitter\s*\{[^}]*height:\s*44px;/s
+    );
+    expect(workspaceCss).toMatch(
+      /\.data-workspace-stage-splitter::before\s*\{[^}]*height:\s*2px;/s
+    );
 
     const short = ruleBody(workspaceCss, '@media (max-height: 520px)');
     expect(short).not.toMatch(/overflow:\s*hidden/);
     expect(short).not.toMatch(/margin-(top|bottom):\s*-/);
     expect(short).not.toContain('4.25rem');
+    expect(short).not.toContain("data-split-mode='even'");
     expect(short).toContain('overflow-y: auto');
     expect(short).toContain("data-split-mode='manual'");
     expect(short).toContain('flex: 0 0 var(--dw-split, 33%)');
     expect(short).toContain('max-height: none');
-
-    expect(workspaceCss.slice(clampAt, clampAt + 400)).toContain(
-      'max-height: none'
-    );
   });
 
   it('keeps status and body text at least 4.5:1 on both theme backgrounds', () => {

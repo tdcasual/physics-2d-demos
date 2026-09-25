@@ -45,6 +45,7 @@ export function makeDraggable(
     dragHandle.setPointerCapture(e.pointerId);
 
     e.preventDefault();
+    e.stopPropagation();
   }
 
   function onPointerMove(e: PointerEvent) {

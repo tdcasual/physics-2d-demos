@@ -1,6 +1,7 @@
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import {
+  chartStepReady,
   cloneSession,
   createEmptySession,
   freezeSession,
@@ -86,6 +87,14 @@ export function createTickerTapeScene(
   let workspaceLoadPromise: Promise<void> | null = null;
   let workspaceChromeOpen = false;
   let hostRef: InnerWorkspace | null = null;
+
+  view.setPlotGateReader(() => {
+    if (!innerWorkspace) return false;
+    return chartStepReady(
+      innerWorkspace.getSession(),
+      innerWorkspace.getSpec()
+    );
+  });
 
   function emptyHostSession(): DataWorkspaceSession {
     const session = createEmptySession(7);
