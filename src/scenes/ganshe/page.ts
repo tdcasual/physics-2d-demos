@@ -6,7 +6,16 @@ import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { createParamMapper, createPresetApplier } from '../page-utils';
 import type { WaveParams } from './scene.sim';
 import { gansheParamMapping, ganshePresets } from './presets';
-import { createWaveSourceCard, createObserverManager } from './controls';
+import {
+  createWaveSourceCard,
+  createObserverManager,
+  type GansheControlsUiDeps
+} from './controls';
+import { createControlCard } from '../../ui/components/ControlCard';
+import { createSliderRow } from '../../ui/components/scene-controls/slider-row';
+
+// ui 工厂注入：场景非 page 模块不得依赖 ui 层（debt-ledger A2）。
+const controlsUi: GansheControlsUiDeps = { createControlCard, createSliderRow };
 
 bootScenePage({
   meta: gansheMeta,
@@ -74,6 +83,7 @@ bootScenePage({
 
     // Observer manager card (narrow — can share rows)
     const observerManager = createObserverManager(
+      controlsUi,
       scene as ReturnType<typeof createGansheScene>,
       () => {
         scheduleRender();
@@ -84,6 +94,7 @@ bootScenePage({
     // Design: entity-grouped, not parameter-type-grouped
     const initialParams = scene.getParams();
     const sourceACard = createWaveSourceCard(
+      controlsUi,
       '波源 A (左)',
       '#3b82f6',
       [
@@ -113,6 +124,7 @@ bootScenePage({
     );
 
     const sourceBCard = createWaveSourceCard(
+      controlsUi,
       '波源 B (右)',
       '#ef4444',
       [
@@ -142,6 +154,7 @@ bootScenePage({
     );
 
     const phaseCard = createWaveSourceCard(
+      controlsUi,
       '相位差',
       '#8b5cf6',
       [

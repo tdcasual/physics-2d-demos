@@ -1,14 +1,29 @@
 /**
  * ganshe 场景的 imperative 控制面板卡片工厂
- *（与 controls-schema.ts 声明式面板并用；本文件命名 controls.ts 以符合
- * 场景非 page 模块不得依赖 ui 层的架构约束，与 spring-oscillator 同例）
+ *（与 controls-schema.ts 声明式面板并用。场景非 page 模块不得依赖 ui 层：
+ * ui 工厂由 page.ts 注入（结构类型），本文件保持零 ui 导入——debt-ledger A2）
  */
-// eslint-disable-next-line no-restricted-imports -- 既有豁免：imperative controls 观察点管理依赖 ui 组件（见 AGENTS.md「已知限制」）
-import { createControlCard } from '../../ui/components/ControlCard';
-// eslint-disable-next-line no-restricted-imports -- 同上
-import { createSliderRow } from '../../ui/components/scene-controls/slider-row';
 import type { createGansheScene } from './scene.entry';
 import { getObserverColor } from './scene.view';
+
+/** page.ts 注入的 ui 工厂（结构类型，避免场景层依赖 ui 模块）。 */
+export interface GansheControlsUiDeps {
+  createControlCard: (
+    title: string,
+    options?: { defaultCollapsed?: boolean; span?: 'full' }
+  ) => { body: HTMLElement; element: HTMLElement };
+  createSliderRow: (
+    label: string,
+    options: {
+      min: number;
+      max: number;
+      step: number;
+      value: number;
+      unit?: string;
+      onChange?: (value: number) => void;
+    }
+  ) => HTMLElement;
+}
 
 export interface WaveSourceSliderSpec {
   key: string;
@@ -33,11 +48,13 @@ export interface WaveSourceCard {
  * 当未来有其他"多实体控制"场景时，遵循同样的实体-卡片映射。
  */
 export function createWaveSourceCard(
+  ui: GansheControlsUiDeps,
   title: string,
   accentColor: string,
   sliders: WaveSourceSliderSpec[],
   onChange: (key: string, value: number) => void
 ): WaveSourceCard {
+  const { createControlCard, createSliderRow } = ui;
   const card = createControlCard(title, {
     defaultCollapsed: false,
     span: 'full'
@@ -56,7 +73,7 @@ export function createWaveSourceCard(
       step: s.step,
       value: s.value,
       unit: s.unit,
-      onChange: (val) => onChange(s.key, val)
+      onChange: (val: number) => onChange(s.key, val)
     });
     row.dataset.controlKey = s.key;
     const input = row.querySelector('input');
@@ -87,9 +104,11 @@ export interface ObserverManagerCard {
 
 /** 创建观察点管理卡片 */
 export function createObserverManager(
+  ui: GansheControlsUiDeps,
   scene: ReturnType<typeof createGansheScene>,
   onChange: () => void
 ): ObserverManagerCard {
+  const { createControlCard } = ui;
   const card = createControlCard('观察点管理', { defaultCollapsed: false });
   const body = card.body;
 

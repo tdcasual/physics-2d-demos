@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createSpringOscillatorScene } from '../../src/scenes/spring-oscillator/scene.entry';
 import { createSpringOscillatorControls } from '../../src/scenes/spring-oscillator/controls';
+import { createControlCard } from '../../src/ui/components/ControlCard';
+
+const controlCardFactory = createControlCard;
 
 describe('spring-oscillator controls', () => {
   function setup() {
@@ -8,7 +11,12 @@ describe('spring-oscillator controls', () => {
     const scene = createSpringOscillatorScene();
     scene.init();
     const onStatus = vi.fn();
-    const controls = createSpringOscillatorControls({ mount, scene, onStatus });
+    const controls = createSpringOscillatorControls({
+      mount,
+      scene,
+      onStatus,
+      ui: { createControlCard: controlCardFactory }
+    });
     // controls 使用 setTimeout 延迟渲染，在 happy-dom 中需要手动刷新
     controls.refresh();
     return { mount, scene, controls, onStatus };

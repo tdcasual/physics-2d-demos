@@ -3,11 +3,25 @@
  * 与 V3 像素级一致
  */
 
-// eslint-disable-next-line no-restricted-imports -- 既有豁免：imperative controls 动态增删振子，依赖 ui 组件（见 AGENTS.md「已知限制」）
-import { createControlCard } from '../../ui/components/ControlCard';
 import { renderOscillatorItem } from './oscillator-item';
 import type { OscillatorItemHandle } from './oscillator-item';
 import type { SpringOscillatorScene } from './scene.entry';
+
+/** page.ts 注入的 ui 工厂（结构类型，避免场景层依赖 ui 模块——debt-ledger A2）。 */
+export interface SpringOscillatorControlsUiDeps {
+  createControlCard: (
+    title: string,
+    options?: {
+      defaultCollapsed?: boolean;
+      headerActions?: HTMLElement[];
+      span?: 'full';
+    }
+  ) => {
+    body: HTMLElement;
+    element: HTMLElement;
+    dispose: () => void;
+  };
+}
 
 export interface SpringOscillatorControlsOptions {
   mount: HTMLElement;
@@ -15,6 +29,7 @@ export interface SpringOscillatorControlsOptions {
   onStatus?: (text: string) => void;
   /** rAF 合帧渲染请求（bootstrapper 注入）；缺省回退为同步 scene.render() */
   scheduleRender?: () => void;
+  ui: SpringOscillatorControlsUiDeps;
 }
 
 export interface SpringOscillatorControls {
@@ -26,6 +41,7 @@ export function createSpringOscillatorControls(
   options: SpringOscillatorControlsOptions
 ): SpringOscillatorControls {
   const {
+    ui: { createControlCard },
     mount,
     scene,
     onStatus,

@@ -1,7 +1,14 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { springOscillatorMeta } from './scene.meta';
 import { createSpringOscillatorScene } from './scene.entry';
-import { createSpringOscillatorControls } from './controls';
+import {
+  createSpringOscillatorControls,
+  type SpringOscillatorControlsUiDeps
+} from './controls';
+import { createControlCard } from '../../ui/components/ControlCard';
+
+// ui 工厂注入：场景非 page 模块不得依赖 ui 层（debt-ledger A2）。
+const controlsUi: SpringOscillatorControlsUiDeps = { createControlCard };
 
 bootScenePage({
   meta: springOscillatorMeta,
@@ -19,7 +26,8 @@ bootScenePage({
       mount,
       scene,
       onStatus,
-      scheduleRender
+      scheduleRender,
+      ui: controlsUi
     });
   },
   preferredLayout: 'split-right',
