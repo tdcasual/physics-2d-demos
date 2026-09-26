@@ -3,7 +3,7 @@ import { dirname, join, relative, resolve, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const root = process.cwd();
-const PANEL = join(root, 'src/ui/components/data-workspace-panel.ts');
+const PANEL = join(root, 'src/ui/components/data-workspace-panel/index.ts');
 
 const FORBIDDEN = [
   'x1',
@@ -43,7 +43,7 @@ describe('data-workspace panel architecture', () => {
     expect(source).not.toContain('1 数据处理');
     expect(source).not.toContain('2 图像分析');
     const capabilitySource = readFileSync(
-      join(root, 'src/app/layouts/capabilities/data-workspace.ts'),
+      join(root, 'src/app/layouts/capabilities/data-workspace/index.ts'),
       'utf8'
     );
     expect(capabilitySource).toContain('图像分析');
