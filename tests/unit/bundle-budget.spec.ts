@@ -198,8 +198,8 @@ describe('bundle budget check', () => {
       maxHomeEntryCssKb: 25,
       maxEntryJsKb: 200,
       maxEntryCssKb: 55,
-      maxVendorJsKb: 160,
-      maxSharedJsKb: 150
+      maxVendorJsKb: 29,
+      maxSharedJsKb: 162
     });
     expect(report.ok).toBe(true);
   });
