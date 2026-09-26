@@ -1,5 +1,7 @@
 # Wave 6 之后的现行瓶颈（一页）
 
+> **状态注（2026-09-25）**：本文为历史瓶颈记录。其中「Canvas viewport 基座迁移未完成」一项已经完成——2026-09-25 核实 src/scenes/\*/scene.view.ts 120/120 全部使用 createCanvasViewport/sizeCanvasToFill（A5 交叉审计证据）。vendor 预算与模块拆分项见 docs/debt-ledger.md。
+
 > 口径以代码与 `scripts/check-bundle-budget.ts` 为准。禁止按 `docs/optimization-analysis.md` / `docs/performance-design.md` 的 2026-04 数字提 PR。
 
 **基线**：`main` @ Wave 6 落地后。产品：18 场景 + 3 仪器。
