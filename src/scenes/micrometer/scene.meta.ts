@@ -37,6 +37,8 @@ export const micrometerMeta: SceneMeta = {
   defaultParams: {
     reading: 4.593
   },
+  urlSyncKeys: ['reading'],
+
   testProfile: {
     hasGraph: false,
     hasTransport: true,

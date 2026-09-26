@@ -42,6 +42,8 @@ export const gansheMeta: SceneMeta = {
     phaseDiff: 0,
     observerX: 15
   },
+  urlSyncKeys: ['freq1', 'freq2', 'amp1', 'amp2', 'phaseDiff', 'observerX'],
+
   testProfile: {
     hasGraph: true,
     hasTransport: true,

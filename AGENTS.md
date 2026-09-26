@@ -174,9 +174,11 @@ bootScenePage({
 
 **已知限制**：
 
-- `emf-analogy` 无对象式 `setParams`（`defaultParams` 已清空）。`mechanical-wave`
-  仅有 `setParam` 单键 API，URL 管线会 fallback。覆盖率实测约 80%，禁止下调
-  `vite.config.ts` 阈值来掩盖缺口。
+- `emf-analogy` 无对象式 `setParams`（`defaultParams` 已清空，无可同步参数）；
+  `mechanical-wave` 仅有 `setParam` 单键 API，URL 管线会 fallback。
+- URL 同步棘轮：`scene-params-contract.spec.ts` 强制「有 `defaultParams` 的
+  场景必须有 `urlSyncKeys` 或 page 级 `paramSync` 自定义路径」，全量 100%
+  结构化覆盖（原 vite.config 百分比阈值已由该棘轮取代，debt-ledger A7）。
 - 布局重建重跑管线时，若落在 `writeParam` 150ms debounce 窗口内，存在理论性
   回灌竞态（窗口极小，非新引入）。
 

@@ -42,6 +42,8 @@ export const chaseMeetMeta: SceneMeta = {
     x0A: 0,
     x0B: 10
   },
+  urlSyncKeys: ['totalTime', 'dt', 'x0A', 'x0B'],
+
   testProfile: {
     hasGraph: true,
     hasTransport: true,

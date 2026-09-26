@@ -47,6 +47,8 @@ export const vtIntegralMeta: SceneMeta = {
     n: 10,
     scene: 1
   },
+  urlSyncKeys: ['n', 'scene'],
+
   testProfile: {
     hasGraph: false,
     hasTransport: false,

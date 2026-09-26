@@ -42,6 +42,8 @@ export const fieldLinesMeta: SceneMeta = {
     q1: 1,
     q2: -1
   },
+  urlSyncKeys: ['n', 'q1', 'q2'],
+
   testProfile: {
     hasGraph: false,
     hasTransport: true,

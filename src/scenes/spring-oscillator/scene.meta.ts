@@ -39,6 +39,8 @@ export const springOscillatorMeta: SceneMeta = {
     m: 1,
     A: 5
   },
+  urlSyncKeys: ['k', 'm', 'A'],
+
   testProfile: {
     hasGraph: true,
     hasTransport: true,

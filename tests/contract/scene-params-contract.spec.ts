@@ -127,6 +127,13 @@ const schemaModules = import.meta.glob<Record<string, unknown>>(
   { eager: true }
 );
 
+// A7 URL 同步棘轮：读取 page.ts 源码以识别 paramSync 自定义同步路径
+const pageSources = import.meta.glob<string>('../../src/scenes/*/page.ts', {
+  query: '?raw',
+  import: 'default',
+  eager: true
+});
+
 function isControlsSchema(value: unknown): value is ControlsSchema {
   return (
     typeof value === 'object' &&
@@ -193,6 +200,24 @@ const scenes: DiscoveredScene[] = Object.entries(metaModules).map(
 // ---------------------------------------------------------------------------
 
 describe('scene params contract', () => {
+  it('URL sync ratchet: scenes with defaultParams must have urlSyncKeys or page-level paramSync (A7)', () => {
+    const gaps: string[] = [];
+    for (const scene of scenes) {
+      if (Object.keys(scene.meta.defaultParams ?? {}).length === 0) continue;
+      const hasKeys = (scene.meta.urlSyncKeys ?? []).length > 0;
+      const pageEntry = Object.entries(pageSources).find(([p]) =>
+        p.includes(`/${scene.id}/page.ts`)
+      );
+      const hasParamSync = pageEntry ? /paramSync/.test(pageEntry[1]) : false;
+      if (!hasKeys && !hasParamSync) gaps.push(scene.id);
+    }
+    expect(
+      gaps,
+      `以下场景有 defaultParams 但既无 urlSyncKeys 也无 page 级 paramSync ` +
+        `（debt-ledger A7 棘轮，只许增补同步机制不许出现新缺口）: ${gaps.join(', ')}`
+    ).toEqual([]);
+  });
+
   it.each(scenes.map((s) => ({ id: s.id })))(
     '$id: every mapped/exempted key actually exists in meta keys',
     ({ id }) => {

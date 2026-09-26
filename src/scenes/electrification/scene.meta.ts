@@ -38,6 +38,8 @@ export const electrificationMeta: SceneMeta = {
   defaultParams: {
     step: 0
   },
+  urlSyncKeys: ['step'],
+
   testProfile: {
     hasGraph: false,
     hasTransport: true,
