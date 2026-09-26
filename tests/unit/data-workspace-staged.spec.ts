@@ -24,7 +24,7 @@ function spec(overrides: Partial<DataWorkspaceSpec> = {}): DataWorkspaceSpec {
     title: 'staged',
     chartAnalysis: false,
     enabledSteps: ['data'],
-    trialCount: 1,
+    maxRows: 1,
     rowFields: [field('x1'), field('x2'), field('n')],
     summaryFields: [],
     ...overrides

@@ -181,11 +181,13 @@ export default defineConfig({
         // Note: scene.view.ts files are now tested via Canvas mock tests
         'src/scenes/*/scene.meta.ts'
       ],
+      // 棘轮阈值 = 实绩(2026-09-25 基线 90.91/82.98/88.29/90.91) − 2，
+      // 任何覆盖率滑坡直接红；上调须随实绩同步（debt-ledger A8）。
       thresholds: {
-        lines: 65,
-        functions: 65,
-        branches: 70,
-        statements: 65
+        lines: 88.9,
+        functions: 86.2,
+        branches: 80.9,
+        statements: 88.9
       }
     }
   },

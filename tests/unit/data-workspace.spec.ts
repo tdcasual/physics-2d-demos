@@ -50,7 +50,6 @@ import {
   CALIPER_PRECISION_MM,
   CALIPER_READING_STRATEGY,
   DOUBLE_SLIT_MAX_ROWS,
-  DOUBLE_SLIT_TRIAL_COUNT,
   MICROMETER_MAX_MM,
   MICROMETER_PRECISION_MM,
   MICROMETER_READING_STRATEGY,
@@ -582,7 +581,7 @@ describe('eligibility does not rewrite physics params', () => {
 
 describe('sequential field evaluation and invalidation', () => {
   it('captures x1 against the snapshot taken at submit time', () => {
-    const session = createEmptySession(DOUBLE_SLIT_TRIAL_COUNT);
+    const session = createEmptySession(1);
     const first = evaluateDoubleSlitField({
       session,
       submit: { field: 'x1', trialIndex: 0, raw: '14.02' },
@@ -818,7 +817,6 @@ describe('sequential field evaluation and invalidation', () => {
 
 describe('dynamic experiment rows', () => {
   it('reads min/max/initial rows from the spec instead of a UI constant', () => {
-    expect(DOUBLE_SLIT_TRIAL_COUNT).toBe(1);
     expect(DOUBLE_SLIT_MAX_ROWS).toBe(6);
     expect(doubleSlitDataWorkspaceSpec.minRows).toBe(1);
     expect(doubleSlitDataWorkspaceSpec.maxRows).toBe(DOUBLE_SLIT_MAX_ROWS);
@@ -1364,9 +1362,8 @@ describe('chart field helpers and spec guards', () => {
     title: 't',
     chartAnalysis: true,
     enabledSteps: ['data', 'chartAnalysis'],
-    trialCount: 1,
-    minRows: 1,
     maxRows: 1,
+    minRows: 1,
     initialRows: 1,
     rowFields: [{ id: 'x', label: '位移', unit: 'm' }],
     summaryFields: [
@@ -1533,7 +1530,6 @@ describe('chart field helpers and spec guards', () => {
       title: 'neighbour',
       chartAnalysis: false,
       enabledSteps: ['data'],
-      trialCount: 3,
       minRows: 3,
       maxRows: 3,
       initialRows: 3,
@@ -1627,7 +1623,6 @@ describe('chart field helpers and spec guards', () => {
         minRows: 3,
         maxRows: 3,
         initialRows: 3,
-        trialCount: 3,
         trialLabels: ['0', '1']
       })
     ).toThrow(/trialLabels/);

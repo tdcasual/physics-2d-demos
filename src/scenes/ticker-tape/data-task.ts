@@ -47,7 +47,6 @@ export const tickerTapeDataWorkspaceSpec: DataWorkspaceSpec = {
   stageHalfSplit: true,
   chartEvenSplit: true,
   enabledSteps: ['reading', 'data', 'calculation', 'chartAnalysis'],
-  trialCount: 7,
   minRows: 7,
   maxRows: 7,
   initialRows: 7,

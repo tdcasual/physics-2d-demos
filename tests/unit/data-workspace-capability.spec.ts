@@ -807,8 +807,7 @@ describe('data-workspace panel dynamic rows', () => {
     const host = createHost({
       minRows: 1,
       maxRows: 4,
-      initialRows: 1,
-      trialCount: 4
+      initialRows: 1
     });
     const panel = createDataWorkspacePanel({
       host,

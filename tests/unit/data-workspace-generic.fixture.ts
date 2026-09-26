@@ -19,9 +19,8 @@ export const kinematicsWorkspaceSpec: DataWorkspaceSpec = {
   title: '测平均速率',
   chartAnalysis: false,
   enabledSteps: ['data', 'calculation'],
-  trialCount: 4,
-  minRows: 1,
   maxRows: 4,
+  minRows: 1,
   initialRows: 1,
   rowFields: [
     { id: 'mass', label: '质量', unit: 'kg', inputMode: 'decimal' },
@@ -65,7 +64,6 @@ export const kinematicsChartWorkspaceSpec: DataWorkspaceSpec = {
   title: '测平均速率',
   chartAnalysis: true,
   enabledSteps: ['data', 'calculation', 'chartAnalysis'],
-  trialCount: 3,
   minRows: 3,
   maxRows: 3,
   initialRows: 3,

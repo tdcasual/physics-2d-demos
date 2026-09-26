@@ -3,7 +3,6 @@ import type {
   ExactDiscreteReading
 } from '../../platform/data-workspace';
 
-export const DOUBLE_SLIT_TRIAL_COUNT = 1;
 export const DOUBLE_SLIT_MAX_ROWS = 6;
 
 /** 游标 0.002 cm → 0.02 mm，与 interferenceVernierCaliperMeta.precision 一致 */

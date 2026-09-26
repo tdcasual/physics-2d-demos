@@ -17,7 +17,6 @@ const stagedSpec: DataWorkspaceSpec = {
   title: '分阶段校对',
   chartAnalysis: false,
   enabledSteps: ['data'],
-  trialCount: 2,
   minRows: 1,
   maxRows: 2,
   initialRows: 1,

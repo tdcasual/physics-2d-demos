@@ -64,7 +64,6 @@ import {
   CALIPER_PRECISION_MM,
   CALIPER_READING_STRATEGY,
   DOUBLE_SLIT_MAX_ROWS,
-  DOUBLE_SLIT_TRIAL_COUNT,
   MICROMETER_MAX_MM,
   MICROMETER_PRECISION_MM,
   MICROMETER_READING_STRATEGY
@@ -73,7 +72,6 @@ export {
   CALIPER_PRECISION_MM,
   CALIPER_READING_STRATEGY,
   DOUBLE_SLIT_MAX_ROWS,
-  DOUBLE_SLIT_TRIAL_COUNT,
   MICROMETER_MAX_MM,
   MICROMETER_PRECISION_MM,
   MICROMETER_READING_STRATEGY
@@ -96,7 +94,6 @@ export const doubleSlitDataWorkspaceSpec: DataWorkspaceSpec = {
   title: '测条纹间距求波长',
   chartAnalysis: false,
   enabledSteps: ['reading', 'data', 'calculation'],
-  trialCount: DOUBLE_SLIT_MAX_ROWS,
   minRows: 1,
   maxRows: DOUBLE_SLIT_MAX_ROWS,
   initialRows: 1,

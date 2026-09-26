@@ -109,6 +109,8 @@ export function createTickerTapeScene(
         innerWorkspace = mod.createTickerTapeDataWorkspace({
           getState: () => sim.getState(),
           getPlotStatus: () => view.getPlotStatus(sim.getState()),
+          // 写回只经 sim 层（writeBack → sim.set*）；公开场景层不暴露
+          // 绕过会话失效的直写 API（debt-ledger A11）。
           writeBack: {
             setMeasuredX: (index, value) => sim.setMeasuredX(index, value),
             setDeltaX: (index, value) => sim.setDeltaX(index, value),
@@ -290,21 +292,6 @@ export function createTickerTapeScene(
       // 已被覆写、vMs/Δx 已清空，会话里的已校对值必须一起作废，
       // 否则图像描点（读 sim）与判分（读会话）两套真值分叉。空会话上是无害 no-op。
       hostRef?.invalidateAll('已按尺重新填数，请重新校对');
-      base.renderAndEmit();
-      base.notify();
-    },
-    setMeasuredX(index: number, value: number | null): void {
-      sim.setMeasuredX(index, value);
-      base.renderAndEmit();
-      base.notify();
-    },
-    setDeltaX(index: number, value: number | null): void {
-      sim.setDeltaX(index, value);
-      base.renderAndEmit();
-      base.notify();
-    },
-    setV(index: number, value: number | null): void {
-      sim.setV(index, value);
       base.renderAndEmit();
       base.notify();
     },

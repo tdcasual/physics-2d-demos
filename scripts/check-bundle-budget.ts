@@ -53,10 +53,12 @@ export const defaultBundleBudget: BundleBudget = {
   maxHomeEntryCssKb: 25,
   maxEntryJsKb: 200,
   maxEntryCssKb: 55,
-  maxVendorJsKb: 160,
+  // 棘轮 = 干净构建实测（2026-09-25：vendor 24.02 / shared 135.00，按本脚本
+  // 口径）×1.2 向上取整；debt-ledger A6。上调须随实测同步。
+  maxVendorJsKb: 29,
   // Layout/scene test capability metadata is intentionally shipped to each
   // page so the runtime and visual matrix share one source of truth.
-  maxSharedJsKb: 150
+  maxSharedJsKb: 162
 };
 
 /**

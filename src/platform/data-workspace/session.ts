@@ -1,7 +1,6 @@
 type DataWorkspaceSpec = {
   minRows?: number;
   maxRows?: number;
-  trialCount?: number;
   initialRows?: number;
 };
 type FieldCheckState = {
@@ -31,10 +30,7 @@ function resolveRowLimits(spec: DataWorkspaceSpec): {
   initialRows: number;
 } {
   const minRows = Math.max(1, Math.floor(spec.minRows ?? 1));
-  const maxRows = Math.max(
-    minRows,
-    Math.floor(spec.maxRows ?? spec.trialCount ?? minRows)
-  );
+  const maxRows = Math.max(minRows, Math.floor(spec.maxRows ?? minRows));
   const initialRows = Math.min(
     maxRows,
     Math.max(minRows, Math.floor(spec.initialRows ?? minRows))
