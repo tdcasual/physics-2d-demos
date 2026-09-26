@@ -35,13 +35,13 @@ describe('sidebar-hidden flag (Fix 7a)', () => {
 
     applyResponsiveColumns(container, 1280, {}, 0.35);
 
-    expect(container.style.gridTemplateColumns).toBe('0px 8px 1fr');
+    expect(container.style.gridTemplateColumns).toBe('0px 0px 1fr');
   });
 
   it('treats flag=false as visible even when the template starts with 0px', () => {
     makeSplitGrid();
     container.dataset.sidebarHidden = 'false';
-    container.style.gridTemplateColumns = '0px 8px 1fr';
+    container.style.gridTemplateColumns = '0px 0px 1fr';
 
     applyResponsiveColumns(container, 1280, {}, 0.35);
 
@@ -52,12 +52,12 @@ describe('sidebar-hidden flag (Fix 7a)', () => {
 
   it('falls back to the 0px prefix sniff when the flag is absent', () => {
     makeSplitGrid();
-    container.style.gridTemplateColumns = '0px 8px 1fr';
+    container.style.gridTemplateColumns = '0px 0px 1fr';
     delete container.dataset.sidebarHidden;
 
     applyResponsiveColumns(container, 1280, {}, 0.35);
 
-    expect(container.style.gridTemplateColumns).toBe('0px 8px 1fr');
+    expect(container.style.gridTemplateColumns).toBe('0px 0px 1fr');
   });
 
   it('sidebar-toggle maintains the flag across hide/show', () => {
@@ -87,7 +87,7 @@ describe('sidebar-hidden flag (Fix 7a)', () => {
 
     btn.click();
     expect(container.dataset.sidebarHidden).toBe('true');
-    expect(container.style.gridTemplateColumns).toBe('0px 8px 1fr');
+    expect(container.style.gridTemplateColumns).toBe('0px 0px 1fr');
 
     btn.click();
     expect(container.dataset.sidebarHidden).toBe('false');

@@ -605,13 +605,13 @@ describe('SceneContainerImpl', () => {
       await layout.mount();
 
       // Simulate sidebar-toggle hiding the sidebar
-      container.style.gridTemplateColumns = '0px 8px 1fr';
+      container.style.gridTemplateColumns = '0px 0px 1fr';
 
       // Trigger resize — this calls handleResize → applyResponsiveColumns
       layout.handleResize(1100, 800);
 
-      // Sidebar should still be hidden (0px first column)
-      expect(container.style.gridTemplateColumns).toBe('0px 8px 1fr');
+      // Sidebar should still be hidden (0px first two columns)
+      expect(container.style.gridTemplateColumns).toBe('0px 0px 1fr');
 
       await layout.unmount();
       container.remove();
@@ -630,10 +630,10 @@ describe('SceneContainerImpl', () => {
       await layout.mount();
 
       // Hide sidebar, then resize to tablet width
-      container.style.gridTemplateColumns = '0px 8px 1fr';
+      container.style.gridTemplateColumns = '0px 0px 1fr';
       layout.handleResize(900, 800);
 
-      expect(container.style.gridTemplateColumns).toBe('0px 8px 1fr');
+      expect(container.style.gridTemplateColumns).toBe('0px 0px 1fr');
 
       await layout.unmount();
       container.remove();

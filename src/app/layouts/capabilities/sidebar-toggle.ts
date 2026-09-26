@@ -100,7 +100,9 @@ export function createSidebarToggle(
           const match = currentCols.match(/^(.+?)\s+8px\s+1fr$/);
           savedLeftWidth = match ? match[1] : currentCols.split(' ')[0];
           if (isMultiColumn) {
-            ctx.container.style.gridTemplateColumns = '0px 8px 1fr';
+            // 隐藏态与 demo-profile 同形（0px 0px）：resizer display:none
+            // 下第二轨收为 0，不留 8px 死轨道（debt-ledger A10）。
+            ctx.container.style.gridTemplateColumns = '0px 0px 1fr';
           }
           // 隐藏态单一事实源：applyResponsiveColumns 读该标记而非嗅探样式串。
           ctx.container.dataset.sidebarHidden = 'true';
@@ -117,6 +119,7 @@ export function createSidebarToggle(
         } else {
           if (isMultiColumn && savedLeftWidth) {
             // Restore the saved first track into the current grid
+            //（resizer display 恢复，第二轨回到 8px）
             ctx.container.style.gridTemplateColumns = `${savedLeftWidth} 8px 1fr`;
           }
           ctx.container.dataset.sidebarHidden = 'false';

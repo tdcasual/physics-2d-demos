@@ -288,7 +288,7 @@ export function applyResponsiveColumns(
     if (!isDataWorkspace) {
       const sidebarWidth = width < 900 ? 240 : 280;
       container.style.gridTemplateColumns = isSidebarHidden
-        ? '0px 8px 1fr'
+        ? '0px 0px 1fr'
         : `${sidebarWidth}px 8px 1fr`;
     }
     container.style.gridTemplateRows = '';
@@ -300,7 +300,7 @@ export function applyResponsiveColumns(
   } else {
     if (!isDataWorkspace) {
       if (isSidebarHidden) {
-        container.style.gridTemplateColumns = '0px 8px 1fr';
+        container.style.gridTemplateColumns = '0px 0px 1fr';
       } else {
         const leftMinWidth = cfg.leftMinWidth ?? 260;
         const leftMaxWidth = Math.min(cfg.leftMaxWidth ?? 960, width * 0.5);

@@ -549,7 +549,7 @@ describe('sidebar-toggle capability', () => {
 
     // Click to hide
     btn.click();
-    expect(ctx.container.style.gridTemplateColumns).toBe('0px 8px 1fr');
+    expect(ctx.container.style.gridTemplateColumns).toBe('0px 0px 1fr');
     expect(btn.textContent).toBe('显示控制面板');
 
     // Click to show
@@ -686,7 +686,7 @@ describe('sidebar-toggle capability', () => {
 
     // Hide -> must save the minmax track
     btn.click();
-    expect(ctx.container.style.gridTemplateColumns).toBe('0px 8px 1fr');
+    expect(ctx.container.style.gridTemplateColumns).toBe('0px 0px 1fr');
 
     // Show -> must restore the full minmax(260px, 40%) not a truncated string
     btn.click();

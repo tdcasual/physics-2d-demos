@@ -649,7 +649,7 @@ describe('data-workspace capability lifecycle', () => {
     expect(before.text).toBe('显示控制面板');
     expect(before.expanded).toBe('false');
     expect(before.sidebarHidden).toBe('true');
-    expect(before.grid).toBe('0px 8px 1fr');
+    expect(before.grid).toBe('0px 0px 1fr');
     (
       container.querySelector('.data-workspace-entry') as HTMLButtonElement
     ).click();
