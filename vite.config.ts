@@ -236,15 +236,13 @@ export default defineConfig({
           // forced into the same preloaded chunk as the engine.
           // data-workspace-declarations.ts / data-workspace-lazy.ts stay
           // in the layouts chunk (their filenames do not match this).
-          if (
-            id.includes('/src/platform/data-workspace.') ||
-            id.includes('/src/platform/data-workspace/')
-          ) {
+          // 目录前缀规则（debt-ledger A4：data-workspace 相关模块已
+          // 目录化，不再按文件名特例匹配）
+          if (id.includes('/src/platform/data-workspace/')) {
             return 'data-workspace';
           }
           if (
-            id.includes('/src/app/layouts/capabilities/data-workspace.') ||
-            id.includes('/src/ui/components/data-workspace-panel.') ||
+            id.includes('/src/app/layouts/capabilities/data-workspace/') ||
             id.includes('/src/ui/components/data-workspace-panel/')
           ) {
             return 'data-workspace-runtime';

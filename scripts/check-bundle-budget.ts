@@ -51,7 +51,8 @@ export type BundleBudgetReport = {
 export const defaultBundleBudget: BundleBudget = {
   maxHomeEntryJsKb: 190,
   maxHomeEntryCssKb: 25,
-  maxEntryJsKb: 200,
+  // 棘轮 = 最大场景入口实测（2026-09-25：double-slit 187.65）+2（debt-ledger A12）
+  maxEntryJsKb: 190,
   maxEntryCssKb: 55,
   // 棘轮 = 干净构建实测（2026-09-25：vendor 24.02 / shared 135.00，按本脚本
   // 口径）×1.2 向上取整；debt-ledger A6。上调须随实测同步。

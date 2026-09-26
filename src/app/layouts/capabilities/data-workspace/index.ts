@@ -9,36 +9,36 @@
  * ensures the runtime-created entry button is styled when it appears.
  */
 
-await import('../../../styles/capability/data-workspace.css');
+await import('../../../../styles/capability/data-workspace.css');
 import type {
   CapabilityDefinition,
   CapabilityInstance,
   CapabilityContext,
   LayoutSlots
-} from '../types';
+} from '../../types';
 import {
   shouldEnableStagePanZoom,
   shouldShowChartAnalysis,
   type DataWorkspaceHost,
   type DataWorkspaceSpec
-} from '../../../platform/data-workspace';
+} from '../../../../platform/data-workspace';
 import {
   createDataWorkspacePanel,
   type DataWorkspacePanelStep
-} from '../../../ui/components/data-workspace-panel';
+} from '../../../../ui/components/data-workspace-panel';
 import {
   ensureStageToolbar,
   releaseStageToolbar
-} from '../../../ui/stage-toolbar';
-import type { DataWorkspaceUpdateData } from './data-workspace-declarations';
-import { createStagePanzoom, type StagePanzoomHandle } from './stage-panzoom';
-import { layoutRegistry } from '../registry';
-import { requestLayoutResize } from '../request-layout-resize';
-import { moveNode, type MovedNode } from '../../../ui/utils/node-mover';
+} from '../../../../ui/stage-toolbar';
+import type { DataWorkspaceUpdateData } from '../data-workspace-declarations';
+import { createStagePanzoom, type StagePanzoomHandle } from '../stage-panzoom';
+import { layoutRegistry } from '../../registry';
+import { requestLayoutResize } from '../../request-layout-resize';
+import { moveNode, type MovedNode } from '../../../../ui/utils/node-mover';
 import {
   GRAPH_SECTION_ATTR,
   STAGE_FRAME_ATTR
-} from '../../../platform/stage-chrome';
+} from '../../../../platform/stage-chrome';
 
 export type { DataWorkspaceUpdateData };
 

@@ -12,9 +12,9 @@ import {
   looksLikeWrongUnit,
   quantizeExactDiscreteMm,
   readingStrategyOf
-} from './data-workspace/tolerance';
-import { assertAcyclicDependencies } from './data-workspace/validation';
-import { cloneSession, createTrialRecord } from './data-workspace/session';
+} from './tolerance';
+import { assertAcyclicDependencies } from './validation';
+import { cloneSession, createTrialRecord } from './session';
 
 export {
   calculationTolerance,
@@ -29,14 +29,14 @@ export {
   significantRoundingHalfUnit,
   withinEpsilon,
   withinTickTolerance
-} from './data-workspace/tolerance';
-export { assertAcyclicDependencies } from './data-workspace/validation';
+} from './tolerance';
+export { assertAcyclicDependencies } from './validation';
 export {
   cloneSession,
   createEmptySession,
   createTrialRecord,
   freezeSession
-} from './data-workspace/session';
+} from './session';
 
 export const DATA_WORKSPACE_STEPS = [
   'reading',

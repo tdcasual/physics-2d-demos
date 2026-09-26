@@ -26,8 +26,19 @@ import {
   type DataWorkspaceSession,
   type DataWorkspaceSpec,
   type FieldCheckState
-} from '../../platform/data-workspace';
-import { renderDataWorkspaceReview } from './data-workspace-panel/review';
+} from '../../../platform/data-workspace';
+import { renderDataWorkspaceReview } from './review';
+import { createChartStageController } from './chart-stage';
+import {
+  clearReadinessOnInput,
+  fillFieldLabel,
+  isFieldsOrientation,
+  isFixedRowCount,
+  isNaPlaceholder,
+  setFieldStatus,
+  setReadinessOnInput,
+  headerLabel
+} from './field-status';
 
 export type DataWorkspacePanelStep = 'data' | 'chartAnalysis';
 
@@ -42,127 +53,6 @@ export type DataWorkspacePanel = {
 };
 
 /** 校验结果保持简短；具体判分原因仍可悬停查看并由辅助技术读取。 */
-function fieldStatus(field: FieldCheckState | undefined): string {
-  if (!field?.feedback) return '';
-  if (field.feedback.message === '端点无需填写') return '—';
-  if (field.stale) return '↻ 需重校';
-  if (!field.feedback.ok) return '✗ 不通过';
-  return '✓';
-}
-
-function statusClass(field: FieldCheckState | undefined): string {
-  if (!field?.feedback) return '';
-  if (field.stale) return 'is-stale';
-  return field.feedback.ok ? 'is-ok' : 'is-error';
-}
-
-function visibleFeedbackReason(
-  field: FieldCheckState | undefined
-): string | undefined {
-  if (!field?.feedback || field.stale || field.feedback.ok) return undefined;
-  switch (field.feedback.layer) {
-    case 'format':
-      return '格式不符';
-    case 'unit':
-      return '单位不符';
-    case 'range':
-      return '超出范围';
-    case 'instrument':
-      return '仪器读数不符';
-    case 'relation':
-      return '计算关系不符';
-  }
-}
-
-function setFieldStatus(
-  node: HTMLElement,
-  field: FieldCheckState | undefined
-): void {
-  const className = `data-workspace-status ${statusClass(field)}`;
-  const text = fieldStatus(field);
-  const reason = visibleFeedbackReason(field);
-  const feedback = field?.feedback;
-  const message = feedback?.message.trim();
-  const hasFeedback = Boolean(field && feedback && message);
-  const outcome = field?.stale
-    ? '数据已变化，需要重新校对'
-    : feedback?.ok
-      ? '校对通过'
-      : '校对未通过';
-  const title = hasFeedback ? (message ?? '') : '';
-  const ariaLabel = hasFeedback ? `${outcome}。${message}` : '';
-  // 场景 notify 高频（如拖动测微仪旋钮 ≈60Hz）；目标态全等时跳过 DOM 写。
-  if (
-    node.className === className &&
-    node.textContent === text &&
-    (node.dataset.reason ?? '') === (reason ?? '') &&
-    node.title === title &&
-    (node.getAttribute('aria-label') ?? '') === ariaLabel
-  ) {
-    return;
-  }
-  node.className = className;
-  node.textContent = text;
-  if (reason) node.dataset.reason = reason;
-  else delete node.dataset.reason;
-  if (!field || !feedback || !message) {
-    node.removeAttribute('title');
-    node.removeAttribute('aria-label');
-    return;
-  }
-  node.title = message;
-  node.setAttribute('aria-label', `${outcome}。${message}`);
-}
-
-function headerLabel(field: DataWorkspaceFieldSpec): string {
-  return field.unit ? `${field.label} / ${field.unit}` : field.label;
-}
-
-/** 表头只留字段名和单位。位数说明在标题下，不进表格。 */
-function fillFieldLabel(
-  target: HTMLElement,
-  field: DataWorkspaceFieldSpec
-): void {
-  target.textContent = headerLabel(field);
-}
-
-function rememberAria(input: HTMLInputElement): void {
-  if (!input.dataset.dwAria) {
-    input.dataset.dwAria = input.getAttribute('aria-label') ?? '';
-  }
-}
-
-/** 未就绪说明只挂在禁用输入上，不写进单元格正文。 */
-function setReadinessOnInput(
-  input: HTMLInputElement | null,
-  hint: string
-): void {
-  if (!input) return;
-  rememberAria(input);
-  const base = input.dataset.dwAria ?? '';
-  input.title = hint;
-  input.setAttribute('aria-label', base ? `${base}。${hint}` : hint);
-}
-
-function clearReadinessOnInput(input: HTMLInputElement | null): void {
-  if (!input?.dataset.dwAria) return;
-  input.removeAttribute('title');
-  input.setAttribute('aria-label', input.dataset.dwAria);
-}
-
-function isFieldsOrientation(spec: DataWorkspaceSpec): boolean {
-  return spec.tableOrientation === 'fields';
-}
-
-function isFixedRowCount(spec: DataWorkspaceSpec): boolean {
-  const { minRows, maxRows } = resolveRowLimits(spec);
-  return minRows === maxRows;
-}
-
-function isNaPlaceholder(field: FieldCheckState | undefined): boolean {
-  return Boolean(field?.checked && field.raw === '—' && !field.stale);
-}
-
 export function createDataWorkspacePanel(options: {
   host: DataWorkspaceHost;
   onChange(): void;
@@ -298,10 +188,12 @@ export function createDataWorkspacePanel(options: {
 
   let reviewEl: HTMLElement | null = null;
   let chartMount: HTMLElement | null = null;
-  /** 图像分析环节的两区包裹层（表 + 分隔条 + 图），比例基准只含这三个。 */
-  let chartStage: HTMLElement | null = null;
-  let splitter: HTMLElement | null = null;
-  if (shouldShowChartAnalysis(spec)) {
+  const chart = shouldShowChartAnalysis(spec)
+    ? createChartStageController({ spec, ac })
+    : null;
+  const chartStage = chart?.chartStage ?? null;
+  const splitter = chart?.splitter ?? null;
+  if (chart) {
     reviewEl = document.createElement('div');
     reviewEl.className = 'data-workspace-review';
     reviewEl.hidden = true;
@@ -312,201 +204,6 @@ export function createDataWorkspacePanel(options: {
     chartMount.dataset.dataWorkspaceChart = 'true';
     chartMount.setAttribute('data-data-workspace-chart', '');
     chartMount.hidden = true;
-    chartStage = document.createElement('div');
-    chartStage.className = 'data-workspace-chart-stage';
-    splitter = document.createElement('div');
-    splitter.className = 'data-workspace-splitter';
-    splitter.setAttribute('role', 'separator');
-    splitter.setAttribute('aria-orientation', 'horizontal');
-    splitter.setAttribute('aria-valuemin', '18');
-    splitter.setAttribute('aria-valuemax', '72');
-    splitter.setAttribute('aria-label', '调整表格与图表分界');
-    splitter.tabIndex = 0;
-    splitter.hidden = true;
-  }
-
-  const SPLIT_MIN = 0.18;
-  const SPLIT_MAX = 0.72;
-  const splitStorageKey = `dw-split-fit-${spec.id}`;
-  let splitMode: 'content' | 'manual' | 'even' = 'content';
-
-  function readStoredSplit(): number | null {
-    try {
-      const stored = Number(window.localStorage.getItem(splitStorageKey));
-      if (
-        Number.isFinite(stored) &&
-        stored >= SPLIT_MIN &&
-        stored <= SPLIT_MAX
-      ) {
-        return stored;
-      }
-    } catch {
-      /* storage may be unavailable in private or embedded browsing contexts */
-    }
-    return null;
-  }
-
-  function measuredSplitRatio(stage: HTMLElement): number | null {
-    const review = stage.querySelector('.data-workspace-review');
-    const height = stage.clientHeight || stage.getBoundingClientRect().height;
-    if (!(review instanceof HTMLElement) || !(height > 0)) return null;
-    const reviewHeight = review.getBoundingClientRect().height;
-    if (!(reviewHeight > 0)) return null;
-    return reviewHeight / height;
-  }
-
-  function currentSplitRatio(stage: HTMLElement): number {
-    if (splitMode === 'even') return 0.5;
-    if (splitMode === 'manual') {
-      const parsed =
-        Number.parseFloat(stage.style.getPropertyValue('--dw-split')) / 100;
-      if (Number.isFinite(parsed)) return parsed;
-    }
-    return measuredSplitRatio(stage) ?? SPLIT_MIN;
-  }
-
-  function applySplitRatio(ratio: number, persist = true): void {
-    const clamped = Math.max(SPLIT_MIN, Math.min(SPLIT_MAX, ratio));
-    splitMode = 'manual';
-    chartStage?.setAttribute('data-split-mode', 'manual');
-    chartStage?.style.setProperty(
-      '--dw-split',
-      `${(clamped * 100).toFixed(2)}%`
-    );
-    announceSeparator(clamped, false);
-    if (!persist) return;
-    try {
-      window.localStorage.setItem(
-        splitStorageKey,
-        String(Math.round(clamped * 1000) / 1000)
-      );
-    } catch {
-      /* 私密模式等存储不可用时静默 */
-    }
-  }
-
-  /**
-   * aria-valuenow must stay inside aria-valuemin/max. Content-fit can be
-   * shorter than 18%; the announced value is clamped, and aria-valuetext
-   * still says the split is following the table.
-   */
-  function announceSeparator(ratio: number, content: boolean): void {
-    if (!splitter) return;
-    const announced = Math.max(SPLIT_MIN, Math.min(SPLIT_MAX, ratio));
-    splitter.setAttribute('aria-valuenow', String(Math.round(announced * 100)));
-    if (content) splitter.setAttribute('aria-valuetext', '按表格内容');
-    else splitter.removeAttribute('aria-valuetext');
-  }
-
-  function useContentSplit(): void {
-    splitMode = 'content';
-    chartStage?.setAttribute('data-split-mode', 'content');
-    chartStage?.style.removeProperty('--dw-split');
-    const measured = chartStage ? measuredSplitRatio(chartStage) : null;
-    announceSeparator(measured ?? SPLIT_MIN, true);
-  }
-
-  function useEvenSplit(): void {
-    splitMode = 'even';
-    chartStage?.setAttribute('data-split-mode', 'even');
-    chartStage?.style.removeProperty('--dw-split');
-    if (!splitter) return;
-    splitter.setAttribute('aria-valuenow', '50');
-    splitter.setAttribute('aria-valuetext', '上下各半');
-  }
-
-  function viewportAllowsEven(): boolean {
-    return typeof window !== 'undefined' && window.innerHeight >= 640;
-  }
-
-  /** Stored manual ratios win. Even is only the untouched default. */
-  function chooseIdleSplit(): void {
-    if (splitMode === 'manual') return;
-    const stored = readStoredSplit();
-    if (stored != null) {
-      applySplitRatio(stored, false);
-      return;
-    }
-    if (
-      options.host.getSpec().chartEvenSplit === true &&
-      viewportAllowsEven()
-    ) {
-      useEvenSplit();
-      return;
-    }
-    useContentSplit();
-  }
-
-  function syncContentSeparator(): void {
-    if (splitMode !== 'content') return;
-    const measured = chartStage ? measuredSplitRatio(chartStage) : null;
-    announceSeparator(measured ?? SPLIT_MIN, true);
-  }
-
-  function bindSplitter(handle: HTMLElement, stage: HTMLElement): void {
-    const ratioFromPointer = (clientY: number): number => {
-      const rect = stage.getBoundingClientRect();
-      // 相对「表+分隔条+图」包裹层的高度换算拖拽比例；包裹层不在
-      // 舞台 transform 内，不违反舞台缩放坐标纪律。
-      const height = stage.clientHeight || rect.height;
-      if (height <= 0) return SPLIT_MIN;
-      return Math.max(
-        SPLIT_MIN,
-        Math.min(SPLIT_MAX, (clientY - rect.top) / height)
-      );
-    };
-    handle.addEventListener(
-      'pointerdown',
-      (event) => {
-        try {
-          if (typeof handle.setPointerCapture === 'function') {
-            handle.setPointerCapture(event.pointerId);
-          }
-        } catch {
-          /* capture is optional; move events still update the ratio */
-        }
-        applySplitRatio(ratioFromPointer(event.clientY));
-        const move = (moveEvent: PointerEvent): void => {
-          applySplitRatio(ratioFromPointer(moveEvent.clientY));
-        };
-        const up = (): void => {
-          handle.removeEventListener('pointermove', move);
-          handle.removeEventListener('pointerup', up);
-          handle.removeEventListener('pointercancel', up);
-        };
-        handle.addEventListener('pointermove', move);
-        handle.addEventListener('pointerup', up);
-        handle.addEventListener('pointercancel', up);
-      },
-      { signal: ac.signal }
-    );
-    handle.addEventListener(
-      'keydown',
-      (event) => {
-        const current = currentSplitRatio(stage);
-        const step =
-          event.key === 'PageUp' || event.key === 'PageDown' ? 0.05 : 0.01;
-        if (event.key === 'ArrowUp' || event.key === 'PageUp') {
-          event.preventDefault();
-          applySplitRatio(current - step);
-        } else if (event.key === 'ArrowDown' || event.key === 'PageDown') {
-          event.preventDefault();
-          applySplitRatio(current + step);
-        } else if (event.key === 'Home') {
-          event.preventDefault();
-          applySplitRatio(SPLIT_MIN);
-        } else if (event.key === 'End') {
-          event.preventDefault();
-          applySplitRatio(SPLIT_MAX);
-        }
-      },
-      { signal: ac.signal }
-    );
-  }
-  if (chartStage && splitter) {
-    chooseIdleSplit();
-    bindSplitter(splitter, chartStage);
-    window.addEventListener('resize', chooseIdleSplit, { signal: ac.signal });
   }
 
   root.append(
@@ -1381,7 +1078,7 @@ export function createDataWorkspacePanel(options: {
     }
     syncSummary(session, specNow, knowns);
     renderResult(session, specNow);
-    syncContentSeparator();
+    chart?.syncContentSeparator();
   }
 
   update();
