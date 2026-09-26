@@ -11,6 +11,13 @@ export type E2ESceneProfile = {
 };
 
 const CANVAS_SELECTOR = 'canvas.stage-canvas, canvas.mobile-stage-canvas';
+/**
+ * 自建舞台 DOM 的场景覆盖：chase-meet 不消费布局画布，用自己的
+ * chase-modern-motion-canvas（renderer/view-utils.ts createStageDom）。
+ */
+const CANVAS_SELECTOR_OVERRIDES: Record<string, string> = {
+  'chase-meet': 'canvas.chase-modern-motion-canvas'
+};
 
 /** Read layout-independent capabilities directly from the exported SceneMeta. */
 async function readProfile(
@@ -39,7 +46,10 @@ async function readProfile(
 export const sceneProfiles = await Promise.all(
   sceneIds.map(async (id) => ({
     id,
-    profile: { ...(await readProfile(id)), canvasSelector: CANVAS_SELECTOR }
+    profile: {
+      ...(await readProfile(id)),
+      canvasSelector: CANVAS_SELECTOR_OVERRIDES[id] ?? CANVAS_SELECTOR
+    }
   }))
 );
 
