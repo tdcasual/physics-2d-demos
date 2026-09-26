@@ -4,20 +4,9 @@
 > 三种状态之一——**A 区待清偿**（链接守卫与验收）、**B 区棘轮在管**（守卫=清单
 > 或测试）、**C 区设计决策**（理由一句话）。复查时「无守卫的债务项」视为违规。
 
-## A 区：待清偿（清偿后移入页脚已清记录）
+## A 区：待清偿
 
-| 编号 | 债务                                                                    | 来源            | 守卫/计划                                                       | 状态   |
-| ---- | ----------------------------------------------------------------------- | --------------- | --------------------------------------------------------------- | ------ |
-| A1   | 全量 Playwright 现状待定真（旧文档 35 不稳定 vs AGENTS.md 已稳定）      | 双盘查          | quality:full 建基线；失败按「产品→测试→环境」优先序，禁放宽断言 | 进行中 |
-| A2   | 控件双轨：ganshe（2 处 eslint-disable）+ spring-oscillator（无 schema） | 双盘查          | Phase 2 迁移后退役 scene-standard 豁免机制                      | 进行中 |
-| A3   | `trialCount` 双轨字段                                                   | 双盘查          | Phase 1 删除平台/会话回退                                       | 进行中 |
-| A4   | 分包按文件名 + data-workspace-panel 1363 行                             | Codex           | Phase 3 拆分；container.ts 842 行登记本表 B 区限期拆分          | 进行中 |
-| A6   | vendor 预算 160 kB 棘轮过宽                                             | Codex           | Phase 1 按脚本口径实测后收紧                                    | 进行中 |
-| A7   | URL 同步 12 场景缺口 + AGENTS.md 幻影阈值引用                           | Codex 待核→证实 | Phase 2 棘轮钉死 + 修文档                                       | 进行中 |
-| A8   | 覆盖率阈值 65/70/65/65 vs 实绩 90.9/83.0/88.3/90.9                      | Claude          | Phase 1 提至实测−2 + 删用例演练                                 | 进行中 |
-| A10  | sidebar-hidden 8px 死轨道                                               | Claude          | Phase 3 统一 `'0px 0px 1fr'`                                    | 进行中 |
-| A11  | ticker-tape 公开 setter 绕过会话失效（公开层零调用方已证实）            | Claude+Codex    | Phase 1 删除公开层、保留 sim 层                                 | 进行中 |
-| A12  | double-slit 入口 187.7/200 kB 贴线                                      | Claude          | Phase 3 实测后拆分 + 预算收紧                                   | 进行中 |
+（空——2026-09-25 债务清偿计划执行完毕，全部移入「已清记录」）
 
 ## B 区：棘轮在管（保留机制，不清偿）
 
@@ -28,6 +17,9 @@
 | B3   | 视觉基线双平台容器门控                                    | CODEOWNERS + scripts/visual-linux-container.sh         | CJK 光栅化必要成本                |
 | B4   | container.ts（842 行）拆分                                | Phase 3 后新增 app/ui >1000 行契约检查（台账条目豁免） | 限期：债务计划二期                |
 | B5   | `writeParam` 150ms 防抖窗口 URL 回灌竞态（理论性）        | AGENTS.md 记录 + 窗口极小                              | 修复复杂度 > 风险，暂缓           |
+
+| B6 | data-workspace-panel/index.ts（1104 行）table 控制器拆分 | app/ui >1000 行契约检查（台账条目豁免） | 限期：债务计划二期 |
+| B7 | sidebar-hidden 恢复态第二轨 8px（resizer 可见时） | 视觉核查无碍 | 接受 |
 
 ## C 区：设计决策（不是债务）
 
@@ -41,6 +33,20 @@
 
 ---
 
-**已清记录**：PRESENTATION_EXEMPT 清空（scene-standard.spec.ts:47）；SNAPSHOT_OPT_OUT
+**已清记录（2026-09-25 债务清偿计划，10 项）**：
+
+- A0 两轮修复三提交入库（e7db921 / fcfaf0c / 77e06ea）
+- A1 全量 e2e 定真并清偿：87 失败 = transport 断言与 reset 暂停语义相反（86）+ chase-meet 自建画布类名（1）；两根因修复后 **545/545 全绿（exit 0，4.9 分钟，原 19.6 分钟）**，Codex 独立复核确认
+- A2 控件双轨：ganshe/spring-oscillator 依赖注入迁移，scenes 层 eslint-disable 归零
+- A3 DataWorkspaceSpec.trialCount 退役（平台/会话/规格/夹具全迁移）
+- A4 data-workspace-panel 目录化拆分：index 1104 + chart-stage 219 + field-status 121 + review 90；chunk 规则改目录前缀（index 余量登记 B6）
+- A6 vendor 预算 160→29 kB、shared 150→162 kB（脚本口径实测 24.02/135.00 ×1.2）
+- A7 URL 同步棘轮：7 场景补 urlSyncKeys、4 场景确认 paramSync、契约结构化 100%；AGENTS.md 幻影阈值引用修正
+- A8 覆盖率棘轮 65/70/65/65 → 88.9/80.9/86.2/88.9（实绩−2，删用例演练验证红线）
+- A10 sidebar-hidden 死轨道统一 0px 0px 1fr
+- A11 ticker-tape 公开 setter 删除（公开层零调用方，写回经 sim 层）
+- A12 场景入口预算棘轮 200→190 kB（double-slit 实测 187.65 + 2）
+
+**历史已清**：PRESENTATION_EXEMPT 清空（scene-standard.spec.ts:47）；SNAPSHOT_OPT_OUT
 清空（visual-regression.spec.ts:21）；2026-09-25 数据处理双 P1 与布局系统 P1
 （docs/plans/ 两份方案）；Canvas viewport 基座迁移 120/120（2026-09-25 核实）。

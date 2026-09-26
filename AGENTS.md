@@ -287,7 +287,7 @@ export type SceneMeta = ScenePlacardMeta & {
 - 单元测试放在 `tests/unit/*.spec.ts`
 - DOM 组件测试使用 `happy-dom` 环境（已全局配置）
 - Playwright 行为测试放在 `tests/e2e/*.spec.ts`，布局、无障碍、视觉与跨浏览器测试放在 `tests/visual/*.spec.ts`
-- 覆盖率阈值以 `vite.config.ts` 为准：lines 65%, functions 65%, branches 70%, statements 65%
+- 覆盖率阈值以 `vite.config.ts` 为准（棘轮 = 实绩−2，2026-09-25 基线）：lines 88.9%, functions 86.2%, branches 80.9%, statements 88.9%
 
 ### 视觉回归基线规则（强制）
 
