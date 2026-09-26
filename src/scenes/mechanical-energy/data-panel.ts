@@ -1,4 +1,5 @@
 import { formatFixed, type MechanicalEnergyState } from './scene.sim';
+import { LAB_DATA_SLOT_ATTR } from '../../platform/stage-chrome';
 
 export type DataPanelHandle = {
   element: HTMLElement;
@@ -84,16 +85,19 @@ export function createMechanicalEnergyDataPanel(): DataPanelHandle {
   };
 }
 
-export function findMechanicalEnergyDataHost(): HTMLElement | null {
-  const lab = document.querySelector('[data-lab-data-slot]');
+export function findMechanicalEnergyDataHost(
+  scope?: ParentNode
+): HTMLElement | null {
+  const root = scope ?? document;
+  const lab = root.querySelector(`[${LAB_DATA_SLOT_ATTR}]`);
   if (lab instanceof HTMLElement) return lab;
   // 读数挂载点统一走创建点打标的 [data-readout-slot]：mobile 是 readout
   // 能力的 inline panel（.mobile-readout-panel），split/srgb 是其内部 ul
-  const readoutSlot = document.querySelector('[data-readout-slot]');
+  const readoutSlot = root.querySelector('[data-readout-slot]');
   if (readoutSlot instanceof HTMLElement) return readoutSlot;
-  const tab = document.querySelector('#mobile-panel-readout');
+  const tab = root.querySelector('#mobile-panel-readout');
   if (tab instanceof HTMLElement) return tab;
-  const overlay = document.querySelector(
+  const overlay = root.querySelector(
     '.srgb-readout-panel, .teaching-readout-panel'
   );
   if (overlay instanceof HTMLElement) return overlay;

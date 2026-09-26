@@ -149,7 +149,12 @@ type LayoutEntry =
 class LayoutRegistry {
   private layouts = new Map<string, LayoutEntry>();
   private metadata = new Map<string, LayoutMetadata>();
-  private pool = new Map<string, ILayout>();
+  /**
+   * 实例池按容器隔离：布局实例持有创建时容器引用，跨容器复用会拿到
+   * 绑定他容器 DOM 的实例。键 = container → layoutId。WeakMap 使容器
+   * 被 GC 时其池条目（连同布局 DOM 引用）一并回收。
+   */
+  private pool = new WeakMap<HTMLElement, Map<string, ILayout>>();
   /** 同一 id 的并发加载共享同一个 import promise */
   private loadPromises = new Map<string, Promise<ILayoutConstructor>>();
 
@@ -255,10 +260,11 @@ class LayoutRegistry {
   }
 
   /**
-   * 创建布局实例（优先从实例池复用；惰性布局首次创建时动态加载）
+   * 创建布局实例（优先从本容器的实例池复用；惰性布局首次创建时动态加载）
    * @param id - 布局ID
    * @param container - 容器元素
-   * @param config - 布局配置
+   * @param config - 布局配置（池复用时经 _updateConfig 浅合并——见各布局
+   *   _updateConfig 的「单页单场景」假设说明）
    * @returns 布局实例
    */
   async create(
@@ -274,9 +280,9 @@ class LayoutRegistry {
     }
 
     // Check instance pool first
-    const cached = this.pool.get(id);
+    const cached = this.pool.get(container)?.get(id);
     if (cached) {
-      this.pool.delete(id);
+      this.pool.get(container)?.delete(id);
       cached._updateConfig?.(config);
       return cached;
     }
@@ -287,18 +293,23 @@ class LayoutRegistry {
   }
 
   /**
-   * 将布局实例放回池中以备复用。
+   * 将布局实例放回池中以备复用（按容器隔离）。
    * 调用方负责确保实例已 unmount。
    */
-  returnInstance(id: string, instance: ILayout): void {
-    this.pool.set(id, instance);
+  returnInstance(container: HTMLElement, id: string, instance: ILayout): void {
+    let perContainer = this.pool.get(container);
+    if (!perContainer) {
+      perContainer = new Map();
+      this.pool.set(container, perContainer);
+    }
+    perContainer.set(id, instance);
   }
 
   /**
-   * 清空实例池（dispose 时使用）
+   * 清空实例池（dispose 时使用）——整体替换 WeakMap。
    */
   clearPool(): void {
-    this.pool.clear();
+    this.pool = new WeakMap();
   }
 
   /**
@@ -356,7 +367,7 @@ class LayoutRegistry {
   clear(): void {
     this.layouts.clear();
     this.metadata.clear();
-    this.pool.clear();
+    this.pool = new WeakMap();
     this.loadPromises.clear();
   }
 }

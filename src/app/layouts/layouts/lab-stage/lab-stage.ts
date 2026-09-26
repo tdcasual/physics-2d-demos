@@ -20,6 +20,7 @@ import { requestLayoutResize } from '../../request-layout-resize';
 import {
   GRAPH_BODY_ATTR,
   GRAPH_SECTION_ATTR,
+  LAB_DATA_SLOT_ATTR,
   READOUT_SLOT_ATTR,
   STAGE_FRAME_ATTR
 } from '../../../../platform/stage-chrome';
@@ -66,6 +67,19 @@ export class LabStageLayout implements ILayout {
     this._container = container;
     this.capabilities = buildBaseCapabilities(config, {
       transportConfig: { mountSlot: 'animation' as const },
+      afterDataWorkspace: [
+        {
+          // inline 读数面板（与 mobile-stack 同型），挂 slots.readout
+          // ——场景不再需要自挂 readout 能力（projectile-components 已删）。
+          id: 'readout-panel',
+          config: {
+            position: 'inline',
+            collapsed: false,
+            cssPrefix: 'mobile',
+            label: ''
+          }
+        }
+      ],
       beforeDemoProfile: [{ id: 'layout-switch' }],
       demoProfileConfig: { sidebarSelector: '.lab-control-section' }
     });
@@ -146,7 +160,7 @@ export class LabStageLayout implements ILayout {
       collapsed: dataCollapsed,
       extraClass: 'lab-float-data',
       slotClass: 'lab-data-slot',
-      slotAttrs: { 'data-lab-data-slot': 'true' }
+      slotAttrs: { [LAB_DATA_SLOT_ATTR]: 'true' }
     });
     const graph = this.buildFloat({
       id: 'graph',
@@ -199,7 +213,10 @@ export class LabStageLayout implements ILayout {
     const readout = document.createElement('div');
     readout.className = 'lab-readout-slot readout-slot';
     readout.setAttribute(READOUT_SLOT_ATTR, '');
-    data.slot.insertAdjacentElement('afterend', readout);
+    // 读数插槽在数据插槽**之前**：场景数据面板 append 进 data slot 后，
+    // 视觉位序为「读数在上、数据表在下」——与 projectile-components 场景
+    // 旧版手动重排的最终位序一致（该重排已随读数能力声明化删除）。
+    data.slot.insertAdjacentElement('beforebegin', readout);
 
     this.slots = {
       animation,
@@ -404,6 +421,11 @@ export class LabStageLayout implements ILayout {
     return this.slots;
   }
 
+  /**
+   * 实例池复用时的配置更新：浅合并，新配置缺失的键保留旧值。
+   * 依赖「单页单场景、同页配置恒定」假设；preservedCanvas 由容器每次
+   * 显式传键（含 null）覆盖，不依赖合并。改键语义需同步此假设。
+   */
   _updateConfig(config?: LabStageConfig): void {
     if (config) this.cfg = { ...this.cfg, ...config };
   }

@@ -713,3 +713,319 @@ describe('SceneContainerImpl', () => {
     });
   });
 });
+
+describe('SceneContainerImpl selection & concurrency (Fix 1 / Fix 5)', () => {
+  let mount: HTMLElement;
+
+  beforeEach(() => {
+    mount = document.createElement('div');
+    mount.style.width = '1200px';
+    mount.style.height = '800px';
+    document.body.appendChild(mount);
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    mount.remove();
+    localStorage.clear();
+    vi.clearAllMocks();
+  });
+
+  function makeScene(): Scene {
+    return {
+      id: 'scene-fix',
+      preferredLayout: 'split-right',
+      renderAnimation: vi.fn(),
+      renderControl: vi.fn(),
+      mount: vi.fn(),
+      unmount: vi.fn(),
+      getTransportState: vi.fn(() => ({ isPlaying: false, speed: 1 })),
+      subscribe: vi.fn(() => vi.fn())
+    } as unknown as Scene;
+  }
+
+  const flush = async (): Promise<void> => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  };
+
+  it('passes forceLayout into the selection context (Fix 1)', async () => {
+    const { layoutSelector } = await import('../../src/app/layouts/selector');
+    const captured: Array<Record<string, unknown>> = [];
+    (layoutSelector.select as ReturnType<typeof vi.fn>).mockImplementation(
+      (ctx: Record<string, unknown>) => {
+        captured.push(ctx);
+        return 'split-right';
+      }
+    );
+
+    const container = createSceneContainer({ mount, forceLayout: 'lab-stage' });
+    await container.setScene(makeScene());
+
+    expect(captured.length).toBeGreaterThan(0);
+    expect(captured[0].forcedLayout).toBe('lab-stage');
+    container.dispose();
+  });
+
+  it('leaves forcedLayout undefined without the option (Fix 1)', async () => {
+    const { layoutSelector } = await import('../../src/app/layouts/selector');
+    const captured: Array<Record<string, unknown>> = [];
+    (layoutSelector.select as ReturnType<typeof vi.fn>).mockImplementation(
+      (ctx: Record<string, unknown>) => {
+        captured.push(ctx);
+        return 'split-right';
+      }
+    );
+
+    const container = createSceneContainer({ mount });
+    await container.setScene(makeScene());
+
+    expect(captured.length).toBeGreaterThan(0);
+    expect(captured[0].forcedLayout).toBeUndefined();
+    container.dispose();
+  });
+
+  it('queues a concurrent manual switch and drains it after the current one (Fix 5)', async () => {
+    const container = createSceneContainer({ mount });
+    await container.setScene(makeScene());
+    expect(container.currentLayout?.id).toBe('split-right');
+
+    const first = container.switchLayout('mobile-stack', { reason: 'manual' });
+    const second = container.switchLayout('lab-stage', { reason: 'manual' });
+    await Promise.all([first, second]);
+    await flush();
+
+    expect(container.currentLayout?.id).toBe('lab-stage');
+    container.dispose();
+  });
+
+  it('drops a concurrent auto switch without queueing (Fix 5)', async () => {
+    const container = createSceneContainer({ mount });
+    await container.setScene(makeScene());
+
+    const first = container.switchLayout('mobile-stack', { reason: 'manual' });
+    const second = container.switchLayout('lab-stage', {
+      reason: 'auto',
+      animate: false
+    });
+    await Promise.all([first, second]);
+    await flush();
+
+    expect(container.currentLayout?.id).toBe('mobile-stack');
+    container.dispose();
+  });
+
+  it('abandons a timed-out switch at the await boundary and drains the queue (Fix 5)', async () => {
+    vi.useFakeTimers();
+    try {
+      const container = createSceneContainer({ mount });
+      await container.setScene(makeScene());
+      expect(container.currentLayout?.id).toBe('split-right');
+
+      // 下一次 registry.create 挂起（模拟惰性 chunk 网络悬挂）
+      const { layoutRegistry } = await import('../../src/app/layouts/registry');
+      let releaseCreate: (value: unknown) => void = () => {};
+      const gate = new Promise((resolve) => {
+        releaseCreate = resolve;
+      });
+      (
+        layoutRegistry.create as ReturnType<typeof vi.fn>
+      ).mockImplementationOnce(() => gate);
+
+      const hung = container.switchLayout('mobile-stack', {
+        reason: 'manual'
+      });
+      await vi.advanceTimersByTimeAsync(0);
+      // 拆卸已完成、装配挂起：当前布局被清空
+      expect(container.currentLayout).toBeNull();
+
+      // 悬挂期间的手动切换进入队列
+      const queued = container.switchLayout('lab-stage', { reason: 'manual' });
+
+      // 安全计时器判死当前代并交棒：排队中的 lab-stage 立即被 drain 执行
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(container.currentLayout?.id).toBe('lab-stage');
+
+      // 旧协程迟完成：在 await 边界作废，不得挂载其布局
+      const lateLayout = {
+        id: 'mobile-stack',
+        capabilities: [],
+        mount: vi.fn(),
+        unmount: vi.fn().mockResolvedValue(undefined),
+        setTheme: vi.fn(),
+        handleResize: vi.fn(),
+        getSlots: () => ({
+          control: document.createElement('div'),
+          animation: document.createElement('div')
+        })
+      };
+      releaseCreate(lateLayout);
+      await vi.advanceTimersByTimeAsync(0);
+      await hung;
+      await queued;
+
+      expect(lateLayout.mount).not.toHaveBeenCalled();
+      expect(container.currentLayout?.id).toBe('lab-stage');
+      container.dispose();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe('SceneContainerImpl Codex-challenged edge cases (Fix 1 / Fix 5 / Fix 6)', () => {
+  let mount: HTMLElement;
+
+  beforeEach(() => {
+    mount = document.createElement('div');
+    mount.style.width = '1200px';
+    mount.style.height = '800px';
+    document.body.appendChild(mount);
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    mount.remove();
+    localStorage.clear();
+    vi.clearAllMocks();
+  });
+
+  function makeScene(id = 'scene-fix'): Scene {
+    return {
+      id,
+      preferredLayout: 'split-right',
+      renderAnimation: vi.fn(),
+      renderControl: vi.fn(),
+      mount: vi.fn(),
+      unmount: vi.fn(),
+      getTransportState: vi.fn(() => ({ isPlaying: false, speed: 1 })),
+      subscribe: vi.fn(() => vi.fn())
+    } as unknown as Scene;
+  }
+
+  const flush = async (): Promise<void> => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  };
+
+  it('keeps the forced layout under low-power mode (Fix 1)', async () => {
+    const { layoutSelector } = await import('../../src/app/layouts/selector');
+    (layoutSelector.select as ReturnType<typeof vi.fn>).mockImplementation(
+      () => 'split-right'
+    );
+
+    const container = createSceneContainer({ mount, forceLayout: 'lab-stage' });
+    // 低功耗模式会试图把无偏好的选择覆盖为 mobile-stack；
+    // 强制档不可被覆盖。
+    (container as unknown as { _lowPowerMode: boolean })._lowPowerMode = true;
+    await container.setScene(makeScene());
+
+    expect(container.currentLayout?.id).toBe('split-right');
+    container.dispose();
+  });
+
+  it('still applies the low-power override without forceLayout (Fix 1)', async () => {
+    const { layoutSelector } = await import('../../src/app/layouts/selector');
+    (layoutSelector.select as ReturnType<typeof vi.fn>).mockImplementation(
+      () => 'split-right'
+    );
+
+    // 注册表 mock 的元数据为空：注入无约束的 mobile-stack 元数据，
+    // 隔离验证低功耗覆盖逻辑本身。
+    const { layoutRegistry } = await import('../../src/app/layouts/registry');
+    (layoutRegistry.getAllMetadata as ReturnType<typeof vi.fn>).mockReturnValue(
+      [
+        {
+          id: 'mobile-stack',
+          priority: 100,
+          autoSelectable: true,
+          constraints: {}
+        }
+      ]
+    );
+
+    const container = createSceneContainer({ mount });
+    (container as unknown as { _lowPowerMode: boolean })._lowPowerMode = true;
+    await container.setScene(makeScene());
+
+    expect(container.currentLayout?.id).toBe('mobile-stack');
+    container.dispose();
+  });
+
+  it('does not emit events or persist preference when enter-hang is abandoned (Fix 5)', async () => {
+    vi.useFakeTimers();
+    try {
+      const { layoutRegistry } = await import('../../src/app/layouts/registry');
+      const container = createSceneContainer({ mount });
+      await container.setScene(makeScene());
+
+      let releaseEnter: (value: undefined) => void = () => {};
+      const enterGate = new Promise<undefined>((resolve) => {
+        releaseEnter = resolve;
+      });
+      (
+        layoutRegistry.create as ReturnType<typeof vi.fn>
+      ).mockImplementationOnce((id: string) => ({
+        id,
+        capabilities: [],
+        mount: vi.fn().mockResolvedValue(undefined),
+        unmount: vi.fn().mockResolvedValue(undefined),
+        enter: vi.fn(() => enterGate),
+        exit: vi.fn().mockResolvedValue(undefined),
+        setTheme: vi.fn(),
+        handleResize: vi.fn(),
+        _updateConfig: vi.fn(),
+        getSlots: () => ({
+          control: document.createElement('div'),
+          animation: document.createElement('div')
+        })
+      }));
+      const changeSpy = vi.fn();
+      container.on('layout:change', changeSpy);
+
+      const hung = container.switchLayout('lab-stage', {
+        reason: 'manual',
+        savePreference: true
+      });
+      await vi.advanceTimersByTimeAsync(0);
+      // enter 挂起期间到达超时：判死当前代
+      await vi.advanceTimersByTimeAsync(10_000);
+      releaseEnter(undefined);
+      await vi.advanceTimersByTimeAsync(0);
+      await hung;
+
+      // 旧代不得写事件与偏好
+      expect(
+        changeSpy.mock.calls.filter((call) => call[0].to === 'lab-stage')
+      ).toHaveLength(0);
+      const stored = JSON.parse(
+        localStorage.getItem('physics-demos-container-state') ?? '{}'
+      );
+      expect(stored.preferredLayout).not.toBe('lab-stage');
+      container.dispose();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('drains pendingScene before pendingSwitchId (Fix 5)', async () => {
+    const container = createSceneContainer({ mount });
+    const scene1 = makeScene('scene-1');
+    await container.setScene(scene1);
+
+    const switchPromise = container.switchLayout('lab-stage', {
+      reason: 'manual'
+    });
+    // 切换进行中：排入 pendingScene（last-wins）与 pendingSwitchId
+    const scene2 = makeScene('scene-2');
+    const setPromise = container.setScene(scene2);
+    const layoutPromise = container.switchLayout('lab-stage', {
+      reason: 'manual'
+    });
+    await Promise.all([switchPromise, setPromise, layoutPromise]);
+    await flush();
+
+    // pendingScene 先（setScene 自行解析布局），pendingSwitchId 后
+    expect(container.currentScene).toBe(scene2);
+    expect(container.currentLayout?.id).toBe('lab-stage');
+    container.dispose();
+  });
+});

@@ -318,6 +318,11 @@ export interface CreateContainerOptions {
   storageKey?: string;
   onResize?: (width: number, height: number) => void;
   layoutConfig?: Record<string, unknown>;
+  /**
+   * URL 强制布局（?layout= 命中已注册布局时由 bootstrapper 传入）。
+   * 选择策略 0：高于用户偏好，不查视口约束（强制语义）。
+   */
+  forceLayout?: string;
 }
 
 export interface LayoutChangeEvent {

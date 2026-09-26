@@ -102,6 +102,8 @@ export function createSidebarToggle(
           if (isMultiColumn) {
             ctx.container.style.gridTemplateColumns = '0px 8px 1fr';
           }
+          // 隐藏态单一事实源：applyResponsiveColumns 读该标记而非嗅探样式串。
+          ctx.container.dataset.sidebarHidden = 'true';
           if (sidebar) {
             sidebar.style.display = 'none';
             sidebar.setAttribute('aria-hidden', 'true');
@@ -117,6 +119,7 @@ export function createSidebarToggle(
             // Restore the saved first track into the current grid
             ctx.container.style.gridTemplateColumns = `${savedLeftWidth} 8px 1fr`;
           }
+          ctx.container.dataset.sidebarHidden = 'false';
           if (sidebar) {
             sidebar.style.display = '';
             sidebar.setAttribute('aria-hidden', 'false');

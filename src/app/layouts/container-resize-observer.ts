@@ -3,8 +3,9 @@
  *
  * 封装 ResizeObserver 的生命周期管理：
  * - 监听容器尺寸变化
- * - 自动布局切换（基于选择器策略）
- * - 防抖处理（300ms）
+ * - 自动布局切换（防抖 300ms 后**按最新上下文重解析**——用户偏好经策略 1 的
+ *   约束检查参与解析：满足时解析结果即偏好（== 当前布局，无切换），违反时
+ *   自动回落；不存在「有偏好即禁用自动切换」的旁路）
  * - 向当前布局通知尺寸变化
  * - 向外部回调通知尺寸变化
  */
@@ -14,11 +15,9 @@ import type { Scene } from './types';
 export interface ResizeObserverCallbacks {
   /** 获取当前场景 */
   getCurrentScene: () => Scene | null;
-  /** 获取用户偏好布局 */
-  getUserPreferredLayout: () => string | null;
   /** 获取当前布局 ID */
   getCurrentLayoutId: () => string | null;
-  /** 解析场景应使用的布局 */
+  /** 解析场景应使用的布局（防抖到期时以最新视口/偏好重解析） */
   resolveLayout: (scene: Scene) => string;
   /** 执行布局切换 */
   switchLayout: (id: string) => Promise<void>;
@@ -36,7 +35,6 @@ export interface ResizeObserverCallbacks {
 export class ContainerResizeObserver {
   private _observer: ResizeObserver | null = null;
   private _timer: ReturnType<typeof setTimeout> | null = null;
-  private _lastLayoutId: string | null = null;
 
   constructor(
     private _container: HTMLElement,
@@ -49,19 +47,13 @@ export class ContainerResizeObserver {
 
     this._observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-
-        // 使用选择器重新计算最佳布局（支持多断点、约束等）
-        const scene = this._callbacks.getCurrentScene();
-        const userPref = this._callbacks.getUserPreferredLayout();
-        if (scene && !userPref) {
-          const newLayoutId = this._callbacks.resolveLayout(scene);
-          if (newLayoutId !== this._lastLayoutId) {
-            this._lastLayoutId = newLayoutId;
-            this._debounceSwitch(newLayoutId);
-          }
+        // 有场景时安排一次重评估；目标布局在防抖到期后按最新上下文重解析
+        //（偏好约束化后不设「有偏好即禁用」旁路）。
+        if (this._callbacks.getCurrentScene()) {
+          this._debounceSwitch();
         }
 
+        const { width, height } = entry.contentRect;
         // 通知布局
         this._callbacks.notifyLayoutResize(width, height);
 
@@ -84,37 +76,24 @@ export class ContainerResizeObserver {
   }
 
   /**
-   * 防抖处理布局切换
-   * @param targetLayoutId - 目标布局 ID（由选择器解析得出）
+   * 防抖处理布局切换。目标布局在防抖到期后**重新解析**（resolveLayout 经
+   * 策略链：强制 > 偏好（约束内）> 场景偏好 > 自动匹配），避免沿用观察
+   * 时刻的过期目标；解析结果 == 当前布局时为 no-op。
    */
-  private _debounceSwitch(targetLayoutId: string): void {
+  private _debounceSwitch(): void {
     if (this._timer) {
       clearTimeout(this._timer);
     }
     this._timer = setTimeout(() => {
-      // Skip if a manual switch is in progress, or if the user has set a
-      // preference since the debounce started.
-      if (
-        this._callbacks.getSwitching() ||
-        this._callbacks.getUserPreferredLayout()
-      ) {
-        // Reset so the next resize cycle re-evaluates from scratch
-        this._lastLayoutId = null;
-        return;
-      }
-      if (targetLayoutId !== this._callbacks.getCurrentLayoutId()) {
-        this._callbacks
-          .switchLayout(targetLayoutId)
-          .catch((err) => {
-            console.error(
-              '[ContainerResizeObserver] Layout switch failed:',
-              err
-            );
-          })
-          .finally(() => {
-            // Reset so the next resize cycle re-evaluates from the actual current layout
-            this._lastLayoutId = this._callbacks.getCurrentLayoutId();
-          });
+      this._timer = null;
+      if (this._callbacks.getSwitching()) return;
+      const scene = this._callbacks.getCurrentScene();
+      if (!scene) return;
+      const target = this._callbacks.resolveLayout(scene);
+      if (target !== this._callbacks.getCurrentLayoutId()) {
+        this._callbacks.switchLayout(target).catch((err) => {
+          console.error('[ContainerResizeObserver] Layout switch failed:', err);
+        });
       }
     }, 300);
   }

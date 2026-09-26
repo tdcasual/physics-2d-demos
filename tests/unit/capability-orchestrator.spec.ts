@@ -444,3 +444,48 @@ describe('CapabilityOrchestrator', () => {
     expect(inst.dispose).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('CapabilityOrchestrator subscribe isolation (Fix 3)', () => {
+  it('logs and contains an update throw, and keeps other capabilities updating', () => {
+    const orchestrator = new CapabilityOrchestrator();
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const layout = createMockLayout([
+      { id: 'transport-bar' },
+      { id: 'readout-panel' }
+    ]);
+    // getTransportState 在通知回调中抛错——transport 的 update 路径失败；
+    // readout 的 update 仍应被调用（异常按 capability 隔离且可见）。
+    let transportReads = 0;
+    const scene = createMockScene({
+      getTransportState: vi.fn(() => {
+        transportReads += 1;
+        if (transportReads > 1) throw new Error('transport state boom');
+        return { isPlaying: false, speed: 1, canReset: false };
+      })
+    });
+    const slots: Partial<LayoutSlots> = {
+      animation: document.createElement('div'),
+      readout: document.createElement('div')
+    };
+
+    orchestrator.wire(layout, scene, slots, createCtx());
+
+    const readoutInstance = orchestrator.getInstances('readout-panel')[0];
+    const updateSpy = vi.spyOn(readoutInstance, 'update');
+
+    // 触发场景通知（subscribe 捕获的全部监听器：transport 与 readout 各一）
+    const subscribeMock = scene.subscribe as ReturnType<typeof vi.fn>;
+    const listeners = subscribeMock.mock.calls.map(
+      (call) => call[0] as () => void
+    );
+    expect(listeners.length).toBeGreaterThanOrEqual(2);
+    expect(() => listeners.forEach((listener) => listener())).not.toThrow();
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('scene update failed for transport-bar'),
+      expect.any(Error)
+    );
+    expect(updateSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+});

@@ -356,3 +356,40 @@ describe('registerAllLayouts', () => {
     expect(layoutRegistry.list().length).toBe(first);
   });
 });
+
+describe('instance pool per-container isolation (Fix 4)', () => {
+  beforeEach(() => {
+    layoutRegistry.clear();
+    registerLayoutTestAdapter('fake-adapter');
+  });
+
+  it('reuses an instance within the same container only', async () => {
+    layoutRegistry.register('pool-layout', FakeLayout, fakeMeta);
+    const containerA = document.createElement('div');
+    const first = await layoutRegistry.create('pool-layout', containerA);
+    layoutRegistry.returnInstance(containerA, 'pool-layout', first);
+
+    const reused = await layoutRegistry.create('pool-layout', containerA);
+    expect(reused).toBe(first);
+
+    // 另一个容器不得拿到绑定容器 A 的实例
+    const containerB = document.createElement('div');
+    const fresh = await layoutRegistry.create('pool-layout', containerB);
+    expect(fresh).not.toBe(first);
+  });
+
+  it('clearPool drops every pooled instance across containers', async () => {
+    layoutRegistry.register('pool-layout', FakeLayout, fakeMeta);
+    const containerA = document.createElement('div');
+    const containerB = document.createElement('div');
+    const a = await layoutRegistry.create('pool-layout', containerA);
+    const b = await layoutRegistry.create('pool-layout', containerB);
+    layoutRegistry.returnInstance(containerA, 'pool-layout', a);
+    layoutRegistry.returnInstance(containerB, 'pool-layout', b);
+
+    layoutRegistry.clearPool();
+
+    expect(await layoutRegistry.create('pool-layout', containerA)).not.toBe(a);
+    expect(await layoutRegistry.create('pool-layout', containerB)).not.toBe(b);
+  });
+});

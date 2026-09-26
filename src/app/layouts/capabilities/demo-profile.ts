@@ -81,6 +81,9 @@ export function createDemoProfile(
       } | null = null;
       let savedGridColumns: string | null = null;
       let savedResizerDisplay: string | null = null;
+      /** 进入演示前的侧栏隐藏标记；null = 属性当时不存在。 */
+      let savedSidebarFlag: string | null = null;
+      let sidebarFlagCaptured = false;
       let graphAdoption: GraphAdoptionState | null = null;
       let savedTransportDisplay: string | null = null;
       const savedControlDisplays = new Map<HTMLElement, string>();
@@ -105,6 +108,13 @@ export function createDemoProfile(
 
       const notifyResize = requestLayoutResize;
 
+      /** 模板写入后同步侧栏隐藏标记（applyResponsiveColumns 的单一事实源）。 */
+      const syncSidebarHiddenFlag = (template: string): void => {
+        ctx.container.dataset.sidebarHidden = template.startsWith('0px')
+          ? 'true'
+          : 'false';
+      };
+
       const collapseGridSidebar = (zero: boolean) => {
         if (!geometryOn()) return;
         const cols = ctx.container.style.gridTemplateColumns;
@@ -112,9 +122,9 @@ export function createDemoProfile(
           savedGridColumns = cols;
         }
         if (cols.includes(' ') || savedGridColumns) {
-          ctx.container.style.gridTemplateColumns = zero
-            ? '0px 0px 1fr'
-            : '48px 0px 1fr';
+          const next = zero ? '0px 0px 1fr' : '48px 0px 1fr';
+          ctx.container.style.gridTemplateColumns = next;
+          syncSidebarHiddenFlag(next);
         }
         const resizer = resizerOf();
         if (resizer && savedResizerDisplay === null) {
@@ -131,8 +141,9 @@ export function createDemoProfile(
           savedGridColumns = cols;
         }
         if (ctx.container.style.gridTemplateColumns.includes(' ')) {
-          ctx.container.style.gridTemplateColumns =
-            'minmax(260px, 22rem) 8px 1fr';
+          const next = 'minmax(260px, 22rem) 8px 1fr';
+          ctx.container.style.gridTemplateColumns = next;
+          syncSidebarHiddenFlag(next);
         }
         const resizer = resizerOf();
         if (resizer && savedResizerDisplay !== null) {
@@ -144,7 +155,16 @@ export function createDemoProfile(
 
       const restoreGridSidebar = () => {
         if (savedGridColumns !== null) {
-          ctx.container.style.gridTemplateColumns = savedGridColumns;
+          const current = ctx.container.style.gridTemplateColumns;
+          const trimmed = current.trim();
+          // 漂移 = 模板被清空或落进单列形态（移动断点重写）——快照在结构
+          // 上已不成立，跳过模板恢复。多列形态（含演示期间真实 resize 后
+          // 的响应式重写）仍还原快照：合成 resize 不触发
+          // applyResponsiveColumns，快照是退出演示时可得的最优值。
+          const drifted = !trimmed || !trimmed.includes(' ');
+          if (!drifted) {
+            ctx.container.style.gridTemplateColumns = savedGridColumns;
+          }
           savedGridColumns = null;
         }
         const resizer = resizerOf();
@@ -314,6 +334,13 @@ export function createDemoProfile(
                 sidebar.style.display ||
                 window.getComputedStyle(sidebar).display;
             }
+            // 隐藏标记与侧栏 display 同点捕获：退出演示时还原到演示前
+            // 的精确状态（drift-skip 路径不写模板，标记若停留在演示的
+            // hidden 值，会让下次 resize 沿用 0px 形态压住已可见的侧栏）。
+            if (!sidebarFlagCaptured) {
+              sidebarFlagCaptured = true;
+              savedSidebarFlag = ctx.container.dataset.sidebarHidden ?? null;
+            }
             sidebar.classList.remove('is-collapsed-demo', 'is-demo-rail');
             switch (profile.controlPanel) {
               case 'hidden':
@@ -472,6 +499,18 @@ export function createDemoProfile(
           sidebar.classList.remove('is-collapsed-demo', 'is-demo-rail');
         }
         restoreGridSidebar();
+        if (sidebarFlagCaptured) {
+          // 隐藏标记回到演示前的精确状态：drift-skip 路径不写模板，
+          // 若标记滞留在演示的 hidden 值，下次真实 resize 会让
+          // applyResponsiveColumns 把已还原为可见的侧栏压成 0px 宽。
+          if (savedSidebarFlag === null) {
+            delete ctx.container.dataset.sidebarHidden;
+          } else {
+            ctx.container.dataset.sidebarHidden = savedSidebarFlag;
+          }
+          sidebarFlagCaptured = false;
+          savedSidebarFlag = null;
+        }
         resetMinimalControls();
         restoreDemoGraph(graphAdoption, _slots.animation ?? null);
         graphAdoption = null;

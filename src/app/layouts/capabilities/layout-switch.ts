@@ -65,7 +65,8 @@ export function createLayoutSwitch(
         const currentId = ctx.getCurrentLayoutId();
         const currentIdx = layouts.findIndex((l) => l.id === currentId);
         const nextIdx = (currentIdx + 1) % layouts.length;
-        // switchLayout reattaches the live sim; this instance stays mounted
+        // 切换期间本实例随旧布局被 orchestrator 销毁，新布局装配新的
+        // layout-switch 实例（capability 一律销毁重建）。
         ctx.switchLayout(layouts[nextIdx].id, true);
       };
 

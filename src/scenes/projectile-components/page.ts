@@ -1,10 +1,8 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
-import { createReadoutPanel } from '../../app/layouts/capabilities/readout-panel';
 import { createRenderScheduler } from '../../app/render-scheduler';
 import { readSceneParams } from '../../app/url-sync';
 import { createControlCard } from '../../ui/components/ControlCard';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
-import type { CapabilityInstance, ReadoutItem } from '../../app/layouts/types';
 import { projectileComponentsControlsSchema } from './controls-schema';
 import {
   createChromeScheduler,
@@ -106,51 +104,13 @@ bootScenePage({
     const panel = createProjectileDataPanel();
     panel.update(scene.getState());
     let fallback: ReturnType<typeof createControlCard> | null = null;
-    let labReadout: CapabilityInstance<ReadoutItem[]> | null = null;
     let disposed = false;
-    function ensureLabReadout(): void {
-      if (disposed) return;
-      // lab 的读数挂载点 = 布局创建点打标的 [data-readout-slot]
-      // （.lab-readout-slot）；限定 lab scope 保持本函数 lab-only 语义
-      const slot = document.querySelector(
-        '.lab-stage-layout [data-readout-slot]'
-      );
-      if (!(slot instanceof HTMLElement)) return;
-      if (!slot.querySelector('.readout-panel')) {
-        labReadout?.dispose();
-        const host = slot.closest('.layout-master');
-        labReadout = createReadoutPanel({
-          position: 'inline',
-          collapsed: false,
-          cssPrefix: 'mobile',
-          label: ''
-        }).mount({ readout: slot, control: slot, animation: slot }, {}, {
-          container: host instanceof HTMLElement ? host : document.body
-        } as never);
-        const mounted = slot.querySelector('.readout-panel');
-        if (mounted instanceof HTMLElement) {
-          mounted.style.position = 'static';
-          mounted.style.right = 'auto';
-          mounted.style.top = 'auto';
-          mounted.style.width = '100%';
-          mounted.style.maxWidth = 'none';
-          mounted.style.zIndex = 'auto';
-          mounted.style.boxShadow = 'none';
-        }
-      }
-      suppressLabFloatInlineReadoutTitle();
-      const dataSlot = document.querySelector('[data-lab-data-slot]');
-      if (
-        dataSlot instanceof HTMLElement &&
-        dataSlot.nextElementSibling === slot
-      ) {
-        dataSlot.before(slot);
-      }
-      labReadout?.update?.(scene.getReadoutItems());
-    }
     function attachPanel(): void {
       if (disposed) return;
-      const host = findProjectileDataHost();
+      // 作用域限定当前布局根，避免多容器宿主时串线；裸挂（测试）回退 document。
+      const host = findProjectileDataHost(
+        mount.closest('[data-layout-id]') ?? undefined
+      );
       if (host) {
         if (fallback) {
           fallback.element.remove();
@@ -160,7 +120,10 @@ bootScenePage({
           host.appendChild(panel.element);
         }
         panel.update(scene.getState());
-        ensureLabReadout();
+        // lab 的读数面板由 lab-stage 声明的 readout-panel 能力挂载与更新
+        //（orchestrator SCENE_BINDINGS 自动绑定）；场景只抑制浮窗内的
+        // 嵌套标题。
+        suppressLabFloatInlineReadoutTitle();
         return;
       }
       if (!fallback) {
@@ -175,7 +138,6 @@ bootScenePage({
     const unsubscribe = scene.subscribe(() => {
       if (disposed) return;
       panel.update(scene.getState());
-      labReadout?.update?.(scene.getReadoutItems());
     });
     const onChrome = () => {
       if (disposed) return;
@@ -199,7 +161,6 @@ bootScenePage({
         chrome.dispose();
         window.removeEventListener('resize', onChrome);
         panel.dispose();
-        labReadout?.dispose();
         fallback?.element.remove();
         renderer.dispose();
       }

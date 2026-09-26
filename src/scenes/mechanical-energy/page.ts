@@ -123,7 +123,10 @@ bootScenePage({
 
     function attachPanel(): void {
       if (disposed) return;
-      const host = findMechanicalEnergyDataHost();
+      // 作用域限定当前布局根，避免多容器宿主时串线；裸挂（测试）回退 document。
+      const host = findMechanicalEnergyDataHost(
+        mount.closest('[data-layout-id]') ?? undefined
+      );
       if (host) {
         if (fallback) {
           fallback.element.remove();

@@ -265,9 +265,15 @@ export function applyResponsiveColumns(
 
   const leftPanel = container.querySelector('aside') as HTMLElement | null;
 
-  // Detect sidebar-hidden state (set by sidebar-toggle capability)
+  // Detect sidebar-hidden state（单一事实源 = dataset 标记，由
+  // sidebar-toggle / demo-profile 在写 0px 形态时同步维护；
+  // startsWith('0px') 仅作为标记缺失时的兼容回退）。
   const currentColumns = container.style.gridTemplateColumns;
-  const isSidebarHidden = currentColumns.startsWith('0px');
+  const hiddenFlag = container.dataset.sidebarHidden;
+  const isSidebarHidden =
+    hiddenFlag != null
+      ? hiddenFlag === 'true'
+      : currentColumns.startsWith('0px');
   const isDataWorkspace = container.classList.contains('is-data-workspace');
 
   if (width < mobileBreakpoint) {

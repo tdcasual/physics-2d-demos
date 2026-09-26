@@ -97,9 +97,15 @@ export function bootScenePage<TScene extends SceneInstance>(
   registerAllLayouts();
 
   // Test and debugging entry point: only registered layouts are accepted.
+  // ?layout= 是强制档（选择策略 0，高于用户偏好），经容器 forceLayout 贯通；
+  // 同时保留 scenePreference 注入作为旧消费方兼容。
   const requestedLayout = new URLSearchParams(window.location.search).get(
     'layout'
   );
+  const forceLayout =
+    requestedLayout && layoutRegistry.has(requestedLayout)
+      ? requestedLayout
+      : null;
   const preferredLayout =
     requestedLayout && layoutRegistry.has(requestedLayout)
       ? requestedLayout
@@ -114,6 +120,7 @@ export function bootScenePage<TScene extends SceneInstance>(
   const container = createSceneContainer({
     mount,
     defaultTheme,
+    forceLayout: forceLayout ?? undefined,
     layoutConfig: {
       ...options.layoutConfig,
       title: options.meta.title

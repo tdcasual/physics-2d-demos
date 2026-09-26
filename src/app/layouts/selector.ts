@@ -21,6 +21,8 @@ export interface LayoutSelectionContext {
   isDesktop: boolean;
   /** 屏幕方向 */
   orientation: 'portrait' | 'landscape';
+  /** URL 强制布局（?layout=，最高优先级；仅要求已注册，不查视口约束） */
+  forcedLayout?: string;
   /** 用户手动指定的偏好布局 */
   userPreference: string | null;
   /** 场景声明的偏好布局 */

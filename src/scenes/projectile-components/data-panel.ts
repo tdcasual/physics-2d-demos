@@ -3,6 +3,7 @@ import {
   projectileComponentsConstants as C,
   type ProjectileComponentsState
 } from './scene.sim';
+import { LAB_DATA_SLOT_ATTR } from '../../platform/stage-chrome';
 
 export type DataPanelHandle = {
   element: HTMLElement;
@@ -91,17 +92,18 @@ export function createProjectileDataPanel(): DataPanelHandle {
   };
 }
 
-export function findProjectileDataHost(): HTMLElement | null {
-  const lab = document.querySelector('[data-lab-data-slot]');
+export function findProjectileDataHost(scope?: ParentNode): HTMLElement | null {
+  const root = scope ?? document;
+  const lab = root.querySelector(`[${LAB_DATA_SLOT_ATTR}]`);
   if (lab instanceof HTMLElement) return lab;
   // mobile 落点 = 打在 .mobile-readout-panel 上的 [data-readout-slot]
   // （readout 能力创建点打标；不用 .mobile-readout-slot——布局清 slot
   // 会抹掉后挂内容）
-  const mobilePanel = document.querySelector(
+  const mobilePanel = root.querySelector(
     '.mobile-stack-layout [data-readout-slot]'
   );
   if (mobilePanel instanceof HTMLElement) return mobilePanel;
-  const tab = document.querySelector('#mobile-panel-readout');
+  const tab = root.querySelector('#mobile-panel-readout');
   if (tab instanceof HTMLElement) return tab;
   return null;
 }

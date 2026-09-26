@@ -22,3 +22,10 @@ export const GRAPH_BODY_ATTR = 'data-graph-body'; // 图区内容体（场景描
 export const STAGE_TOOLBAR_HOST_ATTR = 'data-stage-toolbar-host'; // 舞台工具条宿主
 export const READOUT_SLOT_ATTR = 'data-readout-slot'; // 读数挂载点
 export const PANZOOM_PAN_IGNORE_ATTR = 'data-panzoom-pan-ignore'; // 只挡平移、不挡滚轮
+/**
+ * lab-stage 实验数据浮窗内的数据插槽（lab-stage.ts 创建点打标）。
+ * 场景数据面板（projectile-components / mechanical-energy 等）经
+ * findXxxDataHost 定位此锚点挂载数据表——正式契约，stage-chrome-contract
+ * 兜底，布局改名会跑测试。
+ */
+export const LAB_DATA_SLOT_ATTR = 'data-lab-data-slot';

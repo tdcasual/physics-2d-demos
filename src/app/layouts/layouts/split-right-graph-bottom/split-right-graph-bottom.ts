@@ -244,6 +244,11 @@ export class SplitRightGraphBottomLayout implements ILayout {
     });
   }
 
+  /**
+   * 实例池复用时的配置更新：浅合并，新配置缺失的键保留旧值。
+   * 依赖「单页单场景、同页配置恒定」假设；preservedCanvas 由容器每次
+   * 显式传键（含 null）覆盖，不依赖合并。改键语义需同步此假设。
+   */
   _updateConfig(config?: SplitRightGraphBottomConfig): void {
     if (config) this.cfg = { ...this.cfg, ...config };
   }

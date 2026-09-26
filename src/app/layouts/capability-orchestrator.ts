@@ -161,9 +161,19 @@ export class CapabilityOrchestrator {
     if (scene.subscribe) {
       try {
         const unsub = scene.subscribe(() => {
-          const d = binding.getData(scene);
-          if (d != null && instance.update) {
-            instance.update(d);
+          // 与 dispose 对称的异常边界：单个 capability 的 update 抛错
+          // 只记录不传播（标准 notify 系统按监听器隔离，但自定义
+          // subscribe 实现没有该保证），且错误必须可见而非静默丢失。
+          try {
+            const d = binding.getData(scene);
+            if (d != null && instance.update) {
+              instance.update(d);
+            }
+          } catch (err) {
+            console.error(
+              `[CapabilityOrchestrator] scene update failed for ${id}:`,
+              err
+            );
           }
         });
         this._sceneUnsubscribers.push(unsub);

@@ -110,6 +110,7 @@ export class SceneContainerImpl implements SceneContainer {
   private _currentScene: Scene | null = null;
   private _currentTheme: Theme = 'light';
   private _userPreferredLayout: string | null = null;
+  private _forceLayout: string | null = null;
   private _storageKey: string;
   private _onResize?: (width: number, height: number) => void;
   private _layoutConfig?: Record<string, unknown>;
@@ -117,6 +118,10 @@ export class SceneContainerImpl implements SceneContainer {
   private _lowPowerMode = false;
   private _disposed = false;
   private _switching = false;
+  /** 并发切换代际：新切换/安全计时器递增，旧协程在 await 边界作废。 */
+  private _switchGeneration = 0;
+  /** 手动切换请求排队（last-wins）；观察器自动切换不排队。 */
+  private _pendingSwitchId: string | null = null;
   private _pendingScene: Scene | null = null;
   private _hasExplicitDefaultTheme: boolean;
   private _emitter: EventEmitter<SceneContainerEvents>;
@@ -131,6 +136,10 @@ export class SceneContainerImpl implements SceneContainer {
     this._currentTheme = options.defaultTheme || 'light';
     this._hasExplicitDefaultTheme = options.defaultTheme != null;
     this._layoutConfig = options.layoutConfig;
+    this._forceLayout =
+      options.forceLayout && layoutRegistry.has(options.forceLayout)
+        ? options.forceLayout
+        : null;
 
     // 设置容器基础样式（尺寸由各布局自行声明）
     this.container.style.cssText = `
@@ -141,7 +150,6 @@ export class SceneContainerImpl implements SceneContainer {
     // 初始化 ResizeObserver
     this._resizeObserver = new ContainerResizeObserver(this.container, {
       getCurrentScene: () => this._currentScene,
-      getUserPreferredLayout: () => this._userPreferredLayout,
       getCurrentLayoutId: () => this._currentLayout?.id || null,
       resolveLayout: (scene) => this.resolveLayout(scene),
       switchLayout: (id) => this.switchLayout(id, { animate: false }),
@@ -194,6 +202,7 @@ export class SceneContainerImpl implements SceneContainer {
       isTablet: width >= mobile && width < tablet,
       isDesktop: width >= tablet,
       orientation: width >= height ? 'landscape' : 'portrait',
+      forcedLayout: this._forceLayout ?? undefined,
       userPreference: this._userPreferredLayout,
       scenePreference: scene.preferredLayout || null,
       availableLayouts: layoutRegistry.getAllMetadata()
@@ -201,9 +210,12 @@ export class SceneContainerImpl implements SceneContainer {
 
     const selected = layoutSelector.select(ctx);
 
-    // 低功耗/弱网模式下，若用户未指定偏好，优先选择渲染负担最小的 mobile-stack
+    // 低功耗/弱网模式下，若无强制布局且用户未指定偏好，优先选择渲染
+    // 负担最小的 mobile-stack。强制档（?layout=）与用户偏好都不可被
+    // 低功耗覆盖，否则强制语义与偏好粘滞被旁路。
     if (
       this._lowPowerMode &&
+      !this._forceLayout &&
       !this._userPreferredLayout &&
       selected !== 'mobile-stack'
     ) {
@@ -341,6 +353,11 @@ export class SceneContainerImpl implements SceneContainer {
 
   /**
    * 切换布局
+   *
+   * 并发语义：进行中时手动请求进 `_pendingSwitchId` 排队（last-wins），
+   * 观察器自动请求直接丢弃（重解析后下次 resize 收敛）。
+   * 每次切换取一个代际号；await 边界检查代际，被超时判死或被新切换
+   * 取代的旧协程在下一个边界静默作废，不再触碰共享容器。
    */
   async switchLayout(
     layoutId: string,
@@ -358,16 +375,28 @@ export class SceneContainerImpl implements SceneContainer {
     if (!layoutRegistry.has(layoutId)) {
       throw new Error(`Layout "${layoutId}" not found`);
     }
-    if (this._switching) return;
+    if (this._switching) {
+      if (reason === 'manual') this._pendingSwitchId = layoutId;
+      return;
+    }
+
+    const generation = ++this._switchGeneration;
+    // 旧协程作废谓词：被安全计时器判死或被新切换取代。
+    const stale = () => generation !== this._switchGeneration || this._disposed;
 
     const SWITCH_TIMEOUT_MS = 10_000;
     const safetyTimer = setTimeout(() => {
-      if (this._switching && !this._disposed) {
+      if (generation === this._switchGeneration && this._switching) {
         console.warn(
-          '[SceneContainer] Layout switch timed out after 10s — resetting _switching'
+          '[SceneContainer] Layout switch timed out after 10s — abandoning current generation'
         );
+        // 判死当前代（挂起协程在下一个 await 边界作废）并交棒：
+        // 释放 _switching 允许新切换重建容器；排队中的手动切换/场景
+        // 交给新代的 drain，避免被判死后永久搁置。
+        this._switchGeneration += 1;
+        this._switching = false;
+        void this._drainPending(this._switchGeneration);
       }
-      this._switching = false;
     }, SWITCH_TIMEOUT_MS);
 
     this._switching = true;
@@ -380,7 +409,7 @@ export class SceneContainerImpl implements SceneContainer {
 
     try {
       await this._notifyLayoutWillChange(fromId, layoutId);
-      if (this._disposed) return;
+      if (stale()) return;
 
       const { preservedCanvas, layoutState } =
         this._captureOutgoingState(fromLayout);
@@ -388,8 +417,13 @@ export class SceneContainerImpl implements SceneContainer {
         saveLayoutStateToStorage(this._storageKey, fromLayout.id, layoutState);
       }
 
-      await this._teardownOutgoingLayout(fromLayout, animate, transition);
-      if (this._disposed) return;
+      await this._teardownOutgoingLayout(
+        fromLayout,
+        animate,
+        transition,
+        stale
+      );
+      if (stale()) return;
       this._currentLayout = null;
       if (this.container.childElementCount > 0) {
         this.container.replaceChildren();
@@ -397,9 +431,10 @@ export class SceneContainerImpl implements SceneContainer {
 
       const newLayout = await this._setupIncomingLayout(
         layoutId,
-        preservedCanvas
+        preservedCanvas,
+        stale
       );
-      if (this._disposed) return;
+      if (!newLayout || stale()) return;
 
       await this._finalizeLayoutSwitch(
         newLayout,
@@ -408,8 +443,10 @@ export class SceneContainerImpl implements SceneContainer {
         reason,
         animate,
         transition,
-        savePreference
+        savePreference,
+        stale
       );
+      if (stale()) return;
 
       // Restore focus to the equivalent data-identified control in the new layout.
       if (focusIdentity) {
@@ -420,7 +457,7 @@ export class SceneContainerImpl implements SceneContainer {
 
       // Attempt to recover the old layout from the pool so the container
       // isn't left in a blank state.
-      if (fromId && !this._disposed) {
+      if (fromId && !stale()) {
         try {
           const recovered = await layoutRegistry.create(
             fromId,
@@ -430,7 +467,9 @@ export class SceneContainerImpl implements SceneContainer {
               ...this._resolveLayoutConfig(fromId)
             }
           );
+          if (stale()) return;
           await recovered.mount();
+          if (stale()) return;
           recovered.setTheme(this._currentTheme);
           if (this._currentScene) {
             this.mountScene(this._currentScene, recovered);
@@ -449,16 +488,43 @@ export class SceneContainerImpl implements SceneContainer {
       }
     } finally {
       clearTimeout(safetyTimer);
-      this._switching = false;
+      // 仅当前有效代管理 _switching 与排队消费；作废旧协程不触碰新代状态。
+      if (generation === this._switchGeneration) {
+        this._switching = false;
+        await this._drainPending(generation);
+      }
+    }
+  }
 
-      // 处理在切换期间排队的 setScene 请求
-      if (this._pendingScene && !this._disposed) {
-        const pending = this._pendingScene;
-        this._pendingScene = null;
-        this._doSetScene(pending).catch((err) => {
-          console.error('[SceneContainer] Pending setScene failed:', err);
+  /**
+   * 原子取出并串行处理排队项（仅当前有效代的 finally 调用）：
+   * pendingScene 先（setScene 自行解析布局，内部可能已含切换），
+   * pendingSwitchId 后且目标==当前布局时跳过。drain 期间新到的排队项
+   * 由内层 switchLayout 的 finally 再次消费，不会永久搁置。
+   */
+  private async _drainPending(generation: number): Promise<void> {
+    if (generation !== this._switchGeneration || this._disposed) return;
+    const pendingScene = this._pendingScene;
+    this._pendingScene = null;
+    const pendingSwitchId = this._pendingSwitchId;
+    this._pendingSwitchId = null;
+    try {
+      if (pendingScene) {
+        await this._doSetScene(pendingScene);
+      }
+      if (
+        pendingSwitchId &&
+        !this._disposed &&
+        this._currentLayout?.id !== pendingSwitchId
+      ) {
+        await this.switchLayout(pendingSwitchId, {
+          reason: 'manual',
+          animate: true,
+          savePreference: true
         });
       }
+    } catch (err) {
+      console.error('[SceneContainer] Pending drain failed:', err);
     }
   }
 
@@ -486,7 +552,8 @@ export class SceneContainerImpl implements SceneContainer {
   private async _teardownOutgoingLayout(
     fromLayout: ILayout | null,
     animate: boolean,
-    transition: LayoutTransition
+    transition: LayoutTransition,
+    isStale: () => boolean
   ): Promise<void> {
     if (fromLayout && animate) {
       try {
@@ -494,17 +561,20 @@ export class SceneContainerImpl implements SceneContainer {
       } catch (err) {
         console.warn('[SceneContainer] Layout exit animation failed:', err);
       }
+      if (isStale()) return;
     }
     if (fromLayout) {
       await fromLayout.unmount();
-      layoutRegistry.returnInstance(fromLayout.id, fromLayout);
+      if (isStale()) return;
+      layoutRegistry.returnInstance(this.container, fromLayout.id, fromLayout);
     }
   }
 
   private async _setupIncomingLayout(
     layoutId: string,
-    preservedCanvas: HTMLCanvasElement | null
-  ): Promise<ILayout> {
+    preservedCanvas: HTMLCanvasElement | null,
+    isStale: () => boolean
+  ): Promise<ILayout | null> {
     if (this._disposed)
       throw new Error('Container disposed before layout setup');
 
@@ -521,8 +591,10 @@ export class SceneContainerImpl implements SceneContainer {
       ...this._resolveLayoutConfig(layoutId),
       preservedCanvas
     });
+    if (isStale()) return null;
 
     await newLayout.mount();
+    if (isStale()) return null;
     this.container.dataset.layoutId = layoutId;
     this._currentLayout = newLayout;
     newLayout.setTheme(this._currentTheme);
@@ -572,7 +644,8 @@ export class SceneContainerImpl implements SceneContainer {
     reason: string,
     animate: boolean,
     transition: LayoutTransition,
-    savePreference: boolean
+    savePreference: boolean,
+    isStale: () => boolean
   ): Promise<void> {
     if (animate) {
       try {
@@ -583,6 +656,9 @@ export class SceneContainerImpl implements SceneContainer {
       } catch {
         // 动画被中断或失败，布局本身已可用
       }
+      // enter 子过程内的 await 边界：被超时判死/新代取代的旧协程
+      // 不得再写回调、事件与偏好（保存偏好是持久化副作用，最危险）。
+      if (isStale()) return;
     }
 
     this._currentScene?.onLayoutDidChange?.(layoutId);
@@ -716,6 +792,7 @@ export class SceneContainerImpl implements SceneContainer {
     // 归还布局实例到池（不清理全局池，避免影响其他容器）
     if (this._currentLayout) {
       layoutRegistry.returnInstance(
+        this.container,
         this._currentLayout.id,
         this._currentLayout
       );

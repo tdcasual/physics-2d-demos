@@ -22,10 +22,9 @@ describe('ContainerResizeObserver', () => {
   ) {
     const defaults = {
       getCurrentScene: () => null,
-      getUserPreferredLayout: () => null,
       getCurrentLayoutId: () => null,
       resolveLayout: () => 'desktop',
-      switchLayout: vi.fn(),
+      switchLayout: vi.fn(async () => {}),
       getSwitching: () => false,
       notifyLayoutResize: vi.fn(),
       onResize: vi.fn()
@@ -48,7 +47,7 @@ describe('ContainerResizeObserver', () => {
   });
 
   it('should debounce layout switch', async () => {
-    const switchLayout = vi.fn();
+    const switchLayout = vi.fn(async () => {});
     const observer = createObserver({
       getCurrentScene: () =>
         ({
@@ -95,22 +94,85 @@ describe('ContainerResizeObserver', () => {
     expect(notifyLayoutResize).toBeDefined();
   });
 
-  it('should not auto-switch when user has preference', async () => {
-    const switchLayout = vi.fn();
+  // ---- Fix 1：观察器总是重解析（偏好经 resolveLayout 参与语义）----
+  // happy-dom 的 ResizeObserver 回调不触发，直接驱动私有防抖入口。
+
+  function debounce(observer: ContainerResizeObserver): void {
+    (observer as unknown as { _debounceSwitch(): void })._debounceSwitch();
+  }
+
+  it('re-resolves the target inside the same debounce window (not at schedule time)', async () => {
+    const switchLayout = vi.fn(async () => {});
+    const scene = {
+      id: 'test'
+    } as import('../../src/app/layouts/types').Scene;
+    // 排队时解析为 mobile（≠ 当前 desktop），窗口内变为 desktop——
+    // 到期必须按最新解析结果（desktop == 当前）判定为 no-op。
+    // 若实现沿用排队时刻的旧目标，会错误地切到 mobile。
+    let resolved = 'mobile';
     const observer = createObserver({
-      getCurrentScene: () =>
-        ({ id: 'test' }) as import('../../src/app/layouts/types').Scene,
-      getUserPreferredLayout: () => 'split-right',
+      getCurrentScene: () => scene,
+      getCurrentLayoutId: () => 'desktop',
+      resolveLayout: () => resolved,
       switchLayout
     });
 
     observer.start();
-    container.style.width = '600px';
-    container.getBoundingClientRect();
+    debounce(observer);
+    resolved = 'desktop';
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    expect(switchLayout).not.toHaveBeenCalled();
 
+    // 窗口结束时目标确实不同 → 正常切换
+    resolved = 'mobile';
+    debounce(observer);
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    observer.stop();
+
+    expect(switchLayout).toHaveBeenCalledWith('mobile');
+  });
+
+  it('does not switch when the re-resolved target equals the current layout', async () => {
+    const switchLayout = vi.fn(async () => {});
+    const observer = createObserver({
+      getCurrentScene: () =>
+        ({ id: 'test' }) as import('../../src/app/layouts/types').Scene,
+      getCurrentLayoutId: () => 'split-right',
+      resolveLayout: () => 'split-right',
+      switchLayout
+    });
+
+    observer.start();
+    debounce(observer);
     await new Promise((resolve) => setTimeout(resolve, 350));
     observer.stop();
 
     expect(switchLayout).not.toHaveBeenCalled();
+  });
+
+  it('skips switching while a switch is in progress and re-evaluates later', async () => {
+    const switchLayout = vi.fn(async () => {});
+    let switching = false;
+    const observer = createObserver({
+      getCurrentScene: () =>
+        ({ id: 'test' }) as import('../../src/app/layouts/types').Scene,
+      getCurrentLayoutId: () => 'desktop',
+      resolveLayout: () => 'mobile',
+      getSwitching: () => switching,
+      switchLayout
+    });
+
+    observer.start();
+    switching = true;
+    debounce(observer);
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    expect(switchLayout).not.toHaveBeenCalled();
+
+    switching = false;
+    debounce(observer);
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    observer.stop();
+
+    expect(switchLayout).toHaveBeenCalledWith('mobile');
   });
 });
