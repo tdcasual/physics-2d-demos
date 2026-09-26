@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   findWorkspaceTransportBar,
   tapeScaleCap
 } from '../../src/scenes/ticker-tape/scene.view';
+import { createTickerTapeScene } from '../../src/scenes/ticker-tape/scene.entry';
 import {
   createTickerTapeDataWorkspace,
   evaluateTickerTapeField,
@@ -15,11 +16,14 @@ import {
 import {
   assertSpecGraph,
   chartStepReady,
+  createEmptySession,
   fieldIsOk,
   getSummaryField,
   getTrialField,
   isFieldReady,
-  type DataWorkspaceSession
+  writeCheckedField,
+  type DataWorkspaceSession,
+  type FieldCheckState
 } from '../../src/platform/data-workspace';
 
 function makeSource(kind: 'ua' | 'uniform' = 'ua') {
@@ -435,5 +439,135 @@ describe('ticker-tape data workspace', () => {
     expect(isFieldReady(session, tickerTapeDataWorkspaceSpec, 'v', 1)).toBe(
       true
     );
+  });
+});
+
+describe('scene fillFromRuler invalidation (Fix 2)', () => {
+  function makeTapeScene() {
+    const canvas = document.createElement('canvas');
+    const parent = document.createElement('div');
+    parent.appendChild(canvas);
+    document.body.appendChild(parent);
+    const scene = createTickerTapeScene({ canvas, theme: 'light' });
+    return { scene };
+  }
+
+  async function readyScene() {
+    const { scene } = makeTapeScene();
+    const host = scene.getDataWorkspace();
+    // 数据任务模块经动态 import 加载，等待外层 host 就绪。
+    await vi.waitFor(() => {
+      expect(() => host.getSpec()).not.toThrow();
+    });
+    return { scene, host };
+  }
+
+  it('invalidates the full checked chain and closes the plot gate', async () => {
+    const { scene, host } = await readyScene();
+    const tapeX = scene.getState().tapeXCm;
+    const T = scene.getState().T;
+
+    for (let i = 0; i < 7; i += 1) {
+      const result = host.submitField({
+        field: 'x',
+        trialIndex: i,
+        raw: tapeX[i].toFixed(2)
+      });
+      expect(result.feedback.ok).toBe(true);
+    }
+    for (let i = 1; i < 7; i += 1) {
+      const result = host.submitField({
+        field: 'deltaX',
+        trialIndex: i,
+        raw: (tapeX[i] - tapeX[i - 1]).toFixed(2)
+      });
+      expect(result.feedback.ok).toBe(true);
+    }
+    for (let i = 1; i < 6; i += 1) {
+      const expected = (tapeX[i + 1] - tapeX[i - 1]) / 100 / (2 * T);
+      const result = host.submitField({
+        field: 'v',
+        trialIndex: i,
+        raw: expected.toPrecision(3)
+      });
+      expect(result.feedback.ok).toBe(true);
+    }
+    expect(chartStepReady(host.getSession(), tickerTapeDataWorkspaceSpec)).toBe(
+      true
+    );
+
+    scene.fillFromRuler();
+
+    const session = host.getSession();
+    expect(session.trials.every((trial) => trial.fields.x?.stale)).toBe(true);
+    expect(session.trials[0]?.fields.x?.feedback?.message).toBe(
+      '已按尺重新填数，请重新校对'
+    );
+    expect(chartStepReady(session, tickerTapeDataWorkspaceSpec)).toBe(false);
+    scene.dispose();
+  });
+
+  it('is safe on an untouched session and keeps the host usable afterwards', async () => {
+    const { scene, host } = await readyScene();
+    expect(() => scene.fillFromRuler()).not.toThrow();
+    const tapeX = scene.getState().tapeXCm;
+    expect(
+      host.submitField({ field: 'x', trialIndex: 0, raw: tapeX[0].toFixed(2) })
+        .feedback.ok
+    ).toBe(true);
+    scene.dispose();
+  });
+});
+
+describe('renderResult significant-digit formatting (Fix 8)', () => {
+  const { source } = makeSource();
+  const host = createTickerTapeDataWorkspace(source);
+
+  function okState(raw: string, value: number): FieldCheckState {
+    return {
+      raw,
+      value,
+      checked: true,
+      stale: false,
+      feedback: { ok: true, message: '校对通过' }
+    };
+  }
+
+  it('keeps significant trailing zeros and appends the aDiff note only when checked', () => {
+    let session = createEmptySession(tickerTapeDataWorkspaceSpec);
+    session = writeCheckedField(
+      session,
+      undefined,
+      'aDiff',
+      okState('1.20', 1.2),
+      tickerTapeDataWorkspaceSpec
+    );
+    session = writeCheckedField(
+      session,
+      undefined,
+      'aFit',
+      okState('1.20', 1.2),
+      tickerTapeDataWorkspaceSpec
+    );
+    expect(host.renderResult?.(session)).toBe(
+      'v–t 图像斜率 a = 1.20 m/s²，与逐差法 a = 1.20 m/s² 相互印证'
+    );
+  });
+
+  it('formats 0.823 at three digits without the note when aDiff is empty', () => {
+    let session = createEmptySession(tickerTapeDataWorkspaceSpec);
+    session = writeCheckedField(
+      session,
+      undefined,
+      'aFit',
+      okState('0.823', 0.823),
+      tickerTapeDataWorkspaceSpec
+    );
+    expect(host.renderResult?.(session)).toBe('v–t 图像斜率 a = 0.823 m/s²');
+  });
+
+  it('returns null before completion', () => {
+    const session = createEmptySession(tickerTapeDataWorkspaceSpec);
+    expect(host.renderResult?.(session)).toBeNull();
   });
 });

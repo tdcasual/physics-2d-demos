@@ -19,7 +19,8 @@ import type {
 import {
   shouldEnableStagePanZoom,
   shouldShowChartAnalysis,
-  type DataWorkspaceHost
+  type DataWorkspaceHost,
+  type DataWorkspaceSpec
 } from '../../../platform/data-workspace';
 import {
   createDataWorkspacePanel,
@@ -170,6 +171,20 @@ export function createDataWorkspace(): CapabilityDefinition<
         }
       });
 
+      /**
+       * 外层 host 的 getSpec 在场景数据任务模块动态加载完成前会 throw
+       * （spec 与任务实现同 chunk）。这里统一兜底：未就绪视为「无图任务」，
+       * 各调用点走各自的安全分支；加载完成后的下一次 notify 自愈。
+       */
+      function readSpec(): DataWorkspaceSpec | null {
+        if (!host) return null;
+        try {
+          return host.getSpec();
+        } catch {
+          return null;
+        }
+      }
+
       function eligibilityReason(): string {
         if (!host) return '当前场景未提供数据任务';
         const eligibility = host.getEligibility();
@@ -183,7 +198,8 @@ export function createDataWorkspace(): CapabilityDefinition<
       }
 
       function syncChartButton(): void {
-        if (!host || !shouldShowChartAnalysis(host.getSpec())) {
+        const spec = readSpec();
+        if (!spec || !shouldShowChartAnalysis(spec)) {
           if (chartBtn) chartBtn.hidden = true;
           return;
         }
@@ -256,7 +272,8 @@ export function createDataWorkspace(): CapabilityDefinition<
 
       function adoptGraphIfNeeded(chartMount: HTMLElement | null): void {
         if (adoptedGraph) return;
-        if (!host || !shouldShowChartAnalysis(host.getSpec())) return;
+        const spec = readSpec();
+        if (!spec || !shouldShowChartAnalysis(spec)) return;
         const graph = slots.graph;
         if (!graph || !chartMount) return;
         // 收养层级由布局元数据决定：'slot'（mobile）收养 slots.graph 本身；
@@ -318,8 +335,9 @@ export function createDataWorkspace(): CapabilityDefinition<
       const STAGE_SPLIT_MAX = 0.72;
 
       function stageSplitKey(): string {
-        const id = host?.getSpec().id ?? '';
-        return `dw-stage-split-${id}`;
+        // spec 未就绪时用无 id 的通用键；分栏拖拽需要可见 splitter，
+        // 而 stageHalfActive 在 spec 为 null 时即 false，该键不会被读写。
+        return `dw-stage-split-${readSpec()?.id ?? ''}`;
       }
 
       function stageColumn(): HTMLElement | null {
@@ -363,7 +381,7 @@ export function createDataWorkspace(): CapabilityDefinition<
 
       function stageHalfActive(): boolean {
         return (
-          Boolean(host?.getSpec().stageHalfSplit) &&
+          Boolean(readSpec()?.stageHalfSplit) &&
           chromeOpen &&
           !ctx.container.classList.contains(CHART_CLASS) &&
           window.innerHeight >= 640 &&
@@ -594,6 +612,9 @@ export function createDataWorkspace(): CapabilityDefinition<
           STAGE_LOCK_CLASS
         );
         if (clearActive) host?.setActive(false);
+        // 演示模式挂起：保留 session.active 以便结束后自动重进，
+        // 只把场景的舞台视觉副作用（画布隐藏/仪器撑满等）还原。
+        else host?.setActiveVisual?.(false);
         suppressing = false;
         syncButton();
         syncChartButton();

@@ -595,6 +595,20 @@ function getFeedback(
   );
 }
 
+/**
+ * 有效数字显示串：toPrecision 原文保留尾零（1.20 的 3 位有效数字必须
+ * 显示 1.20 而非 1.2，与 derivedFormatMessage 的「恰好 N 位」口径一致）。
+ * toPrecision 对极小/极大值会产出指数记法；aFit 量级（m/s²，0.1–10 常规
+ * 区间）不会触发，出现 e 时按位数换算 toFixed 兜底。
+ */
+function formatSigFigs(value: number, significant: number): string {
+  if (!Number.isFinite(value)) return String(value);
+  const text = value.toPrecision(Math.max(1, Math.round(significant)));
+  if (!text.includes('e') && !text.includes('E')) return text;
+  const exponent = Math.floor(Math.log10(Math.abs(value)));
+  return value.toFixed(Math.max(0, significant - 1 - exponent));
+}
+
 export function createTickerTapeDataWorkspace(
   source: TickerTapeMeasurementSource
 ): TickerTapeDataWorkspaceHost {
@@ -680,6 +694,17 @@ export function createTickerTapeDataWorkspace(
     },
     syncInstrument() {
       // Paper tape has no instrument identity to synchronize.
+    },
+    renderResult(session: DataWorkspaceSession): string | null {
+      const state = getSummaryField(session, 'aFit');
+      if (!session.completed || !state || !fieldIsOk(state)) return null;
+      const sig = significantDigitsOf(source.getState());
+      const aDiffState = getSummaryField(session, 'aDiff');
+      const aDiffNote =
+        aDiffState && fieldIsOk(aDiffState)
+          ? `，与逐差法 a = ${formatSigFigs(aDiffState.value, sig)} m/s² 相互印证`
+          : '';
+      return `v–t 图像斜率 a = ${formatSigFigs(state.value, sig)} m/s²${aDiffNote}`;
     },
     addTrial() {
       session = restoreEndpointPlaceholders(

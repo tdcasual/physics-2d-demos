@@ -210,7 +210,7 @@ data-workspace 是可选布局能力，仅 `layoutConfig.dataWorkspace: true` �
 
 - **数据处理必有**：knowns + 标题下的一行说明 + 表格 + 数据类 `summaryFields`
 - **文案（强制，2026-09-24）**：说明只写有效位数，放在标题下面，一行。场景要区分加减与乘除时，仍用这一行写清各自保留的位数或小数位。表格内不放说明文案：表头只有字段名和单位，不渲染 `formatHint`；单元格只有输入、短状态（`✓` / `✗ 不通过` / `↻ 需重校` / `—`）和校对按钮，不写入 `readinessHint`、操作步骤或格式教程。未通过的具体原因留在 `title` 和 `aria-label`。已知量芯片只显示名称和数值。
-- **图像分析是数据处理之后的独立环节（非面板内步骤）**：`spec.chartAnalysis: true` 时悬浮工具条出现「图像分析」入口按钮（`.graph-analysis-entry`），`chartStepReady`（行字段 + 非选填数据步 summary 全通过）之前 disabled；点击进入后舞台画布收起（工具条宿主保留），面板切换为「只读回顾表 + 收养的图区」，再次点击返回数据处理。双缝等 `chartAnalysis: false` 场景没有该环节、也不创建按钮。图表形态由场景 graph slot 自定（散点 / 直线 / 柱状 / 波形皆可），进入环节时收养 slot 内容
+- **图像分析是数据处理之后的独立环节（非面板内步骤）**：`spec.chartAnalysis: true` 时悬浮工具条出现「图像分析」入口按钮（`.graph-analysis-entry`），按场景 eligibility 门控（如暂停要求、任务模块加载完成）；进入环节**不需要**数据处理完成——描点/拟合资格由场景 plotGate（`chartStepReady`，行字段 + 非选填数据步 summary 全通过）在图像区内单独门控（工具条描点按钮 disabled + 画布 `data-plot-hint` 提示）；点击进入后舞台画布收起（工具条宿主保留），面板切换为「只读回顾表 + 收养的图区」，再次点击返回数据处理。双缝等 `chartAnalysis: false` 场景没有该环节、也不创建按钮。图表形态由场景 graph slot 自定（散点 / 直线 / 柱状 / 波形皆可），进入环节时收养 slot 内容
 - `DataWorkspaceFieldSpec.optional?: boolean`（仅 summaryFields）标记选填汇总字段：不填不阻塞 `chartStepReady`（如 ticker-tape 的逐差法 a），填了仍按依赖与判分校验
 - `tableOrientation?: 'trials' | 'fields'`（默认 `'trials'`；`'fields'` 为转置表：行=字段、列=trial）
 - `trialLabels?: readonly string[]`（列/行显示标签；缺省 1 基组号。纸带计数点用 `['0','1',…]`）

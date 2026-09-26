@@ -278,6 +278,14 @@ export type DataWorkspaceHost = {
   getKnowns(): DataWorkspaceKnown[];
   getHint(): string;
   setActive(active: boolean): void;
+  /**
+   * Visual-only stage activation, separate from setActive's session
+   * semantics. Presentation-mode suspension restores stage visuals while
+   * keeping the session active so the capability can auto re-enter when
+   * presentation ends. Scenes whose open state has no stage side effects
+   * may omit it.
+   */
+  setActiveVisual?(active: boolean): void;
   submitField(input: DataWorkspaceFieldSubmit): DataWorkspaceFieldResult;
   applyDrafts(drafts: readonly DataWorkspaceDraft[]): DataWorkspaceSession;
   resetSession(): void;
@@ -402,7 +410,16 @@ function allFieldIds(spec: DataWorkspaceSpec): Set<string> {
   ]);
 }
 
+/**
+ * Validated spec identities. Spec objects are frozen module constants in
+ * every scene; submit paths call assertSpecGraph on every write, so the
+ * result is memoized per instance. A spec that fails is never added, so
+ * repeated assertions on a broken spec keep throwing.
+ */
+const validatedSpecs = new WeakSet<object>();
+
 export function assertSpecGraph(spec: DataWorkspaceSpec): void {
+  if (validatedSpecs.has(spec)) return;
   const ids = allFieldIds(spec);
   if (ids.size !== spec.rowFields.length + spec.summaryFields.length) {
     throw new Error(`[data-workspace] duplicate field id in spec "${spec.id}"`);
@@ -541,6 +558,7 @@ export function assertSpecGraph(spec: DataWorkspaceSpec): void {
   }
   assertRowCheckStages(spec);
   assertAcyclicDependencies(spec);
+  validatedSpecs.add(spec);
 }
 
 function assertRowCheckStages(spec: DataWorkspaceSpec): void {

@@ -286,6 +286,10 @@ export function createTickerTapeScene(
     },
     fillFromRuler(): void {
       sim.fillFromRuler();
+      // 与换纸带/换噪声/拖零点/reset 同一条失效路径：sim 的 measuredXCm
+      // 已被覆写、vMs/Δx 已清空，会话里的已校对值必须一起作废，
+      // 否则图像描点（读 sim）与判分（读会话）两套真值分叉。空会话上是无害 no-op。
+      hostRef?.invalidateAll('已按尺重新填数，请重新校对');
       base.renderAndEmit();
       base.notify();
     },

@@ -78,23 +78,38 @@ function setFieldStatus(
   node: HTMLElement,
   field: FieldCheckState | undefined
 ): void {
-  node.className = `data-workspace-status ${statusClass(field)}`;
-  node.textContent = fieldStatus(field);
+  const className = `data-workspace-status ${statusClass(field)}`;
+  const text = fieldStatus(field);
   const reason = visibleFeedbackReason(field);
-  if (reason) node.dataset.reason = reason;
-  else delete node.dataset.reason;
   const feedback = field?.feedback;
   const message = feedback?.message.trim();
+  const hasFeedback = Boolean(field && feedback && message);
+  const outcome = field?.stale
+    ? '数据已变化，需要重新校对'
+    : feedback?.ok
+      ? '校对通过'
+      : '校对未通过';
+  const title = hasFeedback ? (message ?? '') : '';
+  const ariaLabel = hasFeedback ? `${outcome}。${message}` : '';
+  // 场景 notify 高频（如拖动测微仪旋钮 ≈60Hz）；目标态全等时跳过 DOM 写。
+  if (
+    node.className === className &&
+    node.textContent === text &&
+    (node.dataset.reason ?? '') === (reason ?? '') &&
+    node.title === title &&
+    (node.getAttribute('aria-label') ?? '') === ariaLabel
+  ) {
+    return;
+  }
+  node.className = className;
+  node.textContent = text;
+  if (reason) node.dataset.reason = reason;
+  else delete node.dataset.reason;
   if (!field || !feedback || !message) {
     node.removeAttribute('title');
     node.removeAttribute('aria-label');
     return;
   }
-  const outcome = field.stale
-    ? '数据已变化，需要重新校对'
-    : feedback.ok
-      ? '校对通过'
-      : '校对未通过';
   node.title = message;
   node.setAttribute('aria-label', `${outcome}。${message}`);
 }
@@ -864,12 +879,18 @@ export function createDataWorkspacePanel(options: {
     btn: HTMLButtonElement | null = null
   ): void {
     if (input) {
-      input.disabled = !enabled;
-      input.setAttribute('aria-disabled', String(!enabled));
+      if (input.disabled !== !enabled) input.disabled = !enabled;
+      const ariaDisabled = String(!enabled);
+      if (input.getAttribute('aria-disabled') !== ariaDisabled) {
+        input.setAttribute('aria-disabled', ariaDisabled);
+      }
     }
     if (btn) {
-      btn.disabled = !enabled;
-      btn.setAttribute('aria-disabled', String(!enabled));
+      if (btn.disabled !== !enabled) btn.disabled = !enabled;
+      const ariaDisabled = String(!enabled);
+      if (btn.getAttribute('aria-disabled') !== ariaDisabled) {
+        btn.setAttribute('aria-disabled', ariaDisabled);
+      }
     }
   }
 
@@ -1211,16 +1232,26 @@ export function createDataWorkspacePanel(options: {
     specNow: DataWorkspaceSpec
   ): void {
     if (shouldShowChartAnalysis(specNow) && currentStep !== 'chartAnalysis') {
-      result.hidden = true;
-      result.replaceChildren();
+      if (!result.hidden) {
+        result.hidden = true;
+        result.replaceChildren();
+      }
       return;
     }
     const custom = options.host.renderResult?.(session) ?? null;
     const text = custom ?? formatResultText(session, specNow);
     if (!text) {
-      result.hidden = true;
-      result.replaceChildren();
+      if (!result.hidden) {
+        result.hidden = true;
+        result.replaceChildren();
+      }
       return;
+    }
+    const existing = result.firstElementChild;
+    if (!result.hidden && result.childNodes.length === 1) {
+      const existingText =
+        existing instanceof HTMLElement ? existing.textContent : null;
+      if (existingText === text) return;
     }
     result.hidden = false;
     result.replaceChildren();
@@ -1246,10 +1277,18 @@ export function createDataWorkspacePanel(options: {
     addBtn.title = atMax ? `最多 ${maxRows} 组` : '添加一组测量';
   }
 
+  /** 每个容器的芯片签名：knowns 内容不变时跳过 replaceChildren。 */
+  const knownsSignatures = new WeakMap<HTMLElement, string>();
+
   function renderKnownsInto(
     container: HTMLElement,
     knowns: readonly DataWorkspaceKnown[]
   ): void {
+    const signature = knowns
+      .map((known) => `${known.key}\u0000${known.value}`)
+      .join('\u0001');
+    if (knownsSignatures.get(container) === signature) return;
+    knownsSignatures.set(container, signature);
     const chips = knowns.map((known) => {
       const chip = document.createElement('span');
       chip.className = 'data-workspace-known-chip';

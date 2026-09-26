@@ -10,6 +10,7 @@ import {
   removeSessionTrial,
   writeCheckedField,
   type DataWorkspaceDraft,
+  type DataWorkspaceEligibility,
   type DataWorkspaceHost,
   type DataWorkspaceSpec
 } from '../../src/platform/data-workspace';
@@ -1083,5 +1084,138 @@ describe('data-workspace panel dynamic rows', () => {
     expect(avg.disabled).toBe(true);
     expect(lambda.disabled).toBe(true);
     panel.dispose();
+  });
+});
+
+describe('capability getSpec load-window tolerance (Fix 4)', () => {
+  it('survives a host whose getSpec throws until the task module loads', () => {
+    const container = document.createElement('div');
+    const animation = document.createElement('div');
+    const graph = document.createElement('div');
+    container.append(animation, graph);
+    const slots: LayoutSlots = {
+      control: document.createElement('div'),
+      animation,
+      graph
+    };
+    const host = createHost(specWithChart(true));
+    const realSpec = host.getSpec.bind(host);
+    let loaded = false;
+    host.getEligibility = (): DataWorkspaceEligibility =>
+      loaded ? { ok: true } : { ok: false, reason: '数据任务加载中…' };
+    host.getSpec = () => {
+      if (!loaded) throw new Error('[ticker-tape] data workspace not ready');
+      return realSpec();
+    };
+    const instance = createDataWorkspace().mount(
+      slots,
+      {},
+      createCtx(container)
+    );
+
+    expect(() => instance.update?.({ host })).not.toThrow();
+    expect(container.querySelector('.graph-analysis-entry')).toBeNull();
+    const btn = container.querySelector(
+      '.data-workspace-entry'
+    ) as HTMLButtonElement;
+    expect(btn.disabled).toBe(true);
+    // resize 路径（stageHalfActive → readSpec）同样不得抛出。
+    expect(() => window.dispatchEvent(new Event('resize'))).not.toThrow();
+
+    loaded = true;
+    instance.update?.({ host });
+    const chartBtn = container.querySelector(
+      '.graph-analysis-entry'
+    ) as HTMLButtonElement;
+    expect(chartBtn).toBeTruthy();
+    expect(chartBtn.hidden).toBe(false);
+    expect(chartBtn.disabled).toBe(false);
+    instance.dispose();
+  });
+});
+
+describe('capability presentation suspension (Fix 5)', () => {
+  it('suspends via setActiveVisual(false) and keeps the session for auto re-entry', () => {
+    const container = document.createElement('div');
+    const animation = document.createElement('div');
+    animation.className = 'teaching-stage-frame';
+    container.append(animation);
+    const modeListeners: Array<(payload: { mode: string }) => void> = [];
+    let mode: 'normal' | 'presentation' = 'normal';
+    const baseCtx = createCtx(container);
+    const ctx: CapabilityContext = {
+      ...baseCtx,
+      getMode: () => mode,
+      on: ((event: string, listener: (payload: unknown) => void) => {
+        if (event === 'modechange') {
+          modeListeners.push(listener as (payload: { mode: string }) => void);
+        }
+        return () => {};
+      }) as CapabilityContext['on']
+    };
+    const slots: LayoutSlots = {
+      control: document.createElement('div'),
+      animation
+    };
+    const setActiveVisual = vi.fn();
+    const host = { ...createHost(), setActiveVisual } as DataWorkspaceHost;
+    const instance = createDataWorkspace().mount(slots, {}, ctx);
+    instance.update?.({ host });
+    const btn = container.querySelector(
+      '.data-workspace-entry'
+    ) as HTMLButtonElement;
+    btn.click();
+    expect(host.getSession().active).toBe(true);
+    expect(container.classList.contains('is-data-workspace')).toBe(true);
+
+    mode = 'presentation';
+    modeListeners.forEach((listener) => listener({ mode: 'presentation' }));
+    expect(setActiveVisual).toHaveBeenCalledWith(false);
+    // 会话保留：演示结束后 update() 自动重进。
+    expect(host.getSession().active).toBe(true);
+    expect(container.classList.contains('is-data-workspace')).toBe(false);
+
+    mode = 'normal';
+    instance.update?.({ host });
+    expect(container.classList.contains('is-data-workspace')).toBe(true);
+    instance.dispose();
+  });
+
+  it('exits without setActiveVisual when the host does not implement it', () => {
+    const container = document.createElement('div');
+    const animation = document.createElement('div');
+    animation.className = 'teaching-stage-frame';
+    container.append(animation);
+    const modeListeners: Array<(payload: { mode: string }) => void> = [];
+    let mode: 'normal' | 'presentation' = 'normal';
+    const baseCtx = createCtx(container);
+    const ctx: CapabilityContext = {
+      ...baseCtx,
+      getMode: () => mode,
+      on: ((event: string, listener: (payload: unknown) => void) => {
+        if (event === 'modechange') {
+          modeListeners.push(listener as (payload: { mode: string }) => void);
+        }
+        return () => {};
+      }) as CapabilityContext['on']
+    };
+    const slots: LayoutSlots = {
+      control: document.createElement('div'),
+      animation
+    };
+    const host = createHost();
+    const instance = createDataWorkspace().mount(slots, {}, ctx);
+    instance.update?.({ host });
+    const btn = container.querySelector(
+      '.data-workspace-entry'
+    ) as HTMLButtonElement;
+    btn.click();
+    expect(container.classList.contains('is-data-workspace')).toBe(true);
+
+    mode = 'presentation';
+    modeListeners.forEach((listener) => listener({ mode: 'presentation' }));
+    expect(container.classList.contains('is-data-workspace')).toBe(false);
+    expect(host.getSession().active).toBe(true);
+    instance.dispose();
   });
 });

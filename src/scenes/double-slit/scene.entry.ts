@@ -32,6 +32,7 @@ import {
   MICROMETER_PRECISION_MM,
   MICROMETER_READING_STRATEGY
 } from './reading-constants';
+import { opticsChangeReason } from './optics-params';
 import {
   cloneSession,
   createEmptySession,
@@ -434,7 +435,7 @@ export function createDoubleSlitScene(
         rightInstrument?.view.resize();
       }
       syncInstrumentHostAttrs();
-      if (workspaceChromeOpen) scheduleInstrumentStageFit();
+      if (visualsActive) scheduleInstrumentStageFit();
     } else if (lastStep === 6) {
       disposeInstruments();
     }
@@ -496,6 +497,13 @@ export function createDoubleSlitScene(
   }
 
   let workspaceChromeOpen = false;
+  /**
+   * 舞台视觉激活开关，与 workspaceChromeOpen（会话语义，演示结束后
+   * 借它自动重进工作区）分离。演示挂起走 setActiveVisual(false)：
+   * 会话保留，视觉还原；fit 门（syncInstruments / syncInstrumentStageFit）
+   * 读本标志，防止演示中 adapter setMode 触发的 resize 把 --dw-h 写回。
+   */
+  let visualsActive = false;
 
   function collectInstrumentVisualRects(root: ParentNode): DOMRect[] {
     const selectors = [
@@ -538,7 +546,7 @@ export function createDoubleSlitScene(
       `[${STAGE_FRAME_ATTR}]`
     ) as HTMLElement | null;
     if (!section) return;
-    if (!workspaceChromeOpen || !instrumentWrap) {
+    if (!visualsActive || !instrumentWrap) {
       section.style.removeProperty('--dw-h');
       return;
     }
@@ -614,7 +622,10 @@ export function createDoubleSlitScene(
     return { ok: false, reason: '数据任务加载中' };
   };
 
-  const dataWorkspace: DataWorkspaceHost = {
+  const dataWorkspace: DataWorkspaceHost & {
+    invalidateAll(reason: string): void;
+    setActiveVisual(active: boolean): void;
+  } = {
     getSpec() {
       if (!innerWorkspace)
         throw new Error('[double-slit] data workspace not ready');
@@ -640,6 +651,12 @@ export function createDoubleSlitScene(
       workspaceChromeOpen = active;
       if (active) ensureDataWorkspace();
       innerWorkspace?.setActive(active);
+      dataWorkspace.setActiveVisual(active);
+      base.renderAndEmit();
+      base.notify();
+    },
+    setActiveVisual(active: boolean) {
+      visualsActive = active;
       view.setHideNumericHints(active);
       if (instrumentWrap) {
         instrumentWrap.style.top = active ? '0' : '30%';
@@ -649,13 +666,24 @@ export function createDoubleSlitScene(
         options.canvas.style.opacity = active ? '0' : '';
         options.canvas.style.pointerEvents = active ? 'none' : '';
       }
+      if (!active) {
+        // 立即清掉仪器 fit 高度，不等 rAF：演示挂起后 adapter 的
+        // setMode/resize 不再写回（fit 门已换 visualsActive）。
+        const section = options.canvas?.closest(
+          `[${STAGE_FRAME_ATTR}]`
+        ) as HTMLElement | null;
+        section?.style.removeProperty('--dw-h');
+      }
       if (sim.getState().params.step === 6) {
         leftInstrument?.view.resize();
         rightInstrument?.view.resize();
       }
       scheduleInstrumentStageFit();
-      base.renderAndEmit();
-      base.notify();
+    },
+    invalidateAll(reason: string) {
+      // 可选调用：数据任务模块尚未加载完时静默跳过（lifecycle 测试与
+      // 加载窗口内的 setParams 不可抛）；调用方负责随后的 notify。
+      innerWorkspace?.invalidateAll(reason);
     },
     submitField(input) {
       ensureDataWorkspace();
@@ -798,8 +826,13 @@ export function createDoubleSlitScene(
     },
     setParams(params: Partial<DoubleSlitParams>): DoubleSlitParams {
       const prevInstrument = sim.getState().params.activeInstrument;
+      const before = sim.getState().params;
       const result = sim.setParams(params);
       if (result.step === 6) ensureDataWorkspace();
+      // 光学参数变更即失效已校对数据；同值 diff 为 null，URL 管线重放幂等。
+      // 不按 step===6 门控：步骤 1–5 也能改 λ/d/L，会话数据跨步骤存活。
+      const opticsReason = opticsChangeReason(before, result);
+      if (opticsReason) dataWorkspace.invalidateAll(opticsReason);
       // 主画布与仪器画布相互独立：先绘主场景再同步仪器（历史顺序）。
       // wrapAction 会把 syncInstruments 放到 renderAndEmit 之前，此处显式保持旧序。
       base.renderAndEmit();

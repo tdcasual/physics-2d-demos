@@ -201,6 +201,15 @@ export type DoubleSlitMeasurementSource = {
   capture(): MeasurementSnapshot | null;
 };
 
+export type DoubleSlitDataWorkspaceHost = DataWorkspaceHost & {
+  /**
+   * 光学参数（λ/d/L/光源/滤光片/测微仪零位）变更时由 scene.entry 调用，
+   * 失效全部已校对数据。行字段 feedback 用传入 reason，summary 字段为
+   * 平台 markFieldStale 的通用文案（与换仪器路径一致）。
+   */
+  invalidateAll(reason: string): void;
+};
+
 export function slitDistanceMm(slitDistance: number): number {
   // PHYSICAL_D_SCALE 以米/单位计（scene.sim），此处口径为 mm：m→mm 须 ×1000。
   return slitDistance * PHYSICAL_D_SCALE * 1000;
@@ -707,10 +716,10 @@ export function evaluateDoubleSlitField(options: {
 
 export function createDoubleSlitDataWorkspace(
   source: DoubleSlitMeasurementSource
-): DataWorkspaceHost {
+): DoubleSlitDataWorkspaceHost {
   let session = createEmptySession(doubleSlitDataWorkspaceSpec);
 
-  const host: DataWorkspaceHost = {
+  const host: DoubleSlitDataWorkspaceHost = {
     getSpec: () => doubleSlitDataWorkspaceSpec,
     getEligibility: () => {
       const params = source.getParams();
@@ -777,6 +786,13 @@ export function createDoubleSlitDataWorkspace(
           '已切换仪器，请用同一台仪器重新测量'
         );
       }
+    },
+    invalidateAll(reason: string) {
+      session = invalidateAllTrials(
+        session,
+        doubleSlitDataWorkspaceSpec,
+        reason
+      );
     },
     addTrial() {
       session = addSessionTrial(session, doubleSlitDataWorkspaceSpec);

@@ -1639,3 +1639,20 @@ describe('chart field helpers and spec guards', () => {
     ).toThrow(/trialLabels/);
   });
 });
+
+describe('assertSpecGraph memoization (Fix 7)', () => {
+  it('caches validated specs and keeps re-throwing on failed ones', () => {
+    const good: DataWorkspaceSpec = { ...doubleSlitDataWorkspaceSpec };
+    expect(() => assertSpecGraph(good)).not.toThrow();
+    // 记忆化命中：重复断言同一实例依然通过。
+    expect(() => assertSpecGraph(good)).not.toThrow();
+
+    const bad: DataWorkspaceSpec = {
+      ...doubleSlitDataWorkspaceSpec,
+      rowCheckStages: []
+    };
+    // 失败实例不入 WeakSet：连续断言两次都必须继续抛出。
+    expect(() => assertSpecGraph(bad)).toThrow(/rowCheckStages/);
+    expect(() => assertSpecGraph(bad)).toThrow(/rowCheckStages/);
+  });
+});
