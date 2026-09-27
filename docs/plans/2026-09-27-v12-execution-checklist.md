@@ -26,6 +26,10 @@
 - **chase-meet**：改 vExprA 表达式+数值 → 强制换布局 → text 框=live 表达式、滑块=live 值（A5.1）；双向切换 A→B→A 正确（A5.8）；reset 后控件正确（A5.7）。
 - 两场景 e2e：`pnpm test:e2e` 中相关 spec 全绿 + 视觉容器验证（如有基线）。
 
+## 流程变更记录
+
+- 2026-09-28：Claude 验收通道中断（DeepSeek 与 anyrouter 均 402 余额不足，trivial 调用可通过、长任务必失败）。Claude 余额恢复前，验收 = Kimi 主审 + Grok 交叉复审；Claude 对 Wave B 及之后的提交做补审（待办）。
+
 ## 执行日志
 
 | 阶段 | Grok 提交 | Kimi/Claude 验收                                                                        | 结论                                                                                                            |
