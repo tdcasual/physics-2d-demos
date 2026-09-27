@@ -20,7 +20,7 @@ export const chaseMeetControlsSchema: ControlsSchema = {
           type: 'number',
           key: 'dt',
           label: '步长 Δt',
-          value: 0.05,
+          value: 0.02,
           min: 0.005,
           max: 1,
           step: 0.005,
@@ -57,7 +57,7 @@ export const chaseMeetControlsSchema: ControlsSchema = {
           type: 'text',
           key: 'vExprB',
           label: '速度函数 vB(t)',
-          value: '1',
+          value: '0.5',
           fontFamily: 'monospace'
         },
         { type: 'button', key: 'apply', label: '应用参数' }
