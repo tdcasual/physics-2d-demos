@@ -3,7 +3,7 @@
  *
  * handle 暴露 setValue 就必须同时暴露 setValueSilently 与 fieldTypes
  *（或经 exposeSchemaHandle / return renderer / §1.2(c) 既有形态）。
- * grandfather = 尚未迁移的 84+27 场景；A4 机械批只许从中删除不许新增。
+ * grandfather = 尚未迁移的 83 薄包装 + 28 带副作用；A4 机械批只许从中删除不许新增。
  */
 
 import { describe, expect, it } from 'vitest';
@@ -34,14 +34,10 @@ const EXISTING_SPECIAL_HANDLE_FORMS = new Set([
 const PAGES_SPECIAL_FORMS = new Set(['src/pages/single-loop-integration.ts']);
 
 /** dispose-only 待迁移（§1.2(a) 子集） */
-const DISPOSE_ONLY_PENDING = [
-  'chase-meet',
-  'emf-analogy',
-  'vt-integral'
-] as const;
+const DISPOSE_ONLY_PENDING = ['chase-meet', 'emf-analogy'] as const;
 
 /**
- * 尚未迁移的 84 薄包装 + 27 带副作用 = 111。
+ * 尚未迁移的 83 薄包装 + 28 带副作用（§1.2(b) 含 vt-integral 编码场景，已在 A3 收口）。
  * A4 只许删除；新增场景必须 silent-ready，禁止写入本清单。
  */
 const EVENTFUL_PROJECTION_GRANDFATHER = [
@@ -60,8 +56,6 @@ const EVENTFUL_PROJECTION_GRANDFATHER = [
   'bullet-block',
   'capacitor-charge-discharge',
   'car-bank',
-  'centripetal-motion',
-  'charged-particle-circle',
   'charged-particle-electric',
   'charged-superposition',
   'chase-meet',
@@ -74,7 +68,6 @@ const EVENTFUL_PROJECTION_GRANDFATHER = [
   'conveyor-belt',
   'cyclotron',
   'displacement-time',
-  'dynamic-circle',
   'earth-gravity',
   'elastic-collision',
   'elastic-energy',
@@ -84,21 +77,17 @@ const EVENTFUL_PROJECTION_GRANDFATHER = [
   'electrostatic-induction',
   'electrostatic-shielding',
   'emf-analogy',
-  'emf-internal-resistance',
   'faraday-disc',
   'field-lines',
-  'force-composition',
   'free-fall-throw',
   'friction-critical',
   'galileo-incline',
-  'ganshe',
   'half-deflection',
   'harmonic-wave',
   'impulse-momentum',
   'incline-spring',
   'induction-accelerator',
   'interference-formula',
-  'internal-energy',
   'joule-work-heat',
   'laser-speed',
   'lenz-law',
@@ -108,7 +97,6 @@ const EVENTFUL_PROJECTION_GRANDFATHER = [
   'magnetic-mirror',
   'mass-spectrometer',
   'maxwell-speed-distribution',
-  'mechanical-energy',
   'mechanical-energy-two-ball',
   'metal-rod-track',
   'micro-deformation',
@@ -127,29 +115,21 @@ const EVENTFUL_PROJECTION_GRANDFATHER = [
   'photoelectric-iv',
   'photoelectric-switch',
   'potential-energy-graphs',
-  'precision-tools',
-  'projectile-components',
   'projectile-data-analysis',
   'radioactive-decay',
-  'resistor-measurement',
   'rod-model',
   'rutherford-alpha-scattering',
   'satellite-transfer',
   'semicylinder-tir',
   'semicylinder-tir-standard',
   'single-slit',
-  'spring-ball',
   'thin-film',
-  'three-forces',
-  'ticker-tape',
   'ticker-timer',
   'tortoise-hare',
   'uniform-electric-acceleration',
   'uniformly-varied-motion',
-  'variable-work',
   'velocity-selector',
   'vertical-circle',
-  'vt-integral',
   'wave-superpose',
   'wedge',
   'wedge-film-interference',

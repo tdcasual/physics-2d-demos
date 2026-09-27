@@ -137,7 +137,7 @@ bootScenePage({
       setActive: (key: string, value: string) => renderer.setActive(key, value),
       setActiveSilently: (key: string, value: string) =>
         renderer.setActiveSilently(key, value),
-      refresh: () => syncSliders(),
+      syncFromScene: () => syncSliders(),
       dispose: () => renderer.dispose()
     };
   },

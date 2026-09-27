@@ -136,24 +136,26 @@ describe('precision-tools view contract', () => {
     );
   });
 
-  it('page.ts refresh re-syncs mode, adjustment, autoRun, showGuides, showReading', () => {
+  it('page.ts syncFromScene re-syncs mode, adjustment, autoRun, showGuides, showReading', () => {
     const source = readFileSync(
       resolve(process.cwd(), 'src/scenes/precision-tools/page.ts'),
       'utf8'
     );
-    expect(source).toMatch(/refresh:\s*\(\)\s*=>\s*syncControls\(/);
-    expect(source).toMatch(/renderer\.setActive\('mode',\s*params\.mode\)/);
+    expect(source).toMatch(/syncFromScene:\s*\(\)\s*=>\s*syncControls\(/);
     expect(source).toMatch(
-      /renderer\.setValue\('adjustment',\s*params\.adjustment\)/
+      /renderer\.setActiveSilently\('mode',\s*params\.mode\)/
     );
     expect(source).toMatch(
-      /renderer\.setValue\('autoRun',\s*params\.autoRun\)/
+      /renderer\.setValueSilently\('adjustment',\s*params\.adjustment\)/
     );
     expect(source).toMatch(
-      /renderer\.setValue\('showGuides',\s*params\.showGuides\)/
+      /renderer\.setValueSilently\('autoRun',\s*params\.autoRun\)/
     );
     expect(source).toMatch(
-      /renderer\.setValue\('showReading',\s*params\.showReading\)/
+      /renderer\.setValueSilently\('showGuides',\s*params\.showGuides\)/
+    );
+    expect(source).toMatch(
+      /renderer\.setValueSilently\('showReading',\s*params\.showReading\)/
     );
   });
 

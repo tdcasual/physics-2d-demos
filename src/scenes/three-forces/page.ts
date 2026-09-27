@@ -3,6 +3,7 @@ import { createRenderScheduler } from '../../app/render-scheduler';
 import { writeOwnedSceneParams } from '../../app/url-sync';
 import { applyTouchInteractionMode } from '../../platform/input/touch';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { createThreeForcesScene } from './scene.entry';
 import { threeForcesMeta } from './scene.meta';
 import { threeForcesControlsSchema } from './controls-schema';
@@ -167,13 +168,23 @@ bootScenePage({
       last = p;
     });
 
+    const syncFromScene = (): void => {
+      const p = forceScene.getParams();
+      renderer.setValueSilently('mass', p.mass);
+      renderer.setValueSilently('inclineAngle', p.inclineAngle);
+      renderer.setValueSilently('mu', p.mu);
+      renderer.setValueSilently('springK', p.springK);
+      renderer.setValueSilently('springX', p.springX);
+      renderer.setValueSilently('autoRun', p.autoRun);
+      renderer.setValueSilently('showComponents', p.showComponents);
+      renderer.setActiveSilently('tab', p.tab);
+      applyVisibility(p.tab);
+      last = p;
+    };
+
     return {
-      setValue(key: string, value: number | string | boolean): void {
-        renderer.setValue(key, value);
-      },
-      setActive(key: string, value: string): void {
-        renderer.setActive(key, value);
-      },
+      ...exposeSchemaHandle(renderer),
+      syncFromScene,
       dispose(): void {
         unsubscribe();
         renderer.dispose();

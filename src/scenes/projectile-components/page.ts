@@ -3,6 +3,7 @@ import { createRenderScheduler } from '../../app/render-scheduler';
 import { readSceneParams } from '../../app/url-sync';
 import { createControlCard } from '../../ui/components/ControlCard';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { projectileComponentsControlsSchema } from './controls-schema';
 import {
   createChromeScheduler,
@@ -67,20 +68,7 @@ bootScenePage({
   },
   createControls: ({ mount, scene, scheduleRender, writeParam }) => {
     const render = scheduleRender ?? (() => scene.render());
-    let applying = false;
-    function syncSliders(): void {
-      const params = scene.getParams();
-      applying = true;
-      renderer.setValue('speed', params.speed);
-      renderer.setValue('initialHeight', params.initialHeight);
-      renderer.setValue('gravity', params.gravity);
-      renderer.setValue('samplePeriod', params.samplePeriod);
-      renderer.setValue('showTrajectory', params.showTrajectory);
-      renderer.setValue('showVectors', params.showVectors);
-      renderer.setValue('showShadows', params.showShadows);
-      renderer.setValue('showStrobe', params.showStrobe);
-      applying = false;
-    }
+    const applying = false;
     const renderer = renderSchema({
       mount,
       schema: projectileComponentsControlsSchema,
@@ -151,10 +139,7 @@ bootScenePage({
     chrome.start();
 
     return {
-      setValue: (key: string, value: number | string | boolean) =>
-        renderer.setValue(key, value),
-      setActive: (key: string, value: string) => renderer.setActive(key, value),
-      refresh: () => syncSliders(),
+      ...exposeSchemaHandle(renderer),
       dispose: () => {
         disposed = true;
         unsubscribe();

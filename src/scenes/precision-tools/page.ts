@@ -2,6 +2,7 @@ import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
 import { readSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { precisionToolControlsSchema } from './controls-schema';
 import { asPrecisionMode, createPrecisionToolScene } from './scene.entry';
 import { precisionToolMeta } from './scene.meta';
@@ -27,11 +28,11 @@ function syncControls(
   renderer: ReturnType<typeof renderSchema>,
   params: PrecisionToolParams
 ): void {
-  renderer.setActive('mode', params.mode);
-  renderer.setValue('adjustment', params.adjustment);
-  renderer.setValue('autoRun', params.autoRun);
-  renderer.setValue('showGuides', params.showGuides);
-  renderer.setValue('showReading', params.showReading);
+  renderer.setActiveSilently('mode', params.mode);
+  renderer.setValueSilently('adjustment', params.adjustment);
+  renderer.setValueSilently('autoRun', params.autoRun);
+  renderer.setValueSilently('showGuides', params.showGuides);
+  renderer.setValueSilently('showReading', params.showReading);
 }
 
 bootScenePage({
@@ -102,11 +103,8 @@ bootScenePage({
       onAction: () => {}
     });
     return {
-      setValue: (key: string, value: number | string | boolean) =>
-        renderer.setValue(key, value),
-      setActive: (key: string, value: string) => renderer.setActive(key, value),
-      refresh: () => syncControls(renderer, toolScene.getParams()),
-      dispose: () => renderer.dispose()
+      ...exposeSchemaHandle(renderer),
+      syncFromScene: () => syncControls(renderer, toolScene.getParams())
     };
   },
   paramSync: {

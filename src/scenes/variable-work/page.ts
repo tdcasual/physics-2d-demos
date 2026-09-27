@@ -2,6 +2,7 @@ import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
 import { readSceneParams, writeOwnedSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { variableWorkControlsSchema } from './controls-schema';
 import { createVariableWorkScene } from './scene.entry';
 import { variableWorkMeta } from './scene.meta';
@@ -116,7 +117,19 @@ bootScenePage({
     renderer.setVisible('k', shouldShowK(workScene.getParams().mode));
     renderer.setVisible('power', shouldShowPower(workScene.getParams().mode));
 
+    const syncFromScene = (): void => {
+      const params = workScene.getParams();
+      renderer.setActiveSilently('mode', params.mode);
+      renderer.setValueSilently('mass', params.mass);
+      renderer.setValueSilently('k', params.k);
+      renderer.setValueSilently('power', params.power);
+      renderer.setValueSilently('microsteps', params.microsteps);
+      renderer.setVisible('k', shouldShowK(params.mode));
+      renderer.setVisible('power', shouldShowPower(params.mode));
+    };
+
     return {
+      ...exposeSchemaHandle(renderer),
       setValue: (key: string, value: number | string | boolean) => {
         applying = true;
         renderer.setValue(key, value);
@@ -132,19 +145,7 @@ bootScenePage({
         }
         applying = false;
       },
-      refresh: () => {
-        applying = true;
-        const params = workScene.getParams();
-        renderer.setActive('mode', params.mode);
-        renderer.setValue('mass', params.mass);
-        renderer.setValue('k', params.k);
-        renderer.setValue('power', params.power);
-        renderer.setValue('microsteps', params.microsteps);
-        renderer.setVisible('k', shouldShowK(params.mode));
-        renderer.setVisible('power', shouldShowPower(params.mode));
-        applying = false;
-      },
-      dispose: () => renderer.dispose()
+      syncFromScene
     };
   },
   paramSync: {

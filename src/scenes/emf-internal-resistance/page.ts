@@ -2,6 +2,7 @@ import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
 import { readSceneParams, writeOwnedSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { emfInternalControlsSchema } from './controls-schema';
 import { createEmfInternalScene } from './scene.entry';
 import { emfInternalMeta } from './scene.meta';
@@ -84,16 +85,22 @@ function syncControls(
   params: EmfInternalParams,
   mount: HTMLElement
 ): void {
-  renderer.setValue('sourceVoltage', String(params.sourceVoltage));
-  renderer.setActive('sourceVoltage', String(params.sourceVoltage));
+  renderer.setValueSilently('sourceVoltage', String(params.sourceVoltage));
+  renderer.setActiveSilently('sourceVoltage', String(params.sourceVoltage));
   syncSelect(mount, 'sourceVoltage', params.sourceVoltage);
-  renderer.setValue('internalResistance', String(params.internalResistance));
-  renderer.setActive('internalResistance', String(params.internalResistance));
+  renderer.setValueSilently(
+    'internalResistance',
+    String(params.internalResistance)
+  );
+  renderer.setActiveSilently(
+    'internalResistance',
+    String(params.internalResistance)
+  );
   syncSelect(mount, 'internalResistance', params.internalResistance);
-  renderer.setValue('rheostatResistance', params.rheostatResistance);
-  renderer.setValue('systematicError', params.systematicError);
-  renderer.setValue('autoRun', params.autoRun);
-  renderer.setValue('switchClosed', params.switchClosed);
+  renderer.setValueSilently('rheostatResistance', params.rheostatResistance);
+  renderer.setValueSilently('systematicError', params.systematicError);
+  renderer.setValueSilently('autoRun', params.autoRun);
+  renderer.setValueSilently('switchClosed', params.switchClosed);
   syncSwitchButton(mount, params.switchClosed);
 }
 
@@ -199,7 +206,7 @@ bootScenePage({
         render();
       }
     });
-    const refreshControls = () => {
+    const syncFromScene = () => {
       syncingControls = true;
       try {
         syncControls(renderer, emfScene.getParams(), mount);
@@ -207,8 +214,9 @@ bootScenePage({
         syncingControls = false;
       }
     };
-    refreshControls();
+    syncFromScene();
     return {
+      ...exposeSchemaHandle(renderer),
       setValue: (key: string, value: number | string | boolean) => {
         renderer.setValue(key, value);
         syncSelect(mount, key, value);
@@ -217,8 +225,7 @@ bootScenePage({
         renderer.setActive(key, value);
         syncSelect(mount, key, value);
       },
-      refresh: refreshControls,
-      dispose: () => renderer.dispose()
+      syncFromScene
     };
   },
   paramSync: {

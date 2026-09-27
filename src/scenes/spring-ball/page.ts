@@ -2,6 +2,7 @@ import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
 import { readSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { springBallControlsSchema } from './controls-schema';
 import { asBool, asMode, asPreset, createSpringBallScene } from './scene.entry';
 import { springBallMeta } from './scene.meta';
@@ -26,11 +27,11 @@ function syncControls(
   renderer: ReturnType<typeof renderSchema>,
   params: SpringBallParams
 ): void {
-  renderer.setValue('releaseHeight', params.releaseHeight);
-  renderer.setActive('preset', params.preset);
-  renderer.setActive('mode', params.mode);
-  renderer.setValue('autoRun', params.autoRun);
-  renderer.setValue('slow', params.slow);
+  renderer.setValueSilently('releaseHeight', params.releaseHeight);
+  renderer.setActiveSilently('preset', params.preset);
+  renderer.setActiveSilently('mode', params.mode);
+  renderer.setValueSilently('autoRun', params.autoRun);
+  renderer.setValueSilently('slow', params.slow);
 }
 
 bootScenePage({
@@ -117,11 +118,8 @@ bootScenePage({
       syncControls(renderer, springScene.getParams());
     };
     return {
-      setValue: (key: string, value: number | string | boolean) =>
-        renderer.setValue(key, value),
-      setActive: (key: string, value: string) => renderer.setActive(key, value),
-      refresh: () => syncControls(renderer, springScene.getParams()),
-      dispose: () => renderer.dispose()
+      ...exposeSchemaHandle(renderer),
+      syncFromScene: () => syncControls(renderer, springScene.getParams())
     };
   },
   paramSync: {

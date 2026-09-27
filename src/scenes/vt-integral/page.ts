@@ -3,8 +3,23 @@ import { vtIntegralMeta } from './scene.meta';
 import { createVtIntegralScene } from './scene.entry';
 import { vtIntegralControlsSchema } from './controls-schema';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { isValidVtScene } from './scene-values';
 import type { VtCurveKind } from './scene.sim';
+
+/**
+ * getParams().scene 是 1 基数字（scene1→1, scene2→2, scene3→3），
+ * scene-selector 的 id 是 'scene1'..'scene3'。
+ */
+export function decodeVtSceneSelectorId(scene: number | string): string {
+  if (scene === 'scene1' || scene === 'scene2' || scene === 'scene3') {
+    return scene;
+  }
+  const n = Number(scene);
+  if (n === 2) return 'scene2';
+  if (n === 3) return 'scene3';
+  return 'scene1';
+}
 
 const CURVE_KEYS: readonly VtCurveKind[] = [
   'constant',
@@ -56,10 +71,18 @@ bootScenePage({
       }
     });
 
+    const syncFromScene = (): void => {
+      const params = scene.getParams();
+      renderer.setActiveSilently(
+        'scene',
+        decodeVtSceneSelectorId(params.scene)
+      );
+      renderer.setValueSilently('n', params.n);
+    };
+
     return {
-      dispose: () => {
-        renderer.dispose();
-      }
+      ...exposeSchemaHandle(renderer),
+      syncFromScene
     };
   },
   preferredLayout: 'split-right',

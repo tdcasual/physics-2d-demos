@@ -317,44 +317,38 @@ describe('projectControlsFromParams', () => {
 describe('syncControlsFromLiveParams', () => {
   it('prefers handle.syncFromScene over the generic projector', () => {
     const syncFromScene = vi.fn();
-    const refresh = vi.fn();
     const setValueSilently = vi.fn();
     syncControlsFromLiveParams({
       params: { speed: 40 },
       handle: {
         fieldTypes: collectFieldKeys(schema),
         setValueSilently,
-        syncFromScene,
-        refresh
+        syncFromScene
       }
     });
     expect(syncFromScene).toHaveBeenCalledOnce();
     expect(setValueSilently).not.toHaveBeenCalled();
-    expect(refresh).not.toHaveBeenCalled();
   });
 
-  it('falls back to handle.refresh when the projector cannot project', () => {
-    const refresh = vi.fn();
+  it('does nothing when the projector cannot project any key', () => {
+    const setValueSilently = vi.fn();
     syncControlsFromLiveParams({
       params: { speed: 40 },
-      handle: { refresh }
+      handle: { setValueSilently }
     });
-    expect(refresh).toHaveBeenCalledOnce();
+    expect(setValueSilently).not.toHaveBeenCalled();
   });
 
-  it('skips refresh when at least one key was projected', () => {
-    const refresh = vi.fn();
+  it('projects via silent setters when syncFromScene is absent', () => {
     const setValueSilently = vi.fn();
     syncControlsFromLiveParams({
       params: { speed: 40 },
       handle: {
         fieldTypes: collectFieldKeys(schema),
-        setValueSilently,
-        refresh
+        setValueSilently
       }
     });
     expect(setValueSilently).toHaveBeenCalledWith('speed', 40);
-    expect(refresh).not.toHaveBeenCalled();
   });
 });
 

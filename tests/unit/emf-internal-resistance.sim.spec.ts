@@ -245,7 +245,7 @@ describe('emf-internal-resistance entry', () => {
     expect(pageSrc).toContain('readSceneParams');
     expect(pageSrc).toContain('asBool');
     expect(pageSrc).toContain("preferredLayout: 'split-right-graph-bottom'");
-    expect(pageSrc).toContain('refresh: refreshControls');
+    expect(pageSrc).toContain('syncFromScene');
     expect(pageSrc).toContain('initialParams');
     expect(pageSrc).toContain('autoPlay: initialParams.autoRun !== false');
     expect(pageSrc).toContain('const originalReset = scene.reset.bind(scene)');
@@ -262,7 +262,7 @@ describe('emf-internal-resistance entry', () => {
     expect(createSceneBody).toContain('originalReset()');
     expect(createSceneBody).toContain('writeOwnedSceneParams');
     expect(createControlsBody).not.toContain('writeSceneParams');
-    expect(createControlsBody).toContain('refreshControls');
+    expect(createControlsBody).toContain('syncFromScene');
     expect(pageSrc).toContain("writeParam?.('switchClosed', closed ? 1 : 0)");
   });
 

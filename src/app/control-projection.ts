@@ -22,7 +22,6 @@ export type ControlProjectionHandle = {
   setValueSilently?: (key: string, value: number | string | boolean) => void;
   setActiveSilently?: (key: string, id: string) => void;
   syncFromScene?: () => void;
-  refresh?: () => void;
 };
 
 /** 投影器只读这三项；applyAll / applyParam / afterApply 即使存在也不调用 */
@@ -61,8 +60,7 @@ export function collectFieldKeys(schema: ControlsSchema): Map<string, string> {
  * 键宇宙 = handle 字段类型表 ∩ params（经 paramMap 反查后的控件键）。
  * 缺静默 setter 的键跳过，不回退事件性 setValue / setActive。
  *
- * @returns 至少投影了一键则为 true；无法投影任何键（缺类型表或静默 setter）为 false，
- *   调用方可回退 handle.refresh（TODO(A4) 退役该回退）。
+ * @returns 至少投影了一键则为 true；无法投影任何键（缺类型表或静默 setter）为 false。
  */
 export function projectControlsFromParams(
   options: ProjectControlsFromParamsOptions
@@ -107,7 +105,7 @@ export function projectControlsFromParams(
 
 /**
  * remount / reset 共用入口：优先 handle.syncFromScene；
- * 否则通用投影；投影 0 键时回退 handle.refresh。
+ * 否则通用投影。投影 0 键时不再回退事件性 refresh。
  */
 export function syncControlsFromLiveParams(options: {
   params: Record<string, unknown>;
@@ -119,15 +117,11 @@ export function syncControlsFromLiveParams(options: {
     handle.syncFromScene();
     return;
   }
-  const projected = projectControlsFromParams({
+  projectControlsFromParams({
     params: options.params,
     handle,
     paramSync: options.paramSync
   });
-  if (!projected) {
-    // TODO(A4): ②③ 场景迁移后退役 handle.refresh
-    handle.refresh?.();
-  }
 }
 
 export function paramsFromScene(

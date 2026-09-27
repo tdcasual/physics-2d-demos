@@ -2,6 +2,7 @@ import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
 import { readSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { chargedParticleControlsSchema } from './controls-schema';
 import { asFieldDirection, createChargedParticleScene } from './scene.entry';
 import { chargedParticleMeta } from './scene.meta';
@@ -54,14 +55,14 @@ function syncControls(
   renderer: ReturnType<typeof renderSchema>,
   params: ChargedParticleParams
 ): void {
-  renderer.setValue('mass', params.mass);
-  renderer.setValue('charge', params.charge);
-  renderer.setValue('velocity', params.velocity);
-  renderer.setValue('magneticField', params.magneticField);
-  renderer.setValue('autoRun', params.autoRun);
-  renderer.setValue('showVelocity', params.showVelocity);
-  renderer.setValue('showForce', params.showForce);
-  renderer.setActive('fieldDirection', params.fieldDirection);
+  renderer.setValueSilently('mass', params.mass);
+  renderer.setValueSilently('charge', params.charge);
+  renderer.setValueSilently('velocity', params.velocity);
+  renderer.setValueSilently('magneticField', params.magneticField);
+  renderer.setValueSilently('autoRun', params.autoRun);
+  renderer.setValueSilently('showVelocity', params.showVelocity);
+  renderer.setValueSilently('showForce', params.showForce);
+  renderer.setActiveSilently('fieldDirection', params.fieldDirection);
 }
 
 const initialParams = paramsFromUrl(readSceneParams(chargedParticleMeta));
@@ -143,11 +144,8 @@ bootScenePage({
     };
 
     return {
-      setValue: (key: string, value: number | string | boolean) =>
-        renderer.setValue(key, value),
-      setActive: (key: string, value: string) => renderer.setActive(key, value),
-      refresh: () => syncControls(renderer, particleScene.getParams()),
-      dispose: () => renderer.dispose()
+      ...exposeSchemaHandle(renderer),
+      syncFromScene: () => syncControls(renderer, particleScene.getParams())
     };
   },
   paramSync: {

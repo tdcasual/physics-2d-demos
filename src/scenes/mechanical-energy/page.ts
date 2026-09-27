@@ -2,6 +2,7 @@ import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
 import { readSceneParams, writeOwnedSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { createControlCard } from '../../ui/components/ControlCard';
 import { mechanicalEnergyControlsSchema } from './controls-schema';
 import {
@@ -176,22 +177,20 @@ bootScenePage({
     const chrome = createChromeScheduler(onChrome);
     chrome.start();
 
+    const syncFromScene = (): void => {
+      const p = energyScene.getParams();
+      renderer.setActiveSilently('environment', p.environment);
+      renderer.setVisible('resistance', shouldShowResistance(p.environment));
+      renderer.setValueSilently('resistance', p.resistance);
+      renderer.setValueSilently('mass', p.mass);
+      renderer.setValueSilently('gravity', p.gravity);
+      renderer.setValueSilently('pointPeriod', p.pointPeriod);
+      last = p;
+    };
+
     return {
-      setValue: (key: string, value: number | string | boolean) =>
-        renderer.setValue(key, value),
-      setActive: (key: string, value: string) => renderer.setActive(key, value),
-      refresh: () => {
-        const p = energyScene.getParams();
-        applying = true;
-        renderer.setActive('environment', p.environment);
-        renderer.setVisible('resistance', shouldShowResistance(p.environment));
-        renderer.setValue('resistance', p.resistance);
-        renderer.setValue('mass', p.mass);
-        renderer.setValue('gravity', p.gravity);
-        renderer.setValue('pointPeriod', p.pointPeriod);
-        applying = false;
-        last = p;
-      },
+      ...exposeSchemaHandle(renderer),
+      syncFromScene,
       dispose: () => {
         disposed = true;
         unsubscribe();

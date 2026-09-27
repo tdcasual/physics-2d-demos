@@ -38,6 +38,7 @@ export interface WaveSourceSliderSpec {
 export interface WaveSourceCard {
   element: HTMLElement;
   setValue: (key: string, value: number) => void;
+  setValueSilently: (key: string, value: number) => void;
 }
 
 /**
@@ -65,6 +66,7 @@ export function createWaveSourceCard(
   body.style.gap = '4px';
 
   const valueSetters = new Map<string, (value: number) => void>();
+  const silentValueSetters = new Map<string, (value: number) => void>();
 
   for (const s of sliders) {
     const row = createSliderRow(s.label, {
@@ -79,10 +81,16 @@ export function createWaveSourceCard(
     const input = row.querySelector('input');
     if (input) {
       input.style.accentColor = accentColor;
-      valueSetters.set(s.key, (v) => {
+      const valueEl = row.querySelector('span:last-child');
+      const paint = (v: number) => {
         input.value = String(v);
+        if (valueEl) valueEl.textContent = String(v) + (s.unit || '');
+      };
+      valueSetters.set(s.key, (v) => {
+        paint(v);
         input.dispatchEvent(new Event('input'));
       });
+      silentValueSetters.set(s.key, paint);
     }
     body.appendChild(row);
   }
@@ -93,6 +101,9 @@ export function createWaveSourceCard(
     element: card.element,
     setValue(key: string, value: number) {
       valueSetters.get(key)?.(value);
+    },
+    setValueSilently(key: string, value: number) {
+      silentValueSetters.get(key)?.(value);
     }
   };
 }
