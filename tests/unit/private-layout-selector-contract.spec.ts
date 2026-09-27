@@ -41,8 +41,9 @@ describe('cross-module private layout selectors', () => {
   });
 
   it('ticker-tape finds the stage frame via semantic attr', () => {
-    const file = path.join(ROOT, 'src/scenes/ticker-tape/scene.view.ts');
-    const text = fs.readFileSync(file, 'utf8');
+    const dir = path.join(ROOT, 'src/scenes/ticker-tape');
+    const texts = walkTs(dir).map((file) => fs.readFileSync(file, 'utf8'));
+    const text = texts.join('\n');
     expect(text).toContain('STAGE_FRAME_ATTR');
     expect(text).not.toMatch(PRIVATE_CLASS);
   });
