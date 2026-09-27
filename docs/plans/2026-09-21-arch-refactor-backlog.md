@@ -6,13 +6,20 @@
 >
 > **v10 映射（2026-09-27）**
 >
-> | 本清单项                  | 状态                                                                                           |
-> | ------------------------- | ---------------------------------------------------------------------------------------------- |
-> | P0-1 私有 class 挂载点    | 部分完成：`data-stage-frame` / graph / toolbar 属性已落地；data-workspace 能力改为语义属性查找 |
-> | P1-A 死代码与假契约       | 已在 2026-09-25 清偿批次完成                                                                   |
-> | P1-B 场景反查布局内部 DOM | 部分完成；readout 已集中 `readoutOccludesStage`，剩余 scene overlay 测量保留                   |
-> | 大模块拆分                | container.ts 已拆 switch runtime（690 行）；platform workspace / panel 仍 grandfathered        |
-> | 测试绿实现错              | v10 增加 await-barrier / 真实 registry abort-race 测试                                         |
+> | 本清单项                         | 状态                                                                                                                                                                                                                                                                                                |
+> | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+> | P0-1 私有 class 挂载点           | 已清（v10）：`data-stage-frame` / `data-graph-section` / `data-stage-toolbar-host` 属性 + 契约测试；data-workspace 能力改语义属性查找                                                                                                                                                               |
+> | P1-A 死代码与假契约              | 已清（2026-09-25 批次）                                                                                                                                                                                                                                                                             |
+> | P1-B 场景反查布局内部 DOM        | 已清（v10 + v12 C6）：readout 集中 `readoutOccludesStage`； projectile-components / mechanical-energy 迁到 `[data-readout-slot]`（864d26e），`#mobile-panel-readout` / `.mobile-stack-layout` 零残留并入契约                                                                                        |
+> | P1-C hasFloatingReadout 漂移副本 | **未动（19 处仍在）** → 裁定：转入 ledger B 区，冻结 19 项只缩不增（守卫待建，见 E4 收尾）                                                                                                                                                                                                          |
+> | P1-D graphInitiallyHidden 定案   | 已清（v10）：`honorsGraphInitiallyHidden` 元数据 + mobile-stack 显式 false 带理由                                                                                                                                                                                                                   |
+> | P1-E 工具条按钮认领链            | 已清：`buildStageToolbar` 收敛（src/ui/stage-toolbar.ts:36），三布局只传配置                                                                                                                                                                                                                        |
+> | P2-A 搬家-还原 helper            | 已清：`src/ui/utils/node-mover.ts`（moveNode/MovedNode.restore），data-workspace 与 demo-profile 均已采用                                                                                                                                                                                           |
+> | P2-B requestLayoutResize 收敛    | **部分**：四处已收敛（request-layout-resize.ts）；残留 `lab-stage.ts:196-198` 浮窗 onResize 裸 dispatch 绕过 suppress 闸门 → 列入小修待办                                                                                                                                                           |
+> | P2-C 能力声明数组去重            | 已清：`buildBaseCapabilities`（capabilities/base-declarations.ts:26）+ 差异插入点                                                                                                                                                                                                                   |
+> | P2-D setTheme 双写               | 已清：documentElement 写入收敛到 container.ts:647；残留观察 scene-adapter.ts:320（另记）                                                                                                                                                                                                            |
+> | P2-E 过大文件拆分                | 进行中（v12 Wave E）：platform/data-workspace 1413→6 模块（0c4d773）；panel / ticker-tape view 在 E2/E3；scene-adapter / demo-profile / stage-panzoom 维持棘轮                                                                                                                                      |
+> | P2-F 小项                        | 6 项中 4 项已清（selector 兜底 / 焦点恢复 data 属性 / enabledSteps 联合类型 / DESKTOP_DEMO_LAYOUTS→demoCapable 元数据）；**未动 2 项**：双 class（stage-toolbar/floating-controls）列入小修待办；lab-stage `mobile-tab-panel` 承重 class **显式保留**（CSS/矩阵/测试基建三方依赖，改动成本 > 收益） |
 
 ## 优先级定义
 
