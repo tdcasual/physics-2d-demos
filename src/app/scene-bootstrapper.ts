@@ -29,6 +29,10 @@ import type {
   SceneInstance,
   ScenePageOptions
 } from './scene-bootstrapper-types';
+import {
+  paramsFromScene,
+  syncControlsFromLiveParams
+} from './control-projection';
 
 export type {
   SceneInstance,
@@ -161,15 +165,6 @@ export function bootScenePage<TScene extends SceneInstance>(
               },
               sceneWriter: writer ?? undefined
             });
-            const handle = controls as {
-              setValueSilently?: (
-                key: string,
-                value: number | string | boolean
-              ) => void;
-              setActiveSilently?: (key: string, value: string) => void;
-              syncFromScene?: () => void;
-              refresh?: () => void;
-            };
             if (permit.first) {
               try {
                 applySceneUrlParams(
@@ -188,10 +183,12 @@ export function bootScenePage<TScene extends SceneInstance>(
                 adapter.completeUrlRestore(false);
                 throw err;
               }
-            } else if (handle.syncFromScene) {
-              handle.syncFromScene();
             } else {
-              handle.refresh?.();
+              syncControlsFromLiveParams({
+                params: paramsFromScene(controlOpts.scene),
+                handle: controls,
+                paramSync: options.paramSync
+              });
             }
             return attachSchedulerDispose(controls, scheduler);
           }

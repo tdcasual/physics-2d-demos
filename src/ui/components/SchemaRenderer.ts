@@ -43,6 +43,8 @@ export interface SchemaRendererInstance {
   setActiveSilently: (key: string, id: string) => void;
   setVisible: (key: string, visible: boolean) => void;
   dispose: () => void;
+  /** 字段键 → schema 类型，供 app/control-projection 静默分派 */
+  fieldTypes: Map<string, string>;
 }
 
 export function renderSchema(
@@ -56,6 +58,7 @@ export function renderSchema(
   const valueGetters = new Map<string, () => unknown>();
   const activeSetters = new Map<string, (id: string) => void>();
   const visibleNodes = new Map<string, HTMLElement>();
+  const fieldTypes = new Map<string, string>();
   const cleanupFns: Array<() => void> = [];
 
   schema.sections.forEach((section) => {
@@ -78,6 +81,7 @@ export function renderSchema(
     }
 
     section.fields.forEach((field) => {
+      fieldTypes.set(field.key, field.type);
       const {
         node,
         valueSetter,
@@ -133,7 +137,9 @@ export function renderSchema(
       silentValueSetters.clear();
       valueGetters.clear();
       activeSetters.clear();
-    }
+      fieldTypes.clear();
+    },
+    fieldTypes
   };
 }
 

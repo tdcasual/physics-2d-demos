@@ -31,6 +31,10 @@ import type {
   SceneInstance,
   ScenePageOptions
 } from './scene-bootstrapper-types';
+import {
+  paramsFromScene,
+  syncControlsFromLiveParams
+} from './control-projection';
 import { filterPresentationReadout } from './scene-adapter/readout-filter';
 import { registerSceneKeyboardShortcuts } from './scene-adapter/keyboard-shortcuts';
 import { createScenePerformanceRuntime } from './scene-adapter/perf-monitor';
@@ -611,12 +615,13 @@ export class SceneAdapter<
     this.perfMonitor?.stop();
     this.scene?.reset?.();
     this.scene?.render();
-    const c = this.controls as {
-      refresh?(): void;
-      syncFromScene?(): void;
-    } | null;
-    if (c?.syncFromScene) c.syncFromScene();
-    else c?.refresh?.();
+    if (this.controls) {
+      syncControlsFromLiveParams({
+        params: paramsFromScene(this.scene),
+        handle: this.controls,
+        paramSync: this.options.paramSync
+      });
+    }
   }
 
   setTimeScale(scale: number): void {

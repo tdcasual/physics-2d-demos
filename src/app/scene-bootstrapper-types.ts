@@ -39,6 +39,11 @@ export type SceneInstance = {
     | null;
   getTransportState?(): TransportState;
   subscribe?(listener: () => void): () => void;
+  /**
+   * 入口级 live 参数，供 remount / reset 控件投影读取。
+   * 具体场景返回 typed params 对象；平台按 key/value bag 消费。
+   */
+  getParams?(): Record<string, unknown>;
   /** 布局切换时把渲染面绑到新槽，禁止 dispose+init。 */
   reattach?(opts: {
     container: HTMLElement;
@@ -205,4 +210,15 @@ export type SceneParamSync<TScene extends SceneInstance = SceneInstance> = {
   ) => boolean;
   /** 默认管线应用完所有参数后、首绘前调用（如回读约束系统调整后的实际值） */
   afterApply?: (ctx: ParamSyncContext<TScene>) => void;
+  /**
+   * 控件投影逃生口（scene → 面板）。paramMap 非单射或字段类型分派无法编码时使用。
+   *
+   * 语义（强制）：对 sim **只读**、**同步**、**不得**经 rAF / `scheduleRender` 延迟。
+   * 通用投影器永不调用 applyAll / applyParam / afterApply，也不调用任何
+   * scene setter 或 `scene.render()`。
+   */
+  projectControls?: (
+    params: Record<string, unknown>,
+    ctx: { handle: unknown }
+  ) => void;
 };

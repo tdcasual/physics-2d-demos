@@ -14,7 +14,7 @@ const NUMBER_KEYS = [
   'resistance'
 ] as const;
 
-type SingleLoopScene = SceneInstance & {
+type SingleLoopScene = Omit<SceneInstance, 'getParams'> & {
   getParams(): SingleLoopParams;
   setParams(params: Partial<SingleLoopParams>): SingleLoopParams;
   subscribe(listener: () => void): () => void;
