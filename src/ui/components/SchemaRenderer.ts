@@ -27,6 +27,37 @@ function tryDispose(el: HTMLElement): void {
   if (typeof d === 'function') d();
 }
 
+/** slider/number/text/select must ship a true silent setter; other types log in test. */
+const EVENTFUL_FALLBACK_FAIL_LOUD_TYPES = new Set([
+  'slider',
+  'number',
+  'text',
+  'select'
+]);
+
+function registerSilentValueSetter(
+  field: ControlField,
+  silentValueSetter: ((value: unknown) => void) | undefined,
+  valueSetter: ((value: unknown) => void) | undefined,
+  silentValueSetters: Map<string, (value: unknown) => void>
+): void {
+  if (silentValueSetter) {
+    silentValueSetters.set(field.key, silentValueSetter);
+    return;
+  }
+  if (!valueSetter) return;
+  if (import.meta.env.MODE === 'test') {
+    const message =
+      `[SchemaRenderer] field "${field.key}" (type=${field.type}) ` +
+      'has no silentValueSetter; falling back to eventful valueSetter';
+    if (EVENTFUL_FALLBACK_FAIL_LOUD_TYPES.has(field.type)) {
+      throw new Error(message);
+    }
+    console.error(message);
+  }
+  silentValueSetters.set(field.key, valueSetter);
+}
+
 interface SchemaRendererOptions {
   mount: HTMLElement;
   schema: ControlsSchema;
@@ -96,9 +127,12 @@ export function renderSchema(
         visibleNodes.set(field.key, node);
       }
       if (valueSetter) valueSetters.set(field.key, valueSetter);
-      if (silentValueSetter)
-        silentValueSetters.set(field.key, silentValueSetter);
-      else if (valueSetter) silentValueSetters.set(field.key, valueSetter);
+      registerSilentValueSetter(
+        field,
+        silentValueSetter,
+        valueSetter,
+        silentValueSetters
+      );
       if (valueGetter) valueGetters.set(field.key, valueGetter);
       if (activeSetter) activeSetters.set(field.key, activeSetter);
       if (cleanup) cleanupFns.push(cleanup);
@@ -381,24 +415,25 @@ function renderField(
         value: field.value,
         onChange: (val) => onChange(field.key, val)
       });
+      const paintToggle = (value: unknown) => {
+        const btn = row.querySelector('button[role="switch"]');
+        if (!btn) return;
+        const next = Boolean(value);
+        btn.setAttribute('aria-checked', String(next));
+        (btn as HTMLElement).style.backgroundColor = next
+          ? 'var(--accent-primary)'
+          : 'var(--border-color)';
+        const thumb = btn.querySelector('span');
+        if (thumb) {
+          (thumb as HTMLElement).style.transform = next
+            ? 'translateX(16px)'
+            : 'translateX(2px)';
+        }
+      };
       return {
         node: row,
-        valueSetter: (value) => {
-          const btn = row.querySelector('button[role="switch"]');
-          if (btn) {
-            const next = Boolean(value);
-            btn.ariaChecked = String(next);
-            (btn as HTMLElement).style.backgroundColor = next
-              ? 'var(--accent-primary)'
-              : 'var(--border-color)';
-            const thumb = btn.querySelector('span');
-            if (thumb) {
-              (thumb as HTMLElement).style.transform = next
-                ? 'translateX(16px)'
-                : 'translateX(2px)';
-            }
-          }
-        },
+        valueSetter: paintToggle,
+        silentValueSetter: paintToggle,
         cleanup: () => {
           tryDispose(row);
         }

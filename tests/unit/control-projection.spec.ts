@@ -252,6 +252,20 @@ describe('projectControlsFromParams', () => {
     expect(handle.setValueSilently).not.toHaveBeenCalled();
   });
 
+  it('ignores leftover handle.schema and only reads fieldTypes', () => {
+    const handle = {
+      schema,
+      setValueSilently: vi.fn(),
+      setActiveSilently: vi.fn()
+    };
+    const ok = projectControlsFromParams({
+      params: { speed: 40 },
+      handle
+    });
+    expect(ok).toBe(false);
+    expect(handle.setValueSilently).not.toHaveBeenCalled();
+  });
+
   it('does not dispatch button / hint / custom / transport keys', () => {
     const handle = handleWithTypes();
     projectControlsFromParams({

@@ -495,4 +495,33 @@ describe('SchemaRenderer', () => {
     const valueEl = mount.querySelector('span:last-child');
     expect(valueEl?.textContent).toContain('40');
   });
+
+  it('setValueSilently updates toggle without dispatching events', () => {
+    const mount = createMount();
+    const onChange = vi.fn();
+    const schema: ControlsSchema = {
+      sections: [
+        {
+          title: '显示',
+          fields: [
+            { type: 'toggle', key: 'showA', label: '显示 A', value: false }
+          ]
+        }
+      ]
+    };
+    const renderer = renderSchema({
+      mount,
+      schema,
+      onChange,
+      onAction: vi.fn()
+    });
+    renderer.setValueSilently('showA', true);
+    expect(onChange).not.toHaveBeenCalled();
+    const btn = mount.querySelector(
+      'button[role="switch"]'
+    ) as HTMLButtonElement;
+    expect(btn).not.toBeNull();
+    expect(btn.getAttribute('aria-checked')).toBe('true');
+    expect(btn.style.backgroundColor).toBe('var(--accent-primary)');
+  });
 });

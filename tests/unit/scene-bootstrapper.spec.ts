@@ -258,6 +258,49 @@ describe('SceneAdapter', () => {
     adapter.unmount();
   });
 
+  it('keyboard r goes through adapter.reset so controls project', () => {
+    const scene = {
+      ...createMockScene(),
+      getParams: vi.fn(() => ({ speed: 12 }))
+    };
+    const setValueSilently = vi.fn();
+    const adapter = createAdapter({
+      createScene: () => scene as never,
+      createControls: () => ({
+        fieldTypes: new Map([['speed', 'slider']]),
+        setValueSilently,
+        dispose: () => {}
+      })
+    } as Partial<ScenePageOptions>);
+    const container = document.createElement('div');
+    const canvas = document.createElement('canvas');
+    canvas.className = 'stage-canvas';
+    container.appendChild(canvas);
+    const controls = document.createElement('div');
+
+    adapter.renderAnimation(container, {
+      animation: container,
+      control: controls
+    } as LayoutSlots);
+    adapter.renderControl(controls);
+
+    const resetSpy = vi.spyOn(adapter, 'reset');
+    document.body.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'r',
+        bubbles: true,
+        cancelable: true
+      })
+    );
+
+    expect(resetSpy).toHaveBeenCalledTimes(1);
+    expect(scene.reset).toHaveBeenCalled();
+    expect(scene.render).toHaveBeenCalled();
+    expect(setValueSilently).toHaveBeenCalledWith('speed', 12);
+
+    adapter.unmount();
+  });
+
   it('autoPlay starts through startAll (scene hooks included)', () => {
     const scene = createMockScene();
     const adapter = createAdapter({

@@ -309,11 +309,7 @@ export class SceneAdapter<
       isPlaying: () => this.transport?.transport.isPlaying ?? false,
       start: () => this.startAll(),
       pause: () => this.pauseAll(),
-      reset: () => {
-        this.transport?.reset?.();
-        this.perfMonitor?.stop();
-        this.scene?.reset?.();
-      },
+      reset: () => this.reset(),
       toggleTheme: (next) => {
         if (this.options.onToggleTheme) {
           // 统一走 container.setTheme：同步 container 状态、布局与持久化

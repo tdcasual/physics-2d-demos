@@ -19,7 +19,6 @@ const ACTIVE_FIELD_TYPES = new Set<string>(['preset-group', 'scene-selector']);
 
 export type ControlProjectionHandle = {
   fieldTypes?: Map<string, string>;
-  schema?: ControlsSchema;
   setValueSilently?: (key: string, value: number | string | boolean) => void;
   setActiveSilently?: (key: string, id: string) => void;
   syncFromScene?: () => void;
@@ -142,13 +141,8 @@ export function paramsFromScene(
 function resolveFieldTypes(
   handle: ControlProjectionHandle
 ): Map<string, string> | undefined {
-  if (handle.fieldTypes) {
-    return handle.fieldTypes.size > 0 ? handle.fieldTypes : undefined;
-  }
-  if (handle.schema) {
-    const keys = collectFieldKeys(handle.schema);
-    return keys.size > 0 ? keys : undefined;
-  }
+  const types = handle.fieldTypes;
+  if (types && types.size > 0) return types;
   return undefined;
 }
 

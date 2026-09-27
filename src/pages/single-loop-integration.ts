@@ -14,6 +14,7 @@ const NUMBER_KEYS = [
   'resistance'
 ] as const;
 
+// Omit optional SceneInstance.getParams so the required typed getParams below replaces it.
 type SingleLoopScene = Omit<SceneInstance, 'getParams'> & {
   getParams(): SingleLoopParams;
   setParams(params: Partial<SingleLoopParams>): SingleLoopParams;

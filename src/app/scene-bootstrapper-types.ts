@@ -16,6 +16,7 @@ import type {
   DemoRenderHints,
   SceneDemoProfile
 } from '../platform/demo-profile';
+import type { ControlProjectionHandle } from './control-projection';
 
 /** 场景实例接口（场景实现方提供） */
 export type SceneInstance = {
@@ -219,6 +220,6 @@ export type SceneParamSync<TScene extends SceneInstance = SceneInstance> = {
    */
   projectControls?: (
     params: Record<string, unknown>,
-    ctx: { handle: unknown }
+    ctx: { handle: ControlProjectionHandle }
   ) => void;
 };

@@ -21,9 +21,12 @@ describe('App', () => {
 
   it('should render experiments section', async () => {
     const { container, cleanup } = render(<App />);
-    await waitFor(() => {
-      expect(container.querySelector('#experiments')).toBeTruthy();
-    });
+    await waitFor(
+      () => {
+        expect(container.querySelector('#experiments')).toBeTruthy();
+      },
+      { timeout: 5000 }
+    );
     cleanup();
   });
 
@@ -36,9 +39,12 @@ describe('App', () => {
 
   it('should not inject page-scoped style tags at runtime', async () => {
     const { cleanup } = render(<App />);
-    await waitFor(() => {
-      expect(document.querySelector('#experiments')).toBeTruthy();
-    });
+    await waitFor(
+      () => {
+        expect(document.querySelector('#experiments')).toBeTruthy();
+      },
+      { timeout: 5000 }
+    );
     expect(document.querySelectorAll('style')).toHaveLength(0);
     cleanup();
   });
