@@ -1,6 +1,7 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { createDisplacementTimeScene } from './scene.entry';
 import { displacementTimeMeta } from './scene.meta';
 import { displacementTimeControlsSchema } from './controls-schema';
@@ -73,17 +74,7 @@ bootScenePage({
       },
       onAction: () => {}
     });
-    return {
-      setValue(key: string, value: number | string | boolean): void {
-        renderer.setValue(key, value);
-      },
-      setActive(key: string, value: string): void {
-        renderer.setActive(key, value);
-      },
-      dispose(): void {
-        renderer.dispose();
-      }
-    };
+    return exposeSchemaHandle(renderer);
   },
   paramSync: {
     applyParam: (key, value, ctx) => {

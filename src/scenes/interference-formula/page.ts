@@ -7,6 +7,7 @@ import { interferenceFormulaMeta } from './scene.meta';
 import { createInterferenceFormulaScene } from './scene.entry';
 import { interferenceFormulaControlsSchema } from './controls-schema';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { wavelengthToColor } from './scene.view';
 import type { InterferenceFormulaStep } from './scene.sim';
 
@@ -65,15 +66,10 @@ bootScenePage({
     updateLambdaSliderColor(mount, initialLambda);
 
     return {
-      setValue(key: string, value: number | string) {
+      ...exposeSchemaHandle(renderer),
+      setValue: (key: string, value: number | string | boolean) => {
         renderer.setValue(key, value);
         if (key === 'lambda') updateLambdaSliderColor(mount, Number(value));
-      },
-      setActive(key: string, value: string) {
-        renderer.setActive(key, value);
-      },
-      dispose() {
-        renderer.dispose();
       }
     };
   }

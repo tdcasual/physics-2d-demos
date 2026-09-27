@@ -2,6 +2,7 @@ import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
 import { writeOwnedSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { ampereBalanceControlsSchema } from './controls-schema';
 import { ampereBalanceMeta } from './scene.meta';
 import { createAmpereBalanceScene } from './scene.entry';
@@ -130,15 +131,8 @@ bootScenePage({
       }
     });
     return {
-      setValue: (key: string, value: number | string | boolean) =>
-        renderer.setValue(key, value),
-      setValueSilently: (key: string, value: number | string | boolean) =>
-        renderer.setValueSilently(key, value),
-      setActive: (key: string, value: string) => renderer.setActive(key, value),
-      setActiveSilently: (key: string, value: string) =>
-        renderer.setActiveSilently(key, value),
-      syncFromScene: () => syncSliders(),
-      dispose: () => renderer.dispose()
+      ...exposeSchemaHandle(renderer),
+      syncFromScene: () => syncSliders()
     };
   },
   paramSync: {

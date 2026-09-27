@@ -3,6 +3,7 @@ import { createRenderScheduler } from '../../app/render-scheduler';
 import { writeOwnedSceneParams } from '../../app/url-sync';
 import { applyTouchInteractionMode } from '../../platform/input/touch';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { createHarmonicWaveScene } from './scene.entry';
 import { harmonicWaveMeta } from './scene.meta';
 import { harmonicWaveControlsSchema } from './controls-schema';
@@ -128,16 +129,6 @@ bootScenePage({
       },
       onAction: () => {}
     });
-    return {
-      setValue(key: string, value: number | string): void {
-        renderer.setValue(key, value);
-      },
-      setActive(key: string, value: string): void {
-        renderer.setActive(key, value);
-      },
-      dispose(): void {
-        renderer.dispose();
-      }
-    };
+    return exposeSchemaHandle(renderer);
   }
 });

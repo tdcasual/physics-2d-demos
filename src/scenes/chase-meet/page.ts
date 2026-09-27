@@ -6,6 +6,7 @@ import { chaseMeetMeta } from './scene.meta';
 import { createChaseMeetScene } from './scene.entry';
 import { chaseMeetControlsSchema } from './controls-schema';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import type { ChaseMeetSnapshot, ChaseMeetParams } from './scene.sim';
 
 function formatReadout(
@@ -166,11 +167,7 @@ bootScenePage({
       }
     });
 
-    return {
-      dispose: () => {
-        renderer.dispose();
-      }
-    };
+    return exposeSchemaHandle(renderer);
   },
   preferredLayout: 'split-right',
   // hasGraph 仅 mobile-stack 打开：桌面图在舞台内，移动端用 graph 槽。

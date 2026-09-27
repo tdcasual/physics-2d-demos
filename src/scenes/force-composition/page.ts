@@ -104,8 +104,6 @@ bootScenePage({
     const render = scheduleRender ?? (() => scene.render());
     let applying = false;
     let lastUi = scene.getParams();
-    let urlTimer = 0;
-    let pendingUrl: ReturnType<typeof urlSnapshot> | null = null;
 
     const applyTabVisibility = (tab: string): void => {
       renderer.setVisible('两力参数', tab === 'synthesis' || tab === 'range');
@@ -115,29 +113,8 @@ bootScenePage({
       renderer.setVisible('范围演变', tab === 'range');
     };
 
-    const flushUrl = (): void => {
-      if (urlTimer) {
-        window.clearTimeout(urlTimer);
-        urlTimer = 0;
-      }
-      if (!pendingUrl) return;
-      writeOwnedSceneParams(sceneWriter, pendingUrl);
-      pendingUrl = null;
-    };
-
-    const queueUrl = (p: ForceCompositionParams, immediate: boolean): void => {
-      pendingUrl = urlSnapshot(p);
-      if (immediate) {
-        flushUrl();
-        return;
-      }
-      if (urlTimer) {
-        window.clearTimeout(urlTimer);
-      }
-      urlTimer = window.setTimeout(() => {
-        urlTimer = 0;
-        flushUrl();
-      }, 200);
+    const writeUrl = (p: ForceCompositionParams): void => {
+      writeOwnedSceneParams(sceneWriter, urlSnapshot(p));
     };
 
     const syncFromScene = (): void => {
@@ -174,7 +151,7 @@ bootScenePage({
         p.tab !== lastUi.tab ||
         p.rule !== lastUi.rule;
       lastUi = { ...p };
-      if (changed) queueUrl(p, false);
+      if (changed) writeUrl(p);
     };
 
     const renderer = renderSchema({
@@ -195,7 +172,7 @@ bootScenePage({
         if (key === 'tab') applyTabVisibility(String(value));
         lastUi = scene.getParams();
         render();
-        queueUrl(lastUi, true);
+        writeUrl(lastUi);
       },
       onAction: () => {}
     });
@@ -230,9 +207,6 @@ bootScenePage({
       syncFromScene: projectFromLive,
       dispose(): void {
         unsubscribe();
-        if (urlTimer) window.clearTimeout(urlTimer);
-        urlTimer = 0;
-        pendingUrl = null;
         renderer.dispose();
       }
     };

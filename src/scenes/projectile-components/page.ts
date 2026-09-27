@@ -68,12 +68,10 @@ bootScenePage({
   },
   createControls: ({ mount, scene, scheduleRender, writeParam }) => {
     const render = scheduleRender ?? (() => scene.render());
-    const applying = false;
     const renderer = renderSchema({
       mount,
       schema: projectileComponentsControlsSchema,
       onChange: (key, value) => {
-        if (applying) return;
         if ((NUMBER_KEYS as readonly string[]).includes(key)) {
           scene.setParams({
             [key]: Number(value)

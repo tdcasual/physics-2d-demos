@@ -3,6 +3,7 @@ import { createRenderScheduler } from '../../app/render-scheduler';
 import { writeOwnedSceneParams } from '../../app/url-sync';
 import { applyTouchInteractionMode } from '../../platform/input/touch';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { createSingleSlitScene } from './scene.entry';
 import { singleSlitMeta } from './scene.meta';
 import { singleSlitControlsSchema } from './controls-schema';
@@ -152,13 +153,8 @@ bootScenePage({
     });
 
     return {
-      setValue(key: string, value: number | string | boolean): void {
-        renderer.setValue(key, value);
-      },
-      setActive(key: string, value: string): void {
-        renderer.setActive(key, value);
-      },
-      dispose(): void {
+      ...exposeSchemaHandle(renderer),
+      dispose: () => {
         unsubscribe();
         renderer.dispose();
       }

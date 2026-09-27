@@ -1,6 +1,7 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { carBankControlsSchema } from './controls-schema';
 import { createCarBankScene } from './scene.entry';
 import { carBankMeta } from './scene.meta';
@@ -73,12 +74,7 @@ bootScenePage({
         render();
       }
     });
-    return {
-      setValue: (key: string, value: number | string | boolean) =>
-        renderer.setValue(key, value),
-      setActive: () => undefined,
-      dispose: () => renderer.dispose()
-    };
+    return exposeSchemaHandle(renderer);
   },
   paramSync: {
     applyParam: (key, value, ctx) => {

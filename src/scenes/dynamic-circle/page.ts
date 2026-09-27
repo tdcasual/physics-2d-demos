@@ -103,8 +103,6 @@ bootScenePage({
     const render = scheduleRender ?? (() => scene.render());
     let applying = false;
     let lastUi = scene.getParams();
-    let urlTimer = 0;
-    let pendingUrl: ReturnType<typeof urlSnapshot> | null = null;
 
     const applyVisibility = (p: DynamicCircleParams): void => {
       renderer.setVisible('theta', p.tab === 'rotating');
@@ -117,27 +115,8 @@ bootScenePage({
       renderer.setVisible('circleY', p.boundary === 'circle');
     };
 
-    const flushUrl = (): void => {
-      if (urlTimer) {
-        window.clearTimeout(urlTimer);
-        urlTimer = 0;
-      }
-      if (!pendingUrl) return;
-      writeOwnedSceneParams(sceneWriter, pendingUrl);
-      pendingUrl = null;
-    };
-
-    const queueUrl = (p: DynamicCircleParams, immediate: boolean): void => {
-      pendingUrl = urlSnapshot(p);
-      if (immediate) {
-        flushUrl();
-        return;
-      }
-      if (urlTimer) window.clearTimeout(urlTimer);
-      urlTimer = window.setTimeout(() => {
-        urlTimer = 0;
-        flushUrl();
-      }, 200);
+    const writeUrl = (p: DynamicCircleParams): void => {
+      writeOwnedSceneParams(sceneWriter, urlSnapshot(p));
     };
 
     const syncFromScene = (): void => {
@@ -180,7 +159,7 @@ bootScenePage({
         p.autoSweep !== lastUi.autoSweep ||
         p.showCenter !== lastUi.showCenter;
       lastUi = { ...p };
-      if (changed) queueUrl(p, false);
+      if (changed) writeUrl(p);
     };
 
     const renderer = renderSchema({
@@ -197,7 +176,7 @@ bootScenePage({
           applyVisibility(params);
           lastUi = params;
           render();
-          queueUrl(params, true);
+          writeUrl(params);
           return;
         }
         if (key === 'boundary') {
@@ -208,7 +187,7 @@ bootScenePage({
           applyVisibility(params);
           lastUi = params;
           render();
-          queueUrl(params, true);
+          writeUrl(params);
           return;
         }
         if (key === 'autoSweep' || key === 'showCenter') {
@@ -222,7 +201,7 @@ bootScenePage({
         }
         lastUi = scene.getParams();
         render();
-        queueUrl(lastUi, true);
+        writeUrl(lastUi);
       },
       onAction: () => {}
     });
@@ -262,9 +241,6 @@ bootScenePage({
       syncFromScene: projectFromLive,
       dispose(): void {
         unsubscribe();
-        if (urlTimer) window.clearTimeout(urlTimer);
-        urlTimer = 0;
-        pendingUrl = null;
         renderer.dispose();
       }
     };

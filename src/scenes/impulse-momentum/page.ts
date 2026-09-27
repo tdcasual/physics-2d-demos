@@ -2,6 +2,7 @@ import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
 import { writeOwnedSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { impulseMomentumControlsSchema } from './controls-schema';
 import { asForceModel, createImpulseMomentumScene } from './scene.entry';
 import { impulseMomentumMeta } from './scene.meta';
@@ -130,9 +131,7 @@ bootScenePage({
     });
 
     return {
-      setValue: (key: string, value: number | string | boolean) =>
-        renderer.setValue(key, value),
-      setActive: (key: string, value: string) => renderer.setActive(key, value),
+      ...exposeSchemaHandle(renderer),
       dispose: () => {
         unsubscribe();
         renderer.dispose();

@@ -7,6 +7,7 @@ import { thinFilmMeta } from './scene.meta';
 import { createThinFilmScene } from './scene.entry';
 import { thinFilmControlsSchema } from './controls-schema';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { wavelengthToColor } from '../../core/wavelength';
 import type { ThinFilmProfile, ThinFilmStep } from './scene.sim';
 
@@ -107,14 +108,12 @@ bootScenePage({
     canvas?.addEventListener('pointerdown', onPointer);
 
     return {
-      setValue(key: string, value: number | string) {
+      ...exposeSchemaHandle(renderer),
+      setValue: (key: string, value: number | string | boolean) => {
         renderer.setValue(key, value);
         if (key === 'lambda') updateLambdaSliderColor(mount, Number(value));
       },
-      setActive(key: string, value: string) {
-        renderer.setActive(key, value);
-      },
-      dispose() {
+      dispose: () => {
         canvas?.removeEventListener('pointerdown', onPointer);
         renderer.dispose();
       }

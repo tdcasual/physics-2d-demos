@@ -60,7 +60,6 @@ bootScenePage({
       renderer.setValueSilently('mass', params.mass);
       renderer.setValueSilently('radius', params.radius);
       renderer.setValueSilently('angularVelocity', params.angularVelocity);
-      renderer.setValueSilently('autoRun', params.autoRun);
     };
     return {
       ...exposeSchemaHandle(renderer),

@@ -3,7 +3,7 @@
  *
  * handle 暴露 setValue 就必须同时暴露 setValueSilently 与 fieldTypes
  *（或经 exposeSchemaHandle / return renderer / §1.2(c) 既有形态）。
- * grandfather = 尚未迁移的 83 薄包装 + 28 带副作用；A4 机械批只许从中删除不许新增。
+ * A4 机械批已收口 grandfather；只许空清单，禁止新增。
  */
 
 import { describe, expect, it } from 'vitest';
@@ -33,116 +33,21 @@ const EXISTING_SPECIAL_HANDLE_FORMS = new Set([
 /** src/pages 六件套（fieldTypes 随后续补齐） */
 const PAGES_SPECIAL_FORMS = new Set(['src/pages/single-loop-integration.ts']);
 
-/** dispose-only 待迁移（§1.2(a) 子集） */
-const DISPOSE_ONLY_PENDING = ['chase-meet', 'emf-analogy'] as const;
+/** A4 已收口 chase-meet / emf-analogy；禁止再登记 dispose-only 待迁移。 */
+const DISPOSE_ONLY_PENDING = [] as const;
 
 /**
- * 尚未迁移的 83 薄包装 + 28 带副作用（§1.2(b) 含 vt-integral 编码场景，已在 A3 收口）。
- * A4 只许删除；新增场景必须 silent-ready，禁止写入本清单。
+ * A4 机械批已清空。只许空清单；新增场景必须 silent-ready。
  */
-const EVENTFUL_PROJECTION_GRANDFATHER = [
-  'accel-force',
-  'air-track-momentum',
-  'alternating-electric-deflection',
-  'alternating-electric-field',
-  'ampere-balance',
-  'auto-water-feeder',
-  'bellows',
-  'binary-stars',
-  'binding-energy',
-  'block-board',
-  'bounded-magnetic',
-  'brownian-motion',
-  'bullet-block',
-  'capacitor-charge-discharge',
-  'car-bank',
-  'charged-particle-electric',
-  'charged-superposition',
-  'chase-meet',
-  'closed-circuit',
-  'closed-power',
-  'clothes-rod',
-  'conical-pendulum',
-  'connected-bodies',
-  'connected-bodies-incline',
-  'conveyor-belt',
-  'cyclotron',
-  'displacement-time',
-  'earth-gravity',
-  'elastic-collision',
-  'elastic-energy',
-  'electric-deflection',
-  'electric-field-establish',
-  'electric-pendulum',
-  'electrostatic-induction',
-  'electrostatic-shielding',
-  'emf-analogy',
-  'faraday-disc',
-  'field-lines',
-  'free-fall-throw',
-  'friction-critical',
-  'galileo-incline',
-  'half-deflection',
-  'harmonic-wave',
-  'impulse-momentum',
-  'incline-spring',
-  'induction-accelerator',
-  'interference-formula',
-  'joule-work-heat',
-  'laser-speed',
-  'lenz-law',
-  'lightbulb-iv-curve',
-  'locomotive-power',
-  'magnetic-convergence',
-  'magnetic-mirror',
-  'mass-spectrometer',
-  'maxwell-speed-distribution',
-  'mechanical-energy-two-ball',
-  'metal-rod-track',
-  'micro-deformation',
-  'molecular-potential',
-  'momentum-conservation-comparison',
-  'momentum-ring-pendulum',
-  'multimeter-practice',
-  'orbit-critical',
-  'oscilloscope',
-  'parallel-capacitor',
-  'parallel-glass-refraction',
-  'parallelogram-rule',
-  'pendulum-energy',
-  'pendulum-period',
-  'photoelectric-cutoff',
-  'photoelectric-iv',
-  'photoelectric-switch',
-  'potential-energy-graphs',
-  'projectile-data-analysis',
-  'radioactive-decay',
-  'rod-model',
-  'rutherford-alpha-scattering',
-  'satellite-transfer',
-  'semicylinder-tir',
-  'semicylinder-tir-standard',
-  'single-slit',
-  'thin-film',
-  'ticker-timer',
-  'tortoise-hare',
-  'uniform-electric-acceleration',
-  'uniformly-varied-motion',
-  'velocity-selector',
-  'vertical-circle',
-  'wave-superpose',
-  'wedge',
-  'wedge-film-interference',
-  'wire-loop-field',
-  'xt-graph',
-  'zinc-photoelectric-energy'
-] as const;
+const EVENTFUL_PROJECTION_GRANDFATHER = [] as const;
 
 const GRANDFATHER_SET = new Set<string>(EVENTFUL_PROJECTION_GRANDFATHER);
-const GRANDFATHER_CEILING = 111;
+const GRANDFATHER_CEILING = 0;
 
 const HANDLE_KEY =
-  /^(setValueSilently|setActiveSilently|setValue|setActive|setVisible|fieldTypes|syncFromScene|refresh|dispose)\b\s*[:(\s,]/;
+  /^(setValueSilently|setActiveSilently|setValue|setActive|setVisible|fieldTypes|syncFromScene|dispose)\b\s*[:(\s,]/;
+
+const ACTIVE_FIELD_TYPE = /type:\s*['"](?:preset-group|scene-selector)['"]/;
 
 function listSceneIds(): string[] {
   return readdirSync(SCENES_DIR)
@@ -207,12 +112,16 @@ describe('NO_EVENTFUL_PROJECTION', () => {
     expect(overlap).toEqual([]);
   });
 
-  it('dispose-only pending scenes stay grandfathered and expose no setValue', () => {
-    for (const id of DISPOSE_ONLY_PENDING) {
-      expect(GRANDFATHER_SET.has(id)).toBe(true);
+  it('dispose-only pending list is closed after A4', () => {
+    expect(DISPOSE_ONLY_PENDING).toEqual([]);
+    const leftover: string[] = [];
+    for (const id of sceneIds) {
+      if (EXISTING_SPECIAL_HANDLE_FORMS.has(id)) continue;
       const source = readFileSync(join(SCENES_DIR, id, 'page.ts'), 'utf8');
-      expect(isDisposeOnly(source)).toBe(true);
+      if (isSilentReady(source)) continue;
+      if (isDisposeOnly(source)) leftover.push(id);
     }
+    expect(leftover).toEqual([]);
   });
 
   it('every scene page is grandfather, special-form, or silent-ready with fieldTypes', () => {
@@ -277,5 +186,31 @@ describe('NO_EVENTFUL_PROJECTION', () => {
     );
     expect(source).toMatch(/fieldTypes:\s*renderer\.fieldTypes/);
     expect(source).not.toMatch(/new Map\s*\(\s*renderer\.fieldTypes/);
+  });
+
+  it('preset-group/scene-selector schemas expose setActiveSilently', () => {
+    const missing: string[] = [];
+    for (const id of sceneIds) {
+      if (EXISTING_SPECIAL_HANDLE_FORMS.has(id)) continue;
+      const schemaFiles = ['controls-schema.ts', 'controls.ts'].map((name) =>
+        join(SCENES_DIR, id, name)
+      );
+      const hasActiveField = schemaFiles.some((file) => {
+        try {
+          return ACTIVE_FIELD_TYPE.test(readFileSync(file, 'utf8'));
+        } catch {
+          return false;
+        }
+      });
+      if (!hasActiveField) continue;
+      const source = readFileSync(join(SCENES_DIR, id, 'page.ts'), 'utf8');
+      const keys = collectHandleKeys(source);
+      const ready =
+        /\bexposeSchemaHandle\s*\(/.test(source) ||
+        /\breturn\s+renderer\s*;/.test(source) ||
+        keys.has('setActiveSilently');
+      if (!ready) missing.push(id);
+    }
+    expect(missing).toEqual([]);
   });
 });

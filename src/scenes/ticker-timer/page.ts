@@ -2,6 +2,7 @@ import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
 import { readSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { tickerTimerControlsSchema } from './controls-schema';
 import { asModel, createTickerTimerScene } from './scene.entry';
 import { tickerTimerMeta } from './scene.meta';
@@ -104,12 +105,7 @@ bootScenePage({
         render();
       }
     });
-    return {
-      setValue: (key: string, value: number | string | boolean) =>
-        renderer.setValue(key, value),
-      setActive: (key: string, value: string) => renderer.setActive(key, value),
-      dispose: () => renderer.dispose()
-    };
+    return exposeSchemaHandle(renderer);
   },
   paramSync: {
     applyParam: (key, value, ctx) => {

@@ -3,6 +3,7 @@ import { emfAnalogyMeta } from './scene.meta';
 import { createEmfAnalogyScene } from './scene.entry';
 import { emfAnalogyControlsSchema } from './controls-schema';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 bootScenePage({
   meta: emfAnalogyMeta,
   createScene: ({ canvas, theme, mode, demoHints }) => {
@@ -78,11 +79,7 @@ bootScenePage({
       }
     });
 
-    return {
-      dispose: () => {
-        renderer.dispose();
-      }
-    };
+    return exposeSchemaHandle(renderer);
   },
 
   preferredLayout: 'split-right',

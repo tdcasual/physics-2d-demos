@@ -2,6 +2,7 @@ import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
 import { readSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { createOscilloscopeScene } from './scene.entry';
 import { oscilloscopeMeta } from './scene.meta';
 import { oscilloscopeControlsSchema } from './controls-schema';
@@ -105,17 +106,7 @@ bootScenePage({
       },
       onAction: () => {}
     });
-    return {
-      setValue(key: string, value: number | string | boolean): void {
-        renderer.setValue(key, value);
-      },
-      setActive(key: string, value: string): void {
-        renderer.setActive(key, value);
-      },
-      dispose(): void {
-        renderer.dispose();
-      }
-    };
+    return exposeSchemaHandle(renderer);
   },
   paramSync: {
     applyParam: (key, value, ctx) => {

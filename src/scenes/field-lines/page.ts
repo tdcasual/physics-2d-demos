@@ -5,6 +5,7 @@ import { fieldLinesMeta } from './scene.meta';
 import { createFieldLinesScene } from './scene.entry';
 import { fieldLinesControlsSchema } from './controls-schema';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { PROBE_N_DEFAULT, type FieldLinesScene } from './scene.sim';
 
 function sceneLabel(scene: FieldLinesScene): string {
@@ -148,17 +149,7 @@ bootScenePage({
       }
     });
 
-    return {
-      setValue(key: string, value: number | string) {
-        renderer.setValue(key, value);
-      },
-      setActive(key: string, value: string) {
-        renderer.setActive(key, value);
-      },
-      dispose: () => {
-        renderer.dispose();
-      }
-    };
+    return exposeSchemaHandle(renderer);
   },
   preferredLayout: 'split-right',
   layoutConfig: {
