@@ -5,7 +5,10 @@ import path from 'node:path';
 const ROOT = path.resolve(__dirname, '../..');
 
 const PRIVATE_CLASS =
-  /\.(?:lab-stage-main|teaching-right-panel|srgb-graph-section|srgb-stage-frame|teaching-stage-frame|lab-stage-anim)\b/;
+  /\.(?:lab-stage-main|teaching-right-panel|srgb-graph-section|srgb-stage-frame|teaching-stage-frame|lab-stage-anim|mobile-stack-layout)\b/;
+
+/** Layout-private element ids must not leak into scene/capability code. */
+const PRIVATE_ID = /#mobile-panel-readout\b/;
 
 /** Layout implementations may use their own private classes internally. */
 const LAYOUT_OWN_CLASS_FILES = new Set([
@@ -53,7 +56,18 @@ describe('cross-module private layout selectors', () => {
     expect(text).toContain('LAB_DATA_SLOT_ATTR');
     expect(text).toContain('GRAPH_SECTION_ATTR');
     expect(text).toContain('STAGE_FRAME_ATTR');
+    expect(text).toContain('READOUT_SLOT_ATTR');
     expect(text).not.toMatch(PRIVATE_CLASS);
+    expect(text).not.toMatch(PRIVATE_ID);
+  });
+
+  it('mechanical-energy data host uses semantic readout attrs', () => {
+    const file = path.join(ROOT, 'src/scenes/mechanical-energy/data-panel.ts');
+    const text = fs.readFileSync(file, 'utf8');
+    expect(text).toContain('LAB_DATA_SLOT_ATTR');
+    expect(text).toContain('READOUT_SLOT_ATTR');
+    expect(text).not.toMatch(PRIVATE_CLASS);
+    expect(text).not.toMatch(PRIVATE_ID);
   });
 
   it('does not introduce new cross-module private layout class selectors', () => {
@@ -62,7 +76,7 @@ describe('cross-module private layout selectors', () => {
       const rel = path.relative(ROOT, abs);
       if (LAYOUT_OWN_CLASS_FILES.has(rel)) continue;
       const text = fs.readFileSync(abs, 'utf8');
-      if (PRIVATE_CLASS.test(text)) hits.push(rel);
+      if (PRIVATE_CLASS.test(text) || PRIVATE_ID.test(text)) hits.push(rel);
     }
     expect(hits).toEqual([]);
   });

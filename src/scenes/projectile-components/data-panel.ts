@@ -6,6 +6,7 @@ import {
 import {
   GRAPH_SECTION_ATTR,
   LAB_DATA_SLOT_ATTR,
+  READOUT_SLOT_ATTR,
   STAGE_FRAME_ATTR
 } from '../../platform/stage-chrome';
 
@@ -100,15 +101,9 @@ export function findProjectileDataHost(scope?: ParentNode): HTMLElement | null {
   const root = scope ?? document;
   const lab = root.querySelector(`[${LAB_DATA_SLOT_ATTR}]`);
   if (lab instanceof HTMLElement) return lab;
-  // mobile 落点 = 打在 .mobile-readout-panel 上的 [data-readout-slot]
-  // （readout 能力创建点打标；不用 .mobile-readout-slot——布局清 slot
-  // 会抹掉后挂内容）
-  const mobilePanel = root.querySelector(
-    '.mobile-stack-layout [data-readout-slot]'
-  );
-  if (mobilePanel instanceof HTMLElement) return mobilePanel;
-  const tab = root.querySelector('#mobile-panel-readout');
-  if (tab instanceof HTMLElement) return tab;
+  // mobile / split 读数挂载点由 readout 能力创建点打标
+  const readout = root.querySelector(`[${READOUT_SLOT_ATTR}]`);
+  if (readout instanceof HTMLElement) return readout;
   return null;
 }
 
