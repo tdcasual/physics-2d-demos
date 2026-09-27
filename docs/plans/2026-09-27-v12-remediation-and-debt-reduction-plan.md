@@ -124,7 +124,7 @@ projectControlsFromParams({
 2. ticker-tape：countEvery 测 1 和 5；noise 三态；vSigFigs；showA；remount 后 `invalidateAll` spy=0 且工作区 session 仍在。
 3. double-slit `?step=6` remount：scene setter spy=0 且 schema 为 step6。
 4. projectile：v0 控件显示 live speed。
-5. faraday-disc / interference-formula：URL 首绘回归（preset 高亮 / lambda 滑块配色）。
+5. faraday-disc / interference-formula / thin-film / wedge：URL 首绘回归（preset 高亮 / lambda 滑块配色，§10.10-11 修订为 4 场景）。
 6. vt-integral：改 scene-selector 到 scene2 + 改 n → 换布局 → selector 高亮 live 场景（锁索引→id 解码，§10.1）。
 7. ③ 5 场景：remount 时 setParams/writeParam spy=0。
 8. **reset 路径**：transport reset / 键盘 `r` 后控件显示重置值（锁 A1.6 接线，②③ 场景各抽 1 个）。
@@ -257,7 +257,7 @@ Wave A（A1 语义 + A6/A7 契约文档 + 具名 20 场景冻结 → 83 机械�
 - 不补 B11 的 101 场景像素基线；不改 chase-meet 解析器特征化语义（C3）。
 - 已批准偏差：① mount 按 effectful 异步处理（过度近似但更安全）；② 并发 switchLayout 只排队 `reason==='manual'`（触发条件：新增非 manual 调用方）；③ 页 teardown 先 unmount scene 再 dispose capabilities（无 live 失败）；④ ControlSnapshotStore/adapter 快照方案**否决**（防过度设计）。
 
-## 10. v12.2 补充条款（阶段 A1 实施验收后，2026-09-28）
+## 10. 补充条款（v12.2：阶段 A1 验收后；v12.3：阶段 A4 验收后，条款 10-12）
 
 来源：A1 验收（Claude 报告 `artifacts/exec-a1-claude-acceptance-result.md`，ACCEPT: PASS 附带）。以下条款与本方案正文同等效力。
 
@@ -272,4 +272,4 @@ Wave A（A1 语义 + A6/A7 契约文档 + 具名 20 场景冻结 → 83 机械�
 9. **【收口指派】`handle.refresh` 分支退役 + spring-oscillator 的 `refresh: renderOscillatorList` 重命名/标注**，归阶段 A3（冻结批）执行、A4 验收（A4 完成后 `control-projection.ts` 的 `TODO(A4)` 回退分支删除，refresh 调用点归零）。A1 阶段按阶段化条款保留回退是过渡态，不是终态。
 10. **【A4 验收发现·阻塞级修复条款】静默/事件性副作用对等规则**：任何挂在 handle `setValue`/`setActive` 上的副作用（如 faraday-disc 的 syncPreset 高亮、interference-formula/thin-film/wedge 的 updateLambdaSliderColor 配色）**必须同时挂在对应的静默 setter 上**（覆写 `setValueSilently`/`setActiveSilently` 同步执行副作用，仓内先例：ganshe 的 fan-out 覆写）。理由：A4 迁移后 handle 首次具备静默 setter，`applySceneUrlParams` 首绘从事件性 `setValue` 切到 `setValueSilently`（`url-sync.ts:294` 静默优先），只挂事件性侧会在 URL 首绘丢失副作用——属新引入的用户可见回归。修复面：faraday-disc、interference-formula、thin-film、wedge 共 4 个场景（A4.1 修复批）。
 11. **【A5 修订】A5.5 具名回归由 2 个扩到 4 个**（faraday-disc / interference-formula / thin-film / wedge 的 URL 首绘副作用保持），并增加 dynamic-circle / force-composition 的 tab/boundary 首绘可见性锁定（当前靠 scene subscribe→notify 补偿，须用测试固化）。
-12. **【A5 记录】A4 验收非阻塞建议**：`EXISTING_SPECIAL_HANDLE_FORMS` 豁免收窄为仅 electrification（或加 id→理由映射）；`renderSchema` 补 `fieldTypes.size > 0` 运行时断言闭合 §10.4 字面语义；page-url-timer-flush 测试可加「防抖仍存在」的 replaceState 次数上限断言。均为 A5 阶段的顺手项。
+12. **【A5 记录】A4 验收非阻塞建议**：`EXISTING_SPECIAL_HANDLE_FORMS` 豁免收窄为仅 electrification（或加 id→理由映射）；`renderSchema` 补 `fieldTypes.size > 0` 运行时断言闭合 §10.4 字面语义；page-url-timer-flush 测试可加「防抖仍存在」的 replaceState 次数上限断言；imperative/custom 活动控件（spring-oscillator 相位预设卡）的正则盲区登记。可选加固：faraday-disc 的 syncPreset 依赖 (rotation, field, closed) 聚合态，若 URL 键序使 closed 先于 rotation 应用，高亮会被后续 setActiveSilently 覆盖——属 A4 前已存在的既有边界（非新回归），如需更稳可让 faraday 单独走 `paramSync.afterApply`。均为 A5 阶段的顺手项。
