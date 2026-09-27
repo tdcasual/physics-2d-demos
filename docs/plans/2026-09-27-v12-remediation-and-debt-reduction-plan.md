@@ -22,10 +22,10 @@ v10 Waves 1–6 真实落地；交叉审计确认 6 个 HIGH + 若干 MEDIUM 未
 | ④ 无投影       | 其余 ~100                                                                                                                      | 控件回退 schema 默认值，live scene 保留学生参数       |
 | 特殊           | ganshe（refreshObservers）、spring-oscillator（refresh=列表重建）                                                              | 单独裁定                                              |
 
-### 1.2 handle 形态分类（120 = 84 + 27 + 9）
+### 1.2 handle 形态分类（120 = 83 + 28 + 9）
 
-- **(a) 纯薄包装 84 个**：仅 `setValue/setActive/dispose` 直接转发（含 3 个空 `setActive` 存根：car-bank:78、conical-pendulum:82、galileo-incline:80；含 3 个 dispose-only：chase-meet、emf-analogy、vt-integral——A2 须改用 exposeSchemaHandle）。→ 机械批。
-- **(b) 带副作用 27 个**（**不参与机械批，逐个判定**）：
+- **(a) 纯薄包装 83 个**（机械批）：仅 `setValue/setActive/dispose` 直接转发（含 3 个空 `setActive` 存根：car-bank:78、conical-pendulum:82、galileo-incline:80；含 2 个 dispose-only：chase-meet、emf-analogy——A2 须改用 exposeSchemaHandle）。
+- **(b) 带副作用/特殊 28 个**（**不参与机械批，逐个判定**）——原 27 + **vt-integral**（dispose-only 但 §1.4 tier-1 编码场景：A3 冻结批交付解码版 syncFromScene 后，其 handle 须用合成式 `{ ...exposeSchemaHandle(renderer), syncFromScene }` 保留解码器，禁止裸 `return exposeSchemaHandle(renderer)`）：
   - 控制逻辑副作用（7）：faraday-disc（`:105` syncPreset）、interference-formula（`:70`）、thin-film（`:112` lambda 配色，另 `:117-119` dispose 摘 pointerdown 须保留）、wedge（`:82`）、dynamic-circle（`:237-239`）、force-composition（`:209-211`）、emf-internal-resistance（`:214/:218` syncSelect）
   - refresh 重投影（10）：ampere-balance、centripetal-motion、charged-particle-circle、precision-tools、resistor-measurement、spring-ball、mechanical-energy、projectile-components、internal-energy、variable-work
   - 仅 dispose 带清理（8）：accel-force、binding-energy、impulse-momentum、parallelogram-rule、potential-energy-graphs、single-slit、three-forces、vertical-circle
@@ -106,7 +106,7 @@ projectControlsFromParams({
 ### A2. handle 静默迁移
 
 - 新增 `exposeSchemaHandle(renderer)`：转发 setValue/setValueSilently/setActive/setActiveSilently/setVisible/dispose + 字段类型表。
-- **机械批 = §1.2(a) 84 个**；(b) 27 个逐个判定（dispose 清理保留；thin-film 的 pointerdown 摘除保留；ganshe 明确禁止机械替换）；(c) 9 个保持形态、仅补缺转发。
+- **机械批 = §1.2(a) 83 个**；(b) 28 个逐个判定（dispose 清理保留；thin-film 的 pointerdown 摘除保留；ganshe 明确禁止机械替换；tier-1 场景用 `{ ...exposeSchemaHandle(renderer), syncFromScene }` 合成式）；(c) 9 个保持形态、仅补缺转发。
 - toggle 补真 `silentValueSetter`；`SchemaRenderer.ts:97` 事件性回退测试环境 fail-loud。
 - 契约 `NO_EVENTFUL_PROJECTION`：handle 必须暴露静默四件套（dispose-only 形态也覆盖）；扫描 glob 覆盖 `src/scenes/*/page.ts` + `src/pages/*.ts`。
 
@@ -125,16 +125,17 @@ projectControlsFromParams({
 3. double-slit `?step=6` remount：scene setter spy=0 且 schema 为 step6。
 4. projectile：v0 控件显示 live speed。
 5. faraday-disc / interference-formula：URL 首绘回归（preset 高亮 / lambda 滑块配色）。
-6. ③ 5 场景：remount 时 setParams/writeParam spy=0。
-7. **reset 路径**：transport reset / 键盘 `r` 后控件显示重置值（锁 A1.6 接线，②③ 场景各抽 1 个）。
-8. 双向切布局（A→B→A）投影正确；空 URL permit 仍 complete。
-9. `scene-param-pipeline.spec.ts` 迁移到两入口类。
+6. vt-integral：改 scene-selector 到 scene2 + 改 n → 换布局 → selector 高亮 live 场景（锁索引→id 解码，§10.1）。
+7. ③ 5 场景：remount 时 setParams/writeParam spy=0。
+8. **reset 路径**：transport reset / 键盘 `r` 后控件显示重置值（锁 A1.6 接线，②③ 场景各抽 1 个）。
+9. 双向切布局（A→B→A）投影正确；空 URL permit 仍 complete。
+10. `scene-param-pipeline.spec.ts` 迁移到两入口类。
 
 ### A6-A8
 
 - **A6** 双契约：`NO_CONTROL_PROJECTION` ∪ `NO_EVENTFUL_PROJECTION`；B5 台账在全绿前重新打开。
 - **A7** AGENTS.md「URL 参数同步」小节同批改写（v10 §6.3）。
-- **A8** 内部顺序：先冻结语义——具名并集 **20 个**（§1.4 的 12 + ②③ 中未被 tier-1 包含的 6 个（projectile-components、centripetal-motion、resistor-measurement、precision-tools、charged-particle-circle、spring-ball）+ 特殊 2 个，去重口径：mechanical-energy/internal-energy/variable-work/emf-internal-resistance 已在 §1.4；vt-integral 经 v12.2 进入 §1.4）→ 再机械批 84 个。
+- **A8** 内部顺序：先冻结语义——具名并集 **20 个**（§1.4 的 12 + ②③ 中未被 tier-1 包含的 6 个（projectile-components、centripetal-motion、resistor-measurement、precision-tools、charged-particle-circle、spring-ball）+ 特殊 2 个，去重口径：mechanical-energy/internal-energy/variable-work/emf-internal-resistance 已在 §1.4；vt-integral 经 v12.2 进入 §1.4）→ 再机械批 83 个。
 
 ## 3. Wave B：布局切换生命周期硬化
 
@@ -228,7 +229,7 @@ E1-E3 完成后删 `module-line-budget.spec.ts:10-18` 三条祖父条目；新�
 ## 7. 批次与依赖总序
 
 ```
-Wave A（A1 语义 + A6/A7 契约文档 + 具名 20 场景冻结 → 84 机械批 → A4 定时器 → A5 门禁 + D1a）
+Wave A（A1 语义 + A6/A7 契约文档 + 具名 20 场景冻结 → 83 机械批 → A4 定时器 → A5 门禁 + D1a）
   → Wave B（B2+B4 同批；B1/B3/B5/B6）∥ Wave C（C1 复用 B2 替身）
   → D1b / D2 / D3
   → Wave E（E1 → E2 → E3 各自独立提交；E4/E6 随对应批次）
@@ -242,7 +243,7 @@ Wave A（A1 语义 + A6/A7 契约文档 + 具名 20 场景冻结 → 84 机械�
 
 | Wave | 门禁                                                                                                                                                                                                                                                                            |
 | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A    | A5 九项具名回归（含 reset 路径）+ 双契约落地 + AGENTS.md 同步 + D1a 绿                                                                                                                                                                                                          |
+| A    | A5 十项具名回归（含 reset 路径与 vt-integral 解码）+ 双契约落地 + AGENTS.md 同步 + D1a 绿                                                                                                                                                                                       |
 | B    | B1-B6 各项新增测试全绿；`quality:core` 绿                                                                                                                                                                                                                                       |
 | C    | C1-C6 各项测试/契约绿                                                                                                                                                                                                                                                           |
 | D    | D1b quality:full 绿留档；D2 基线配对完成；D3 台账校准（含 B1 17→16）                                                                                                                                                                                                            |
