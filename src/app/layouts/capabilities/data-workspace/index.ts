@@ -286,8 +286,9 @@ export function createDataWorkspace(): CapabilityDefinition<
         const graph = slots.graph;
         if (!graph || !chartMount) return;
         // 收养层级由布局元数据决定：'slot'（mobile）收养 slots.graph 本身；
-        // 缺省 'section' 收养外层图区（属性优先，class 旧链兜底）。
-        // getCurrentLayoutId 为空串时元数据为 undefined，走 'section' 兜底。
+        // 缺省 'section' 收养 [data-graph-section] 外层图区，找不到则回退
+        // slots.graph。getCurrentLayoutId 为空串时元数据为 undefined，走
+        // 'section' 兜底。
         const adoptTarget =
           layoutRegistry.getMetadata(ctx.getCurrentLayoutId())
             ?.graphAdoptTarget ?? 'section';

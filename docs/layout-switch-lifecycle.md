@@ -19,18 +19,25 @@ ack，coordinator 不能再启动新的 switch / setScene。
 `enterQuarantine` / `resetSwitchQuarantine` 都会清空 `pendingSwitchId` 与
 `pendingScene`，避免隔离前入队的目标在下一次成功 switch 的 `finally` 被
 drain。`drainPending` 的顺序是 **pendingScene 先、pendingSwitchId 后**；
-C4 将把 `savePreference: true` 硬编码改为按 queued reason 传递，不得调换
-这两步。
+排队请求的 `reason` / `savePreference` 原样传递，不得调换这两步。
 
 ## Stage canvas 监管域
 
-`hasUniqueCanvasOwner` 只看协调器持有的 stage canvas（`canvasOwner` /
-snapshot / 当前与 incoming 布局的 **animation** slot），不扫
+`hasUniqueCanvasOwner` 的「唯一性」= 协调器持有的 **stage** canvas 节点
+仍在宿主容器内（未被复制、未被顶掉）。animation slot 内场景/仪器合法
+存在的其他 canvas（double-slit 仪器画布、chase-meet 三画布）忽略。不扫
 `container.querySelectorAll('canvas')`。
 
-持有 node 且容器内 0 个 stage canvas → unique（`true`）。普通 mount 抛错后
-`abandonIncoming` 清空树、走 rollback、不进 quarantine
-（`scene-container-registry.spec.ts` 锁定）。
+- owned 仍在 `host.container` 内 → unique
+- owned 已脱离且 tracked slots 内 0 个 canvas → unique（普通 mount 抛错后
+  `abandonIncoming` 清空树、走 rollback，`scene-container-registry.spec.ts`
+  锁定）
+- owned 已脱离且槽内有其他 canvas → 非 unique
+- owned 为 null → 回退 `live.length ≤ 1`
+
+初始 mount（`_initialSetScene`）不加载 switch chunk。第一次
+`switchLayout` → `ensureSwitch` 时从当前 animation slot 收养 owned 节点，
+使首次 switch 的 willChange 隔离路径也能带着槽内多画布复位。
 
 ## 已批准偏差：enter-abort after `incomingMounted`（v10 §3.2:74）
 

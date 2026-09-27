@@ -231,7 +231,6 @@ export class SplitRightGraphBottomLayout implements ILayout {
     );
     delete this._container.dataset.testid;
     delete this._container.dataset.theme;
-    delete this._container.dataset.mode;
     delete this._container.dataset.graphCollapsed;
     delete this._container.dataset.graphInitiallyHidden;
     this._container.removeAttribute(READOUT_OVERLAY_ATTR);

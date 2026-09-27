@@ -1025,10 +1025,41 @@ describe('SceneContainerImpl Codex-challenged edge cases (Fix 1 / Fix 5 / Fix 6)
     await flush();
 
     // pendingScene 先（setScene 自行解析布局），pendingSwitchId 后
-    // C4 (not this wave): drainPending still hardcodes savePreference:true;
-    // keep this order when C4 threads reason through.
     expect(container.currentScene).toBe(scene2);
     expect(container.currentLayout?.id).toBe('lab-stage');
+    container.dispose();
+  });
+
+  it('drains a queued switch with the queued savePreference', async () => {
+    const container = createSceneContainer({ mount });
+    const scene1 = makeScene('scene-1');
+    await container.setScene(scene1);
+
+    const skipSave = container.switchLayout('lab-stage', {
+      reason: 'manual',
+      savePreference: false
+    });
+    const queuedSkip = container.switchLayout('mobile-stack', {
+      reason: 'manual',
+      savePreference: false
+    });
+    await Promise.all([skipSave, queuedSkip]);
+    await flush();
+    expect(container.currentLayout?.id).toBe('mobile-stack');
+    expect(container.getUserPreferredLayout()).toBeNull();
+
+    const keep = container.switchLayout('lab-stage', {
+      reason: 'manual',
+      savePreference: false
+    });
+    const queuedSave = container.switchLayout('split-right', {
+      reason: 'manual',
+      savePreference: true
+    });
+    await Promise.all([keep, queuedSave]);
+    await flush();
+    expect(container.currentLayout?.id).toBe('split-right');
+    expect(container.getUserPreferredLayout()).toBe('split-right');
     container.dispose();
   });
 

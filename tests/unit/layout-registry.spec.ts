@@ -575,6 +575,68 @@ describe('layoutRegistry abort race and reuse key', () => {
     expect(reused.cfg.preservedCanvas).toBeNull();
   });
 
+  it('rejects an in-flight lazy create after clear + re-register', async () => {
+    let ctorCount = 0;
+    const Counted = class {
+      constructor() {
+        ctorCount += 1;
+      }
+      unmount() {}
+    } as unknown as ILayoutConstructor;
+
+    let resolveLoader!: (ctor: ILayoutConstructor) => void;
+    registerLazyLayout(
+      'epoch',
+      () =>
+        new Promise<ILayoutConstructor>((resolve) => {
+          resolveLoader = resolve;
+        }),
+      fakeMeta
+    );
+
+    const container = document.createElement('div');
+    const pending = layoutRegistry.create('epoch', container);
+    await vi.waitFor(() => expect(typeof resolveLoader).toBe('function'));
+
+    layoutRegistry.clear();
+    registerLazyLayout('epoch', () => Counted, fakeMeta);
+
+    resolveLoader(Counted);
+    await expect(pending).rejects.toMatchObject({
+      name: 'AbortError',
+      message: 'Layout registration superseded'
+    });
+    expect(ctorCount).toBe(0);
+
+    const late = await layoutRegistry.create('epoch', container);
+    expect(late).toBeInstanceOf(Counted);
+    expect(ctorCount).toBe(1);
+  });
+
+  it('observes a rejecting pooled unmount', async () => {
+    const errorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    const Layout = class {
+      constructor() {}
+      unmount() {
+        return Promise.reject(new Error('unmount boom'));
+      }
+    } as unknown as ILayoutConstructor;
+
+    layoutRegistry.register('tok-reject', Layout, fakeMeta);
+    const container = document.createElement('div');
+    const first = await layoutRegistry.create('tok-reject', container);
+    layoutRegistry.returnInstance(container, 'tok-reject', first);
+    layoutRegistry.unregister('tok-reject');
+    layoutRegistry.register('tok-reject', Layout, fakeMeta);
+    await layoutRegistry.create('tok-reject', container);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
   it('disposes a pooled instance after unregister/re-register', async () => {
     let disposed = 0;
     const Layout = class {

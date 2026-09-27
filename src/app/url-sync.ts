@@ -121,6 +121,8 @@ export function createSceneParamWriter(
     write(patch: UrlParamPatch) {
       if (record.closed) return;
       Object.entries(patch).forEach(([key, value]) => {
+        // Illegal keys drop silently. Known legal keys must land in the
+        // pending patch — scene-url-writer-contract asserts zero loss.
         if (record.allowedKeys && !record.allowedKeys.has(key)) return;
         const stored = storeValue(value);
         if (stored == null) return;
@@ -235,6 +237,14 @@ export function bindActiveSceneWriter(
   };
 }
 
+/**
+ * Legacy write: joins the bound scene-generation writer when one is
+ * active, otherwise a process-wide `legacy` owner. Production scene
+ * pages must use `writeOwnedSceneParams` (scene-url-writer-contract).
+ * Kept because unit tests bind a writer via `bindActiveSceneWriter` and
+ * assert this helper; removing it would rewrite those tests without
+ * changing production behavior.
+ */
 export function writeSceneParams(params: UrlParamPatch): void {
   if (activeWriter) {
     activeWriter.write(params);

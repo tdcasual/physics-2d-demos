@@ -137,7 +137,6 @@ export class SplitRightLayout implements ILayout {
     );
     delete this._container.dataset.testid;
     delete this._container.dataset.theme;
-    delete this._container.dataset.mode;
     delete this._container.dataset.hasGraph;
     delete this._container.dataset.graphInitiallyHidden;
     this._container.removeAttribute(READOUT_OVERLAY_ATTR);

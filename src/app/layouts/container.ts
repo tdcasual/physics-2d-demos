@@ -240,8 +240,6 @@ export class SceneContainerImpl implements SceneContainer {
       },
       savePreference: (id) => this.setUserPreferredLayout(id),
       mountScene: (scene, layout) => this.mountScene(scene, layout),
-      notifyLayoutWillChange: (fromId, toId, signal) =>
-        this._notifyLayoutWillChange(fromId, toId, signal),
       onLayoutDidChange: (to) => this._currentScene?.onLayoutDidChange?.(to),
       drainResize: () => this._resizeObserver.drain(),
       captureFocus: () => {
@@ -263,6 +261,7 @@ export class SceneContainerImpl implements SceneContainer {
         ({ LayoutSwitchRuntime }) => {
           const runtime = new LayoutSwitchRuntime(this.switchHost());
           runtime.hostSetScene = (scene) => this._doSetScene(scene);
+          runtime.adoptCurrentCanvas();
           this._switch = runtime;
           return runtime;
         }
@@ -379,8 +378,11 @@ export class SceneContainerImpl implements SceneContainer {
       if (this._disposed) {
         try {
           await created.unmount();
-        } catch {
-          /* dispose already tearing down */
+        } catch (err) {
+          console.error(
+            '[SceneContainer] Layout unmount rejected during boot abort:',
+            err
+          );
         }
         return;
       }
@@ -391,8 +393,11 @@ export class SceneContainerImpl implements SceneContainer {
       if (this._disposed) {
         try {
           await created.unmount();
-        } catch {
-          /* dispose already tearing down */
+        } catch (err) {
+          console.error(
+            '[SceneContainer] Layout unmount rejected during boot abort:',
+            err
+          );
         }
         return;
       }
@@ -411,6 +416,7 @@ export class SceneContainerImpl implements SceneContainer {
       this._sidebar.project(this.container);
 
       this.attachScene(scene, created);
+      this._switch?.adoptCurrentCanvas();
 
       await this._orchestrator.preload();
       if (this._disposed) return;
@@ -586,16 +592,6 @@ export class SceneContainerImpl implements SceneContainer {
       throw new SwitchQuarantinedError(this._switch.generation);
     }
     this._modeOwner.setMode(mode, 'api');
-  }
-
-  private async _notifyLayoutWillChange(
-    fromId: string | null,
-    toId: string,
-    signal: AbortSignal
-  ): Promise<void> {
-    if (this._currentScene?.onLayoutWillChange) {
-      await this._currentScene.onLayoutWillChange(fromId || '', toId, signal);
-    }
   }
 
   private _resolveLayoutConfig(layoutId: string): LayoutConfig {
@@ -803,9 +799,17 @@ export class SceneContainerImpl implements SceneContainer {
       );
     }
 
-    // 卸载布局
+    // 卸载布局（同步契约；仍观测 Promise rejection）
     try {
-      this._currentLayout?.unmount();
+      const unmount = this._currentLayout?.unmount();
+      if (unmount) {
+        void Promise.resolve(unmount).catch((err: unknown) => {
+          console.error(
+            '[SceneContainer] Layout unmount rejected in dispose:',
+            err
+          );
+        });
+      }
     } catch (err) {
       console.error(
         '[SceneContainer] Error during layout unmount in dispose:',

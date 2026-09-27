@@ -331,7 +331,6 @@ export class MobileStackLayout implements ILayout {
     );
     delete this._container.dataset.testid;
     delete this._container.dataset.theme;
-    delete this._container.dataset.mode;
     this._container.removeAttribute(READOUT_OVERLAY_ATTR);
     try {
       this._container.replaceChildren();

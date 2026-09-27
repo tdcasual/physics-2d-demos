@@ -168,6 +168,12 @@ class LayoutRegistry {
   private loadPromises = new Map<string, Promise<ILayoutConstructor>>();
   /** Per-id registration generation; unregister/re-register invalidates pooled entries. */
   private registrationTokens = new Map<string, number>();
+  /**
+   * Monotonic epoch for registration tokens. `clear()` bumps every known id
+   * instead of resetting the map to 1, so an in-flight `create` cannot pass
+   * the token check after clear + re-register.
+   */
+  private nextRegistrationToken = 1;
   /** Create-time structural key, keyed by instance so GC still follows the pool WeakMap. */
   private instanceReuseKeys = new WeakMap<ILayout, string>();
 
@@ -233,7 +239,13 @@ class LayoutRegistry {
     this.layouts.set(id, entry);
     this.metadata.set(id, { id, ...metadata });
     this.loadPromises.delete(id);
-    this.registrationTokens.set(id, (this.registrationTokens.get(id) ?? 0) + 1);
+    this.bumpToken(id);
+  }
+
+  private bumpToken(id: string): number {
+    const token = this.nextRegistrationToken++;
+    this.registrationTokens.set(id, token);
+    return token;
   }
 
   private currentToken(id: string): number {
@@ -242,9 +254,11 @@ class LayoutRegistry {
 
   private disposePooled(entry: PooledLayoutEntry): void {
     try {
-      void entry.instance.unmount();
-    } catch {
-      /* best-effort */
+      void Promise.resolve(entry.instance.unmount()).catch((err: unknown) => {
+        console.error('[LayoutRegistry] pooled layout unmount rejected:', err);
+      });
+    } catch (err) {
+      console.error('[LayoutRegistry] pooled layout unmount threw:', err);
     }
   }
 
@@ -288,7 +302,8 @@ class LayoutRegistry {
    *
    * Abort: `options.signal` 使调用方立即停止等待惰性 import。迟到
    * continuation 在 `new LayoutClass` 与任何 pool 写入前核对 signal /
-   * 当前 registration token，不得构造或发布实例。
+   * 当前 registration token，不得构造或发布实例。布局切换 generation
+   * 不是 create 选项；注册 token 是唯一 epoch。
    */
   async create(
     id: string,
@@ -420,7 +435,7 @@ class LayoutRegistry {
     this.layouts.delete(id);
     this.metadata.delete(id);
     this.loadPromises.delete(id);
-    this.registrationTokens.set(id, (this.registrationTokens.get(id) ?? 0) + 1);
+    this.bumpToken(id);
   }
 
   /**
@@ -432,14 +447,18 @@ class LayoutRegistry {
   }
 
   /**
-   * 清空所有注册
+   * 清空所有注册。Registration tokens stay monotonic: each known id is
+   * bumped so a deferred `create` that started before clear cannot pass
+   * with a recycled token after re-register.
    */
   clear(): void {
     this.layouts.clear();
     this.metadata.clear();
     this.pool = new WeakMap();
     this.loadPromises.clear();
-    this.registrationTokens.clear();
+    for (const id of this.registrationTokens.keys()) {
+      this.bumpToken(id);
+    }
   }
 }
 

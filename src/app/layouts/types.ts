@@ -213,7 +213,22 @@ export interface ILayout {
   /** 声明式能力列表 — 容器据此自动装配读数面板、运输控制等可插拔能力。 */
   readonly capabilities: CapabilityDeclaration[];
 
+  /**
+   * Mount the layout DOM.
+   *
+   * Built-in layouts complete synchronously (the Promise is already
+   * settled in the same turn). Recovery awaits this; do not add new
+   * async work (timers, network, rAF) on the mount/recovery path.
+   */
   mount(): Promise<LayoutSlots>;
+  /**
+   * Tear down the layout DOM.
+   *
+   * Built-in layouts complete synchronously (the Promise is already
+   * settled in the same turn). Callers that fire-and-forget MUST observe
+   * rejection (`.catch` / `console.error`). Do not add new async work in
+   * implementations.
+   */
   unmount(): Promise<void>;
   setTheme(theme: Theme): void;
   handleResize(width: number, height: number): void;
@@ -382,10 +397,9 @@ export type SceneContainerEvents = {
   'slot:toggle': { slot: SlotName; collapsed: boolean };
 };
 
-/** Options for `layoutRegistry.create` (abort/generation guards). */
+/** Options for `layoutRegistry.create` (abort guards). */
 export type LayoutCreateOptions = {
   signal?: AbortSignal;
-  generation?: number;
 };
 
 // ============================================================================

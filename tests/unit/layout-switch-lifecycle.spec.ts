@@ -190,6 +190,39 @@ describe('Layout switch lifecycle (Wave B)', () => {
       vi.useRealTimers();
     });
 
+    it('seeds canvasOwner on first switch with three in-slot canvases', async () => {
+      registerLayout('layout-a', layoutClass('layout-a'), testMeta);
+      registerLayout('layout-b', layoutClass('layout-b'), testMeta);
+      const scene = makeScene();
+      const container = createSceneContainer({
+        mount,
+        forceLayout: 'layout-a'
+      });
+      await container.setScene(scene);
+      const slot = animationSlotOf(container);
+      const owned = slot.querySelector('canvas');
+      expect(owned).not.toBeNull();
+      const extraA = document.createElement('canvas');
+      extraA.dataset.role = 'instrument';
+      const extraB = document.createElement('canvas');
+      extraB.dataset.role = 'instrument';
+      slot.append(extraA, extraB);
+      expect(slot.querySelectorAll('canvas').length).toBe(3);
+
+      const release = await quarantineHungWillChange(
+        container,
+        scene,
+        'layout-b'
+      );
+      expect(runtimeOf(container).canvasOwner?.node).toBe(owned);
+      expect(slot.querySelectorAll('canvas').length).toBe(3);
+      release();
+      await flushMicrotasks();
+      expect(container.resetSwitchQuarantine()).toBe(true);
+      expect(container.getSwitchState()).toBe('idle');
+      container.dispose();
+    });
+
     it('resets quarantine when instrument canvases share the animation slot', async () => {
       registerLayout('layout-a', layoutClass('layout-a'), testMeta);
       registerLayout('layout-b', layoutClass('layout-b'), testMeta);

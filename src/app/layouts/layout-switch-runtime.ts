@@ -77,11 +77,6 @@ export type SwitchRuntimeHost = {
   }): void;
   savePreference(layoutId: string): void;
   mountScene(scene: Scene, layout: ILayout): void;
-  notifyLayoutWillChange(
-    fromId: string | null,
-    toId: string,
-    signal: AbortSignal
-  ): Promise<void>;
   onLayoutDidChange(to: string): void;
   drainResize(): void;
   captureFocus(): {
@@ -94,6 +89,8 @@ export class LayoutSwitchRuntime {
   generation = 0;
   pendingSwitchId: string | null = null;
   pendingScene: Scene | null = null;
+  private pendingSwitchSavePreference = false;
+  private pendingSwitchReason = 'manual';
   canvasOwner: { generation: number; node: HTMLCanvasElement | null } | null =
     null;
   lastError: unknown = null;
@@ -105,6 +102,22 @@ export class LayoutSwitchRuntime {
   private ackWaiters: Array<() => void> = [];
 
   constructor(private readonly host: SwitchRuntimeHost) {}
+
+  /**
+   * Seed stage-canvas custody from the layout already mounted by
+   * `_initialSetScene`. First `switchLayout` constructs this runtime
+   * before `willChange`, so a hung first switch can still reset
+   * quarantine when extra instrument canvases share the animation slot.
+   */
+  adoptCurrentCanvas(): void {
+    if (this.canvasOwner) return;
+    const node =
+      this.host
+        .getCurrentLayout()
+        ?.getSlots?.()
+        ?.animation?.querySelector<HTMLCanvasElement>('canvas') ?? null;
+    this.canvasOwner = { generation: this.generation, node };
+  }
 
   getSwitchState(): LayoutSwitchState {
     return this.state;
@@ -178,7 +191,11 @@ export class LayoutSwitchRuntime {
       throw new Error(`Layout "${layoutId}" not found`);
     }
     if (this.state === 'switching') {
-      if (reason === 'manual') this.pendingSwitchId = layoutId;
+      if (reason === 'manual') {
+        this.pendingSwitchId = layoutId;
+        this.pendingSwitchSavePreference = savePreference;
+        this.pendingSwitchReason = reason;
+      }
       return;
     }
 
@@ -388,6 +405,8 @@ export class LayoutSwitchRuntime {
   private clearPendingQueue(): void {
     this.pendingSwitchId = null;
     this.pendingScene = null;
+    this.pendingSwitchSavePreference = false;
+    this.pendingSwitchReason = 'manual';
   }
 
   private commitLayoutChange(
@@ -561,21 +580,29 @@ export class LayoutSwitchRuntime {
     }
   }
 
+  private reportDisposeAllError(context: string, err: unknown): void {
+    console.error(`[SceneContainer] ${context} disposeAll failed:`, err);
+  }
+
+  private disposeCapabilitiesBestEffort(context: string): void {
+    try {
+      this.host.orchestrator.disposeAll();
+    } catch (err) {
+      this.reportDisposeAllError(context, err);
+    }
+  }
+
   private async abandonIncoming(layout: ILayout | null): Promise<void> {
     if (!layout) return;
     if (this.host.isDisposed()) {
       if (this.incomingLayout === layout) this.incomingLayout = null;
       return;
     }
-    try {
-      this.host.orchestrator.disposeAll();
-    } catch {
-      /* still try to unmount the partial tree */
-    }
+    this.disposeCapabilitiesBestEffort('abandonIncoming');
     try {
       await layout.unmount();
-    } catch {
-      /* best-effort */
+    } catch (err) {
+      console.error('[SceneContainer] abandonIncoming unmount rejected:', err);
     }
     if (this.incomingLayout === layout) this.incomingLayout = null;
   }
@@ -604,7 +631,7 @@ export class LayoutSwitchRuntime {
             ...this.host.resolveLayoutConfig(layoutId),
             preservedCanvas
           },
-          { signal, generation }
+          { signal }
         ),
         signal
       );
@@ -629,8 +656,11 @@ export class LayoutSwitchRuntime {
           if (this.host.isDisposed() || signal.aborted) {
             try {
               await incoming.unmount();
-            } catch {
-              /* dispose already tearing down */
+            } catch (err) {
+              console.error(
+                '[SceneContainer] incoming unmount after halt rejected:',
+                err
+              );
             }
             throw this.haltError(signal);
           }
@@ -734,11 +764,7 @@ export class LayoutSwitchRuntime {
       return false;
     }
     try {
-      try {
-        this.host.orchestrator.disposeAll();
-      } catch {
-        /* rollback still attempts to remount */
-      }
+      this.disposeCapabilitiesBestEffort('rollback');
       if (this.host.container.childElementCount > 0) {
         this.host.container.replaceChildren();
       }
@@ -749,8 +775,7 @@ export class LayoutSwitchRuntime {
           theme: this.host.getTheme(),
           ...this.host.resolveLayoutConfig(snapshot.fromId),
           preservedCanvas: snapshot.canvas ?? null
-        },
-        { generation: this.generation }
+        }
       );
       this.projectOwners();
       await recovered.mount();
@@ -788,10 +813,9 @@ export class LayoutSwitchRuntime {
 
   /**
    * Drain order is a Wave B/C contract: pendingScene first, then
-   * pendingSwitchId. Wave C4 will pass `savePreference` from the queued
-   * request's reason instead of hardcoding `true` below; do not reorder
-   * these awaits without updating the test that locks both this order and
-   * the quarantine-clears-pending invariant.
+   * pendingSwitchId. Queued `reason` / `savePreference` are passed
+   * through; do not reorder these awaits without updating the test that
+   * locks both this order and the quarantine-clears-pending invariant.
    */
   async drainPending(generation: number): Promise<void> {
     if (generation !== this.generation || this.host.isDisposed()) return;
@@ -800,7 +824,11 @@ export class LayoutSwitchRuntime {
     const pendingScene = this.pendingScene;
     this.pendingScene = null;
     const pendingSwitchId = this.pendingSwitchId;
+    const pendingSavePreference = this.pendingSwitchSavePreference;
+    const pendingReason = this.pendingSwitchReason;
     this.pendingSwitchId = null;
+    this.pendingSwitchSavePreference = false;
+    this.pendingSwitchReason = 'manual';
     try {
       if (pendingScene) {
         await this.hostSetScene(pendingScene);
@@ -811,11 +839,9 @@ export class LayoutSwitchRuntime {
         this.host.getCurrentLayout()?.id !== pendingSwitchId
       ) {
         await this.switchLayout(pendingSwitchId, {
-          reason: 'manual',
+          reason: pendingReason,
           animate: true,
-          // C4: replace this hardcoded true with the queued request's
-          // savePreference / reason. Keep pendingScene-then-pendingSwitchId.
-          savePreference: true
+          savePreference: pendingSavePreference
         });
       }
     } catch (err) {
