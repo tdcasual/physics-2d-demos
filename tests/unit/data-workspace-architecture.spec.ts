@@ -1,9 +1,9 @@
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const root = process.cwd();
-const PANEL = join(root, 'src/ui/components/data-workspace-panel/index.ts');
+const PANEL_DIR = join(root, 'src/ui/components/data-workspace-panel');
 
 const FORBIDDEN = [
   'x1',
@@ -26,9 +26,25 @@ const FORBIDDEN = [
   'tickerTape'
 ];
 
+function collectDirectorySource(dir: string): string {
+  const files: string[] = [];
+  function walk(current: string): void {
+    for (const entry of readdirSync(current, { withFileTypes: true })) {
+      const full = join(current, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.name.endsWith('.ts') || entry.name.endsWith('.tsx')) {
+        files.push(full);
+      }
+    }
+  }
+  walk(dir);
+  files.sort();
+  return files.map((file) => readFileSync(file, 'utf8')).join('\n');
+}
+
 describe('data-workspace panel architecture', () => {
   it('contains no double-slit field ids or formula copy', () => {
-    const source = readFileSync(PANEL, 'utf8');
+    const source = collectDirectorySource(PANEL_DIR);
     for (const token of FORBIDDEN) {
       expect(
         source,
@@ -114,7 +130,42 @@ function withoutExt(path: string): string {
   return path.replace(/\.(?:ts|tsx|js|mjs)$/, '');
 }
 
+/** Directory entries match as a prefix so files inside them cannot bypass. */
+function isRuntimeModule(resolved: string): boolean {
+  const normalized = withoutExt(resolved);
+  for (const prefix of RUNTIME_MODULES) {
+    if (normalized === prefix || normalized.startsWith(`${prefix}/`)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 describe('data-workspace lazy import boundary', () => {
+  it('matches runtime modules by directory prefix', () => {
+    expect(
+      isRuntimeModule('src/ui/components/data-workspace-panel/index.ts')
+    ).toBe(true);
+    expect(
+      isRuntimeModule('src/ui/components/data-workspace-panel/table-render.ts')
+    ).toBe(true);
+    expect(isRuntimeModule('src/platform/data-workspace/session-ops.ts')).toBe(
+      true
+    );
+    expect(isRuntimeModule('src/scenes/double-slit/data-task.ts')).toBe(true);
+    expect(
+      isRuntimeModule('src/app/layouts/capabilities/stage-panzoom.ts')
+    ).toBe(true);
+    expect(
+      isRuntimeModule(
+        'src/app/layouts/capabilities/data-workspace-declarations.ts'
+      )
+    ).toBe(false);
+    expect(
+      isRuntimeModule('src/app/layouts/capabilities/stage-panzoom-controls.ts')
+    ).toBe(false);
+  });
+
   it('keeps runtime modules out of capability index and layout static imports', () => {
     for (const file of BOUNDARY_FILES) {
       const source = readFileSync(join(root, file), 'utf8');
@@ -122,7 +173,7 @@ describe('data-workspace lazy import boundary', () => {
         const resolved = resolveSpecifier(file, specifier);
         if (!resolved) continue;
         expect(
-          RUNTIME_MODULES.has(withoutExt(resolved)),
+          isRuntimeModule(resolved),
           `${file} must not statically import ${resolved}`
         ).toBe(false);
       }
