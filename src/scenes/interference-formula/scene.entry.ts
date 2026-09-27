@@ -31,6 +31,7 @@ export function createInterferenceFormulaScene(
   setParams(
     params: Partial<InterferenceFormulaParams>
   ): InterferenceFormulaParams;
+  getParams(): InterferenceFormulaParams;
   attachGraphCanvas(canvas: HTMLCanvasElement): void;
   getReadoutItems(): Array<{ key: string; label: string; value: string }>;
   subscribe(listener: () => void): () => void;
@@ -105,6 +106,9 @@ export function createInterferenceFormulaScene(
       base.renderAndEmit();
       base.notify();
       return result;
+    },
+    getParams(): InterferenceFormulaParams {
+      return { ...sim.getState().params };
     },
     attachGraphCanvas(canvas: HTMLCanvasElement): void {
       view.attachGraphCanvas(canvas);

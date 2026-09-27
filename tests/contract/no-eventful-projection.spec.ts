@@ -15,23 +15,25 @@ const SCENES_DIR = resolve(ROOT, 'src/scenes');
 const PAGES_DIR = resolve(ROOT, 'src/pages');
 
 /**
- * §1.2(c) 9 个既有形态：return renderer / 委托工厂 / 六件套 / double-slit /
- * electrification。本阶段不改 page.ts，允许暂无 fieldTypes 字面量。
+ * 仍无法经 page.ts 字面量判定 silent-ready 的既有形态。
+ * A5 收窄为 id→理由映射：electrification 是唯一无 setValue 的自定义句柄；
+ * 委托工厂（page.ts 不展开静默四件套）单独登记。
  */
-const EXISTING_SPECIAL_HANDLE_FORMS = new Set([
-  'doppler-effect',
-  'double-slit',
-  'electrification',
-  'mechanical-wave',
-  'micrometer',
-  'projectile',
-  'single-loop',
-  'spring-oscillator',
-  'vernier-caliper'
-]);
+const EXISTING_SPECIAL_HANDLE_FORMS: Record<string, string> = {
+  electrification:
+    'handle 仅 setActiveScene+dispose；scene-selector 走 onChange，step 是 action 按钮，无取值字段走通用投影',
+  'single-loop':
+    'page.ts 委托 src/pages/single-loop-integration.ts（该文件已 silent-ready）',
+  'spring-oscillator':
+    'imperative 列表重建；page.ts 委托 controls.ts 的 syncFromScene。相位预设卡是 custom DOM，正则扫不到 preset-group'
+};
 
-/** src/pages 六件套（fieldTypes 随后续补齐） */
-const PAGES_SPECIAL_FORMS = new Set(['src/pages/single-loop-integration.ts']);
+function isSpecialForm(id: string): boolean {
+  return Object.hasOwn(EXISTING_SPECIAL_HANDLE_FORMS, id);
+}
+
+/** src/pages 无剩余特殊形态；single-loop-integration 已挂 fieldTypes */
+const PAGES_SPECIAL_FORMS = new Set<string>();
 
 /** A4 已收口 chase-meet / emf-analogy；禁止再登记 dispose-only 待迁移。 */
 const DISPOSE_ONLY_PENDING = [] as const;
@@ -107,16 +109,25 @@ describe('NO_EVENTFUL_PROJECTION', () => {
     );
     expect(unknown).toEqual([]);
     const overlap = EVENTFUL_PROJECTION_GRANDFATHER.filter((id) =>
-      EXISTING_SPECIAL_HANDLE_FORMS.has(id)
+      isSpecialForm(id)
     );
     expect(overlap).toEqual([]);
+    for (const [id, reason] of Object.entries(EXISTING_SPECIAL_HANDLE_FORMS)) {
+      expect(sceneIds.includes(id), `${id}: unknown special-form id`).toBe(
+        true
+      );
+      expect(
+        reason.trim().length,
+        `${id}: special-form reason must be non-empty`
+      ).toBeGreaterThan(10);
+    }
   });
 
   it('dispose-only pending list is closed after A4', () => {
     expect(DISPOSE_ONLY_PENDING).toEqual([]);
     const leftover: string[] = [];
     for (const id of sceneIds) {
-      if (EXISTING_SPECIAL_HANDLE_FORMS.has(id)) continue;
+      if (isSpecialForm(id)) continue;
       const source = readFileSync(join(SCENES_DIR, id, 'page.ts'), 'utf8');
       if (isSilentReady(source)) continue;
       if (isDisposeOnly(source)) leftover.push(id);
@@ -131,7 +142,7 @@ describe('NO_EVENTFUL_PROJECTION', () => {
       const source = readFileSync(join(SCENES_DIR, id, 'page.ts'), 'utf8');
       const silentReady = isSilentReady(source);
       const grandfathered = GRANDFATHER_SET.has(id);
-      const special = EXISTING_SPECIAL_HANDLE_FORMS.has(id);
+      const special = isSpecialForm(id);
       if (silentReady && grandfathered) {
         staleGrandfather.push(id);
         continue;
@@ -145,7 +156,7 @@ describe('NO_EVENTFUL_PROJECTION', () => {
 
   it('new scenes must not join the grandfather list', () => {
     const missingFromPartition = sceneIds.filter(
-      (id) => !GRANDFATHER_SET.has(id) && !EXISTING_SPECIAL_HANDLE_FORMS.has(id)
+      (id) => !GRANDFATHER_SET.has(id) && !isSpecialForm(id)
     );
     for (const id of missingFromPartition) {
       const source = readFileSync(join(SCENES_DIR, id, 'page.ts'), 'utf8');
@@ -191,7 +202,7 @@ describe('NO_EVENTFUL_PROJECTION', () => {
   it('preset-group/scene-selector schemas expose setActiveSilently', () => {
     const missing: string[] = [];
     for (const id of sceneIds) {
-      if (EXISTING_SPECIAL_HANDLE_FORMS.has(id)) continue;
+      if (isSpecialForm(id)) continue;
       const schemaFiles = ['controls-schema.ts', 'controls.ts'].map((name) =>
         join(SCENES_DIR, id, name)
       );

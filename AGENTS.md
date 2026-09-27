@@ -162,8 +162,10 @@ bootScenePage({
   首次 `createControls` 消费一次性 restore permit，执行
   `applySceneUrlParams`（`setParams`，无对象 API 时退回 `setParam`）并用
   `setValueSilently` / `setActiveSilently` 投影控件。布局 remount 不再读 URL、
-  不重放 snapshot，只从 live scene 走 `syncFromScene` / `refresh`。
-  合法键集合 = `defaultParams ∪ urlSyncKeys ∪ {preset}`（`resolveUrlSyncKeys`）。
+  不重放 snapshot，只从 live scene 走 `syncFromScene` 优先，否则
+  `projectControlsFromParams` 通用投影（`src/app/control-projection.ts`）。
+  `handle.refresh` 已退役。合法键集合 =
+  `defaultParams ∪ urlSyncKeys ∪ {preset}`（`resolveUrlSyncKeys`）。
 - **写回**：createControls 注入 `writeParam` 与同一 generation 的 `sceneWriter`。
   多键写回走 `writeOwnedSceneParams(sceneWriter, patch)`；owner 级 debounce
   合并不同键、同键 last-write-wins。`flush(A)` 不影响 B 的 timer。scene leave
@@ -173,15 +175,20 @@ bootScenePage({
 - **逃生口**：`ScenePageOptions.paramSync` —— `paramMap`（meta 键 → sim 键，
   如 projectile 的 v0→speed）、`activeKeys`、`applyParam`（单键接管，返回
   true 跳过默认处理）、`applyAll`（整体接管含首绘，用于批量约束语义）、
-  `afterApply`（默认管线后、首绘前）。
+  `afterApply`（默认管线后、首绘前）、`projectControls`（remount/reset
+  逃生口：对 sim 只读、同步、不得 rAF 延迟）。
 
 **已知限制**：
 
-- `emf-analogy` 无对象式 `setParams`（`defaultParams` 已清空，无可同步参数）；
+- `emf-analogy` 无对象式 `setParams`（`defaultParams` 已清空，无可投影参数；
+  schema 仍有 tap/speed 控件）。登记在 `NO_CONTROL_PROJECTION`；
   `mechanical-wave` 仅有 `setParam` 单键 API，URL 管线会 fallback。
 - URL 同步棘轮：`scene-params-contract.spec.ts` 强制「有 `defaultParams` 的
   场景必须有 `urlSyncKeys` 或 page 级 `paramSync` 自定义路径」，全量 100%
   结构化覆盖（原 vite.config 百分比阈值已由该棘轮取代，debt-ledger A7）。
+- 双契约棘轮：`NO_EVENTFUL_PROJECTION`（静默四件套 + fieldTypes）与
+  `NO_CONTROL_PROJECTION`（entry `getParams` + handle `fieldTypes`/`syncFromScene`，
+  或登记豁免）并存。
 - Owner-scoped writer / restore-once 契约见 `src/app/url-sync.ts` 与
   `tests/contract/scene-url-writer-contract.spec.ts`。布局 remount 不再把
   首屏 query 写回 scene。

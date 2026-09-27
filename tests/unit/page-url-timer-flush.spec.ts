@@ -121,6 +121,23 @@ describe('page URL timer removal (A4)', () => {
     expect(new URL(window.location.href).searchParams.get('B')).toBe('0.22');
   });
 
+  it('owner debounce coalesces rapid writes into one replaceState', () => {
+    vi.useFakeTimers();
+    const replaceSpy = vi.spyOn(window.history, 'replaceState');
+    const scene = createDynamicCircleScene();
+    mountWithWriter('dynamic-circle', scene, dynamicCircleMeta);
+    const callsBefore = replaceSpy.mock.calls.length;
+    scene.setParams({ B: 0.12 });
+    scene.setParams({ B: 0.18 });
+    scene.setParams({ B: 0.22 });
+    expect(replaceSpy.mock.calls.length).toBe(callsBefore);
+    vi.advanceTimersByTime(150);
+    expect(replaceSpy.mock.calls.length).toBeLessThanOrEqual(callsBefore + 1);
+    expect(new URL(window.location.href).searchParams.get('B')).toBe('0.22');
+    replaceSpy.mockRestore();
+    vi.useRealTimers();
+  });
+
   it('rapid param changes survive scene leave (writer close)', () => {
     const scene = createForceCompositionScene();
     const { handle, writer } = mountWithWriter(

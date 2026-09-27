@@ -30,6 +30,7 @@ export function createThinFilmScene(
   setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
   getState(): ThinFilmState;
   setParams(params: Partial<ThinFilmParams>): ThinFilmParams;
+  getParams(): ThinFilmParams;
   setCursorY(y: number): void;
   pickCursor(cssX: number, cssY: number): number | null;
   attachGraphCanvas(canvas: HTMLCanvasElement): void;
@@ -114,6 +115,9 @@ export function createThinFilmScene(
     setParams: base.wrapAction(
       (params: Partial<ThinFilmParams>): ThinFilmParams => sim.setParams(params)
     ),
+    getParams(): ThinFilmParams {
+      return { ...sim.getState().params };
+    },
     setCursorY: base.wrapAction((y: number): void => {
       sim.setCursorY(y);
     }),

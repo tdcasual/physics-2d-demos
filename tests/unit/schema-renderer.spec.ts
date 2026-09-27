@@ -53,6 +53,38 @@ describe('SchemaRenderer', () => {
     expect(mount.querySelector('[data-control-key="speed"]')).not.toBeNull();
   });
 
+  it('exposes a non-empty fieldTypes map when the schema has fields', () => {
+    const mount = createMount();
+    const schema: ControlsSchema = {
+      sections: [
+        {
+          title: '参数',
+          fields: [
+            {
+              type: 'slider',
+              key: 'speed',
+              label: '速度',
+              min: 0,
+              max: 10,
+              step: 1,
+              value: 5
+            },
+            { type: 'button', key: 'go', label: '开始' }
+          ]
+        }
+      ]
+    };
+    const renderer = renderSchema({
+      mount,
+      schema,
+      onChange: vi.fn(),
+      onAction: vi.fn()
+    });
+    expect(renderer.fieldTypes.size).toBeGreaterThan(0);
+    expect(renderer.fieldTypes.get('speed')).toBe('slider');
+    expect(renderer.fieldTypes.get('go')).toBe('button');
+  });
+
   it('stamps a button field key only on the wrapper', () => {
     const mount = createMount();
     const schema: ControlsSchema = {

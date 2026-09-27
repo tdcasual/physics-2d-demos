@@ -70,6 +70,7 @@ export function createSingleLoopControls({
   setValueSilently: (key: string, value: number | string | boolean) => void;
   setActive: (key: string, value: string) => void;
   setActiveSilently: (key: string, value: string) => void;
+  fieldTypes: Map<string, string>;
   syncFromScene: () => void;
   dispose: () => void;
 } {
@@ -130,6 +131,7 @@ export function createSingleLoopControls({
       applySilently(() => renderer.setActive(key, value)),
     setActiveSilently: (key, value) =>
       applySilently(() => renderer.setActiveSilently(key, value)),
+    fieldTypes: renderer.fieldTypes,
     syncFromScene: () => syncControls(scene.getParams()),
     dispose: () => {
       unsubscribe();

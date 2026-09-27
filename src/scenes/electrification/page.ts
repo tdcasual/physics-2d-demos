@@ -77,6 +77,7 @@ bootScenePage({
       setActiveScene(scene: string) {
         renderer.setActive('scene', scene);
       },
+      fieldTypes: renderer.fieldTypes,
       dispose: () => {
         renderer.dispose();
       }

@@ -139,6 +139,7 @@ bootScenePage<ReturnType<typeof createDopplerScene>>({
       setActiveSilently(key: string, value: string) {
         renderer.setActiveSilently(key, value);
       },
+      fieldTypes: renderer.fieldTypes,
       syncFromScene: syncRendererToScene,
       dispose() {
         renderer.dispose();

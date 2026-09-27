@@ -41,6 +41,7 @@ const testMeta: SceneMeta = {
 };
 
 function createMockScene() {
+  const params: Record<string, number | string> = { speed: 20, ratio: 1.5 };
   return {
     init: vi.fn(),
     resize: vi.fn(),
@@ -49,7 +50,11 @@ function createMockScene() {
     step: vi.fn(),
     setTheme: vi.fn(),
     setMode: vi.fn(),
-    setParams: vi.fn(),
+    setParams: vi.fn((next: Record<string, number | string>) => {
+      Object.assign(params, next);
+      return { ...params };
+    }),
+    getParams: vi.fn(() => ({ ...params })),
     subscribe: vi.fn(() => vi.fn())
   };
 }
@@ -112,102 +117,152 @@ describe('bootScenePage URL param pipeline', () => {
     layoutRegistry.clear();
   });
 
-  it('injects urlParams and writeParam into createControls', () => {
-    window.history.replaceState({}, '', '/test.html?speed=30&bogus=1');
-    let captured: CapturedControlOpts | undefined;
-    bootWithControls((opts) => {
-      captured = opts;
-      return { dispose: vi.fn() };
-    });
-    driveAdapter();
-
-    expect(captured).toBeDefined();
-    // 合法键快照（bogus 被过滤）
-    expect(captured!.urlParams).toEqual({ speed: 30 });
-    expect(typeof captured!.writeParam).toBe('function');
-    expect(typeof captured!.scheduleRender).toBe('function');
-  });
-
-  it('applies URL params to scene and reflects into controls handle, then renders', () => {
-    window.history.replaceState({}, '', '/test.html?speed=30&mode=fast');
-    let scene: ReturnType<typeof createMockScene> | undefined;
-    const setValue = vi.fn();
-    const setActive = vi.fn();
-    bootWithControls((opts) => {
-      scene = opts.scene;
-      return { setValue, setActive, dispose: vi.fn() };
-    });
-    driveAdapter();
-
-    expect(scene!.setParams).toHaveBeenCalledWith({ speed: 30 });
-    expect(scene!.setParams).toHaveBeenCalledWith({ mode: 'fast' });
-    expect(setValue).toHaveBeenCalledWith('speed', 30);
-    expect(setActive).toHaveBeenCalledWith('mode', 'fast');
-    expect(scene!.render).toHaveBeenCalled();
-  });
-
-  it('is a no-op when URL has no legal params', () => {
-    window.history.replaceState({}, '', '/test.html?bogus=1');
-    let scene: ReturnType<typeof createMockScene> | undefined;
-    const setValue = vi.fn();
-    bootWithControls((opts) => {
-      scene = opts.scene;
-      return { setValue, dispose: vi.fn() };
-    });
-    driveAdapter();
-
-    expect(scene!.setParams).not.toHaveBeenCalled();
-    expect(setValue).not.toHaveBeenCalled();
-  });
-
-  it('writeParam writes legal keys and silently drops illegal ones', async () => {
-    let captured: CapturedControlOpts | undefined;
-    bootWithControls((opts) => {
-      captured = opts;
-      return { dispose: vi.fn() };
-    });
-    driveAdapter();
-
-    const flush = () => new Promise((resolve) => setTimeout(resolve, 200));
-
-    captured!.writeParam!('speed', 40);
-    await flush();
-    expect(new URL(window.location.href).searchParams.get('speed')).toBe('40');
-
-    captured!.writeParam!('preset', 'earth'); // preset 是合法键
-    await flush();
-    expect(new URL(window.location.href).searchParams.get('preset')).toBe(
-      'earth'
-    );
-
-    captured!.writeParam!('bogus', 1);
-    await flush();
-    const url = new URL(window.location.href);
-    expect(url.searchParams.has('bogus')).toBe(false);
-    // 既有合法参数不受影响
-    expect(url.searchParams.get('speed')).toBe('40');
-  });
-
-  it('invokes paramSync.applyParam hook through the pipeline', () => {
-    window.history.replaceState({}, '', '/test.html?preset=moon&speed=25');
-    let scene: ReturnType<typeof createMockScene> | undefined;
-    const applyParam = vi.fn((key: string) => key === 'preset');
-    bootWithControls(
-      (opts) => {
-        scene = opts.scene;
+  describe('首绘 URL', () => {
+    it('injects urlParams and writeParam into createControls', () => {
+      window.history.replaceState({}, '', '/test.html?speed=30&bogus=1');
+      let captured: CapturedControlOpts | undefined;
+      bootWithControls((opts) => {
+        captured = opts;
         return { dispose: vi.fn() };
-      },
-      { paramSync: { applyParam } as never }
-    );
-    driveAdapter();
+      });
+      driveAdapter();
 
-    expect(applyParam).toHaveBeenCalledWith(
-      'preset',
-      'moon',
-      expect.objectContaining({ scene: scene! })
-    );
-    // preset 被钩子接管；speed 走默认管线
-    expect(scene!.setParams).toHaveBeenCalledTimes(1);
-    expect(scene!.setParams).toHaveBeenCalledWith({ speed: 25 });
+      expect(captured).toBeDefined();
+      // 合法键快照（bogus 被过滤）
+      expect(captured!.urlParams).toEqual({ speed: 30 });
+      expect(typeof captured!.writeParam).toBe('function');
+      expect(typeof captured!.scheduleRender).toBe('function');
+    });
+
+    it('applies URL params to scene and reflects into controls handle, then renders', () => {
+      window.history.replaceState({}, '', '/test.html?speed=30&mode=fast');
+      let scene: ReturnType<typeof createMockScene> | undefined;
+      const setValue = vi.fn();
+      const setActive = vi.fn();
+      bootWithControls((opts) => {
+        scene = opts.scene;
+        return { setValue, setActive, dispose: vi.fn() };
+      });
+      driveAdapter();
+
+      expect(scene!.setParams).toHaveBeenCalledWith({ speed: 30 });
+      expect(scene!.setParams).toHaveBeenCalledWith({ mode: 'fast' });
+      expect(setValue).toHaveBeenCalledWith('speed', 30);
+      expect(setActive).toHaveBeenCalledWith('mode', 'fast');
+      expect(scene!.render).toHaveBeenCalled();
+    });
+
+    it('is a no-op when URL has no legal params', () => {
+      window.history.replaceState({}, '', '/test.html?bogus=1');
+      let scene: ReturnType<typeof createMockScene> | undefined;
+      const setValue = vi.fn();
+      bootWithControls((opts) => {
+        scene = opts.scene;
+        return { setValue, dispose: vi.fn() };
+      });
+      driveAdapter();
+
+      expect(scene!.setParams).not.toHaveBeenCalled();
+      expect(setValue).not.toHaveBeenCalled();
+    });
+
+    it('writeParam writes legal keys and silently drops illegal ones', async () => {
+      let captured: CapturedControlOpts | undefined;
+      bootWithControls((opts) => {
+        captured = opts;
+        return { dispose: vi.fn() };
+      });
+      driveAdapter();
+
+      const flush = () => new Promise((resolve) => setTimeout(resolve, 200));
+
+      captured!.writeParam!('speed', 40);
+      await flush();
+      expect(new URL(window.location.href).searchParams.get('speed')).toBe(
+        '40'
+      );
+
+      captured!.writeParam!('preset', 'earth'); // preset 是合法键
+      await flush();
+      expect(new URL(window.location.href).searchParams.get('preset')).toBe(
+        'earth'
+      );
+
+      captured!.writeParam!('bogus', 1);
+      await flush();
+      const url = new URL(window.location.href);
+      expect(url.searchParams.has('bogus')).toBe(false);
+      // 既有合法参数不受影响
+      expect(url.searchParams.get('speed')).toBe('40');
+    });
+
+    it('invokes paramSync.applyParam hook through the pipeline', () => {
+      window.history.replaceState({}, '', '/test.html?preset=moon&speed=25');
+      let scene: ReturnType<typeof createMockScene> | undefined;
+      const applyParam = vi.fn((key: string) => key === 'preset');
+      bootWithControls(
+        (opts) => {
+          scene = opts.scene;
+          return { dispose: vi.fn() };
+        },
+        { paramSync: { applyParam } as never }
+      );
+      driveAdapter();
+
+      expect(applyParam).toHaveBeenCalledWith(
+        'preset',
+        'moon',
+        expect.objectContaining({ scene: scene! })
+      );
+      // preset 被钩子接管；speed 走默认管线
+      expect(scene!.setParams).toHaveBeenCalledTimes(1);
+      expect(scene!.setParams).toHaveBeenCalledWith({ speed: 25 });
+    });
+  });
+
+  describe('remount 投影', () => {
+    it('second createControls does not re-apply URL and projects live params', () => {
+      window.history.replaceState({}, '', '/test.html?speed=30');
+      const setValueSilently = vi.fn();
+      const fieldTypes = new Map([
+        ['speed', 'slider'],
+        ['ratio', 'number']
+      ]);
+      let scene: ReturnType<typeof createMockScene> | undefined;
+      bootWithControls((opts) => {
+        scene = opts.scene;
+        return {
+          fieldTypes,
+          setValueSilently,
+          dispose: vi.fn()
+        };
+      });
+      const adapter = driveAdapter();
+      expect(scene!.setParams).toHaveBeenCalledWith({ speed: 30 });
+      scene!.setParams({ speed: 40, ratio: 2 });
+      scene!.setParams.mockClear();
+      setValueSilently.mockClear();
+      adapter.renderControl(document.createElement('div'));
+      expect(scene!.setParams).not.toHaveBeenCalled();
+      expect(setValueSilently).toHaveBeenCalledWith('speed', 40);
+      expect(setValueSilently).toHaveBeenCalledWith('ratio', 2);
+    });
+
+    it('empty URL still completes restore-once permit', () => {
+      window.history.replaceState({}, '', '/test.html');
+      const urlSnapshots: Array<Record<string, number | string> | undefined> =
+        [];
+      bootWithControls((opts) => {
+        urlSnapshots.push(opts.urlParams);
+        return { dispose: vi.fn() };
+      });
+      const adapter = driveAdapter();
+      expect(urlSnapshots[0]).toEqual({});
+      adapter.renderControl(document.createElement('div'));
+      expect(urlSnapshots[1]).toEqual({});
+      const permit = adapter.takeUrlRestorePermit();
+      expect(permit.first).toBe(false);
+      expect(permit.snapshot).toEqual({});
+    });
   });
 });

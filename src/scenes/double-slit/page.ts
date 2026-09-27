@@ -73,6 +73,7 @@ bootScenePage<ReturnType<typeof createDoubleSlitScene>>({
     let currentRenderer: SchemaRendererInstance | null = null;
     let unsubscribeControls: (() => void) | null = null;
     let currentSchemaId: 'default' | 'step6' = 'default';
+    const fieldTypes = new Map<string, string>();
 
     function syncRendererToScene(): void {
       const state = dsScene.getState();
@@ -113,7 +114,7 @@ bootScenePage<ReturnType<typeof createDoubleSlitScene>>({
       schemaId: 'default' | 'step6'
     ) {
       currentRenderer?.dispose();
-      currentRenderer = renderSchema({
+      const renderer = renderSchema({
         mount,
         schema,
         onChange: (key, value) => {
@@ -175,6 +176,11 @@ bootScenePage<ReturnType<typeof createDoubleSlitScene>>({
           // 无 action 按钮
         }
       });
+      currentRenderer = renderer;
+      fieldTypes.clear();
+      renderer.fieldTypes.forEach((type, key) => {
+        fieldTypes.set(key, type);
+      });
       currentSchemaId = schemaId;
     }
 
@@ -221,6 +227,7 @@ bootScenePage<ReturnType<typeof createDoubleSlitScene>>({
       setActiveSilently(key: string, value: string) {
         currentRenderer?.setActiveSilently(key, value);
       },
+      fieldTypes,
       syncFromScene: syncRendererToScene,
       dispose() {
         unsubscribeControls?.();
