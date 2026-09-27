@@ -183,12 +183,20 @@ bootScenePage({
 - `emf-analogy` 无对象式 `setParams`（`defaultParams` 已清空，无可投影参数；
   schema 仍有 tap/speed 控件）。登记在 `NO_CONTROL_PROJECTION`；
   `mechanical-wave` 仅有 `setParam` 单键 API，URL 管线会 fallback。
+- `xt-graph` / `tortoise-hare`：entry `getParams` 仅 `{speed}`，schema 只有
+  preset-group + hint；通用投影无对象可投。preset 高亮由 URL `applyParam` /
+  首绘负责，remount 后高亮回退 `initialActive`（A3 裁定保持）。
+- `spring-oscillator`：`getParams` 只暴露首振子 `{k,m,A}`；handle 以
+  `syncFromScene`（列表重建，仅供 remount/reset）投影，通用投影无对象可投。
+- `electrification`：`getParams` 含 `scene`，handle 转发 `setActiveSilently`，
+  remount 后 scene-selector 高亮 live 子场景。仍无 `setValue`（action 为
+  button-grid），留在 `EXISTING_SPECIAL_HANDLE_FORMS`。
 - URL 同步棘轮：`scene-params-contract.spec.ts` 强制「有 `defaultParams` 的
   场景必须有 `urlSyncKeys` 或 page 级 `paramSync` 自定义路径」，全量 100%
   结构化覆盖（原 vite.config 百分比阈值已由该棘轮取代，debt-ledger A7）。
 - 双契约棘轮：`NO_EVENTFUL_PROJECTION`（静默四件套 + fieldTypes）与
-  `NO_CONTROL_PROJECTION`（entry `getParams` + handle `fieldTypes`/`syncFromScene`，
-  或登记豁免）并存。
+  `NO_CONTROL_PROJECTION`（entry `getParams` **实现** + handle `fieldTypes`/`syncFromScene`，
+  且 getParams 返回键 ∩ fieldTypes ≠ ∅，或登记豁免）并存。
 - Owner-scoped writer / restore-once 契约见 `src/app/url-sync.ts` 与
   `tests/contract/scene-url-writer-contract.spec.ts`。布局 remount 不再把
   首屏 query 写回 scene。
@@ -430,5 +438,7 @@ function resize() {
 ## 已知限制
 
 - `spring-oscillator` 与 `ganshe` 使用 imperative `controls.ts`（动态增删振子 / 观察点管理）。ui 工厂由 page.ts 注入（结构类型参数），场景层保持零 ui 导入——新增 imperative 卡片时遵循同一注入模式，禁止恢复行内 `eslint-disable no-restricted-imports` 豁免（debt-ledger A2 已清偿）
+- `xt-graph` / `tortoise-hare`：`getParams` 仅 `{speed}`，schema 无 speed 键，通用投影空转；preset 高亮只覆盖 URL 首绘（A3 裁定）
+- `spring-oscillator`：`getParams` 只暴露首振子 `{k,m,A}`，列表重建走 handle `syncFromScene`（A3 裁定）
 - chase-meet 的表达式解析器语义（除零得 0、悬挂操作符补 0、多余 token 静默丢弃）已被 `tests/unit/chase-meet-expression-parser.spec.ts` 固化为特征化契约；「修正」parser 前须先改测试，否则会被该契约挡住。
 - E2E 套件当前稳定：本地连续 3 次完整运行（含 `--repeat-each=2` 加压，累计 304 次执行）全部通过，早期文档所述「35 个不稳定测试」已不复现。若 CI 偶发超时，优先排查浏览器/资源环境而非测试本身。

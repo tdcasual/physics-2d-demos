@@ -77,6 +77,9 @@ bootScenePage({
       setActiveScene(scene: string) {
         renderer.setActive('scene', scene);
       },
+      setActiveSilently(key: string, id: string) {
+        renderer.setActiveSilently(key, id);
+      },
       fieldTypes: renderer.fieldTypes,
       dispose: () => {
         renderer.dispose();

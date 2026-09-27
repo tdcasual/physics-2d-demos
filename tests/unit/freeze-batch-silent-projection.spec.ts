@@ -20,6 +20,8 @@ import {
   TICKER_TAPE_NOISE_IDS
 } from '../../src/scenes/ticker-tape/page';
 import { decodeVtSceneSelectorId } from '../../src/scenes/vt-integral/page';
+import { getTrialField } from '../../src/platform/data-workspace';
+import * as tickerTapeDataTask from '../../src/scenes/ticker-tape/data-task';
 
 const captured = vi.hoisted(() => ({
   byId: new Map<
@@ -216,6 +218,63 @@ describe('ticker-tape encoding round-trip', () => {
     expect(activePreset(mount, 'noise')).toBe('typical');
     expect(toggleChecked(mount, 'showA')).toBe('true');
     expect(selectValue(mount, 'vSigFigs')).toBe('3');
+  });
+
+  it('remount projection does not invalidate workspace session', async () => {
+    const invalidateAll = vi.fn();
+    const origCreate = tickerTapeDataTask.createTickerTapeDataWorkspace;
+    vi.spyOn(
+      tickerTapeDataTask,
+      'createTickerTapeDataWorkspace'
+    ).mockImplementation((opts) => {
+      const inner = origCreate(opts);
+      const origInvalidate = inner.invalidateAll.bind(inner);
+      inner.invalidateAll = (reason: string) => {
+        invalidateAll(reason);
+        origInvalidate(reason);
+      };
+      return inner;
+    });
+
+    const scene = createTickerTapeScene();
+    pendingDispose.push(() => scene.dispose());
+    const host = scene.getDataWorkspace();
+    await vi.waitFor(() => {
+      expect(() => host.getSpec()).not.toThrow();
+    });
+
+    scene.setParams({
+      preset: 'ud',
+      noise: 'typical',
+      countEvery: 5,
+      showA: true,
+      vSigFigs: 3
+    });
+    expect(invalidateAll).toHaveBeenCalled();
+    invalidateAll.mockClear();
+
+    const tapeX = scene.getState().tapeXCm;
+    const submitted = host.submitField({
+      field: 'x',
+      trialIndex: 0,
+      raw: tapeX[0].toFixed(2)
+    });
+    expect(submitted.feedback.ok).toBe(true);
+    const before = getTrialField(host.getSession().trials[0], 'x');
+    expect(before?.checked).toBe(true);
+    expect(before?.stale).toBe(false);
+    expect(before?.raw).toBe(tapeX[0].toFixed(2));
+    invalidateAll.mockClear();
+
+    mountScene('ticker-tape', scene);
+    const second = mountScene('ticker-tape', scene);
+    second.handle.syncFromScene?.();
+
+    expect(invalidateAll).not.toHaveBeenCalled();
+    const after = getTrialField(host.getSession().trials[0], 'x');
+    expect(after?.checked).toBe(true);
+    expect(after?.stale).toBe(false);
+    expect(after?.raw).toBe(before?.raw);
   });
 });
 

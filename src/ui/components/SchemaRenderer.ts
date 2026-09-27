@@ -141,18 +141,6 @@ export function renderSchema(
     mount.appendChild(card.element);
   });
 
-  if (import.meta.env.MODE === 'test') {
-    const fieldCount = schema.sections.reduce(
-      (n, section) => n + section.fields.length,
-      0
-    );
-    if (fieldCount > 0 && fieldTypes.size === 0) {
-      throw new Error(
-        '[SchemaRenderer] fieldTypes is empty despite schema fields'
-      );
-    }
-  }
-
   return {
     element: mount,
     setValue(key: string, value: unknown) {

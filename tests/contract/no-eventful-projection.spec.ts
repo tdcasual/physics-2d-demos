@@ -16,12 +16,13 @@ const PAGES_DIR = resolve(ROOT, 'src/pages');
 
 /**
  * 仍无法经 page.ts 字面量判定 silent-ready 的既有形态。
- * A5 收窄为 id→理由映射：electrification 是唯一无 setValue 的自定义句柄；
- * 委托工厂（page.ts 不展开静默四件套）单独登记。
+ * A5 收窄为 id→理由映射：electrification 仍无 setValue（button-grid 动作），
+ * 但已转发 setActiveSilently，scene-selector 走通用投影；委托工厂
+ *（page.ts 不展开静默四件套）单独登记。
  */
 const EXISTING_SPECIAL_HANDLE_FORMS: Record<string, string> = {
   electrification:
-    'handle 仅 setActiveScene+dispose；scene-selector 走 onChange，step 是 action 按钮，无取值字段走通用投影',
+    'handle 转发 setActiveSilently+fieldTypes；scene-selector 经通用投影回读 live scene；无 setValue（action 为 button-grid）',
   'single-loop':
     'page.ts 委托 src/pages/single-loop-integration.ts（该文件已 silent-ready）',
   'spring-oscillator':

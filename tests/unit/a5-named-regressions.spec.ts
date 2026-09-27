@@ -19,6 +19,7 @@ import { createProjectileScene } from '../../src/scenes/projectile/scene.entry';
 import { createCentripetalScene } from '../../src/scenes/centripetal-motion/scene.entry';
 import { centripetalMeta } from '../../src/scenes/centripetal-motion/scene.meta';
 import { createMechanicalEnergyScene } from '../../src/scenes/mechanical-energy/scene.entry';
+import { createElectrificationScene } from '../../src/scenes/electrification/scene.entry';
 
 const captured = vi.hoisted(() => ({
   byId: new Map<
@@ -61,6 +62,7 @@ import '../../src/scenes/double-slit/page';
 import '../../src/scenes/projectile/page';
 import '../../src/scenes/centripetal-motion/page';
 import '../../src/scenes/mechanical-energy/page';
+import '../../src/scenes/electrification/page';
 
 type Handle = {
   syncFromScene?: () => void;
@@ -199,16 +201,19 @@ describe('A5.7 reset path projects reset values', () => {
     const scene = createCentripetalScene();
     const createControls = captured.byId.get('centripetal-motion');
     if (!createControls) throw new Error('centripetal-motion controls missing');
+    let handle: Handle | undefined;
     const adapter = new SceneAdapter({
       meta: centripetalMeta,
       createScene: () => scene,
-      createControls: ({ mount, scene: live }) =>
-        createControls({
+      createControls: ({ mount, scene: live }) => {
+        handle = createControls({
           mount,
           scene: live,
           writeParam: vi.fn(),
           scheduleRender: vi.fn()
-        })
+        });
+        return handle;
+      }
     });
     const container = document.createElement('div');
     const canvas = document.createElement('canvas');
@@ -226,13 +231,23 @@ describe('A5.7 reset path projects reset values', () => {
       control: controls
     } as LayoutSlots);
     adapter.renderControl(controls);
+    if (!handle) throw new Error('centripetal-motion handle missing');
+
+    // schema 默认恰等于 sim 默认（2 / 2.5 / 1.5）。先把非默认值投进
+    // 面板，删掉 SceneAdapter.reset 的投影接线后本断言必红。
     scene.setParams({ mass: 4, radius: 3, angularVelocity: 2.5 });
+    remountProject('centripetal-motion', scene, handle);
+    expect(controlValue(controls, 'mass')).toBe('4');
+    expect(controlValue(controls, 'radius')).toBe('3');
+    expect(controlValue(controls, 'angularVelocity')).toBe('2.5');
     adapter.reset();
     expect(controlValue(controls, 'mass')).toBe('2');
     expect(controlValue(controls, 'radius')).toBe('2.5');
     expect(controlValue(controls, 'angularVelocity')).toBe('1.5');
 
     scene.setParams({ mass: 4, radius: 3, angularVelocity: 2.5 });
+    remountProject('centripetal-motion', scene, handle);
+    expect(controlValue(controls, 'mass')).toBe('4');
     document.body.dispatchEvent(
       new KeyboardEvent('keydown', {
         key: 'r',
@@ -242,6 +257,26 @@ describe('A5.7 reset path projects reset values', () => {
     );
     expect(controlValue(controls, 'mass')).toBe('2');
     expect(controlValue(controls, 'radius')).toBe('2.5');
+    expect(controlValue(controls, 'angularVelocity')).toBe('1.5');
+  });
+});
+
+describe('A5 electrification remount highlights live scene', () => {
+  it('scene-selector follows getParams.scene via setActiveSilently', () => {
+    const scene = createElectrificationScene();
+    scene.setScene('induction');
+    const setScene = vi.spyOn(scene, 'setScene');
+    const setParams = vi.spyOn(scene, 'setParams');
+    const { mount, handle, writeParam } = mountScene('electrification', scene);
+    remountProject('electrification', scene, handle);
+    expect(setScene).not.toHaveBeenCalled();
+    expect(setParams).not.toHaveBeenCalled();
+    expect(writeParam).not.toHaveBeenCalled();
+    const active = mount.querySelector(
+      '[data-control-key="scene"] button[aria-checked="true"] span'
+    );
+    expect(active?.textContent).toBe('感应起电');
+    scene.dispose();
   });
 });
 
