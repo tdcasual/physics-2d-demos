@@ -948,12 +948,15 @@ describe('SceneContainerImpl Codex-challenged edge cases (Fix 1 / Fix 5 / Fix 6)
     container.dispose();
   });
 
-  it('does not emit events or persist preference when enter-hang is abandoned (Fix 5)', async () => {
+  it('commits layout:change and preference when enter-abort happens after incomingMounted (B4; approved deviation from v10 §3.2:74)', async () => {
     vi.useFakeTimers();
     try {
       const { layoutRegistry } = await import('../../src/app/layouts/registry');
       const container = createSceneContainer({ mount });
-      await container.setScene(makeScene());
+      const scene = makeScene();
+      const didChange = vi.fn();
+      scene.onLayoutDidChange = didChange;
+      await container.setScene(scene);
 
       let releaseEnter: (value: undefined) => void = () => {};
       const enterGate = new Promise<undefined>((resolve) => {
@@ -991,11 +994,13 @@ describe('SceneContainerImpl Codex-challenged edge cases (Fix 1 / Fix 5 / Fix 6)
 
       expect(
         changeSpy.mock.calls.filter((call) => call[0].to === 'lab-stage')
-      ).toHaveLength(0);
+      ).toHaveLength(1);
+      expect(didChange).toHaveBeenCalledWith('lab-stage');
       const stored = JSON.parse(
         localStorage.getItem('physics-demos-container-state') ?? '{}'
       );
-      expect(stored.preferredLayout).not.toBe('lab-stage');
+      expect(stored.preferredLayout).toBe('lab-stage');
+      expect(container.currentLayout?.id).toBe('lab-stage');
       container.dispose();
     } finally {
       vi.useRealTimers();
@@ -1020,8 +1025,50 @@ describe('SceneContainerImpl Codex-challenged edge cases (Fix 1 / Fix 5 / Fix 6)
     await flush();
 
     // pendingScene 先（setScene 自行解析布局），pendingSwitchId 后
+    // C4 (not this wave): drainPending still hardcodes savePreference:true;
+    // keep this order when C4 threads reason through.
     expect(container.currentScene).toBe(scene2);
     expect(container.currentLayout?.id).toBe('lab-stage');
     container.dispose();
+  });
+
+  it('clears pendingSwitchId and pendingScene on quarantine and reset (B6)', async () => {
+    vi.useFakeTimers();
+    try {
+      const container = createSceneContainer({ mount });
+      const scene1 = makeScene('scene-1');
+      await container.setScene(scene1);
+      scene1.onLayoutWillChange = () => new Promise(() => {});
+
+      const hung = container.switchLayout('lab-stage', { reason: 'manual' });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(container.getSwitchState()).toBe('switching');
+
+      const scene2 = makeScene('scene-2');
+      void container.setScene(scene2);
+      await container.switchLayout('mobile-stack', { reason: 'manual' });
+
+      const runtime = (
+        container as unknown as {
+          _switch: {
+            pendingSwitchId: string | null;
+            pendingScene: Scene | null;
+          };
+        }
+      )._switch;
+      expect(runtime.pendingScene).toBe(scene2);
+      expect(runtime.pendingSwitchId).toBe('mobile-stack');
+
+      await vi.advanceTimersByTimeAsync(10_000);
+      await vi.advanceTimersByTimeAsync(1_000);
+      await hung.catch(() => undefined);
+
+      expect(container.getSwitchState()).toBe('quarantined');
+      expect(runtime.pendingScene).toBeNull();
+      expect(runtime.pendingSwitchId).toBeNull();
+      container.dispose();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

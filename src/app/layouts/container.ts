@@ -35,7 +35,11 @@ import type {
   LayoutSwitchRuntime,
   SwitchRuntimeHost
 } from './layout-switch-runtime';
-import { SwitchQuarantinedError } from './switch-errors';
+import {
+  SwitchQuarantinedError,
+  SWITCH_QUARANTINE_MESSAGE,
+  SWITCH_STATUS_ATTR
+} from './switch-errors';
 import type {
   SceneContainer,
   Scene,
@@ -230,8 +234,10 @@ export class SceneContainerImpl implements SceneContainer {
       workspaceUi: this._workspaceUi,
       orchestrator: this._orchestrator,
       emitLayoutChange: (event) => this._emitter.emit('layout:change', event),
-      emitSwitchError: (payload) =>
-        this._emitter.emit('layout:switch-error', payload),
+      emitSwitchError: (payload) => {
+        this.surfaceSwitchError(payload);
+        this._emitter.emit('layout:switch-error', payload);
+      },
       savePreference: (id) => this.setUserPreferredLayout(id),
       mountScene: (scene, layout) => this.mountScene(scene, layout),
       notifyLayoutWillChange: (fromId, toId, signal) =>
@@ -433,7 +439,10 @@ export class SceneContainerImpl implements SceneContainer {
     const layoutId = this.resolveLayout(scene);
 
     if (!this._currentLayout || this._currentLayout.id !== layoutId) {
-      await this.switchLayout(layoutId, { animate: false });
+      await this.switchLayout(layoutId, {
+        animate: false,
+        skipWillChange: true
+      });
     } else {
       this._modeOwner.project('reproject');
       this._sidebar.project(this.container);
@@ -543,6 +552,10 @@ export class SceneContainerImpl implements SceneContainer {
       this.ensureSwitch(),
       this._orchestrator.preload()
     ]);
+    if (this._disposed) {
+      sw.dispose();
+      return;
+    }
     await sw.switchLayout(layoutId, options);
   }
 
@@ -553,6 +566,7 @@ export class SceneContainerImpl implements SceneContainer {
   resetSwitchQuarantine(): boolean {
     if (!this._switch) return false;
     const ok = this._switch.resetSwitchQuarantine();
+    if (ok) this.hideSwitchStatus();
     if (!ok && this._switch.getSwitchState() === 'quarantined') {
       throw new SwitchQuarantinedError(
         this._switch.generation,
@@ -700,10 +714,73 @@ export class SceneContainerImpl implements SceneContainer {
   }
 
   /**
+   * Production consumer of `layout:switch-error`: console + status bar.
+   * Quarantine is page-terminal (reload) unless resetSwitchQuarantine
+   * succeeds. See docs/layout-switch-lifecycle.md.
+   */
+  private surfaceSwitchError(payload: {
+    generation: number;
+    error: unknown;
+    state: LayoutSwitchState;
+  }): void {
+    if (payload.state === 'quarantined') {
+      console.error(
+        `[SceneContainer] Layout switch quarantined (generation ${payload.generation}). ` +
+          `${SWITCH_QUARANTINE_MESSAGE}. Cause:`,
+        payload.error
+      );
+      this.showQuarantineStatus();
+      return;
+    }
+    console.error(
+      `[SceneContainer] Layout switch error (generation ${payload.generation}, state=${payload.state}):`,
+      payload.error
+    );
+  }
+
+  private showQuarantineStatus(): void {
+    let bar = this.container.querySelector<HTMLElement>(
+      `[${SWITCH_STATUS_ATTR}]`
+    );
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.setAttribute(SWITCH_STATUS_ATTR, 'quarantined');
+      bar.setAttribute('role', 'status');
+      bar.setAttribute('aria-live', 'assertive');
+      bar.style.cssText = [
+        'position:absolute',
+        'left:0',
+        'right:0',
+        'top:0',
+        'z-index:10000',
+        'padding:8px 12px',
+        'background:var(--danger,#b91c1c)',
+        'color:#fff',
+        'font-size:14px',
+        'text-align:center'
+      ].join(';');
+      this.container.appendChild(bar);
+    }
+    bar.textContent = SWITCH_QUARANTINE_MESSAGE;
+  }
+
+  private hideSwitchStatus(): void {
+    this.container.querySelector(`[${SWITCH_STATUS_ATTR}]`)?.remove();
+  }
+
+  /**
    * 销毁容器
    */
   dispose(): void {
     this._disposed = true;
+    try {
+      this._switch?.dispose();
+    } catch (err) {
+      console.error(
+        '[SceneContainer] Error aborting in-flight switch in dispose:',
+        err
+      );
+    }
 
     // 卸载场景（有独立错误边界）
     try {

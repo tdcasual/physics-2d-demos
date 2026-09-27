@@ -1,5 +1,16 @@
 export type LayoutSwitchState = 'idle' | 'switching' | 'quarantined';
 
+/**
+ * Quarantine is terminal for the page unless `resetSwitchQuarantine()`
+ * succeeds (acked phase + unique stage-canvas custody + known recovery
+ * target). Otherwise the only exit is a full reload. Production surfaces
+ * this via `layout:switch-error` (status bar + console). See
+ * `docs/layout-switch-lifecycle.md`.
+ */
+export const SWITCH_STATUS_ATTR = 'data-layout-switch-status';
+
+export const SWITCH_QUARANTINE_MESSAGE = '布局切换已隔离，请刷新页面恢复';
+
 export function createAbortError(
   message = 'The operation was aborted.'
 ): Error {

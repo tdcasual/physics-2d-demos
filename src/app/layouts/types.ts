@@ -330,6 +330,13 @@ export interface SwitchOptions {
   animate?: boolean;
   transition?: LayoutTransition;
   savePreference?: boolean;
+  /**
+   * Scene replacement (`setScene` → `_doSetScene`) unmounts the outgoing
+   * scene before `switchLayout`. Skip `onLayoutWillChange` so the hook is
+   * not fired on the incoming scene. Same-scene layout switches leave this
+   * unset and still notify the live scene.
+   */
+  skipWillChange?: boolean;
 }
 
 export interface CreateContainerOptions {

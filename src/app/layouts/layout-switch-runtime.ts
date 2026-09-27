@@ -1,5 +1,13 @@
 /**
  * Serial layout-switch coordinator: one owner, abort/ack, rollback, quarantine.
+ *
+ * Quarantine = page-terminal isolation (reload, or `resetSwitchQuarantine`
+ * when ack + unique stage-canvas custody + recovery target). See
+ * `docs/layout-switch-lifecycle.md`.
+ *
+ * Approved deviation from v10 §3.2:74: abort after `incomingMounted` keeps
+ * the new tree and still commits `onLayoutDidChange` / `layout:change` /
+ * `savePreference`. Rolling back an acked enter is worse.
  */
 
 import { layoutRegistry } from './registry';
@@ -103,6 +111,32 @@ export class LayoutSwitchRuntime {
   }
 
   /**
+   * Abort the in-flight switch (watchdog, dispose, or explicit cancel).
+   * Does not enter quarantine; the current `switchLayout` catch/finally
+   * observes `isDisposed()` / the aborted signal and skips DOM writes.
+   */
+  abortSwitch(reason?: unknown): void {
+    if (this.timeoutId != null) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
+    }
+    if (this.abort && !this.abort.signal.aborted) {
+      this.abort.abort(reason ?? createAbortError());
+    }
+  }
+
+  /**
+   * Page/container teardown: abort the in-flight wait, drop the pending
+   * queue, and never enter quarantine from this path.
+   */
+  dispose(): void {
+    this.clearPendingQueue();
+    this.abortSwitch(createAbortError('Container disposed'));
+    this.abort = null;
+    this.phase = null;
+  }
+
+  /**
    * Leave quarantine only when the live phase has acked, canvas ownership
    * is unique, and a recovery target is known. Otherwise keep isolation.
    */
@@ -111,6 +145,7 @@ export class LayoutSwitchRuntime {
     if (this.hasUnackedEffectfulPhase()) return false;
     if (!this.hasUniqueCanvasOwner()) return false;
     if (!this.recoveryTarget()) return false;
+    this.clearPendingQueue();
     this.state = 'idle';
     this.lastError = null;
     this.abort = null;
@@ -132,7 +167,8 @@ export class LayoutSwitchRuntime {
       reason = 'manual',
       animate = true,
       transition = { type: 'fade', duration: 250, easing: 'ease-in-out' },
-      savePreference = false
+      savePreference = false,
+      skipWillChange = false
     } = options;
 
     this.rejectIfQuarantined();
@@ -171,9 +207,12 @@ export class LayoutSwitchRuntime {
     let incomingMounted = false;
 
     try {
-      await this.runWillChange(fromId, layoutId, abort.signal, generation);
-      if (this.getSwitchState() === 'quarantined') return;
-      if (stale() && !abort.signal.aborted) return;
+      if (!skipWillChange) {
+        await this.runWillChange(fromId, layoutId, abort.signal, generation);
+        if (this.getSwitchState() === 'quarantined') return;
+        if (stale() && !abort.signal.aborted) return;
+      }
+      if (this.host.isDisposed() || abort.signal.aborted) return;
 
       snapshot = this.capture(fromLayout, generation);
       this.snapshot = snapshot;
@@ -242,11 +281,23 @@ export class LayoutSwitchRuntime {
       if (isAbortError(err) && !teardownStarted) {
         return;
       }
+      if (!teardownStarted) {
+        this.host.emitSwitchError({
+          generation,
+          error: err,
+          state: 'idle'
+        });
+        return;
+      }
       if (isAbortError(err) && !incomingMounted) {
         await this.rollback(snapshot, err);
         return;
       }
       if (isAbortError(err) && incomingMounted) {
+        // Approved deviation from v10 §3.2:74: the incoming tree is already
+        // live; complete commit notifications instead of rolling back an
+        // acked enter. See docs/layout-switch-lifecycle.md.
+        this.commitLayoutChange(fromId, layoutId, reason, savePreference);
         return;
       }
       console.error('[SceneContainer] Layout switch failed:', err);
@@ -260,7 +311,9 @@ export class LayoutSwitchRuntime {
         this.timeoutId = null;
       }
       releaseResize();
-      if (this.hasUnackedEffectfulPhase()) {
+      if (this.host.isDisposed()) {
+        this.clearPendingQueue();
+      } else if (this.hasUnackedEffectfulPhase()) {
         if (this.getSwitchState() !== 'quarantined') {
           this.enterQuarantine(
             generation,
@@ -299,15 +352,63 @@ export class LayoutSwitchRuntime {
     return this.snapshot?.fromId ?? this.host.getCurrentLayout()?.id ?? null;
   }
 
+  /**
+   * Stage-canvas uniqueness is the coordinator's custody, not every
+   * `<canvas>` in the page (graph slots and instruments also paint).
+   *
+   * Coordinator holds a node and the tracked animation slots contain 0
+   * canvases → unique (`true`). That keeps ordinary mount-throw rollback
+   * off the quarantine path (`scene-container-registry.spec.ts`).
+   */
   private hasUniqueCanvasOwner(): boolean {
-    const node = this.canvasOwner?.node ?? this.snapshot?.canvas ?? null;
-    const live = this.host.container.querySelectorAll('canvas');
-    if (node) {
-      if (live.length > 1) return false;
-      if (live.length === 1) return live[0] === node;
-      return true;
-    }
+    const owned = this.canvasOwner?.node ?? this.snapshot?.canvas ?? null;
+    const live = this.trackedLiveStageCanvases();
+    if (owned && live.length === 0) return true;
     return live.length <= 1;
+  }
+
+  private trackedLiveStageCanvases(): HTMLCanvasElement[] {
+    const found = new Set<HTMLCanvasElement>();
+    const take = (root: HTMLElement | undefined): void => {
+      if (!root) return;
+      for (const canvas of root.querySelectorAll('canvas')) {
+        if (this.host.container.contains(canvas)) found.add(canvas);
+      }
+    };
+    take(this.host.getCurrentLayout()?.getSlots?.()?.animation);
+    take(this.incomingLayout?.getSlots?.()?.animation);
+    return [...found];
+  }
+
+  private clearPendingQueue(): void {
+    this.pendingSwitchId = null;
+    this.pendingScene = null;
+  }
+
+  private commitLayoutChange(
+    fromId: string | null,
+    layoutId: string,
+    reason: string,
+    savePreference: boolean
+  ): void {
+    this.host.onLayoutDidChange(layoutId);
+    this.host.emitLayoutChange({ from: fromId, to: layoutId, reason });
+    if (savePreference) {
+      this.host.savePreference(layoutId);
+    }
+  }
+
+  private haltError(signal: AbortSignal): Error {
+    if (signal.reason instanceof Error) return signal.reason;
+    return createAbortError(
+      this.host.isDisposed() ? 'Container disposed' : 'Layout switch aborted'
+    );
+  }
+
+  private assertNotHalted(signal: AbortSignal): void {
+    if (this.host.isDisposed() || signal.aborted) {
+      throw this.haltError(signal);
+    }
   }
 
   private finishIdle(generation: number): void {
@@ -320,6 +421,8 @@ export class LayoutSwitchRuntime {
   }
 
   private enterQuarantine(generation: number, error: unknown): void {
+    if (this.host.isDisposed()) return;
+    this.clearPendingQueue();
     this.state = 'quarantined';
     this.lastError = error;
     this.host.emitSwitchError({
@@ -404,7 +507,9 @@ export class LayoutSwitchRuntime {
       if (!isAbortError(err)) throw err;
       await this.waitAck(() => phase.acked);
       if (!phase.acked) {
-        this.enterQuarantine(generation, err);
+        if (!this.host.isDisposed()) {
+          this.enterQuarantine(generation, err);
+        }
         throw err;
       }
       throw err;
@@ -453,6 +558,10 @@ export class LayoutSwitchRuntime {
 
   private async abandonIncoming(layout: ILayout | null): Promise<void> {
     if (!layout) return;
+    if (this.host.isDisposed()) {
+      if (this.incomingLayout === layout) this.incomingLayout = null;
+      return;
+    }
     try {
       this.host.orchestrator.disposeAll();
     } catch {
@@ -472,8 +581,8 @@ export class LayoutSwitchRuntime {
     signal: AbortSignal,
     generation: number
   ): Promise<ILayout> {
-    if (this.host.isDisposed()) {
-      throw new Error('Container disposed before layout setup');
+    if (this.host.isDisposed() || signal.aborted) {
+      throw this.haltError(signal);
     }
     this.host.container.style.display = '';
     this.host.container.style.gridTemplateColumns = '';
@@ -499,55 +608,62 @@ export class LayoutSwitchRuntime {
       throw err;
     }
 
-    this.incomingLayout = created;
-    if (signal.aborted) {
-      await this.abandonIncoming(created);
-      throw signal.reason ?? createAbortError();
+    this.assertNotHalted(signal);
+    if (!created) {
+      throw createAbortError('Layout create returned no instance');
     }
+    const incoming = created;
+    this.incomingLayout = incoming;
 
     const phase = this.beginPhase('mount', true);
     try {
       this.projectOwners();
       await this.awaitEffectful(
         phase,
-        Promise.resolve(created.mount()).then(() => undefined),
+        Promise.resolve(incoming.mount()).then(async () => {
+          if (this.host.isDisposed() || signal.aborted) {
+            try {
+              await incoming.unmount();
+            } catch {
+              /* dispose already tearing down */
+            }
+            throw this.haltError(signal);
+          }
+        }),
         signal,
         generation
       );
-      if (signal.aborted) {
-        await this.abandonIncoming(created);
-        throw signal.reason ?? createAbortError();
-      }
+      this.assertNotHalted(signal);
       this.host.container.dataset.layoutId = layoutId;
-      this.host.setCurrentLayout(created);
-      created.setTheme(this.host.getTheme());
+      this.host.setCurrentLayout(incoming);
+      incoming.setTheme(this.host.getTheme());
       const savedLayoutState = restoreLayoutStateFromStorage(
         this.host.storageKey,
         layoutId
       );
       if (savedLayoutState) {
-        created.restoreLayoutState?.(savedLayoutState);
+        incoming.restoreLayoutState?.(savedLayoutState);
       }
       this.projectOwners();
 
       const scene = this.host.getCurrentScene();
       if (scene) {
-        this.host.mountScene(scene, created);
+        this.host.mountScene(scene, incoming);
       }
       this.canvasOwner = {
         generation,
         node:
-          created
+          incoming
             .getSlots?.()
             ?.animation?.querySelector<HTMLCanvasElement>('canvas') ??
           preservedCanvas
       };
-      return created;
+      return incoming;
     } catch (err) {
       if (this.state === 'quarantined' || this.hasUnackedEffectfulPhase()) {
         throw err;
       }
-      await this.abandonIncoming(created);
+      await this.abandonIncoming(incoming);
       if (!this.hasUniqueCanvasOwner()) {
         this.enterQuarantine(generation, err);
       }
@@ -585,6 +701,7 @@ export class LayoutSwitchRuntime {
         }
       }
     }
+    this.assertNotHalted(signal);
     if (this.hasUnackedEffectfulPhase()) {
       this.enterQuarantine(
         generation,
@@ -596,17 +713,14 @@ export class LayoutSwitchRuntime {
       throw signal.reason ?? createAbortError();
     }
 
-    this.host.onLayoutDidChange(layoutId);
-    this.host.emitLayoutChange({ from: fromId, to: layoutId, reason });
-    if (savePreference) {
-      this.host.savePreference(layoutId);
-    }
+    this.commitLayoutChange(fromId, layoutId, reason, savePreference);
   }
 
   private async rollback(
     snapshot: LayoutSwitchSnapshot | null,
     _error: unknown
   ): Promise<boolean> {
+    if (this.host.isDisposed()) return false;
     if (this.hasUnackedEffectfulPhase()) return false;
     if (this.incomingLayout) {
       await this.abandonIncoming(this.incomingLayout);
@@ -667,6 +781,13 @@ export class LayoutSwitchRuntime {
     }
   }
 
+  /**
+   * Drain order is a Wave B/C contract: pendingScene first, then
+   * pendingSwitchId. Wave C4 will pass `savePreference` from the queued
+   * request's reason instead of hardcoding `true` below; do not reorder
+   * these awaits without updating the test that locks both this order and
+   * the quarantine-clears-pending invariant.
+   */
   async drainPending(generation: number): Promise<void> {
     if (generation !== this.generation || this.host.isDisposed()) return;
     if (this.state === 'quarantined') return;
@@ -687,6 +808,8 @@ export class LayoutSwitchRuntime {
         await this.switchLayout(pendingSwitchId, {
           reason: 'manual',
           animate: true,
+          // C4: replace this hardcoded true with the queued request's
+          // savePreference / reason. Keep pendingScene-then-pendingSwitchId.
           savePreference: true
         });
       }
