@@ -3,7 +3,11 @@ import {
   projectileComponentsConstants as C,
   type ProjectileComponentsState
 } from './scene.sim';
-import { LAB_DATA_SLOT_ATTR } from '../../platform/stage-chrome';
+import {
+  GRAPH_SECTION_ATTR,
+  LAB_DATA_SLOT_ATTR,
+  STAGE_FRAME_ATTR
+} from '../../platform/stage-chrome';
 
 export type DataPanelHandle = {
   element: HTMLElement;
@@ -115,7 +119,8 @@ const LAB_INLINE_TITLE_SELECTOR =
 export function suppressLabFloatInlineReadoutTitle(
   root: ParentNode = document
 ): void {
-  const lab = root.querySelector('.lab-stage-layout .lab-float-data');
+  const slot = root.querySelector(`[${LAB_DATA_SLOT_ATTR}]`);
+  const lab = slot?.parentElement ?? slot;
   if (!(lab instanceof HTMLElement)) return;
   for (const node of lab.querySelectorAll(LAB_INLINE_TITLE_SELECTOR)) {
     node.remove();
@@ -163,7 +168,7 @@ export function createChromeScheduler(run: () => void): {
 }
 
 export function hideLabGraphFloat(): void {
-  const graph = document.querySelector('.lab-stage-layout .lab-float-graph');
+  const graph = document.querySelector(`[${GRAPH_SECTION_ATTR}]`);
   if (!(graph instanceof HTMLElement)) return;
   graph.hidden = true;
   graph.style.display = 'none';
@@ -171,9 +176,11 @@ export function hideLabGraphFloat(): void {
 }
 
 export function placeLabDataFloat(): void {
-  const layout = document.querySelector('.lab-stage-layout');
-  const panel = layout?.querySelector('.lab-float-data');
-  const canvas = layout?.querySelector('canvas');
+  const slot = document.querySelector(`[${LAB_DATA_SLOT_ATTR}]`);
+  const panel = slot?.parentElement;
+  const canvas = document.querySelector(`[${STAGE_FRAME_ATTR}] canvas`);
+  const layout =
+    canvas?.closest('.layout-master') ?? panel?.closest('.layout-master');
   if (
     !(layout instanceof HTMLElement) ||
     !(panel instanceof HTMLElement) ||

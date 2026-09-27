@@ -34,6 +34,13 @@ import type {
 import { filterPresentationReadout } from './scene-adapter/readout-filter';
 import { registerSceneKeyboardShortcuts } from './scene-adapter/keyboard-shortcuts';
 import { createScenePerformanceRuntime } from './scene-adapter/perf-monitor';
+import {
+  bindActiveSceneWriter,
+  createSceneParamWriter,
+  persistSceneParams,
+  readSceneParams,
+  resolveUrlSyncKeys
+} from './url-sync';
 
 export { filterPresentationReadout } from './scene-adapter/readout-filter';
 
@@ -63,6 +70,11 @@ export class SceneAdapter<
   private _mode: 'normal' | 'presentation' = 'normal';
   private _resolvedProfile: ResolvedDemoProfile | null = null;
   private _fullscreenHost: HTMLElement | null = null;
+  private _urlRestore: 'notStarted' | 'consuming' | 'complete' | 'failed' =
+    'notStarted';
+  private _urlSnapshot: Readonly<Record<string, number | string>> = {};
+  private _sceneWriter: import('./url-sync').SceneParamWriter | null = null;
+  private _unbindWriter: (() => void) | null = null;
 
   constructor(
     private options: ScenePageOptions<TScene>,
@@ -70,6 +82,31 @@ export class SceneAdapter<
   ) {
     this.id = options.meta.id;
     this.preferredLayout = options.preferredLayout ?? 'split-right';
+  }
+
+  takeUrlRestorePermit(): {
+    first: boolean;
+    snapshot: Readonly<Record<string, number | string>>;
+  } {
+    if (this._urlRestore === 'notStarted') {
+      this._urlRestore = 'consuming';
+      return { first: true, snapshot: this._urlSnapshot };
+    }
+    return { first: false, snapshot: {} };
+  }
+
+  completeUrlRestore(ok: boolean): void {
+    if (this._urlRestore !== 'consuming') return;
+    this._urlRestore = ok ? 'complete' : 'failed';
+  }
+
+  getSceneWriter(): import('./url-sync').SceneParamWriter | null {
+    return this._sceneWriter;
+  }
+
+  captureUrlSnapshot(snapshot: Record<string, number | string>): void {
+    if (this._urlRestore !== 'notStarted') return;
+    this._urlSnapshot = Object.freeze({ ...snapshot });
   }
 
   private _disposeControls(): void {
@@ -173,23 +210,35 @@ export class SceneAdapter<
         ?.getAttribute('data-theme') as Theme) ||
       (document.documentElement.getAttribute('data-theme') as Theme) ||
       'light';
-    const mode =
-      (container.closest('[data-mode]')?.getAttribute('data-mode') as
-        | 'normal'
-        | 'presentation') || 'normal';
+    const mode = this._mode;
 
     const demoHints =
       mode === 'presentation'
         ? (this.options.demoProfile ?? this.options.meta.demoProfile)
             ?.renderHints
         : undefined;
+    if (!this._sceneWriter) {
+      this._sceneWriter = createSceneParamWriter(
+        resolveUrlSyncKeys(this.options.meta)
+      );
+      this._unbindWriter = bindActiveSceneWriter(this._sceneWriter);
+      this.lifecycle.onDispose(() => {
+        this._sceneWriter?.close();
+        this._unbindWriter?.();
+        this._sceneWriter = null;
+        this._unbindWriter = null;
+      });
+      this.captureUrlSnapshot(readSceneParams(this.options.meta));
+    }
+
     this.scene = this.options.createScene({
       canvas,
       container,
       slots,
       theme,
       mode,
-      demoHints
+      demoHints,
+      sceneWriter: this._sceneWriter
     });
 
     this.scene.init();
@@ -286,22 +335,12 @@ export class SceneAdapter<
         }
       },
       switchLayout: () => {
-        document
-          .querySelector('.layout-switch-btn')
-          ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        this.options.onSwitchLayout?.();
       },
       exitPresentation: () => {
-        const layoutEl = document.querySelector('.layout-master');
-        if (layoutEl?.getAttribute('data-mode') !== 'presentation') return;
+        if (this._mode !== 'presentation') return;
         if (this.options.onSetMode) {
           this.options.onSetMode('normal');
-          return;
-        }
-        const btn = layoutEl.querySelector(
-          '.mode-toggle'
-        ) as HTMLButtonElement | null;
-        if (btn) {
-          btn.click();
           return;
         }
         this.setMode('normal');
@@ -432,13 +471,9 @@ export class SceneAdapter<
         ?.getAttribute('data-theme') as Theme) ||
       (document.documentElement.getAttribute('data-theme') as Theme) ||
       'light';
-    const mode =
-      (container.closest('[data-mode]')?.getAttribute('data-mode') as
-        | 'normal'
-        | 'presentation') || 'normal';
 
     this.scene?.setTheme(theme);
-    this.scene?.setMode(mode);
+    this.setMode(this._mode);
 
     if (this.scene?.reattach) {
       this.scene.reattach({ container, canvas, slots });
@@ -538,6 +573,8 @@ export class SceneAdapter<
     this._ro?.disconnect();
     this._ro = null;
     this._disposeControls();
+    this._sceneWriter?.flush();
+    persistSceneParams(this.id);
     this.scene?.dispose();
     this.lifecycle.dispose();
     this.scene = null;
@@ -574,8 +611,12 @@ export class SceneAdapter<
     this.perfMonitor?.stop();
     this.scene?.reset?.();
     this.scene?.render();
-    const c = this.controls as { refresh?(): void } | null;
-    c?.refresh?.();
+    const c = this.controls as {
+      refresh?(): void;
+      syncFromScene?(): void;
+    } | null;
+    if (c?.syncFromScene) c.syncFromScene();
+    else c?.refresh?.();
   }
 
   setTimeScale(scale: number): void {

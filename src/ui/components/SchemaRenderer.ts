@@ -37,8 +37,10 @@ interface SchemaRendererOptions {
 export interface SchemaRendererInstance {
   element: HTMLElement;
   setValue: (key: string, value: unknown) => void;
+  setValueSilently: (key: string, value: unknown) => void;
   getValue: <T>(key: string) => T | undefined;
   setActive: (key: string, id: string) => void;
+  setActiveSilently: (key: string, id: string) => void;
   setVisible: (key: string, visible: boolean) => void;
   dispose: () => void;
 }
@@ -50,6 +52,7 @@ export function renderSchema(
   mount.replaceChildren();
 
   const valueSetters = new Map<string, (value: unknown) => void>();
+  const silentValueSetters = new Map<string, (value: unknown) => void>();
   const valueGetters = new Map<string, () => unknown>();
   const activeSetters = new Map<string, (id: string) => void>();
   const visibleNodes = new Map<string, HTMLElement>();
@@ -75,14 +78,23 @@ export function renderSchema(
     }
 
     section.fields.forEach((field) => {
-      const { node, valueSetter, valueGetter, activeSetter, cleanup } =
-        renderField(field, onChange, onAction);
+      const {
+        node,
+        valueSetter,
+        silentValueSetter,
+        valueGetter,
+        activeSetter,
+        cleanup
+      } = renderField(field, onChange, onAction);
       if (node) {
         node.dataset.controlKey = field.key;
         card.body.appendChild(node);
         visibleNodes.set(field.key, node);
       }
       if (valueSetter) valueSetters.set(field.key, valueSetter);
+      if (silentValueSetter)
+        silentValueSetters.set(field.key, silentValueSetter);
+      else if (valueSetter) silentValueSetters.set(field.key, valueSetter);
       if (valueGetter) valueGetters.set(field.key, valueGetter);
       if (activeSetter) activeSetters.set(field.key, activeSetter);
       if (cleanup) cleanupFns.push(cleanup);
@@ -96,10 +108,16 @@ export function renderSchema(
     setValue(key: string, value: unknown) {
       valueSetters.get(key)?.(value);
     },
+    setValueSilently(key: string, value: unknown) {
+      silentValueSetters.get(key)?.(value);
+    },
     getValue<T>(key: string): T | undefined {
       return valueGetters.get(key)?.() as T | undefined;
     },
     setActive(key: string, id: string) {
+      activeSetters.get(key)?.(id);
+    },
+    setActiveSilently(key: string, id: string) {
       activeSetters.get(key)?.(id);
     },
     setVisible(key: string, visible: boolean) {
@@ -112,6 +130,7 @@ export function renderSchema(
       cleanupFns.forEach((fn) => fn());
       mount.replaceChildren();
       valueSetters.clear();
+      silentValueSetters.clear();
       valueGetters.clear();
       activeSetters.clear();
     }
@@ -121,6 +140,7 @@ export function renderSchema(
 interface RenderResult {
   node: HTMLElement | null;
   valueSetter?: (value: unknown) => void;
+  silentValueSetter?: (value: unknown) => void;
   valueGetter?: () => unknown;
   activeSetter?: (id: string) => void;
   cleanup?: () => void;
@@ -144,14 +164,27 @@ function renderField(
       });
       const input = row.querySelector('input');
       if (input) input.dataset.key = field.key;
+      const paintSlider = (value: unknown) => {
+        if (!input) return;
+        input.value = String(value);
+        const valueEl = row.querySelector('span:last-child');
+        if (valueEl) {
+          const n = parseFloat(String(value));
+          const formatted = Number.isFinite(n)
+            ? field.formatValue
+              ? field.formatValue(n)
+              : String(n)
+            : String(value);
+          valueEl.textContent = formatted + (field.unit || '');
+        }
+      };
       return {
         node: row,
         valueSetter: (value) => {
-          if (input) {
-            input.value = String(value);
-            input.dispatchEvent(new Event('input'));
-          }
+          paintSlider(value);
+          if (input) input.dispatchEvent(new Event('input'));
         },
+        silentValueSetter: paintSlider,
         cleanup: () => {
           tryDispose(row);
         }
@@ -179,6 +212,9 @@ function renderField(
             input.dispatchEvent(new Event('input'));
           }
         },
+        silentValueSetter: (value) => {
+          if (input) input.value = String(value);
+        },
         valueGetter: () => (input ? parseFloat(input.value) : field.value),
         cleanup: () => {
           tryDispose(row);
@@ -201,6 +237,9 @@ function renderField(
             input.dispatchEvent(new Event('input'));
           }
         },
+        silentValueSetter: (value) => {
+          if (input) input.value = String(value);
+        },
         valueGetter: () => (input ? input.value : field.value),
         cleanup: () => {
           tryDispose(row);
@@ -214,8 +253,19 @@ function renderField(
         value: field.value,
         onChange: (val) => onChange(field.key, val)
       });
+      const select = row.querySelector('select');
       return {
         node: row,
+        valueSetter: (value) => {
+          if (select) {
+            select.value = String(value);
+            select.dispatchEvent(new Event('change'));
+          }
+        },
+        silentValueSetter: (value) => {
+          if (select) select.value = String(value);
+        },
+        valueGetter: () => select?.value ?? field.value,
         cleanup: () => {
           tryDispose(row);
         }

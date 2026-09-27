@@ -93,7 +93,9 @@ bootScenePage({
     const plotBar = document.createElement('div');
     plotBar.className = 'lab-plot-toolbar';
     // 按图选择：x–t / v–t 可勾选（可多选），描点/拟合只作用于选中图。
-    const selected = new Set<'x' | 'v'>(['x', 'v']);
+    const selected = new Set<'x' | 'v'>(
+      tape.getSelectedGraphs?.() ?? ['x', 'v']
+    );
     const chipDefs: Array<{ kind: 'x' | 'v'; label: string }> = [
       { kind: 'x', label: 'x–t' },
       { kind: 'v', label: 'v–t' }
@@ -103,7 +105,7 @@ bootScenePage({
       chip.type = 'button';
       chip.className = 'lab-plot-chip';
       chip.textContent = label;
-      chip.setAttribute('aria-pressed', 'true');
+      chip.setAttribute('aria-pressed', String(selected.has(kind)));
       chip.addEventListener('click', () => {
         if (selected.has(kind)) selected.delete(kind);
         else selected.add(kind);

@@ -1,6 +1,6 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { writeSceneParams } from '../../app/url-sync';
+import { writeOwnedSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { ampereBalanceControlsSchema } from './controls-schema';
 import { ampereBalanceMeta } from './scene.meta';
@@ -49,19 +49,25 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, scheduleRender, writeParam }) => {
+  createControls: ({
+    mount,
+    scene,
+    scheduleRender,
+    writeParam,
+    sceneWriter
+  }) => {
     const render = scheduleRender ?? (() => scene.render());
     const syncSliders = () => {
       const params = scene.getParams();
-      renderer.setValue('inclineAngle', params.inclineAngle);
-      renderer.setValue('magneticField', params.magneticField);
-      renderer.setValue('current', params.current);
-      renderer.setValue('mass', params.mass);
-      renderer.setActive('fieldDirection', params.fieldDirection);
-      renderer.setActive('currentDirection', params.currentDirection);
+      renderer.setValueSilently('inclineAngle', params.inclineAngle);
+      renderer.setValueSilently('magneticField', params.magneticField);
+      renderer.setValueSilently('current', params.current);
+      renderer.setValueSilently('mass', params.mass);
+      renderer.setActiveSilently('fieldDirection', params.fieldDirection);
+      renderer.setActiveSilently('currentDirection', params.currentDirection);
     };
     const writeAll = (params: AmpereBalanceParams) => {
-      writeSceneParams(ampereBalanceUrlPayload(params));
+      writeOwnedSceneParams(sceneWriter, ampereBalanceUrlPayload(params));
     };
     const renderer = renderSchema({
       mount,
@@ -118,7 +124,7 @@ bootScenePage({
           renderer.setValue('mass', C.defaultMass);
           renderer.setActive('fieldDirection', 'down');
           renderer.setActive('currentDirection', 'out');
-          writeSceneParams(ampereBalanceUrlReset());
+          writeOwnedSceneParams(sceneWriter, ampereBalanceUrlReset());
         }
         render();
       }
@@ -126,7 +132,11 @@ bootScenePage({
     return {
       setValue: (key: string, value: number | string | boolean) =>
         renderer.setValue(key, value),
+      setValueSilently: (key: string, value: number | string | boolean) =>
+        renderer.setValueSilently(key, value),
       setActive: (key: string, value: string) => renderer.setActive(key, value),
+      setActiveSilently: (key: string, value: string) =>
+        renderer.setActiveSilently(key, value),
       refresh: () => syncSliders(),
       dispose: () => renderer.dispose()
     };

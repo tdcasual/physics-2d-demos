@@ -21,6 +21,7 @@ import {
 import { buildSplitLayoutDOM } from '../../_shared/split-layout-base';
 import { enterLayout, exitLayout } from '../../_shared/layout-transition';
 import { buildBaseCapabilities } from '../../capabilities/base-declarations';
+import { layoutReuseKey } from '../../layout-reuse-key';
 import { READOUT_OVERLAY_ATTR } from '../../../../platform/stage-readout';
 
 export interface SplitRightConfig extends LayoutConfig {
@@ -61,8 +62,16 @@ export class SplitRightLayout implements ILayout {
     this.cfg = config;
     this.leftRatio = config.defaultLeftRatio ?? 0.38;
     this._container = container;
+    this.capabilities = SplitRightLayout.capabilityDecls(config, (r) => {
+      this.leftRatio = r;
+    });
+  }
 
-    this.capabilities = buildBaseCapabilities(config, {
+  private static capabilityDecls(
+    config: SplitRightConfig,
+    onResize?: (ratio: number) => void
+  ): CapabilityDeclaration[] {
+    return buildBaseCapabilities(config, {
       transportConfig: { mountSlot: 'animation' as const },
       afterDataWorkspace: [
         {
@@ -84,9 +93,7 @@ export class SplitRightLayout implements ILayout {
             direction: 'vertical',
             targetSelector: '.teaching-left-panel',
             selector: '.teaching-panel-resizer',
-            onResize: (r: number) => {
-              this.leftRatio = r;
-            }
+            onResize: onResize ?? (() => undefined)
           }
         }
       ]
@@ -180,5 +187,13 @@ export class SplitRightLayout implements ILayout {
    */
   _updateConfig(config?: SplitRightConfig): void {
     if (config) this.cfg = { ...this.cfg, ...config };
+  }
+
+  getReuseKey(config?: LayoutConfig): string {
+    const cfg = (config ?? this.cfg) as SplitRightConfig;
+    return layoutReuseKey(this.id, {
+      ...cfg,
+      capabilities: SplitRightLayout.capabilityDecls(cfg)
+    });
   }
 }

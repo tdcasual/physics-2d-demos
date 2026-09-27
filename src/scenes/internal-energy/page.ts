@@ -1,6 +1,6 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { readSceneParams, writeSceneParams } from '../../app/url-sync';
+import { readSceneParams, writeOwnedSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { internalEnergyControlsSchema } from './controls-schema';
 import { createInternalEnergyScene } from './scene.entry';
@@ -170,7 +170,7 @@ bootScenePage({
     graphMaxHeight: 360,
     graphColumns: 1
   },
-  createScene: ({ canvas, theme, mode, demoHints }) => {
+  createScene: ({ canvas, theme, mode, demoHints, sceneWriter }) => {
     if (!canvas) throw new Error('internal-energy requires a canvas');
     const scene = createInternalEnergyScene({
       canvas,
@@ -184,7 +184,8 @@ bootScenePage({
     const originalStartAll = scene.startAll.bind(scene);
     const originalPauseAll = scene.pauseAll.bind(scene);
     const syncUrl = (): void => {
-      writeSceneParams(
+      writeOwnedSceneParams(
+        sceneWriter,
         restoredUrlParams(
           scene.getParams(),
           scene.getTransportState().isPlaying

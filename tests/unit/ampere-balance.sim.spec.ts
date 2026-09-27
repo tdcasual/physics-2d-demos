@@ -260,7 +260,7 @@ describe('ampere-balance simulation', () => {
       expect(url.searchParams.get('audit')).toBe('keep');
     });
 
-    it('drops earlier keys if writeSceneParams is called six times', () => {
+    it('merges keys if writeSceneParams is called six times', () => {
       const payload = ampereBalanceUrlPayload({
         ...defaults,
         ...ampereBalancePresets.balance
@@ -271,8 +271,8 @@ describe('ampere-balance simulation', () => {
       vi.advanceTimersByTime(150);
       const url = new URL(window.location.href);
       expect(url.searchParams.get('currentDirection')).toBe('0');
-      expect(url.searchParams.get('fieldDirection')).toBeNull();
-      expect(url.searchParams.get('inclineAngle')).toBeNull();
+      expect(url.searchParams.get('fieldDirection')).toBe('0');
+      expect(url.searchParams.get('inclineAngle')).toBe('30');
     });
 
     it('clears the six keys on reset while keeping unrelated query keys', () => {

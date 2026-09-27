@@ -25,6 +25,8 @@ import {
   shouldShowHeat,
   shouldShowRatio
 } from '../../src/scenes/internal-energy/scene.sim';
+import { SidebarStateOwner } from '../../src/app/layouts/sidebar-state';
+import { WorkspaceUiState } from '../../src/app/layouts/workspace-ui-state';
 
 describe('internal-energy chrome', () => {
   afterEach(() => {
@@ -237,7 +239,9 @@ describe('internal-energy chrome', () => {
       getCurrentLayoutId: () => 'split-right-graph-bottom',
       getAvailableLayouts: () => [],
       on: () => () => undefined,
-      requestStageRepaint: () => undefined
+      requestStageRepaint: () => undefined,
+      sidebar: new SidebarStateOwner(),
+      workspaceUi: new WorkspaceUiState()
     };
     const instance = createDemoProfile().mount(
       {

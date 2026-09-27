@@ -16,6 +16,7 @@ import type {
 } from '../../types';
 import { enterLayout, exitLayout } from '../../_shared/layout-transition';
 import { buildBaseCapabilities } from '../../capabilities/base-declarations';
+import { layoutReuseKey } from '../../layout-reuse-key';
 import { buildStageToolbar } from '../../../../ui/stage-toolbar';
 import { STAGE_FRAME_ATTR } from '../../../../platform/stage-chrome';
 import { READOUT_OVERLAY_ATTR } from '../../../../platform/stage-readout';
@@ -71,7 +72,13 @@ export class MobileStackLayout implements ILayout {
     this.cfg = config;
     this._container = container;
 
-    this.capabilities = buildBaseCapabilities(config, {
+    this.capabilities = MobileStackLayout.capabilityDecls(config);
+  }
+
+  private static capabilityDecls(
+    config: MobileStackConfig
+  ): CapabilityDeclaration[] {
+    return buildBaseCapabilities(config, {
       afterDataWorkspace: [
         {
           id: 'readout-panel',
@@ -99,7 +106,6 @@ export class MobileStackLayout implements ILayout {
     container.classList.add('mobile-stack-layout', 'layout-master');
     container.dataset.testid = 'mobile-stack-layout';
     container.dataset.theme = this.currentTheme;
-    container.dataset.mode = 'normal';
     // mobile 读数在舞台下方的 tab 面板，不遮挡舞台（场景留白契约为 false）
     container.setAttribute(READOUT_OVERLAY_ATTR, 'false');
     container.style.height = '100dvh';
@@ -401,5 +407,13 @@ export class MobileStackLayout implements ILayout {
    */
   _updateConfig(config?: MobileStackConfig): void {
     if (config) this.cfg = { ...this.cfg, ...config };
+  }
+
+  getReuseKey(config?: LayoutConfig): string {
+    const cfg = (config ?? this.cfg) as MobileStackConfig;
+    return layoutReuseKey(this.id, {
+      ...cfg,
+      capabilities: MobileStackLayout.capabilityDecls(cfg)
+    });
   }
 }

@@ -271,6 +271,9 @@ export function createTickerTapeScene(
       base.renderAndEmit();
       base.notify();
     },
+    getSelectedGraphs(): Array<'x' | 'v'> {
+      return view.getSelectedGraphs();
+    },
     setTimeScale(scale: number): void {
       timeScale = clampTimeScale(scale);
       base.notify();

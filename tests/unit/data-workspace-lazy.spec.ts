@@ -10,6 +10,8 @@ import type {
   LayoutSlots
 } from '../../src/app/layouts/types';
 import type { DataWorkspaceUpdateData } from '../../src/app/layouts/capabilities/data-workspace-declarations';
+import { SidebarStateOwner } from '../../src/app/layouts/sidebar-state';
+import { WorkspaceUiState } from '../../src/app/layouts/workspace-ui-state';
 
 function createSlots(): LayoutSlots {
   return {
@@ -31,7 +33,9 @@ function createCtx(): CapabilityContext {
     getCurrentLayoutId: () => 'split-right',
     getAvailableLayouts: () => [],
     on: () => () => {},
-    requestStageRepaint() {}
+    requestStageRepaint() {},
+    sidebar: new SidebarStateOwner(),
+    workspaceUi: new WorkspaceUiState()
   };
 }
 

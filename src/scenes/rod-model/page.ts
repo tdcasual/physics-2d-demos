@@ -1,6 +1,6 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { readSceneParams, writeSceneParams } from '../../app/url-sync';
+import { readSceneParams, writeOwnedSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { rodModelControlsSchema } from './controls-schema';
 import { asRodModel, createRodModelScene } from './scene.entry';
@@ -27,7 +27,7 @@ bootScenePage({
     graphMaxHeight: 340,
     graphColumns: 1
   },
-  createScene: ({ canvas, theme, mode, demoHints }) => {
+  createScene: ({ canvas, theme, mode, demoHints, sceneWriter }) => {
     if (!canvas) throw new Error('rod-model requires a canvas');
     const scene = createRodModelScene({ canvas, theme, mode, demoHints });
     const scheduler = createRenderScheduler(() => scene.render());
@@ -36,7 +36,7 @@ bootScenePage({
     const originalStartAll = scene.startAll.bind(scene);
     const originalPauseAll = scene.pauseAll.bind(scene);
     const syncUrl = (): void => {
-      writeSceneParams(restoredUrlParams(scene.getParams()));
+      writeOwnedSceneParams(sceneWriter, restoredUrlParams(scene.getParams()));
     };
     return {
       ...scene,

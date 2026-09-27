@@ -76,26 +76,32 @@ bootScenePage<ReturnType<typeof createDoubleSlitScene>>({
 
     function syncRendererToScene(): void {
       const state = dsScene.getState();
-      currentRenderer?.setValue('step', state.params.step);
-      currentRenderer?.setActive('step', String(state.params.step));
-      currentRenderer?.setValue('lambda', state.params.lambda);
-      currentRenderer?.setValue('slitDistance', state.params.slitDistance);
-      currentRenderer?.setValue('L', (state.params.L ?? 0.7) * 100);
+      currentRenderer?.setValueSilently('step', state.params.step);
+      currentRenderer?.setActiveSilently('step', String(state.params.step));
+      currentRenderer?.setValueSilently('lambda', state.params.lambda);
+      currentRenderer?.setValueSilently(
+        'slitDistance',
+        state.params.slitDistance
+      );
+      currentRenderer?.setValueSilently('L', (state.params.L ?? 0.7) * 100);
       // 根据光源模式控制 section 可见性
       const isMono = state.params.lightMode === 'mono';
       currentRenderer?.setVisible('滤光片', !isMono);
       currentRenderer?.setVisible('光源', isMono);
       if (state.params.step === 6) {
-        currentRenderer?.setActive(
+        currentRenderer?.setActiveSilently(
           'activeInstrument',
           state.params.activeInstrument
         );
-        currentRenderer?.setActive(
+        currentRenderer?.setActiveSilently(
           'viewMode',
           state.params.viewMode ?? 'fringe'
         );
-        currentRenderer?.setValue('stripeOffset', state.params.stripeOffset);
-        currentRenderer?.setValue(
+        currentRenderer?.setValueSilently(
+          'stripeOffset',
+          state.params.stripeOffset
+        );
+        currentRenderer?.setValueSilently(
           'crosshairAngle',
           state.params.crosshairAngle
         );
@@ -206,8 +212,14 @@ bootScenePage<ReturnType<typeof createDoubleSlitScene>>({
       setValue(key: string, value: number | string) {
         currentRenderer?.setValue(key, value);
       },
+      setValueSilently(key: string, value: number | string) {
+        currentRenderer?.setValueSilently(key, value);
+      },
       setActive(key: string, value: string) {
         currentRenderer?.setActive(key, value);
+      },
+      setActiveSilently(key: string, value: string) {
+        currentRenderer?.setActiveSilently(key, value);
       },
       syncFromScene: syncRendererToScene,
       dispose() {

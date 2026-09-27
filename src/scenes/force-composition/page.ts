@@ -1,6 +1,6 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { writeSceneParams } from '../../app/url-sync';
+import { writeOwnedSceneParams } from '../../app/url-sync';
 import { applyTouchInteractionMode } from '../../platform/input/touch';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { createForceCompositionScene } from './scene.entry';
@@ -99,7 +99,7 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, scheduleRender }) => {
+  createControls: ({ mount, scene, scheduleRender, sceneWriter }) => {
     const render = scheduleRender ?? (() => scene.render());
     let applying = false;
     let lastUi = scene.getParams();
@@ -120,7 +120,7 @@ bootScenePage({
         urlTimer = 0;
       }
       if (!pendingUrl) return;
-      writeSceneParams(pendingUrl);
+      writeOwnedSceneParams(sceneWriter, pendingUrl);
       pendingUrl = null;
     };
 

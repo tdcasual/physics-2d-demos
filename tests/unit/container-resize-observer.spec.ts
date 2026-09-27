@@ -175,4 +175,59 @@ describe('ContainerResizeObserver', () => {
 
     expect(switchLayout).toHaveBeenCalledWith('mobile');
   });
+
+  it('marks dirty while switching and drain() re-resolves the latest viewport', () => {
+    vi.useFakeTimers();
+    const OriginalRO = window.ResizeObserver;
+    type FakeEntry = { contentRect: { width: number; height: number } };
+    const created: Array<{
+      fire: (width: number, height: number) => void;
+    }> = [];
+    window.ResizeObserver = class {
+      private cb: ResizeObserverCallback;
+      constructor(cb: ResizeObserverCallback) {
+        this.cb = cb;
+        created.push({
+          fire: (width: number, height: number) => {
+            this.cb(
+              [
+                { contentRect: { width, height } }
+              ] as unknown as FakeEntry[] as ResizeObserverEntry[],
+              this as unknown as ResizeObserver
+            );
+          }
+        });
+      }
+      observe(): void {}
+      disconnect(): void {}
+      unobserve(): void {}
+    } as unknown as typeof ResizeObserver;
+
+    try {
+      const switchLayout = vi.fn(async () => {});
+      let switching = true;
+      let resolved = 'desktop';
+      const observer = createObserver({
+        getCurrentScene: () =>
+          ({ id: 'test' }) as import('../../src/app/layouts/types').Scene,
+        getCurrentLayoutId: () => 'desktop',
+        resolveLayout: () => resolved,
+        getSwitching: () => switching,
+        switchLayout
+      });
+      observer.start();
+      created[0]?.fire(400, 800);
+      vi.advanceTimersByTime(300);
+      expect(switchLayout).not.toHaveBeenCalled();
+
+      switching = false;
+      resolved = 'mobile';
+      observer.drain();
+      expect(switchLayout).toHaveBeenCalledWith('mobile');
+      observer.stop();
+    } finally {
+      window.ResizeObserver = OriginalRO;
+      vi.useRealTimers();
+    }
+  });
 });

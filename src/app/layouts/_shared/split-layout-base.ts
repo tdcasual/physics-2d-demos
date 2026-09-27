@@ -96,7 +96,6 @@ export function buildSplitLayoutDOM(
   container.classList.add(...containerClass.split(/\s+/));
   container.dataset.testid = testId;
   container.dataset.theme = currentTheme;
-  container.dataset.mode = 'normal';
   // split 系读数是遮挡舞台的浮层（场景留白契约，见 platform/stage-readout）
   container.setAttribute(READOUT_OVERLAY_ATTR, 'true');
   // Set individual properties to avoid wiping container-level inline styles

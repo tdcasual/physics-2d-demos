@@ -10,6 +10,9 @@ import {
   resolveDemoProfile,
   type DemoRenderHints
 } from '../../platform/demo-profile';
+import type { ModeOwner } from './mode-owner';
+import type { SidebarStateOwner } from './sidebar-state';
+import type { WorkspaceUiState } from './workspace-ui-state';
 
 type Mode = 'normal' | 'presentation';
 type DemoProfileUpdate = CapabilityEvents['modechange'];
@@ -31,6 +34,9 @@ export interface BuildCapabilityContextOptions {
     handler: (payload: SceneContainerEvents[K]) => void
   ): () => void;
   updateDemoProfileInstances(payload: DemoProfileUpdate): void;
+  modeOwner: ModeOwner;
+  sidebar: SidebarStateOwner;
+  workspaceUi: WorkspaceUiState;
 }
 
 export function buildCapabilityContext(
@@ -44,44 +50,19 @@ export function buildCapabilityContext(
     getCurrentLayoutId,
     switchLayout,
     getAvailableLayouts,
-    emit,
     on,
-    updateDemoProfileInstances
+    modeOwner,
+    sidebar,
+    workspaceUi
   } = options;
 
   return {
     container,
     getTheme,
     setTheme,
-    getMode: () =>
-      container.getAttribute('data-mode') === 'presentation'
-        ? 'presentation'
-        : 'normal',
+    getMode: () => modeOwner.getMode(),
     setMode: (mode: Mode) => {
-      container.setAttribute('data-mode', mode);
-      const raw =
-        mode === 'presentation' ? scene?.getDemoProfile?.() || null : null;
-      const profile =
-        mode === 'presentation' && raw && scene?.id
-          ? resolveDemoProfile(raw, { sceneId: scene.id })
-          : null;
-      const payload = { mode, profile };
-      emit('layout:mode', payload);
-      container.dispatchEvent(
-        new CustomEvent('layout:modechange', {
-          detail: payload,
-          bubbles: true
-        })
-      );
-      updateDemoProfileInstances(payload);
-      if (mode === 'presentation' && profile) {
-        const withHints = scene as unknown as {
-          setMode?(m: Mode, hints?: DemoRenderHints): void;
-        };
-        withHints?.setMode?.(mode, profile.renderHints);
-      } else {
-        scene?.setMode?.(mode);
-      }
+      modeOwner.setMode(mode, 'toggle');
     },
     switchLayout,
     getCurrentLayoutId,
@@ -97,8 +78,48 @@ export function buildCapabilityContext(
       }
       return () => {};
     },
-    requestStageRepaint: () => scene?.requestStageRepaint()
+    requestStageRepaint: () => scene?.requestStageRepaint(),
+    sidebar,
+    workspaceUi
   };
+}
+
+/**
+ * Legacy helper used by tests that still drive mode through the context
+ * without a ModeOwner. Production wiring always goes through ModeOwner.
+ */
+export function applyModeProjection(
+  container: HTMLElement,
+  scene: Scene | null,
+  mode: Mode,
+  emit: BuildCapabilityContextOptions['emit'],
+  updateDemoProfileInstances: (payload: DemoProfileUpdate) => void
+): DemoProfileUpdate {
+  container.setAttribute('data-mode', mode);
+  const raw =
+    mode === 'presentation' ? scene?.getDemoProfile?.() || null : null;
+  const profile =
+    mode === 'presentation' && raw && scene?.id
+      ? resolveDemoProfile(raw, { sceneId: scene.id })
+      : null;
+  const payload = { mode, profile };
+  emit('layout:mode', payload);
+  container.dispatchEvent(
+    new CustomEvent('layout:modechange', {
+      detail: payload,
+      bubbles: true
+    })
+  );
+  updateDemoProfileInstances(payload);
+  if (mode === 'presentation' && profile) {
+    const withHints = scene as unknown as {
+      setMode?(m: Mode, hints?: DemoRenderHints): void;
+    };
+    withHints?.setMode?.(mode, profile.renderHints);
+  } else {
+    scene?.setMode?.(mode);
+  }
+  return payload;
 }
 
 export function updateCapabilityInstances(

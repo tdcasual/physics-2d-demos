@@ -9,12 +9,11 @@ import '../styles/index.css';
 import { createSceneContainer } from './layouts/container';
 import { registerAllLayouts } from './layouts/auto-register';
 import { layoutRegistry } from './layouts/registry';
+import { satisfiesConstraints } from './layouts/layout-constraints';
 import { SceneAdapter } from './scene-adapter';
 import {
   restoreSceneParams,
   persistSceneParams,
-  readSceneParams,
-  writeSceneParams,
   resolveUrlSyncKeys,
   applySceneUrlParams
 } from './url-sync';
@@ -148,32 +147,78 @@ export function bootScenePage<TScene extends SceneInstance>(
             const scheduler = createRenderScheduler(() => {
               controlOpts.scene.render();
             });
-            const urlParams = readSceneParams(options.meta);
+            const permit = adapter.takeUrlRestorePermit();
+            const urlParams = permit.first ? { ...permit.snapshot } : {};
+            const writer = adapter.getSceneWriter();
             const controls = userCreateControls({
               ...controlOpts,
               scheduleRender: scheduler.schedule,
               urlParams,
               writeParam: (key, value) => {
                 if (writableKeys.has(key)) {
-                  writeSceneParams({ [key]: value });
+                  writer?.write({ [key]: value });
                 }
-              }
-            });
-            applySceneUrlParams(
-              options.meta,
-              {
-                scene: controlOpts.scene,
-                controls,
-                mount: controlOpts.mount,
-                scheduleRender: scheduler.schedule
               },
-              options.paramSync,
-              urlParams
-            );
+              sceneWriter: writer ?? undefined
+            });
+            const handle = controls as {
+              setValueSilently?: (
+                key: string,
+                value: number | string | boolean
+              ) => void;
+              setActiveSilently?: (key: string, value: string) => void;
+              syncFromScene?: () => void;
+              refresh?: () => void;
+            };
+            if (permit.first) {
+              try {
+                applySceneUrlParams(
+                  options.meta,
+                  {
+                    scene: controlOpts.scene,
+                    controls,
+                    mount: controlOpts.mount,
+                    scheduleRender: scheduler.schedule
+                  },
+                  options.paramSync,
+                  urlParams
+                );
+                adapter.completeUrlRestore(true);
+              } catch (err) {
+                adapter.completeUrlRestore(false);
+                throw err;
+              }
+            } else if (handle.syncFromScene) {
+              handle.syncFromScene();
+            } else {
+              handle.refresh?.();
+            }
             return attachSchedulerDispose(controls, scheduler);
           }
         : undefined,
-      onToggleTheme: (next) => container.setTheme(next)
+      onToggleTheme: (next) => container.setTheme(next),
+      onSetMode: (mode) => container.setMode(mode),
+      onSwitchLayout: () => {
+        const current = container.currentLayout?.id;
+        const w = container.container.clientWidth || window.innerWidth;
+        const h = container.container.clientHeight || window.innerHeight;
+        const orientation = w >= h ? 'landscape' : 'portrait';
+        const ids = layoutRegistry
+          .getAllMetadata()
+          .filter((m) =>
+            satisfiesConstraints(m, { width: w, height: h }, orientation)
+          )
+          .map((m) => m.id);
+        if (ids.length === 0) return;
+        const idx = current ? ids.indexOf(current) : -1;
+        const next = ids[(idx + 1) % ids.length];
+        if (next && next !== current) {
+          void container.switchLayout(next, {
+            animate: true,
+            savePreference: true
+          });
+        }
+      }
     },
     (text) => container.currentLayout?.updateStatus?.(text)
   );

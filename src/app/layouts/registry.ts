@@ -11,10 +11,13 @@ import type {
   ILayout,
   ILayoutConstructor,
   LayoutConfig,
+  LayoutCreateOptions,
   LayoutLoader,
   LayoutTestProfile,
   SlotName
 } from './types';
+import { createAbortError, raceAbort } from './switch-errors';
+import { layoutReuseKey } from './layout-reuse-key';
 
 /** 布局元数据 */
 export interface LayoutMetadata {
@@ -145,6 +148,12 @@ type LayoutEntry =
   | { kind: 'eager'; ctor: ILayoutConstructor }
   | { kind: 'lazy'; loader: LayoutLoader };
 
+type PooledLayoutEntry = {
+  instance: ILayout;
+  registrationToken: number;
+  reuseKey: string;
+};
+
 /** 布局注册表 */
 class LayoutRegistry {
   private layouts = new Map<string, LayoutEntry>();
@@ -154,9 +163,13 @@ class LayoutRegistry {
    * 绑定他容器 DOM 的实例。键 = container → layoutId。WeakMap 使容器
    * 被 GC 时其池条目（连同布局 DOM 引用）一并回收。
    */
-  private pool = new WeakMap<HTMLElement, Map<string, ILayout>>();
+  private pool = new WeakMap<HTMLElement, Map<string, PooledLayoutEntry>>();
   /** 同一 id 的并发加载共享同一个 import promise */
   private loadPromises = new Map<string, Promise<ILayoutConstructor>>();
+  /** Per-id registration generation; unregister/re-register invalidates pooled entries. */
+  private registrationTokens = new Map<string, number>();
+  /** Create-time structural key, keyed by instance so GC still follows the pool WeakMap. */
+  private instanceReuseKeys = new WeakMap<ILayout, string>();
 
   /**
    * 注册布局母版（eager 构造器）
@@ -220,8 +233,19 @@ class LayoutRegistry {
     this.layouts.set(id, entry);
     this.metadata.set(id, { id, ...metadata });
     this.loadPromises.delete(id);
+    this.registrationTokens.set(id, (this.registrationTokens.get(id) ?? 0) + 1);
+  }
 
-    // layout registered
+  private currentToken(id: string): number {
+    return this.registrationTokens.get(id) ?? 0;
+  }
+
+  private disposePooled(entry: PooledLayoutEntry): void {
+    try {
+      void entry.instance.unmount();
+    } catch {
+      /* best-effort */
+    }
   }
 
   /** 解析布局构造器；惰性条目只触发一次加载并共享 promise */
@@ -261,16 +285,16 @@ class LayoutRegistry {
 
   /**
    * 创建布局实例（优先从本容器的实例池复用；惰性布局首次创建时动态加载）
-   * @param id - 布局ID
-   * @param container - 容器元素
-   * @param config - 布局配置（池复用时经 _updateConfig 浅合并——见各布局
-   *   _updateConfig 的「单页单场景」假设说明）
-   * @returns 布局实例
+   *
+   * Abort: `options.signal` 使调用方立即停止等待惰性 import。迟到
+   * continuation 在 `new LayoutClass` 与任何 pool 写入前核对 signal /
+   * 当前 registration token，不得构造或发布实例。
    */
   async create(
     id: string,
     container: HTMLElement,
-    config?: LayoutConfig
+    config?: LayoutConfig,
+    options?: LayoutCreateOptions
   ): Promise<ILayout> {
     if (!id || typeof id !== 'string') {
       throw new Error('Layout id must be a non-empty string');
@@ -279,30 +303,76 @@ class LayoutRegistry {
       throw new Error('Layout container must be a valid HTMLElement');
     }
 
-    // Check instance pool first
-    const cached = this.pool.get(container)?.get(id);
+    const signal = options?.signal;
+    const throwIfAborted = (): void => {
+      if (signal?.aborted) {
+        throw signal.reason ?? createAbortError();
+      }
+    };
+    throwIfAborted();
+
+    const inputKey = layoutReuseKey(id, config);
+    const tokenAtStart = this.currentToken(id);
+    const perContainer = this.pool.get(container);
+    const cached = perContainer?.get(id);
     if (cached) {
-      this.pool.get(container)?.delete(id);
-      cached._updateConfig?.(config);
-      return cached;
+      perContainer?.delete(id);
+      const tokenOk = cached.registrationToken === tokenAtStart;
+      const requestedKey = cached.instance.getReuseKey?.(config) ?? inputKey;
+      const keyOk = cached.reuseKey === requestedKey;
+      if (tokenOk && keyOk) {
+        cached.instance._updateConfig?.(config);
+        this.instanceReuseKeys.set(cached.instance, cached.reuseKey);
+        return cached.instance;
+      }
+      this.disposePooled(cached);
     }
 
-    const LayoutClass = await this.resolveConstructor(id);
+    const LayoutClass = signal
+      ? await raceAbort(this.resolveConstructor(id), signal)
+      : await this.resolveConstructor(id);
+    throwIfAborted();
+    if (this.currentToken(id) !== tokenAtStart) {
+      throw createAbortError('Layout registration superseded');
+    }
 
-    return new LayoutClass(container, config);
+    const instance = new LayoutClass(container, config);
+    this.instanceReuseKeys.set(instance, instance.getReuseKey?.() ?? inputKey);
+    return instance;
   }
 
   /**
    * 将布局实例放回池中以备复用（按容器隔离）。
-   * 调用方负责确保实例已 unmount。
+   * 调用方负责确保实例已 unmount。失效 registration token 的条目
+   * 在下次 create/returnInstance 时 dispose，不建强引用 side index。
    */
   returnInstance(container: HTMLElement, id: string, instance: ILayout): void {
+    const token = this.currentToken(id);
+    if (token === 0 || !this.layouts.has(id)) {
+      this.disposePooled({
+        instance,
+        registrationToken: token,
+        reuseKey: ''
+      });
+      return;
+    }
     let perContainer = this.pool.get(container);
     if (!perContainer) {
       perContainer = new Map();
       this.pool.set(container, perContainer);
     }
-    perContainer.set(id, instance);
+    const existing = perContainer.get(id);
+    if (existing && existing.instance !== instance) {
+      this.disposePooled(existing);
+    }
+    perContainer.set(id, {
+      instance,
+      registrationToken: token,
+      reuseKey:
+        this.instanceReuseKeys.get(instance) ??
+        instance.getReuseKey?.() ??
+        layoutReuseKey(id, {})
+    });
   }
 
   /**
@@ -350,7 +420,7 @@ class LayoutRegistry {
     this.layouts.delete(id);
     this.metadata.delete(id);
     this.loadPromises.delete(id);
-    // layout unregistered
+    this.registrationTokens.set(id, (this.registrationTokens.get(id) ?? 0) + 1);
   }
 
   /**
@@ -369,6 +439,7 @@ class LayoutRegistry {
     this.metadata.clear();
     this.pool = new WeakMap();
     this.loadPromises.clear();
+    this.registrationTokens.clear();
   }
 }
 

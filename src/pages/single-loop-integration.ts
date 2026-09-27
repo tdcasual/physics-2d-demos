@@ -1,4 +1,4 @@
-import { writeSceneParams } from '../app/url-sync';
+import { writeOwnedSceneParams, type SceneParamWriter } from '../app/url-sync';
 import type { SceneInstance } from '../app/scene-bootstrapper-types';
 import { renderSchema } from '../ui/components/SchemaRenderer';
 import { singleLoopControlsSchema } from '../scenes/single-loop/controls-schema';
@@ -22,7 +22,8 @@ type SingleLoopScene = SceneInstance & {
 
 /** Keep page transport actions and URL state in the same reset/play/pause path. */
 export function withSingleLoopUrlSync<TScene extends SingleLoopScene>(
-  scene: TScene
+  scene: TScene,
+  writer?: SceneParamWriter | null
 ): TScene {
   const originalReset = scene.reset?.bind(scene);
   const originalStartAll = scene.startAll?.bind(scene);
@@ -31,7 +32,7 @@ export function withSingleLoopUrlSync<TScene extends SingleLoopScene>(
     throw new Error('single-loop transport methods are required');
   }
   const syncUrl = (): void => {
-    writeSceneParams(restoredUrlParams(scene.getParams()));
+    writeOwnedSceneParams(writer, restoredUrlParams(scene.getParams()));
   };
   return {
     ...scene,
@@ -65,7 +66,9 @@ export function createSingleLoopControls({
   writeParam
 }: CreateSingleLoopControlsOptions): {
   setValue: (key: string, value: number | string | boolean) => void;
+  setValueSilently: (key: string, value: number | string | boolean) => void;
   setActive: (key: string, value: string) => void;
+  setActiveSilently: (key: string, value: string) => void;
   refresh: () => void;
   dispose: () => void;
 } {
@@ -108,7 +111,7 @@ export function createSingleLoopControls({
     applySilently(() => {
       for (const key of NUMBER_KEYS) {
         if (changedOnly && params[key] === last[key]) continue;
-        renderer.setValue(key, params[key]);
+        renderer.setValueSilently(key, params[key]);
       }
     });
   };
@@ -120,8 +123,12 @@ export function createSingleLoopControls({
   return {
     setValue: (key, value) =>
       applySilently(() => renderer.setValue(key, value)),
+    setValueSilently: (key, value) =>
+      applySilently(() => renderer.setValueSilently(key, value)),
     setActive: (key, value) =>
       applySilently(() => renderer.setActive(key, value)),
+    setActiveSilently: (key, value) =>
+      applySilently(() => renderer.setActiveSilently(key, value)),
     refresh: () => syncControls(scene.getParams()),
     dispose: () => {
       unsubscribe();

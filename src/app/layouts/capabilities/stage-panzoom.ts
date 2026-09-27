@@ -191,13 +191,23 @@ export function createStagePanzoom(
     return Math.abs(zoom - 1) < IDENTITY_EPS ? 1 : zoom;
   }
 
+  const ownedCanvases = new Set<HTMLCanvasElement>();
+  const ownedBoostOriginal = new Map<HTMLCanvasElement, string | undefined>();
+
   function canvasesInSlot(): HTMLCanvasElement[] {
     return [...slot.querySelectorAll('canvas')];
+  }
+
+  function trackCanvas(canvas: HTMLCanvasElement): void {
+    if (ownedCanvases.has(canvas)) return;
+    ownedCanvases.add(canvas);
+    ownedBoostOriginal.set(canvas, canvas.dataset.renderBoost);
   }
 
   function applyBoostNow(forceResize = false): void {
     const settled = settledZoom();
     for (const canvas of canvasesInSlot()) {
+      trackCanvas(canvas);
       if (settled === 1) delete canvas.dataset.renderBoost;
       else setRenderBoost(canvas, settled);
     }
@@ -456,9 +466,13 @@ export function createStagePanzoom(
     tx = 0;
     ty = 0;
     lastAppliedBoost = 1;
-    for (const canvas of canvasesInSlot()) {
-      delete canvas.dataset.renderBoost;
+    for (const canvas of ownedCanvases) {
+      const original = ownedBoostOriginal.get(canvas);
+      if (original) canvas.dataset.renderBoost = original;
+      else delete canvas.dataset.renderBoost;
     }
+    ownedCanvases.clear();
+    ownedBoostOriginal.clear();
     ac.abort();
     // dispose 顺序：清 boost → 删 renderBoost → unwrap（之后
     // sizeCanvasToFill 量的才是未变换容器）→ 最后强制 repaint 一次。

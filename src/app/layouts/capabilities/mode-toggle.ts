@@ -1,7 +1,7 @@
 /**
  * Mode Toggle Capability — normal/presentation 模式切换按钮
  *
- * 从 DesktopSplitLayout.bindModeToggleEvents / setMode 提取为独立能力
+ * Labels subscribe to the canonical mode owner; clicks go through ctx.setMode.
  */
 
 import type {
@@ -35,7 +35,6 @@ export function createModeToggle(
 
       let btn: HTMLButtonElement | null = null;
       let btnCreated = false;
-      let handler: (() => void) | null = null;
 
       btn = ctx.container.querySelector(selector) as HTMLButtonElement | null;
       if (!btn) {
@@ -58,24 +57,30 @@ export function createModeToggle(
         }
       };
 
-      handler = () => {
+      const handler = () => {
         const next =
           ctx.getMode() === 'presentation' ? 'normal' : 'presentation';
         ctx.setMode(next);
-        updateLabel(next);
       };
 
       btn.addEventListener('click', handler);
       updateLabel(ctx.getMode());
+      const unsub = ctx.on('modechange', (payload) => {
+        updateLabel(payload.mode);
+      });
 
       return {
+        update(data) {
+          const payload = data as { mode?: string } | undefined;
+          if (payload?.mode) updateLabel(payload.mode);
+        },
         dispose() {
-          if (btn && handler) {
+          unsub();
+          if (btn) {
             btn.removeEventListener('click', handler);
           }
           if (btnCreated && btn) btn.remove();
           btn = null;
-          handler = null;
         }
       };
     }

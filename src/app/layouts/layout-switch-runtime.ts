@@ -1,0 +1,700 @@
+/**
+ * Serial layout-switch coordinator: one owner, abort/ack, rollback, quarantine.
+ */
+
+import { layoutRegistry } from './registry';
+import {
+  saveLayoutState as saveLayoutStateToStorage,
+  restoreLayoutState as restoreLayoutStateFromStorage
+} from './container-persistence';
+import { suppressLayoutResize } from './request-layout-resize';
+import {
+  createAbortError,
+  isAbortError,
+  raceAbort,
+  SwitchQuarantinedError,
+  type LayoutSwitchState
+} from './switch-errors';
+import type { ModeOwner } from './mode-owner';
+import type { SidebarStateOwner } from './sidebar-state';
+import type { WorkspaceUiState } from './workspace-ui-state';
+import type { CapabilityOrchestrator } from './capability-orchestrator';
+import type {
+  ILayout,
+  LayoutConfig,
+  LayoutTransition,
+  Scene,
+  SwitchOptions,
+  Theme,
+  LayoutChangeEvent
+} from './types';
+
+const SWITCH_TIMEOUT_MS = 10_000;
+const ACK_DEADLINE_MS = 1_000;
+
+export type LayoutSwitchSnapshot = {
+  fromId: string | null;
+  fromLayout: ILayout | null;
+  canvas: HTMLCanvasElement | null;
+  canvasGeneration: number;
+  layoutState: Record<string, unknown> | undefined;
+};
+
+type PhaseName = 'willChange' | 'exit' | 'enter' | 'mount';
+
+type SwitchPhase = {
+  name: PhaseName;
+  effectful: boolean;
+  acked: boolean;
+};
+
+export type SwitchRuntimeHost = {
+  container: HTMLElement;
+  storageKey: string;
+  getTheme(): Theme;
+  resolveLayoutConfig(layoutId: string): LayoutConfig;
+  isDisposed(): boolean;
+  getCurrentLayout(): ILayout | null;
+  setCurrentLayout(layout: ILayout | null): void;
+  getCurrentScene(): Scene | null;
+  mode: ModeOwner;
+  sidebar: SidebarStateOwner;
+  workspaceUi: WorkspaceUiState;
+  orchestrator: CapabilityOrchestrator;
+  emitLayoutChange(event: LayoutChangeEvent): void;
+  emitSwitchError(payload: {
+    generation: number;
+    error: unknown;
+    state: LayoutSwitchState;
+  }): void;
+  savePreference(layoutId: string): void;
+  mountScene(scene: Scene, layout: ILayout): void;
+  notifyLayoutWillChange(
+    fromId: string | null,
+    toId: string,
+    signal: AbortSignal
+  ): Promise<void>;
+  onLayoutDidChange(to: string): void;
+  drainResize(): void;
+  captureFocus(): {
+    restore: () => void;
+  };
+};
+
+export class LayoutSwitchRuntime {
+  state: LayoutSwitchState = 'idle';
+  generation = 0;
+  pendingSwitchId: string | null = null;
+  pendingScene: Scene | null = null;
+  canvasOwner: { generation: number; node: HTMLCanvasElement | null } | null =
+    null;
+  lastError: unknown = null;
+  private abort: AbortController | null = null;
+  private timeoutId: ReturnType<typeof setTimeout> | null = null;
+  private phase: SwitchPhase | null = null;
+  private snapshot: LayoutSwitchSnapshot | null = null;
+  private incomingLayout: ILayout | null = null;
+  private ackWaiters: Array<() => void> = [];
+
+  constructor(private readonly host: SwitchRuntimeHost) {}
+
+  getSwitchState(): LayoutSwitchState {
+    return this.state;
+  }
+
+  /**
+   * Leave quarantine only when the live phase has acked, canvas ownership
+   * is unique, and a recovery target is known. Otherwise keep isolation.
+   */
+  resetSwitchQuarantine(): boolean {
+    if (this.state !== 'quarantined') return false;
+    if (this.hasUnackedEffectfulPhase()) return false;
+    if (!this.hasUniqueCanvasOwner()) return false;
+    if (!this.recoveryTarget()) return false;
+    this.state = 'idle';
+    this.lastError = null;
+    this.abort = null;
+    this.phase = null;
+    return true;
+  }
+
+  rejectIfQuarantined(): void {
+    if (this.state === 'quarantined') {
+      throw new SwitchQuarantinedError(this.generation);
+    }
+  }
+
+  async switchLayout(
+    layoutId: string,
+    options: SwitchOptions = {}
+  ): Promise<void> {
+    const {
+      reason = 'manual',
+      animate = true,
+      transition = { type: 'fade', duration: 250, easing: 'ease-in-out' },
+      savePreference = false
+    } = options;
+
+    this.rejectIfQuarantined();
+    if (this.host.getCurrentLayout()?.id === layoutId) return;
+    if (this.host.isDisposed()) return;
+    if (!layoutRegistry.has(layoutId)) {
+      throw new Error(`Layout "${layoutId}" not found`);
+    }
+    if (this.state === 'switching') {
+      if (reason === 'manual') this.pendingSwitchId = layoutId;
+      return;
+    }
+
+    const generation = ++this.generation;
+    const abort = new AbortController();
+    this.abort = abort;
+    this.state = 'switching';
+    this.incomingLayout = null;
+    const stale = () =>
+      generation !== this.generation ||
+      this.host.isDisposed() ||
+      abort.signal.aborted;
+
+    this.timeoutId = setTimeout(() => {
+      if (generation === this.generation && this.state === 'switching') {
+        abort.abort(createAbortError('Layout switch timed out'));
+      }
+    }, SWITCH_TIMEOUT_MS);
+
+    const fromLayout = this.host.getCurrentLayout();
+    const fromId = fromLayout?.id || null;
+    const focus = this.host.captureFocus();
+    const releaseResize = suppressLayoutResize();
+    let snapshot: LayoutSwitchSnapshot | null = null;
+    let teardownStarted = false;
+    let incomingMounted = false;
+
+    try {
+      await this.runWillChange(fromId, layoutId, abort.signal, generation);
+      if (this.getSwitchState() === 'quarantined') return;
+      if (stale() && !abort.signal.aborted) return;
+
+      snapshot = this.capture(fromLayout, generation);
+      this.snapshot = snapshot;
+      this.canvasOwner = {
+        generation,
+        node: snapshot.canvas
+      };
+      if (snapshot.layoutState && fromLayout?.id) {
+        saveLayoutStateToStorage(
+          this.host.storageKey,
+          fromLayout.id,
+          snapshot.layoutState
+        );
+      }
+
+      this.host.orchestrator.disposeAll();
+
+      teardownStarted = true;
+      await this.teardownOutgoing(
+        fromLayout,
+        animate,
+        transition,
+        abort.signal,
+        generation
+      );
+      if (this.getSwitchState() === 'quarantined') return;
+      if (this.host.isDisposed()) return;
+      this.host.setCurrentLayout(null);
+      if (this.host.container.childElementCount > 0) {
+        this.host.container.replaceChildren();
+      }
+
+      this.projectOwners();
+
+      const newLayout = await this.setupIncoming(
+        layoutId,
+        snapshot.canvas,
+        abort.signal,
+        generation
+      );
+      incomingMounted = true;
+      if (this.getSwitchState() === 'quarantined') return;
+      if (this.host.isDisposed()) return;
+
+      await this.finalize(
+        newLayout,
+        fromId,
+        layoutId,
+        reason,
+        animate,
+        transition,
+        savePreference,
+        abort.signal,
+        generation
+      );
+      if (this.getSwitchState() === 'quarantined') return;
+      if (this.host.isDisposed()) return;
+      focus.restore();
+    } catch (err) {
+      if (this.host.isDisposed()) return;
+      if (this.getSwitchState() === 'quarantined') return;
+      if (this.hasUnackedEffectfulPhase()) {
+        this.enterQuarantine(generation, err);
+        return;
+      }
+      if (isAbortError(err) && !teardownStarted) {
+        return;
+      }
+      if (isAbortError(err) && !incomingMounted) {
+        await this.rollback(snapshot, err);
+        return;
+      }
+      if (isAbortError(err) && incomingMounted) {
+        return;
+      }
+      console.error('[SceneContainer] Layout switch failed:', err);
+      const recovered = await this.rollback(snapshot, err);
+      if (!recovered) {
+        this.enterQuarantine(generation, err);
+      }
+    } finally {
+      if (this.timeoutId != null) {
+        clearTimeout(this.timeoutId);
+        this.timeoutId = null;
+      }
+      releaseResize();
+      if (this.hasUnackedEffectfulPhase()) {
+        if (this.getSwitchState() !== 'quarantined') {
+          this.enterQuarantine(
+            generation,
+            this.lastError ?? createAbortError('Unacked layout phase')
+          );
+        }
+      } else if (
+        generation === this.generation &&
+        this.getSwitchState() === 'switching'
+      ) {
+        this.finishIdle(generation);
+        await this.drainPending(generation);
+      }
+    }
+  }
+
+  private hasUnackedEffectfulPhase(): boolean {
+    return Boolean(this.phase && this.phase.effectful && !this.phase.acked);
+  }
+
+  private beginPhase(name: PhaseName, effectful: boolean): SwitchPhase {
+    const phase: SwitchPhase = { name, effectful, acked: false };
+    this.phase = phase;
+    return phase;
+  }
+
+  private ackPhase(phase: SwitchPhase): void {
+    phase.acked = true;
+    if (this.phase === phase) this.phase = null;
+    const waiters = this.ackWaiters;
+    this.ackWaiters = [];
+    for (const waiter of waiters) waiter();
+  }
+
+  private recoveryTarget(): string | null {
+    return this.snapshot?.fromId ?? this.host.getCurrentLayout()?.id ?? null;
+  }
+
+  private hasUniqueCanvasOwner(): boolean {
+    const node = this.canvasOwner?.node ?? this.snapshot?.canvas ?? null;
+    const live = this.host.container.querySelectorAll('canvas');
+    if (node) {
+      if (live.length > 1) return false;
+      if (live.length === 1) return live[0] === node;
+      return true;
+    }
+    return live.length <= 1;
+  }
+
+  private finishIdle(generation: number): void {
+    if (generation !== this.generation) return;
+    if (this.state === 'quarantined') return;
+    this.state = 'idle';
+    this.abort = null;
+    this.phase = null;
+    this.host.drainResize();
+  }
+
+  private enterQuarantine(generation: number, error: unknown): void {
+    this.state = 'quarantined';
+    this.lastError = error;
+    this.host.emitSwitchError({
+      generation,
+      error,
+      state: 'quarantined'
+    });
+  }
+
+  private projectOwners(): void {
+    this.host.mode.project('reproject');
+    this.host.sidebar.project(this.host.container);
+  }
+
+  private capture(
+    fromLayout: ILayout | null,
+    generation: number
+  ): LayoutSwitchSnapshot {
+    const canvas =
+      fromLayout
+        ?.getSlots?.()
+        ?.animation?.querySelector<HTMLCanvasElement>('canvas') ?? null;
+    return {
+      fromId: fromLayout?.id || null,
+      fromLayout,
+      canvas,
+      canvasGeneration: generation,
+      layoutState: fromLayout?.getLayoutState?.()
+    };
+  }
+
+  private async runWillChange(
+    fromId: string | null,
+    toId: string,
+    signal: AbortSignal,
+    generation: number
+  ): Promise<void> {
+    const hook = this.host.getCurrentScene()?.onLayoutWillChange;
+    if (!hook) return;
+    const phase = this.beginPhase('willChange', true);
+    const work = Promise.resolve(hook(fromId || '', toId, signal)).then(
+      () => undefined
+    );
+    await this.awaitEffectful(phase, work, signal, generation);
+  }
+
+  private waitAck(isAcked: () => boolean): Promise<void> {
+    if (isAcked()) return Promise.resolve();
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
+        resolve();
+      };
+      const timeoutId = setTimeout(finish, ACK_DEADLINE_MS);
+      this.ackWaiters.push(() => {
+        if (isAcked()) finish();
+      });
+    });
+  }
+
+  private async awaitEffectful(
+    phase: SwitchPhase,
+    work: Promise<void>,
+    signal: AbortSignal,
+    generation: number
+  ): Promise<void> {
+    const tracked = work.then(
+      () => {
+        this.ackPhase(phase);
+      },
+      (err: unknown) => {
+        this.ackPhase(phase);
+        throw err;
+      }
+    );
+    try {
+      await raceAbort(tracked, signal);
+    } catch (err) {
+      if (!isAbortError(err)) throw err;
+      await this.waitAck(() => phase.acked);
+      if (!phase.acked) {
+        this.enterQuarantine(generation, err);
+        throw err;
+      }
+      throw err;
+    }
+  }
+
+  private async teardownOutgoing(
+    fromLayout: ILayout | null,
+    animate: boolean,
+    transition: LayoutTransition,
+    signal: AbortSignal,
+    generation: number
+  ): Promise<void> {
+    if (fromLayout && animate && fromLayout.exit) {
+      const phase = this.beginPhase('exit', true);
+      const work = Promise.resolve(fromLayout.exit(transition)).then(
+        () => undefined
+      );
+      try {
+        await this.awaitEffectful(phase, work, signal, generation);
+      } catch (err) {
+        if (this.state === 'quarantined') throw err;
+        if (!isAbortError(err)) {
+          console.warn('[SceneContainer] Layout exit animation failed:', err);
+        } else {
+          throw err;
+        }
+      }
+    }
+    if (this.hasUnackedEffectfulPhase()) {
+      this.enterQuarantine(
+        generation,
+        createAbortError('Layout exit did not acknowledge cancellation')
+      );
+      throw this.lastError ?? createAbortError();
+    }
+    if (fromLayout) {
+      await fromLayout.unmount();
+      layoutRegistry.returnInstance(
+        this.host.container,
+        fromLayout.id,
+        fromLayout
+      );
+    }
+  }
+
+  private async abandonIncoming(layout: ILayout | null): Promise<void> {
+    if (!layout) return;
+    try {
+      this.host.orchestrator.disposeAll();
+    } catch {
+      /* still try to unmount the partial tree */
+    }
+    try {
+      await layout.unmount();
+    } catch {
+      /* best-effort */
+    }
+    if (this.incomingLayout === layout) this.incomingLayout = null;
+  }
+
+  private async setupIncoming(
+    layoutId: string,
+    preservedCanvas: HTMLCanvasElement | null,
+    signal: AbortSignal,
+    generation: number
+  ): Promise<ILayout> {
+    if (this.host.isDisposed()) {
+      throw new Error('Container disposed before layout setup');
+    }
+    this.host.container.style.display = '';
+    this.host.container.style.gridTemplateColumns = '';
+    this.host.container.style.gridTemplateRows = '';
+
+    let created: ILayout | null = null;
+    try {
+      created = await raceAbort(
+        layoutRegistry.create(
+          layoutId,
+          this.host.container,
+          {
+            theme: this.host.getTheme(),
+            ...this.host.resolveLayoutConfig(layoutId),
+            preservedCanvas
+          },
+          { signal, generation }
+        ),
+        signal
+      );
+    } catch (err) {
+      if (created) await this.abandonIncoming(created);
+      throw err;
+    }
+
+    this.incomingLayout = created;
+    if (signal.aborted) {
+      await this.abandonIncoming(created);
+      throw signal.reason ?? createAbortError();
+    }
+
+    const phase = this.beginPhase('mount', true);
+    try {
+      this.projectOwners();
+      await this.awaitEffectful(
+        phase,
+        Promise.resolve(created.mount()).then(() => undefined),
+        signal,
+        generation
+      );
+      if (signal.aborted) {
+        await this.abandonIncoming(created);
+        throw signal.reason ?? createAbortError();
+      }
+      this.host.container.dataset.layoutId = layoutId;
+      this.host.setCurrentLayout(created);
+      created.setTheme(this.host.getTheme());
+      const savedLayoutState = restoreLayoutStateFromStorage(
+        this.host.storageKey,
+        layoutId
+      );
+      if (savedLayoutState) {
+        created.restoreLayoutState?.(savedLayoutState);
+      }
+      this.projectOwners();
+
+      const scene = this.host.getCurrentScene();
+      if (scene) {
+        this.host.mountScene(scene, created);
+      }
+      this.canvasOwner = {
+        generation,
+        node:
+          created
+            .getSlots?.()
+            ?.animation?.querySelector<HTMLCanvasElement>('canvas') ??
+          preservedCanvas
+      };
+      return created;
+    } catch (err) {
+      if (this.state === 'quarantined' || this.hasUnackedEffectfulPhase()) {
+        throw err;
+      }
+      await this.abandonIncoming(created);
+      if (!this.hasUniqueCanvasOwner()) {
+        this.enterQuarantine(generation, err);
+      }
+      throw err;
+    }
+  }
+
+  private async finalize(
+    newLayout: ILayout,
+    fromId: string | null,
+    layoutId: string,
+    reason: string,
+    animate: boolean,
+    transition: LayoutTransition,
+    savePreference: boolean,
+    signal: AbortSignal,
+    generation: number
+  ): Promise<void> {
+    if (animate && newLayout.enter) {
+      const phase = this.beginPhase('enter', true);
+      const work = Promise.resolve(
+        newLayout.enter({
+          ...transition,
+          easing: 'ease-out'
+        })
+      ).then(() => undefined);
+      try {
+        await this.awaitEffectful(phase, work, signal, generation);
+      } catch (err) {
+        if (this.state === 'quarantined') throw err;
+        if (!isAbortError(err)) {
+          /* 动画被中断或失败，布局本身已可用 */
+        } else {
+          throw err;
+        }
+      }
+    }
+    if (this.hasUnackedEffectfulPhase()) {
+      this.enterQuarantine(
+        generation,
+        createAbortError('Layout enter did not acknowledge cancellation')
+      );
+      throw this.lastError ?? createAbortError();
+    }
+    if (signal.aborted) {
+      throw signal.reason ?? createAbortError();
+    }
+
+    this.host.onLayoutDidChange(layoutId);
+    this.host.emitLayoutChange({ from: fromId, to: layoutId, reason });
+    if (savePreference) {
+      this.host.savePreference(layoutId);
+    }
+  }
+
+  private async rollback(
+    snapshot: LayoutSwitchSnapshot | null,
+    _error: unknown
+  ): Promise<boolean> {
+    if (this.hasUnackedEffectfulPhase()) return false;
+    if (this.incomingLayout) {
+      await this.abandonIncoming(this.incomingLayout);
+    }
+    if (!snapshot?.fromId || !snapshot.fromLayout) {
+      return false;
+    }
+    try {
+      try {
+        this.host.orchestrator.disposeAll();
+      } catch {
+        /* rollback still attempts to remount */
+      }
+      if (this.host.container.childElementCount > 0) {
+        this.host.container.replaceChildren();
+      }
+      const recovered = await layoutRegistry.create(
+        snapshot.fromId,
+        this.host.container,
+        {
+          theme: this.host.getTheme(),
+          ...this.host.resolveLayoutConfig(snapshot.fromId),
+          preservedCanvas: snapshot.canvas ?? null
+        },
+        { generation: this.generation }
+      );
+      this.projectOwners();
+      await recovered.mount();
+      recovered.setTheme(this.host.getTheme());
+      const scene = this.host.getCurrentScene();
+      if (scene) {
+        this.host.mountScene(scene, recovered);
+      }
+      this.host.setCurrentLayout(recovered);
+      this.incomingLayout = null;
+      this.canvasOwner = {
+        generation: snapshot.canvasGeneration,
+        node:
+          recovered
+            .getSlots?.()
+            ?.animation?.querySelector<HTMLCanvasElement>('canvas') ??
+          snapshot.canvas
+      };
+      this.projectOwners();
+      console.warn(
+        `[SceneContainer] Recovered layout "${snapshot.fromId}" after switch failure`
+      );
+      return true;
+    } catch (recoveryErr) {
+      console.error(
+        '[SceneContainer] Recovery also failed, container is empty:',
+        recoveryErr
+      );
+      if (!this.hasUniqueCanvasOwner()) {
+        this.enterQuarantine(this.generation, recoveryErr);
+      }
+      return false;
+    }
+  }
+
+  async drainPending(generation: number): Promise<void> {
+    if (generation !== this.generation || this.host.isDisposed()) return;
+    if (this.state === 'quarantined') return;
+    if (this.hasUnackedEffectfulPhase()) return;
+    const pendingScene = this.pendingScene;
+    this.pendingScene = null;
+    const pendingSwitchId = this.pendingSwitchId;
+    this.pendingSwitchId = null;
+    try {
+      if (pendingScene) {
+        await this.hostSetScene(pendingScene);
+      }
+      if (
+        pendingSwitchId &&
+        !this.host.isDisposed() &&
+        this.host.getCurrentLayout()?.id !== pendingSwitchId
+      ) {
+        await this.switchLayout(pendingSwitchId, {
+          reason: 'manual',
+          animate: true,
+          savePreference: true
+        });
+      }
+    } catch (err) {
+      console.error('[SceneContainer] Pending drain failed:', err);
+    }
+  }
+
+  /** Injected by the container so drain can call setScene without a cycle. */
+  hostSetScene: (scene: Scene) => Promise<void> = async () => {};
+}

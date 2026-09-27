@@ -82,6 +82,12 @@ export interface LayoutConfig {
    * 用于"实验阶段不需要图表、仅图像分析步需要"的场景。
    */
   graphInitiallyHidden?: boolean;
+  /** 读数面板默认折叠 */
+  readoutCollapsed?: boolean;
+  /** 读数面板标题 */
+  readoutLabel?: string;
+  /** 是否创建 graph slot */
+  hasGraph?: boolean;
   /** 场景标题（由 bootstrapper 注入），用于 canvas aria-label 等无障碍文本 */
   title?: string;
 }
@@ -157,6 +163,10 @@ export interface CapabilityContext {
    * 替代伪造的 window resize 事件。
    */
   requestStageRepaint(): void;
+  /** Canonical sidebar visibility (user hidden vs presentation suppress). */
+  sidebar: import('./sidebar-state').SidebarStateOwner;
+  /** Canonical workspace chrome/step (survives capability rebuild). */
+  workspaceUi: import('./workspace-ui-state').WorkspaceUiState;
 }
 
 /** Capability 实例 — 挂载后返回 */
@@ -223,6 +233,8 @@ export interface ILayout {
   updateStatus?(text: string, level?: string): void;
   /** 更新内部配置（实例池复用时调用） */
   _updateConfig?(config?: LayoutConfig): void;
+  /** Structural reuse key; omit DOM/function fields. */
+  getReuseKey?(config?: LayoutConfig): string;
 }
 
 // ============================================================================
@@ -239,7 +251,11 @@ export interface Scene {
   renderReadout?(container: HTMLElement): void;
   renderHeader?(container: HTMLElement): void;
 
-  onLayoutWillChange?(from: string, to: string): Promise<void>;
+  onLayoutWillChange?(
+    from: string,
+    to: string,
+    signal?: AbortSignal
+  ): Promise<void>;
   onLayoutDidChange?(to: string): void;
 
   mount?(): void;
@@ -284,6 +300,10 @@ export interface SceneContainer {
   getUserPreferredLayout(): string | null;
   setTheme(theme: Theme): void;
   getTheme(): Theme;
+  getMode(): 'normal' | 'presentation';
+  setMode(mode: 'normal' | 'presentation'): void;
+  getSwitchState(): import('./switch-errors').LayoutSwitchState;
+  resetSwitchQuarantine(): boolean;
 
   on<K extends keyof SceneContainerEvents>(
     event: K,
@@ -345,8 +365,20 @@ export type SceneContainerEvents = {
   'layout:mode': {
     mode: string;
     profile?: import('../../platform/demo-profile').ResolvedDemoProfile | null;
+    reason?: string;
+  };
+  'layout:switch-error': {
+    generation: number;
+    error: unknown;
+    state: import('./switch-errors').LayoutSwitchState;
   };
   'slot:toggle': { slot: SlotName; collapsed: boolean };
+};
+
+/** Options for `layoutRegistry.create` (abort/generation guards). */
+export type LayoutCreateOptions = {
+  signal?: AbortSignal;
+  generation?: number;
 };
 
 // ============================================================================

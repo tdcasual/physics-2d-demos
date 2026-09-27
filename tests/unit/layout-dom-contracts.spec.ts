@@ -11,6 +11,8 @@ import { createReadoutPanel } from '../../src/app/layouts/capabilities/readout-p
 import type { CapabilityContext } from '../../src/app/layouts/types';
 import { createFloatingControls } from '../../src/ui/floating-controls';
 import { createStageDom } from '../../src/scenes/chase-meet/renderer/view-utils';
+import { SidebarStateOwner } from '../../src/app/layouts/sidebar-state';
+import { WorkspaceUiState } from '../../src/app/layouts/workspace-ui-state';
 
 describe('layout DOM compatibility contracts', () => {
   function createCapabilityContext(container: HTMLElement): CapabilityContext {
@@ -24,7 +26,9 @@ describe('layout DOM compatibility contracts', () => {
       getCurrentLayoutId: () => 'split-right',
       getAvailableLayouts: () => [],
       on: () => () => {},
-      requestStageRepaint() {}
+      requestStageRepaint() {},
+      sidebar: new SidebarStateOwner(),
+      workspaceUi: new WorkspaceUiState()
     };
   }
 

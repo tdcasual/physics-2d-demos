@@ -1,6 +1,6 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { writeSceneParams } from '../../app/url-sync';
+import { writeOwnedSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { createBindingEnergyScene } from './scene.entry';
 import { bindingEnergyMeta } from './scene.meta';
@@ -35,7 +35,7 @@ bootScenePage({
     readoutLabel: '数据读数',
     hasGraph: false
   },
-  createScene: ({ canvas, theme, mode, demoHints }) => {
+  createScene: ({ canvas, theme, mode, demoHints, sceneWriter }) => {
     if (!canvas) throw new Error('binding-energy requires a canvas');
     const scene = createBindingEnergyScene({ canvas, theme, mode, demoHints });
     const scheduler = createRenderScheduler(() => scene.render());
@@ -46,7 +46,7 @@ bootScenePage({
         scene.step(dt);
         scheduler.schedule();
         if (Math.abs(Math.abs(dt) - C.keyboardDt) < 1e-12) {
-          writeSceneParams({ A: scene.getParams().A });
+          writeOwnedSceneParams(sceneWriter, { A: scene.getParams().A });
         }
       },
       dispose(): void {

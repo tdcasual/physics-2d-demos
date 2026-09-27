@@ -57,6 +57,13 @@ export type SceneInstance = {
  * 所有 createScene 回调都会收到这些参数。每个场景的 entry 工厂函数
  * 必须能接受此类型（或兼容的超集），否则在类型测试中会报错。
  */
+export type SceneParamWriter = {
+  readonly token: string;
+  write(patch: Record<string, number | string | boolean | undefined>): void;
+  flush(): void;
+  close(): void;
+};
+
 export type StandardSceneCreateParams = {
   /** 动画区容器（渲染面）。非 canvas 渲染（SVG/DOM/WebGL 等）直接渲染到此容器。 */
   container: HTMLElement;
@@ -66,6 +73,11 @@ export type StandardSceneCreateParams = {
   theme: Theme;
   mode: 'normal' | 'presentation';
   demoHints?: DemoRenderHints;
+  /**
+   * Optional scene-generation URL writer. Production SceneAdapter always
+   * injects one before createScene; omitted only for hand-built tests.
+   */
+  sceneWriter?: SceneParamWriter;
 };
 
 /** 场景页面配置选项 */
@@ -80,6 +92,10 @@ export type ScenePageOptions<TScene extends SceneInstance = SceneInstance> = {
   demoProfile?: SceneDemoProfile;
   /** Esc 等走容器 setMode，避免 Adapter 再派一次无 profile 的事件 */
   onSetMode?: (mode: 'normal' | 'presentation') => void;
+  /** Keyboard `l` walks the container switch, not a DOM button click. */
+  onSwitchLayout?: () => void;
+  /** Production adapter injects the generation-scoped URL writer. */
+  sceneWriter?: SceneParamWriter;
   /** 创建场景实例 */
   createScene: (opts: StandardSceneCreateParams) => TScene;
   /** 创建控制面板（可选） */
@@ -108,6 +124,11 @@ export type ScenePageOptions<TScene extends SceneInstance = SceneInstance> = {
      * （不可读的 key 写了也无法恢复）。
      */
     writeParam?: (key: string, value: number | string | boolean) => void;
+    /**
+     * Scene-generation URL writer. Same instance as createScene's
+     * `sceneWriter`; layout remount reuses it.
+     */
+    sceneWriter?: SceneParamWriter;
   }) => unknown;
   /**
    * 声明式 URL 参数同步（可选逃生口）。缺省时 bootstrapper 按

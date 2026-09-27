@@ -24,6 +24,7 @@ import {
 import { buildSplitLayoutDOM } from '../../_shared/split-layout-base';
 import { enterLayout, exitLayout } from '../../_shared/layout-transition';
 import { buildBaseCapabilities } from '../../capabilities/base-declarations';
+import { layoutReuseKey } from '../../layout-reuse-key';
 import { READOUT_OVERLAY_ATTR } from '../../../../platform/stage-readout';
 
 export interface SplitRightGraphBottomConfig extends LayoutConfig {
@@ -114,6 +115,47 @@ export class SplitRightGraphBottomLayout implements ILayout {
                 r * (this._container.clientHeight || window.innerHeight || 800)
               );
             }
+          }
+        }
+      ]
+    });
+  }
+
+  private static capabilityDecls(
+    config: SplitRightGraphBottomConfig
+  ): CapabilityDeclaration[] {
+    return buildBaseCapabilities(config, {
+      transportConfig: { mountSlot: 'animation' as const },
+      afterDataWorkspace: [
+        {
+          id: 'readout-panel',
+          config: {
+            position: 'top-right',
+            collapsed: true,
+            cssPrefix: PREFIX,
+            label: config.readoutLabel ?? '数据读数'
+          }
+        }
+      ],
+      beforeDemoProfile: [
+        { id: 'layout-switch' },
+        { id: 'sidebar-toggle' },
+        {
+          id: 'resizer',
+          config: {
+            direction: 'vertical',
+            targetSelector: '.srgb-left-panel',
+            selector: '.srgb-resizer-v'
+          }
+        },
+        {
+          id: 'resizer',
+          config: {
+            direction: 'horizontal',
+            targetSelector: '.srgb-graph-section',
+            selector: '.srgb-resizer-h',
+            minSize: 120,
+            maxSize: 480
           }
         }
       ]
@@ -251,6 +293,14 @@ export class SplitRightGraphBottomLayout implements ILayout {
    */
   _updateConfig(config?: SplitRightGraphBottomConfig): void {
     if (config) this.cfg = { ...this.cfg, ...config };
+  }
+
+  getReuseKey(config?: LayoutConfig): string {
+    const cfg = (config ?? this.cfg) as SplitRightGraphBottomConfig;
+    return layoutReuseKey(this.id, {
+      ...cfg,
+      capabilities: SplitRightGraphBottomLayout.capabilityDecls(cfg)
+    });
   }
 
   restoreLayoutState(state: Record<string, unknown>): void {

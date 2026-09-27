@@ -7,7 +7,6 @@ import {
 } from '../../src/pages/single-loop-integration';
 import { singleLoopMeta } from '../../src/scenes/single-loop/scene.meta';
 import { createSingleLoopScene } from '../../src/scenes/single-loop/scene.entry';
-import { writeSceneParams } from '../../src/app/url-sync';
 
 describe('single-loop Reset URL integration', () => {
   let adapter:
@@ -31,17 +30,18 @@ describe('single-loop Reset URL integration', () => {
 
     adapter = new SceneAdapter<ReturnType<typeof createSingleLoopScene>>({
       meta: singleLoopMeta,
-      createScene: ({ canvas, theme, mode, demoHints }) => {
+      createScene: ({ canvas, theme, mode, demoHints, sceneWriter }) => {
         scene = withSingleLoopUrlSync(
-          createSingleLoopScene({ canvas, theme, mode, demoHints })
+          createSingleLoopScene({ canvas, theme, mode, demoHints }),
+          sceneWriter
         );
         return scene;
       },
-      createControls: ({ mount, scene: adapterScene }) =>
+      createControls: ({ mount, scene: adapterScene, writeParam }) =>
         createSingleLoopControls({
           mount,
           scene: adapterScene,
-          writeParam: (key, value) => writeSceneParams({ [key]: value })
+          writeParam
         })
     });
 

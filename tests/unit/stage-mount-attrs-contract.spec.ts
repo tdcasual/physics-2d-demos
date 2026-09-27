@@ -31,6 +31,8 @@ import type {
   ILayout,
   LayoutSlots
 } from '../../src/app/layouts/types';
+import { SidebarStateOwner } from '../../src/app/layouts/sidebar-state';
+import { WorkspaceUiState } from '../../src/app/layouts/workspace-ui-state';
 
 function createContainer(): HTMLDivElement {
   const el = document.createElement('div');
@@ -53,7 +55,9 @@ function createCtx(
     getCurrentLayoutId: () => layoutId,
     getAvailableLayouts: () => [],
     on: () => () => {},
-    requestStageRepaint() {}
+    requestStageRepaint() {},
+    sidebar: new SidebarStateOwner(),
+    workspaceUi: new WorkspaceUiState()
   };
 }
 
@@ -76,6 +80,38 @@ describe('stage mount attributes contract', () => {
   afterEach(() => {
     document.body.innerHTML = '';
     layoutRegistry.clear();
+  });
+
+  describe('production registry discovery', () => {
+    it('clear → registerAllLayouts → list → create covers every layout', async () => {
+      layoutRegistry.clear();
+      registerAllLayouts();
+      const productionIds = layoutRegistry.list();
+      expect(productionIds.length).toBeGreaterThan(0);
+      for (const id of productionIds) {
+        const container = createContainer();
+        const layout = await layoutRegistry.create(id, container);
+        const slots = await layout.mount();
+        expect(
+          container.querySelector(`[${STAGE_FRAME_ATTR}]`),
+          `${id} missing data-stage-frame`
+        ).not.toBeNull();
+        const meta = layoutRegistry.getMetadata(id);
+        if (slots.graph) {
+          const target = meta?.graphAdoptTarget ?? 'section';
+          if (target === 'section') {
+            expect(
+              container.querySelector(`[${GRAPH_SECTION_ATTR}]`)
+            ).not.toBeNull();
+            expect(
+              container.querySelector(`[${GRAPH_BODY_ATTR}]`)
+            ).not.toBeNull();
+          }
+        }
+        await layout.unmount();
+        container.remove();
+      }
+    });
   });
 
   describe('data-stage-frame', () => {

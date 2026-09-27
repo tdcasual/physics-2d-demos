@@ -148,9 +148,11 @@ describe('projectile-components lab-float title chrome', () => {
 
   it('removes nested ReadoutPanel title inside lab-float-data and keeps the float heading', () => {
     const layout = document.createElement('div');
-    layout.className = 'lab-stage-layout';
+    layout.className = 'layout-master';
     const float = document.createElement('section');
     float.className = 'lab-float-data';
+    const slot = document.createElement('div');
+    slot.setAttribute('data-lab-data-slot', 'true');
     const heading = document.createElement('h2');
     heading.className = 'lab-float-title';
     heading.textContent = '数据读数';
@@ -163,7 +165,7 @@ describe('projectile-components lab-float title chrome', () => {
     const table = document.createElement('table');
     table.setAttribute('aria-label', '频闪采样记录');
     table.innerHTML = '<tbody><tr><td>0.00</td></tr></tbody>';
-    float.append(heading, inline, items, table);
+    float.append(heading, inline, items, table, slot);
     layout.appendChild(float);
     document.body.appendChild(layout);
 

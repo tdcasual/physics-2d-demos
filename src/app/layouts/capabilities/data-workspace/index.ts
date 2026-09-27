@@ -86,11 +86,7 @@ function placeWorkspaceHost(
 ): void {
   const animation = slots.animation;
   const stageFrame =
-    container.querySelector<HTMLElement>(`[${STAGE_FRAME_ATTR}]`) ??
-    animation?.closest(
-      '.teaching-stage-frame, .srgb-stage-frame, .mobile-animation-section, .lab-stage-anim'
-    ) ??
-    animation;
+    container.querySelector<HTMLElement>(`[${STAGE_FRAME_ATTR}]`) ?? animation;
   if (stageFrame?.parentElement) {
     stageFrame.parentElement.insertBefore(hostEl, stageFrame.nextSibling);
     return;
@@ -114,7 +110,7 @@ export function createDataWorkspace(): CapabilityDefinition<
       const ac = new AbortController();
       let host: DataWorkspaceHost | null = null;
       let chromeOpen = false;
-      let chartMode = false;
+      const chartMode = () => ctx.workspaceUi.getStep() === 'chartAnalysis';
       let panel: ReturnType<typeof createDataWorkspacePanel> | null = null;
       let panzoom: StagePanzoomHandle | null = null;
       let stageSplitter: HTMLElement | null = null;
@@ -153,7 +149,7 @@ export function createDataWorkspace(): CapabilityDefinition<
           chartBtn.addEventListener(
             'click',
             () => {
-              if (chartMode) exitChartMode();
+              if (chartMode()) exitChartMode();
               else enterChartMode();
             },
             { signal: ac.signal }
@@ -164,7 +160,20 @@ export function createDataWorkspace(): CapabilityDefinition<
 
       const unsubMode = ctx.on('modechange', (payload) => {
         if (payload.mode === 'presentation' && chromeOpen) {
+          ctx.workspaceUi.setChromeVisible(true);
+          ctx.workspaceUi.setPresentationSuspension(true);
           exitWorkspace(false);
+        } else if (
+          payload.mode === 'normal' &&
+          ctx.workspaceUi.getPresentationSuspension()
+        ) {
+          ctx.workspaceUi.setPresentationSuspension(false);
+          if (host?.getSession().active && ctx.workspaceUi.getChromeVisible()) {
+            enterWorkspace();
+            if (chartMode()) enterChartMode();
+          }
+          syncButton();
+          syncChartButton();
         } else {
           syncButton();
           syncChartButton();
@@ -205,7 +214,7 @@ export function createDataWorkspace(): CapabilityDefinition<
         }
         const cb = ensureChartButton();
         cb.hidden = false;
-        if (!chartMode) {
+        if (!chartMode()) {
           const allowed = chartEntryAllowed();
           cb.disabled = !allowed;
           cb.setAttribute('aria-disabled', String(!allowed));
@@ -224,7 +233,7 @@ export function createDataWorkspace(): CapabilityDefinition<
       }
 
       function enterChartMode(): void {
-        if (chartMode || !host || !chartEntryAllowed()) return;
+        if (chartMode() || !host || !chartEntryAllowed()) return;
         if (!chromeOpen) enterWorkspace();
         if (!chromeOpen || !panel) return;
         if (!panel.setChartMode(true)) {
@@ -232,15 +241,15 @@ export function createDataWorkspace(): CapabilityDefinition<
           syncStageSplitter();
           return;
         }
-        chartMode = true;
+        ctx.workspaceUi.setStep('chartAnalysis');
         syncButton();
         syncChartButton();
         syncStageSplitter();
       }
 
       function exitChartMode(): void {
-        if (!chartMode) return;
-        chartMode = false;
+        if (!chartMode()) return;
+        ctx.workspaceUi.setStep('data');
         panel?.setChartMode(false);
         syncButton();
         syncChartButton();
@@ -254,14 +263,14 @@ export function createDataWorkspace(): CapabilityDefinition<
         btn.disabled = disabled;
         btn.setAttribute('aria-disabled', String(disabled));
         btn.setAttribute('aria-pressed', String(chromeOpen));
-        btn.textContent = chartMode
+        btn.textContent = chartMode()
           ? '数据处理'
           : chromeOpen
             ? '返回实验'
             : '数据处理';
         if (inPresentation) {
           btn.title = '演示模式下不可进入数据处理';
-        } else if (chartMode) {
+        } else if (chartMode()) {
           btn.title = '返回数据处理工作区';
         } else if (reason && !chromeOpen) {
           btn.title = reason;
@@ -287,11 +296,7 @@ export function createDataWorkspace(): CapabilityDefinition<
             ? graph
             : ((graph.closest(
                 `[${GRAPH_SECTION_ATTR}]`
-              ) as HTMLElement | null) ??
-              (graph.closest(
-                '.srgb-graph-section, .teaching-graph-section, .lab-float-graph, .graph-section'
-              ) as HTMLElement | null) ??
-              graph);
+              ) as HTMLElement | null) ?? graph);
         if (!section.parentElement) return;
         // parent/next 快照与还原由 node-mover 负责；hidden/collapsed/
         // inlineStyle/geometry 清理是本能力的收养语义，留在调用方
@@ -340,27 +345,16 @@ export function createDataWorkspace(): CapabilityDefinition<
         return `dw-stage-split-${readSpec()?.id ?? ''}`;
       }
 
-      function stageColumn(): HTMLElement | null {
-        const found =
-          ctx.container.querySelector('.lab-stage-main') ??
-          ctx.container.querySelector('.teaching-right-panel') ??
-          ctx.container.querySelector('.srgb-right-panel');
-        if (found instanceof HTMLElement) return found;
-        if (ctx.container.classList.contains('mobile-stack-layout')) {
-          return ctx.container;
-        }
-        return null;
+      function stageFrame(): HTMLElement | null {
+        const found = ctx.container.querySelector(`[${STAGE_FRAME_ATTR}]`);
+        return found instanceof HTMLElement ? found : null;
       }
 
-      function stageFrame(): HTMLElement | null {
-        const column = stageColumn();
-        if (!column) return null;
-        const found =
-          column.querySelector('.lab-stage-anim') ??
-          column.querySelector('.teaching-stage-frame') ??
-          column.querySelector('.srgb-stage-frame') ??
-          column.querySelector('.mobile-animation-section');
-        return found instanceof HTMLElement ? found : null;
+      function stageColumn(): HTMLElement | null {
+        const frame = stageFrame();
+        if (frame?.parentElement instanceof HTMLElement)
+          return frame.parentElement;
+        return ctx.container;
       }
 
       function readStageSplit(): number | null {
@@ -563,6 +557,7 @@ export function createDataWorkspace(): CapabilityDefinition<
           return;
         }
         chromeOpen = true;
+        ctx.workspaceUi.setChromeVisible(true);
         ctx.container.classList.add(WORKSPACE_CLASS);
         if (host.getSpec().stageMode === 'instrument-only') {
           ctx.container.classList.add(INSTRUMENT_ONLY_CLASS);
@@ -584,10 +579,15 @@ export function createDataWorkspace(): CapabilityDefinition<
             panel?.update();
           },
           onStepChange: (step) => {
+            ctx.workspaceUi.setStep(step);
             applyChartStep(step);
           }
         });
         placeWorkspaceHost(slots, ctx.container, panel.root);
+        if (chartMode()) {
+          panel.setChartMode(true);
+          applyChartStep('chartAnalysis');
+        }
         syncButton();
         syncChartButton();
         requestLayoutResize();
@@ -600,7 +600,10 @@ export function createDataWorkspace(): CapabilityDefinition<
         if (!chromeOpen || suppressing) return;
         suppressing = true;
         chromeOpen = false;
-        chartMode = false;
+        if (clearActive) {
+          ctx.workspaceUi.setChromeVisible(false);
+          ctx.workspaceUi.setStep('data');
+        }
         teardownPanzoom();
         restoreGraph();
         panel?.dispose();
@@ -623,7 +626,7 @@ export function createDataWorkspace(): CapabilityDefinition<
       }
 
       function toggle(): void {
-        if (chromeOpen && chartMode) {
+        if (chromeOpen && chartMode()) {
           exitChartMode();
           return;
         }
@@ -640,7 +643,13 @@ export function createDataWorkspace(): CapabilityDefinition<
         update(data: DataWorkspaceUpdateData) {
           host = data?.host ?? null;
           if (suppressing) return;
-          if (host?.getSession().active && !chromeOpen) {
+          if (
+            host?.getSession().active &&
+            !chromeOpen &&
+            ctx.getMode() !== 'presentation' &&
+            (ctx.workspaceUi.getChromeVisible() ||
+              !ctx.workspaceUi.getPresentationSuspension())
+          ) {
             enterWorkspace();
           } else if (chromeOpen && host && !host.getSession().active) {
             exitWorkspace(false);
@@ -666,7 +675,6 @@ export function createDataWorkspace(): CapabilityDefinition<
             STAGE_LOCK_CLASS
           );
           chromeOpen = false;
-          chartMode = false;
           stageSplitter?.remove();
           stageSplitter = null;
           ctx.container.removeAttribute('data-stage-half');

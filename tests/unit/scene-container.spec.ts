@@ -187,7 +187,8 @@ describe('SceneContainerImpl', () => {
     expect(layoutRegistry.create).toHaveBeenCalledWith(
       'split-right',
       mount,
-      expect.objectContaining({ theme: 'light' })
+      expect.objectContaining({ theme: 'light' }),
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
     );
   });
 
@@ -211,7 +212,8 @@ describe('SceneContainerImpl', () => {
       expect.objectContaining({
         hasGraph: false,
         readoutCollapsed: true
-      })
+      }),
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
     );
 
     await container.switchLayout('mobile-stack', { animate: false });
@@ -814,14 +816,13 @@ describe('SceneContainerImpl selection & concurrency (Fix 1 / Fix 5)', () => {
     container.dispose();
   });
 
-  it('abandons a timed-out switch at the await boundary and drains the queue (Fix 5)', async () => {
+  it('aborts a hung create, rolls back, then serially drains the pending target', async () => {
     vi.useFakeTimers();
     try {
       const container = createSceneContainer({ mount });
       await container.setScene(makeScene());
       expect(container.currentLayout?.id).toBe('split-right');
 
-      // 下一次 registry.create 挂起（模拟惰性 chunk 网络悬挂）
       const { layoutRegistry } = await import('../../src/app/layouts/registry');
       let releaseCreate: (value: unknown) => void = () => {};
       const gate = new Promise((resolve) => {
@@ -835,17 +836,15 @@ describe('SceneContainerImpl selection & concurrency (Fix 1 / Fix 5)', () => {
         reason: 'manual'
       });
       await vi.advanceTimersByTimeAsync(0);
-      // 拆卸已完成、装配挂起：当前布局被清空
-      expect(container.currentLayout).toBeNull();
+      expect(container.getSwitchState()).toBe('switching');
 
-      // 悬挂期间的手动切换进入队列
       const queued = container.switchLayout('lab-stage', { reason: 'manual' });
 
-      // 安全计时器判死当前代并交棒：排队中的 lab-stage 立即被 drain 执行
       await vi.advanceTimersByTimeAsync(10_000);
-      expect(container.currentLayout?.id).toBe('lab-stage');
+      await hung;
+      await queued;
+      await vi.advanceTimersByTimeAsync(0);
 
-      // 旧协程迟完成：在 await 边界作废，不得挂载其布局
       const lateLayout = {
         id: 'mobile-stack',
         capabilities: [],
@@ -860,11 +859,10 @@ describe('SceneContainerImpl selection & concurrency (Fix 1 / Fix 5)', () => {
       };
       releaseCreate(lateLayout);
       await vi.advanceTimersByTimeAsync(0);
-      await hung;
-      await queued;
 
       expect(lateLayout.mount).not.toHaveBeenCalled();
       expect(container.currentLayout?.id).toBe('lab-stage');
+      expect(container.getSwitchState()).toBe('idle');
       container.dispose();
     } finally {
       vi.useRealTimers();
@@ -986,13 +984,11 @@ describe('SceneContainerImpl Codex-challenged edge cases (Fix 1 / Fix 5 / Fix 6)
         savePreference: true
       });
       await vi.advanceTimersByTimeAsync(0);
-      // enter 挂起期间到达超时：判死当前代
       await vi.advanceTimersByTimeAsync(10_000);
       releaseEnter(undefined);
       await vi.advanceTimersByTimeAsync(0);
       await hung;
 
-      // 旧代不得写事件与偏好
       expect(
         changeSpy.mock.calls.filter((call) => call[0].to === 'lab-stage')
       ).toHaveLength(0);

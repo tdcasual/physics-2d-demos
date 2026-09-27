@@ -54,8 +54,11 @@ bundle 预算，失败即停并打印修复指引。全绿才算完成编码部�
   （CI 同构容器），或 CI `workflow_dispatch → update_snapshots` 下载 artifact
 - Mac：`pnpm test:visual:update`，或 `update-darwin-snapshots.yml` 重生成
 
-确实无法稳定截图的场景才加入 `visual-regression.spec.ts` 的
-`SNAPSHOT_OPT_OUT`，且必须带理由注释。
+新场景必须把 id **显式追加**到 `tests/visual/baseline-coverage.json` 的
+`legacyDebtSceneIds`（B11，owner=`physics-2d maintainers`）。禁止依赖
+「未出现在 covered 清单」的自动归类。直到 Linux 容器与真实 macOS runner
+都补齐 desktop+mobile 黄金图后再移入 `coveredSceneIds`。不要把未配对场景
+写成 skip。
 
 ### Step 6 — 浏览器门禁（有环境则跑）
 

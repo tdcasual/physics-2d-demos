@@ -1,8 +1,18 @@
 # 布局系统 × 实验模式 架构重构清单（v3 · 定稿）
 
 > 来源：2026-09-21 双 agent 架构审计 + Grok 交叉审计两轮（第 1 轮核实证据/纠优先级，第 2 轮复核并指出 8 处方案漏洞，本版已全部修补）。
-> 状态：**定稿，可按批次实施。**
+> 状态：**历史审计快照（2026-09-21）**。2026-09-27 v10 实施后的活债务见 `docs/debt-ledger.md`。
 > 术语：本文"容器"一律指 SceneContainer；Linux 截图环境称"截图容器"。
+>
+> **v10 映射（2026-09-27）**
+>
+> | 本清单项                  | 状态                                                                                           |
+> | ------------------------- | ---------------------------------------------------------------------------------------------- |
+> | P0-1 私有 class 挂载点    | 部分完成：`data-stage-frame` / graph / toolbar 属性已落地；data-workspace 能力改为语义属性查找 |
+> | P1-A 死代码与假契约       | 已在 2026-09-25 清偿批次完成                                                                   |
+> | P1-B 场景反查布局内部 DOM | 部分完成；readout 已集中 `readoutOccludesStage`，剩余 scene overlay 测量保留                   |
+> | 大模块拆分                | container.ts 已拆 switch runtime（690 行）；platform workspace / panel 仍 grandfathered        |
+> | 测试绿实现错              | v10 增加 await-barrier / 真实 registry abort-race 测试                                         |
 
 ## 优先级定义
 

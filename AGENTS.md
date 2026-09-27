@@ -158,15 +158,18 @@ bootScenePage({
 `bootScenePage` 内置声明式 URL 参数管线（`applySceneUrlParams`，见
 `src/app/url-sync.ts`），page.ts **不要再手写** `readSceneParams` 循环：
 
-- **应用**：管线在 createControls 返回后统一执行
-  `readSceneParams → scene.setParams（无 setParams 时退回 setParam 单键 API）
-→ createControls 返回句柄回写（数值走 setValue；字符串或
-`paramSync.activeKeys` 走 setActive）→ URL 非空时同步首绘`。
+- **应用**：SceneAdapter 为每个 scene generation 保存不可变 URL snapshot。
+  首次 `createControls` 消费一次性 restore permit，执行
+  `applySceneUrlParams`（`setParams`，无对象 API 时退回 `setParam`）并用
+  `setValueSilently` / `setActiveSilently` 投影控件。布局 remount 不再读 URL、
+  不重放 snapshot，只从 live scene 走 `syncFromScene` / `refresh`。
   合法键集合 = `defaultParams ∪ urlSyncKeys ∪ {preset}`（`resolveUrlSyncKeys`）。
-- **写回**：createControls 上下文注入 `writeParam(key, value)`，
-  等价旧样板的 `writeSceneParams({ [key]: value })` 但自动过滤非法键。
-- **上下文注入**：`urlParams`（合法参数只读快照，供建 UI 前必须知悉参数的
-  场景使用，如 double-slit 按 step 选 schema）。
+- **写回**：createControls 注入 `writeParam` 与同一 generation 的 `sceneWriter`。
+  多键写回走 `writeOwnedSceneParams(sceneWriter, patch)`；owner 级 debounce
+  合并不同键、同键 last-write-wins。`flush(A)` 不影响 B 的 timer。scene leave
+  顺序为 `flush → persistSceneParams（localStorage 镜像）→ close/revoke`。
+- **上下文注入**：`urlParams` 仅在该 generation 首次 createControls 传入
+  snapshot（供 double-slit 按 step 选 schema）；remount 传空对象。
 - **逃生口**：`ScenePageOptions.paramSync` —— `paramMap`（meta 键 → sim 键，
   如 projectile 的 v0→speed）、`activeKeys`、`applyParam`（单键接管，返回
   true 跳过默认处理）、`applyAll`（整体接管含首绘，用于批量约束语义）、
@@ -179,8 +182,9 @@ bootScenePage({
 - URL 同步棘轮：`scene-params-contract.spec.ts` 强制「有 `defaultParams` 的
   场景必须有 `urlSyncKeys` 或 page 级 `paramSync` 自定义路径」，全量 100%
   结构化覆盖（原 vite.config 百分比阈值已由该棘轮取代，debt-ledger A7）。
-- 布局重建重跑管线时，若落在 `writeParam` 150ms debounce 窗口内，存在理论性
-  回灌竞态（窗口极小，非新引入）。
+- Owner-scoped writer / restore-once 契约见 `src/app/url-sync.ts` 与
+  `tests/contract/scene-url-writer-contract.spec.ts`。布局 remount 不再把
+  首屏 query 写回 scene。
 
 ### 控制区列布局范式
 
@@ -308,8 +312,12 @@ update_snapshots` **调用同一脚本**，不是 runner 上裸跑 PNG。
   `Noto Sans CJK SC`（见 `design-tokens.css` 字体栈）。
 - 移动端断言遍历 canvas 时必须跳过非激活 tab 面板（`.mobile-tab-panel:not(.active)`
   内的 canvas 是 display:none，尺寸为 0 属设计如此），或先切换到目标 tab 再断言。
-- 像素覆盖清单 = 自动发现的全部场景 − spec 内 `SNAPSHOT_OPT_OUT` 显式豁免
-  （每个条目须带理由注释）。新增场景默认纳入像素覆盖，首次须生成两套平台基线。
+- 像素覆盖清单 = `tests/visual/baseline-coverage.json`：`coveredSceneIds`
+  必须等于实际完整 Linux+Darwin × desktop+mobile 黄金对；其余场景必须写进
+  冻结的 `legacyDebtSceneIds`（B11，owner=`physics-2d maintainers`），禁止把
+  「未覆盖」动态归类为债务。截图测试只跑 covered；禁止 skip。新场景必须显式
+  追加到 `legacyDebtSceneIds`，补齐两套平台基线后再移入 covered。未登记的新
+  场景会使 coverage 契约失败。
 
 ### 场景删除保护规则（强制）
 

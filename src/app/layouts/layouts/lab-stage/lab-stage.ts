@@ -14,6 +14,7 @@ import type {
 } from '../../types';
 import { enterLayout, exitLayout } from '../../_shared/layout-transition';
 import { buildBaseCapabilities } from '../../capabilities/base-declarations';
+import { layoutReuseKey } from '../../layout-reuse-key';
 import { makeDraggable, makeResizable } from '../../../../ui/utils/draggable';
 import { buildStageToolbar } from '../../../../ui/stage-toolbar';
 import { requestLayoutResize } from '../../request-layout-resize';
@@ -65,7 +66,13 @@ export class LabStageLayout implements ILayout {
   constructor(container: HTMLElement, config: LabStageConfig = {}) {
     this.cfg = config;
     this._container = container;
-    this.capabilities = buildBaseCapabilities(config, {
+    this.capabilities = LabStageLayout.capabilityDecls(config);
+  }
+
+  private static capabilityDecls(
+    config: LabStageConfig
+  ): CapabilityDeclaration[] {
+    return buildBaseCapabilities(config, {
       transportConfig: { mountSlot: 'animation' as const },
       afterDataWorkspace: [
         {
@@ -428,5 +435,13 @@ export class LabStageLayout implements ILayout {
    */
   _updateConfig(config?: LabStageConfig): void {
     if (config) this.cfg = { ...this.cfg, ...config };
+  }
+
+  getReuseKey(config?: LayoutConfig): string {
+    const cfg = (config ?? this.cfg) as LabStageConfig;
+    return layoutReuseKey(this.id, {
+      ...cfg,
+      capabilities: LabStageLayout.capabilityDecls(cfg)
+    });
   }
 }

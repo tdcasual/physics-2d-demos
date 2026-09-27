@@ -3,6 +3,8 @@ import { createDemoProfile } from '../../src/app/layouts/capabilities/demo-profi
 import type { CapabilityContext } from '../../src/app/layouts/types';
 import type { ResolvedDemoProfile } from '../../src/platform/demo-profile';
 import { registerAllLayouts } from '../../src/app/layouts/auto-register';
+import { SidebarStateOwner } from '../../src/app/layouts/sidebar-state';
+import { WorkspaceUiState } from '../../src/app/layouts/workspace-ui-state';
 
 /**
  * Fix 6：演示网格恢复的「形态漂移检测」——未漂移还原快照；
@@ -26,11 +28,12 @@ describe('demo-profile grid restore drift detection (Fix 6)', () => {
     } as unknown as ResolvedDemoProfile;
   }
 
-  function makeCapability(): {
+  function makeCapability(sidebar = new SidebarStateOwner()): {
     update(data: {
       mode: 'normal' | 'presentation';
       profile: ResolvedDemoProfile | null;
     }): void;
+    sidebar: SidebarStateOwner;
   } {
     // CapabilityInstance.update 为可选方法；本能力定义必然提供。
     const ctx = {
@@ -43,7 +46,9 @@ describe('demo-profile grid restore drift detection (Fix 6)', () => {
       getCurrentLayoutId: () => 'split-right',
       getAvailableLayouts: () => [],
       on: () => () => {},
-      requestStageRepaint: () => {}
+      requestStageRepaint: () => {},
+      sidebar,
+      workspaceUi: new WorkspaceUiState()
     } as unknown as CapabilityContext;
     const instance = createDemoProfile().mount(
       { control: document.createElement('div'), animation: container },
@@ -52,7 +57,7 @@ describe('demo-profile grid restore drift detection (Fix 6)', () => {
     );
     const update = instance.update?.bind(instance);
     if (!update) throw new Error('demo-profile capability missing update()');
-    return { update };
+    return { update, sidebar };
   }
 
   beforeEach(() => {
@@ -86,8 +91,8 @@ describe('demo-profile grid restore drift detection (Fix 6)', () => {
     capability.update({ mode: 'normal', profile: null });
     expect(container.style.gridTemplateColumns).toBe('300px 8px 1fr');
     expect(resizer.style.display).toBe('');
-    // 演示前标记不存在 → 精确还原为不存在（而非写成 false）
-    expect(container.dataset.sidebarHidden).toBeUndefined();
+    // Owner projection always writes true/false; user preference stayed visible.
+    expect(container.dataset.sidebarHidden).toBe('false');
   });
 
   it('skips the template restore after a responsive rewrite during presentation', () => {
@@ -165,11 +170,12 @@ describe('demo-profile grid restore drift detection (Fix 6)', () => {
   });
 
   it('restores the pre-demo sidebarHidden flag exactly (Codex challenge)', () => {
-    // 演示前用户已用 sidebar-toggle 隐藏侧栏（标记 true + 隐藏形态）
-    container.dataset.sidebarHidden = 'true';
+    const sidebar = new SidebarStateOwner();
+    sidebar.setUserHidden(true);
+    sidebar.project(container);
     container.style.gridTemplateColumns = '0px 8px 1fr';
 
-    const capability = makeCapability();
+    const capability = makeCapability(sidebar);
     capability.update({
       mode: 'presentation',
       profile: makeProfile('hidden')

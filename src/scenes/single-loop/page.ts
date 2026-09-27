@@ -35,22 +35,25 @@ bootScenePage({
     graphMaxHeight: 340,
     graphColumns: 1
   },
-  createScene: ({ canvas, theme, mode, demoHints }) => {
+  createScene: ({ canvas, theme, mode, demoHints, sceneWriter }) => {
     if (!canvas) throw new Error('single-loop requires a canvas');
     const scene = createSingleLoopScene({ canvas, theme, mode, demoHints });
     const scheduler = createRenderScheduler(() => scene.render());
     const dispose = scene.dispose.bind(scene);
-    return withSingleLoopUrlSync({
-      ...scene,
-      step(dt: number): void {
-        scene.step(dt);
-        scheduler.schedule();
+    return withSingleLoopUrlSync(
+      {
+        ...scene,
+        step(dt: number): void {
+          scene.step(dt);
+          scheduler.schedule();
+        },
+        dispose(): void {
+          scheduler.dispose();
+          dispose();
+        }
       },
-      dispose(): void {
-        scheduler.dispose();
-        dispose();
-      }
-    });
+      sceneWriter
+    );
   },
   createControls: (options) => createSingleLoopControls(options),
   paramSync: {

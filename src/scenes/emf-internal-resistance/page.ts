@@ -1,6 +1,6 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { readSceneParams, writeSceneParams } from '../../app/url-sync';
+import { readSceneParams, writeOwnedSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { emfInternalControlsSchema } from './controls-schema';
 import { createEmfInternalScene } from './scene.entry';
@@ -114,7 +114,7 @@ bootScenePage({
     graphMaxHeight: 320,
     graphColumns: 1
   },
-  createScene: ({ canvas, theme, mode, demoHints }) => {
+  createScene: ({ canvas, theme, mode, demoHints, sceneWriter }) => {
     if (!canvas) throw new Error('emf-internal-resistance requires a canvas');
     const scene = createEmfInternalScene({
       canvas,
@@ -138,7 +138,10 @@ bootScenePage({
       },
       reset(): void {
         originalReset();
-        writeSceneParams(restoredUrlParams(scene.getParams()));
+        writeOwnedSceneParams(
+          sceneWriter,
+          restoredUrlParams(scene.getParams())
+        );
       }
     };
   },

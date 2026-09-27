@@ -6,6 +6,7 @@ import {
 } from '../../core/canvas-sizing';
 import { getThemeColors } from '../../core/colors';
 import type { DemoRenderHints } from '../../platform/demo-profile';
+import { STAGE_FRAME_ATTR } from '../../platform/stage-chrome';
 import { getRenderTokens } from '../../platform/standards';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
@@ -328,14 +329,11 @@ function legacyTapeBox(canvas: HTMLCanvasElement, cssBox: number): number {
   return Math.min(cssBox, tapeScaleCap(window.innerWidth, window.innerHeight));
 }
 
-const WORKSPACE_STAGE_FRAME =
-  '.lab-stage-anim, .teaching-stage-frame, .srgb-stage-frame, .mobile-animation-section';
-
 /** Transport bar inside the stage frame. The mobile control bar is not one. */
 export function findWorkspaceTransportBar(
   canvas: HTMLCanvasElement
 ): HTMLElement | null {
-  const frame = canvas.closest(WORKSPACE_STAGE_FRAME);
+  const frame = canvas.closest(`[${STAGE_FRAME_ATTR}]`);
   const bar = frame?.querySelector('.stage-floating-controls');
   if (!(bar instanceof HTMLElement) || bar.offsetHeight < 1) return null;
   return bar;
@@ -1348,6 +1346,8 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
       selected.x = kinds.includes('x');
       selected.v = kinds.includes('v');
     },
+    getSelectedGraphs: (): Array<'x' | 'v'> =>
+      (['x', 'v'] as const).filter((kind) => selected[kind]),
     getPlotStatus(state: TickerTapeState) {
       return plotStatus(state);
     },

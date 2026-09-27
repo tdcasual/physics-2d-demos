@@ -13,6 +13,8 @@ import type {
   LayoutSlots
 } from '../../src/app/layouts/types';
 import type { ILayout, Scene } from '../../src/app/layouts/types';
+import { SidebarStateOwner } from '../../src/app/layouts/sidebar-state';
+import { WorkspaceUiState } from '../../src/app/layouts/workspace-ui-state';
 
 // Mock capabilities module
 vi.mock('../../src/app/layouts/capabilities', () => {
@@ -87,7 +89,9 @@ function createCtx(): CapabilityContext {
     getCurrentLayoutId: () => 'test',
     getAvailableLayouts: () => [],
     on: () => () => {},
-    requestStageRepaint() {}
+    requestStageRepaint() {},
+    sidebar: new SidebarStateOwner(),
+    workspaceUi: new WorkspaceUiState()
   };
 }
 
@@ -138,8 +142,9 @@ function createMockScene(overrides: Partial<Scene> = {}): Scene {
 describe('CapabilityOrchestrator', () => {
   let orchestrator: CapabilityOrchestrator;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     orchestrator = new CapabilityOrchestrator();
+    await orchestrator.preload();
   });
 
   // ---- wire basics ----
@@ -163,6 +168,21 @@ describe('CapabilityOrchestrator', () => {
     expect(
       orchestrator.getInstances('readout-panel').length
     ).toBeGreaterThanOrEqual(1);
+  });
+
+  it('propagates capability dispose errors on the next wire', () => {
+    const layout = createMockLayout([{ id: 'transport-bar' }]);
+    const slots: Partial<LayoutSlots> = {
+      animation: document.createElement('div')
+    };
+    orchestrator.wire(layout, null, slots, createCtx());
+    const [inst] = orchestrator.getInstances('transport-bar');
+    inst.dispose = () => {
+      throw new Error('dispose-boom');
+    };
+    expect(() => orchestrator.wire(layout, null, slots, createCtx())).toThrow(
+      'dispose-boom'
+    );
   });
 
   it('should skip unknown capability ids gracefully', () => {
@@ -446,8 +466,9 @@ describe('CapabilityOrchestrator', () => {
 });
 
 describe('CapabilityOrchestrator subscribe isolation (Fix 3)', () => {
-  it('logs and contains an update throw, and keeps other capabilities updating', () => {
+  it('logs and contains an update throw, and keeps other capabilities updating', async () => {
     const orchestrator = new CapabilityOrchestrator();
+    await orchestrator.preload();
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const layout = createMockLayout([
       { id: 'transport-bar' },

@@ -1,6 +1,6 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { writeSceneParams } from '../../app/url-sync';
+import { writeOwnedSceneParams } from '../../app/url-sync';
 import { applyTouchInteractionMode } from '../../platform/input/touch';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { createHarmonicWaveScene } from './scene.entry';
@@ -35,7 +35,7 @@ bootScenePage({
     readoutLabel: '数据读数',
     hasGraph: false
   },
-  createScene: ({ canvas, theme, mode, demoHints }) => {
+  createScene: ({ canvas, theme, mode, demoHints, sceneWriter }) => {
     if (!canvas) throw new Error('harmonic-wave requires a canvas');
     applyTouchInteractionMode(canvas, 'drag');
     const scene = createHarmonicWaveScene({ canvas, theme, mode, demoHints });
@@ -74,7 +74,7 @@ bootScenePage({
           pointInput.dispatchEvent(new Event('input', { bubbles: true }));
         }
       }
-      writeSceneParams({ pointX: scene.getParams().pointX });
+      writeOwnedSceneParams(sceneWriter, { pointX: scene.getParams().pointX });
     };
     canvas.addEventListener('pointerdown', onPointerDown);
     canvas.addEventListener('pointermove', onPointerMove);

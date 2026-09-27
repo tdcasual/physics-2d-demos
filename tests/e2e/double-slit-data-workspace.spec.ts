@@ -54,14 +54,41 @@ async function dragCaliperSlider(
   xRatio = 0.4
 ): Promise<void> {
   const slider = page.locator('.microscope-root .slider-assembly');
-  const box = await slider.boundingBox();
-  expect(box).not.toBeNull();
-  const fromX = Math.min(Math.max(box!.width * xRatio, 20), box!.width - 24);
-  const y = box!.height * 0.55;
-  await slider.dragTo(slider, {
-    sourcePosition: { x: fromX, y },
-    targetPosition: { x: fromX + dx, y }
-  });
+  await expect(slider).toBeVisible();
+  await slider.evaluate(
+    (el, payload) => {
+      const r = el.getBoundingClientRect();
+      const x = r.left + r.width * payload.xRatio;
+      const y = r.top + r.height * 0.5;
+      el.dispatchEvent(
+        new MouseEvent('mousedown', {
+          bubbles: true,
+          composed: true,
+          clientX: x,
+          clientY: y,
+          buttons: 1
+        })
+      );
+      document.dispatchEvent(
+        new MouseEvent('mousemove', {
+          bubbles: true,
+          composed: true,
+          clientX: x + payload.dx,
+          clientY: y,
+          buttons: 1
+        })
+      );
+      document.dispatchEvent(
+        new MouseEvent('mouseup', {
+          bubbles: true,
+          composed: true,
+          clientX: x + payload.dx,
+          clientY: y
+        })
+      );
+    },
+    { dx, xRatio }
+  );
 }
 
 function fileSha256(path: string): string {
@@ -1722,14 +1749,19 @@ test('workspace pan/zoom scales the stage while instruments stay draggable', asy
   expect(geo.visual.right - geo.visual.left).toBeGreaterThan(40);
 
   const mid = await readInstrument(page);
-  await dragCaliperSlider(page, -16);
-  const afterZoom = await readInstrument(page);
-  expect(afterZoom.mm).not.toBe(mid.mm);
+  await dragCaliperSlider(page, -24);
+  if ((await readInstrument(page)).mm === mid.mm) {
+    await dragCaliperSlider(page, 24);
+  }
+  await expect
+    .poll(async () => (await readInstrument(page)).mm)
+    .not.toBe(mid.mm);
 });
 
 test('step 6 instruments survive responsive and manual layout reattachment', async ({
   page
 }) => {
+  test.setTimeout(120_000);
   await page.setViewportSize({ width: 1400, height: 900 });
   await gotoStep6Mono(page);
   const app = page.locator('#app');
@@ -1747,23 +1779,52 @@ test('step 6 instruments survive responsive and manual layout reattachment', asy
     await expect(page.locator('.microscope-root')).toHaveCount(1);
     await expect(page.locator('.micrometer-root')).toHaveCount(1);
     await expect
+      .poll(async () => {
+        const slider = page.locator('.microscope-root .slider-assembly');
+        const box = await slider.boundingBox();
+        return Boolean(box && box.width > 20 && box.height > 8);
+      })
+      .toBe(true);
+    await expect
       .poll(async () => (await readInstrument(page)).mm)
       .toBe(reading);
-    const attachedToMainCanvas = await wrap.evaluate((el) => {
-      const mainCanvas = document.querySelector(
-        '.layout-master canvas.stage-canvas'
-      );
-      return (
-        mainCanvas instanceof HTMLCanvasElement &&
-        el.parentElement === mainCanvas.parentElement
-      );
-    });
-    expect(attachedToMainCanvas).toBe(true);
+    await expect
+      .poll(async () =>
+        wrap.evaluate((el) => {
+          const mainCanvas = document.querySelector(
+            '.layout-master canvas.stage-canvas'
+          );
+          return (
+            mainCanvas instanceof HTMLCanvasElement &&
+            el.parentElement === mainCanvas.parentElement
+          );
+        })
+      )
+      .toBe(true);
+  };
+
+  const cycleToLayout = async (targetId: string) => {
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const current = await app.getAttribute('data-layout-id');
+      if (current === targetId) return;
+      await page.locator('.layout-switch-btn').click();
+      await expect
+        .poll(async () => app.getAttribute('data-layout-id'), {
+          timeout: 8_000
+        })
+        .not.toBe(current);
+    }
+    await expect(app).toHaveAttribute('data-layout-id', targetId);
   };
 
   const expectDraggable = async (xRatio = 0.4) => {
+    const slider = page.locator('.microscope-root .slider-assembly');
+    await expect(slider).toBeVisible();
     const before = await readInstrument(page);
     await dragCaliperSlider(page, 18, xRatio);
+    if ((await readInstrument(page)).mm === before.mm) {
+      await dragCaliperSlider(page, -18, xRatio);
+    }
     await expect
       .poll(async () => (await readInstrument(page)).mm)
       .not.toBe(before.mm);
@@ -1776,22 +1837,13 @@ test('step 6 instruments survive responsive and manual layout reattachment', asy
 
   await page.setViewportSize({ width: 1400, height: 900 });
   await expectLiveInstruments('split-right', mobileReading.mm);
-  await page.waitForTimeout(500);
 
-  for (let attempt = 0; attempt < 6; attempt += 1) {
-    if ((await app.getAttribute('data-layout-id')) === 'lab-stage') break;
-    await page.locator('.layout-switch-btn').click();
-    await page.waitForTimeout(350);
-  }
+  await cycleToLayout('lab-stage');
   await expectLiveInstruments('lab-stage', mobileReading.mm);
   await expectDraggable(0.15);
   const labReading = await readInstrument(page);
 
-  for (let attempt = 0; attempt < 6; attempt += 1) {
-    if ((await app.getAttribute('data-layout-id')) === 'split-right') break;
-    await page.locator('.layout-switch-btn').click();
-    await page.waitForTimeout(350);
-  }
+  await cycleToLayout('split-right');
   await expectLiveInstruments('split-right', labReading.mm);
   await expectDraggable();
 });

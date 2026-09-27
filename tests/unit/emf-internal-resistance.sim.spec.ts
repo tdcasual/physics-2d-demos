@@ -249,9 +249,7 @@ describe('emf-internal-resistance entry', () => {
     expect(pageSrc).toContain('initialParams');
     expect(pageSrc).toContain('autoPlay: initialParams.autoRun !== false');
     expect(pageSrc).toContain('const originalReset = scene.reset.bind(scene)');
-    expect(pageSrc).toContain(
-      'writeSceneParams(restoredUrlParams(scene.getParams()))'
-    );
+    expect(pageSrc).toContain('writeOwnedSceneParams');
     expect(pageSrc).toContain('if (syncingControls) return');
     expect(pageSrc).not.toContain('emfScene.reset =');
     const createSceneStart = pageSrc.indexOf('createScene:');
@@ -262,9 +260,7 @@ describe('emf-internal-resistance entry', () => {
     );
     const createControlsBody = pageSrc.slice(createControlsStart);
     expect(createSceneBody).toContain('originalReset()');
-    expect(createSceneBody).toContain(
-      'writeSceneParams(restoredUrlParams(scene.getParams()))'
-    );
+    expect(createSceneBody).toContain('writeOwnedSceneParams');
     expect(createControlsBody).not.toContain('writeSceneParams');
     expect(createControlsBody).toContain('refreshControls');
     expect(pageSrc).toContain("writeParam?.('switchClosed', closed ? 1 : 0)");

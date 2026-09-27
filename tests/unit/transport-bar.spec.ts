@@ -109,7 +109,7 @@ describe('transport-bar capability (compact mode)', () => {
     expect(container.querySelector('.speed-value')?.textContent).toBe('1.50×');
   });
 
-  it('dispose aborts listeners so clicks no longer fire callbacks', () => {
+  it('dispose removes the compact node so a rewire does not duplicate it', () => {
     const onTogglePlay = vi.fn();
     instance.setCallbacks?.({
       isPlaying: () => false,
@@ -119,10 +119,13 @@ describe('transport-bar capability (compact mode)', () => {
       getSpeed: () => 1
     });
     instance.dispose();
-    (container.querySelector('.play-pause') as HTMLElement).dispatchEvent(
-      new Event('click')
-    );
-    expect(onTogglePlay).not.toHaveBeenCalled();
+    expect(container.querySelector('.mobile-transport-controls')).toBeNull();
+    const again = createTransportBar().mount(makeSlots(), { container }, ctx);
+    expect(
+      container.querySelectorAll('.mobile-transport-controls')
+    ).toHaveLength(1);
+    again.dispose();
+    expect(container.querySelector('.mobile-transport-controls')).toBeNull();
   });
 });
 

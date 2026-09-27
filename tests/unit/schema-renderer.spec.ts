@@ -446,4 +446,53 @@ describe('SchemaRenderer', () => {
     button.click();
     expect(onAction).toHaveBeenCalledWith('reset');
   });
+
+  it('setValueSilently updates slider and select without dispatching events', () => {
+    const mount = createMount();
+    const onChange = vi.fn();
+    const schema: ControlsSchema = {
+      sections: [
+        {
+          title: '参数',
+          fields: [
+            {
+              type: 'slider',
+              key: 'speed',
+              label: '速度',
+              min: 0,
+              max: 80,
+              step: 1,
+              value: 20,
+              unit: 'm/s'
+            },
+            {
+              type: 'select',
+              key: 'preset',
+              label: '预设',
+              value: 'earth',
+              options: [
+                { value: 'earth', label: '地球' },
+                { value: 'moon', label: '月球' }
+              ]
+            }
+          ]
+        }
+      ]
+    };
+    const renderer = renderSchema({
+      mount,
+      schema,
+      onChange,
+      onAction: vi.fn()
+    });
+    renderer.setValueSilently('speed', 40);
+    renderer.setValueSilently('preset', 'moon');
+    expect(onChange).not.toHaveBeenCalled();
+    const input = mount.querySelector('input') as HTMLInputElement;
+    const select = mount.querySelector('select') as HTMLSelectElement;
+    expect(input.value).toBe('40');
+    expect(select.value).toBe('moon');
+    const valueEl = mount.querySelector('span:last-child');
+    expect(valueEl?.textContent).toContain('40');
+  });
 });

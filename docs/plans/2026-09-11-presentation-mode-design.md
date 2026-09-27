@@ -32,19 +32,18 @@
 2. 布局决定「怎么给空间」→ `createDemoProfile()`（`src/app/layouts/capabilities/demo-profile.ts`）
 3. 场景 view 决定「怎么放大内容」→ `createViewEnvironment().contentScale()`（`src/scenes/view-base.ts`）+ 各 `scene.view.ts`
 
-模式切换主路径：
+模式切换主路径（2026-09-11 原文；2026-09-27 v10 已改为单一 ModeOwner）：
 
 ```
-ModeToggle click
-  → CapabilityContext.setMode (capability-context.ts)
-    → container[data-mode]
-    → scene.getDemoProfile()
-    → emit('layout:mode') + CustomEvent('layout:modechange')
-    → updateCapabilityInstances('demo-profile')
-    → SceneAdapter.setMode(mode)          // 再派一次缺 profile 的事件
-      → inner scene.setMode(mode, renderHints)
-      → resize() + render()
+ModeToggle / Esc / container.setMode
+  → ModeOwner.setMode(mode, reason)
+    → SceneAdapter.setMode（含 resolved profile / inner scene）
+    → container[data-mode] 投影
+    → emit('layout:mode') + bubbling CustomEvent('layout:modechange')
+    → updateCapabilityInstances（demo-profile / mode-toggle / sidebar / workspace）
 ```
+
+**页面/场景 mode 语义（v10 新增产品决策，不是 2026-09-11 原文）**：新 page 与 `setScene` 换 scene 进入 `normal`；同一 scene 内切换 layout 保留当前 mode。layout mount 不再无条件写 `data-mode=normal`。
 
 `BASE_VIEWPORT` 已是 `{ width: 1920, height: 1080 }`（`src/platform/standards.ts`）。`getRenderTokens(scale)` 只放大字号/线宽/标记半径，**不改变舞台几何**。
 
