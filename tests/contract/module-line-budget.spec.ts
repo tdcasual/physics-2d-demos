@@ -8,7 +8,6 @@ import path from 'node:path';
  * Frozen limits are the Wave 0 measured values; do not raise them.
  */
 const GRANDFATHERED: Record<string, number> = {
-  'src/platform/data-workspace/index.ts': 1413,
   'src/ui/components/data-workspace-panel/index.ts': 1099,
   'src/scenes/ticker-tape/scene.view.ts': 1381,
   'src/scenes/pendulum-period/scene.view.ts': 1091,
