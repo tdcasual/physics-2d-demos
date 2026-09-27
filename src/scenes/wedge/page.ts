@@ -82,6 +82,10 @@ bootScenePage({
       setValue: (key: string, value: number | string | boolean) => {
         renderer.setValue(key, value);
         if (key === 'lambda') updateLambdaSliderColor(mount, Number(value));
+      },
+      setValueSilently: (key: string, value: number | string | boolean) => {
+        renderer.setValueSilently(key, value);
+        if (key === 'lambda') updateLambdaSliderColor(mount, Number(value));
       }
     };
   }

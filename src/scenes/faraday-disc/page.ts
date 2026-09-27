@@ -105,6 +105,10 @@ bootScenePage({
       setValue: (key: string, value: number | string | boolean) => {
         renderer.setValue(key, value);
         if (key === 'closed') syncPreset();
+      },
+      setValueSilently: (key: string, value: number | string | boolean) => {
+        renderer.setValueSilently(key, value);
+        if (key === 'closed') syncPreset();
       }
     };
   }
