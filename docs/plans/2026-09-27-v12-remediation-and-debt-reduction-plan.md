@@ -51,7 +51,7 @@ v10 Waves 1–6 真实落地；交叉审计确认 6 个 HIGH + 若干 MEDIUM 未
 豁免登记在 `NO_CONTROL_PROJECTION` 清单，**不进** `NO_PARAMS_API`（`scene-params-contract.spec.ts:53-59` 按 setParams 判定、要求登记者无 setParams）。
 「投影源不完整」注解（有 getParams 但覆盖不全）：xt-graph（`:108-110` 只返回 `{speed}`）、**tortoise-hare**（`:110-112` 同形 `{speed: timeScale}`）、spring-oscillator（`:245-251` 只返回首振子）——逐个裁定。
 
-### 1.4 编码/换算/可见性场景（tier-1 保留清单，11 个，定稿）
+### 1.4 编码/换算/可见性场景（tier-1 保留清单，12 个，定稿——v12.2 起含 vt-integral）
 
 | 场景                    | 原因                                                                                                                                                                                                                                                                                         | 证据                                                        |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
@@ -100,7 +100,7 @@ projectControlsFromParams({
 3. **paramMap 反查仅一行**（全仓仅 projectile，单射可逆）；不可逆 → 必须走 `paramSync.projectControls`。
 4. **按 schema 字段类型分派**：slider/number/text/toggle/**select** → `setValueSilently`；preset-group/scene-selector/`preset` 键/activeKeys → `setActiveSilently`。禁止 `typeof === 'string'` 启发式；禁止回退事件性 `setValue`；button/button-grid/hint/custom/transport 不参与分派、不触发 fail-loud。
 5. **字段类型表随 handle 走**：`renderSchema`/`exposeSchemaHandle` 把字段类型表挂到 handle。
-6. **两个调用点共用同一投影路径（R3 恢复条）**：bootstrapper remount（`scene-bootstrapper.ts:191-195`）与 `SceneAdapter.reset()`（`scene-adapter.ts:609-620`，transport reset 按钮 + 键盘 `r` 可达）都改为 `syncFromScene?.() ?? projectControlsFromParams(...)`；`handle.refresh` 分支整体退役；spring-oscillator 的列表重建式 refresh 保留、重命名并标注「仅供 reset/内部使用」。
+6. **两个调用点共用同一投影路径（R3 恢复条；表达式按 §10.5 勘误为准）**：bootstrapper remount（`scene-bootstrapper.ts:191-195`）与 `SceneAdapter.reset()`（`scene-adapter.ts:609-620`，transport reset 按钮 + 键盘 `r` 可达）都改为 `if (handle.syncFromScene) { handle.syncFromScene(); } else { projectControlsFromParams(...); }`（伪代码——`syncFromScene?.() ?? ...` 对 void 函数是无效表达式，恒双重投影）；`handle.refresh` 分支整体退役（退役收口在阶段 A3/A4，见 §10.9）；spring-oscillator 的列表重建式 refresh 保留、重命名并标注「仅供 reset/内部使用」。
 7. `paramSync.projectControls(params, ctx)` 逃生口语义（A3 执行前定稿）：对 sim 只读、同步、不得 rAF 延迟。同步补 `SceneInstance.getParams?()` 类型声明。
 
 ### A2. handle 静默迁移
@@ -134,7 +134,7 @@ projectControlsFromParams({
 
 - **A6** 双契约：`NO_CONTROL_PROJECTION` ∪ `NO_EVENTFUL_PROJECTION`；B5 台账在全绿前重新打开。
 - **A7** AGENTS.md「URL 参数同步」小节同批改写（v10 §6.3）。
-- **A8** 内部顺序：先冻结语义——具名并集 **19 个**（§1.4 的 11 + ②③ 中未被 tier-1 包含的 6 个（projectile-components、centripetal-motion、resistor-measurement、precision-tools、charged-particle-circle、spring-ball）+ 特殊 2 个，去重口径：mechanical-energy/internal-energy/variable-work/emf-internal-resistance 已在 §1.4）→ 再机械批 84 个。
+- **A8** 内部顺序：先冻结语义——具名并集 **20 个**（§1.4 的 12 + ②③ 中未被 tier-1 包含的 6 个（projectile-components、centripetal-motion、resistor-measurement、precision-tools、charged-particle-circle、spring-ball）+ 特殊 2 个，去重口径：mechanical-energy/internal-energy/variable-work/emf-internal-resistance 已在 §1.4；vt-integral 经 v12.2 进入 §1.4）→ 再机械批 84 个。
 
 ## 3. Wave B：布局切换生命周期硬化
 
@@ -228,7 +228,7 @@ E1-E3 完成后删 `module-line-budget.spec.ts:10-18` 三条祖父条目；新�
 ## 7. 批次与依赖总序
 
 ```
-Wave A（A1 语义 + A6/A7 契约文档 + 具名 19 场景冻结 → 84 机械批 → A4 定时器 → A5 门禁 + D1a）
+Wave A（A1 语义 + A6/A7 契约文档 + 具名 20 场景冻结 → 84 机械批 → A4 定时器 → A5 门禁 + D1a）
   → Wave B（B2+B4 同批；B1/B3/B5/B6）∥ Wave C（C1 复用 B2 替身）
   → D1b / D2 / D3
   → Wave E（E1 → E2 → E3 各自独立提交；E4/E6 随对应批次）
@@ -260,7 +260,7 @@ Wave A（A1 语义 + A6/A7 契约文档 + 具名 19 场景冻结 → 84 机械�
 
 来源：A1 验收（Claude 报告 `artifacts/exec-a1-claude-acceptance-result.md`，ACCEPT: PASS 附带）。以下条款与本方案正文同等效力。
 
-1. **【A3 前置，高】vt-integral 移入 tier-1**（§1.4 表已加行）：索引编码 selector 场景在机械批之前必须有解码版投影，否则「投影器报成功、面板静默不动」。
+1. **【冻结批/A8 第一批，高】vt-integral 移入 tier-1**（§1.4 表已加行）：索引编码 selector 场景在机械批之前必须有解码版投影，否则「投影器报成功、面板静默不动」。解码版 syncFromScene 的交付与 ticker-tape 同批（阶段 A3 冻结批）。
 2. **【A2】键盘 `r` 归并**：`scene-adapter.ts:312-316` 有一段内联 reset（不经 `this.reset()` → 不经投影）。A2 阶段改为 `() => this.reset()` 去重，否则 A5.7 的 reset 回归按键盘路径会失败。
 3. **【A2】删除 `control-projection.ts` 的 `handle.schema` 回退分支**（或至少 `Array.isArray(schema?.sections)` 守卫）：方案只规定 `fieldTypes`；schema 分支是契约外路径且在 remount/reset 这类不该抛异常的路径上有 TypeError 风险。
 4. **【A2 契约】`NO_EVENTFUL_PROJECTION` 同时断言 `fieldTypes` 存在且非空**：否则 `exposeSchemaHandle` 漏转发时投影静默返回 false（fail-silent），与薄包装丢字段同一失效模式。
@@ -268,3 +268,4 @@ Wave A（A1 语义 + A6/A7 契约文档 + 具名 19 场景冻结 → 84 机械�
 6. **【语义】projector 返回 boolean = 「至少投影一键」**，不等于完整投影；部分键跳过时不回退 refresh（skip 是刻意的，如编码场景走 tier-1）。召回缺口依赖 A5 具名回归与 NO_CONTROL_PROJECTION 豁免审查，不靠返回值。
 7. **【记录·非回归】首屏（空 URL）不投影**：schema 默认值 ≠ sim 默认值的场景（如 projectile 滑块默认 30 vs sim 默认 20）首屏以 schema 为准，首次 remount 后显示 live 值。A5 不为此加断言；如产品上要消除，另行立项。
 8. **【建议·实施期】`single-loop-integration.ts` 的 `Omit<SceneInstance,'getParams'>` 补注释**（防后人还原踩坑）；`SceneParamSync.projectControls` 的 `ctx.handle` 类型与 `ControlProjectionHandle` 统一（A2 顺手）；`url-sync.ts:318` 的 `typeof string → setActive` 启发式与投影器分派规则的分歧在 A5/A7 对齐时记录为已知差异。
+9. **【收口指派】`handle.refresh` 分支退役 + spring-oscillator 的 `refresh: renderOscillatorList` 重命名/标注**，归阶段 A3（冻结批）执行、A4 验收（A4 完成后 `control-projection.ts` 的 `TODO(A4)` 回退分支删除，refresh 调用点归零）。A1 阶段按阶段化条款保留回退是过渡态，不是终态。
