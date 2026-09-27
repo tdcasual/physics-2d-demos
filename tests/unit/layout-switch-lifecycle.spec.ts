@@ -133,6 +133,39 @@ function runtimeOf(container: unknown): LayoutSwitchRuntime {
   return (container as { _switch: LayoutSwitchRuntime })._switch;
 }
 
+function animationSlotOf(container: {
+  currentLayout: ILayout | null;
+}): HTMLElement {
+  const slot = container.currentLayout?.getSlots?.()?.animation;
+  if (!slot) throw new Error('expected animation slot');
+  return slot;
+}
+
+async function quarantineHungWillChange(
+  container: {
+    switchLayout: (id: string, options?: { reason?: string }) => Promise<void>;
+    getSwitchState: () => string;
+  },
+  scene: Scene,
+  layoutId: string
+): Promise<() => void> {
+  let release!: () => void;
+  scene.onLayoutWillChange = () =>
+    new Promise<void>((resolve) => {
+      release = resolve;
+    });
+  vi.useFakeTimers({ toFake: [...FAKE_TIMER_APIS] });
+  const hung = container.switchLayout(layoutId, { reason: 'manual' });
+  await waitUntilSwitching(container);
+  vi.advanceTimersByTime(10_000);
+  await flushMicrotasks();
+  vi.advanceTimersByTime(1_000);
+  await flushMicrotasks();
+  await hung.catch(() => undefined);
+  expect(container.getSwitchState()).toBe('quarantined');
+  return release;
+}
+
 describe('Layout switch lifecycle (Wave B)', () => {
   let mount: HTMLElement;
 
@@ -157,7 +190,7 @@ describe('Layout switch lifecycle (Wave B)', () => {
       vi.useRealTimers();
     });
 
-    it('resets quarantine when a graph canvas sits beside the stage canvas', async () => {
+    it('resets quarantine when instrument canvases share the animation slot', async () => {
       registerLayout('layout-a', layoutClass('layout-a'), testMeta);
       registerLayout('layout-b', layoutClass('layout-b'), testMeta);
       const scene = makeScene();
@@ -166,29 +199,62 @@ describe('Layout switch lifecycle (Wave B)', () => {
         forceLayout: 'layout-a'
       });
       await container.setScene(scene);
-      const graphCanvas = document.createElement('canvas');
-      graphCanvas.dataset.role = 'graph';
-      mount.appendChild(graphCanvas);
-      expect(mount.querySelectorAll('canvas').length).toBeGreaterThan(1);
+      await container.switchLayout('layout-b', { animate: false });
+      const slot = animationSlotOf(container);
+      const owned = slot.querySelector('canvas');
+      expect(owned).not.toBeNull();
+      expect(runtimeOf(container).canvasOwner?.node).toBe(owned);
+      const instrumentA = document.createElement('canvas');
+      instrumentA.dataset.role = 'instrument';
+      const instrumentB = document.createElement('canvas');
+      instrumentB.dataset.role = 'instrument';
+      slot.append(instrumentA, instrumentB);
+      expect(slot.querySelectorAll('canvas').length).toBe(3);
 
-      let release!: () => void;
-      scene.onLayoutWillChange = () =>
-        new Promise<void>((resolve) => {
-          release = resolve;
-        });
-      vi.useFakeTimers({ toFake: [...FAKE_TIMER_APIS] });
-      const hung = container.switchLayout('layout-b', { reason: 'manual' });
-      await waitUntilSwitching(container);
-      vi.advanceTimersByTime(10_000);
-      await flushMicrotasks();
-      vi.advanceTimersByTime(1_000);
-      await flushMicrotasks();
-      await hung.catch(() => undefined);
-      expect(container.getSwitchState()).toBe('quarantined');
+      const release = await quarantineHungWillChange(
+        container,
+        scene,
+        'layout-a'
+      );
+      expect(slot.querySelectorAll('canvas').length).toBe(3);
       release();
       await flushMicrotasks();
       expect(container.resetSwitchQuarantine()).toBe(true);
       expect(container.getSwitchState()).toBe('idle');
+      container.dispose();
+    });
+
+    it('keeps quarantine when the owned stage canvas has been displaced', async () => {
+      registerLayout('layout-a', layoutClass('layout-a'), testMeta);
+      registerLayout('layout-b', layoutClass('layout-b'), testMeta);
+      const scene = makeScene();
+      const container = createSceneContainer({
+        mount,
+        forceLayout: 'layout-a'
+      });
+      await container.setScene(scene);
+      await container.switchLayout('layout-b', { animate: false });
+      const slot = animationSlotOf(container);
+      const owned = slot.querySelector('canvas');
+      expect(owned).not.toBeNull();
+      expect(runtimeOf(container).canvasOwner?.node).toBe(owned);
+      owned!.remove();
+      const replacement = document.createElement('canvas');
+      replacement.dataset.role = 'replacement';
+      slot.appendChild(replacement);
+      expect(owned!.isConnected).toBe(false);
+      expect(slot.contains(owned!)).toBe(false);
+      expect(slot.querySelector('canvas')).toBe(replacement);
+
+      const release = await quarantineHungWillChange(
+        container,
+        scene,
+        'layout-a'
+      );
+      release();
+      await flushMicrotasks();
+      expect(runtimeOf(container).resetSwitchQuarantine()).toBe(false);
+      expect(container.getSwitchState()).toBe('quarantined');
       container.dispose();
     });
 

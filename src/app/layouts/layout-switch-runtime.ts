@@ -353,18 +353,23 @@ export class LayoutSwitchRuntime {
   }
 
   /**
-   * Stage-canvas uniqueness is the coordinator's custody, not every
-   * `<canvas>` in the page (graph slots and instruments also paint).
+   * Stage-canvas uniqueness is custody of the owned node, not a count of
+   * every `<canvas>` under the animation slot (double-slit instruments
+   * and chase-meet motion/x/v canvases are legal extras).
    *
-   * Coordinator holds a node and the tracked animation slots contain 0
-   * canvases → unique (`true`). That keeps ordinary mount-throw rollback
-   * off the quarantine path (`scene-container-registry.spec.ts`).
+   * owned still in the host container → unique. Coordinator holds a node
+   * and the tracked slots contain 0 canvases → unique (ordinary
+   * mount-throw rollback, `scene-container-registry.spec.ts`). owned
+   * gone with a different canvas in the slot → not unique. owned is
+   * null → fall back to live.length ≤ 1.
    */
   private hasUniqueCanvasOwner(): boolean {
     const owned = this.canvasOwner?.node ?? this.snapshot?.canvas ?? null;
-    const live = this.trackedLiveStageCanvases();
-    if (owned && live.length === 0) return true;
-    return live.length <= 1;
+    if (owned) {
+      if (this.host.container.contains(owned)) return true;
+      return this.trackedLiveStageCanvases().length === 0;
+    }
+    return this.trackedLiveStageCanvases().length <= 1;
   }
 
   private trackedLiveStageCanvases(): HTMLCanvasElement[] {
