@@ -86,7 +86,7 @@ export type DataWorkspaceSpec = {
   /** When false, the workspace must not render an empty graph region. */
   chartAnalysis: boolean;
   enabledSteps: readonly DataWorkspaceStepKind[];
-  /** @deprecated Prefer minRows/maxRows/initialRows. Kept as max-row fallback. */
+  /** Inclusive lower bound on trial row count. Defaults to 1. */
   minRows?: number;
   maxRows?: number;
   initialRows?: number;

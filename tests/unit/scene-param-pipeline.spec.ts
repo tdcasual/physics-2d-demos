@@ -265,4 +265,81 @@ describe('bootScenePage URL param pipeline', () => {
       expect(permit.snapshot).toEqual({});
     });
   });
+
+  describe('createControls 失败安全', () => {
+    function mountAdapter(): SceneAdapter {
+      const mockContainer = (createSceneContainer as ReturnType<typeof vi.fn>)
+        .mock.results[0].value as { setScene: ReturnType<typeof vi.fn> };
+      const adapter = mockContainer.setScene.mock.calls[0][0] as SceneAdapter;
+      const container = document.createElement('div');
+      const canvas = document.createElement('canvas');
+      container.appendChild(canvas);
+      adapter.renderAnimation(container, {
+        animation: container,
+        control: container
+      } as LayoutSlots);
+      return adapter;
+    }
+
+    it('throw before apply returns permit to notStarted so same generation can retry', () => {
+      window.history.replaceState({}, '', '/test.html?speed=30');
+      const urlSnapshots: Array<Record<string, number | string> | undefined> =
+        [];
+      let failOnce = true;
+      let scene: ReturnType<typeof createMockScene> | undefined;
+      bootWithControls((opts) => {
+        scene = opts.scene;
+        urlSnapshots.push(opts.urlParams);
+        if (failOnce) {
+          failOnce = false;
+          throw new Error('controls boom');
+        }
+        return { dispose: vi.fn() };
+      });
+      const adapter = mountAdapter();
+      expect(() =>
+        adapter.renderControl(document.createElement('div'))
+      ).toThrow('controls boom');
+      expect(urlSnapshots[0]).toEqual({ speed: 30 });
+      expect(scene!.setParams).not.toHaveBeenCalled();
+      const permit = adapter.takeUrlRestorePermit();
+      expect(permit.first).toBe(true);
+      adapter.releaseUrlRestorePermit();
+
+      adapter.renderControl(document.createElement('div'));
+      expect(urlSnapshots[1]).toEqual({ speed: 30 });
+      expect(scene!.setParams).toHaveBeenCalledWith({ speed: 30 });
+    });
+
+    it('layout remount after recovered apply still does not read URL (B5)', () => {
+      window.history.replaceState({}, '', '/test.html?speed=30');
+      const urlSnapshots: Array<Record<string, number | string> | undefined> =
+        [];
+      let failOnce = true;
+      let scene: ReturnType<typeof createMockScene> | undefined;
+      bootWithControls((opts) => {
+        scene = opts.scene;
+        urlSnapshots.push(opts.urlParams);
+        if (failOnce) {
+          failOnce = false;
+          throw new Error('controls boom');
+        }
+        return {
+          fieldTypes: new Map([['speed', 'slider']]),
+          setValueSilently: vi.fn(),
+          dispose: vi.fn()
+        };
+      });
+      const adapter = mountAdapter();
+      expect(() =>
+        adapter.renderControl(document.createElement('div'))
+      ).toThrow('controls boom');
+      adapter.renderControl(document.createElement('div'));
+      expect(scene!.setParams).toHaveBeenCalledWith({ speed: 30 });
+      scene!.setParams.mockClear();
+      adapter.renderControl(document.createElement('div'));
+      expect(urlSnapshots[2]).toEqual({});
+      expect(scene!.setParams).not.toHaveBeenCalled();
+    });
+  });
 });

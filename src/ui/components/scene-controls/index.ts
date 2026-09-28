@@ -5,7 +5,6 @@
  */
 
 export type {
-  ControlItem,
   SceneControlsOptions,
   SceneControlsInstance,
   DisposableElement

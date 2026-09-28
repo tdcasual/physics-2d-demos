@@ -22,19 +22,6 @@ export function withDispose<T extends HTMLElement>(
   return target;
 }
 
-export interface ControlItem {
-  type: 'slider' | 'select' | 'button' | 'button-group';
-  label: string;
-  key: string;
-  value?: number | string;
-  options?: Array<{ label: string; value: string }>;
-  buttons?: Array<{ label: string; value: string; desc?: string }>;
-  min?: number;
-  max?: number;
-  step?: number;
-  unit?: string;
-}
-
 export interface SceneControlsOptions {
   title: string;
   icon?: string;
