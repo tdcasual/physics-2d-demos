@@ -177,6 +177,11 @@ bootScenePage({
   true 跳过默认处理）、`applyAll`（整体接管含首绘，用于批量约束语义）、
   `afterApply`（默认管线后、首绘前）、`projectControls`（remount/reset
   逃生口：对 sim 只读、同步、不得 rAF 延迟）。
+- **autoPlay**：page.ts 不要在模块顶层 `readSceneParams`。`shouldAutoPlay(params, urlParams)`
+  在 URL restore（`applySceneUrlParams`）之后、`startAll` 之前求值；`params` 为
+  `getParams()`，`urlParams` 为该代 snapshot。URL query 的 `autoRun` 覆盖
+  localStorage 镜像（`restoreSceneParams` 仅在 query 为空时灌入）。构造期
+  `initialParams` 从 `createScene` 注入的 `urlParams` 读取。
 
 **已知限制**：
 
@@ -450,4 +455,5 @@ function resize() {
 - `spring-oscillator`：`getParams` 只暴露首振子 `{k,m,A}`，列表重建走 handle `syncFromScene`（A3 裁定）
 - 豁免清单冻结（F4）：`EXISTING_SPECIAL_HANDLE_FORMS` 冻 3 项；`NON_PARAM_KEYS` 冻 6 场景且 13 键；`LARGE_RENDER_LITERAL_EXEMPT` 冻 16 id。只许缩小。
 - chase-meet 的表达式解析器语义（除零得 0、悬挂操作符补 0、多余 token 静默丢弃）已被 `tests/unit/chase-meet-expression-parser.spec.ts` 固化为特征化契约；「修正」parser 前须先改测试，否则会被该契约挡住。
+- chase-meet 舞台内多画布是产品决策（C8）：速度图与位移图需同屏对照，标准 graph slot 放不下三画布。桌面 `hasGraph: false`（图在舞台内），移动端经 `layoutOverrides['mobile-stack'].hasGraph = true` 开图表 tab 并走标准 `renderGraph`。不要把舞台画布迁到 graph slot；豁免由 hasGraph 双源契约的 layoutOverrides 子句机器化。
 - E2E 套件当前稳定；用例数以 `pnpm exec playwright test -c playwright.e2e.config.ts --list` 查询为准。早期文档所述「35 个不稳定测试」已不复现。若 CI 偶发超时，优先排查浏览器/资源环境而非测试本身。
