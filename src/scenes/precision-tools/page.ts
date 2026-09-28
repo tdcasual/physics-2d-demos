@@ -1,6 +1,6 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { readSceneParams } from '../../app/url-sync';
+
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { precisionToolControlsSchema } from './controls-schema';
@@ -13,15 +13,18 @@ function asFiniteNumber(value: unknown): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
-const rawInitialParams = readSceneParams(precisionToolMeta);
-const initialParams: Partial<PrecisionToolParams> = {};
-const initialMode = asPrecisionMode(rawInitialParams.mode);
-if (initialMode !== undefined) initialParams.mode = initialMode;
-const initialAdj = asFiniteNumber(rawInitialParams.adjustment);
-if (initialAdj !== undefined) initialParams.adjustment = initialAdj;
-for (const key of ['autoRun', 'showGuides', 'showReading'] as const) {
-  if (rawInitialParams[key] !== undefined)
-    initialParams[key] = asBool(rawInitialParams[key], true);
+function paramsFromUrl(
+  raw: Record<string, number | string>
+): Partial<PrecisionToolParams> {
+  const next: Partial<PrecisionToolParams> = {};
+  const mode = asPrecisionMode(raw.mode);
+  if (mode !== undefined) next.mode = mode;
+  const adj = asFiniteNumber(raw.adjustment);
+  if (adj !== undefined) next.adjustment = adj;
+  for (const key of ['autoRun', 'showGuides', 'showReading'] as const) {
+    if (raw[key] !== undefined) next[key] = asBool(raw[key], true);
+  }
+  return next;
 }
 
 function syncControls(
@@ -37,7 +40,8 @@ function syncControls(
 
 bootScenePage({
   meta: precisionToolMeta,
-  autoPlay: initialParams.autoRun !== false,
+  shouldAutoPlay: (_params, urlParams) =>
+    paramsFromUrl(urlParams).autoRun !== false,
   preferredLayout: 'split-right',
   layoutConfig: {
     defaultLeftRatio: 0.34,
@@ -48,14 +52,14 @@ bootScenePage({
     readoutLabel: '数据读数',
     hasGraph: false
   },
-  createScene: ({ canvas, theme, mode, demoHints }) => {
+  createScene: ({ canvas, theme, mode, demoHints, urlParams }) => {
     if (!canvas) throw new Error('precision-tools requires a canvas');
     const scene = createPrecisionToolScene({
       canvas,
       theme,
       mode,
       demoHints,
-      initialParams
+      initialParams: paramsFromUrl(urlParams ?? {})
     });
     const scheduler = createRenderScheduler(() => scene.render());
     const dispose = scene.dispose.bind(scene);

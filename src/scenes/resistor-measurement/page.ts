@@ -1,6 +1,6 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { readSceneParams } from '../../app/url-sync';
+
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { resistorControlsSchema } from './controls-schema';
@@ -33,8 +33,6 @@ function paramsFromUrl(
   return next;
 }
 
-const initialParams = paramsFromUrl(readSceneParams(resistorMeta));
-
 function syncControls(
   renderer: ReturnType<typeof renderSchema>,
   params: ResistorParams
@@ -51,7 +49,8 @@ function syncControls(
 
 bootScenePage({
   meta: resistorMeta,
-  autoPlay: initialParams.autoRun !== false,
+  shouldAutoPlay: (_params, urlParams) =>
+    paramsFromUrl(urlParams).autoRun !== false,
   preferredLayout: 'split-right',
   layoutConfig: {
     defaultLeftRatio: 0.34,
@@ -62,14 +61,14 @@ bootScenePage({
     readoutLabel: '数据读数',
     hasGraph: false
   },
-  createScene: ({ canvas, theme, mode, demoHints }) => {
+  createScene: ({ canvas, theme, mode, demoHints, urlParams }) => {
     if (!canvas) throw new Error('resistor-measurement requires a canvas');
     const scene = createResistorScene({
       canvas,
       theme,
       mode,
       demoHints,
-      initialParams
+      initialParams: paramsFromUrl(urlParams ?? {})
     });
     const scheduler = createRenderScheduler(() => scene.render());
     const dispose = scene.dispose.bind(scene);
