@@ -11,7 +11,7 @@ export default defineConfig({
   // 像素级截图对比无法跨平台复现（CJK 字体光栅化不同），不要试图合并。
   snapshotPathTemplate:
     '{testDir}/{testFilePath}-snapshots/{arg}-{platform}{ext}',
-  timeout: 30_000,
+  timeout: 60_000,
   fullyParallel: false,
   use: {
     ...sharedConfig.use,

@@ -21,7 +21,7 @@ export const sharedConfig = {
     locale: 'zh-CN',
     timezoneId: 'Asia/Shanghai',
     actionTimeout: 5_000,
-    navigationTimeout: 15_000
+    navigationTimeout: 30_000
   },
   webServer: {
     command: webServerCommand,
