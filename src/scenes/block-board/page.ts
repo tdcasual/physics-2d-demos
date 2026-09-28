@@ -1,6 +1,6 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { readSceneParams } from '../../app/url-sync';
+
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { createBlockBoardScene } from './scene.entry';
@@ -41,13 +41,12 @@ function paramsFromUrl(
   return next;
 }
 
-const initialParams = paramsFromUrl(readSceneParams(blockBoardMeta));
-
 bootScenePage({
   meta: blockBoardMeta,
   // Keep the established auto-play default, but let an explicit URL
   // autoRun=0 remain paused from the first frame.
-  autoPlay: initialParams.autoRun !== false,
+  shouldAutoPlay: (_params, urlParams) =>
+    paramsFromUrl(urlParams).autoRun !== false,
   preferredLayout: 'split-right-graph-bottom',
   layoutConfig: {
     defaultLeftRatio: 0.32,
@@ -62,14 +61,14 @@ bootScenePage({
     graphMaxHeight: 300,
     graphColumns: 1
   },
-  createScene: ({ canvas, theme, mode, demoHints }) => {
+  createScene: ({ canvas, theme, mode, demoHints, urlParams }) => {
     if (!canvas) throw new Error('block-board requires a canvas');
     const scene = createBlockBoardScene({
       canvas,
       theme,
       mode,
       demoHints,
-      initialParams
+      initialParams: paramsFromUrl(urlParams ?? {})
     });
     const scheduler = createRenderScheduler(() => scene.render());
     const dispose = scene.dispose.bind(scene);

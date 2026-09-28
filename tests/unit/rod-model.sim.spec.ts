@@ -387,9 +387,10 @@ describe('rod-model scene entry, transport and URL', () => {
       resolve(process.cwd(), 'src/scenes/rod-model/page.ts'),
       'utf8'
     );
-    expect(pageSrc).toContain('readSceneParams(rodModelMeta)');
+    expect(pageSrc).not.toContain('readSceneParams(');
+    expect(pageSrc).toContain('shouldAutoPlay:');
     expect(pageSrc).toContain(
-      'rawInitial.autoRun === undefined ? true : asBool(rawInitial.autoRun, true)'
+      'urlParams.autoRun === undefined ? true : asBool(urlParams.autoRun, true)'
     );
     expect(pageSrc).not.toMatch(/autoPlay:\s*true/);
     expect(pageSrc).toContain(

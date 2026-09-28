@@ -1,6 +1,6 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { readSceneParams, writeOwnedSceneParams } from '../../app/url-sync';
+import { writeOwnedSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { rodModelControlsSchema } from './controls-schema';
@@ -8,12 +8,10 @@ import { asRodModel, createRodModelScene } from './scene.entry';
 import { rodModelMeta } from './scene.meta';
 import { asBool, restoredUrlParams, type RodParams } from './scene.sim';
 
-const rawInitial = readSceneParams(rodModelMeta);
-
 bootScenePage({
   meta: rodModelMeta,
-  autoPlay:
-    rawInitial.autoRun === undefined ? true : asBool(rawInitial.autoRun, true),
+  shouldAutoPlay: (_params, urlParams) =>
+    urlParams.autoRun === undefined ? true : asBool(urlParams.autoRun, true),
   preferredLayout: 'split-right-graph-bottom',
   layoutConfig: {
     defaultLeftRatio: 0.32,

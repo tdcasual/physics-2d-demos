@@ -1,6 +1,6 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { readSceneParams } from '../../app/url-sync';
+
 import { createSingleLoopScene } from './scene.entry';
 import { singleLoopMeta } from './scene.meta';
 import { asBool, type SingleLoopParams } from './scene.sim';
@@ -9,7 +9,6 @@ import {
   withSingleLoopUrlSync
 } from '../../pages/single-loop-integration';
 
-const rawInitial = readSceneParams(singleLoopMeta);
 const NUMBER_KEYS = [
   'initialVelocity',
   'fieldStrength',
@@ -19,8 +18,8 @@ const NUMBER_KEYS = [
 
 bootScenePage({
   meta: singleLoopMeta,
-  autoPlay:
-    rawInitial.autoRun === undefined ? true : asBool(rawInitial.autoRun, true),
+  shouldAutoPlay: (_params, urlParams) =>
+    urlParams.autoRun === undefined ? true : asBool(urlParams.autoRun, true),
   preferredLayout: 'split-right-graph-bottom',
   layoutConfig: {
     defaultLeftRatio: 0.32,
