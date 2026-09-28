@@ -39,6 +39,9 @@ export function createProjectileDataPanel(): DataPanelHandle {
 
   const wrap = document.createElement('div');
   wrap.style.cssText = 'overflow:auto;min-height:0;flex:1;';
+  wrap.tabIndex = 0;
+  wrap.setAttribute('role', 'region');
+  wrap.setAttribute('aria-label', '频闪采样滚动区');
   const table = document.createElement('table');
   table.setAttribute('aria-label', '频闪采样记录');
   table.style.cssText =

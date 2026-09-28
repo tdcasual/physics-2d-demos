@@ -33,6 +33,9 @@ export function createMechanicalEnergyDataPanel(): DataPanelHandle {
 
   const wrap = document.createElement('div');
   wrap.style.cssText = 'overflow:auto;min-height:0;flex:1;max-width:100%;';
+  wrap.tabIndex = 0;
+  wrap.setAttribute('role', 'region');
+  wrap.setAttribute('aria-label', '计数点记录滚动区');
   const table = document.createElement('table');
   table.setAttribute('aria-label', '计数点记录');
   table.style.cssText =
