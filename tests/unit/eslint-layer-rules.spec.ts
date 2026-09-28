@@ -73,14 +73,4 @@ describe('eslint layer rules', { timeout: 30_000 }, () => {
     );
     expect(msgs.some((m) => /cannot import ui layer/i.test(m))).toBe(true);
   });
-
-  it('ganshe/spring-oscillator inline disable exempts ui imports', async () => {
-    const msgs = await restrictedImportMessages(
-      'src/scenes/ganshe/controls.ts',
-      `// eslint-disable-next-line no-restricted-imports -- 既有豁免：imperative controls 观察点管理依赖 ui 组件（见 AGENTS.md「已知限制」）
-import { createControlCard } from '../../ui/components/ControlCard';
-`
-    );
-    expect(msgs).toEqual([]);
-  });
 });

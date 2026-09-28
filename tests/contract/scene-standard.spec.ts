@@ -385,6 +385,10 @@ describe('scene modernization standard (anti-drift ratchet)', () => {
 
     it('large-render-literal exemption list contains only known scenes', () => {
       expect(
+        LARGE_RENDER_LITERAL_EXEMPT.size,
+        'LARGE_RENDER_LITERAL_EXEMPT 冻 16 id；只许缩小，新场景禁止加入'
+      ).toBe(16);
+      expect(
         [...LARGE_RENDER_LITERAL_EXEMPT].filter((id) => !sceneIds.includes(id)),
         'LARGE_RENDER_LITERAL_EXEMPT 含不存在的场景 id（拼写错误或场景已删除）：' +
           '请修正 tests/contract/scene-standard.spec.ts 中的豁免清单'

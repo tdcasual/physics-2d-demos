@@ -188,9 +188,16 @@ bootScenePage({
   首绘负责，remount 后高亮回退 `initialActive`（A3 裁定保持）。
 - `spring-oscillator`：`getParams` 只暴露首振子 `{k,m,A}`；handle 以
   `syncFromScene`（列表重建，仅供 remount/reset）投影，通用投影无对象可投。
+  k/m/A 在 imperative 卡片，page 无 writeParam 字面量，复用
+  `EXISTING_SPECIAL_HANDLE_FORMS`（F3 豁免）。
 - `electrification`：`getParams` 含 `scene`，handle 转发 `setActiveSilently`，
   remount 后 scene-selector 高亮 live 子场景。仍无 `setValue`（action 为
-  button-grid），留在 `EXISTING_SPECIAL_HANDLE_FORMS`。
+  button-grid），留在 `EXISTING_SPECIAL_HANDLE_FORMS`。urlSyncKeys 仅
+  `step`（button-grid action），无 value-control 写回点。
+- `chase-meet`：写回只发生在 apply / uniform / accelerated（onChange 空实现
+  是刻意的，防止未应用草稿进 URL）；只写 4 个 urlSyncKeys。
+- `ganshe`：urlSyncKeys 滑块在 imperative `createWaveSourceCard`，F3 正向
+  契约谓词覆盖不到（无契约守卫，见 v13 方案 §9 条款 3）。写回是手工项。
 - URL 同步棘轮：`scene-params-contract.spec.ts` 强制「有 `defaultParams` 的
   场景必须有 `urlSyncKeys` 或 page 级 `paramSync` 自定义路径」，全量 100%
   结构化覆盖（原 vite.config 百分比阈值已由该棘轮取代，debt-ledger A7）。
@@ -199,7 +206,8 @@ bootScenePage({
   且 getParams 返回键 ∩ fieldTypes ≠ ∅，或登记豁免）并存。
 - Owner-scoped writer / restore-once 契约见 `src/app/url-sync.ts` 与
   `tests/contract/scene-url-writer-contract.spec.ts`。布局 remount 不再把
-  首屏 query 写回 scene。
+  首屏 query 写回 scene。urlSyncKeys ∩ value-control 非空 ⇒ page 必须有
+  writeParam / writeOwnedSceneParams / sceneWriter，或登记豁免。
 
 ### 控制区列布局范式
 
@@ -437,8 +445,9 @@ function resize() {
 
 ## 已知限制
 
-- `spring-oscillator` 与 `ganshe` 使用 imperative `controls.ts`（动态增删振子 / 观察点管理）。ui 工厂由 page.ts 注入（结构类型参数），场景层保持零 ui 导入——新增 imperative 卡片时遵循同一注入模式，禁止恢复行内 `eslint-disable no-restricted-imports` 豁免（debt-ledger A2 已清偿）
+- `spring-oscillator` 与 `ganshe` 使用 imperative `controls.ts`（动态增删振子 / 观察点管理）。ui 工厂由 page.ts 注入（结构类型参数），场景层保持零 ui 导入——新增 imperative 卡片时遵循同一注入模式，禁止恢复行内 `eslint-disable no-restricted-imports` 豁免（debt-ledger A2 已清偿）。`UI_EXEMPT_SCENE_CONTROLS` 已清空，必须保持空。
 - `xt-graph` / `tortoise-hare`：`getParams` 仅 `{speed}`，schema 无 speed 键，通用投影空转；preset 高亮只覆盖 URL 首绘（A3 裁定）
 - `spring-oscillator`：`getParams` 只暴露首振子 `{k,m,A}`，列表重建走 handle `syncFromScene`（A3 裁定）
+- 豁免清单冻结（F4）：`EXISTING_SPECIAL_HANDLE_FORMS` 冻 3 项；`NON_PARAM_KEYS` 冻 6 场景且 13 键；`LARGE_RENDER_LITERAL_EXEMPT` 冻 16 id。只许缩小。
 - chase-meet 的表达式解析器语义（除零得 0、悬挂操作符补 0、多余 token 静默丢弃）已被 `tests/unit/chase-meet-expression-parser.spec.ts` 固化为特征化契约；「修正」parser 前须先改测试，否则会被该契约挡住。
 - E2E 套件当前稳定；用例数以 `pnpm exec playwright test -c playwright.e2e.config.ts --list` 查询为准。早期文档所述「35 个不稳定测试」已不复现。若 CI 偶发超时，优先排查浏览器/资源环境而非测试本身。
