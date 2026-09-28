@@ -104,6 +104,16 @@ export class SceneAdapter<
     this._urlRestore = ok ? 'complete' : 'failed';
   }
 
+  /**
+   * createControls 在 apply 前抛错时把 permit 退回 notStarted，
+   * 同代重试仍能 take。apply 失败走 completeUrlRestore(false)，本方法 no-op。
+   */
+  releaseUrlRestorePermit(): void {
+    if (this._urlRestore === 'consuming') {
+      this._urlRestore = 'notStarted';
+    }
+  }
+
   getSceneWriter(): import('./url-sync').SceneParamWriter | null {
     return this._sceneWriter;
   }
@@ -208,12 +218,7 @@ export class SceneAdapter<
       container.setAttribute('aria-label', `${this.options.meta.title}演示区`);
     }
 
-    const theme =
-      (container
-        .closest('[data-theme]')
-        ?.getAttribute('data-theme') as Theme) ||
-      (document.documentElement.getAttribute('data-theme') as Theme) ||
-      'light';
+    const theme = this.readThemeFrom(container);
     const mode = this._mode;
 
     const demoHints =
@@ -459,18 +464,23 @@ export class SceneAdapter<
     this._graphVisibilityRo = null;
   }
 
+  private readThemeFrom(container: HTMLElement): Theme {
+    return (
+      (container
+        .closest('[data-theme]')
+        ?.getAttribute('data-theme') as Theme) ||
+      (document.documentElement.getAttribute('data-theme') as Theme) ||
+      'light'
+    );
+  }
+
   /**
    * 布局切换：保住 sim 与 shell，把渲染面绑到新槽。
    * 禁止 dispose / init / createScene（init 会 reset 物理时钟）。
    */
   private _reattachLiveScene(container: HTMLElement, slots: LayoutSlots): void {
     const canvas = container.querySelector('canvas') ?? undefined;
-    const theme =
-      (container
-        .closest('[data-theme]')
-        ?.getAttribute('data-theme') as Theme) ||
-      (document.documentElement.getAttribute('data-theme') as Theme) ||
-      'light';
+    const theme = this.readThemeFrom(container);
 
     this.scene?.setTheme(theme);
     this.setMode(this._mode);
@@ -643,16 +653,7 @@ export class SceneAdapter<
     try {
       if (this.scene?.setMode) {
         if (mode === 'presentation' && this._resolvedProfile) {
-          const sceneWithHints = this.scene as unknown as {
-            setMode(
-              m: 'normal' | 'presentation',
-              nextHints?: DemoRenderHints
-            ): void;
-          };
-          sceneWithHints.setMode(
-            mode,
-            hints ?? this._resolvedProfile.renderHints
-          );
+          this.scene.setMode(mode, hints ?? this._resolvedProfile.renderHints);
         } else {
           this.scene.setMode(mode);
         }

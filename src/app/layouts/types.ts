@@ -147,7 +147,10 @@ export interface CapabilityContext {
   /** 设置模式（触发 mode change 流程） */
   setMode(mode: 'normal' | 'presentation'): void;
   /** 切换到指定布局 */
-  switchLayout(layoutId: string, savePreference?: boolean): void;
+  switchLayout(
+    layoutId: string,
+    savePreference?: boolean
+  ): Promise<void> | void;
   /** 获取当前布局 ID */
   getCurrentLayoutId(): string;
   /** 获取所有可用布局 */

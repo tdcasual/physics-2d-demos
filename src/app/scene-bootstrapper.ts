@@ -152,45 +152,55 @@ export function bootScenePage<TScene extends SceneInstance>(
               controlOpts.scene.render();
             });
             const permit = adapter.takeUrlRestorePermit();
-            const urlParams = permit.first ? { ...permit.snapshot } : {};
-            const writer = adapter.getSceneWriter();
-            const controls = userCreateControls({
-              ...controlOpts,
-              scheduleRender: scheduler.schedule,
-              urlParams,
-              writeParam: (key, value) => {
-                if (writableKeys.has(key)) {
-                  writer?.write({ [key]: value });
-                }
-              },
-              sceneWriter: writer ?? undefined
-            });
-            if (permit.first) {
-              try {
-                applySceneUrlParams(
-                  options.meta,
-                  {
-                    scene: controlOpts.scene,
-                    controls,
-                    mount: controlOpts.mount,
-                    scheduleRender: scheduler.schedule
-                  },
-                  options.paramSync,
-                  urlParams
-                );
-                adapter.completeUrlRestore(true);
-              } catch (err) {
-                adapter.completeUrlRestore(false);
-                throw err;
-              }
-            } else {
-              syncControlsFromLiveParams({
-                params: paramsFromScene(controlOpts.scene),
-                handle: controls,
-                paramSync: options.paramSync
+            let attached = false;
+            try {
+              const urlParams = permit.first ? { ...permit.snapshot } : {};
+              const writer = adapter.getSceneWriter();
+              const controls = userCreateControls({
+                ...controlOpts,
+                scheduleRender: scheduler.schedule,
+                urlParams,
+                writeParam: (key, value) => {
+                  if (writableKeys.has(key)) {
+                    writer?.write({ [key]: value });
+                  }
+                },
+                sceneWriter: writer ?? undefined
               });
+              if (permit.first) {
+                try {
+                  applySceneUrlParams(
+                    options.meta,
+                    {
+                      scene: controlOpts.scene,
+                      controls,
+                      mount: controlOpts.mount,
+                      scheduleRender: scheduler.schedule
+                    },
+                    options.paramSync,
+                    urlParams
+                  );
+                  adapter.completeUrlRestore(true);
+                } catch (err) {
+                  adapter.completeUrlRestore(false);
+                  throw err;
+                }
+              } else {
+                syncControlsFromLiveParams({
+                  params: paramsFromScene(controlOpts.scene),
+                  handle: controls,
+                  paramSync: options.paramSync
+                });
+              }
+              const wrapped = attachSchedulerDispose(controls, scheduler);
+              attached = true;
+              return wrapped;
+            } catch (err) {
+              adapter.releaseUrlRestorePermit();
+              throw err;
+            } finally {
+              if (!attached) scheduler.dispose();
             }
-            return attachSchedulerDispose(controls, scheduler);
           }
         : undefined,
       onToggleTheme: (next) => container.setTheme(next),
@@ -210,9 +220,14 @@ export function bootScenePage<TScene extends SceneInstance>(
         const idx = current ? ids.indexOf(current) : -1;
         const next = ids[(idx + 1) % ids.length];
         if (next && next !== current) {
-          void container.switchLayout(next, {
-            animate: true,
-            savePreference: true
+          // host 适配器已 surfaceSwitchError；此处只收口未处理 rejection。
+          void Promise.resolve(
+            container.switchLayout(next, {
+              animate: true,
+              savePreference: true
+            })
+          ).catch((err: unknown) => {
+            console.error('[bootScenePage] switchLayout failed:', err);
           });
         }
       }

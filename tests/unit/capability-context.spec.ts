@@ -43,7 +43,6 @@ describe('buildCapabilityContext', () => {
       switchLayout: () => {},
       getAvailableLayouts: () => [],
       emit: (event, payload) => emitter.emit(event, payload),
-      updateDemoProfileInstances: (payload) => updates.push(payload),
       scene,
       modeOwner,
       sidebar: new SidebarStateOwner(),
@@ -75,7 +74,6 @@ describe('buildCapabilityContext', () => {
       switchLayout: () => {},
       getAvailableLayouts: () => [],
       emit: () => {},
-      updateDemoProfileInstances: () => {},
       modeOwner,
       sidebar: new SidebarStateOwner(),
       workspaceUi: new WorkspaceUiState()

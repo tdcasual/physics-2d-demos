@@ -488,7 +488,18 @@ export class SceneContainerImpl implements SceneContainer {
       setTheme: (t: Theme) => this.setTheme(t),
       getCurrentLayoutId: () => this._currentLayout?.id ?? '',
       switchLayout: (id: string, save = true) => {
-        this.switchLayout(id, { animate: true, savePreference: save });
+        const p = this.switchLayout(id, {
+          animate: true,
+          savePreference: save
+        });
+        p.catch((err) =>
+          this.surfaceSwitchError({
+            generation: this._switch?.generation ?? 0,
+            error: err,
+            state: this.getSwitchState()
+          })
+        );
+        return p;
       },
       modeOwner: this._modeOwner,
       sidebar: this._sidebar,
@@ -506,13 +517,7 @@ export class SceneContainerImpl implements SceneContainer {
           .map((m) => ({ id: m.id, name: m.name }));
       },
       emit: (event, payload) => this._emitter.emit(event, payload),
-      on: (event, handler) => this._emitter.on(event, handler),
-      updateDemoProfileInstances: (payload) => {
-        updateCapabilityInstances(
-          this._orchestrator.getInstances('demo-profile'),
-          payload
-        );
-      }
+      on: (event, handler) => this._emitter.on(event, handler)
     });
   }
 

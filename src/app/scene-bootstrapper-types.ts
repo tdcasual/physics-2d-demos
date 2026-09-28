@@ -25,7 +25,7 @@ export type SceneInstance = {
   render(): void;
   dispose(): void;
   setTheme(theme: Theme): void;
-  setMode(mode: 'normal' | 'presentation'): void;
+  setMode(mode: 'normal' | 'presentation', hints?: DemoRenderHints): void;
   step(dt: number): void;
   reset?(): void;
   startAll?(): void;
