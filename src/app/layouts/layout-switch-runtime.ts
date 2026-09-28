@@ -89,6 +89,12 @@ export class LayoutSwitchRuntime {
   generation = 0;
   pendingSwitchId: string | null = null;
   pendingScene: Scene | null = null;
+  /**
+   * Container-side settle hook for the switching-queue deferred.
+   * `clearPendingQueue` (quarantine / reset / dispose) and a successful
+   * `drainPending` apply must fire this so `setScene` waiters cannot hang.
+   */
+  pendingApplyNotify: (() => void) | null = null;
   private pendingSwitchSavePreference = false;
   private pendingSwitchReason = 'manual';
   canvasOwner: { generation: number; node: HTMLCanvasElement | null } | null =
@@ -407,6 +413,9 @@ export class LayoutSwitchRuntime {
   }
 
   private clearPendingQueue(): void {
+    const pendingNotify = this.pendingApplyNotify;
+    this.pendingApplyNotify = null;
+    pendingNotify?.();
     this.pendingSwitchId = null;
     this.pendingScene = null;
     this.pendingSwitchSavePreference = false;
@@ -887,6 +896,9 @@ export class LayoutSwitchRuntime {
       if (pendingScene) {
         await this.hostSetScene(pendingScene);
         sceneApplied = true;
+        const pendingNotify = this.pendingApplyNotify;
+        this.pendingApplyNotify = null;
+        pendingNotify?.();
       }
       if (
         pendingSwitchId &&

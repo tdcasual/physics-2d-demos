@@ -378,6 +378,16 @@ export class SceneContainerImpl implements SceneContainer {
       this._switch.pendingScene = scene;
       const deferred = createQueuedSceneDeferred();
       this._switchQueued = { scene, deferred };
+      // quarantine / reset / dispose 清 pendingScene 但不走 drainPending。
+      // 此处 resolve（与 boot 排队「被替换必须 resolve」同一 last-wins）：
+      // 布局切换自己的 promise 已经失败；reject 只会让 UI 等待方掉进
+      // F1 的 console 收口。
+      this._switch.pendingApplyNotify = () => {
+        settleQueuedSceneDeferred(deferred);
+        if (this._switchQueued?.deferred === deferred) {
+          this._switchQueued = null;
+        }
+      };
       return deferred.promise;
     }
 
@@ -509,9 +519,14 @@ export class SceneContainerImpl implements SceneContainer {
    * 同步前缀必须看到空屏障，否则会自等待）。
    * `_currentLayout === null`（boot 失败后的排队 drain）自愈回退
    * `_initialSetScene`，避免空容器走 switchLayout。
+   *
+   * 自愈分支不变量：必须保持同步前缀——进入 `_initialSetScene` 之前不得
+   * 插入 `await`。`_initialSetScene` 入口同步武装 `_boot`，drain 随即把
+   * `_boot` 覆盖为同一条 Promise；若自愈前先 await 屏障会自等待死锁。
    */
   private async _doSetScene(scene: Scene): Promise<void> {
     if (!this._currentLayout) {
+      // 同步前缀：unmount + 进入 _initialSetScene 必须在第一个 await 之前完成。
       if (this._currentScene && this._currentScene !== scene) {
         this.unmountCurrentScene();
       }

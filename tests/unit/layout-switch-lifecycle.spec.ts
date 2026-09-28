@@ -838,6 +838,10 @@ describe('Layout switch lifecycle (Wave B)', () => {
   });
 
   describe('G′ switching-queue deferred', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
     it('setScene during switching returns a deferred; replaced requests resolve', async () => {
       registerLayout('layout-a', layoutClass('layout-a'), testMeta);
       registerLayout('layout-b', layoutClass('layout-b'), testMeta);
@@ -878,6 +882,56 @@ describe('Layout switch lifecycle (Wave B)', () => {
       await Promise.all([hung, p3]);
       expect(container.currentScene).toBe(scene3);
       expect(container.getSwitchState()).toBe('idle');
+      container.dispose();
+    });
+
+    it('quarantine settles the queued setScene deferred (G″ 条款 18)', async () => {
+      registerLayout('layout-a', layoutClass('layout-a'), testMeta);
+      registerLayout('layout-b', layoutClass('layout-b'), testMeta);
+      const scene1 = makeScene('scene-1', 'layout-a');
+      const container = createSceneContainer({
+        mount,
+        forceLayout: 'layout-a'
+      });
+      await container.setScene(scene1);
+
+      scene1.onLayoutWillChange = () => new Promise<void>(() => undefined);
+
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      vi.useFakeTimers({ toFake: [...FAKE_TIMER_APIS] });
+      const hung = container.switchLayout('layout-b', { reason: 'manual' });
+      await waitUntilSwitching(container);
+
+      const scene2 = makeScene('scene-2', 'layout-a');
+      let p2Outcome: 'pending' | 'fulfilled' | 'rejected' = 'pending';
+      const p2 = container.setScene(scene2);
+      void p2.then(
+        () => {
+          p2Outcome = 'fulfilled';
+        },
+        () => {
+          p2Outcome = 'rejected';
+        }
+      );
+      await flushMicrotasks();
+      expect(p2Outcome).toBe('pending');
+      expect(runtimeOf(container).pendingScene).toBe(scene2);
+
+      vi.advanceTimersByTime(10_000);
+      await flushMicrotasks();
+      vi.advanceTimersByTime(1_000);
+      await flushMicrotasks();
+      await hung.catch(() => undefined);
+
+      await expect(p2).resolves.toBeUndefined();
+      expect(container.getSwitchState()).toBe('quarantined');
+      expect(p2Outcome).toBe('fulfilled');
+      expect(runtimeOf(container).pendingScene).toBeNull();
+      expect(runtimeOf(container).pendingApplyNotify).toBeNull();
+      expect(
+        (container as unknown as { _switchQueued: unknown })._switchQueued
+      ).toBeNull();
+      expect(container.currentScene).toBe(scene1);
       container.dispose();
     });
   });
