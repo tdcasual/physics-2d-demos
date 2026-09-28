@@ -245,15 +245,15 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
   function canvasLocalX(e: PointerEvent): number | null {
     const el = stage.canvas;
     if (!el) return null;
-    const rect = el.getBoundingClientRect();
-    return e.clientX - rect.left;
+    // Offset-box origin (layout local). localPointerDelta is delta-only and
+    // must not be used as an absolute pointer origin.
+    return e.offsetX;
   }
 
   function canvasLocalY(e: PointerEvent): number | null {
     const el = stage.canvas;
     if (!el) return null;
-    const rect = el.getBoundingClientRect();
-    return e.clientY - rect.top;
+    return e.offsetY;
   }
 
   function hitOrigin(px: number, py: number): boolean {
