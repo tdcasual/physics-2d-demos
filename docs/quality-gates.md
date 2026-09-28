@@ -36,7 +36,9 @@ E2E / visual 验收须用独立端口，或先确认无外部 `vite preview` 占
 
 本地跑 Vitest 时不要并发开多个 `vitest` 进程（`electrostatic-induction` round-trip 等用例在双进程下会 5s 超时 flake）。
 
-**视觉权威环境**：Linux 基线以 `scripts/visual-linux-container.sh`（及 CI 的 `update_snapshots`）为准，Darwin 以 Mac 本机或 `update-darwin-snapshots.yml` 为准。开发机直接跑 `pnpm quality:full` / `pnpm test:visual` 因字体与光栅化漂移**不是**权威结果，不能用来判定像素回归或更新基线。
+门禁结论必须与宿主状态绑定：引用 `quality:core` / `verify:scene` 的 exit 0 时记录 `loadavg`；同一提交在不同负载下 exit 不同即视为负载类失败，须隔离复跑失败用例（单文件重跑）后再下结论。禁止把单次 exit 0 写成「门禁绿」而不附负载背景。
+
+**视觉权威环境**：Linux 基线以 `scripts/visual-linux-container.sh`（及 CI 的 `update_snapshots`）为准，Darwin 以 Mac 本机或 `update-darwin-snapshots.yml` 为准。开发机直接跑 `pnpm quality:full` / `pnpm test:visual` 因字体与光栅化漂移**不是**权威结果，不能用来判定像素回归或更新基线。审阅 visual 结果时必须同时报 `passed` 与 `skipped` 计数并点名 skipped 的用例标题——Linux 宿主机裸跑时像素截图用例会被平台规则静默跳过（`visual-regression.spec.ts` 的 `test.skip` + `linuxScreenshotsAuthorized()`）而套件整体仍 exit 0；skipped 非空时不得声称「像素已验证」。
 
 ## Bundle Budget
 
