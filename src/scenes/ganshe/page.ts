@@ -36,7 +36,12 @@ bootScenePage({
   createScene: ({ canvas, theme, mode, demoHints }) => {
     return createGansheScene({ canvas, theme, mode, demoHints });
   },
-  createControls: ({ mount, scene, scheduleRender = () => scene.render() }) => {
+  createControls: ({
+    mount,
+    scene,
+    scheduleRender = () => scene.render(),
+    writeParam
+  }) => {
     const applyParam = createParamMapper<WaveParams>(
       gansheParamMapping,
       (params) => {
@@ -65,6 +70,13 @@ bootScenePage({
         if (key === 'preset') {
           if (applyPreset(String(value))) {
             renderer.setActive(key, String(value));
+            const p = scene.getParams();
+            writeParam?.('freq1', p.freq1);
+            writeParam?.('freq2', p.freq2);
+            writeParam?.('amp1', p.amp1);
+            writeParam?.('amp2', p.amp2);
+            writeParam?.('phaseDiff', p.phaseDiff);
+            writeParam?.('observerX', p.observerX);
           }
         } else if (key === 'mode') {
           const modeValue = String(value) as 'head-on' | 'single';
@@ -75,6 +87,7 @@ bootScenePage({
         } else {
           applyParam(key, value);
           scheduleRender();
+          writeParam?.(key, value);
         }
       },
       onAction: () => {
@@ -121,6 +134,7 @@ bootScenePage({
       (key, value) => {
         applyParam(key, value);
         scheduleRender();
+        writeParam?.(key, value);
       }
     );
 
@@ -151,6 +165,7 @@ bootScenePage({
       (key, value) => {
         applyParam(key, value);
         scheduleRender();
+        writeParam?.(key, value);
       }
     );
 
@@ -172,6 +187,7 @@ bootScenePage({
       (key, value) => {
         applyParam(key, value);
         scheduleRender();
+        writeParam?.(key, value);
       }
     );
 

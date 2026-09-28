@@ -7,6 +7,7 @@ import {
   resetUrlSyncOwners
 } from '../../src/app/url-sync';
 import type { SceneMeta } from '../../src/platform/scene-contract';
+import { EXISTING_SPECIAL_HANDLE_FORMS } from './no-eventful-projection.spec';
 
 const ROOT = path.resolve(__dirname, '../..');
 
@@ -303,6 +304,73 @@ describe('scene URL writer contract', () => {
       }
     }
     expect(violations).toEqual([]);
+  });
+
+  it('urlSyncKeys intersecting value-control fields require a page writer or exemption', () => {
+    const VALUE_CONTROL_TYPES = new Set([
+      'slider',
+      'number',
+      'text',
+      'select',
+      'toggle',
+      'scene-selector'
+    ]);
+    const WRITER_MARKERS = [
+      'writeParam',
+      'writeOwnedSceneParams',
+      'sceneWriter'
+    ] as const;
+    /**
+     * C6：emf-analogy 无 defaultParams。台账 Wave J 统一登记，本波不改台账。
+     * 谓词（urlSyncKeys ∩ value-control）当前不命中该场景。
+     */
+    const C_ZONE_NO_DEFAULT_PARAMS: Record<string, string> = {
+      'emf-analogy':
+        'defaultParams 为空，无可 URL 同步的 defaultParams 写回（C 区）'
+    };
+    const metas = metaById();
+    const seen = new Set<SceneMeta>();
+    const missing: string[] = [];
+    for (const meta of metas.values()) {
+      if (seen.has(meta)) continue;
+      seen.add(meta);
+      const schemaPath = path.join(
+        ROOT,
+        'src/scenes',
+        meta.id,
+        'controls-schema.ts'
+      );
+      if (!fs.existsSync(schemaPath)) continue;
+      const schemaText = fs.readFileSync(schemaPath, 'utf8');
+      const valueKeys = new Set<string>();
+      for (const block of schemaText.split('{').slice(1)) {
+        const typeMatch = block.match(/\btype:\s*['"]([\w-]+)['"]/);
+        const keyMatch = block.match(/\bkey:\s*['"]([^'"]+)['"]/);
+        if (typeMatch && keyMatch && VALUE_CONTROL_TYPES.has(typeMatch[1])) {
+          valueKeys.add(keyMatch[1]);
+        }
+      }
+      const syncKeys = new Set(meta.urlSyncKeys ?? []);
+      const intersection = [...syncKeys].filter((key) => valueKeys.has(key));
+      if (intersection.length === 0) continue;
+      if (Object.hasOwn(EXISTING_SPECIAL_HANDLE_FORMS, meta.id)) continue;
+      if (Object.hasOwn(C_ZONE_NO_DEFAULT_PARAMS, meta.id)) continue;
+      const pagePath = path.join(ROOT, 'src/scenes', meta.id, 'page.ts');
+      if (!fs.existsSync(pagePath)) {
+        missing.push(`${meta.id}: missing page.ts`);
+        continue;
+      }
+      const pageText = fs.readFileSync(pagePath, 'utf8');
+      const hasWriter = WRITER_MARKERS.some((name) =>
+        new RegExp(`\\b${name}\\b`).test(pageText)
+      );
+      if (!hasWriter) {
+        missing.push(
+          `${meta.id}: urlSyncKeys ∩ value-control = [${intersection.join(', ')}] but page.ts has no writeParam/writeOwnedSceneParams/sceneWriter`
+        );
+      }
+    }
+    expect(missing).toEqual([]);
   });
 
   it('never drops known legal keys from a writer allowlist', () => {

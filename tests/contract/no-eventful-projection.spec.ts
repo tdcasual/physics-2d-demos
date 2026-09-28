@@ -20,13 +20,13 @@ const PAGES_DIR = resolve(ROOT, 'src/pages');
  * 但已转发 setActiveSilently，scene-selector 走通用投影；委托工厂
  *（page.ts 不展开静默四件套）单独登记。
  */
-const EXISTING_SPECIAL_HANDLE_FORMS: Record<string, string> = {
+export const EXISTING_SPECIAL_HANDLE_FORMS: Record<string, string> = {
   electrification:
-    'handle 转发 setActiveSilently+fieldTypes；scene-selector 经通用投影回读 live scene；无 setValue（action 为 button-grid）',
+    'handle 转发 setActiveSilently+fieldTypes；scene-selector 经通用投影回读 live scene；无 setValue（action 为 button-grid）。urlSyncKeys 仅 step（button-grid action），无 value-control 写回点',
   'single-loop':
     'page.ts 委托 src/pages/single-loop-integration.ts（该文件已 silent-ready）',
   'spring-oscillator':
-    'imperative 列表重建；page.ts 委托 controls.ts 的 syncFromScene。相位预设卡是 custom DOM，正则扫不到 preset-group'
+    'imperative 列表重建；page.ts 委托 controls.ts 的 syncFromScene。相位预设卡是 custom DOM，正则扫不到 preset-group。k/m/A 在 imperative 卡片，page 无 writeParam 字面量（F3 豁免）'
 };
 
 function isSpecialForm(id: string): boolean {
@@ -113,6 +113,10 @@ describe('NO_EVENTFUL_PROJECTION', () => {
       isSpecialForm(id)
     );
     expect(overlap).toEqual([]);
+    expect(
+      Object.keys(EXISTING_SPECIAL_HANDLE_FORMS).length,
+      'EXISTING_SPECIAL_HANDLE_FORMS 冻 3 项（场景 id）；只许缩小'
+    ).toBe(3);
     for (const [id, reason] of Object.entries(EXISTING_SPECIAL_HANDLE_FORMS)) {
       expect(sceneIds.includes(id), `${id}: unknown special-form id`).toBe(
         true

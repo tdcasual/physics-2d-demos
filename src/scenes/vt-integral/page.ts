@@ -46,7 +46,12 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, scheduleRender = () => scene.render() }) => {
+  createControls: ({
+    mount,
+    scene,
+    scheduleRender = () => scene.render(),
+    writeParam
+  }) => {
     const renderer = renderSchema({
       mount,
       schema: vtIntegralControlsSchema,
@@ -57,10 +62,12 @@ bootScenePage({
             scene.setScene(sceneId);
             scheduleRender();
             renderer.setActive(key, sceneId);
+            writeParam?.(key, sceneId);
           }
         } else if (key === 'n') {
           scene.setParams({ n: value as number });
           scheduleRender();
+          writeParam?.(key, value);
         }
       },
       onAction: (key) => {

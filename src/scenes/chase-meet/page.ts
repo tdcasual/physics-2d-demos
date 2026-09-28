@@ -123,14 +123,25 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, onStatus }) => {
+  createControls: ({ mount, scene, onStatus, writeParam }) => {
     const renderer = renderSchema({
       mount,
       schema: chaseMeetControlsSchema,
       onChange: () => {
-        // Values are read on apply; no-op here
+        // Values are read on apply; no-op here（点击应用才生效，草稿不进 URL）
       },
       onAction: (key) => {
+        const writeUrlSync = (
+          totalTime: number,
+          dt: number,
+          x0A: number,
+          x0B: number
+        ): void => {
+          writeParam?.('totalTime', totalTime);
+          writeParam?.('dt', dt);
+          writeParam?.('x0A', x0A);
+          writeParam?.('x0B', x0B);
+        };
         if (key === 'apply') {
           const totalTime = renderer.getValue<number>('totalTime') ?? 10;
           const dt = renderer.getValue<number>('dt') ?? 0.05;
@@ -148,6 +159,7 @@ bootScenePage({
             vExprB
           };
           scene.setParams(next);
+          writeUrlSync(next.totalTime ?? totalTime, next.dt ?? dt, x0A, x0B);
           onStatus?.('参数已更新');
         } else if (key === 'uniform') {
           renderer.setValue('vExprA', '2');
@@ -155,6 +167,12 @@ bootScenePage({
           renderer.setValue('x0A', 0);
           renderer.setValue('x0B', 10);
           scene.setParams({ vExprA: '2', vExprB: '1', x0A: 0, x0B: 10 });
+          writeUrlSync(
+            renderer.getValue<number>('totalTime') ?? 10,
+            renderer.getValue<number>('dt') ?? 0.05,
+            0,
+            10
+          );
           onStatus?.('应用预设: 匀速追赶');
         } else if (key === 'accelerated') {
           renderer.setValue('vExprA', '0.5*t');
@@ -162,6 +180,12 @@ bootScenePage({
           renderer.setValue('x0A', 0);
           renderer.setValue('x0B', 15);
           scene.setParams({ vExprA: '0.5*t', vExprB: '2', x0A: 0, x0B: 15 });
+          writeUrlSync(
+            renderer.getValue<number>('totalTime') ?? 10,
+            renderer.getValue<number>('dt') ?? 0.05,
+            0,
+            15
+          );
           onStatus?.('应用预设: 加速追赶');
         }
       }
