@@ -136,6 +136,12 @@
 - **G 波**：被替换排队请求的 deferred 表必须真实实现（`container-initial-mount.spec.ts:108-139`、`container-stress.spec.ts:144-157` 是硬回归靶）；G2 契约增断言「drain 期间并发 `switchLayout` 必须等 drain 结束」；`_doSetScene` 顶部注释锁定「`switchLayout` 前不得插 `await`」同步前缀不变量。
 - **I 波**：视觉门禁精确命令 `scripts/visual-linux-container.sh verify --grep 'desktop ticker-tape|mobile ticker-tape|desktop double-slit|mobile double-slit'`（注意 --grep 是诊断口径，canary/计数断言被跳过，不能替代全量）；I1 的 `extensions` 形态（hooks 映射 vs 提升为 DataWorkspaceHost 可选契约方法）在 Wave I 开工前定稿，推荐提升为可选契约方法（贴合现有 `setActiveVisual?`/`renderResult?` 先例）。
 
+**条款 13（Wave G 验收发现，Claude F1，P1，Wave G′ 立即修）**：G1 引入边界回归——boot 失败 + 非内联布局解析 + boot 期有排队 setScene ⇒ 排队请求**永久丢失**（探针实测：`_currentScene` 悬空指向不在任何布局上的场景、容器空；`7bdd4c3^` 基线同一探针正常应用排队场景）。机理：`settleBoot()` 先于 drain 判定，消费者恢复排在 `bootOk=false` 跳过 drain 之后。修法三选一（实施者定，推荐 b）：a) drain 判定改「`_disposed` 否决 + 有排队请求即 drain」；b) `_doSetScene` 在 `_currentLayout === null` 时自愈回退 `_initialSetScene`（注意防递归：二次 boot 的 finally 会再进 drain 循环，须保证 \_boot 武装/deferred 交接不打架）；c) `settleBoot()` 推迟到 drain 判定之后。**必须**补「boot 失败 + 排队 setScene」回归测试。附带：drain 失败目前只落 `console.error` 无用户可见面，同一波补 surface 通道（复用 surfaceSwitchError 或新增 boot error 上报）。
+
+**条款 14（Wave G 验收发现，Claude，Wave G′ 修）**：契约网补密——① G2-2「drain 期间并发 switchLayout 必须等 drain 结束」在 `7bdd4c3^`（G1 之前）同样通过 ⇒ 断言没锁住，重写（建议 spy `layoutRegistry.create` 计数/时序断言，像 G2-1 那样撤销实现即红）；② G5 的 flushAckWaiters、drainPending 按步恢复、ticker-tape rAF cancel 三项零测试守卫（删除后全量单测仍绿），各补一条最小判别测试；③ G4 的 disposed 早退断言升级到 B2 同精度（MutationObserver 零 DOM mutation）。
+
+**条款 15（Wave G 实施报告 #4 + Claude 裁定，Wave G′ 或登记）**：`setScene` 在 `state === 'switching'` 时仍立即 return 且无 deferred——调用方 `await setScene(B)` 返回时 `_currentScene` 可能还是 A。G1 只覆盖 boot 排队。Wave G′ 顺手统一（switching 排队也返回 deferred、被替换必须 resolve），或登记台账说明触发面窄（生产只有单页 bootScenePage 一次 setScene）。
+
 **条款 5（Wave D 验收残留，Claude F1，Wave J 处理）**：`docs/controls-cookbook.md` 对 `setValue` 触发 onChange 的描述仍不精确——实测探针结果 `{slider:1, number:0, text:0, select:1, toggle:0}`（number/text 的 valueSetter 派发 `input` 但行组件监听 `change`；toggle 的 valueSetter 等于 silent 实现）。改法：按实际行为逐类注明（slider/select 会触发；number/text/toggle 仅回写显示，需自读 getValue）。
 
 **条款 6（Wave D 验收残留，Claude F2，Wave J 处理）**：`src/instruments/STANDARDS.md:306/:335` 示例 import 路径深度错误（`../../../src/...` 只在 tests/unit/ 下成立，该文件在 `src/instruments/`）——按真实 spec 口径改为 `'../../src/instruments/<id>/instrument.sim'`。
