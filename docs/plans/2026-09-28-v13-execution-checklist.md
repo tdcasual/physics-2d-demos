@@ -6,10 +6,11 @@
 
 ## Wave D：文档清偿（D1-D10）
 
-- [ ] 实施完成
-- [ ] 门禁：format:check + lint + typecheck 绿
-- [ ] Kimi 复核 / Claude 复核
-- 提交：
+- [x] 实施完成
+- [x] 门禁：format:check + lint + typecheck 绿（artifacts/v13-evidence/wave-d-gates.log；Claude 独立复跑同绿）
+- [x] Kimi 复核 / Claude 复核（均通过；Claude 报告 artifacts/v13-wave-d-accept-claude.md）
+- 提交：`0dbecc6`
+- 验收观察项（非阻塞，转方案 §9 条款 5-8，Wave J 处理）：cookbook setValue/onChange 描述不精确；STANDARDS §6 示例 import 路径深度；22 份 plans 文档缺状态头；B4 措辞 nit
 
 ## Wave F：P1 速修（F1-F6）
 

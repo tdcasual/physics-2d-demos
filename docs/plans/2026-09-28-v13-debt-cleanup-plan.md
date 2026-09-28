@@ -135,3 +135,11 @@
 
 - **G 波**：被替换排队请求的 deferred 表必须真实实现（`container-initial-mount.spec.ts:108-139`、`container-stress.spec.ts:144-157` 是硬回归靶）；G2 契约增断言「drain 期间并发 `switchLayout` 必须等 drain 结束」；`_doSetScene` 顶部注释锁定「`switchLayout` 前不得插 `await`」同步前缀不变量。
 - **I 波**：视觉门禁精确命令 `scripts/visual-linux-container.sh verify --grep 'desktop ticker-tape|mobile ticker-tape|desktop double-slit|mobile double-slit'`（注意 --grep 是诊断口径，canary/计数断言被跳过，不能替代全量）；I1 的 `extensions` 形态（hooks 映射 vs 提升为 DataWorkspaceHost 可选契约方法）在 Wave I 开工前定稿，推荐提升为可选契约方法（贴合现有 `setActiveVisual?`/`renderResult?` 先例）。
+
+**条款 5（Wave D 验收残留，Claude F1，Wave J 处理）**：`docs/controls-cookbook.md` 对 `setValue` 触发 onChange 的描述仍不精确——实测探针结果 `{slider:1, number:0, text:0, select:1, toggle:0}`（number/text 的 valueSetter 派发 `input` 但行组件监听 `change`；toggle 的 valueSetter 等于 silent 实现）。改法：按实际行为逐类注明（slider/select 会触发；number/text/toggle 仅回写显示，需自读 getValue）。
+
+**条款 6（Wave D 验收残留，Claude F2，Wave J 处理）**：`src/instruments/STANDARDS.md:306/:335` 示例 import 路径深度错误（`../../../src/...` 只在 tests/unit/ 下成立，该文件在 `src/instruments/`）——按真实 spec 口径改为 `'../../src/instruments/<id>/instrument.sim'`。
+
+**条款 7（Wave D 验收残留，Claude F4，Wave J 处理）**：D7 删表后 `docs/plans/` 内 22 份文档头部无状态标记（其中 6 份全文无状态字样）——一次性补头部状态行（现行/已执行/历史快照）。
+
+**条款 8（Wave D 验收残留，Claude F5，Wave J 处理）**：debt-ledger B4 措辞「v10 拆出 layout-switch-runtime.ts 后瞬时 778 行」易误读——改为「v10 拆出 layout-switch-runtime.ts 后 container.ts 瞬时 778 行」（778 是拆分前后 container.ts 的行数，layout-switch-runtime.ts 在 v10 才首次出现）。
