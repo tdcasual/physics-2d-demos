@@ -323,6 +323,45 @@ describe('SceneAdapter', () => {
     adapter.unmount();
   });
 
+  it('shouldAutoPlay skips startAll when restored autoRun=0', () => {
+    window.history.replaceState({}, '', '/src/pages/test.html?autoRun=0');
+    const scene = {
+      ...createMockScene(),
+      getParams: vi.fn(() => ({ autoRun: 0 }))
+    };
+    const adapter = createAdapter({
+      meta: {
+        id: 'test',
+        title: '测试',
+        category: 'mechanics',
+        subject: 'test',
+        concept: 'test',
+        subConcepts: ['a', 'b'] as [string, string],
+        keywords: [],
+        objective: '',
+        defaultParams: { autoRun: 1 },
+        urlSyncKeys: ['autoRun'],
+        path: '/test'
+      },
+      createScene: () => scene as never,
+      shouldAutoPlay: (_params, urlParams) =>
+        urlParams.autoRun === undefined ? true : Number(urlParams.autoRun) !== 0
+    } as Partial<ScenePageOptions>);
+    const container = document.createElement('div');
+    const canvas = document.createElement('canvas');
+    canvas.className = 'stage-canvas';
+    container.appendChild(canvas);
+
+    adapter.renderAnimation(container, {
+      animation: container,
+      control: container
+    } as LayoutSlots);
+
+    expect(scene.startAll).not.toHaveBeenCalled();
+    adapter.unmount();
+    window.history.replaceState({}, '', '/');
+  });
+
   it('reset should call transport reset and scene reset', () => {
     const scene = createMockScene();
     const adapter = createAdapter({ createScene: () => scene as never });

@@ -247,7 +247,8 @@ export class SceneAdapter<
       theme,
       mode,
       demoHints,
-      sceneWriter: this._sceneWriter
+      sceneWriter: this._sceneWriter,
+      urlParams: this._urlSnapshot
     });
 
     this.scene.init();
@@ -409,8 +410,11 @@ export class SceneAdapter<
     this.scene.render();
     this._markFirstFrame();
 
-    // 自动播放：场景挂载后立即启动动画循环
-    if (this.options.autoPlay) {
+    // 自动播放：URL restore（createControls → applySceneUrlParams）之后
+    // 再根据 shouldAutoPlay(getParams, snapshot) 决定 startAll。
+    // URL query 的 autoRun 覆盖 localStorage 镜像（restoreSceneParams
+    // 仅在 query 为空时灌入，snapshot 在其后捕获）。
+    if (this._shouldAutoPlay()) {
       this.startAll();
     }
 
@@ -602,6 +606,14 @@ export class SceneAdapter<
     this._resizeHandlerAdded = false;
     this._deferredControlContainer = null;
     this._scheduleResize = null;
+  }
+
+  private _shouldAutoPlay(): boolean {
+    const live = (this.scene?.getParams?.() ?? {}) as Record<string, unknown>;
+    if (this.options.shouldAutoPlay) {
+      return this.options.shouldAutoPlay(live, this._urlSnapshot);
+    }
+    return Boolean(this.options.autoPlay);
   }
 
   startAll(): void {

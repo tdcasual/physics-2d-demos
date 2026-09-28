@@ -80,6 +80,13 @@ export type StandardSceneCreateParams = {
   mode: 'normal' | 'presentation';
   demoHints?: DemoRenderHints;
   /**
+   * Immutable URL snapshot for this scene generation (captured after
+   * restoreSceneParams). Scenes that still need construction-time
+   * initialParams read it here instead of calling readSceneParams at
+   * module top.
+   */
+  urlParams?: Readonly<Record<string, number | string>>;
+  /**
    * Optional scene-generation URL writer. Production SceneAdapter always
    * injects one before createScene; omitted only for hand-built tests.
    */
@@ -149,6 +156,17 @@ export type ScenePageOptions<TScene extends SceneInstance = SceneInstance> = {
   maxSubSteps?: number;
   /** 场景挂载后自动播放动画，默认 false */
   autoPlay?: boolean;
+  /**
+   * Decide autoPlay after URL restore (applySceneUrlParams) has run.
+   * `params` is scene.getParams() after restore; `urlParams` is the
+   * generation snapshot (URL query wins over localStorage — restore
+   * only fills the query when it was empty). When omitted, `autoPlay`
+   * is used as a static fallback.
+   */
+  shouldAutoPlay?: (
+    params: Record<string, unknown>,
+    urlParams: Readonly<Record<string, number | string>>
+  ) => boolean;
   /**
    * 主题切换回调（可选）。由 bootstrapper 注入 container.setTheme，
    * 让 `t` 快捷键走 container 统一路径（状态同步 + 持久化）；
