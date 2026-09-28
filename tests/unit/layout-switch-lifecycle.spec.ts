@@ -441,6 +441,63 @@ describe('Layout switch lifecycle (Wave B)', () => {
       expect(domWrites === 0 || mount.childElementCount === 0).toBe(true);
     });
 
+    it('unmounts incoming after mount resolves when already disposed (G4 mount-after-disposed)', async () => {
+      registerLayout('layout-a', layoutClass('layout-a'), testMeta);
+      let releaseMount!: () => void;
+      const mountGate = new Promise<void>((resolve) => {
+        releaseMount = resolve;
+      });
+      let incomingUnmounted = 0;
+      const Deferred = class {
+        readonly id = 'layout-b';
+        readonly name = 'layout-b';
+        readonly description = 'layout-b';
+        readonly supportedSlots = ['control', 'animation'] as const;
+        readonly capabilities = [];
+        constructor(private readonly host: HTMLElement) {}
+        async mount() {
+          await mountGate;
+          const control = document.createElement('div');
+          const animation = document.createElement('div');
+          const canvas = document.createElement('canvas');
+          canvas.dataset.layoutId = 'layout-b';
+          animation.appendChild(canvas);
+          this.host.append(control, animation);
+        }
+        async unmount() {
+          incomingUnmounted += 1;
+          this.host.replaceChildren();
+        }
+        setTheme() {}
+        handleResize() {}
+        getSlots() {
+          return {
+            control: document.createElement('div'),
+            animation: document.createElement('div')
+          };
+        }
+      } as unknown as ILayoutConstructor;
+      registerLayout('layout-b', Deferred, testMeta);
+      const container = createSceneContainer({
+        mount,
+        forceLayout: 'layout-a'
+      });
+      await container.setScene(makeScene());
+      const hung = container.switchLayout('layout-b', {
+        reason: 'manual',
+        animate: false
+      });
+      await waitUntilSwitching(container);
+      container.dispose();
+      releaseMount();
+      await hung.catch(() => undefined);
+      await flushMicrotasks();
+      expect(incomingUnmounted).toBeGreaterThan(0);
+      expect(container.currentLayout).toBeNull();
+      expect(mount.dataset.layoutId).toBeUndefined();
+      expect(mount.querySelector('[data-layout-id="layout-b"]')).toBeNull();
+    });
+
     it('clears data-layout-id when disposed during rollback (G4)', async () => {
       const origCreate = layoutRegistry.create.bind(layoutRegistry);
       let createCalls = 0;
@@ -933,6 +990,37 @@ describe('Layout switch lifecycle (Wave B)', () => {
       ).toBeNull();
       expect(container.currentScene).toBe(scene1);
       container.dispose();
+    });
+
+    it('dispose settles a switching-queued setScene deferred', async () => {
+      registerLayout('layout-a', layoutClass('layout-a'), testMeta);
+      registerLayout('layout-b', layoutClass('layout-b'), testMeta);
+      const scene1 = makeScene('scene-1', 'layout-a');
+      const container = createSceneContainer({
+        mount,
+        forceLayout: 'layout-a'
+      });
+      await container.setScene(scene1);
+      scene1.onLayoutWillChange = () => new Promise<void>(() => undefined);
+      const hung = container.switchLayout('layout-b', { reason: 'manual' });
+      await waitUntilSwitching(container);
+      const scene2 = makeScene('scene-2', 'layout-a');
+      const p2 = container.setScene(scene2);
+      let p2Outcome: 'pending' | 'fulfilled' | 'rejected' = 'pending';
+      void p2.then(
+        () => {
+          p2Outcome = 'fulfilled';
+        },
+        () => {
+          p2Outcome = 'rejected';
+        }
+      );
+      await flushMicrotasks();
+      expect(p2Outcome).toBe('pending');
+      container.dispose();
+      await expect(p2).resolves.toBeUndefined();
+      expect(p2Outcome).toBe('fulfilled');
+      await hung.catch(() => undefined);
     });
   });
 });

@@ -149,6 +149,47 @@ describe('SceneContainer initial mount serialization', () => {
     container.dispose();
   });
 
+  it('dispose settles a boot-queued setScene deferred', async () => {
+    let resolveLoader!: (ctor: ILayoutConstructor) => void;
+    registerLazyLayout(
+      'layout-a',
+      () =>
+        new Promise<ILayoutConstructor>((resolve) => {
+          resolveLoader = resolve;
+        }),
+      testMeta
+    );
+    const container = createSceneContainer({
+      mount: mountEl,
+      forceLayout: 'layout-a'
+    });
+    const first = makeScene('scene-1');
+    const second = makeScene('scene-2');
+    const p1 = container.setScene(first);
+    const bootOwner = container as unknown as { _boot: Promise<void> | null };
+    for (let i = 0; i < 40; i++) {
+      if (typeof resolveLoader === 'function' && bootOwner._boot) break;
+      await Promise.resolve();
+    }
+    expect(typeof resolveLoader).toBe('function');
+    expect(bootOwner._boot).toBeTruthy();
+    const p2 = container.setScene(second);
+    let p2Outcome: 'pending' | 'fulfilled' | 'rejected' = 'pending';
+    void p2.then(
+      () => {
+        p2Outcome = 'fulfilled';
+      },
+      () => {
+        p2Outcome = 'rejected';
+      }
+    );
+    container.dispose();
+    await expect(p2).resolves.toBeUndefined();
+    expect(p2Outcome).toBe('fulfilled');
+    resolveLoader(layoutClass('layout-a'));
+    await p1.catch(() => undefined);
+  });
+
   it('propagates a capability-load failure after the scene has attached', async () => {
     registerLayout('layout-a', layoutClass('layout-a'), testMeta);
     const container = createSceneContainer({

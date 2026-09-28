@@ -1,5 +1,7 @@
 # Readout Panel Compact Implementation Plan
 
+> 状态：历史快照。归档设计/实施记录，不作为现行方案。
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Make the shell-level readout panel on all modern scenes default collapsed on desktop, expandable and draggable after opening, with a denser two-column-capable layout.

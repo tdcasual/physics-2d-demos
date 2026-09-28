@@ -7,7 +7,7 @@ import {
   resetUrlSyncOwners
 } from '../../src/app/url-sync';
 import type { SceneMeta } from '../../src/platform/scene-contract';
-import { EXISTING_SPECIAL_HANDLE_FORMS } from './no-eventful-projection.spec';
+import { EXISTING_SPECIAL_HANDLE_FORMS } from '../helpers/special-handle-forms';
 
 const ROOT = path.resolve(__dirname, '../..');
 

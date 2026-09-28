@@ -1,5 +1,7 @@
 # v13 技术债清偿与文档一致性方案（2026-09-28，v13.2 修订版）
 
+> 状态：现行（Wave J 收尾中）。
+
 > 依据：`artifacts/v13-cross-analysis.md`（三方交叉审计终稿）。
 > 本版已并入两轮方案审计（Grok 5 阻塞 + Claude 8 阻塞/6 建议）与一轮确认审计
 > （Grok 确认 17 项销号 + G1 drain 屏障/H5 旁注 2 项补刀，均已并入）的全部修订，
@@ -136,7 +138,7 @@
 - **G 波**：被替换排队请求的 deferred 表必须真实实现（`container-initial-mount.spec.ts:108-139`、`container-stress.spec.ts:144-157` 是硬回归靶）；G2 契约增断言「drain 期间并发 `switchLayout` 必须等 drain 结束」；`_doSetScene` 顶部注释锁定「`switchLayout` 前不得插 `await`」同步前缀不变量。
 - **I 波**：视觉门禁精确命令 `scripts/visual-linux-container.sh verify --grep 'desktop ticker-tape|mobile ticker-tape|desktop double-slit|mobile double-slit'`（注意 --grep 是诊断口径，canary/计数断言被跳过，不能替代全量）；I1 的 `extensions` 形态（hooks 映射 vs 提升为 DataWorkspaceHost 可选契约方法）在 Wave I 开工前定稿，推荐提升为可选契约方法（贴合现有 `setActiveVisual?`/`renderResult?` 先例）。
 
-**条款 13（Wave G 验收发现，Claude F1，P1，Wave G′ 立即修）**：G1 引入边界回归——boot 失败 + 非内联布局解析 + boot 期有排队 setScene ⇒ 排队请求**永久丢失**（探针实测：`_currentScene` 悬空指向不在任何布局上的场景、容器空；`7bdd4c3^` 基线同一探针正常应用排队场景）。机理：`settleBoot()` 先于 drain 判定，消费者恢复排在 `bootOk=false` 跳过 drain 之后。修法三选一（实施者定，推荐 b）：a) drain 判定改「`_disposed` 否决 + 有排队请求即 drain」；b) `_doSetScene` 在 `_currentLayout === null` 时自愈回退 `_initialSetScene`（注意防递归：二次 boot 的 finally 会再进 drain 循环，须保证 \_boot 武装/deferred 交接不打架）；c) `settleBoot()` 推迟到 drain 判定之后。**必须**补「boot 失败 + 排队 setScene」回归测试。附带：drain 失败目前只落 `console.error` 无用户可见面，同一波补 surface 通道（复用 surfaceSwitchError 或新增 boot error 上报）。
+**条款 13（Wave G 验收发现，Claude F1，P1，Wave G′ 立即修）**：G1 引入边界回归——boot 失败 + 非内联布局解析 + boot 期有排队 setScene ⇒ 排队请求**永久丢失**（探针实测：`_currentScene` 悬空指向不在任何布局上的场景、容器空；`7bdd4c3^` 基线同一探针正常应用排队场景）。机理：`settleBoot()` 先于 drain 判定，消费者恢复排在 `bootOk=false` 跳过 drain 之后。修法三选一（实施者定，推荐 b）：a) drain 判定改「`_disposed` 否决 + 有排队请求即 drain」；b) `_doSetScene` 在 `_currentLayout === null` 时自愈回退 `_initialSetScene`（注意防递归：二次 boot 的 finally 会再进 drain 循环，须保证 \_boot 武装/deferred 交接不打架）；c) `settleBoot()` 推迟到 drain 判定之后。**必须**补「boot 失败 + 排队 setScene」回归测试。附带：drain 失败目前只落 `console.error` 无事件面，同一波补 surface 通道（复用 surfaceSwitchError 或新增 boot error 上报）。
 
 **条款 14（Wave G 验收发现，Claude，Wave G′ 修）**：契约网补密——① G2-2「drain 期间并发 switchLayout 必须等 drain 结束」在 `7bdd4c3^`（G1 之前）同样通过 ⇒ 断言没锁住，重写（建议 spy `layoutRegistry.create` 计数/时序断言，像 G2-1 那样撤销实现即红）；② G5 的 flushAckWaiters、drainPending 按步恢复、ticker-tape rAF cancel 三项零测试守卫（删除后全量单测仍绿），各补一条最小判别测试；③ G4 的 disposed 早退断言升级到 B2 同精度（MutationObserver 零 DOM mutation）。
 
@@ -150,7 +152,7 @@
 
 **条款 18（Wave G′ 验收发现，Claude，P1，Wave G″ 立即修）**：条款 15 引入 quarantine 悬挂——`clearPendingQueue()` 清 `pendingScene` 但 `_switchQueued` deferred 永不结算（切换被隔离拒绝时，await 该 deferred 的调用方永久悬挂）。修法：`pendingApplyNotify` 式结算 + 配一条 quarantine 用例。
 
-**条款 19（Wave G′ 验收残留，Claude，Wave J 处理）**：① G4 `mount` 后 disposed 早退零覆盖（M-F 绿）补测试；② container `dispose()` 的两条 deferred settle（container.ts:890-893）零覆盖，补测试；③ 条款 13「用户可见面」口径改「事件面」（idle 态 surfaceSwitchError 只 console）；④ `_doSetScene` 自愈分支「必须保持同步、不得插 await」写成注释不变量；⑤ e2e 复核被外部 vite preview（reuseExistingServer）污染的工程问题——文档注明验收用独立端口或显式产物路径。
+**条款 19（Wave G′ 验收残留，Claude，Wave J 处理）**：① G4 `mount` 后 disposed 早退零覆盖（M-F 绿）补测试；② container `dispose()` 的两条 deferred settle（container.ts:890-893）零覆盖，补测试；③ 条款 13「事件面」口径（idle 态 surfaceSwitchError 只 console）；④ `_doSetScene` 自愈分支「必须保持同步、不得插 await」写成注释不变量；⑤ e2e 复核被外部 vite preview（reuseExistingServer）污染的工程问题——文档注明验收用独立端口或显式产物路径。
 
 **条款 5（Wave D 验收残留，Claude F1，Wave J 处理）**：`docs/controls-cookbook.md` 对 `setValue` 触发 onChange 的描述仍不精确——实测探针结果 `{slider:1, number:0, text:0, select:1, toggle:0}`（number/text 的 valueSetter 派发 `input` 但行组件监听 `change`；toggle 的 valueSetter 等于 silent 实现）。改法：按实际行为逐类注明（slider/select 会触发；number/text/toggle 仅回写显示，需自读 getValue）。
 

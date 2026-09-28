@@ -294,4 +294,225 @@ describe('createDataWorkspaceHost', () => {
       reason: '请先暂停纸带播放再处理数据'
     });
   });
+
+  it('removeTrial notifies only when the effect is notify', async () => {
+    const tickerNotify = vi.fn();
+    const dsNotify = vi.fn();
+    const ticker = createDataWorkspaceHost({
+      load: async () => stubInner(),
+      eligibility: () => ({ ok: false, reason: 'loading' }),
+      emptySession: emptyOf(7),
+      prefetch: true,
+      notify: tickerNotify,
+      effects: {
+        submitField: 'renderAndNotify',
+        addTrial: 'none',
+        removeTrial: 'none',
+        syncInstrument: 'none'
+      },
+      loadingMessage: '…',
+      notReadyError: 'not ready',
+      loadErrorLabel: 'load failed'
+    });
+    const ds = createDataWorkspaceHost({
+      load: async () => stubInner(),
+      eligibility: () => ({ ok: false, reason: 'loading' }),
+      emptySession: emptyOf(1),
+      prefetch: true,
+      notify: dsNotify,
+      effects: {
+        submitField: 'notify',
+        addTrial: 'notify',
+        removeTrial: 'notify',
+        syncInstrument: 'notify'
+      },
+      loadingMessage: 'loading',
+      notReadyError: 'not ready',
+      loadErrorLabel: 'load failed'
+    });
+    await Promise.resolve();
+    tickerNotify.mockClear();
+    dsNotify.mockClear();
+    ticker.removeTrial('row-1');
+    ds.removeTrial('row-1');
+    expect(tickerNotify).not.toHaveBeenCalled();
+    expect(dsNotify).toHaveBeenCalled();
+  });
+
+  it('syncInstrument none-guard skips inner and notify', async () => {
+    const tickerInner = stubInner();
+    const dsInner = stubInner();
+    const tickerNotify = vi.fn();
+    const dsNotify = vi.fn();
+    const ticker = createDataWorkspaceHost({
+      load: async () => tickerInner,
+      eligibility: () => ({ ok: false, reason: 'loading' }),
+      emptySession: emptyOf(7),
+      prefetch: true,
+      notify: tickerNotify,
+      effects: {
+        submitField: 'renderAndNotify',
+        addTrial: 'none',
+        removeTrial: 'none',
+        syncInstrument: 'none'
+      },
+      loadingMessage: '…',
+      notReadyError: 'not ready',
+      loadErrorLabel: 'load failed'
+    });
+    const ds = createDataWorkspaceHost({
+      load: async () => dsInner,
+      eligibility: () => ({ ok: false, reason: 'loading' }),
+      emptySession: emptyOf(1),
+      prefetch: true,
+      notify: dsNotify,
+      effects: {
+        submitField: 'notify',
+        addTrial: 'notify',
+        removeTrial: 'notify',
+        syncInstrument: 'notify'
+      },
+      loadingMessage: 'loading',
+      notReadyError: 'not ready',
+      loadErrorLabel: 'load failed'
+    });
+    await Promise.resolve();
+    tickerNotify.mockClear();
+    dsNotify.mockClear();
+    ticker.syncInstrument('caliper');
+    ds.syncInstrument('caliper');
+    expect(tickerInner.syncInstrument).not.toHaveBeenCalled();
+    expect(tickerNotify).not.toHaveBeenCalled();
+    expect(dsInner.syncInstrument).toHaveBeenCalledWith('caliper');
+    expect(dsNotify).toHaveBeenCalled();
+  });
+
+  it('invalidateSigFigsDerived forwards with per-scene notify', async () => {
+    const tickerInner = stubInner();
+    const dsInner = stubInner();
+    const tickerNotify = vi.fn();
+    const dsNotify = vi.fn();
+    const ticker = createDataWorkspaceHost({
+      load: async () => tickerInner,
+      eligibility: () => ({ ok: false, reason: 'loading' }),
+      emptySession: emptyOf(7),
+      prefetch: true,
+      notify: tickerNotify,
+      extensions: { invalidateSigFigsDerived: { notify: true } },
+      effects: {
+        submitField: 'renderAndNotify',
+        addTrial: 'none',
+        removeTrial: 'none',
+        syncInstrument: 'none'
+      },
+      loadingMessage: '…',
+      notReadyError: 'not ready',
+      loadErrorLabel: 'load failed'
+    });
+    const ds = createDataWorkspaceHost({
+      load: async () => dsInner,
+      eligibility: () => ({ ok: false, reason: 'loading' }),
+      emptySession: emptyOf(1),
+      prefetch: true,
+      notify: dsNotify,
+      effects: {
+        submitField: 'notify',
+        addTrial: 'notify',
+        removeTrial: 'notify',
+        syncInstrument: 'notify'
+      },
+      loadingMessage: 'loading',
+      notReadyError: 'not ready',
+      loadErrorLabel: 'load failed'
+    });
+    await Promise.resolve();
+    tickerNotify.mockClear();
+    dsNotify.mockClear();
+    ticker.invalidateSigFigsDerived?.('sigfigs');
+    expect(ds.invalidateSigFigsDerived).toBeUndefined();
+    expect(tickerInner.invalidateSigFigsDerived).toHaveBeenCalledWith(
+      'sigfigs'
+    );
+    expect(tickerNotify).toHaveBeenCalled();
+    expect(dsNotify).not.toHaveBeenCalled();
+  });
+
+  it('setActive always renderAndEmit+notify and syncs getSession.active', async () => {
+    const tickerRender = vi.fn();
+    const tickerNotify = vi.fn();
+    const visual = vi.fn();
+    const inner = stubInner({
+      getSession: () =>
+        freezeSession(cloneSession({ ...createEmptySession(2), active: false }))
+    });
+    const host = createDataWorkspaceHost({
+      load: async () => inner,
+      eligibility: () => ({ ok: true as const }),
+      emptySession: emptyOf(7),
+      prefetch: true,
+      notify: tickerNotify,
+      renderAndEmit: tickerRender,
+      onActiveChange: visual,
+      effects: {
+        submitField: 'renderAndNotify',
+        addTrial: 'none',
+        removeTrial: 'none',
+        syncInstrument: 'none'
+      },
+      loadingMessage: '…',
+      notReadyError: 'not ready',
+      loadErrorLabel: 'load failed'
+    });
+    await Promise.resolve();
+    tickerNotify.mockClear();
+    tickerRender.mockClear();
+    host.setActive(true);
+    expect(tickerRender).toHaveBeenCalled();
+    expect(tickerNotify).toHaveBeenCalled();
+    expect(visual).toHaveBeenCalledWith(true);
+    expect(inner.setActive).toHaveBeenCalledWith(true);
+    expect(host.getSession().active).toBe(true);
+  });
+
+  it('renderResult is mounted only when the extension is on', async () => {
+    const tickerInner = stubInner();
+    const dsInner = stubInner();
+    const ticker = createDataWorkspaceHost({
+      load: async () => tickerInner,
+      eligibility: () => ({ ok: false, reason: 'loading' }),
+      emptySession: emptyOf(7),
+      prefetch: true,
+      notify: vi.fn(),
+      effects: {
+        submitField: 'renderAndNotify',
+        addTrial: 'none',
+        removeTrial: 'none',
+        syncInstrument: 'none'
+      },
+      loadingMessage: '…',
+      notReadyError: 'not ready',
+      loadErrorLabel: 'load failed'
+    });
+    const ds = createDataWorkspaceHost({
+      load: async () => dsInner,
+      eligibility: () => ({ ok: false, reason: 'loading' }),
+      emptySession: emptyOf(1),
+      prefetch: true,
+      notify: vi.fn(),
+      extensions: { renderResult: true },
+      effects: {
+        submitField: 'notify',
+        addTrial: 'notify',
+        removeTrial: 'notify',
+        syncInstrument: 'notify'
+      },
+      loadingMessage: 'loading',
+      notReadyError: 'not ready',
+      loadErrorLabel: 'load failed'
+    });
+    await Promise.resolve();
+    expect(ticker.renderResult).toBeUndefined();
+    expect(ds.renderResult?.(ds.getSession())).toBe('result');
+    expect(dsInner.renderResult).toHaveBeenCalled();
+  });
 });

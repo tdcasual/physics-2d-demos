@@ -1,5 +1,7 @@
 # Decoupling and Debt-Defense Implementation Plan
 
+> 状态：历史快照。归档设计/实施记录，不作为现行方案。
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Reduce coupling between navigation/catalog/runtime layers, harden legacy adapter boundaries, and add architecture guardrails so future 2D scene expansion does not accumulate hidden technical debt.

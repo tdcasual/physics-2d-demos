@@ -344,6 +344,7 @@ describe('SceneAdapter', () => {
         path: '/test'
       },
       createScene: () => scene as never,
+      autoPlay: true,
       shouldAutoPlay: (_params, urlParams) =>
         urlParams.autoRun === undefined ? true : Number(urlParams.autoRun) !== 0
     } as Partial<ScenePageOptions>);

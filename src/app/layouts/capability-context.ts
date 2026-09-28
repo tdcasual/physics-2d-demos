@@ -24,10 +24,6 @@ export interface BuildCapabilityContextOptions {
     savePreference?: boolean
   ): Promise<void> | void;
   getAvailableLayouts(): { id: string; name: string }[];
-  emit<K extends keyof SceneContainerEvents>(
-    event: K,
-    payload: SceneContainerEvents[K]
-  ): void;
   on?<K extends keyof SceneContainerEvents>(
     event: K,
     handler: (payload: SceneContainerEvents[K]) => void

@@ -1,9 +1,9 @@
 /**
- * hasGraph 双源一致性契约（v13 Wave H H1b + §9 条款 4）
+ * hasGraph 双源一致性契约（v13 Wave H H1b + §9 条款 4 + 条款 16）
  *
- * meta.testProfile.hasGraph ≡ page.layoutConfig.hasGraph。
- * page 缺省该键视为等于 meta（不是等于运行时缺省 true）。
- * layoutOverrides 豁免精确到实际 override 了 hasGraph 的布局 id。
+ * 逐布局解析 effectiveHasGraph = override ?? page ?? true（复刻布局
+ * `hasGraph !== false` 语义）。图槽生效时 meta.testProfile.hasGraph
+ * 必须为 true，消灭 M9（page=true + 仅 mobile-stack false + meta=false）。
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
@@ -167,7 +167,7 @@ describe('hasGraph dual-source consistency (H1b)', () => {
   const sceneIds = listSceneIds();
 
   it.each(sceneIds)(
-    '%s: meta.testProfile.hasGraph ≡ page.layoutConfig.hasGraph',
+    '%s: per-layout effectiveHasGraph cannot show a graph slot when meta is false',
     (id) => {
       const meta = findSceneMeta(id);
       expect(meta?.testProfile, `场景 "${id}" 缺少 testProfile`).toBeDefined();
@@ -186,30 +186,35 @@ describe('hasGraph dual-source consistency (H1b)', () => {
       ).not.toBeNull();
 
       const pageHasGraph = parsed!.hasGraph;
-      const pageDeclared = parsed!.hasGraphKey;
-      const hasGraphOverrideIds = Object.entries(parsed!.layoutOverrides)
-        .filter(([, override]) => override.hasGraphKey)
-        .map(([layoutId]) => layoutId);
-
-      if (!pageDeclared) {
-        // 缺省该键 ⇒ 视为等于 meta（不是运行时缺省 true）
-        return;
+      if (parsed!.hasGraphKey) {
+        expect(
+          typeof pageHasGraph,
+          `场景 "${id}" layoutConfig.hasGraph 必须是 boolean 字面量`
+        ).toBe('boolean');
       }
 
-      expect(
-        typeof pageHasGraph,
-        `场景 "${id}" layoutConfig.hasGraph 必须是 boolean 字面量`
-      ).toBe('boolean');
+      const defaultEffective = pageHasGraph ?? true;
+      const layouts: Array<{ layoutId: string; effective: boolean }> = [
+        { layoutId: '(default)', effective: defaultEffective }
+      ];
+      for (const [layoutId, override] of Object.entries(
+        parsed!.layoutOverrides
+      )) {
+        const effective = override.hasGraphKey
+          ? (override.hasGraph ?? defaultEffective)
+          : defaultEffective;
+        layouts.push({ layoutId, effective });
+      }
 
-      if (pageHasGraph === metaHasGraph) return;
-
+      const illegal = layouts.filter(
+        ({ effective }) => effective && metaHasGraph !== true
+      );
       expect(
-        hasGraphOverrideIds,
-        `场景 "${id}" meta.testProfile.hasGraph=${String(metaHasGraph)} 与 ` +
-          `page.layoutConfig.hasGraph=${String(pageHasGraph)} 不一致，且没有 ` +
-          `layoutOverrides 对具体布局 id 覆盖 hasGraph。禁止用空 override ` +
-          `或无关键豁免。`
-      ).not.toEqual([]);
+        illegal,
+        `场景 "${id}" meta.testProfile.hasGraph=${String(metaHasGraph)} 但 ` +
+          `下列布局 effectiveHasGraph=true（会建空图区/空 tab）：` +
+          illegal.map((row) => row.layoutId).join(', ')
+      ).toEqual([]);
     }
   );
 

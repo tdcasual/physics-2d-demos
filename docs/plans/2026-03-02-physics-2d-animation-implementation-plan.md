@@ -1,5 +1,7 @@
 # Physics 2D Animation Foundation Implementation Plan
 
+> 状态：历史快照。归档设计/实施记录，不作为现行方案。
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Build a scalable static-site foundation for large-volume 2D physics teaching animations with deterministic simulation, reusable scene templates, and automated quality gates.

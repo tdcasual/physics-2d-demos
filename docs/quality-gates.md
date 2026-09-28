@@ -32,6 +32,10 @@ Playwright 分工如下：
 
 浏览器门禁是合并前要求。若本机浏览器环境被明确阻断，应记录命令和错误并由 CI 补跑；不能因环境问题删除测试、增加 skip 或声称完整门禁已通过。
 
+E2E / visual 验收须用独立端口，或先确认无外部 `vite preview` 占用 5177：Playwright `reuseExistingServer` 会接到别人构建的 `dist/`，结果不可信。
+
+本地跑 Vitest 时不要并发开多个 `vitest` 进程（`electrostatic-induction` round-trip 等用例在双进程下会 5s 超时 flake）。
+
 **视觉权威环境**：Linux 基线以 `scripts/visual-linux-container.sh`（及 CI 的 `update_snapshots`）为准，Darwin 以 Mac 本机或 `update-darwin-snapshots.yml` 为准。开发机直接跑 `pnpm quality:full` / `pnpm test:visual` 因字体与光栅化漂移**不是**权威结果，不能用来判定像素回归或更新基线。
 
 ## Bundle Budget

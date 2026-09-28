@@ -303,7 +303,7 @@ export { createInstrumentHost } from './mount';
 ```typescript
 // tests/unit/my-instrument.sim.spec.ts
 import { describe, it, expect } from 'vitest';
-import { createMySim } from '../../../src/instruments/my-instrument/instrument.sim';
+import { createMySim } from '../../src/instruments/my-instrument/instrument.sim';
 
 describe('MyInstrument Sim', () => {
   it('初始状态正确', () => {
@@ -332,7 +332,7 @@ describe('MyInstrument Sim', () => {
 
 ```typescript
 import { describe, it, expect } from 'vitest';
-import { createMyView } from '../../../src/instruments/my-instrument/instrument.view';
+import { createMyView } from '../../src/instruments/my-instrument/instrument.view';
 
 describe('MyInstrument View', () => {
   it('render 不抛异常', () => {

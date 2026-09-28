@@ -1,5 +1,7 @@
 # Physics 2D v10 implementation checklist
 
+> 状态：已执行。归档记录，不作为现行方案。
+
 **Plan:** `/tmp/physics-2d-remediation-plan-v10.md`  
 **SHA-256:** `3e581ed35a1c3809e9d20ecc5a64559794583344844ff3da19f2c2e43f94d5f5`  
 **Branch:** `fix/physics-2d-remediation` @ `22616fe19e472c2fa194c2865f701880d72a17fe` (clean)  

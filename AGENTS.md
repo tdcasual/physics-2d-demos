@@ -179,9 +179,11 @@ bootScenePage({
   逃生口：对 sim 只读、同步、不得 rAF 延迟）。
 - **autoPlay**：page.ts 不要在模块顶层 `readSceneParams`。`shouldAutoPlay(params, urlParams)`
   在 URL restore（`applySceneUrlParams`）之后、`startAll` 之前求值；`params` 为
-  `getParams()`，`urlParams` 为该代 snapshot。URL query 的 `autoRun` 覆盖
-  localStorage 镜像（`restoreSceneParams` 仅在 query 为空时灌入）。构造期
-  `initialParams` 从 `createScene` 注入的 `urlParams` 读取。
+  `getParams()`，`urlParams` 为该代 snapshot。已迁 `shouldAutoPlay` 的 14 个场景
+  （见台账 B13）中，URL query 的 `autoRun` 覆盖 localStorage 镜像
+  （`restoreSceneParams` 仅在 query 为空时灌入）。其余静态 `autoPlay: true` 且
+  `autoRun ∈ urlSyncKeys` 的场景仍走 `Boolean(autoPlay)`，query `autoRun=0`
+  被静默忽略（B22）。构造期 `initialParams` 从 `createScene` 注入的 `urlParams` 读取。
 
 **已知限制**：
 

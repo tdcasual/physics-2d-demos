@@ -1,5 +1,7 @@
 # v13 实施执行检查单
 
+> 状态：现行。
+
 > 方案：`docs/plans/2026-09-28-v13-debt-cleanup-plan.md`（v13.2）
 > 实施：Grok 4.6；验收：Kimi（源码复核）+ Claude（独立复核）+ Grok（自证）
 > 记录格式：每波【提交 hash / 门禁证据 / 三方验收结论】
@@ -42,8 +44,8 @@
 
 ## Wave J：棘轮与台账（J1-J5 + §9 条款 3 B21）
 
-- [ ] 实施完成
-- [ ] 门禁：quality:core 绿（新契约全部生效）
+- [x] 实施完成
+- [x] 门禁：quality:core 绿（新契约全部生效；artifacts/v13-evidence/wave-j-gates.log）
 - [ ] Kimi 复核 / Claude 复核
 - 提交：
 

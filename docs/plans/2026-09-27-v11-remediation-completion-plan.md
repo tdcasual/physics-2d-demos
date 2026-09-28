@@ -1,5 +1,7 @@
 # v11.2 方案：v10 收尾 + 控件投影架构收敛（交叉审计通过稿）
 
+> 状态：已执行。归档记录，不作为现行方案。
+
 > 日期：2026-09-27。基线：`fix/physics-2d-remediation` @ `22616fe` + 未提交的 v10 实现（tsc 通过；quality:core / e2e / linux-visual 日志为绿）。
 > 审计链：三方独立审计（`/tmp/physics-2d-final-audit/`，均 CHANGES_REQUIRED）→ v11 初稿 → 第一轮方案交叉审计（Claude 7 阻塞 / Grok 5 阻塞，`artifacts/v11-*-round1-*`）→ v11.1 → 第二轮（**Grok PASS**；Claude 判 3 条文本级阻塞，明示「改完即可开工，无需第三轮」，`artifacts/v11-*-round2-*`）→ 本稿 v11.2 已纳入全部修正。
 

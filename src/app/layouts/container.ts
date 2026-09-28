@@ -171,6 +171,7 @@ export class SceneContainerImpl implements SceneContainer {
     scene: Scene;
     deferred: QueuedSceneDeferred;
   } | null = null;
+  private _surfacedSwitchKeys = new Set<string>();
 
   constructor(options: CreateContainerOptions) {
     this._emitter = createEventEmitter<SceneContainerEvents>('SceneContainer');
@@ -644,7 +645,6 @@ export class SceneContainerImpl implements SceneContainer {
           )
           .map((m) => ({ id: m.id, name: m.name }));
       },
-      emit: (event, payload) => this._emitter.emit(event, payload),
       on: (event, handler) => this._emitter.on(event, handler)
     });
   }
@@ -842,16 +842,15 @@ export class SceneContainerImpl implements SceneContainer {
     return this._emitter.on(event, listener);
   }
 
-  /**
-   * Production consumer of `layout:switch-error`: console + status bar.
-   * Quarantine is page-terminal (reload) unless resetSwitchQuarantine
-   * succeeds. See docs/layout-switch-lifecycle.md.
-   */
+  /** Event surface: idle=console; quarantine=+status bar. p.catch is idempotent fallback. */
   private surfaceSwitchError(payload: {
     generation: number;
     error: unknown;
     state: LayoutSwitchState;
   }): void {
+    const key = `${payload.generation}:${payload.state}:${String(payload.error)}`;
+    if (this._surfacedSwitchKeys.has(key)) return;
+    this._surfacedSwitchKeys.add(key);
     if (payload.state === 'quarantined') {
       console.error(
         `[SceneContainer] Layout switch quarantined (generation ${payload.generation}). ` +

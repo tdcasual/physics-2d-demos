@@ -1,5 +1,7 @@
 # Data-workspace 整合方案（grok 成果 + main 已推送工作）
 
+> 状态：已执行。归档记录，不作为现行方案。
+
 > 日期：2026-09-20
 > 角色分工：Kimi（计划与验收）→ codex（执行）
 > 前置事实：grok 的完整实现原在 `~/.grok/worktrees/.../double-slit-data-workspace`（从未提交），

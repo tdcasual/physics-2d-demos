@@ -42,7 +42,6 @@ describe('buildCapabilityContext', () => {
       getCurrentLayoutId: () => 'split-right',
       switchLayout: () => {},
       getAvailableLayouts: () => [],
-      emit: (event, payload) => emitter.emit(event, payload),
       scene,
       modeOwner,
       sidebar: new SidebarStateOwner(),
@@ -73,7 +72,6 @@ describe('buildCapabilityContext', () => {
       getCurrentLayoutId: () => 'split-right',
       switchLayout: () => {},
       getAvailableLayouts: () => [],
-      emit: () => {},
       modeOwner,
       sidebar: new SidebarStateOwner(),
       workspaceUi: new WorkspaceUiState()
