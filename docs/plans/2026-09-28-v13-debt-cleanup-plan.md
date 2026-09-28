@@ -148,6 +148,10 @@
 
 另：Claude 纠正 A13 归因细节——我此前复跑的「6 failed」中 2 条 mobile a11y 实为宿主负载下 preview 掉线（ERR_CONNECTION_REFUSED），不是 axe 违规；移动端两项在基线上本就是绿的。台账 A13 关闭记录按此口径书写。
 
+**条款 18（Wave G′ 验收发现，Claude，P1，Wave G″ 立即修）**：条款 15 引入 quarantine 悬挂——`clearPendingQueue()` 清 `pendingScene` 但 `_switchQueued` deferred 永不结算（切换被隔离拒绝时，await 该 deferred 的调用方永久悬挂）。修法：`pendingApplyNotify` 式结算 + 配一条 quarantine 用例。
+
+**条款 19（Wave G′ 验收残留，Claude，Wave J 处理）**：① G4 `mount` 后 disposed 早退零覆盖（M-F 绿）补测试；② container `dispose()` 的两条 deferred settle（container.ts:890-893）零覆盖，补测试；③ 条款 13「用户可见面」口径改「事件面」（idle 态 surfaceSwitchError 只 console）；④ `_doSetScene` 自愈分支「必须保持同步、不得插 await」写成注释不变量；⑤ e2e 复核被外部 vite preview（reuseExistingServer）污染的工程问题——文档注明验收用独立端口或显式产物路径。
+
 **条款 5（Wave D 验收残留，Claude F1，Wave J 处理）**：`docs/controls-cookbook.md` 对 `setValue` 触发 onChange 的描述仍不精确——实测探针结果 `{slider:1, number:0, text:0, select:1, toggle:0}`（number/text 的 valueSetter 派发 `input` 但行组件监听 `change`；toggle 的 valueSetter 等于 silent 实现）。改法：按实际行为逐类注明（slider/select 会触发；number/text/toggle 仅回写显示，需自读 getValue）。
 
 **条款 6（Wave D 验收残留，Claude F2，Wave J 处理）**：`src/instruments/STANDARDS.md:306/:335` 示例 import 路径深度错误（`../../../src/...` 只在 tests/unit/ 下成立，该文件在 `src/instruments/`）——按真实 spec 口径改为 `'../../src/instruments/<id>/instrument.sim'`。
