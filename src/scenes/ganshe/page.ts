@@ -262,7 +262,6 @@ bootScenePage({
       updatePreset(preset: string) {
         renderer.setActive('preset', preset);
       },
-      refreshObservers: observerManager.refresh,
       syncFromScene,
       dispose() {
         renderer.dispose();
