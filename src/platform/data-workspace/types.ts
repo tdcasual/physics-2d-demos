@@ -258,6 +258,17 @@ export type DataWorkspaceHost = {
     confirmed?: boolean
   ): { session: DataWorkspaceSession; needsConfirm: boolean };
   renderResult?(session: DataWorkspaceSession): string | null;
+  /**
+   * Drop every checked field (rows + summary). Optional: only scenes whose
+   * inner task exposes invalidation (ticker-tape, double-slit) implement it.
+   */
+  invalidateAll?(reason: string): void;
+  /**
+   * Drop derived fields whose format/scoring window follows a live
+   * significant-digit setting. ticker-tape uses this when vSigFigs changes;
+   * scenes without that coupling omit it.
+   */
+  invalidateSigFigsDerived?(reason: string): void;
 };
 
 export type GraphNode =

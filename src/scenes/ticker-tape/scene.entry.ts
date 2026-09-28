@@ -3,11 +3,9 @@ import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import {
   chartStepReady,
   cloneSession,
+  createDataWorkspaceHost,
   createEmptySession,
-  freezeSession,
-  type DataWorkspaceFieldResult,
-  type DataWorkspaceHost,
-  type DataWorkspaceSession
+  freezeSession
 } from '../../platform/data-workspace';
 import {
   clampTimeScale,
@@ -83,30 +81,12 @@ export function createTickerTapeScene(
   });
 
   type InnerWorkspace = ReturnType<typeof createTickerTapeDataWorkspace>;
-  let innerWorkspace: InnerWorkspace | null = null;
-  let workspaceLoadPromise: Promise<void> | null = null;
-  let workspaceChromeOpen = false;
   let hostRef: InnerWorkspace | null = null;
 
-  view.setPlotGateReader(() => {
-    if (!innerWorkspace) return false;
-    return chartStepReady(
-      innerWorkspace.getSession(),
-      innerWorkspace.getSpec()
-    );
-  });
-
-  function emptyHostSession(): DataWorkspaceSession {
-    const session = createEmptySession(7);
-    session.active = workspaceChromeOpen;
-    return freezeSession(cloneSession(session));
-  }
-
-  function ensureDataWorkspace(): void {
-    if (innerWorkspace || workspaceLoadPromise) return;
-    workspaceLoadPromise = import('./data-task')
-      .then((mod) => {
-        innerWorkspace = mod.createTickerTapeDataWorkspace({
+  const dataWorkspace = createDataWorkspaceHost<InnerWorkspace>({
+    load: () =>
+      import('./data-task').then((mod) =>
+        mod.createTickerTapeDataWorkspace({
           getState: () => sim.getState(),
           getPlotStatus: () => view.getPlotStatus(sim.getState()),
           // 写回只经 sim 层（writeBack → sim.set*）；公开场景层不暴露
@@ -116,109 +96,45 @@ export function createTickerTapeScene(
             setDeltaX: (index, value) => sim.setDeltaX(index, value),
             setV: (index, value) => sim.setV(index, value)
           }
-        });
-        hostRef = innerWorkspace;
-        innerWorkspace.setActive(workspaceChromeOpen);
-        base.notify();
-      })
-      .catch((error: unknown) => {
-        console.error('[ticker-tape] 数据任务模块加载失败', error);
-      })
-      .finally(() => {
-        workspaceLoadPromise = null;
-      });
-  }
-
-  const inactiveEligibility = () => {
-    if (sim.getState().playing) {
-      return { ok: false as const, reason: '请先暂停纸带播放再处理数据' };
+        })
+      ),
+    eligibility: () => {
+      if (sim.getState().playing) {
+        return { ok: false as const, reason: '请先暂停纸带播放再处理数据' };
+      }
+      return { ok: false as const, reason: '数据任务加载中…' };
+    },
+    emptySession: (active) => {
+      const session = createEmptySession(7);
+      session.active = active;
+      return freezeSession(cloneSession(session));
+    },
+    prefetch: true,
+    notify: () => base.notify(),
+    renderAndEmit: () => base.renderAndEmit(),
+    effects: {
+      submitField: 'renderAndNotify',
+      addTrial: 'none',
+      removeTrial: 'none',
+      syncInstrument: 'none'
+    },
+    extensions: {
+      invalidateAll: { notify: true },
+      invalidateSigFigsDerived: { notify: true }
+    },
+    loadingMessage: '数据任务加载中…',
+    notReadyError: '[ticker-tape] data workspace not ready',
+    loadErrorLabel: '[ticker-tape] 数据任务模块加载失败',
+    onInnerReady: (inner) => {
+      hostRef = inner;
     }
-    return { ok: false as const, reason: '数据任务加载中…' };
-  };
+  });
 
-  const dataWorkspace: DataWorkspaceHost & {
-    invalidateAll(reason: string): void;
-    invalidateSigFigsDerived(reason: string): void;
-  } = {
-    getSpec() {
-      if (!innerWorkspace) {
-        throw new Error('[ticker-tape] data workspace not ready');
-      }
-      return innerWorkspace.getSpec();
-    },
-    getEligibility() {
-      return innerWorkspace?.getEligibility() ?? inactiveEligibility();
-    },
-    getSession() {
-      const session = innerWorkspace?.getSession() ?? emptyHostSession();
-      if (session.active === workspaceChromeOpen) return session;
-      return freezeSession(
-        cloneSession({ ...session, active: workspaceChromeOpen })
-      );
-    },
-    getKnowns() {
-      return innerWorkspace?.getKnowns() ?? [];
-    },
-    getHint() {
-      return innerWorkspace?.getHint() ?? '';
-    },
-    setActive(active: boolean) {
-      workspaceChromeOpen = active;
-      if (active) ensureDataWorkspace();
-      innerWorkspace?.setActive(active);
-      base.renderAndEmit();
-      base.notify();
-    },
-    submitField(input) {
-      ensureDataWorkspace();
-      if (!innerWorkspace) {
-        return {
-          feedback: { ok: false, message: '数据任务加载中…' },
-          session: emptyHostSession()
-        } satisfies DataWorkspaceFieldResult;
-      }
-      const result = innerWorkspace.submitField(input);
-      base.renderAndEmit();
-      base.notify();
-      return result;
-    },
-    applyDrafts(drafts) {
-      ensureDataWorkspace();
-      if (!innerWorkspace) return emptyHostSession();
-      const session = innerWorkspace.applyDrafts(drafts);
-      base.notify();
-      return session;
-    },
-    resetSession() {
-      innerWorkspace?.resetSession();
-      base.notify();
-    },
-    invalidateAll(reason: string) {
-      innerWorkspace?.invalidateAll(reason);
-      base.notify();
-    },
-    invalidateSigFigsDerived(reason: string) {
-      innerWorkspace?.invalidateSigFigsDerived(reason);
-      base.notify();
-    },
-    syncInstrument() {
-      // Paper tape has no instrument to synchronize.
-    },
-    addTrial() {
-      ensureDataWorkspace();
-      if (!innerWorkspace) return emptyHostSession();
-      return innerWorkspace.addTrial();
-    },
-    removeTrial(rowId: string, confirmed = false) {
-      if (!innerWorkspace) {
-        return { session: emptyHostSession(), needsConfirm: false };
-      }
-      return innerWorkspace.removeTrial(rowId, confirmed);
-    }
-  };
-
-  // The task is small but must be ready before the shared toolbar enables entry.
-  ensureDataWorkspace();
+  view.setPlotGateReader(() => {
+    const inner = dataWorkspace.getInner();
+    if (!inner) return false;
+    return chartStepReady(inner.getSession(), inner.getSpec());
+  });
 
   view.setOnOriginDrag((tickIndex) => {
     if (dataWorkspace.getSession().active) return;
@@ -334,7 +250,7 @@ export function createTickerTapeScene(
       if (before.tapeKind !== after.tapeKind || before.noise !== after.noise) {
         hostRef?.invalidateAll('纸带已更换，请重新测量校对');
       } else if (before.vSigFigs !== after.vSigFigs) {
-        dataWorkspace.invalidateSigFigsDerived(
+        dataWorkspace.invalidateSigFigsDerived?.(
           `有效位数要求已改为 ${after.vSigFigs} 位，请按新要求重新填写校对`
         );
       }

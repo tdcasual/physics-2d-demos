@@ -60,6 +60,16 @@ export type {
   TrialRecord
 } from './types';
 
+export { createDataWorkspaceHost } from './host';
+export type {
+  CreateDataWorkspaceHostOptions,
+  DataWorkspaceHostEffects,
+  DataWorkspaceHostExtensions,
+  DataWorkspaceHostFacade,
+  DataWorkspaceHostNotifyEffect,
+  DataWorkspaceHostSubmitEffect
+} from './host';
+
 export {
   chartStepReady,
   dependencySatisfied,

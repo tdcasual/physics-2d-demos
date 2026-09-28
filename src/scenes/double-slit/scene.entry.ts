@@ -35,13 +35,12 @@ import {
 import { opticsChangeReason } from './optics-params';
 import {
   cloneSession,
+  createDataWorkspaceHost,
   createEmptySession,
   freezeSession,
   quantizeExactDiscreteMm,
   type DataWorkspaceEligibility,
-  type DataWorkspaceFieldResult,
   type DataWorkspaceHost,
-  type DataWorkspaceSession,
   type MeasurementSnapshot
 } from '../../platform/data-workspace';
 import {
@@ -496,12 +495,11 @@ export function createDoubleSlitScene(
       fringeOrder != null ? String(fringeOrder) : '';
   }
 
-  let workspaceChromeOpen = false;
   /**
-   * 舞台视觉激活开关，与 workspaceChromeOpen（会话语义，演示结束后
-   * 借它自动重进工作区）分离。演示挂起走 setActiveVisual(false)：
-   * 会话保留，视觉还原；fit 门（syncInstruments / syncInstrumentStageFit）
-   * 读本标志，防止演示中 adapter setMode 触发的 resize 把 --dw-h 写回。
+   * 舞台视觉激活开关，与 host 会话语义（演示结束后借它自动重进工作区）
+   * 分离。演示挂起走 setActiveVisual(false)：会话保留，视觉还原；fit 门
+   * （syncInstruments / syncInstrumentStageFit）读本标志，防止演示中
+   * adapter setMode 触发的 resize 把 --dw-h 写回。
    */
   let visualsActive = false;
 
@@ -578,159 +576,79 @@ export function createDoubleSlitScene(
   }
 
   type InnerWorkspace = ReturnType<typeof createDoubleSlitDataWorkspace>;
-  let innerWorkspace: InnerWorkspace | null = null;
-  let workspaceLoadPromise: Promise<void> | null = null;
 
-  function emptyHostSession(): DataWorkspaceSession {
-    return freezeSession(
-      cloneSession({
-        ...createEmptySession(1),
-        active: workspaceChromeOpen
-      })
-    );
+  function setActiveVisual(active: boolean): void {
+    visualsActive = active;
+    view.setHideNumericHints(active);
+    if (instrumentWrap) {
+      instrumentWrap.style.top = active ? '0' : '30%';
+      instrumentWrap.style.height = active ? '100%' : '70%';
+    }
+    if (options.canvas) {
+      options.canvas.style.opacity = active ? '0' : '';
+      options.canvas.style.pointerEvents = active ? 'none' : '';
+    }
+    if (!active) {
+      // 立即清掉仪器 fit 高度，不等 rAF：演示挂起后 adapter 的
+      // setMode/resize 不再写回（fit 门已换 visualsActive）。
+      const section = options.canvas?.closest(
+        `[${STAGE_FRAME_ATTR}]`
+      ) as HTMLElement | null;
+      section?.style.removeProperty('--dw-h');
+    }
+    if (sim.getState().params.step === 6) {
+      leftInstrument?.view.resize();
+      rightInstrument?.view.resize();
+    }
+    scheduleInstrumentStageFit();
   }
 
-  function ensureDataWorkspace(): void {
-    if (innerWorkspace || workspaceLoadPromise) return;
-    workspaceLoadPromise = import('./data-task')
-      .then((mod) => {
-        innerWorkspace = mod.createDoubleSlitDataWorkspace({
+  const dataWorkspace = createDataWorkspaceHost<InnerWorkspace>({
+    load: () =>
+      import('./data-task').then((mod) =>
+        mod.createDoubleSlitDataWorkspace({
           getParams: () => sim.getState().params,
           capture: captureMeasurement
-        });
-        innerWorkspace.setActive(workspaceChromeOpen);
-        base.notify();
-      })
-      .catch((error: unknown) => {
-        console.error('[double-slit] 数据任务模块加载失败', error);
-      })
-      .finally(() => {
-        workspaceLoadPromise = null;
-      });
-  }
-
-  if (sim.getState().params.step === 6) ensureDataWorkspace();
-
-  const inactiveEligibility = (): DataWorkspaceEligibility => {
-    const params = sim.getState().params;
-    if (params.step !== 6) {
-      return {
-        ok: false,
-        reason: '请先进入第 6 步（目镜观察）后再处理数据'
-      };
-    }
-    return { ok: false, reason: '数据任务加载中' };
-  };
-
-  const dataWorkspace: DataWorkspaceHost & {
-    invalidateAll(reason: string): void;
-    setActiveVisual(active: boolean): void;
-  } = {
-    getSpec() {
-      if (!innerWorkspace)
-        throw new Error('[double-slit] data workspace not ready');
-      return innerWorkspace.getSpec();
-    },
-    getEligibility() {
-      return innerWorkspace?.getEligibility() ?? inactiveEligibility();
-    },
-    getSession() {
-      const session = innerWorkspace?.getSession() ?? emptyHostSession();
-      if (session.active === workspaceChromeOpen) return session;
-      return freezeSession(
-        cloneSession({ ...cloneSession(session), active: workspaceChromeOpen })
-      );
-    },
-    getKnowns() {
-      return innerWorkspace?.getKnowns() ?? [];
-    },
-    getHint() {
-      return innerWorkspace?.getHint() ?? '';
-    },
-    setActive(active: boolean) {
-      workspaceChromeOpen = active;
-      if (active) ensureDataWorkspace();
-      innerWorkspace?.setActive(active);
-      dataWorkspace.setActiveVisual(active);
-      base.renderAndEmit();
-      base.notify();
-    },
-    setActiveVisual(active: boolean) {
-      visualsActive = active;
-      view.setHideNumericHints(active);
-      if (instrumentWrap) {
-        instrumentWrap.style.top = active ? '0' : '30%';
-        instrumentWrap.style.height = active ? '100%' : '70%';
+        })
+      ),
+    eligibility: (): DataWorkspaceEligibility => {
+      const params = sim.getState().params;
+      if (params.step !== 6) {
+        return {
+          ok: false,
+          reason: '请先进入第 6 步（目镜观察）后再处理数据'
+        };
       }
-      if (options.canvas) {
-        options.canvas.style.opacity = active ? '0' : '';
-        options.canvas.style.pointerEvents = active ? 'none' : '';
-      }
-      if (!active) {
-        // 立即清掉仪器 fit 高度，不等 rAF：演示挂起后 adapter 的
-        // setMode/resize 不再写回（fit 门已换 visualsActive）。
-        const section = options.canvas?.closest(
-          `[${STAGE_FRAME_ATTR}]`
-        ) as HTMLElement | null;
-        section?.style.removeProperty('--dw-h');
-      }
-      if (sim.getState().params.step === 6) {
-        leftInstrument?.view.resize();
-        rightInstrument?.view.resize();
-      }
-      scheduleInstrumentStageFit();
+      return { ok: false, reason: '数据任务加载中' };
     },
-    invalidateAll(reason: string) {
+    emptySession: (active) =>
+      freezeSession(
+        cloneSession({
+          ...createEmptySession(1),
+          active
+        })
+      ),
+    prefetch: () => sim.getState().params.step === 6,
+    onActiveChange: setActiveVisual,
+    notify: () => base.notify(),
+    renderAndEmit: () => base.renderAndEmit(),
+    effects: {
+      submitField: 'notify',
+      addTrial: 'notify',
+      removeTrial: 'notify',
+      syncInstrument: 'notify'
+    },
+    extensions: {
       // 可选调用：数据任务模块尚未加载完时静默跳过（lifecycle 测试与
       // 加载窗口内的 setParams 不可抛）；调用方负责随后的 notify。
-      innerWorkspace?.invalidateAll(reason);
+      invalidateAll: { notify: false },
+      setActiveVisual,
+      renderResult: true
     },
-    submitField(input) {
-      ensureDataWorkspace();
-      if (!innerWorkspace) {
-        return {
-          feedback: { ok: false, message: '数据任务加载中' },
-          session: emptyHostSession()
-        } satisfies DataWorkspaceFieldResult;
-      }
-      const result = innerWorkspace.submitField(input);
-      base.notify();
-      return result;
-    },
-    applyDrafts(drafts) {
-      ensureDataWorkspace();
-      if (!innerWorkspace) return emptyHostSession();
-      const session = innerWorkspace.applyDrafts(drafts);
-      base.notify();
-      return session;
-    },
-    resetSession() {
-      innerWorkspace?.resetSession();
-      base.notify();
-    },
-    syncInstrument(instrumentId: string) {
-      innerWorkspace?.syncInstrument(instrumentId);
-      base.notify();
-    },
-    addTrial() {
-      ensureDataWorkspace();
-      if (!innerWorkspace) return emptyHostSession();
-      const session = innerWorkspace.addTrial();
-      base.notify();
-      return session;
-    },
-    removeTrial(rowId: string, confirmed = false) {
-      if (!innerWorkspace) {
-        return { session: emptyHostSession(), needsConfirm: false };
-      }
-      const result = innerWorkspace.removeTrial(rowId, confirmed);
-      base.notify();
-      return result;
-    },
-    renderResult(session) {
-      return innerWorkspace?.renderResult?.(session) ?? null;
-    }
-  };
+    loadingMessage: '数据任务加载中',
+    notReadyError: '[double-slit] data workspace not ready',
+    loadErrorLabel: '[double-slit] 数据任务模块加载失败'
+  });
 
   function getReadoutItems(): Array<{
     key: string;
@@ -828,11 +746,11 @@ export function createDoubleSlitScene(
       const prevInstrument = sim.getState().params.activeInstrument;
       const before = sim.getState().params;
       const result = sim.setParams(params);
-      if (result.step === 6) ensureDataWorkspace();
+      if (result.step === 6) dataWorkspace.ensure();
       // 光学参数变更即失效已校对数据；同值 diff 为 null，URL 管线重放幂等。
       // 不按 step===6 门控：步骤 1–5 也能改 λ/d/L，会话数据跨步骤存活。
       const opticsReason = opticsChangeReason(before, result);
-      if (opticsReason) dataWorkspace.invalidateAll(opticsReason);
+      if (opticsReason) dataWorkspace.invalidateAll?.(opticsReason);
       // 主画布与仪器画布相互独立：先绘主场景再同步仪器（历史顺序）。
       // wrapAction 会把 syncInstruments 放到 renderAndEmit 之前，此处显式保持旧序。
       base.renderAndEmit();
