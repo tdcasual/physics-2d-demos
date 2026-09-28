@@ -142,6 +142,12 @@
 
 **条款 15（Wave G 实施报告 #4 + Claude 裁定，Wave G′ 或登记）**：`setScene` 在 `state === 'switching'` 时仍立即 return 且无 deferred——调用方 `await setScene(B)` 返回时 `_currentScene` 可能还是 A。G1 只覆盖 boot 排队。Wave G′ 顺手统一（switching 排队也返回 deferred、被替换必须 resolve），或登记台账说明触发面窄（生产只有单页 bootScenePage 一次 setScene）。
 
+**条款 16（Wave H 验收发现，Claude M9，P1，Wave J 修）**：hasGraph 双源契约的豁免方向单向——`page=true + layoutOverrides['mobile-stack']={hasGraph:false} + meta=false` 逃过全部四条断言（契约全绿，但桌面 split-right 因 `hasGraph !== false` 仍建空图区），即 H1 修掉的缺陷可用「合法 override」原地复活。修法：契约改**逐布局解析运行时配置与 meta 比较**——对每个 override 布局 id 计算 `effectiveHasGraph`（override 值 ?? page 值 ?? true，复刻布局 `!== false` 语义），断言方向规则（Claude 建议稿：`effective === meta || effective === true`，实施时必须以「M9 探针变红 + chase-meet（桌面 false/移动 true/meta true）保持绿 + ganshe 保持绿」为验收三叉戟，谓词形态可据此调整）。同时红掉缺省方向相反的 M7/M10 形态。
+
+**条款 17（Wave H 验收发现，Claude T3/T4，已裁定）**：`playwright.config.ts` 视觉 timeout 30s→60s 与 navigationTimeout 30s 叠加——**裁定保留 60s**：timeout 预算只在失败/悬挂路径消耗，通过测试不占预算；H5 两轮（含 repeat-each=2）证明稳定性。CI 无 timeout-minutes 的隐患另行登记观察（台账 B 区由 Wave J 一并补记），不改回。
+
+另：Claude 纠正 A13 归因细节——我此前复跑的「6 failed」中 2 条 mobile a11y 实为宿主负载下 preview 掉线（ERR_CONNECTION_REFUSED），不是 axe 违规；移动端两项在基线上本就是绿的。台账 A13 关闭记录按此口径书写。
+
 **条款 5（Wave D 验收残留，Claude F1，Wave J 处理）**：`docs/controls-cookbook.md` 对 `setValue` 触发 onChange 的描述仍不精确——实测探针结果 `{slider:1, number:0, text:0, select:1, toggle:0}`（number/text 的 valueSetter 派发 `input` 但行组件监听 `change`；toggle 的 valueSetter 等于 silent 实现）。改法：按实际行为逐类注明（slider/select 会触发；number/text/toggle 仅回写显示，需自读 getValue）。
 
 **条款 6（Wave D 验收残留，Claude F2，Wave J 处理）**：`src/instruments/STANDARDS.md:306/:335` 示例 import 路径深度错误（`../../../src/...` 只在 tests/unit/ 下成立，该文件在 `src/instruments/`）——按真实 spec 口径改为 `'../../src/instruments/<id>/instrument.sim'`。
