@@ -143,3 +143,11 @@
 **条款 7（Wave D 验收残留，Claude F4，Wave J 处理）**：D7 删表后 `docs/plans/` 内 22 份文档头部无状态标记（其中 6 份全文无状态字样）——一次性补头部状态行（现行/已执行/历史快照）。
 
 **条款 8（Wave D 验收残留，Claude F5，Wave J 处理）**：debt-ledger B4 措辞「v10 拆出 layout-switch-runtime.ts 后瞬时 778 行」易误读——改为「v10 拆出 layout-switch-runtime.ts 后 container.ts 瞬时 778 行」（778 是拆分前后 container.ts 的行数，layout-switch-runtime.ts 在 v10 才首次出现）。
+
+**条款 9（Wave F 验收残留，Claude，Wave J 处理）**：ganshe `observerX` 画布拖拽不写回 URL（写回点只在 createWaveSourceCard 滑块与 preset 路径）——登记台账 B21 时并入该子项。
+
+**条款 10（Wave F 验收残留，Claude，Wave J 处理）**：`BuildCapabilityContextOptions.emit` + `DemoProfileUpdate` + `updateCapabilityInstances` 在 `applyModeProjection` 删除后成为残留 options 面（container.ts:519 与两处测试传参）——Wave J 清理或登记；顺带复核 `capability-context.ts:13-14` 两个本地类型别名存活性。
+
+**条款 11（Wave F 验收残留，Claude，Wave J 处理）**：`EXISTING_SPECIAL_HANDLE_FORMS` 从 spec 文件跨 import 导致 `NO_EVENTFUL_PROJECTION` 套件在 scene-url-writer-contract.spec.ts 名下重复注册（同名 7 测跑两遍、计数虚增）——Wave J 把该常量迁到 `tests/helpers/` 或独立非 spec 模块再 import。
+
+**条款 12（Wave F 验收残留，Claude，Wave J 处理）**：host `p.catch` 与 `layout-switch-runtime.ts:313/456` 的 `emitSwitchError` 路径对同一错误双报 console（仅日志噪音 + 幂等 status bar 重入）——host p.catch 改为兜底通道（emitSwitchError 已报过的不再报）或登记豁免理由。另：`electrostatic-induction` round-trip 5s 超时 flake 在测试指南写明「勿并发跑 vitest」。
