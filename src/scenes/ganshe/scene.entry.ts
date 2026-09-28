@@ -44,6 +44,13 @@ export type CreateGansheSceneOptions = {
   mode?: 'normal' | 'presentation';
   demoHints?: DemoRenderHints;
   onReadout?: (state: WaveState) => void;
+  /**
+   * Generation-scoped URL writer (page createScene forwards the adapter
+   * inject). Structural type: scene layer cannot import app.
+   */
+  sceneWriter?: {
+    write(patch: Record<string, number | string | boolean | undefined>): void;
+  };
 };
 
 function formatReadout(state: WaveState): Array<{
@@ -266,10 +273,13 @@ export function createGansheScene(
     }
   }
 
-  // Observer drag callback: update sim param, clear history, and re-render
+  // Observer drag callback: update sim param, clear history, and re-render.
+  // index === -1 is the primary observer (canvas drag and blank-click).
+  // Extra observers are not in urlSyncKeys — do not write them.
   view.setOnObserverMove((index, x) => {
     if (index === -1) {
       sim.setObserverX(x);
+      options.sceneWriter?.write({ observerX: x });
     } else {
       sim.setObserverPosition(index, x);
     }

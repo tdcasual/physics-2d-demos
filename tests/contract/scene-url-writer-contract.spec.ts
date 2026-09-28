@@ -373,6 +373,36 @@ describe('scene URL writer contract', () => {
     expect(missing).toEqual([]);
   });
 
+  it('ganshe setOnObserverMove writes observerX via sceneWriter (B21 path-level)', () => {
+    const entryPath = path.join(ROOT, 'src/scenes/ganshe/scene.entry.ts');
+    const text = fs.readFileSync(entryPath, 'utf8');
+    const args = findCallArgs(text, 'setOnObserverMove');
+    expect(args, 'ganshe entry must register setOnObserverMove').toHaveLength(
+      1
+    );
+    const arg = args[0].trim();
+    const arrow = arg.indexOf('=>');
+    expect(arrow).toBeGreaterThanOrEqual(0);
+    const i = skipWs(arg, arrow + 2);
+    expect(arg[i]).toBe('{');
+    const end = matchBrackets(arg, i);
+    expect(end).toBeGreaterThan(i);
+    const body = arg.slice(i, end + 1);
+    const hasWriter =
+      /\b(?:sceneWriter|writeOwnedSceneParams|writeParam)\b/.test(body);
+    const hasObserverX = /\bobserverX\b/.test(body);
+    expect(
+      hasWriter && hasObserverX,
+      'setOnObserverMove callback must co-locate a URL writer with observerX'
+    ).toBe(true);
+  });
+
+  it('ganshe page createScene forwards sceneWriter into createGansheScene', () => {
+    const pagePath = path.join(ROOT, 'src/scenes/ganshe/page.ts');
+    const text = fs.readFileSync(pagePath, 'utf8');
+    expect(text).toMatch(/createGansheScene\(\s*\{[^}]*\bsceneWriter\b/);
+  });
+
   it('never drops known legal keys from a writer allowlist', () => {
     const previous = window.location.href;
     resetUrlSyncOwners();

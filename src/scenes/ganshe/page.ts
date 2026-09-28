@@ -33,8 +33,8 @@ bootScenePage({
     readoutCollapsed: false,
     readoutLabel: '干涉分析'
   },
-  createScene: ({ canvas, theme, mode, demoHints }) => {
-    return createGansheScene({ canvas, theme, mode, demoHints });
+  createScene: ({ canvas, theme, mode, demoHints, sceneWriter }) => {
+    return createGansheScene({ canvas, theme, mode, demoHints, sceneWriter });
   },
   createControls: ({
     mount,

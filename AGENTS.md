@@ -203,7 +203,10 @@ bootScenePage({
 - `chase-meet`：写回只发生在 apply / uniform / accelerated（onChange 空实现
   是刻意的，防止未应用草稿进 URL）；只写 4 个 urlSyncKeys。
 - `ganshe`：urlSyncKeys 滑块在 imperative `createWaveSourceCard`，F3 正向
-  契约谓词覆盖不到（无契约守卫，见 v13 方案 §9 条款 3）。写回是手工项。
+  契约谓词覆盖不到（取值键由 page `writeParam` 手工写回）。非控件突变键
+  `observerX`（画布拖拽/空白点击，无对应控件）由 entry `setOnObserverMove`
+  经 `sceneWriter` 写回；路径级断言在 `scene-url-writer-contract.spec.ts`
+  （B21 已清）。两条谓词分属 B12 备注所述。
 - URL 同步棘轮：`scene-params-contract.spec.ts` 强制「有 `defaultParams` 的
   场景必须有 `urlSyncKeys` 或 page 级 `paramSync` 自定义路径」，全量 100%
   结构化覆盖（原 vite.config 百分比阈值已由该棘轮取代，debt-ledger A7）。
