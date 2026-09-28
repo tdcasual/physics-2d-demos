@@ -26,7 +26,7 @@ bootScenePage({
     controlColumns: 'auto',
     readoutCollapsed: true,
     readoutLabel: '光电读数',
-    hasGraph: true
+    hasGraph: false
   },
   createScene: ({ canvas, theme, mode, demoHints }) => {
     if (!canvas) throw new Error('photoelectric-cutoff requires a canvas');
