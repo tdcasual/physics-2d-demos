@@ -8,7 +8,7 @@ Physics-2D-Demos 是一个物理教学演示中心（Teaching Demo Hub），当�
 
 - **技术栈**: Vite 7 + TypeScript 5.9 (strict) + React 18 + Tailwind CSS v4
 - **测试**: Vitest 3.2 (单元/契约) + Playwright (E2E/视觉)
-- **构建产物**: 体积预算与实测口径以 `scripts/check-bundle-budget.ts` 为唯一权威（预算值：首页 JS 190 kB / CSS 25 kB；场景页 JS 200 kB / CSS 55 kB；vendor 160 kB；shared 150 kB；当前无入口级覆盖）。实测数字随构建变化，不在本文固化，运行 `pnpm check:bundle` 获取当前值
+- **构建产物**: 体积预算与实测口径以 `scripts/check-bundle-budget.ts` 为唯一权威。本文不固化数值；运行 `pnpm check:bundle` 获取当前预算与实测
 - **Runtime 依赖**: 仅 3 个（preact / react / react-dom）
 - **线上地址**: <https://x.infinitas.fun>
 
@@ -242,11 +242,11 @@ data-workspace 是可选布局能力，仅 `layoutConfig.dataWorkspace: true` �
 - `DataWorkspaceFieldSpec.step?: 'chartAnalysis'` 把 summary 字段划到图像分析环节显示（缺省数据步；图像分析模式下仅显示该类字段）
 - lab-stage `floatData` / `floatGraph`（默认 true）：false 时仍创建 slot（收养需要锚点）但 panel 为 `hidden`、不参与拖拽
 - split 系布局 `graphInitiallyHidden`（默认 false）：true 时图表区默认不渲染（section 置 `hidden`、容器标 `data-graph-initially-hidden`），slot 仍创建作收养锚点；工作区图像分析环节收养时自动 unhide、退出还原。用于"实验阶段不需要图表"的场景（如 ticker-tape）
-- CSS 由能力 runtime 惰性携带（`src/app/layouts/capabilities/data-workspace.ts` 动态 import），**page.ts 不要 import 工作区 CSS**
+- CSS 由能力 runtime 惰性携带（`src/app/layouts/capabilities/data-workspace/index.ts` 动态 import），**page.ts 不要 import 工作区 CSS**
 
 ## 舞台缩放坐标纪律（强制）
 
-data-workspace 的舞台 pan/zoom 是纯视图层 CSS transform（`stage-panzoom.ts`）。以下规则防止屏幕空间与局部空间混用（历史 bug：仪器 fit 漂移、panzoom 控件变遮罩）：
+data-workspace 的舞台 pan/zoom 是纯视图层 CSS transform（`capabilities/stage-panzoom.ts`）。以下规则防止屏幕空间与局部空间混用（历史 bug：仪器 fit 漂移、panzoom 控件变遮罩）：
 
 - **布局测量**：只用 `readElementLayoutSize` / `sizeCanvasToFill`（offsetWidth 系，免疫祖先 transform）；禁止用 `getBoundingClientRect` 当布局盒去写 `style.transform` / 窄屏判断 / fit 计算。仪器 fit 统一走 `src/instruments/_utils/fit-visual.ts`（内部经 `localFitSpace` 归一化）
 - **指针 delta**：进局部坐标前必须经 `localPointerDelta(el, dx, dy)`（`core/canvas-sizing.ts`）；k 读自 panzoom 写入的 `.stage-viewport[data-stage-zoom]`，`stageZoomOf` 沿 composed 树攀爬（穿透仪器 open shadow root）。`el` 必须用闭包内稳定节点，禁止用 document 级 move 事件的 `event.target`；禁止对被 transform 的元素取 GBCR 比值当 k
@@ -306,7 +306,7 @@ export type SceneMeta = ScenePlacardMeta & {
 - 单元测试放在 `tests/unit/*.spec.ts`
 - DOM 组件测试使用 `happy-dom` 环境（已全局配置）
 - Playwright 行为测试放在 `tests/e2e/*.spec.ts`，布局、无障碍、视觉与跨浏览器测试放在 `tests/visual/*.spec.ts`
-- 覆盖率阈值以 `vite.config.ts` 为准（棘轮 = 实绩−2，2026-09-25 基线）：lines 88.9%, functions 86.2%, branches 80.9%, statements 88.9%
+- 覆盖率阈值以 `vite.config.ts` 的 `test.coverage.thresholds` 为唯一来源（棘轮 = 实绩−2）。本文不固化数值
 
 ### 视觉回归基线规则（强制）
 
@@ -441,4 +441,4 @@ function resize() {
 - `xt-graph` / `tortoise-hare`：`getParams` 仅 `{speed}`，schema 无 speed 键，通用投影空转；preset 高亮只覆盖 URL 首绘（A3 裁定）
 - `spring-oscillator`：`getParams` 只暴露首振子 `{k,m,A}`，列表重建走 handle `syncFromScene`（A3 裁定）
 - chase-meet 的表达式解析器语义（除零得 0、悬挂操作符补 0、多余 token 静默丢弃）已被 `tests/unit/chase-meet-expression-parser.spec.ts` 固化为特征化契约；「修正」parser 前须先改测试，否则会被该契约挡住。
-- E2E 套件当前稳定：本地连续 3 次完整运行（含 `--repeat-each=2` 加压，累计 304 次执行）全部通过，早期文档所述「35 个不稳定测试」已不复现。若 CI 偶发超时，优先排查浏览器/资源环境而非测试本身。
+- E2E 套件当前稳定；用例数以 `pnpm exec playwright test -c playwright.e2e.config.ts --list` 查询为准。早期文档所述「35 个不稳定测试」已不复现。若 CI 偶发超时，优先排查浏览器/资源环境而非测试本身。

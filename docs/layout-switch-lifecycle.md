@@ -1,4 +1,4 @@
-# 布局切换生命周期（Wave B）
+# 布局切换生命周期
 
 串行 owner 在 `src/app/layouts/layout-switch-runtime.ts`。本页锁定 quarantine
 语义、stage-canvas 监管域，以及相对 v10 §3.2:74 的已批准偏差。

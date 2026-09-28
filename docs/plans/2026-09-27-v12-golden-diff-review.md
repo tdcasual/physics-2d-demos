@@ -1,5 +1,7 @@
 # 2026-09-27 v10 布局改动 × 4 张 Linux 基线替换的逐项 diff 审阅（D2）
 
+> ✅ 已执行完毕（2026-09-28）。本文为归档记录，现行方案见 `docs/plans/2026-09-28-v13-debt-cleanup-plan.md`。
+
 审阅人：Kimi（逐张目视对比 22616fe 旧基线 vs 工作树新基线，图对在 /tmp/golden-diff/）。容器验证：2026-09-28 `scripts/visual-linux-container.sh verify` EXIT 0（artifacts/v12-evidence/d1a-visual-container.log）。
 
 | 基线                            | 结论               | 依据                                                                                                                                                                                                                     |

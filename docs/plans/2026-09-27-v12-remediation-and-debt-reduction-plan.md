@@ -1,5 +1,7 @@
 # v12.1 方案：v10 收尾 + 控件投影架构收敛 + 结构性减债（交叉审计定稿候选）
 
+> ✅ 已执行完毕（2026-09-28）。本文为归档记录，现行方案见 `docs/plans/2026-09-28-v13-debt-cleanup-plan.md`。
+
 > 日期：2026-09-27。基线：`fix/physics-2d-remediation` @ `22616fe` + 未提交工作树（v10 实现；tsc 通过；quality:core / e2e / linux-visual 日志为绿）。
 > 审计链：三方独立审计（`/tmp/physics-2d-final-audit/`，均 CHANGES_REQUIRED）→ v11 → 方案审计 R1（Claude 7 阻塞 / Grok 5 阻塞）→ v11.1 → R2（Grok PASS；Claude 3 条文本级修正）→ v11.2 → v12（深化 + Wave E）→ R3 现状核对（Claude 9 条 / Grok 3 条阻塞+5 条建议，全部文本级与边界级，两家均明示改完即可开工）→ 本稿 v12.1 已纳入全部修正。
 > v12.1 相对 v12 的变化：恢复 A1.6（reset/remount 共用投影，R3 两家共同头号阻塞）；§1.2(b) 补 ganshe；§1.3 补 field-lines（共 11 行）+ tortoise-hare 注解；A8/§7 计数改为具名并集 19；E1 依赖图重画；E2/E3 联动约束补全；§8 验收矩阵修正。

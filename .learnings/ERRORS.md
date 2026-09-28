@@ -1,3 +1,7 @@
+# 错误日志
+
+结案规则：条目状态仅为 `pending` / `resolved` / `obsolete`；环境已变更、不再可复现的条目标 `obsolete`，不再追踪。
+
 ## [ERR-20260808-001] git add index lock
 
 **Logged**: 2026-08-08T00:00:00Z
@@ -40,7 +44,7 @@ Run Git index and ref mutations with explicitly approved elevated permissions.
 
 **Logged**: 2026-08-05T00:00:00Z
 **Priority**: medium
-**Status**: pending
+**Status**: obsolete（环境已变更，不再适用）
 **Area**: infra
 
 ### Summary
@@ -74,7 +78,7 @@ Use a writable pnpm store/cache for sandboxed runs, or invoke the already-instal
 
 **Logged**: 2026-08-05T00:00:00Z
 **Priority**: low
-**Status**: pending
+**Status**: obsolete（环境已变更，不再适用）
 **Area**: tests
 
 ### Summary
@@ -108,7 +112,7 @@ Retry once or run the same command under an already-approved Playwright test rul
 
 **Logged**: 2026-08-05T00:00:00Z
 **Priority**: high
-**Status**: pending
+**Status**: obsolete（环境已变更，不再适用）
 **Area**: tests
 
 ### Summary
@@ -142,7 +146,7 @@ Run browser tests in a supported container/CI image, or configure Playwright to 
 
 **Logged**: 2026-08-05T00:00:00Z
 **Priority**: medium
-**Status**: pending
+**Status**: obsolete（环境已变更，不再适用）
 **Area**: tests
 
 ### Summary
@@ -176,7 +180,7 @@ Run `npx playwright install chromium` after dependency updates and cache the bro
 
 **Logged**: 2026-08-05T00:00:00Z
 **Priority**: medium
-**Status**: pending
+**Status**: obsolete（环境已变更，不再适用）
 **Area**: tests
 
 ### Summary
@@ -210,7 +214,7 @@ Run Playwright with the same approved network scope as the preview server.
 
 **Logged**: 2026-08-05T00:00:00Z
 **Priority**: medium
-**Status**: pending
+**Status**: obsolete（环境已变更，不再适用）
 **Area**: infra
 
 ### Summary
@@ -244,7 +248,7 @@ Run the preview server with approved network-listen permissions in restricted en
 
 **Logged**: 2026-08-05T00:00:00Z
 **Priority**: medium
-**Status**: pending
+**Status**: obsolete（环境已变更，不再适用）
 **Area**: infra
 
 ### Summary

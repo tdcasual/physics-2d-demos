@@ -16,8 +16,9 @@
   `ganshe` 动态管理观察点）；
 - schema 的 12 种字段类型确实表达不了的交互（先试 `custom` 字段再放弃）。
 
-注意：imperative `controls.ts` import `ui/` 层组件会触发 ESLint
-`no-restricted-imports`，需行内 disable 注释（属既有豁免形态）。
+注意：imperative `controls.ts` 不得 import `ui/`（ESLint `no-restricted-imports`）。
+ui 工厂由 `page.ts` 注入（结构类型参数），场景层保持零 ui 导入——见
+`spring-oscillator` / `ganshe`。禁止恢复行内 `eslint-disable` 豁免（debt-ledger A2 已清）。
 
 ## 1. 总体接线方式
 
@@ -43,15 +44,19 @@ createControls: ({ mount, scene, writeParam }) => {
 };
 ```
 
-`renderer` 句柄提供 5 个方法（`SchemaRendererInstance`）：
+`renderer` 句柄（`SchemaRendererInstance`）提供：
 
-| 方法                       | 适用字段                                              |
-| -------------------------- | ----------------------------------------------------- |
-| `setValue(key, value)`     | 仅 `slider`、`toggle` 注册了 valueSetter              |
-| `getValue<T>(key)`         | 仅 `number`、`text` 注册了 valueGetter                |
-| `setActive(key, id)`       | 仅 `preset-group`、`scene-selector`                   |
-| `setVisible(key, visible)` | 任意字段 key，或 **section 的 title**（隐藏整张卡片） |
-| `dispose()`                | 清理全部                                              |
+| 成员                           | 适用字段                                                          |
+| ------------------------------ | ----------------------------------------------------------------- |
+| `setValue(key, value)`         | `slider`、`number`、`text`、`select`、`toggle`（会触发 onChange） |
+| `setValueSilently(key, value)` | 同上（不触发 onChange，URL 投影用）                               |
+| `getValue<T>(key)`             | `number`、`text`、`select`                                        |
+| `setActive(key, id)`           | `preset-group`、`scene-selector`                                  |
+| `setActiveSilently(key, id)`   | 同上                                                              |
+| `setVisible(key, visible)`     | 任意字段 key，或 **section 的 title**（隐藏整张卡片）             |
+| `element`                      | 挂载点 `HTMLElement`                                              |
+| `fieldTypes`                   | 字段键 → schema 类型（`Map`）                                     |
+| `dispose()`                    | 清理全部                                                          |
 
 ## 2. 十二种字段类型
 
@@ -92,8 +97,8 @@ createControls: ({ mount, scene, writeParam }) => {
 
 - `onChange(key, value)`：`value` 为 `number`。
 - 出处：`src/scenes/chase-meet/controls-schema.ts`。
-- ⚠️ 无 `valueSetter`，URL 参数回写不会刷新它的显示值；场景自行读取时可用
-  `renderer.getValue<number>(key)`。
+- 支持 `renderer.setValue(key, n)` 回写（会触发 onChange）；静默回写用
+  `setValueSilently`。场景自行读取时可用 `renderer.getValue<number>(key)`。
 
 ### 2.3 text — 自由文本
 
@@ -130,7 +135,7 @@ createControls: ({ mount, scene, writeParam }) => {
 
 - `onChange(key, value)`：`value` 为 `string`（即 options 里的 `value`，
   **不是** `label`）。
-- 出处：`src/instruments/vernier-caliper/controls-schema.ts`。
+- 出处：`src/instruments/vernier-caliper-guide/controls-schema.ts`。
 - ⚠️ options 每项是 `{ label, value }`，键名顺序无所谓但两个都不能缺。
 
 ### 2.5 button — 单个动作按钮
@@ -268,7 +273,7 @@ createControls: ({ mount, scene, writeParam }) => {
 - 纯展示，**不参与 onChange/onAction**；每行渲染为一个 `<p>`，
   颜色 `var(--text-secondary)`。
 - 出处：`src/scenes/electrification/controls-schema.ts`、
-  `src/instruments/vernier-caliper/controls-schema.ts`。
+  `src/instruments/vernier-caliper-guide/controls-schema.ts`。
 - 优先用 hint 表达纯文本说明，不要为此写 `custom`。
 
 ### 2.12 custom — 逃生口

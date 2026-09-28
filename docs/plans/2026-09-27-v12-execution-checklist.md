@@ -1,5 +1,7 @@
 # v12.1 执行检查单（Grok 实施 × Kimi/Claude 交叉验收）
 
+> ✅ 已执行完毕（2026-09-28）。本文为归档记录，现行方案见 `docs/plans/2026-09-28-v13-debt-cleanup-plan.md`。
+
 > 方案权威：`docs/plans/2026-09-27-v12-remediation-and-debt-reduction-plan.md`（v12.1，交叉审计通过）。
 > 分工：Grok CLI 实施并提交；Kimi + Claude 交叉验收每个阶段；方案未覆盖的问题 → Kimi 补方案 → 三方复审 → 继续。
 > 纪律：每阶段独立提交；Wave A 未绿不合 main；实施者不得修改方案文档（方案修订只能经审计循环）。

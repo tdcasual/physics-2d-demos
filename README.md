@@ -31,26 +31,26 @@ pnpm quality:full
 
 ## Scripts
 
-| 命令                      | 说明                                       |
-| ------------------------- | ------------------------------------------ |
-| `pnpm dev`                | 本地开发（端口 5177）                      |
-| `pnpm build`              | 构建产物到 `dist/`                         |
-| `pnpm preview`            | 预览构建结果                               |
-| `pnpm check:scenes`       | 检查场景标准文件、控制面板形态与 HTML 入口 |
-| `pnpm check:layouts`      | 检查布局注册表与 layoutTestProfile         |
-| `pnpm check:scaffold`     | 脚手架自证明（生成探针场景后清理）         |
-| `pnpm check:bundle`       | 检查生产构建产物是否超过 bundle budget     |
-| `pnpm check:circular`     | 检查 `src/` 循环依赖                       |
-| `pnpm check:audit`        | 依赖漏洞审计                               |
-| `pnpm verify:scene`       | 单场景一站式验证（结构→测试→构建→预算）    |
-| `pnpm quality:core`       | 快速本地质量门禁                           |
-| `pnpm quality:full`       | 完整本地质量门禁                           |
-| `pnpm lint`               | ESLint 静态检查                            |
-| `pnpm typecheck`          | TypeScript 类型检查                        |
-| `pnpm test`               | Vitest 单元/契约测试                       |
-| `pnpm test:e2e`           | Playwright E2E 测试                        |
-| `pnpm test:visual`        | Playwright 视觉回归测试                    |
-| `pnpm test:visual:update` | 更新视觉快照基线                           |
+| 命令                      | 说明                                                                                    |
+| ------------------------- | --------------------------------------------------------------------------------------- |
+| `pnpm dev`                | 本地开发（端口 5177）                                                                   |
+| `pnpm build`              | 构建产物到 `dist/`                                                                      |
+| `pnpm preview`            | 预览构建结果                                                                            |
+| `pnpm check:scenes`       | 检查场景标准文件、控制面板形态与 HTML 入口                                              |
+| `pnpm check:layouts`      | 检查布局注册表与 layoutTestProfile                                                      |
+| `pnpm check:scaffold`     | 脚手架自证明（生成探针场景后清理）                                                      |
+| `pnpm check:bundle`       | 检查生产构建产物是否超过 bundle budget                                                  |
+| `pnpm check:circular`     | 检查 `src/` 循环依赖                                                                    |
+| `pnpm check:audit`        | 依赖漏洞审计                                                                            |
+| `pnpm verify:scene`       | 单场景一站式验证（结构→测试→构建→预算）                                                 |
+| `pnpm quality:core`       | 快速本地质量门禁                                                                        |
+| `pnpm quality:full`       | 完整本地质量门禁                                                                        |
+| `pnpm lint`               | ESLint 静态检查                                                                         |
+| `pnpm typecheck`          | TypeScript 类型检查                                                                     |
+| `pnpm test`               | Vitest 单元/契约测试                                                                    |
+| `pnpm test:e2e`           | Playwright E2E 测试                                                                     |
+| `pnpm test:visual`        | Playwright 视觉回归测试                                                                 |
+| `pnpm test:visual:update` | 更新视觉快照基线（仅限 macOS；Linux 基线走 `scripts/visual-linux-container.sh update`） |
 
 ## Project Layout
 
@@ -99,7 +99,7 @@ tests/
   visual/                      # 视觉回归 + 快照
 docs/
   README.md                    # 文档索引
-  layout-master-system-design.md   # 布局母版系统设计
+  layout-master-system-design.md   # 布局母版系统设计（历史快照）
   new-scene-agent-contract.md      # 新场景开发规范（当前有效）
   scene-migration-requirements.md  # 旧版场景开发规范（历史归档）
 ```
@@ -223,7 +223,7 @@ bootScenePage({
 
 详细规范见：[docs/new-scene-agent-contract.md](./docs/new-scene-agent-contract.md)（旧版规范 scene-migration-requirements.md 已归档，仅供追溯）
 
-布局系统扩展指南见：[docs/layout-master-system-design.md](./docs/layout-master-system-design.md)
+布局系统扩展指南见 AGENTS.md「布局扩展规范」。历史快照：[docs/layout-master-system-design.md](./docs/layout-master-system-design.md)
 
 ## CI
 
