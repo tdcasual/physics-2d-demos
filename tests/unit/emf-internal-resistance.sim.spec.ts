@@ -242,12 +242,13 @@ describe('emf-internal-resistance entry', () => {
       resolve(process.cwd(), 'src/scenes/emf-internal-resistance/page.ts'),
       'utf8'
     );
-    expect(pageSrc).toContain('readSceneParams');
+    expect(pageSrc).not.toContain('readSceneParams');
     expect(pageSrc).toContain('asBool');
     expect(pageSrc).toContain("preferredLayout: 'split-right-graph-bottom'");
     expect(pageSrc).toContain('syncFromScene');
-    expect(pageSrc).toContain('initialParams');
-    expect(pageSrc).toContain('autoPlay: initialParams.autoRun !== false');
+    expect(pageSrc).toContain('initialParams: paramsFromUrl(urlParams ?? {})');
+    expect(pageSrc).toContain('shouldAutoPlay:');
+    expect(pageSrc).toContain('paramsFromUrl(urlParams).autoRun !== false');
     expect(pageSrc).toContain('const originalReset = scene.reset.bind(scene)');
     expect(pageSrc).toContain('writeOwnedSceneParams');
     expect(pageSrc).toContain('if (syncingControls) return');

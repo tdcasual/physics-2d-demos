@@ -1,6 +1,6 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { readSceneParams } from '../../app/url-sync';
+
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { chargedParticleControlsSchema } from './controls-schema';
@@ -65,11 +65,10 @@ function syncControls(
   renderer.setActiveSilently('fieldDirection', params.fieldDirection);
 }
 
-const initialParams = paramsFromUrl(readSceneParams(chargedParticleMeta));
-
 bootScenePage({
   meta: chargedParticleMeta,
-  autoPlay: initialParams.autoRun !== false,
+  shouldAutoPlay: (_params, urlParams) =>
+    paramsFromUrl(urlParams).autoRun !== false,
   preferredLayout: 'split-right',
   layoutConfig: {
     defaultLeftRatio: 0.34,
@@ -80,14 +79,14 @@ bootScenePage({
     readoutLabel: '数据读数',
     hasGraph: false
   },
-  createScene: ({ canvas, theme, mode, demoHints }) => {
+  createScene: ({ canvas, theme, mode, demoHints, urlParams }) => {
     if (!canvas) throw new Error('charged-particle-circle requires a canvas');
     const scene = createChargedParticleScene({
       canvas,
       theme,
       mode,
       demoHints,
-      initialParams
+      initialParams: paramsFromUrl(urlParams ?? {})
     });
     const scheduler = createRenderScheduler(() => scene.render());
     const dispose = scene.dispose.bind(scene);

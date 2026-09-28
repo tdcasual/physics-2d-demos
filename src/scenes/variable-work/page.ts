@@ -1,6 +1,6 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { readSceneParams, writeOwnedSceneParams } from '../../app/url-sync';
+import { writeOwnedSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { variableWorkControlsSchema } from './controls-schema';
@@ -15,12 +15,11 @@ import {
   type VariableWorkParams
 } from './scene.sim';
 
-const rawInitial = readSceneParams(variableWorkMeta);
 const NUMBER_KEYS = ['mass', 'k', 'power', 'microsteps'] as const;
 
 bootScenePage({
   meta: variableWorkMeta,
-  autoPlay: asBool(rawInitial.autoRun, false),
+  shouldAutoPlay: (_params, urlParams) => asBool(urlParams.autoRun, false),
   preferredLayout:
     typeof window !== 'undefined' && window.innerWidth <= 720
       ? 'mobile-stack'

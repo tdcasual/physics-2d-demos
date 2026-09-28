@@ -1,6 +1,6 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { readSceneParams, writeOwnedSceneParams } from '../../app/url-sync';
+import { writeOwnedSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { emfInternalControlsSchema } from './controls-schema';
@@ -60,8 +60,6 @@ function paramsFromUrl(
   return next;
 }
 
-const initialParams = paramsFromUrl(readSceneParams(emfInternalMeta));
-
 function syncSwitchButton(mount: HTMLElement, closed: boolean): void {
   const btn = mount.querySelector('[data-control-key="toggleSwitch"]');
   if (!(btn instanceof HTMLElement)) return;
@@ -106,7 +104,8 @@ function syncControls(
 
 bootScenePage({
   meta: emfInternalMeta,
-  autoPlay: initialParams.autoRun !== false,
+  shouldAutoPlay: (_params, urlParams) =>
+    paramsFromUrl(urlParams).autoRun !== false,
   preferredLayout: 'split-right-graph-bottom',
   layoutConfig: {
     defaultLeftRatio: 0.32,
@@ -121,14 +120,14 @@ bootScenePage({
     graphMaxHeight: 320,
     graphColumns: 1
   },
-  createScene: ({ canvas, theme, mode, demoHints, sceneWriter }) => {
+  createScene: ({ canvas, theme, mode, demoHints, sceneWriter, urlParams }) => {
     if (!canvas) throw new Error('emf-internal-resistance requires a canvas');
     const scene = createEmfInternalScene({
       canvas,
       theme,
       mode,
       demoHints,
-      initialParams
+      initialParams: paramsFromUrl(urlParams ?? {})
     });
     const scheduler = createRenderScheduler(() => scene.render());
     const dispose = scene.dispose.bind(scene);
