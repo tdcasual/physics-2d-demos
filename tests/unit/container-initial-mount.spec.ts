@@ -1,3 +1,4 @@
+import { setTimeout as realSetTimeout } from 'node:timers/promises';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { createSceneContainer } from '../../src/app/layouts/container';
 import type {
@@ -13,6 +14,7 @@ import {
   registerLazyLayout,
   registerLayoutTestAdapter
 } from '../../src/app/layouts/registry';
+import { registerDefaultStrategies } from '../../src/app/layouts/default-strategies';
 
 const testMeta = {
   name: 'Test',
@@ -74,10 +76,18 @@ function layoutClass(id: string, onConstruct?: () => void): ILayoutConstructor {
   } as unknown as ILayoutConstructor;
 }
 
-function makeScene(id = 'scene-a'): Scene {
+async function waitUntil(pred: () => boolean, message: string): Promise<void> {
+  for (let i = 0; i < 400; i++) {
+    if (pred()) return;
+    await realSetTimeout(5);
+  }
+  throw new Error(message);
+}
+
+function makeScene(id = 'scene-a', preferredLayout = 'layout-a'): Scene {
   return {
     id,
-    preferredLayout: 'layout-a',
+    preferredLayout,
     renderAnimation: vi.fn(),
     renderControl: vi.fn(),
     mount: vi.fn(),
@@ -94,6 +104,7 @@ describe('SceneContainer initial mount serialization', () => {
   beforeEach(() => {
     layoutRegistry.clear();
     registerLayoutTestAdapter('initial-mount-adapter');
+    registerDefaultStrategies();
     mountEl = document.createElement('div');
     mountEl.style.width = '1200px';
     mountEl.style.height = '800px';
@@ -196,5 +207,109 @@ describe('SceneContainer initial mount serialization', () => {
     expect(options).toBeUndefined();
     container.dispose();
     create.mockRestore();
+  });
+
+  it('applies a queued setScene after a failed lazy boot (G′ F1)', async () => {
+    let rejectA!: (reason: Error) => void;
+    registerLazyLayout(
+      'layout-a',
+      () =>
+        new Promise<ILayoutConstructor>((_resolve, reject) => {
+          rejectA = reject;
+        }),
+      testMeta
+    );
+    registerLayout('layout-b', layoutClass('layout-b'), testMeta);
+
+    const container = createSceneContainer({ mount: mountEl });
+    const scene1 = makeScene('scene-1', 'layout-a');
+    const scene2 = makeScene('scene-2', 'layout-b');
+    const errors: Array<{ error: unknown }> = [];
+    container.on('layout:switch-error', (payload) => {
+      errors.push(payload);
+    });
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const p1 = container.setScene(scene1);
+    await waitUntil(
+      () => typeof rejectA === 'function',
+      'layout-a loader did not start'
+    );
+
+    const p2 = container.setScene(scene2);
+    rejectA(new Error('boot boom'));
+
+    const r1 = await p1.then(
+      () => 'fulfilled' as const,
+      (err: unknown) =>
+        `rejected(${err instanceof Error ? err.message : String(err)})`
+    );
+    const r2 = await p2.then(
+      () => 'fulfilled' as const,
+      (err: unknown) =>
+        `rejected(${err instanceof Error ? err.message : String(err)})`
+    );
+
+    expect(r1).toBe('rejected(boot boom)');
+    expect(r2).toBe('fulfilled');
+    expect(container.currentScene).toBe(scene2);
+    expect(container.currentLayout?.id).toBe('layout-b');
+    expect(mountEl.childElementCount).toBeGreaterThan(0);
+    expect(scene2.mount).toHaveBeenCalled();
+    expect(errors).toHaveLength(0);
+    container.dispose();
+  });
+
+  it('rejects the queued setScene and reports when recovery boot also fails', async () => {
+    let rejectA!: (reason: Error) => void;
+    let rejectB!: (reason: Error) => void;
+    registerLazyLayout(
+      'layout-a',
+      () =>
+        new Promise<ILayoutConstructor>((_resolve, reject) => {
+          rejectA = reject;
+        }),
+      testMeta
+    );
+    registerLazyLayout(
+      'layout-b',
+      () =>
+        new Promise<ILayoutConstructor>((_resolve, reject) => {
+          rejectB = reject;
+        }),
+      testMeta
+    );
+
+    const container = createSceneContainer({ mount: mountEl });
+    const scene1 = makeScene('scene-1', 'layout-a');
+    const scene2 = makeScene('scene-2', 'layout-b');
+    const errors: Array<{ error: unknown }> = [];
+    container.on('layout:switch-error', (payload) => {
+      errors.push(payload);
+    });
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const p1 = container.setScene(scene1);
+    await waitUntil(
+      () => typeof rejectA === 'function',
+      'layout-a loader did not start'
+    );
+    const p2 = container.setScene(scene2);
+    rejectA(new Error('boot boom'));
+    await waitUntil(
+      () => typeof rejectB === 'function',
+      'recovery boot did not start layout-b create'
+    );
+    rejectB(new Error('recovery boom'));
+
+    await expect(p1).rejects.toThrow('boot boom');
+    await expect(p2).rejects.toThrow('recovery boom');
+    expect(container.currentLayout).toBeNull();
+    expect(mountEl.childElementCount).toBe(0);
+    expect(errors.length).toBeGreaterThan(0);
+    expect(String((errors[0]?.error as Error)?.message ?? '')).toContain(
+      'recovery boom'
+    );
+    container.dispose();
   });
 });

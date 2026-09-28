@@ -444,7 +444,7 @@ describe('Layout switch lifecycle (Wave B)', () => {
     it('clears data-layout-id when disposed during rollback (G4)', async () => {
       const origCreate = layoutRegistry.create.bind(layoutRegistry);
       let createCalls = 0;
-      let rollbackCreatePending = false;
+      let releaseRollback: (() => void) | undefined;
       vi.spyOn(layoutRegistry, 'create').mockImplementation(
         async (id, el, cfg, opts) => {
           createCalls += 1;
@@ -454,17 +454,11 @@ describe('Layout switch lifecycle (Wave B)', () => {
           if (id === 'layout-b') {
             throw new Error('incoming layout failed');
           }
-          rollbackCreatePending = true;
-          return new Promise((_, reject) => {
-            const signal = opts?.signal;
-            const onAbort = (): void => {
-              reject(signal?.reason ?? new Error('aborted'));
+          return new Promise((resolve) => {
+            releaseRollback = () => {
+              const Ctor = layoutClass(id);
+              resolve(new Ctor(el, cfg));
             };
-            if (signal?.aborted) {
-              onAbort();
-              return;
-            }
-            signal?.addEventListener('abort', onAbort, { once: true });
           });
         }
       );
@@ -486,14 +480,28 @@ describe('Layout switch lifecycle (Wave B)', () => {
       });
       await waitUntilSwitching(container);
       await waitUntil(
-        () => rollbackCreatePending,
+        () => typeof releaseRollback === 'function',
         'rollback create did not start'
       );
 
       container.dispose();
+      const htmlAfterDispose = mount.innerHTML;
+      const mutations: MutationRecord[] = [];
+      const observer = new MutationObserver((list) => {
+        mutations.push(...list);
+      });
+      observer.observe(mount, {
+        childList: true,
+        subtree: true,
+        attributes: true
+      });
+      releaseRollback?.();
       await hung.catch(() => undefined);
       await flushMicrotasks();
+      observer.disconnect();
 
+      expect(mutations).toHaveLength(0);
+      expect(mount.innerHTML).toBe(htmlAfterDispose);
       expect(mount.dataset.layoutId).toBeUndefined();
       expect(mount.hasAttribute('data-layout-id')).toBe(false);
       expect(mount.querySelector('[data-layout-id]')).toBeNull();
@@ -701,6 +709,20 @@ describe('Layout switch lifecycle (Wave B)', () => {
         testMeta
       );
 
+      const orig = LayoutSwitchRuntime.prototype.switchLayout;
+      const entered: string[] = [];
+      vi.spyOn(
+        LayoutSwitchRuntime.prototype,
+        'switchLayout'
+      ).mockImplementation(function (
+        this: LayoutSwitchRuntime,
+        layoutId: string,
+        options?: Parameters<LayoutSwitchRuntime['switchLayout']>[1]
+      ) {
+        entered.push(layoutId);
+        return orig.apply(this, [layoutId, options]);
+      });
+
       const container = createSceneContainer({ mount });
       const scene1 = makeScene('scene-1', 'layout-a');
       const scene2 = makeScene('scene-2', 'layout-b');
@@ -713,19 +735,148 @@ describe('Layout switch lifecycle (Wave B)', () => {
         'boot drain did not start layout-b create'
       );
 
-      const p3 = container.switchLayout('layout-c', {
-        reason: 'manual',
-        animate: false
-      });
+      let p3Settled = false;
+      const p3 = container
+        .switchLayout('layout-c', {
+          reason: 'manual',
+          animate: false
+        })
+        .finally(() => {
+          p3Settled = true;
+        });
       await flushMicrotasks();
+      expect(entered).toEqual(['layout-b']);
       expect(cConstructs).toBe(0);
+      expect(p3Settled).toBe(false);
 
       resolveB(layoutClass('layout-b'));
       await Promise.all([p1, p2, p3]);
 
+      expect(p3Settled).toBe(true);
+      expect(entered.filter((id) => id === 'layout-c')).toHaveLength(1);
       expect(cConstructs).toBe(1);
       expect(container.currentScene).toBe(scene2);
       expect(container.currentLayout?.id).toBe('layout-c');
+      expect(container.getSwitchState()).toBe('idle');
+      container.dispose();
+    });
+  });
+
+  describe('G5 hardening guards', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('flushAckWaiters on dispose so abort-path waiters do not hang', async () => {
+      registerLayout('layout-a', layoutClass('layout-a'), testMeta);
+      registerLayout('layout-b', layoutClass('layout-b'), testMeta);
+      const scene = makeScene();
+      scene.onLayoutWillChange = () => new Promise<void>(() => undefined);
+      const container = createSceneContainer({
+        mount,
+        forceLayout: 'layout-a'
+      });
+      await container.setScene(scene);
+
+      vi.useFakeTimers({ toFake: [...FAKE_TIMER_APIS] });
+      const hung = container.switchLayout('layout-b', { reason: 'manual' });
+      await waitUntilSwitching(container);
+      vi.advanceTimersByTime(10_000);
+      await flushMicrotasks();
+
+      let settled = false;
+      void hung.finally(() => {
+        settled = true;
+      });
+      container.dispose();
+      await flushMicrotasks();
+      await flushMicrotasks();
+      expect(settled).toBe(true);
+    });
+
+    it('drainPending restores only pendingSwitchId when scene apply succeeded', async () => {
+      registerLayout('layout-a', layoutClass('layout-a'), testMeta);
+      registerLayout('layout-b', layoutClass('layout-b'), testMeta);
+      const scene1 = makeScene('scene-1', 'layout-a');
+      const container = createSceneContainer({
+        mount,
+        forceLayout: 'layout-a'
+      });
+      await container.setScene(scene1);
+
+      let release!: () => void;
+      scene1.onLayoutWillChange = () =>
+        new Promise<void>((resolve) => {
+          release = resolve;
+        });
+
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const hung = container.switchLayout('layout-b', {
+        reason: 'manual',
+        animate: false
+      });
+      await waitUntilSwitching(container);
+
+      const scene2 = makeScene('scene-2', 'layout-a');
+      const p2 = container.setScene(scene2);
+      const sw = runtimeOf(container);
+      sw.pendingSwitchId = 'layout-missing';
+      expect(sw.pendingScene).toBe(scene2);
+      expect(sw.pendingSwitchId).toBe('layout-missing');
+
+      release();
+      await hung.catch(() => undefined);
+      await p2;
+      await flushMicrotasks();
+      await flushMicrotasks();
+
+      expect(container.currentScene).toBe(scene2);
+      expect(sw.pendingScene).toBeNull();
+      expect(sw.pendingSwitchId).toBe('layout-missing');
+      container.dispose();
+    });
+  });
+
+  describe('G′ switching-queue deferred', () => {
+    it('setScene during switching returns a deferred; replaced requests resolve', async () => {
+      registerLayout('layout-a', layoutClass('layout-a'), testMeta);
+      registerLayout('layout-b', layoutClass('layout-b'), testMeta);
+      const scene1 = makeScene('scene-1', 'layout-a');
+      const container = createSceneContainer({
+        mount,
+        forceLayout: 'layout-a'
+      });
+      await container.setScene(scene1);
+
+      let release!: () => void;
+      scene1.onLayoutWillChange = () =>
+        new Promise<void>((resolve) => {
+          release = resolve;
+        });
+
+      const hung = container.switchLayout('layout-b', {
+        reason: 'manual',
+        animate: false
+      });
+      await waitUntilSwitching(container);
+
+      const scene2 = makeScene('scene-2', 'layout-a');
+      const scene3 = makeScene('scene-3', 'layout-a');
+      let p2Settled = false;
+      const p2 = container.setScene(scene2).finally(() => {
+        p2Settled = true;
+      });
+      await flushMicrotasks();
+      expect(p2Settled).toBe(false);
+
+      const p3 = container.setScene(scene3);
+      await flushMicrotasks();
+      expect(p2Settled).toBe(true);
+      await expect(p2).resolves.toBeUndefined();
+
+      release();
+      await Promise.all([hung, p3]);
+      expect(container.currentScene).toBe(scene3);
       expect(container.getSwitchState()).toBe('idle');
       container.dispose();
     });
