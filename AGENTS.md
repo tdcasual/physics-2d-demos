@@ -178,12 +178,11 @@ bootScenePage({
   `afterApply`（默认管线后、首绘前）、`projectControls`（remount/reset
   逃生口：对 sim 只读、同步、不得 rAF 延迟）。
 - **autoPlay**：page.ts 不要在模块顶层 `readSceneParams`。`shouldAutoPlay(params, urlParams)`
-  在 URL restore（`applySceneUrlParams`）之后、`startAll` 之前求值；`params` 为
-  `getParams()`，`urlParams` 为该代 snapshot。已迁 `shouldAutoPlay` 的 14 个场景
-  （见台账 B13）中，URL query 的 `autoRun` 覆盖 localStorage 镜像
-  （`restoreSceneParams` 仅在 query 为空时灌入）。其余静态 `autoPlay: true` 且
-  `autoRun ∈ urlSyncKeys` 的场景仍走 `Boolean(autoPlay)`，query `autoRun=0`
-  被静默忽略（B22）。构造期 `initialParams` 从 `createScene` 注入的 `urlParams` 读取。
+  在 URL restore 之后、`startAll` 之前求值。平台 fallback：`resolveUrlSyncKeys(meta)`
+  含 `autoRun` 且 snapshot 含恢复值时，以恢复值决定播放；snapshot 缺省时仍用静态
+  `autoPlay`。B13 的 14 个显式钩子保留且优先级最高。`params` 为 `getParams()`，
+  `urlParams` 为该代 snapshot。构造期 `initialParams` 从 `createScene` 注入的
+  `urlParams` 读取。
 
 **已知限制**：
 

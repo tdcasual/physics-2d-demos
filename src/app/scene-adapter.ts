@@ -48,6 +48,24 @@ import {
 
 export { filterPresentationReadout } from './scene-adapter/readout-filter';
 
+/**
+ * B22：恢复值 → 是否播放。
+ * 显式覆盖 0 / '0' / false / 'false' / NaN 判假，其余判真。
+ * 不可用 `!== false && !== 0 && !== '0'`——`?autoRun=abc` 会经 parseInt 得 NaN 被误判为播。
+ */
+export function coerceAutoRun(value: unknown): boolean {
+  if (
+    value === 0 ||
+    value === '0' ||
+    value === false ||
+    value === 'false' ||
+    (typeof value === 'number' && Number.isNaN(value))
+  ) {
+    return false;
+  }
+  return true;
+}
+
 export class SceneAdapter<
   TScene extends SceneInstance = SceneInstance
 > implements Scene {
@@ -612,6 +630,15 @@ export class SceneAdapter<
     const live = (this.scene?.getParams?.() ?? {}) as Record<string, unknown>;
     if (this.options.shouldAutoPlay) {
       return this.options.shouldAutoPlay(live, this._urlSnapshot);
+    }
+    // B22：只在存在恢复值（URL query 或 localStorage 镜像）时接管；
+    // 缺省 snapshot 时行为与静态 autoPlay 逐场景一致。
+    if (
+      Boolean(this.options.autoPlay) &&
+      resolveUrlSyncKeys(this.options.meta).has('autoRun') &&
+      Object.prototype.hasOwnProperty.call(this._urlSnapshot, 'autoRun')
+    ) {
+      return coerceAutoRun(this._urlSnapshot['autoRun']);
     }
     return Boolean(this.options.autoPlay);
   }
