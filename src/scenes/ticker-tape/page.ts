@@ -188,12 +188,20 @@ bootScenePage({
     }
 
     let plotBarRetries = 0;
+    let plotBarRaf: number | null = null;
+    let plotBarDisposed = false;
     function placePlotBarWhenReady(): void {
-      if (plotBar.isConnected || plotBarRetries >= 300) return;
+      if (plotBarDisposed || plotBar.isConnected || plotBarRetries >= 300) {
+        return;
+      }
       plotBarRetries += 1;
       placePlotBar();
-      if (!plotBar.isConnected && typeof requestAnimationFrame === 'function') {
-        requestAnimationFrame(() => placePlotBarWhenReady());
+      if (
+        !plotBarDisposed &&
+        !plotBar.isConnected &&
+        typeof requestAnimationFrame === 'function'
+      ) {
+        plotBarRaf = requestAnimationFrame(() => placePlotBarWhenReady());
       }
     }
     placePlotBarWhenReady();
@@ -240,6 +248,11 @@ bootScenePage({
       ...exposeSchemaHandle(renderer),
       syncFromScene,
       dispose: () => {
+        plotBarDisposed = true;
+        if (plotBarRaf != null && typeof cancelAnimationFrame === 'function') {
+          cancelAnimationFrame(plotBarRaf);
+          plotBarRaf = null;
+        }
         unsub();
         renderer.dispose();
         plotBar.remove();

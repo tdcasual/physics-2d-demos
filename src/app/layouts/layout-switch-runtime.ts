@@ -100,6 +100,7 @@ export class LayoutSwitchRuntime {
   private snapshot: LayoutSwitchSnapshot | null = null;
   private incomingLayout: ILayout | null = null;
   private ackWaiters: Array<() => void> = [];
+  private rollbackAbort: AbortController | null = null;
 
   constructor(private readonly host: SwitchRuntimeHost) {}
 
@@ -136,6 +137,7 @@ export class LayoutSwitchRuntime {
     if (this.abort && !this.abort.signal.aborted) {
       this.abort.abort(reason ?? createAbortError());
     }
+    this.flushAckWaiters();
   }
 
   /**
@@ -145,6 +147,8 @@ export class LayoutSwitchRuntime {
   dispose(): void {
     this.clearPendingQueue();
     this.abortSwitch(createAbortError('Container disposed'));
+    this.rollbackAbort?.abort(createAbortError('Container disposed'));
+    this.rollbackAbort = null;
     this.abort = null;
     this.phase = null;
   }
@@ -493,8 +497,14 @@ export class LayoutSwitchRuntime {
     await this.awaitEffectful(phase, work, signal, generation);
   }
 
+  private flushAckWaiters(): void {
+    const waiters = this.ackWaiters;
+    this.ackWaiters = [];
+    for (const waiter of waiters) waiter();
+  }
+
   private waitAck(isAcked: () => boolean): Promise<void> {
-    if (isAcked()) return Promise.resolve();
+    if (isAcked() || this.host.isDisposed()) return Promise.resolve();
     return new Promise((resolve) => {
       let settled = false;
       const finish = () => {
@@ -505,7 +515,7 @@ export class LayoutSwitchRuntime {
       };
       const timeoutId = setTimeout(finish, ACK_DEADLINE_MS);
       this.ackWaiters.push(() => {
-        if (isAcked()) finish();
+        finish();
       });
     });
   }
@@ -571,7 +581,10 @@ export class LayoutSwitchRuntime {
       throw this.lastError ?? createAbortError();
     }
     if (fromLayout) {
-      await fromLayout.unmount();
+      await raceAbort(
+        Promise.resolve(fromLayout.unmount()).then(() => undefined),
+        signal
+      );
       layoutRegistry.returnInstance(
         this.host.container,
         fromLayout.id,
@@ -594,11 +607,11 @@ export class LayoutSwitchRuntime {
 
   private async abandonIncoming(layout: ILayout | null): Promise<void> {
     if (!layout) return;
+    this.disposeCapabilitiesBestEffort('abandonIncoming');
     if (this.host.isDisposed()) {
       if (this.incomingLayout === layout) this.incomingLayout = null;
       return;
     }
-    this.disposeCapabilitiesBestEffort('abandonIncoming');
     try {
       await layout.unmount();
     } catch (err) {
@@ -755,59 +768,99 @@ export class LayoutSwitchRuntime {
     snapshot: LayoutSwitchSnapshot | null,
     _error: unknown
   ): Promise<boolean> {
-    if (this.host.isDisposed()) return false;
-    if (this.hasUnackedEffectfulPhase()) return false;
-    if (this.incomingLayout) {
-      await this.abandonIncoming(this.incomingLayout);
-    }
-    if (!snapshot?.fromId || !snapshot.fromLayout) {
-      return false;
-    }
-    try {
+    const rollbackAbort = new AbortController();
+    this.rollbackAbort = rollbackAbort;
+    const signal = rollbackAbort.signal;
+    const internalCleanup = (): void => {
       this.disposeCapabilitiesBestEffort('rollback');
-      if (this.host.container.childElementCount > 0) {
-        this.host.container.replaceChildren();
-      }
-      const recovered = await layoutRegistry.create(
-        snapshot.fromId,
-        this.host.container,
-        {
-          theme: this.host.getTheme(),
-          ...this.host.resolveLayoutConfig(snapshot.fromId),
-          preservedCanvas: snapshot.canvas ?? null
+      if (this.incomingLayout) this.incomingLayout = null;
+    };
+    try {
+      if (this.host.isDisposed()) {
+        if (this.incomingLayout) {
+          await this.abandonIncoming(this.incomingLayout);
         }
-      );
-      this.projectOwners();
-      await recovered.mount();
-      recovered.setTheme(this.host.getTheme());
-      const scene = this.host.getCurrentScene();
-      if (scene) {
-        this.host.mountScene(scene, recovered);
+        internalCleanup();
+        return false;
       }
-      this.host.setCurrentLayout(recovered);
-      this.incomingLayout = null;
-      this.canvasOwner = {
-        generation: snapshot.canvasGeneration,
-        node:
-          recovered
-            .getSlots?.()
-            ?.animation?.querySelector<HTMLCanvasElement>('canvas') ??
-          snapshot.canvas
-      };
-      this.projectOwners();
-      console.warn(
-        `[SceneContainer] Recovered layout "${snapshot.fromId}" after switch failure`
-      );
-      return true;
-    } catch (recoveryErr) {
-      console.error(
-        '[SceneContainer] Recovery also failed, container is empty:',
-        recoveryErr
-      );
-      if (!this.hasUniqueCanvasOwner()) {
-        this.enterQuarantine(this.generation, recoveryErr);
+      if (this.hasUnackedEffectfulPhase()) return false;
+      if (this.incomingLayout) {
+        await this.abandonIncoming(this.incomingLayout);
+        if (this.host.isDisposed()) {
+          internalCleanup();
+          return false;
+        }
       }
-      return false;
+      if (!snapshot?.fromId || !snapshot.fromLayout) {
+        return false;
+      }
+      try {
+        this.disposeCapabilitiesBestEffort('rollback');
+        if (this.host.isDisposed()) return false;
+        if (this.host.container.childElementCount > 0) {
+          this.host.container.replaceChildren();
+        }
+        if (this.host.isDisposed()) return false;
+        const recovered = await layoutRegistry.create(
+          snapshot.fromId,
+          this.host.container,
+          {
+            theme: this.host.getTheme(),
+            ...this.host.resolveLayoutConfig(snapshot.fromId),
+            preservedCanvas: snapshot.canvas ?? null
+          },
+          { signal }
+        );
+        if (this.host.isDisposed() || signal.aborted) {
+          internalCleanup();
+          return false;
+        }
+        this.projectOwners();
+        await recovered.mount();
+        if (this.host.isDisposed() || signal.aborted) {
+          internalCleanup();
+          return false;
+        }
+        recovered.setTheme(this.host.getTheme());
+        const scene = this.host.getCurrentScene();
+        if (scene) {
+          this.host.mountScene(scene, recovered);
+        }
+        if (this.host.isDisposed()) {
+          internalCleanup();
+          return false;
+        }
+        this.host.setCurrentLayout(recovered);
+        this.incomingLayout = null;
+        this.canvasOwner = {
+          generation: snapshot.canvasGeneration,
+          node:
+            recovered
+              .getSlots?.()
+              ?.animation?.querySelector<HTMLCanvasElement>('canvas') ??
+            snapshot.canvas
+        };
+        this.projectOwners();
+        console.warn(
+          `[SceneContainer] Recovered layout "${snapshot.fromId}" after switch failure`
+        );
+        return true;
+      } catch (recoveryErr) {
+        console.error(
+          '[SceneContainer] Recovery also failed, container is empty:',
+          recoveryErr
+        );
+        if (this.host.isDisposed()) {
+          internalCleanup();
+          return false;
+        }
+        if (!this.hasUniqueCanvasOwner()) {
+          this.enterQuarantine(this.generation, recoveryErr);
+        }
+        return false;
+      }
+    } finally {
+      if (this.rollbackAbort === rollbackAbort) this.rollbackAbort = null;
     }
   }
 
@@ -829,9 +882,11 @@ export class LayoutSwitchRuntime {
     this.pendingSwitchId = null;
     this.pendingSwitchSavePreference = false;
     this.pendingSwitchReason = 'manual';
+    let sceneApplied = false;
     try {
       if (pendingScene) {
         await this.hostSetScene(pendingScene);
+        sceneApplied = true;
       }
       if (
         pendingSwitchId &&
@@ -846,6 +901,14 @@ export class LayoutSwitchRuntime {
       }
     } catch (err) {
       console.error('[SceneContainer] Pending drain failed:', err);
+      if (!sceneApplied && pendingScene && !this.pendingScene) {
+        this.pendingScene = pendingScene;
+      }
+      if (pendingSwitchId && !this.pendingSwitchId) {
+        this.pendingSwitchId = pendingSwitchId;
+        this.pendingSwitchSavePreference = pendingSavePreference;
+        this.pendingSwitchReason = pendingReason;
+      }
     }
   }
 
