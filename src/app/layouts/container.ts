@@ -109,6 +109,33 @@ function findFocusTarget(
   return null;
 }
 
+type BootQueuedDeferred = {
+  promise: Promise<void>;
+  resolve: () => void;
+  reject: (reason?: unknown) => void;
+  settled: boolean;
+};
+
+function createBootQueuedDeferred(): BootQueuedDeferred {
+  let resolve!: () => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<void>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject, settled: false };
+}
+
+function settleBootQueuedDeferred(
+  deferred: BootQueuedDeferred | null,
+  error?: unknown
+): void {
+  if (!deferred || deferred.settled) return;
+  deferred.settled = true;
+  if (error !== undefined) deferred.reject(error);
+  else deferred.resolve();
+}
+
 /**
  * 场景容器实现类
  *
@@ -139,6 +166,7 @@ export class SceneContainerImpl implements SceneContainer {
   private _switchReady: Promise<LayoutSwitchRuntime> | null = null;
   private _boot: Promise<void> | null = null;
   private _bootQueuedScene: Scene | null = null;
+  private _bootQueuedDeferred: BootQueuedDeferred | null = null;
 
   constructor(options: CreateContainerOptions) {
     this._emitter = createEventEmitter<SceneContainerEvents>('SceneContainer');
@@ -335,8 +363,11 @@ export class SceneContainerImpl implements SceneContainer {
     this._switch?.rejectIfQuarantined();
 
     if (this._boot) {
+      settleBootQueuedDeferred(this._bootQueuedDeferred);
       this._bootQueuedScene = scene;
-      return;
+      const deferred = createBootQueuedDeferred();
+      this._bootQueuedDeferred = deferred;
+      return deferred.promise;
     }
 
     if (this._switch?.state === 'switching') {
@@ -363,6 +394,9 @@ export class SceneContainerImpl implements SceneContainer {
     this._boot = new Promise<void>((resolve) => {
       settleBoot = resolve;
     });
+    let bootOk = false;
+    let drainError: unknown;
+    let hasDrainError = false;
     try {
       this._modeOwner.resetToNormal('new-scene');
       this._sidebar.resetForNewScene();
@@ -417,21 +451,52 @@ export class SceneContainerImpl implements SceneContainer {
 
       this.attachScene(scene, created);
       this._switch?.adoptCurrentCanvas();
+      bootOk = true;
 
       await this._orchestrator.preload();
       if (this._disposed) return;
       this.wireCapabilities(scene, created);
     } finally {
-      const queued = this._bootQueuedScene;
-      this._bootQueuedScene = null;
-      this._boot = null;
-      settleBoot();
-      if (queued && queued !== scene && !this._disposed) {
-        await this.setScene(queued);
+      try {
+        if (bootOk && !this._disposed) {
+          while (!this._disposed) {
+            const queued = this._bootQueuedScene;
+            this._bootQueuedScene = null;
+            if (!queued) break;
+            const queuedDeferred = this._bootQueuedDeferred;
+            this._bootQueuedDeferred = null;
+            // 启动前必须空：_doSetScene 同步前缀先于重新赋值，内部
+            // switchLayout 不自等待。
+            this._boot = null;
+            const drain = this._doSetScene(queued);
+            this._boot = drain;
+            try {
+              await drain;
+              settleBootQueuedDeferred(queuedDeferred);
+            } catch (err) {
+              settleBootQueuedDeferred(queuedDeferred, err);
+              drainError = err;
+              hasDrainError = true;
+              break;
+            }
+          }
+        }
+      } finally {
+        this._boot = null;
+        settleBoot();
+        settleBootQueuedDeferred(this._bootQueuedDeferred);
+        this._bootQueuedDeferred = null;
+        this._bootQueuedScene = null;
       }
     }
+    if (hasDrainError) throw drainError;
   }
 
+  /**
+   * 将已挂载容器切换到新场景。
+   * 不变量：`switchLayout` 之前不得插入 `await`（boot drain 启动前清 `_boot`，
+   * 同步前缀必须看到空屏障，否则会自等待）。
+   */
   private async _doSetScene(scene: Scene): Promise<void> {
     if (this._currentScene) {
       this.unmountCurrentScene();
