@@ -19,7 +19,7 @@ import {
   SWITCH_QUARANTINE_MESSAGE,
   SWITCH_STATUS_ATTR
 } from '../../src/app/layouts/switch-errors';
-import type { LayoutSwitchRuntime } from '../../src/app/layouts/layout-switch-runtime';
+import { LayoutSwitchRuntime } from '../../src/app/layouts/layout-switch-runtime';
 
 const testMeta = {
   name: 'Test',
@@ -123,6 +123,14 @@ async function waitUntilSwitching(container: {
     await realSetTimeout(5);
   }
   throw new Error('layout switch did not enter switching');
+}
+
+async function waitUntil(pred: () => boolean, message: string): Promise<void> {
+  for (let i = 0; i < 400; i++) {
+    if (pred()) return;
+    await realSetTimeout(5);
+  }
+  throw new Error(message);
 }
 
 async function flushMicrotasks(): Promise<void> {
@@ -432,6 +440,64 @@ describe('Layout switch lifecycle (Wave B)', () => {
       expect(mount.querySelector('[data-layout-id="layout-b"]')).toBeNull();
       expect(domWrites === 0 || mount.childElementCount === 0).toBe(true);
     });
+
+    it('clears data-layout-id when disposed during rollback (G4)', async () => {
+      const origCreate = layoutRegistry.create.bind(layoutRegistry);
+      let createCalls = 0;
+      let rollbackCreatePending = false;
+      vi.spyOn(layoutRegistry, 'create').mockImplementation(
+        async (id, el, cfg, opts) => {
+          createCalls += 1;
+          if (createCalls === 1) {
+            return origCreate(id, el, cfg, opts);
+          }
+          if (id === 'layout-b') {
+            throw new Error('incoming layout failed');
+          }
+          rollbackCreatePending = true;
+          return new Promise((_, reject) => {
+            const signal = opts?.signal;
+            const onAbort = (): void => {
+              reject(signal?.reason ?? new Error('aborted'));
+            };
+            if (signal?.aborted) {
+              onAbort();
+              return;
+            }
+            signal?.addEventListener('abort', onAbort, { once: true });
+          });
+        }
+      );
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+      registerLayout('layout-a', layoutClass('layout-a'), testMeta);
+      registerLayout('layout-b', layoutClass('layout-b'), testMeta);
+      const container = createSceneContainer({
+        mount,
+        forceLayout: 'layout-a'
+      });
+      await container.setScene(makeScene());
+      expect(mount.dataset.layoutId).toBe('layout-a');
+
+      const hung = container.switchLayout('layout-b', {
+        reason: 'manual',
+        animate: false
+      });
+      await waitUntilSwitching(container);
+      await waitUntil(
+        () => rollbackCreatePending,
+        'rollback create did not start'
+      );
+
+      container.dispose();
+      await hung.catch(() => undefined);
+      await flushMicrotasks();
+
+      expect(mount.dataset.layoutId).toBeUndefined();
+      expect(mount.hasAttribute('data-layout-id')).toBe(false);
+      expect(mount.querySelector('[data-layout-id]')).toBeNull();
+    });
   });
 
   describe('B3 throw-before-teardown', () => {
@@ -548,6 +614,119 @@ describe('Layout switch lifecycle (Wave B)', () => {
       });
       expect(container.currentScene).toBe(scene1);
       expect(container.currentLayout?.id).toBe('layout-b');
+      container.dispose();
+    });
+  });
+
+  describe('G2 boot drain vs concurrent switchLayout', () => {
+    it('second setScene during boot plus concurrent switchLayout keeps a single owner', async () => {
+      let resolveA!: (ctor: ILayoutConstructor) => void;
+      registerLazyLayout(
+        'layout-a',
+        () =>
+          new Promise<ILayoutConstructor>((resolve) => {
+            resolveA = resolve;
+          }),
+        testMeta
+      );
+      registerLayout('layout-b', layoutClass('layout-b'), testMeta);
+      registerLayout('layout-c', layoutClass('layout-c'), testMeta);
+
+      const orig = LayoutSwitchRuntime.prototype.switchLayout;
+      let active = 0;
+      let maxActive = 0;
+      vi.spyOn(
+        LayoutSwitchRuntime.prototype,
+        'switchLayout'
+      ).mockImplementation(function (
+        this: LayoutSwitchRuntime,
+        ...args: Parameters<LayoutSwitchRuntime['switchLayout']>
+      ) {
+        active += 1;
+        maxActive = Math.max(maxActive, active);
+        return Promise.resolve(orig.apply(this, args)).finally(() => {
+          active -= 1;
+        });
+      });
+
+      const container = createSceneContainer({ mount });
+      const scene1 = makeScene('scene-1', 'layout-a');
+      const scene2 = makeScene('scene-2', 'layout-b');
+      const p1 = container.setScene(scene1);
+      await waitUntil(
+        () => typeof resolveA === 'function',
+        'layout-a loader did not start'
+      );
+      const p2 = container.setScene(scene2);
+      const p3 = container.switchLayout('layout-c', {
+        reason: 'manual',
+        animate: false
+      });
+
+      resolveA(layoutClass('layout-a'));
+      await Promise.all([p1, p2, p3]);
+
+      expect(maxActive).toBeLessThanOrEqual(1);
+      expect(container.currentScene).toBe(scene2);
+      expect(container.currentLayout?.id).toBe('layout-c');
+      expect(container.getSwitchState()).toBe('idle');
+      container.dispose();
+    });
+
+    it('switchLayout issued during boot drain waits until drain finishes', async () => {
+      let resolveA!: (ctor: ILayoutConstructor) => void;
+      let resolveB!: (ctor: ILayoutConstructor) => void;
+      registerLazyLayout(
+        'layout-a',
+        () =>
+          new Promise<ILayoutConstructor>((resolve) => {
+            resolveA = resolve;
+          }),
+        testMeta
+      );
+      registerLazyLayout(
+        'layout-b',
+        () =>
+          new Promise<ILayoutConstructor>((resolve) => {
+            resolveB = resolve;
+          }),
+        testMeta
+      );
+      let cConstructs = 0;
+      registerLayout(
+        'layout-c',
+        layoutClass('layout-c', () => {
+          cConstructs += 1;
+        }),
+        testMeta
+      );
+
+      const container = createSceneContainer({ mount });
+      const scene1 = makeScene('scene-1', 'layout-a');
+      const scene2 = makeScene('scene-2', 'layout-b');
+      const p1 = container.setScene(scene1);
+      await flushMicrotasks();
+      const p2 = container.setScene(scene2);
+      resolveA(layoutClass('layout-a'));
+      await waitUntil(
+        () => typeof resolveB === 'function',
+        'boot drain did not start layout-b create'
+      );
+
+      const p3 = container.switchLayout('layout-c', {
+        reason: 'manual',
+        animate: false
+      });
+      await flushMicrotasks();
+      expect(cConstructs).toBe(0);
+
+      resolveB(layoutClass('layout-b'));
+      await Promise.all([p1, p2, p3]);
+
+      expect(cConstructs).toBe(1);
+      expect(container.currentScene).toBe(scene2);
+      expect(container.currentLayout?.id).toBe('layout-c');
+      expect(container.getSwitchState()).toBe('idle');
       container.dispose();
     });
   });
