@@ -1,8 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import {
-  createChromeScheduler,
-  suppressLabFloatInlineReadoutTitle
-} from '../../src/scenes/projectile-components/data-panel';
+import { createChromeScheduler } from '../../src/scenes/page-utils';
+import { suppressLabFloatInlineReadoutTitle } from '../../src/scenes/projectile-components/data-panel';
 
 describe('projectile-components chrome scheduler', () => {
   const queued: FrameRequestCallback[] = [];

@@ -1,12 +1,12 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { readSceneParams, writeOwnedSceneParams } from '../../app/url-sync';
+import { writeOwnedSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { createControlCard } from '../../ui/components/ControlCard';
 import { mechanicalEnergyControlsSchema } from './controls-schema';
+import { createChromeScheduler } from '../page-utils';
 import {
-  createChromeScheduler,
   createMechanicalEnergyDataPanel,
   findMechanicalEnergyDataHost,
   mountDataPanel,
@@ -21,12 +21,11 @@ import {
   type MechanicalEnergyParams
 } from './scene.sim';
 
-const rawInitial = readSceneParams(mechanicalEnergyMeta);
 const NUMBER_KEYS = ['resistance', 'mass', 'gravity', 'pointPeriod'] as const;
 
 bootScenePage({
   meta: mechanicalEnergyMeta,
-  autoPlay: asBool(rawInitial.autoRun, false),
+  shouldAutoPlay: (_params, urlParams) => asBool(urlParams.autoRun, false),
   preferredLayout:
     typeof window !== 'undefined' && window.innerWidth <= 720
       ? 'mobile-stack'

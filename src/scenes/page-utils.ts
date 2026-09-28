@@ -47,3 +47,48 @@ export function createPresetApplier<TParams>(
     return false;
   };
 }
+
+/**
+ * Double-rAF chrome scheduler used by mechanical-energy and
+ * projectile-components data panels. Shared so H2 a11y attributes on wrap
+ * stay local to each panel; this helper never rewrites wrap cssText.
+ */
+export function createChromeScheduler(run: () => void): {
+  start(): void;
+  dispose(): void;
+} {
+  let disposed = false;
+  let raf1 = 0;
+  let raf2 = 0;
+  const cancelBoth = (): void => {
+    if (raf1) window.cancelAnimationFrame(raf1);
+    if (raf2) window.cancelAnimationFrame(raf2);
+    raf1 = 0;
+    raf2 = 0;
+  };
+  const guarded = (): void => {
+    if (disposed) return;
+    run();
+  };
+  return {
+    start() {
+      if (disposed) return;
+      cancelBoth();
+      raf1 = window.requestAnimationFrame(() => {
+        raf1 = 0;
+        if (disposed) return;
+        guarded();
+        if (disposed) return;
+        raf2 = window.requestAnimationFrame(() => {
+          raf2 = 0;
+          if (disposed) return;
+          guarded();
+        });
+      });
+    },
+    dispose() {
+      disposed = true;
+      cancelBoth();
+    }
+  };
+}

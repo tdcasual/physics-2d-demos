@@ -1,12 +1,12 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { readSceneParams } from '../../app/url-sync';
+
 import { createControlCard } from '../../ui/components/ControlCard';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { projectileComponentsControlsSchema } from './controls-schema';
+import { createChromeScheduler } from '../page-utils';
 import {
-  createChromeScheduler,
   createProjectileDataPanel,
   findProjectileDataHost,
   hideLabGraphFloat,
@@ -17,7 +17,6 @@ import { projectileComponentsMeta } from './scene.meta';
 import { createProjectileComponentsScene } from './scene.entry';
 import { asBool, type ProjectileComponentsParams } from './scene.sim';
 
-const rawInitial = readSceneParams(projectileComponentsMeta);
 const NUMBER_KEYS = [
   'speed',
   'initialHeight',
@@ -33,8 +32,8 @@ const TOGGLE_KEYS = [
 
 bootScenePage({
   meta: projectileComponentsMeta,
-  autoPlay:
-    rawInitial.autoRun === undefined ? true : asBool(rawInitial.autoRun, true),
+  shouldAutoPlay: (_params, urlParams) =>
+    urlParams.autoRun === undefined ? true : asBool(urlParams.autoRun, true),
   preferredLayout: window.innerWidth <= 720 ? 'mobile-stack' : 'lab-stage',
   layoutConfig: {
     controlColumns: 'auto',
