@@ -10,7 +10,9 @@ import { PALETTE, sizeGraphCanvasToHost } from './renderer/draw-helpers';
 export type { HorizontalArrowGeom } from './renderer/draw-helpers';
 export {
   forceArrowGeom,
+  rightwardRodArrow,
   rodXToPx,
+  sizeGraphCanvasToHost,
   stageMetrics,
   velocityArrowGeom
 } from './renderer/draw-helpers';
