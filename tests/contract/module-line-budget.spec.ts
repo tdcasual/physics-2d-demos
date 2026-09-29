@@ -6,10 +6,11 @@ import path from 'node:path';
  * Wave 0 freeze (wc -l) for grandfathered production modules.
  * New src TS/TSX modules must stay at or under 1000 lines.
  * Frozen limits are the Wave 0 measured values; do not raise them.
+ * v15 Phase D emptied this map: the four >1000 scene.view.ts files
+ * (pendulum-period / potential-energy-graphs / multimeter-practice /
+ * rod-model) were split into renderer/ modules, each ≤800 lines.
  */
-const GRANDFATHERED: Record<string, number> = {
-  'src/scenes/rod-model/scene.view.ts': 1006
-};
+const GRANDFATHERED: Record<string, number> = {};
 
 /**
  * Wave J 实测 (800, 1000] 警戒清单。冻结值只降不升。
