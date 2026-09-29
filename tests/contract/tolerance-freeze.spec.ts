@@ -1,8 +1,9 @@
 /**
- * 容差冻结（v13 Wave J J4 / B20）
+ * 容差冻结（v13 Wave J J4 / B20；v15 Phase A 收紧）
  *
  * 登记 visual-regression highDiff 分支与 toBeCloseTo(…, 0) 为收紧候选。
- * 冻条数只降不升；不收紧数值本身。
+ * 扫描用括号平衡口径（含多行调用），跳过 `.not.toBeCloseTo`（收紧它会放宽）。
+ * 冻条数只降不升。剩余为物理近似保留桶。
  */
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -13,9 +14,12 @@ const ROOT = resolve(process.cwd());
 const HIGH_DIFF_SCENE_CEILING = 2;
 const HIGH_DIFF_MAX_PIXELS = 3000;
 const HIGH_DIFF_THRESHOLD = 0.3;
-const CLOSE_TO_ZERO_CEILING = 21;
+/** v15 Phase A：括号平衡口径 23 → 保留桶 2（maxwell mostProbable、force-composition baseEnd.x）。 */
+const CLOSE_TO_ZERO_CEILING = 2;
 
 const HIGH_DIFF_SCENES = ['double-slit', 'emf-analogy'] as const;
+
+const CLOSE_TO_CALL = 'toBeCloseTo(';
 
 function walk(dir: string, acc: string[] = []): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -26,6 +30,113 @@ function walk(dir: string, acc: string[] = []): string[] {
     }
   }
   return acc;
+}
+
+function lineAt(text: string, index: number): string {
+  const start = text.lastIndexOf('\n', index - 1) + 1;
+  const end = text.indexOf('\n', index);
+  return text.slice(start, end === -1 ? text.length : end);
+}
+
+function isCommentLine(line: string): boolean {
+  const trimmed = line.trimStart();
+  return trimmed.startsWith('//') || trimmed.startsWith('*');
+}
+
+function skipStringAndComment(
+  text: string,
+  i: number
+): { i: number; skipped: boolean } {
+  const c = text[i];
+  if (c === "'" || c === '"' || c === '`') {
+    const quote = c;
+    i += 1;
+    while (i < text.length) {
+      if (text[i] === '\\') {
+        i += 2;
+        continue;
+      }
+      if (text[i] === quote) return { i: i + 1, skipped: true };
+      i += 1;
+    }
+    return { i, skipped: true };
+  }
+  if (c === '/' && text[i + 1] === '/') {
+    const nl = text.indexOf('\n', i);
+    return { i: nl === -1 ? text.length : nl, skipped: true };
+  }
+  if (c === '/' && text[i + 1] === '*') {
+    const end = text.indexOf('*/', i + 2);
+    return { i: end === -1 ? text.length : end + 2, skipped: true };
+  }
+  return { i, skipped: false };
+}
+
+/** 括号平衡扫描 toBeCloseTo 调用；precision 字面量 0 且非 `.not.` 才计入。 */
+function collectCloseToZeroHits(
+  text: string
+): Array<{ index: number; lineNo: number }> {
+  const hits: Array<{ index: number; lineNo: number }> = [];
+  let i = 0;
+  while (i < text.length) {
+    const skip = skipStringAndComment(text, i);
+    if (skip.skipped) {
+      i = skip.i;
+      continue;
+    }
+    if (text.startsWith(CLOSE_TO_CALL, i)) {
+      const line = lineAt(text, i);
+      if (!isCommentLine(line) && !/\.not\s*\.\s*$/.test(text.slice(0, i))) {
+        const start = i + CLOSE_TO_CALL.length;
+        let depth = 1;
+        let j = start;
+        while (j < text.length && depth > 0) {
+          const inner = skipStringAndComment(text, j);
+          if (inner.skipped) {
+            j = inner.i;
+            continue;
+          }
+          if (text[j] === '(') depth += 1;
+          else if (text[j] === ')') depth -= 1;
+          j += 1;
+        }
+        const inner = text.slice(start, j - 1);
+        const precision = lastTopLevelPrecision(inner);
+        if (precision === '0') {
+          hits.push({
+            index: i,
+            lineNo: text.slice(0, i).split('\n').length
+          });
+        }
+        i = j;
+        continue;
+      }
+    }
+    i += 1;
+  }
+  return hits;
+}
+
+function lastTopLevelPrecision(inner: string): string | null {
+  let lastComma = -1;
+  let depth = 0;
+  let k = 0;
+  while (k < inner.length) {
+    const skip = skipStringAndComment(inner, k);
+    if (skip.skipped) {
+      k = skip.i;
+      continue;
+    }
+    const c = inner[k];
+    if (c === '(' || c === '[' || c === '{') depth += 1;
+    else if (c === ')' || c === ']' || c === '}') depth -= 1;
+    else if (c === ',' && depth === 0) lastComma = k;
+    k += 1;
+  }
+  if (lastComma === -1) return null;
+  const raw = inner.slice(lastComma + 1).trim();
+  const precision = raw.replace(/,+$/, '').trim();
+  return precision.length === 0 ? null : precision;
 }
 
 describe('tolerance freeze (B20)', () => {
@@ -53,6 +164,20 @@ describe('tolerance freeze (B20)', () => {
     );
   });
 
+  it('counts multiline toBeCloseTo(…, 0) and skips .not (paren-balance)', () => {
+    const sample = `
+expect(a).toBeCloseTo(
+  foo,
+  0
+);
+expect(b).not.toBeCloseTo(c, 0);
+expect(d).toBeCloseTo(1, 0);
+expect(e).toBeCloseTo(1, 1);
+`;
+    const hits = collectCloseToZeroHits(sample);
+    expect(hits.map((h) => h.lineNo)).toEqual([2, 7]);
+  });
+
   it('freezes toBeCloseTo(…, 0) count as a tightening candidate list', () => {
     const files = [
       ...walk(join(ROOT, 'tests/unit')),
@@ -60,22 +185,11 @@ describe('tolerance freeze (B20)', () => {
       ...walk(join(ROOT, 'tests/visual'))
     ];
     const hits: string[] = [];
-    const re = /toBeCloseTo\([^\n)]*,\s*0\s*\)/g;
     for (const abs of files) {
       const text = readFileSync(abs, 'utf8');
       const rel = relative(ROOT, abs).replaceAll('\\', '/');
-      const local = new RegExp(re.source, re.flags);
-      let match: RegExpExecArray | null;
-      while ((match = local.exec(text))) {
-        const lineNo = text.slice(0, match.index).split('\n').length;
-        const line = text.split('\n')[lineNo - 1] ?? '';
-        if (
-          line.trimStart().startsWith('//') ||
-          line.trimStart().startsWith('*')
-        ) {
-          continue;
-        }
-        hits.push(`${rel}:${lineNo}`);
+      for (const hit of collectCloseToZeroHits(text)) {
+        hits.push(`${rel}:${hit.lineNo}`);
       }
     }
     expect(

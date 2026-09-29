@@ -274,8 +274,8 @@ describe('rod-model view contract', () => {
     const expectedX = box.left + (state.time / tMax) * (box.right - box.left);
     const expectedY =
       box.bottom - (state.velocity / vMax) * (box.bottom - box.top);
-    expect(cursor.x).toBeCloseTo(expectedX, 0);
-    expect(cursor.y).toBeCloseTo(expectedY, 0);
+    expect(cursor.x).toBe(expectedX);
+    expect(cursor.y).toBe(expectedY);
     expect(cursor.y).toBeGreaterThan(box.top + 2);
     view.dispose();
   });
@@ -460,10 +460,10 @@ describe('rod-model view contract', () => {
         graphCanvas.dataset.responsiveScale || '1'
       );
       const chrome = plotChrome(width, height, scale);
-      expect(title!.x).toBeCloseTo(chrome.title.x, 0);
-      expect(title!.y).toBeCloseTo(chrome.title.y, 0);
-      expect(unit!.x).toBeCloseTo(chrome.yUnit.x, 0);
-      expect(unit!.y).toBeCloseTo(chrome.yUnit.y, 0);
+      expect(title!.x).toBe(chrome.title.x);
+      expect(title!.y).toBe(chrome.title.y);
+      expect(unit!.x).toBe(chrome.yUnit.x);
+      expect(unit!.y).toBe(chrome.yUnit.y);
       expect(unit!.y).toBeGreaterThan(title!.y + 8);
       expect(unit!.y).toBeLessThan(chrome.box.top - 2);
       expect(title!.y).toBeGreaterThan(4);

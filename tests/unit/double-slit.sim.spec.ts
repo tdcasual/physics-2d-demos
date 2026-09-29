@@ -83,9 +83,10 @@ describe('double-slit simulation', () => {
   });
 
   it('lambdaToGap scales correctly', () => {
-    expect(lambdaToGap(450)).toBeCloseTo(32.1, 0);
-    expect(lambdaToGap(650)).toBeCloseTo(46.4, 0);
-    expect(lambdaToGap(532)).toBeCloseTo(38.0, 0);
+    // 450/14=32.142… Δ=4.29e-2；650/14=46.429… Δ=2.86e-2
+    expect(lambdaToGap(450)).toBeCloseTo(32.1, 1);
+    expect(lambdaToGap(650)).toBeCloseTo(46.4, 1);
+    expect(lambdaToGap(532)).toBe(38); // 532/14=38 精确
   });
 
   it('lambdaToRgb returns valid RGB for visible spectrum', () => {
@@ -108,8 +109,8 @@ describe('double-slit simulation', () => {
 describe('computeFringeSpacingPx', () => {
   it('returns correct value for default params (λ=532, d=40)', () => {
     const px = computeFringeSpacingPx(532, 40);
-    // Δx = λL/d = 532e-9 * 0.7 / (40 * 1e-5) = 9.31e-4 m = 93.1 px
-    expect(px).toBeCloseTo(93.1, 0);
+    // Δx = λL/d = 532e-9 * 0.7 / (40 * 1e-5) = 9.31e-4 m = 93.1 px 精确
+    expect(px).toBe(93.1);
   });
 
   it('proportional to lambda', () => {

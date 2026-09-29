@@ -20,7 +20,7 @@ describe('wedge sim', () => {
       const s = sim.getState();
       const x = s.cursorX * defaultParams.L * 10; // mm
       const expected = x * Math.tan(defaultParams.theta * DEG_TO_RAD) * 1e6;
-      expect(s.thickness).toBeCloseTo(expected, 0);
+      expect(s.thickness).toBe(expected);
     });
 
     it('increases with cursorX', () => {
@@ -47,17 +47,14 @@ describe('wedge sim', () => {
     it('equals 2 * thickness + λ/2', () => {
       const sim = createWedgeSim(defaultParams);
       const s = sim.getState();
-      expect(s.pathDiff).toBeCloseTo(
-        2 * s.thickness + defaultParams.lambda / 2,
-        0
-      );
+      expect(s.pathDiff).toBe(2 * s.thickness + defaultParams.lambda / 2);
     });
 
     it('λ/2 offset at zero thickness', () => {
       const sim = createWedgeSim(defaultParams);
       sim.setCursorX(0);
       const s = sim.getState();
-      expect(s.pathDiff).toBeCloseTo(defaultParams.lambda / 2, 0);
+      expect(s.pathDiff).toBe(defaultParams.lambda / 2);
     });
   });
 
@@ -230,7 +227,7 @@ describe('wedge sim', () => {
     it('cursorX at 0', () => {
       const sim = createWedgeSim(defaultParams);
       sim.setCursorX(0);
-      expect(sim.getState().thickness).toBeCloseTo(0, 0);
+      expect(sim.getState().thickness).toBe(0);
     });
 
     it('cursorX at 1', () => {

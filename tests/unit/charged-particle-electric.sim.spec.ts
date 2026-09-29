@@ -7,7 +7,8 @@ import {
 
 describe('charged-particle-electric simulation', () => {
   it('computes the expected proton entry speed at 200 V', () => {
-    expect(particleSpeed('proton', 200)).toBeCloseTo(195745.7, 0);
+    // √(2qV/m)=195745.737，Δ=3.72e-2 → precision 1（阈 5e-2）
+    expect(particleSpeed('proton', 200)).toBeCloseTo(195745.7, 1);
   });
 
   it('keeps the deflection direction tied to charge and voltage sign', () => {

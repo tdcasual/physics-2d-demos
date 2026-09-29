@@ -61,8 +61,8 @@ describe('internal-energy simulation', () => {
     sim.start();
     sim.step(C.gasDuration);
     const s = sim.getState();
-    // T2=293.15×1.5^0.4 ≈ 293.15×1.176 → 71.6 °C
-    expect(s.temperature).toBeCloseTo(71.6, 0);
+    // T2=293.15×1.5^0.4−273.15=71.618，Δ=1.76e-2 → precision 1
+    expect(s.temperature).toBeCloseTo(71.6, 1);
     expect(s.ignited).toBe(false);
   });
 
