@@ -52,7 +52,7 @@
 - multimeter-practice（6a16667）：1019 → view 119 + draw-helpers 113 + draw-meter 244 + draw-leads 123 + draw-panel 432
 - rod-model（d4f9de2）：1006 → view 135 + draw-helpers 332 + draw-apparatus 266 + draw-graphs 309
 
-新模块均 ≤800。B9 从超限清单移除。
+新模块均 ≤800。B9 从超限清单移除。容器 `visual-linux-container.sh verify --grep` 8 张（desktop+mobile × 四场景）零 diff，`8 passed (28.1s)`，exit 0。
 
 **v15 Phase B（2026-09-29）**：销 v14 终审 N1（B23 守卫空挂）。守卫现为 `tests/contract/content-box-gbcr-ratchet.spec.ts`。
 
