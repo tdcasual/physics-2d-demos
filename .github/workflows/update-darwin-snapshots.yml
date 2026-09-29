@@ -9,7 +9,7 @@ on:
       grep:
         description: "Playwright --grep 过滤串（如 'desktop foo|mobile foo'）；留空 = 全量（慎用：会重写全部既有基线）"
         required: false
-        default: ""
+        default: ''
 
 jobs:
   update:
