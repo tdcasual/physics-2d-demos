@@ -457,7 +457,7 @@ function resize() {
 - `spring-oscillator` 与 `ganshe` 使用 imperative `controls.ts`（动态增删振子 / 观察点管理）。ui 工厂由 page.ts 注入（结构类型参数），场景层保持零 ui 导入——新增 imperative 卡片时遵循同一注入模式，禁止恢复行内 `eslint-disable no-restricted-imports` 豁免（debt-ledger A2 已清偿）。`UI_EXEMPT_SCENE_CONTROLS` 已清空，必须保持空。
 - `xt-graph` / `tortoise-hare`：`getParams` 仅 `{speed}`，schema 无 speed 键，通用投影空转；preset 高亮只覆盖 URL 首绘（A3 裁定）
 - `spring-oscillator`：`getParams` 只暴露首振子 `{k,m,A}`，列表重建走 handle `syncFromScene`（A3 裁定）
-- 豁免清单冻结（F4）：`EXISTING_SPECIAL_HANDLE_FORMS` 冻 3 项；`NON_PARAM_KEYS` 冻 6 场景且 13 键；`LARGE_RENDER_LITERAL_EXEMPT` 冻 12 id。只许缩小。
+- 豁免清单冻结（F4）：`EXISTING_SPECIAL_HANDLE_FORMS` 冻 3 项；`NON_PARAM_KEYS` 冻 6 场景且 13 键；`LARGE_RENDER_LITERAL_EXEMPT` 冻 8 id。只许缩小。
 - chase-meet 的表达式解析器语义（除零得 0、悬挂操作符补 0、多余 token 静默丢弃）已被 `tests/unit/chase-meet-expression-parser.spec.ts` 固化为特征化契约；「修正」parser 前须先改测试，否则会被该契约挡住。
 - chase-meet 舞台内多画布是产品决策（C8）：速度图与位移图需同屏对照，标准 graph slot 放不下三画布。桌面 `hasGraph: false`（图在舞台内），移动端经 `layoutOverrides['mobile-stack'].hasGraph = true` 开图表 tab 并走标准 `renderGraph`。不要把舞台画布迁到 graph slot；豁免由 hasGraph 双源契约的 layoutOverrides 子句机器化。
 - E2E 套件当前稳定；用例数以 `pnpm exec playwright test -c playwright.e2e.config.ts --list` 查询为准。早期文档所述「35 个不稳定测试」已不复现。若 CI 偶发超时，优先排查浏览器/资源环境而非测试本身。

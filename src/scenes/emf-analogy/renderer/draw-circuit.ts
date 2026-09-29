@@ -24,7 +24,7 @@ export function drawCircuit(options: CircuitDrawOptions): void {
   const { ctx, width, height, snapshot, theme, phase, responsiveScale } =
     options;
   const colors = circuitColors(theme);
-  const s = responsiveScale;
+  const scale = responsiveScale;
 
   // 背景
   ctx.fillStyle = colors.bg;
@@ -33,15 +33,15 @@ export function drawCircuit(options: CircuitDrawOptions): void {
   // 布局计算
   const cx = width / 2;
   const cy = height * 0.4;
-  const circuitW = Math.min(width * 0.85, 600 * s);
+  const circuitW = Math.min(width * 0.85, 600 * scale);
 
   const batteryX = cx - circuitW * 0.4;
   const resistorX = cx;
   const switchX = cx + circuitW * 0.35;
   const wireY = cy;
 
-  const componentSize = Math.min(width * 0.1, height * 0.12, 55 * s);
-  const wireThickness = Math.max(2, 3 * s);
+  const componentSize = Math.min(width * 0.1, height * 0.12, 55 * scale);
+  const wireThickness = Math.max(2, 3 * scale);
 
   const currentI = snapshot.state.currentI;
   const isOn = snapshot.state.isSystemOn;

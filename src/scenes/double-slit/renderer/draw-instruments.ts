@@ -4,6 +4,15 @@
 
 import { FILTERS, lambdaToRgb } from '../scene.sim';
 import { SCENE_PALETTE, type ScenePalette, type WavePalette } from './palette';
+import {
+  GLOW_CACHE_PX,
+  SCREEN_FULL,
+  SCREEN_HALF,
+  SINGLE_SLIT_ARM,
+  SLIT_BOARD_HALF,
+  TUBE_FULL,
+  TUBE_HALF
+} from './logical-metrics';
 
 // 白光光源发光 offscreen 缓存
 let _glowCvs: HTMLCanvasElement | null = null;
@@ -76,10 +85,20 @@ export function drawInstruments(
   if (!skipTube) {
     // 遮光筒底色
     c.fillStyle = scene.tubeBg;
-    c.fillRect(POS.doubleSlit, CY - 100, POS.screen - POS.doubleSlit, 200);
+    c.fillRect(
+      POS.doubleSlit,
+      CY - TUBE_HALF,
+      POS.screen - POS.doubleSlit,
+      TUBE_FULL
+    );
     c.strokeStyle = scene.tubeBorder;
     c.lineWidth = 2;
-    c.strokeRect(POS.doubleSlit, CY - 100, POS.screen - POS.doubleSlit, 200);
+    c.strokeRect(
+      POS.doubleSlit,
+      CY - TUBE_HALF,
+      POS.screen - POS.doubleSlit,
+      TUBE_FULL
+    );
   }
 
   c.fillStyle = scene.instrument;
@@ -96,11 +115,11 @@ export function drawInstruments(
     if (!_glowCvs || _glowKey !== gKey) {
       if (!_glowCvs) {
         _glowCvs = document.createElement('canvas');
-        _glowCvs.width = 60;
-        _glowCvs.height = 60;
+        _glowCvs.width = GLOW_CACHE_PX;
+        _glowCvs.height = GLOW_CACHE_PX;
         _glowCtx = _glowCvs.getContext('2d');
       } else {
-        _glowCtx!.clearRect(0, 0, 60, 60);
+        _glowCtx!.clearRect(0, 0, GLOW_CACHE_PX, GLOW_CACHE_PX);
       }
       const gc = _glowCtx!;
       gc.fillStyle = '#fff';
@@ -158,25 +177,30 @@ export function drawInstruments(
 
   // 单缝挡板
   c.fillStyle = scene.instrumentDark;
-  c.fillRect(POS.singleSlit - 4, CY - 80, 8, 78);
-  c.fillRect(POS.singleSlit - 4, CY + 2, 8, 78);
+  c.fillRect(POS.singleSlit - 4, CY - SLIT_BOARD_HALF, 8, SINGLE_SLIT_ARM);
+  c.fillRect(POS.singleSlit - 4, CY + 2, 8, SINGLE_SLIT_ARM);
   drawLabel(POS.singleSlit, CY - 90, '单缝');
 
   // 双缝挡板
   const slitWidth = 4;
-  c.fillRect(POS.doubleSlit - 4, CY - 80, 8, 80 - d / 2 - slitWidth / 2);
+  c.fillRect(
+    POS.doubleSlit - 4,
+    CY - SLIT_BOARD_HALF,
+    8,
+    SLIT_BOARD_HALF - d / 2 - slitWidth / 2
+  );
   c.fillRect(POS.doubleSlit - 4, CY - d / 2 + slitWidth / 2, 8, d - slitWidth);
   c.fillRect(
     POS.doubleSlit - 4,
     CY + d / 2 + slitWidth / 2,
     8,
-    80 - d / 2 - slitWidth / 2
+    SLIT_BOARD_HALF - d / 2 - slitWidth / 2
   );
   drawLabel(POS.doubleSlit, CY - 90, '双缝');
 
   // 毛玻璃屏幕
   c.fillStyle = scene.instrument;
-  c.fillRect(POS.screen - 2, CY - 120, 4, 240);
+  c.fillRect(POS.screen - 2, CY - SCREEN_HALF, 4, SCREEN_FULL);
   drawLabel(POS.screen, CY - 130, '毛玻璃');
 
   // 目镜

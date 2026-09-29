@@ -5,6 +5,7 @@
 import { computeFringeSpacingPx } from '../scene.sim';
 import type { ScenePalette, WavePalette } from './palette';
 import { computeWhiteFringeRgb } from './draw-white';
+import { DELTA_X_LABEL_SHIFT, STEP5_IMAGE_HALF } from './logical-metrics';
 
 // 步骤6干涉图样 offscreen 缓存
 let _step6Cvs: HTMLCanvasElement | null = null;
@@ -147,7 +148,7 @@ export function drawInterferencePattern(
     fc.stroke();
     _step5Key = key;
   }
-  c.drawImage(_step5Cvs, startX - 2, CY - 125);
+  c.drawImage(_step5Cvs, startX - 2, CY - STEP5_IMAGE_HALF);
 
   // 辅助线
   c.setLineDash([4, 4]);
@@ -260,7 +261,11 @@ export function drawStep6Pattern(
     c.font = `${11 * contentScale}px sans-serif`;
     c.fillStyle = scene.guide;
     const deltaXmm = (fringeSpacingPx * 0.01).toFixed(3);
-    c.fillText(`Δx ≈ ${deltaXmm} mm`, patternX + patternW - 120, patternY - 6);
+    c.fillText(
+      `Δx ≈ ${deltaXmm} mm`,
+      patternX + patternW - DELTA_X_LABEL_SHIFT,
+      patternY - 6
+    );
   }
 
   // 辅助虚线（分隔上下区域）

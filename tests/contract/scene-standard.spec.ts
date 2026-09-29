@@ -53,16 +53,12 @@ const PRESENTATION_EXEMPT: string[] = [];
  */
 const LARGE_RENDER_LITERAL_EXEMPT = new Set([
   'doppler-effect',
-  'double-slit',
   'electrification',
-  'emf-analogy',
   'field-lines',
   'ganshe',
-  'interference-formula',
   'mechanical-wave',
   'micrometer',
   'spring-oscillator',
-  'thin-film',
   'vernier-caliper'
 ]);
 
@@ -387,8 +383,8 @@ describe('scene modernization standard (anti-drift ratchet)', () => {
     it('large-render-literal exemption list contains only known scenes', () => {
       expect(
         LARGE_RENDER_LITERAL_EXEMPT.size,
-        'LARGE_RENDER_LITERAL_EXEMPT 冻 12 id；只许缩小，新场景禁止加入'
-      ).toBe(12);
+        'LARGE_RENDER_LITERAL_EXEMPT 冻 8 id；只许缩小，新场景禁止加入'
+      ).toBe(8);
       expect(
         [...LARGE_RENDER_LITERAL_EXEMPT].filter((id) => !sceneIds.includes(id)),
         'LARGE_RENDER_LITERAL_EXEMPT 含不存在的场景 id（拼写错误或场景已删除）：' +
