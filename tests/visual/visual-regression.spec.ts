@@ -32,15 +32,6 @@ function linuxScreenshotsAuthorized(): boolean {
   return process.env.VISUAL_LINUX_AUTHORITY === '1';
 }
 
-async function freezeDynamicCanvas(page: import('@playwright/test').Page) {
-  await page.evaluate(() => {
-    const w = window as Window & { __visualCanvasFrozen?: boolean };
-    if (w.__visualCanvasFrozen) return;
-    w.__visualCanvasFrozen = true;
-    window.requestAnimationFrame = (() => 0) as typeof requestAnimationFrame;
-  });
-}
-
 test('linux PNG authority env is fail-closed in the container', () => {
   if (process.platform !== 'linux') return;
   if (existsSync('/.dockerenv')) {
@@ -101,10 +92,24 @@ test.describe('scene screenshots', () => {
       await page.goto(scenePage(scene.id), {
         waitUntil: 'domcontentloaded'
       });
+      if (DYNAMIC.has(scene.id)) {
+        // 相位钉死必须在 remainder 之前，但不能 stub rAF（waitForFirstFrame
+        // 的 remainder 用 rAF 计拍，仪器 fit 也走 rAF）。改为读播放态投影
+        // 并暂停场景：画面从 t≈0 起静止，rAF 继续服务 fit/排版（B20/rod-model）。
+        await page.waitForSelector('.layout-master[data-first-frame="ready"]', {
+          timeout: 10_000
+        });
+        const playing = await page.evaluate(
+          () =>
+            document
+              .querySelector('.layout-master')
+              ?.getAttribute('data-scene-playing') === 'true'
+        );
+        if (playing) await page.keyboard.press(' ');
+      }
       await waitForFirstFrame(page, {
         remainderMs: extraWait ? 1200 : 800
       });
-      if (DYNAMIC.has(scene.id)) await freezeDynamicCanvas(page);
       await expect(page).toHaveScreenshot(`${scene.id}-desktop.png`, {
         maxDiffPixels: highDiff ? 3000 : 800,
         threshold: highDiff ? 0.3 : 0.2
@@ -116,10 +121,24 @@ test.describe('scene screenshots', () => {
       await page.goto(scenePage(scene.id), {
         waitUntil: 'domcontentloaded'
       });
+      if (DYNAMIC.has(scene.id)) {
+        // 相位钉死必须在 remainder 之前，但不能 stub rAF（waitForFirstFrame
+        // 的 remainder 用 rAF 计拍，仪器 fit 也走 rAF）。改为读播放态投影
+        // 并暂停场景：画面从 t≈0 起静止，rAF 继续服务 fit/排版（B20/rod-model）。
+        await page.waitForSelector('.layout-master[data-first-frame="ready"]', {
+          timeout: 10_000
+        });
+        const playing = await page.evaluate(
+          () =>
+            document
+              .querySelector('.layout-master')
+              ?.getAttribute('data-scene-playing') === 'true'
+        );
+        if (playing) await page.keyboard.press(' ');
+      }
       await waitForFirstFrame(page, {
         remainderMs: extraWait ? 1200 : 800
       });
-      if (DYNAMIC.has(scene.id)) await freezeDynamicCanvas(page);
       await expect(page).toHaveScreenshot(`${scene.id}-mobile.png`, {
         maxDiffPixels: highDiff ? 3000 : 800,
         threshold: highDiff ? 0.3 : 0.2

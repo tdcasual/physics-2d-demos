@@ -215,6 +215,20 @@ export class SceneAdapter<
     if (host) host.dataset.firstFrame = 'ready';
     const canvas = this.slots?.animation?.querySelector('canvas');
     if (canvas) canvas.dataset.firstFrame = 'ready';
+    this._projectPlayingState();
+  }
+
+  /**
+   * 只读投影当前播放态（视觉测试用：dynamic 场景在 first-frame 后据此
+   * 决定是否按空格暂停，钉死相位。与 data-first-frame 同一宿主）。
+   */
+  private _projectPlayingState(): void {
+    const host = this._firstFrameHost();
+    if (host) {
+      host.dataset.scenePlaying = String(
+        this.transport?.transport.isPlaying ?? false
+      );
+    }
   }
 
   renderAnimation(container: HTMLElement, slots: LayoutSlots): void {
@@ -647,18 +661,21 @@ export class SceneAdapter<
     this.transport?.play();
     this.perfMonitor?.start();
     this.scene?.startAll?.();
+    this._projectPlayingState();
   }
 
   pauseAll(): void {
     this.transport?.pause();
     this.perfMonitor?.stop();
     this.scene?.pauseAll?.();
+    this._projectPlayingState();
   }
 
   reset(): void {
     this.transport?.reset();
     this.perfMonitor?.stop();
     this.scene?.reset?.();
+    this._projectPlayingState();
     this.scene?.render();
     if (this.controls) {
       syncControlsFromLiveParams({
