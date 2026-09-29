@@ -31,6 +31,10 @@ const SCENE_RENDERERS: Record<
   scene3: drawScene3
 };
 
+/** 未挂载时 clientWidth 回落，不参与 scale（已知误报类）。 */
+const FALLBACK_CSS_W = 800;
+const FALLBACK_CSS_H = 600;
+
 export function createVtIntegralView(
   options: CreateVtIntegralViewOptions = {}
 ) {
@@ -40,8 +44,8 @@ export function createVtIntegralView(
   let mode: TeachingMode = options.mode ?? 'normal';
   let hints: DemoRenderHints | undefined = options.demoHints;
   let snapshot: VtIntegralSnapshot | null = null;
-  let canvasWidth = 800;
-  let canvasHeight = 600;
+  let canvasWidth = FALLBACK_CSS_W;
+  let canvasHeight = FALLBACK_CSS_H;
   let responsiveScale = 1;
   let onPointDrag: ((id: 'A' | 'B', x: number) => void) | null = null;
   let dragging: 'A' | 'B' | null = null;
@@ -55,8 +59,8 @@ export function createVtIntegralView(
     if (!canvas) return;
     const newCtx = sizeCanvasToFill(canvas);
     ctx = newCtx;
-    canvasWidth = Math.max(1, canvas.clientWidth || 800);
-    canvasHeight = Math.max(1, canvas.clientHeight || 600);
+    canvasWidth = Math.max(1, canvas.clientWidth || FALLBACK_CSS_W);
+    canvasHeight = Math.max(1, canvas.clientHeight || FALLBACK_CSS_H);
     responsiveScale = parseFloat(canvas.dataset.responsiveScale || '1');
   }
 

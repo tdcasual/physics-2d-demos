@@ -52,7 +52,6 @@ const PRESENTATION_EXEMPT: string[] = [];
  * automatically because their id is absent from the list.
  */
 const LARGE_RENDER_LITERAL_EXEMPT = new Set([
-  'chase-meet',
   'doppler-effect',
   'double-slit',
   'electrification',
@@ -62,12 +61,9 @@ const LARGE_RENDER_LITERAL_EXEMPT = new Set([
   'interference-formula',
   'mechanical-wave',
   'micrometer',
-  'projectile',
   'spring-oscillator',
   'thin-film',
-  'vernier-caliper',
-  'vt-integral',
-  'wedge'
+  'vernier-caliper'
 ]);
 
 const CANVAS_SPATIAL_METHODS = new Set([
@@ -391,8 +387,8 @@ describe('scene modernization standard (anti-drift ratchet)', () => {
     it('large-render-literal exemption list contains only known scenes', () => {
       expect(
         LARGE_RENDER_LITERAL_EXEMPT.size,
-        'LARGE_RENDER_LITERAL_EXEMPT 冻 16 id；只许缩小，新场景禁止加入'
-      ).toBe(16);
+        'LARGE_RENDER_LITERAL_EXEMPT 冻 12 id；只许缩小，新场景禁止加入'
+      ).toBe(12);
       expect(
         [...LARGE_RENDER_LITERAL_EXEMPT].filter((id) => !sceneIds.includes(id)),
         'LARGE_RENDER_LITERAL_EXEMPT 含不存在的场景 id（拼写错误或场景已删除）：' +

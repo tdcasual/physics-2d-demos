@@ -2,7 +2,7 @@ import type { ChaseMeetSnapshot } from './scene.sim';
 import type { TeachingMode } from '../../platform/standards';
 import type { TeachingTheme } from '../../platform/standards';
 import type { DemoRenderHints } from '../../platform/demo-profile';
-import { sizeCanvasToFill } from '../../core/canvas-sizing';
+import { getResponsiveScale, sizeCanvasToFill } from '../../core/canvas-sizing';
 import { createViewEnvironment } from '../view-base';
 import {
   getResponsiveViewport,
@@ -17,6 +17,31 @@ import {
 import { drawMotion } from './renderer/draw-motion';
 import { drawGraphs } from './renderer/draw-graphs';
 import { drawFallback } from './renderer/draw-fallback';
+
+/** 1440×900 split-right 舞台短边 getResponsiveScale 实测（clamp 上限）。 */
+const DESKTOP_LAYOUT_SCALE = 1.5;
+/** 未挂载时 getBoundingClientRect 回落，不参与 scale（已知误报类）。 */
+const FALLBACK_STAGE_W = 1280;
+const FALLBACK_STAGE_H = 720;
+const NARROW_BREAK_PX = 960;
+
+const USABLE_BAND_MIN = 240 / DESKTOP_LAYOUT_SCALE;
+const TRACK_BAND_MIN_GRAPH = 180 / DESKTOP_LAYOUT_SCALE;
+const TRACK_BAND_MIN_NARROW = 200 / DESKTOP_LAYOUT_SCALE;
+const TRACK_BAND_CAP_NARROW = 300 / DESKTOP_LAYOUT_SCALE;
+const TRACK_BAND_MIN_PRESENT = 240 / DESKTOP_LAYOUT_SCALE;
+const TRACK_BAND_CAP = 380 / DESKTOP_LAYOUT_SCALE;
+const TRACK_BAND_MIN = 190 / DESKTOP_LAYOUT_SCALE;
+const GRAPH_BAND_MIN_MOBILE = 140 / DESKTOP_LAYOUT_SCALE;
+const GRAPH_BAND_CAP_MOBILE = 220 / DESKTOP_LAYOUT_SCALE;
+const GRAPH_BAND_MIN = 120 / DESKTOP_LAYOUT_SCALE;
+const GRAPH_SLOT_FALLBACK = 300;
+const GRAPH_BAND_MIN_NARROW = 130 / DESKTOP_LAYOUT_SCALE;
+const GRAPH_BAND_CAP_NARROW = 200 / DESKTOP_LAYOUT_SCALE;
+const GRAPH_BAND_MIN_PRESENT = 140 / DESKTOP_LAYOUT_SCALE;
+const GRAPH_BAND_CAP = 250 / DESKTOP_LAYOUT_SCALE;
+const GRAPH_BAND_MIN_DESKTOP = 160 / DESKTOP_LAYOUT_SCALE;
+const GRAPH_BAND_MIN_W = 180 / DESKTOP_LAYOUT_SCALE;
 
 export type CreateChaseMeetViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -40,8 +65,8 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
   });
   let theme: TeachingTheme = options.theme ?? 'dark';
   let snapshot: ChaseMeetSnapshot | null = null;
-  let cssWidth = 1280;
-  let cssHeight = 720;
+  let cssWidth = FALLBACK_STAGE_W;
+  let cssHeight = FALLBACK_STAGE_H;
   let graphResizeObserver: ResizeObserver | null = null;
   let lastGraphSlotSize = '';
 
@@ -97,8 +122,8 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
     const newCtx = sizeCanvasToFill(canvas);
     if (newCtx) ctx = newCtx;
     const rect = canvas.getBoundingClientRect();
-    cssWidth = Math.max(1, Math.floor(rect.width || 1280));
-    cssHeight = Math.max(1, Math.floor(rect.height || 720));
+    cssWidth = Math.max(1, Math.floor(rect.width || FALLBACK_STAGE_W));
+    cssHeight = Math.max(1, Math.floor(rect.height || FALLBACK_STAGE_H));
   }
 
   function initStageSize(): void {
@@ -108,11 +133,11 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
       return;
     }
 
-    const viewport = getResponsiveViewport(960);
+    const viewport = getResponsiveViewport(NARROW_BREAK_PX);
     const totalWidth = resolveResponsiveStageWidth(dom.root, {
       minWidthPx: 1,
       horizontalPaddingPx: 16,
-      narrowBreakpointPx: 960
+      narrowBreakpointPx: NARROW_BREAK_PX
     });
     dom.root.classList.toggle('is-narrow', viewport.isNarrow);
 
@@ -120,6 +145,7 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
       1,
       Math.floor(dom.root.getBoundingClientRect().height || viewport.height)
     );
+    const layoutScale = getResponsiveScale(totalWidth, stageHeight);
     const layoutId = stageSlot
       ?.closest('[data-layout-id]')
       ?.getAttribute('data-layout-id');
@@ -131,14 +157,29 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
     const hudReserve = isPresentation
       ? Math.round(Math.min(window.innerHeight * 0.22, 176))
       : 0;
-    const usableHeight = Math.max(240, stageHeight - hudReserve);
+    const usableHeight = Math.max(
+      USABLE_BAND_MIN * layoutScale,
+      stageHeight - hudReserve
+    );
     let trackHeight = viewport.isNarrow
       ? hasMobileGraphSlot
-        ? Math.max(180, stageHeight - 4)
-        : Math.max(200, Math.min(300, Math.round(totalWidth * 0.52)))
+        ? Math.max(TRACK_BAND_MIN_GRAPH * layoutScale, stageHeight - 4)
+        : Math.max(
+            TRACK_BAND_MIN_NARROW * layoutScale,
+            Math.min(
+              TRACK_BAND_CAP_NARROW * layoutScale,
+              Math.round(totalWidth * 0.52)
+            )
+          )
       : isPresentation
-        ? Math.max(240, Math.round(usableHeight * 0.62))
-        : Math.min(380, Math.max(190, stageHeight * 0.42));
+        ? Math.max(
+            TRACK_BAND_MIN_PRESENT * layoutScale,
+            Math.round(usableHeight * 0.62)
+          )
+        : Math.min(
+            TRACK_BAND_CAP * layoutScale,
+            Math.max(TRACK_BAND_MIN * layoutScale, stageHeight * 0.42)
+          );
 
     let graphHeight: number;
     let graphWidth: number;
@@ -156,22 +197,40 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
             plotWidth || (gRect.width > 0 ? gRect.width - 14 : totalWidth - 16)
           )
         );
-        graphHeight = Math.max(140, Math.min(220, availableHeight));
+        graphHeight = Math.max(
+          GRAPH_BAND_MIN_MOBILE * layoutScale,
+          Math.min(GRAPH_BAND_CAP_MOBILE * layoutScale, availableHeight)
+        );
       } else {
         graphWidth = Math.max(
           1,
           Math.floor((gRect.width || totalWidth) / 2 - 4)
         );
-        graphHeight = Math.max(120, Math.floor(gRect.height || 300));
+        graphHeight = Math.max(
+          GRAPH_BAND_MIN * layoutScale,
+          Math.floor(gRect.height || GRAPH_SLOT_FALLBACK)
+        );
       }
     } else if (viewport.isNarrow) {
       graphWidth = totalWidth;
-      graphHeight = Math.max(130, Math.min(200, Math.round(totalWidth * 0.42)));
+      graphHeight = Math.max(
+        GRAPH_BAND_MIN_NARROW * layoutScale,
+        Math.min(
+          GRAPH_BAND_CAP_NARROW * layoutScale,
+          Math.round(totalWidth * 0.42)
+        )
+      );
     } else {
       graphHeight = isPresentation
-        ? Math.max(140, Math.round(usableHeight * 0.3))
-        : Math.min(250, Math.max(160, stageHeight * 0.34));
-      graphWidth = Math.max(180, totalWidth / 2 - 8);
+        ? Math.max(
+            GRAPH_BAND_MIN_PRESENT * layoutScale,
+            Math.round(usableHeight * 0.3)
+          )
+        : Math.min(
+            GRAPH_BAND_CAP * layoutScale,
+            Math.max(GRAPH_BAND_MIN_DESKTOP * layoutScale, stageHeight * 0.34)
+          );
+      graphWidth = Math.max(GRAPH_BAND_MIN_W * layoutScale, totalWidth / 2 - 8);
     }
 
     if (isPresentation && !viewport.isNarrow && !graphSlot) {
@@ -180,14 +239,20 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
       const motionBox = motionCard?.getBoundingClientRect();
       const graphsBox = graphsCard?.getBoundingClientRect();
       if (motionBox && motionBox.height > 40) {
-        trackHeight = Math.max(200, Math.floor(motionBox.height));
+        trackHeight = Math.max(
+          TRACK_BAND_MIN_NARROW * layoutScale,
+          Math.floor(motionBox.height)
+        );
       }
       if (graphsBox && graphsBox.height > 40) {
         graphWidth = Math.max(
-          180,
+          GRAPH_BAND_MIN_W * layoutScale,
           Math.floor((graphsBox.width || totalWidth) / 2 - 8)
         );
-        graphHeight = Math.max(120, Math.floor(graphsBox.height - 36));
+        graphHeight = Math.max(
+          GRAPH_BAND_MIN * layoutScale,
+          Math.floor(graphsBox.height - 36)
+        );
       }
     }
 
