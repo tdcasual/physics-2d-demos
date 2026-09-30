@@ -2,6 +2,13 @@ import { defineConfig } from '@playwright/test';
 import { sharedConfig } from './tests/playwright.shared';
 
 const systemChromium = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+// 像素基线跨容器代际稳定性：LCD 子像素 AA / 字体亚像素定位随 freetype/fontconfig
+// 版本漂移（表现为顶栏与文本的 ~1-2k px 系统性 diff）。固定为灰度 AA + 整数
+// 字形定位后，AA 与渲染栈版本解耦。仅在容器 SoT 环境开启（visual-linux-container.sh）。
+const stableAaArgs =
+  process.env.VISUAL_STABLE_AA === '1'
+    ? ['--disable-lcd-text', '--disable-font-subpixel-positioning']
+    : [];
 
 export default defineConfig({
   ...sharedConfig,
@@ -16,8 +23,9 @@ export default defineConfig({
   use: {
     ...sharedConfig.use,
     viewport: { width: 1280, height: 720 },
-    ...(systemChromium
-      ? { launchOptions: { executablePath: systemChromium } }
-      : {})
+    launchOptions: {
+      ...(systemChromium ? { executablePath: systemChromium } : {}),
+      ...(stableAaArgs.length ? { args: stableAaArgs } : {})
+    }
   }
 });

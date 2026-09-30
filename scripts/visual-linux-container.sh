@@ -75,6 +75,7 @@ docker run --rm \
   --shm-size=1g \
   -e VISUAL_MODE="$MODE" \
   -e VISUAL_LINUX_AUTHORITY=1 \
+  -e VISUAL_STABLE_AA=1 \
   -e VISUAL_GREP="$GREP" \
   -v "$REPO_ROOT":/src:ro \
   -v "$OUT":/out \
@@ -97,7 +98,7 @@ chown -R builder:builder /work
 
 su builder -s /bin/bash -c "cd /work && pnpm config set store-dir /work/.pnpm-store && pnpm install --frozen-lockfile"
 /work/node_modules/.bin/playwright install-deps chromium >/dev/null
-su builder -s /bin/bash -c "export VISUAL_LINUX_AUTHORITY=1; cd /work && pnpm exec playwright install chromium"
+su builder -s /bin/bash -c "export VISUAL_LINUX_AUTHORITY=1 VISUAL_STABLE_AA=1; cd /work && pnpm exec playwright install chromium"
 
 export PLAYWRIGHT_JSON_OUTPUT_FILE=/tmp/visual-regression.json
 cat > /tmp/assert-visual-linux-json.js <<ENDJS
@@ -194,6 +195,7 @@ const result = spawnSync("pnpm", args, {
   env: {
     ...process.env,
     VISUAL_LINUX_AUTHORITY: "1",
+    VISUAL_STABLE_AA: "1",
     PLAYWRIGHT_JSON_OUTPUT_FILE: "/tmp/visual-regression.json"
   },
   encoding: "utf8"
@@ -217,7 +219,7 @@ ENDJS
 run_visual_regression() {
   local extra="${1:-}"
   set +e
-  su builder -s /bin/bash -c "export VISUAL_LINUX_AUTHORITY=1; cd /work && node /tmp/run-visual.mjs ${extra}"
+  su builder -s /bin/bash -c "export VISUAL_LINUX_AUTHORITY=1 VISUAL_STABLE_AA=1; cd /work && node /tmp/run-visual.mjs ${extra}"
   local pw_ec=$?
   set -e
   node /tmp/assert-visual-linux-json.js
