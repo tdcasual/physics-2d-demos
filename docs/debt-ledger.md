@@ -43,7 +43,7 @@
 
 ---
 
-**v15 Phase F（2026-09-30）**：B20 关闭。2a highDiff 删除（emf-analogy / double-slit 退出 3000/0.3，全员标准 800/0.2；`extraWait` 仅 chase-meet）；emf-analogy `createWaterParticle` 改为按池 key 派生的 mulberry32，粒子初始状态跨两次加载逐字节一致。2b `toBeCloseTo(…, 0)` 保留桶 2 处于 Phase A 完成。守卫改为 `tolerance-freeze.spec.ts`：禁止 `highDiff` 回潮 + 保留桶条数只降不升。B20 从 B 区移入已清。
+**v15 Phase F（2026-09-30）**：B20 关闭。2a highDiff 删除（emf-analogy / double-slit 退出 3000/0.3，全员标准 800/0.2；`extraWait` 仅 chase-meet）；emf-analogy `createWaterParticle` 改为按池 key 派生的 mulberry32，粒子初始状态跨两次加载逐字节一致。2b `toBeCloseTo(…, 0)` 保留桶 2 处于 Phase A 完成。守卫改为 `tolerance-freeze.spec.ts`：禁止 `highDiff` 回潮 + 保留桶条数只降不升。B20 从 B 区移入已清。补记（Claude 验收）：本轮两张重生基线的真实成因是渲染栈抗锯齿漂移（emf-mobile 3366px 全在顶栏/控制面板、double-slit-desktop 1357px 中 1355 在顶栏，两场景画布差像素 ≈0——孪生对照 emf-desktop / double-slit-mobile 均为 0px，这反而更强地证明暂停机制+PRNG 后场景渲染确定）；顶栏 AA 漂移源头待查。Darwin 侧经 workflow 36666037409（grep 4 spec，--update-snapshots 零重写）验证既有基线在新机制下仍匹配，非未验证状态。
 
 **v15 Phase E 批 4（2026-09-30）**：B1 十六场景 canvas 裸数字豁免表清零。`LARGE_RENDER_LITERAL_EXEMPT` 16→0，size 断言 0。批 4 摘 mechanical-wave（3，桌面锚 `newBase=old/1.5`）/ ganshe（0）/ micrometer（0）/ vernier-caliper（0）。micrometer-render.ts:254 字重 700/400 为已知误报，未改。B1 从 B 区移入已清。
 
