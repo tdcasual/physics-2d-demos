@@ -3,9 +3,9 @@ allowBuilds:
 # 安全补丁 overrides（全部位于 dev 依赖链，runtime 依赖 react/react-dom 无漏洞）。
 # 阈值取自 npm 安全公告，跟随 dependabot 升级后应定期复核并移除过期条目。
 overrides:
-  'brace-expansion@<1.1.18': '>=1.1.18 <2'
-  'brace-expansion@>=2.0.0 <2.1.4': '>=2.1.4 <3'
-  'brace-expansion@>=5.0.0 <5.0.9': '>=5.0.9 <6'
+  'brace-expansion@<1.1.21': '>=1.1.21 <2'
+  'brace-expansion@>=2.0.0 <2.1.7': '>=2.1.7 <3'
+  'brace-expansion@>=4.0.0 <5.0.12': '>=5.0.12 <6'
   'flatted@<3.4.2': '>=3.4.2 <4'
   'picomatch@>=4.0.0 <4.0.4': '>=4.0.4 <5'
   'postcss@<8.5.18': '>=8.5.18 <9'
