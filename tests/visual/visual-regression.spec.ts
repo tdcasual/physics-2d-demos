@@ -62,7 +62,7 @@ test('visual baseline coverage accounts for every discovered scene', () => {
   expect(overlap, 'scene listed as both covered and debt').toEqual([]);
   expect(covered.length + debtIds.length).toBe(discovered.length);
   expect(COVERED.length * 2).toBe(VISUAL_SCREENSHOT_SPEC_COUNT);
-  expect(debtIds).toHaveLength(23);
+  expect(debtIds).toHaveLength(11);
   expect(VISUAL_LEGACY_DEBT_RECORD).toBe('B11');
   expect(Object.keys(debt).sort()).toEqual(debtIds);
 });
