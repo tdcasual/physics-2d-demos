@@ -1,5 +1,5 @@
 {
-  "screenshotSpecCount": 218,
+  "screenshotSpecCount": 240,
   "coveredSceneIds": [
     "accel-force",
     "air-track-momentum",
@@ -101,15 +101,26 @@
     "semicylinder-tir-standard",
     "single-loop",
     "single-slit",
+    "spring-ball",
     "spring-oscillator",
     "thin-film",
+    "three-forces",
     "ticker-tape",
+    "ticker-timer",
     "tortoise-hare",
+    "uniform-electric-acceleration",
     "uniformly-varied-motion",
+    "variable-work",
+    "velocity-selector",
     "vernier-caliper",
+    "vertical-circle",
     "vt-integral",
+    "wave-superpose",
     "wedge",
-    "xt-graph"
+    "wedge-film-interference",
+    "wire-loop-field",
+    "xt-graph",
+    "zinc-photoelectric-energy"
   ],
   "dynamicSceneIds": [
     "accel-force",
@@ -199,27 +210,23 @@
     "single-loop",
     "single-slit",
     "spring-ball",
+    "three-forces",
     "ticker-tape",
     "ticker-timer",
-    "uniformly-varied-motion",
-    "variable-work",
-    "xt-graph"
-  ],
-  "legacyDebtRecord": "B11",
-  "legacyDebtOwner": "physics-2d maintainers",
-  "legacyDebtReason": "legacy baseline debt: missing complete Linux+Darwin desktop+mobile golden pair as of 2026-09-27; tracked as B11 until reviewed Ubuntu 24 Linux and real macOS Darwin goldens exist for every scene",
-  "legacyDebtReference": "docs/debt-ledger.md B11",
-  "legacyDebtSceneIds": [
-    "spring-ball",
-    "three-forces",
-    "ticker-timer",
     "uniform-electric-acceleration",
+    "uniformly-varied-motion",
     "variable-work",
     "velocity-selector",
     "vertical-circle",
     "wave-superpose",
     "wedge-film-interference",
     "wire-loop-field",
+    "xt-graph",
     "zinc-photoelectric-energy"
-  ]
+  ],
+  "legacyDebtRecord": "B11",
+  "legacyDebtOwner": "physics-2d maintainers",
+  "legacyDebtReason": "legacy baseline debt: missing complete Linux+Darwin desktop+mobile golden pair as of 2026-09-27; tracked as B11 until reviewed Ubuntu 24 Linux and real macOS Darwin goldens exist for every scene",
+  "legacyDebtReference": "docs/debt-ledger.md B11",
+  "legacyDebtSceneIds": []
 }
