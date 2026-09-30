@@ -3,7 +3,12 @@ import {
   projectileComponentsConstants as C,
   type ProjectileComponentsState
 } from './scene.sim';
-import { LAB_DATA_SLOT_ATTR } from '../../platform/stage-chrome';
+import {
+  GRAPH_SECTION_ATTR,
+  LAB_DATA_SLOT_ATTR,
+  READOUT_SLOT_ATTR,
+  STAGE_FRAME_ATTR
+} from '../../platform/stage-chrome';
 
 export type DataPanelHandle = {
   element: HTMLElement;
@@ -34,6 +39,9 @@ export function createProjectileDataPanel(): DataPanelHandle {
 
   const wrap = document.createElement('div');
   wrap.style.cssText = 'overflow:auto;min-height:0;flex:1;';
+  wrap.tabIndex = 0;
+  wrap.setAttribute('role', 'region');
+  wrap.setAttribute('aria-label', '频闪采样滚动区');
   const table = document.createElement('table');
   table.setAttribute('aria-label', '频闪采样记录');
   table.style.cssText =
@@ -96,15 +104,9 @@ export function findProjectileDataHost(scope?: ParentNode): HTMLElement | null {
   const root = scope ?? document;
   const lab = root.querySelector(`[${LAB_DATA_SLOT_ATTR}]`);
   if (lab instanceof HTMLElement) return lab;
-  // mobile 落点 = 打在 .mobile-readout-panel 上的 [data-readout-slot]
-  // （readout 能力创建点打标；不用 .mobile-readout-slot——布局清 slot
-  // 会抹掉后挂内容）
-  const mobilePanel = root.querySelector(
-    '.mobile-stack-layout [data-readout-slot]'
-  );
-  if (mobilePanel instanceof HTMLElement) return mobilePanel;
-  const tab = root.querySelector('#mobile-panel-readout');
-  if (tab instanceof HTMLElement) return tab;
+  // mobile / split 读数挂载点由 readout 能力创建点打标
+  const readout = root.querySelector(`[${READOUT_SLOT_ATTR}]`);
+  if (readout instanceof HTMLElement) return readout;
   return null;
 }
 
@@ -115,55 +117,16 @@ const LAB_INLINE_TITLE_SELECTOR =
 export function suppressLabFloatInlineReadoutTitle(
   root: ParentNode = document
 ): void {
-  const lab = root.querySelector('.lab-stage-layout .lab-float-data');
+  const slot = root.querySelector(`[${LAB_DATA_SLOT_ATTR}]`);
+  const lab = slot?.parentElement ?? slot;
   if (!(lab instanceof HTMLElement)) return;
   for (const node of lab.querySelectorAll(LAB_INLINE_TITLE_SELECTOR)) {
     node.remove();
   }
 }
 
-export function createChromeScheduler(run: () => void): {
-  start(): void;
-  dispose(): void;
-} {
-  let disposed = false;
-  let raf1 = 0;
-  let raf2 = 0;
-  const cancelBoth = (): void => {
-    if (raf1) window.cancelAnimationFrame(raf1);
-    if (raf2) window.cancelAnimationFrame(raf2);
-    raf1 = 0;
-    raf2 = 0;
-  };
-  const guarded = (): void => {
-    if (disposed) return;
-    run();
-  };
-  return {
-    start() {
-      if (disposed) return;
-      cancelBoth();
-      raf1 = window.requestAnimationFrame(() => {
-        raf1 = 0;
-        if (disposed) return;
-        guarded();
-        if (disposed) return;
-        raf2 = window.requestAnimationFrame(() => {
-          raf2 = 0;
-          if (disposed) return;
-          guarded();
-        });
-      });
-    },
-    dispose() {
-      disposed = true;
-      cancelBoth();
-    }
-  };
-}
-
 export function hideLabGraphFloat(): void {
-  const graph = document.querySelector('.lab-stage-layout .lab-float-graph');
+  const graph = document.querySelector(`[${GRAPH_SECTION_ATTR}]`);
   if (!(graph instanceof HTMLElement)) return;
   graph.hidden = true;
   graph.style.display = 'none';
@@ -171,9 +134,11 @@ export function hideLabGraphFloat(): void {
 }
 
 export function placeLabDataFloat(): void {
-  const layout = document.querySelector('.lab-stage-layout');
-  const panel = layout?.querySelector('.lab-float-data');
-  const canvas = layout?.querySelector('canvas');
+  const slot = document.querySelector(`[${LAB_DATA_SLOT_ATTR}]`);
+  const panel = slot?.parentElement;
+  const canvas = document.querySelector(`[${STAGE_FRAME_ATTR}] canvas`);
+  const layout =
+    canvas?.closest('.layout-master') ?? panel?.closest('.layout-master');
   if (
     !(layout instanceof HTMLElement) ||
     !(panel instanceof HTMLElement) ||

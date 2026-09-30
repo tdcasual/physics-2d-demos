@@ -26,6 +26,7 @@ export function createWedgeScene(
   setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
   getState(): WedgeState;
   setParams(params: Partial<WedgeParams>): WedgeParams;
+  getParams(): WedgeParams;
   setCursorX(x: number): void;
   attachGraphCanvas(canvas: HTMLCanvasElement): void;
   getReadoutItems(): Array<{ key: string; label: string; value: string }>;
@@ -101,6 +102,9 @@ export function createWedgeScene(
     setParams: base.wrapAction(
       (params: Partial<WedgeParams>): WedgeParams => sim.setParams(params)
     ),
+    getParams(): WedgeParams {
+      return { ...sim.getState().params };
+    },
     setCursorX: base.wrapAction((x: number): void => {
       sim.setCursorX(x);
     }),

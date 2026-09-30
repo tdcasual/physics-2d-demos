@@ -27,6 +27,37 @@ function tryDispose(el: HTMLElement): void {
   if (typeof d === 'function') d();
 }
 
+/** slider/number/text/select must ship a true silent setter; other types log in test. */
+const EVENTFUL_FALLBACK_FAIL_LOUD_TYPES = new Set([
+  'slider',
+  'number',
+  'text',
+  'select'
+]);
+
+function registerSilentValueSetter(
+  field: ControlField,
+  silentValueSetter: ((value: unknown) => void) | undefined,
+  valueSetter: ((value: unknown) => void) | undefined,
+  silentValueSetters: Map<string, (value: unknown) => void>
+): void {
+  if (silentValueSetter) {
+    silentValueSetters.set(field.key, silentValueSetter);
+    return;
+  }
+  if (!valueSetter) return;
+  if (import.meta.env.MODE === 'test') {
+    const message =
+      `[SchemaRenderer] field "${field.key}" (type=${field.type}) ` +
+      'has no silentValueSetter; falling back to eventful valueSetter';
+    if (EVENTFUL_FALLBACK_FAIL_LOUD_TYPES.has(field.type)) {
+      throw new Error(message);
+    }
+    console.error(message);
+  }
+  silentValueSetters.set(field.key, valueSetter);
+}
+
 interface SchemaRendererOptions {
   mount: HTMLElement;
   schema: ControlsSchema;
@@ -37,10 +68,14 @@ interface SchemaRendererOptions {
 export interface SchemaRendererInstance {
   element: HTMLElement;
   setValue: (key: string, value: unknown) => void;
+  setValueSilently: (key: string, value: unknown) => void;
   getValue: <T>(key: string) => T | undefined;
   setActive: (key: string, id: string) => void;
+  setActiveSilently: (key: string, id: string) => void;
   setVisible: (key: string, visible: boolean) => void;
   dispose: () => void;
+  /** 字段键 → schema 类型，供 app/control-projection 静默分派 */
+  fieldTypes: Map<string, string>;
 }
 
 export function renderSchema(
@@ -50,9 +85,11 @@ export function renderSchema(
   mount.replaceChildren();
 
   const valueSetters = new Map<string, (value: unknown) => void>();
+  const silentValueSetters = new Map<string, (value: unknown) => void>();
   const valueGetters = new Map<string, () => unknown>();
   const activeSetters = new Map<string, (id: string) => void>();
   const visibleNodes = new Map<string, HTMLElement>();
+  const fieldTypes = new Map<string, string>();
   const cleanupFns: Array<() => void> = [];
 
   schema.sections.forEach((section) => {
@@ -75,14 +112,27 @@ export function renderSchema(
     }
 
     section.fields.forEach((field) => {
-      const { node, valueSetter, valueGetter, activeSetter, cleanup } =
-        renderField(field, onChange, onAction);
+      fieldTypes.set(field.key, field.type);
+      const {
+        node,
+        valueSetter,
+        silentValueSetter,
+        valueGetter,
+        activeSetter,
+        cleanup
+      } = renderField(field, onChange, onAction);
       if (node) {
         node.dataset.controlKey = field.key;
         card.body.appendChild(node);
         visibleNodes.set(field.key, node);
       }
       if (valueSetter) valueSetters.set(field.key, valueSetter);
+      registerSilentValueSetter(
+        field,
+        silentValueSetter,
+        valueSetter,
+        silentValueSetters
+      );
       if (valueGetter) valueGetters.set(field.key, valueGetter);
       if (activeSetter) activeSetters.set(field.key, activeSetter);
       if (cleanup) cleanupFns.push(cleanup);
@@ -96,10 +146,16 @@ export function renderSchema(
     setValue(key: string, value: unknown) {
       valueSetters.get(key)?.(value);
     },
+    setValueSilently(key: string, value: unknown) {
+      silentValueSetters.get(key)?.(value);
+    },
     getValue<T>(key: string): T | undefined {
       return valueGetters.get(key)?.() as T | undefined;
     },
     setActive(key: string, id: string) {
+      activeSetters.get(key)?.(id);
+    },
+    setActiveSilently(key: string, id: string) {
       activeSetters.get(key)?.(id);
     },
     setVisible(key: string, visible: boolean) {
@@ -112,15 +168,19 @@ export function renderSchema(
       cleanupFns.forEach((fn) => fn());
       mount.replaceChildren();
       valueSetters.clear();
+      silentValueSetters.clear();
       valueGetters.clear();
       activeSetters.clear();
-    }
+      fieldTypes.clear();
+    },
+    fieldTypes
   };
 }
 
 interface RenderResult {
   node: HTMLElement | null;
   valueSetter?: (value: unknown) => void;
+  silentValueSetter?: (value: unknown) => void;
   valueGetter?: () => unknown;
   activeSetter?: (id: string) => void;
   cleanup?: () => void;
@@ -144,14 +204,27 @@ function renderField(
       });
       const input = row.querySelector('input');
       if (input) input.dataset.key = field.key;
+      const paintSlider = (value: unknown) => {
+        if (!input) return;
+        input.value = String(value);
+        const valueEl = row.querySelector('span:last-child');
+        if (valueEl) {
+          const n = parseFloat(String(value));
+          const formatted = Number.isFinite(n)
+            ? field.formatValue
+              ? field.formatValue(n)
+              : String(n)
+            : String(value);
+          valueEl.textContent = formatted + (field.unit || '');
+        }
+      };
       return {
         node: row,
         valueSetter: (value) => {
-          if (input) {
-            input.value = String(value);
-            input.dispatchEvent(new Event('input'));
-          }
+          paintSlider(value);
+          if (input) input.dispatchEvent(new Event('input'));
         },
+        silentValueSetter: paintSlider,
         cleanup: () => {
           tryDispose(row);
         }
@@ -179,6 +252,9 @@ function renderField(
             input.dispatchEvent(new Event('input'));
           }
         },
+        silentValueSetter: (value) => {
+          if (input) input.value = String(value);
+        },
         valueGetter: () => (input ? parseFloat(input.value) : field.value),
         cleanup: () => {
           tryDispose(row);
@@ -201,6 +277,9 @@ function renderField(
             input.dispatchEvent(new Event('input'));
           }
         },
+        silentValueSetter: (value) => {
+          if (input) input.value = String(value);
+        },
         valueGetter: () => (input ? input.value : field.value),
         cleanup: () => {
           tryDispose(row);
@@ -214,8 +293,19 @@ function renderField(
         value: field.value,
         onChange: (val) => onChange(field.key, val)
       });
+      const select = row.querySelector('select');
       return {
         node: row,
+        valueSetter: (value) => {
+          if (select) {
+            select.value = String(value);
+            select.dispatchEvent(new Event('change'));
+          }
+        },
+        silentValueSetter: (value) => {
+          if (select) select.value = String(value);
+        },
+        valueGetter: () => select?.value ?? field.value,
         cleanup: () => {
           tryDispose(row);
         }
@@ -325,24 +415,25 @@ function renderField(
         value: field.value,
         onChange: (val) => onChange(field.key, val)
       });
+      const paintToggle = (value: unknown) => {
+        const btn = row.querySelector('button[role="switch"]');
+        if (!btn) return;
+        const next = Boolean(value);
+        btn.setAttribute('aria-checked', String(next));
+        (btn as HTMLElement).style.backgroundColor = next
+          ? 'var(--accent-primary)'
+          : 'var(--border-color)';
+        const thumb = btn.querySelector('span');
+        if (thumb) {
+          (thumb as HTMLElement).style.transform = next
+            ? 'translateX(16px)'
+            : 'translateX(2px)';
+        }
+      };
       return {
         node: row,
-        valueSetter: (value) => {
-          const btn = row.querySelector('button[role="switch"]');
-          if (btn) {
-            const next = Boolean(value);
-            btn.ariaChecked = String(next);
-            (btn as HTMLElement).style.backgroundColor = next
-              ? 'var(--accent-primary)'
-              : 'var(--border-color)';
-            const thumb = btn.querySelector('span');
-            if (thumb) {
-              (thumb as HTMLElement).style.transform = next
-                ? 'translateX(16px)'
-                : 'translateX(2px)';
-            }
-          }
-        },
+        valueSetter: paintToggle,
+        silentValueSetter: paintToggle,
         cleanup: () => {
           tryDispose(row);
         }

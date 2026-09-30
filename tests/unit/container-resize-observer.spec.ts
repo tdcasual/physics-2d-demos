@@ -94,85 +94,200 @@ describe('ContainerResizeObserver', () => {
     expect(notifyLayoutResize).toBeDefined();
   });
 
-  // ---- Fix 1：观察器总是重解析（偏好经 resolveLayout 参与语义）----
-  // happy-dom 的 ResizeObserver 回调不触发，直接驱动私有防抖入口。
+  // happy-dom 的 ResizeObserver 回调不触发；用可编程 contentRect stub 驱动。
 
-  function debounce(observer: ContainerResizeObserver): void {
-    (observer as unknown as { _debounceSwitch(): void })._debounceSwitch();
+  type RectFire = { fire: (width: number, height: number) => void };
+
+  function installContentRectStub(): {
+    created: RectFire[];
+    restore: () => void;
+  } {
+    const OriginalRO = window.ResizeObserver;
+    const created: RectFire[] = [];
+    window.ResizeObserver = class {
+      private cb: ResizeObserverCallback;
+      constructor(cb: ResizeObserverCallback) {
+        this.cb = cb;
+        created.push({
+          fire: (width: number, height: number) => {
+            this.cb(
+              [
+                { contentRect: { width, height } }
+              ] as unknown as ResizeObserverEntry[],
+              this as unknown as ResizeObserver
+            );
+          }
+        });
+      }
+      observe(): void {}
+      disconnect(): void {}
+      unobserve(): void {}
+    } as unknown as typeof ResizeObserver;
+    return {
+      created,
+      restore: () => {
+        window.ResizeObserver = OriginalRO;
+      }
+    };
   }
 
   it('re-resolves the target inside the same debounce window (not at schedule time)', async () => {
-    const switchLayout = vi.fn(async () => {});
-    const scene = {
-      id: 'test'
-    } as import('../../src/app/layouts/types').Scene;
-    // 排队时解析为 mobile（≠ 当前 desktop），窗口内变为 desktop——
-    // 到期必须按最新解析结果（desktop == 当前）判定为 no-op。
-    // 若实现沿用排队时刻的旧目标，会错误地切到 mobile。
-    let resolved = 'mobile';
-    const observer = createObserver({
-      getCurrentScene: () => scene,
-      getCurrentLayoutId: () => 'desktop',
-      resolveLayout: () => resolved,
-      switchLayout
-    });
+    vi.useFakeTimers();
+    const stub = installContentRectStub();
+    try {
+      const switchLayout = vi.fn(async () => {});
+      const scene = {
+        id: 'test'
+      } as import('../../src/app/layouts/types').Scene;
+      // 排队时解析为 mobile（≠ 当前 desktop），窗口内变为 desktop——
+      // 到期必须按最新解析结果（desktop == 当前）判定为 no-op。
+      let resolved = 'mobile';
+      const observer = createObserver({
+        getCurrentScene: () => scene,
+        getCurrentLayoutId: () => 'desktop',
+        resolveLayout: () => resolved,
+        switchLayout
+      });
 
-    observer.start();
-    debounce(observer);
-    resolved = 'desktop';
-    await new Promise((resolve) => setTimeout(resolve, 350));
-    expect(switchLayout).not.toHaveBeenCalled();
+      observer.start();
+      stub.created[0]?.fire(400, 800);
+      resolved = 'desktop';
+      await vi.advanceTimersByTimeAsync(300);
+      expect(switchLayout).not.toHaveBeenCalled();
 
-    // 窗口结束时目标确实不同 → 正常切换
-    resolved = 'mobile';
-    debounce(observer);
-    await new Promise((resolve) => setTimeout(resolve, 350));
-    observer.stop();
+      resolved = 'mobile';
+      stub.created[0]?.fire(375, 800);
+      await vi.advanceTimersByTimeAsync(300);
+      observer.stop();
 
-    expect(switchLayout).toHaveBeenCalledWith('mobile');
+      expect(switchLayout).toHaveBeenCalledWith('mobile');
+    } finally {
+      stub.restore();
+      vi.useRealTimers();
+    }
   });
 
   it('does not switch when the re-resolved target equals the current layout', async () => {
-    const switchLayout = vi.fn(async () => {});
-    const observer = createObserver({
-      getCurrentScene: () =>
-        ({ id: 'test' }) as import('../../src/app/layouts/types').Scene,
-      getCurrentLayoutId: () => 'split-right',
-      resolveLayout: () => 'split-right',
-      switchLayout
-    });
+    vi.useFakeTimers();
+    const stub = installContentRectStub();
+    try {
+      const switchLayout = vi.fn(async () => {});
+      const observer = createObserver({
+        getCurrentScene: () =>
+          ({ id: 'test' }) as import('../../src/app/layouts/types').Scene,
+        getCurrentLayoutId: () => 'split-right',
+        resolveLayout: () => 'split-right',
+        switchLayout
+      });
 
-    observer.start();
-    debounce(observer);
-    await new Promise((resolve) => setTimeout(resolve, 350));
-    observer.stop();
+      observer.start();
+      stub.created[0]?.fire(900, 600);
+      await vi.advanceTimersByTimeAsync(300);
+      observer.stop();
 
-    expect(switchLayout).not.toHaveBeenCalled();
+      expect(switchLayout).not.toHaveBeenCalled();
+    } finally {
+      stub.restore();
+      vi.useRealTimers();
+    }
   });
 
   it('skips switching while a switch is in progress and re-evaluates later', async () => {
-    const switchLayout = vi.fn(async () => {});
-    let switching = false;
-    const observer = createObserver({
-      getCurrentScene: () =>
-        ({ id: 'test' }) as import('../../src/app/layouts/types').Scene,
-      getCurrentLayoutId: () => 'desktop',
-      resolveLayout: () => 'mobile',
-      getSwitching: () => switching,
-      switchLayout
-    });
+    vi.useFakeTimers();
+    const stub = installContentRectStub();
+    try {
+      const switchLayout = vi.fn(async () => {});
+      let switching = false;
+      const observer = createObserver({
+        getCurrentScene: () =>
+          ({ id: 'test' }) as import('../../src/app/layouts/types').Scene,
+        getCurrentLayoutId: () => 'desktop',
+        resolveLayout: () => 'mobile',
+        getSwitching: () => switching,
+        switchLayout
+      });
 
-    observer.start();
-    switching = true;
-    debounce(observer);
-    await new Promise((resolve) => setTimeout(resolve, 350));
-    expect(switchLayout).not.toHaveBeenCalled();
+      observer.start();
+      switching = true;
+      stub.created[0]?.fire(400, 800);
+      await vi.advanceTimersByTimeAsync(300);
+      expect(switchLayout).not.toHaveBeenCalled();
 
-    switching = false;
-    debounce(observer);
-    await new Promise((resolve) => setTimeout(resolve, 350));
-    observer.stop();
+      switching = false;
+      stub.created[0]?.fire(375, 800);
+      await vi.advanceTimersByTimeAsync(300);
+      observer.stop();
 
-    expect(switchLayout).toHaveBeenCalledWith('mobile');
+      expect(switchLayout).toHaveBeenCalledWith('mobile');
+    } finally {
+      stub.restore();
+      vi.useRealTimers();
+    }
+  });
+
+  it('marks dirty while switching and drain() re-resolves the latest viewport', () => {
+    vi.useFakeTimers();
+    const stub = installContentRectStub();
+    try {
+      const switchLayout = vi.fn(async () => {});
+      let switching = true;
+      let resolved = 'desktop';
+      const observer = createObserver({
+        getCurrentScene: () =>
+          ({ id: 'test' }) as import('../../src/app/layouts/types').Scene,
+        getCurrentLayoutId: () => 'desktop',
+        resolveLayout: () => resolved,
+        getSwitching: () => switching,
+        switchLayout
+      });
+      observer.start();
+      stub.created[0]?.fire(400, 800);
+      vi.advanceTimersByTime(300);
+      expect(switchLayout).not.toHaveBeenCalled();
+
+      switching = false;
+      resolved = 'mobile';
+      observer.drain();
+      expect(switchLayout).toHaveBeenCalledWith('mobile');
+      observer.stop();
+    } finally {
+      stub.restore();
+      vi.useRealTimers();
+    }
+  });
+
+  it('settles after a bounded burst of resize events', async () => {
+    vi.useFakeTimers();
+    const stub = installContentRectStub();
+    const BURST = 20;
+    try {
+      const switchLayout = vi.fn(async () => {});
+      let resolved = 'desktop';
+      const observer = createObserver({
+        getCurrentScene: () =>
+          ({ id: 'test' }) as import('../../src/app/layouts/types').Scene,
+        getCurrentLayoutId: () => 'desktop',
+        resolveLayout: () => resolved,
+        switchLayout
+      });
+      observer.start();
+      const fire = stub.created[0]?.fire;
+      expect(fire).toBeTypeOf('function');
+      for (let i = 0; i < BURST; i++) {
+        resolved = i % 2 === 0 ? 'mobile' : 'desktop';
+        fire!(200 + i, 800);
+      }
+      resolved = 'mobile';
+      fire!(375, 800);
+      await vi.advanceTimersByTimeAsync(300);
+      expect(switchLayout).toHaveBeenCalledTimes(1);
+      expect(switchLayout).toHaveBeenCalledWith('mobile');
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(switchLayout).toHaveBeenCalledTimes(1);
+      observer.stop();
+    } finally {
+      stub.restore();
+      vi.useRealTimers();
+    }
   });
 });

@@ -96,6 +96,10 @@ export function createTransportBar(
         speedValue.textContent = '1.00×';
 
         controls.append(playBtn, resetBtn, speedLabel, speedSlider, speedValue);
+        const existing = container.querySelector(
+          ':scope > .mobile-transport-controls'
+        );
+        if (existing) existing.remove();
         container.prepend(controls);
 
         // Wire events
@@ -148,6 +152,7 @@ export function createTransportBar(
           },
           dispose() {
             ac.abort();
+            controls.remove();
           }
         };
       }

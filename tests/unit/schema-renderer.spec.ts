@@ -53,6 +53,38 @@ describe('SchemaRenderer', () => {
     expect(mount.querySelector('[data-control-key="speed"]')).not.toBeNull();
   });
 
+  it('exposes a non-empty fieldTypes map when the schema has fields', () => {
+    const mount = createMount();
+    const schema: ControlsSchema = {
+      sections: [
+        {
+          title: '参数',
+          fields: [
+            {
+              type: 'slider',
+              key: 'speed',
+              label: '速度',
+              min: 0,
+              max: 10,
+              step: 1,
+              value: 5
+            },
+            { type: 'button', key: 'go', label: '开始' }
+          ]
+        }
+      ]
+    };
+    const renderer = renderSchema({
+      mount,
+      schema,
+      onChange: vi.fn(),
+      onAction: vi.fn()
+    });
+    expect(renderer.fieldTypes.size).toBeGreaterThan(0);
+    expect(renderer.fieldTypes.get('speed')).toBe('slider');
+    expect(renderer.fieldTypes.get('go')).toBe('button');
+  });
+
   it('stamps a button field key only on the wrapper', () => {
     const mount = createMount();
     const schema: ControlsSchema = {
@@ -445,5 +477,83 @@ describe('SchemaRenderer', () => {
 
     button.click();
     expect(onAction).toHaveBeenCalledWith('reset');
+  });
+
+  it('setValueSilently updates slider and select without dispatching events', () => {
+    const mount = createMount();
+    const onChange = vi.fn();
+    const schema: ControlsSchema = {
+      sections: [
+        {
+          title: '参数',
+          fields: [
+            {
+              type: 'slider',
+              key: 'speed',
+              label: '速度',
+              min: 0,
+              max: 80,
+              step: 1,
+              value: 20,
+              unit: 'm/s'
+            },
+            {
+              type: 'select',
+              key: 'preset',
+              label: '预设',
+              value: 'earth',
+              options: [
+                { value: 'earth', label: '地球' },
+                { value: 'moon', label: '月球' }
+              ]
+            }
+          ]
+        }
+      ]
+    };
+    const renderer = renderSchema({
+      mount,
+      schema,
+      onChange,
+      onAction: vi.fn()
+    });
+    renderer.setValueSilently('speed', 40);
+    renderer.setValueSilently('preset', 'moon');
+    expect(onChange).not.toHaveBeenCalled();
+    const input = mount.querySelector('input') as HTMLInputElement;
+    const select = mount.querySelector('select') as HTMLSelectElement;
+    expect(input.value).toBe('40');
+    expect(select.value).toBe('moon');
+    const valueEl = mount.querySelector('span:last-child');
+    expect(valueEl?.textContent).toContain('40');
+  });
+
+  it('setValueSilently updates toggle without dispatching events', () => {
+    const mount = createMount();
+    const onChange = vi.fn();
+    const schema: ControlsSchema = {
+      sections: [
+        {
+          title: '显示',
+          fields: [
+            { type: 'toggle', key: 'showA', label: '显示 A', value: false }
+          ]
+        }
+      ]
+    };
+    const renderer = renderSchema({
+      mount,
+      schema,
+      onChange,
+      onAction: vi.fn()
+    });
+    renderer.setValueSilently('showA', true);
+    expect(onChange).not.toHaveBeenCalled();
+    const btn = mount.querySelector(
+      'button[role="switch"]'
+    ) as HTMLButtonElement;
+    expect(btn).not.toBeNull();
+    expect(btn.getAttribute('aria-checked')).toBe('true');
+    expect(btn.style.backgroundColor).toBe('var(--accent-primary)');
   });
 });

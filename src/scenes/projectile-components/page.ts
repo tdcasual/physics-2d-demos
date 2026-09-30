@@ -1,11 +1,12 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { readSceneParams } from '../../app/url-sync';
+
 import { createControlCard } from '../../ui/components/ControlCard';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { projectileComponentsControlsSchema } from './controls-schema';
+import { createChromeScheduler } from '../page-utils';
 import {
-  createChromeScheduler,
   createProjectileDataPanel,
   findProjectileDataHost,
   hideLabGraphFloat,
@@ -16,7 +17,6 @@ import { projectileComponentsMeta } from './scene.meta';
 import { createProjectileComponentsScene } from './scene.entry';
 import { asBool, type ProjectileComponentsParams } from './scene.sim';
 
-const rawInitial = readSceneParams(projectileComponentsMeta);
 const NUMBER_KEYS = [
   'speed',
   'initialHeight',
@@ -32,8 +32,8 @@ const TOGGLE_KEYS = [
 
 bootScenePage({
   meta: projectileComponentsMeta,
-  autoPlay:
-    rawInitial.autoRun === undefined ? true : asBool(rawInitial.autoRun, true),
+  shouldAutoPlay: (_params, urlParams) =>
+    urlParams.autoRun === undefined ? true : asBool(urlParams.autoRun, true),
   preferredLayout: window.innerWidth <= 720 ? 'mobile-stack' : 'lab-stage',
   layoutConfig: {
     controlColumns: 'auto',
@@ -67,25 +67,10 @@ bootScenePage({
   },
   createControls: ({ mount, scene, scheduleRender, writeParam }) => {
     const render = scheduleRender ?? (() => scene.render());
-    let applying = false;
-    function syncSliders(): void {
-      const params = scene.getParams();
-      applying = true;
-      renderer.setValue('speed', params.speed);
-      renderer.setValue('initialHeight', params.initialHeight);
-      renderer.setValue('gravity', params.gravity);
-      renderer.setValue('samplePeriod', params.samplePeriod);
-      renderer.setValue('showTrajectory', params.showTrajectory);
-      renderer.setValue('showVectors', params.showVectors);
-      renderer.setValue('showShadows', params.showShadows);
-      renderer.setValue('showStrobe', params.showStrobe);
-      applying = false;
-    }
     const renderer = renderSchema({
       mount,
       schema: projectileComponentsControlsSchema,
       onChange: (key, value) => {
-        if (applying) return;
         if ((NUMBER_KEYS as readonly string[]).includes(key)) {
           scene.setParams({
             [key]: Number(value)
@@ -151,10 +136,7 @@ bootScenePage({
     chrome.start();
 
     return {
-      setValue: (key: string, value: number | string | boolean) =>
-        renderer.setValue(key, value),
-      setActive: (key: string, value: string) => renderer.setActive(key, value),
-      refresh: () => syncSliders(),
+      ...exposeSchemaHandle(renderer),
       dispose: () => {
         disposed = true;
         unsubscribe();

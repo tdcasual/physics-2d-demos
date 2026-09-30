@@ -31,11 +31,40 @@ import type {
   SceneInstance,
   ScenePageOptions
 } from './scene-bootstrapper-types';
+import {
+  paramsFromScene,
+  syncControlsFromLiveParams
+} from './control-projection';
 import { filterPresentationReadout } from './scene-adapter/readout-filter';
 import { registerSceneKeyboardShortcuts } from './scene-adapter/keyboard-shortcuts';
 import { createScenePerformanceRuntime } from './scene-adapter/perf-monitor';
+import {
+  bindActiveSceneWriter,
+  createSceneParamWriter,
+  persistSceneParams,
+  readSceneParams,
+  resolveUrlSyncKeys
+} from './url-sync';
 
 export { filterPresentationReadout } from './scene-adapter/readout-filter';
+
+/**
+ * B22：恢复值 → 是否播放。
+ * 显式覆盖 0 / '0' / false / 'false' / NaN 判假，其余判真。
+ * 不可用 `!== false && !== 0 && !== '0'`——`?autoRun=abc` 会经 parseInt 得 NaN 被误判为播。
+ */
+export function coerceAutoRun(value: unknown): boolean {
+  if (
+    value === 0 ||
+    value === '0' ||
+    value === false ||
+    value === 'false' ||
+    (typeof value === 'number' && Number.isNaN(value))
+  ) {
+    return false;
+  }
+  return true;
+}
 
 export class SceneAdapter<
   TScene extends SceneInstance = SceneInstance
@@ -63,6 +92,11 @@ export class SceneAdapter<
   private _mode: 'normal' | 'presentation' = 'normal';
   private _resolvedProfile: ResolvedDemoProfile | null = null;
   private _fullscreenHost: HTMLElement | null = null;
+  private _urlRestore: 'notStarted' | 'consuming' | 'complete' | 'failed' =
+    'notStarted';
+  private _urlSnapshot: Readonly<Record<string, number | string>> = {};
+  private _sceneWriter: import('./url-sync').SceneParamWriter | null = null;
+  private _unbindWriter: (() => void) | null = null;
 
   constructor(
     private options: ScenePageOptions<TScene>,
@@ -70,6 +104,41 @@ export class SceneAdapter<
   ) {
     this.id = options.meta.id;
     this.preferredLayout = options.preferredLayout ?? 'split-right';
+  }
+
+  takeUrlRestorePermit(): {
+    first: boolean;
+    snapshot: Readonly<Record<string, number | string>>;
+  } {
+    if (this._urlRestore === 'notStarted') {
+      this._urlRestore = 'consuming';
+      return { first: true, snapshot: this._urlSnapshot };
+    }
+    return { first: false, snapshot: {} };
+  }
+
+  completeUrlRestore(ok: boolean): void {
+    if (this._urlRestore !== 'consuming') return;
+    this._urlRestore = ok ? 'complete' : 'failed';
+  }
+
+  /**
+   * createControls 在 apply 前抛错时把 permit 退回 notStarted，
+   * 同代重试仍能 take。apply 失败走 completeUrlRestore(false)，本方法 no-op。
+   */
+  releaseUrlRestorePermit(): void {
+    if (this._urlRestore === 'consuming') {
+      this._urlRestore = 'notStarted';
+    }
+  }
+
+  getSceneWriter(): import('./url-sync').SceneParamWriter | null {
+    return this._sceneWriter;
+  }
+
+  captureUrlSnapshot(snapshot: Record<string, number | string>): void {
+    if (this._urlRestore !== 'notStarted') return;
+    this._urlSnapshot = Object.freeze({ ...snapshot });
   }
 
   private _disposeControls(): void {
@@ -146,6 +215,20 @@ export class SceneAdapter<
     if (host) host.dataset.firstFrame = 'ready';
     const canvas = this.slots?.animation?.querySelector('canvas');
     if (canvas) canvas.dataset.firstFrame = 'ready';
+    this._projectPlayingState();
+  }
+
+  /**
+   * 只读投影当前播放态（视觉测试用：dynamic 场景在 first-frame 后据此
+   * 决定是否按空格暂停，钉死相位。与 data-first-frame 同一宿主）。
+   */
+  private _projectPlayingState(): void {
+    const host = this._firstFrameHost();
+    if (host) {
+      host.dataset.scenePlaying = String(
+        this.transport?.transport.isPlaying ?? false
+      );
+    }
   }
 
   renderAnimation(container: HTMLElement, slots: LayoutSlots): void {
@@ -167,29 +250,37 @@ export class SceneAdapter<
       container.setAttribute('aria-label', `${this.options.meta.title}演示区`);
     }
 
-    const theme =
-      (container
-        .closest('[data-theme]')
-        ?.getAttribute('data-theme') as Theme) ||
-      (document.documentElement.getAttribute('data-theme') as Theme) ||
-      'light';
-    const mode =
-      (container.closest('[data-mode]')?.getAttribute('data-mode') as
-        | 'normal'
-        | 'presentation') || 'normal';
+    const theme = this.readThemeFrom(container);
+    const mode = this._mode;
 
     const demoHints =
       mode === 'presentation'
         ? (this.options.demoProfile ?? this.options.meta.demoProfile)
             ?.renderHints
         : undefined;
+    if (!this._sceneWriter) {
+      this._sceneWriter = createSceneParamWriter(
+        resolveUrlSyncKeys(this.options.meta)
+      );
+      this._unbindWriter = bindActiveSceneWriter(this._sceneWriter);
+      this.lifecycle.onDispose(() => {
+        this._sceneWriter?.close();
+        this._unbindWriter?.();
+        this._sceneWriter = null;
+        this._unbindWriter = null;
+      });
+      this.captureUrlSnapshot(readSceneParams(this.options.meta));
+    }
+
     this.scene = this.options.createScene({
       canvas,
       container,
       slots,
       theme,
       mode,
-      demoHints
+      demoHints,
+      sceneWriter: this._sceneWriter,
+      urlParams: this._urlSnapshot
     });
 
     this.scene.init();
@@ -256,11 +347,7 @@ export class SceneAdapter<
       isPlaying: () => this.transport?.transport.isPlaying ?? false,
       start: () => this.startAll(),
       pause: () => this.pauseAll(),
-      reset: () => {
-        this.transport?.reset?.();
-        this.perfMonitor?.stop();
-        this.scene?.reset?.();
-      },
+      reset: () => this.reset(),
       toggleTheme: (next) => {
         if (this.options.onToggleTheme) {
           // 统一走 container.setTheme：同步 container 状态、布局与持久化
@@ -286,22 +373,12 @@ export class SceneAdapter<
         }
       },
       switchLayout: () => {
-        document
-          .querySelector('.layout-switch-btn')
-          ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        this.options.onSwitchLayout?.();
       },
       exitPresentation: () => {
-        const layoutEl = document.querySelector('.layout-master');
-        if (layoutEl?.getAttribute('data-mode') !== 'presentation') return;
+        if (this._mode !== 'presentation') return;
         if (this.options.onSetMode) {
           this.options.onSetMode('normal');
-          return;
-        }
-        const btn = layoutEl.querySelector(
-          '.mode-toggle'
-        ) as HTMLButtonElement | null;
-        if (btn) {
-          btn.click();
           return;
         }
         this.setMode('normal');
@@ -365,8 +442,11 @@ export class SceneAdapter<
     this.scene.render();
     this._markFirstFrame();
 
-    // 自动播放：场景挂载后立即启动动画循环
-    if (this.options.autoPlay) {
+    // 自动播放：URL restore（createControls → applySceneUrlParams）之后
+    // 再根据 shouldAutoPlay(getParams, snapshot) 决定 startAll。
+    // URL query 的 autoRun 覆盖 localStorage 镜像（restoreSceneParams
+    // 仅在 query 为空时灌入，snapshot 在其后捕获）。
+    if (this._shouldAutoPlay()) {
       this.startAll();
     }
 
@@ -420,25 +500,26 @@ export class SceneAdapter<
     this._graphVisibilityRo = null;
   }
 
+  private readThemeFrom(container: HTMLElement): Theme {
+    return (
+      (container
+        .closest('[data-theme]')
+        ?.getAttribute('data-theme') as Theme) ||
+      (document.documentElement.getAttribute('data-theme') as Theme) ||
+      'light'
+    );
+  }
+
   /**
    * 布局切换：保住 sim 与 shell，把渲染面绑到新槽。
    * 禁止 dispose / init / createScene（init 会 reset 物理时钟）。
    */
   private _reattachLiveScene(container: HTMLElement, slots: LayoutSlots): void {
     const canvas = container.querySelector('canvas') ?? undefined;
-    const theme =
-      (container
-        .closest('[data-theme]')
-        ?.getAttribute('data-theme') as Theme) ||
-      (document.documentElement.getAttribute('data-theme') as Theme) ||
-      'light';
-    const mode =
-      (container.closest('[data-mode]')?.getAttribute('data-mode') as
-        | 'normal'
-        | 'presentation') || 'normal';
+    const theme = this.readThemeFrom(container);
 
     this.scene?.setTheme(theme);
-    this.scene?.setMode(mode);
+    this.setMode(this._mode);
 
     if (this.scene?.reattach) {
       this.scene.reattach({ container, canvas, slots });
@@ -538,6 +619,8 @@ export class SceneAdapter<
     this._ro?.disconnect();
     this._ro = null;
     this._disposeControls();
+    this._sceneWriter?.flush();
+    persistSceneParams(this.id);
     this.scene?.dispose();
     this.lifecycle.dispose();
     this.scene = null;
@@ -557,25 +640,50 @@ export class SceneAdapter<
     this._scheduleResize = null;
   }
 
+  private _shouldAutoPlay(): boolean {
+    const live = (this.scene?.getParams?.() ?? {}) as Record<string, unknown>;
+    if (this.options.shouldAutoPlay) {
+      return this.options.shouldAutoPlay(live, this._urlSnapshot);
+    }
+    // B22：只在存在恢复值（URL query 或 localStorage 镜像）时接管；
+    // 缺省 snapshot 时行为与静态 autoPlay 逐场景一致。
+    if (
+      Boolean(this.options.autoPlay) &&
+      resolveUrlSyncKeys(this.options.meta).has('autoRun') &&
+      Object.prototype.hasOwnProperty.call(this._urlSnapshot, 'autoRun')
+    ) {
+      return coerceAutoRun(this._urlSnapshot['autoRun']);
+    }
+    return Boolean(this.options.autoPlay);
+  }
+
   startAll(): void {
     this.transport?.play();
     this.perfMonitor?.start();
     this.scene?.startAll?.();
+    this._projectPlayingState();
   }
 
   pauseAll(): void {
     this.transport?.pause();
     this.perfMonitor?.stop();
     this.scene?.pauseAll?.();
+    this._projectPlayingState();
   }
 
   reset(): void {
     this.transport?.reset();
     this.perfMonitor?.stop();
     this.scene?.reset?.();
+    this._projectPlayingState();
     this.scene?.render();
-    const c = this.controls as { refresh?(): void } | null;
-    c?.refresh?.();
+    if (this.controls) {
+      syncControlsFromLiveParams({
+        params: paramsFromScene(this.scene),
+        handle: this.controls,
+        paramSync: this.options.paramSync
+      });
+    }
   }
 
   setTimeScale(scale: number): void {
@@ -601,16 +709,7 @@ export class SceneAdapter<
     try {
       if (this.scene?.setMode) {
         if (mode === 'presentation' && this._resolvedProfile) {
-          const sceneWithHints = this.scene as unknown as {
-            setMode(
-              m: 'normal' | 'presentation',
-              nextHints?: DemoRenderHints
-            ): void;
-          };
-          sceneWithHints.setMode(
-            mode,
-            hints ?? this._resolvedProfile.renderHints
-          );
+          this.scene.setMode(mode, hints ?? this._resolvedProfile.renderHints);
         } else {
           this.scene.setMode(mode);
         }

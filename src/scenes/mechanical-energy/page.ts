@@ -1,11 +1,12 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { readSceneParams, writeSceneParams } from '../../app/url-sync';
+import { writeOwnedSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { createControlCard } from '../../ui/components/ControlCard';
 import { mechanicalEnergyControlsSchema } from './controls-schema';
+import { createChromeScheduler } from '../page-utils';
 import {
-  createChromeScheduler,
   createMechanicalEnergyDataPanel,
   findMechanicalEnergyDataHost,
   mountDataPanel,
@@ -20,12 +21,11 @@ import {
   type MechanicalEnergyParams
 } from './scene.sim';
 
-const rawInitial = readSceneParams(mechanicalEnergyMeta);
 const NUMBER_KEYS = ['resistance', 'mass', 'gravity', 'pointPeriod'] as const;
 
 bootScenePage({
   meta: mechanicalEnergyMeta,
-  autoPlay: asBool(rawInitial.autoRun, false),
+  shouldAutoPlay: (_params, urlParams) => asBool(urlParams.autoRun, false),
   preferredLayout:
     typeof window !== 'undefined' && window.innerWidth <= 720
       ? 'mobile-stack'
@@ -43,7 +43,7 @@ bootScenePage({
     graphMaxHeight: 340,
     graphColumns: 1
   },
-  createScene: ({ canvas, theme, mode, demoHints }) => {
+  createScene: ({ canvas, theme, mode, demoHints, sceneWriter }) => {
     if (!canvas) throw new Error('mechanical-energy requires a canvas');
     const scene = createMechanicalEnergyScene({
       canvas,
@@ -57,7 +57,7 @@ bootScenePage({
     const originalStartAll = scene.startAll.bind(scene);
     const originalPauseAll = scene.pauseAll.bind(scene);
     const syncUrl = (): void => {
-      writeSceneParams(restoredUrlParams(scene.getParams()));
+      writeOwnedSceneParams(sceneWriter, restoredUrlParams(scene.getParams()));
     };
     return {
       ...scene,
@@ -176,22 +176,20 @@ bootScenePage({
     const chrome = createChromeScheduler(onChrome);
     chrome.start();
 
+    const syncFromScene = (): void => {
+      const p = energyScene.getParams();
+      renderer.setActiveSilently('environment', p.environment);
+      renderer.setVisible('resistance', shouldShowResistance(p.environment));
+      renderer.setValueSilently('resistance', p.resistance);
+      renderer.setValueSilently('mass', p.mass);
+      renderer.setValueSilently('gravity', p.gravity);
+      renderer.setValueSilently('pointPeriod', p.pointPeriod);
+      last = p;
+    };
+
     return {
-      setValue: (key: string, value: number | string | boolean) =>
-        renderer.setValue(key, value),
-      setActive: (key: string, value: string) => renderer.setActive(key, value),
-      refresh: () => {
-        const p = energyScene.getParams();
-        applying = true;
-        renderer.setActive('environment', p.environment);
-        renderer.setVisible('resistance', shouldShowResistance(p.environment));
-        renderer.setValue('resistance', p.resistance);
-        renderer.setValue('mass', p.mass);
-        renderer.setValue('gravity', p.gravity);
-        renderer.setValue('pointPeriod', p.pointPeriod);
-        applying = false;
-        last = p;
-      },
+      ...exposeSchemaHandle(renderer),
+      syncFromScene,
       dispose: () => {
         disposed = true;
         unsubscribe();

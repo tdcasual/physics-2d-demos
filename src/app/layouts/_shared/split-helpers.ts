@@ -265,9 +265,8 @@ export function applyResponsiveColumns(
 
   const leftPanel = container.querySelector('aside') as HTMLElement | null;
 
-  // Detect sidebar-hidden state（单一事实源 = dataset 标记，由
-  // sidebar-toggle / demo-profile 在写 0px 形态时同步维护；
-  // startsWith('0px') 仅作为标记缺失时的兼容回退）。
+  // Consumer-only projection: owner writes dataset.sidebarHidden.
+  // Style sniffing is a fallback when the projection has not been written yet.
   const currentColumns = container.style.gridTemplateColumns;
   const hiddenFlag = container.dataset.sidebarHidden;
   const isSidebarHidden =

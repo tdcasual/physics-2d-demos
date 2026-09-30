@@ -27,6 +27,8 @@ import type {
   CapabilityContext,
   LayoutSlots
 } from '../../src/app/layouts/types';
+import { SidebarStateOwner } from '../../src/app/layouts/sidebar-state';
+import { WorkspaceUiState } from '../../src/app/layouts/workspace-ui-state';
 
 function createCtx(container: HTMLElement): CapabilityContext {
   return {
@@ -39,7 +41,9 @@ function createCtx(container: HTMLElement): CapabilityContext {
     getCurrentLayoutId: () => 'split-right',
     getAvailableLayouts: () => [],
     on: () => () => {},
-    requestStageRepaint() {}
+    requestStageRepaint() {},
+    sidebar: new SidebarStateOwner(),
+    workspaceUi: new WorkspaceUiState()
   };
 }
 

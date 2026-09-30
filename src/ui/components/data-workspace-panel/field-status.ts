@@ -3,6 +3,7 @@
  * 只依赖类型与传入参数，不持有任何面板状态。
  */
 
+import { resolveRowLimits } from '../../../platform/data-workspace/spec-queries';
 import type {
   DataWorkspaceFieldSpec,
   DataWorkspaceSpec,
@@ -123,19 +124,10 @@ export function isFieldsOrientation(spec: DataWorkspaceSpec): boolean {
 }
 
 export function isFixedRowCount(spec: DataWorkspaceSpec): boolean {
-  const { minRows, maxRows } = resolveRowLimitsLocal(spec);
+  const { minRows, maxRows } = resolveRowLimits(spec);
   return minRows === maxRows;
 }
 
 export function isNaPlaceholder(field: FieldCheckState | undefined): boolean {
   return Boolean(field?.checked && field.raw === '—' && !field.stale);
-}
-
-function resolveRowLimitsLocal(spec: DataWorkspaceSpec): {
-  minRows: number;
-  maxRows: number;
-} {
-  const minRows = Math.max(1, Math.floor(spec.minRows ?? 1));
-  const maxRows = Math.max(minRows, Math.floor(spec.maxRows ?? minRows));
-  return { minRows, maxRows };
 }

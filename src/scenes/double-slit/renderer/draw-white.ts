@@ -9,6 +9,7 @@ import {
   lambdaToRgb
 } from '../scene.sim';
 import { SCENE_PALETTE, type ScenePalette } from './palette';
+import { WHITE_FRINGE_CACHE_X, WHITE_FRINGE_CACHE_Y } from './logical-metrics';
 
 // 白光条纹面板离屏缓存（每个 view 实例一份，由工厂创建并传入）
 export type WhiteFringeCache = {
@@ -191,11 +192,11 @@ export function drawWhiteFringeDisplay(
   if (!cache.cvs || cache.key !== key) {
     if (!cache.cvs) {
       cache.cvs = document.createElement('canvas');
-      cache.cvs.width = 382;
-      cache.cvs.height = 155;
+      cache.cvs.width = WHITE_FRINGE_CACHE_X;
+      cache.cvs.height = WHITE_FRINGE_CACHE_Y;
       cache.ctx = cache.cvs.getContext('2d');
     } else {
-      cache.ctx!.clearRect(0, 0, 382, 155);
+      cache.ctx!.clearRect(0, 0, WHITE_FRINGE_CACHE_X, WHITE_FRINGE_CACHE_Y);
     }
     const fc = cache.ctx!;
     const panelX = 1,

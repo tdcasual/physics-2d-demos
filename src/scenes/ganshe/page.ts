@@ -3,6 +3,7 @@ import { createGansheScene } from './scene.entry';
 import { gansheMeta } from './scene.meta';
 import { gansheControlsSchema } from './controls-schema';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { createParamMapper, createPresetApplier } from '../page-utils';
 import type { WaveParams } from './scene.sim';
 import { gansheParamMapping, ganshePresets } from './presets';
@@ -32,10 +33,15 @@ bootScenePage({
     readoutCollapsed: false,
     readoutLabel: '干涉分析'
   },
-  createScene: ({ canvas, theme, mode, demoHints }) => {
-    return createGansheScene({ canvas, theme, mode, demoHints });
+  createScene: ({ canvas, theme, mode, demoHints, sceneWriter }) => {
+    return createGansheScene({ canvas, theme, mode, demoHints, sceneWriter });
   },
-  createControls: ({ mount, scene, scheduleRender = () => scene.render() }) => {
+  createControls: ({
+    mount,
+    scene,
+    scheduleRender = () => scene.render(),
+    writeParam
+  }) => {
     const applyParam = createParamMapper<WaveParams>(
       gansheParamMapping,
       (params) => {
@@ -64,6 +70,13 @@ bootScenePage({
         if (key === 'preset') {
           if (applyPreset(String(value))) {
             renderer.setActive(key, String(value));
+            const p = scene.getParams();
+            writeParam?.('freq1', p.freq1);
+            writeParam?.('freq2', p.freq2);
+            writeParam?.('amp1', p.amp1);
+            writeParam?.('amp2', p.amp2);
+            writeParam?.('phaseDiff', p.phaseDiff);
+            writeParam?.('observerX', p.observerX);
           }
         } else if (key === 'mode') {
           const modeValue = String(value) as 'head-on' | 'single';
@@ -74,6 +87,7 @@ bootScenePage({
         } else {
           applyParam(key, value);
           scheduleRender();
+          writeParam?.(key, value);
         }
       },
       onAction: () => {
@@ -120,6 +134,7 @@ bootScenePage({
       (key, value) => {
         applyParam(key, value);
         scheduleRender();
+        writeParam?.(key, value);
       }
     );
 
@@ -150,6 +165,7 @@ bootScenePage({
       (key, value) => {
         applyParam(key, value);
         scheduleRender();
+        writeParam?.(key, value);
       }
     );
 
@@ -171,6 +187,7 @@ bootScenePage({
       (key, value) => {
         applyParam(key, value);
         scheduleRender();
+        writeParam?.(key, value);
       }
     );
 
@@ -182,7 +199,29 @@ bootScenePage({
 
     const sourceCards = [sourceACard, sourceBCard, phaseCard];
 
+    const paintSourceKey = (
+      key: string,
+      value: number,
+      silently: boolean
+    ): void => {
+      for (const card of sourceCards) {
+        if (silently) card.setValueSilently(key, value);
+        else card.setValue(key, value);
+      }
+    };
+
+    const syncFromScene = (): void => {
+      const params = scene.getParams();
+      renderer.setActiveSilently('mode', params.mode);
+      paintSourceKey('freq1', params.freq1, true);
+      paintSourceKey('amp1', params.amp1, true);
+      paintSourceKey('freq2', params.freq2, true);
+      paintSourceKey('amp2', params.amp2, true);
+      paintSourceKey('phaseDiff', params.phaseDiff, true);
+    };
+
     return {
+      ...exposeSchemaHandle(renderer),
       setValue(key: string, value: number | string | boolean) {
         if (key === 'preset' || key === 'mode') {
           renderer.setActive(key, String(value));
@@ -190,19 +229,32 @@ bootScenePage({
         }
         if (gansheParamMapping[key]) {
           const num = typeof value === 'number' ? value : Number(value);
-          if (Number.isFinite(num)) {
-            for (const card of sourceCards) card.setValue(key, num);
-          }
+          if (Number.isFinite(num)) paintSourceKey(key, num, false);
           return;
         }
         renderer.setValue(key, value);
       },
+      setValueSilently(key: string, value: number | string | boolean) {
+        if (key === 'preset' || key === 'mode') {
+          renderer.setActiveSilently(key, String(value));
+          return;
+        }
+        if (gansheParamMapping[key]) {
+          const num = typeof value === 'number' ? value : Number(value);
+          if (Number.isFinite(num)) paintSourceKey(key, num, true);
+          return;
+        }
+        renderer.setValueSilently(key, value);
+      },
       setActive(key: string, value: string) {
         renderer.setActive(key, value);
       },
+      setActiveSilently(key: string, value: string) {
+        renderer.setActiveSilently(key, value);
+      },
       setParam(key: string, value: number) {
         if (gansheParamMapping[key]) {
-          for (const card of sourceCards) card.setValue(key, value);
+          paintSourceKey(key, value, false);
         } else {
           renderer.setValue(key, value);
         }
@@ -210,7 +262,7 @@ bootScenePage({
       updatePreset(preset: string) {
         renderer.setActive('preset', preset);
       },
-      refreshObservers: observerManager.refresh,
+      syncFromScene,
       dispose() {
         renderer.dispose();
         observerManager.element.remove();

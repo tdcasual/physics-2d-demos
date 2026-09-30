@@ -41,25 +41,57 @@ export function drawMeshPipe(
 
 /* ── 水管 + 水流动画 ── */
 
-interface WaterParticle {
+export interface WaterParticle {
   t: number; // 0~1 沿管道位置
   yOffset: number; // 垂直偏移
   speedOffset: number;
   size: number;
 }
 
-function createWaterParticle(): WaterParticle {
+/** 模块级固定种子；各管段按 key 派生独立序列，重建时同一 key 得到同一粒子。 */
+const PARTICLE_SEED_BASE = 0xe4f4a107;
+
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a += 0x6d2b79f5;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function hashPoolKey(key: string): number {
+  let h = PARTICLE_SEED_BASE;
+  for (let i = 0; i < key.length; i++) {
+    h = Math.imul(h ^ key.charCodeAt(i), 16777619);
+  }
+  return h >>> 0;
+}
+
+function createWaterParticle(rng: () => number): WaterParticle {
   return {
-    t: Math.random(),
-    yOffset: (Math.random() - 0.5) * 0.6,
-    speedOffset: 0.8 + Math.random() * 0.4,
-    size: 0.5 + Math.random() * 0.8
+    t: rng(),
+    yOffset: (rng() - 0.5) * 0.6,
+    speedOffset: 0.8 + rng() * 0.4,
+    size: 0.5 + rng() * 0.8
   };
 }
 
 // 每段水管持有独立粒子池（按调用方传入的稳定 key），
 // 避免不同管段共享单一缓存导致每帧重新随机初始化（视觉抖动）
 const waterParticlePools = new Map<string, WaterParticle[]>();
+const waterParticleRngs = new Map<string, () => number>();
+
+function rngForPool(key: string): () => number {
+  let rng = waterParticleRngs.get(key);
+  if (!rng) {
+    rng = mulberry32(hashPoolKey(key));
+    waterParticleRngs.set(key, rng);
+  }
+  return rng;
+}
 
 function getWaterParticles(key: string, count: number): WaterParticle[] {
   let pool = waterParticlePools.get(key);
@@ -67,11 +99,28 @@ function getWaterParticles(key: string, count: number): WaterParticle[] {
     pool = [];
     waterParticlePools.set(key, pool);
   }
-  // count 仅随管段长度（窗口尺寸）变化：不足则补随机粒子，超出则截断，
+  // count 仅随管段长度（窗口尺寸）变化：不足则补确定性粒子，超出则截断，
   // 已有粒子保持稳定不跳动
-  while (pool.length < count) pool.push(createWaterParticle());
+  const rng = rngForPool(key);
+  while (pool.length < count) pool.push(createWaterParticle(rng));
   if (pool.length > count) pool.length = count;
   return pool;
+}
+
+/** 测试用：清空模块级池与 PRNG，模拟两次独立页面加载。 */
+export function resetWaterParticlePools(): void {
+  waterParticlePools.clear();
+  waterParticleRngs.clear();
+}
+
+/** 测试用：重置指定 key 后生成 count 个粒子的深拷贝快照。 */
+export function snapshotWaterParticles(
+  key: string,
+  count: number
+): WaterParticle[] {
+  waterParticlePools.delete(key);
+  waterParticleRngs.delete(key);
+  return getWaterParticles(key, count).map((p) => ({ ...p }));
 }
 
 // 水波渐变色只随（几何, 压力档位, 主题色）变化，按帧复用避免每段每帧重建

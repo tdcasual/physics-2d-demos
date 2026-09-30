@@ -18,7 +18,7 @@ describe('spring-oscillator controls', () => {
       ui: { createControlCard: controlCardFactory }
     });
     // controls 使用 setTimeout 延迟渲染，在 happy-dom 中需要手动刷新
-    controls.refresh();
+    controls.syncFromScene();
     return { mount, scene, controls, onStatus };
   }
 
@@ -100,11 +100,11 @@ describe('spring-oscillator controls', () => {
     expect(scene.sim.oscillators[1].startDelay).toBeCloseTo(T / 2, 6);
   });
 
-  it('refresh re-renders the list', () => {
+  it('syncFromScene re-renders the list', () => {
     const { mount, scene, controls } = setup();
     const before = mount.innerHTML;
     scene.addOscillator();
-    controls.refresh();
+    controls.syncFromScene();
     const after = mount.innerHTML;
     expect(after).not.toBe(before);
   });

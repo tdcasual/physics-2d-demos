@@ -17,13 +17,13 @@
 
 ## 架构设计
 
-| 文档                                                                           | 说明                                                   |
-| ------------------------------------------------------------------------------ | ------------------------------------------------------ |
-| [layout-master-system-design.md](layout-master-system-design.md)               | 布局母版系统设计：接口定义、架构图、设计约束、实施步骤 |
-| [layout-master-system-impl.md](layout-master-system-impl.md)                   | 实施总结：已完成的 Phase 清单、文件结构、关键决策      |
-| [layout-master-system-pixel-perfect.md](layout-master-system-pixel-perfect.md) | 像素级还原指南：布局比例、断点、安全区域               |
-| [layout-v2-design.md](layout-v2-design.md)                                     | 布局 V2 设计提案（历史）                               |
-| [layout-v2-summary.md](layout-v2-summary.md)                                   | 布局 V2 实施总结（历史）                               |
+| 文档                                                                           | 说明                                                               |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| [layout-master-system-design.md](layout-master-system-design.md)               | 布局母版系统设计（历史快照）：接口定义、架构图、设计约束、实施步骤 |
+| [layout-master-system-impl.md](layout-master-system-impl.md)                   | 实施总结（历史快照）：已完成的 Phase 清单、文件结构、关键决策      |
+| [layout-master-system-pixel-perfect.md](layout-master-system-pixel-perfect.md) | 像素级还原指南（历史快照）：布局比例、断点、安全区域               |
+| [layout-v2-design.md](layout-v2-design.md)                                     | 布局 V2 设计提案（历史快照）                                       |
+| [layout-v2-summary.md](layout-v2-summary.md)                                   | 布局 V2 实施总结（历史快照）                                       |
 
 ---
 

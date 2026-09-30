@@ -1,6 +1,10 @@
 # 布局系统修复：偏好约束、lab 读数契约化、并发与池隔离（v2）
 
 > 状态：**已实施（2026-09-25）**。2026-09-25 布局系统/架构审计的修复方案。
+> **2026-09-27 v10**：历史「测试绿但实现错」的 timeout 解锁路径已由串行
+> switch coordinator 取代——watchdog 只 abort 当前等待，不清除 `_switching`；
+> 真实 `registry.create` abort-race 与 quarantine 有独立测试
+> （`layout-registry.spec.ts`、`scene-container-registry.spec.ts`）。
 > 实施结果：全量单测 289 文件 / 7406 通过（新增 T1–T10 及 default-strategies
 > 按 4 策略契约重写）；`verify:scene` ticker-tape / projectile-components /
 > mechanical-energy 各 7 步全过；`quality:core` exit 0；bundle 预算无回归。

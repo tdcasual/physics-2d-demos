@@ -1,5 +1,7 @@
 # 数据处理/图像分析两步工作区标准化方案
 
+> 状态：已执行。归档记录，不作为现行方案。
+
 > 2026-09-20 · 执行者：grok（批次 A → 批次 B） · 验收：kimi 按批次验收清单独立复跑
 > 前置：`docs/plans/2026-09-20-data-workspace-compact-ticker-tape.md` 批次 1/2 已完成并验收（面板紧凑化 + ticker-tape 初版接入，均在未提交的 working tree 中）。
 

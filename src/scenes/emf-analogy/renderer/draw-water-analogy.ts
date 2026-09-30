@@ -84,7 +84,7 @@ export function drawWaterAnalogy(options: WaterDrawOptions): void {
   const { ctx, width, height, snapshot, theme, phase, responsiveScale } =
     options;
   const colors = waterColors(theme);
-  const s = responsiveScale;
+  const scale = responsiveScale;
 
   // 背景
   ctx.fillStyle = colors.bg;
@@ -94,15 +94,15 @@ export function drawWaterAnalogy(options: WaterDrawOptions): void {
   const cy = height / 2;
   const pipeY = cy;
 
-  const componentSize = Math.min(width * 0.13, height * 0.18, 70 * s);
-  const pipeWidth = Math.max(14, 20 * s);
+  const componentSize = Math.min(width * 0.13, height * 0.18, 70 * scale);
+  const pipeWidth = Math.max(14, 20 * scale);
 
   // 元件水平分布
   const pumpX = width * 0.15;
   const turbineX = width * 0.42;
   const valveX = width * 0.68;
   const meshX = width * 0.88;
-  const meshW = Math.max(20, 28 * s);
+  const meshW = Math.max(20, 28 * scale);
 
   // 动画参数
   const currentI = snapshot.state.currentI;

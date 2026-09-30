@@ -90,6 +90,7 @@ describe('ci scripts and workflow', () => {
     expect(script).toContain('s.suites');
     expect(script).toContain('/^(desktop|mobile) /');
     expect(script).toContain('canary.ok !== true');
+    expect(script).toContain('if (!process.env.VISUAL_GREP)');
     expect(script).toContain('r.status === "skipped"');
     expect(script).toContain('process.exit(1)');
     expect(script).toContain('--shm-size=1g');
@@ -99,21 +100,36 @@ describe('ci scripts and workflow', () => {
     const canaryIdx = spec.indexOf(
       'linux PNG authority env is fail-closed in the container'
     );
-    const optOutIdx = spec.indexOf(
-      'snapshot opt-out list only references discovered scenes'
+    const coverageIdx = spec.indexOf(
+      'visual baseline coverage accounts for every discovered scene'
+    );
+    const dynamicIdx = spec.indexOf(
+      'dynamic screenshot allowlist only contains discovered scenes'
     );
     const describeIdx = spec.indexOf("test.describe('scene screenshots'");
     const skipIdx = spec.indexOf('test.skip(');
     expect(canaryIdx).toBeGreaterThan(-1);
-    expect(optOutIdx).toBeGreaterThan(-1);
+    expect(coverageIdx).toBeGreaterThan(-1);
+    expect(dynamicIdx).toBeGreaterThan(-1);
     expect(describeIdx).toBeGreaterThan(-1);
     expect(skipIdx).toBeGreaterThan(-1);
     expect(canaryIdx).toBeLessThan(describeIdx);
-    expect(optOutIdx).toBeLessThan(describeIdx);
+    expect(coverageIdx).toBeLessThan(describeIdx);
+    expect(dynamicIdx).toBeLessThan(describeIdx);
     expect(skipIdx).toBeGreaterThan(describeIdx);
     expect(spec.indexOf('for (const scene of SCENES)')).toBeGreaterThan(
       describeIdx
     );
+    expect(script).toContain('baseline-coverage.json');
+    expect(script).toContain('screenshotSpecCount');
+    expect(script).toContain('--grep');
+    expect(script).toContain('--output');
+    expect(script).toContain('/tmp/visual-grep.dat');
+    expect(script).toContain('args.push("--grep", grep)');
+    expect(script).toContain('visual-filtered.log');
+    expect(script).not.toContain('export VISUAL_GREP=\\"');
+    expect(script).toContain('cp -a /src/. /work/');
+    expect(script).not.toContain('rm -rf /work\n');
   });
 
   it('keeps coverage reporters aligned with codecov upload', () => {

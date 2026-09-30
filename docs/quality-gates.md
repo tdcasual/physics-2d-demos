@@ -17,12 +17,12 @@ pnpm quality:full
 ```
 
 `pnpm check:bundle` 依赖 `dist/`，因此必须在 `pnpm build` 之后运行。
-`quality:core` 与 CI 的静态段对齐：结构检查、循环依赖、`check:audit`、lint、`format:check`、类型、带覆盖率的单元/契约测试、构建、bundle budget。
+`quality:core` 与 CI 的静态段对齐：结构检查（`check:scenes`）、脚手架（`check:scaffold`）、布局（`check:layouts`）、循环依赖、`check:audit`、lint、`format:check`、类型、带覆盖率的单元/契约测试、构建、bundle budget。
 `quality:full` 在 core 之后追加 E2E 与视觉测试（`PLAYWRIGHT_SKIP_BUILD=1`，复用刚产出的 `dist/`）。
 
 CI（`.github/workflows/ci.yml`）额外上传 Codecov；本地不必跑 Codecov。覆盖率实测通常高于 `vite.config.ts` 阈值，禁止下调该阈值来「修」失败。
 
-Vitest 覆盖率阈值以 `vite.config.ts` 为唯一事实来源：lines 65%、functions 65%、branches 70%、statements 65%。`quality:full` 只执行一次带覆盖率的 Vitest，随后只构建一次；E2E 与 visual 共用该 `dist/`，避免重复工作掩盖真实失败。
+Vitest 覆盖率阈值以 `vite.config.ts` 的 `test.coverage.thresholds` 为唯一来源；本文不固化数值。运行 `pnpm test:coverage` 获取实绩。`quality:full` 只执行一次带覆盖率的 Vitest，随后只构建一次；E2E 与 visual 共用该 `dist/`，避免重复工作掩盖真实失败。
 
 Playwright 分工如下：
 
@@ -32,7 +32,13 @@ Playwright 分工如下：
 
 浏览器门禁是合并前要求。若本机浏览器环境被明确阻断，应记录命令和错误并由 CI 补跑；不能因环境问题删除测试、增加 skip 或声称完整门禁已通过。
 
-**视觉权威环境**：Linux 基线以 `scripts/visual-linux-container.sh`（及 CI 的 `update_snapshots`）为准，Darwin 以 Mac 本机或 `update-darwin-snapshots.yml` 为准。开发机直接跑 `pnpm quality:full` / `pnpm test:visual` 因字体与光栅化漂移**不是**权威结果，不能用来判定像素回归或更新基线。
+E2E / visual 验收须用独立端口，或先确认无外部 `vite preview` 占用 5177：Playwright `reuseExistingServer` 会接到别人构建的 `dist/`，结果不可信。
+
+本地跑 Vitest 时不要并发开多个 `vitest` 进程（`electrostatic-induction` round-trip 等用例在双进程下会 5s 超时 flake）。
+
+门禁结论必须与宿主状态绑定：引用 `quality:core` / `verify:scene` 的 exit 0 时记录 `loadavg`；同一提交在不同负载下 exit 不同即视为负载类失败，须隔离复跑失败用例（单文件重跑）后再下结论。禁止把单次 exit 0 写成「门禁绿」而不附负载背景。
+
+**视觉权威环境**：Linux 基线以 `scripts/visual-linux-container.sh`（及 CI 的 `update_snapshots`）为准，Darwin 以 Mac 本机或 `update-darwin-snapshots.yml` 为准。开发机直接跑 `pnpm quality:full` / `pnpm test:visual` 因字体与光栅化漂移**不是**权威结果，不能用来判定像素回归或更新基线。审阅 visual 结果时必须同时报 `passed` 与 `skipped` 计数并点名 skipped 的用例标题——Linux 宿主机裸跑时像素截图用例会被平台规则静默跳过（`visual-regression.spec.ts` 的 `test.skip` + `linuxScreenshotsAuthorized()`）而套件整体仍 exit 0；skipped 非空时不得声称「像素已验证」。
 
 ## Bundle Budget
 

@@ -181,8 +181,10 @@ describe('force-composition sim', () => {
   it('keeps the 30° wedge near the original SVG points', () => {
     const g = inclineGeometry(30);
     expect(g.rightAngle).toEqual({ x: 140, y: 480 });
+    // 保留：原 SVG 30° 楔 hypot(340,197)*cos30°=480.304，Δ=3.04e-1 无法进 precision 1
     expect(g.baseEnd.x).toBeCloseTo(480, 0);
-    expect(g.topEnd.y).toBeCloseTo(283.5, 0);
+    // hypot*sin30°=283.525，Δ=2.54e-2 → precision 1
+    expect(g.topEnd.y).toBeCloseTo(283.5, 1);
   });
 
   it('makes the hypotenuse angle equal the incline parameter at 15/30/60', () => {

@@ -1,7 +1,8 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { readSceneParams, writeSceneParams } from '../../app/url-sync';
+import { writeOwnedSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { variableWorkControlsSchema } from './controls-schema';
 import { createVariableWorkScene } from './scene.entry';
 import { variableWorkMeta } from './scene.meta';
@@ -14,12 +15,11 @@ import {
   type VariableWorkParams
 } from './scene.sim';
 
-const rawInitial = readSceneParams(variableWorkMeta);
 const NUMBER_KEYS = ['mass', 'k', 'power', 'microsteps'] as const;
 
 bootScenePage({
   meta: variableWorkMeta,
-  autoPlay: asBool(rawInitial.autoRun, false),
+  shouldAutoPlay: (_params, urlParams) => asBool(urlParams.autoRun, false),
   preferredLayout:
     typeof window !== 'undefined' && window.innerWidth <= 720
       ? 'mobile-stack'
@@ -37,7 +37,7 @@ bootScenePage({
     graphMaxHeight: 360,
     graphColumns: 1
   },
-  createScene: ({ canvas, theme, mode, demoHints }) => {
+  createScene: ({ canvas, theme, mode, demoHints, sceneWriter }) => {
     if (!canvas) throw new Error('variable-work requires a canvas');
     const scene = createVariableWorkScene({
       canvas,
@@ -51,7 +51,8 @@ bootScenePage({
     const originalStartAll = scene.startAll.bind(scene);
     const originalPauseAll = scene.pauseAll.bind(scene);
     const syncUrl = (): void => {
-      writeSceneParams(
+      writeOwnedSceneParams(
+        sceneWriter,
         restoredUrlParams(
           scene.getParams(),
           scene.getTransportState().isPlaying
@@ -115,7 +116,19 @@ bootScenePage({
     renderer.setVisible('k', shouldShowK(workScene.getParams().mode));
     renderer.setVisible('power', shouldShowPower(workScene.getParams().mode));
 
+    const syncFromScene = (): void => {
+      const params = workScene.getParams();
+      renderer.setActiveSilently('mode', params.mode);
+      renderer.setValueSilently('mass', params.mass);
+      renderer.setValueSilently('k', params.k);
+      renderer.setValueSilently('power', params.power);
+      renderer.setValueSilently('microsteps', params.microsteps);
+      renderer.setVisible('k', shouldShowK(params.mode));
+      renderer.setVisible('power', shouldShowPower(params.mode));
+    };
+
     return {
+      ...exposeSchemaHandle(renderer),
       setValue: (key: string, value: number | string | boolean) => {
         applying = true;
         renderer.setValue(key, value);
@@ -131,19 +144,7 @@ bootScenePage({
         }
         applying = false;
       },
-      refresh: () => {
-        applying = true;
-        const params = workScene.getParams();
-        renderer.setActive('mode', params.mode);
-        renderer.setValue('mass', params.mass);
-        renderer.setValue('k', params.k);
-        renderer.setValue('power', params.power);
-        renderer.setValue('microsteps', params.microsteps);
-        renderer.setVisible('k', shouldShowK(params.mode));
-        renderer.setVisible('power', shouldShowPower(params.mode));
-        applying = false;
-      },
-      dispose: () => renderer.dispose()
+      syncFromScene
     };
   },
   paramSync: {

@@ -67,7 +67,13 @@ export function createLayoutSwitch(
         const nextIdx = (currentIdx + 1) % layouts.length;
         // 切换期间本实例随旧布局被 orchestrator 销毁，新布局装配新的
         // layout-switch 实例（capability 一律销毁重建）。
-        ctx.switchLayout(layouts[nextIdx].id, true);
+        // Promise<void> | void 不能直接 .catch（TS2339）；host 适配器已
+        // 旁路 surfaceSwitchError，此处只收口未处理 rejection。
+        void Promise.resolve(ctx.switchLayout(layouts[nextIdx].id, true)).catch(
+          (err: unknown) => {
+            console.error('[layout-switch] switchLayout failed:', err);
+          }
+        );
       };
 
       btn.addEventListener('click', handler);

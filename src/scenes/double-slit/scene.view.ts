@@ -48,6 +48,11 @@ import {
   drawWhiteInterferenceOverlay,
   drawWhiteInterferencePattern
 } from './renderer/draw-white';
+import {
+  TUBE_FULL,
+  TUBE_HALF,
+  WAVE_REACH_SHORT
+} from './renderer/logical-metrics';
 
 export type CreateDoubleSlitViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -237,7 +242,8 @@ export function createDoubleSlitView(
       }
 
       if (step >= 3) {
-        const maxRadius = step >= 4 ? POS.screen - POS.doubleSlit + 50 : 60;
+        const maxRadius =
+          step >= 4 ? POS.screen - POS.doubleSlit + 50 : WAVE_REACH_SHORT;
         if (white) {
           drawWhiteWaves(
             c,
@@ -289,14 +295,19 @@ export function createDoubleSlitView(
       if (step === 4) {
         // 先画遮光筒底色
         c.fillStyle = scene.tubeBg;
-        c.fillRect(POS.doubleSlit, CY - 100, POS.screen - POS.doubleSlit, 200);
+        c.fillRect(
+          POS.doubleSlit,
+          CY - TUBE_HALF,
+          POS.screen - POS.doubleSlit,
+          TUBE_FULL
+        );
         c.strokeStyle = scene.tubeBorder;
         c.lineWidth = 2;
         c.strokeRect(
           POS.doubleSlit,
-          CY - 100,
+          CY - TUBE_HALF,
           POS.screen - POS.doubleSlit,
-          200
+          TUBE_FULL
         );
         // 叠加明暗带
         if (white) {

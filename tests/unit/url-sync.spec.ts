@@ -4,7 +4,11 @@ import {
   writeSceneParams,
   resolveUrlSyncKeys,
   applySceneUrlParams,
-  restoreSceneParams
+  restoreSceneParams,
+  createSceneParamWriter,
+  persistSceneParams,
+  resetUrlSyncOwners,
+  writeOwnedSceneParams
 } from '../../src/app/url-sync';
 import type { SceneMeta } from '../../src/platform/scene-contract';
 import type {
@@ -345,6 +349,103 @@ describe('url-sync', () => {
       });
       expect(scene.setParams).toHaveBeenCalledWith({ speed: 99 });
       expect(scene.setParams).not.toHaveBeenCalledWith({ speed: 30 });
+    });
+
+    it('prefers silent control setters when both are present', () => {
+      window.history.replaceState({}, '', '/test.html?speed=30');
+      const scene = createFakeScene();
+      const setValue = vi.fn();
+      const setValueSilently = vi.fn();
+      applySceneUrlParams(
+        mockMeta,
+        createTarget(scene, { setValue, setValueSilently })
+      );
+      expect(setValueSilently).toHaveBeenCalledWith('speed', 30);
+      expect(setValue).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('owner-scoped writers', () => {
+    beforeEach(() => {
+      resetUrlSyncOwners();
+      vi.useFakeTimers();
+      window.history.replaceState(
+        {},
+        '',
+        '/test.html?layout=lab-stage&theme=dark&audit=keep'
+      );
+    });
+
+    afterEach(() => {
+      resetUrlSyncOwners();
+      vi.useRealTimers();
+    });
+
+    it('merges different keys and last-write-wins the same key', () => {
+      const writer = createSceneParamWriter(['speed', 'angle']);
+      writer.write({ speed: 10 });
+      writer.write({ angle: 45, speed: 20 });
+      vi.advanceTimersByTime(150);
+      const url = new URL(window.location.href);
+      expect(url.searchParams.get('speed')).toBe('20');
+      expect(url.searchParams.get('angle')).toBe('45');
+      expect(url.searchParams.get('layout')).toBe('lab-stage');
+      expect(url.searchParams.get('theme')).toBe('dark');
+      expect(url.searchParams.get('audit')).toBe('keep');
+      writer.close();
+    });
+
+    it('flush(A) does not cancel B timer or pending patch', () => {
+      const a = createSceneParamWriter(['speed']);
+      const b = createSceneParamWriter(['angle']);
+      a.write({ speed: 11 });
+      b.write({ angle: 60 });
+      a.flush();
+      const mid = new URL(window.location.href);
+      expect(mid.searchParams.get('speed')).toBe('11');
+      expect(mid.searchParams.get('angle')).toBeNull();
+      vi.advanceTimersByTime(150);
+      const url = new URL(window.location.href);
+      expect(url.searchParams.get('angle')).toBe('60');
+      a.close();
+      b.close();
+    });
+
+    it('close flushes then rejects later writes', () => {
+      const writer = createSceneParamWriter(['speed']);
+      writer.write({ speed: 7 });
+      writer.close();
+      const url = new URL(window.location.href);
+      expect(url.searchParams.get('speed')).toBe('7');
+      writer.write({ speed: 99 });
+      vi.advanceTimersByTime(150);
+      expect(new URL(window.location.href).searchParams.get('speed')).toBe('7');
+    });
+
+    it('persistSceneParams flushes pending patches into localStorage', () => {
+      const writer = createSceneParamWriter(['speed']);
+      writer.write({ speed: 33 });
+      persistSceneParams('test');
+      const stored = JSON.parse(
+        localStorage.getItem('physics-demos-params-test') ?? '{}'
+      ) as Record<string, string>;
+      expect(stored.speed).toBe('33');
+      writer.close();
+      localStorage.removeItem('physics-demos-params-test');
+    });
+
+    it('writeOwnedSceneParams uses the injected writer', () => {
+      const writer = createSceneParamWriter(['speed']);
+      const spy = vi.spyOn(writer, 'write');
+      writeOwnedSceneParams(writer, { speed: 4 });
+      expect(spy).toHaveBeenCalledWith({ speed: 4 });
+      writer.close();
+    });
+
+    it('writeOwnedSceneParams does not fall back to a global writer', () => {
+      expect(() => writeOwnedSceneParams(null, { speed: 1 })).toThrow(
+        /requires a scene-generation writer/
+      );
     });
   });
 });

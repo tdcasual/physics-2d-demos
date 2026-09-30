@@ -48,6 +48,7 @@ export function createFieldLinesScene(
     q1: number;
     q2: number;
   };
+  getParams(): { n: number; q1: number; q2: number };
   pickCharge(normX: number, normY: number): number | null;
   moveCharge(index: number, normX: number, normY: number): void;
   addCharge(q: number): void;
@@ -170,6 +171,10 @@ export function createFieldLinesScene(
       base.notify();
       const after = sim.getParams();
       return { n: after.n, q1: after.q1, q2: after.q2 };
+    },
+    getParams(): { n: number; q1: number; q2: number } {
+      const current = sim.getParams();
+      return { n: current.n, q1: current.q1, q2: current.q2 };
     },
     pickCharge(normX: number, normY: number): number | null {
       const cs =

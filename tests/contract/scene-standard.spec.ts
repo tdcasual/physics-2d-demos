@@ -47,28 +47,11 @@ const PRESENTATION_PATTERN = /getRenderTokens|demoHints/;
 const PRESENTATION_EXEMPT: string[] = [];
 
 /**
- * Historical renderers predate the strict large-literal rule. Keep this list
- * frozen and shrink it when a renderer is modernized; new scenes are checked
- * automatically because their id is absent from the list.
+ * Unscaled large Canvas-dimension exemption list. Closed empty at v15
+ * Phase E batch 4 (16 → 0). Must stay empty; new scenes are checked
+ * automatically and must not be added here.
  */
-const LARGE_RENDER_LITERAL_EXEMPT = new Set([
-  'chase-meet',
-  'doppler-effect',
-  'double-slit',
-  'electrification',
-  'emf-analogy',
-  'field-lines',
-  'ganshe',
-  'interference-formula',
-  'mechanical-wave',
-  'micrometer',
-  'projectile',
-  'spring-oscillator',
-  'thin-film',
-  'vernier-caliper',
-  'vt-integral',
-  'wedge'
-]);
+const LARGE_RENDER_LITERAL_EXEMPT = new Set<string>();
 
 const CANVAS_SPATIAL_METHODS = new Set([
   'arc',
@@ -364,26 +347,35 @@ describe('scene modernization standard (anti-drift ratchet)', () => {
       expect(violations).toHaveLength(4);
     });
 
-    it('future scenes contain no unscaled large Canvas dimensions', () => {
-      const violations = sceneIds
-        .filter((id) => !LARGE_RENDER_LITERAL_EXEMPT.has(id))
-        .flatMap((id) =>
-          findUnscaledLargeRenderLiterals(id, sceneRenderSources.get(id)!).map(
-            (violation) => `${id}:${violation}`
-          )
-        );
-      expect(
-        violations,
-        '渲染代码含未缩放的大尺寸裸数字（格式 场景id:行:列 (数值)）：' +
-          '在对应 scene.view.ts / renderer 中把尺寸改为乘以 responsiveScale' +
-          '（canvas.dataset.responsiveScale）、或经 getResponsiveScale / ' +
-          'scaledSize / viewport 尺寸推导；新场景禁止加入 ' +
-          'LARGE_RENDER_LITERAL_EXEMPT 豁免清单。规范与示例见 AGENTS.md ' +
-          '「Canvas 响应式渲染规范」与 src/core/canvas-sizing.ts'
-      ).toEqual([]);
-    });
+    it(
+      'future scenes contain no unscaled large Canvas dimensions',
+      { timeout: 20_000 },
+      () => {
+        const violations = sceneIds
+          .filter((id) => !LARGE_RENDER_LITERAL_EXEMPT.has(id))
+          .flatMap((id) =>
+            findUnscaledLargeRenderLiterals(
+              id,
+              sceneRenderSources.get(id)!
+            ).map((violation) => `${id}:${violation}`)
+          );
+        expect(
+          violations,
+          '渲染代码含未缩放的大尺寸裸数字（格式 场景id:行:列 (数值)）：' +
+            '在对应 scene.view.ts / renderer 中把尺寸改为乘以 responsiveScale' +
+            '（canvas.dataset.responsiveScale）、或经 getResponsiveScale / ' +
+            'scaledSize / viewport 尺寸推导；新场景禁止加入 ' +
+            'LARGE_RENDER_LITERAL_EXEMPT 豁免清单。规范与示例见 AGENTS.md ' +
+            '「Canvas 响应式渲染规范」与 src/core/canvas-sizing.ts'
+        ).toEqual([]);
+      }
+    );
 
     it('large-render-literal exemption list contains only known scenes', () => {
+      expect(
+        LARGE_RENDER_LITERAL_EXEMPT.size,
+        'LARGE_RENDER_LITERAL_EXEMPT 已关闭（冻 0 id）；只许保持为空，新场景禁止加入'
+      ).toBe(0);
       expect(
         [...LARGE_RENDER_LITERAL_EXEMPT].filter((id) => !sceneIds.includes(id)),
         'LARGE_RENDER_LITERAL_EXEMPT 含不存在的场景 id（拼写错误或场景已删除）：' +

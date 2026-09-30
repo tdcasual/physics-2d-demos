@@ -82,6 +82,12 @@ export interface LayoutConfig {
    * 用于"实验阶段不需要图表、仅图像分析步需要"的场景。
    */
   graphInitiallyHidden?: boolean;
+  /** 读数面板默认折叠 */
+  readoutCollapsed?: boolean;
+  /** 读数面板标题 */
+  readoutLabel?: string;
+  /** 是否创建 graph slot */
+  hasGraph?: boolean;
   /** 场景标题（由 bootstrapper 注入），用于 canvas aria-label 等无障碍文本 */
   title?: string;
 }
@@ -141,7 +147,10 @@ export interface CapabilityContext {
   /** 设置模式（触发 mode change 流程） */
   setMode(mode: 'normal' | 'presentation'): void;
   /** 切换到指定布局 */
-  switchLayout(layoutId: string, savePreference?: boolean): void;
+  switchLayout(
+    layoutId: string,
+    savePreference?: boolean
+  ): Promise<void> | void;
   /** 获取当前布局 ID */
   getCurrentLayoutId(): string;
   /** 获取所有可用布局 */
@@ -157,6 +166,10 @@ export interface CapabilityContext {
    * 替代伪造的 window resize 事件。
    */
   requestStageRepaint(): void;
+  /** Canonical sidebar visibility (user hidden vs presentation suppress). */
+  sidebar: import('./sidebar-state').SidebarStateOwner;
+  /** Canonical workspace chrome/step (survives capability rebuild). */
+  workspaceUi: import('./workspace-ui-state').WorkspaceUiState;
 }
 
 /** Capability 实例 — 挂载后返回 */
@@ -203,7 +216,22 @@ export interface ILayout {
   /** 声明式能力列表 — 容器据此自动装配读数面板、运输控制等可插拔能力。 */
   readonly capabilities: CapabilityDeclaration[];
 
+  /**
+   * Mount the layout DOM.
+   *
+   * Built-in layouts complete synchronously (the Promise is already
+   * settled in the same turn). Recovery awaits this; do not add new
+   * async work (timers, network, rAF) on the mount/recovery path.
+   */
   mount(): Promise<LayoutSlots>;
+  /**
+   * Tear down the layout DOM.
+   *
+   * Built-in layouts complete synchronously (the Promise is already
+   * settled in the same turn). Callers that fire-and-forget MUST observe
+   * rejection (`.catch` / `console.error`). Do not add new async work in
+   * implementations.
+   */
   unmount(): Promise<void>;
   setTheme(theme: Theme): void;
   handleResize(width: number, height: number): void;
@@ -223,6 +251,8 @@ export interface ILayout {
   updateStatus?(text: string, level?: string): void;
   /** 更新内部配置（实例池复用时调用） */
   _updateConfig?(config?: LayoutConfig): void;
+  /** Structural reuse key; omit DOM/function fields. */
+  getReuseKey?(config?: LayoutConfig): string;
 }
 
 // ============================================================================
@@ -239,7 +269,11 @@ export interface Scene {
   renderReadout?(container: HTMLElement): void;
   renderHeader?(container: HTMLElement): void;
 
-  onLayoutWillChange?(from: string, to: string): Promise<void>;
+  onLayoutWillChange?(
+    from: string,
+    to: string,
+    signal?: AbortSignal
+  ): Promise<void>;
   onLayoutDidChange?(to: string): void;
 
   mount?(): void;
@@ -284,6 +318,10 @@ export interface SceneContainer {
   getUserPreferredLayout(): string | null;
   setTheme(theme: Theme): void;
   getTheme(): Theme;
+  getMode(): 'normal' | 'presentation';
+  setMode(mode: 'normal' | 'presentation'): void;
+  getSwitchState(): import('./switch-errors').LayoutSwitchState;
+  resetSwitchQuarantine(): boolean;
 
   on<K extends keyof SceneContainerEvents>(
     event: K,
@@ -310,6 +348,13 @@ export interface SwitchOptions {
   animate?: boolean;
   transition?: LayoutTransition;
   savePreference?: boolean;
+  /**
+   * Scene replacement (`setScene` → `_doSetScene`) unmounts the outgoing
+   * scene before `switchLayout`. Skip `onLayoutWillChange` so the hook is
+   * not fired on the incoming scene. Same-scene layout switches leave this
+   * unset and still notify the live scene.
+   */
+  skipWillChange?: boolean;
 }
 
 export interface CreateContainerOptions {
@@ -345,8 +390,19 @@ export type SceneContainerEvents = {
   'layout:mode': {
     mode: string;
     profile?: import('../../platform/demo-profile').ResolvedDemoProfile | null;
+    reason?: string;
+  };
+  'layout:switch-error': {
+    generation: number;
+    error: unknown;
+    state: import('./switch-errors').LayoutSwitchState;
   };
   'slot:toggle': { slot: SlotName; collapsed: boolean };
+};
+
+/** Options for `layoutRegistry.create` (abort guards). */
+export type LayoutCreateOptions = {
+  signal?: AbortSignal;
 };
 
 // ============================================================================

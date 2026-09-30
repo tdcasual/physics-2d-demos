@@ -1,18 +1,17 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { readSceneParams, writeSceneParams } from '../../app/url-sync';
+import { writeOwnedSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { rodModelControlsSchema } from './controls-schema';
 import { asRodModel, createRodModelScene } from './scene.entry';
 import { rodModelMeta } from './scene.meta';
 import { asBool, restoredUrlParams, type RodParams } from './scene.sim';
 
-const rawInitial = readSceneParams(rodModelMeta);
-
 bootScenePage({
   meta: rodModelMeta,
-  autoPlay:
-    rawInitial.autoRun === undefined ? true : asBool(rawInitial.autoRun, true),
+  shouldAutoPlay: (_params, urlParams) =>
+    urlParams.autoRun === undefined ? true : asBool(urlParams.autoRun, true),
   preferredLayout: 'split-right-graph-bottom',
   layoutConfig: {
     defaultLeftRatio: 0.32,
@@ -27,7 +26,7 @@ bootScenePage({
     graphMaxHeight: 340,
     graphColumns: 1
   },
-  createScene: ({ canvas, theme, mode, demoHints }) => {
+  createScene: ({ canvas, theme, mode, demoHints, sceneWriter }) => {
     if (!canvas) throw new Error('rod-model requires a canvas');
     const scene = createRodModelScene({ canvas, theme, mode, demoHints });
     const scheduler = createRenderScheduler(() => scene.render());
@@ -36,7 +35,7 @@ bootScenePage({
     const originalStartAll = scene.startAll.bind(scene);
     const originalPauseAll = scene.pauseAll.bind(scene);
     const syncUrl = (): void => {
-      writeSceneParams(restoredUrlParams(scene.getParams()));
+      writeOwnedSceneParams(sceneWriter, restoredUrlParams(scene.getParams()));
     };
     return {
       ...scene,
@@ -88,12 +87,7 @@ bootScenePage({
       },
       onAction: () => {}
     });
-    return {
-      setValue: (key: string, value: number | string | boolean) =>
-        renderer.setValue(key, value),
-      setActive: (key: string, value: string) => renderer.setActive(key, value),
-      dispose: () => renderer.dispose()
-    };
+    return exposeSchemaHandle(renderer);
   },
   paramSync: {
     applyParam: (key, value, ctx) => {

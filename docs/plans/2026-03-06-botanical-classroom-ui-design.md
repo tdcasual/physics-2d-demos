@@ -1,5 +1,7 @@
 # Botanical Classroom UI Design
 
+> 状态：历史快照。归档设计/实施记录，不作为现行方案。
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Evolve the navigation page and modern teaching pages into a cohesive "植物园课堂" UI while preserving readability and teaching-first structure.

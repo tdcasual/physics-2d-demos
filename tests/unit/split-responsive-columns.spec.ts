@@ -2,6 +2,8 @@ import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 import { applyResponsiveColumns } from '../../src/app/layouts/_shared/split-helpers';
 import { createSidebarToggle } from '../../src/app/layouts/capabilities/sidebar-toggle';
 import type { CapabilityContext } from '../../src/app/layouts/types';
+import { SidebarStateOwner } from '../../src/app/layouts/sidebar-state';
+import { WorkspaceUiState } from '../../src/app/layouts/workspace-ui-state';
 
 /**
  * Fix 7a：侧栏隐藏态单一事实源 = container.dataset.sidebarHidden；
@@ -72,7 +74,9 @@ describe('sidebar-hidden flag (Fix 7a)', () => {
       getCurrentLayoutId: () => 'split-right',
       getAvailableLayouts: () => [],
       on: () => () => {},
-      requestStageRepaint: () => {}
+      requestStageRepaint: () => {},
+      sidebar: new SidebarStateOwner(),
+      workspaceUi: new WorkspaceUiState()
     } as unknown as CapabilityContext;
 
     const instance = createSidebarToggle().mount(

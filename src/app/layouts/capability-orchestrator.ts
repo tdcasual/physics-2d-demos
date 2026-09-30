@@ -5,10 +5,6 @@
  * 从 SceneContainerImpl 中提取，降低 Container 的复杂度。
  */
 
-import {
-  capabilityFactories,
-  createCapabilityDefinition
-} from './capabilities';
 import type {
   CapabilityContext,
   CapabilityInstance,
@@ -16,6 +12,8 @@ import type {
   ILayout,
   Scene
 } from './types';
+
+type CapabilitiesModule = typeof import('./capabilities');
 
 /** 场景绑定描述符 */
 interface SceneBinding {
@@ -59,6 +57,20 @@ export class CapabilityOrchestrator {
   private _instances = new Map<string, CapabilityInstance[]>();
   private _sceneUnsubscribers: (() => void)[] = [];
   private _disposed = false;
+  private _caps: CapabilitiesModule | null = null;
+  private _capsReady: Promise<CapabilitiesModule> | null = null;
+
+  /** Start loading capability factories without blocking construction. */
+  preload(): Promise<CapabilitiesModule> {
+    if (this._caps) return Promise.resolve(this._caps);
+    if (!this._capsReady) {
+      this._capsReady = import('./capabilities').then((mod) => {
+        this._caps = mod;
+        return mod;
+      });
+    }
+    return this._capsReady;
+  }
 
   getInstances(id: string): CapabilityInstance[] {
     return this._instances.get(id) || [];
@@ -88,26 +100,20 @@ export class CapabilityOrchestrator {
     ctx: CapabilityContext
   ): void {
     if (this._disposed) return;
+    const caps = this._caps;
+    if (!caps) {
+      throw new Error(
+        'Capability factories not loaded; await preload() before wire()'
+      );
+    }
 
-    // 清理旧场景绑定
-    this.cleanupSceneBindings();
-
-    // Dispose all existing instances
-    this._instances.forEach((insts) =>
-      insts.forEach((inst) => {
-        try {
-          inst.dispose();
-        } catch {
-          /* best-effort */
-        }
-      })
-    );
-    this._instances.clear();
+    this.disposeAll();
 
     const seenIds = new Set<string>();
+    const factories = caps.capabilityFactories;
 
     for (const decl of layout.capabilities) {
-      const factory = capabilityFactories[decl.id];
+      const factory = factories[decl.id];
       if (!factory) {
         console.warn(`[CapabilityOrchestrator] Unknown capability: ${decl.id}`);
         continue;
@@ -122,7 +128,7 @@ export class CapabilityOrchestrator {
       seenIds.add(decl.id);
 
       try {
-        const def = createCapabilityDefinition(decl);
+        const def = caps.createCapabilityDefinition(decl);
         const instance = def.mount(
           slots as LayoutSlots,
           decl.config ?? {},
@@ -138,7 +144,31 @@ export class CapabilityOrchestrator {
           `[CapabilityOrchestrator] Failed to mount capability ${decl.id}:`,
           err
         );
+        throw err;
       }
+    }
+  }
+
+  /**
+   * Dispose every capability instance and scene binding.
+   * Idempotent. Aggregates dispose errors so the switch transaction can roll back.
+   */
+  disposeAll(): void {
+    this.cleanupSceneBindings();
+    const errors: unknown[] = [];
+    this._instances.forEach((insts) =>
+      insts.forEach((inst) => {
+        try {
+          inst.dispose();
+        } catch (err) {
+          errors.push(err);
+        }
+      })
+    );
+    this._instances.clear();
+    if (errors.length === 1) throw errors[0];
+    if (errors.length > 1) {
+      throw new AggregateError(errors, 'Capability dispose failed');
     }
   }
 
@@ -194,17 +224,10 @@ export class CapabilityOrchestrator {
   dispose(): void {
     if (this._disposed) return;
     this._disposed = true;
-
-    this._instances.forEach((insts) =>
-      insts.forEach((inst) => {
-        try {
-          inst.dispose();
-        } catch (err) {
-          console.error('[CapabilityOrchestrator] dispose error:', err);
-        }
-      })
-    );
-    this._instances.clear();
-    this.cleanupSceneBindings();
+    try {
+      this.disposeAll();
+    } catch (err) {
+      console.error('[CapabilityOrchestrator] dispose error:', err);
+    }
   }
 }

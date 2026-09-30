@@ -16,6 +16,7 @@ import type {
   DemoRenderHints,
   SceneDemoProfile
 } from '../platform/demo-profile';
+import type { ControlProjectionHandle } from './control-projection';
 
 /** 场景实例接口（场景实现方提供） */
 export type SceneInstance = {
@@ -24,7 +25,7 @@ export type SceneInstance = {
   render(): void;
   dispose(): void;
   setTheme(theme: Theme): void;
-  setMode(mode: 'normal' | 'presentation'): void;
+  setMode(mode: 'normal' | 'presentation', hints?: DemoRenderHints): void;
   step(dt: number): void;
   reset?(): void;
   startAll?(): void;
@@ -39,6 +40,11 @@ export type SceneInstance = {
     | null;
   getTransportState?(): TransportState;
   subscribe?(listener: () => void): () => void;
+  /**
+   * 入口级 live 参数，供 remount / reset 控件投影读取。
+   * 具体场景返回 typed params 对象；平台按 key/value bag 消费。
+   */
+  getParams?(): Record<string, unknown>;
   /** 布局切换时把渲染面绑到新槽，禁止 dispose+init。 */
   reattach?(opts: {
     container: HTMLElement;
@@ -57,6 +63,13 @@ export type SceneInstance = {
  * 所有 createScene 回调都会收到这些参数。每个场景的 entry 工厂函数
  * 必须能接受此类型（或兼容的超集），否则在类型测试中会报错。
  */
+export type SceneParamWriter = {
+  readonly token: string;
+  write(patch: Record<string, number | string | boolean | undefined>): void;
+  flush(): void;
+  close(): void;
+};
+
 export type StandardSceneCreateParams = {
   /** 动画区容器（渲染面）。非 canvas 渲染（SVG/DOM/WebGL 等）直接渲染到此容器。 */
   container: HTMLElement;
@@ -66,6 +79,18 @@ export type StandardSceneCreateParams = {
   theme: Theme;
   mode: 'normal' | 'presentation';
   demoHints?: DemoRenderHints;
+  /**
+   * Immutable URL snapshot for this scene generation (captured after
+   * restoreSceneParams). Scenes that still need construction-time
+   * initialParams read it here instead of calling readSceneParams at
+   * module top.
+   */
+  urlParams?: Readonly<Record<string, number | string>>;
+  /**
+   * Optional scene-generation URL writer. Production SceneAdapter always
+   * injects one before createScene; omitted only for hand-built tests.
+   */
+  sceneWriter?: SceneParamWriter;
 };
 
 /** 场景页面配置选项 */
@@ -80,6 +105,10 @@ export type ScenePageOptions<TScene extends SceneInstance = SceneInstance> = {
   demoProfile?: SceneDemoProfile;
   /** Esc 等走容器 setMode，避免 Adapter 再派一次无 profile 的事件 */
   onSetMode?: (mode: 'normal' | 'presentation') => void;
+  /** Keyboard `l` walks the container switch, not a DOM button click. */
+  onSwitchLayout?: () => void;
+  /** Production adapter injects the generation-scoped URL writer. */
+  sceneWriter?: SceneParamWriter;
   /** 创建场景实例 */
   createScene: (opts: StandardSceneCreateParams) => TScene;
   /** 创建控制面板（可选） */
@@ -108,6 +137,11 @@ export type ScenePageOptions<TScene extends SceneInstance = SceneInstance> = {
      * （不可读的 key 写了也无法恢复）。
      */
     writeParam?: (key: string, value: number | string | boolean) => void;
+    /**
+     * Scene-generation URL writer. Same instance as createScene's
+     * `sceneWriter`; layout remount reuses it.
+     */
+    sceneWriter?: SceneParamWriter;
   }) => unknown;
   /**
    * 声明式 URL 参数同步（可选逃生口）。缺省时 bootstrapper 按
@@ -122,6 +156,17 @@ export type ScenePageOptions<TScene extends SceneInstance = SceneInstance> = {
   maxSubSteps?: number;
   /** 场景挂载后自动播放动画，默认 false */
   autoPlay?: boolean;
+  /**
+   * Decide autoPlay after URL restore (applySceneUrlParams) has run.
+   * `params` is scene.getParams() after restore; `urlParams` is the
+   * generation snapshot (URL query wins over localStorage — restore
+   * only fills the query when it was empty). When omitted, `autoPlay`
+   * is used as a static fallback.
+   */
+  shouldAutoPlay?: (
+    params: Record<string, unknown>,
+    urlParams: Readonly<Record<string, number | string>>
+  ) => boolean;
   /**
    * 主题切换回调（可选）。由 bootstrapper 注入 container.setTheme，
    * 让 `t` 快捷键走 container 统一路径（状态同步 + 持久化）；
@@ -184,4 +229,15 @@ export type SceneParamSync<TScene extends SceneInstance = SceneInstance> = {
   ) => boolean;
   /** 默认管线应用完所有参数后、首绘前调用（如回读约束系统调整后的实际值） */
   afterApply?: (ctx: ParamSyncContext<TScene>) => void;
+  /**
+   * 控件投影逃生口（scene → 面板）。paramMap 非单射或字段类型分派无法编码时使用。
+   *
+   * 语义（强制）：对 sim **只读**、**同步**、**不得**经 rAF / `scheduleRender` 延迟。
+   * 通用投影器永不调用 applyAll / applyParam / afterApply，也不调用任何
+   * scene setter 或 `scene.render()`。
+   */
+  projectControls?: (
+    params: Record<string, unknown>,
+    ctx: { handle: ControlProjectionHandle }
+  ) => void;
 };

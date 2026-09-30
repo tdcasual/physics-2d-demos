@@ -268,10 +268,15 @@ export default defineConfig({
           }
           // Layout system chunk（仅框架：registry/container/capabilities；
           // 具体布局实现经 registerLazyLayout 动态 import，
-          // 必须排除在 manualChunks 外才能成为独立异步 chunk）
+          // 必须排除在 manualChunks 外才能成为独立异步 chunk）。
+          // layout-switch-runtime and capability implementations are
+          // dynamically imported so the first-paint entry graph stays
+          // inside the 190 kB scene budget.
           if (
             id.includes('/src/app/layouts/') &&
-            !id.includes('/src/app/layouts/layouts/')
+            !id.includes('/src/app/layouts/layouts/') &&
+            !id.includes('/layout-switch-runtime') &&
+            !id.includes('/src/app/layouts/capabilities/')
           ) {
             return 'layouts';
           }

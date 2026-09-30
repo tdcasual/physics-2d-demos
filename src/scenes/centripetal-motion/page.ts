@@ -1,6 +1,7 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { centripetalControlsSchema } from './controls-schema';
 import { centripetalMeta } from './scene.meta';
 import { createCentripetalScene } from './scene.entry';
@@ -54,17 +55,15 @@ bootScenePage({
       },
       onAction: () => {}
     });
+    const syncFromScene = (): void => {
+      const params = scene.getParams();
+      renderer.setValueSilently('mass', params.mass);
+      renderer.setValueSilently('radius', params.radius);
+      renderer.setValueSilently('angularVelocity', params.angularVelocity);
+    };
     return {
-      setValue: (key: string, value: number | string | boolean) =>
-        renderer.setValue(key, value),
-      setActive: (key: string, value: string) => renderer.setActive(key, value),
-      refresh: () => {
-        const params = scene.getParams();
-        renderer.setValue('mass', params.mass);
-        renderer.setValue('radius', params.radius);
-        renderer.setValue('angularVelocity', params.angularVelocity);
-      },
-      dispose: () => renderer.dispose()
+      ...exposeSchemaHandle(renderer),
+      syncFromScene
     };
   },
   paramSync: {

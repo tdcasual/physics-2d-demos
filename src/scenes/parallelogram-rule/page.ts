@@ -1,6 +1,7 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { createParallelogramScene } from './scene.entry';
 import { parallelogramMeta } from './scene.meta';
 import { parallelogramControlsSchema } from './controls-schema';
@@ -76,13 +77,8 @@ bootScenePage({
     });
 
     return {
-      setValue(key: string, value: number | string): void {
-        renderer.setValue(key, value);
-      },
-      setActive(key: string, value: string): void {
-        renderer.setActive(key, value);
-      },
-      dispose(): void {
+      ...exposeSchemaHandle(renderer),
+      dispose: () => {
         unsubscribe();
         renderer.dispose();
       }

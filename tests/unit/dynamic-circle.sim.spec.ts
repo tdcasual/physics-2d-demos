@@ -133,7 +133,7 @@ describe('dynamic-circle sim', () => {
     for (const p of inside.slice(1, -1)) {
       expect(
         Math.hypot(p.x - state.center!.x, p.y - state.center!.y)
-      ).toBeCloseTo(150, 0);
+      ).toBeCloseTo(150, 12); // 圆上点到圆心，maxΔ≈6e-14
     }
   });
 

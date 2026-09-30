@@ -258,6 +258,49 @@ describe('SceneAdapter', () => {
     adapter.unmount();
   });
 
+  it('keyboard r goes through adapter.reset so controls project', () => {
+    const scene = {
+      ...createMockScene(),
+      getParams: vi.fn(() => ({ speed: 12 }))
+    };
+    const setValueSilently = vi.fn();
+    const adapter = createAdapter({
+      createScene: () => scene as never,
+      createControls: () => ({
+        fieldTypes: new Map([['speed', 'slider']]),
+        setValueSilently,
+        dispose: () => {}
+      })
+    } as Partial<ScenePageOptions>);
+    const container = document.createElement('div');
+    const canvas = document.createElement('canvas');
+    canvas.className = 'stage-canvas';
+    container.appendChild(canvas);
+    const controls = document.createElement('div');
+
+    adapter.renderAnimation(container, {
+      animation: container,
+      control: controls
+    } as LayoutSlots);
+    adapter.renderControl(controls);
+
+    const resetSpy = vi.spyOn(adapter, 'reset');
+    document.body.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'r',
+        bubbles: true,
+        cancelable: true
+      })
+    );
+
+    expect(resetSpy).toHaveBeenCalledTimes(1);
+    expect(scene.reset).toHaveBeenCalled();
+    expect(scene.render).toHaveBeenCalled();
+    expect(setValueSilently).toHaveBeenCalledWith('speed', 12);
+
+    adapter.unmount();
+  });
+
   it('autoPlay starts through startAll (scene hooks included)', () => {
     const scene = createMockScene();
     const adapter = createAdapter({
@@ -278,6 +321,46 @@ describe('SceneAdapter', () => {
     expect(adapter.getTransportState().isPlaying).toBe(true);
 
     adapter.unmount();
+  });
+
+  it('shouldAutoPlay skips startAll when restored autoRun=0', () => {
+    window.history.replaceState({}, '', '/src/pages/test.html?autoRun=0');
+    const scene = {
+      ...createMockScene(),
+      getParams: vi.fn(() => ({ autoRun: 0 }))
+    };
+    const adapter = createAdapter({
+      meta: {
+        id: 'test',
+        title: '测试',
+        category: 'mechanics',
+        subject: 'test',
+        concept: 'test',
+        subConcepts: ['a', 'b'] as [string, string],
+        keywords: [],
+        objective: '',
+        defaultParams: { autoRun: 1 },
+        urlSyncKeys: ['autoRun'],
+        path: '/test'
+      },
+      createScene: () => scene as never,
+      autoPlay: true,
+      shouldAutoPlay: (_params, urlParams) =>
+        urlParams.autoRun === undefined ? true : Number(urlParams.autoRun) !== 0
+    } as Partial<ScenePageOptions>);
+    const container = document.createElement('div');
+    const canvas = document.createElement('canvas');
+    canvas.className = 'stage-canvas';
+    container.appendChild(canvas);
+
+    adapter.renderAnimation(container, {
+      animation: container,
+      control: container
+    } as LayoutSlots);
+
+    expect(scene.startAll).not.toHaveBeenCalled();
+    adapter.unmount();
+    window.history.replaceState({}, '', '/');
   });
 
   it('reset should call transport reset and scene reset', () => {

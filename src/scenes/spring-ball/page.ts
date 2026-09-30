@@ -1,41 +1,45 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { readSceneParams } from '../../app/url-sync';
+
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { springBallControlsSchema } from './controls-schema';
 import { asBool, asMode, asPreset, createSpringBallScene } from './scene.entry';
 import { springBallMeta } from './scene.meta';
 import type { SpringBallParams } from './scene.sim';
 
-const initialRaw = readSceneParams(springBallMeta);
-const initialParams: Partial<SpringBallParams> = {};
-if (initialRaw.releaseHeight !== undefined) {
-  const n = Number(initialRaw.releaseHeight);
-  if (Number.isFinite(n)) initialParams.releaseHeight = n;
+function paramsFromUrl(
+  raw: Record<string, number | string>
+): Partial<SpringBallParams> {
+  const next: Partial<SpringBallParams> = {};
+  if (raw.releaseHeight !== undefined) {
+    const n = Number(raw.releaseHeight);
+    if (Number.isFinite(n)) next.releaseHeight = n;
+  }
+  const preset = asPreset(raw.preset);
+  if (preset) next.preset = preset;
+  const mode = asMode(raw.mode);
+  if (mode) next.mode = mode;
+  if (raw.autoRun !== undefined) next.autoRun = asBool(raw.autoRun, false);
+  if (raw.slow !== undefined) next.slow = asBool(raw.slow, false);
+  return next;
 }
-const initialPreset = asPreset(initialRaw.preset);
-if (initialPreset) initialParams.preset = initialPreset;
-const initialMode = asMode(initialRaw.mode);
-if (initialMode) initialParams.mode = initialMode;
-if (initialRaw.autoRun !== undefined)
-  initialParams.autoRun = asBool(initialRaw.autoRun, false);
-if (initialRaw.slow !== undefined)
-  initialParams.slow = asBool(initialRaw.slow, false);
 
 function syncControls(
   renderer: ReturnType<typeof renderSchema>,
   params: SpringBallParams
 ): void {
-  renderer.setValue('releaseHeight', params.releaseHeight);
-  renderer.setActive('preset', params.preset);
-  renderer.setActive('mode', params.mode);
-  renderer.setValue('autoRun', params.autoRun);
-  renderer.setValue('slow', params.slow);
+  renderer.setValueSilently('releaseHeight', params.releaseHeight);
+  renderer.setActiveSilently('preset', params.preset);
+  renderer.setActiveSilently('mode', params.mode);
+  renderer.setValueSilently('autoRun', params.autoRun);
+  renderer.setValueSilently('slow', params.slow);
 }
 
 bootScenePage({
   meta: springBallMeta,
-  autoPlay: initialParams.autoRun !== false,
+  shouldAutoPlay: (_params, urlParams) =>
+    paramsFromUrl(urlParams).autoRun !== false,
   preferredLayout: 'split-right-graph-bottom',
   layoutConfig: {
     defaultLeftRatio: 0.34,
@@ -50,14 +54,14 @@ bootScenePage({
     graphMaxHeight: 300,
     graphColumns: 1
   },
-  createScene: ({ canvas, theme, mode, demoHints }) => {
+  createScene: ({ canvas, theme, mode, demoHints, urlParams }) => {
     if (!canvas) throw new Error('spring-ball requires a canvas');
     const scene = createSpringBallScene({
       canvas,
       theme,
       mode,
       demoHints,
-      initialParams
+      initialParams: paramsFromUrl(urlParams ?? {})
     });
     const scheduler = createRenderScheduler(() => scene.render());
     const dispose = scene.dispose.bind(scene);
@@ -117,11 +121,8 @@ bootScenePage({
       syncControls(renderer, springScene.getParams());
     };
     return {
-      setValue: (key: string, value: number | string | boolean) =>
-        renderer.setValue(key, value),
-      setActive: (key: string, value: string) => renderer.setActive(key, value),
-      refresh: () => syncControls(renderer, springScene.getParams()),
-      dispose: () => renderer.dispose()
+      ...exposeSchemaHandle(renderer),
+      syncFromScene: () => syncControls(renderer, springScene.getParams())
     };
   },
   paramSync: {

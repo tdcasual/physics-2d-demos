@@ -131,7 +131,8 @@ layoutConfig: {
   defaultLeftRatio: 0.35,
   hasGraph: false,
   controlColumns: 'auto',
-  readoutCollapsed: true
+  readoutCollapsed: false,
+  hideTransport: true
 }
 ```
 

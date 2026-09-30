@@ -24,13 +24,13 @@ src/instruments/_manifest/manifest.ts   # 在 instrumentManifest 数组中追加
 
 ### 命名规则
 
-| 项目      | 规则             | 示例                                  |
-| --------- | ---------------- | ------------------------------------- |
-| 目录名    | kebab-case       | `vernier-caliper`                     |
-| 工厂变量  | 与目录同名       | `export const vernierCaliper = {...}` |
-| Sim 函数  | `create<Id>Sim`  | `createVernierCaliperSim`             |
-| View 函数 | `create<Id>View` | `createVernierCaliperView`            |
-| Meta 变量 | `<id>Meta`       | `vernierCaliperMeta`                  |
+| 项目      | 规则                       | 示例                                              |
+| --------- | -------------------------- | ------------------------------------------------- |
+| 目录名    | kebab-case                 | `vernier-caliper-guide`                           |
+| 工厂变量  | camelCase + `Factory` 后缀 | `export const vernierCaliperGuideFactory = {...}` |
+| Sim 函数  | `create<Id>Sim`            | `createVernierCaliperGuideSim`                    |
+| View 函数 | `create<Id>View`           | `createVernierCaliperGuideView`                   |
+| Meta 变量 | `<id>Meta`                 | `vernierCaliperGuideMeta`                         |
 
 ## 2. Sim 规范
 
@@ -246,7 +246,7 @@ import { myMeta } from './instrument.meta';
 import { createMySim } from './instrument.sim';
 import { createMyView } from './instrument.view';
 
-export const myInstrument: InstrumentFactory<MyState, MyParams> = {
+export const myInstrumentFactory: InstrumentFactory<MyState, MyParams> = {
   meta: myMeta,
   createSim: createMySim,
   createView: createMyView
@@ -279,10 +279,12 @@ export const instrumentManifest: InstrumentManifestEntry[] = [
 ];
 ```
 
-**Step 2**: 在 `src/instruments/index.ts` 中导出（可选，供外部直接 import）：
+**Step 2**: 工厂代码通过 `import()` 按需加载（manifest 的 `modulePath`）。
+`src/instruments/index.ts` **只再导出合约类型与 host 工具**，不在此再导出各仪器工厂：
 
 ```typescript
-export { myInstrument } from './my-instrument';
+export type { InstrumentFactory } from './_contract/instrument-contract';
+export { createInstrumentHost } from './mount';
 ```
 
 **为什么用 manifest 而不是自动发现？**
@@ -299,9 +301,9 @@ export { myInstrument } from './my-instrument';
 每个 Sim 必须有单元测试，验证状态管理：
 
 ```typescript
-// tests/unit/instruments/my-instrument.sim.spec.ts
+// tests/unit/my-instrument.sim.spec.ts
 import { describe, it, expect } from 'vitest';
-import { createMySim } from '../../../src/instruments/my-instrument/my-instrument.sim';
+import { createMySim } from '../../src/instruments/my-instrument/instrument.sim';
 
 describe('MyInstrument Sim', () => {
   it('初始状态正确', () => {
@@ -330,7 +332,7 @@ describe('MyInstrument Sim', () => {
 
 ```typescript
 import { describe, it, expect } from 'vitest';
-import { createMyView } from '../../../src/instruments/my-instrument/my-instrument.view';
+import { createMyView } from '../../src/instruments/my-instrument/instrument.view';
 
 describe('MyInstrument View', () => {
   it('render 不抛异常', () => {
@@ -430,5 +432,5 @@ dist/assets/instrument-micrometer-xxx.js      # 螺旋测微器代码
 - [ ] Sim 有单元测试覆盖
 - [ ] `pnpm build` 无错误，生成独立的 `instrument-<id>.js` chunk
 - [ ] `pnpm test` 全部通过
-- [ ] 组件库审计页面 (`/instruments.html`) 能正确显示新仪器
+- [ ] 组件库审计页面 (`/src/pages/instruments.html`) 能正确显示新仪器
 - [ ] 场景通过 `createInstrumentHost` 接入，物理换算只位于 `mapParams`

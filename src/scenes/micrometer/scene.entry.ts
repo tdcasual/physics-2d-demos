@@ -30,6 +30,7 @@ export function createMicrometerScene(
   setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
   getState(): MicrometerState;
   setParams(params: Partial<MicrometerParams>): MicrometerParams;
+  getParams(): MicrometerParams;
   getReadoutItems(): Array<{ key: string; label: string; value: string }>;
   setRevealAnswer(value: boolean): void;
   subscribe(listener: () => void): () => void;
@@ -103,6 +104,9 @@ export function createMicrometerScene(
       base.renderAndEmit();
       base.notify();
       return result;
+    },
+    getParams(): MicrometerParams {
+      return { ...sim.getState().params };
     },
     getReadoutItems,
     setRevealAnswer(value: boolean): void {

@@ -1,7 +1,8 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { readSceneParams, writeSceneParams } from '../../app/url-sync';
+import { writeOwnedSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { internalEnergyControlsSchema } from './controls-schema';
 import { createInternalEnergyScene } from './scene.entry';
 import { internalEnergyMeta } from './scene.meta';
@@ -17,7 +18,6 @@ import {
   type InternalEnergyParams
 } from './scene.sim';
 
-const rawInitial = readSceneParams(internalEnergyMeta);
 const NUMBER_KEYS = [
   'ratio',
   'dewPoint',
@@ -152,7 +152,7 @@ function applyVisibility(
 bootScenePage({
   meta: internalEnergyMeta,
   demoProfile: internalEnergyMeta.demoProfile,
-  autoPlay: asBool(rawInitial.autoRun, false),
+  shouldAutoPlay: (_params, urlParams) => asBool(urlParams.autoRun, false),
   preferredLayout:
     typeof window !== 'undefined' && window.innerWidth <= 720
       ? 'mobile-stack'
@@ -170,7 +170,7 @@ bootScenePage({
     graphMaxHeight: 360,
     graphColumns: 1
   },
-  createScene: ({ canvas, theme, mode, demoHints }) => {
+  createScene: ({ canvas, theme, mode, demoHints, sceneWriter }) => {
     if (!canvas) throw new Error('internal-energy requires a canvas');
     const scene = createInternalEnergyScene({
       canvas,
@@ -184,7 +184,8 @@ bootScenePage({
     const originalStartAll = scene.startAll.bind(scene);
     const originalPauseAll = scene.pauseAll.bind(scene);
     const syncUrl = (): void => {
-      writeSceneParams(
+      writeOwnedSceneParams(
+        sceneWriter,
         restoredUrlParams(
           scene.getParams(),
           scene.getTransportState().isPlaying
@@ -259,7 +260,21 @@ bootScenePage({
     };
     document.addEventListener('layout:modechange', onLayoutMode);
 
+    const syncFromScene = (): void => {
+      const params = energyScene.getParams();
+      renderer.setActiveSilently('mode', params.mode);
+      renderer.setValueSilently('ratio', params.ratio);
+      renderer.setValueSilently('dewPoint', params.dewPoint);
+      renderer.setValueSilently('wet', params.wet);
+      renderer.setValueSilently('tHot', params.tHot);
+      renderer.setValueSilently('tCold', params.tCold);
+      renderer.setValueSilently('cHot', params.cHot);
+      renderer.setValueSilently('cCold', params.cCold);
+      applyVisibility(renderer, params.mode);
+    };
+
     return {
+      ...exposeSchemaHandle(renderer),
       setValue: (key: string, value: number | string | boolean) => {
         applying = true;
         renderer.setValue(key, value);
@@ -271,20 +286,7 @@ bootScenePage({
         if (key === 'mode') applyVisibility(renderer, asMode(value));
         applying = false;
       },
-      refresh: () => {
-        applying = true;
-        const params = energyScene.getParams();
-        renderer.setActive('mode', params.mode);
-        renderer.setValue('ratio', params.ratio);
-        renderer.setValue('dewPoint', params.dewPoint);
-        renderer.setValue('wet', params.wet);
-        renderer.setValue('tHot', params.tHot);
-        renderer.setValue('tCold', params.tCold);
-        renderer.setValue('cHot', params.cHot);
-        renderer.setValue('cCold', params.cCold);
-        applyVisibility(renderer, params.mode);
-        applying = false;
-      },
+      syncFromScene,
       dispose: () => {
         document.removeEventListener('layout:modechange', onLayoutMode);
         renderer.dispose();

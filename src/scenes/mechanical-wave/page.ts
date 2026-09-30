@@ -102,13 +102,13 @@ bootScenePage({
     function syncRendererToScene(): void {
       const s = mwScene.getState();
       isUpdatingFromSim = true;
-      renderer.setValue('waveSpeed', s.params.waveSpeed);
-      renderer.setValue('wavelength', s.params.wavelength);
-      renderer.setValue('period', s.params.period);
-      renderer.setValue('amplitude', s.params.amplitude);
-      renderer.setValue('playbackSpeed', s.params.playbackSpeed);
-      renderer.setValue('showMicroShift', s.params.showMicroShift);
-      renderer.setActive('direction', s.params.direction);
+      renderer.setValueSilently('waveSpeed', s.params.waveSpeed);
+      renderer.setValueSilently('wavelength', s.params.wavelength);
+      renderer.setValueSilently('period', s.params.period);
+      renderer.setValueSilently('amplitude', s.params.amplitude);
+      renderer.setValueSilently('playbackSpeed', s.params.playbackSpeed);
+      renderer.setValueSilently('showMicroShift', s.params.showMicroShift);
+      renderer.setActiveSilently('direction', s.params.direction);
       isUpdatingFromSim = false;
     }
 
@@ -119,9 +119,16 @@ bootScenePage({
       setValue(key: string, value: number | string) {
         renderer.setValue(key, value);
       },
+      setValueSilently(key: string, value: number | string) {
+        renderer.setValueSilently(key, value);
+      },
       setActive(key: string, value: string) {
         renderer.setActive(key, value);
       },
+      setActiveSilently(key: string, value: string) {
+        renderer.setActiveSilently(key, value);
+      },
+      fieldTypes: renderer.fieldTypes,
       syncFromScene: syncRendererToScene,
       dispose() {
         renderer.dispose();

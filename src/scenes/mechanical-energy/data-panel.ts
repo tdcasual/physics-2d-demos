@@ -1,5 +1,8 @@
 import { formatFixed, type MechanicalEnergyState } from './scene.sim';
-import { LAB_DATA_SLOT_ATTR } from '../../platform/stage-chrome';
+import {
+  LAB_DATA_SLOT_ATTR,
+  READOUT_SLOT_ATTR
+} from '../../platform/stage-chrome';
 
 export type DataPanelHandle = {
   element: HTMLElement;
@@ -30,6 +33,9 @@ export function createMechanicalEnergyDataPanel(): DataPanelHandle {
 
   const wrap = document.createElement('div');
   wrap.style.cssText = 'overflow:auto;min-height:0;flex:1;max-width:100%;';
+  wrap.tabIndex = 0;
+  wrap.setAttribute('role', 'region');
+  wrap.setAttribute('aria-label', '计数点记录滚动区');
   const table = document.createElement('table');
   table.setAttribute('aria-label', '计数点记录');
   table.style.cssText =
@@ -91,12 +97,9 @@ export function findMechanicalEnergyDataHost(
   const root = scope ?? document;
   const lab = root.querySelector(`[${LAB_DATA_SLOT_ATTR}]`);
   if (lab instanceof HTMLElement) return lab;
-  // 读数挂载点统一走创建点打标的 [data-readout-slot]：mobile 是 readout
-  // 能力的 inline panel（.mobile-readout-panel），split/srgb 是其内部 ul
-  const readoutSlot = root.querySelector('[data-readout-slot]');
+  // 读数挂载点统一走创建点打标的 [data-readout-slot]
+  const readoutSlot = root.querySelector(`[${READOUT_SLOT_ATTR}]`);
   if (readoutSlot instanceof HTMLElement) return readoutSlot;
-  const tab = root.querySelector('#mobile-panel-readout');
-  if (tab instanceof HTMLElement) return tab;
   const overlay = root.querySelector(
     '.srgb-readout-panel, .teaching-readout-panel'
   );
@@ -134,44 +137,4 @@ export function syncDataPanelCollapsed(panel: HTMLElement): void {
   if (panel.closest('li[data-energy-table]')) return;
   const collapsed = host.classList.contains('is-collapsed');
   panel.style.display = collapsed ? 'none' : '';
-}
-
-export function createChromeScheduler(run: () => void): {
-  start(): void;
-  dispose(): void;
-} {
-  let disposed = false;
-  let raf1 = 0;
-  let raf2 = 0;
-  const cancelBoth = (): void => {
-    if (raf1) window.cancelAnimationFrame(raf1);
-    if (raf2) window.cancelAnimationFrame(raf2);
-    raf1 = 0;
-    raf2 = 0;
-  };
-  const guarded = (): void => {
-    if (disposed) return;
-    run();
-  };
-  return {
-    start() {
-      if (disposed) return;
-      cancelBoth();
-      raf1 = window.requestAnimationFrame(() => {
-        raf1 = 0;
-        if (disposed) return;
-        guarded();
-        if (disposed) return;
-        raf2 = window.requestAnimationFrame(() => {
-          raf2 = 0;
-          if (disposed) return;
-          guarded();
-        });
-      });
-    },
-    dispose() {
-      disposed = true;
-      cancelBoth();
-    }
-  };
 }

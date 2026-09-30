@@ -61,6 +61,7 @@ describe('workspace transport bar lookup', () => {
   ): HTMLCanvasElement {
     const frame = document.createElement('div');
     frame.className = frameClass;
+    frame.setAttribute('data-stage-frame', '');
     const canvas = document.createElement('canvas');
     frame.appendChild(canvas);
     if (withBar) {
@@ -73,18 +74,12 @@ describe('workspace transport bar lookup', () => {
     return canvas;
   }
 
-  it('finds the transport bar in every desktop stage frame', () => {
-    for (const frameClass of [
-      'lab-stage-anim',
-      'teaching-stage-frame',
-      'srgb-stage-frame'
-    ]) {
-      const canvas = stageWithCanvas(frameClass, true);
-      expect(findWorkspaceTransportBar(canvas)?.className).toBe(
-        'stage-floating-controls'
-      );
-      canvas.parentElement?.remove();
-    }
+  it('finds the transport bar from the semantic stage frame', () => {
+    const canvas = stageWithCanvas('layout-stage-frame', true);
+    expect(findWorkspaceTransportBar(canvas)?.className).toBe(
+      'stage-floating-controls'
+    );
+    canvas.parentElement?.remove();
   });
 
   it('returns null when the frame has no transport bar', () => {

@@ -1,5 +1,7 @@
 # Data workspace catalog hardening — 2026-09-18
 
+> 状态：已执行。归档记录，不作为现行方案。
+
 ## Evidence (pre-change)
 
 ### Track A — data-workspace is scene-hardcoded

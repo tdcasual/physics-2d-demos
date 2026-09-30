@@ -1,7 +1,8 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { writeSceneParams } from '../../app/url-sync';
+import { writeOwnedSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { potentialGraphControlsSchema } from './controls-schema';
 import { asPotentialScenario, createPotentialGraphScene } from './scene.entry';
 import { potentialGraphMeta } from './scene.meta';
@@ -33,7 +34,7 @@ bootScenePage({
     graphMaxHeight: 460,
     graphColumns: 1
   },
-  createScene: ({ canvas, theme, mode, demoHints }) => {
+  createScene: ({ canvas, theme, mode, demoHints, sceneWriter }) => {
     if (!canvas) throw new Error('potential-energy-graphs requires a canvas');
     const scene = createPotentialGraphScene({ canvas, theme, mode, demoHints });
     const scheduler = createRenderScheduler(() => scene.render());
@@ -42,7 +43,7 @@ bootScenePage({
     const originalStartAll = scene.startAll.bind(scene);
     const originalPauseAll = scene.pauseAll.bind(scene);
     const syncUrl = (): void => {
-      writeSceneParams(restoredUrlParams(scene.getParams()));
+      writeOwnedSceneParams(sceneWriter, restoredUrlParams(scene.getParams()));
     };
     return {
       ...scene,
@@ -131,9 +132,7 @@ bootScenePage({
     });
 
     return {
-      setValue: (key: string, value: number | string | boolean) =>
-        renderer.setValue(key, value),
-      setActive: (key: string, value: string) => renderer.setActive(key, value),
+      ...exposeSchemaHandle(renderer),
       dispose: () => {
         unsubscribe();
         renderer.dispose();

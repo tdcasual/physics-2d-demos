@@ -48,6 +48,12 @@ const PALETTE = {
   }
 };
 
+/** 1440×900 split-right 舞台短边 getResponsiveScale 实测（clamp 上限）。 */
+const DESKTOP_LAYOUT_SCALE = 1.5;
+const AXIS_LEFT_BASE = 55 / DESKTOP_LAYOUT_SCALE;
+const LEGEND_ACCEL_DX = 90 / DESKTOP_LAYOUT_SCALE;
+const LEGEND_SHIFT_DX = 170 / DESKTOP_LAYOUT_SCALE;
+
 export function createMechanicalWaveView(
   options: CreateMechanicalWaveViewOptions = {}
 ) {
@@ -70,19 +76,21 @@ export function createMechanicalWaveView(
   const WORLD_Y_MIN = -12;
   const WORLD_Y_MAX = 12;
 
-  const MARGIN_LEFT = 55;
   const MARGIN_RIGHT = 30;
   const MARGIN_TOP = 30;
   const MARGIN_BOTTOM = 35;
 
   let onPointSelectCallback: ((x: number) => void) | null = null;
 
+  function axisLeftPx(): number {
+    return AXIS_LEFT_BASE * stage.responsiveScale;
+  }
+
   function worldToPixelX(x: number): number {
     const cssW = stage.cssWidth;
-    const drawW = cssW - MARGIN_LEFT - MARGIN_RIGHT;
-    return (
-      MARGIN_LEFT + ((x - WORLD_X_MIN) / (WORLD_X_MAX - WORLD_X_MIN)) * drawW
-    );
+    const left = axisLeftPx();
+    const drawW = cssW - left - MARGIN_RIGHT;
+    return left + ((x - WORLD_X_MIN) / (WORLD_X_MAX - WORLD_X_MIN)) * drawW;
   }
 
   function worldToPixelY(y: number): number {
@@ -94,10 +102,9 @@ export function createMechanicalWaveView(
 
   function pixelToWorldX(px: number): number {
     const cssW = stage.cssWidth;
-    const drawW = cssW - MARGIN_LEFT - MARGIN_RIGHT;
-    return (
-      WORLD_X_MIN + ((px - MARGIN_LEFT) / drawW) * (WORLD_X_MAX - WORLD_X_MIN)
-    );
+    const left = axisLeftPx();
+    const drawW = cssW - left - MARGIN_RIGHT;
+    return WORLD_X_MIN + ((px - left) / drawW) * (WORLD_X_MAX - WORLD_X_MIN);
   }
 
   function drawScene(state: MechanicalWaveState): void {
@@ -281,15 +288,24 @@ export function createMechanicalWaveView(
 
     // 图例
     const legendY = axisBotY + 22;
+    const legendLeft = axisLeftPx();
     c.font = `${Math.max(10, 11 * responsiveScale * cs)}px sans-serif`;
     c.textAlign = 'left';
     c.fillStyle = p.velocity;
-    c.fillText('→ 振动速度', MARGIN_LEFT, legendY);
+    c.fillText('→ 振动速度', legendLeft, legendY);
     c.fillStyle = p.accel;
-    c.fillText('→ 加速度', MARGIN_LEFT + 90, legendY);
+    c.fillText(
+      '→ 加速度',
+      legendLeft + LEGEND_ACCEL_DX * responsiveScale,
+      legendY
+    );
     if (showMicroShift) {
       c.fillStyle = p.label;
-      c.fillText('--- Δt 微移', MARGIN_LEFT + 170, legendY);
+      c.fillText(
+        '--- Δt 微移',
+        legendLeft + LEGEND_SHIFT_DX * responsiveScale,
+        legendY
+      );
     }
   }
 

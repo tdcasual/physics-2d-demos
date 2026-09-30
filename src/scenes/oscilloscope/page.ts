@@ -1,7 +1,8 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { readSceneParams } from '../../app/url-sync';
+
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { createOscilloscopeScene } from './scene.entry';
 import { oscilloscopeMeta } from './scene.meta';
 import { oscilloscopeControlsSchema } from './controls-schema';
@@ -40,11 +41,10 @@ function paramsFromUrl(
   return next;
 }
 
-const initialParams = paramsFromUrl(readSceneParams(oscilloscopeMeta));
-
 bootScenePage({
   meta: oscilloscopeMeta,
-  autoPlay: initialParams.autoRun !== false,
+  shouldAutoPlay: (_params, urlParams) =>
+    paramsFromUrl(urlParams).autoRun !== false,
   preferredLayout: 'split-right-graph-bottom',
   layoutConfig: {
     defaultLeftRatio: 0.32,
@@ -59,14 +59,14 @@ bootScenePage({
     graphMaxHeight: 340,
     graphColumns: 1
   },
-  createScene: ({ canvas, theme, mode, demoHints }) => {
+  createScene: ({ canvas, theme, mode, demoHints, urlParams }) => {
     if (!canvas) throw new Error('oscilloscope requires a canvas');
     const scene = createOscilloscopeScene({
       canvas,
       theme,
       mode,
       demoHints,
-      initialParams
+      initialParams: paramsFromUrl(urlParams ?? {})
     });
     const scheduler = createRenderScheduler(() => scene.render());
     const dispose = scene.dispose.bind(scene);
@@ -105,17 +105,7 @@ bootScenePage({
       },
       onAction: () => {}
     });
-    return {
-      setValue(key: string, value: number | string | boolean): void {
-        renderer.setValue(key, value);
-      },
-      setActive(key: string, value: string): void {
-        renderer.setActive(key, value);
-      },
-      dispose(): void {
-        renderer.dispose();
-      }
-    };
+    return exposeSchemaHandle(renderer);
   },
   paramSync: {
     applyParam: (key, value, ctx) => {

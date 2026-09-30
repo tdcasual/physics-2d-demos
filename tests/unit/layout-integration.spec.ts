@@ -19,6 +19,8 @@ import type {
   ILayout,
   LayoutSlots
 } from '../../src/app/layouts/types';
+import { SidebarStateOwner } from '../../src/app/layouts/sidebar-state';
+import { WorkspaceUiState } from '../../src/app/layouts/workspace-ui-state';
 
 // ============================================================================
 // Helpers
@@ -766,6 +768,8 @@ describe('Layout-switch capability', () => {
       getCurrentLayoutId: () => currentId,
       getAvailableLayouts: () => available,
       requestStageRepaint() {},
+      sidebar: new SidebarStateOwner(),
+      workspaceUi: new WorkspaceUiState(),
       switchLayout: (id: string) => {
         switchCalls.push(id);
         currentId = id;

@@ -1,5 +1,7 @@
 # Legacy To Modern Parity Migration Implementation Plan
 
+> 状态：历史快照。归档设计/实施记录，不作为现行方案。
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Migrate all legacy 2D demos to modern scene modules while preserving scene behavior and teaching outcomes, then remove the legacy runtime path so only one architecture remains.

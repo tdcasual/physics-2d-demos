@@ -1,8 +1,9 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { writeSceneParams } from '../../app/url-sync';
+import { writeOwnedSceneParams } from '../../app/url-sync';
 import { applyTouchInteractionMode } from '../../platform/input/touch';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { createVerticalCircleScene } from './scene.entry';
 import { verticalCircleMeta } from './scene.meta';
 import { verticalCircleControlsSchema } from './controls-schema';
@@ -41,7 +42,7 @@ bootScenePage({
     readoutLabel: '数据读数',
     hasGraph: false
   },
-  createScene: ({ canvas, theme, mode, demoHints }) => {
+  createScene: ({ canvas, theme, mode, demoHints, sceneWriter }) => {
     if (!canvas) throw new Error('vertical-circle requires a canvas');
     applyTouchInteractionMode(canvas, 'drag');
     const scene = createVerticalCircleScene({ canvas, theme, mode, demoHints });
@@ -70,7 +71,7 @@ bootScenePage({
     };
     const onPointerUp = (event: PointerEvent): void => {
       if (dragHandle) {
-        writeSceneParams({ theta: scene.getParams().theta });
+        writeOwnedSceneParams(sceneWriter, { theta: scene.getParams().theta });
       }
       dragHandle = null;
       try {
@@ -152,13 +153,8 @@ bootScenePage({
     });
 
     return {
-      setValue(key: string, value: number | string | boolean): void {
-        renderer.setValue(key, value);
-      },
-      setActive(key: string, value: string): void {
-        renderer.setActive(key, value);
-      },
-      dispose(): void {
+      ...exposeSchemaHandle(renderer),
+      dispose: () => {
         unsubscribe();
         renderer.dispose();
       }

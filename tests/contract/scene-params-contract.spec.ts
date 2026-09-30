@@ -371,6 +371,16 @@ describe('scene params contract', () => {
     }
   );
 
+  it('NON_PARAM_KEYS is frozen at 6 scenes and 13 keys', () => {
+    const sceneCount = Object.keys(NON_PARAM_KEYS).length;
+    const keyCount = Object.values(NON_PARAM_KEYS).reduce(
+      (n, keys) => n + Object.keys(keys).length,
+      0
+    );
+    expect(sceneCount, 'NON_PARAM_KEYS 冻 6 场景；只许缩小').toBe(6);
+    expect(keyCount, 'NON_PARAM_KEYS 冻 13 键；只许缩小').toBe(13);
+  });
+
   // 防陈旧：NON_PARAM_KEYS 的登记必须对应 schema 中真实存在的参数字段
   it('NON_PARAM_KEYS registrations match real schema param fields', () => {
     for (const [id, keys] of Object.entries(NON_PARAM_KEYS)) {

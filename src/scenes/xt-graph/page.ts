@@ -1,5 +1,6 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { createXtGraphScene } from './scene.entry';
 import { xtGraphMeta } from './scene.meta';
 import { xtGraphControlsSchema } from './controls-schema';
@@ -38,14 +39,6 @@ bootScenePage({
       onAction: () => {}
     });
 
-    return {
-      setValue(key: string, value: number | string) {
-        renderer.setValue(key, value);
-      },
-      setActive(key: string, value: string) {
-        renderer.setActive(key, value);
-      },
-      dispose: () => renderer.dispose()
-    };
+    return exposeSchemaHandle(renderer);
   }
 });

@@ -114,13 +114,13 @@ bootScenePage<ReturnType<typeof createDopplerScene>>({
 
     function syncRendererToScene(): void {
       const s = dsScene.getState();
-      renderer.setValue('sourceSpeed', s.params.sourceSpeed);
-      renderer.setValue('observerSpeed', s.params.observerSpeed);
-      renderer.setValue('emitFrequency', s.params.emitFrequency);
-      renderer.setValue('playbackSpeed', s.params.playbackSpeed);
-      renderer.setValue('audioEnabled', s.params.audioEnabled);
-      renderer.setValue('audioVolume', s.params.audioVolume * 100);
-      renderer.setActive('mode', s.params.mode);
+      renderer.setValueSilently('sourceSpeed', s.params.sourceSpeed);
+      renderer.setValueSilently('observerSpeed', s.params.observerSpeed);
+      renderer.setValueSilently('emitFrequency', s.params.emitFrequency);
+      renderer.setValueSilently('playbackSpeed', s.params.playbackSpeed);
+      renderer.setValueSilently('audioEnabled', s.params.audioEnabled);
+      renderer.setValueSilently('audioVolume', s.params.audioVolume * 100);
+      renderer.setActiveSilently('mode', s.params.mode);
     }
 
     // URL 参数应用（含应用后全量同步）由 bootstrapper 管线的
@@ -130,9 +130,16 @@ bootScenePage<ReturnType<typeof createDopplerScene>>({
       setValue(key: string, value: number | string) {
         renderer.setValue(key, value);
       },
+      setValueSilently(key: string, value: number | string) {
+        renderer.setValueSilently(key, value);
+      },
       setActive(key: string, value: string) {
         renderer.setActive(key, value);
       },
+      setActiveSilently(key: string, value: string) {
+        renderer.setActiveSilently(key, value);
+      },
+      fieldTypes: renderer.fieldTypes,
       syncFromScene: syncRendererToScene,
       dispose() {
         renderer.dispose();

@@ -483,9 +483,7 @@ describe('potential-energy-graphs scene entry and URL', () => {
       resolve(process.cwd(), 'src/scenes/potential-energy-graphs/page.ts'),
       'utf8'
     );
-    expect(pageSrc).toContain(
-      'writeSceneParams(restoredUrlParams(scene.getParams()))'
-    );
+    expect(pageSrc).toContain('writeOwnedSceneParams');
     expect(pageSrc).toContain('const originalReset = scene.reset.bind(scene)');
     expect(pageSrc).toContain(
       'const originalStartAll = scene.startAll.bind(scene)'

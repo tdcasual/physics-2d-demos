@@ -1,42 +1,10 @@
-type DataWorkspaceSpec = {
-  minRows?: number;
-  maxRows?: number;
-  initialRows?: number;
-};
-type FieldCheckState = {
-  raw: string;
-  value: number;
-  checked: boolean;
-  stale: boolean;
-  [key: string]: unknown;
-};
-type TrialRecord = {
-  id: string;
-  fields: Record<string, FieldCheckState | undefined>;
-};
-type DataWorkspaceSession = {
-  active: boolean;
-  currentTrial: number;
-  completed: boolean;
-  lockedInstrumentId?: string;
-  nextRowSeq: number;
-  summary: Record<string, FieldCheckState | undefined>;
-  trials: TrialRecord[];
-};
-
-function resolveRowLimits(spec: DataWorkspaceSpec): {
-  minRows: number;
-  maxRows: number;
-  initialRows: number;
-} {
-  const minRows = Math.max(1, Math.floor(spec.minRows ?? 1));
-  const maxRows = Math.max(minRows, Math.floor(spec.maxRows ?? minRows));
-  const initialRows = Math.min(
-    maxRows,
-    Math.max(minRows, Math.floor(spec.initialRows ?? minRows))
-  );
-  return { minRows, maxRows, initialRows };
-}
+import { resolveRowLimits } from './spec-queries';
+import type {
+  DataWorkspaceSession,
+  DataWorkspaceSpec,
+  FieldCheckState,
+  TrialRecord
+} from './types';
 
 export function createTrialRecord(id: string): TrialRecord {
   return { id, fields: {} };

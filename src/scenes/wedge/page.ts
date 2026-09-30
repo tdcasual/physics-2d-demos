@@ -7,6 +7,7 @@ import { wedgeMeta } from './scene.meta';
 import { createWedgeScene } from './scene.entry';
 import { wedgeControlsSchema } from './controls-schema';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { wavelengthToColor } from '../../core/wavelength';
 import type { WedgeStep } from './scene.sim';
 
@@ -77,15 +78,14 @@ bootScenePage({
     updateLambdaSliderColor(mount, initialLambda);
 
     return {
-      setValue(key: string, value: number | string) {
+      ...exposeSchemaHandle(renderer),
+      setValue: (key: string, value: number | string | boolean) => {
         renderer.setValue(key, value);
         if (key === 'lambda') updateLambdaSliderColor(mount, Number(value));
       },
-      setActive(key: string, value: string) {
-        renderer.setActive(key, value);
-      },
-      dispose() {
-        renderer.dispose();
+      setValueSilently: (key: string, value: number | string | boolean) => {
+        renderer.setValueSilently(key, value);
+        if (key === 'lambda') updateLambdaSliderColor(mount, Number(value));
       }
     };
   }

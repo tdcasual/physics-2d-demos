@@ -296,6 +296,8 @@ expect(byObserver).toBeCloseTo(firstOrder, 1);
 
 ---
 
+本地不要并发跑多个 `vitest` 进程：`electrostatic-induction` round-trip 等用例会在双进程下 5s 超时 flake。
+
 ## 8. 提交前检查清单
 
 1. **独立性**：每个关键期望值能否说出独立来源（公式手算 / 物理定律 / 数值方法 /

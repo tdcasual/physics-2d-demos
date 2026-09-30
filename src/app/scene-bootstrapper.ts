@@ -9,12 +9,11 @@ import '../styles/index.css';
 import { createSceneContainer } from './layouts/container';
 import { registerAllLayouts } from './layouts/auto-register';
 import { layoutRegistry } from './layouts/registry';
+import { satisfiesConstraints } from './layouts/layout-constraints';
 import { SceneAdapter } from './scene-adapter';
 import {
   restoreSceneParams,
   persistSceneParams,
-  readSceneParams,
-  writeSceneParams,
   resolveUrlSyncKeys,
   applySceneUrlParams
 } from './url-sync';
@@ -30,6 +29,10 @@ import type {
   SceneInstance,
   ScenePageOptions
 } from './scene-bootstrapper-types';
+import {
+  paramsFromScene,
+  syncControlsFromLiveParams
+} from './control-projection';
 
 export type {
   SceneInstance,
@@ -148,32 +151,86 @@ export function bootScenePage<TScene extends SceneInstance>(
             const scheduler = createRenderScheduler(() => {
               controlOpts.scene.render();
             });
-            const urlParams = readSceneParams(options.meta);
-            const controls = userCreateControls({
-              ...controlOpts,
-              scheduleRender: scheduler.schedule,
-              urlParams,
-              writeParam: (key, value) => {
-                if (writableKeys.has(key)) {
-                  writeSceneParams({ [key]: value });
+            const permit = adapter.takeUrlRestorePermit();
+            let attached = false;
+            try {
+              const urlParams = permit.first ? { ...permit.snapshot } : {};
+              const writer = adapter.getSceneWriter();
+              const controls = userCreateControls({
+                ...controlOpts,
+                scheduleRender: scheduler.schedule,
+                urlParams,
+                writeParam: (key, value) => {
+                  if (writableKeys.has(key)) {
+                    writer?.write({ [key]: value });
+                  }
+                },
+                sceneWriter: writer ?? undefined
+              });
+              if (permit.first) {
+                try {
+                  applySceneUrlParams(
+                    options.meta,
+                    {
+                      scene: controlOpts.scene,
+                      controls,
+                      mount: controlOpts.mount,
+                      scheduleRender: scheduler.schedule
+                    },
+                    options.paramSync,
+                    urlParams
+                  );
+                  adapter.completeUrlRestore(true);
+                } catch (err) {
+                  adapter.completeUrlRestore(false);
+                  throw err;
                 }
+              } else {
+                syncControlsFromLiveParams({
+                  params: paramsFromScene(controlOpts.scene),
+                  handle: controls,
+                  paramSync: options.paramSync
+                });
               }
-            });
-            applySceneUrlParams(
-              options.meta,
-              {
-                scene: controlOpts.scene,
-                controls,
-                mount: controlOpts.mount,
-                scheduleRender: scheduler.schedule
-              },
-              options.paramSync,
-              urlParams
-            );
-            return attachSchedulerDispose(controls, scheduler);
+              const wrapped = attachSchedulerDispose(controls, scheduler);
+              attached = true;
+              return wrapped;
+            } catch (err) {
+              adapter.releaseUrlRestorePermit();
+              throw err;
+            } finally {
+              if (!attached) scheduler.dispose();
+            }
           }
         : undefined,
-      onToggleTheme: (next) => container.setTheme(next)
+      onToggleTheme: (next) => container.setTheme(next),
+      onSetMode: (mode) => container.setMode(mode),
+      onSwitchLayout: () => {
+        const current = container.currentLayout?.id;
+        const w = container.container.clientWidth || window.innerWidth;
+        const h = container.container.clientHeight || window.innerHeight;
+        const orientation = w >= h ? 'landscape' : 'portrait';
+        const ids = layoutRegistry
+          .getAllMetadata()
+          .filter((m) =>
+            satisfiesConstraints(m, { width: w, height: h }, orientation)
+          )
+          .map((m) => m.id);
+        if (ids.length === 0) return;
+        const idx = current ? ids.indexOf(current) : -1;
+        const next = ids[(idx + 1) % ids.length];
+        if (next && next !== current) {
+          // host 适配器已 surfaceSwitchError；此处只收口未处理 rejection。
+          void Promise.resolve(
+            container.switchLayout(next, {
+              animate: true,
+              savePreference: true
+            })
+          ).catch((err: unknown) => {
+            console.error('[bootScenePage] switchLayout failed:', err);
+          });
+        }
+      }
     },
     (text) => container.currentLayout?.updateStatus?.(text)
   );

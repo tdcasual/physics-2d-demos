@@ -33,7 +33,8 @@ export interface SpringOscillatorControlsOptions {
 }
 
 export interface SpringOscillatorControls {
-  refresh: () => void;
+  /** 列表重建式，仅供 remount/reset */
+  syncFromScene: () => void;
   dispose: () => void;
 }
 
@@ -280,7 +281,8 @@ export function createSpringOscillatorControls(
   }, 0);
 
   return {
-    refresh: renderOscillatorList,
+    // 列表重建式，仅供 remount/reset
+    syncFromScene: renderOscillatorList,
     dispose: () => {
       cleanups.forEach((c) => c());
       itemHandles.forEach((h) => h.dispose());

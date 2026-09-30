@@ -8,7 +8,7 @@ Physics-2D-Demos 是一个物理教学演示中心（Teaching Demo Hub），当�
 
 - **技术栈**: Vite 7 + TypeScript 5.9 (strict) + React 18 + Tailwind CSS v4
 - **测试**: Vitest 3.2 (单元/契约) + Playwright (E2E/视觉)
-- **构建产物**: 体积预算与实测口径以 `scripts/check-bundle-budget.ts` 为唯一权威（预算值：首页 JS 190 kB / CSS 25 kB；场景页 JS 200 kB / CSS 55 kB；vendor 160 kB；shared 150 kB；当前无入口级覆盖）。实测数字随构建变化，不在本文固化，运行 `pnpm check:bundle` 获取当前值
+- **构建产物**: 体积预算与实测口径以 `scripts/check-bundle-budget.ts` 为唯一权威。本文不固化数值；运行 `pnpm check:bundle` 获取当前预算与实测
 - **Runtime 依赖**: 仅 3 个（preact / react / react-dom）
 - **线上地址**: <https://x.infinitas.fun>
 
@@ -158,29 +158,65 @@ bootScenePage({
 `bootScenePage` 内置声明式 URL 参数管线（`applySceneUrlParams`，见
 `src/app/url-sync.ts`），page.ts **不要再手写** `readSceneParams` 循环：
 
-- **应用**：管线在 createControls 返回后统一执行
-  `readSceneParams → scene.setParams（无 setParams 时退回 setParam 单键 API）
-→ createControls 返回句柄回写（数值走 setValue；字符串或
-`paramSync.activeKeys` 走 setActive）→ URL 非空时同步首绘`。
-  合法键集合 = `defaultParams ∪ urlSyncKeys ∪ {preset}`（`resolveUrlSyncKeys`）。
-- **写回**：createControls 上下文注入 `writeParam(key, value)`，
-  等价旧样板的 `writeSceneParams({ [key]: value })` 但自动过滤非法键。
-- **上下文注入**：`urlParams`（合法参数只读快照，供建 UI 前必须知悉参数的
-  场景使用，如 double-slit 按 step 选 schema）。
+- **应用**：SceneAdapter 为每个 scene generation 保存不可变 URL snapshot。
+  首次 `createControls` 消费一次性 restore permit，执行
+  `applySceneUrlParams`（`setParams`，无对象 API 时退回 `setParam`）并用
+  `setValueSilently` / `setActiveSilently` 投影控件。布局 remount 不再读 URL、
+  不重放 snapshot，只从 live scene 走 `syncFromScene` 优先，否则
+  `projectControlsFromParams` 通用投影（`src/app/control-projection.ts`）。
+  `handle.refresh` 已退役。合法键集合 =
+  `defaultParams ∪ urlSyncKeys ∪ {preset}`（`resolveUrlSyncKeys`）。
+- **写回**：createControls 注入 `writeParam` 与同一 generation 的 `sceneWriter`。
+  多键写回走 `writeOwnedSceneParams(sceneWriter, patch)`；owner 级 debounce
+  合并不同键、同键 last-write-wins。`flush(A)` 不影响 B 的 timer。scene leave
+  顺序为 `flush → persistSceneParams（localStorage 镜像）→ close/revoke`。
+- **上下文注入**：`urlParams` 仅在该 generation 首次 createControls 传入
+  snapshot（供 double-slit 按 step 选 schema）；remount 传空对象。
 - **逃生口**：`ScenePageOptions.paramSync` —— `paramMap`（meta 键 → sim 键，
   如 projectile 的 v0→speed）、`activeKeys`、`applyParam`（单键接管，返回
   true 跳过默认处理）、`applyAll`（整体接管含首绘，用于批量约束语义）、
-  `afterApply`（默认管线后、首绘前）。
+  `afterApply`（默认管线后、首绘前）、`projectControls`（remount/reset
+  逃生口：对 sim 只读、同步、不得 rAF 延迟）。
+- **autoPlay**：page.ts 不要在模块顶层 `readSceneParams`。`shouldAutoPlay(params, urlParams)`
+  在 URL restore 之后、`startAll` 之前求值。平台 fallback：`resolveUrlSyncKeys(meta)`
+  含 `autoRun` 且 snapshot 含恢复值时，以恢复值决定播放；snapshot 缺省时仍用静态
+  `autoPlay`。B13 的 14 个显式钩子保留且优先级最高。`params` 为 `getParams()`，
+  `urlParams` 为该代 snapshot。构造期 `initialParams` 从 `createScene` 注入的
+  `urlParams` 读取。
 
 **已知限制**：
 
-- `emf-analogy` 无对象式 `setParams`（`defaultParams` 已清空，无可同步参数）；
+- `emf-analogy` 无对象式 `setParams`（`defaultParams` 已清空，无可投影参数；
+  schema 仍有 tap/speed 控件）。登记在 `NO_CONTROL_PROJECTION`；
   `mechanical-wave` 仅有 `setParam` 单键 API，URL 管线会 fallback。
+- `xt-graph` / `tortoise-hare`：entry `getParams` 仅 `{speed}`，schema 只有
+  preset-group + hint；通用投影无对象可投。preset 高亮由 URL `applyParam` /
+  首绘负责，remount 后高亮回退 `initialActive`（A3 裁定保持）。
+- `spring-oscillator`：`getParams` 只暴露首振子 `{k,m,A}`；handle 以
+  `syncFromScene`（列表重建，仅供 remount/reset）投影，通用投影无对象可投。
+  k/m/A 在 imperative 卡片，page 无 writeParam 字面量，复用
+  `EXISTING_SPECIAL_HANDLE_FORMS`（F3 豁免）。
+- `electrification`：`getParams` 含 `scene`，handle 转发 `setActiveSilently`，
+  remount 后 scene-selector 高亮 live 子场景。仍无 `setValue`（action 为
+  button-grid），留在 `EXISTING_SPECIAL_HANDLE_FORMS`。urlSyncKeys 仅
+  `step`（button-grid action），无 value-control 写回点。
+- `chase-meet`：写回只发生在 apply / uniform / accelerated（onChange 空实现
+  是刻意的，防止未应用草稿进 URL）；只写 4 个 urlSyncKeys。
+- `ganshe`：urlSyncKeys 滑块在 imperative `createWaveSourceCard`，F3 正向
+  契约谓词覆盖不到（取值键由 page `writeParam` 手工写回）。非控件突变键
+  `observerX`（画布拖拽/空白点击，无对应控件）由 entry `setOnObserverMove`
+  经 `sceneWriter` 写回；路径级断言在 `scene-url-writer-contract.spec.ts`
+  （B21 已清）。两条谓词分属 B12 备注所述。
 - URL 同步棘轮：`scene-params-contract.spec.ts` 强制「有 `defaultParams` 的
   场景必须有 `urlSyncKeys` 或 page 级 `paramSync` 自定义路径」，全量 100%
   结构化覆盖（原 vite.config 百分比阈值已由该棘轮取代，debt-ledger A7）。
-- 布局重建重跑管线时，若落在 `writeParam` 150ms debounce 窗口内，存在理论性
-  回灌竞态（窗口极小，非新引入）。
+- 双契约棘轮：`NO_EVENTFUL_PROJECTION`（静默四件套 + fieldTypes）与
+  `NO_CONTROL_PROJECTION`（entry `getParams` **实现** + handle `fieldTypes`/`syncFromScene`，
+  且 getParams 返回键 ∩ fieldTypes ≠ ∅，或登记豁免）并存。
+- Owner-scoped writer / restore-once 契约见 `src/app/url-sync.ts` 与
+  `tests/contract/scene-url-writer-contract.spec.ts`。布局 remount 不再把
+  首屏 query 写回 scene。urlSyncKeys ∩ value-control 非空 ⇒ page 必须有
+  writeParam / writeOwnedSceneParams / sceneWriter，或登记豁免。
 
 ### 控制区列布局范式
 
@@ -223,11 +259,11 @@ data-workspace 是可选布局能力，仅 `layoutConfig.dataWorkspace: true` �
 - `DataWorkspaceFieldSpec.step?: 'chartAnalysis'` 把 summary 字段划到图像分析环节显示（缺省数据步；图像分析模式下仅显示该类字段）
 - lab-stage `floatData` / `floatGraph`（默认 true）：false 时仍创建 slot（收养需要锚点）但 panel 为 `hidden`、不参与拖拽
 - split 系布局 `graphInitiallyHidden`（默认 false）：true 时图表区默认不渲染（section 置 `hidden`、容器标 `data-graph-initially-hidden`），slot 仍创建作收养锚点；工作区图像分析环节收养时自动 unhide、退出还原。用于"实验阶段不需要图表"的场景（如 ticker-tape）
-- CSS 由能力 runtime 惰性携带（`src/app/layouts/capabilities/data-workspace.ts` 动态 import），**page.ts 不要 import 工作区 CSS**
+- CSS 由能力 runtime 惰性携带（`src/app/layouts/capabilities/data-workspace/index.ts` 动态 import），**page.ts 不要 import 工作区 CSS**
 
 ## 舞台缩放坐标纪律（强制）
 
-data-workspace 的舞台 pan/zoom 是纯视图层 CSS transform（`stage-panzoom.ts`）。以下规则防止屏幕空间与局部空间混用（历史 bug：仪器 fit 漂移、panzoom 控件变遮罩）：
+data-workspace 的舞台 pan/zoom 是纯视图层 CSS transform（`capabilities/stage-panzoom.ts`）。以下规则防止屏幕空间与局部空间混用（历史 bug：仪器 fit 漂移、panzoom 控件变遮罩）：
 
 - **布局测量**：只用 `readElementLayoutSize` / `sizeCanvasToFill`（offsetWidth 系，免疫祖先 transform）；禁止用 `getBoundingClientRect` 当布局盒去写 `style.transform` / 窄屏判断 / fit 计算。仪器 fit 统一走 `src/instruments/_utils/fit-visual.ts`（内部经 `localFitSpace` 归一化）
 - **指针 delta**：进局部坐标前必须经 `localPointerDelta(el, dx, dy)`（`core/canvas-sizing.ts`）；k 读自 panzoom 写入的 `.stage-viewport[data-stage-zoom]`，`stageZoomOf` 沿 composed 树攀爬（穿透仪器 open shadow root）。`el` 必须用闭包内稳定节点，禁止用 document 级 move 事件的 `event.target`；禁止对被 transform 的元素取 GBCR 比值当 k
@@ -287,7 +323,7 @@ export type SceneMeta = ScenePlacardMeta & {
 - 单元测试放在 `tests/unit/*.spec.ts`
 - DOM 组件测试使用 `happy-dom` 环境（已全局配置）
 - Playwright 行为测试放在 `tests/e2e/*.spec.ts`，布局、无障碍、视觉与跨浏览器测试放在 `tests/visual/*.spec.ts`
-- 覆盖率阈值以 `vite.config.ts` 为准（棘轮 = 实绩−2，2026-09-25 基线）：lines 88.9%, functions 86.2%, branches 80.9%, statements 88.9%
+- 覆盖率阈值以 `vite.config.ts` 的 `test.coverage.thresholds` 为唯一来源（棘轮 = 实绩−2）。本文不固化数值
 
 ### 视觉回归基线规则（强制）
 
@@ -308,8 +344,12 @@ update_snapshots` **调用同一脚本**，不是 runner 上裸跑 PNG。
   `Noto Sans CJK SC`（见 `design-tokens.css` 字体栈）。
 - 移动端断言遍历 canvas 时必须跳过非激活 tab 面板（`.mobile-tab-panel:not(.active)`
   内的 canvas 是 display:none，尺寸为 0 属设计如此），或先切换到目标 tab 再断言。
-- 像素覆盖清单 = 自动发现的全部场景 − spec 内 `SNAPSHOT_OPT_OUT` 显式豁免
-  （每个条目须带理由注释）。新增场景默认纳入像素覆盖，首次须生成两套平台基线。
+- 像素覆盖清单 = `tests/visual/baseline-coverage.json`：`coveredSceneIds`
+  必须等于实际完整 Linux+Darwin × desktop+mobile 黄金对；其余场景必须写进
+  冻结的 `legacyDebtSceneIds`（B11，owner=`physics-2d maintainers`），禁止把
+  「未覆盖」动态归类为债务。截图测试只跑 covered；禁止 skip。新场景必须显式
+  追加到 `legacyDebtSceneIds`，补齐两套平台基线后再移入 covered。未登记的新
+  场景会使 coverage 契约失败。
 
 ### 场景删除保护规则（强制）
 
@@ -393,7 +433,7 @@ function resize() {
 - [ ] 使用了 `canvas.dataset.responsiveScale` 或 `getResponsiveScale`
 - [ ] Playwright 移动端截图通过审查（无元素遮挡、无过度拥挤）
 
-`scene-standard.spec.ts` 对未来新增场景实施 AST 棘轮：Canvas 空间参数和尺寸变量中大于 50 的数值必须由 scale、viewport 尺寸或标准 token 推导。现有历史场景使用冻结豁免清单，禁止把新场景加入该清单来绕过失败。
+`scene-standard.spec.ts` 对全部场景实施 AST 棘轮：Canvas 空间参数和尺寸变量中大于 50 的数值必须由 scale、viewport 尺寸或标准 token 推导。`LARGE_RENDER_LITERAL_EXEMPT` 已于 v15 Phase E 批 4 清空，禁止再加入。
 
 ## 布局扩展规范（强制）
 
@@ -414,6 +454,10 @@ function resize() {
 
 ## 已知限制
 
-- `spring-oscillator` 与 `ganshe` 使用 imperative `controls.ts`（动态增删振子 / 观察点管理）。ui 工厂由 page.ts 注入（结构类型参数），场景层保持零 ui 导入——新增 imperative 卡片时遵循同一注入模式，禁止恢复行内 `eslint-disable no-restricted-imports` 豁免（debt-ledger A2 已清偿）
+- `spring-oscillator` 与 `ganshe` 使用 imperative `controls.ts`（动态增删振子 / 观察点管理）。ui 工厂由 page.ts 注入（结构类型参数），场景层保持零 ui 导入——新增 imperative 卡片时遵循同一注入模式，禁止恢复行内 `eslint-disable no-restricted-imports` 豁免（debt-ledger A2 已清偿）。`UI_EXEMPT_SCENE_CONTROLS` 已清空，必须保持空。
+- `xt-graph` / `tortoise-hare`：`getParams` 仅 `{speed}`，schema 无 speed 键，通用投影空转；preset 高亮只覆盖 URL 首绘（A3 裁定）
+- `spring-oscillator`：`getParams` 只暴露首振子 `{k,m,A}`，列表重建走 handle `syncFromScene`（A3 裁定）
+- 豁免清单冻结（F4）：`EXISTING_SPECIAL_HANDLE_FORMS` 冻 3 项；`NON_PARAM_KEYS` 冻 6 场景且 13 键；`LARGE_RENDER_LITERAL_EXEMPT` 已空（v15 Phase E 批 4 关闭）。只许缩小。
 - chase-meet 的表达式解析器语义（除零得 0、悬挂操作符补 0、多余 token 静默丢弃）已被 `tests/unit/chase-meet-expression-parser.spec.ts` 固化为特征化契约；「修正」parser 前须先改测试，否则会被该契约挡住。
-- E2E 套件当前稳定：本地连续 3 次完整运行（含 `--repeat-each=2` 加压，累计 304 次执行）全部通过，早期文档所述「35 个不稳定测试」已不复现。若 CI 偶发超时，优先排查浏览器/资源环境而非测试本身。
+- chase-meet 舞台内多画布是产品决策（C8）：速度图与位移图需同屏对照，标准 graph slot 放不下三画布。桌面 `hasGraph: false`（图在舞台内），移动端经 `layoutOverrides['mobile-stack'].hasGraph = true` 开图表 tab 并走标准 `renderGraph`。不要把舞台画布迁到 graph slot；豁免由 hasGraph 双源契约的 layoutOverrides 子句机器化。
+- E2E 套件当前稳定；用例数以 `pnpm exec playwright test -c playwright.e2e.config.ts --list` 查询为准。早期文档所述「35 个不稳定测试」已不复现。若 CI 偶发超时，优先排查浏览器/资源环境而非测试本身。

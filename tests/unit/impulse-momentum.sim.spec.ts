@@ -242,9 +242,7 @@ describe('impulse-momentum scene entry and URL', () => {
       resolve(process.cwd(), 'src/scenes/impulse-momentum/page.ts'),
       'utf8'
     );
-    expect(pageSrc).toContain(
-      'writeSceneParams(restoredUrlParams(scene.getParams()))'
-    );
+    expect(pageSrc).toContain('writeOwnedSceneParams');
     expect(pageSrc).not.toContain("key: 'autoRun'");
     const createControlsBody = pageSrc.slice(
       pageSrc.indexOf('createControls:')

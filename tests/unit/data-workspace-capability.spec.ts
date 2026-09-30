@@ -21,6 +21,12 @@ import type {
 } from '../../src/app/layouts/types';
 import { createDataWorkspacePanel } from '../../src/ui/components/data-workspace-panel';
 import { createKinematicsChartHost } from './data-workspace-generic.fixture';
+import { SidebarStateOwner } from '../../src/app/layouts/sidebar-state';
+import { WorkspaceUiState } from '../../src/app/layouts/workspace-ui-state';
+import {
+  GRAPH_SECTION_ATTR,
+  STAGE_FRAME_ATTR
+} from '../../src/platform/stage-chrome';
 
 function specWithChart(on: boolean): DataWorkspaceSpec {
   return {
@@ -86,7 +92,9 @@ function createCtx(container: HTMLElement): CapabilityContext {
     getCurrentLayoutId: () => 'split-right',
     getAvailableLayouts: () => [],
     on: () => () => {},
-    requestStageRepaint() {}
+    requestStageRepaint() {},
+    sidebar: new SidebarStateOwner(),
+    workspaceUi: new WorkspaceUiState()
   };
 }
 
@@ -178,8 +186,10 @@ describe('data-workspace capability lifecycle', () => {
     const container = document.createElement('div');
     const animation = document.createElement('div');
     animation.className = 'teaching-stage-frame';
+    animation.setAttribute(STAGE_FRAME_ATTR, '');
     const graphSection = document.createElement('div');
     graphSection.className = 'teaching-graph-section';
+    graphSection.setAttribute(GRAPH_SECTION_ATTR, '');
     const graph = document.createElement('div');
     graph.className = 'graph-slot';
     graphSection.appendChild(graph);
@@ -234,6 +244,7 @@ describe('data-workspace capability lifecycle', () => {
     const container = document.createElement('div');
     const animation = document.createElement('div');
     animation.className = 'teaching-stage-frame';
+    animation.setAttribute(STAGE_FRAME_ATTR, '');
     const graph = document.createElement('div');
     graph.className = 'graph-slot';
     container.append(animation, graph);
@@ -274,6 +285,7 @@ describe('data-workspace capability lifecycle', () => {
     main.className = 'lab-stage-main';
     const anim = document.createElement('div');
     anim.className = 'lab-stage-anim';
+    anim.setAttribute(STAGE_FRAME_ATTR, '');
     main.append(anim);
     container.append(main);
     document.body.append(container);
@@ -358,6 +370,7 @@ describe('data-workspace capability lifecycle', () => {
     toolbar.className = 'teaching-stage-toolbar stage-toolbar';
     const frame = document.createElement('div');
     frame.className = 'teaching-stage-frame';
+    frame.setAttribute(STAGE_FRAME_ATTR, '');
     panel.append(toolbar, frame);
     container.append(panel);
     document.body.append(container);
@@ -432,8 +445,10 @@ describe('data-workspace capability lifecycle', () => {
     const container = document.createElement('div');
     const animation = document.createElement('div');
     animation.className = 'teaching-stage-frame';
+    animation.setAttribute(STAGE_FRAME_ATTR, '');
     const graphSection = document.createElement('div');
     graphSection.className = 'teaching-graph-section';
+    graphSection.setAttribute(GRAPH_SECTION_ATTR, '');
     graphSection.hidden = true;
     graphSection.classList.add('is-collapsed');
     const graph = document.createElement('div');
@@ -500,8 +515,10 @@ describe('data-workspace capability lifecycle', () => {
     const container = document.createElement('div');
     const animation = document.createElement('div');
     animation.className = 'teaching-stage-frame';
+    animation.setAttribute(STAGE_FRAME_ATTR, '');
     const graphSection = document.createElement('div');
     graphSection.className = 'lab-float lab-float-graph is-collapsed';
+    graphSection.setAttribute(GRAPH_SECTION_ATTR, '');
     graphSection.hidden = true;
     graphSection.style.cssText =
       'position:absolute;top:568px;left:788px;width:400px;height:200px;z-index:20';
@@ -1138,6 +1155,7 @@ describe('capability presentation suspension (Fix 5)', () => {
     const container = document.createElement('div');
     const animation = document.createElement('div');
     animation.className = 'teaching-stage-frame';
+    animation.setAttribute(STAGE_FRAME_ATTR, '');
     container.append(animation);
     const modeListeners: Array<(payload: { mode: string }) => void> = [];
     let mode: 'normal' | 'presentation' = 'normal';
@@ -1184,6 +1202,7 @@ describe('capability presentation suspension (Fix 5)', () => {
     const container = document.createElement('div');
     const animation = document.createElement('div');
     animation.className = 'teaching-stage-frame';
+    animation.setAttribute(STAGE_FRAME_ATTR, '');
     container.append(animation);
     const modeListeners: Array<(payload: { mode: string }) => void> = [];
     let mode: 'normal' | 'presentation' = 'normal';

@@ -1,7 +1,8 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { readSceneParams } from '../../app/url-sync';
+
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { tickerTimerControlsSchema } from './controls-schema';
 import { asModel, createTickerTimerScene } from './scene.entry';
 import { tickerTimerMeta } from './scene.meta';
@@ -19,20 +20,24 @@ function asBool(value: unknown, fallback = false): boolean {
   return fallback;
 }
 
-const rawInitialParams = readSceneParams(tickerTimerMeta);
-const initialParams: Partial<TickerTimerParams> = {};
-const initialModel = asModel(rawInitialParams.model);
-if (initialModel !== undefined) initialParams.model = initialModel;
-for (const key of ['initialVelocity', 'acceleration'] as const) {
-  const value = Number(rawInitialParams[key]);
-  if (Number.isFinite(value)) initialParams[key] = value;
+function paramsFromUrl(
+  raw: Record<string, number | string>
+): Partial<TickerTimerParams> {
+  const next: Partial<TickerTimerParams> = {};
+  const model = asModel(raw.model);
+  if (model !== undefined) next.model = model;
+  for (const key of ['initialVelocity', 'acceleration'] as const) {
+    const value = Number(raw[key]);
+    if (Number.isFinite(value)) next[key] = value;
+  }
+  if (raw.autoRun !== undefined) next.autoRun = asBool(raw.autoRun);
+  return next;
 }
-if (rawInitialParams.autoRun !== undefined)
-  initialParams.autoRun = asBool(rawInitialParams.autoRun);
 
 bootScenePage({
   meta: tickerTimerMeta,
-  autoPlay: initialParams.autoRun !== false,
+  shouldAutoPlay: (_params, urlParams) =>
+    paramsFromUrl(urlParams).autoRun !== false,
   preferredLayout: 'split-right',
   layoutConfig: {
     defaultLeftRatio: 0.34,
@@ -43,14 +48,14 @@ bootScenePage({
     readoutLabel: '数据读数',
     hasGraph: false
   },
-  createScene: ({ canvas, theme, mode, demoHints }) => {
+  createScene: ({ canvas, theme, mode, demoHints, urlParams }) => {
     if (!canvas) throw new Error('ticker-timer requires a canvas');
     const scene = createTickerTimerScene({
       canvas,
       theme,
       mode,
       demoHints,
-      initialParams
+      initialParams: paramsFromUrl(urlParams ?? {})
     });
     const scheduler = createRenderScheduler(() => scene.render());
     const dispose = scene.dispose.bind(scene);
@@ -104,12 +109,7 @@ bootScenePage({
         render();
       }
     });
-    return {
-      setValue: (key: string, value: number | string | boolean) =>
-        renderer.setValue(key, value),
-      setActive: (key: string, value: string) => renderer.setActive(key, value),
-      dispose: () => renderer.dispose()
-    };
+    return exposeSchemaHandle(renderer);
   },
   paramSync: {
     applyParam: (key, value, ctx) => {

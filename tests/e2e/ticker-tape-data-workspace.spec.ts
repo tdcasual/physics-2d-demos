@@ -282,7 +282,7 @@ test.describe('ticker-tape data workspace', () => {
     await dragBeyond();
     const clamped2 = await geom();
     expect(clamped2.originTick).toBe(16);
-    expect(clamped2.originPx).toBeCloseTo(clamped.originPx, 0);
+    expect(clamped2.originPx).toBe(clamped.originPx);
   });
 
   test('default page hides lab float graph and data on mobile', async ({
@@ -1807,10 +1807,7 @@ test.describe('ticker-tape data workspace', () => {
     expect(
       Math.abs(afterReset.canvasWidth - baseline.canvasWidth)
     ).toBeLessThanOrEqual(4);
-    expect(afterReset.canvasCssWidth).toBeCloseTo(
-      afterReset.slotOffsetWidth,
-      0
-    );
+    expect(afterReset.canvasCssWidth).toBe(afterReset.slotOffsetWidth);
 
     await entry.click();
     await expect(page.locator('.stage-viewport')).toHaveCount(0);

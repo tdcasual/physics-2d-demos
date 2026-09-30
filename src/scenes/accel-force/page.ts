@@ -1,6 +1,7 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { createAccelForceScene } from './scene.entry';
 import { accelForceMeta } from './scene.meta';
 import { accelForceControlsSchema } from './controls-schema';
@@ -124,13 +125,8 @@ bootScenePage({
     });
 
     return {
-      setValue(key: string, value: number | string | boolean): void {
-        renderer.setValue(key, value);
-      },
-      setActive(key: string, value: string): void {
-        renderer.setActive(key, value);
-      },
-      dispose(): void {
+      ...exposeSchemaHandle(renderer),
+      dispose: () => {
         unsubscribe();
         renderer.dispose();
       }

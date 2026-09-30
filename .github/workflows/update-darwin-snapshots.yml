@@ -5,6 +5,11 @@ name: Update darwin visual baselines
 # 等效于在 Mac 本地执行 `pnpm test:visual:update`（见 AGENTS.md 基线规则）。
 on:
   workflow_dispatch:
+    inputs:
+      grep:
+        description: "Playwright --grep 过滤串（如 'desktop foo|mobile foo'）；留空 = 全量（慎用：会重写全部既有基线）"
+        required: false
+        default: ''
 
 jobs:
   update:
@@ -36,7 +41,12 @@ jobs:
         run: pnpm build
 
       - name: Regenerate darwin visual baselines
-        run: PLAYWRIGHT_SKIP_BUILD=1 pnpm exec playwright test tests/visual/visual-regression.spec.ts --update-snapshots
+        run: |
+          if [ -n "${{ inputs.grep }}" ]; then
+            PLAYWRIGHT_SKIP_BUILD=1 pnpm exec playwright test tests/visual/visual-regression.spec.ts --update-snapshots --grep "${{ inputs.grep }}"
+          else
+            PLAYWRIGHT_SKIP_BUILD=1 pnpm exec playwright test tests/visual/visual-regression.spec.ts --update-snapshots
+          fi
 
       - name: Upload regenerated baselines
         uses: actions/upload-artifact@v4

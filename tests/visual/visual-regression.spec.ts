@@ -2,29 +2,31 @@ import { existsSync } from 'node:fs';
 import { test, expect } from '@playwright/test';
 import { sceneIds, scenePage } from './scene-pages';
 import { waitForFirstFrame } from '../helpers/wait-first-frame';
+import {
+  hasAuthoritativePair,
+  legacyBaselineDebt,
+  untrackedSceneIds,
+  VISUAL_COVERED_SCENE_IDS,
+  VISUAL_DYNAMIC_SCENE_IDS,
+  VISUAL_LEGACY_DEBT_RECORD,
+  VISUAL_LEGACY_DEBT_SCENE_IDS,
+  VISUAL_SCREENSHOT_SPEC_COUNT
+} from './baseline-coverage';
 
 /**
- * Pixel snapshots cover every discovered scene. Baselines are per-platform
- * files: *-linux.png is maintained only by scripts/visual-linux-container.sh
- * (CI invokes the same script), *-darwin.png on Mac.
+ * Pixel snapshots cover the scenes listed in baseline-coverage.json that
+ * have complete desktop+mobile goldens for both linux and darwin.
+ * Uncovered scenes must be listed in frozen legacyDebtSceneIds (B11).
  *
- * 覆盖清单 = 自动发现（tests/visual/scene-pages.ts 的 sceneIds，
- * 即 src/pages/*.html 减去工具页）− 下方 SNAPSHOT_OPT_OUT。
- * 新场景默认纳入像素覆盖；首次补充基线用
- * scripts/visual-linux-container.sh update（linux）或
- * pnpm test:visual:update（darwin，仅在 macOS 上）。
+ * *-linux.png is maintained only by scripts/visual-linux-container.sh
+ * (CI invokes the same script), *-darwin.png on Mac.
  *
  * 禁止在 Linux 宿主机 --update-snapshots：会用错误光栅覆盖 *-linux.png。
  */
 
-// 显式 opt-out 清单，每个条目必须带理由注释。当前为空：所有场景均有基线。
-const SNAPSHOT_OPT_OUT: readonly string[] = [];
-
-const SNAPSHOT_SCENE_IDS = sceneIds.filter(
-  (id) => !SNAPSHOT_OPT_OUT.includes(id)
-);
-
-const SCENES = SNAPSHOT_SCENE_IDS.map((id) => ({ id, name: id }));
+const COVERED = VISUAL_COVERED_SCENE_IDS;
+const DYNAMIC = new Set(VISUAL_DYNAMIC_SCENE_IDS);
+const SCENES = COVERED.map((id) => ({ id, name: id }));
 
 function linuxScreenshotsAuthorized(): boolean {
   return process.env.VISUAL_LINUX_AUTHORITY === '1';
@@ -37,11 +39,39 @@ test('linux PNG authority env is fail-closed in the container', () => {
   }
 });
 
-test('snapshot opt-out list only references discovered scenes', () => {
-  const unknown = SNAPSHOT_OPT_OUT.filter((id) => !sceneIds.includes(id));
-  expect(unknown, 'snapshot opt-out list contains unknown scene ids').toEqual(
+test('visual baseline coverage accounts for every discovered scene', () => {
+  const covered = [...COVERED].sort();
+  const discovered = [...sceneIds].sort();
+  const debt = legacyBaselineDebt();
+  const debtIds = [...VISUAL_LEGACY_DEBT_SCENE_IDS].sort();
+  const unknownCovered = covered.filter((id) => !discovered.includes(id));
+  const unknownDebt = debtIds.filter((id) => !discovered.includes(id));
+  const partial = covered.filter((id) => !hasAuthoritativePair(id));
+  const untracked = untrackedSceneIds(discovered);
+  const overlap = covered.filter((id) => debtIds.includes(id));
+
+  expect(unknownCovered, 'covered list contains unknown scene ids').toEqual([]);
+  expect(unknownDebt, 'debt list contains unknown scene ids').toEqual([]);
+  expect(
+    partial,
+    'covered scenes missing a complete Linux+Darwin pair'
+  ).toEqual([]);
+  expect(untracked, 'discovered scenes missing from covered or debt').toEqual(
     []
   );
+  expect(overlap, 'scene listed as both covered and debt').toEqual([]);
+  expect(covered.length + debtIds.length).toBe(discovered.length);
+  expect(COVERED.length * 2).toBe(VISUAL_SCREENSHOT_SPEC_COUNT);
+  expect(debtIds).toHaveLength(0);
+  expect(VISUAL_LEGACY_DEBT_RECORD).toBe('B11');
+  expect(Object.keys(debt).sort()).toEqual(debtIds);
+});
+
+test('dynamic screenshot allowlist only contains discovered scenes', () => {
+  const unknown = VISUAL_DYNAMIC_SCENE_IDS.filter(
+    (id) => !sceneIds.includes(id)
+  );
+  expect(unknown, 'dynamic allowlist contains unknown scene ids').toEqual([]);
 });
 
 test.describe('scene screenshots', () => {
@@ -51,21 +81,35 @@ test.describe('scene screenshots', () => {
   );
 
   for (const scene of SCENES) {
-    // emf-analogy 有粒子动画（相位推进）、double-slit 默认 autoPlay，
-    // 截图时动画可能仍在推进，diff 阈值需要更高
-    const isDynamic = scene.id === 'emf-analogy' || scene.id === 'double-slit';
+    // chase-meet 舞台内多画布，remainder 需要更长才能排完。
+    const extraWait = scene.id === 'chase-meet';
 
     test(`desktop ${scene.id}`, async ({ page }) => {
       await page.setViewportSize({ width: 1440, height: 900 });
       await page.goto(scenePage(scene.id), {
         waitUntil: 'domcontentloaded'
       });
+      if (DYNAMIC.has(scene.id)) {
+        // 相位钉死必须在 remainder 之前，但不能 stub rAF（waitForFirstFrame
+        // 的 remainder 用 rAF 计拍，仪器 fit 也走 rAF）。改为读播放态投影
+        // 并暂停场景：画面从 t≈0 起静止，rAF 继续服务 fit/排版（B20/rod-model）。
+        await page.waitForSelector('.layout-master[data-first-frame="ready"]', {
+          timeout: 10_000
+        });
+        const playing = await page.evaluate(
+          () =>
+            document
+              .querySelector('.layout-master')
+              ?.getAttribute('data-scene-playing') === 'true'
+        );
+        if (playing) await page.keyboard.press(' ');
+      }
       await waitForFirstFrame(page, {
-        remainderMs: isDynamic || scene.id === 'chase-meet' ? 1200 : 800
+        remainderMs: extraWait ? 1200 : 800
       });
       await expect(page).toHaveScreenshot(`${scene.id}-desktop.png`, {
-        maxDiffPixels: isDynamic ? 3000 : 800,
-        threshold: isDynamic ? 0.3 : 0.2
+        maxDiffPixels: 800,
+        threshold: 0.2
       });
     });
 
@@ -74,12 +118,27 @@ test.describe('scene screenshots', () => {
       await page.goto(scenePage(scene.id), {
         waitUntil: 'domcontentloaded'
       });
+      if (DYNAMIC.has(scene.id)) {
+        // 相位钉死必须在 remainder 之前，但不能 stub rAF（waitForFirstFrame
+        // 的 remainder 用 rAF 计拍，仪器 fit 也走 rAF）。改为读播放态投影
+        // 并暂停场景：画面从 t≈0 起静止，rAF 继续服务 fit/排版（B20/rod-model）。
+        await page.waitForSelector('.layout-master[data-first-frame="ready"]', {
+          timeout: 10_000
+        });
+        const playing = await page.evaluate(
+          () =>
+            document
+              .querySelector('.layout-master')
+              ?.getAttribute('data-scene-playing') === 'true'
+        );
+        if (playing) await page.keyboard.press(' ');
+      }
       await waitForFirstFrame(page, {
-        remainderMs: isDynamic || scene.id === 'chase-meet' ? 1200 : 800
+        remainderMs: extraWait ? 1200 : 800
       });
       await expect(page).toHaveScreenshot(`${scene.id}-mobile.png`, {
-        maxDiffPixels: isDynamic ? 3000 : 800,
-        threshold: isDynamic ? 0.3 : 0.2
+        maxDiffPixels: 800,
+        threshold: 0.2
       });
     });
   }

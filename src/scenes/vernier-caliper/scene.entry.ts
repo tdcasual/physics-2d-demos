@@ -29,6 +29,7 @@ export function createVernierCaliperScene(
   setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
   getState(): CaliperState;
   setParams(params: Partial<CaliperParams>): CaliperParams;
+  getParams(): CaliperParams;
   getReadoutItems(): Array<{ key: string; label: string; value: string }>;
   setRevealAnswer(value: boolean): void;
   subscribe(listener: () => void): () => void;
@@ -101,6 +102,9 @@ export function createVernierCaliperScene(
       base.renderAndEmit();
       base.notify();
       return result;
+    },
+    getParams(): CaliperParams {
+      return { ...sim.getState().params };
     },
     getReadoutItems,
     setRevealAnswer(value: boolean): void {

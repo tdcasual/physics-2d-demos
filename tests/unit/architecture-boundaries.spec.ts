@@ -144,12 +144,8 @@ function layerRule(
   };
 }
 
-// AGENTS.md「已知限制」记载的合法例外：两个 imperative controls.ts 经行内
-// eslint-disable 豁免引入 ui 组件。仅豁免 ui；app/catalog/跨场景仍禁止。
-const UI_EXEMPT_SCENE_CONTROLS: ReadonlySet<string> = new Set([
-  'src/scenes/ganshe/controls.ts',
-  'src/scenes/spring-oscillator/controls.ts'
-]);
+// A2 已清偿：imperative controls.ts 经 page.ts 注入 ui 工厂，清单必须保持空。
+const UI_EXEMPT_SCENE_CONTROLS: ReadonlySet<string> = new Set();
 
 function sceneFileRule(
   file: string
@@ -173,9 +169,6 @@ function sceneFileRule(
       if (isPage) {
         return null;
       }
-      if (target.layer === 'ui' && UI_EXEMPT_SCENE_CONTROLS.has(file)) {
-        return null;
-      }
       return `${file} must not import ${target.layer} layer`;
     }
     return null;
@@ -191,8 +184,10 @@ describe('architecture boundaries', () => {
   });
 
   it('scene modules do not import app, ui, catalog, or other scenes', () => {
-    // 不再整体排除 controls.ts：ganshe/spring-oscillator 的 controls.ts
-    // 仅豁免 ui（AGENTS.md 合法例外），其余约束照常生效。
+    expect(
+      UI_EXEMPT_SCENE_CONTROLS.size,
+      'UI_EXEMPT_SCENE_CONTROLS 必须保持空（A2 已清偿，禁止回潮）'
+    ).toBe(0);
     assertImportRules(listSourceFiles('src/scenes'), (target, file) =>
       sceneFileRule(file)(target)
     );

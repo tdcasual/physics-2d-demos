@@ -1,8 +1,9 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { writeSceneParams } from '../../app/url-sync';
+import { writeOwnedSceneParams } from '../../app/url-sync';
 import { applyTouchInteractionMode } from '../../platform/input/touch';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { createForceCompositionScene } from './scene.entry';
 import { forceCompositionMeta } from './scene.meta';
 import { forceCompositionControlsSchema } from './controls-schema';
@@ -99,12 +100,10 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, scheduleRender }) => {
+  createControls: ({ mount, scene, scheduleRender, sceneWriter }) => {
     const render = scheduleRender ?? (() => scene.render());
     let applying = false;
     let lastUi = scene.getParams();
-    let urlTimer = 0;
-    let pendingUrl: ReturnType<typeof urlSnapshot> | null = null;
 
     const applyTabVisibility = (tab: string): void => {
       renderer.setVisible('两力参数', tab === 'synthesis' || tab === 'range');
@@ -114,29 +113,8 @@ bootScenePage({
       renderer.setVisible('范围演变', tab === 'range');
     };
 
-    const flushUrl = (): void => {
-      if (urlTimer) {
-        window.clearTimeout(urlTimer);
-        urlTimer = 0;
-      }
-      if (!pendingUrl) return;
-      writeSceneParams(pendingUrl);
-      pendingUrl = null;
-    };
-
-    const queueUrl = (p: ForceCompositionParams, immediate: boolean): void => {
-      pendingUrl = urlSnapshot(p);
-      if (immediate) {
-        flushUrl();
-        return;
-      }
-      if (urlTimer) {
-        window.clearTimeout(urlTimer);
-      }
-      urlTimer = window.setTimeout(() => {
-        urlTimer = 0;
-        flushUrl();
-      }, 200);
+    const writeUrl = (p: ForceCompositionParams): void => {
+      writeOwnedSceneParams(sceneWriter, urlSnapshot(p));
     };
 
     const syncFromScene = (): void => {
@@ -173,7 +151,7 @@ bootScenePage({
         p.tab !== lastUi.tab ||
         p.rule !== lastUi.rule;
       lastUi = { ...p };
-      if (changed) queueUrl(p, false);
+      if (changed) writeUrl(p);
     };
 
     const renderer = renderSchema({
@@ -194,7 +172,7 @@ bootScenePage({
         if (key === 'tab') applyTabVisibility(String(value));
         lastUi = scene.getParams();
         render();
-        queueUrl(lastUi, true);
+        writeUrl(lastUi);
       },
       onAction: () => {}
     });
@@ -202,19 +180,33 @@ bootScenePage({
     applyTabVisibility(scene.getParams().tab);
     const unsubscribe = scene.subscribe(syncFromScene);
 
+    const projectFromLive = (): void => {
+      const p = scene.getParams();
+      applying = true;
+      renderer.setValueSilently('f1', p.f1);
+      renderer.setValueSilently('f2', p.f2);
+      renderer.setValueSilently('angle', p.angle);
+      renderer.setValueSilently('orthogonalF', p.orthogonalF);
+      renderer.setValueSilently('orthogonalAngle', p.orthogonalAngle);
+      renderer.setValueSilently('gravity', p.gravity);
+      renderer.setValueSilently('inclineAngle', p.inclineAngle);
+      renderer.setValueSilently('rangeSweep', p.rangeSweep);
+      renderer.setActiveSilently('tab', p.tab);
+      renderer.setActiveSilently('rule', p.rule);
+      applyTabVisibility(p.tab);
+      applying = false;
+      lastUi = { ...p };
+    };
+
     return {
-      setValue(key: string, value: number | string | boolean): void {
-        renderer.setValue(key, value);
-      },
+      ...exposeSchemaHandle(renderer),
       setActive(key: string, value: string): void {
         renderer.setActive(key, value);
         if (key === 'tab') applyTabVisibility(value);
       },
+      syncFromScene: projectFromLive,
       dispose(): void {
         unsubscribe();
-        if (urlTimer) window.clearTimeout(urlTimer);
-        urlTimer = 0;
-        pendingUrl = null;
         renderer.dispose();
       }
     };

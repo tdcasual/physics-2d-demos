@@ -1,5 +1,7 @@
 # Modern Usability Hardening Implementation Plan
 
+> 状态：历史快照。归档设计/实施记录，不作为现行方案。
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Land P0/P1/P2 usability upgrades for modern scenes: touch-safe targets, mobile stability, classroom-simple controls, structured status, unified touch/responsive strategy, with regression tests.

@@ -16,7 +16,6 @@ import type { LayoutSelectionContext } from './selector';
 import {
   persistState as persistStateToStorage,
   restorePersistedState as restorePersistedStateFromStorage,
-  saveLayoutState as saveLayoutStateToStorage,
   restoreLayoutState as restoreLayoutStateFromStorage
 } from './container-persistence';
 import { satisfiesConstraints } from './layout-constraints';
@@ -29,19 +28,31 @@ import {
   buildCapabilityContext,
   updateCapabilityInstances
 } from './capability-context';
+import { ModeOwner } from './mode-owner';
+import { SidebarStateOwner } from './sidebar-state';
+import { WorkspaceUiState } from './workspace-ui-state';
+import type {
+  LayoutSwitchRuntime,
+  SwitchRuntimeHost
+} from './layout-switch-runtime';
+import {
+  SwitchQuarantinedError,
+  SWITCH_QUARANTINE_MESSAGE,
+  SWITCH_STATUS_ATTR
+} from './switch-errors';
 import type {
   SceneContainer,
   Scene,
   LayoutConfig,
   Theme,
   SwitchOptions,
-  LayoutTransition,
-  LayoutChangeEvent,
   CreateContainerOptions,
   SceneContainerEvents,
   CapabilityContext,
   ILayout
 } from './types';
+import type { DemoRenderHints } from '../../platform/demo-profile';
+import type { LayoutSwitchState } from './switch-errors';
 
 /**
  * Stable data attributes used by controls to identify the same focus target
@@ -98,6 +109,33 @@ function findFocusTarget(
   return null;
 }
 
+type QueuedSceneDeferred = {
+  promise: Promise<void>;
+  resolve: () => void;
+  reject: (reason?: unknown) => void;
+  settled: boolean;
+};
+
+function createQueuedSceneDeferred(): QueuedSceneDeferred {
+  let resolve!: () => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<void>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject, settled: false };
+}
+
+function settleQueuedSceneDeferred(
+  deferred: QueuedSceneDeferred | null,
+  error?: unknown
+): void {
+  if (!deferred || deferred.settled) return;
+  deferred.settled = true;
+  if (error !== undefined) deferred.reject(error);
+  else deferred.resolve();
+}
+
 /**
  * 场景容器实现类
  *
@@ -117,16 +155,23 @@ export class SceneContainerImpl implements SceneContainer {
 
   private _lowPowerMode = false;
   private _disposed = false;
-  private _switching = false;
-  /** 并发切换代际：新切换/安全计时器递增，旧协程在 await 边界作废。 */
-  private _switchGeneration = 0;
-  /** 手动切换请求排队（last-wins）；观察器自动切换不排队。 */
-  private _pendingSwitchId: string | null = null;
-  private _pendingScene: Scene | null = null;
   private _hasExplicitDefaultTheme: boolean;
   private _emitter: EventEmitter<SceneContainerEvents>;
   private _resizeObserver: ContainerResizeObserver;
   private _orchestrator = new CapabilityOrchestrator();
+  private _modeOwner: ModeOwner;
+  private _sidebar = new SidebarStateOwner();
+  private _workspaceUi = new WorkspaceUiState();
+  private _switch: LayoutSwitchRuntime | null = null;
+  private _switchReady: Promise<LayoutSwitchRuntime> | null = null;
+  private _boot: Promise<void> | null = null;
+  private _bootQueuedScene: Scene | null = null;
+  private _bootQueuedDeferred: QueuedSceneDeferred | null = null;
+  private _switchQueued: {
+    scene: Scene;
+    deferred: QueuedSceneDeferred;
+  } | null = null;
+  private _surfacedSwitchKeys = new Set<string>();
 
   constructor(options: CreateContainerOptions) {
     this._emitter = createEventEmitter<SceneContainerEvents>('SceneContainer');
@@ -141,6 +186,33 @@ export class SceneContainerImpl implements SceneContainer {
         ? options.forceLayout
         : null;
 
+    this._modeOwner = new ModeOwner({
+      container: this.container,
+      getScene: () => this._currentScene,
+      applyAdapterMode: (mode, hints) => {
+        const scene = this._currentScene as
+          | (Scene & {
+              setMode?(m: 'normal' | 'presentation', h?: DemoRenderHints): void;
+            })
+          | null;
+        if (mode === 'presentation' && hints) {
+          scene?.setMode?.(mode, hints);
+        } else {
+          scene?.setMode?.(mode);
+        }
+      },
+      emitMode: (payload) => this._emitter.emit('layout:mode', payload),
+      updateCapabilities: (payload) => {
+        const instances = [
+          ...this._orchestrator.getInstances('demo-profile'),
+          ...this._orchestrator.getInstances('mode-toggle'),
+          ...this._orchestrator.getInstances('sidebar-toggle'),
+          ...this._orchestrator.getInstances('data-workspace')
+        ];
+        updateCapabilityInstances(instances, payload);
+      }
+    });
+
     // 设置容器基础样式（尺寸由各布局自行声明）
     this.container.style.cssText = `
       overflow: hidden;
@@ -153,7 +225,7 @@ export class SceneContainerImpl implements SceneContainer {
       getCurrentLayoutId: () => this._currentLayout?.id || null,
       resolveLayout: (scene) => this.resolveLayout(scene),
       switchLayout: (id) => this.switchLayout(id, { animate: false }),
-      getSwitching: () => this._switching,
+      getSwitching: () => this._switch?.state === 'switching',
       notifyLayoutResize: (width, height) =>
         this._currentLayout?.handleResize(width, height),
       onResize: options.onResize
@@ -176,6 +248,59 @@ export class SceneContainerImpl implements SceneContainer {
     } catch {
       // Battery API not available or permission denied — non-critical
     }
+  }
+
+  private switchHost(): SwitchRuntimeHost {
+    return {
+      container: this.container,
+      storageKey: this._storageKey,
+      getTheme: () => this._currentTheme,
+      resolveLayoutConfig: (id) => this._resolveLayoutConfig(id),
+      isDisposed: () => this._disposed,
+      getCurrentLayout: () => this._currentLayout,
+      setCurrentLayout: (layout) => {
+        this._currentLayout = layout;
+      },
+      getCurrentScene: () => this._currentScene,
+      mode: this._modeOwner,
+      sidebar: this._sidebar,
+      workspaceUi: this._workspaceUi,
+      orchestrator: this._orchestrator,
+      emitLayoutChange: (event) => this._emitter.emit('layout:change', event),
+      emitSwitchError: (payload) => {
+        this.surfaceSwitchError(payload);
+        this._emitter.emit('layout:switch-error', payload);
+      },
+      savePreference: (id) => this.setUserPreferredLayout(id),
+      mountScene: (scene, layout) => this.mountScene(scene, layout),
+      onLayoutDidChange: (to) => this._currentScene?.onLayoutDidChange?.(to),
+      drainResize: () => this._resizeObserver.drain(),
+      captureFocus: () => {
+        const activeEl = document.activeElement as HTMLElement | null;
+        const identity = captureFocusIdentity(activeEl, this.container);
+        return {
+          restore: () => {
+            if (identity) findFocusTarget(this.container, identity)?.focus();
+          }
+        };
+      }
+    };
+  }
+
+  private ensureSwitch(): Promise<LayoutSwitchRuntime> {
+    if (this._switch) return Promise.resolve(this._switch);
+    if (!this._switchReady) {
+      this._switchReady = import('./layout-switch-runtime').then(
+        ({ LayoutSwitchRuntime }) => {
+          const runtime = new LayoutSwitchRuntime(this.switchHost());
+          runtime.hostSetScene = (scene) => this.applyHostSetScene(scene);
+          runtime.adoptCurrentCanvas();
+          this._switch = runtime;
+          return runtime;
+        }
+      );
+    }
+    return this._switchReady;
   }
 
   // Getters
@@ -234,36 +359,230 @@ export class SceneContainerImpl implements SceneContainer {
   }
 
   /**
-   * 设置场景
-   * 如果布局切换正在进行中，将请求排队，切换完成后自动处理。
-   * @param scene - 场景实例
+   * 设置场景。boot 期与 switching 期排队均返回 in-flight deferred；
+   * 被更新请求替换时 resolve（last-wins），应用失败则 reject。
    */
   async setScene(scene: Scene): Promise<void> {
     if (this._disposed) return;
+    this._switch?.rejectIfQuarantined();
 
-    // 如果布局切换正在进行中，排队等待
-    if (this._switching) {
-      this._pendingScene = scene;
+    if (this._boot) {
+      settleQueuedSceneDeferred(this._bootQueuedDeferred);
+      this._bootQueuedScene = scene;
+      const deferred = createQueuedSceneDeferred();
+      this._bootQueuedDeferred = deferred;
+      return deferred.promise;
+    }
+
+    if (this._switch?.state === 'switching') {
+      settleQueuedSceneDeferred(this._switchQueued?.deferred ?? null);
+      this._switch.pendingScene = scene;
+      const deferred = createQueuedSceneDeferred();
+      this._switchQueued = { scene, deferred };
+      // quarantine / reset / dispose 清 pendingScene 但不走 drainPending。
+      // 此处 resolve（与 boot 排队「被替换必须 resolve」同一 last-wins）：
+      // 布局切换自己的 promise 已经失败；reject 只会让 UI 等待方掉进
+      // F1 的 console 收口。
+      this._switch.pendingApplyNotify = () => {
+        settleQueuedSceneDeferred(deferred);
+        if (this._switchQueued?.deferred === deferred) {
+          this._switchQueued = null;
+        }
+      };
+      return deferred.promise;
+    }
+
+    if (!this._currentLayout) {
+      await this._initialSetScene(scene);
       return;
     }
 
     await this._doSetScene(scene);
   }
 
+  /**
+   * First empty-container mount: create the layout, project owners, attach
+   * the scene, then load capability factories. Does not import the switch
+   * coordinator chunk.
+   */
+  private async _initialSetScene(scene: Scene): Promise<void> {
+    if (this._disposed) return;
+    let settleBoot: () => void = () => {};
+    this._boot = new Promise<void>((resolve) => {
+      settleBoot = resolve;
+    });
+    let bootOk = false;
+    let drainError: unknown;
+    let hasDrainError = false;
+    try {
+      this._modeOwner.resetToNormal('new-scene');
+      this._sidebar.resetForNewScene();
+      this._workspaceUi.resetForNewScene();
+      this._currentScene = scene;
+
+      const layoutId = this.resolveLayout(scene);
+      const created = await layoutRegistry.create(layoutId, this.container, {
+        theme: this._currentTheme,
+        ...this._resolveLayoutConfig(layoutId),
+        preservedCanvas: null
+      });
+      if (this._disposed) {
+        try {
+          await created.unmount();
+        } catch (err) {
+          console.error(
+            '[SceneContainer] Layout unmount rejected during boot abort:',
+            err
+          );
+        }
+        return;
+      }
+
+      this._modeOwner.project('reproject');
+      this._sidebar.project(this.container);
+      await created.mount();
+      if (this._disposed) {
+        try {
+          await created.unmount();
+        } catch (err) {
+          console.error(
+            '[SceneContainer] Layout unmount rejected during boot abort:',
+            err
+          );
+        }
+        return;
+      }
+
+      this.container.dataset.layoutId = layoutId;
+      this._currentLayout = created;
+      created.setTheme(this._currentTheme);
+      const savedLayoutState = restoreLayoutStateFromStorage(
+        this._storageKey,
+        layoutId
+      );
+      if (savedLayoutState) {
+        created.restoreLayoutState?.(savedLayoutState);
+      }
+      this._modeOwner.project('reproject');
+      this._sidebar.project(this.container);
+
+      this.attachScene(scene, created);
+      this._switch?.adoptCurrentCanvas();
+      bootOk = true;
+
+      await this._orchestrator.preload();
+      if (this._disposed) return;
+      this.wireCapabilities(scene, created);
+    } finally {
+      try {
+        // boot 失败也 drain：排队请求不能随 settleBoot 一起丢掉。
+        // `_doSetScene` 在 `_currentLayout === null` 时自愈回退
+        // `_initialSetScene`（二次 boot 的 finally 再进 drain 循环）。
+        if (!this._disposed && (bootOk || this._bootQueuedScene)) {
+          while (!this._disposed) {
+            const queued = this._bootQueuedScene;
+            this._bootQueuedScene = null;
+            if (!queued) break;
+            const queuedDeferred = this._bootQueuedDeferred;
+            this._bootQueuedDeferred = null;
+            // 启动前必须空：_doSetScene 同步前缀先于重新赋值，内部
+            // switchLayout 不自等待。自愈路径会重新武装 `_boot`，下一
+            // 行再覆盖为 drain，二次 boot 与 drain 是同一条 Promise。
+            this._boot = null;
+            const drain = this._doSetScene(queued);
+            this._boot = drain;
+            try {
+              await drain;
+              settleQueuedSceneDeferred(queuedDeferred);
+            } catch (err) {
+              settleQueuedSceneDeferred(queuedDeferred, err);
+              this.reportLayoutError(err);
+              drainError = err;
+              hasDrainError = true;
+              break;
+            }
+          }
+        }
+      } finally {
+        this._boot = null;
+        settleBoot();
+        settleQueuedSceneDeferred(this._bootQueuedDeferred);
+        this._bootQueuedDeferred = null;
+        this._bootQueuedScene = null;
+      }
+    }
+    if (hasDrainError) throw drainError;
+  }
+
+  /**
+   * 将已挂载容器切换到新场景。
+   * 不变量：`switchLayout` 之前不得插入 `await`（boot drain 启动前清 `_boot`，
+   * 同步前缀必须看到空屏障，否则会自等待）。
+   * `_currentLayout === null`（boot 失败后的排队 drain）自愈回退
+   * `_initialSetScene`，避免空容器走 switchLayout。
+   *
+   * 自愈分支不变量：必须保持同步前缀——进入 `_initialSetScene` 之前不得
+   * 插入 `await`。`_initialSetScene` 入口同步武装 `_boot`，drain 随即把
+   * `_boot` 覆盖为同一条 Promise；若自愈前先 await 屏障会自等待死锁。
+   */
   private async _doSetScene(scene: Scene): Promise<void> {
+    if (!this._currentLayout) {
+      // 同步前缀：unmount + 进入 _initialSetScene 必须在第一个 await 之前完成。
+      if (this._currentScene && this._currentScene !== scene) {
+        this.unmountCurrentScene();
+      }
+      await this._initialSetScene(scene);
+      return;
+    }
+
     if (this._currentScene) {
       this.unmountCurrentScene();
     }
 
+    this._modeOwner.resetToNormal('new-scene');
+    this._sidebar.resetForNewScene();
+    this._workspaceUi.resetForNewScene();
     this._currentScene = scene;
 
     const layoutId = this.resolveLayout(scene);
 
-    if (!this._currentLayout || this._currentLayout.id !== layoutId) {
-      await this.switchLayout(layoutId, { animate: false });
+    if (this._currentLayout.id !== layoutId) {
+      await this.switchLayout(layoutId, {
+        animate: false,
+        skipWillChange: true
+      });
     } else {
+      this._modeOwner.project('reproject');
+      this._sidebar.project(this.container);
       this.mountScene(scene);
     }
+  }
+
+  /**
+   * drainPending 的 hostSetScene：应用成功/失败时结算 switching 排队 deferred。
+   * 仅结算「这次 apply 对应的」那条；已被更新请求替换的 deferred 在入队时已 resolve。
+   */
+  private async applyHostSetScene(scene: Scene): Promise<void> {
+    const queued = this._switchQueued;
+    const owns = queued?.scene === scene;
+    if (owns) this._switchQueued = null;
+    try {
+      await this._doSetScene(scene);
+      if (owns) settleQueuedSceneDeferred(queued.deferred);
+    } catch (err) {
+      if (owns) settleQueuedSceneDeferred(queued.deferred, err);
+      throw err;
+    }
+  }
+
+  private reportLayoutError(error: unknown): void {
+    const payload = {
+      generation: this._switch?.generation ?? 0,
+      error,
+      state: this.getSwitchState()
+    };
+    this.surfaceSwitchError(payload);
+    this._emitter.emit('layout:switch-error', payload);
   }
 
   /**
@@ -273,20 +592,20 @@ export class SceneContainerImpl implements SceneContainer {
     const targetLayout = layout || this._currentLayout;
     if (!targetLayout) return;
 
-    renderSceneToSlots(scene, targetLayout);
-    this.activateSceneLifecycle(scene, targetLayout);
+    this.attachScene(scene, targetLayout);
+    this.wireCapabilities(scene, targetLayout);
   }
 
-  /** 激活场景生命周期：Capability 装配、事件绑定、挂载 */
-  private activateSceneLifecycle(scene: Scene, layout: ILayout): void {
-    const slots = layout.getSlots?.() || {};
-
-    // 装配布局声明的 capabilities（ILayout 约定 capabilities 必填）
-    const ctx = this._buildCapabilityContext(scene);
-    this._orchestrator.wire(layout, scene, slots, ctx);
-
+  private attachScene(scene: Scene, layout: ILayout): void {
+    renderSceneToSlots(scene, layout);
     scene.mount?.();
     this._emitter.emit('scene:mount', { sceneId: scene.id });
+  }
+
+  private wireCapabilities(scene: Scene, layout: ILayout): void {
+    const slots = layout.getSlots?.() || {};
+    const ctx = this._buildCapabilityContext(scene);
+    this._orchestrator.wire(layout, scene, slots, ctx);
   }
 
   /** 构建 CapabilityContext — 桥接容器状态与 capability 运行时 */
@@ -298,8 +617,22 @@ export class SceneContainerImpl implements SceneContainer {
       setTheme: (t: Theme) => this.setTheme(t),
       getCurrentLayoutId: () => this._currentLayout?.id ?? '',
       switchLayout: (id: string, save = true) => {
-        this.switchLayout(id, { animate: true, savePreference: save });
+        const p = this.switchLayout(id, {
+          animate: true,
+          savePreference: save
+        });
+        p.catch((err) =>
+          this.surfaceSwitchError({
+            generation: this._switch?.generation ?? 0,
+            error: err,
+            state: this.getSwitchState()
+          })
+        );
+        return p;
       },
+      modeOwner: this._modeOwner,
+      sidebar: this._sidebar,
+      workspaceUi: this._workspaceUi,
       getAvailableLayouts: () => {
         const w = this.container.clientWidth || window.innerWidth;
         const h = this.container.clientHeight || window.innerHeight;
@@ -312,14 +645,7 @@ export class SceneContainerImpl implements SceneContainer {
           )
           .map((m) => ({ id: m.id, name: m.name }));
       },
-      emit: (event, payload) => this._emitter.emit(event, payload),
-      on: (event, handler) => this._emitter.on(event, handler),
-      updateDemoProfileInstances: (payload) => {
-        updateCapabilityInstances(
-          this._orchestrator.getInstances('demo-profile'),
-          payload
-        );
-      }
+      on: (event, handler) => this._emitter.on(event, handler)
     });
   }
 
@@ -352,266 +678,53 @@ export class SceneContainerImpl implements SceneContainer {
   }
 
   /**
-   * 切换布局
-   *
-   * 并发语义：进行中时手动请求进 `_pendingSwitchId` 排队（last-wins），
-   * 观察器自动请求直接丢弃（重解析后下次 resize 收敛）。
-   * 每次切换取一个代际号；await 边界检查代际，被超时判死或被新切换
-   * 取代的旧协程在下一个边界静默作废，不再触碰共享容器。
+   * 切换布局。唯一事务 owner：并发手动请求合并为最新目标；
+   * 超时只 abort 当前等待，不解锁 generation / 不清 switching。
    */
   async switchLayout(
     layoutId: string,
     options: SwitchOptions = {}
   ): Promise<void> {
-    const {
-      reason = 'manual',
-      animate = true,
-      transition = { type: 'fade', duration: 250, easing: 'ease-in-out' },
-      savePreference = false
-    } = options;
-
-    if (this._currentLayout?.id === layoutId) return;
+    if (this._boot) await this._boot;
     if (this._disposed) return;
-    if (!layoutRegistry.has(layoutId)) {
-      throw new Error(`Layout "${layoutId}" not found`);
-    }
-    if (this._switching) {
-      if (reason === 'manual') this._pendingSwitchId = layoutId;
+    const [sw] = await Promise.all([
+      this.ensureSwitch(),
+      this._orchestrator.preload()
+    ]);
+    if (this._disposed) {
+      sw.dispose();
       return;
     }
+    await sw.switchLayout(layoutId, options);
+  }
 
-    const generation = ++this._switchGeneration;
-    // 旧协程作废谓词：被安全计时器判死或被新切换取代。
-    const stale = () => generation !== this._switchGeneration || this._disposed;
+  getSwitchState(): LayoutSwitchState {
+    return this._switch?.getSwitchState() ?? 'idle';
+  }
 
-    const SWITCH_TIMEOUT_MS = 10_000;
-    const safetyTimer = setTimeout(() => {
-      if (generation === this._switchGeneration && this._switching) {
-        console.warn(
-          '[SceneContainer] Layout switch timed out after 10s — abandoning current generation'
-        );
-        // 判死当前代（挂起协程在下一个 await 边界作废）并交棒：
-        // 释放 _switching 允许新切换重建容器；排队中的手动切换/场景
-        // 交给新代的 drain，避免被判死后永久搁置。
-        this._switchGeneration += 1;
-        this._switching = false;
-        void this._drainPending(this._switchGeneration);
-      }
-    }, SWITCH_TIMEOUT_MS);
-
-    this._switching = true;
-    const fromLayout = this._currentLayout;
-    const fromId = fromLayout?.id || null;
-
-    // Save focused element before tearing down DOM (avoid focus loss to <body>)
-    const activeEl = document.activeElement as HTMLElement | null;
-    const focusIdentity = captureFocusIdentity(activeEl, this.container);
-
-    try {
-      await this._notifyLayoutWillChange(fromId, layoutId);
-      if (stale()) return;
-
-      const { preservedCanvas, layoutState } =
-        this._captureOutgoingState(fromLayout);
-      if (layoutState && fromLayout?.id) {
-        saveLayoutStateToStorage(this._storageKey, fromLayout.id, layoutState);
-      }
-
-      await this._teardownOutgoingLayout(
-        fromLayout,
-        animate,
-        transition,
-        stale
+  resetSwitchQuarantine(): boolean {
+    if (!this._switch) return false;
+    const ok = this._switch.resetSwitchQuarantine();
+    if (ok) this.hideSwitchStatus();
+    if (!ok && this._switch.getSwitchState() === 'quarantined') {
+      throw new SwitchQuarantinedError(
+        this._switch.generation,
+        'Cannot reset switch quarantine'
       );
-      if (stale()) return;
-      this._currentLayout = null;
-      if (this.container.childElementCount > 0) {
-        this.container.replaceChildren();
-      }
-
-      const newLayout = await this._setupIncomingLayout(
-        layoutId,
-        preservedCanvas,
-        stale
-      );
-      if (!newLayout || stale()) return;
-
-      await this._finalizeLayoutSwitch(
-        newLayout,
-        fromId,
-        layoutId,
-        reason,
-        animate,
-        transition,
-        savePreference,
-        stale
-      );
-      if (stale()) return;
-
-      // Restore focus to the equivalent data-identified control in the new layout.
-      if (focusIdentity) {
-        findFocusTarget(this.container, focusIdentity)?.focus();
-      }
-    } catch (err) {
-      console.error('[SceneContainer] Layout switch failed:', err);
-
-      // Attempt to recover the old layout from the pool so the container
-      // isn't left in a blank state.
-      if (fromId && !stale()) {
-        try {
-          const recovered = await layoutRegistry.create(
-            fromId,
-            this.container,
-            {
-              theme: this._currentTheme,
-              ...this._resolveLayoutConfig(fromId)
-            }
-          );
-          if (stale()) return;
-          await recovered.mount();
-          if (stale()) return;
-          recovered.setTheme(this._currentTheme);
-          if (this._currentScene) {
-            this.mountScene(this._currentScene, recovered);
-          }
-          this._currentLayout = recovered;
-          console.warn(
-            `[SceneContainer] Recovered layout "${fromId}" after switch failure`
-          );
-        } catch (recoveryErr) {
-          console.error(
-            '[SceneContainer] Recovery also failed, container is empty:',
-            recoveryErr
-          );
-          this.container.replaceChildren();
-        }
-      }
-    } finally {
-      clearTimeout(safetyTimer);
-      // 仅当前有效代管理 _switching 与排队消费；作废旧协程不触碰新代状态。
-      if (generation === this._switchGeneration) {
-        this._switching = false;
-        await this._drainPending(generation);
-      }
     }
+    return ok;
   }
 
-  /**
-   * 原子取出并串行处理排队项（仅当前有效代的 finally 调用）：
-   * pendingScene 先（setScene 自行解析布局，内部可能已含切换），
-   * pendingSwitchId 后且目标==当前布局时跳过。drain 期间新到的排队项
-   * 由内层 switchLayout 的 finally 再次消费，不会永久搁置。
-   */
-  private async _drainPending(generation: number): Promise<void> {
-    if (generation !== this._switchGeneration || this._disposed) return;
-    const pendingScene = this._pendingScene;
-    this._pendingScene = null;
-    const pendingSwitchId = this._pendingSwitchId;
-    this._pendingSwitchId = null;
-    try {
-      if (pendingScene) {
-        await this._doSetScene(pendingScene);
-      }
-      if (
-        pendingSwitchId &&
-        !this._disposed &&
-        this._currentLayout?.id !== pendingSwitchId
-      ) {
-        await this.switchLayout(pendingSwitchId, {
-          reason: 'manual',
-          animate: true,
-          savePreference: true
-        });
-      }
-    } catch (err) {
-      console.error('[SceneContainer] Pending drain failed:', err);
-    }
+  getMode(): 'normal' | 'presentation' {
+    return this._modeOwner.getMode();
   }
 
-  private async _notifyLayoutWillChange(
-    fromId: string | null,
-    toId: string
-  ): Promise<void> {
-    if (this._currentScene?.onLayoutWillChange) {
-      await this._currentScene.onLayoutWillChange(fromId || '', toId);
+  setMode(mode: 'normal' | 'presentation'): void {
+    if (this._disposed) return;
+    if (this._switch?.state === 'quarantined') {
+      throw new SwitchQuarantinedError(this._switch.generation);
     }
-  }
-
-  private _captureOutgoingState(fromLayout: ILayout | null): {
-    preservedCanvas: HTMLCanvasElement | null;
-    layoutState: Record<string, unknown> | undefined;
-  } {
-    const preservedCanvas =
-      fromLayout
-        ?.getSlots?.()
-        ?.animation?.querySelector<HTMLCanvasElement>('canvas') ?? null;
-    const layoutState = fromLayout?.getLayoutState?.();
-    return { preservedCanvas, layoutState };
-  }
-
-  private async _teardownOutgoingLayout(
-    fromLayout: ILayout | null,
-    animate: boolean,
-    transition: LayoutTransition,
-    isStale: () => boolean
-  ): Promise<void> {
-    if (fromLayout && animate) {
-      try {
-        await fromLayout.exit?.(transition);
-      } catch (err) {
-        console.warn('[SceneContainer] Layout exit animation failed:', err);
-      }
-      if (isStale()) return;
-    }
-    if (fromLayout) {
-      await fromLayout.unmount();
-      if (isStale()) return;
-      layoutRegistry.returnInstance(this.container, fromLayout.id, fromLayout);
-    }
-  }
-
-  private async _setupIncomingLayout(
-    layoutId: string,
-    preservedCanvas: HTMLCanvasElement | null,
-    isStale: () => boolean
-  ): Promise<ILayout | null> {
-    if (this._disposed)
-      throw new Error('Container disposed before layout setup');
-
-    // Reset grid-specific inline styles from previous layout to prevent
-    // grid styles from a split layout corrupting e.g. mobile-stack.
-    // Do NOT reset height/overflow — those are essential container-level
-    // properties set by the constructor.
-    this.container.style.display = '';
-    this.container.style.gridTemplateColumns = '';
-    this.container.style.gridTemplateRows = '';
-
-    const newLayout = await layoutRegistry.create(layoutId, this.container, {
-      theme: this._currentTheme,
-      ...this._resolveLayoutConfig(layoutId),
-      preservedCanvas
-    });
-    if (isStale()) return null;
-
-    await newLayout.mount();
-    if (isStale()) return null;
-    this.container.dataset.layoutId = layoutId;
-    this._currentLayout = newLayout;
-    newLayout.setTheme(this._currentTheme);
-
-    const savedLayoutState = restoreLayoutStateFromStorage(
-      this._storageKey,
-      layoutId
-    );
-    if (savedLayoutState) {
-      newLayout.restoreLayoutState?.(savedLayoutState);
-    }
-
-    if (this._currentScene) {
-      this.mountScene(this._currentScene, newLayout);
-    }
-
-    return newLayout;
+    this._modeOwner.setMode(mode, 'api');
   }
 
   private _resolveLayoutConfig(layoutId: string): LayoutConfig {
@@ -635,40 +748,6 @@ export class SceneContainerImpl implements SceneContainer {
     }
 
     return resolved as LayoutConfig;
-  }
-
-  private async _finalizeLayoutSwitch(
-    newLayout: ILayout,
-    fromId: string | null,
-    layoutId: string,
-    reason: string,
-    animate: boolean,
-    transition: LayoutTransition,
-    savePreference: boolean,
-    isStale: () => boolean
-  ): Promise<void> {
-    if (animate) {
-      try {
-        await newLayout.enter?.({
-          ...transition,
-          easing: 'ease-out'
-        });
-      } catch {
-        // 动画被中断或失败，布局本身已可用
-      }
-      // enter 子过程内的 await 边界：被超时判死/新代取代的旧协程
-      // 不得再写回调、事件与偏好（保存偏好是持久化副作用，最危险）。
-      if (isStale()) return;
-    }
-
-    this._currentScene?.onLayoutDidChange?.(layoutId);
-
-    const event: LayoutChangeEvent = { from: fromId, to: layoutId, reason };
-    this._emitter.emit('layout:change', event);
-
-    if (savePreference) {
-      this.setUserPreferredLayout(layoutId);
-    }
   }
 
   /**
@@ -763,11 +842,78 @@ export class SceneContainerImpl implements SceneContainer {
     return this._emitter.on(event, listener);
   }
 
+  /** Event surface: idle=console; quarantine=+status bar. p.catch is idempotent fallback. */
+  private surfaceSwitchError(payload: {
+    generation: number;
+    error: unknown;
+    state: LayoutSwitchState;
+  }): void {
+    const key = `${payload.generation}:${payload.state}:${String(payload.error)}`;
+    if (this._surfacedSwitchKeys.has(key)) return;
+    this._surfacedSwitchKeys.add(key);
+    if (payload.state === 'quarantined') {
+      console.error(
+        `[SceneContainer] Layout switch quarantined (generation ${payload.generation}). ` +
+          `${SWITCH_QUARANTINE_MESSAGE}. Cause:`,
+        payload.error
+      );
+      this.showQuarantineStatus();
+      return;
+    }
+    console.error(
+      `[SceneContainer] Layout switch error (generation ${payload.generation}, state=${payload.state}):`,
+      payload.error
+    );
+  }
+
+  private showQuarantineStatus(): void {
+    let bar = this.container.querySelector<HTMLElement>(
+      `[${SWITCH_STATUS_ATTR}]`
+    );
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.setAttribute(SWITCH_STATUS_ATTR, 'quarantined');
+      bar.setAttribute('role', 'status');
+      bar.setAttribute('aria-live', 'assertive');
+      bar.style.cssText = [
+        'position:absolute',
+        'left:0',
+        'right:0',
+        'top:0',
+        'z-index:10000',
+        'padding:8px 12px',
+        'background:var(--danger,#b91c1c)',
+        'color:#fff',
+        'font-size:14px',
+        'text-align:center'
+      ].join(';');
+      this.container.appendChild(bar);
+    }
+    bar.textContent = SWITCH_QUARANTINE_MESSAGE;
+  }
+
+  private hideSwitchStatus(): void {
+    this.container.querySelector(`[${SWITCH_STATUS_ATTR}]`)?.remove();
+  }
+
   /**
    * 销毁容器
    */
   dispose(): void {
     this._disposed = true;
+    settleQueuedSceneDeferred(this._bootQueuedDeferred);
+    this._bootQueuedDeferred = null;
+    this._bootQueuedScene = null;
+    settleQueuedSceneDeferred(this._switchQueued?.deferred ?? null);
+    this._switchQueued = null;
+    try {
+      this._switch?.dispose();
+    } catch (err) {
+      console.error(
+        '[SceneContainer] Error aborting in-flight switch in dispose:',
+        err
+      );
+    }
 
     // 卸载场景（有独立错误边界）
     try {
@@ -780,9 +926,27 @@ export class SceneContainerImpl implements SceneContainer {
       this._currentScene = null;
     }
 
-    // 卸载布局
+    // Capabilities first: they still need the live layout DOM.
     try {
-      this._currentLayout?.unmount();
+      this._orchestrator.dispose();
+    } catch (err) {
+      console.error(
+        '[SceneContainer] Error during capability cleanup in dispose:',
+        err
+      );
+    }
+
+    // 卸载布局（同步契约；仍观测 Promise rejection）
+    try {
+      const unmount = this._currentLayout?.unmount();
+      if (unmount) {
+        void Promise.resolve(unmount).catch((err: unknown) => {
+          console.error(
+            '[SceneContainer] Layout unmount rejected in dispose:',
+            err
+          );
+        });
+      }
     } catch (err) {
       console.error(
         '[SceneContainer] Error during layout unmount in dispose:',
@@ -799,16 +963,6 @@ export class SceneContainerImpl implements SceneContainer {
     }
     this._currentLayout = null;
     delete this.container.dataset.layoutId;
-
-    // 清理 Capability 实例
-    try {
-      this._orchestrator.dispose();
-    } catch (err) {
-      console.error(
-        '[SceneContainer] Error during capability cleanup in dispose:',
-        err
-      );
-    }
 
     // 停止 ResizeObserver
     try {

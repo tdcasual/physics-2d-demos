@@ -47,11 +47,16 @@ vi.mock('../../src/app/layouts/container-resize-observer', () => ({
   ContainerResizeObserver: class {
     start() {}
     stop() {}
+    drain() {}
   }
 }));
 
 vi.mock('../../src/app/layouts/capabilities', () => ({
-  capabilityFactories: {}
+  capabilityFactories: {},
+  createCapabilityDefinition: () => ({
+    id: 'mock',
+    mount: () => ({ dispose() {} })
+  })
 }));
 
 import { createSceneContainer } from '../../src/app/layouts/container';

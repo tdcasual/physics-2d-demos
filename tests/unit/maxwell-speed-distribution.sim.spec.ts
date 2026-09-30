@@ -11,6 +11,7 @@ describe('Maxwell speed distribution simulation', () => {
       molarMass: 28,
       autoRun: false
     });
+    // 保留：√(2RT/M)=596.921 vs 教科书圆整 597，Δ=7.93e-2 无法进 precision 1
     expect(s.mostProbable).toBeCloseTo(597, 0);
     expect(s.mostProbable).toBeLessThan(s.meanSpeed);
     expect(s.meanSpeed).toBeLessThan(s.rmsSpeed);

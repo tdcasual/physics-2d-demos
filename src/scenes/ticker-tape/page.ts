@@ -1,5 +1,6 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import {
   GRAPH_BODY_ATTR,
   GRAPH_SECTION_ATTR
@@ -7,6 +8,35 @@ import {
 import { tickerTapeControlsSchema } from './controls-schema';
 import { createTickerTapeScene } from './scene.entry';
 import { tickerTapeMeta } from './scene.meta';
+
+/** getParams.noise 是 0|1|2 索引，控件 preset id 是 off/typical/large */
+export const TICKER_TAPE_NOISE_IDS = ['off', 'typical', 'large'] as const;
+
+export type TickerTapeEncodedParams = {
+  countEvery: number;
+  noise: number;
+  showA: number;
+  vSigFigs: number;
+  preset: string;
+};
+
+/** sim 编码 → 控件值。countEvery 1|5 ↔ toggle；noise 索引 ↔ id；showA 0|1 ↔ bool；vSigFigs number ↔ select 字符串 */
+export function decodeTickerTapeControls(params: TickerTapeEncodedParams): {
+  countEvery: boolean;
+  noise: (typeof TICKER_TAPE_NOISE_IDS)[number];
+  showA: boolean;
+  vSigFigs: string;
+  preset: string;
+} {
+  const noise = TICKER_TAPE_NOISE_IDS[params.noise] ?? 'off';
+  return {
+    countEvery: params.countEvery === 5,
+    noise,
+    showA: params.showA > 0,
+    vSigFigs: String(params.vSigFigs),
+    preset: params.preset
+  };
+}
 
 bootScenePage({
   meta: tickerTapeMeta,
@@ -93,7 +123,9 @@ bootScenePage({
     const plotBar = document.createElement('div');
     plotBar.className = 'lab-plot-toolbar';
     // 按图选择：x–t / v–t 可勾选（可多选），描点/拟合只作用于选中图。
-    const selected = new Set<'x' | 'v'>(['x', 'v']);
+    const selected = new Set<'x' | 'v'>(
+      tape.getSelectedGraphs?.() ?? ['x', 'v']
+    );
     const chipDefs: Array<{ kind: 'x' | 'v'; label: string }> = [
       { kind: 'x', label: 'x–t' },
       { kind: 'v', label: 'v–t' }
@@ -103,7 +135,7 @@ bootScenePage({
       chip.type = 'button';
       chip.className = 'lab-plot-chip';
       chip.textContent = label;
-      chip.setAttribute('aria-pressed', 'true');
+      chip.setAttribute('aria-pressed', String(selected.has(kind)));
       chip.addEventListener('click', () => {
         if (selected.has(kind)) selected.delete(kind);
         else selected.add(kind);
@@ -156,12 +188,20 @@ bootScenePage({
     }
 
     let plotBarRetries = 0;
+    let plotBarRaf: number | null = null;
+    let plotBarDisposed = false;
     function placePlotBarWhenReady(): void {
-      if (plotBar.isConnected || plotBarRetries >= 300) return;
+      if (plotBarDisposed || plotBar.isConnected || plotBarRetries >= 300) {
+        return;
+      }
       plotBarRetries += 1;
       placePlotBar();
-      if (!plotBar.isConnected && typeof requestAnimationFrame === 'function') {
-        requestAnimationFrame(() => placePlotBarWhenReady());
+      if (
+        !plotBarDisposed &&
+        !plotBar.isConnected &&
+        typeof requestAnimationFrame === 'function'
+      ) {
+        plotBarRaf = requestAnimationFrame(() => placePlotBarWhenReady());
       }
     }
     placePlotBarWhenReady();
@@ -195,14 +235,24 @@ bootScenePage({
       syncPlotBar();
     });
 
+    const syncFromScene = (): void => {
+      const decoded = decodeTickerTapeControls(tape.getParams());
+      renderer.setValueSilently('countEvery', decoded.countEvery);
+      renderer.setActiveSilently('noise', decoded.noise);
+      renderer.setValueSilently('showA', decoded.showA);
+      renderer.setValueSilently('vSigFigs', decoded.vSigFigs);
+      renderer.setActiveSilently('preset', decoded.preset);
+    };
+
     return {
-      setValue(key: string, value: number | string) {
-        renderer.setValue(key, value);
-      },
-      setActive(key: string, value: string) {
-        renderer.setActive(key, value);
-      },
+      ...exposeSchemaHandle(renderer),
+      syncFromScene,
       dispose: () => {
+        plotBarDisposed = true;
+        if (plotBarRaf != null && typeof cancelAnimationFrame === 'function') {
+          cancelAnimationFrame(plotBarRaf);
+          plotBarRaf = null;
+        }
         unsub();
         renderer.dispose();
         plotBar.remove();

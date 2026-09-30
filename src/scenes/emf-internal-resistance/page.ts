@@ -1,7 +1,8 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { readSceneParams, writeSceneParams } from '../../app/url-sync';
+import { writeOwnedSceneParams } from '../../app/url-sync';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { emfInternalControlsSchema } from './controls-schema';
 import { createEmfInternalScene } from './scene.entry';
 import { emfInternalMeta } from './scene.meta';
@@ -59,8 +60,6 @@ function paramsFromUrl(
   return next;
 }
 
-const initialParams = paramsFromUrl(readSceneParams(emfInternalMeta));
-
 function syncSwitchButton(mount: HTMLElement, closed: boolean): void {
   const btn = mount.querySelector('[data-control-key="toggleSwitch"]');
   if (!(btn instanceof HTMLElement)) return;
@@ -84,22 +83,29 @@ function syncControls(
   params: EmfInternalParams,
   mount: HTMLElement
 ): void {
-  renderer.setValue('sourceVoltage', String(params.sourceVoltage));
-  renderer.setActive('sourceVoltage', String(params.sourceVoltage));
+  renderer.setValueSilently('sourceVoltage', String(params.sourceVoltage));
+  renderer.setActiveSilently('sourceVoltage', String(params.sourceVoltage));
   syncSelect(mount, 'sourceVoltage', params.sourceVoltage);
-  renderer.setValue('internalResistance', String(params.internalResistance));
-  renderer.setActive('internalResistance', String(params.internalResistance));
+  renderer.setValueSilently(
+    'internalResistance',
+    String(params.internalResistance)
+  );
+  renderer.setActiveSilently(
+    'internalResistance',
+    String(params.internalResistance)
+  );
   syncSelect(mount, 'internalResistance', params.internalResistance);
-  renderer.setValue('rheostatResistance', params.rheostatResistance);
-  renderer.setValue('systematicError', params.systematicError);
-  renderer.setValue('autoRun', params.autoRun);
-  renderer.setValue('switchClosed', params.switchClosed);
+  renderer.setValueSilently('rheostatResistance', params.rheostatResistance);
+  renderer.setValueSilently('systematicError', params.systematicError);
+  renderer.setValueSilently('autoRun', params.autoRun);
+  renderer.setValueSilently('switchClosed', params.switchClosed);
   syncSwitchButton(mount, params.switchClosed);
 }
 
 bootScenePage({
   meta: emfInternalMeta,
-  autoPlay: initialParams.autoRun !== false,
+  shouldAutoPlay: (_params, urlParams) =>
+    paramsFromUrl(urlParams).autoRun !== false,
   preferredLayout: 'split-right-graph-bottom',
   layoutConfig: {
     defaultLeftRatio: 0.32,
@@ -114,14 +120,14 @@ bootScenePage({
     graphMaxHeight: 320,
     graphColumns: 1
   },
-  createScene: ({ canvas, theme, mode, demoHints }) => {
+  createScene: ({ canvas, theme, mode, demoHints, sceneWriter, urlParams }) => {
     if (!canvas) throw new Error('emf-internal-resistance requires a canvas');
     const scene = createEmfInternalScene({
       canvas,
       theme,
       mode,
       demoHints,
-      initialParams
+      initialParams: paramsFromUrl(urlParams ?? {})
     });
     const scheduler = createRenderScheduler(() => scene.render());
     const dispose = scene.dispose.bind(scene);
@@ -138,7 +144,10 @@ bootScenePage({
       },
       reset(): void {
         originalReset();
-        writeSceneParams(restoredUrlParams(scene.getParams()));
+        writeOwnedSceneParams(
+          sceneWriter,
+          restoredUrlParams(scene.getParams())
+        );
       }
     };
   },
@@ -196,7 +205,7 @@ bootScenePage({
         render();
       }
     });
-    const refreshControls = () => {
+    const syncFromScene = () => {
       syncingControls = true;
       try {
         syncControls(renderer, emfScene.getParams(), mount);
@@ -204,8 +213,9 @@ bootScenePage({
         syncingControls = false;
       }
     };
-    refreshControls();
+    syncFromScene();
     return {
+      ...exposeSchemaHandle(renderer),
       setValue: (key: string, value: number | string | boolean) => {
         renderer.setValue(key, value);
         syncSelect(mount, key, value);
@@ -214,8 +224,7 @@ bootScenePage({
         renderer.setActive(key, value);
         syncSelect(mount, key, value);
       },
-      refresh: refreshControls,
-      dispose: () => renderer.dispose()
+      syncFromScene
     };
   },
   paramSync: {

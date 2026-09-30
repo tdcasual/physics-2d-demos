@@ -8,7 +8,11 @@
  * 4. 防止"变形"：确保 canvas.width/height 始终与 CSS 显示尺寸保持 DPR 比例
  */
 
-import { getResponsiveScale, setCanvasSize } from '../canvas-sizing';
+import {
+  getResponsiveScale,
+  readElementLayoutSize,
+  setCanvasSize
+} from '../canvas-sizing';
 
 export interface ChartCanvasOptions {
   container: HTMLElement;
@@ -74,9 +78,9 @@ export function createChartCanvas(
   let dpr = 1;
 
   function updateSize(): void {
-    const rect = container.getBoundingClientRect();
-    const newWidth = Math.max(1, Math.floor(rect.width));
-    const newHeight = Math.max(1, Math.floor(rect.height));
+    const size = readElementLayoutSize(container);
+    const newWidth = Math.max(1, Math.floor(size.width));
+    const newHeight = Math.max(1, Math.floor(size.height));
 
     if (newWidth !== cssWidth || newHeight !== cssHeight) {
       cssWidth = newWidth;

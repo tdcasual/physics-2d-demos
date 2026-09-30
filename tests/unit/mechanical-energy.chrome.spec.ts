@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { renderSchema } from '../../src/ui/components/SchemaRenderer';
 import { mechanicalEnergyControlsSchema } from '../../src/scenes/mechanical-energy/controls-schema';
+import { createChromeScheduler } from '../../src/scenes/page-utils';
 import {
-  createChromeScheduler,
   createMechanicalEnergyDataPanel,
   findMechanicalEnergyDataHost,
   mountDataPanel,

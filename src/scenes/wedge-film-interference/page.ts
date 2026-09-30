@@ -1,5 +1,6 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import type { WedgeParams } from './scene.sim';
 import { wedgeFilmInterferenceControlsSchema } from './controls-schema';
 import {
@@ -42,11 +43,6 @@ bootScenePage({
         writeParam?.(key, value);
       }
     });
-    return {
-      setValue: (key: string, value: number | string | boolean) =>
-        renderer.setValue(key, value),
-      setActive: (key: string, value: string) => renderer.setActive(key, value),
-      dispose: () => renderer.dispose()
-    };
+    return exposeSchemaHandle(renderer);
   }
 });

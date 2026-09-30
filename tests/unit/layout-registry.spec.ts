@@ -393,3 +393,267 @@ describe('instance pool per-container isolation (Fix 4)', () => {
     expect(await layoutRegistry.create('pool-layout', containerB)).not.toBe(b);
   });
 });
+
+describe('layoutRegistry abort race and reuse key', () => {
+  beforeEach(() => {
+    layoutRegistry.clear();
+    registerLayoutTestAdapter('fake-adapter');
+  });
+
+  it('aborts a hung lazy import before constructing or pooling', async () => {
+    let ctorCount = 0;
+    const Counted = class {
+      constructor() {
+        ctorCount += 1;
+      }
+      unmount() {}
+    } as unknown as ILayoutConstructor;
+
+    let resolveLoader!: (ctor: ILayoutConstructor) => void;
+    registerLazyLayout(
+      'hung',
+      () =>
+        new Promise<ILayoutConstructor>((resolve) => {
+          resolveLoader = resolve;
+        }),
+      fakeMeta
+    );
+
+    const container = document.createElement('div');
+    const ac = new AbortController();
+    const pending = layoutRegistry.create(
+      'hung',
+      container,
+      {},
+      { signal: ac.signal }
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(typeof resolveLoader).toBe('function');
+    ac.abort();
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+    expect(ctorCount).toBe(0);
+
+    resolveLoader(Counted);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(ctorCount).toBe(0);
+
+    const late = await layoutRegistry.create('hung', container);
+    expect(ctorCount).toBe(1);
+    expect(late).toBeInstanceOf(Counted);
+  });
+
+  it('rebuilds when the structural reuse key changes', async () => {
+    let constructed = 0;
+    const Layout = class {
+      cfg: { readoutCollapsed?: boolean };
+      constructor(_c: HTMLElement, config?: { readoutCollapsed?: boolean }) {
+        constructed += 1;
+        this.cfg = config ?? {};
+      }
+      unmount() {}
+      getReuseKey(config?: { readoutCollapsed?: boolean }) {
+        const cfg = config ?? this.cfg;
+        return `id=keyed|readoutCollapsed=${String(cfg.readoutCollapsed)}`;
+      }
+    } as unknown as ILayoutConstructor;
+
+    layoutRegistry.register('keyed', Layout, fakeMeta);
+    const container = document.createElement('div');
+    const first = await layoutRegistry.create('keyed', container, {
+      readoutCollapsed: true
+    });
+    layoutRegistry.returnInstance(container, 'keyed', first);
+    const reused = await layoutRegistry.create('keyed', container, {
+      readoutCollapsed: true
+    });
+    expect(reused).toBe(first);
+    expect(constructed).toBe(1);
+
+    layoutRegistry.returnInstance(container, 'keyed', reused);
+    const rebuilt = await layoutRegistry.create('keyed', container, {
+      readoutCollapsed: false
+    });
+    expect(rebuilt).not.toBe(first);
+    expect(constructed).toBe(2);
+  });
+
+  it('rebuilds when nested structural capability config changes', async () => {
+    let constructed = 0;
+    const Layout = class {
+      constructor(
+        _c: HTMLElement,
+        public cfg: Record<string, unknown> = {}
+      ) {
+        constructed += 1;
+      }
+      unmount() {}
+    } as unknown as ILayoutConstructor;
+
+    layoutRegistry.register('nested-key', Layout, fakeMeta);
+    const container = document.createElement('div');
+    const first = await layoutRegistry.create('nested-key', container, {
+      capabilities: [{ id: 'readout-panel', config: { collapsed: true } }]
+    } as never);
+    layoutRegistry.returnInstance(container, 'nested-key', first);
+    const same = await layoutRegistry.create('nested-key', container, {
+      capabilities: [{ id: 'readout-panel', config: { collapsed: true } }]
+    } as never);
+    expect(same).toBe(first);
+    expect(constructed).toBe(1);
+
+    layoutRegistry.returnInstance(container, 'nested-key', same);
+    const rebuilt = await layoutRegistry.create('nested-key', container, {
+      capabilities: [{ id: 'readout-panel', config: { collapsed: false } }]
+    } as never);
+    expect(rebuilt).not.toBe(first);
+    expect(constructed).toBe(2);
+  });
+
+  it('reuses when only runtime fields such as theme change', async () => {
+    let constructed = 0;
+    const Layout = class {
+      cfg: Record<string, unknown>;
+      constructor(_c: HTMLElement, config?: Record<string, unknown>) {
+        constructed += 1;
+        this.cfg = config ?? {};
+      }
+      unmount() {}
+      _updateConfig(config?: Record<string, unknown>) {
+        if (config) this.cfg = { ...this.cfg, ...config };
+      }
+    } as unknown as ILayoutConstructor;
+
+    layoutRegistry.register('runtime-key', Layout, fakeMeta);
+    const container = document.createElement('div');
+    const first = await layoutRegistry.create('runtime-key', container, {
+      readoutCollapsed: true,
+      theme: 'light'
+    });
+    layoutRegistry.returnInstance(container, 'runtime-key', first);
+    const reused = await layoutRegistry.create('runtime-key', container, {
+      readoutCollapsed: true,
+      theme: 'dark'
+    });
+    expect(reused).toBe(first);
+    expect(constructed).toBe(1);
+  });
+
+  it('does not inherit a previous canvas when preservedCanvas is null', async () => {
+    const previous = document.createElement('canvas');
+    previous.dataset.marker = 'old';
+    const Layout = class {
+      cfg: { preservedCanvas?: HTMLCanvasElement | null };
+      constructor(
+        _c: HTMLElement,
+        config?: { preservedCanvas?: HTMLCanvasElement | null }
+      ) {
+        this.cfg = config ?? {};
+      }
+      unmount() {}
+      _updateConfig(config?: { preservedCanvas?: HTMLCanvasElement | null }) {
+        if (config) this.cfg = { ...this.cfg, ...config };
+      }
+    } as unknown as ILayoutConstructor;
+
+    layoutRegistry.register('canvas-key', Layout, fakeMeta);
+    const container = document.createElement('div');
+    const first = (await layoutRegistry.create('canvas-key', container, {
+      preservedCanvas: previous
+    })) as unknown as { cfg: { preservedCanvas?: HTMLCanvasElement | null } };
+    expect(first.cfg.preservedCanvas).toBe(previous);
+    layoutRegistry.returnInstance(
+      container,
+      'canvas-key',
+      first as unknown as import('../../src/app/layouts/types').ILayout
+    );
+    const reused = (await layoutRegistry.create('canvas-key', container, {
+      preservedCanvas: null
+    })) as unknown as { cfg: { preservedCanvas?: HTMLCanvasElement | null } };
+    expect(reused).toBe(first);
+    expect(reused.cfg.preservedCanvas).toBeNull();
+  });
+
+  it('rejects an in-flight lazy create after clear + re-register', async () => {
+    let ctorCount = 0;
+    const Counted = class {
+      constructor() {
+        ctorCount += 1;
+      }
+      unmount() {}
+    } as unknown as ILayoutConstructor;
+
+    let resolveLoader!: (ctor: ILayoutConstructor) => void;
+    registerLazyLayout(
+      'epoch',
+      () =>
+        new Promise<ILayoutConstructor>((resolve) => {
+          resolveLoader = resolve;
+        }),
+      fakeMeta
+    );
+
+    const container = document.createElement('div');
+    const pending = layoutRegistry.create('epoch', container);
+    await vi.waitFor(() => expect(typeof resolveLoader).toBe('function'));
+
+    layoutRegistry.clear();
+    registerLazyLayout('epoch', () => Counted, fakeMeta);
+
+    resolveLoader(Counted);
+    await expect(pending).rejects.toMatchObject({
+      name: 'AbortError',
+      message: 'Layout registration superseded'
+    });
+    expect(ctorCount).toBe(0);
+
+    const late = await layoutRegistry.create('epoch', container);
+    expect(late).toBeInstanceOf(Counted);
+    expect(ctorCount).toBe(1);
+  });
+
+  it('observes a rejecting pooled unmount', async () => {
+    const errorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    const Layout = class {
+      constructor() {}
+      unmount() {
+        return Promise.reject(new Error('unmount boom'));
+      }
+    } as unknown as ILayoutConstructor;
+
+    layoutRegistry.register('tok-reject', Layout, fakeMeta);
+    const container = document.createElement('div');
+    const first = await layoutRegistry.create('tok-reject', container);
+    layoutRegistry.returnInstance(container, 'tok-reject', first);
+    layoutRegistry.unregister('tok-reject');
+    layoutRegistry.register('tok-reject', Layout, fakeMeta);
+    await layoutRegistry.create('tok-reject', container);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  it('disposes a pooled instance after unregister/re-register', async () => {
+    let disposed = 0;
+    const Layout = class {
+      constructor() {}
+      unmount() {
+        disposed += 1;
+      }
+    } as unknown as ILayoutConstructor;
+
+    layoutRegistry.register('tok', Layout, fakeMeta);
+    const container = document.createElement('div');
+    const first = await layoutRegistry.create('tok', container);
+    layoutRegistry.returnInstance(container, 'tok', first);
+    layoutRegistry.unregister('tok');
+    layoutRegistry.register('tok', Layout, fakeMeta);
+    const second = await layoutRegistry.create('tok', container);
+    expect(second).not.toBe(first);
+    expect(disposed).toBeGreaterThanOrEqual(1);
+  });
+});
