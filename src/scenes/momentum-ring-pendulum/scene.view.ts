@@ -257,11 +257,11 @@ function drawMechanism(
   text(
     ctx,
     '质心水平恒线（X = 0）',
-    V.ringBaseX,
-    74,
+    V.ringBaseX + 12,
+    100,
     p.gold,
     15,
-    'center',
+    'left',
     700
   );
   if (state.showForces) {

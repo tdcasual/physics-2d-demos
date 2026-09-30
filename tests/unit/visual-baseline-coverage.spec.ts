@@ -24,11 +24,11 @@ describe('visual baseline coverage manifest', () => {
     expect(untrackedSceneIds(discovered)).toEqual([]);
     expect(covered.filter((id) => debtIds.includes(id))).toEqual([]);
     expect(covered.length + debtIds.length).toBe(discovered.length);
-    expect(debtIds).toHaveLength(35);
+    expect(debtIds).toHaveLength(23);
     expect(VISUAL_COVERED_SCENE_IDS.length * 2).toBe(
       VISUAL_SCREENSHOT_SPEC_COUNT
     );
-    expect(VISUAL_SCREENSHOT_SPEC_COUNT).toBe(170);
+    expect(VISUAL_SCREENSHOT_SPEC_COUNT).toBe(194);
     expect(VISUAL_LEGACY_DEBT_RECORD).toBe('B11');
     expect(VISUAL_LEGACY_DEBT_OWNER).toBe('physics-2d maintainers');
     expect(Object.keys(namedDebt).sort()).toEqual(debtIds);
