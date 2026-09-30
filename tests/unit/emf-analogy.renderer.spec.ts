@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { drawCircuit } from '../../src/scenes/emf-analogy/renderer/draw-circuit';
 import { drawWaterAnalogy } from '../../src/scenes/emf-analogy/renderer/draw-water-analogy';
+import {
+  resetWaterParticlePools,
+  snapshotWaterParticles
+} from '../../src/scenes/emf-analogy/renderer/draw-pipe-system';
 import type { EmfAnalogySnapshot } from '../../src/scenes/emf-analogy/scene.sim';
 
 function makeCtx(): {
@@ -171,6 +175,33 @@ describe('emf-analogy renderer', () => {
           responsiveScale: 1
         })
       ).not.toThrow();
+    });
+  });
+
+  describe('water particle PRNG', () => {
+    it('snapshotWaterParticles is byte-identical across two independent fills', () => {
+      resetWaterParticlePools();
+      const first = snapshotWaterParticles('pipe-pump-turbine', 12);
+      const second = snapshotWaterParticles('pipe-pump-turbine', 12);
+      expect(first).toEqual(second);
+      expect(first).toHaveLength(12);
+      for (const p of first) {
+        expect(p.t).toBeGreaterThanOrEqual(0);
+        expect(p.t).toBeLessThan(1);
+        expect(p.yOffset).toBeGreaterThanOrEqual(-0.3);
+        expect(p.yOffset).toBeLessThanOrEqual(0.3);
+        expect(p.speedOffset).toBeGreaterThanOrEqual(0.8);
+        expect(p.speedOffset).toBeLessThanOrEqual(1.2);
+        expect(p.size).toBeGreaterThanOrEqual(0.5);
+        expect(p.size).toBeLessThanOrEqual(1.3);
+      }
+    });
+
+    it('distinct pool keys produce distinct particle sequences', () => {
+      resetWaterParticlePools();
+      const a = snapshotWaterParticles('pipe-pump-turbine', 8);
+      const b = snapshotWaterParticles('pipe-mesh-pump', 8);
+      expect(a).not.toEqual(b);
     });
   });
 });

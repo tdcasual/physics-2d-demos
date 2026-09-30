@@ -81,11 +81,8 @@ test.describe('scene screenshots', () => {
   );
 
   for (const scene of SCENES) {
-    // emf-analogy 有粒子动画（相位推进）、double-slit 默认 autoPlay，
-    // 截图时动画可能仍在推进，diff 阈值需要更高。其余动态场景冻结 rAF，
-    // 不抬高阈值。
-    const highDiff = scene.id === 'emf-analogy' || scene.id === 'double-slit';
-    const extraWait = highDiff || scene.id === 'chase-meet';
+    // chase-meet 舞台内多画布，remainder 需要更长才能排完。
+    const extraWait = scene.id === 'chase-meet';
 
     test(`desktop ${scene.id}`, async ({ page }) => {
       await page.setViewportSize({ width: 1440, height: 900 });
@@ -111,8 +108,8 @@ test.describe('scene screenshots', () => {
         remainderMs: extraWait ? 1200 : 800
       });
       await expect(page).toHaveScreenshot(`${scene.id}-desktop.png`, {
-        maxDiffPixels: highDiff ? 3000 : 800,
-        threshold: highDiff ? 0.3 : 0.2
+        maxDiffPixels: 800,
+        threshold: 0.2
       });
     });
 
@@ -140,8 +137,8 @@ test.describe('scene screenshots', () => {
         remainderMs: extraWait ? 1200 : 800
       });
       await expect(page).toHaveScreenshot(`${scene.id}-mobile.png`, {
-        maxDiffPixels: highDiff ? 3000 : 800,
-        threshold: highDiff ? 0.3 : 0.2
+        maxDiffPixels: 800,
+        threshold: 0.2
       });
     });
   }

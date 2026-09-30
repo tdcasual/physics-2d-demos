@@ -1,9 +1,10 @@
 /**
- * 容差冻结（v13 Wave J J4 / B20；v15 Phase A 收紧）
+ * 容差冻结（v13 Wave J J4 / B20；v15 Phase A 收紧 2b；Phase F 关闭 2a）
  *
- * 登记 visual-regression highDiff 分支与 toBeCloseTo(…, 0) 为收紧候选。
- * 扫描用括号平衡口径（含多行调用），跳过 `.not.toBeCloseTo`（收紧它会放宽）。
- * 冻条数只降不升。剩余为物理近似保留桶。
+ * highDiff 分支已删除（B20-2a）：visual-regression 全员 800 / 0.2，
+ * extraWait 仅 chase-meet。本文件棘轮禁止 highDiff 回潮。
+ * toBeCloseTo(…, 0) 保留桶（2b）扫描用括号平衡口径（含多行调用），
+ * 跳过 `.not.toBeCloseTo`（收紧它会放宽）。冻条数只降不升。
  */
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -11,13 +12,10 @@ import { join, relative, resolve } from 'node:path';
 
 const ROOT = resolve(process.cwd());
 
-const HIGH_DIFF_SCENE_CEILING = 2;
-const HIGH_DIFF_MAX_PIXELS = 3000;
-const HIGH_DIFF_THRESHOLD = 0.3;
 /** v15 Phase A：括号平衡口径 23 → 保留桶 2（maxwell mostProbable、force-composition baseEnd.x）。 */
 const CLOSE_TO_ZERO_CEILING = 2;
 
-const HIGH_DIFF_SCENES = ['double-slit', 'emf-analogy'] as const;
+const STANDARD_MAX_DIFF_PIXELS = 800;
 
 const CLOSE_TO_CALL = 'toBeCloseTo(';
 
@@ -140,28 +138,19 @@ function lastTopLevelPrecision(inner: string): string | null {
 }
 
 describe('tolerance freeze (B20)', () => {
-  it('freezes visual-regression highDiff scenes and thresholds', () => {
+  it('visual-regression has no highDiff branch (B20-2a closed)', () => {
     const source = readFileSync(
       resolve(ROOT, 'tests/visual/visual-regression.spec.ts'),
       'utf8'
     );
-    const match = source.match(
-      /const highDiff = scene\.id === '([^']+)' \|\| scene\.id === '([^']+)';/
-    );
-    expect(
-      match,
-      'highDiff scene pair must stay a two-id === check'
-    ).not.toBeNull();
-    const ids = [match![1], match![2]].sort();
-    expect(ids).toEqual([...HIGH_DIFF_SCENES].sort());
-    expect(ids.length).toBeLessThanOrEqual(HIGH_DIFF_SCENE_CEILING);
-
+    expect(source).not.toMatch(/\bhighDiff\b/);
     expect(source).toMatch(
-      new RegExp(`maxDiffPixels:\\s*highDiff \\? ${HIGH_DIFF_MAX_PIXELS} : `)
+      new RegExp(`maxDiffPixels:\\s*${STANDARD_MAX_DIFF_PIXELS}\\b`)
     );
-    expect(source).toMatch(
-      new RegExp(`threshold:\\s*highDiff \\? ${HIGH_DIFF_THRESHOLD} : `)
-    );
+    expect(source).toMatch(/threshold:\s*0\.2\b/);
+    expect(source).toMatch(/const extraWait = scene\.id === 'chase-meet';/);
+    expect(source).not.toMatch(/maxDiffPixels:\s*3000/);
+    expect(source).not.toMatch(/threshold:\s*0\.3/);
   });
 
   it('counts multiline toBeCloseTo(…, 0) and skips .not (paren-balance)', () => {
