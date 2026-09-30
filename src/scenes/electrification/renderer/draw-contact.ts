@@ -8,6 +8,9 @@ import {
 } from './draw-field-lines';
 import { drawStepIndicator } from './draw-step-indicator';
 
+/** 接触前两球间距下限（px），不参与 scale。 */
+const CONTACT_SEP_MIN = 80;
+
 /**
  * 接触起电：2 个步骤
  */
@@ -18,15 +21,15 @@ export function drawContact(
   const { ctx, width, height, theme, responsiveScale } = context;
   const { state } = snapshot;
   const isDark = theme === 'dark';
-  const s = responsiveScale;
+  const scale = responsiveScale;
 
   const cx = width * 0.5;
   const cy = height * 0.4;
 
   if (state.stepIndex === 0) {
-    drawContactStep0(ctx, cx, cy, s, isDark, state);
+    drawContactStep0(ctx, cx, cy, scale, isDark, state);
   } else {
-    drawContactStep1(ctx, cx, cy, s, isDark, state);
+    drawContactStep1(ctx, cx, cy, scale, isDark, state);
   }
 
   // 步骤指示器
@@ -38,7 +41,7 @@ export function drawContact(
     2,
     ['接触前', '接触后'],
     isDark,
-    s
+    scale
   );
 }
 
@@ -47,20 +50,20 @@ function drawContactStep0(
   ctx: CanvasRenderingContext2D,
   cx: number,
   cy: number,
-  s: number,
+  scale: number,
   isDark: boolean,
   state: ElectrificationSnapshot['state']
 ): void {
-  const gap = Math.max(80, 130 * s);
+  const gap = Math.max(CONTACT_SEP_MIN, 130 * scale);
   const leftX = cx - gap * 0.5;
   const rightX = cx + gap * 0.5;
-  const sphereR = Math.max(35, 55 * s);
+  const sphereR = Math.max(35, 55 * scale);
 
   // 左侧导体（+3）
-  drawChargedSphere(ctx, leftX, cy, sphereR, state.leftCharge, isDark, s);
+  drawChargedSphere(ctx, leftX, cy, sphereR, state.leftCharge, isDark, scale);
 
   // 右侧导体（-1）
-  drawChargedSphere(ctx, rightX, cy, sphereR, state.rightCharge, isDark, s);
+  drawChargedSphere(ctx, rightX, cy, sphereR, state.rightCharge, isDark, scale);
 
   // 电场线
   drawFieldLinesFromPoint(
@@ -70,7 +73,7 @@ function drawContactStep0(
     state.leftCharge,
     sphereR * 2.2,
     isDark,
-    s
+    scale
   );
   drawFieldLinesFromPoint(
     ctx,
@@ -79,7 +82,7 @@ function drawContactStep0(
     state.rightCharge,
     sphereR * 2.2,
     isDark,
-    s
+    scale
   );
   drawFieldLinesBetween(
     ctx,
@@ -90,13 +93,13 @@ function drawContactStep0(
     cy,
     state.rightCharge,
     isDark,
-    s
+    scale
   );
 
   // 即将接触提示
   ctx.strokeStyle = isDark ? 'rgba(148,163,184,0.25)' : 'rgba(71,85,105,0.2)';
-  ctx.lineWidth = Math.max(0.5, 1 * s);
-  ctx.setLineDash([5 * s, 5 * s]);
+  ctx.lineWidth = Math.max(0.5, 1 * scale);
+  ctx.setLineDash([5 * scale, 5 * scale]);
   ctx.beginPath();
   ctx.moveTo(leftX + sphereR, cy);
   ctx.lineTo(rightX - sphereR, cy);
@@ -105,10 +108,10 @@ function drawContactStep0(
 
   // 标签
   ctx.fillStyle = isDark ? 'rgba(226,232,240,0.7)' : 'rgba(71,85,105,0.8)';
-  ctx.font = `600 ${Math.max(11, Math.round(14 * s))}px "Noto Sans SC", sans-serif`;
+  ctx.font = `600 ${Math.max(11, Math.round(14 * scale))}px "Noto Sans SC", sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
-  const labelGap = 12 * s;
+  const labelGap = 12 * scale;
   ctx.fillText('A', leftX, cy + sphereR + labelGap);
   ctx.fillText('B', rightX, cy + sphereR + labelGap);
 }
@@ -118,36 +121,52 @@ function drawContactStep1(
   ctx: CanvasRenderingContext2D,
   cx: number,
   cy: number,
-  s: number,
+  scale: number,
   isDark: boolean,
   state: ElectrificationSnapshot['state']
 ): void {
-  const sphereR = Math.max(35, 55 * s);
+  const sphereR = Math.max(35, 55 * scale);
   const gap = sphereR * 0.1; // 紧密接触
 
   const leftX = cx - gap * 0.5 - sphereR * 0.5;
   const rightX = cx + gap * 0.5 + sphereR * 0.5;
 
   // 两个导体用导体球绘制（颜色相同，表示电荷平衡）
-  drawConductor(ctx, leftX, cy, sphereR, isDark, s);
-  drawConductor(ctx, rightX, cy, sphereR, isDark, s);
+  drawConductor(ctx, leftX, cy, sphereR, isDark, scale);
+  drawConductor(ctx, rightX, cy, sphereR, isDark, scale);
 
   // 电荷重新分配可视化
   const avgCharge = (state.leftCharge + state.rightCharge) / 2;
 
   // 在两个球上都显示相同的净电荷
-  drawNetCharges(ctx, leftX, cy, avgCharge, sphereR * 0.4, isDark, s);
-  drawNetCharges(ctx, rightX, cy, avgCharge, sphereR * 0.4, isDark, s);
+  drawNetCharges(ctx, leftX, cy, avgCharge, sphereR * 0.4, isDark, scale);
+  drawNetCharges(ctx, rightX, cy, avgCharge, sphereR * 0.4, isDark, scale);
 
   // 电场线（从每个球向外辐射）
-  drawFieldLinesFromPoint(ctx, leftX, cy, avgCharge, sphereR * 2.2, isDark, s);
-  drawFieldLinesFromPoint(ctx, rightX, cy, avgCharge, sphereR * 2.2, isDark, s);
+  drawFieldLinesFromPoint(
+    ctx,
+    leftX,
+    cy,
+    avgCharge,
+    sphereR * 2.2,
+    isDark,
+    scale
+  );
+  drawFieldLinesFromPoint(
+    ctx,
+    rightX,
+    cy,
+    avgCharge,
+    sphereR * 2.2,
+    isDark,
+    scale
+  );
 
   // 电荷流动箭头（从左向右，示意正电荷流动方向）
   ctx.save();
   ctx.strokeStyle = isDark ? 'rgba(250,204,21,0.5)' : 'rgba(202,138,4,0.45)';
-  ctx.lineWidth = Math.max(1, 1.5 * s);
-  ctx.setLineDash([5 * s, 4 * s]);
+  ctx.lineWidth = Math.max(1, 1.5 * scale);
+  ctx.setLineDash([5 * scale, 4 * scale]);
 
   // 上方流动箭头
   ctx.beginPath();
@@ -160,8 +179,8 @@ function drawContactStep1(
   ctx.setLineDash([]);
   ctx.fillStyle = isDark ? 'rgba(250,204,21,0.6)' : 'rgba(202,138,4,0.55)';
   const arrowTipX = rightX - sphereR * 0.5;
-  const arrowH = 4 * s;
-  const arrowW = 8 * s;
+  const arrowH = 4 * scale;
+  const arrowW = 8 * scale;
   ctx.beginPath();
   ctx.moveTo(arrowTipX, arrowY);
   ctx.lineTo(arrowTipX - arrowW, arrowY - arrowH);
@@ -173,7 +192,7 @@ function drawContactStep1(
 
   // 接触标记（实线）
   ctx.strokeStyle = isDark ? 'rgba(148,163,184,0.4)' : 'rgba(71,85,105,0.3)';
-  ctx.lineWidth = Math.max(1, 2 * s);
+  ctx.lineWidth = Math.max(1, 2 * scale);
   ctx.beginPath();
   ctx.moveTo(leftX + sphereR, cy);
   ctx.lineTo(rightX - sphereR, cy);
@@ -181,10 +200,10 @@ function drawContactStep1(
 
   // 标签
   ctx.fillStyle = isDark ? 'rgba(226,232,240,0.7)' : 'rgba(71,85,105,0.8)';
-  ctx.font = `600 ${Math.max(11, Math.round(14 * s))}px "Noto Sans SC", sans-serif`;
+  ctx.font = `600 ${Math.max(11, Math.round(14 * scale))}px "Noto Sans SC", sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
-  const labelGap = 12 * s;
+  const labelGap = 12 * scale;
   ctx.fillText('A', leftX, cy + sphereR + labelGap);
   ctx.fillText('B', rightX, cy + sphereR + labelGap);
 }

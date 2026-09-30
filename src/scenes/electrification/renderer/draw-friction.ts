@@ -5,6 +5,9 @@ import { drawNetCharges, drawTransferArrow } from './draw-charges';
 import { drawFieldLinesFromPoint } from './draw-field-lines';
 import { drawStepIndicator } from './draw-step-indicator';
 
+/** 分离后两球间距下限（px），不参与 scale。 */
+const FRICTION_SEP_MIN = 60;
+
 /**
  * 摩擦起电：3 个步骤
  */
@@ -15,15 +18,15 @@ export function drawFriction(
   const { ctx, width, height, theme, responsiveScale } = context;
   const { state } = snapshot;
   const isDark = theme === 'dark';
-  const s = responsiveScale;
+  const scale = responsiveScale;
 
   const cx = width * 0.5;
   const cy = height * 0.42;
 
   if (state.stepIndex === 0) {
-    drawFrictionStep0(ctx, cx, cy, width, height, s, isDark);
+    drawFrictionStep0(ctx, cx, cy, width, height, scale, isDark);
   } else {
-    drawFrictionStep1Plus(ctx, cx, cy, width, height, s, isDark, state);
+    drawFrictionStep1Plus(ctx, cx, cy, width, height, scale, isDark, state);
   }
 
   // 步骤指示器
@@ -35,7 +38,7 @@ export function drawFriction(
     3,
     ['初始', '摩擦', '分离'],
     isDark,
-    s
+    scale
   );
 }
 
@@ -46,29 +49,29 @@ function drawFrictionStep0(
   cy: number,
   width: number,
   height: number,
-  s: number,
+  scale: number,
   isDark: boolean
 ): void {
-  const rodW = Math.max(80, 140 * s);
-  const rodH = Math.max(40, 70 * s);
-  const silkW = Math.max(80, 140 * s);
-  const silkH = Math.max(40, 70 * s);
-  const gap = Math.max(10, 20 * s);
+  const rodW = Math.max(80, 140 * scale);
+  const rodH = Math.max(40, 70 * scale);
+  const silkW = Math.max(80, 140 * scale);
+  const silkH = Math.max(40, 70 * scale);
+  const gap = Math.max(10, 20 * scale);
 
   const rodX = cx - rodW - gap * 0.5;
   const silkX = cx + gap * 0.5;
   const objY = cy - rodH * 0.5;
 
   // 玻璃棒
-  drawGlassRod(ctx, rodX, objY, rodW, rodH, isDark, s);
+  drawGlassRod(ctx, rodX, objY, rodW, rodH, isDark, scale);
 
   // 丝绸
-  drawSilk(ctx, silkX, objY, silkW, silkH, isDark, s);
+  drawSilk(ctx, silkX, objY, silkW, silkH, isDark, scale);
 
   // 接触标记
   ctx.strokeStyle = isDark ? 'rgba(148,163,184,0.3)' : 'rgba(71,85,105,0.25)';
-  ctx.lineWidth = Math.max(0.5, 1 * s);
-  ctx.setLineDash([4 * s, 4 * s]);
+  ctx.lineWidth = Math.max(0.5, 1 * scale);
+  ctx.setLineDash([4 * scale, 4 * scale]);
   ctx.beginPath();
   ctx.moveTo(cx, objY + rodH * 0.3);
   ctx.lineTo(cx, objY + rodH * 0.7);
@@ -77,10 +80,10 @@ function drawFrictionStep0(
 
   // 标签
   ctx.fillStyle = isDark ? 'rgba(226,232,240,0.7)' : 'rgba(71,85,105,0.8)';
-  ctx.font = `600 ${Math.max(11, Math.round(14 * s))}px "Noto Sans SC", sans-serif`;
+  ctx.font = `600 ${Math.max(11, Math.round(14 * scale))}px "Noto Sans SC", sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
-  const labelGap = 10 * s;
+  const labelGap = 10 * scale;
   ctx.fillText('玻璃棒', rodX + rodW * 0.5, objY + rodH + labelGap);
   ctx.fillText('丝绸', silkX + silkW * 0.5, objY + silkH + labelGap);
 
@@ -92,7 +95,7 @@ function drawFrictionStep0(
     rodW * 0.35,
     0,
     isDark,
-    s
+    scale
   );
   drawInternalCharges(
     ctx,
@@ -101,7 +104,7 @@ function drawFrictionStep0(
     silkW * 0.35,
     0,
     isDark,
-    s
+    scale
   );
 }
 
@@ -112,22 +115,30 @@ function drawFrictionStep1Plus(
   cy: number,
   width: number,
   height: number,
-  s: number,
+  scale: number,
   isDark: boolean,
   state: ElectrificationSnapshot['state']
 ): void {
-  const gap = Math.max(60, 120 * s);
-  const sphereR = Math.max(35, 55 * s);
+  const gap = Math.max(FRICTION_SEP_MIN, 120 * scale);
+  const sphereR = Math.max(35, 55 * scale);
 
   const leftX = cx - gap * 0.5;
   const rightX = cx + gap * 0.5;
   const objY = cy;
 
   // 玻璃棒 → 带电球
-  drawChargedSphere(ctx, leftX, objY, sphereR, state.leftCharge, isDark, s);
+  drawChargedSphere(ctx, leftX, objY, sphereR, state.leftCharge, isDark, scale);
 
   // 丝绸 → 带电球
-  drawChargedSphere(ctx, rightX, objY, sphereR, state.rightCharge, isDark, s);
+  drawChargedSphere(
+    ctx,
+    rightX,
+    objY,
+    sphereR,
+    state.rightCharge,
+    isDark,
+    scale
+  );
 
   // 电场线
   drawFieldLinesFromPoint(
@@ -137,7 +148,7 @@ function drawFrictionStep1Plus(
     state.leftCharge,
     sphereR * 2.2,
     isDark,
-    s
+    scale
   );
   drawFieldLinesFromPoint(
     ctx,
@@ -146,7 +157,7 @@ function drawFrictionStep1Plus(
     state.rightCharge,
     sphereR * 2.2,
     isDark,
-    s
+    scale
   );
 
   // 电子转移箭头（step 2 显示最终方向）
@@ -158,21 +169,29 @@ function drawFrictionStep1Plus(
       rightX - sphereR,
       objY,
       isDark,
-      s
+      scale
     );
   }
 
   // 标签
   ctx.fillStyle = isDark ? 'rgba(226,232,240,0.7)' : 'rgba(71,85,105,0.8)';
-  ctx.font = `600 ${Math.max(11, Math.round(14 * s))}px "Noto Sans SC", sans-serif`;
+  ctx.font = `600 ${Math.max(11, Math.round(14 * scale))}px "Noto Sans SC", sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
-  const labelGap = 12 * s;
+  const labelGap = 12 * scale;
   ctx.fillText('玻璃棒', leftX, objY + sphereR + labelGap);
   ctx.fillText('丝绸', rightX, objY + sphereR + labelGap);
 
   // 净电荷粒子
-  drawNetCharges(ctx, leftX, objY, state.leftCharge, sphereR * 0.5, isDark, s);
+  drawNetCharges(
+    ctx,
+    leftX,
+    objY,
+    state.leftCharge,
+    sphereR * 0.5,
+    isDark,
+    scale
+  );
   drawNetCharges(
     ctx,
     rightX,
@@ -180,7 +199,7 @@ function drawFrictionStep1Plus(
     state.rightCharge,
     sphereR * 0.5,
     isDark,
-    s
+    scale
   );
 }
 
@@ -192,11 +211,11 @@ function drawInternalCharges(
   spreadR: number,
   _netCharge: number,
   isDark: boolean,
-  s: number
+  scale: number
 ): void {
   const count = 6;
-  const r = Math.max(2, 3 * s);
-  const offset = Math.max(2, 3 * s);
+  const r = Math.max(2, 3 * scale);
+  const offset = Math.max(2, 3 * scale);
   for (let i = 0; i < count; i++) {
     const angle = (i / count) * Math.PI * 2;
     const dist = spreadR * 0.6;

@@ -10,6 +10,10 @@ import type { OscillatorHistory } from './types';
 
 const HISTORY_DURATION = 30; // 显示最近 30 秒
 
+/** 图表紧凑布局阈值（CSS 盒尺寸），不是绘制 px。 */
+const COMPACT_H = 250;
+const COMPACT_W = 350;
+
 export interface ChartState {
   canvas: HTMLCanvasElement | null;
   ctx: CanvasRenderingContext2D | null;
@@ -109,10 +113,10 @@ export function drawGraph(
 
   // 绘制当前位置点（外圈白 + 内圈彩）
   const margin = {
-    top: cssHeight < 250 ? 16 : 24,
-    right: cssWidth < 350 ? 10 : 16,
-    bottom: cssHeight < 250 ? 28 : 36,
-    left: cssWidth < 350 ? 36 : 44
+    top: cssHeight < COMPACT_H ? 16 : 24,
+    right: cssWidth < COMPACT_W ? 10 : 16,
+    bottom: cssHeight < COMPACT_H ? 28 : 36,
+    left: cssWidth < COMPACT_W ? 36 : 44
   };
   const chartW = Math.max(50, cssWidth - margin.left - margin.right);
   const chartH = Math.max(30, cssHeight - margin.top - margin.bottom);

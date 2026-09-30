@@ -16,6 +16,14 @@ import type { ClickArea } from './renderer/types';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import { calculateGridLayout, getDeviceType } from './view-layout';
 
+/** 未挂载时 CSS 回落，不参与 scale（已知误报类）。 */
+const FALLBACK_GRAPH_W = 400;
+const FALLBACK_GRAPH_H = 300;
+const FALLBACK_STAGE_W = 800;
+const FALLBACK_STAGE_H = 600;
+const MIN_CSS_W = 200;
+const MIN_CSS_H = 150;
+
 /** 弹簧振子视图构造选项 */
 export type SpringOscillatorViewOptions = {
   graphCanvas?: HTMLCanvasElement;
@@ -56,10 +64,10 @@ export function createSpringOscillatorView(
     return responsiveScale * cs;
   }
 
-  let graphWidth = 400;
-  let graphHeight = 300;
-  let stageWidth = 800;
-  let stageHeight = 600;
+  let graphWidth = FALLBACK_GRAPH_W;
+  let graphHeight = FALLBACK_GRAPH_H;
+  let stageWidth = FALLBACK_STAGE_W;
+  let stageHeight = FALLBACK_STAGE_H;
   let responsiveScale = 1;
 
   // 图表 Canvas 状态
@@ -82,8 +90,14 @@ export function createSpringOscillatorView(
     if (!parent) return;
 
     const rect = parent.getBoundingClientRect();
-    const newWidth = Math.max(200, Math.floor(rect.width || 400));
-    const newHeight = Math.max(150, Math.floor(rect.height || 300));
+    const newWidth = Math.max(
+      MIN_CSS_W,
+      Math.floor(rect.width || FALLBACK_GRAPH_W)
+    );
+    const newHeight = Math.max(
+      MIN_CSS_H,
+      Math.floor(rect.height || FALLBACK_GRAPH_H)
+    );
 
     if (newWidth !== graphWidth || newHeight !== graphHeight) {
       graphWidth = newWidth;
@@ -99,8 +113,14 @@ export function createSpringOscillatorView(
       stageCtx = newCtx;
     }
     const rect = stageCanvas.getBoundingClientRect();
-    stageWidth = Math.max(200, Math.floor(rect.width || 800));
-    stageHeight = Math.max(150, Math.floor(rect.height || 600));
+    stageWidth = Math.max(
+      MIN_CSS_W,
+      Math.floor(rect.width || FALLBACK_STAGE_W)
+    );
+    stageHeight = Math.max(
+      MIN_CSS_H,
+      Math.floor(rect.height || FALLBACK_STAGE_H)
+    );
     responsiveScale = parseFloat(stageCanvas.dataset.responsiveScale || '1');
   }
 
