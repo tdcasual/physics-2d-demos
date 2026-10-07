@@ -3,7 +3,7 @@
 > 依据：`docs/plans/2026-09-21-arch-refactor-backlog.md`（v3 定稿）。
 > v1→v2：工具条宿主打标落点/时机重写；双缝"加新标留旧标"；契约 hasGraph:false 收窄；补 readout-slot/graph-body 落点；demoCapable 移到批 5。
 > v2→v3（Grok 第 2 轮修补）：工具条改单一宿主语义（mount 时不预打标，ensureStageToolbar 对解析结果补标）；graph-body 中间层补 flex 契约；selector 兜底第二分支保留 satisfiesConstraints（含 maxWidth）；readout-slot 只打 ul；projectile 两锚点不合并。
-> 状态：**定稿。批 1、批 2 均可开工。**
+> 状态：**已执行（2026-10-07）：文末批 1–6 验收表均通过。本文件为历史实施记录；现行技术债状态以 `docs/debt-ledger.md` 为准。**
 
 ## 全局约定
 
