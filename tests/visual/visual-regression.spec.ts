@@ -44,6 +44,12 @@ async function resetDynamicScene(page: Page): Promise<void> {
     );
   });
   await expect(master).toHaveAttribute('data-scene-playing', 'false');
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      })
+  );
 }
 
 function linuxScreenshotsAuthorized(): boolean {
@@ -107,10 +113,13 @@ test.describe('scene screenshots', () => {
       await page.goto(scenePage(scene.id), {
         waitUntil: 'domcontentloaded'
       });
-      if (DYNAMIC.has(scene.id)) await resetDynamicScene(page);
       await waitForFirstFrame(page, {
         remainderMs: extraWait ? 1200 : 800
       });
+      // Let auto-play and initial layout settle before resetting. Resetting
+      // while the first frame is still being attached can race the startup
+      // play call and leave a blank canvas snapshot.
+      if (DYNAMIC.has(scene.id)) await resetDynamicScene(page);
       await expect(page).toHaveScreenshot(`${scene.id}-desktop.png`, {
         maxDiffPixels: 800,
         threshold: 0.2
@@ -122,10 +131,10 @@ test.describe('scene screenshots', () => {
       await page.goto(scenePage(scene.id), {
         waitUntil: 'domcontentloaded'
       });
-      if (DYNAMIC.has(scene.id)) await resetDynamicScene(page);
       await waitForFirstFrame(page, {
         remainderMs: extraWait ? 1200 : 800
       });
+      if (DYNAMIC.has(scene.id)) await resetDynamicScene(page);
       await expect(page).toHaveScreenshot(`${scene.id}-mobile.png`, {
         maxDiffPixels: 800,
         threshold: 0.2

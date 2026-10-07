@@ -1,12 +1,12 @@
 # v15 剩余债务清零 — 实施进度与续作指南（2026-09-30）
 
 > **给下次续作的读者**：本文是 V15 最终进度权威。v13/v14 已全部完成（见各自 plan 的状态行）。
-> V15 Phase A-G 已完成；AA 漂移锁定、120 场景双平台基线、核心门禁与全量 E2E 均已验收。Darwin 全量快照将在本提交进入 main 后由 macOS workflow 生成并逐张比对，结果回填于 §3。
+> V15 Phase A-G 已完成；AA 漂移锁定、120 场景双平台基线、核心门禁与全量 E2E 均已验收。Darwin 全量快照已在本机 macOS 完成更新及普通比对（243/243，各 1 次），结果回填于 §2–3。
 > 最终更新：2026-10-07。
 
-## 0. 分支与合并状态
+## 0. 提交与合并状态
 
-- 分支：`main`。原 remediation 分支已合并；本次收尾提交将记录在本节提交地图。
+- 所有 V15 收尾改动直接提交到 `main`；原 remediation 工作已在此前合并。
 - 台账：`docs/debt-ledger.md`——B 区只剩永久机制项（B2/B3/B4/B5/B5b/B7/B10/B12/B13/B14/B15/B19/B22/B23），A 区空，无可清偿项
 - 方案：`docs/plans/2026-09-29-v15-remaining-debt-zero-plan.md`（v15.1，两审计方修订版）
 
@@ -25,7 +25,7 @@
 ### Phase C（B11 首批 + autoPlay 试点 + 暂停机制）✅
 
 - 提交链：`1b57a5b`（Darwin workflow grep input）→ `70fcf7f`（4 B9 + 2 试点 linux）→ `5061f61`（darwin 12 张 + 台账）→ `44671ff`（**暂停机制**）→ `37b7fa1`（darwin 5 张）。
-- **核心机制（后续一切的基础）**：`scene-adapter.ts` 新增 `data-scene-playing` 只读投影（\_markFirstFrame/startAll/pauseAll/reset 四处调用点）；`visual-regression.spec.ts` 对 dynamic 场景在 first-frame 读投影、播放中则按空格暂停。**禁止 stub rAF**（waitForFirstFrame 的 remainder 与仪器 fit 都依赖 rAF，探针实证会打死它们）。
+- **核心机制（后续一切的基础）**：`scene-adapter.ts` 新增 `data-scene-playing` 只读投影（\_markFirstFrame/startAll/pauseAll/reset 四处调用点）；`visual-regression.spec.ts` 对 dynamic 场景先等首帧、可见画布尺寸、字体与布局稳定（800ms），再发文档级 `r` reset、断言 `data-scene-playing=false` 并等两帧后截图。**禁止 stub rAF**（waitForFirstFrame 的 remainder 与仪器 fit 都依赖 rAF，探针实证会打死它们）。
 - 验收：Claude 条件通过（格式红已修；回归测试在 Phase F 补齐）。
 
 ### Phase D（B9 四场景 view 拆分）✅
@@ -58,13 +58,15 @@
 - Linux AA 稳定性探针：10/10 通过，连续两次独立冷启动 verify 均通过。
 - Linux 全量基线更新：243/243 Playwright 项成功（240 张截图 + 3 项保护断言）；155 张 Linux PNG 更新、85 张字节级未变。抽审 binary-stars、double-slit、momentum-ring-pendulum、potential-energy-graphs 桌面/移动样例，文字与画布完整，无新遮挡或裁切。
 - Linux 全量 verify：243/243，通过两次独立冷启动；`VISUAL_STABLE_AA=1` 的灰度抗锯齿及整数字体定位模式可复现。
+- 最终截图时序调整后，`electrostatic-shielding` 移动端 Linux PNG 单张更新；定向 verify 1/1、随后全量 verify 243/243 均通过。Linux 基线累计 156/240 张更新、84 张与原图字节级一致。
+- Darwin 全量基线更新及普通 verify：各 243/243 通过；240 张截图中 220 张实际改变、20 张保持字节级一致。生成和复验均在本机 macOS arm64 上完成；GitHub Actions dispatch 未分配 runner 且无步骤日志，因此采用仓库文档认可的本机 macOS 等效流程。
 - `CI=true pnpm quality:core`：通过。包含结构/脚手架、布局、循环依赖、audit、lint、Prettier、TypeScript、覆盖率、构建及 bundle budget。依赖审计无已知漏洞；Vitest/coverage-v8 升级到 4.1.11，source-map-js 锁到 1.2.2 补丁版。
 - Vitest 4 V8 AST remapping 比旧版准确，覆盖率口径发生变化。2026-10-07 重测 lines/functions/branches/statements = 89.32/86.90/71.44/87.75%；`vite.config.ts` 的棘轮按项目既有规则设为新实绩 −2 个百分点。所有测试通过。
 - Playwright E2E：546/546 通过（4.9 分钟）。第一次诊断运行未安装 Playwright Chromium/headless shell，发现后补齐浏览器并重跑；该次失败属容器配置问题，不是项目回归。
 - 历史要求的 `artifacts/final-two-scenes-check-v13.mjs` 在此仓库与 artifacts 目录不存在。本次以 546 项全量 E2E 完成终验，其中包含 double-slit 数据工作区及 chase-meet 布局切换、播放行为用例。
 - 负载纪律（quality-gates.md:39）：重型门禁在隔离 Ubuntu 容器单独执行；Linux AA 的独立冷启动复验避免受宿主负载影响。
 
-## 3. ✅ 容器 AA 渲染漂移锁定验证完成
+## 3. ✅ 容器 AA 渲染漂移锁定与 Darwin 基线收尾完成
 
 ### 根因和处理
 
@@ -72,19 +74,23 @@
 
 动态场景截图不再通过空格暂停，而是在首帧就绪后发文档级 `r` 重置快捷键，并断言 `data-scene-playing=false`，将动画统一到相同初始画面；这也覆盖无可见传输工具栏的 double-slit 场景。
 
+最终截图时序为：等可见画布、字体与布局稳定后再重置，并在重置暂停后等两帧再截图。早重置曾让 `accel-force` 产生空白图；时序调整后按真实画面重生该 Darwin 基线。复验还识别出 `bullet-block` 桌面舞台布局尺寸与旧图不同，以及 `electrostatic-shielding` 移动端电场线颜色/辉光差异；两张图均已按当前稳定渲染结果重生并单独复验。
+
 ### 验证结果
 
 - `binary-stars`、`conical-pendulum`、`harmonic-wave`、`spring-ball` 的桌面/移动探针（含 2 项防护断言）连续两次 10/10 通过。
 - Linux 全量更新 243/243；随后完整 verify 连续两轮各 243/243。
-- 仅 155 张 Linux PNG 改变；85 张原基线保持字节级一致。代表样例已抽审。
-- Darwin 快照将在本次代码先提交到 main 后，以 `.github/workflows/update-darwin-snapshots.yml` 全量生成；只纳入与仓库原图确实不同的 PNG，并逐张检查差异。
+- Linux 累计 156 张 PNG 改变、84 张原基线保持字节级一致；代表样例已抽审。
+- Darwin 全量更新与普通 verify 各 243/243；220 张 Darwin PNG 改变、20 张原图保持字节级一致。抽审 binary-stars、double-slit、momentum-ring-pendulum、potential-energy-graphs 桌面/移动画面，确认布局完整、没有新遮挡或裁切。
+- 最终时序下 Linux `electrostatic-shielding` 移动截图 1/1 更新、1/1 定向 verify 通过；之后全量 Linux verify 243/243。
+- GitHub `update-darwin-snapshots.yml` dispatch 未分配 runner、没有步骤日志；在仓库注明等效的本机 macOS arm64 流程完成相同全量命令。所有 240 张 Darwin PNG 均来自实际本机渲染，未用仓库旧图填充。
 
 ## 4. 环境/工具经验（全部沉淀）
 
 - **pnpm 一律 `CI=true` 前缀**（否则 ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY）。
 - **Grok CLI**（grok-4.6）：长等待（容器 ~15-25 min）时会在 ~12-15 min 优雅退出并**遗留 detached 容器**——容器会继续跑完并产出文件，协调方 `docker ps` 监控后接手后续步骤即可（本流程已多次验证）。`--max-turns 100` 在长门禁下可能不够，重要提交总能落盘。
 - **Claude CLI**：`/home/tdcasual/.nvm/versions/node/v22.23.1/bin/claude`（PATH 前置），默认模型（deepseek 端点）；`-p` 模式输出到结束才落盘；验收指令必须写「禁止跑重型测试」（静态审查），耗时 10-70 min 不等。
-- **Darwin 基线**：`update-darwin-snapshots.yml` 已有 `grep` input；`-f grep='...'`（带等号）；产物含全部 darwin PNG（未跑到的来自 repo 拷贝），用 `cmp` 核对既有文件 byte 级未动。
+- **Darwin 基线**：`update-darwin-snapshots.yml` 已有 `grep` input；`-f grep='...'`（带等号）。2026-10-07 全量改动由本机 arm64 Mac 生成，普通比对 243/243；220 张改变、20 张 byte 级未变。
 - **Playwright update 语义**：`--update-snapshots`（changed）写缺失+覆盖差异并 exit 0（仅当有真失败才非零）；容器脚本在 pw_ec≠0 时不拷回——**任何真失败都会挡住整批拷贝**（批 2 的 charged-particle-circle 教训）。
 - **preview 端口 5177**：终验脚本需要 `npx vite preview --host 127.0.0.1 --port 5177` 先跑起来；`pkill -f` 会匹配自身，用 `[v]ite` 形式。
 - **stale .git/index.lock**：进程中断会留下，无活跃 git 进程时 `rm -f` 即可。
@@ -109,4 +115,6 @@ c075961 G3 linux / 1f8a311 darwin    227f39e G4 linux / 90db31c darwin
 c181a44 G5 linux / 735eb65 darwin    04311c3 G6 linux+mrp 修复 / 9dc0f46 darwin
 f718a10 G7 linux / 65a80ee darwin    95245ba G8 linux / c865dcb darwin
 a866217 G: B11 台账关闭              4e81853 G3: brace-expansion audit overrides
+ba2fd98 V15 收尾：AA 确定性、Linux 全量快照、核心门禁与 E2E
+最终收尾提交：Darwin 快照、动态截图时序修正、Linux 局部基线与实施进度回填
 ```

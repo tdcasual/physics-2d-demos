@@ -1,6 +1,6 @@
 # v15 剩余债务清零总方案（2026-09-29，v15.1 修订版）
 
-> 状态：Phase A-G 与容器 AA 漂移锁定均已完成（2026-10-07）；质量门禁及 546 项 E2E 通过。Darwin 全量基线更新结果见 `docs/plans/2026-09-30-v15-execution-progress.md` §3。
+> 状态：V15 完成（2026-10-07）。Phase A-G、Linux/Darwin 基线、容器 AA 漂移锁定、质量门禁及 546 项 E2E 全部通过；Linux 最终全量 verify 243/243，Darwin 更新和普通比对各 243/243（220 张改变、20 张 byte 级一致），详情见 `docs/plans/2026-09-30-v15-execution-progress.md` §2–3。
 
 > 前作：v13、v14（均已执行）。目标：台账 B 区无可清偿项。
 > 本版已并入两轮交叉审计（Grok 5 阻塞 + Claude 27 项修订，结论收敛）的全部修订。
@@ -121,10 +121,10 @@
 - 不用 CI `update_snapshots: true` 做分批（全量容器 update 会重写既有基线）。
 - 不做无 grep 的 Darwin / 容器 update（会重写既有金标；每批后 git status 强制检视）。
 
-
 ## V15 最终收尾验收（2026-10-07）
 
 - Linux AA 探针连续两次 10/10，全量快照更新 243/243，独立全量 verify 两次各 243/243。
+- 最终截图时序调整后额外更新 1 张 Linux 快照；定向 verify 1/1、全量 verify 243/243。
 - `CI=true pnpm quality:core` 通过；完整 Playwright E2E 546/546 通过。
 - Vitest 4.1.11 修复审计阻断；V8 覆盖率映射变更后按新实测更新 coverage ratchet，保留 2pp 余量并记录新基线。
-- Darwin 全量快照由 macOS workflow 产出、逐张审阅与字节比较的最终结果记录在实施进度 §3。
+- Darwin 全量快照由本机 macOS arm64 产出、逐张审阅与字节比较；workflow 未分配 runner，最终结果记录在实施进度 §3。
