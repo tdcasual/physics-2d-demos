@@ -229,17 +229,21 @@ bootScenePage({
 
 GitHub Actions workflow：`.github/workflows/ci.yml`
 
-CI 流程：
+CI 分两层：
+
+**快速门禁（`validate`）**：每次 push / PR 自动运行，范围与 `pnpm quality:core` 一致。
 
 1. install
-2. scene structure check
-3. layout contract check
-4. circular dependency check
-5. lint + typecheck
-6. unit and contract tests with coverage
-7. install Playwright browsers and CJK fonts
-8. build + bundle budget
-9. E2E behavior tests
-10. visual, layout, accessibility and cross-browser tests
+2. scene structure / scaffold / layout contract / circular dependency / audit
+3. lint + format check + typecheck
+4. unit and contract tests with coverage
+5. build + bundle budget
 
-只有全绿才应进入发布流程。
+**重型验证（`browser`）**：只在手动触发时运行（Actions → CI → Run workflow，或 `gh workflow run ci.yml --ref <branch>`），不挡日常推送。
+
+1. install Playwright browsers and CJK fonts
+2. E2E behavior tests
+3. visual, layout, accessibility and cross-browser tests
+4. Linux visual-regression（容器内像素回归）
+
+三个浏览器套件互不短路，一次触发即可拿到全部结果。涉及交互、布局或视觉的改动，上线前应手动触发一次重型验证并确认通过。

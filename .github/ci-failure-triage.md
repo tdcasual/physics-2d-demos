@@ -21,6 +21,9 @@
 | Visual tests                        | 非 PNG 视觉套件（layout-matrix / a11y / cross-browser 等） | 本地 `PLAYWRIGHT_SKIP_BUILD=1 pnpm test:visual` 复现；Linux 上 PNG 用例会 skip，不是基线绿                                                                       |
 | Linux visual-regression (container) | Linux PNG SoT 像素差 / canary 失败 / 截图被 skip           | **先** `./scripts/visual-linux-container.sh` 复现；**禁止**宿主机 `--update-snapshots`。`update_snapshots` 也走该脚本；artifact 绿 ≠ 无 diff，必须与 HEAD 比 PNG |
 
+E2E / Visual / Linux visual-regression 三步属于 `browser` 任务，只在手动触发
+（Actions → CI → Run workflow）时运行；push / PR 只跑到 Bundle budget 为止。
+
 通用排查顺序：`pnpm quality:core` 本地复现 → 按上表定位 → 修复后
 `pnpm verify:scene <id>`（场景任务）或 `pnpm quality:core`（非场景任务）
 验证 → 再推送。

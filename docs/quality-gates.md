@@ -20,7 +20,7 @@ pnpm quality:full
 `quality:core` 与 CI 的静态段对齐：结构检查（`check:scenes`）、脚手架（`check:scaffold`）、布局（`check:layouts`）、循环依赖、`check:audit`、lint、`format:check`、类型、带覆盖率的单元/契约测试、构建、bundle budget。
 `quality:full` 在 core 之后追加 E2E 与视觉测试（`PLAYWRIGHT_SKIP_BUILD=1`，复用刚产出的 `dist/`）。
 
-CI（`.github/workflows/ci.yml`）额外上传 Codecov；本地不必跑 Codecov。覆盖率实测通常高于 `vite.config.ts` 阈值，禁止下调该阈值来「修」失败。
+CI（`.github/workflows/ci.yml`）分两层：`validate` 任务在每次 push / PR 自动跑上述静态段并额外上传 Codecov（本地不必跑 Codecov）；`browser` 任务（E2E、视觉、容器内 Linux 像素回归）只在手动触发时运行（Actions → CI → Run workflow，或 `gh workflow run ci.yml --ref <branch>`），三个套件互不短路。覆盖率实测通常高于 `vite.config.ts` 阈值，禁止下调该阈值来「修」失败。
 
 Vitest 覆盖率阈值以 `vite.config.ts` 的 `test.coverage.thresholds` 为唯一来源；本文不固化数值。运行 `pnpm test:coverage` 获取实绩。`quality:full` 只执行一次带覆盖率的 Vitest，随后只构建一次；E2E 与 visual 共用该 `dist/`，避免重复工作掩盖真实失败。
 
@@ -30,7 +30,7 @@ Playwright 分工如下：
 - `tests/visual/`：布局矩阵、无障碍、跨浏览器、视觉快照及专项回归。
 - `layout-matrix.spec.ts`：自动遍历全部场景与全部注册布局，验证 profile 视口、无横向溢出、活跃 Canvas 尺寸/边界/响应式比例/非空像素，以及 graph 激活。
 
-浏览器门禁是合并前要求。若本机浏览器环境被明确阻断，应记录命令和错误并由 CI 补跑；不能因环境问题删除测试、增加 skip 或声称完整门禁已通过。
+浏览器门禁是合并前要求。若本机浏览器环境被明确阻断，应记录命令和错误并手动触发 CI 的 `browser` 任务补跑；不能因环境问题删除测试、增加 skip 或声称完整门禁已通过。
 
 E2E / visual 验收须用独立端口，或先确认无外部 `vite preview` 占用 5177：Playwright `reuseExistingServer` 会接到别人构建的 `dist/`，结果不可信。
 

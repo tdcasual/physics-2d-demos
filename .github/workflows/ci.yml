@@ -1,5 +1,9 @@
 name: CI
 
+# 两层门禁：
+# - validate（快速门禁 = pnpm quality:core 的范围）：每次 push / PR 自动跑。
+# - browser（重型验证：E2E、视觉、容器内 Linux 像素回归）：只在手动触发
+#   （Actions → CI → Run workflow）时跑，不挡日常推送。
 on:
   push:
     branches:
@@ -13,9 +17,16 @@ on:
         default: false
         type: boolean
 
+# 同一分支同一触发方式的新运行取消旧运行；手动触发与 push 互不取消。
+concurrency:
+  group: ci-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
 jobs:
   validate:
+    if: ${{ !inputs.update_snapshots }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -68,6 +79,39 @@ jobs:
           fail_ci_if_error: false
           verbose: true
 
+      - name: Build
+        run: pnpm build
+
+      - name: Bundle budget
+        run: pnpm check:bundle
+
+      # 失败时把分诊表输出到 Job Summary，供人类与 AI 代理直接按表修复
+      - name: Failure triage summary
+        if: ${{ failure() }}
+        run: cat .github/ci-failure-triage.md >> "$GITHUB_STEP_SUMMARY"
+
+  browser:
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium firefox webkit
 
@@ -77,20 +121,20 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y fonts-noto-cjk
 
       - name: Build
+        id: build
         run: pnpm build
 
-      - name: Bundle budget
-        run: pnpm check:bundle
-
+      # 三个套件互不短路：前一个失败后面的照跑，一次触发拿到全部结果。
       - name: End-to-end behavior tests
+        if: ${{ !inputs.update_snapshots }}
         run: PLAYWRIGHT_SKIP_BUILD=1 pnpm test:e2e
 
       - name: Visual tests
-        if: ${{ !inputs.update_snapshots }}
+        if: ${{ !cancelled() && steps.build.outcome == 'success' && !inputs.update_snapshots }}
         run: PLAYWRIGHT_SKIP_BUILD=1 pnpm test:visual
 
       - name: Linux visual-regression (container)
-        if: ${{ !inputs.update_snapshots }}
+        if: ${{ !cancelled() && steps.build.outcome == 'success' && !inputs.update_snapshots }}
         run: ./scripts/visual-linux-container.sh
 
       - name: Regenerate Linux visual baselines
