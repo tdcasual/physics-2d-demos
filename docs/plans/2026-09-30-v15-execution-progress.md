@@ -7,7 +7,7 @@
 ## 0. 提交与合并状态
 
 - 所有 V15 收尾改动直接提交到 `main`；原 remediation 工作已在此前合并。
-- 台账：`docs/debt-ledger.md`——B 区只剩永久机制项（B2/B3/B4/B5/B5b/B7/B10/B12/B13/B14/B15/B19/B22/B23），A 区空，无可清偿项
+- 台账：`docs/debt-ledger.md`——A 区空；B 区仅保留回归守卫与长期棘轮（B2/B3/B5/B5b/B10/B12/B13/B14/B15/B19/B22/B23），B4 已并入 B19，原 B7 已转为 C9 已接受决策（2026-10-07 台账整理）
 - 方案：`docs/plans/2026-09-29-v15-remaining-debt-zero-plan.md`（v15.1，两审计方修订版）
 
 ## 1. 各 Phase 完成记录
