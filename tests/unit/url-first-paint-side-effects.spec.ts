@@ -6,7 +6,7 @@
  * - dynamic-circle / force-composition：tab/boundary 首绘可见性靠 scene
  *   subscribe→notify 补偿（不改实现，用测试固化）
  */
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';
 import {
   applySceneUrlParams,
   createSceneParamWriter,
@@ -89,19 +89,21 @@ function mountScene(
   id: string,
   scene: { dispose?: () => void },
   options: {
-    writeParam?: ReturnType<typeof vi.fn>;
+    writeParam?: Mock<(key: string, value: string | number | boolean) => void>;
     sceneWriter?: SceneParamWriter;
   } = {}
 ): {
   mount: HTMLElement;
   handle: Handle;
-  writeParam: ReturnType<typeof vi.fn>;
+  writeParam: Mock<(key: string, value: string | number | boolean) => void>;
 } {
   const createControls = captured.byId.get(id);
   if (!createControls) throw new Error(`createControls missing for ${id}`);
   const mount = document.createElement('div');
   document.body.appendChild(mount);
-  const writeParam = options.writeParam ?? vi.fn();
+  const writeParam =
+    options.writeParam ??
+    vi.fn<(key: string, value: string | number | boolean) => void>();
   const handle = createControls({
     mount,
     scene,

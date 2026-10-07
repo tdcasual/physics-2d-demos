@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { sceneIds, scenePage } from './scene-pages';
 import { waitForFirstFrame } from '../helpers/wait-first-frame';
 import {
@@ -27,6 +27,24 @@ import {
 const COVERED = VISUAL_COVERED_SCENE_IDS;
 const DYNAMIC = new Set(VISUAL_DYNAMIC_SCENE_IDS);
 const SCENES = COVERED.map((id) => ({ id, name: id }));
+
+async function resetDynamicScene(page: Page): Promise<void> {
+  const master = page.locator('.layout-master');
+  await expect(master).toHaveAttribute('data-first-frame', 'ready');
+
+  // Reset via the document-level shortcut so every layout reaches the same
+  // initial frame, including scenes without a visible transport toolbar.
+  await page.evaluate(() => {
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'r',
+        bubbles: true,
+        cancelable: true
+      })
+    );
+  });
+  await expect(master).toHaveAttribute('data-scene-playing', 'false');
+}
 
 function linuxScreenshotsAuthorized(): boolean {
   return process.env.VISUAL_LINUX_AUTHORITY === '1';
@@ -89,21 +107,7 @@ test.describe('scene screenshots', () => {
       await page.goto(scenePage(scene.id), {
         waitUntil: 'domcontentloaded'
       });
-      if (DYNAMIC.has(scene.id)) {
-        // 相位钉死必须在 remainder 之前，但不能 stub rAF（waitForFirstFrame
-        // 的 remainder 用 rAF 计拍，仪器 fit 也走 rAF）。改为读播放态投影
-        // 并暂停场景：画面从 t≈0 起静止，rAF 继续服务 fit/排版（B20/rod-model）。
-        await page.waitForSelector('.layout-master[data-first-frame="ready"]', {
-          timeout: 10_000
-        });
-        const playing = await page.evaluate(
-          () =>
-            document
-              .querySelector('.layout-master')
-              ?.getAttribute('data-scene-playing') === 'true'
-        );
-        if (playing) await page.keyboard.press(' ');
-      }
+      if (DYNAMIC.has(scene.id)) await resetDynamicScene(page);
       await waitForFirstFrame(page, {
         remainderMs: extraWait ? 1200 : 800
       });
@@ -118,21 +122,7 @@ test.describe('scene screenshots', () => {
       await page.goto(scenePage(scene.id), {
         waitUntil: 'domcontentloaded'
       });
-      if (DYNAMIC.has(scene.id)) {
-        // 相位钉死必须在 remainder 之前，但不能 stub rAF（waitForFirstFrame
-        // 的 remainder 用 rAF 计拍，仪器 fit 也走 rAF）。改为读播放态投影
-        // 并暂停场景：画面从 t≈0 起静止，rAF 继续服务 fit/排版（B20/rod-model）。
-        await page.waitForSelector('.layout-master[data-first-frame="ready"]', {
-          timeout: 10_000
-        });
-        const playing = await page.evaluate(
-          () =>
-            document
-              .querySelector('.layout-master')
-              ?.getAttribute('data-scene-playing') === 'true'
-        );
-        if (playing) await page.keyboard.press(' ');
-      }
+      if (DYNAMIC.has(scene.id)) await resetDynamicScene(page);
       await waitForFirstFrame(page, {
         remainderMs: extraWait ? 1200 : 800
       });

@@ -1,12 +1,12 @@
 # v15 剩余债务清零 — 实施进度与续作指南（2026-09-30）
 
-> **给下次续作的读者**：本文是唯一的进度权威。v13/v14 已全部完成（见各自 plan 的状态行）。
-> v15 的六个 Phase 中 **A/B/C/D/E/F 全部完成并验收**，**G（B11 百场景基线）产物层面完成**（120/120 场景双平台 480 张基线入库、台账 B11 已关闭），
-> **唯一未完成事项 = 容器渲染栈 AA 漂移的锁定验证**（见 §3，含精确续作命令）。
+> **给下次续作的读者**：本文是 V15 最终进度权威。v13/v14 已全部完成（见各自 plan 的状态行）。
+> V15 Phase A-G 已完成；AA 漂移锁定、120 场景双平台基线、核心门禁与全量 E2E 均已验收。Darwin 全量快照将在本提交进入 main 后由 macOS workflow 生成并逐张比对，结果回填于 §3。
+> 最终更新：2026-10-07。
 
 ## 0. 分支与合并状态
 
-- 工作分支：`fix/physics-2d-remediation`（本文写入时正在合并回 main）
+- 分支：`main`。原 remediation 分支已合并；本次收尾提交将记录在本节提交地图。
 - 台账：`docs/debt-ledger.md`——B 区只剩永久机制项（B2/B3/B4/B5/B5b/B7/B10/B12/B13/B14/B15/B19/B22/B23），A 区空，无可清偿项
 - 方案：`docs/plans/2026-09-29-v15-remaining-debt-zero-plan.md`（v15.1，两审计方修订版）
 
@@ -53,54 +53,31 @@
 - 审阅：168 张新 linux 基线逐张审阅（子代理执行）；发现并已处理：momentum-ring-pendulum 文字互压真 bug（`04311c3` 修复：标注从 y74 移到 y100 左对齐）；5 处轻微既有 nit 登记观察（closed-circuit/closed-power/clothes-rod 文字互压、charged-particle-electric 标签裁切、connected-bodies 末行贴边）。
 - **重要事实**：101 个场景**零 Math.random**（全部确定性渲染）；75 个 autoPlay 全部进 dynamicSceneIds。**陷阱**：B13 的 14 个 I3 钩子场景（`shouldAutoPlay`）不能用 `grep autoPlay:` 分类——charged-particle-circle 曾漏网导致真失败，已全部补入 dynamicSceneIds。
 
-## 2. 验收与门禁记录
+## 2. 验收与门禁记录（2026-10-07）
 
-- quality:core 最近全绿：`artifacts/v13-evidence/v15-phase-e2-core.log`（7988 passed，loadavg 6.49）——但此后有 Phase G 大量提交，**续作时必须重跑一次**。
-- 全量容器 verify（240 spec）：`artifacts/v13-evidence/v15-final-full-verify.log` —— **18 张 desktop 失败**（~1000-2100px，1-2%），引出 §3。
-- 验收方式（用户新规）：**多方静态审查**（读 diff/grep/行数/逻辑），不跑基线/容器/全量测试。
-- 负载纪律（quality-gates.md:39）：门禁结论必须绑 loadavg；失败用例隔离复跑（单文件）后再下结论；宿主外部负载（其他项目 node/esbuild/dropbox）曾达 26，test:coverage 在该负载下必有假红。
+- Linux AA 稳定性探针：10/10 通过，连续两次独立冷启动 verify 均通过。
+- Linux 全量基线更新：243/243 Playwright 项成功（240 张截图 + 3 项保护断言）；155 张 Linux PNG 更新、85 张字节级未变。抽审 binary-stars、double-slit、momentum-ring-pendulum、potential-energy-graphs 桌面/移动样例，文字与画布完整，无新遮挡或裁切。
+- Linux 全量 verify：243/243，通过两次独立冷启动；`VISUAL_STABLE_AA=1` 的灰度抗锯齿及整数字体定位模式可复现。
+- `CI=true pnpm quality:core`：通过。包含结构/脚手架、布局、循环依赖、audit、lint、Prettier、TypeScript、覆盖率、构建及 bundle budget。依赖审计无已知漏洞；Vitest/coverage-v8 升级到 4.1.11，source-map-js 锁到 1.2.2 补丁版。
+- Vitest 4 V8 AST remapping 比旧版准确，覆盖率口径发生变化。2026-10-07 重测 lines/functions/branches/statements = 89.32/86.90/71.44/87.75%；`vite.config.ts` 的棘轮按项目既有规则设为新实绩 −2 个百分点。所有测试通过。
+- Playwright E2E：546/546 通过（4.9 分钟）。第一次诊断运行未安装 Playwright Chromium/headless shell，发现后补齐浏览器并重跑；该次失败属容器配置问题，不是项目回归。
+- 历史要求的 `artifacts/final-two-scenes-check-v13.mjs` 在此仓库与 artifacts 目录不存在。本次以 546 项全量 E2E 完成终验，其中包含 double-slit 数据工作区及 chase-meet 布局切换、播放行为用例。
+- 负载纪律（quality-gates.md:39）：重型门禁在隔离 Ubuntu 容器单独执行；Linux AA 的独立冷启动复验避免受宿主负载影响。
 
-## 3. ⚠️ 唯一未完成事项：容器 AA 渲染漂移的锁定验证
+## 3. ✅ 容器 AA 渲染漂移锁定验证完成
 
-### 问题
+### 根因和处理
 
-最终全量 verify 中 18 张 desktop 基线失败（1036-2114px），复跑探针确认是**稳定漂移**而非负载抖动。根因（Claude Phase F 已首次发现）：容器每次冷启动 `apt-get install fonts-noto-cjk` + 系统库来自移动的 ubuntu:24.04 仓库，freetype/fontconfig 版本漂移导致 **LCD 子像素 AA ↔ 灰度 AA 变化**，表现为顶栏与文本的 ~1-2k px 系统性 diff（场景画布本身 0 diff，渲染确定性无问题）。分批生成的基线（不同时刻的容器代际）与当前 verify 代际不匹配。
+之前 18 张桌面截图出现约 1–2k px 系统性差异，集中在顶栏与文本，画布本身基本一致。漂移来自容器每次冷启动所取的 freetype/fontconfig 及 LCD 子像素 AA 差异。Linux 权威容器现全程设置 `VISUAL_STABLE_AA=1`，Chromium 使用 `--disable-lcd-text` 与 `--disable-font-subpixel-positioning`，固定灰度抗锯齿与整数字形定位。
 
-### 已实施的修法（**未提交验证**）
+动态场景截图不再通过空格暂停，而是在首帧就绪后发文档级 `r` 重置快捷键，并断言 `data-scene-playing=false`，将动画统一到相同初始画面；这也覆盖无可见传输工具栏的 double-slit 场景。
 
-- `playwright.config.ts`：新增 `VISUAL_STABLE_AA=1` 时 launch args `--disable-lcd-text --disable-font-subpixel-positioning`（强制灰度 AA + 整数字形定位，AA 与渲染栈版本解耦）。
-- `scripts/visual-linux-container.sh`：docker env、install env、run env、run-visual.mjs spawn env 四处注入 `VISUAL_STABLE_AA=1`（容器 SoT 环境恒开启）。
-- 探针：binary-stars/conical-pendulum/harmonic-wave/spring-ball 四场景在新模式重生 desktop 基线（4/8 张相变，mobile 在阈值内）；**verify 第 1 轮被用户中断（结果未读）**。
-- 上述改动（config + script + 4 张 probe PNG）在工作树中，随本文一并提交（commit message 标注「验证未完成」）。
+### 验证结果
 
-### 续作精确步骤（按序执行）
-
-```bash
-# 0. 环境检查
-git status; df -h /   # 磁盘 ≥5G
-# 1. AA 模式稳定性证明：同一批场景连续两次冷启动 verify 都应全绿
-scripts/visual-linux-container.sh verify --grep 'desktop binary-stars|mobile binary-stars|desktop conical-pendulum|mobile conical-pendulum|desktop harmonic-wave|mobile harmonic-wave|desktop spring-ball|mobile spring-ball'
-scripts/visual-linux-container.sh verify --grep '<同上>'
-# 2. 若两轮全绿 → 全量重生 Linux 基线（AA 新模式，约 30-40 min）
-scripts/visual-linux-container.sh update    # 不带 grep = 全量 240 张
-# 3. 全量 verify ×2（两次独立冷启动都必须 240/240 绿）
-scripts/visual-linux-container.sh verify
-scripts/visual-linux-container.sh verify
-# 4. Darwin 全量重生（macOS 侧 AA 未锁定——darwin 基线在新 linux 模式下无关联，
-#    但为保持两平台同代际，建议一并重生；workflow 的 grep 留空 = 全量）
-gh workflow run update-darwin-snapshots.yml --ref main
-gh run list --workflow=update-darwin-snapshots.yml --limit 1
-gh run download <id> -n visual-baselines-darwin -D /tmp/darwin-full
-#    核对既有 darwin PNG 改动并逐张抽审后提交
-# 5. 收尾门禁
-CI=true pnpm quality:core        # 记录 loadavg
-CI=true pnpm build && node artifacts/final-two-scenes-check-v13.mjs   # 双场景终验（需 preview 5177 在跑）
-# 6. 台账补记：AA 锁定机制（playwright.config.ts 的 VISUAL_STABLE_AA 段）写入 B11 关闭记录
-```
-
-### 若 AA 锁定后仍不稳
-
-备用路径：① 阈值分析（实测 AA 漂移 P99 是否 <800 灰度模式）；② 容器镜像按 digest 固定（`ubuntu:24.04@sha256:...`）+ apt 包用 snapshot.ubuntu.com 冻结——这是更重的方案，先试 AA 锁定。
+- `binary-stars`、`conical-pendulum`、`harmonic-wave`、`spring-ball` 的桌面/移动探针（含 2 项防护断言）连续两次 10/10 通过。
+- Linux 全量更新 243/243；随后完整 verify 连续两轮各 243/243。
+- 仅 155 张 Linux PNG 改变；85 张原基线保持字节级一致。代表样例已抽审。
+- Darwin 快照将在本次代码先提交到 main 后，以 `.github/workflows/update-darwin-snapshots.yml` 全量生成；只纳入与仓库原图确实不同的 PNG，并逐张检查差异。
 
 ## 4. 环境/工具经验（全部沉淀）
 

@@ -13,11 +13,7 @@ overrides:
   'nanoid@<3.3.18': '>=3.3.18 <4'
   '@babel/core@<=7.29.0': '>=7.29.6 <8'
   'esbuild@<0.28.1': '>=0.28.1 <0.29'
+  'source-map-js@<1.2.2': '>=1.2.2 <2'
   'glob@>=10.2.0 <10.5.0': '>=10.5.0 <11'
   'browserslist@<=4.28.6': '>=4.28.7 <5'
   'js-yaml@>=4.0.0 <4.3.2': '>=4.3.2 <5'
-# Vitest 3.2 无 3.x 补丁（公告要求 >=4.1.11）；本地测试 runner 的 mocker
-# 路径穿越，不进生产 bundle。升到 Vitest 4 另开任务。
-auditConfig:
-  ignoreGhsas:
-    - GHSA-82fw-gwwq-j7x9

@@ -7,7 +7,7 @@
 Physics-2D-Demos 是一个物理教学演示中心（Teaching Demo Hub），当前包含 120 个交互式 2D 物理场景，以及 3 个可按需加载的仪器组件。
 
 - **技术栈**: Vite 7 + TypeScript 5.9 (strict) + React 18 + Tailwind CSS v4
-- **测试**: Vitest 3.2 (单元/契约) + Playwright (E2E/视觉)
+- **测试**: Vitest 4.1.11 (单元/契约) + Playwright (E2E/视觉)
 - **构建产物**: 体积预算与实测口径以 `scripts/check-bundle-budget.ts` 为唯一权威。本文不固化数值；运行 `pnpm check:bundle` 获取当前预算与实测
 - **Runtime 依赖**: 仅 3 个（preact / react / react-dom）
 - **线上地址**: <https://x.infinitas.fun>
