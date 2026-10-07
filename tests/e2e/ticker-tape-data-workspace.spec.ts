@@ -6,9 +6,7 @@ import { waitForFirstFrame } from '../helpers/wait-first-frame';
 import {
   expectCanvasLayoutNotInflated,
   expectCanvasNotBlank,
-  readStageZoomMetrics,
-  readViewportZoom,
-  waitForBoost
+  readStageZoomMetrics
 } from '../helpers/stage-zoom-metrics';
 
 /** 1280×720 is the Playwright default and the middle classroom tier. */
@@ -194,12 +192,18 @@ async function chartStack(page: Page): Promise<{
 
 const STAGE_CANVAS = '.lab-stage-slot canvas';
 const STAGE_SLOT = '.lab-stage-slot';
-const ZOOM3_EVIDENCE = join(
+const ZOOM_EVIDENCE = join(
   process.cwd(),
   'artifacts',
   'data-workspace',
-  'ticker-tape-zoom3-metrics.json'
+  'ticker-tape-zoom-metrics.json'
 );
+
+/** 场景自绘缩放的当前倍率（画布 data-view-zoom）。 */
+async function readViewZoom(page: Page): Promise<number> {
+  const raw = await page.locator(STAGE_CANVAS).getAttribute('data-view-zoom');
+  return raw == null ? 1 : Number(raw);
+}
 
 test.describe('ticker-tape data workspace', () => {
   test('default page hides lab float graph and data on desktop', async ({
@@ -316,11 +320,12 @@ test.describe('ticker-tape data workspace', () => {
     await expect(entry).toBeEnabled();
     await entry.click();
     await expect(page.locator('.data-workspace-panel')).toBeVisible();
-    await expect(page.locator('.layout-master')).toHaveClass(
+    // 读数缩放由画布自绘：舞台不锁指针，画布进入缩放视图（拖尺由视图停用）。
+    await expect(page.locator('.layout-master')).not.toHaveClass(
       /is-data-workspace-stage-lock/
     );
     const stageCanvas = page.locator('.lab-stage-slot canvas');
-    await expect(stageCanvas).toHaveCSS('pointer-events', 'none');
+    await expect(stageCanvas).toHaveAttribute('data-view-zoom', '1.000');
     await expect(
       page.locator('.data-workspace-chart .lab-float-graph')
     ).toHaveCount(0);
@@ -1673,7 +1678,7 @@ test.describe('ticker-tape data workspace', () => {
     }
   });
 
-  test('workspace pan/zoom scales the stage without moving the origin', async ({
+  test('workspace reading zoom redraws the tape without moving the origin', async ({
     page
   }) => {
     await page.goto(scenePage('ticker-tape', '?preset=ua'), {
@@ -1685,12 +1690,15 @@ test.describe('ticker-tape data workspace', () => {
       '.data-workspace-entry:not(.graph-analysis-entry)'
     );
     await entry.click();
-    const viewport = page.locator('.stage-viewport');
-    await expect(viewport).toBeVisible();
     await expect(page.locator('.data-workspace-panel')).toBeVisible();
-    await expect(page.getByRole('button', { name: '放大' })).toBeVisible();
+    // 场景自绘缩放：没有平台的 CSS 缩放视口，控件同名。
+    await expect(page.locator('.stage-viewport')).toHaveCount(0);
+    const zoomIn = page.getByRole('button', { name: '放大' });
+    await expect(zoomIn).toBeVisible();
+    await expect(page.getByRole('button', { name: '缩小' })).toBeVisible();
 
     const canvas = page.locator(STAGE_CANVAS);
+    await expect(canvas).toHaveAttribute('data-view-zoom', '1.000');
     const originBefore = await canvas.getAttribute('data-origin-tick-index');
     expect(originBefore).toBeTruthy();
 
@@ -1711,16 +1719,9 @@ test.describe('ticker-tape data workspace', () => {
       box!.y + box!.height * 0.5
     );
     await page.mouse.wheel(0, -240);
-    await expect
-      .poll(async () => {
-        const transform = await viewport.evaluate(
-          (el) => (el as HTMLElement).style.transform
-        );
-        const match = transform.match(/scale\(([^)]+)\)/);
-        return match ? Number(match[1]) : 0;
-      })
-      .toBeGreaterThan(1);
+    await expect.poll(async () => readViewZoom(page)).toBeGreaterThan(1);
 
+    // 按在尺上横向拖：只平移视图，计时起点不变。
     await page.mouse.move(
       box!.x + box!.width * 0.28,
       box!.y + box!.height * 0.42
@@ -1737,80 +1738,43 @@ test.describe('ticker-tape data workspace', () => {
       originBefore as string
     );
 
-    await waitForBoost(page, STAGE_CANVAS);
-    const afterWheel = await readStageZoomMetrics(
-      page,
-      STAGE_CANVAS,
-      STAGE_SLOT
-    );
-    expectCanvasLayoutNotInflated(afterWheel);
-    expectCanvasNotBlank(afterWheel);
-
-    const zoomIn = page.getByRole('button', { name: '放大' });
-    for (let i = 0; i < 6; i += 1) {
-      const z = await readViewportZoom(page);
-      if (z >= 2.99) break;
+    // 放大到平台 CSS 缩放的 3 倍上限之外。
+    for (let i = 0; i < 12; i += 1) {
+      if ((await readViewZoom(page)) >= 3.99) break;
       await zoomIn.click();
     }
     await expect
-      .poll(async () => readViewportZoom(page))
-      .toBeGreaterThanOrEqual(2.99);
-    await waitForBoost(page, STAGE_CANVAS, 2.99);
+      .poll(async () => readViewZoom(page))
+      .toBeGreaterThanOrEqual(3.99);
 
-    const zoom3 = await readStageZoomMetrics(page, STAGE_CANVAS, STAGE_SLOT);
+    const zoomed = await readStageZoomMetrics(page, STAGE_CANVAS, STAGE_SLOT);
     mkdirSync(join(process.cwd(), 'artifacts', 'data-workspace'), {
       recursive: true
     });
-    writeFileSync(ZOOM3_EVIDENCE, `${JSON.stringify(zoom3, null, 2)}\n`);
-    expect(zoom3.zoom).toBeGreaterThanOrEqual(2.99);
-    expect(zoom3.boost).toBeGreaterThanOrEqual(2.99);
-    expectCanvasLayoutNotInflated(zoom3);
-    expectCanvasNotBlank(zoom3);
-    const expectedBacking = Math.round(
-      Math.max(1, Math.floor(zoom3.canvasCssWidth)) *
-        Math.min(2, zoom3.dpr) *
-        zoom3.boost
+    writeFileSync(
+      ZOOM_EVIDENCE,
+      `${JSON.stringify({ viewZoom: await readViewZoom(page), ...zoomed }, null, 2)}\n`
     );
-    expect(zoom3.canvasWidth).toBeLessThanOrEqual(expectedBacking + 2);
-    expect(zoom3.canvasWidth).toBeGreaterThan(zoom3.canvasCssWidth * 2);
-    expect(zoom3.canvasWidth).toBeLessThan(
-      zoom3.slotOffsetWidth *
-        Math.min(2, zoom3.dpr) *
-        zoom3.boost *
-        zoom3.boost +
-        2
-    );
+    // 矢量重画：不靠 CSS 放大，也不加大画布背衬。
+    expect(zoomed.zoom).toBe(1);
+    expect(zoomed.boost).toBe(1);
+    await expect(canvas).not.toHaveAttribute('data-render-boost');
+    expect(zoomed.canvasWidth).toBe(baseline.canvasWidth);
+    expect(zoomed.canvasHeight).toBe(baseline.canvasHeight);
+    expectCanvasLayoutNotInflated(zoomed);
+    expectCanvasNotBlank(zoomed);
 
-    const widthAtZoom3 = zoom3.canvasWidth;
     await page.getByRole('button', { name: '复位视图' }).click();
-    await expect.poll(async () => readViewportZoom(page)).toBeCloseTo(1, 2);
-    await expect(canvas).not.toHaveAttribute('data-render-boost');
-    await page.evaluate(
-      () =>
-        new Promise<void>((resolve) => {
-          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-        })
+    await expect(canvas).toHaveAttribute('data-view-zoom', '1.000');
+    await expect(canvas).toHaveAttribute(
+      'data-origin-tick-index',
+      originBefore as string
     );
-    const afterReset = await readStageZoomMetrics(
-      page,
-      STAGE_CANVAS,
-      STAGE_SLOT
-    );
-    expect(afterReset.boost).toBe(1);
-    expect(afterReset.zoom).toBeCloseTo(1, 2);
-    expect(afterReset.canvasWidth).toBeLessThan(widthAtZoom3);
-    const boost1Backing = Math.round(
-      Math.max(1, Math.floor(afterReset.canvasCssWidth)) *
-        Math.min(2, afterReset.dpr)
-    );
-    expect(afterReset.canvasWidth).toBe(boost1Backing);
-    expect(
-      Math.abs(afterReset.canvasWidth - baseline.canvasWidth)
-    ).toBeLessThanOrEqual(4);
-    expect(afterReset.canvasCssWidth).toBe(afterReset.slotOffsetWidth);
 
+    // 退出工作区：缩放控件撤掉，拖尺恢复可用。
     await entry.click();
-    await expect(page.locator('.stage-viewport')).toHaveCount(0);
-    await expect(canvas).not.toHaveAttribute('data-render-boost');
+    await expect(page.locator('.data-workspace-panel')).toHaveCount(0);
+    await expect(canvas).not.toHaveAttribute('data-view-zoom');
+    await expect(page.getByRole('button', { name: '放大' })).toHaveCount(0);
   });
 });

@@ -80,6 +80,34 @@ export function createSummaryRenderController(options: {
   >();
   let summaryBuilt = false;
   let contextEl: HTMLDivElement | null = null;
+  /** summaryCheck: 'together' 时汇总区唯一的校对按钮。 */
+  let checkAllBtn: HTMLButtonElement | null = null;
+
+  /** 当前环节可见的汇总字段（图像分析字段只在图像分析环节出现）。 */
+  function isOnCurrentStep(
+    specNow: DataWorkspaceSpec,
+    def: DataWorkspaceSpec['summaryFields'][number]
+  ): boolean {
+    if (!shouldShowChartAnalysis(specNow)) return true;
+    const onChartStep = def.step === 'chartAnalysis';
+    return getCurrentStep() === 'chartAnalysis' ? onChartStep : !onChartStep;
+  }
+
+  /** 一次校对当前环节的全部汇总字段，只刷新一次面板。 */
+  function checkAllSummary(): void {
+    const specNow = host.getSpec();
+    let submitted = false;
+    for (const def of specNow.summaryFields) {
+      const nodes = summaryInputs.get(def.id);
+      if (!nodes || nodes.input.disabled) continue;
+      if (!isOnCurrentStep(specNow, def)) continue;
+      host.submitField({ field: def.id, raw: nodes.input.value });
+      submitted = true;
+    }
+    if (!submitted) return;
+    options.onChange();
+    options.update();
+  }
 
   /** 每个容器的芯片签名：knowns 内容不变时跳过 replaceChildren。 */
   const knownsSignatures = new WeakMap<HTMLElement, string>();
@@ -135,6 +163,7 @@ export function createSummaryRenderController(options: {
     contextEl.hidden = true;
     summary.appendChild(contextEl);
 
+    const together = specNow.summaryCheck === 'together';
     for (const def of specNow.summaryFields) {
       const row = document.createElement('div');
       row.className =
@@ -154,11 +183,23 @@ export function createSummaryRenderController(options: {
         `${def.label}${def.unit ? `（${def.unit}）` : ''}`
       );
       input.dataset.dwApplied = '';
-      bindCheck(input, def.id);
+      if (together) {
+        input.addEventListener(
+          'keydown',
+          (event) => {
+            if (event.key !== 'Enter' || event.isComposing) return;
+            checkAllSummary();
+          },
+          { signal: ac.signal }
+        );
+      } else {
+        bindCheck(input, def.id);
+      }
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'data-workspace-check';
       btn.textContent = '校对';
+      btn.hidden = together;
       btn.addEventListener(
         'click',
         () => {
@@ -175,6 +216,28 @@ export function createSummaryRenderController(options: {
       row.append(lab, input, btn, status);
       summary.appendChild(row);
       summaryInputs.set(def.id, { input, btn, row });
+    }
+    if (together) {
+      const row = document.createElement('div');
+      row.className = 'data-workspace-summary-row';
+      checkAllBtn = document.createElement('button');
+      checkAllBtn.type = 'button';
+      checkAllBtn.className = 'data-workspace-check';
+      checkAllBtn.textContent = '校对';
+      checkAllBtn.setAttribute(
+        'aria-label',
+        `校对${specNow.summaryFields.map((def) => def.label).join('、')}`
+      );
+      checkAllBtn.addEventListener(
+        'click',
+        () => {
+          if (checkAllBtn?.disabled) return;
+          checkAllSummary();
+        },
+        { signal: ac.signal }
+      );
+      row.append(checkAllBtn);
+      summary.appendChild(row);
     }
     summaryBuilt = true;
   }
@@ -195,18 +258,13 @@ export function createSummaryRenderController(options: {
       renderKnownsInto(contextEl, contextItems);
     }
 
-    const chartMode = shouldShowChartAnalysis(specNow);
+    let anyReady = false;
     for (const def of specNow.summaryFields) {
       const nodes = summaryInputs.get(def.id);
-      if (nodes) {
-        const onChartStep = def.step === 'chartAnalysis';
-        nodes.row.hidden = chartMode
-          ? getCurrentStep() === 'chartAnalysis'
-            ? !onChartStep
-            : onChartStep
-          : false;
-      }
+      const visible = isOnCurrentStep(specNow, def);
+      if (nodes) nodes.row.hidden = !visible;
       const ready = isFieldReady(session, specNow, def.id);
+      if (ready && visible) anyReady = true;
       setFieldEnabled(nodes?.input ?? null, ready, nodes?.btn ?? null);
       const state = getSummaryField(session, def.id);
       syncInputValue(nodes?.input ?? null, state);
@@ -227,6 +285,7 @@ export function createSummaryRenderController(options: {
         setFieldStatus(status, state);
       }
     }
+    if (checkAllBtn) checkAllBtn.disabled = !anyReady;
   }
 
   function renderResult(

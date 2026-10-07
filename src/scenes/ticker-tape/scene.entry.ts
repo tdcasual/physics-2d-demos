@@ -110,6 +110,7 @@ export function createTickerTapeScene(
       return freezeSession(cloneSession(session));
     },
     prefetch: true,
+    onActiveChange: (active) => view.setWorkspaceActive(active),
     notify: () => base.notify(),
     renderAndEmit: () => base.renderAndEmit(),
     effects: {
@@ -120,7 +121,12 @@ export function createTickerTapeScene(
     },
     extensions: {
       invalidateAll: { notify: true },
-      invalidateSigFigsDerived: { notify: true }
+      invalidateSigFigsDerived: { notify: true },
+      // 演示模式挂起工作区时还原舞台视图（复位缩放、恢复拖尺）。
+      setActiveVisual: (active) => {
+        view.setWorkspaceActive(active);
+        base.renderAndEmit();
+      }
     },
     loadingMessage: '数据任务加载中…',
     notReadyError: '[ticker-tape] data workspace not ready',

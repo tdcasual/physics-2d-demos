@@ -1,6 +1,7 @@
 import { readElementLayoutSize } from '../../core/canvas-sizing';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
+import { createCanvasZoom } from '../../platform/input/canvas-zoom';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import type { TickerTapeState } from './scene.sim';
 import { drawGraphs, toPoints, type GraphKind } from './renderer/draw-graphs';
@@ -23,6 +24,12 @@ export type CreateTickerTapeViewOptions = {
   mode?: TeachingMode;
   demoHints?: DemoRenderHints;
 };
+
+/** 数据处理时纸带最大放大到每毫米这么多 px，足够估读毫米的下一位。 */
+const MAX_PX_PER_MM = 20;
+const MM_PER_CM = 10;
+/** 倍率上限的下限：宽屏上纸带本身已经较大，仍保证能再放大这么多倍。 */
+const MIN_MAX_ZOOM = 4;
 
 export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
   const canvas = options.canvas ?? document.createElement('canvas');
@@ -226,9 +233,33 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     });
   }
 
+  /**
+   * 数据处理环节的读数缩放：纸带与尺按视图变换矢量重画，画布背衬不变，
+   * 放大后刻度线依然清晰（平台的 CSS 舞台缩放放不到这个倍数）。
+   */
+  const zoom = createCanvasZoom({
+    canvas,
+    size: () => ({ width: stage.cssWidth, height: stage.cssHeight }),
+    maxZoom: () =>
+      Math.max(
+        MIN_MAX_ZOOM,
+        tapeHit ? (MAX_PX_PER_MM * MM_PER_CM) / tapeHit.cmToPx : MIN_MAX_ZOOM
+      ),
+    onChange: () => {
+      if (lastGraphState) paintTape(lastGraphState);
+    }
+  });
+
   function paintTape(state: TickerTapeState): void {
     const ctx = stage.ctx;
     if (!ctx) return;
+    const view = zoom.view();
+    ctx.save();
+    if (view.k !== 1) {
+      ctx.clearRect(0, 0, stage.cssWidth, stage.cssHeight);
+      ctx.translate(view.tx, view.ty);
+      ctx.scale(view.k, view.k);
+    }
     const hit = drawTape({
       ctx,
       canvas,
@@ -239,6 +270,7 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
       theme: env.theme,
       state
     });
+    ctx.restore();
     if (hit) tapeHit = hit;
   }
 
@@ -282,6 +314,8 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
   }
 
   function handlePointerDown(e: PointerEvent): void {
+    // 数据处理环节：指针归读数缩放，不能再拖动尺改计时起点。
+    if (zoom.isActive()) return;
     const px = canvasLocalX(e);
     const py = canvasLocalY(e);
     if (px === null || py === null || !tapeHit) return;
@@ -294,6 +328,7 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
   }
 
   function handlePointerMove(e: PointerEvent): void {
+    if (zoom.isActive()) return;
     const px = canvasLocalX(e);
     const py = canvasLocalY(e);
     if (px === null || py === null) return;
@@ -441,7 +476,15 @@ export function createTickerTapeView(options: CreateTickerTapeViewOptions) {
     setOnOriginDrag(cb: (tickIndex: number) => void): void {
       onOriginDrag = cb;
     },
+    /** 数据处理环节开/关：开时画布接管缩放与平移，并停用拖尺。 */
+    setWorkspaceActive(active: boolean): void {
+      draggingOrigin = false;
+      hoverOrigin = false;
+      zoom.setActive(active);
+      if (stage.canvas) stage.canvas.style.cursor = active ? 'grab' : '';
+    },
     dispose(): void {
+      zoom.dispose();
       detachEvents();
       stage.release();
       graphStage.release();

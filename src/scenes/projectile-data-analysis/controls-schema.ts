@@ -1,74 +1,82 @@
 import type { ControlsSchema } from '../../platform/controls-schema';
 
-export const projectileDataControlsSchema: ControlsSchema = {
+export const projectileLabControlsSchema: ControlsSchema = {
   sections: [
     {
-      title: '视图',
+      title: '实验操作',
       collapsed: false,
       fields: [
         {
-          type: 'preset-group',
-          key: 'mode',
+          type: 'button-grid',
+          key: 'operate',
           columns: 2,
-          presets: [
-            { id: 'trajectory', label: '轨迹分析' },
-            { id: 'strobe', label: '频闪还原' }
-          ],
-          initialActive: 'strobe'
+          buttons: [
+            { key: 'release', label: '释放小球' },
+            { key: 'lowerPlate', label: '挡板下移一格' },
+            { key: 'trace', label: '描出轨迹' },
+            { key: 'newPaper', label: '换白纸' }
+          ]
+        }
+      ]
+    },
+    {
+      title: '实验设置',
+      collapsed: false,
+      fields: [
+        {
+          type: 'toggle',
+          key: 'useLocator',
+          label: '使用定位卡',
+          value: true
         },
         {
           type: 'toggle',
-          key: 'showVectors',
-          label: '速度分解',
+          key: 'recordOrigin',
+          label: '记录抛出点 O',
+          value: true
+        },
+        {
+          type: 'toggle',
+          key: 'showLabels',
+          label: '器材标注',
           value: true
         }
       ]
     },
     {
-      title: '实验参数',
+      title: '器材调节',
       collapsed: false,
       span: 'full',
       fields: [
         {
           type: 'slider',
-          key: 'v0',
-          label: '初速度 v₀',
-          min: 0.5,
-          max: 5,
-          step: 0.1,
-          value: 2,
-          unit: 'm/s'
+          key: 'releaseH',
+          label: '释放高度 h',
+          min: 4,
+          max: 12,
+          step: 0.5,
+          value: 8,
+          unit: 'cm'
         },
         {
           type: 'slider',
-          key: 'gravity',
-          label: '重力加速度 g',
-          min: 1.6,
-          max: 15,
-          step: 0.1,
-          value: 10,
-          unit: 'm/s²'
+          key: 'chuteTilt',
+          label: '斜槽末端倾角',
+          min: -8,
+          max: 8,
+          step: 1,
+          value: 0,
+          unit: '°'
         },
         {
           type: 'slider',
-          key: 'period',
-          label: '频闪周期 T',
-          min: 0.05,
-          max: 0.3,
-          step: 0.01,
-          value: 0.15,
-          unit: 's'
-        }
-      ]
-    },
-    {
-      title: '结论',
-      collapsed: false,
-      fields: [
-        {
-          type: 'hint',
-          key: 'formula',
-          lines: ['Δx=v₀T', 'Δ²y=gT²']
+          key: 'plateY',
+          label: '挡板位置 y',
+          min: 6,
+          max: 42,
+          step: 1,
+          value: 6,
+          unit: 'cm'
         }
       ]
     }

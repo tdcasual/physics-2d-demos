@@ -123,6 +123,12 @@ export type DataWorkspaceSpec = {
    */
   rowCheckStages?: readonly DataWorkspaceRowCheckStage[];
   summaryFields: readonly DataWorkspaceFieldSpec[];
+  /**
+   * each（默认）= 每个汇总字段各有一个校对按钮；together = 汇总区只有一个
+   * 按钮，一次按 spec 顺序校对当前环节的全部汇总字段（一组互相关联的
+   * 演算结果只核算一次时使用）。
+   */
+  summaryCheck?: 'each' | 'together';
   summary?: DataWorkspaceSummarySpec;
   result?: DataWorkspaceResultSpec;
   completionField?: string;

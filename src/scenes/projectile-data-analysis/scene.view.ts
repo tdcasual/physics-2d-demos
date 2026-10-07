@@ -1,543 +1,185 @@
-import type { TeachingMode, TeachingTheme } from '../../platform/standards';
+import { readElementLayoutSize } from '../../core/canvas-sizing';
 import type { DemoRenderHints } from '../../platform/demo-profile';
-import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import {
-  projectileDataConstants,
-  projectileDataToCanvas,
-  stageLayoutFrom,
-  stageTransform,
-  type ProjectileDataState
-} from './scene.sim';
+  getRenderTokens,
+  type TeachingMode,
+  type TeachingTheme
+} from '../../platform/standards';
+import {
+  createCanvasZoom,
+  type CanvasZoomView
+} from '../../platform/input/canvas-zoom';
+import { createCanvasViewport, createViewEnvironment } from '../view-base';
+import { PAPER_HEIGHT_CM, PAPER_WIDTH_CM } from './scene.sim';
+import type { ProjectileLabState } from './scene.sim';
+import {
+  APPARATUS_BOUNDS,
+  drawApparatus,
+  drawBoard
+} from './renderer/draw-apparatus';
+import {
+  PAPER_MARGIN_CM,
+  drawPaper,
+  labPalette,
+  type StageTransform
+} from './renderer/draw-paper';
 
-export type CreateProjectileDataViewOptions = {
+export type CreateProjectileLabViewOptions = {
   canvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
   mode?: TeachingMode;
   demoHints?: DemoRenderHints;
 };
 
-const {
-  baseWidth: BASE_W,
-  baseHeight: BASE_H,
-  originX: ORIGIN_X,
-  originY: ORIGIN_Y,
-  axisEndX: AXIS_END_X,
-  axisEndY: AXIS_END_Y,
-  gridStepX: GRID_STEP_X,
-  gridStepY: GRID_STEP_Y,
-  gridCountX: GRID_COUNT_X,
-  gridCountY: GRID_COUNT_Y,
-  gridMinorDiv: GRID_MINOR_DIV,
-  pointRadius: POINT_RADIUS,
-  labelOffsetX: LABEL_OFFSET_X,
-  labelOffsetY: LABEL_OFFSET_Y,
-  trajectorySampleCount: TRAJECTORY_SAMPLE_COUNT,
-  vectorScale: VECTOR_SCALE,
-  analysisLeft: ANALYSIS_LEFT,
-  analysisTop: ANALYSIS_TOP,
-  analysisWidth: ANALYSIS_WIDTH,
-  analysisHeight: ANALYSIS_HEIGHT,
-  formulaLeft: FORMULA_LEFT,
-  formulaTop: FORMULA_TOP,
-  formulaMid: FORMULA_MID,
-  formulaRight: FORMULA_RIGHT,
-  formulaHeight: FORMULA_HEIGHT,
-  titleY: TITLE_Y
-} = projectileDataConstants;
-
-type Palette = {
-  bg: string;
-  grid: string;
-  ink: string;
-  muted: string;
-  blue: string;
-  red: string;
-  green: string;
-  purple: string;
-  orange: string;
-  panel: string;
-  border: string;
+export type StageBounds = {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
 };
 
-const PALETTE: Record<TeachingTheme, Palette> = {
-  light: {
-    bg: '#fbfaf7',
-    grid: '#ddd8cf',
-    ink: '#2f3640',
-    muted: '#8291a6',
-    blue: '#1683dc',
-    red: '#ef4050',
-    green: '#159a74',
-    purple: '#7d32c8',
-    orange: '#f59f18',
-    panel: '#ffffff',
-    border: '#cfd7e3'
-  },
-  dark: {
-    bg: '#101827',
-    grid: '#334155',
-    ink: '#e5e7eb',
-    muted: '#94a3b8',
-    blue: '#60a5fa',
-    red: '#fb7185',
-    green: '#34d399',
-    purple: '#c084fc',
-    orange: '#fbbf24',
-    panel: '#182235',
-    border: '#475569'
-  }
+/** 数据处理视图的取景范围（cm）：取下的白纸铺满舞台。 */
+const PAPER_BOUNDS: StageBounds = {
+  left: -PAPER_MARGIN_CM - 1,
+  right: PAPER_WIDTH_CM + 1,
+  top: -PAPER_MARGIN_CM - 1,
+  bottom: PAPER_HEIGHT_CM + 1
 };
 
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left'
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `600 ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
+/** 最大放大到每毫米这么多 px：毫米格之间足够估读下一位。 */
+const MAX_PX_PER_MM = 16;
+const MM_PER_CM = 10;
+
+/** 把取景范围等比居中放进画布。 */
+export function fitStageTransform(
+  bounds: StageBounds,
+  width: number,
+  height: number
+): StageTransform {
+  const worldWidth = bounds.right - bounds.left;
+  const worldHeight = bounds.bottom - bounds.top;
+  const pxPerCm = Math.max(
+    0.01,
+    Math.min(width / worldWidth, height / worldHeight)
+  );
+  const offsetX = (width - worldWidth * pxPerCm) / 2 - bounds.left * pxPerCm;
+  const offsetY = (height - worldHeight * pxPerCm) / 2 - bounds.top * pxPerCm;
+  return {
+    px: (xCm) => offsetX + xCm * pxPerCm,
+    py: (yCm) => offsetY + yCm * pxPerCm,
+    cmX: (px) => (px - offsetX) / pxPerCm,
+    cmY: (py) => (py - offsetY) / pxPerCm,
+    pxPerCm,
+    width,
+    height
+  };
 }
 
-function arrow(
-  ctx: CanvasRenderingContext2D,
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number,
-  color: string,
-  width: number
-): void {
-  const dx = x2 - x1;
-  const dy = y2 - y1;
-  const length = Math.hypot(dx, dy);
-  if (length < 2) return;
-  const ux = dx / length;
-  const uy = dy / length;
-  const head = Math.min(12, Math.max(7, length * 0.2));
-  ctx.save();
-  ctx.strokeStyle = color;
-  ctx.fillStyle = color;
-  ctx.lineWidth = width;
-  ctx.beginPath();
-  ctx.moveTo(x1, y1);
-  ctx.lineTo(x2, y2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(x2, y2);
-  ctx.lineTo(
-    x2 - ux * head - uy * head * 0.5,
-    y2 - uy * head + ux * head * 0.5
-  );
-  ctx.lineTo(
-    x2 - ux * head + uy * head * 0.5,
-    y2 - uy * head - ux * head * 0.5
-  );
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
+/** 在基础取景变换上叠加画布缩放视图 screen = k·p + t。 */
+export function zoomStageTransform(
+  base: StageTransform,
+  view: CanvasZoomView
+): StageTransform {
+  return {
+    px: (xCm) => view.k * base.px(xCm) + view.tx,
+    py: (yCm) => view.k * base.py(yCm) + view.ty,
+    cmX: (px) => base.cmX((px - view.tx) / view.k),
+    cmY: (py) => base.cmY((py - view.ty) / view.k),
+    pxPerCm: base.pxPerCm * view.k,
+    width: base.width,
+    height: base.height
+  };
 }
 
-export function createProjectileDataView(
-  options: CreateProjectileDataViewOptions = {}
+export function createProjectileLabView(
+  options: CreateProjectileLabViewOptions
 ) {
-  const stage = createCanvasViewport({
-    canvas: options.canvas ?? null,
-    sizing: {
-      mode: 'clamped',
-      fallbackWidth: BASE_W,
-      fallbackHeight: BASE_H
-    },
-    initialWidth: BASE_W,
-    initialHeight: BASE_H,
-    eagerContext: true
-  });
+  const canvas = options.canvas ?? document.createElement('canvas');
   const env = createViewEnvironment({
     theme: options.theme ?? 'light',
     mode: options.mode ?? 'normal',
     demoHints: options.demoHints
   });
-  let snapshot: ProjectileDataState | null = null;
+  const stage = createCanvasViewport({
+    canvas,
+    sizing: { mode: 'raw' },
+    measure: (c) => {
+      const size = readElementLayoutSize(c);
+      return {
+        width: Math.max(1, Math.floor(size.width)),
+        height: Math.max(1, Math.floor(size.height))
+      };
+    }
+  });
 
-  function draw(state: ProjectileDataState): void {
+  let lastState: ProjectileLabState | null = null;
+  /** 数据处理环节打开时只画取下的白纸，可放大到毫米格并平移。 */
+  const zoom = createCanvasZoom({
+    canvas,
+    size: () => ({ width: stage.cssWidth, height: stage.cssHeight }),
+    maxZoom: () =>
+      (MAX_PX_PER_MM * MM_PER_CM) /
+      fitStageTransform(PAPER_BOUNDS, stage.cssWidth, stage.cssHeight).pxPerCm,
+    onChange: () => {
+      if (lastState) render(lastState);
+    }
+  });
+
+  function fontPx(): number {
+    const tokens = getRenderTokens(stage.responsiveScale * env.contentScale());
+    return Math.max(
+      10,
+      tokens.rightStage.secondaryFontPx * 0.42 * env.fontScale()
+    );
+  }
+
+  function render(state: ProjectileLabState): void {
+    lastState = state;
+    stage.ensureSized();
     const ctx = stage.ctx;
     if (!ctx) return;
     const width = stage.cssWidth;
     const height = stage.cssHeight;
-    const layout = stageLayoutFrom(stage.canvas);
-    const { fit, offsetX, offsetY, boxW, boxH } = stageTransform(
-      width,
-      height,
-      layout
-    );
-    const palette = PALETTE[env.theme];
-    const contentScale = env.contentScale() * stage.responsiveScale;
+    if (width <= 0 || height <= 0) return;
 
+    const font = fontPx();
+    const palette = labPalette(env.theme);
     ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = palette.bg;
-    ctx.fillRect(0, 0, width, height);
     ctx.save();
-    ctx.translate(offsetX, offsetY);
-    ctx.scale(fit, fit);
-    ctx.fillStyle = palette.panel;
-    ctx.fillRect(0, 0, boxW, boxH);
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(0, 0, boxW, boxH);
-    ctx.clip();
-
-    text(
-      ctx,
-      '平抛实验数据还原',
-      BASE_W / 2,
-      TITLE_Y,
-      palette.ink,
-      20 * contentScale,
-      'center'
-    );
-
-    ctx.fillStyle = palette.bg;
-    ctx.strokeStyle = palette.border;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.roundRect(
-      ORIGIN_X - 28,
-      ORIGIN_Y - 28,
-      AXIS_END_X - ORIGIN_X + 48,
-      AXIS_END_Y - ORIGIN_Y + 32,
-      12
-    );
-    ctx.fill();
-    ctx.stroke();
-
-    const minorStepX = GRID_STEP_X / GRID_MINOR_DIV;
-    const minorStepY = GRID_STEP_Y / GRID_MINOR_DIV;
-    ctx.strokeStyle = palette.grid;
-    ctx.lineWidth = 1;
-    ctx.globalAlpha = 0.45;
-    for (let x = ORIGIN_X + minorStepX; x < AXIS_END_X - 1; x += minorStepX) {
-      ctx.beginPath();
-      ctx.moveTo(x, ORIGIN_Y);
-      ctx.lineTo(x, AXIS_END_Y);
-      ctx.stroke();
-    }
-    for (let y = ORIGIN_Y + minorStepY; y < AXIS_END_Y - 1; y += minorStepY) {
-      ctx.beginPath();
-      ctx.moveTo(ORIGIN_X, y);
-      ctx.lineTo(AXIS_END_X, y);
-      ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
-    for (let i = 0; i <= GRID_COUNT_X; i += 1) {
-      const x = ORIGIN_X + i * GRID_STEP_X;
-      ctx.beginPath();
-      ctx.moveTo(x, ORIGIN_Y);
-      ctx.lineTo(x, AXIS_END_Y);
-      ctx.stroke();
-    }
-    for (let i = 0; i <= GRID_COUNT_Y; i += 1) {
-      const y = ORIGIN_Y + i * GRID_STEP_Y;
-      ctx.beginPath();
-      ctx.moveTo(ORIGIN_X, y);
-      ctx.lineTo(AXIS_END_X, y);
-      ctx.stroke();
-    }
-
-    ctx.strokeStyle = palette.ink;
-    ctx.fillStyle = palette.ink;
-    ctx.lineWidth = 2 * contentScale;
-    ctx.beginPath();
-    ctx.moveTo(ORIGIN_X, ORIGIN_Y);
-    ctx.lineTo(AXIS_END_X, ORIGIN_Y);
-    ctx.moveTo(ORIGIN_X, ORIGIN_Y);
-    ctx.lineTo(ORIGIN_X, AXIS_END_Y);
-    ctx.stroke();
-    arrow(
-      ctx,
-      AXIS_END_X - 22,
-      ORIGIN_Y,
-      AXIS_END_X,
-      ORIGIN_Y,
-      palette.ink,
-      2 * contentScale
-    );
-    arrow(
-      ctx,
-      ORIGIN_X,
-      AXIS_END_Y - 22,
-      ORIGIN_X,
-      AXIS_END_Y,
-      palette.ink,
-      2 * contentScale
-    );
-    text(
-      ctx,
-      '+x（水平/m）',
-      AXIS_END_X - 4,
-      ORIGIN_Y + 24,
-      palette.ink,
-      13 * contentScale,
-      'right'
-    );
-    text(
-      ctx,
-      '+y（竖直向下/m）',
-      ORIGIN_X + 8,
-      AXIS_END_Y - 12,
-      palette.ink,
-      12 * contentScale,
-      'left'
-    );
-    text(
-      ctx,
-      'O(0)',
-      ORIGIN_X - 10,
-      ORIGIN_Y + 26,
-      palette.ink,
-      14 * contentScale,
-      'right'
-    );
-
-    for (let i = 1; i <= GRID_COUNT_X; i += 1) {
-      text(
-        ctx,
-        `${(i * 0.4).toFixed(1)}m`,
-        ORIGIN_X + i * GRID_STEP_X,
-        ORIGIN_Y - 14,
-        palette.muted,
-        11 * contentScale,
-        'center'
+    if (zoom.isActive()) {
+      const t = zoomStageTransform(
+        fitStageTransform(PAPER_BOUNDS, width, height),
+        zoom.view()
       );
+      drawPaper({ ctx, t, palette, state, fontPx: font, analysis: true });
+    } else {
+      const t = fitStageTransform(APPARATUS_BOUNDS, width, height);
+      drawBoard({ ctx, t, palette, state, fontPx: font });
+      drawPaper({ ctx, t, palette, state, fontPx: font, analysis: false });
+      drawApparatus({ ctx, t, palette, state, fontPx: font });
     }
-    for (let i = 1; i <= GRID_COUNT_Y; i += 1) {
-      text(
-        ctx,
-        `${(i * 0.4).toFixed(1)}m`,
-        ORIGIN_X - 12,
-        ORIGIN_Y + i * GRID_STEP_Y,
-        palette.muted,
-        11 * contentScale,
-        'right'
-      );
-    }
-
-    const points = state.points;
-    const trajectoryEnd = points[points.length - 1];
-    ctx.strokeStyle = palette.red;
-    ctx.lineWidth = 2.5 * contentScale;
-    ctx.setLineDash([8, 6]);
-    ctx.beginPath();
-    for (let i = 0; i <= TRAJECTORY_SAMPLE_COUNT; i += 1) {
-      const ratio = i / TRAJECTORY_SAMPLE_COUNT;
-      const x = trajectoryEnd.x * ratio;
-      const y =
-        0.5 *
-        state.params.gravity *
-        (x / Math.max(state.params.v0, 0.001)) ** 2;
-      const point = projectileDataToCanvas(x, y);
-      if (i === 0) ctx.moveTo(point.x, point.y);
-      else ctx.lineTo(point.x, point.y);
-    }
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    for (const point of points) {
-      const position = projectileDataToCanvas(point.x, point.y);
-      ctx.fillStyle = palette.orange;
-      ctx.strokeStyle = palette.ink;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.arc(position.x, position.y, POINT_RADIUS, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      if (point.index > 0) {
-        text(
-          ctx,
-          `${String.fromCharCode(64 + point.index)}(${point.index}T)`,
-          position.x + LABEL_OFFSET_X,
-          position.y + LABEL_OFFSET_Y,
-          palette.ink,
-          13 * contentScale
-        );
-        const previous = projectileDataToCanvas(
-          points[point.index - 1].x,
-          points[point.index - 1].y
-        );
-        arrow(
-          ctx,
-          position.x,
-          previous.y,
-          position.x,
-          position.y,
-          palette.green,
-          2 * contentScale
-        );
-        text(
-          ctx,
-          `Δy${point.index}=${point.deltaY.toFixed(3)}m`,
-          position.x + 8,
-          (previous.y + position.y) / 2,
-          palette.green,
-          11 * contentScale
-        );
-        ctx.strokeStyle = palette.blue;
-        ctx.setLineDash([4, 4]);
-        ctx.beginPath();
-        ctx.moveTo(position.x, position.y);
-        ctx.lineTo(position.x, ORIGIN_Y);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      }
-    }
-
-    const current = projectileDataToCanvas(state.current.x, state.current.y);
-    ctx.strokeStyle = palette.red;
-    ctx.lineWidth = 3 * contentScale;
-    ctx.beginPath();
-    ctx.arc(current.x, current.y, POINT_RADIUS + 7, 0, Math.PI * 2);
-    ctx.stroke();
-    if (state.params.showVectors) {
-      arrow(
-        ctx,
-        current.x,
-        current.y,
-        current.x + state.vx * VECTOR_SCALE,
-        current.y,
-        palette.blue,
-        2.5 * contentScale
-      );
-      arrow(
-        ctx,
-        current.x,
-        current.y,
-        current.x,
-        current.y + state.vy * VECTOR_SCALE,
-        palette.purple,
-        2.5 * contentScale
-      );
-      text(
-        ctx,
-        'vₓ=v₀',
-        current.x + state.vx * VECTOR_SCALE + 8,
-        current.y - 14,
-        palette.blue,
-        12 * contentScale
-      );
-      text(
-        ctx,
-        'vᵧ=gt',
-        current.x + 8,
-        current.y + state.vy * VECTOR_SCALE + 14,
-        palette.purple,
-        12 * contentScale
-      );
-    }
-
-    ctx.fillStyle = palette.panel;
-    ctx.strokeStyle = palette.border;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.roundRect(
-      ANALYSIS_LEFT,
-      ANALYSIS_TOP,
-      ANALYSIS_WIDTH,
-      ANALYSIS_HEIGHT,
-      12
-    );
-    ctx.fill();
-    ctx.stroke();
-    text(
-      ctx,
-      '分力分析',
-      ANALYSIS_LEFT + 14,
-      ANALYSIS_TOP + 20,
-      palette.ink,
-      14 * contentScale
-    );
-    text(
-      ctx,
-      '水平：Fₓ=0（aₓ=0）',
-      ANALYSIS_LEFT + 14,
-      ANALYSIS_TOP + 48,
-      palette.blue,
-      12 * contentScale
-    );
-    text(
-      ctx,
-      '竖直：Fᵧ=mg（aᵧ=g）',
-      ANALYSIS_LEFT + 14,
-      ANALYSIS_TOP + 70,
-      palette.purple,
-      12 * contentScale
-    );
-
-    ctx.fillStyle = palette.panel;
-    ctx.strokeStyle = palette.border;
-    ctx.beginPath();
-    ctx.roundRect(
-      FORMULA_LEFT,
-      FORMULA_TOP,
-      FORMULA_RIGHT - FORMULA_LEFT,
-      FORMULA_HEIGHT,
-      10
-    );
-    ctx.fill();
-    ctx.stroke();
-    text(
-      ctx,
-      `Δx=v₀T=${state.deltaX.toFixed(3)}m`,
-      FORMULA_LEFT + 14,
-      FORMULA_TOP + 18,
-      palette.blue,
-      13 * contentScale
-    );
-    text(
-      ctx,
-      `Δ²y=gT²=${state.deltaY2.toFixed(3)}m`,
-      FORMULA_MID,
-      FORMULA_TOP + 18,
-      palette.green,
-      13 * contentScale,
-      'center'
-    );
-    text(
-      ctx,
-      `v₀=Δx/T=${state.restoredV0.toFixed(2)}m/s`,
-      FORMULA_RIGHT - 14,
-      FORMULA_TOP + 18,
-      palette.red,
-      13 * contentScale,
-      'right'
-    );
-    ctx.restore();
     ctx.restore();
   }
 
+  stage.resize();
+
   return {
-    render(state: ProjectileDataState): void {
-      snapshot = state;
-      stage.ensureSized();
-      draw(state);
+    render,
+    resize: () => stage.resize(),
+    reset(): void {},
+    setAnalysisMode(active: boolean): void {
+      zoom.setActive(active);
+      canvas.style.cursor = active ? 'grab' : '';
     },
-    resize(): void {
-      stage.resize();
-      if (snapshot) draw(snapshot);
-    },
+    isAnalysisMode: () => zoom.isActive(),
     setTheme(theme: TeachingTheme): void {
       env.setTheme(theme);
-      if (snapshot) draw(snapshot);
     },
     setMode(mode: TeachingMode, hints?: DemoRenderHints): void {
       env.setMode(mode, hints);
-      if (snapshot) draw(snapshot);
     },
     dispose(): void {
-      snapshot = null;
+      zoom.dispose();
       stage.release();
     }
   };

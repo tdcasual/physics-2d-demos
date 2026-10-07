@@ -105,7 +105,9 @@ describe('ticker-tape data workspace', () => {
   it('has the planned graph-enabled spec and a fixed seven-row session', () => {
     expect(() => assertSpecGraph(tickerTapeDataWorkspaceSpec)).not.toThrow();
     expect(tickerTapeDataWorkspaceSpec.tableOrientation).toBe('fields');
-    expect(tickerTapeDataWorkspaceSpec.stageLock).toBe(true);
+    // 读数缩放由场景画布自绘：不锁舞台指针、不用平台 CSS 缩放
+    expect(tickerTapeDataWorkspaceSpec.stageLock).toBe(false);
+    expect(tickerTapeDataWorkspaceSpec.stagePanZoom).toBe(false);
     expect(tickerTapeDataWorkspaceSpec.trialLabels).toEqual([
       '0',
       '1',

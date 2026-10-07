@@ -21,6 +21,8 @@ export type TapeHit = {
   rulerRight: number;
   tapeBandY: number;
   tapeBandH: number;
+  /** 纸带与尺共用的比例（未缩放，CSS px / cm）。 */
+  cmToPx: number;
   nearestTick: (px: number) => number;
 };
 
@@ -290,6 +292,7 @@ export function drawTape(input: DrawTapeInput): TapeHit | null {
     rulerRight,
     tapeBandY: tapeY,
     tapeBandH: tapeH,
+    cmToPx,
     nearestTick: (px: number) => {
       let best = state.originTickIndex;
       let bestDist = Number.POSITIVE_INFINITY;

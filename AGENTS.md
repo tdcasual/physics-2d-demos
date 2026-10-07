@@ -255,6 +255,8 @@ data-workspace 是可选布局能力，仅 `layoutConfig.dataWorkspace: true` �
 - `stageLock?: boolean`（默认 false；true 时工作区打开锁定舞台指针事件，不阻止纯视口 pan/zoom）
 - `stagePanZoom?: boolean`（默认 true；进入工作区时舞台可平移/缩放。场景自有拖拽控件标 `data-panzoom-ignore`，滚轮/空白拖拽归视口。退出工作区还原 transform 与 DOM）
   - 逃生口细分：`data-panzoom-ignore` 同时挡平移和滚轮；`data-panzoom-pan-ignore`（常量 `PANZOOM_PAN_IGNORE_ATTR`）**只挡平移、不挡滚轮**——用于占满舞台但仍需滚轮缩放的仪器宿主（如 double-slit 的仪器 wrap）
+- **高倍读数用画布自绘缩放**：平台舞台缩放上限 3 倍（CSS transform + 背衬 boost，受画布像素上限约束）。需要放大到数清毫米刻度的场景（ticker-tape、projectile-data-analysis）改用 `src/platform/input/canvas-zoom.ts`：spec 设 `stagePanZoom: false` 且 `stageLock: false`，场景按视图变换 `screen = k·p + t` 矢量重画（背衬不变），工作区打开期间由视图自行停用会改实验状态的拖拽；控件与平台同名同类名（放大/缩小/复位视图），倍率写在 `canvas.dataset.viewZoom`
+- `summaryCheck?: 'each' | 'together'`（默认 `'each'`）：`'together'` 时汇总区只有一个校对按钮，一次按 spec 顺序校对当前环节的全部汇总字段
 - 清晰化钩子：`canvas.dataset.renderBoost` / `setRenderBoost(canvas, boost)`（clamp `[0.5, 4]`）。`sizeCanvasToFill` 用容器 `offsetWidth/offsetHeight` 测布局尺寸（免疫 CSS transform；为 0 时回退 `getBoundingClientRect`），`canvas.style` 始终写未放大 CSS；背衬 = css × dpr × boost，`ctx.scale(dpr × boost)`；`responsiveScale` 仍按 CSS 尺寸。缺省无 dataset 时行为与历史一致
 - `DataWorkspaceFieldSpec.step?: 'chartAnalysis'` 把 summary 字段划到图像分析环节显示（缺省数据步；图像分析模式下仅显示该类字段）
 - lab-stage `floatData` / `floatGraph`（默认 true）：false 时仍创建 slot（收养需要锚点）但 panel 为 `hidden`、不参与拖拽

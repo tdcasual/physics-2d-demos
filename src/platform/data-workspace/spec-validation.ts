@@ -126,6 +126,15 @@ export function assertSpecGraph(spec: DataWorkspaceSpec): void {
       `[data-workspace] tableOrientation must be "trials" or "fields" in spec "${spec.id}"`
     );
   }
+  if (
+    spec.summaryCheck !== undefined &&
+    spec.summaryCheck !== 'each' &&
+    spec.summaryCheck !== 'together'
+  ) {
+    throw new Error(
+      `[data-workspace] summaryCheck must be "each" or "together" in spec "${spec.id}"`
+    );
+  }
   if (spec.stageLock !== undefined && typeof spec.stageLock !== 'boolean') {
     throw new Error(
       `[data-workspace] stageLock must be a boolean in spec "${spec.id}"`

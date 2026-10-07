@@ -52,7 +52,10 @@ export const tickerTapeDataWorkspaceSpec: DataWorkspaceSpec = {
   initialRows: 7,
   stageMode: 'full',
   tableOrientation: 'fields',
-  stageLock: true,
+  // 读数缩放由场景画布自己重画（见 platform/input/canvas-zoom.ts）：指针要落到
+  // 画布上，所以不锁舞台；工作区打开期间由视图停用拖尺。
+  stageLock: false,
+  stagePanZoom: false,
   trialLabels: ['0', '1', '2', '3', '4', '5', '6'],
   rowFields: [
     { id: 'x', label: 'x', unit: 'cm', inputMode: 'decimal' },

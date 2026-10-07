@@ -117,7 +117,7 @@
 | `potential-energy-graphs`          | electromagnetism | electric-field            | 电势、电势能与场图像                    |
 | `precision-tools`                  | experimental     | measurement               | 游标卡尺与螺旋测微器                    |
 | `projectile-components`            | mechanics        | kinematics                | 平抛运动分解                            |
-| `projectile-data-analysis`         | experimental     | data-analysis             | 平抛实验数据还原                        |
+| `projectile-data-analysis`         | experimental     | data-analysis             | 平抛运动实验（描迹法）                  |
 | `projectile`                       | mechanics        | kinematics                | 抛体运动                                |
 | `radioactive-decay`                | modern           | modern-physics            | 放射性衰变与半衰期                      |
 | `resistor-measurement`             | experimental     | measurement               | 伏安法测电阻接线设计                    |
