@@ -65,6 +65,42 @@ export function createMetalRodScene(
     reset: base.wrapAction(() => sim.reset()),
     getReadoutItems() {
       const s = sim.getState();
+      if (s.mode === 'charge') {
+        const c = s.charge;
+        // 前三项进入演示读数（readoutKeys），其余只在常规面板显示
+        return [
+          {
+            key: 'charge-sum',
+            label: '累计 ΣIΔt',
+            value: `${c.stripSum.toFixed(3)} C`
+          },
+          {
+            key: 'charge-formula',
+            label: 'BLx/R',
+            value: `${c.formula.toFixed(3)} C`
+          },
+          {
+            key: 'charge-x',
+            label: '位移 x',
+            value: `${c.displacement.toFixed(3)} m`
+          },
+          {
+            key: 'charge-current',
+            label: '电流 I',
+            value: `${c.current.toFixed(3)} A`
+          },
+          {
+            key: 'charge-velocity',
+            label: '速度 v',
+            value: `${c.velocity.toFixed(3)} m/s`
+          },
+          {
+            key: 'charge-time',
+            label: '时间 t',
+            value: `${c.time.toFixed(2)} s`
+          }
+        ];
+      }
       return [
         { key: 'emf', label: '电动势 E', value: `${s.emf.toFixed(2)} V` },
         { key: 'current', label: '电流 I', value: `${s.current.toFixed(2)} A` },

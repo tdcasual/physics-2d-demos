@@ -90,6 +90,22 @@ test.describe('presentation 1920x1080 geometry', () => {
     await expect(readout).toHaveClass(/is-overlay/);
   });
 
+  test('metal-rod-track charge mode docks ΣIΔt / BLx/R / x and keeps profile + n', async ({
+    page
+  }) => {
+    await page.goto('/src/pages/metal-rod-track.html?mode=charge&profile=1');
+    await enterPresentation(page);
+    const readout = page.locator('.readout-panel');
+    await expect(readout).toHaveClass(/is-docked-bottom/);
+    await expect(readout.getByText('累计 ΣIΔt')).toBeVisible();
+    await expect(readout.getByText('BLx/R')).toBeVisible();
+    await expect(readout.getByText('位移 x')).toBeVisible();
+    await expect(readout.getByText('电动势 E')).toHaveCount(0);
+    await expect(page.locator('[data-control-key="profile"]')).toBeVisible();
+    await expect(page.locator('[data-control-key="strips"]')).toBeVisible();
+    await expect(page.locator('[data-control-key="mass"]')).toBeHidden();
+  });
+
   test('spring-oscillator process chips keep phase presets', async ({
     page
   }) => {

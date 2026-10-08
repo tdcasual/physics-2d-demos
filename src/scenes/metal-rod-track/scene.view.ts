@@ -2,6 +2,12 @@ import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import { metalRodConstants, type MetalRodState } from './scene.sim';
+import { drawChargeMode } from './renderer/draw-charge';
+import {
+  createOcclusionWatcher,
+  measureStageOcclusions,
+  occlusionSignature
+} from './renderer/stage-occlusion';
 
 export type CreateMetalRodViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -404,11 +410,40 @@ export function createMetalRodView(options: CreateMetalRodViewOptions = {}) {
     eagerContext: true
   });
   let snapshot: MetalRodState | null = null;
+  const canvas = options.canvas ?? null;
+  let lastOcclusionKey = '';
+  // 浮层（读数面板 / 播放条）变化时重绘：暂停状态下也能及时避让
+  const occlusionWatcher = createOcclusionWatcher(
+    () => canvas,
+    () => {
+      if (!snapshot || snapshot.mode !== 'charge') return;
+      const key = occlusionSignature(
+        measureStageOcclusions(canvas, stage.cssWidth, stage.cssHeight)
+      );
+      if (key !== lastOcclusionKey) draw(snapshot);
+    }
+  );
   function draw(state: MetalRodState): void {
     const ctx = stage.ctx;
     if (!ctx) return;
     const width = stage.cssWidth;
     const height = stage.cssHeight;
+    if (state.mode === 'charge') {
+      occlusionWatcher.watch();
+      const occlusions = measureStageOcclusions(canvas, width, height);
+      lastOcclusionKey = occlusionSignature(occlusions);
+      drawChargeMode({
+        ctx,
+        width,
+        height,
+        theme: env.theme,
+        responsiveScale: stage.responsiveScale,
+        contentScale: env.contentScale(),
+        occlusions,
+        state
+      });
+      return;
+    }
     const fit = Math.min(width / BASE_W, height / BASE_H);
     const offsetX = Math.max(0, (width - BASE_W * fit) / 2);
     const offsetY = Math.max(0, (height - BASE_H * fit) / 2);
@@ -440,6 +475,7 @@ export function createMetalRodView(options: CreateMetalRodViewOptions = {}) {
     },
     dispose() {
       snapshot = null;
+      occlusionWatcher.dispose();
       stage.release();
     }
   };

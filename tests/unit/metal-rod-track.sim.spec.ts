@@ -46,7 +46,9 @@ describe('metal-rod-track simulation', () => {
         resistance: 2,
         mass: 1,
         initialVelocity: 20,
-        autoRun: true
+        autoRun: true,
+        profile: 0,
+        strips: 20
       })
     ).toBeCloseTo(1.125, 6);
   });
