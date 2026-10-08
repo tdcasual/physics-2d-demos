@@ -5,7 +5,7 @@ import {
 } from '../../platform/standards';
 import { sizeCanvasToFill } from '../../core/canvas-sizing';
 import { createTransitionTracker } from '../../core/transition-tracker';
-import { Colors, alpha } from '../../core/colors';
+import { getThemeColors } from '../../core/colors';
 import type { VtIntegralSnapshot } from './scene.sim';
 import type { Box, DrawContext } from './renderer/types';
 import { curveY } from './scene.sim';
@@ -56,8 +56,6 @@ export function createVtIntegralView(
   const sceneTransition = createTransitionTracker(250);
   // 自驱动补帧：暂停/静态场景下也推进过渡动画至 alpha=1，避免画面停在淡化中途帧
   let transitionRaf: number | null = null;
-  // 背景渐变缓存：仅依赖 (尺寸, theme)，变化时重建
-  let bgGradCache: { key: string; grad: CanvasGradient } | null = null;
   // 场景二最近一帧布局：命中测试与绘制共用同一套坐标
   let scene2Layout: Scene2Layout | null = null;
   // 读数浮层遮挡：签名变化才重绘（先例：single-slit / magnetic-mirror）
@@ -163,19 +161,11 @@ export function createVtIntegralView(
     const width = canvasWidth;
     const height = canvasHeight;
 
+    // 中性纯色舞台底：与 projectile / field-lines 等共用 canvasBg 色板
+    // （亮 Colors.bg、暗 Colors.darkBg，与 themes.css 的 --stage-bg 同色系），
+    // 不再叠加蓝紫渐变
     ctx.clearRect(0, 0, width, height);
-
-    const gradKey = `${width}|${height}|${theme}`;
-    if (!bgGradCache || bgGradCache.key !== gradKey) {
-      const gradient = ctx.createLinearGradient(0, 0, width, height);
-      gradient.addColorStop(0, theme === 'light' ? '#eef2ff' : Colors.darkBg);
-      gradient.addColorStop(
-        1,
-        theme === 'light' ? '#e0e7ff' : alpha(Colors.darkCard, 0.8)
-      );
-      bgGradCache = { key: gradKey, grad: gradient };
-    }
-    ctx.fillStyle = bgGradCache.grad;
+    ctx.fillStyle = getThemeColors(theme).canvasBg;
     ctx.fillRect(0, 0, width, height);
   }
 
