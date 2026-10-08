@@ -80,10 +80,11 @@ test.describe('presentation 1920x1080 geometry', () => {
     await expect(page.getByRole('button', { name: /匀速追赶/ })).toBeVisible();
   });
 
-  test('vt-integral lecture keeps scene/preset/n', async ({ page }) => {
+  test('vt-integral lecture keeps scene/rule/n', async ({ page }) => {
     await page.goto('/src/pages/vt-integral.html');
     await enterPresentation(page);
     await expect(page.locator('[data-control-key="scene"]')).toBeVisible();
+    await expect(page.locator('[data-control-key="rule"]')).toBeVisible();
     await expect(page.locator('[data-control-key="n"]')).toBeVisible();
     const readout = page.locator('.readout-panel');
     await expect(readout).toHaveClass(/is-overlay/);

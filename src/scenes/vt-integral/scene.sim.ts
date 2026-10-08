@@ -1,6 +1,10 @@
 import { clamp } from '../../core/math';
 
 const VT_SCENE_VALUES = ['scene1', 'scene2', 'scene3'] as const;
+
+/** 分割数 / 边数 n 的取值范围（控件与 sim 共用）。 */
+export const VT_N_MIN = 4;
+export const VT_N_MAX = 50;
 export type VtScene = (typeof VT_SCENE_VALUES)[number];
 export type VtMethod = 'left' | 'mid' | 'right' | 'trap';
 export type VtCurveKind = 'constant' | 'linear' | 'quadratic' | 'sine';
@@ -29,10 +33,13 @@ export type VtIntegralParams = {
 export type VtIntegralMetrics = {
   rectArea: number;
   trueArea: number;
+  /** 矩形和 − 真实面积（带符号：<0 偏小，>0 偏大） */
+  signedErr: number;
   absErr: number;
   relErr: number;
   curveLength: number;
   lineDistance: number;
+  polygonPerimeter: number;
   circumferenceDiff: number;
 };
 
@@ -110,6 +117,23 @@ export function arcLength(
   return length;
 }
 
+/**
+ * 第 i 个微元 [t0, t1] 上的矩形高度：左端点取 v(t0)、右端点取 v(t1)，
+ * 中点取 v((t0+t1)/2)，梯形取两端平均。sim 求和与渲染共用，保证画面
+ * 与读数一致。
+ */
+export function rectHeight(
+  kind: VtCurveKind,
+  t0: number,
+  t1: number,
+  method: VtMethod
+): number {
+  if (method === 'left') return vAt(kind, t0);
+  if (method === 'right') return vAt(kind, t1);
+  if (method === 'mid') return vAt(kind, (t0 + t1) * 0.5);
+  return (vAt(kind, t0) + vAt(kind, t1)) * 0.5;
+}
+
 function integrateByRects(
   kind: VtCurveKind,
   time: number,
@@ -119,19 +143,14 @@ function integrateByRects(
   const dt = time / rects;
   let sum = 0;
   for (let i = 0; i < rects; i += 1) {
-    const t0 = i * dt;
-    const t1 = (i + 1) * dt;
-    if (method === 'left') {
-      sum += vAt(kind, t0) * dt;
-    } else if (method === 'right') {
-      sum += vAt(kind, t1) * dt;
-    } else if (method === 'mid') {
-      sum += vAt(kind, (t0 + t1) * 0.5) * dt;
-    } else {
-      sum += (vAt(kind, t0) + vAt(kind, t1)) * 0.5 * dt;
-    }
+    sum += rectHeight(kind, i * dt, (i + 1) * dt, method) * dt;
   }
   return sum;
+}
+
+/** 单位圆内接正 n 边形周长 2n·sin(π/n)。 */
+export function polygonPerimeter(n: number): number {
+  return 2 * n * Math.sin(Math.PI / n);
 }
 
 function buildMetrics(params: VtIntegralParams): VtIntegralMetrics {
@@ -142,7 +161,8 @@ function buildMetrics(params: VtIntegralParams): VtIntegralMetrics {
     params.rects,
     params.method
   );
-  const absErr = Math.abs(rectArea - trueArea);
+  const signedErr = rectArea - trueArea;
+  const absErr = Math.abs(signedErr);
   const relErr = trueArea === 0 ? 0 : absErr / Math.abs(trueArea);
 
   const curveLen = arcLength(
@@ -157,16 +177,18 @@ function buildMetrics(params: VtIntegralParams): VtIntegralMetrics {
   );
 
   const circumference = Math.PI * 2;
-  const polygon = 2 * params.circleN * Math.sin(Math.PI / params.circleN);
+  const polygon = polygonPerimeter(params.circleN);
   const circumferenceDiff = Math.abs(circumference - polygon);
 
   return {
     rectArea,
     trueArea,
+    signedErr,
     absErr,
     relErr,
     curveLength: curveLen,
     lineDistance,
+    polygonPerimeter: polygon,
     circumferenceDiff
   };
 }
@@ -191,9 +213,11 @@ function normalize(input: Partial<VtIntegralParams>): VtIntegralParams {
     input.method === 'right' ||
     input.method === 'trap'
       ? input.method
-      : 'mid';
+      : 'left';
+  // 场景一矩形数与场景三边数共用同一个 n（单一来源，避免重置后两者不一致）
+  const rawN = Number.isFinite(input.rects) ? input.rects : input.circleN;
   const n = Math.round(
-    clamp(Number.isFinite(input.rects) ? Number(input.rects) : 10, 2, 50)
+    clamp(Number.isFinite(rawN) ? Number(rawN) : 10, VT_N_MIN, VT_N_MAX)
   );
   return {
     scene,
@@ -208,9 +232,7 @@ function normalize(input: Partial<VtIntegralParams>): VtIntegralParams {
       0.15,
       0.8
     ),
-    circleN: Math.round(
-      clamp(Number.isFinite(input.circleN) ? Number(input.circleN) : n, 3, 200)
-    ),
+    circleN: n,
     surfaceN: 1,
     division: 16,
     pointA: clamp(
@@ -240,7 +262,7 @@ export function createVtIntegralSim(initial: Partial<VtIntegralParams> = {}) {
       params = normalize({ ...params, scene });
     },
     setRects(value: number): void {
-      params = normalize({ ...params, rects: value, circleN: value });
+      params = normalize({ ...params, rects: value });
     },
     setTime(value: number): void {
       params = normalize({ ...params, time: value });
@@ -254,8 +276,9 @@ export function createVtIntegralSim(initial: Partial<VtIntegralParams> = {}) {
     setCurveAmplitude(value: number): void {
       params = normalize({ ...params, curveAmplitude: value });
     },
+    /** 边数与分割数共用 n（见 normalize）。 */
     setCircleN(value: number): void {
-      params = normalize({ ...params, circleN: value, rects: value });
+      params = normalize({ ...params, rects: value });
     },
     setSurfaceN(value: number): void {
       params = normalize({ ...params, surfaceN: value });
@@ -274,10 +297,9 @@ export function createVtIntegralSim(initial: Partial<VtIntegralParams> = {}) {
         scene: params.scene,
         rects: 10,
         time: 5,
-        method: 'mid',
+        method: 'left',
         curveKind: 'linear',
         curveAmplitude: 0.45,
-        circleN: 8,
         surfaceN: 1,
         division: 16,
         pointA: 0.18,

@@ -31,7 +31,9 @@ function createSnapshot(
       relErr: 0.06,
       curveLength: 8.5,
       lineDistance: 7.2,
-      circumferenceDiff: 0.3
+      circumferenceDiff: 0.3,
+      signedErr: -0.7,
+      polygonPerimeter: 6
     }
   };
 }

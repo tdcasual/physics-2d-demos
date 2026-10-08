@@ -23,7 +23,9 @@ export const demoProfile: SceneDemoProfile = {
   },
   interactionHints: {
     touchTargetMinSize: 48,
-    visibleControlKeys: ['scene', 'preset', 'n']
+    // lecture ≤ 3 键：讲授核心是左/右端点夹逼，故 rule 取代函数类型 preset
+    // （函数类型仍在标准模式可用）
+    visibleControlKeys: ['scene', 'rule', 'n']
   }
 };
 
@@ -45,9 +47,10 @@ export const vtIntegralMeta: SceneMeta = {
   featured: true,
   defaultParams: {
     n: 10,
-    scene: 1
+    scene: 1,
+    rule: 0
   },
-  urlSyncKeys: ['n', 'scene'],
+  urlSyncKeys: ['n', 'scene', 'rule'],
 
   testProfile: {
     hasGraph: false,
