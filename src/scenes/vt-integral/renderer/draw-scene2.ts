@@ -1,6 +1,13 @@
 import { curveY, type VtIntegralSnapshot } from '../scene.sim';
-import type { DrawContext } from './types';
-import { drawAxis } from './draw-axis';
+import type { Box, DrawContext } from './types';
+import {
+  axisBottomReserve,
+  axisTopReserve,
+  drawAxis,
+  measureXOverhang,
+  measureYGutter
+} from './draw-axis';
+import { drawHeaderText, layoutBody, layoutHeader } from './layout';
 import {
   vtPalette,
   fontPx,
@@ -20,26 +27,27 @@ export type Scene2Layout = {
   hitR: number;
 };
 
-export function scene2Layout(
-  width: number,
-  height: number,
+/** y 轴数据范围：曲线 y = A·sin(πx) ∈ [0, A]，下方留少许、上方留标签空间 */
+const Y_LOW = -0.15;
+const Y_HIGH = 1.3;
+
+export function scene2LayoutFromPlot(
+  plot: Box,
   scale: number,
   amplitude: number
 ): Scene2Layout {
-  const left = 72 * scale;
-  const right = width - 44 * scale;
-  const bottom = height * 0.74;
-  const top = height * 0.17;
+  const { left, right, top, bottom } = plot;
   const axisW = right - left;
   const axisH = bottom - top;
-  const ySpan = amplitude * 2.4;
+  const yMin = amplitude * Y_LOW;
+  const ySpan = amplitude * (Y_HIGH - Y_LOW) || 1;
   return {
     left,
     right,
     top,
     bottom,
     toX: (x: number) => left + x * axisW,
-    toY: (y: number) => bottom - ((y + amplitude * 1.2) / ySpan) * axisH,
+    toY: (y: number) => bottom - ((y - yMin) / ySpan) * axisH,
     hitR: Math.max(28, 36 * scale)
   };
 }
@@ -47,18 +55,39 @@ export function scene2Layout(
 /**
  * 子场景 2 · 化曲为直：两点 A、B 的弦长与轨迹长。
  * 把 A、B 拖近时，直线 AB 与曲线弧长趋于相同。
+ *
+ * 返回本帧布局，供视图层命中测试（拖拽 A/B）使用同一套坐标。
  */
 export function drawScene2(
   context: DrawContext,
   snapshot: VtIntegralSnapshot
-): void {
-  const { ctx, width, height, responsiveScale, contentScale } = context;
+): Scene2Layout {
+  const { ctx, width, responsiveScale, contentScale } = context;
   const { params } = snapshot;
   const P = vtPalette(context.theme);
   const s = responsiveScale;
   const cs = contentScale;
   const amp = params.curveAmplitude;
-  const layout = scene2Layout(width, height, s, amp);
+  const yMin = amp * Y_LOW;
+  const yMax = amp * Y_HIGH;
+
+  const header = layoutHeader(context, {
+    title: '化曲为直 · 拖动 A、B 比较直线与轨迹'
+  });
+  const type = resolveTypeScale(s, cs);
+  const hintH = type.labelPx * 1.6;
+  const plot = layoutBody(
+    context,
+    header.bottom,
+    {
+      left: measureYGutter(context, yMin, yMax),
+      top: axisTopReserve(context),
+      right: measureXOverhang(context, 1),
+      bottom: axisBottomReserve(context) + hintH
+    },
+    { width: width * 0.35, height: header.legendPx * 6 }
+  );
+  const layout = scene2LayoutFromPlot(plot, s, amp);
   const { left, right, top, bottom, toX, toY } = layout;
 
   drawAxis(context, {
@@ -68,23 +97,18 @@ export function drawScene2(
     height: bottom - top,
     xMin: 0,
     xMax: 1,
-    yMin: -amp * 1.2,
-    yMax: amp * 1.2,
+    yMin,
+    yMax,
     xLabel: 'x',
     yLabel: 'y'
   });
 
   ctx.save();
-
-  ctx.fillStyle = P.text;
-  ctx.font = `600 ${fontPx(14, s, cs)}px ${FONT_FAMILY}`;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillText(
-    '化曲为直 · 拖动 A、B 比较直线与轨迹',
-    left + 2 * s,
-    top - 14 * s
-  );
+  drawHeaderText(context, header, {
+    title: P.text,
+    legend: P.textSecondary,
+    note: P.textMuted
+  });
 
   const xA = params.pointA;
   const xB = params.pointB;
@@ -150,7 +174,7 @@ export function drawScene2(
     ctx.font = `700 ${fontPx(13, s, cs)}px ${FONT_FAMILY}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
-    ctx.fillText(label, p.x, p.y - 10 * s);
+    ctx.fillText(label, p.x, p.y - markR(6, s, cs) - type.tickPx * 0.3);
   };
   drawPoint(pA, 'A', P.approx);
   drawPoint(pB, 'B', P.accent);
@@ -158,13 +182,13 @@ export function drawScene2(
   ctx.fillStyle = P.textMuted;
   ctx.font = `${fontPx(11, s, cs)}px ${FONT_FAMILY}`;
   ctx.textAlign = 'left';
-  ctx.textBaseline = 'alphabetic';
-  const type = resolveTypeScale(s, cs);
+  ctx.textBaseline = 'bottom';
   ctx.fillText(
     '把 A、B 拖近，直线长与轨迹长趋于相等',
-    left + 2 * s,
-    bottom + type.tickPx + type.labelPx + 10
+    left,
+    bottom + axisBottomReserve(context) + hintH
   );
 
   ctx.restore();
+  return layout;
 }

@@ -23,6 +23,14 @@ export type VtPalette = {
   /** 强调/高亮 —— 明黄点缀 */
   accent: string;
   accentSoft: string;
+  /**
+   * 子场景 1 误差块：over = 矩形高出曲线（多算），under = 矩形低于曲线
+   * （少算）。琥珀 / 紫罗兰对比在红绿色弱下仍可区分，且与珊瑚、薄荷不冲突。
+   */
+  over: string;
+  overFill: string;
+  under: string;
+  underFill: string;
   /** 文本 */
   text: string;
   textSecondary: string;
@@ -44,6 +52,10 @@ export function vtPalette(theme: TeachingTheme): VtPalette {
     approxFill: isDark ? 'rgba(78,205,196,0.16)' : 'rgba(18,165,148,0.13)',
     accent: isDark ? '#FFE66D' : '#eab308',
     accentSoft: isDark ? 'rgba(255,230,109,0.7)' : 'rgba(234,179,8,0.7)',
+    over: isDark ? '#FFB454' : '#d97706',
+    overFill: isDark ? 'rgba(255,180,84,0.55)' : 'rgba(217,119,6,0.5)',
+    under: isDark ? '#A78BFA' : '#6d28d9',
+    underFill: isDark ? 'rgba(167,139,250,0.42)' : 'rgba(109,40,217,0.26)',
     text: isDark ? '#e2e8f0' : '#334155',
     textSecondary: isDark ? 'rgba(226,232,240,0.72)' : 'rgba(51,65,85,0.75)',
     textMuted: isDark ? 'rgba(148,163,184,0.6)' : 'rgba(100,116,139,0.6)',

@@ -1,5 +1,6 @@
-import type { VtIntegralSnapshot } from '../scene.sim';
+import { VT_N_MAX, type VtIntegralSnapshot } from '../scene.sim';
 import type { DrawContext } from './types';
+import { drawHeaderText, layoutBody, layoutHeader } from './layout';
 import { vtPalette, fontPx, lineW, markR, FONT_FAMILY } from './palette';
 
 // 圆渐变 / 多边形渐变 / 内接多边形顶点：仅依赖几何与主题，
@@ -25,9 +26,27 @@ export function drawScene3(
   const s = responsiveScale;
   const cs = contentScale;
 
-  const cx = width * 0.36;
-  const cy = height * 0.52;
-  const r = Math.min(width * 0.3, height * 0.34);
+  const n = params.circleN;
+  const header = layoutHeader(context, {
+    title: '割圆术 · 逼近圆周',
+    note:
+      n >= VT_N_MAX
+        ? '割之又割，多边形已近乎与圆合体'
+        : `内接正 ${n} 边形：边数越多，周长越接近 2π`
+  });
+  const minSide = Math.min(width, height) * 0.3;
+  const body = layoutBody(
+    context,
+    header.bottom,
+    { left: 0, top: 0, right: 0, bottom: 0 },
+    { width: minSide, height: minSide }
+  );
+  const cx = (body.left + body.right) / 2;
+  const cy = (body.top + body.bottom) / 2;
+  const r = Math.max(
+    1,
+    0.46 * Math.min(body.right - body.left, body.bottom - body.top)
+  );
 
   ctx.save();
 
@@ -65,7 +84,6 @@ export function drawScene3(
   ctx.setLineDash([]);
 
   // 内接正 n 边形顶点（只依赖 n 与几何，缓存复用）
-  const n = params.circleN;
   const ptsKey = `${n}|${cx}|${cy}|${r}`;
   if (!polyPtsCache || polyPtsCache.key !== ptsKey) {
     const pts: Array<{ x: number; y: number }> = [];
@@ -138,20 +156,11 @@ export function drawScene3(
   ctx.arc(cx, cy, markR(2.6, s, cs), 0, Math.PI * 2);
   ctx.fill();
 
-  // 收敛提示
-  if (n >= 50) {
-    ctx.fillStyle = P.accent;
-    ctx.font = `italic 600 ${fontPx(13, s, cs)}px ${FONT_FAMILY}`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText('割之又割，多边形已近乎与圆合体', cx, cy - r - 14 * s);
-  }
-
-  ctx.fillStyle = P.text;
-  ctx.font = `600 ${fontPx(14, s, cs)}px ${FONT_FAMILY}`;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillText('割圆术 · 逼近圆周', 24 * s, 28 * s);
+  drawHeaderText(context, header, {
+    title: P.text,
+    legend: P.textSecondary,
+    note: n >= VT_N_MAX ? P.accent : P.textMuted
+  });
 
   ctx.restore();
 }

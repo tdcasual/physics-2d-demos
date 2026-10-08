@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { drawAxis } from '../../src/scenes/vt-integral/renderer/draw-axis';
 import { drawScene1 } from '../../src/scenes/vt-integral/renderer/draw-scene1';
 import { drawScene2 } from '../../src/scenes/vt-integral/renderer/draw-scene2';
@@ -127,6 +127,103 @@ describe('vt-integral renderer', () => {
         ).not.toThrow();
       });
     }
+  });
+
+  describe('readout overlay avoidance', () => {
+    // 读数浮层典型位置：split-right 右上角（right: 12px; top: 60px）
+    const occlusion = { left: 540, top: 60, right: 788, bottom: 380 };
+    const inside = (x: number, y: number) =>
+      x > occlusion.left &&
+      x < occlusion.right &&
+      y > occlusion.top &&
+      y < occlusion.bottom;
+
+    for (const { name, fn, scene } of [
+      { name: 'scene1', fn: drawScene1, scene: 'scene1' as const },
+      { name: 'scene2', fn: drawScene2, scene: 'scene2' as const },
+      { name: 'scene3', fn: drawScene3, scene: 'scene3' as const }
+    ]) {
+      it(`${name}: no text anchor and no filled rect inside the overlay`, () => {
+        const { ctx } = makeCtx();
+        const snapshot = createSnapshot(scene);
+        snapshot.params.method = 'left';
+        fn(
+          {
+            ctx,
+            width: 800,
+            height: 600,
+            theme: 'dark',
+            responsiveScale: 1,
+            contentScale: 1,
+            occlusion
+          },
+          snapshot
+        );
+        const texts = vi.mocked(ctx.fillText).mock.calls;
+        expect(texts.length).toBeGreaterThan(0);
+        for (const [text, x, y] of texts) {
+          expect(inside(x, y), `${String(text)} @ ${x},${y}`).toBe(false);
+        }
+        for (const [x, y, w, h] of vi.mocked(ctx.fillRect).mock.calls) {
+          // 背景以外的矩形（矩形条、图例色块）不得伸入浮层
+          if (w >= 800 && h >= 600) continue;
+          const overlaps =
+            x < occlusion.right &&
+            x + w > occlusion.left &&
+            y < occlusion.bottom &&
+            y + h > occlusion.top;
+          expect(overlaps, `rect ${x},${y},${w},${h}`).toBe(false);
+        }
+      });
+    }
+
+    it('scene2 returns the plot layout used for hit-testing, clear of the overlay', () => {
+      const { ctx } = makeCtx();
+      const layout = drawScene2(
+        {
+          ctx,
+          width: 800,
+          height: 600,
+          theme: 'dark',
+          responsiveScale: 1,
+          contentScale: 1,
+          occlusion
+        },
+        createSnapshot('scene2')
+      );
+      const clear =
+        layout.right <= occlusion.left || layout.top >= occlusion.bottom;
+      expect(clear).toBe(true);
+      expect(layout.toX(0)).toBe(layout.left);
+      expect(layout.toX(1)).toBe(layout.right);
+    });
+  });
+
+  describe('axis labels stay on canvas', () => {
+    it('y-axis label is drawn right of the axis, never at negative x (narrow canvas)', () => {
+      const { ctx } = makeCtx();
+      drawScene1(
+        {
+          ctx,
+          width: 360,
+          height: 420,
+          theme: 'light',
+          responsiveScale: 0.6,
+          contentScale: 1
+        },
+        createSnapshot('scene1')
+      );
+      const call = vi
+        .mocked(ctx.fillText)
+        .mock.calls.find(([text]) => text === 'v / (m·s⁻¹)');
+      expect(call).toBeDefined();
+      const [, x, y] = call!;
+      expect(x).toBeGreaterThan(0);
+      expect(y).toBeGreaterThan(0);
+      for (const [, tx] of vi.mocked(ctx.fillText).mock.calls) {
+        expect(tx).toBeGreaterThanOrEqual(0);
+      }
+    });
   });
 
   describe('classroom tokens', () => {
