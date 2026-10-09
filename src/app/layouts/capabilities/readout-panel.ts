@@ -42,28 +42,28 @@ function initAdaptiveColumns(
   cssPrefix: string
 ): ResizeObserver {
   const p = cssPrefix;
+  // 回调里改 slot 列数类会改变 panel 自身高度（panel 正是被观察元素），
+  // WebKit 会判为「ResizeObserver loop completed with undelivered
+  // notifications」并抛 pageerror。因此只在列数档位真正变化时才动 DOM；
+  // 初始档位（auto）已在创建 slot 时写好类名，常见宽度下回调为 no-op。
   const observer = new ResizeObserver((entries) => {
     for (const entry of entries) {
       const width = entry.contentRect.width;
+      const columns =
+        width < 220 ? '1' : width < 320 ? 'auto' : width < 420 ? '2' : '3';
+      if (slot.getAttribute('data-columns') === columns) continue;
       slot.classList.remove(
         `${p}-readout-slot--1col`,
         `${p}-readout-slot--2col`,
         `${p}-readout-slot--3col`,
         `${p}-readout-slot--auto`
       );
-      if (width < 220) {
-        slot.classList.add(`${p}-readout-slot--1col`);
-        slot.setAttribute('data-columns', '1');
-      } else if (width < 320) {
-        slot.classList.add(`${p}-readout-slot--auto`);
-        slot.setAttribute('data-columns', 'auto');
-      } else if (width < 420) {
-        slot.classList.add(`${p}-readout-slot--2col`);
-        slot.setAttribute('data-columns', '2');
-      } else {
-        slot.classList.add(`${p}-readout-slot--3col`);
-        slot.setAttribute('data-columns', '3');
-      }
+      slot.classList.add(
+        columns === 'auto'
+          ? `${p}-readout-slot--auto`
+          : `${p}-readout-slot--${columns}col`
+      );
+      slot.setAttribute('data-columns', columns);
     }
   });
   observer.observe(panel);
@@ -282,7 +282,7 @@ export function createReadoutPanel(
       }
 
       const slot = document.createElement('ul');
-      slot.className = `${cssPrefix}-readout-slot readout-slot ${cssPrefix}-readout-slot--adaptive`;
+      slot.className = `${cssPrefix}-readout-slot readout-slot ${cssPrefix}-readout-slot--adaptive ${cssPrefix}-readout-slot--auto`;
       slot.setAttribute('data-columns', 'auto');
       // 可滚动区域必须可被键盘聚焦（WCAG 2.1.1 / axe scrollable-region-focusable）
       slot.setAttribute('tabindex', '0');
