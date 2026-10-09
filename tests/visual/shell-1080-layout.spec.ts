@@ -51,9 +51,10 @@ for (const scene of sceneIds) {
   }) => {
     const path = scenePage(scene, '?layout=split-right');
     await page.goto(path);
-    const visibleSidebarToggles = await page
-      .locator('.sidebar-toggle')
-      .evaluateAll((nodes) => {
+    // sidebar-toggle 是 load 之后异步挂载的能力；轮询到恰好 1 个，再隔两帧
+    // 复核仍是 1 个（0 或重复挂出第二个都会失败）。
+    const countVisibleSidebarToggles = () =>
+      page.locator('.sidebar-toggle').evaluateAll((nodes) => {
         return nodes.filter((node) => {
           if (!(node instanceof HTMLElement)) return false;
           const rect = node.getBoundingClientRect();
@@ -67,8 +68,21 @@ for (const scene of sceneIds) {
           );
         }).length;
       });
+    await expect
+      .poll(countVisibleSidebarToggles, {
+        message: `${path} should expose exactly one sidebar toggle on desktop`,
+        timeout: 5_000,
+        intervals: [50, 100, 250]
+      })
+      .toBe(1);
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+        )
+    );
     expect(
-      visibleSidebarToggles,
+      await countVisibleSidebarToggles(),
       `${path} should expose exactly one sidebar toggle on desktop`
     ).toBe(1);
   });

@@ -65,30 +65,36 @@ for (const scene of sceneIds) {
     ).toBeGreaterThan(0);
     await expect(graphCanvases.first()).toBeVisible();
 
-    const graphCanvasesContained = await graphCanvases.evaluateAll(
-      (canvases) => {
-        const panel = document.querySelector('#mobile-panel-graph');
-        if (!panel || canvases.length === 0) return false;
-        const bounds = panel.getBoundingClientRect();
-        return canvases.every((canvas) => {
-          const rect = canvas.getBoundingClientRect();
-          const contentTop = rect.top - bounds.top + panel.scrollTop;
-          const contentBottom = contentTop + rect.height;
-          return (
-            rect.width > 50 &&
-            rect.height > 50 &&
-            rect.x >= bounds.x - 1 &&
-            rect.right <= bounds.right + 1 &&
-            contentTop >= -1 &&
-            contentBottom <= panel.scrollHeight + 1
-          );
-        });
-      }
-    );
-    expect(
-      graphCanvasesContained,
-      `${path} graph canvases should stay visible inside the graph panel`
-    ).toBe(true);
+    // 图表 tab 刚激活时画布还是隐藏期的 1×1，由 ResizeObserver/rAF 在随后
+    // 1–2 帧撑开；断言内容不变，只等尺寸落定再量，避免与布局帧赛跑。
+    await expect
+      .poll(
+        () =>
+          graphCanvases.evaluateAll((canvases) => {
+            const panel = document.querySelector('#mobile-panel-graph');
+            if (!panel || canvases.length === 0) return false;
+            const bounds = panel.getBoundingClientRect();
+            return canvases.every((canvas) => {
+              const rect = canvas.getBoundingClientRect();
+              const contentTop = rect.top - bounds.top + panel.scrollTop;
+              const contentBottom = contentTop + rect.height;
+              return (
+                rect.width > 50 &&
+                rect.height > 50 &&
+                rect.x >= bounds.x - 1 &&
+                rect.right <= bounds.right + 1 &&
+                contentTop >= -1 &&
+                contentBottom <= panel.scrollHeight + 1
+              );
+            });
+          }),
+        {
+          message: `${path} graph canvases should stay visible inside the graph panel`,
+          timeout: 5_000,
+          intervals: [50, 100, 250]
+        }
+      )
+      .toBe(true);
     await graphCanvases
       .last()
       .evaluate((canvas) => canvas.scrollIntoView({ block: 'center' }));
