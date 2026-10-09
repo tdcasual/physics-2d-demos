@@ -34,6 +34,13 @@ const TRACK_BAND_CAP = 380 / DESKTOP_LAYOUT_SCALE;
 const TRACK_BAND_MIN = 190 / DESKTOP_LAYOUT_SCALE;
 const GRAPH_BAND_MIN_MOBILE = 140 / DESKTOP_LAYOUT_SCALE;
 const GRAPH_BAND_CAP_MOBILE = 220 / DESKTOP_LAYOUT_SCALE;
+/**
+ * mobile 图表 tab 里 x-t / v-t 纵向堆叠、面板可纵向滚动。图高下限按图宽比例给，
+ * 不跟舞台短边算出的 layoutScale 走：320×568 时舞台很矮，layoutScale≈0.5 把
+ * 图高压到 ~73px（282×73，宽高比接近 4:1，曲线几乎压平）。2.5:1 是保证
+ * 坐标轴刻度与曲线仍可读的最扁比例。
+ */
+const GRAPH_MIN_ASPECT_MOBILE = 0.4;
 const GRAPH_BAND_MIN = 120 / DESKTOP_LAYOUT_SCALE;
 const GRAPH_SLOT_FALLBACK = 300;
 const GRAPH_BAND_MIN_NARROW = 130 / DESKTOP_LAYOUT_SCALE;
@@ -199,6 +206,7 @@ export function createChaseMeetView(options: CreateChaseMeetViewOptions = {}) {
         );
         graphHeight = Math.max(
           GRAPH_BAND_MIN_MOBILE * layoutScale,
+          Math.round(graphWidth * GRAPH_MIN_ASPECT_MOBILE),
           Math.min(GRAPH_BAND_CAP_MOBILE * layoutScale, availableHeight)
         );
       } else {
