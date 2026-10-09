@@ -247,6 +247,17 @@
     line-height: 1.15;
   }
 
+  /* 「✗ 不通过 / ↻ 需重校」是带三个汉字的状态词，54px 时一格要 ~226px，
+     会把该次测量列撑到 ~410px；七列 + 动作列在 1920 下本就只剩个位数余量，
+     Linux 默认 DejaVu 拉丁字形再宽一点就溢出成横向滚动（1937 > 1904）。
+     状态词降到与已知量数值同级的 40px，✓ 仍保持 54px；颜色、符号与
+     aria-label 不变，整表在各平台字体下都留出 ~25px 余量。 */
+  .layout-master.is-data-workspace[data-scene-id='ticker-tape']
+    .data-workspace-table:not(.data-workspace-review-table)
+    .data-workspace-status:is(.is-error, .is-stale) {
+    font-size: 40px;
+  }
+
   .layout-master.is-data-workspace.is-data-workspace-chart[data-scene-id='ticker-tape']
     .data-workspace-review-table {
     font-size: 44px;
