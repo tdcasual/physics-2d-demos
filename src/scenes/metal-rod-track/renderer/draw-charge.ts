@@ -2,7 +2,6 @@ import { drawArrow, pathRoundRect } from '../../../core/draw-primitives';
 import type { TeachingTheme } from '../../../platform/standards';
 import {
   CHARGE_DISTANCE,
-  CHARGE_PROFILE_LABELS,
   CHARGE_V0,
   bellPeakVelocity,
   chargeStrips,
@@ -38,7 +37,6 @@ export type ChargeDrawInput = {
 
 export type ChargeLayout = {
   region: Box;
-  header: { left: number; top: number; bottom: number; lines: number };
   apparatus: Box;
   graph: Box;
   orientation: 'row' | 'column';
@@ -90,6 +88,15 @@ export function avoidOcclusions(
   return region;
 }
 
+/** 并排时每栏高度上限（相对栏宽），避免宽屏上图形被拉得过高 */
+const ROW_MAX_HEIGHT_RATIO = 0.72;
+/** 上下堆叠时内容宽度上限（相对可用高度），避免超宽画布上图形被拉扁 */
+const COLUMN_MAX_WIDTH_RATIO = 1.9;
+
+/**
+ * 舞台只放图：可用区域（避开读数面板与浮动播放条）内，宽则装置与 I–t 图
+ * 左右并排，窄则上下堆叠；内容按比例封顶后在可用区域内居中。
+ */
 export function layoutCharge(
   width: number,
   height: number,
@@ -102,42 +109,35 @@ export function layoutCharge(
     { left: pad, top: pad, right: width - pad, bottom: height - pad },
     occlusions,
     gap,
-    { width: type.labelPx * 18, height: type.labelPx * 16 }
+    { width: type.labelPx * 18, height: type.labelPx * 14 }
   );
-  const headerLines = 3;
-  const headerBottom =
-    region.top + type.titlePx * 1.35 + type.labelPx * 1.5 * (headerLines - 1);
-  const body: Box = { ...region, top: headerBottom + gap };
-  const bodyW = boxW(body);
-  const bodyH = boxH(body);
+  const regionW = boxW(region);
+  const regionH = boxH(region);
+  const centerX = (region.left + region.right) / 2;
+  const centerY = (region.top + region.bottom) / 2;
   const row =
-    bodyW >= bodyH * SIDE_BY_SIDE_ASPECT && bodyW >= type.labelPx * 34;
+    regionW >= regionH * SIDE_BY_SIDE_ASPECT && regionW >= type.labelPx * 34;
   if (row) {
-    const split = body.left + bodyW * 0.48;
+    const colGap = gap * 2;
+    const colW = (regionW - colGap) / 2;
+    const contentH = Math.min(regionH, colW * ROW_MAX_HEIGHT_RATIO);
+    const top = centerY - contentH / 2;
+    const bottom = top + contentH;
     return {
       region,
-      header: {
-        left: region.left,
-        top: region.top,
-        bottom: headerBottom,
-        lines: headerLines
-      },
-      apparatus: { ...body, right: split - gap / 2 },
-      graph: { ...body, left: split + gap / 2 },
+      apparatus: { left: region.left, top, right: region.left + colW, bottom },
+      graph: { left: region.right - colW, top, right: region.right, bottom },
       orientation: 'row'
     };
   }
-  const split = body.top + bodyH * 0.44;
+  const contentW = Math.min(regionW, regionH * COLUMN_MAX_WIDTH_RATIO);
+  const left = centerX - contentW / 2;
+  const right = left + contentW;
+  const split = region.top + regionH * 0.45;
   return {
     region,
-    header: {
-      left: region.left,
-      top: region.top,
-      bottom: headerBottom,
-      lines: headerLines
-    },
-    apparatus: { ...body, bottom: split - gap / 2 },
-    graph: { ...body, top: split + gap / 2 },
+    apparatus: { left, top: region.top, right, bottom: split - gap / 2 },
+    graph: { left, top: split + gap / 2, right, bottom: region.bottom },
     orientation: 'column'
   };
 }
@@ -148,61 +148,6 @@ const REGULAR = '400';
 
 function font(px: number, weight: string = REGULAR): string {
   return `${weight} ${px}px ${CHARGE_FONT_FAMILY}`;
-}
-
-function fitText(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  maxWidth: number
-): string {
-  if (ctx.measureText(value).width <= maxWidth) return value;
-  let text = value;
-  while (text.length > 1 && ctx.measureText(`${text}…`).width > maxWidth) {
-    text = text.slice(0, -1);
-  }
-  return `${text}…`;
-}
-
-function drawHeader(
-  ctx: CanvasRenderingContext2D,
-  layout: ChargeLayout,
-  type: ChargeTypeScale,
-  p: ChargePalette,
-  state: MetalRodState
-): void {
-  const { header, region } = layout;
-  const maxWidth = boxW(region);
-  const c = state.charge;
-  ctx.save();
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-  ctx.fillStyle = p.text;
-  ctx.font = font(type.titlePx, SEMIBOLD);
-  ctx.fillText(
-    fitText(ctx, '微元法求电荷量：Δq = IΔt = BLΔx/R', maxWidth),
-    header.left,
-    header.top
-  );
-  let y = header.top + type.titlePx * 1.35;
-  ctx.font = font(type.labelPx);
-  ctx.fillStyle = p.textSecondary;
-  ctx.fillText(
-    fitText(
-      ctx,
-      `速度变化方式：${CHARGE_PROFILE_LABELS[c.profile]} · 全程分 n = ${state.strips} 份`,
-      maxWidth
-    ),
-    header.left,
-    y
-  );
-  y += type.labelPx * 1.5;
-  ctx.fillStyle = c.finished ? p.strip : p.textSecondary;
-  ctx.font = font(type.labelPx, c.finished ? SEMIBOLD : REGULAR);
-  const note = c.finished
-    ? `滑过 x = ${c.displacement.toFixed(2)} m：ΣIΔt ≈ BLx/R，与 v 怎样变化无关`
-    : '棒向右滑动，每个 Δt 的 Δq = IΔt 逐条累加';
-  ctx.fillText(fitText(ctx, note, maxWidth), header.left, y);
-  ctx.restore();
 }
 
 function drawFieldMark(
@@ -240,7 +185,7 @@ function label(
   ctx.fillText(value, x, y);
 }
 
-/** 导轨、电阻、⊗ 磁场、扫过面积与导体棒（含 I、v、Fₐ 箭头） */
+/** 导轨、电阻、⊗ 磁场、扫过面积与导体棒（含 I、v、Fₐ 箭头）；只用单符号标注 */
 function drawApparatus(
   ctx: CanvasRenderingContext2D,
   box: Box,
@@ -275,20 +220,10 @@ function drawApparatus(
   }
   label(ctx, 'B ⊗', railEnd, box.top + lp * 0.6, p.textSecondary, lp, 'right');
 
-  // 扫过面积 ΔΦ = BLx
+  // 扫过面积（ΔΦ = BLx，仅着色，不加文字）
   if (rodX > x0) {
     ctx.fillStyle = p.sweptFill;
     ctx.fillRect(x0, railTop, rodX - x0, railH);
-    if (rodX - x0 > lp * 5) {
-      label(
-        ctx,
-        'ΔΦ = BLx',
-        (x0 + rodX) / 2,
-        railTop + railH * 0.5,
-        p.strip,
-        lp
-      );
-    }
   }
 
   // 起点 / 终点虚线
@@ -377,7 +312,8 @@ function drawApparatus(
     });
     label(ctx, 'I', rodX + rodW * 1.6, iTop, p.curve, lp, 'left');
     // 速度 v（向右）
-    const vy = railTop + railH * 0.36;
+    // 放在棒中部，与上端的「I」标签错开（矮画布上不重叠）
+    const vy = railTop + railH * 0.52;
     drawArrow(ctx, rodX + rodW * 2.4, vy, rodX + rodW * 2.4 + len, vy, {
       color: p.velocity,
       lineWidth: type.stroke,
@@ -393,7 +329,7 @@ function drawApparatus(
       'left'
     );
     // 安培力 Fₐ（与 v 相反）
-    const fy = railTop + railH * 0.66;
+    const fy = railTop + railH * 0.74;
     drawArrow(ctx, rodX - rodW, fy, rodX - rodW - len, fy, {
       color: p.force,
       lineWidth: type.stroke,
@@ -423,7 +359,7 @@ export function formatTick(value: number, step: number): string {
   return value.toFixed(digits);
 }
 
-/** I–t 图：曲线（全程淡、已走过实线）、Δt 小矩形（面积 = q）、时间游标 */
+/** I–t 图：曲线（全程淡、已走过实线）、Δt 小矩形（面积 = q，当前一条高亮）、时间游标 */
 function drawGraph(
   ctx: CanvasRenderingContext2D,
   box: Box,
@@ -443,16 +379,9 @@ function drawGraph(
   const tMax = c.duration;
 
   ctx.save();
-  // 注释两行：ΣIΔt 与 BLx/R
-  const sumText = `面积 ΣIΔt = ${c.stripSum.toFixed(3)} C`;
-  const formulaText = `BLx/R = ${c.formula.toFixed(3)} C`;
-  ctx.font = font(lp, SEMIBOLD);
-  const oneLine =
-    ctx.measureText(`${sumText}    ${formulaText}`).width <= boxW(box);
-  const noteRows = oneLine ? 1 : 2;
-
   ctx.font = font(tp);
-  const plotTop = box.top + lp * 1.5 * noteRows + lp * 1.2;
+  // 顶部只留 y 轴箭头与「I / A」轴名的位置（数值见读数面板）
+  const plotTop = box.top + lp * 1.4;
   const plotBottom = box.bottom - tp * 1.9;
   // 刻度行距不小于 ≈2 倍字号：矮画布（移动端）自动减少 y 刻度
   const yTicks = Math.max(
@@ -471,21 +400,6 @@ function drawGraph(
   const ph = Math.max(1, boxH(plot));
   const px = (t: number): number => plot.left + (t / tMax) * pw;
   const py = (i: number): number => plot.bottom - (i / yMax) * ph;
-
-  // 注释
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'middle';
-  ctx.font = font(lp, SEMIBOLD);
-  const noteY = box.top + lp * 0.75;
-  ctx.fillStyle = p.strip;
-  ctx.fillText(sumText, box.left, noteY);
-  ctx.fillStyle = p.curve;
-  if (oneLine) {
-    ctx.textAlign = 'right';
-    ctx.fillText(formulaText, box.right, noteY);
-  } else {
-    ctx.fillText(formulaText, box.left, noteY + lp * 1.5);
-  }
 
   // 网格与刻度
   ctx.lineWidth = 1;
@@ -515,7 +429,6 @@ function drawGraph(
 
   // Δt 小矩形（中点取值）：已走过的填色，当前一条高亮
   const now = c.time;
-  let active: { x0: number; x1: number; y: number } | null = null;
   ctx.lineWidth = type.thinStroke * 0.8;
   for (const strip of strips) {
     if (strip.t0 >= now) break;
@@ -528,7 +441,6 @@ function drawGraph(
     ctx.strokeStyle = partial ? p.accent : p.strip;
     ctx.fillRect(x0, y, x1 - x0, plot.bottom - y);
     ctx.strokeRect(x0, y, x1 - x0, plot.bottom - y);
-    if (partial) active = { x0, x1: px(strip.t1), y };
   }
 
   // I–t 曲线：全程淡虚线 + 已走过实线
@@ -607,23 +519,6 @@ function drawGraph(
     ctx.fill();
   }
 
-  if (active && active.x1 - active.x0 > 0) {
-    const mid = (active.x0 + active.x1) / 2;
-    const text = 'Δq = IΔt';
-    ctx.font = font(tp, SEMIBOLD);
-    const tw = ctx.measureText(text).width;
-    const lx = Math.min(Math.max(mid, plot.left + tw / 2), plot.right - tw / 2);
-    label(ctx, text, lx, active.y - tp * 0.9, p.accent, tp);
-  } else if (c.finished) {
-    label(
-      ctx,
-      '小矩形面积之和 = q',
-      (plot.left + plot.right) / 2,
-      plot.top + lp * 0.4,
-      p.strip,
-      lp
-    );
-  }
   ctx.restore();
 }
 
@@ -642,7 +537,6 @@ export function drawChargeMode(input: ChargeDrawInput): ChargeLayout {
     state.resistance,
     state.strips
   );
-  drawHeader(ctx, layout, type, p, state);
   drawApparatus(ctx, layout.apparatus, type, p, state);
   drawGraph(ctx, layout.graph, type, p, state, strips);
   return layout;

@@ -421,6 +421,61 @@ describe('charge renderer · layout & drawing', () => {
     expect(tall.apparatus.bottom).toBeLessThan(tall.graph.top);
   });
 
+  it('stage holds only the drawing: single-symbol labels, axis names and ticks', () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 900;
+    canvas.height = 600;
+    const ctx = canvas.getContext('2d')!;
+    const texts: string[] = [];
+    const spy = vi
+      .spyOn(ctx, 'fillText')
+      .mockImplementation((text: string) => void texts.push(String(text)));
+    const allowed = new Set([
+      'R',
+      'L',
+      'B ⊗',
+      'v',
+      'I',
+      'Fₐ',
+      'x = 0',
+      'x = 1.0 m',
+      'I / A',
+      't / s'
+    ]);
+    for (const profile of [1, 3]) {
+      const sim = createMetalRodSim();
+      sim.setParams({ mode: 'charge', profile });
+      for (const seconds of [0.6, 8]) {
+        for (let t = 0; t < seconds; t += 0.05) sim.step(0.05);
+        drawChargeMode({
+          ctx,
+          width: 900,
+          height: 600,
+          theme: 'light',
+          responsiveScale: 1,
+          contentScale: 1,
+          occlusions: [],
+          state: sim.getState()
+        });
+      }
+    }
+    spy.mockRestore();
+    expect(texts.length).toBeGreaterThan(0);
+    const extra = texts.filter(
+      (t) => !allowed.has(t) && !/^\d+(\.\d+)?$/.test(t)
+    );
+    expect(extra).toEqual([]);
+  });
+
+  it('content is centred in the free region (no header band)', () => {
+    const tall = layoutCharge(700, 700, type, []);
+    expect(tall.apparatus.top).toBe(tall.region.top);
+    expect(tall.graph.bottom).toBe(tall.region.bottom);
+    const wide = layoutCharge(2400, 700, type, []);
+    const midY = (wide.apparatus.top + wide.apparatus.bottom) / 2;
+    expect(midY).toBeCloseTo((wide.region.top + wide.region.bottom) / 2, 6);
+  });
+
   it('draws mid-animation and finished frames without throwing', () => {
     const canvas = document.createElement('canvas');
     canvas.width = 900;
