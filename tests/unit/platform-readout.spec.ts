@@ -30,6 +30,19 @@ describe('platform/readout', () => {
     expect(formatReadoutNumber(Number.MAX_VALUE, { sigFigs: 3 })).toBe('—');
     expect(formatReadoutNumber(1.234, { sigFigs: 0 })).toBe('1.23');
     expect(formatReadoutNumber(1.234, { sigFigs: 102 })).toBe('1.23');
+    expect(formatReadoutNumber(1.234, { sigFigs: 0, digits: 4 })).toBe('1.23');
+    expect(
+      formatReadoutNumber(Number.MAX_VALUE, { sigFigs: 3, signed: true })
+    ).toBe('—');
+  });
+
+  it('leaves illegal digits to native toFixed (sigFigs clamp does not leak)', () => {
+    expect(() => formatReadoutNumber(1.234, { digits: -1 })).toThrow(
+      RangeError
+    );
+    expect(() => formatReadoutNumber(1.234, { digits: 101 })).toThrow(
+      RangeError
+    );
   });
 
   it('handles signed values and non-finite input', () => {

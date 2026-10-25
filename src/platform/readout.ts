@@ -49,11 +49,11 @@ function roundHalfAwayFromZero(value: number, place: number): number {
 }
 
 function formatWithDigits(value: number, digits: number): string {
-  return value.toFixed(clampFixedDigits(digits));
+  return value.toFixed(digits);
 }
 
 function formatWithSigFigs(value: number, sigFigs: number): string {
-  if (value === 0) return formatWithDigits(0, sigFigs - 1);
+  if (value === 0) return formatWithDigits(0, clampFixedDigits(sigFigs - 1));
   const magnitude = Math.floor(Math.log10(Math.abs(value)));
   const decimals = sigFigs - 1 - magnitude;
   if (decimals > EXPONENTIAL_BELOW_DECIMALS) {
@@ -71,11 +71,13 @@ function formatWithSigFigs(value: number, sigFigs: number): string {
     if (nextMagnitude !== magnitude) return formatWithSigFigs(rounded, sigFigs);
     return String(rounded);
   }
-  let text = formatWithDigits(value, decimals);
+  let text = formatWithDigits(value, clampFixedDigits(decimals));
   const rounded = Number(text);
   if (Number.isFinite(rounded) && rounded !== 0) {
     const again = sigFigs - 1 - Math.floor(Math.log10(Math.abs(rounded)));
-    if (again !== decimals) text = formatWithDigits(rounded, again);
+    if (again !== decimals) {
+      text = formatWithDigits(rounded, clampFixedDigits(again));
+    }
   }
   return text;
 }
@@ -86,12 +88,22 @@ export function formatReadoutNumber(
   precision: ReadoutPrecision = {}
 ): string {
   if (!Number.isFinite(value)) return NON_FINITE_TEXT;
-  const text = isValidSigFigs(precision.sigFigs)
-    ? formatWithSigFigs(value, precision.sigFigs)
-    : formatWithDigits(value, precision.digits ?? DEFAULT_DIGITS);
+  const text =
+    precision.sigFigs != null
+      ? isValidSigFigs(precision.sigFigs)
+        ? formatWithSigFigs(value, precision.sigFigs)
+        : formatWithDigits(value, DEFAULT_DIGITS)
+      : formatWithDigits(value, precision.digits ?? DEFAULT_DIGITS);
   const cleaned = stripNegativeZero(text);
-  if (precision.signed && value > 0 && Number(cleaned) !== 0)
+  const numeric = Number(cleaned);
+  if (
+    precision.signed &&
+    value > 0 &&
+    Number.isFinite(numeric) &&
+    numeric !== 0
+  ) {
     return `+${cleaned}`;
+  }
   return cleaned;
 }
 
