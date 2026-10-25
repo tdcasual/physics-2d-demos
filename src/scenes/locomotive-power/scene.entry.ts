@@ -8,6 +8,7 @@ import {
   type LocomotiveParams,
   type LocomotiveState
 } from './scene.sim';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateLocomotiveSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -27,7 +28,7 @@ export function createLocomotiveScene(
   setTheme(theme: TeachingTheme): void;
   setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
   resize(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createLocomotiveSim();
   const view = createLocomotiveView({
@@ -68,22 +69,30 @@ export function createLocomotiveScene(
         {
           key: 'velocity',
           label: '当前速度 v',
-          value: `${s.velocity.toFixed(1)} m/s`
+          value: s.velocity,
+          digits: 1,
+          unit: 'm/s'
         },
         {
           key: 'accelerationNow',
           label: '瞬时加速度 a',
-          value: `${s.accelerationNow.toFixed(2)} m/s²`
+          value: s.accelerationNow,
+          digits: 2,
+          unit: 'm/s²'
         },
         {
           key: 'tractionForce',
           label: '牵引力 F',
-          value: `${(s.tractionForce / 1000).toFixed(2)} kN`
+          value: s.tractionForce / 1000,
+          digits: 2,
+          unit: 'kN'
         },
         {
           key: 'actualPower',
           label: '实际功率 P',
-          value: `${s.actualPower.toFixed(1)} kW`
+          value: s.actualPower,
+          digits: 1,
+          unit: 'kW'
         }
       ];
     }

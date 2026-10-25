@@ -8,6 +8,7 @@ import {
   type PendulumEnergyState
 } from './scene.sim';
 import { createPendulumEnergyView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreatePendulumEnergySceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -28,7 +29,7 @@ export function createPendulumEnergyScene(
   setTheme(theme: TeachingTheme): void;
   setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
   resize(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createPendulumEnergySim();
   const view = createPendulumEnergyView({
@@ -69,22 +70,30 @@ export function createPendulumEnergyScene(
         {
           key: 'speed',
           label: '实时速度 v',
-          value: `${state.speed.toFixed(2)} m/s`
+          value: state.speed,
+          digits: 2,
+          unit: 'm/s'
         },
         {
           key: 'potentialEnergy',
           label: '重力势能 Eₚ',
-          value: `${state.potentialEnergy.toFixed(3)} J`
+          value: state.potentialEnergy,
+          digits: 3,
+          unit: 'J'
         },
         {
           key: 'kineticEnergy',
           label: '动能 Eₖ',
-          value: `${state.kineticEnergy.toFixed(3)} J`
+          value: state.kineticEnergy,
+          digits: 3,
+          unit: 'J'
         },
         {
           key: 'mechanicalEnergy',
           label: '机械能',
-          value: `${state.mechanicalEnergy.toFixed(3)} J`
+          value: state.mechanicalEnergy,
+          digits: 3,
+          unit: 'J'
         }
       ];
     }

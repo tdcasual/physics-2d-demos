@@ -8,6 +8,7 @@ import {
   type InductionAcceleratorParams,
   type InductionAcceleratorState
 } from './scene.sim';
+import type { ReadoutItem } from '../../platform/readout';
 export type CreateInductionAcceleratorSceneOptions = {
   canvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
@@ -29,7 +30,7 @@ export function createInductionAcceleratorScene(
   setTheme(theme: TeachingTheme): void;
   setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
   resize(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createInductionAcceleratorSim();
   const view = createInductionAcceleratorView({
@@ -71,27 +72,37 @@ export function createInductionAcceleratorScene(
         {
           key: 'innerB',
           label: '中心平均磁场 B内均',
-          value: `${s.innerB.toFixed(2)} T`
+          value: s.innerB,
+          digits: 2,
+          unit: 'T'
         },
         {
           key: 'orbitB',
           label: '轨道处磁场 B轨',
-          value: `${s.orbitB.toFixed(2)} T`
+          value: s.orbitB,
+          digits: 2,
+          unit: 'T'
         },
         {
           key: 'speed',
           label: '电子切线速度 v',
-          value: `${(s.speed / 1e7).toFixed(2)} ×10⁷ m/s`
+          value: s.speed / 1e7,
+          digits: 2,
+          unit: '×10⁷ m/s'
         },
         {
           key: 'centripetalForce',
           label: '所需向心力 F向',
-          value: `${s.centripetalForce.toFixed(2)} N`
+          value: s.centripetalForce,
+          digits: 2,
+          unit: 'N'
         },
         {
           key: 'lorentzForce',
           label: '实际洛伦兹力 F洛',
-          value: `${s.lorentzForce.toFixed(2)} N`
+          value: s.lorentzForce,
+          digits: 2,
+          unit: 'N'
         }
       ];
     }

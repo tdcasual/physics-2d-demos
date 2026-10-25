@@ -8,6 +8,7 @@ import {
   type DisplacementTimeState
 } from './scene.sim';
 import { createDisplacementTimeView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateDisplacementTimeSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -28,7 +29,7 @@ export function createDisplacementTimeScene(
   getParams(): DisplacementTimeParams;
   setParams(params: Partial<DisplacementTimeParams>): DisplacementTimeParams;
   stepFrame(dt?: number): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
   subscribe(listener: () => void): () => void;
 } {
   const sim = createDisplacementTimeSim();
@@ -45,23 +46,23 @@ export function createDisplacementTimeScene(
     onReadout: options.onReadout
   });
 
-  function getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string;
-  }> {
+  function getReadoutItems(): ReadoutItem[] {
     const state = sim.getState();
     return [
-      { key: 'time', label: '时刻 t', value: `${state.time.toFixed(2)} s` },
+      { key: 'time', label: '时刻 t', value: state.time, digits: 2, unit: 's' },
       {
         key: 'velocity',
         label: '瞬时速度 v',
-        value: `${state.velocity.toFixed(2)} m/s`
+        value: state.velocity,
+        digits: 2,
+        unit: 'm/s'
       },
       {
         key: 'displacement',
         label: '总位移 x',
-        value: `${state.displacement.toFixed(2)} m`
+        value: state.displacement,
+        digits: 2,
+        unit: 'm'
       }
     ];
   }

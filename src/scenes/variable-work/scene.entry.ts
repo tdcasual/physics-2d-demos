@@ -11,6 +11,7 @@ import {
   type VariableWorkParams,
   type VariableWorkState
 } from './scene.sim';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateVariableWorkSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -31,7 +32,7 @@ export function createVariableWorkScene(
   getSnapshot(): VariableWorkState;
   getParams(): VariableWorkParams;
   setParams(params: Partial<VariableWorkParams>): VariableWorkParams;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
   subscribe(listener: () => void): () => void;
   attachGraphCanvas(canvas: HTMLCanvasElement): void;
   startAll(): void;
@@ -58,23 +59,41 @@ export function createVariableWorkScene(
 
   function getReadoutItems() {
     const s = sim.getState();
-    const items = [
-      { key: 'force', label: '即时外力 F', value: `${s.force.toFixed(2)} N` },
+    const items: ReadoutItem[] = [
+      {
+        key: 'force',
+        label: '即时外力 F',
+        value: s.force,
+        digits: 2,
+        unit: 'N'
+      },
       {
         key: 'velocity',
         label: '即时速度 v',
-        value: `${s.velocity.toFixed(2)} m/s`
+        value: s.velocity,
+        digits: 2,
+        unit: 'm/s'
       },
-      { key: 'power', label: '即时功率 P', value: `${s.power.toFixed(2)} W` },
+      {
+        key: 'power',
+        label: '即时功率 P',
+        value: s.power,
+        digits: 2,
+        unit: 'W'
+      },
       {
         key: 'work',
         label: '解析功 W',
-        value: `${s.work.toFixed(2)} J`
+        value: s.work,
+        digits: 2,
+        unit: 'J'
       },
       {
         key: 'kinetic',
         label: '动能增量 ΔEₖ',
-        value: `${s.kineticGain.toFixed(2)} J`
+        value: s.kineticGain,
+        digits: 2,
+        unit: 'J'
       }
     ];
     if (s.params.microsteps > 0) {
@@ -88,12 +107,16 @@ export function createVariableWorkScene(
         {
           key: 'riemann',
           label: '左端点 Wₙ',
-          value: `${s.riemannWork.toFixed(2)} J`
+          value: s.riemannWork,
+          digits: 2,
+          unit: 'J'
         },
         {
           key: 'riemannError',
           label: '|W − Wₙ|',
-          value: `${s.riemannError.toFixed(3)} J`
+          value: s.riemannError,
+          digits: 3,
+          unit: 'J'
         },
         { key: 'riemannBias', label: '逼近', value: bias }
       );

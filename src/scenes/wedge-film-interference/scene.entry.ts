@@ -9,6 +9,7 @@ import {
   type WedgeState
 } from './scene.sim';
 import { createWedgeFilmInterferenceView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateWedgeSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -27,7 +28,7 @@ export function createWedgeFilmInterferenceScene(
   getSnapshot(): WedgeState;
   getParams(): WedgeParams;
   setParams(next: Partial<WedgeParams>): WedgeParams;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createWedgeFilmInterferenceSim();
   const view = createWedgeFilmInterferenceView({
@@ -62,14 +63,16 @@ export function createWedgeFilmInterferenceScene(
     setParams: base.wrapAction((next: Partial<WedgeParams>) =>
       sim.setParams(next)
     ),
-    getReadoutItems(): Array<{ key: string; label: string; value: string }> {
+    getReadoutItems(): ReadoutItem[] {
       const s = sim.getState();
       return [
         { key: 'lambda', label: '波长', value: `${s.lambda} nm` },
         {
           key: 'd-local',
           label: '局部厚度',
-          value: `${s.localThickness.toFixed(0)} nm`
+          value: s.localThickness,
+          digits: 0,
+          unit: 'nm'
         },
         { key: 'order', label: '干涉级次', value: s.order.toFixed(2) }
       ];

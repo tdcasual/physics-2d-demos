@@ -21,6 +21,7 @@ import {
   threeForcesSpringStep,
   threeForcesVectors
 } from '../../src/scenes/three-forces/scene.sim';
+import { normalizeReadoutItem } from '../../src/platform/readout';
 
 describe('three-forces gravity decomposition', () => {
   it('uses G = mg with g = 10 N/kg', () => {
@@ -375,7 +376,7 @@ describe('three-forces switching, clamps, drag, and reset', () => {
 
   it('exposes readout formulas off the canvas via the scene entry', () => {
     const scene = createThreeForcesScene();
-    const gravity = scene.getReadoutItems();
+    const gravity = scene.getReadoutItems().map(normalizeReadoutItem);
     expect(gravity.some((item) => item.value === 'G = mg')).toBe(true);
     expect(gravity.some((item) => String(item.value).includes('G sinθ'))).toBe(
       true
@@ -386,7 +387,7 @@ describe('three-forces switching, clamps, drag, and reset', () => {
       springX: 0.2,
       autoRun: false
     });
-    const spring = scene.getReadoutItems();
+    const spring = scene.getReadoutItems().map(normalizeReadoutItem);
     const springForce = spring.find((item) => item.key === 'springForce');
     expect(springForce?.label).toBe('F弹');
     // k=40 N/m, x=+0.2 m → F弹=−kx=−8.0 N；大小 |F弹|=kx=8.0 N
@@ -397,7 +398,10 @@ describe('three-forces switching, clamps, drag, and reset', () => {
     expect(spring.some((item) => item.value === 'F弹 = kx')).toBe(false);
     scene.setParams({ springX: -0.2 });
     expect(
-      scene.getReadoutItems().find((item) => item.key === 'springForce')?.value
+      scene
+        .getReadoutItems()
+        .map(normalizeReadoutItem)
+        .find((item) => item.key === 'springForce')?.value
     ).toBe('8.0 N');
     scene.dispose();
   });

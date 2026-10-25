@@ -8,6 +8,7 @@ import {
   type MassSpectrometerState
 } from './scene.sim';
 import { createMassSpectrometerView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateMassSpectrometerSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -28,7 +29,7 @@ export function createMassSpectrometerScene(
   setTheme(theme: TeachingTheme): void;
   setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
   resize(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createMassSpectrometerSim();
   const view = createMassSpectrometerView({
@@ -69,22 +70,30 @@ export function createMassSpectrometerScene(
         {
           key: 'speed',
           label: '氘速度 v',
-          value: `${(state.particles[1].speed / 1e5).toFixed(2)} ×10⁵ m/s`
+          value: state.particles[1].speed / 1e5,
+          digits: 2,
+          unit: '×10⁵ m/s'
         },
         {
           key: 'radius',
           label: '氘半径 R',
-          value: `${(state.measuredRadius * 100).toFixed(2)} cm`
+          value: state.measuredRadius * 100,
+          digits: 2,
+          unit: 'cm'
         },
         {
           key: 'calculatedMass',
           label: '计算质量 m',
-          value: `${state.calculatedMass.toFixed(2)} u`
+          value: state.calculatedMass,
+          digits: 2,
+          unit: 'u'
         },
         {
           key: 'separation',
           label: '氢—氚间距',
-          value: `${state.separation.toFixed(0)} px`
+          value: state.separation,
+          digits: 0,
+          unit: 'px'
         }
       ];
     }

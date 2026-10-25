@@ -14,6 +14,7 @@ import {
   type ResolvedProjectileParams
 } from './scene.sim';
 import { createProjectileView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 const defaultParams: ProjectileParams = {
   speed: projectileMeta.defaultParams.v0 ?? 30,
@@ -37,11 +38,11 @@ function formatReadout(
   params: ResolvedProjectileParams
 ) {
   return [
-    { key: 't', label: '时间 t', value: `${state.t.toFixed(2)} s` },
-    { key: 'x', label: '位移 x', value: `${state.x.toFixed(2)} m` },
-    { key: 'y', label: '高度 y', value: `${state.y.toFixed(2)} m` },
-    { key: 'vx', label: '速度 vx', value: `${state.vx.toFixed(2)} m/s` },
-    { key: 'vy', label: '速度 vy', value: `${state.vy.toFixed(2)} m/s` },
+    { key: 't', label: '时间 t', value: state.t, digits: 2, unit: 's' },
+    { key: 'x', label: '位移 x', value: state.x, digits: 2, unit: 'm' },
+    { key: 'y', label: '高度 y', value: state.y, digits: 2, unit: 'm' },
+    { key: 'vx', label: '速度 vx', value: state.vx, digits: 2, unit: 'm/s' },
+    { key: 'vy', label: '速度 vy', value: state.vy, digits: 2, unit: 'm/s' },
     {
       key: 'v0-theta',
       label: '参数 v0/θ',
@@ -69,12 +70,7 @@ export function createProjectileScene(
   getState(): ProjectileState;
   getParams(): ResolvedProjectileParams;
   setParams(next: Partial<ProjectileParams>): ResolvedProjectileParams;
-  getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string | number;
-    layout?: 'half' | 'full';
-  }>;
+  getReadoutItems(): ReadoutItem[];
   subscribe(listener: () => void): () => void;
 } {
   const sim = createProjectileSim(defaultParams);
@@ -109,12 +105,7 @@ export function createProjectileScene(
       (next: Partial<ProjectileParams>): ResolvedProjectileParams =>
         sim.setParams(next)
     ),
-    getReadoutItems(): Array<{
-      key: string;
-      label: string;
-      value: string | number;
-      layout?: 'half' | 'full';
-    }> {
+    getReadoutItems(): ReadoutItem[] {
       return formatReadout(sim.getState(), sim.getParams());
     }
   };

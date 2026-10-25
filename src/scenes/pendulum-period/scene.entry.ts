@@ -53,17 +53,23 @@ export function createPendulumScene(options: CreatePendulumSceneOptions = {}) {
         {
           key: 'period',
           label: '小角周期 T',
-          value: `${state.period.toFixed(2)} s`
+          value: state.period,
+          digits: 2,
+          unit: 's'
         },
         {
           key: 'speed',
           label: '线速度 v',
-          value: `${state.speed.toFixed(2)} m/s`
+          value: state.speed,
+          digits: 2,
+          unit: 'm/s'
         },
         {
           key: 'tension',
           label: '绳张力 F_T',
-          value: `${state.tension.toFixed(2)} N`
+          value: state.tension,
+          digits: 2,
+          unit: 'N'
         },
         {
           key: 'measuredGravity',

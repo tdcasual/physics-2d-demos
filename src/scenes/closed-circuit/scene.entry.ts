@@ -38,22 +38,30 @@ export function createClosedCircuitScene(
       {
         key: 'current',
         label: '干路电流 I',
-        value: `${state.current.toFixed(2)} A`
+        value: state.current,
+        digits: 2,
+        unit: 'A'
       },
       {
         key: 'terminalVoltage',
         label: '路端电压 U',
-        value: `${state.terminalVoltage.toFixed(2)} V`
+        value: state.terminalVoltage,
+        digits: 2,
+        unit: 'V'
       },
       {
         key: 'internalDrop',
         label: '内电压 Ir',
-        value: `${state.internalDrop.toFixed(2)} V`
+        value: state.internalDrop,
+        digits: 2,
+        unit: 'V'
       },
       {
         key: 'outputPower',
         label: '输出功率 P出',
-        value: `${state.outputPower.toFixed(2)} W`
+        value: state.outputPower,
+        digits: 2,
+        unit: 'W'
       }
     ];
   }

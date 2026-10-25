@@ -8,6 +8,7 @@ import {
   type GalileoInclineState
 } from './scene.sim';
 import { createGalileoInclineView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateGalileoInclineSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -60,22 +61,30 @@ export function createGalileoInclineScene(
         {
           key: 'potentialEnergy',
           label: '重力势能 Eₚ',
-          value: `${state.potentialEnergy.toFixed(2)} J`
+          value: state.potentialEnergy,
+          digits: 2,
+          unit: 'J'
         },
         {
           key: 'kineticEnergy',
           label: '动能 Eₖ',
-          value: `${state.kineticEnergy.toFixed(2)} J`
+          value: state.kineticEnergy,
+          digits: 2,
+          unit: 'J'
         },
         {
           key: 'height',
           label: '当前位置 h',
-          value: `${state.height.toFixed(2)} m`
+          value: state.height,
+          digits: 2,
+          unit: 'm'
         },
         {
           key: 'velocity',
           label: '速度 v',
-          value: `${state.velocity.toFixed(2)} m/s`
+          value: state.velocity,
+          digits: 2,
+          unit: 'm/s'
         }
       ];
     }
@@ -89,6 +98,6 @@ export function createGalileoInclineScene(
     setTheme(theme: TeachingTheme): void;
     setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
     resize(): void;
-    getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+    getReadoutItems(): ReadoutItem[];
   };
 }

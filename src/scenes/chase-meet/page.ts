@@ -25,11 +25,19 @@ function formatReadout(
       label: '动画状态',
       value: isPlaying ? '运行中' : '已暂停'
     },
-    { key: 't', label: '当前时间', value: `${snapshot.state.t.toFixed(2)} s` },
+    {
+      key: 't',
+      label: '当前时间',
+      value: snapshot.state.t,
+      digits: 2,
+      unit: 's'
+    },
     {
       key: 'distance',
       label: '当前距离',
-      value: `${snapshot.state.distance.toFixed(2)} m`
+      value: snapshot.state.distance,
+      digits: 2,
+      unit: 'm'
     },
     { key: 'meet', label: '相遇信息', value: snapshot.state.meetMessage },
     {

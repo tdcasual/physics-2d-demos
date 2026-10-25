@@ -50,17 +50,23 @@ export function createElectricPendulumScene(
         {
           key: 'speed',
           label: '瞬时速度 v',
-          value: `${s.speed.toFixed(2)} v₀`
+          value: s.speed,
+          digits: 2,
+          unit: 'v₀'
         },
         {
           key: 'electricForce',
           label: '电场力 Fₑ',
-          value: `${s.electricForce.toFixed(2)} mg`
+          value: s.electricForce,
+          digits: 2,
+          unit: 'mg'
         },
         {
           key: 'tension',
           label: '绳张力 T',
-          value: `${s.tension.toFixed(2)} mg`
+          value: s.tension,
+          digits: 2,
+          unit: 'mg'
         }
       ];
     }

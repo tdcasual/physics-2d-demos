@@ -8,6 +8,7 @@ import {
   type BoundedMagneticParams,
   type BoundedMagneticState
 } from './scene.sim';
+import type { ReadoutItem } from '../../platform/readout';
 export type CreateBoundedMagneticSceneOptions = {
   canvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
@@ -26,7 +27,7 @@ export function createBoundedMagneticScene(
   getParams(): BoundedMagneticParams;
   setParams(next: Partial<BoundedMagneticParams>): BoundedMagneticParams;
   reset(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createBoundedMagneticSim();
   const view = createBoundedMagneticView({
@@ -72,17 +73,21 @@ export function createBoundedMagneticScene(
         {
           key: 'radius',
           label: '轨道半径 r',
-          value: `${s.orbitRadius.toFixed(1)}`
+          value: s.orbitRadius,
+          digits: 1
         },
         {
           key: 'position',
           label: '粒子位置 x',
-          value: `${s.position.x.toFixed(0)}`
+          value: s.position.x,
+          digits: 0
         },
         {
           key: 'time',
           label: '场内运动时间 t',
-          value: `${s.time.toFixed(2)} s`
+          value: s.time,
+          digits: 2,
+          unit: 's'
         },
         { key: 'status', label: '状态', value: s.status }
       ];

@@ -25,6 +25,7 @@ import {
   statusAt,
   totalBindingEnergy
 } from '../../src/scenes/binding-energy/scene.sim';
+import { normalizeReadoutItem } from '../../src/platform/readout';
 
 function nuclide(A: number) {
   return BINDING_ENERGY_DATA.find((point) => point.A === A);
@@ -249,7 +250,10 @@ describe('binding-energy URL params and readout', () => {
       showRegions: false
     });
     const items = Object.fromEntries(
-      scene.getReadoutItems().map((item) => [item.key, item.value])
+      scene
+        .getReadoutItems()
+        .map(normalizeReadoutItem)
+        .map((item) => [item.key, item.value])
     );
     expect(items.A).toBe('56');
     expect(items.binding).toBe('8.79 MeV');
@@ -266,13 +270,19 @@ describe('binding-energy URL params and readout', () => {
     const scene = createBindingEnergyScene({ canvas });
     scene.setParams({ A: 238, autoRun: false });
     const heavy = Object.fromEntries(
-      scene.getReadoutItems().map((item) => [item.key, item.value])
+      scene
+        .getReadoutItems()
+        .map(normalizeReadoutItem)
+        .map((item) => [item.key, item.value])
     );
     expect(heavy.gain).toBe('1.22 MeV');
     expect(heavy.status).toBe('重核·可裂变');
     scene.setParams({ A: 4 });
     const light = Object.fromEntries(
-      scene.getReadoutItems().map((item) => [item.key, item.value])
+      scene
+        .getReadoutItems()
+        .map(normalizeReadoutItem)
+        .map((item) => [item.key, item.value])
     );
     expect(light.gain).toBe('1.72 MeV');
     expect(light.status).toBe('轻核·可聚变');

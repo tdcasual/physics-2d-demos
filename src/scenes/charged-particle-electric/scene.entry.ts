@@ -47,12 +47,16 @@ export function createChargedParticleElectricScene(
       {
         key: 'v0',
         label: '入场初速度 v₀',
-        value: `${(state.v0 / 1e5).toFixed(2)} × 10⁵ m/s`
+        value: state.v0 / 1e5,
+        digits: 2,
+        unit: '× 10⁵ m/s'
       },
       {
         key: 'y',
         label: '出板侧移 |y|',
-        value: `${(Math.abs(state.y) * 100).toFixed(2)} cm`
+        value: Math.abs(state.y) * 100,
+        digits: 2,
+        unit: 'cm'
       },
       {
         key: 'tanTheta',
@@ -62,7 +66,9 @@ export function createChargedParticleElectricScene(
       {
         key: 'screenY',
         label: '屏上侧移 |Y|',
-        value: `${(Math.abs(state.screenY) * 100).toFixed(2)} cm`
+        value: Math.abs(state.screenY) * 100,
+        digits: 2,
+        unit: 'cm'
       }
     ];
   }

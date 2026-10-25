@@ -10,6 +10,7 @@ import {
   type PhotoelectricParams,
   type PhotoelectricState
 } from './scene.sim';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreatePhotoelectricSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -35,7 +36,7 @@ export function createPhotoelectricScene(
   getParams(): PhotoelectricParams;
   setParams(next: Partial<PhotoelectricParams>): PhotoelectricParams;
   reset(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createPhotoelectricSim();
   const view = createPhotoelectricView({
@@ -59,23 +60,29 @@ export function createPhotoelectricScene(
       sim.setParams(next)
     ),
     reset: base.wrapAction(() => sim.reset()),
-    getReadoutItems(): Array<{ key: string; label: string; value: string }> {
+    getReadoutItems(): ReadoutItem[] {
       const s = sim.getState();
       return [
         {
           key: 'current',
           label: '光电流',
-          value: `${s.current.toFixed(1)} μA`
+          value: s.current,
+          digits: 1,
+          unit: 'μA'
         },
         {
           key: 'stoppingVoltage',
           label: '遏止电压',
-          value: `${s.stoppingVoltage.toFixed(2)} V`
+          value: s.stoppingVoltage,
+          digits: 2,
+          unit: 'V'
         },
         {
           key: 'maxKineticEnergy',
           label: '初动能',
-          value: `${s.maxKineticEnergy.toFixed(2)} eV`
+          value: s.maxKineticEnergy,
+          digits: 2,
+          unit: 'eV'
         }
       ];
     }

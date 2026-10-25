@@ -8,6 +8,7 @@ import {
   type EarthGravityState
 } from './scene.sim';
 import { createEarthGravityView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateEarthGravitySceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -27,7 +28,7 @@ export function createEarthGravityScene(
   getSnapshot(): EarthGravityState;
   getParams(): EarthGravityParams;
   setParams(params: Partial<EarthGravityParams>): EarthGravityParams;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createEarthGravitySim();
   const view = createEarthGravityView({
@@ -56,17 +57,23 @@ export function createEarthGravityScene(
         {
           key: 'gravitationalForce',
           label: '万有引力 F万',
-          value: `${state.gravitationalForce.toFixed(4)} N`
+          value: state.gravitationalForce,
+          digits: 4,
+          unit: 'N'
         },
         {
           key: 'centripetalForce',
           label: '向心力 F向',
-          value: `${state.centripetalForce.toFixed(4)} N`
+          value: state.centripetalForce,
+          digits: 4,
+          unit: 'N'
         },
         {
           key: 'weight',
           label: '重力 G',
-          value: `${state.weight.toFixed(4)} N`
+          value: state.weight,
+          digits: 4,
+          unit: 'N'
         },
         { key: 'angle', label: '偏角 α', value: `${state.angle.toFixed(3)}°` }
       ];

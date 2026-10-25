@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createTortoiseHareScene } from '../../src/scenes/tortoise-hare/scene.entry';
+import { normalizeReadoutItem } from '../../src/platform/readout';
 
 describe('tortoise-hare entry（transport 状态机）', () => {
   it('startAll/pauseAll 驱动 getTransportState', () => {
@@ -63,7 +64,7 @@ describe('tortoise-hare entry（transport 状态机）', () => {
     scene.setParams({ preset: 'opposite' });
     scene.startAll();
     scene.step(4);
-    const items = scene.getReadoutItems();
+    const items = scene.getReadoutItems().map(normalizeReadoutItem);
     expect(items.find((i) => i.label === '时间 t')?.value).toBe('4.00 s');
     expect(items.find((i) => i.label === '乌龟 x')?.value).toBe('8.00 m');
     expect(items.find((i) => i.label === '兔子 x')?.value).toBe('8.00 m');

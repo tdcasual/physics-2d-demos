@@ -55,12 +55,16 @@ export function createClothesRodScene(
         {
           key: 'tensionLeft',
           label: '左绳张力 T₁',
-          value: `${s.tensionLeft.toFixed(1)} N`
+          value: s.tensionLeft,
+          digits: 1,
+          unit: 'N'
         },
         {
           key: 'tensionRight',
           label: '右绳张力 T₂',
-          value: `${s.tensionRight.toFixed(1)} N`
+          value: s.tensionRight,
+          digits: 1,
+          unit: 'N'
         }
       ];
     }

@@ -8,6 +8,7 @@ import {
   type BrownianParams,
   type BrownianState
 } from './scene.sim';
+import type { ReadoutItem } from '../../platform/readout';
 export type CreateBrownianSceneOptions = {
   canvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
@@ -26,7 +27,7 @@ export function createBrownianScene(
   setTheme(theme: TeachingTheme): void;
   setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
   resize(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createBrownianSim();
   const view = createBrownianView({
@@ -67,7 +68,9 @@ export function createBrownianScene(
         {
           key: 'molecularSpeed',
           label: '分子平均速率 v',
-          value: `${s.molecularSpeed.toFixed(2)} a.u.`
+          value: s.molecularSpeed,
+          digits: 2,
+          unit: 'a.u.'
         },
         {
           key: 'instantCollisions',
@@ -77,7 +80,8 @@ export function createBrownianScene(
         {
           key: 'netForce',
           label: '不平衡合力 F合',
-          value: `${s.netForce.toFixed(2)}`
+          value: s.netForce,
+          digits: 2
         },
         { key: 'status', label: '状态', value: s.status }
       ];

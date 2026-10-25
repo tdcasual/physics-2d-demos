@@ -8,6 +8,7 @@ import {
   type ConnectedBodiesInclineParams,
   type ConnectedBodiesInclineState
 } from './scene.sim';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateConnectedBodiesInclineSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -30,7 +31,7 @@ export function createConnectedBodiesInclineScene(
   setTheme(theme: TeachingTheme): void;
   setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
   resize(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createConnectedBodiesInclineSim();
   const view = createConnectedBodiesInclineView({
@@ -72,15 +73,31 @@ export function createConnectedBodiesInclineScene(
         {
           key: 'acceleration',
           label: '系统加速度',
-          value: `${s.acceleration.toFixed(2)} m/s²`
+          value: s.acceleration,
+          digits: 2,
+          unit: 'm/s²'
         },
-        { key: 'tension', label: '绳张力', value: `${s.tension.toFixed(2)} N` },
+        {
+          key: 'tension',
+          label: '绳张力',
+          value: s.tension,
+          digits: 2,
+          unit: 'N'
+        },
         {
           key: 'friction',
           label: '摩擦力',
-          value: `${s.friction.toFixed(2)} N`
+          value: s.friction,
+          digits: 2,
+          unit: 'N'
         },
-        { key: 'normal', label: '支持力', value: `${s.normal.toFixed(2)} N` }
+        {
+          key: 'normal',
+          label: '支持力',
+          value: s.normal,
+          digits: 2,
+          unit: 'N'
+        }
       ];
     }
   };

@@ -8,6 +8,7 @@ import {
   type BlockBoardState
 } from './scene.sim';
 import { createBlockBoardView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateBlockBoardSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -34,7 +35,7 @@ export function createBlockBoardScene(
   pauseAll(): void;
   attachGraphCanvas(canvas: HTMLCanvasElement): void;
   getTransportState(): { isPlaying: boolean; speed: number };
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
   subscribe(listener: () => void): () => void;
 } {
   const sim = createBlockBoardSim(options.initialParams);
@@ -52,39 +53,45 @@ export function createBlockBoardScene(
     onReadout: options.onReadout
   });
 
-  function getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string;
-  }> {
+  function getReadoutItems(): ReadoutItem[] {
     const state = sim.getState();
     return [
       {
         key: 'block-velocity',
         label: '木块速度 v₁',
-        value: `${state.blockVelocity.toFixed(2)} m/s`
+        value: state.blockVelocity,
+        digits: 2,
+        unit: 'm/s'
       },
       {
         key: 'board-velocity',
         label: '木板速度 v₂',
-        value: `${state.boardVelocity.toFixed(2)} m/s`
+        value: state.boardVelocity,
+        digits: 2,
+        unit: 'm/s'
       },
       {
         key: 'common-velocity',
         label: '共速 v_c',
-        value: `${state.commonVelocity.toFixed(2)} m/s`
+        value: state.commonVelocity,
+        digits: 2,
+        unit: 'm/s'
       },
       {
         key: 'relative-displacement',
         label: '相对位移 Δx',
-        value: `${state.relativeDisplacement.toFixed(2)} m`
+        value: state.relativeDisplacement,
+        digits: 2,
+        unit: 'm'
       },
       {
         key: 'sync-time',
         label: '共速时刻 t_c',
-        value: `${state.syncTime.toFixed(2)} s`
+        value: state.syncTime,
+        digits: 2,
+        unit: 's'
       },
-      { key: 'time', label: '时刻 t', value: `${state.time.toFixed(2)} s` },
+      { key: 'time', label: '时刻 t', value: state.time, digits: 2, unit: 's' },
       {
         key: 'status',
         label: '状态',

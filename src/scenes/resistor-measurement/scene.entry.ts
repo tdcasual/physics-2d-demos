@@ -12,6 +12,7 @@ import {
   type ResistorParams,
   type ResistorState
 } from './scene.sim';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateResistorSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -34,7 +35,7 @@ export function createResistorScene(
   getSnapshot(): ResistorState;
   getParams(): ResistorParams;
   setParams(params: Partial<ResistorParams>): ResistorParams;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
   subscribe(listener: () => void): () => void;
 } {
   const sim = createResistorSim(options.initialParams);
@@ -50,27 +51,29 @@ export function createResistorScene(
     getState: () => sim.getState(),
     onReadout: options.onReadout
   });
-  function getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string;
-  }> {
+  function getReadoutItems(): ReadoutItem[] {
     const state = sim.getState();
     return [
       {
         key: 'voltage',
         label: '电压表读数',
-        value: `${state.voltageMeasured.toFixed(2)} V`
+        value: state.voltageMeasured,
+        digits: 2,
+        unit: 'V'
       },
       {
         key: 'current',
         label: '电流表读数',
-        value: `${state.measuredCurrent.toFixed(3)} A`
+        value: state.measuredCurrent,
+        digits: 3,
+        unit: 'A'
       },
       {
         key: 'resistance',
         label: '测量电阻',
-        value: `${state.measuredResistance.toFixed(2)} Ω`
+        value: state.measuredResistance,
+        digits: 2,
+        unit: 'Ω'
       },
       {
         key: 'error',

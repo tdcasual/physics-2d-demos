@@ -9,6 +9,7 @@ import {
   type ElectricDeflectionState
 } from './scene.sim';
 import { createElectricDeflectionView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateElectricDeflectionSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -35,7 +36,7 @@ export function createElectricDeflectionScene(
   getParams(): ElectricDeflectionParams;
   setParams(next: Partial<ElectricDeflectionParams>): ElectricDeflectionParams;
   reset(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createElectricDeflectionSim();
   const view = createElectricDeflectionView({
@@ -76,17 +77,23 @@ export function createElectricDeflectionScene(
         {
           key: 'field',
           label: '场强 E',
-          value: `${state.field.toFixed(1)} V/m`
+          value: state.field,
+          digits: 1,
+          unit: 'V/m'
         },
         {
           key: 'deflection',
           label: '出板偏转 |y|',
-          value: `${(Math.abs(state.deflection) * 100).toFixed(1)} cm`
+          value: Math.abs(state.deflection) * 100,
+          digits: 1,
+          unit: 'cm'
         },
         {
           key: 'screen',
           label: '屏上偏转 |Y|',
-          value: `${(Math.abs(state.screenDeflection) * 100).toFixed(1)} cm`
+          value: Math.abs(state.screenDeflection) * 100,
+          digits: 1,
+          unit: 'cm'
         },
         {
           key: 'theta',

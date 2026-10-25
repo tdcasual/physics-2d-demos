@@ -8,6 +8,7 @@ import {
   type MetalRodParams,
   type MetalRodState
 } from './scene.sim';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateMetalRodSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -28,7 +29,7 @@ export function createMetalRodScene(
   getParams(): MetalRodParams;
   setParams(next: Partial<MetalRodParams>): MetalRodParams;
   reset(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createMetalRodSim();
   const view = createMetalRodView({
@@ -72,47 +73,69 @@ export function createMetalRodScene(
           {
             key: 'charge-sum',
             label: '累计 ΣIΔt',
-            value: `${c.stripSum.toFixed(3)} C`
+            value: c.stripSum,
+            digits: 3,
+            unit: 'C'
           },
           {
             key: 'charge-formula',
             label: 'BLx/R',
-            value: `${c.formula.toFixed(3)} C`
+            value: c.formula,
+            digits: 3,
+            unit: 'C'
           },
           {
             key: 'charge-x',
             label: '位移 x',
-            value: `${c.displacement.toFixed(3)} m`
+            value: c.displacement,
+            digits: 3,
+            unit: 'm'
           },
           {
             key: 'charge-current',
             label: '电流 I',
-            value: `${c.current.toFixed(3)} A`
+            value: c.current,
+            digits: 3,
+            unit: 'A'
           },
           {
             key: 'charge-velocity',
             label: '速度 v',
-            value: `${c.velocity.toFixed(3)} m/s`
+            value: c.velocity,
+            digits: 3,
+            unit: 'm/s'
           },
           {
             key: 'charge-time',
             label: '时间 t',
-            value: `${c.time.toFixed(2)} s`
+            value: c.time,
+            digits: 2,
+            unit: 's'
           }
         ];
       }
       return [
-        { key: 'emf', label: '电动势 E', value: `${s.emf.toFixed(2)} V` },
-        { key: 'current', label: '电流 I', value: `${s.current.toFixed(2)} A` },
+        { key: 'emf', label: '电动势 E', value: s.emf, digits: 2, unit: 'V' },
+        {
+          key: 'current',
+          label: '电流 I',
+          value: s.current,
+          digits: 2,
+          unit: 'A'
+        },
         {
           key: 'force',
           label: '安培力 Fₐ',
-          value: `${s.magneticForce.toFixed(2)} N`
+          value: s.magneticForce,
+          digits: 2,
+          unit: 'N'
         },
         {
           key: 'velocity',
           label: '瞬时速度 v',
-          value: `${s.velocity.toFixed(2)} m/s`
+          value: s.velocity,
+          digits: 2,
+          unit: 'm/s'
         },
         { key: 'status', label: '状态', value: s.status }
       ];

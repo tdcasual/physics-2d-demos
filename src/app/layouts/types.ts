@@ -92,14 +92,9 @@ export interface LayoutConfig {
   title?: string;
 }
 
-export interface ReadoutItem {
-  /** 投影 HUD 过滤键；迁移期可选，有 readoutKeys 的场景必须带 */
-  key?: string;
-  label: string;
-  value: string | number;
-  unit?: string;
-  layout?: 'half' | 'full';
-}
+/** 读数项定义与格式化在 platform/readout.ts（场景层可直接 import） */
+export type { ReadoutItem } from '../../platform/readout';
+import type { ReadoutItem } from '../../platform/readout';
 
 export interface TransportState {
   isPlaying: boolean;

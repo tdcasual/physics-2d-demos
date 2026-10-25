@@ -9,6 +9,7 @@ import {
   type GlassState
 } from './scene.sim';
 import { createGlassView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateGlassSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -29,7 +30,7 @@ export function createGlassScene(
   setTheme(theme: TeachingTheme): void;
   setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
   resize(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createGlassSim();
   const view = createGlassView({
@@ -85,7 +86,9 @@ export function createGlassScene(
         {
           key: 'lateral-shift',
           label: '侧移量 Δx',
-          value: `${s.lateralShift.toFixed(2)} cm`
+          value: s.lateralShift,
+          digits: 2,
+          unit: 'cm'
         }
       ];
     }

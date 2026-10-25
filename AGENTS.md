@@ -260,6 +260,20 @@ DOM: [场景选择] [预设按钮] [观察点管理] → [含滑块的参数区 
 { title: '原理说明', collapsed: true, span: 'full', fields: [{ type: 'custom', ... }] }
 ```
 
+## 读数（getReadoutItems）
+
+读数返回**数值 + 精度 + 单位**，由 `platform/readout.ts` 统一格式化（负零、非有限数、
+有效数字、单位拼接）：
+
+```typescript
+{ key: 'v', label: '速度 v', value: state.v, digits: 2, unit: 'm/s' }
+{ key: 'T', label: '周期 T', value: period, sigFigs: 3, unit: 's' }
+{ key: 'x', label: '位移 x', value: x, digits: 2, unit: 'm', signed: true }
+```
+
+不要自己 `toFixed` 拼字符串（仍接受字符串，但 `readout-format-contract` 冻结此类读数总数，
+只许减少）。类型 `ReadoutItem` 从 `platform/readout` 导入。
+
 ## 数据处理工作区与图像分析环节
 
 data-workspace 是可选布局能力，仅 `layoutConfig.dataWorkspace: true` 的场景挂载入口。标准结构：

@@ -27,6 +27,7 @@ import {
 } from '../../src/scenes/internal-energy/scene.sim';
 import { SidebarStateOwner } from '../../src/app/layouts/sidebar-state';
 import { WorkspaceUiState } from '../../src/app/layouts/workspace-ui-state';
+import { normalizeReadoutItem } from '../../src/platform/readout';
 
 describe('internal-energy chrome', () => {
   afterEach(() => {
@@ -163,7 +164,7 @@ describe('internal-energy chrome', () => {
       cHot: 100,
       cCold: 300
     });
-    const items = scene.getReadoutItems();
+    const items = scene.getReadoutItems().map(normalizeReadoutItem);
     const byKey = Object.fromEntries(items.map((item) => [item.key, item]));
     expect(byKey.tHot.label).toBe('T左');
     expect(byKey.tCold.label).toBe('T右');
@@ -310,7 +311,7 @@ describe('internal-energy chrome', () => {
     const scene = createInternalEnergyScene();
 
     scene.setParams({ mode: 'compress', ratio: 3 });
-    const compress = scene.getReadoutItems();
+    const compress = scene.getReadoutItems().map(normalizeReadoutItem);
     expect(compress.map((item) => item.label)).toEqual([
       'T',
       'p',
@@ -336,7 +337,7 @@ describe('internal-energy chrome', () => {
     scene.setParams({ mode: 'expand', ratio: 2, wet: true });
     scene.startAll();
     scene.step(3);
-    const expand = scene.getReadoutItems();
+    const expand = scene.getReadoutItems().map(normalizeReadoutItem);
     expect(expand.map((item) => item.key)).toEqual([
       'temperature',
       'pressure',
@@ -354,7 +355,7 @@ describe('internal-energy chrome', () => {
     );
 
     scene.setParams({ mode: 'heat', tHot: 80, tCold: 20 });
-    const heat = scene.getReadoutItems();
+    const heat = scene.getReadoutItems().map(normalizeReadoutItem);
     expect(heat.map((item) => item.label)).toEqual([
       'T左',
       'T右',

@@ -5,6 +5,7 @@ import type { SceneLifecycle } from '../types';
 import { createStandardSceneEntry } from '../scene-entry-helpers';
 import { createEmfAnalogySim, type EmfAnalogySnapshot } from './scene.sim';
 import { createEmfAnalogyView, type EmfViewMode } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateEmfAnalogySceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -14,9 +15,7 @@ export type CreateEmfAnalogySceneOptions = {
   onReadout?: (snapshot: EmfAnalogySnapshot) => void;
 };
 
-function formatReadout(
-  snapshot: EmfAnalogySnapshot
-): Array<{ key: string; label: string; value: string }> {
+function formatReadout(snapshot: EmfAnalogySnapshot): ReadoutItem[] {
   return [
     {
       key: 'state',
@@ -34,17 +33,23 @@ function formatReadout(
     {
       key: 'I',
       label: '电流 I',
-      value: `${snapshot.state.currentI.toFixed(2)} A`
+      value: snapshot.state.currentI,
+      digits: 2,
+      unit: 'A'
     },
     {
       key: 'Ir',
       label: '内阻压降 Ir',
-      value: `${snapshot.state.internalDrop.toFixed(2)} V`
+      value: snapshot.state.internalDrop,
+      digits: 2,
+      unit: 'V'
     },
     {
       key: 'U',
       label: '路端电压 U',
-      value: `${snapshot.state.terminalVoltage.toFixed(2)} V`
+      value: snapshot.state.terminalVoltage,
+      digits: 2,
+      unit: 'V'
     }
   ];
 }
@@ -61,7 +66,7 @@ export function createEmfAnalogyScene(
   setView(view: EmfViewMode): void;
   getView(): EmfViewMode;
   getSnapshot(): EmfAnalogySnapshot;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
   startAll(): void;
   pauseAll(): void;
   subscribe(listener: () => void): () => void;

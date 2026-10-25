@@ -11,6 +11,7 @@ import {
   type XtPresetId
 } from './scene.sim';
 import { createXtGraphView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type XtGraphParams = {
   /** 播放速度倍率（0.25–3，与 transport-bar 对齐） */
@@ -109,11 +110,11 @@ export function createXtGraphScene(options: CreateXtGraphSceneOptions = {}) {
       return { speed: timeScale };
     },
     getState: (): XtGraphState => sim.getState(),
-    getReadoutItems(): Array<{ key: string; label: string; value: string }> {
+    getReadoutItems(): ReadoutItem[] {
       const s = sim.getState();
       const sign = (v: number) => (v >= 0 ? '+' : '');
       return [
-        { key: 't', label: '时间 t', value: `${s.t.toFixed(2)} s` },
+        { key: 't', label: '时间 t', value: s.t, digits: 2, unit: 's' },
         { key: 'x', label: '位置 x', value: `${sign(s.x)}${s.x.toFixed(2)} m` },
         {
           key: 'v',

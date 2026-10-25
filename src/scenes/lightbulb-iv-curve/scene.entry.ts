@@ -47,22 +47,30 @@ export function createLightbulbScene(
         {
           key: 'voltage',
           label: '灯泡电压 U',
-          value: `${state.voltage.toFixed(2)} V`
+          value: state.voltage,
+          digits: 2,
+          unit: 'V'
         },
         {
           key: 'current',
           label: '干路电流 I',
-          value: `${state.current.toFixed(2)} A`
+          value: state.current,
+          digits: 2,
+          unit: 'A'
         },
         {
           key: 'resistance',
           label: '即时电阻 R',
-          value: `${state.resistance.toFixed(1)} Ω`
+          value: state.resistance,
+          digits: 1,
+          unit: 'Ω'
         },
         {
           key: 'power',
           label: '消耗功率 P',
-          value: `${state.power.toFixed(2)} W`
+          value: state.power,
+          digits: 2,
+          unit: 'W'
         }
       ];
     }

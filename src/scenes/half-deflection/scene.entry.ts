@@ -43,12 +43,16 @@ export function createHalfDeflectionScene(
       {
         key: 'meterReading',
         label: '电表读数',
-        value: `${state.meterReading.toFixed(2)} 格`
+        value: state.meterReading,
+        digits: 2,
+        unit: '格'
       },
       {
         key: 'halfTarget',
         label: '半偏目标',
-        value: `${state.halfTarget.toFixed(2)} 格`
+        value: state.halfTarget,
+        digits: 2,
+        unit: '格'
       },
       {
         key: 'estimate',

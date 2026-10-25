@@ -9,6 +9,7 @@ import {
   type FeederState
 } from './scene.sim';
 import { createFeederView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateFeederSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -29,7 +30,7 @@ export function createFeederScene(
   setTheme(theme: TeachingTheme): void;
   setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
   resize(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createFeederSim();
   const view = createFeederView({
@@ -70,27 +71,37 @@ export function createFeederScene(
         {
           key: 'water-depth',
           label: '水深 h',
-          value: `${s.effectiveDepth.toFixed(2)} m`
+          value: s.effectiveDepth,
+          digits: 2,
+          unit: 'm'
         },
         {
           key: 'buoyant-force',
           label: '浮力 F浮',
-          value: `${s.buoyantForce.toFixed(1)} N`
+          value: s.buoyantForce,
+          digits: 1,
+          unit: 'N'
         },
         {
           key: 'spring-force',
           label: '弹力 F弹',
-          value: `${s.springForce.toFixed(1)} N`
+          value: s.springForce,
+          digits: 1,
+          unit: 'N'
         },
         {
           key: 'sensor-resistance',
           label: '传感电阻 R₁',
-          value: `${s.sensorResistance.toFixed(2)} Ω`
+          value: s.sensorResistance,
+          digits: 2,
+          unit: 'Ω'
         },
         {
           key: 'meter-voltage',
           label: '电压表 U₀',
-          value: `${s.meterVoltage.toFixed(2)} V`
+          value: s.meterVoltage,
+          digits: 2,
+          unit: 'V'
         }
       ];
     }

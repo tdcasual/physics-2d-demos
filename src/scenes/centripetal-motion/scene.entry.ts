@@ -8,6 +8,7 @@ import {
   type CentripetalParams,
   type CentripetalState
 } from './scene.sim';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateCentripetalSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -27,7 +28,7 @@ export function createCentripetalScene(
   getSnapshot(): CentripetalState;
   getParams(): CentripetalParams;
   setParams(params: Partial<CentripetalParams>): CentripetalParams;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
   subscribe(listener: () => void): () => void;
   startAll(): void;
   pauseAll(): void;
@@ -46,32 +47,36 @@ export function createCentripetalScene(
     getState: () => sim.getState(),
     onReadout: options.onReadout
   });
-  function getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string;
-  }> {
+  function getReadoutItems(): ReadoutItem[] {
     const state = sim.getState();
     return [
       {
         key: 'speed',
         label: '线速度 v',
-        value: `${state.speed.toFixed(2)} m/s`
+        value: state.speed,
+        digits: 2,
+        unit: 'm/s'
       },
       {
         key: 'centripetalAcceleration',
         label: '向心加速度 aₙ',
-        value: `${state.centripetalAcceleration.toFixed(2)} m/s²`
+        value: state.centripetalAcceleration,
+        digits: 2,
+        unit: 'm/s²'
       },
       {
         key: 'centripetalForce',
         label: '向心合力 Fₙ',
-        value: `${state.centripetalForce.toFixed(2)} N`
+        value: state.centripetalForce,
+        digits: 2,
+        unit: 'N'
       },
       {
         key: 'period',
         label: '运动周期 T',
-        value: `${state.period.toFixed(2)} s`
+        value: state.period,
+        digits: 2,
+        unit: 's'
       }
     ];
   }

@@ -47,22 +47,30 @@ export function createConnectedBodiesScene(
         {
           key: 'accelerationA',
           label: '球 A 加速度',
-          value: `${s.accelerationA.toFixed(1)} m/s²`
+          value: s.accelerationA,
+          digits: 1,
+          unit: 'm/s²'
         },
         {
           key: 'accelerationB',
           label: '球 B 加速度',
-          value: `${s.accelerationB.toFixed(1)} m/s²`
+          value: s.accelerationB,
+          digits: 1,
+          unit: 'm/s²'
         },
         {
           key: 'upperForce',
           label: '上方连接力',
-          value: `${s.upperForce.toFixed(1)} N`
+          value: s.upperForce,
+          digits: 1,
+          unit: 'N'
         },
         {
           key: 'lowerForce',
           label: '下方连接力',
-          value: `${s.lowerForce.toFixed(1)} N`
+          value: s.lowerForce,
+          digits: 1,
+          unit: 'N'
         }
       ];
     }

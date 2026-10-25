@@ -10,6 +10,7 @@ import {
   type EnergyState
 } from './scene.sim';
 import { createEnergyView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateEnergySceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -30,7 +31,7 @@ export function createEnergyScene(
   setTheme(theme: TeachingTheme): void;
   setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
   resize(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createEnergySim();
   const view = createEnergyView({
@@ -72,22 +73,30 @@ export function createEnergyScene(
         {
           key: 'totalMomentum',
           label: '总动量 Σp',
-          value: `${s.totalMomentum.toFixed(2)} 千克·米/秒`
+          value: s.totalMomentum,
+          digits: 2,
+          unit: '千克·米/秒'
         },
         {
           key: 'totalEnergy',
           label: '总动能 ΣEₖ',
-          value: `${s.totalEnergy.toFixed(2)} 焦耳`
+          value: s.totalEnergy,
+          digits: 2,
+          unit: '焦耳'
         },
         {
           key: 'velocityA',
           label: 'A球末速度',
-          value: `${s.velocityA.toFixed(2)} 米/秒`
+          value: s.velocityA,
+          digits: 2,
+          unit: '米/秒'
         },
         {
           key: 'velocityB',
           label: 'B球末速度',
-          value: `${s.velocityB.toFixed(2)} 米/秒`
+          value: s.velocityB,
+          digits: 2,
+          unit: '米/秒'
         },
         {
           key: 'collision',

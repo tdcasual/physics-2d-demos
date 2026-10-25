@@ -19,6 +19,7 @@ import {
   stageTransform,
   xToPx
 } from '../../src/scenes/single-slit/scene.sim';
+import { normalizeReadoutItem } from '../../src/platform/readout';
 
 describe('single-slit Fraunhofer intensity', () => {
   it('keeps sinc² continuous at β = 0 and bounded in [0, 1]', () => {
@@ -212,7 +213,10 @@ describe('single-slit entry readout', () => {
       autoScan: false
     });
     const items = Object.fromEntries(
-      scene.getReadoutItems().map((item) => [item.key, item.value])
+      scene
+        .getReadoutItems()
+        .map(normalizeReadoutItem)
+        .map((item) => [item.key, item.value])
     );
     expect(items.theta).toMatch(/°$/);
     expect(Number.parseFloat(items.intensity ?? '')).toBeLessThan(0.001);

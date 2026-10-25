@@ -9,6 +9,7 @@ import {
   type DeflectionCharge
 } from './scene.sim';
 import { createAlternatingElectricDeflectionView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateAlternatingElectricDeflectionSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -37,7 +38,7 @@ export function createAlternatingElectricDeflectionScene(
     next: Partial<AlternatingElectricDeflectionParams>
   ): AlternatingElectricDeflectionParams;
   reset(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createAlternatingElectricDeflectionSim();
   const view = createAlternatingElectricDeflectionView({
@@ -76,7 +77,13 @@ export function createAlternatingElectricDeflectionScene(
     getReadoutItems() {
       const state = sim.getState();
       return [
-        { key: 'time', label: '飞行时间', value: `${state.time.toFixed(2)} T` },
+        {
+          key: 'time',
+          label: '飞行时间',
+          value: state.time,
+          digits: 2,
+          unit: 'T'
+        },
         {
           key: 'voltage',
           label: '即时电压',
@@ -85,12 +92,16 @@ export function createAlternatingElectricDeflectionScene(
         {
           key: 'velocityY',
           label: '竖直速度',
-          value: `${(state.velocityY / Math.max(1e-9, state.velocityScale)).toFixed(2)} vₘ`
+          value: state.velocityY / Math.max(1e-9, state.velocityScale),
+          digits: 2,
+          unit: 'vₘ'
         },
         {
           key: 'positionY',
           label: '竖直位移',
-          value: `${(state.positionY / Math.max(1e-9, state.positionScale)).toFixed(3)} a₀T²`
+          value: state.positionY / Math.max(1e-9, state.positionScale),
+          digits: 3,
+          unit: 'a₀T²'
         }
       ];
     }

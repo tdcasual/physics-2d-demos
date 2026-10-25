@@ -12,6 +12,7 @@ import {
   type InterferenceFormulaState
 } from './scene.sim';
 import { createInterferenceFormulaView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateInterferenceFormulaSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -33,7 +34,7 @@ export function createInterferenceFormulaScene(
   ): InterferenceFormulaParams;
   getParams(): InterferenceFormulaParams;
   attachGraphCanvas(canvas: HTMLCanvasElement): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
   subscribe(listener: () => void): () => void;
 } {
   const sim = createInterferenceFormulaSim({
@@ -57,11 +58,7 @@ export function createInterferenceFormulaScene(
     onReadout: options.onReadout
   });
 
-  function getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string;
-  }> {
+  function getReadoutItems(): ReadoutItem[] {
     const s = sim.getState();
     const { lambda, L, d } = s.params;
     const x = s.deltaX;
@@ -72,12 +69,14 @@ export function createInterferenceFormulaScene(
 
     return [
       { key: 'lambda', label: '波长 λ', value: `${lambda} nm` },
-      { key: 'L', label: '缝屏距 L', value: `${L.toFixed(1)} m` },
-      { key: 'd', label: '缝间距 d', value: `${d.toFixed(1)} mm` },
+      { key: 'L', label: '缝屏距 L', value: L, digits: 1, unit: 'm' },
+      { key: 'd', label: '缝间距 d', value: d, digits: 1, unit: 'mm' },
       {
         key: 'delta-x',
         label: '条纹间距 Δx',
-        value: `${(x * 1e3).toFixed(2)} mm`
+        value: x * 1e3,
+        digits: 2,
+        unit: 'mm'
       },
       {
         key: 'theta',

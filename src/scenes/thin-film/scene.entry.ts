@@ -12,6 +12,7 @@ import {
   type ThinFilmState
 } from './scene.sim';
 import { createThinFilmView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateThinFilmSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -34,7 +35,7 @@ export function createThinFilmScene(
   setCursorY(y: number): void;
   pickCursor(cssX: number, cssY: number): number | null;
   attachGraphCanvas(canvas: HTMLCanvasElement): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
   subscribe(listener: () => void): () => void;
 } {
   const sim = createThinFilmSim({
@@ -62,11 +63,7 @@ export function createThinFilmScene(
     onReadout: options.onReadout
   });
 
-  function getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string;
-  }> {
+  function getReadoutItems(): ReadoutItem[] {
     const s = sim.getState();
     const { lambda, dTop, dBottom, n, whiteLight, profile } = s.params;
     return [
@@ -86,12 +83,16 @@ export function createThinFilmScene(
       {
         key: 'd-local',
         label: '观察点厚度 d',
-        value: `${s.localThickness.toFixed(0)} nm`
+        value: s.localThickness,
+        digits: 0,
+        unit: 'nm'
       },
       {
         key: 'path-diff',
         label: '光程差 Δ',
-        value: `${(s.pathDiff / 1e3).toFixed(2)} μm`
+        value: s.pathDiff / 1e3,
+        digits: 2,
+        unit: 'μm'
       },
       { key: 'order', label: '级次 m', value: s.order.toFixed(1) },
       {

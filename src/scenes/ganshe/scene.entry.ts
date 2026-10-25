@@ -21,6 +21,7 @@ import {
   getObserverColor,
   type XtGraphRenderer
 } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 const defaultParams: WaveParams = {
   freq1: gansheMeta.defaultParams.freq1,
@@ -53,28 +54,20 @@ export type CreateGansheSceneOptions = {
   };
 };
 
-function formatReadout(state: WaveState): Array<{
-  key: string;
-  label: string;
-  value: string | number;
-  layout?: 'half' | 'full';
-}> {
+function formatReadout(state: WaveState): ReadoutItem[] {
   const p = state.interference;
-  const items: Array<{
-    key: string;
-    label: string;
-    value: string | number;
-    layout?: 'half' | 'full';
-  }> = [
-    { key: 't', label: '时间 t', value: `${state.time.toFixed(2)} s` },
+  const items: ReadoutItem[] = [
+    { key: 't', label: '时间 t', value: state.time, digits: 2, unit: 's' },
     {
       key: 'x',
       label: '观察点 x',
-      value: `${state.params.observerX.toFixed(2)} m`
+      value: state.params.observerX,
+      digits: 2,
+      unit: 'm'
     },
     { key: 'dphase', label: '相对相位差', value: `${p.dphaseDeg.toFixed(0)}°` },
-    { key: 'y', label: '瞬时位移', value: `${p.ySum.toFixed(2)} cm` },
-    { key: 'A', label: '理论振幅', value: `${p.A_theory.toFixed(1)} cm` },
+    { key: 'y', label: '瞬时位移', value: p.ySum, digits: 2, unit: 'cm' },
+    { key: 'A', label: '理论振幅', value: p.A_theory, digits: 1, unit: 'cm' },
     {
       key: 'intensity',
       label: '干涉强度',
@@ -116,12 +109,7 @@ export function createGansheScene(
   getState(): WaveState;
   getParams(): WaveParams;
   setParams(next: Partial<WaveParams>): WaveParams;
-  getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string | number;
-    layout?: 'half' | 'full';
-  }>;
+  getReadoutItems(): ReadoutItem[];
   setTimeScale(scale: number): void;
   getTimeScale(): number;
   subscribe(listener: () => void): () => void;
@@ -339,12 +327,7 @@ export function createGansheScene(
       notify();
       return params;
     },
-    getReadoutItems(): Array<{
-      key: string;
-      label: string;
-      value: string | number;
-      layout?: 'half' | 'full';
-    }> {
+    getReadoutItems(): ReadoutItem[] {
       return formatReadout(sim.getState());
     },
     setTimeScale(scale: number): void {

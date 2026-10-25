@@ -27,7 +27,7 @@ const WATCHLIST: Record<string, number> = {
   'src/scenes/molecular-potential/scene.view.ts': 847,
   'src/scenes/dynamic-circle/scene.sim.ts': 839,
   'src/scenes/accel-force/scene.sim.ts': 825,
-  'src/scenes/double-slit/scene.entry.ts': 821,
+  'src/scenes/double-slit/scene.entry.ts': 826,
   'src/scenes/mechanical-energy/scene.view.ts': 815,
   'src/scenes/block-board/scene.sim.ts': 815,
   'src/scenes/double-slit/data-task.ts': 810,

@@ -13,6 +13,7 @@ import {
   controlToParam
 } from '../../src/platform/param-binding';
 import { syncControlsFromLiveParams } from '../../src/app/control-projection';
+import { normalizeReadoutItem } from '../../src/platform/readout';
 
 const bindings = collectBindings(vtIntegralControlsSchema);
 
@@ -90,7 +91,10 @@ function hidden(el: HTMLElement, selector: string): boolean {
 }
 
 function readout(scene: ReturnType<typeof createVtIntegralScene>, key: string) {
-  const item = scene.getReadoutItems().find((r) => r.key === key);
+  const item = scene
+    .getReadoutItems()
+    .map(normalizeReadoutItem)
+    .find((r) => r.key === key);
   if (!item) throw new Error(`readout ${key} missing`);
   return item;
 }

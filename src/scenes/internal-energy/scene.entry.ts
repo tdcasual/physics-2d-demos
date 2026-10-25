@@ -11,6 +11,7 @@ import {
   type InternalEnergyParams,
   type InternalEnergyState
 } from './scene.sim';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateInternalEnergySceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -37,7 +38,7 @@ export function createInternalEnergyScene(
   getSnapshot(): InternalEnergyState;
   getParams(): InternalEnergyParams;
   setParams(params: Partial<InternalEnergyParams>): InternalEnergyParams;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
   subscribe(listener: () => void): () => void;
   attachGraphCanvas(canvas: HTMLCanvasElement): void;
   startAll(): void;
@@ -69,14 +70,18 @@ export function createInternalEnergyScene(
         {
           key: 'tHot',
           label: 'T左',
-          value: `${s.tHotNow.toFixed(1)} °C`
+          value: s.tHotNow,
+          digits: 1,
+          unit: '°C'
         },
         {
           key: 'tCold',
           label: 'T右',
-          value: `${s.tColdNow.toFixed(1)} °C`
+          value: s.tColdNow,
+          digits: 1,
+          unit: '°C'
         },
-        { key: 'tEq', label: 'Teq', value: `${s.tEq.toFixed(1)} °C` },
+        { key: 'tEq', label: 'Teq', value: s.tEq, digits: 1, unit: '°C' },
         { key: 'work', label: 'W', value: signed(s.work, 2, 'J') },
         { key: 'heatHot', label: 'Q左', value: signed(s.heatHot, 1, 'J') },
         { key: 'heatCold', label: 'Q右', value: signed(s.heatCold, 1, 'J') },
@@ -92,17 +97,23 @@ export function createInternalEnergyScene(
       {
         key: 'temperature',
         label: 'T',
-        value: `${s.temperature.toFixed(1)} °C`
+        value: s.temperature,
+        digits: 1,
+        unit: '°C'
       },
       {
         key: 'pressure',
         label: 'p',
-        value: `${s.pressure.toFixed(0)} kPa`
+        value: s.pressure,
+        digits: 0,
+        unit: 'kPa'
       },
       {
         key: 'volume',
         label: 'V',
-        value: `${s.volume.toFixed(1)} mL`
+        value: s.volume,
+        digits: 1,
+        unit: 'mL'
       },
       { key: 'work', label: 'W', value: signed(s.work, 2, 'J') },
       { key: 'heat', label: 'Q', value: signed(s.heat, 2, 'J') },

@@ -9,6 +9,7 @@ import {
   type FreeFallState
 } from './scene.sim';
 import { createFreeFallView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateFreeFallSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -58,12 +59,16 @@ export function createFreeFallScene(options: CreateFreeFallSceneOptions = {}) {
         {
           key: 'time',
           label: '运动时刻 t',
-          value: `${state.time.toFixed(2)} s`
+          value: state.time,
+          digits: 2,
+          unit: 's'
         },
         {
           key: 'height',
           label: '实时高度 h',
-          value: `${state.height.toFixed(2)} m`
+          value: state.height,
+          digits: 2,
+          unit: 'm'
         },
         {
           key: 'velocity',
@@ -73,7 +78,9 @@ export function createFreeFallScene(options: CreateFreeFallSceneOptions = {}) {
         {
           key: 'acceleration',
           label: '加速度 a',
-          value: `${state.acceleration.toFixed(1)} m/s²`
+          value: state.acceleration,
+          digits: 1,
+          unit: 'm/s²'
         }
       ];
     }
@@ -86,7 +93,7 @@ export function createFreeFallScene(options: CreateFreeFallSceneOptions = {}) {
     setTheme(theme: TeachingTheme): void;
     setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
     resize(): void;
-    getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+    getReadoutItems(): ReadoutItem[];
   };
 }
 

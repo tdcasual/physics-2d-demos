@@ -48,17 +48,23 @@ export function createThreeForcesScene(
         {
           key: 'springX',
           label: '形变量 x',
-          value: `${s.springDisplacement.toFixed(2)} m`
+          value: s.springDisplacement,
+          digits: 2,
+          unit: 'm'
         },
         {
           key: 'springK',
           label: '劲度系数 k',
-          value: `${s.params.springK.toFixed(0)} N/m`
+          value: s.params.springK,
+          digits: 0,
+          unit: 'N/m'
         },
         {
           key: 'springForce',
           label: 'F弹',
-          value: `${s.springForce.toFixed(1)} N`
+          value: s.springForce,
+          digits: 1,
+          unit: 'N'
         },
         { key: 'status', label: '状态', value: s.status },
         {
@@ -71,32 +77,54 @@ export function createThreeForcesScene(
     }
     return [
       { key: 'tab', label: '性质力', value: tabLabel(s.params.tab) },
-      { key: 'gravity', label: '重力 G', value: `${s.gravity.toFixed(1)} N` },
+      {
+        key: 'gravity',
+        label: '重力 G',
+        value: s.gravity,
+        digits: 1,
+        unit: 'N'
+      },
       {
         key: 'g1',
         label: '下滑分力 G₁',
-        value: `${s.downslope.toFixed(1)} N`
+        value: s.downslope,
+        digits: 1,
+        unit: 'N'
       },
       {
         key: 'g2',
         label: '垂直分力 G₂',
-        value: `${s.perpendicular.toFixed(1)} N`
+        value: s.perpendicular,
+        digits: 1,
+        unit: 'N'
       },
-      { key: 'normal', label: '支持力 FN', value: `${s.normal.toFixed(1)} N` },
+      {
+        key: 'normal',
+        label: '支持力 FN',
+        value: s.normal,
+        digits: 1,
+        unit: 'N'
+      },
       {
         key: 'friction',
         label: '摩擦力 f',
-        value: `${s.friction.toFixed(1)} N`
+        value: s.friction,
+        digits: 1,
+        unit: 'N'
       },
       {
         key: 'frictionMax',
         label: 'f_s,max',
-        value: `${s.frictionMax.toFixed(1)} N`
+        value: s.frictionMax,
+        digits: 1,
+        unit: 'N'
       },
       {
         key: 'acceleration',
         label: '加速度 a',
-        value: `${s.acceleration.toFixed(2)} m/s²`
+        value: s.acceleration,
+        digits: 2,
+        unit: 'm/s²'
       },
       { key: 'status', label: '状态', value: s.status },
       {

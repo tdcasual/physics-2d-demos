@@ -10,6 +10,7 @@ import {
   tickerTimerConstants
 } from './scene.sim';
 import { createTickerTimerView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateTickerTimerSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -41,7 +42,7 @@ export function createTickerTimerScene(
   setParams(params: Partial<TickerTimerParams>): TickerTimerParams;
   powerOn(): void;
   releaseTape(): boolean;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
   subscribe(listener: () => void): () => void;
 } {
   const sim = createTickerTimerSim(options.initialParams);
@@ -57,11 +58,7 @@ export function createTickerTimerScene(
     getState: () => sim.getState(),
     onReadout: options.onReadout
   });
-  function getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string;
-  }> {
+  function getReadoutItems(): ReadoutItem[] {
     const state = sim.getState();
     const status =
       state.error ??
@@ -76,13 +73,17 @@ export function createTickerTimerScene(
       {
         key: 'timer-period',
         label: '周期 T',
-        value: `${tickerTimerConstants.tickPeriod.toFixed(3)} s`
+        value: tickerTimerConstants.tickPeriod,
+        digits: 3,
+        unit: 's'
       },
       { key: 'dot-count', label: '打点数', value: String(state.dots.length) },
       {
         key: 'instant-velocity',
         label: '瞬时速度',
-        value: `${state.currentV.toFixed(2)} m/s`
+        value: state.currentV,
+        digits: 2,
+        unit: 'm/s'
       },
       {
         key: 'measured-acceleration',

@@ -16,6 +16,7 @@ import {
   wrapDisplacementTime,
   zeroCrossingTime
 } from '../../src/scenes/displacement-time/scene.sim';
+import { normalizeReadoutItem } from '../../src/platform/readout';
 
 function trapArea(segment: ReturnType<typeof vtAreaSegments>[number]): number {
   const t0 = segment.points[0]!.t;
@@ -199,7 +200,10 @@ describe('displacement-time entry readout', () => {
     scene.setParams({ v0: 5, acceleration: 4, autoRun: false });
     scene.stepFrame(3.73);
     const items = Object.fromEntries(
-      scene.getReadoutItems().map((item) => [item.key, item.value])
+      scene
+        .getReadoutItems()
+        .map(normalizeReadoutItem)
+        .map((item) => [item.key, item.value])
     );
     expect(items.time).toBe('3.73 s');
     expect(items.velocity).toBe('19.92 m/s');

@@ -13,6 +13,7 @@ import {
 } from './scene.sim';
 import { createMicrometerView } from './scene.view';
 import { micrometerMeta } from './scene.meta';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateMicrometerSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -31,7 +32,7 @@ export function createMicrometerScene(
   getState(): MicrometerState;
   setParams(params: Partial<MicrometerParams>): MicrometerParams;
   getParams(): MicrometerParams;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
   setRevealAnswer(value: boolean): void;
   subscribe(listener: () => void): () => void;
 } {
@@ -57,11 +58,7 @@ export function createMicrometerScene(
     (options.mode ?? 'normal') !== 'presentation' ||
     Boolean(options.demoHints?.revealAnswer);
 
-  function getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string;
-  }> {
+  function getReadoutItems(): ReadoutItem[] {
     if (!revealed) {
       return [{ key: 'status', label: '读数', value: '点击「揭示」后显示' }];
     }
@@ -70,17 +67,23 @@ export function createMicrometerScene(
       {
         key: 'reading',
         label: '测量读数',
-        value: `${s.reading.toFixed(3)} mm`
+        value: s.reading,
+        digits: 3,
+        unit: 'mm'
       },
       {
         key: 'main',
         label: '固定刻度',
-        value: `${s.mainScaleReading.toFixed(1)} mm`
+        value: s.mainScaleReading,
+        digits: 1,
+        unit: 'mm'
       },
       {
         key: 'drum',
         label: '微分筒读数',
-        value: `${s.drumReading.toFixed(1)} 格`
+        value: s.drumReading,
+        digits: 1,
+        unit: '格'
       },
       {
         key: 'half-mm',

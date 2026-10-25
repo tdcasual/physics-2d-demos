@@ -285,7 +285,9 @@ export function createProjectileLabScene(
         {
           key: 'release',
           label: '释放高度 h',
-          value: `${state.params.releaseH.toFixed(1)} cm`
+          value: state.params.releaseH,
+          digits: 1,
+          unit: 'cm'
         },
         {
           key: 'tilt',
@@ -295,7 +297,9 @@ export function createProjectileLabScene(
         {
           key: 'plate',
           label: '挡板位置 y',
-          value: `${state.params.plateY.toFixed(0)} cm`
+          value: state.params.plateY,
+          digits: 0,
+          unit: 'cm'
         },
         {
           key: 'marks',

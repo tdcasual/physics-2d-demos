@@ -8,6 +8,7 @@ import {
   type ClosedPowerState
 } from './scene.sim';
 import { createClosedPowerView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateClosedPowerSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -28,7 +29,7 @@ export function createClosedPowerScene(
   getParams(): ClosedPowerParams;
   setParams(next: Partial<ClosedPowerParams>): ClosedPowerParams;
   reset(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createClosedPowerSim();
   const view = createClosedPowerView({
@@ -69,27 +70,37 @@ export function createClosedPowerScene(
         {
           key: 'current',
           label: '回路电流 I',
-          value: `${state.current.toFixed(2)} A`
+          value: state.current,
+          digits: 2,
+          unit: 'A'
         },
         {
           key: 'terminalVoltage',
           label: '路端电压 U',
-          value: `${state.terminalVoltage.toFixed(2)} V`
+          value: state.terminalVoltage,
+          digits: 2,
+          unit: 'V'
         },
         {
           key: 'outputPower',
           label: '输出功率 P出',
-          value: `${state.outputPower.toFixed(2)} W`
+          value: state.outputPower,
+          digits: 2,
+          unit: 'W'
         },
         {
           key: 'internalPower',
           label: '内阻功率 P内',
-          value: `${state.internalPower.toFixed(2)} W`
+          value: state.internalPower,
+          digits: 2,
+          unit: 'W'
         },
         {
           key: 'efficiency',
           label: '供电效率 η',
-          value: `${(state.efficiency * 100).toFixed(1)} %`
+          value: state.efficiency * 100,
+          digits: 1,
+          unit: '%'
         }
       ];
     }

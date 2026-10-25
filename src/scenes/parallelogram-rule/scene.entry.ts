@@ -7,6 +7,7 @@ import {
   type ParallelogramState
 } from './scene.sim';
 import { createParallelogramView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateParallelogramSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -39,11 +40,7 @@ export function createParallelogramScene(
     onReadout: options.onReadout
   });
 
-  function getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string;
-  }> {
+  function getReadoutItems(): ReadoutItem[] {
     const state = sim.getState();
     const verdict = state.samePoint
       ? state.sameDirection
@@ -59,12 +56,16 @@ export function createParallelogramScene(
       {
         key: 'f1',
         label: 'F₁',
-        value: `${state.params.f1.toFixed(2)} N`
+        value: state.params.f1,
+        digits: 2,
+        unit: 'N'
       },
       {
         key: 'f2',
         label: 'F₂',
-        value: `${state.params.f2.toFixed(2)} N`
+        value: state.params.f2,
+        digits: 2,
+        unit: 'N'
       },
       {
         key: 'angle',
@@ -74,12 +75,16 @@ export function createParallelogramScene(
       {
         key: 'theory',
         label: '理论合力 F',
-        value: `${state.theoreticalMagnitude.toFixed(2)} N`
+        value: state.theoreticalMagnitude,
+        digits: 2,
+        unit: 'N'
       },
       {
         key: 'measured',
         label: '实测合力 F′',
-        value: `${state.measuredMagnitude.toFixed(2)} N`
+        value: state.measuredMagnitude,
+        digits: 2,
+        unit: 'N'
       },
       {
         key: 'magnitude-error',

@@ -8,6 +8,7 @@ import {
   type UniformElectricAccelerationState
 } from './scene.sim';
 import { createUniformElectricAccelerationView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateUniformElectricAccelerationSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -30,7 +31,7 @@ export function createUniformElectricAccelerationScene(
     next: Partial<UniformElectricAccelerationParams>
   ): UniformElectricAccelerationParams;
   reset(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createUniformElectricAccelerationSim();
   const view = createUniformElectricAccelerationView({
@@ -71,7 +72,9 @@ export function createUniformElectricAccelerationScene(
         {
           key: 'electricField',
           label: '电场强度 E',
-          value: `${state.electricField.toFixed(0)} N/C`
+          value: state.electricField,
+          digits: 0,
+          unit: 'N/C'
         },
         {
           key: 'force',

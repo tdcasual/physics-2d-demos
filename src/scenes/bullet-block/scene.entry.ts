@@ -8,6 +8,7 @@ import {
   type BulletBlockState
 } from './scene.sim';
 import { createBulletBlockView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateBulletBlockSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -34,11 +35,7 @@ export function createBulletBlockScene(
     onReadout: options.onReadout
   });
 
-  function getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string;
-  }> {
+  function getReadoutItems(): ReadoutItem[] {
     const state = sim.getState();
     return [
       {
@@ -49,14 +46,22 @@ export function createBulletBlockScene(
       {
         key: 'common-speed',
         label: '理论共速',
-        value: `${bulletBlockCommonSpeed(state.params.speed, state.params.bulletMass, state.params.blockMass).toFixed(2)} m/s`
+        value: bulletBlockCommonSpeed(
+          state.params.speed,
+          state.params.bulletMass,
+          state.params.blockMass
+        ),
+        digits: 2,
+        unit: 'm/s'
       },
       {
         key: 'max-depth',
         label: '最大深度',
-        value: `${state.maxDepth.toFixed(2)} m`
+        value: state.maxDepth,
+        digits: 2,
+        unit: 'm'
       },
-      { key: 'heat', label: '内能 Q', value: `${state.heat.toFixed(1)} J` }
+      { key: 'heat', label: '内能 Q', value: state.heat, digits: 1, unit: 'J' }
     ];
   }
 

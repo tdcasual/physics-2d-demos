@@ -294,14 +294,16 @@ export function createTickerTapeScene(
       const s = sim.getState();
       const items = [
         { key: 'period', label: '打点周期', value: '0.02 s' },
-        { key: 'T', label: '计数间隔 T', value: `${s.T.toFixed(2)} s` },
+        { key: 'T', label: '计数间隔 T', value: s.T, digits: 2, unit: 's' },
         { key: 'tape', label: '纸带', value: s.tapeKind }
       ];
       if (s.showA && s.aMs2 !== null) {
         items.push({
           key: 'a',
           label: 'a（逐差）',
-          value: `${s.aMs2.toFixed(2)} m/s²`
+          value: s.aMs2,
+          digits: 2,
+          unit: 'm/s²'
         });
       }
       return items;

@@ -9,6 +9,7 @@ import {
   type LenzState
 } from './scene.sim';
 import { createLenzLawView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateLenzLawSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -58,22 +59,30 @@ export function createLenzLawScene(options: CreateLenzLawSceneOptions = {}) {
         {
           key: 'flux',
           label: '原磁通量 Φ',
-          value: `${(state.flux * 1000).toFixed(2)} mWb`
+          value: state.flux * 1000,
+          digits: 2,
+          unit: 'mWb'
         },
         {
           key: 'emf',
           label: '感应电动势 E',
-          value: `${state.emf.toFixed(2)} V`
+          value: state.emf,
+          digits: 2,
+          unit: 'V'
         },
         {
           key: 'current',
           label: '感应电流 I',
-          value: `${state.current.toFixed(2)} A`
+          value: state.current,
+          digits: 2,
+          unit: 'A'
         },
         {
           key: 'force',
           label: '安培力 F',
-          value: `${state.force.toFixed(2)} N`
+          value: state.force,
+          digits: 2,
+          unit: 'N'
         }
       ];
     }
@@ -86,7 +95,7 @@ export function createLenzLawScene(options: CreateLenzLawSceneOptions = {}) {
     setTheme(theme: TeachingTheme): void;
     setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
     resize(): void;
-    getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+    getReadoutItems(): ReadoutItem[];
   };
 }
 

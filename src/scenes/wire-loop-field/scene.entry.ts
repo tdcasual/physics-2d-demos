@@ -8,6 +8,7 @@ import {
   type WireLoopFieldState
 } from './scene.sim';
 import { createWireLoopFieldView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateWireLoopFieldSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -27,7 +28,7 @@ export function createWireLoopFieldScene(
   setTheme(theme: TeachingTheme): void;
   setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
   resize(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createWireLoopFieldSim();
   const view = createWireLoopFieldView({
@@ -65,17 +66,33 @@ export function createWireLoopFieldScene(
     getReadoutItems() {
       const s = sim.getState();
       return [
-        { key: 'flux', label: '磁通量 Φ', value: `${s.flux.toFixed(3)} Wb` },
-        { key: 'emf', label: '感应电动势 E', value: `${s.emf.toFixed(2)} V` },
+        {
+          key: 'flux',
+          label: '磁通量 Φ',
+          value: s.flux,
+          digits: 3,
+          unit: 'Wb'
+        },
+        {
+          key: 'emf',
+          label: '感应电动势 E',
+          value: s.emf,
+          digits: 2,
+          unit: 'V'
+        },
         {
           key: 'current',
           label: '感应电流 I',
-          value: `${s.current.toFixed(2)} A`
+          value: s.current,
+          digits: 2,
+          unit: 'A'
         },
         {
           key: 'magneticForce',
           label: '安培力 F安',
-          value: `${s.magneticForce.toFixed(2)} N`
+          value: s.magneticForce,
+          digits: 2,
+          unit: 'N'
         }
       ];
     }

@@ -8,6 +8,7 @@ import {
   type RingPendulumParams,
   type RingPendulumState
 } from './scene.sim';
+import type { ReadoutItem } from '../../platform/readout';
 export type CreateRingPendulumSceneOptions = {
   canvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
@@ -31,7 +32,7 @@ export function createRingPendulumScene(
   getParams(): RingPendulumParams;
   setParams(next: Partial<RingPendulumParams>): RingPendulumParams;
   reset(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createRingPendulumSim();
   const view = createRingPendulumView({
@@ -55,23 +56,29 @@ export function createRingPendulumScene(
       sim.setParams(next)
     ),
     reset: base.wrapAction(() => sim.reset()),
-    getReadoutItems(): Array<{ key: string; label: string; value: string }> {
+    getReadoutItems(): ReadoutItem[] {
       const s = sim.getState();
       return [
         {
           key: 'ringVelocity',
           label: '圆环速度',
-          value: `${s.ringVelocity.toFixed(2)} m/s`
+          value: s.ringVelocity,
+          digits: 2,
+          unit: 'm/s'
         },
         {
           key: 'ballVelocity',
           label: '摆球速度',
-          value: `${s.ballVelocity.toFixed(2)} m/s`
+          value: s.ballVelocity,
+          digits: 2,
+          unit: 'm/s'
         },
         {
           key: 'horizontalMomentum',
           label: '水平动量',
-          value: `${s.horizontalMomentum.toFixed(3)} kg·m/s`
+          value: s.horizontalMomentum,
+          digits: 3,
+          unit: 'kg·m/s'
         }
       ];
     }

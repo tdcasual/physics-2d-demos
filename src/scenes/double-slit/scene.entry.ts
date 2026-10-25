@@ -52,6 +52,7 @@ import type { createDoubleSlitDataWorkspace } from './data-task';
 // 此处保留 type-only 引用（不产生运行时 chunk 边）用于实例类型推导
 import type { createInterferenceVernierCaliper } from '../../instruments/interference-vernier-caliper/instrument.entry';
 import type { createMicrometerEyepiece } from '../../instruments/micrometer-eyepiece/instrument.entry';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateDoubleSlitSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -69,7 +70,7 @@ export function createDoubleSlitScene(
   setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
   getState(): DoubleSlitState;
   setParams(params: Partial<DoubleSlitParams>): DoubleSlitParams;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
   getDataWorkspace(): DataWorkspaceHost;
   getStepInfo(): { id: number; title: string; desc: string };
   subscribe(listener: () => void): () => void;
@@ -650,11 +651,7 @@ export function createDoubleSlitScene(
     loadErrorLabel: '[double-slit] 数据任务模块加载失败'
   });
 
-  function getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string;
-  }> {
+  function getReadoutItems(): ReadoutItem[] {
     const s = sim.getState();
     const d = s.params.slitDistance;
     const step = s.params.step;
@@ -679,7 +676,9 @@ export function createDoubleSlitScene(
       {
         key: 'L',
         label: '缝屏距 L',
-        value: `${((s.params.L ?? DEFAULT_L) * 100).toFixed(0)} cm`
+        value: (s.params.L ?? DEFAULT_L) * 100,
+        digits: 0,
+        unit: 'cm'
       }
     ];
     if (step === 6) {
@@ -709,7 +708,9 @@ export function createDoubleSlitScene(
       items.push({
         key: 'delta-x',
         label: '条纹间距 Δx',
-        value: `${realDeltaXmm.toFixed(3)} mm`
+        value: realDeltaXmm,
+        digits: 3,
+        unit: 'mm'
       });
       const active = s.params.activeInstrument;
       if (active === 'caliper' && leftInstrument) {
@@ -717,14 +718,18 @@ export function createDoubleSlitScene(
         items.push({
           key: 'caliper',
           label: '游标卡尺读数',
-          value: `${(reading * 10).toFixed(3)} mm`
+          value: reading * 10,
+          digits: 3,
+          unit: 'mm'
         });
       } else if (active === 'micrometer' && rightInstrument) {
         const reading = rightInstrument.view.getReading();
         items.push({
           key: 'micrometer',
           label: '螺旋测微仪读数',
-          value: `${reading.toFixed(3)} mm`
+          value: reading,
+          digits: 3,
+          unit: 'mm'
         });
       }
     }

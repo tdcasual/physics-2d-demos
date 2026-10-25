@@ -50,12 +50,16 @@ export function createSingleSlitScene(
       {
         key: 'firstMinimum',
         label: '第一暗纹 x₁',
-        value: `${state.firstMinimum.toFixed(2)} mm`
+        value: state.firstMinimum,
+        digits: 2,
+        unit: 'mm'
       },
       {
         key: 'centralWidth',
         label: '中央明纹 Δx',
-        value: `${state.centralWidth.toFixed(2)} mm`
+        value: state.centralWidth,
+        digits: 2,
+        unit: 'mm'
       },
       { key: 'status', label: '状态', value: state.status },
       {

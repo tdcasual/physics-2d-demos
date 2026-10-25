@@ -9,6 +9,7 @@ import {
   type ElectrostaticInductionState,
   type InductionAction
 } from './scene.sim';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateElectrostaticInductionSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -32,7 +33,7 @@ export function createElectrostaticInductionScene(
   setTheme(theme: TeachingTheme): void;
   setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
   resize(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createElectrostaticInductionSim();
   const view = createElectrostaticInductionView({
@@ -84,7 +85,9 @@ export function createElectrostaticInductionScene(
         {
           key: 'internalField',
           label: '内部合场强',
-          value: `${s.internalField.toFixed(2)} E₀`
+          value: s.internalField,
+          digits: 2,
+          unit: 'E₀'
         },
         {
           key: 'potential',
@@ -94,7 +97,8 @@ export function createElectrostaticInductionScene(
         {
           key: 'electronShift',
           label: '电子迁移',
-          value: `${s.electronShift.toFixed(2)}`
+          value: s.electronShift,
+          digits: 2
         }
       ];
     }

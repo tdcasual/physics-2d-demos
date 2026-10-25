@@ -8,6 +8,7 @@ import type { DemoRenderHints } from '../../platform/demo-profile';
 import { createStandardSceneEntry } from '../scene-entry-helpers';
 import { createWedgeSim, type WedgeParams, type WedgeState } from './scene.sim';
 import { createWedgeView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateWedgeSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -29,7 +30,7 @@ export function createWedgeScene(
   getParams(): WedgeParams;
   setCursorX(x: number): void;
   attachGraphCanvas(canvas: HTMLCanvasElement): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
   subscribe(listener: () => void): () => void;
 } {
   const sim = createWedgeSim({
@@ -54,31 +55,33 @@ export function createWedgeScene(
     onReadout: options.onReadout
   });
 
-  function getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string;
-  }> {
+  function getReadoutItems(): ReadoutItem[] {
     const s = sim.getState();
     const { lambda, theta, L } = s.params;
     return [
       { key: 'lambda', label: '波长 λ', value: `${lambda} nm` },
       { key: 'theta', label: '劈尖角 θ', value: `${theta.toFixed(3)}°` },
-      { key: 'L', label: '板长 L', value: `${L.toFixed(1)} cm` },
+      { key: 'L', label: '板长 L', value: L, digits: 1, unit: 'cm' },
       {
         key: 'x',
         label: '光标位置 x',
-        value: `${(s.cursorX * L * 10).toFixed(2)} mm`
+        value: s.cursorX * L * 10,
+        digits: 2,
+        unit: 'mm'
       },
       {
         key: 'd',
         label: '厚度 d',
-        value: `${(s.thickness / 1e3).toFixed(2)} μm`
+        value: s.thickness / 1e3,
+        digits: 2,
+        unit: 'μm'
       },
       {
         key: 'path-diff',
         label: '光程差 Δ',
-        value: `${(s.pathDiff / 1e3).toFixed(2)} μm`
+        value: s.pathDiff / 1e3,
+        digits: 2,
+        unit: 'μm'
       },
       { key: 'order', label: '级次 m', value: s.order.toFixed(1) },
       {
@@ -89,7 +92,9 @@ export function createWedgeScene(
       {
         key: 'fringe-l',
         label: '条纹间距 l',
-        value: `${s.fringeSpacing.toFixed(3)} mm`
+        value: s.fringeSpacing,
+        digits: 3,
+        unit: 'mm'
       }
     ];
   }

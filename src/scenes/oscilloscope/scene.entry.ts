@@ -8,6 +8,7 @@ import {
   type OscilloscopeState
 } from './scene.sim';
 import { createOscilloscopeView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateOscilloscopeSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -34,7 +35,7 @@ export function createOscilloscopeScene(
   pauseAll(): void;
   attachGraphCanvas(canvas: HTMLCanvasElement): void;
   getTransportState(): { isPlaying: boolean; speed: number };
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
   subscribe(listener: () => void): () => void;
 } {
   const sim = createOscilloscopeSim(options.initialParams);
@@ -52,11 +53,7 @@ export function createOscilloscopeScene(
     onReadout: options.onReadout
   });
 
-  function getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string;
-  }> {
+  function getReadoutItems(): ReadoutItem[] {
     const state = sim.getState();
     const ratio = state.cyclesPerScan;
     const n = Math.round(ratio);
@@ -69,12 +66,16 @@ export function createOscilloscopeScene(
       {
         key: 'signal-frequency',
         label: 'fᵧ',
-        value: `${state.params.signalFrequency.toFixed(0)} Hz`
+        value: state.params.signalFrequency,
+        digits: 0,
+        unit: 'Hz'
       },
       {
         key: 'scan-frequency',
         label: 'fₓ',
-        value: `${state.params.scanFrequency.toFixed(0)} Hz`
+        value: state.params.scanFrequency,
+        digits: 0,
+        unit: 'Hz'
       },
       {
         key: 'cycles-per-scan',

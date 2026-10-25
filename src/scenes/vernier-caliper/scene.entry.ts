@@ -12,6 +12,7 @@ import {
   type CaliperState
 } from './scene.sim';
 import { createVernierCaliperView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateCaliperSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -30,7 +31,7 @@ export function createVernierCaliperScene(
   getState(): CaliperState;
   setParams(params: Partial<CaliperParams>): CaliperParams;
   getParams(): CaliperParams;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
   setRevealAnswer(value: boolean): void;
   subscribe(listener: () => void): () => void;
 } {
@@ -57,11 +58,7 @@ export function createVernierCaliperScene(
     (options.mode ?? 'normal') !== 'presentation' ||
     Boolean(options.demoHints?.revealAnswer);
 
-  function getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string;
-  }> {
+  function getReadoutItems(): ReadoutItem[] {
     const s = sim.getState();
     if (!revealed) {
       return [
@@ -75,7 +72,9 @@ export function createVernierCaliperScene(
       {
         key: 'size',
         label: '真实尺寸',
-        value: `${s.objectSize.toFixed(2)} mm`
+        value: s.objectSize,
+        digits: 2,
+        unit: 'mm'
       },
       { key: 'precision', label: '精度', value: `${s.params.precision} mm` },
       { key: 'main', label: '主尺读数', value: `${s.mainScaleReading} mm` },
@@ -83,7 +82,9 @@ export function createVernierCaliperScene(
       {
         key: 'reading',
         label: '测量读数',
-        value: `${s.totalReading.toFixed(2)} mm`
+        value: s.totalReading,
+        digits: 2,
+        unit: 'mm'
       }
     ];
   }

@@ -34,6 +34,7 @@ import {
   layoutCharge
 } from '../../src/scenes/metal-rod-track/renderer/draw-charge';
 import { chargeTypeScale } from '../../src/scenes/metal-rod-track/renderer/charge-palette';
+import { normalizeReadoutItem } from '../../src/platform/readout';
 
 const B = 0.5;
 const L = 0.4;
@@ -265,7 +266,7 @@ describe('metal-rod-track entry · charge readouts', () => {
     const scene = createMetalRodScene();
     scene.setParams({ mode: 'charge', profile: 1 });
     for (let i = 0; i < 60; i += 1) scene.step(0.05);
-    const items = scene.getReadoutItems();
+    const items = scene.getReadoutItems().map(normalizeReadoutItem);
     expect(items.slice(0, 3).map((r) => r.key)).toEqual([
       'charge-sum',
       'charge-formula',

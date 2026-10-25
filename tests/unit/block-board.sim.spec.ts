@@ -17,6 +17,7 @@ import {
   syncTimeFor,
   wrapBlockBoardTime
 } from '../../src/scenes/block-board/scene.sim';
+import { normalizeReadoutItem } from '../../src/platform/readout';
 
 describe('block-board simulation', () => {
   it('matches friction accelerations and the common-speed time', () => {
@@ -318,7 +319,10 @@ describe('block-board scene entry', () => {
       autoRun: false
     });
     expect(
-      scene.getReadoutItems().find((item) => item.key === 'sync-time')?.value
+      scene
+        .getReadoutItems()
+        .map(normalizeReadoutItem)
+        .find((item) => item.key === 'sync-time')?.value
     ).toBe('22.86 s');
     scene.dispose();
   });
@@ -326,7 +330,10 @@ describe('block-board scene entry', () => {
   it('exposes readout, graph attach, and transport hooks', () => {
     const scene = createBlockBoardScene();
     scene.init();
-    const keys = scene.getReadoutItems().map((item) => item.key);
+    const keys = scene
+      .getReadoutItems()
+      .map(normalizeReadoutItem)
+      .map((item) => item.key);
     expect(keys).toEqual(
       expect.arrayContaining([
         'block-velocity',

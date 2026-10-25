@@ -9,6 +9,7 @@ import {
   type ZincPhotoelectricParams,
   type ZincPhotoelectricState
 } from './scene.sim';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateZincPhotoelectricSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -33,7 +34,7 @@ export function createZincPhotoelectricScene(
   getParams(): ZincPhotoelectricParams;
   setParams(next: Partial<ZincPhotoelectricParams>): ZincPhotoelectricParams;
   reset(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createZincPhotoelectricSim();
   const view = createZincPhotoelectricView({
@@ -57,23 +58,29 @@ export function createZincPhotoelectricScene(
       sim.setParams(next)
     ),
     reset: base.wrapAction(() => sim.reset()),
-    getReadoutItems(): Array<{ key: string; label: string; value: string }> {
+    getReadoutItems(): ReadoutItem[] {
       const s = sim.getState();
       return [
         {
           key: 'photonEnergy',
           label: '光子能量',
-          value: `${s.photonEnergy.toFixed(2)} eV`
+          value: s.photonEnergy,
+          digits: 2,
+          unit: 'eV'
         },
         {
           key: 'workFunction',
           label: '逸出功',
-          value: `${s.workFunction.toFixed(2)} eV`
+          value: s.workFunction,
+          digits: 2,
+          unit: 'eV'
         },
         {
           key: 'maxKineticEnergy',
           label: '最大初动能',
-          value: `${s.maxKineticEnergy.toFixed(2)} eV`
+          value: s.maxKineticEnergy,
+          digits: 2,
+          unit: 'eV'
         }
       ];
     }

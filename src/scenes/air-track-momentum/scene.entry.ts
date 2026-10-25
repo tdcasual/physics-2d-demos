@@ -8,6 +8,7 @@ import {
   type AirTrackMomentumParams,
   type AirTrackMomentumState
 } from './scene.sim';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateAirTrackMomentumSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -29,7 +30,7 @@ export function createAirTrackMomentumScene(
   setTheme(theme: TeachingTheme): void;
   setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
   resize(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createAirTrackMomentumSim();
   const view = createAirTrackMomentumView({
@@ -71,21 +72,33 @@ export function createAirTrackMomentumScene(
         {
           key: 'totalMomentum',
           label: '碰撞前总动量',
-          value: `${s.totalMomentum.toFixed(2)} kg·m/s`
+          value: s.totalMomentum,
+          digits: 2,
+          unit: 'kg·m/s'
         },
         {
           key: 'totalMomentumAfter',
           label: '碰撞后总动量',
-          value: `${s.totalMomentumAfter.toFixed(2)} kg·m/s`
+          value: s.totalMomentumAfter,
+          digits: 2,
+          unit: 'kg·m/s'
         },
         {
           key: 'impulse',
           label: '冲量 J',
-          value: `${s.impulse.toFixed(2)} N·s`
+          value: s.impulse,
+          digits: 2,
+          unit: 'N·s'
         },
-        { key: 'force', label: '接触力 F', value: `${s.force.toFixed(2)} N` },
-        { key: 'vA', label: '红滑块速度', value: `${s.vA.toFixed(2)} m/s` },
-        { key: 'vB', label: '蓝滑块速度', value: `${s.vB.toFixed(2)} m/s` }
+        {
+          key: 'force',
+          label: '接触力 F',
+          value: s.force,
+          digits: 2,
+          unit: 'N'
+        },
+        { key: 'vA', label: '红滑块速度', value: s.vA, digits: 2, unit: 'm/s' },
+        { key: 'vB', label: '蓝滑块速度', value: s.vB, digits: 2, unit: 'm/s' }
       ];
     }
   };

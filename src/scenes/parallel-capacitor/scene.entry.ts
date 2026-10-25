@@ -45,12 +45,16 @@ export function createParallelCapacitorScene(
         {
           key: 'capacitanceRatio',
           label: '电容 C',
-          value: `${s.capacitanceRatio.toFixed(2)} C₀`
+          value: s.capacitanceRatio,
+          digits: 2,
+          unit: 'C₀'
         },
         {
           key: 'voltageRatio',
           label: '电压 U',
-          value: `${s.voltageRatio.toFixed(2)} U₀`
+          value: s.voltageRatio,
+          digits: 2,
+          unit: 'U₀'
         },
         {
           key: 'needleAngle',
@@ -60,7 +64,9 @@ export function createParallelCapacitorScene(
         {
           key: 'fieldRatio',
           label: '电场强度 E',
-          value: `${s.fieldRatio.toFixed(2)} E₀`
+          value: s.fieldRatio,
+          digits: 2,
+          unit: 'E₀'
         }
       ];
     }

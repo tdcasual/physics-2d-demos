@@ -42,22 +42,30 @@ export function createJouleScene(options: CreateJouleSceneOptions = {}) {
         {
           key: 'activeWork',
           label: '输入做功 W',
-          value: `${state.activeWork.toFixed(0)} J`
+          value: state.activeWork,
+          digits: 0,
+          unit: 'J'
         },
         {
           key: 'temperatureRise',
           label: '温升 ΔT',
-          value: `${state.temperatureRise.toFixed(2)} °C`
+          value: state.temperatureRise,
+          digits: 2,
+          unit: '°C'
         },
         {
           key: 'mechanicalWork',
           label: '机械功 mgh',
-          value: `${state.mechanicalWork.toFixed(0)} J`
+          value: state.mechanicalWork,
+          digits: 0,
+          unit: 'J'
         },
         {
           key: 'electricWork',
           label: '电功 UIt',
-          value: `${state.electricWork.toFixed(0)} J`
+          value: state.electricWork,
+          digits: 0,
+          unit: 'J'
         }
       ];
     }

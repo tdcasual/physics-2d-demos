@@ -11,6 +11,7 @@ import {
   type SpringBallParams,
   type SpringBallState
 } from './scene.sim';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateSpringBallSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -33,7 +34,7 @@ export function createSpringBallScene(
   getParams(): SpringBallParams;
   setParams(params: Partial<SpringBallParams>): SpringBallParams;
   attachGraphCanvas(canvas: HTMLCanvasElement): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
   subscribe(listener: () => void): () => void;
 } {
   const sim = createSpringBallSim(options.initialParams);
@@ -51,11 +52,7 @@ export function createSpringBallScene(
     onReadout: options.onReadout,
     resetView: () => view.reset()
   });
-  function getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string;
-  }> {
+  function getReadoutItems(): ReadoutItem[] {
     const state = sim.getState();
     const stageLabel = {
       'free-fall': '自由落体',
@@ -64,32 +61,48 @@ export function createSpringBallScene(
     }[state.stage];
     return [
       { key: 'stage', label: '阶段', value: stageLabel },
-      { key: 'position', label: '位移 x', value: `${state.x.toFixed(2)} m` },
+      {
+        key: 'position',
+        label: '位移 x',
+        value: state.x,
+        digits: 2,
+        unit: 'm'
+      },
       {
         key: 'velocity',
         label: '速度 v',
-        value: `${state.velocity.toFixed(2)} m/s`
+        value: state.velocity,
+        digits: 2,
+        unit: 'm/s'
       },
       {
         key: 'acceleration',
         label: '加速度 a',
-        value: `${state.acceleration.toFixed(2)} m/s²`
+        value: state.acceleration,
+        digits: 2,
+        unit: 'm/s²'
       },
       {
         key: 'spring-force',
         label: '弹簧力 Fₛ',
-        value: `${state.springForce.toFixed(2)} N`
+        value: state.springForce,
+        digits: 2,
+        unit: 'N'
       },
       {
         key: 'net-force',
         label: '合力 F合',
-        value: `${state.netForce.toFixed(2)} N`
+        value: state.netForce,
+        digits: 2,
+        unit: 'N'
       },
       { key: 'direction', label: '约定', value: '向下为正' },
       {
         key: 'bottom',
         label: '最低点 x底',
-        value: `${state.bottomX.toFixed(2)} m`
+        value: state.bottomX,
+        digits: 2,
+        unit: 'm'
       }
     ];
   }

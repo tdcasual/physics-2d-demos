@@ -8,6 +8,7 @@ import {
   type ConicalPendulumState
 } from './scene.sim';
 import { createConicalPendulumView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateConicalPendulumSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -59,22 +60,30 @@ export function createConicalPendulumScene(
         {
           key: 'centripetalForce',
           label: '合力/向心力 Fₙ',
-          value: `${state.centripetalForce.toFixed(2)} N`
+          value: state.centripetalForce,
+          digits: 2,
+          unit: 'N'
         },
         {
           key: 'tension',
           label: '绳子拉力 T',
-          value: `${state.tension.toFixed(2)} N`
+          value: state.tension,
+          digits: 2,
+          unit: 'N'
         },
         {
           key: 'period',
           label: '周期 Tₚ',
-          value: `${state.period.toFixed(2)} s`
+          value: state.period,
+          digits: 2,
+          unit: 's'
         },
         {
           key: 'linearSpeed',
           label: '线速度 v',
-          value: `${state.linearSpeed.toFixed(2)} m/s`
+          value: state.linearSpeed,
+          digits: 2,
+          unit: 'm/s'
         }
       ];
     }
@@ -87,6 +96,6 @@ export function createConicalPendulumScene(
     setTheme(theme: TeachingTheme): void;
     setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
     resize(): void;
-    getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+    getReadoutItems(): ReadoutItem[];
   };
 }

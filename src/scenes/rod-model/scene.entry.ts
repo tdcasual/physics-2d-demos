@@ -10,6 +10,7 @@ import {
   type RodParams,
   type RodState
 } from './scene.sim';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateRodModelSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -32,7 +33,7 @@ export function createRodModelScene(
   getSnapshot(): RodState;
   getParams(): RodParams;
   setParams(params: Partial<RodParams>): RodParams;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
   subscribe(listener: () => void): () => void;
   attachGraphCanvas(canvas: HTMLCanvasElement): void;
   startAll(): void;
@@ -79,13 +80,9 @@ export function createRodModelScene(
         speed: 1
       };
     },
-    getReadoutItems(): Array<{
-      key: string;
-      label: string;
-      value: string;
-    }> {
+    getReadoutItems(): ReadoutItem[] {
       const state = sim.getState();
-      const items: Array<{ key: string; label: string; value: string }> = [
+      const items: ReadoutItem[] = [
         {
           key: 'model',
           label: '模型',
@@ -94,32 +91,44 @@ export function createRodModelScene(
         {
           key: 'time',
           label: 't',
-          value: `${state.time.toFixed(2)} s`
+          value: state.time,
+          digits: 2,
+          unit: 's'
         },
         {
           key: 'velocity',
           label: 'v',
-          value: `${state.velocity.toFixed(2)} m/s`
+          value: state.velocity,
+          digits: 2,
+          unit: 'm/s'
         },
         {
           key: 'acceleration',
           label: 'a',
-          value: `${state.acceleration.toFixed(2)} m/s²`
+          value: state.acceleration,
+          digits: 2,
+          unit: 'm/s²'
         },
         {
           key: 'magneticForce',
           label: 'F安',
-          value: `${state.magneticForce.toFixed(2)} N`
+          value: state.magneticForce,
+          digits: 2,
+          unit: 'N'
         },
         {
           key: 'current',
           label: 'I',
-          value: `${state.current.toFixed(2)} A`
+          value: state.current,
+          digits: 2,
+          unit: 'A'
         },
         {
           key: 'heatingPower',
           label: 'P',
-          value: `${state.heatingPower.toFixed(2)} W`
+          value: state.heatingPower,
+          digits: 2,
+          unit: 'W'
         }
       ];
       if (
@@ -129,13 +138,17 @@ export function createRodModelScene(
         items.push({
           key: 'terminalVelocity',
           label: 'vₘ',
-          value: `${state.terminalVelocity.toFixed(2)} m/s`
+          value: state.terminalVelocity,
+          digits: 2,
+          unit: 'm/s'
         });
       } else {
         items.push({
           key: 'equivalentMass',
           label: 'm*',
-          value: `${state.equivalentMass.toFixed(2)} kg`
+          value: state.equivalentMass,
+          digits: 2,
+          unit: 'kg'
         });
       }
       return items;

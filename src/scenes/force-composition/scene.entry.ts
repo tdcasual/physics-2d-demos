@@ -8,6 +8,7 @@ import {
   type ForceCompositionTab
 } from './scene.sim';
 import { createForceCompositionView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateForceCompositionSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -45,37 +46,43 @@ export function createForceCompositionScene(
     onReadout: options.onReadout
   });
 
-  function getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string;
-  }> {
+  function getReadoutItems(): ReadoutItem[] {
     const state = sim.getState();
     const p = state.params;
     const magnitude = (x: number, y: number): number => Math.hypot(x, y);
     if (p.tab === 'orthogonal') {
       return [
         { key: 'tab', label: '模式', value: '正交分解' },
-        { key: 'result', label: 'F', value: `${p.orthogonalF.toFixed(1)} N` },
+        {
+          key: 'result',
+          label: 'F',
+          value: p.orthogonalF,
+          digits: 1,
+          unit: 'N'
+        },
         { key: 'angle', label: 'θ', value: `${p.orthogonalAngle.toFixed(1)}°` },
-        { key: 'fx', label: 'Fx', value: `${state.fx.x.toFixed(1)} N` },
-        { key: 'fy', label: 'Fy', value: `${state.fy.y.toFixed(1)} N` }
+        { key: 'fx', label: 'Fx', value: state.fx.x, digits: 1, unit: 'N' },
+        { key: 'fy', label: 'Fy', value: state.fy.y, digits: 1, unit: 'N' }
       ];
     }
     if (p.tab === 'effect') {
       return [
         { key: 'tab', label: '模式', value: '按效果分解' },
-        { key: 'result', label: 'G', value: `${p.gravity.toFixed(1)} N` },
+        { key: 'result', label: 'G', value: p.gravity, digits: 1, unit: 'N' },
         { key: 'angle', label: 'θ', value: `${p.inclineAngle.toFixed(1)}°` },
         {
           key: 'g1',
           label: 'G₁',
-          value: `${magnitude(state.g1.x, state.g1.y).toFixed(1)} N`
+          value: magnitude(state.g1.x, state.g1.y),
+          digits: 1,
+          unit: 'N'
         },
         {
           key: 'g2',
           label: 'G₂',
-          value: `${magnitude(state.g2.x, state.g2.y).toFixed(1)} N`
+          value: magnitude(state.g2.x, state.g2.y),
+          digits: 1,
+          unit: 'N'
         }
       ];
     }
@@ -88,11 +95,13 @@ export function createForceCompositionScene(
       {
         key: 'result',
         label: 'F合',
-        value: `${magnitude(state.resultant.x, state.resultant.y).toFixed(1)} N`
+        value: magnitude(state.resultant.x, state.resultant.y),
+        digits: 1,
+        unit: 'N'
       },
       { key: 'angle', label: 'θ', value: `${p.angle.toFixed(1)}°` },
-      { key: 'f1', label: 'F₁', value: `${p.f1.toFixed(1)} N` },
-      { key: 'f2', label: 'F₂', value: `${p.f2.toFixed(1)} N` }
+      { key: 'f1', label: 'F₁', value: p.f1, digits: 1, unit: 'N' },
+      { key: 'f2', label: 'F₂', value: p.f2, digits: 1, unit: 'N' }
     ];
   }
 

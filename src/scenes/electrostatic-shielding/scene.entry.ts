@@ -8,6 +8,7 @@ import {
   type ElectrostaticShieldingParams,
   type ElectrostaticShieldingState
 } from './scene.sim';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateElectrostaticShieldingSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -32,7 +33,7 @@ export function createElectrostaticShieldingScene(
   setTheme(theme: TeachingTheme): void;
   setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
   resize(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createElectrostaticShieldingSim();
   const view = createElectrostaticShieldingView({
@@ -104,17 +105,23 @@ export function createElectrostaticShieldingScene(
         {
           key: 'measuredField',
           label: '实测合场强 |E|',
-          value: `${state.measuredField.toFixed(2)} V/m`
+          value: state.measuredField,
+          digits: 2,
+          unit: 'V/m'
         },
         {
           key: 'innerInducedCharge',
           label: '内表面感应电荷',
-          value: `${state.innerInducedCharge.toFixed(1)} q`
+          value: state.innerInducedCharge,
+          digits: 1,
+          unit: 'q'
         },
         {
           key: 'outerNetCharge',
           label: '外表面净电荷',
-          value: `${state.outerNetCharge.toFixed(1)} q`
+          value: state.outerNetCharge,
+          digits: 1,
+          unit: 'q'
         },
         { key: 'status', label: '状态', value: state.status }
       ];

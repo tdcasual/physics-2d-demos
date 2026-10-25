@@ -11,6 +11,7 @@ import {
   type MicroMaterial
 } from './scene.sim';
 import { createMicroDeformationView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateMicroDeformationSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -44,7 +45,7 @@ export function createMicroDeformationScene(
   getParams(): MicroDeformationParams;
   setParams(next: Partial<MicroDeformationParams>): MicroDeformationParams;
   reset(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createMicroDeformationSim();
   const view = createMicroDeformationView({
@@ -80,28 +81,36 @@ export function createMicroDeformationScene(
       sim.setParams(next)
     ),
     reset: base.wrapAction(() => sim.reset()),
-    getReadoutItems(): Array<{ key: string; label: string; value: string }> {
+    getReadoutItems(): ReadoutItem[] {
       const state = sim.getState();
       return [
         {
           key: 'force',
           label: '压力 F',
-          value: `${state.forceN.toFixed(0)} N`
+          value: state.forceN,
+          digits: 0,
+          unit: 'N'
         },
         {
           key: 'deflection',
           label: '下凹 Δy',
-          value: `${state.deflectionMicron.toFixed(2)} μm`
+          value: state.deflectionMicron,
+          digits: 2,
+          unit: 'μm'
         },
         {
           key: 'screenShift',
           label: '光斑偏移 ΔY',
-          value: `${state.screenShiftMm.toFixed(2)} mm`
+          value: state.screenShiftMm,
+          digits: 2,
+          unit: 'mm'
         },
         {
           key: 'magnification',
           label: '放大倍数 M',
-          value: `${state.magnification.toFixed(0)} 倍`
+          value: state.magnification,
+          digits: 0,
+          unit: '倍'
         }
       ];
     }

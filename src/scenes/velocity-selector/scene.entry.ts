@@ -9,6 +9,7 @@ import {
   type VelocitySelectorState
 } from './scene.sim';
 import { createVelocitySelectorView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateVelocitySelectorSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -33,7 +34,7 @@ export function createVelocitySelectorScene(
   getParams(): VelocitySelectorParams;
   setParams(next: Partial<VelocitySelectorParams>): VelocitySelectorParams;
   reset(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createVelocitySelectorSim();
   const view = createVelocitySelectorView({
@@ -74,17 +75,23 @@ export function createVelocitySelectorScene(
         {
           key: 'balanceSpeed',
           label: '匹配速度 E/B',
-          value: `${state.balanceSpeed.toFixed(2)} v₀*`
+          value: state.balanceSpeed,
+          digits: 2,
+          unit: 'v₀*'
         },
         {
           key: 'electricForce',
           label: '电场力',
-          value: `${state.electricForce.toFixed(2)} F₀`
+          value: state.electricForce,
+          digits: 2,
+          unit: 'F₀'
         },
         {
           key: 'magneticForce',
           label: '洛伦兹力',
-          value: `${state.magneticForce.toFixed(2)} F₀`
+          value: state.magneticForce,
+          digits: 2,
+          unit: 'F₀'
         },
         { key: 'status', label: '状态', value: state.status }
       ];

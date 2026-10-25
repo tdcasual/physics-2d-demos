@@ -58,17 +58,23 @@ export function createVerticalCircleScene(
       {
         key: 'vBottom',
         label: 'v_bottom',
-        value: `${state.params.vBottom.toFixed(1)} m/s`
+        value: state.params.vBottom,
+        digits: 1,
+        unit: 'm/s'
       },
       {
         key: 'vTop',
         label: 'v_top',
-        value: `${state.topSpeed.toFixed(1)} m/s`
+        value: state.topSpeed,
+        digits: 1,
+        unit: 'm/s'
       },
       {
         key: 'speed',
         label: 'v',
-        value: `${state.speed.toFixed(1)} m/s`
+        value: state.speed,
+        digits: 1,
+        unit: 'm/s'
       },
       {
         key: 'constraint',

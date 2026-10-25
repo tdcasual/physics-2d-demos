@@ -8,6 +8,7 @@ import {
   type OrbitCriticalParams,
   type OrbitCriticalState
 } from './scene.sim';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateOrbitCriticalSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -27,7 +28,7 @@ export function createOrbitCriticalScene(
   getParams(): OrbitCriticalParams;
   setParams(next: Partial<OrbitCriticalParams>): OrbitCriticalParams;
   reset(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createOrbitCriticalSim();
   const view = createOrbitCriticalView({
@@ -68,22 +69,30 @@ export function createOrbitCriticalScene(
         {
           key: 'speed',
           label: '瞬时速度 v',
-          value: `${s.speed.toFixed(2)} m/s`
+          value: s.speed,
+          digits: 2,
+          unit: 'm/s'
         },
         {
           key: 'normal',
           label: '支持力 Fₙ',
-          value: `${s.normalForce.toFixed(2)} N`
+          value: s.normalForce,
+          digits: 2,
+          unit: 'N'
         },
         {
           key: 'accel',
           label: '向心加速度 aᵣ',
-          value: `${(s.speed ** 2 / s.radius).toFixed(2)} m/s²`
+          value: s.speed ** 2 / s.radius,
+          digits: 2,
+          unit: 'm/s²'
         },
         {
           key: 'critical',
           label: '临界底速',
-          value: `${s.criticalBottomSpeed.toFixed(2)} m/s`
+          value: s.criticalBottomSpeed,
+          digits: 2,
+          unit: 'm/s'
         },
         { key: 'status', label: '状态', value: s.status }
       ];

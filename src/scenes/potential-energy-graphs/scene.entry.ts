@@ -10,6 +10,7 @@ import {
   type PotentialGraphState,
   type PotentialScenario
 } from './scene.sim';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreatePotentialGraphSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -65,7 +66,7 @@ export function createPotentialGraphScene(
   getSnapshot(): PotentialGraphState;
   getParams(): PotentialGraphParams;
   setParams(params: Partial<PotentialGraphParams>): PotentialGraphParams;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
   subscribe(listener: () => void): () => void;
   attachGraphCanvas(canvas: HTMLCanvasElement): void;
   startAll(): void;
@@ -116,7 +117,7 @@ export function createPotentialGraphScene(
     getTransportState(): { isPlaying: boolean; speed: number } {
       return { isPlaying: sim.getParams().autoRun, speed: 1 };
     },
-    getReadoutItems(): Array<{ key: string; label: string; value: string }> {
+    getReadoutItems(): ReadoutItem[] {
       const state = sim.getState();
       const slopeValue = state.kink
         ? '未定义'
@@ -131,12 +132,16 @@ export function createPotentialGraphScene(
         {
           key: 'position',
           label: 'x',
-          value: `${state.probePosition.toFixed(2)} m`
+          value: state.probePosition,
+          digits: 2,
+          unit: 'm'
         },
         {
           key: 'potential',
           label: 'φ',
-          value: `${state.potential.toFixed(2)} V`
+          value: state.potential,
+          digits: 2,
+          unit: 'V'
         },
         {
           key: 'slope',
@@ -151,7 +156,9 @@ export function createPotentialGraphScene(
         {
           key: 'energy',
           label: 'Uₚ',
-          value: `${state.potentialEnergy.toFixed(2)} μJ`
+          value: state.potentialEnergy,
+          digits: 2,
+          unit: 'μJ'
         },
         {
           key: 'force',

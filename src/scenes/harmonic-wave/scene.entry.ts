@@ -11,6 +11,7 @@ import {
   type HarmonicWaveDirection
 } from './scene.sim';
 import { createHarmonicWaveView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateHarmonicWaveSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -41,11 +42,7 @@ export function createHarmonicWaveScene(
     onReadout: options.onReadout
   });
 
-  function getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string;
-  }> {
+  function getReadoutItems(): ReadoutItem[] {
     const state = sim.getState();
     const dir = state.params.direction === 'right' ? '向右' : '向左';
     const arrow = (value: 'up' | 'down' | 'zero'): string =>
@@ -54,13 +51,17 @@ export function createHarmonicWaveScene(
       {
         key: 'wave-speed',
         label: 'v',
-        value: `${state.waveSpeed.toFixed(2)} m/s`
+        value: state.waveSpeed,
+        digits: 2,
+        unit: 'm/s'
       },
-      { key: 'time', label: 't', value: `${state.time.toFixed(2)} s` },
+      { key: 'time', label: 't', value: state.time, digits: 2, unit: 's' },
       {
         key: 'point-y',
         label: 'P 位移',
-        value: `${state.pointY.toFixed(1)} cm`
+        value: state.pointY,
+        digits: 1,
+        unit: 'cm'
       },
       {
         key: 'velocity',

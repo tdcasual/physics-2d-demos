@@ -9,6 +9,7 @@ import {
   parallel,
   resistorConstants as C
 } from '../../src/scenes/resistor-measurement/scene.sim';
+import { normalizeReadoutItem } from '../../src/platform/readout';
 
 describe('resistor measurement simulation', () => {
   it('external connection measures Rx ∥ RV and is below Rx', () => {
@@ -168,7 +169,7 @@ describe('resistor measurement simulation', () => {
       }
     });
     const state = scene.getState();
-    const items = scene.getReadoutItems();
+    const items = scene.getReadoutItems().map(normalizeReadoutItem);
     const byKey = Object.fromEntries(
       items.map((item) => [item.key, item.value])
     );

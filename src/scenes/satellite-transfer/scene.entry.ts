@@ -8,6 +8,7 @@ import {
   type SatelliteParams,
   type SatelliteState
 } from './scene.sim';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateSatelliteSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -28,7 +29,7 @@ export function createSatelliteScene(
   getParams(): SatelliteParams;
   setParams(params: Partial<SatelliteParams>): SatelliteParams;
   reset(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createSatelliteSim();
   const view = createSatelliteView({
@@ -70,22 +71,30 @@ export function createSatelliteScene(
         {
           key: 'radius',
           label: '半径 r',
-          value: `${state.radius.toFixed(1)} km`
+          value: state.radius,
+          digits: 1,
+          unit: 'km'
         },
         {
           key: 'speed',
           label: '速度 v',
-          value: `${state.speed.toFixed(2)} km/s`
+          value: state.speed,
+          digits: 2,
+          unit: 'km/s'
         },
         {
           key: 'acceleration',
           label: '加速度 a',
-          value: `${state.acceleration.toFixed(3)} km/s²`
+          value: state.acceleration,
+          digits: 3,
+          unit: 'km/s²'
         },
         {
           key: 'period',
           label: '周期 T',
-          value: `${state.orbitalPeriod.toFixed(2)} s`
+          value: state.orbitalPeriod,
+          digits: 2,
+          unit: 's'
         }
       ];
     }

@@ -8,6 +8,7 @@ import {
   type MagneticMirrorState
 } from './scene.sim';
 import { createMagneticMirrorView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateMagneticMirrorSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -27,7 +28,7 @@ export function createMagneticMirrorScene(
   getSnapshot(): MagneticMirrorState;
   getParams(): MagneticMirrorParams;
   setParams(params: Partial<MagneticMirrorParams>): MagneticMirrorParams;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
   subscribe(listener: () => void): () => void;
 } {
   const sim = createMagneticMirrorSim();
@@ -44,37 +45,43 @@ export function createMagneticMirrorScene(
     onReadout: options.onReadout
   });
 
-  function getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string;
-  }> {
+  function getReadoutItems(): ReadoutItem[] {
     const state = sim.getState();
     return [
       {
         key: 'position',
         label: '轴向位置 x',
-        value: `${(state.position * 23.4).toFixed(2)} cm`
+        value: state.position * 23.4,
+        digits: 2,
+        unit: 'cm'
       },
       {
         key: 'parallel-speed',
         label: '轴向速度 v∥',
-        value: `${state.parallelSpeed.toFixed(2)} 米/秒`
+        value: state.parallelSpeed,
+        digits: 2,
+        unit: '米/秒'
       },
       {
         key: 'perpendicular-speed',
         label: '垂直速度 v⊥',
-        value: `${state.perpendicularSpeed.toFixed(2)} 米/秒`
+        value: state.perpendicularSpeed,
+        digits: 2,
+        unit: '米/秒'
       },
       {
         key: 'pitch-distance',
         label: '轨迹螺距 d',
-        value: `${state.pitchDistance.toFixed(2)} cm`
+        value: state.pitchDistance,
+        digits: 2,
+        unit: 'cm'
       },
       {
         key: 'energy',
         label: '动能 Eₖ',
-        value: `${state.energy.toFixed(2)} 焦耳`
+        value: state.energy,
+        digits: 2,
+        unit: '焦耳'
       },
       {
         key: 'magnetic-moment',

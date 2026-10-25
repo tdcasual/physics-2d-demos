@@ -9,6 +9,7 @@ import {
   type SingleLoopParams,
   type SingleLoopState
 } from './scene.sim';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateSingleLoopSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -29,7 +30,7 @@ export function createSingleLoopScene(
   getSnapshot(): SingleLoopState;
   getParams(): SingleLoopParams;
   setParams(params: Partial<SingleLoopParams>): SingleLoopParams;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
   subscribe(listener: () => void): () => void;
   attachGraphCanvas(canvas: HTMLCanvasElement): void;
   startAll(): void;
@@ -76,24 +77,30 @@ export function createSingleLoopScene(
         speed: 1
       };
     },
-    getReadoutItems(): Array<{ key: string; label: string; value: string }> {
+    getReadoutItems(): ReadoutItem[] {
       const state = sim.getState();
       return [
         { key: 'region', label: '区域', value: regionLabel(state.region) },
         {
           key: 'position',
           label: 'x',
-          value: `${state.position.toFixed(2)} m`
+          value: state.position,
+          digits: 2,
+          unit: 'm'
         },
         {
           key: 'velocity',
           label: 'v',
-          value: `${state.velocity.toFixed(2)} m/s`
+          value: state.velocity,
+          digits: 2,
+          unit: 'm/s'
         },
         {
           key: 'current',
           label: 'i',
-          value: `${state.current.toFixed(2)} A`
+          value: state.current,
+          digits: 2,
+          unit: 'A'
         }
       ];
     }

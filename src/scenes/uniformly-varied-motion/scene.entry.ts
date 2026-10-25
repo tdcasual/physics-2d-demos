@@ -30,16 +30,20 @@ export function createUvtScene(options: CreateUvtSceneOptions = {}) {
   function getReadoutItems() {
     const s = sim.getState();
     return [
-      { key: 'time', label: 't', value: `${s.time.toFixed(2)} s` },
+      { key: 'time', label: 't', value: s.time, digits: 2, unit: 's' },
       {
         key: 'velocity',
         label: 'v',
-        value: `${s.velocity.toFixed(2)} m/s`
+        value: s.velocity,
+        digits: 2,
+        unit: 'm/s'
       },
       {
         key: 'displacement',
         label: 'x',
-        value: `${s.displacement.toFixed(2)} m`
+        value: s.displacement,
+        digits: 2,
+        unit: 'm'
       },
       {
         key: 'status',

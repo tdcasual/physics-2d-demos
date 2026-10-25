@@ -8,6 +8,7 @@ import {
   type RadioactiveParams,
   type RadioactiveState
 } from './scene.sim';
+import type { ReadoutItem } from '../../platform/readout';
 export type CreateRadioactiveSceneOptions = {
   canvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
@@ -26,7 +27,7 @@ export function createRadioactiveScene(
   getParams(): RadioactiveParams;
   setParams(next: Partial<RadioactiveParams>): RadioactiveParams;
   reset(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createRadioactiveSim();
   const view = createRadioactiveView({
@@ -50,7 +51,7 @@ export function createRadioactiveScene(
       sim.setParams(next)
     ),
     reset: base.wrapAction(() => sim.reset()),
-    getReadoutItems(): Array<{ key: string; label: string; value: string }> {
+    getReadoutItems(): ReadoutItem[] {
       const s = sim.getState();
       return [
         { key: 'remaining', label: '未衰变 N', value: `${s.remaining}` },
@@ -58,7 +59,9 @@ export function createRadioactiveScene(
         {
           key: 'halfLives',
           label: '经历半衰期',
-          value: `${s.halfLives.toFixed(2)} T`
+          value: s.halfLives,
+          digits: 2,
+          unit: 'T'
         }
       ];
     }

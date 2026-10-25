@@ -12,6 +12,7 @@ import {
   type FaradayState
 } from './scene.sim';
 import { createFaradayView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateFaradaySceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -36,22 +37,26 @@ export function createFaradayScene(options: CreateFaradaySceneOptions = {}) {
     onReadout: options.onReadout
   });
 
-  function getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string;
-  }> {
+  function getReadoutItems(): ReadoutItem[] {
     const state = sim.getState();
     const aPole = state.rimPositive ? '负极' : '正极';
     const bPole = state.rimPositive ? '正极' : '负极';
     return [
-      { key: 'emf', label: 'E', value: `${state.emf.toFixed(2)} V` },
-      { key: 'current', label: 'I', value: `${state.current.toFixed(2)} A` },
-      { key: 'power', label: 'P电', value: `${state.power.toFixed(3)} W` },
+      { key: 'emf', label: 'E', value: state.emf, digits: 2, unit: 'V' },
+      {
+        key: 'current',
+        label: 'I',
+        value: state.current,
+        digits: 2,
+        unit: 'A'
+      },
+      { key: 'power', label: 'P电', value: state.power, digits: 3, unit: 'W' },
       {
         key: 'torque',
         label: 'M安',
-        value: `${state.torque.toFixed(4)} N·m`
+        value: state.torque,
+        digits: 4,
+        unit: 'N·m'
       },
       {
         key: 'polarity',

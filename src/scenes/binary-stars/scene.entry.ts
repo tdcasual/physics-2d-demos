@@ -7,6 +7,7 @@ import {
   type BinaryStarsState
 } from './scene.sim';
 import { createBinaryStarsView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateBinaryStarsSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -45,25 +46,24 @@ export function createBinaryStarsScene(
     onReadout: options.onReadout
   });
 
-  function getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string;
-    layout?: 'half' | 'full';
-  }> {
+  function getReadoutItems(): ReadoutItem[] {
     const state = sim.getState();
     const product = state.params.m1 * state.r1;
     return [
       {
         key: 'r1',
         label: 'r₁',
-        value: `${state.r1.toFixed(1)} R`,
+        value: state.r1,
+        digits: 1,
+        unit: 'R',
         layout: 'half'
       },
       {
         key: 'r2',
         label: 'r₂',
-        value: `${state.r2.toFixed(1)} R`,
+        value: state.r2,
+        digits: 1,
+        unit: 'R',
         layout: 'half'
       },
       {
@@ -79,12 +79,16 @@ export function createBinaryStarsScene(
       {
         key: 'force',
         label: 'F',
-        value: `${state.force.toFixed(4)} F₀`
+        value: state.force,
+        digits: 4,
+        unit: 'F₀'
       },
       {
         key: 'omega',
         label: 'ω',
-        value: `${state.omega.toFixed(3)} rad·s⁻¹`
+        value: state.omega,
+        digits: 3,
+        unit: 'rad·s⁻¹'
       }
     ];
   }

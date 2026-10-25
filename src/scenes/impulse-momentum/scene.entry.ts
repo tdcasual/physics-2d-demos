@@ -11,6 +11,7 @@ import {
   type ImpulseMomentumParams,
   type ImpulseMomentumState
 } from './scene.sim';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateImpulseMomentumSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -41,7 +42,7 @@ export function createImpulseMomentumScene(
   getSnapshot(): ImpulseMomentumState;
   getParams(): ImpulseMomentumParams;
   setParams(params: Partial<ImpulseMomentumParams>): ImpulseMomentumParams;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
   subscribe(listener: () => void): () => void;
   attachGraphCanvas(canvas: HTMLCanvasElement): void;
   startAll(): void;
@@ -98,19 +99,23 @@ export function createImpulseMomentumScene(
         speed: 1
       };
     },
-    getReadoutItems(): Array<{ key: string; label: string; value: string }> {
+    getReadoutItems(): ReadoutItem[] {
       const state = sim.getState();
       return [
-        { key: 'time', label: 't', value: `${state.time.toFixed(2)} s` },
+        { key: 'time', label: 't', value: state.time, digits: 2, unit: 's' },
         {
           key: 'force',
           label: 'Fₓ',
-          value: `${state.force.toFixed(2)} N`
+          value: state.force,
+          digits: 2,
+          unit: 'N'
         },
         {
           key: 'impulse',
           label: 'Iₓ',
-          value: `${state.impulse.toFixed(2)} N·s`
+          value: state.impulse,
+          digits: 2,
+          unit: 'N·s'
         },
         {
           key: 'p0',

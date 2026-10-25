@@ -8,6 +8,7 @@ import {
   type ElectricFieldParams,
   type ElectricFieldState
 } from './scene.sim';
+import type { ReadoutItem } from '../../platform/readout';
 export type CreateElectricFieldSceneOptions = {
   canvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
@@ -26,7 +27,7 @@ export function createElectricFieldScene(
   getParams(): ElectricFieldParams;
   setParams(next: Partial<ElectricFieldParams>): ElectricFieldParams;
   reset(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createElectricFieldSim();
   const view = createElectricFieldView({
@@ -67,14 +68,24 @@ export function createElectricFieldScene(
         {
           key: 'field',
           label: '场强 E',
-          value: `${s.fieldStrength.toFixed(2)} V/m`
+          value: s.fieldStrength,
+          digits: 2,
+          unit: 'V/m'
         },
         {
           key: 'drift',
           label: '漂移速率 v',
-          value: `${s.driftVelocity.toFixed(2)} m/s`
+          value: s.driftVelocity,
+          digits: 2,
+          unit: 'm/s'
         },
-        { key: 'current', label: '电流 I', value: `${s.current.toFixed(2)} A` },
+        {
+          key: 'current',
+          label: '电流 I',
+          value: s.current,
+          digits: 2,
+          unit: 'A'
+        },
         { key: 'status', label: '状态', value: s.status }
       ];
     }

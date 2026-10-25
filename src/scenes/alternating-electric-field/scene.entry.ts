@@ -9,6 +9,7 @@ import {
   type AlternatingElectricFieldState
 } from './scene.sim';
 import { createAlternatingElectricFieldView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateAlternatingElectricFieldSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -37,7 +38,7 @@ export function createAlternatingElectricFieldScene(
     next: Partial<AlternatingElectricFieldParams>
   ): AlternatingElectricFieldParams;
   reset(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createAlternatingElectricFieldSim();
   const view = createAlternatingElectricFieldView({
@@ -83,17 +84,23 @@ export function createAlternatingElectricFieldScene(
         {
           key: 'acceleration',
           label: '加速度 a',
-          value: `${state.acceleration.toFixed(2)} a₀`
+          value: state.acceleration,
+          digits: 2,
+          unit: 'a₀'
         },
         {
           key: 'velocity',
           label: '速度 v',
-          value: `${state.velocity.toFixed(2)} v₀`
+          value: state.velocity,
+          digits: 2,
+          unit: 'v₀'
         },
         {
           key: 'position',
           label: '位置 x',
-          value: `${state.position.toFixed(1)} mm`
+          value: state.position,
+          digits: 1,
+          unit: 'mm'
         }
       ];
     }

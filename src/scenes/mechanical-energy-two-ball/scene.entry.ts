@@ -8,6 +8,7 @@ import {
   type TwoBallState
 } from './scene.sim';
 import { createTwoBallView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 export type CreateTwoBallSceneOptions = {
   canvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
@@ -25,7 +26,7 @@ export function createMechanicalEnergyTwoBallScene(
   getSnapshot(): TwoBallState;
   getParams(): TwoBallParams;
   setParams(next: Partial<TwoBallParams>): TwoBallParams;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createTwoBallSim();
   const view = createTwoBallView({
@@ -60,16 +61,18 @@ export function createMechanicalEnergyTwoBallScene(
     setParams: base.wrapAction((next: Partial<TwoBallParams>) =>
       sim.setParams(next)
     ),
-    getReadoutItems(): Array<{ key: string; label: string; value: string }> {
+    getReadoutItems(): ReadoutItem[] {
       const s = sim.getState();
       return [
         {
           key: 'energy',
           label: '总机械能',
-          value: `${s.totalEnergy.toFixed(2)} J`
+          value: s.totalEnergy,
+          digits: 2,
+          unit: 'J'
         },
-        { key: 'va', label: 'a 速度', value: `${s.vA.toFixed(2)} m/s` },
-        { key: 'vb', label: 'b 速度', value: `${s.vB.toFixed(2)} m/s` }
+        { key: 'va', label: 'a 速度', value: s.vA, digits: 2, unit: 'm/s' },
+        { key: 'vb', label: 'b 速度', value: s.vB, digits: 2, unit: 'm/s' }
       ];
     }
   };

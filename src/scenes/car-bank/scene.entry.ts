@@ -8,6 +8,7 @@ import {
   type CarBankState
 } from './scene.sim';
 import { createCarBankView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateCarBankSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -57,7 +58,9 @@ export function createCarBankScene(options: CreateCarBankSceneOptions = {}) {
         {
           key: 'criticalSpeed',
           label: '无摩擦临界速度 v₀',
-          value: `${state.criticalSpeed.toFixed(1)} m/s`
+          value: state.criticalSpeed,
+          digits: 1,
+          unit: 'm/s'
         },
         {
           key: 'frictionForce',
@@ -67,12 +70,16 @@ export function createCarBankScene(options: CreateCarBankSceneOptions = {}) {
         {
           key: 'normalForce',
           label: '支持力 N',
-          value: `${(state.normalForce / 1000).toFixed(1)} kN`
+          value: state.normalForce / 1000,
+          digits: 1,
+          unit: 'kN'
         },
         {
           key: 'centripetalForce',
           label: '向心力 Fₙ',
-          value: `${(state.centripetalForce / 1000).toFixed(1)} kN`
+          value: state.centripetalForce / 1000,
+          digits: 1,
+          unit: 'kN'
         }
       ];
     }
@@ -85,6 +92,6 @@ export function createCarBankScene(options: CreateCarBankSceneOptions = {}) {
     setTheme(theme: TeachingTheme): void;
     setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
     resize(): void;
-    getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+    getReadoutItems(): ReadoutItem[];
   };
 }

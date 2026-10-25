@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createXtGraphScene } from '../../src/scenes/xt-graph/scene.entry';
+import { normalizeReadoutItem } from '../../src/platform/readout';
 
 describe('xt-graph entry（transport 状态机）', () => {
   it('startAll/pauseAll 驱动 getTransportState', () => {
@@ -62,7 +63,7 @@ describe('xt-graph entry（transport 状态机）', () => {
     const scene = createXtGraphScene();
     scene.startAll();
     scene.step(5);
-    const items = scene.getReadoutItems();
+    const items = scene.getReadoutItems().map(normalizeReadoutItem);
     expect(items.find((i) => i.label === '时间 t')?.value).toBe('5.00 s');
     expect(items.find((i) => i.label === '位置 x')?.value).toBe('+0.00 m');
     expect(items.find((i) => i.label === '速度 v')?.value).toBe('+1.60 m/s');

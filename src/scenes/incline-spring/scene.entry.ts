@@ -8,6 +8,7 @@ import {
   type InclineSpringParams,
   type InclineSpringState
 } from './scene.sim';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateInclineSpringSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -27,7 +28,7 @@ export function createInclineSpringScene(
   getParams(): InclineSpringParams;
   setParams(next: Partial<InclineSpringParams>): InclineSpringParams;
   reset(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createInclineSpringSim();
   const view = createInclineSpringView({
@@ -69,22 +70,30 @@ export function createInclineSpringScene(
         {
           key: 'velocity',
           label: '速度 v',
-          value: `${s.velocity.toFixed(2)} m/s`
+          value: s.velocity,
+          digits: 2,
+          unit: 'm/s'
         },
         {
           key: 'acceleration',
           label: '加速度 a',
-          value: `${s.acceleration.toFixed(2)} m/s²`
+          value: s.acceleration,
+          digits: 2,
+          unit: 'm/s²'
         },
         {
           key: 'spring-force',
           label: '弹力 F弹',
-          value: `${s.springForce.toFixed(1)} N`
+          value: s.springForce,
+          digits: 1,
+          unit: 'N'
         },
         {
           key: 'total-energy',
           label: '总能量 E总',
-          value: `${s.totalEnergy.toFixed(2)} J`
+          value: s.totalEnergy,
+          digits: 2,
+          unit: 'J'
         }
       ];
     }

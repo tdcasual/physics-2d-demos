@@ -9,6 +9,7 @@ import {
   type PhotoelectricState
 } from './scene.sim';
 import { createPhotoelectricView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreatePhotoelectricSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -60,17 +61,23 @@ export function createPhotoelectricScene(
         {
           key: 'photonEnergy',
           label: '光子能量 hν',
-          value: `${state.photonEnergy.toFixed(2)} eV`
+          value: state.photonEnergy,
+          digits: 2,
+          unit: 'eV'
         },
         {
           key: 'maxKineticEnergy',
           label: '最大动能 Eₖ',
-          value: `${state.maxKineticEnergy.toFixed(2)} eV`
+          value: state.maxKineticEnergy,
+          digits: 2,
+          unit: 'eV'
         },
         {
           key: 'photoCurrent',
           label: '光电流 I',
-          value: `${state.photoCurrent.toFixed(2)} mA`
+          value: state.photoCurrent,
+          digits: 2,
+          unit: 'mA'
         },
         {
           key: 'relayState',
@@ -88,7 +95,7 @@ export function createPhotoelectricScene(
     setTheme(theme: TeachingTheme): void;
     setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
     resize(): void;
-    getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+    getReadoutItems(): ReadoutItem[];
   };
 }
 

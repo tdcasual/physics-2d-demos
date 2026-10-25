@@ -11,6 +11,7 @@ import {
   type RaceState
 } from './scene.sim';
 import { createTortoiseHareView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type TortoiseHareParams = {
   /** 播放速度倍率（0.25–3，与 transport-bar 对齐） */
@@ -111,16 +112,18 @@ export function createTortoiseHareScene(
       return { speed: timeScale };
     },
     getState: (): RaceState => sim.getState(),
-    getReadoutItems(): Array<{ key: string; label: string; value: string }> {
+    getReadoutItems(): ReadoutItem[] {
       const s = sim.getState();
       return [
-        { key: 't', label: '时间 t', value: `${s.t.toFixed(2)} s` },
-        { key: 'xa', label: '乌龟 x', value: `${s.xa.toFixed(2)} m` },
-        { key: 'xb', label: '兔子 x', value: `${s.xb.toFixed(2)} m` },
+        { key: 't', label: '时间 t', value: s.t, digits: 2, unit: 's' },
+        { key: 'xa', label: '乌龟 x', value: s.xa, digits: 2, unit: 'm' },
+        { key: 'xb', label: '兔子 x', value: s.xb, digits: 2, unit: 'm' },
         {
           key: 'dx',
           label: '间距 Δx',
-          value: `${Math.abs(s.xa - s.xb).toFixed(2)} m`
+          value: Math.abs(s.xa - s.xb),
+          digits: 2,
+          unit: 'm'
         }
       ];
     }

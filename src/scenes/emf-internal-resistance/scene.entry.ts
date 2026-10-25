@@ -11,6 +11,7 @@ import {
   type EmfInternalParams,
   type EmfInternalState
 } from './scene.sim';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateEmfInternalSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -39,7 +40,7 @@ export function createEmfInternalScene(
   fitRecords(): EmfInternalState['fit'];
   clearRecords(): void;
   attachGraphCanvas(canvas: HTMLCanvasElement): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
   subscribe(listener: () => void): () => void;
 } {
   const sim = createEmfInternalSim(options.initialParams);
@@ -57,27 +58,29 @@ export function createEmfInternalScene(
     onReadout: options.onReadout
   });
 
-  function getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string;
-  }> {
+  function getReadoutItems(): ReadoutItem[] {
     const state = sim.getState();
     const items = [
       {
         key: 'voltage',
         label: '端电压 U',
-        value: `${state.terminalVoltage.toFixed(2)} V`
+        value: state.terminalVoltage,
+        digits: 2,
+        unit: 'V'
       },
       {
         key: 'current',
         label: '电流 I',
-        value: `${state.current.toFixed(3)} A`
+        value: state.current,
+        digits: 3,
+        unit: 'A'
       },
       {
         key: 'resistance',
         label: '滑片电阻 R',
-        value: `${state.rheostatResistance.toFixed(1)} Ω`
+        value: state.rheostatResistance,
+        digits: 1,
+        unit: 'Ω'
       },
       {
         key: 'records',

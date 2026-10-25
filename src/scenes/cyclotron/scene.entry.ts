@@ -9,6 +9,7 @@ import {
   type CyclotronState
 } from './scene.sim';
 import { createCyclotronView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateCyclotronSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -35,11 +36,7 @@ export function createCyclotronScene(
     onReadout: options.onReadout
   });
 
-  function getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string;
-  }> {
+  function getReadoutItems(): ReadoutItem[] {
     const state = sim.getState();
     return [
       {
@@ -48,13 +45,21 @@ export function createCyclotronScene(
         value: PARTICLES[state.params.particle].label
       },
       { key: 'crossings', label: 'n', value: `${state.crossings}` },
-      { key: 'energy', label: 'Eₖ', value: `${state.energy.toFixed(0)} MeV` },
+      {
+        key: 'energy',
+        label: 'Eₖ',
+        value: state.energy,
+        digits: 0,
+        unit: 'MeV'
+      },
       {
         key: 'maxEnergy',
         label: 'Eₖₘ',
-        value: `${state.maxEnergy.toFixed(0)} MeV`
+        value: state.maxEnergy,
+        digits: 0,
+        unit: 'MeV'
       },
-      { key: 'radius', label: 'R', value: `${state.radius.toFixed(0)} px` },
+      { key: 'radius', label: 'R', value: state.radius, digits: 0, unit: 'px' },
       { key: 'period', label: 'T/T₀', value: state.periodRatio.toFixed(2) },
       { key: 'status', label: '状态', value: state.status }
     ];

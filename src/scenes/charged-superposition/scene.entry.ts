@@ -8,6 +8,7 @@ import {
   type ChargedSuperpositionState
 } from './scene.sim';
 import { createChargedSuperpositionView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateChargedSuperpositionSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -59,12 +60,16 @@ export function createChargedSuperpositionScene(
         {
           key: 'screenOffsetMm',
           label: '打屏偏移量 Y',
-          value: `${state.screenOffsetMm.toFixed(1)} mm`
+          value: state.screenOffsetMm,
+          digits: 1,
+          unit: 'mm'
         },
         {
           key: 'exitSpeed',
           label: '出射初速度 v₀',
-          value: `${(state.exitSpeed / 1e6).toFixed(2)} ×10⁶ m/s`
+          value: state.exitSpeed / 1e6,
+          digits: 2,
+          unit: '×10⁶ m/s'
         },
         {
           key: 'exitAngleDeg',
@@ -86,6 +91,6 @@ export function createChargedSuperpositionScene(
     setTheme(theme: TeachingTheme): void;
     setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
     resize(): void;
-    getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+    getReadoutItems(): ReadoutItem[];
   };
 }

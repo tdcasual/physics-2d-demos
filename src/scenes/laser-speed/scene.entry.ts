@@ -8,6 +8,7 @@ import {
   type LaserSpeedState
 } from './scene.sim';
 import { createLaserSpeedView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateLaserSpeedSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -27,7 +28,7 @@ export function createLaserSpeedScene(
   getSnapshot(): LaserSpeedState;
   getParams(): LaserSpeedParams;
   setParams(params: Partial<LaserSpeedParams>): LaserSpeedParams;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createLaserSpeedSim();
   const view = createLaserSpeedView({
@@ -57,22 +58,30 @@ export function createLaserSpeedScene(
         {
           key: 'pulse1',
           label: '脉冲①往返',
-          value: `${state.pulse1.returnTime.toFixed(2)} s`
+          value: state.pulse1.returnTime,
+          digits: 2,
+          unit: 's'
         },
         {
           key: 'pulse2',
           label: '脉冲②往返',
-          value: `${(state.pulse2.returnTime - state.pulse2.emissionTime).toFixed(2)} s`
+          value: state.pulse2.returnTime - state.pulse2.emissionTime,
+          digits: 2,
+          unit: 's'
         },
         {
           key: 'distance',
           label: '相对位移 Δx',
-          value: `${state.measuredDistance.toFixed(1)} m`
+          value: state.measuredDistance,
+          digits: 1,
+          unit: 'm'
         },
         {
           key: 'velocity',
           label: '测得车速 v',
-          value: `${state.inferredVelocity.toFixed(1)} m/s`
+          value: state.inferredVelocity,
+          digits: 1,
+          unit: 'm/s'
         }
       ];
     }

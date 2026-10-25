@@ -9,6 +9,7 @@ import {
   type TirState
 } from './scene.sim';
 import { createTirView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateTirSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -28,7 +29,7 @@ export function createTirScene(
   setTheme(theme: TeachingTheme): void;
   setMode(mode: TeachingMode, hints?: DemoRenderHints): void;
   resize(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createTirSim();
   const view = createTirView({
@@ -87,7 +88,9 @@ export function createTirScene(
         {
           key: 'critical-height',
           label: '临界高度 hᶜ',
-          value: `${s.criticalHeight.toFixed(2)} cm`
+          value: s.criticalHeight,
+          digits: 2,
+          unit: 'cm'
         },
         { key: 'status', label: '光学判定', value: s.status }
       ];

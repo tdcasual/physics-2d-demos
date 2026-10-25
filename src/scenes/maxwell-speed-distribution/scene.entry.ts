@@ -8,6 +8,7 @@ import {
   type MaxwellParams,
   type MaxwellState
 } from './scene.sim';
+import type { ReadoutItem } from '../../platform/readout';
 export type CreateMaxwellSceneOptions = {
   canvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
@@ -31,7 +32,7 @@ export function createMaxwellScene(
   getParams(): MaxwellParams;
   setParams(next: Partial<MaxwellParams>): MaxwellParams;
   reset(): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
 } {
   const sim = createMaxwellSim();
   const view = createMaxwellView({
@@ -55,23 +56,29 @@ export function createMaxwellScene(
       sim.setParams(next)
     ),
     reset: base.wrapAction(() => sim.reset()),
-    getReadoutItems(): Array<{ key: string; label: string; value: string }> {
+    getReadoutItems(): ReadoutItem[] {
       const s = sim.getState();
       return [
         {
           key: 'mostProbable',
           label: '最可几速率',
-          value: `${s.mostProbable.toFixed(0)} m/s`
+          value: s.mostProbable,
+          digits: 0,
+          unit: 'm/s'
         },
         {
           key: 'meanSpeed',
           label: '平均速率',
-          value: `${s.meanSpeed.toFixed(0)} m/s`
+          value: s.meanSpeed,
+          digits: 0,
+          unit: 'm/s'
         },
         {
           key: 'rmsSpeed',
           label: '方均根速率',
-          value: `${s.rmsSpeed.toFixed(0)} m/s`
+          value: s.rmsSpeed,
+          digits: 0,
+          unit: 'm/s'
         }
       ];
     }

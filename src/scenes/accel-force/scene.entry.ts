@@ -43,11 +43,13 @@ export function createAccelForceScene(
   function getReadoutItems() {
     const s = sim.getState();
     return [
-      { key: 'force', label: '拉力 F', value: `${s.force.toFixed(3)} N` },
+      { key: 'force', label: '拉力 F', value: s.force, digits: 3, unit: 'N' },
       {
         key: 'inverseMass',
         label: '1/M',
-        value: `${s.inverseMass.toFixed(2)} kg⁻¹`
+        value: s.inverseMass,
+        digits: 2,
+        unit: 'kg⁻¹'
       },
       {
         key: 'accelTheory',
@@ -55,9 +57,15 @@ export function createAccelForceScene(
         value: formatAccel(s.acceleration)
       },
       { key: 'accelTape', label: 'a仿', value: formatAccel(s.aTape) },
-      { key: 'friction', label: 'f', value: `${s.friction.toFixed(3)} N` },
-      { key: 'time', label: 't', value: `${s.time.toFixed(2)} s` },
-      { key: 'velocity', label: 'v', value: `${s.velocity.toFixed(2)} m/s` },
+      { key: 'friction', label: 'f', value: s.friction, digits: 3, unit: 'N' },
+      { key: 'time', label: 't', value: s.time, digits: 2, unit: 's' },
+      {
+        key: 'velocity',
+        label: 'v',
+        value: s.velocity,
+        digits: 2,
+        unit: 'm/s'
+      },
       { key: 'status', label: '状态', value: s.status }
     ];
   }

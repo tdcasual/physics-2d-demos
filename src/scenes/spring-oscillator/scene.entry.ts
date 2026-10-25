@@ -6,6 +6,7 @@ import {
 
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import type { DemoRenderHints } from '../../platform/demo-profile';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateSpringOscillatorSceneOptions = {
   graphCanvas?: HTMLCanvasElement;
@@ -31,13 +32,15 @@ export function createSpringOscillatorScene(
   }
 
   // 生成读数数据（供容器统一刷新）
-  function getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string;
-  }> {
-    const items: Array<{ key: string; label: string; value: string }> = [
-      { key: 't', label: '全局时间', value: `${sim.globalTime.toFixed(2)} s` },
+  function getReadoutItems(): ReadoutItem[] {
+    const items: ReadoutItem[] = [
+      {
+        key: 't',
+        label: '全局时间',
+        value: sim.globalTime,
+        digits: 2,
+        unit: 's'
+      },
       { key: 'count', label: '振子数量', value: String(sim.oscillators.length) }
     ];
 
@@ -52,12 +55,16 @@ export function createSpringOscillatorScene(
         {
           key: `omega-${n}`,
           label: `#${n} ω`,
-          value: `${omega.toFixed(2)} rad/s`
+          value: omega,
+          digits: 2,
+          unit: 'rad/s'
         },
         {
           key: `period-${n}`,
           label: `#${n} T`,
-          value: `${period.toFixed(2)} s`
+          value: period,
+          digits: 2,
+          unit: 's'
         },
         {
           key: `phase-${n}`,

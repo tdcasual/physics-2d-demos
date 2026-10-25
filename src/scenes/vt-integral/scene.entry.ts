@@ -18,6 +18,7 @@ import {
   encodeVtScene,
   vtRuleLabel
 } from './scene-values';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateVtIntegralSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -29,8 +30,6 @@ export type CreateVtIntegralSceneOptions = {
 
 /** URL / 控件投影用的数字编码参数（与 meta.defaultParams 键一致）。 */
 export type VtUrlParams = { n: number; scene: number; rule: number };
-
-type ReadoutItem = { key: string; label: string; value: string };
 
 function sceneLabel(scene: VtIntegralSnapshot['params']['scene']): string {
   if (scene === 'scene1') return '场景一：v-t积分';
@@ -79,7 +78,9 @@ export function buildVtReadoutItems(
       {
         key: 'true-area',
         label: '位移 x（v-t 面积）',
-        value: `${metrics.trueArea.toFixed(4)} m`
+        value: metrics.trueArea,
+        digits: 4,
+        unit: 'm'
       },
       {
         key: 'abs-err',

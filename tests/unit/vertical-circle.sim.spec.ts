@@ -17,6 +17,7 @@ import {
   verticalCircleTopSpeed,
   verticalCircleTurningAbs
 } from '../../src/scenes/vertical-circle/scene.sim';
+import { normalizeReadoutItem } from '../../src/platform/readout';
 
 describe('vertical-circle energy and kinematics', () => {
   it('matches v² = v_bottom² − 2gR(1+cosθ) at θ = 0 / ±90 / ±180', () => {
@@ -384,7 +385,10 @@ describe('vertical-circle entry readout', () => {
       autoRun: false
     });
     const items = Object.fromEntries(
-      scene.getReadoutItems().map((item) => [item.key, item.value])
+      scene
+        .getReadoutItems()
+        .map(normalizeReadoutItem)
+        .map((item) => [item.key, item.value])
     );
     expect(items.model).toBe('绳模型（只能拉）');
     expect(items.vBottom).toBe('25.0 m/s');
@@ -396,7 +400,10 @@ describe('vertical-circle entry readout', () => {
     expect(items.formulaT).toBe('T = mv²/R − mg cosθ');
     scene.setParams({ model: 'rod', vBottom: 20, theta: 0 });
     const rod = Object.fromEntries(
-      scene.getReadoutItems().map((item) => [item.key, item.value])
+      scene
+        .getReadoutItems()
+        .map(normalizeReadoutItem)
+        .map((item) => [item.key, item.value])
     );
     expect(rod.model).toBe('杆模型（拉与推）');
     expect(rod.status).toBe('杆受压');

@@ -7,6 +7,7 @@ import {
   type BindingEnergyState
 } from './scene.sim';
 import { createBindingEnergyView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateBindingEnergySceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -16,23 +17,23 @@ export type CreateBindingEnergySceneOptions = {
   onReadout?: (state: BindingEnergyState) => void;
 };
 
-function gainReadout(state: BindingEnergyState): {
-  key: string;
-  label: string;
-  value: string;
-} {
+function gainReadout(state: BindingEnergyState): ReadoutItem {
   if (state.fusionGain > 0) {
     return {
       key: 'gain',
       label: '聚变增益',
-      value: `${state.fusionGain.toFixed(2)} MeV`
+      value: state.fusionGain,
+      digits: 2,
+      unit: 'MeV'
     };
   }
   if (state.fissionGain > 0) {
     return {
       key: 'gain',
       label: '裂变增益',
-      value: `${state.fissionGain.toFixed(2)} MeV`
+      value: state.fissionGain,
+      digits: 2,
+      unit: 'MeV'
     };
   }
   return { key: 'gain', label: '增益', value: '0（铁峰）' };
@@ -67,12 +68,16 @@ export function createBindingEnergyScene(
       {
         key: 'binding',
         label: '比结合能 E/A',
-        value: `${s.point.binding.toFixed(2)} MeV`
+        value: s.point.binding,
+        digits: 2,
+        unit: 'MeV'
       },
       {
         key: 'total',
         label: '总结合能 E',
-        value: `${s.total.toFixed(1)} MeV`
+        value: s.total,
+        digits: 1,
+        unit: 'MeV'
       },
       { key: 'status', label: '区域', value: s.status },
       gainReadout(s),

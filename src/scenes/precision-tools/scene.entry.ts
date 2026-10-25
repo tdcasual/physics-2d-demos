@@ -10,6 +10,7 @@ import {
   type PrecisionToolParams,
   type PrecisionToolState
 } from './scene.sim';
+import type { ReadoutItem } from '../../platform/readout';
 
 export { asPrecisionMode };
 
@@ -39,7 +40,7 @@ export function createPrecisionToolScene(
   getSnapshot(): PrecisionToolState;
   getParams(): PrecisionToolParams;
   setParams(params: Partial<PrecisionToolParams>): PrecisionToolParams;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
   subscribe(listener: () => void): () => void;
 } {
   const sim = createPrecisionToolSim(options.initialParams);
@@ -56,18 +57,16 @@ export function createPrecisionToolScene(
     onReadout: options.onReadout,
     resetView: () => view.reset()
   });
-  function getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string;
-  }> {
+  function getReadoutItems(): ReadoutItem[] {
     const state = sim.getState();
     const items = [
       { key: 'mode', label: '模式', value: modeLabel(state.params.mode) },
       {
         key: 'main',
         label: '主尺',
-        value: `${state.mainScaleReading.toFixed(2)} mm`
+        value: state.mainScaleReading,
+        digits: 2,
+        unit: 'mm'
       },
       {
         key: 'fine',
@@ -77,7 +76,9 @@ export function createPrecisionToolScene(
       {
         key: 'total',
         label: '最终读数',
-        value: `${state.totalReading.toFixed(2)} mm`
+        value: state.totalReading,
+        digits: 2,
+        unit: 'mm'
       }
     ];
     if (state.params.showReading) {

@@ -12,6 +12,7 @@ import {
   type DopplerState
 } from './scene.sim';
 import { createDopplerView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateDopplerSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -32,7 +33,7 @@ export function createDopplerScene(
   enableAudio(): void;
   disableAudio(): void;
   setVolume(v: number): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
   subscribe(listener: () => void): () => void;
 } {
   const sim = createDopplerSim();
@@ -67,22 +68,22 @@ export function createDopplerScene(
     (params: Partial<DopplerParams>): DopplerParams => sim.setParams(params)
   );
 
-  function getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string;
-  }> {
+  function getReadoutItems(): ReadoutItem[] {
     const s = sim.getState();
     return [
       {
         key: 'f-emit',
         label: '发射频率',
-        value: `${s.params.emitFrequency.toFixed(1)} Hz`
+        value: s.params.emitFrequency,
+        digits: 1,
+        unit: 'Hz'
       },
       {
         key: 'f-receive',
         label: '接收频率',
-        value: `${s.receivedFrequency.toFixed(2)} Hz`
+        value: s.receivedFrequency,
+        digits: 2,
+        unit: 'Hz'
       },
       {
         key: 'delta-pct',
@@ -92,19 +93,25 @@ export function createDopplerScene(
       {
         key: 'lambda-0',
         label: '标准波长 λ₀',
-        value: `${s.wavelengthStandard.toFixed(2)} m`
+        value: s.wavelengthStandard,
+        digits: 2,
+        unit: 'm'
       },
       {
         key: 'lambda-front',
         label: '前方波长',
-        value: `${s.wavelengthFront.toFixed(2)} m`
+        value: s.wavelengthFront,
+        digits: 2,
+        unit: 'm'
       },
       {
         key: 'lambda-back',
         label: '后方波长',
-        value: `${s.wavelengthBack.toFixed(2)} m`
+        value: s.wavelengthBack,
+        digits: 2,
+        unit: 'm'
       },
-      { key: 'mach', label: '马赫数', value: `${s.machNumber.toFixed(2)}` }
+      { key: 'mach', label: '马赫数', value: s.machNumber, digits: 2 }
     ];
   }
 

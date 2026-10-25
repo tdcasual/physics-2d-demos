@@ -45,7 +45,9 @@ export function createMagneticConvergenceScene(
       {
         key: 'focusError',
         label: state.params.mode === 'converge' ? '焦点偏差' : '平行偏差',
-        value: `${state.focusErrorPx.toFixed(0)} px`
+        value: state.focusErrorPx,
+        digits: 0,
+        unit: 'px'
       }
     ];
   }

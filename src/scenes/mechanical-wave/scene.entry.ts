@@ -13,6 +13,7 @@ import {
   type ConstraintInfo
 } from './scene.sim';
 import { createMechanicalWaveView } from './scene.view';
+import type { ReadoutItem } from '../../platform/readout';
 
 export type CreateMechanicalWaveSceneOptions = {
   canvas?: HTMLCanvasElement;
@@ -31,7 +32,7 @@ export function createMechanicalWaveScene(
   getState(): MechanicalWaveState;
   setParam(key: string, value: number | string): MechanicalWaveParams;
   setPointP(x: number): void;
-  getReadoutItems(): Array<{ key: string; label: string; value: string }>;
+  getReadoutItems(): ReadoutItem[];
   getConstraintInfo(): ConstraintInfo;
   subscribe(listener: () => void): () => void;
 } {
@@ -71,20 +72,24 @@ export function createMechanicalWaveScene(
     zero: '○ 零'
   };
 
-  function getReadoutItems(): Array<{
-    key: string;
-    label: string;
-    value: string;
-  }> {
+  function getReadoutItems(): ReadoutItem[] {
     const s = sim.getState();
     return [
       {
         key: 'wave-speed',
         label: '波速 v = λ/T',
-        value: `${s.params.waveSpeed.toFixed(2)} m/s`
+        value: s.params.waveSpeed,
+        digits: 2,
+        unit: 'm/s'
       },
-      { key: 't', label: '当前时刻 t', value: `${s.time.toFixed(2)} s` },
-      { key: 'p-y', label: 'P 点位移', value: `${s.pointPY.toFixed(2)} cm` },
+      { key: 't', label: '当前时刻 t', value: s.time, digits: 2, unit: 's' },
+      {
+        key: 'p-y',
+        label: 'P 点位移',
+        value: s.pointPY,
+        digits: 2,
+        unit: 'cm'
+      },
       {
         key: 'p-v-dir',
         label: 'P 点速度方向',

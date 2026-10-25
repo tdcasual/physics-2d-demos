@@ -13,6 +13,7 @@ import {
   uvtZeroCrossingTime,
   wrapUvtTime
 } from '../../src/scenes/uniformly-varied-motion/scene.sim';
+import { normalizeReadoutItem } from '../../src/platform/readout';
 
 function trapArea(segment: ReturnType<typeof uvtAreaSegments>[number]): number {
   const t0 = segment.points[0]!.t;
@@ -200,7 +201,10 @@ describe('uniformly varied motion entry readout', () => {
     scene.setParams({ v0: 10, acceleration: -2, autoRun: false });
     scene.stepFrame(5);
     const items = Object.fromEntries(
-      scene.getReadoutItems().map((item) => [item.key, item.value])
+      scene
+        .getReadoutItems()
+        .map(normalizeReadoutItem)
+        .map((item) => [item.key, item.value])
     );
     expect(items.time).toBe('5.00 s');
     expect(items.velocity).toBe('0.00 m/s');
@@ -210,7 +214,10 @@ describe('uniformly varied motion entry readout', () => {
     expect(items.formulaX).toBe('v₀t + ½at²');
     scene.stepFrame(1);
     const moving = Object.fromEntries(
-      scene.getReadoutItems().map((item) => [item.key, item.value])
+      scene
+        .getReadoutItems()
+        .map(normalizeReadoutItem)
+        .map((item) => [item.key, item.value])
     );
     expect(moving.status).toBe('运动中');
     expect(moving.velocity).toBe('-2.00 m/s');
