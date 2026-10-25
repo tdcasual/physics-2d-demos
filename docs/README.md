@@ -17,42 +17,46 @@
 
 ## 架构设计
 
-| 文档                                                                           | 说明                                                               |
-| ------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
-| [layout-master-system-design.md](layout-master-system-design.md)               | 布局母版系统设计（历史快照）：接口定义、架构图、设计约束、实施步骤 |
-| [layout-master-system-impl.md](layout-master-system-impl.md)                   | 实施总结（历史快照）：已完成的 Phase 清单、文件结构、关键决策      |
-| [layout-master-system-pixel-perfect.md](layout-master-system-pixel-perfect.md) | 像素级还原指南（历史快照）：布局比例、断点、安全区域               |
-| [layout-v2-design.md](layout-v2-design.md)                                     | 布局 V2 设计提案（历史快照）                                       |
-| [layout-v2-summary.md](layout-v2-summary.md)                                   | 布局 V2 实施总结（历史快照）                                       |
+| 文档                                                                                   | 说明                                                               |
+| -------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| [layout-master-system-design.md](layout-master-system-design.md)                       | 布局母版系统设计（历史快照）：接口定义、架构图、设计约束、实施步骤 |
+| [layout-master-system-impl.md](archive/layout-master-system-impl.md)                   | 实施总结（历史快照）：已完成的 Phase 清单、文件结构、关键决策      |
+| [layout-master-system-pixel-perfect.md](archive/layout-master-system-pixel-perfect.md) | 像素级还原指南（历史快照）：布局比例、断点、安全区域               |
+| [layout-v2-design.md](archive/layout-v2-design.md)                                     | 布局 V2 设计提案（历史快照）                                       |
+| [layout-v2-summary.md](archive/layout-v2-summary.md)                                   | 布局 V2 实施总结（历史快照）                                       |
 
 ---
 
 ## 场景与迁移
 
-| 文档                                                               | 说明                                                                     |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| [scene-migration-requirements.md](scene-migration-requirements.md) | 旧版场景开发规范（**历史文档**，当前规范见 new-scene-agent-contract.md） |
-| [scene-modernization-guide.md](scene-modernization-guide.md)       | **场景现代化指南**：当前标准、可复用基建、安全重写流程、脚手架           |
-| [scene-analysis.md](scene-analysis.md)                             | 场景功能分析与分类（**历史文档**，统一框架落地前的分析快照）             |
-| [scene-design-proposal.md](scene-design-proposal.md)               | 场景设计提案模板                                                         |
-| [scene-layout-configs.md](scene-layout-configs.md)                 | 各场景布局配置汇总                                                       |
-| [projectile-migration-review.md](projectile-migration-review.md)   | 抛体运动迁移评审                                                         |
-| [projectile-migration-summary.md](projectile-migration-summary.md) | 抛体运动迁移总结                                                         |
+| 文档                                                                       | 说明                                                                     |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| [scene-migration-requirements.md](archive/scene-migration-requirements.md) | 旧版场景开发规范（**历史文档**，当前规范见 new-scene-agent-contract.md） |
+| [scene-modernization-guide.md](scene-modernization-guide.md)               | **场景现代化指南**：当前标准、可复用基建、安全重写流程、脚手架           |
+| [scene-analysis.md](archive/scene-analysis.md)                             | 场景功能分析与分类（**历史文档**，统一框架落地前的分析快照）             |
+| [scene-design-proposal.md](archive/scene-design-proposal.md)               | 场景设计提案模板                                                         |
+| [scene-layout-configs.md](scene-layout-configs.md)                         | 各场景布局配置汇总                                                       |
+| [projectile-migration-review.md](archive/projectile-migration-review.md)   | 抛体运动迁移评审                                                         |
+| [projectile-migration-summary.md](archive/projectile-migration-summary.md) | 抛体运动迁移总结                                                         |
 
 ---
 
 ## 视觉与比例
 
-| 文档                                                                     | 说明         |
-| ------------------------------------------------------------------------ | ------------ |
-| [color-palette.md](color-palette.md)                                     | 项目配色方案 |
-| [quality-gates.md](quality-gates.md)                                     | 质量门禁流程 |
-| [layout-proportions-analysis.md](layout-proportions-analysis.md)         | 布局比例分析 |
-| [layout-proportions-summary.md](layout-proportions-summary.md)           | 布局比例总结 |
-| [proportion-optimization-summary.md](proportion-optimization-summary.md) | 比例优化总结 |
+| 文档                                                                             | 说明         |
+| -------------------------------------------------------------------------------- | ------------ |
+| [color-palette.md](color-palette.md)                                             | 项目配色方案 |
+| [quality-gates.md](quality-gates.md)                                             | 质量门禁流程 |
+| [layout-proportions-analysis.md](archive/layout-proportions-analysis.md)         | 布局比例分析 |
+| [layout-proportions-summary.md](archive/layout-proportions-summary.md)           | 布局比例总结 |
+| [proportion-optimization-summary.md](archive/proportion-optimization-summary.md) | 比例优化总结 |
 
 ---
 
 ## 历史计划（已执行）
 
 见 [plans/README.md](plans/README.md)。所有计划已执行完毕，保留供追溯。
+
+## 历史归档
+
+标注为 `archive/` 的文档不代表现状（早期审计报告、旧规范、旧设计稿），清单见 [archive/README.md](archive/README.md)。

@@ -3,7 +3,7 @@
 > 状态：历史快照。归档设计/实施记录，不作为现行方案。
 
 > 用于逐场景验证“modern 版本与 legacy 演示一致”。
-> **迁移实施前请阅读：[场景迁移到统一框架的要求规范](../scene-migration-requirements.md)**
+> **迁移实施前请阅读：[场景迁移到统一框架的要求规范](../archive/scene-migration-requirements.md)**
 
 > **归档说明（2026-08）**：legacy 页面和 `renderer` 查询路由已经从产品中移除，
 > `tests/parity/` 及其 Playwright 配置也已删除。本文件只保留迁移历史记录，
