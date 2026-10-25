@@ -1,5 +1,8 @@
 import { readoutOccludesStage } from '../../platform/stage-readout';
 import { clamp } from '../../core/math';
+import { finiteNumber } from '../../core/coerce';
+import { measureStageLayout, fitStage } from '../stage-fit';
+import type { StageLayoutHint } from '../stage-fit';
 
 export type VerticalCircleModel = 'rope' | 'rod';
 export type VerticalCircleHandle = 'ball' | null;
@@ -32,19 +35,6 @@ export type VerticalCircleState = {
   criticalBottomSpeed: number;
   criticalTopSpeed: number;
   status: string;
-};
-
-export type StageLayoutHint = {
-  floatingReadout: boolean;
-  overlayPx?: number;
-  overlayTopPx?: number;
-  overlayHeightPx?: number;
-};
-
-type StagePose = {
-  fit: number;
-  offsetX: number;
-  offsetY: number;
 };
 
 const G = 10;
@@ -108,15 +98,6 @@ export const verticalCircleConstants = {
 const C = verticalCircleConstants;
 const FLOATING_OVERLAY_FALLBACK = C.overlayFallbackPx;
 
-function finite(value: unknown, fallback: number): number {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string' && value.trim() !== '') {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return fallback;
-}
-
 function asBool(value: unknown, fallback: boolean): boolean {
   if (typeof value === 'boolean') return value;
   if (value === true || value === 1 || value === '1' || value === 'true') {
@@ -138,9 +119,11 @@ function parseModel(
 }
 
 export function normalizeAngle(angle: number): number {
-  let value = finite(angle, THETA_DEFAULT);
-  while (value > 180) value -= 360;
-  while (value < -180) value += 360;
+  // 先取余（浮点取余是精确的）再单步修正：与逐次 ±360 的结果一致，
+  // 但不随 |angle| 增长迭代——URL 可注入 1e308，循环会永不终止。
+  let value = finiteNumber(angle, THETA_DEFAULT) % 360;
+  if (value > 180) value -= 360;
+  if (value < -180) value += 360;
   return value;
 }
 
@@ -151,11 +134,11 @@ function normalizeParams(
   return {
     model: parseModel(input.model, previous.model),
     vBottom: clamp(
-      finite(input.vBottom, previous.vBottom),
+      finiteNumber(input.vBottom, previous.vBottom),
       V_BOTTOM_MIN,
       V_BOTTOM_MAX
     ),
-    theta: normalizeAngle(finite(input.theta, previous.theta)),
+    theta: normalizeAngle(finiteNumber(input.theta, previous.theta)),
     autoRun:
       input.autoRun === undefined
         ? previous.autoRun
@@ -173,7 +156,9 @@ function normalizeParams(
 
 /** v_top = √max(0, v_bottom² − 4gR) */
 export function verticalCircleTopSpeed(vBottom: number): number {
-  return Math.sqrt(Math.max(0, finite(vBottom, 0) ** 2 - 4 * G * RADIUS_M));
+  return Math.sqrt(
+    Math.max(0, finiteNumber(vBottom, 0) ** 2 - 4 * G * RADIUS_M)
+  );
 }
 
 /** v(θ)² = v_bottom² − 2gR(1 + cosθ)，平方非负夹取 */
@@ -185,7 +170,7 @@ export function verticalCircleSpeedAtAngle(
   return Math.sqrt(
     Math.max(
       0,
-      finite(vBottom, 0) ** 2 - 2 * G * RADIUS_M * (1 + Math.cos(angle))
+      finiteNumber(vBottom, 0) ** 2 - 2 * G * RADIUS_M * (1 + Math.cos(angle))
     )
   );
 }
@@ -222,7 +207,7 @@ export function verticalCircleGravityTangential(theta: number): number {
 
 /** 能量允许的最小 |θ|；能过最高点时为 0。 */
 export function verticalCircleTurningAbs(vBottom: number): number {
-  const limit = finite(vBottom, 0) ** 2 / (2 * G * RADIUS_M) - 1;
+  const limit = finiteNumber(vBottom, 0) ** 2 / (2 * G * RADIUS_M) - 1;
   if (limit >= 1 - 1e-12) return 0;
   return Math.acos(clamp(limit, -1, 1)) / DEG;
 }
@@ -253,67 +238,10 @@ function statusFor(
   return constraintForce < -FORCE_EPS ? '杆受压' : '杆受拉';
 }
 
-function containInRect(
-  boxW: number,
-  boxH: number,
-  availW: number,
-  availH: number,
-  originX: number,
-  originY: number,
-  alignX: 'left' | 'center'
-): StagePose {
-  const w = Math.max(1, availW);
-  const h = Math.max(1, availH);
-  const fit = Math.min(w / boxW, h / boxH);
-  const stageW = boxW * fit;
-  const stageH = boxH * fit;
-  return {
-    fit,
-    offsetX: originX + (alignX === 'center' ? (w - stageW) / 2 : 0),
-    offsetY: originY + (h - stageH) / 2
-  };
-}
-
-function betterPose(a: StagePose, b: StagePose): StagePose {
-  return b.fit > a.fit + 1e-9 ? b : a;
-}
-
-export function hasFloatingReadout(anchor?: Element | null): boolean {
-  return readoutOccludesStage(anchor);
-}
+export const hasFloatingReadout = readoutOccludesStage;
 
 export function stageLayoutFrom(canvas?: Element | null): StageLayoutHint {
-  const floatingReadout = hasFloatingReadout(canvas);
-  if (!floatingReadout) return { floatingReadout: false, overlayPx: 0 };
-  let overlayPx = 0;
-  let overlayTopPx = 0;
-  let overlayHeightPx = 0;
-  if (canvas instanceof HTMLElement) {
-    const panel = canvas.parentElement?.querySelector(
-      '.teaching-readout-panel, .srgb-readout-panel'
-    );
-    if (panel instanceof HTMLElement) {
-      const cr = canvas.getBoundingClientRect();
-      const rr = panel.getBoundingClientRect();
-      if (
-        rr.left < cr.right &&
-        rr.right > cr.left &&
-        rr.top < cr.bottom &&
-        rr.bottom > cr.top
-      ) {
-        overlayPx = Math.max(0, cr.right - rr.left);
-        const top = Math.max(rr.top, cr.top);
-        const bottom = Math.min(rr.bottom, cr.bottom);
-        overlayTopPx = Math.max(0, top - cr.top);
-        overlayHeightPx = Math.max(0, bottom - top);
-      }
-    }
-  }
-  return {
-    floatingReadout: true,
-    overlayPx: overlayPx || FLOATING_OVERLAY_FALLBACK,
-    ...(overlayHeightPx > 0 ? { overlayTopPx, overlayHeightPx } : {})
-  };
+  return measureStageLayout(canvas, FLOATING_OVERLAY_FALLBACK);
 }
 
 /**
@@ -324,77 +252,15 @@ export function stageTransform(
   cssWidth: number,
   cssHeight: number,
   layout: StageLayoutHint
-): {
-  fit: number;
-  offsetX: number;
-  offsetY: number;
-  boxW: number;
-  boxH: number;
-  floatingReadout: boolean;
-} {
-  const width = Math.max(1, cssWidth);
-  const height = Math.max(1, cssHeight);
-  const boxW = C.baseWidth;
-  const boxH = C.baseHeight;
-
-  if (!layout.floatingReadout) {
-    const pose = containInRect(boxW, boxH, width, height, 0, 0, 'center');
-    return { ...pose, boxW, boxH, floatingReadout: false };
-  }
-
-  const overlay = layout.overlayPx ?? FLOATING_OVERLAY_FALLBACK;
-  const gap = C.overlayGapPx;
-  let chosen = containInRect(
-    boxW,
-    boxH,
-    Math.max(1, width - overlay - gap),
-    height,
-    0,
-    0,
-    'left'
-  );
-
-  const overlayTop = layout.overlayTopPx;
-  const overlayH = layout.overlayHeightPx;
-  const wideColumn = width + 1e-6 >= boxW && chosen.fit >= C.minReadableFit;
-  if (
-    !wideColumn &&
-    typeof overlayTop === 'number' &&
-    typeof overlayH === 'number' &&
-    overlayH > 0
-  ) {
-    const overlayBottom = overlayTop + overlayH;
-    const clearTop = C.overlayClearTop;
-    const denom = boxH - clearTop;
-    if (overlayBottom + gap < height - 1 && denom > 1) {
-      const fit = Math.min(
-        width / boxW,
-        height / boxH,
-        (height - overlayBottom - gap) / denom
-      );
-      if (fit > 0) {
-        const stageW = boxW * fit;
-        const stageH = boxH * fit;
-        const minOY = overlayBottom + gap - clearTop * fit;
-        const maxOY = height - stageH;
-        chosen = betterPose(chosen, {
-          fit,
-          offsetX: Math.max(0, (width - stageW) / 2),
-          offsetY: Math.max(0, Math.min(minOY, maxOY))
-        });
-      }
-    }
-  }
-
-  if (chosen.fit < C.minReadableFit) {
-    const pose = containInRect(boxW, boxH, width, height, 0, 0, 'center');
-    chosen = betterPose(chosen, {
-      ...pose,
-      offsetY: Math.max(0, height - boxH * pose.fit)
-    });
-  }
-
-  return { ...chosen, boxW, boxH, floatingReadout: true };
+) {
+  return fitStage(cssWidth, cssHeight, layout, {
+    baseWidth: C.baseWidth,
+    baseHeight: C.baseHeight,
+    overlayGapPx: C.overlayGapPx,
+    minReadableFit: C.minReadableFit,
+    overlayClearTop: C.overlayClearTop,
+    overlayFallbackPx: FLOATING_OVERLAY_FALLBACK
+  });
 }
 
 export function pointerToBaseNorm(
@@ -469,7 +335,7 @@ export function createVerticalCircleSim(
 
   function advance(dt: number, force: boolean): void {
     if (!force && !params.autoRun) return;
-    const seconds = finite(dt, 0);
+    const seconds = finiteNumber(dt, 0);
     if (!Number.isFinite(seconds) || seconds <= 0) return;
     time += seconds;
     let remaining = seconds;
@@ -512,8 +378,8 @@ export function createVerticalCircleSim(
       return { ...params };
     },
     pickHandle(x: number, y: number): VerticalCircleHandle {
-      const px = finite(x, 0) * C.baseWidth;
-      const py = finite(y, 0) * C.baseHeight;
+      const px = finiteNumber(x, 0) * C.baseWidth;
+      const py = finiteNumber(y, 0) * C.baseHeight;
       const point = positionAtAngle(params.theta);
       return Math.hypot(px - point.x, py - point.y) <= C.handleRadius
         ? 'ball'
@@ -525,8 +391,8 @@ export function createVerticalCircleSim(
       y: number
     ): void {
       if (handle !== 'ball') return;
-      const px = finite(x, 0) * C.baseWidth;
-      const py = finite(y, 0) * C.baseHeight;
+      const px = finiteNumber(x, 0) * C.baseWidth;
+      const py = finiteNumber(y, 0) * C.baseHeight;
       const dx = px - C.centerX;
       const dy = py - C.centerY;
       if (dx === 0 && dy === 0) return;
@@ -545,3 +411,5 @@ export function createVerticalCircleSim(
     }
   };
 }
+
+export type { StageLayoutHint };

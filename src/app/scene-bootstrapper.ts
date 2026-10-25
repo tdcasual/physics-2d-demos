@@ -4,6 +4,7 @@
  * 将场景 page.ts 从 ~200 行缩减到 ~30 行。
  */
 
+import { controlToParam, type ParamBindings } from '../platform/param-binding';
 import '../styles/index.css';
 
 import { createSceneContainer } from './layouts/container';
@@ -156,17 +157,25 @@ export function bootScenePage<TScene extends SceneInstance>(
             try {
               const urlParams = permit.first ? { ...permit.snapshot } : {};
               const writer = adapter.getSceneWriter();
+              // writeParam 收到控件值；URL 约定为参数单位，经 schema bind 换算。
+              // 句柄在 userCreateControls 返回后才可得，回调执行时惰性读取。
+              const handleRef: { bindings?: ParamBindings } = {};
               const controls = userCreateControls({
                 ...controlOpts,
                 scheduleRender: scheduler.schedule,
                 urlParams,
                 writeParam: (key, value) => {
                   if (writableKeys.has(key)) {
-                    writer?.write({ [key]: value });
+                    writer?.write({
+                      [key]: controlToParam(key, value, handleRef.bindings)
+                    });
                   }
                 },
                 sceneWriter: writer ?? undefined
               });
+              handleRef.bindings = (
+                controls as { bindings?: ParamBindings } | null
+              )?.bindings;
               if (permit.first) {
                 try {
                   applySceneUrlParams(

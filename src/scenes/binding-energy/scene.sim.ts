@@ -1,5 +1,8 @@
 import { readoutOccludesStage } from '../../platform/stage-readout';
 import { clamp } from '../../core/math';
+import { finiteNumber, asBooleanOr } from '../../core/coerce';
+import { measureStageLayout, fitStage } from '../stage-fit';
+import type { StageLayoutHint } from '../stage-fit';
 
 export type BindingEnergyParams = {
   A: number;
@@ -31,19 +34,6 @@ export type BindingEnergyState = {
   status: string;
   fusionGain: number;
   fissionGain: number;
-};
-
-export type StageLayoutHint = {
-  floatingReadout: boolean;
-  overlayPx?: number;
-  overlayTopPx?: number;
-  overlayHeightPx?: number;
-};
-
-type StagePose = {
-  fit: number;
-  offsetX: number;
-  offsetY: number;
 };
 
 /**
@@ -148,30 +138,6 @@ export const bindingEnergyConstants = {
 const C = bindingEnergyConstants;
 const FLOATING_OVERLAY_FALLBACK = C.overlayFallbackPx;
 
-function finite(value: unknown, fallback: number): number {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string' && value.trim() !== '') {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return fallback;
-}
-
-function asBool(value: unknown, fallback: boolean): boolean {
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'number') return value !== 0;
-  if (typeof value === 'string') {
-    const text = value.trim().toLowerCase();
-    if (text === '0' || text === 'false' || text === 'off' || text === 'no') {
-      return false;
-    }
-    if (text === '1' || text === 'true' || text === 'on' || text === 'yes') {
-      return true;
-    }
-  }
-  return fallback;
-}
-
 export function parseBindingEnergyPreset(
   value: unknown,
   fallback = 'u238'
@@ -181,7 +147,7 @@ export function parseBindingEnergyPreset(
 }
 
 export function presetIdForA(A: number): string | null {
-  const mass = Math.round(finite(A, A_DEFAULT));
+  const mass = Math.round(finiteNumber(A, A_DEFAULT));
   const found = Object.entries(BINDING_ENERGY_PRESETS).find(
     ([, value]) => value === mass
   );
@@ -193,26 +159,26 @@ function normalizeParams(
   previous = DEFAULTS
 ): BindingEnergyParams {
   return {
-    A: Math.round(clamp(finite(input.A, previous.A), A_MIN, A_MAX)),
+    A: Math.round(clamp(finiteNumber(input.A, previous.A), A_MIN, A_MAX)),
     autoRun:
       input.autoRun === undefined
         ? previous.autoRun
-        : asBool(input.autoRun, previous.autoRun),
+        : asBooleanOr(input.autoRun, previous.autoRun),
     showRegions:
       input.showRegions === undefined
         ? previous.showRegions
-        : asBool(input.showRegions, previous.showRegions)
+        : asBooleanOr(input.showRegions, previous.showRegions)
   };
 }
 
 function directionFromA(A: number): 1 | -1 {
-  return finite(A, A_DEFAULT) >= IRON_A ? -1 : 1;
+  return finiteNumber(A, A_DEFAULT) >= IRON_A ? -1 : 1;
 }
 
 function clampedA(A: unknown, fallback = A_MIN): number {
   if (A === Number.POSITIVE_INFINITY) return A_MAX;
   if (A === Number.NEGATIVE_INFINITY) return A_MIN;
-  return clamp(finite(A, fallback), A_MIN, A_MAX);
+  return clamp(finiteNumber(A, fallback), A_MIN, A_MAX);
 }
 
 function massNumber(A: unknown, fallback = A_MIN): number {
@@ -317,12 +283,12 @@ export function nuclideLabelAnchor(symbol: string): BindingEnergyLabelAnchor {
 }
 
 export function chartX(A: number): number {
-  const a = clamp(finite(A, 0), 0, C.axisMaxA);
+  const a = clamp(finiteNumber(A, 0), 0, C.axisMaxA);
   return C.chartLeft + (C.chartRight - C.chartLeft) * (a / C.axisMaxA);
 }
 
 export function chartY(energy: number): number {
-  const e = clamp(finite(energy, 0), 0, C.axisMaxE);
+  const e = clamp(finiteNumber(energy, 0), 0, C.axisMaxE);
   return C.chartBottom - (C.chartBottom - C.chartTop) * (e / C.axisMaxE);
 }
 
@@ -335,7 +301,7 @@ export type BindingEnergyLabelBox = {
 
 /** Conservative bold sans-serif width in design pixels. */
 export function estimateLabelWidth(text: string, fontSize: number): number {
-  const size = Math.max(1, finite(fontSize, 12));
+  const size = Math.max(1, finiteNumber(fontSize, 12));
   let width = 0;
   for (const char of text) {
     const code = char.codePointAt(0) ?? 0;
@@ -352,15 +318,15 @@ export function labelBox(
   fontSize: number
 ): BindingEnergyLabelBox {
   const width = estimateLabelWidth(text, fontSize);
-  const half = Math.max(1, finite(fontSize, 12)) * 0.55;
-  let left = finite(x, 0);
+  const half = Math.max(1, finiteNumber(fontSize, 12)) * 0.55;
+  let left = finiteNumber(x, 0);
   if (align === 'right') left -= width;
   else if (align === 'center') left -= width / 2;
   return {
     left,
     right: left + width,
-    top: finite(y, 0) - half,
-    bottom: finite(y, 0) + half
+    top: finiteNumber(y, 0) - half,
+    bottom: finiteNumber(y, 0) + half
   };
 }
 
@@ -372,12 +338,12 @@ export function clampLabelX(
 ): number {
   const minL = inset;
   const maxR = C.baseWidth - inset;
-  const w = Math.max(0, finite(width, 0));
-  if (align === 'right') return clamp(finite(x, 0), minL + w, maxR);
+  const w = Math.max(0, finiteNumber(width, 0));
+  if (align === 'right') return clamp(finiteNumber(x, 0), minL + w, maxR);
   if (align === 'center') {
-    return clamp(finite(x, 0), minL + w / 2, maxR - w / 2);
+    return clamp(finiteNumber(x, 0), minL + w / 2, maxR - w / 2);
   }
-  return clamp(finite(x, 0), minL, maxR - w);
+  return clamp(finiteNumber(x, 0), minL, maxR - w);
 }
 
 export function boxesOverlap(
@@ -424,67 +390,10 @@ export function nuclideLabelPose(symbol: string): {
   };
 }
 
-function containInRect(
-  boxW: number,
-  boxH: number,
-  availW: number,
-  availH: number,
-  originX: number,
-  originY: number,
-  alignX: 'left' | 'center'
-): StagePose {
-  const w = Math.max(1, availW);
-  const h = Math.max(1, availH);
-  const fit = Math.min(w / boxW, h / boxH);
-  const stageW = boxW * fit;
-  const stageH = boxH * fit;
-  return {
-    fit,
-    offsetX: originX + (alignX === 'center' ? (w - stageW) / 2 : 0),
-    offsetY: originY + (h - stageH) / 2
-  };
-}
-
-function betterPose(a: StagePose, b: StagePose): StagePose {
-  return b.fit > a.fit + 1e-9 ? b : a;
-}
-
-export function hasFloatingReadout(anchor?: Element | null): boolean {
-  return readoutOccludesStage(anchor);
-}
+export const hasFloatingReadout = readoutOccludesStage;
 
 export function stageLayoutFrom(canvas?: Element | null): StageLayoutHint {
-  const floatingReadout = hasFloatingReadout(canvas);
-  if (!floatingReadout) return { floatingReadout: false, overlayPx: 0 };
-  let overlayPx = 0;
-  let overlayTopPx = 0;
-  let overlayHeightPx = 0;
-  if (canvas instanceof HTMLElement) {
-    const panel = canvas.parentElement?.querySelector(
-      '.teaching-readout-panel, .srgb-readout-panel'
-    );
-    if (panel instanceof HTMLElement) {
-      const cr = canvas.getBoundingClientRect();
-      const rr = panel.getBoundingClientRect();
-      if (
-        rr.left < cr.right &&
-        rr.right > cr.left &&
-        rr.top < cr.bottom &&
-        rr.bottom > cr.top
-      ) {
-        overlayPx = Math.max(0, cr.right - rr.left);
-        const top = Math.max(rr.top, cr.top);
-        const bottom = Math.min(rr.bottom, cr.bottom);
-        overlayTopPx = Math.max(0, top - cr.top);
-        overlayHeightPx = Math.max(0, bottom - top);
-      }
-    }
-  }
-  return {
-    floatingReadout: true,
-    overlayPx: overlayPx || FLOATING_OVERLAY_FALLBACK,
-    ...(overlayHeightPx > 0 ? { overlayTopPx, overlayHeightPx } : {})
-  };
+  return measureStageLayout(canvas, FLOATING_OVERLAY_FALLBACK);
 }
 
 /**
@@ -495,77 +404,15 @@ export function stageTransform(
   cssWidth: number,
   cssHeight: number,
   layout: StageLayoutHint
-): {
-  fit: number;
-  offsetX: number;
-  offsetY: number;
-  boxW: number;
-  boxH: number;
-  floatingReadout: boolean;
-} {
-  const width = Math.max(1, cssWidth);
-  const height = Math.max(1, cssHeight);
-  const boxW = C.baseWidth;
-  const boxH = C.baseHeight;
-
-  if (!layout.floatingReadout) {
-    const pose = containInRect(boxW, boxH, width, height, 0, 0, 'center');
-    return { ...pose, boxW, boxH, floatingReadout: false };
-  }
-
-  const overlay = layout.overlayPx ?? FLOATING_OVERLAY_FALLBACK;
-  const gap = C.overlayGapPx;
-  let chosen = containInRect(
-    boxW,
-    boxH,
-    Math.max(1, width - overlay - gap),
-    height,
-    0,
-    0,
-    'left'
-  );
-
-  const overlayTop = layout.overlayTopPx;
-  const overlayH = layout.overlayHeightPx;
-  const wideColumn = width + 1e-6 >= boxW && chosen.fit >= C.minReadableFit;
-  if (
-    !wideColumn &&
-    typeof overlayTop === 'number' &&
-    typeof overlayH === 'number' &&
-    overlayH > 0
-  ) {
-    const overlayBottom = overlayTop + overlayH;
-    const clearTop = C.overlayClearTop;
-    const denom = boxH - clearTop;
-    if (overlayBottom + gap < height - 1 && denom > 1) {
-      const fit = Math.min(
-        width / boxW,
-        height / boxH,
-        (height - overlayBottom - gap) / denom
-      );
-      if (fit > 0) {
-        const stageW = boxW * fit;
-        const stageH = boxH * fit;
-        const minOY = overlayBottom + gap - clearTop * fit;
-        const maxOY = height - stageH;
-        chosen = betterPose(chosen, {
-          fit,
-          offsetX: Math.max(0, (width - stageW) / 2),
-          offsetY: Math.max(0, Math.min(minOY, maxOY))
-        });
-      }
-    }
-  }
-
-  if (chosen.fit < C.minReadableFit) {
-    const pose = containInRect(boxW, boxH, width, height, 0, 0, 'center');
-    chosen = betterPose(chosen, {
-      ...pose,
-      offsetY: Math.max(0, height - boxH * pose.fit)
-    });
-  }
-
-  return { ...chosen, boxW, boxH, floatingReadout: true };
+) {
+  return fitStage(cssWidth, cssHeight, layout, {
+    baseWidth: C.baseWidth,
+    baseHeight: C.baseHeight,
+    overlayGapPx: C.overlayGapPx,
+    minReadableFit: C.minReadableFit,
+    overlayClearTop: C.overlayClearTop,
+    overlayFallbackPx: FLOATING_OVERLAY_FALLBACK
+  });
 }
 
 function makeState(
@@ -598,13 +445,13 @@ export function createBindingEnergySim(
   let direction: 1 | -1 = directionFromA(params.A);
 
   function snapTo(mass: number): void {
-    const next = Math.round(clamp(finite(mass, params.A), A_MIN, A_MAX));
+    const next = Math.round(clamp(finiteNumber(mass, params.A), A_MIN, A_MAX));
     params = { ...params, A: next };
     cursorA = next;
   }
 
   function advanceCursor(deltaA: number): void {
-    const delta = finite(deltaA, 0);
+    const delta = finiteNumber(deltaA, 0);
     if (!Number.isFinite(delta) || delta === 0) return;
     let next = cursorA + delta;
     if (next >= A_MAX) {
@@ -619,13 +466,13 @@ export function createBindingEnergySim(
   }
 
   function nudgeA(delta: number): void {
-    const step = Math.trunc(finite(delta, 0));
+    const step = Math.trunc(finiteNumber(delta, 0));
     if (step === 0) return;
     snapTo(params.A + step);
   }
 
   function applyStep(dt: number, force: boolean): void {
-    const delta = finite(dt, 0);
+    const delta = finiteNumber(dt, 0);
     if (!Number.isFinite(delta) || delta === 0) return;
     if (!force && Math.abs(Math.abs(delta) - KEYBOARD_DT) < 1e-12) {
       time += Math.abs(delta);
@@ -662,7 +509,7 @@ export function createBindingEnergySim(
     },
     /** Forced frame; ignores autoRun so pause still allows a single tick. */
     stepFrame(dt: number = FRAME_DT): void {
-      applyStep(finite(dt, FRAME_DT), true);
+      applyStep(finiteNumber(dt, FRAME_DT), true);
     },
     reset(): void {
       params = { ...defaults };
@@ -672,3 +519,5 @@ export function createBindingEnergySim(
     }
   };
 }
+
+export type { StageLayoutHint };

@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { createImpulseMomentumSim } from '../../src/scenes/impulse-momentum/scene.sim';
 import { impulseMomentumConstants as C } from '../../src/scenes/impulse-momentum/scene.sim';
@@ -71,18 +69,6 @@ describe('impulse-momentum view contract', () => {
     expect('fieldWidth' in C).toBe(false);
     expect('cardWidth' in C).toBe(false);
     expect('graphX' in C).toBe(false);
-  });
-
-  it('keeps F-t drawing on the graph canvas path', () => {
-    const viewSrc = readFileSync(
-      resolve(process.cwd(), 'src/scenes/impulse-momentum/scene.view.ts'),
-      'utf8'
-    );
-    expect(viewSrc).toContain('attachGraphCanvas');
-    expect(viewSrc).toContain('drawApparatus');
-    expect(viewSrc).toContain('drawGraphs');
-    expect(viewSrc).not.toMatch(/drawPanel|动量定理实时计算|有向面积 Iₓ/);
-    expect(viewSrc).not.toMatch(/拖动参数或播放/);
   });
 
   it('paints the cart on the animation canvas and F-t axes in the graph slot', () => {

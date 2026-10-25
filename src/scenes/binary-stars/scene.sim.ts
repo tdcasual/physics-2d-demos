@@ -1,5 +1,8 @@
 import { readoutOccludesStage } from '../../platform/stage-readout';
 import { clamp } from '../../core/math';
+import { finiteNumber } from '../../core/coerce';
+import { measureStageLayout, fitStage } from '../stage-fit';
+import type { StageLayoutHint } from '../stage-fit';
 
 export type BinaryStarsParams = {
   m1: number;
@@ -21,19 +24,6 @@ export type BinaryStarsState = {
   position2: { x: number; y: number };
   velocity1: { x: number; y: number };
   velocity2: { x: number; y: number };
-};
-
-export type StageLayoutHint = {
-  floatingReadout: boolean;
-  overlayPx?: number;
-  overlayTopPx?: number;
-  overlayHeightPx?: number;
-};
-
-type StagePose = {
-  fit: number;
-  offsetX: number;
-  offsetY: number;
 };
 
 /** 教学单位制，G=1。 */
@@ -89,15 +79,6 @@ export const binaryStarsConstants = {
 const C = binaryStarsConstants;
 const FLOATING_OVERLAY_FALLBACK = C.overlayFallbackPx;
 
-function finite(value: unknown, fallback: number): number {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string' && value.trim() !== '') {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return fallback;
-}
-
 function flag(value: unknown, fallback: boolean): boolean {
   if (value === true || value === 1 || value === '1' || value === 'true') {
     return true;
@@ -113,9 +94,13 @@ function normalizeParams(
   previous = DEFAULTS
 ): BinaryStarsParams {
   return {
-    m1: clamp(finite(input.m1, previous.m1), M_MIN, M_MAX),
-    m2: clamp(finite(input.m2, previous.m2), M_MIN, M_MAX),
-    distance: clamp(finite(input.distance, previous.distance), L_MIN, L_MAX),
+    m1: clamp(finiteNumber(input.m1, previous.m1), M_MIN, M_MAX),
+    m2: clamp(finiteNumber(input.m2, previous.m2), M_MIN, M_MAX),
+    distance: clamp(
+      finiteNumber(input.distance, previous.distance),
+      L_MIN,
+      L_MAX
+    ),
     autoRun: flag(input.autoRun, previous.autoRun),
     showVectors: flag(input.showVectors, previous.showVectors)
   };
@@ -126,9 +111,9 @@ export function binaryStarsRadii(
   m2: number,
   distance: number
 ): { r1: number; r2: number } {
-  const safeM1 = Math.max(0, finite(m1, 0));
-  const safeM2 = Math.max(0, finite(m2, 0));
-  const safeDistance = Math.max(0, finite(distance, 0));
+  const safeM1 = Math.max(0, finiteNumber(m1, 0));
+  const safeM2 = Math.max(0, finiteNumber(m2, 0));
+  const safeDistance = Math.max(0, finiteNumber(distance, 0));
   const total = safeM1 + safeM2;
   if (total <= 0) return { r1: 0, r2: 0 };
   return {
@@ -142,9 +127,10 @@ export function binaryStarsOmega(
   m2: number,
   distance: number
 ): number {
-  const safeDistance = Math.max(0.001, finite(distance, 1));
+  const safeDistance = Math.max(0.001, finiteNumber(distance, 1));
   return Math.sqrt(
-    (G * (Math.max(0, finite(m1, 0)) + Math.max(0, finite(m2, 0)))) /
+    (G *
+      (Math.max(0, finiteNumber(m1, 0)) + Math.max(0, finiteNumber(m2, 0)))) /
       safeDistance ** 3
   );
 }
@@ -154,74 +140,17 @@ export function binaryStarsForce(
   m2: number,
   distance: number
 ): number {
-  const safeDistance = Math.max(0.001, finite(distance, 1));
+  const safeDistance = Math.max(0.001, finiteNumber(distance, 1));
   return (
-    (G * Math.max(0, finite(m1, 0)) * Math.max(0, finite(m2, 0))) /
+    (G * Math.max(0, finiteNumber(m1, 0)) * Math.max(0, finiteNumber(m2, 0))) /
     safeDistance ** 2
   );
 }
 
-function containInRect(
-  boxW: number,
-  boxH: number,
-  availW: number,
-  availH: number,
-  originX: number,
-  originY: number,
-  alignX: 'left' | 'center'
-): StagePose {
-  const w = Math.max(1, availW);
-  const h = Math.max(1, availH);
-  const fit = Math.min(w / boxW, h / boxH);
-  const stageW = boxW * fit;
-  const stageH = boxH * fit;
-  return {
-    fit,
-    offsetX: originX + (alignX === 'center' ? (w - stageW) / 2 : 0),
-    offsetY: originY + (h - stageH) / 2
-  };
-}
-
-function betterPose(a: StagePose, b: StagePose): StagePose {
-  return b.fit > a.fit + 1e-9 ? b : a;
-}
-
-export function hasFloatingReadout(anchor?: Element | null): boolean {
-  return readoutOccludesStage(anchor);
-}
+export const hasFloatingReadout = readoutOccludesStage;
 
 export function stageLayoutFrom(canvas?: Element | null): StageLayoutHint {
-  const floatingReadout = hasFloatingReadout(canvas);
-  if (!floatingReadout) return { floatingReadout: false, overlayPx: 0 };
-  let overlayPx = 0;
-  let overlayTopPx = 0;
-  let overlayHeightPx = 0;
-  if (canvas instanceof HTMLElement) {
-    const panel = canvas.parentElement?.querySelector(
-      '.teaching-readout-panel, .srgb-readout-panel'
-    );
-    if (panel instanceof HTMLElement) {
-      const cr = canvas.getBoundingClientRect();
-      const rr = panel.getBoundingClientRect();
-      if (
-        rr.left < cr.right &&
-        rr.right > cr.left &&
-        rr.top < cr.bottom &&
-        rr.bottom > cr.top
-      ) {
-        overlayPx = Math.max(0, cr.right - rr.left);
-        const top = Math.max(rr.top, cr.top);
-        const bottom = Math.min(rr.bottom, cr.bottom);
-        overlayTopPx = Math.max(0, top - cr.top);
-        overlayHeightPx = Math.max(0, bottom - top);
-      }
-    }
-  }
-  return {
-    floatingReadout: true,
-    overlayPx: overlayPx || FLOATING_OVERLAY_FALLBACK,
-    ...(overlayHeightPx > 0 ? { overlayTopPx, overlayHeightPx } : {})
-  };
+  return measureStageLayout(canvas, FLOATING_OVERLAY_FALLBACK);
 }
 
 /**
@@ -233,77 +162,15 @@ export function stageTransform(
   cssWidth: number,
   cssHeight: number,
   layout: StageLayoutHint
-): {
-  fit: number;
-  offsetX: number;
-  offsetY: number;
-  boxW: number;
-  boxH: number;
-  floatingReadout: boolean;
-} {
-  const width = Math.max(1, cssWidth);
-  const height = Math.max(1, cssHeight);
-  const boxW = C.baseWidth;
-  const boxH = C.baseHeight;
-
-  if (!layout.floatingReadout) {
-    const pose = containInRect(boxW, boxH, width, height, 0, 0, 'center');
-    return { ...pose, boxW, boxH, floatingReadout: false };
-  }
-
-  const overlay = layout.overlayPx ?? FLOATING_OVERLAY_FALLBACK;
-  const gap = C.overlayGapPx;
-  let chosen = containInRect(
-    boxW,
-    boxH,
-    Math.max(1, width - overlay - gap),
-    height,
-    0,
-    0,
-    'left'
-  );
-
-  const overlayTop = layout.overlayTopPx;
-  const overlayH = layout.overlayHeightPx;
-  const wideColumn = width + 1e-6 >= boxW && chosen.fit >= C.minReadableFit;
-  if (
-    !wideColumn &&
-    typeof overlayTop === 'number' &&
-    typeof overlayH === 'number' &&
-    overlayH > 0
-  ) {
-    const overlayBottom = overlayTop + overlayH;
-    const clearTop = C.overlayClearTop;
-    const denom = boxH - clearTop;
-    if (overlayBottom + gap < height - 1 && denom > 1) {
-      const fit = Math.min(
-        width / boxW,
-        height / boxH,
-        (height - overlayBottom - gap) / denom
-      );
-      if (fit > 0) {
-        const stageW = boxW * fit;
-        const stageH = boxH * fit;
-        const minOY = overlayBottom + gap - clearTop * fit;
-        const maxOY = height - stageH;
-        chosen = betterPose(chosen, {
-          fit,
-          offsetX: Math.max(0, (width - stageW) / 2),
-          offsetY: Math.max(0, Math.min(minOY, maxOY))
-        });
-      }
-    }
-  }
-
-  if (chosen.fit < C.minReadableFit) {
-    const pose = containInRect(boxW, boxH, width, height, 0, 0, 'center');
-    chosen = betterPose(chosen, {
-      ...pose,
-      offsetY: Math.max(0, height - boxH * pose.fit)
-    });
-  }
-
-  return { ...chosen, boxW, boxH, floatingReadout: true };
+) {
+  return fitStage(cssWidth, cssHeight, layout, {
+    baseWidth: C.baseWidth,
+    baseHeight: C.baseHeight,
+    overlayGapPx: C.overlayGapPx,
+    minReadableFit: C.minReadableFit,
+    overlayClearTop: C.overlayClearTop,
+    overlayFallbackPx: FLOATING_OVERLAY_FALLBACK
+  });
 }
 
 function vectorAt(radius: number, theta: number, omega: number) {
@@ -365,7 +232,7 @@ export function createBinaryStarsSim(initial: Partial<BinaryStarsParams> = {}) {
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      const delta = Math.max(0, finite(dt, 0));
+      const delta = Math.max(0, finiteNumber(dt, 0));
       const omega = binaryStarsOmega(params.m1, params.m2, params.distance);
       t += delta;
       theta += omega * delta * TIME_SCALE;
@@ -377,3 +244,5 @@ export function createBinaryStarsSim(initial: Partial<BinaryStarsParams> = {}) {
     }
   };
 }
+
+export type { StageLayoutHint };

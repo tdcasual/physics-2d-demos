@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type AirTrackMode = 'conservation' | 'theorem';
 export type CollisionPreset =
@@ -91,9 +92,6 @@ const DEFAULTS: AirTrackMomentumParams = {
   showVectors: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
 function bool(value: unknown, fallback: boolean): boolean {
   if (value === true || value === 1 || value === '1' || value === 'true')
     return true;
@@ -119,15 +117,15 @@ function normalize(
   return {
     mode,
     preset,
-    massA: clamp(finite(input.massA, previous.massA), C.massMin, C.massMax),
-    massB: clamp(finite(input.massB, previous.massB), C.massMin, C.massMax),
+    massA: clamp(finiteOr(input.massA, previous.massA), C.massMin, C.massMax),
+    massB: clamp(finiteOr(input.massB, previous.massB), C.massMin, C.massMax),
     velocityA: clamp(
-      finite(input.velocityA, previous.velocityA),
+      finiteOr(input.velocityA, previous.velocityA),
       C.velocityMin,
       C.velocityMax
     ),
     velocityB: clamp(
-      finite(input.velocityB, previous.velocityB),
+      finiteOr(input.velocityB, previous.velocityB),
       C.velocityMin,
       C.velocityMax
     ),
@@ -165,7 +163,7 @@ function derive(
   params: AirTrackMomentumParams,
   time: number
 ): AirTrackMomentumState {
-  const t = clamp(Math.max(0, finite(time, 0)), 0, C.timeMax);
+  const t = clamp(Math.max(0, finiteOr(time, 0)), 0, C.timeMax);
   const preset = presetParams(params);
   const relative = preset.velocityA - preset.velocityB;
   const distance = C.cartStartB - C.cartStartA - C.contactGap;
@@ -258,7 +256,7 @@ export function createAirTrackMomentumSim(
     },
     step(dt: number): void {
       if (params.autoRun)
-        time = Math.min(C.timeMax, time + clamp(finite(dt, 0), 0, 0.1));
+        time = Math.min(C.timeMax, time + clamp(finiteOr(dt, 0), 0, 0.1));
     },
     relaunch(): void {
       time = 0;

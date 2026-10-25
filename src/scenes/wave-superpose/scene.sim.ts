@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type WaveStartDirection = 'up' | 'down';
 export type WaveSuperposeParams = {
@@ -59,31 +60,28 @@ const DEFAULTS: WaveSuperposeParams = {
   autoRun: true
 };
 const TAU = Math.PI * 2;
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
 function normalize(
   input: Partial<WaveSuperposeParams>,
   previous = DEFAULTS
 ): WaveSuperposeParams {
   return {
     amplitude1: clamp(
-      finite(input.amplitude1, previous.amplitude1),
+      finiteOr(input.amplitude1, previous.amplitude1),
       waveSuperposeConstants.amplitudeMin,
       waveSuperposeConstants.amplitudeMax
     ),
     wavelength1: clamp(
-      finite(input.wavelength1, previous.wavelength1),
+      finiteOr(input.wavelength1, previous.wavelength1),
       waveSuperposeConstants.wavelengthMin,
       waveSuperposeConstants.wavelengthMax
     ),
     amplitude2: clamp(
-      finite(input.amplitude2, previous.amplitude2),
+      finiteOr(input.amplitude2, previous.amplitude2),
       waveSuperposeConstants.amplitudeMin,
       waveSuperposeConstants.amplitudeMax
     ),
     wavelength2: clamp(
-      finite(input.wavelength2, previous.wavelength2),
+      finiteOr(input.wavelength2, previous.wavelength2),
       waveSuperposeConstants.wavelengthMin,
       waveSuperposeConstants.wavelengthMax
     ),
@@ -100,7 +98,7 @@ function normalize(
           ? 'down'
           : previous.direction2,
     observationX: clamp(
-      finite(input.observationX, previous.observationX),
+      finiteOr(input.observationX, previous.observationX),
       waveSuperposeConstants.observationMin,
       waveSuperposeConstants.observationMax
     ),
@@ -183,7 +181,7 @@ export function createWaveSuperposeSim(
     step(dt: number): void {
       if (params.autoRun)
         time =
-          (time + clamp(finite(dt, 0), 0, 0.05)) %
+          (time + clamp(finiteOr(dt, 0), 0, 0.05)) %
           waveSuperposeConstants.animationPeriod;
     },
     reset(): void {

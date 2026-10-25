@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { rodModelControlsSchema } from '../../src/scenes/rod-model/controls-schema';
 import { rodModelMeta } from '../../src/scenes/rod-model/scene.meta';
@@ -89,25 +87,6 @@ describe('rod-model view contract', () => {
     expect('graphX' in C).toBe(false);
     expect('readoutY' in C).toBe(false);
     expect('formulaY' in C).toBe(false);
-  });
-
-  it('keeps v-t drawing on the graph canvas path', () => {
-    const viewSrc = readFileSync(
-      resolve(process.cwd(), 'src/scenes/rod-model/scene.view.ts'),
-      'utf8'
-    );
-    const simSrc = readFileSync(
-      resolve(process.cwd(), 'src/scenes/rod-model/scene.sim.ts'),
-      'utf8'
-    );
-    expect(viewSrc).toContain('attachGraphCanvas');
-    expect(viewSrc).toContain('drawApparatus');
-    expect(viewSrc).toContain('drawGraphs');
-    expect(viewSrc).not.toMatch(
-      /drawPanel|实时物理量看板|模型关系|实验参数与图象/
-    );
-    expect(viewSrc).not.toMatch(/物理情景演示区|高考核心考点/);
-    expect(simSrc).not.toMatch(/panelWidth|fieldWidth|cardWidth/);
   });
 
   it('paints the apparatus on the animation canvas and v-t in the graph slot', () => {

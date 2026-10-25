@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type ResistorCircuitMode = 'divider' | 'limiting';
 export type ResistorMeterMode = 'external' | 'internal';
@@ -60,10 +61,6 @@ const DEFAULTS: ResistorParams = {
   autoRun: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 export function asBool(value: unknown, fallback: boolean): boolean {
   if (typeof value === 'boolean') return value;
   if (typeof value === 'number') return value !== 0;
@@ -117,27 +114,27 @@ function normalize(
     circuitMode: asCircuitMode(input.circuitMode) ?? previous.circuitMode,
     meterMode: asMeterMode(input.meterMode) ?? previous.meterMode,
     targetResistance: clamp(
-      finite(input.targetResistance, previous.targetResistance),
+      finiteOr(input.targetResistance, previous.targetResistance),
       resistorConstants.targetMinResistance,
       resistorConstants.targetMaxResistance
     ),
     ammeterResistance: clamp(
-      finite(input.ammeterResistance, previous.ammeterResistance),
+      finiteOr(input.ammeterResistance, previous.ammeterResistance),
       resistorConstants.ammeterMinResistance,
       resistorConstants.ammeterMaxResistance
     ),
     voltmeterResistance: clamp(
-      finite(input.voltmeterResistance, previous.voltmeterResistance),
+      finiteOr(input.voltmeterResistance, previous.voltmeterResistance),
       resistorConstants.voltmeterMinResistance,
       resistorConstants.voltmeterMaxResistance
     ),
     supplyVoltage: clamp(
-      finite(input.supplyVoltage, previous.supplyVoltage),
+      finiteOr(input.supplyVoltage, previous.supplyVoltage),
       resistorConstants.supplyMin,
       resistorConstants.supplyMax
     ),
     rheostatPosition: clamp(
-      finite(input.rheostatPosition, previous.rheostatPosition),
+      finiteOr(input.rheostatPosition, previous.rheostatPosition),
       0,
       1
     ),
@@ -225,7 +222,7 @@ export function createResistorSim(initial: Partial<ResistorParams> = {}) {
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      time += Math.max(0, finite(dt, 0));
+      time += Math.max(0, finiteOr(dt, 0));
     },
     reset(): void {
       params = { ...baseline };

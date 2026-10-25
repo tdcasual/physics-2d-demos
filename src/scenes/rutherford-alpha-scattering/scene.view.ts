@@ -2,6 +2,7 @@ import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import { rutherfordConstants, type RutherfordState } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateRutherfordViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -52,23 +53,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     wire: '#8ca8ba'
   }
 };
-
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 
 function card(
   ctx: CanvasRenderingContext2D,
@@ -186,7 +170,7 @@ function drawSource(
     ctx.lineTo(x + 24 * scale, y + index * 32 * scale);
     ctx.stroke();
   }
-  text(
+  drawText(
     ctx,
     '放射源 (P₀)',
     x + 8 * scale,
@@ -196,7 +180,7 @@ function drawSource(
     'center',
     600
   );
-  text(
+  drawText(
     ctx,
     '准直缝',
     x + 72 * scale,
@@ -242,7 +226,7 @@ function drawNucleus(
       );
       ctx.fill();
     }
-    text(
+    drawText(
       ctx,
       '枣糕模型：弥散正电',
       x,
@@ -270,7 +254,7 @@ function drawNucleus(
   ctx.arc(x, y, 8 * scale, 0, Math.PI * 2);
   ctx.fill();
   ctx.shadowBlur = 0;
-  text(
+  drawText(
     ctx,
     '极小致密核（+Ze）',
     x,
@@ -361,7 +345,7 @@ function drawPanel(
   const width = rutherfordConstants.panelWidth * scale;
   ctx.fillStyle = p.panel;
   ctx.fillRect(x, 0, width, rutherfordConstants.baseHeight * scale);
-  text(
+  drawText(
     ctx,
     '卢瑟福 α 粒子散射',
     x + 18 * scale,
@@ -394,7 +378,7 @@ function drawPanel(
       p,
       `${p.card}ee`
     );
-    text(
+    drawText(
       ctx,
       label,
       x + 36 * scale,
@@ -404,7 +388,7 @@ function drawPanel(
       'left',
       600
     );
-    text(
+    drawText(
       ctx,
       value,
       x + width - 36 * scale,
@@ -426,7 +410,7 @@ function drawPanel(
     `${p.red}1c`,
     p.red
   );
-  text(
+  drawText(
     ctx,
     '当前所处理理论',
     x + 36 * scale,
@@ -436,7 +420,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     state.model === 1 ? '核式结构' : '枣糕（弥散正电）',
     x + width - 36 * scale,
@@ -455,7 +439,7 @@ function drawPanel(
     p,
     `${p.red}14`
   );
-  text(
+  drawText(
     ctx,
     '【核物理定量科学事实】',
     x + 36 * scale,
@@ -465,7 +449,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'F = kQq / r²',
     x + 36 * scale,
@@ -475,7 +459,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     'a = F / m · v = v₀ + aΔt',
     x + 36 * scale,
@@ -485,7 +469,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     '金原子有效边界  R ≈ 10⁻¹⁰ m',
     x + 36 * scale,
@@ -495,7 +479,7 @@ function drawPanel(
     'left',
     500
   );
-  text(
+  drawText(
     ctx,
     '矢量受力动态渲染 (F)',
     x + 18 * scale,
@@ -536,7 +520,7 @@ function drawPanel(
     `${p.cyan}16`,
     p.cyan
   );
-  text(
+  drawText(
     ctx,
     '发射特定瞄准距离粒子束',
     x + width / 2,
@@ -546,7 +530,7 @@ function drawPanel(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     '空格键：暂停 / 恢复微观推演',
     x + width / 2,
@@ -619,7 +603,7 @@ export function createRutherfordView(
         p.red,
         scale
       );
-      text(
+      drawText(
         ctx,
         'F',
         (state.focused.x + (dx / magnitude) * 68) * scale,
@@ -630,7 +614,7 @@ export function createRutherfordView(
         700
       );
     }
-    text(
+    drawText(
       ctx,
       '金原子有效边界（R ≈ 10⁻¹⁰ m）',
       390 * scale,

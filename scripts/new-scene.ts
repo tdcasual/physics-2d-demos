@@ -286,11 +286,10 @@ export const __CAMEL__ControlsSchema: ControlsSchema = {
 `;
 
 const pageTpl = `import { bootScenePage } from '../../app/scene-bootstrapper';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { createBoundControls } from '../../ui/components/bound-controls';
 import { create__PASCAL__Scene } from './scene.entry';
 import { __CAMEL__Meta } from './scene.meta';
 import { __CAMEL__ControlsSchema } from './controls-schema';
-import type { __PASCAL__Params } from './scene.sim';
 
 bootScenePage({
   meta: __CAMEL__Meta,
@@ -301,31 +300,17 @@ bootScenePage({
   },
   createScene: ({ canvas, theme, mode, demoHints }) =>
     create__PASCAL__Scene({ canvas, theme, mode, demoHints }),
-  // URL 参数（键集 = meta.defaultParams ∪ meta.urlSyncKeys）由
-  // bootstrapper 参数管线自动应用与回写，无需手写样板。
-  createControls: ({ mount, scene, scheduleRender, writeParam }) => {
-    const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+  // 控件默认路由：setParams → 重绘 → writeParam。键名/单位/枚举编码与
+  // 显隐在 controls-schema 字段上声明（bind / visibleWhen）；URL 恢复、
+  // remount 投影由平台完成。只有特殊键才需要 onChange 拦截。
+  createControls: ({ mount, scene, scheduleRender, writeParam }) =>
+    createBoundControls({
       mount,
       schema: __CAMEL__ControlsSchema,
-      onChange: (key, value) => {
-        scene.setParams({ [key]: value } as Partial<__PASCAL__Params>);
-        render();
-        writeParam?.(key, value);
-      },
-      onAction: () => {}
-    });
-
-    return {
-      setValue(key: string, value: number | string) {
-        renderer.setValue(key, value);
-      },
-      setActive(key: string, value: string) {
-        renderer.setActive(key, value);
-      },
-      dispose: () => renderer.dispose()
-    };
-  }
+      scene,
+      scheduleRender,
+      writeParam
+    })
 });
 `;
 

@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteNumber } from '../../core/coerce';
 
 export type FieldDirection = 'into' | 'out';
 
@@ -124,17 +125,12 @@ export function asFieldDirection(value: unknown): FieldDirection | undefined {
   return undefined;
 }
 
-function finite(value: unknown, fallback: number): number {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string' && value.trim() !== '') {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return fallback;
-}
-
 function normalizeCharge(value: unknown, fallback: number): number {
-  const candidate = clamp(finite(value, fallback), CHARGE_MIN, CHARGE_MAX);
+  const candidate = clamp(
+    finiteNumber(value, fallback),
+    CHARGE_MIN,
+    CHARGE_MAX
+  );
   if (!Number.isFinite(candidate) || Math.abs(candidate) < CHARGE_DEADZONE) {
     return candidate < 0 ? -CHARGE_FLOOR : CHARGE_FLOOR;
   }
@@ -146,15 +142,15 @@ function normalize(
   previous = DEFAULTS
 ): ChargedParticleParams {
   return {
-    mass: clamp(finite(input.mass, previous.mass), MASS_MIN, MASS_MAX),
+    mass: clamp(finiteNumber(input.mass, previous.mass), MASS_MIN, MASS_MAX),
     charge: normalizeCharge(input.charge, previous.charge),
     velocity: clamp(
-      finite(input.velocity, previous.velocity),
+      finiteNumber(input.velocity, previous.velocity),
       VELOCITY_MIN,
       VELOCITY_MAX
     ),
     magneticField: clamp(
-      finite(input.magneticField, previous.magneticField),
+      finiteNumber(input.magneticField, previous.magneticField),
       FIELD_MIN,
       FIELD_MAX
     ),
@@ -280,7 +276,7 @@ export function createChargedParticleSim(
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      time += Math.max(0, finite(dt, 0));
+      time += Math.max(0, finiteNumber(dt, 0));
     },
     reset(): void {
       params = { ...baseline };

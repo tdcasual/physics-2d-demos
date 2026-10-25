@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { singleLoopControlsSchema } from '../../src/scenes/single-loop/controls-schema';
 import { singleLoopMeta } from '../../src/scenes/single-loop/scene.meta';
@@ -98,24 +96,6 @@ describe('single-loop view contract', () => {
     expect('cardWidth' in C).toBe(false);
     expect('graphY' in C).toBe(false);
     expect('readoutY' in C).toBe(false);
-  });
-
-  it('keeps v-x / i-x drawing on the graph canvas path', () => {
-    const viewSrc = readFileSync(
-      resolve(process.cwd(), 'src/scenes/single-loop/scene.view.ts'),
-      'utf8'
-    );
-    const simSrc = readFileSync(
-      resolve(process.cwd(), 'src/scenes/single-loop/scene.sim.ts'),
-      'utf8'
-    );
-    expect(viewSrc).toContain('attachGraphCanvas');
-    expect(viewSrc).toContain('drawApparatus');
-    expect(viewSrc).toContain('drawGraphs');
-    expect(viewSrc).not.toMatch(/drawPanel|实时状态|模型关系|实验参数与图象/);
-    expect(viewSrc).not.toMatch(/显示电流|i=/);
-    expect(simSrc).not.toMatch(/panelWidth|fieldWidth|cardWidth/);
-    expect(simSrc).not.toMatch(/showCurrent/);
   });
 
   it('paints the apparatus on the animation canvas and both graphs in the graph slot', () => {

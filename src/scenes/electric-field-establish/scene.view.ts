@@ -5,6 +5,7 @@ import {
   electricFieldConstants as c,
   type ElectricFieldState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 export type CreateElectricFieldViewOptions = {
   canvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
@@ -49,22 +50,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     card: '#172337'
   }
 };
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 function round(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -139,8 +124,26 @@ function drawBattery(ctx: CanvasRenderingContext2D, p: Palette): void {
   ctx.moveTo(c.batteryX + 50, c.batteryY);
   ctx.lineTo(c.batteryX + 50, c.batteryY - 38);
   ctx.stroke();
-  text(ctx, '+', c.batteryX - 30, c.batteryY - 48, p.pos, 18, 'center', 700);
-  text(ctx, '−', c.batteryX + 34, c.batteryY - 48, p.ink, 18, 'center', 700);
+  drawText(
+    ctx,
+    '+',
+    c.batteryX - 30,
+    c.batteryY - 48,
+    p.pos,
+    18,
+    'center',
+    700
+  );
+  drawText(
+    ctx,
+    '−',
+    c.batteryX + 34,
+    c.batteryY - 48,
+    p.ink,
+    18,
+    'center',
+    700
+  );
 }
 function drawParticles(
   ctx: CanvasRenderingContext2D,
@@ -166,8 +169,8 @@ function drawCircuit(
   p: Palette,
   scale: number
 ): void {
-  text(ctx, '恒定电场的建立机制', 28, 38, p.ink, 24 * scale, 'left', 700);
-  text(ctx, '表面电荷建立 · 自由电子定向漂移', 28, 68, p.muted, 14 * scale);
+  drawText(ctx, '恒定电场的建立机制', 28, 38, p.ink, 24 * scale, 'left', 700);
+  drawText(ctx, '表面电荷建立 · 自由电子定向漂移', 28, 68, p.muted, 14 * scale);
   ctx.strokeStyle = p.wire;
   ctx.lineWidth = 5;
   ctx.beginPath();
@@ -187,7 +190,7 @@ function drawCircuit(
   ctx.roundRect(c.resistorX, c.resistorY - 18, c.resistorWidth, 36, 6);
   ctx.fill();
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     'R',
     c.resistorX + 60,
@@ -202,7 +205,7 @@ function drawCircuit(
     ctx.lineWidth = 3;
     arrow(ctx, 650, c.wireTop + 66, -76, 0, p.field);
     arrow(ctx, 320, c.wireTop + 120, 0, 70, p.field);
-    text(ctx, 'E', 610, c.wireTop + 52, p.field, 18 * scale, 'center', 700);
+    drawText(ctx, 'E', 610, c.wireTop + 52, p.field, 18 * scale, 'center', 700);
   }
   if (state.showSurfaceCharge) {
     for (let i = 0; i < c.chargeCount; i += 1) {
@@ -212,12 +215,12 @@ function drawCircuit(
       ctx.beginPath();
       ctx.arc(x, c.wireTop + 2, 9, 0, Math.PI * 2);
       ctx.fill();
-      text(ctx, '+', x, c.wireTop + 2, '#fff', 12, 'center', 700);
+      drawText(ctx, '+', x, c.wireTop + 2, '#fff', 12, 'center', 700);
     }
   }
   drawParticles(ctx, state, p);
   round(ctx, 30, 470, 740, 108, p);
-  text(
+  drawText(
     ctx,
     state.status,
     52,
@@ -227,7 +230,7 @@ function drawCircuit(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `内部场强 E = ${state.fieldStrength.toFixed(2)} V/m`,
     52,
@@ -235,7 +238,7 @@ function drawCircuit(
     p.ink,
     15 * scale
   );
-  text(
+  drawText(
     ctx,
     `漂移速率 v = ${state.driftVelocity.toFixed(2)} m/s   I = ${state.current.toFixed(2)} A`,
     52,
@@ -244,8 +247,8 @@ function drawCircuit(
     14 * scale
   );
   round(ctx, 30, 604, 740, 86, p);
-  text(ctx, '微观过程', 52, 630, p.ink, 16 * scale, 'left', 700);
-  text(
+  drawText(ctx, '微观过程', 52, 630, p.ink, 16 * scale, 'left', 700);
+  drawText(
     ctx,
     state.showSurfaceCharge ? '① 表面电荷已建立' : '① 隐藏表面电荷',
     220,
@@ -253,7 +256,7 @@ function drawCircuit(
     p.pos,
     13 * scale
   );
-  text(
+  drawText(
     ctx,
     state.showDrift ? '② 电子定向漂移' : '② 隐藏漂移矢量',
     490,
@@ -261,7 +264,7 @@ function drawCircuit(
     p.electron,
     13 * scale
   );
-  text(ctx, 'E = U / L   v = μE', 52, 664, p.muted, 13 * scale);
+  drawText(ctx, 'E = U / L   v = μE', 52, 664, p.muted, 13 * scale);
 }
 export function createElectricFieldView(
   options: CreateElectricFieldViewOptions = {}

@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type UniformElectricAccelerationParams = {
   voltage: number;
@@ -81,32 +82,28 @@ const DEFAULTS: UniformElectricAccelerationParams = {
   showVectors: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function normalize(
   input: Partial<UniformElectricAccelerationParams>,
   previous = DEFAULTS
 ): UniformElectricAccelerationParams {
   return {
     voltage: clamp(
-      finite(input.voltage, previous.voltage),
+      finiteOr(input.voltage, previous.voltage),
       uniformElectricAccelerationConstants.voltageMin,
       uniformElectricAccelerationConstants.voltageMax
     ),
     plateGap: clamp(
-      finite(input.plateGap, previous.plateGap),
+      finiteOr(input.plateGap, previous.plateGap),
       uniformElectricAccelerationConstants.plateGapMin,
       uniformElectricAccelerationConstants.plateGapMax
     ),
     charge: clamp(
-      finite(input.charge, previous.charge),
+      finiteOr(input.charge, previous.charge),
       uniformElectricAccelerationConstants.chargeMin,
       uniformElectricAccelerationConstants.chargeMax
     ),
     mass: clamp(
-      finite(input.mass, previous.mass),
+      finiteOr(input.mass, previous.mass),
       uniformElectricAccelerationConstants.massMin,
       uniformElectricAccelerationConstants.massMax
     ),
@@ -192,7 +189,7 @@ export function createUniformElectricAccelerationSim(
       return { ...params };
     },
     step(dt: number): void {
-      if (params.autoRun) time += Math.max(0, finite(dt, 0));
+      if (params.autoRun) time += Math.max(0, finiteOr(dt, 0));
     },
     reset(): void {
       params = { ...defaults };

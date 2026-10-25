@@ -7,6 +7,7 @@ import {
   galileoInclineConstants as C,
   type GalileoInclineState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateGalileoInclineViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -65,22 +66,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
   }
 };
 
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 function rounded(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -150,7 +135,7 @@ function drawEnergyMonitor(
   rounded(ctx, C.energyX, C.energyY, C.energyWidth, C.energyHeight, 14);
   ctx.fill();
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '能量转化实时监测',
     C.energyX + 18,
@@ -173,14 +158,14 @@ function drawEnergyMonitor(
   ];
   rows.forEach(([label, ratio, color], index) => {
     const y = C.energyY + 64 + index * 34;
-    text(ctx, label, C.energyX + 18, y, p.ink, 14, 'left', 600);
+    drawText(ctx, label, C.energyX + 18, y, p.ink, 14, 'left', 600);
     ctx.fillStyle = p.soft;
     rounded(ctx, C.energyX + 144, y - 8, 142, 16, 4);
     ctx.fill();
     ctx.fillStyle = color;
     rounded(ctx, C.energyX + 144, y - 8, 142 * clamp(ratio, 0, 1), 16, 4);
     ctx.fill();
-    text(
+    drawText(
       ctx,
       `${Math.round(clamp(ratio, 0, 1) * 100)}%`,
       C.energyX + C.energyWidth - 18,
@@ -224,7 +209,7 @@ function drawTrack(
   ctx.lineTo(C.bottomX + C.rightRun + 20, C.leftStartY);
   ctx.stroke();
   ctx.setLineDash([]);
-  text(
+  drawText(
     ctx,
     '释放高度等高线 h',
     C.leftStartX + 92,
@@ -234,7 +219,7 @@ function drawTrack(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'θ₁ = 45°',
     C.bottomX - 70,
@@ -244,7 +229,7 @@ function drawTrack(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     `θ₂ = ${state.theta2.toFixed(0)}°`,
     C.bottomX + 112,
@@ -254,7 +239,16 @@ function drawTrack(
     'center',
     700
   );
-  text(ctx, '最低点 B', C.bottomX, C.bottomY + 24, p.ink, 14, 'center', 700);
+  drawText(
+    ctx,
+    '最低点 B',
+    C.bottomX,
+    C.bottomY + 24,
+    p.ink,
+    14,
+    'center',
+    700
+  );
 }
 function drawBall(
   ctx: CanvasRenderingContext2D,
@@ -270,7 +264,7 @@ function drawBall(
   ctx.strokeStyle = `${p.ball}99`;
   ctx.lineWidth = 2;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     state.released ? '小球' : '释放点 A',
     x + 26,
@@ -296,7 +290,7 @@ function drawBall(
       p.blue,
       4
     );
-    text(
+    drawText(
       ctx,
       'N',
       x - Math.cos(normalAngle) * 70,
@@ -307,9 +301,9 @@ function drawBall(
       700
     );
     arrow(ctx, x, y, x, y + C.axisLength, p.red, 4);
-    text(ctx, 'G', x + 14, y + C.axisLength, p.red, 15, 'left', 700);
+    drawText(ctx, 'G', x + 14, y + C.axisLength, p.red, 15, 'left', 700);
     arrow(ctx, x, y, x - 66, y + 20, p.orange, 4);
-    text(ctx, 'Gₓ', x - 84, y + 24, p.orange, 14, 'center', 700);
+    drawText(ctx, 'Gₓ', x - 84, y + 24, p.orange, 14, 'center', 700);
   }
 }
 function drawPanel(
@@ -323,7 +317,7 @@ function drawPanel(
   rounded(ctx, C.panelX, 0, C.panelWidth, C.baseHeight, 16);
   ctx.fill();
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '伽利略理想实验',
     C.panelX + C.panelInset,
@@ -336,7 +330,7 @@ function drawPanel(
   rounded(ctx, C.panelX + C.panelWidth - 126, 19, 102, 30, 15);
   ctx.fillStyle = `${p.blue}22`;
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '高中物理',
     C.panelX + C.panelWidth - 75,
@@ -362,7 +356,7 @@ function drawPanel(
   );
   ctx.fillStyle = p.soft;
   ctx.fill();
-  text(
+  drawText(
     ctx,
     `右侧斜面夹角 θ₂   ${state.theta2.toFixed(0)}°`,
     C.panelX + C.panelInset * 2,
@@ -372,7 +366,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     state.mu === 0 ? '无摩擦（理想状态）' : `动摩擦 μ = ${state.mu.toFixed(2)}`,
     C.panelX + C.panelInset * 2,
@@ -394,7 +388,7 @@ function drawPanel(
   ctx.fill();
   ctx.strokeStyle = p.border;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     `重力加速度 g             ${state.g.toFixed(0)} m/s²`,
     C.panelX + C.panelInset * 2,
@@ -404,7 +398,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `小球质量 m               ${state.mass.toFixed(0)} kg`,
     C.panelX + C.panelInset * 2,
@@ -414,7 +408,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `当前位置 h                ${state.height.toFixed(2)} m`,
     C.panelX + C.panelInset * 2,
@@ -424,7 +418,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `速度 v                    ${state.velocity.toFixed(2)} m/s`,
     C.panelX + C.panelInset * 2,
@@ -434,7 +428,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `加速度 a                  ${state.acceleration.toFixed(2)} m/s²`,
     C.panelX + C.panelInset * 2,
@@ -444,7 +438,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     state.segment === 'limit'
       ? '水平极限：永远前进'
@@ -468,7 +462,7 @@ function drawPanel(
   );
   ctx.fillStyle = p.soft;
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '理想极限  θ₂ → 0，μ → 0',
     C.panelX + C.panelInset * 2,
@@ -478,7 +472,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'a₂ = −g·sinθ₂ − μg·cosθ₂',
     C.panelX + C.panelInset * 2,
@@ -488,7 +482,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     'E总 = Eₚ + Eₖ',
     C.panelX + C.panelInset * 2,
@@ -498,7 +492,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `势能 ${state.potentialEnergy.toFixed(2)} J`,
     C.panelX + C.panelInset * 2,
@@ -508,7 +502,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `动能 ${state.kineticEnergy.toFixed(2)} J`,
     C.panelX + C.panelInset * 2,
@@ -528,7 +522,7 @@ function drawPanel(
   );
   ctx.fillStyle = p.soft;
   ctx.fill();
-  text(
+  drawText(
     ctx,
     state.released ? '按 R 复位 · 空格暂停/播放' : '按“释放小球”开始',
     C.panelX + C.panelInset * 2,
@@ -538,7 +532,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     state.showVectors ? '受力向量：开' : '受力向量：关',
     C.panelX + C.panelInset * 2,
@@ -592,7 +586,7 @@ export function createGalileoInclineView(
     drawTrack(ctx, state, p);
     drawBall(ctx, state, p);
     drawPanel(ctx, state, p);
-    text(
+    drawText(
       ctx,
       '空格：暂停/播放',
       C.fieldWidth - 24,

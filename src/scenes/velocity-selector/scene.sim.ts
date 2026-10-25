@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type SelectorCharge = 'positive' | 'negative';
 
@@ -72,32 +73,28 @@ const DEFAULTS: VelocitySelectorParams = {
   showVectors: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function normalize(
   input: Partial<VelocitySelectorParams>,
   previous = DEFAULTS
 ): VelocitySelectorParams {
   return {
     electricField: clamp(
-      finite(input.electricField, previous.electricField),
+      finiteOr(input.electricField, previous.electricField),
       velocitySelectorConstants.electricFieldMin,
       velocitySelectorConstants.electricFieldMax
     ),
     magneticField: clamp(
-      finite(input.magneticField, previous.magneticField),
+      finiteOr(input.magneticField, previous.magneticField),
       velocitySelectorConstants.magneticFieldMin,
       velocitySelectorConstants.magneticFieldMax
     ),
     initialSpeed: clamp(
-      finite(input.initialSpeed, previous.initialSpeed),
+      finiteOr(input.initialSpeed, previous.initialSpeed),
       velocitySelectorConstants.initialSpeedMin,
       velocitySelectorConstants.initialSpeedMax
     ),
     plateGap: clamp(
-      finite(input.plateGap, previous.plateGap),
+      finiteOr(input.plateGap, previous.plateGap),
       velocitySelectorConstants.plateGapMin,
       velocitySelectorConstants.plateGapMax
     ),
@@ -143,7 +140,7 @@ export function velocitySelectorSample(
   >,
   progress: number
 ) {
-  const normalizedProgress = clamp(finite(progress, 0), 0, 1);
+  const normalizedProgress = clamp(finiteOr(progress, 0), 0, 1);
   const result = calculateVelocitySelector(params);
   const deflection =
     0.5 *
@@ -210,7 +207,7 @@ export function createVelocitySelectorSim(
       return { ...params };
     },
     step(dt: number): void {
-      if (params.autoRun) time += Math.max(0, finite(dt, 0));
+      if (params.autoRun) time += Math.max(0, finiteOr(dt, 0));
     },
     reset(): void {
       params = { ...defaults };

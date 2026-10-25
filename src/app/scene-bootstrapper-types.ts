@@ -199,13 +199,11 @@ export type ParamSyncContext<TScene extends SceneInstance = SceneInstance> = {
 /**
  * 声明式 URL 参数同步配置（可选逃生口）
  *
- * 默认管线：readSceneParams → scene.setParams（无 setParams 时退回
- * setParam 单键 API）→ 控制面板句柄回写（数值 setValue / 字符串或
+ * 默认管线：readSceneParams → scene.setParams（键名/单位经 schema `bind`
+ * 换算；无 setParams 时退回 setParam 单键 API）→ 控制面板句柄回写（数值 setValue / 字符串或
  * activeKeys 用 setActive）→ URL 非空时同步首绘。
  */
 export type SceneParamSync<TScene extends SceneInstance = SceneInstance> = {
-  /** meta 参数 key → 场景 setParams 参数 key 映射（如 projectile 的 v0→speed） */
-  paramMap?: Record<string, string>;
   /** 这些 key 回写控制面板时用 setActive（预设组/选择器），而非 setValue */
   activeKeys?: string[];
   /**
@@ -230,7 +228,7 @@ export type SceneParamSync<TScene extends SceneInstance = SceneInstance> = {
   /** 默认管线应用完所有参数后、首绘前调用（如回读约束系统调整后的实际值） */
   afterApply?: (ctx: ParamSyncContext<TScene>) => void;
   /**
-   * 控件投影逃生口（scene → 面板）。paramMap 非单射或字段类型分派无法编码时使用。
+   * 控件投影逃生口（scene → 面板）。schema `bind` 与字段类型分派无法编码时使用。
    *
    * 语义（强制）：对 sim **只读**、**同步**、**不得**经 rAF / `scheduleRender` 延迟。
    * 通用投影器永不调用 applyAll / applyParam / afterApply，也不调用任何

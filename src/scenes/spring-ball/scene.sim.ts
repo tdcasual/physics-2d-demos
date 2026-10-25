@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteNumber } from '../../core/coerce';
 
 export type SpringBallMode = 'single' | 'continuous';
 export type SpringBallPreset = 'h0' | 'h-x0' | 'h-2x0' | 'h-3x0';
@@ -106,15 +107,6 @@ export function asPreset(value: unknown): SpringBallPreset | undefined {
   return undefined;
 }
 
-function finite(value: unknown, fallback: number): number {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string' && value.trim() !== '') {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return fallback;
-}
-
 function normalize(
   input: Partial<SpringBallParams> & Record<string, unknown>,
   previous = DEFAULTS
@@ -122,7 +114,7 @@ function normalize(
   const preset = asPreset(input.preset) ?? previous.preset;
   return {
     releaseHeight: clamp(
-      finite(input.releaseHeight, PRESET_HEIGHT[preset]),
+      finiteNumber(input.releaseHeight, PRESET_HEIGHT[preset]),
       0,
       0.75
     ),
@@ -216,7 +208,7 @@ export function createSpringBallSim(initial: Partial<SpringBallParams> = {}) {
     step(dt: number): void {
       if (!params.autoRun) return;
       const speed = params.slow ? 0.3 : 1;
-      const safeDt = Math.max(0, finite(dt, 0)) * speed;
+      const safeDt = Math.max(0, finiteNumber(dt, 0)) * speed;
       const current = stateAt(params, time);
       if (params.mode === 'single' && time >= current.contactTime) {
         const omega = Math.sqrt(

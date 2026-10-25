@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 export type RingPendulumParams = {
   ringMass: number;
   ballMass: number;
@@ -46,31 +47,28 @@ const DEFAULTS: RingPendulumParams = {
   showTrail: true,
   autoRun: true
 };
-function finite(v: unknown, fallback: number): number {
-  return typeof v === 'number' && Number.isFinite(v) ? v : fallback;
-}
 function normalize(
   input: Partial<RingPendulumParams>,
   previous = DEFAULTS
 ): RingPendulumParams {
   return {
     ringMass: clamp(
-      finite(input.ringMass, previous.ringMass),
+      finiteOr(input.ringMass, previous.ringMass),
       ringPendulumConstants.ringMassMin,
       ringPendulumConstants.ringMassMax
     ),
     ballMass: clamp(
-      finite(input.ballMass, previous.ballMass),
+      finiteOr(input.ballMass, previous.ballMass),
       ringPendulumConstants.ballMassMin,
       ringPendulumConstants.ballMassMax
     ),
     length: clamp(
-      finite(input.length, previous.length),
+      finiteOr(input.length, previous.length),
       ringPendulumConstants.lengthMin,
       ringPendulumConstants.lengthMax
     ),
     angle: clamp(
-      finite(input.angle, previous.angle),
+      finiteOr(input.angle, previous.angle),
       ringPendulumConstants.angleMin,
       ringPendulumConstants.angleMax
     ),
@@ -141,7 +139,7 @@ export function createRingPendulumSim(
       return { ...params };
     },
     step(dt: number): void {
-      if (params.autoRun) time += Math.max(0, finite(dt, 0));
+      if (params.autoRun) time += Math.max(0, finiteOr(dt, 0));
     },
     reset(): void {
       params = { ...defaults };

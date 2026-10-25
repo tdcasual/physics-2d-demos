@@ -269,11 +269,11 @@ export function createSpringOscillatorSim(): SpringOscillatorSim {
       // 假设两个振子周期相同（同相演示的前提）
       const avgPeriod = (T1 + T2) / 2;
       const timeDiff = osc2.startDelay - osc1.startDelay;
-      let diff = (2 * Math.PI * timeDiff) / avgPeriod;
+      let diff = ((2 * Math.PI * timeDiff) / avgPeriod) % (2 * Math.PI);
 
-      // 归一化到 [-pi, pi]
-      while (diff > Math.PI) diff -= 2 * Math.PI;
-      while (diff < -Math.PI) diff += 2 * Math.PI;
+      // 归一化到 [-pi, pi]（先取余，避免大相位差时逐圈循环）
+      if (diff > Math.PI) diff -= 2 * Math.PI;
+      if (diff < -Math.PI) diff += 2 * Math.PI;
 
       return diff;
     }

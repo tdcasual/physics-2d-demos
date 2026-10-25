@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type LightbulbParams = {
   voltage: number;
@@ -35,16 +36,13 @@ const DEFAULTS: LightbulbParams = {
   showIdeal: true,
   autoRun: false
 };
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
 function normalize(
   input: Partial<LightbulbParams>,
   prev = DEFAULTS
 ): LightbulbParams {
   return {
     voltage: clamp(
-      finite(input.voltage, prev.voltage),
+      finiteOr(input.voltage, prev.voltage),
       lightbulbConstants.voltageMin,
       lightbulbConstants.voltageMax
     ),
@@ -120,7 +118,7 @@ export function createLightbulbSim(initial: Partial<LightbulbParams> = {}) {
     },
     step(dt: number): void {
       if (params.autoRun) {
-        time += clamp(finite(dt, 0), 0, 0.05);
+        time += clamp(finiteOr(dt, 0), 0, 0.05);
         params = {
           ...params,
           voltage: ((time % 4) / 4) * lightbulbConstants.voltageMax

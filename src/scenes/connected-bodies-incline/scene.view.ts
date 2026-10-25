@@ -5,6 +5,7 @@ import {
   connectedBodiesInclineConstants as C,
   type ConnectedBodiesInclineState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateConnectedBodiesInclineViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -69,22 +70,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
   }
 };
 
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 function card(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -126,7 +111,7 @@ function arrow(
   ctx.lineTo(x + dx - ux * 14 - uy * 7, y + dy - uy * 14 + ux * 7);
   ctx.closePath();
   ctx.fill();
-  text(
+  drawText(
     ctx,
     label,
     x + dx + uy * 16,
@@ -160,10 +145,10 @@ function drawHeader(
   state: ConnectedBodiesInclineState,
   p: Palette
 ): void {
-  text(ctx, '连接体受力分析', 36, 34, p.ink, 25, 'left', 700);
-  text(ctx, '定滑轮 · 斜面 · 摩擦方向', 36, 64, p.muted, 15, 'left', 600);
+  drawText(ctx, '连接体受力分析', 36, 34, p.ink, 25, 'left', 700);
+  drawText(ctx, '定滑轮 · 斜面 · 摩擦方向', 36, 64, p.muted, 15, 'left', 600);
   card(ctx, C.panelX, C.panelY, C.panelWidth, C.stateCardHeight - 12, p);
-  text(
+  drawText(
     ctx,
     state.status,
     C.panelX + 24,
@@ -177,7 +162,7 @@ function drawHeader(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     state.trend,
     C.panelX + 24,
@@ -187,7 +172,7 @@ function drawHeader(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `a = ${state.acceleration.toFixed(2)} m/s²`,
     C.panelX + C.panelWidth - 24,
@@ -285,7 +270,16 @@ function drawBlocks(
   );
   ctx.fill();
   ctx.stroke();
-  text(ctx, `A (${state.massA.toFixed(1)} kg)`, 0, 0, p.ink, 16, 'center', 700);
+  drawText(
+    ctx,
+    `A (${state.massA.toFixed(1)} kg)`,
+    0,
+    0,
+    p.ink,
+    16,
+    'center',
+    700
+  );
   ctx.restore();
   const hangingY = C.ropeEndY + state.displacement * 44;
   ctx.fillStyle = p.block;
@@ -301,7 +295,7 @@ function drawBlocks(
   );
   ctx.fill();
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     `B (${state.massB.toFixed(1)} kg)`,
     C.hangingX,
@@ -345,8 +339,8 @@ function drawForces(
     p.teal,
     'N'
   );
-  text(ctx, 'mₐg sinθ', x - 12, y + 82, p.muted, 14, 'center', 600);
-  text(
+  drawText(ctx, 'mₐg sinθ', x - 12, y + 82, p.muted, 14, 'center', 600);
+  drawText(
     ctx,
     `摩擦 ${Math.abs(state.friction).toFixed(1)} N`,
     x + 102,
@@ -372,7 +366,7 @@ function drawPanel(
   p: Palette
 ): void {
   card(ctx, C.panelX, C.formulaCardY, C.panelWidth, C.formulaCardHeight, p);
-  text(
+  drawText(
     ctx,
     '牛顿第二定律',
     C.panelX + 24,
@@ -382,7 +376,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `B:  mᵦg − T = mᵦa`,
     C.panelX + 24,
@@ -392,7 +386,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `A:  T − mₐg sinθ ${state.friction >= 0 ? '+' : '−'} f = mₐa`,
     C.panelX + 24,
@@ -402,7 +396,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `T = ${state.tension.toFixed(2)} N`,
     C.panelX + 24,
@@ -412,7 +406,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `f = ${Math.abs(state.friction).toFixed(2)} N`,
     C.panelX + 204,
@@ -423,7 +417,7 @@ function drawPanel(
     700
   );
   card(ctx, C.panelX, C.metricCardY, C.panelWidth, C.metricCardHeight, p);
-  text(
+  drawText(
     ctx,
     `mₐ ${state.massA.toFixed(1)} kg   mᵦ ${state.massB.toFixed(1)} kg`,
     C.panelX + 24,
@@ -433,7 +427,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `θ ${state.angle.toFixed(0)}°     μ ${state.mu.toFixed(2)}`,
     C.panelX + 24,
@@ -443,7 +437,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `驱动力 ${state.drive.toFixed(2)} N`,
     C.panelX + 24,
@@ -453,7 +447,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `静摩擦上限 ${state.staticLimit.toFixed(2)} N`,
     C.panelX + 24,
@@ -470,7 +464,7 @@ function drawFooter(
   p: Palette
 ): void {
   card(ctx, 36, C.noteCardY, 720, C.noteCardHeight, p);
-  text(
+  drawText(
     ctx,
     state.status === '静止'
       ? '静摩擦力抵消驱动力'
@@ -482,7 +476,7 @@ function drawFooter(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `t = ${state.time.toFixed(2)} s`,
     730,

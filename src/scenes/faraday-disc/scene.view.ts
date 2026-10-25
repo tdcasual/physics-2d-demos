@@ -7,6 +7,7 @@ import {
   stageTransform,
   type FaradayState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateFaradayViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -98,23 +99,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
 };
 
 type Pt = { x: number; y: number };
-
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 
 function arrow(
   ctx: CanvasRenderingContext2D,
@@ -233,7 +217,7 @@ function drawTitle(
   const width = C.titleWidth * cs;
   const height = C.titleHeight * cs;
   card(ctx, x, y, width, height, p);
-  text(
+  drawText(
     ctx,
     '法拉第圆盘发电机实验装置',
     x + 14,
@@ -286,7 +270,7 @@ function drawField(
   ctx.restore();
 
   const dir = into ? '垂直纸面向里' : '垂直纸面向外';
-  text(
+  drawText(
     ctx,
     `B = ${state.params.B.toFixed(1)} T  ${dir}`,
     (C.fieldLeft + C.fieldRight) / 2,
@@ -371,7 +355,7 @@ function drawHub(
   ctx.arc(x, y, C.pivotRadius, 0, Math.PI * 2);
   ctx.fill();
   const minus = !state.rimPositive;
-  text(
+  drawText(
     ctx,
     minus ? 'A −' : 'A +',
     x + C.hubRadius + 14,
@@ -381,7 +365,7 @@ function drawHub(
     'left',
     700
   );
-  text(ctx, '电刷 A', x + C.hubRadius + 14, y + 34, p.muted, 11 * cs);
+  drawText(ctx, '电刷 A', x + C.hubRadius + 14, y + 34, p.muted, 11 * cs);
   ctx.restore();
 }
 
@@ -408,7 +392,7 @@ function drawBrushB(
   ctx.beginPath();
   ctx.arc(x + 18, y - 16, 7, 0, Math.PI * 2);
   ctx.fill();
-  text(
+  drawText(
     ctx,
     state.rimPositive ? '+' : '−',
     x + 18,
@@ -418,7 +402,7 @@ function drawBrushB(
     'center',
     800
   );
-  text(ctx, '电刷 B', x + 30, y - 16, p.red, 13 * cs, 'left', 700);
+  drawText(ctx, '电刷 B', x + 30, y - 16, p.red, 13 * cs, 'left', 700);
   ctx.restore();
 }
 
@@ -452,7 +436,7 @@ function drawOmega(
   ctx.lineTo(ex - hx * 10 + hy * 5, ey - hy * 10 - hx * 5);
   ctx.closePath();
   ctx.fill();
-  text(
+  drawText(
     ctx,
     cw ? 'ω 顺时针' : 'ω 逆时针',
     x - r - 8,
@@ -487,7 +471,7 @@ function drawPointP(
   const fy = state.forceOutward ? -fLen : fLen;
   arrow(ctx, px, py, px + vx, py, p.green, 2.8 * cs);
   arrow(ctx, px, py, px, py + fy, p.orange, 2.8 * cs);
-  text(
+  drawText(
     ctx,
     'v',
     px + vx * 0.55,
@@ -497,8 +481,8 @@ function drawPointP(
     'center',
     700
   );
-  text(ctx, 'F洛', px + 16, py + fy * 0.55, p.orange, 13 * cs, 'left', 700);
-  text(ctx, 'P', px - 16, py - 18, p.ink, 14 * cs, 'right', 800);
+  drawText(ctx, 'F洛', px + 16, py + fy * 0.55, p.orange, 13 * cs, 'left', 700);
+  drawText(ctx, 'P', px - 16, py - 18, p.ink, 14 * cs, 'right', 800);
   ctx.restore();
 }
 
@@ -522,7 +506,7 @@ function drawRadius(
   ctx.lineTo(x2, y2);
   ctx.stroke();
   ctx.setLineDash([]);
-  text(
+  drawText(
     ctx,
     `R = ${state.params.radius.toFixed(2)} m`,
     x2 - 8,
@@ -657,7 +641,7 @@ function drawSwitch(
 ): void {
   const x = C.circuitX - C.circuitW / 2;
   card(ctx, x, C.switchY, C.circuitW, C.switchH, p);
-  text(
+  drawText(
     ctx,
     '开关 S',
     C.circuitX,
@@ -685,7 +669,7 @@ function drawSwitch(
   if (state.params.closed) ctx.lineTo(right, y);
   else ctx.lineTo(right - 6, y - 16);
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     state.params.closed ? '闭合' : '断开',
     C.circuitX,
@@ -704,7 +688,16 @@ function drawBulb(
 ): void {
   const x = C.circuitX - C.circuitW / 2;
   card(ctx, x, C.bulbY, C.circuitW, C.bulbH, p);
-  text(ctx, '灯泡', C.circuitX, C.bulbY + 16, p.ink, 13 * cs, 'center', 700);
+  drawText(
+    ctx,
+    '灯泡',
+    C.circuitX,
+    C.bulbY + 16,
+    p.ink,
+    13 * cs,
+    'center',
+    700
+  );
   const bx = C.circuitX;
   const by = C.bulbY + 52;
   if (state.bulbOn) {
@@ -760,9 +753,9 @@ function drawMeter(
   ctx.strokeStyle = p.muted;
   ctx.lineWidth = 1.4;
   ctx.stroke();
-  text(ctx, '−G', x - 28, y + 18, p.muted, 11 * cs, 'center');
-  text(ctx, '+G', x + 28, y + 18, p.muted, 11 * cs, 'center');
-  text(ctx, 'G', x, y + 8, p.ink, 16 * cs, 'center', 800);
+  drawText(ctx, '−G', x - 28, y + 18, p.muted, 11 * cs, 'center');
+  drawText(ctx, '+G', x + 28, y + 18, p.muted, 11 * cs, 'center');
+  drawText(ctx, 'G', x, y + 8, p.ink, 16 * cs, 'center', 800);
   const max = 1.05;
   const defl = max * Math.tanh(state.current / 0.35) * (state.currentSign || 0);
   const needle = -Math.PI / 2 + defl;
@@ -780,7 +773,7 @@ function drawMeter(
   ctx.beginPath();
   ctx.arc(x, y, 4, 0, Math.PI * 2);
   ctx.fill();
-  text(ctx, '检流计', x, y + C.meterR + 14, p.muted, 12 * cs, 'center');
+  drawText(ctx, '检流计', x, y + C.meterR + 14, p.muted, 12 * cs, 'center');
 }
 
 export function createFaradayView(options: CreateFaradayViewOptions = {}) {

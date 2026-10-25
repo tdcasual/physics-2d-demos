@@ -2,6 +2,7 @@ import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import { jouleConstants, type JouleState } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateJouleViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -55,22 +56,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
   }
 };
 
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 function card(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -204,7 +189,7 @@ function drawCalorimeter(
   ctx.roundRect(300 * scale, 392 * scale, 298 * scale, 26 * scale, 5);
   ctx.fill();
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '绝热水槽 · 搅拌桨',
     450 * scale,
@@ -252,7 +237,7 @@ function drawMechanical(
   ctx.roundRect(205 * scale, weightY * scale, 68 * scale, 52 * scale, 6);
   ctx.fill();
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     'm/2',
     239 * scale,
@@ -272,7 +257,7 @@ function drawMechanical(
   ctx.beginPath();
   ctx.roundRect(576 * scale, weightY * scale, 68 * scale, 52 * scale, 6);
   ctx.fill();
-  text(
+  drawText(
     ctx,
     'm/2',
     610 * scale,
@@ -291,7 +276,7 @@ function drawMechanical(
   ctx.stroke();
   ctx.fillStyle = p.dark;
   ctx.fillRect(442 * scale, 174 * scale, 50 * scale, 90 * scale);
-  text(
+  drawText(
     ctx,
     '转轴',
     467 * scale,
@@ -309,8 +294,8 @@ function drawMechanical(
   ctx.lineTo(92 * scale, 628 * scale);
   ctx.stroke();
   ctx.setLineDash([]);
-  text(ctx, '0', 70 * scale, 178 * scale, p.ink, 16 * scale, 'right', 600);
-  text(
+  drawText(ctx, '0', 70 * scale, 178 * scale, p.ink, 16 * scale, 'right', 600);
+  drawText(
     ctx,
     `${state.height.toFixed(0)} m`,
     70 * scale,
@@ -320,8 +305,17 @@ function drawMechanical(
     'right',
     600
   );
-  text(ctx, 'h', 104 * scale, 405 * scale, p.ink, 18 * scale, 'center', 700);
-  text(
+  drawText(
+    ctx,
+    'h',
+    104 * scale,
+    405 * scale,
+    p.ink,
+    18 * scale,
+    'center',
+    700
+  );
+  drawText(
     ctx,
     `机械做功  W = ${state.activeWork.toFixed(0)} J`,
     380 * scale,
@@ -359,8 +353,17 @@ function drawElectric(
   ctx.roundRect(100 * scale, 168 * scale, 58 * scale, 84 * scale, 6);
   ctx.fill();
   ctx.stroke();
-  text(ctx, 'U', 129 * scale, 198 * scale, p.ink, 18 * scale, 'center', 700);
-  text(
+  drawText(
+    ctx,
+    'U',
+    129 * scale,
+    198 * scale,
+    p.ink,
+    18 * scale,
+    'center',
+    700
+  );
+  drawText(
     ctx,
     `${state.voltage.toFixed(0)} V`,
     129 * scale,
@@ -384,7 +387,7 @@ function drawElectric(
   ctx.moveTo(375 * scale, 492 * scale);
   ctx.lineTo(520 * scale, 492 * scale);
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     `电阻丝发热  W = ${state.activeWork.toFixed(0)} J`,
     380 * scale,
@@ -407,7 +410,7 @@ function drawElectric(
   );
   ctx.fill();
   ctx.shadowBlur = 0;
-  text(
+  drawText(
     ctx,
     `t = ${state.time.toFixed(1)} s`,
     380 * scale,
@@ -455,7 +458,7 @@ function drawThermometer(
   ctx.beginPath();
   ctx.arc(x, y + 64 * scale, 15 * scale, 0, Math.PI * 2);
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '21',
     x - 26 * scale,
@@ -465,7 +468,7 @@ function drawThermometer(
     'right',
     700
   );
-  text(
+  drawText(
     ctx,
     '20',
     x - 26 * scale,
@@ -475,7 +478,7 @@ function drawThermometer(
     'right',
     700
   );
-  text(
+  drawText(
     ctx,
     `${state.temperature.toFixed(2)} °C`,
     x,
@@ -518,7 +521,7 @@ function drawPanel(
     state.mode === 1 ? p.cyan : p.soft,
     state.mode === 1 ? p.cyan : p.border
   );
-  text(
+  drawText(
     ctx,
     '机械功',
     x + 18 * scale + tabWidth / 2,
@@ -528,7 +531,7 @@ function drawPanel(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     '电功',
     x + 18 * scale + tabWidth + tabWidth / 2,
@@ -539,7 +542,7 @@ function drawPanel(
     700
   );
   card(ctx, x + 18 * scale, 96 * scale, width - 36 * scale, 228 * scale, p);
-  text(
+  drawText(
     ctx,
     '系统参数',
     x + 36 * scale,
@@ -559,7 +562,7 @@ function drawPanel(
   ];
   values.forEach(([label, value], index) => {
     const y = 154 + index * 27;
-    text(
+    drawText(
       ctx,
       label,
       x + 36 * scale,
@@ -569,7 +572,7 @@ function drawPanel(
       'left',
       600
     );
-    text(
+    drawText(
       ctx,
       value,
       x + width - 36 * scale,
@@ -589,7 +592,7 @@ function drawPanel(
     p,
     p.soft
   );
-  text(
+  drawText(
     ctx,
     '能量守恒与转化计算',
     x + width / 2,
@@ -599,7 +602,7 @@ function drawPanel(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     state.mode === 0 ? '重力做功： W = mgh' : '电流做功： W = UIt',
     x + 36 * scale,
@@ -609,7 +612,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `${state.activeWork.toFixed(0)} J`,
     x + width - 36 * scale,
@@ -619,7 +622,7 @@ function drawPanel(
     'right',
     700
   );
-  text(
+  drawText(
     ctx,
     '绝热系统内能增量： ΔU = W',
     x + 36 * scale,
@@ -629,7 +632,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `ΔT = ${state.temperatureRise.toFixed(2)} °C`,
     x + width - 36 * scale,
@@ -649,7 +652,7 @@ function drawPanel(
     `${p.red}12`,
     p.red
   );
-  text(
+  drawText(
     ctx,
     '温度升高',
     x + 36 * scale,
@@ -659,7 +662,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     'ΔU = cMΔT',
     x + 36 * scale,
@@ -669,7 +672,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     'c = 4200 J/(kg·°C)',
     x + width - 36 * scale,
@@ -679,7 +682,7 @@ function drawPanel(
     'right',
     500
   );
-  text(
+  drawText(
     ctx,
     '空格键暂停 / 恢复',
     x + width / 2,

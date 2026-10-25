@@ -4,7 +4,7 @@
 
 ## Tech Stack
 
-- 构建：`Vite 7` + `TypeScript 5.9` + `pnpm`
+- 构建：`Vite 7` + `TypeScript 5.9` + `pnpm`（Node ≥ 22；pnpm 版本由 `package.json` 的 `packageManager` 固定，`corepack enable` 后自动使用）
 - UI：`React 18` + `Tailwind CSS v4`
 - 测试：`Vitest`（单元/契约）+ `Playwright`（E2E + 视觉回归）
 - 工程质量：`ESLint` + `Prettier` + `TypeScript strict`
@@ -33,7 +33,8 @@ pnpm quality:full
 
 | 命令                      | 说明                                                                                    |
 | ------------------------- | --------------------------------------------------------------------------------------- |
-| `pnpm dev`                | 本地开发（端口 5177）                                                                   |
+| `pnpm dev`                | 本地开发（端口 5177，仅监听本机）                                                       |
+| `pnpm dev:lan`            | 局域网开发（`--host`，供真机调试）                                                      |
 | `pnpm build`              | 构建产物到 `dist/`                                                                      |
 | `pnpm preview`            | 预览构建结果                                                                            |
 | `pnpm check:scenes`       | 检查场景标准文件、控制面板形态与 HTML 入口                                              |
@@ -101,7 +102,7 @@ docs/
   README.md                    # 文档索引
   layout-master-system-design.md   # 布局母版系统设计（历史快照）
   new-scene-agent-contract.md      # 新场景开发规范（当前有效）
-  scene-migration-requirements.md  # 旧版场景开发规范（历史归档）
+  archive/                         # 历史快照与已归档文档（审计报告、旧规范、旧设计稿）
 ```
 
 ## Page Entrypoints
@@ -221,7 +222,7 @@ bootScenePage({
    - 至少 1 个 E2E test（页面截图或控件交互）
 6. 执行质量门禁并更新快照（如需要）
 
-详细规范见：[docs/new-scene-agent-contract.md](./docs/new-scene-agent-contract.md)（旧版规范 scene-migration-requirements.md 已归档，仅供追溯）
+详细规范见：[docs/new-scene-agent-contract.md](./docs/new-scene-agent-contract.md)（旧版规范已归档至 [docs/archive/scene-migration-requirements.md](./docs/archive/scene-migration-requirements.md)，仅供追溯）
 
 布局系统扩展指南见 AGENTS.md「布局扩展规范」。历史快照：[docs/layout-master-system-design.md](./docs/layout-master-system-design.md)
 

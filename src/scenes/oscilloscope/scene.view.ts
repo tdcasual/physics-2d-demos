@@ -1,8 +1,4 @@
-import {
-  applyCanvasSize,
-  getResponsiveScale,
-  scaledSize
-} from '../../core/canvas-sizing';
+import { scaledSize } from '../../core/canvas-sizing';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
@@ -25,6 +21,8 @@ import {
   type OscilloscopeGraphPoint,
   type OscilloscopeState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
+import { sizeCanvasToHostBox } from '../stage-fit';
 
 export type CreateOscilloscopeViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -83,71 +81,12 @@ const PALETTE: Record<TeachingTheme, Palette> = {
   }
 };
 
-function contentBoxSize(host: HTMLElement): { width: number; height: number } {
-  const cs = getComputedStyle(host);
-  const rect = host.getBoundingClientRect();
-  const padX =
-    (Number.parseFloat(cs.paddingLeft) || 0) +
-    (Number.parseFloat(cs.paddingRight) || 0);
-  const padY =
-    (Number.parseFloat(cs.paddingTop) || 0) +
-    (Number.parseFloat(cs.paddingBottom) || 0);
-  return {
-    width: Math.max(1, Math.floor(rect.width - padX)),
-    height: Math.max(1, Math.floor(rect.height - padY))
-  };
-}
-
 /** Size the graph canvas to the host content box, not the padded border box. */
-export function sizeGraphCanvasToHost(canvas: HTMLCanvasElement): {
-  ctx: CanvasRenderingContext2D;
-  cssWidth: number;
-  cssHeight: number;
-  responsiveScale: number;
-} {
-  const host = canvas.parentElement;
-  let cssWidth: number;
-  let cssHeight: number;
-  if (host) {
-    const box = contentBoxSize(host);
-    cssWidth = box.width;
-    cssHeight = box.height;
-  } else {
-    const rect = canvas.getBoundingClientRect();
-    cssWidth = Math.max(1, Math.floor(rect.width || C.graphFallbackWidth));
-    cssHeight = Math.max(1, Math.floor(rect.height || C.graphFallbackHeight));
-  }
-  const dpr = Math.min(
-    2,
-    typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1
-  );
-  const responsiveScale = getResponsiveScale(cssWidth, cssHeight);
-  const ctx = applyCanvasSize(canvas, {
-    width: Math.max(1, Math.floor(cssWidth * dpr)),
-    height: Math.max(1, Math.floor(cssHeight * dpr)),
-    cssWidth,
-    cssHeight,
-    dpr,
-    responsiveScale
+export function sizeGraphCanvasToHost(canvas: HTMLCanvasElement) {
+  return sizeCanvasToHostBox(canvas, {
+    width: C.graphFallbackWidth,
+    height: C.graphFallbackHeight
   });
-  return { ctx, cssWidth, cssHeight, responsiveScale };
-}
-
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
 }
 
 function rounded(
@@ -274,7 +213,7 @@ function drawTube(
           ? p.pink
           : p.muted;
     const weight = label.text.length <= 2 ? 700 : 600;
-    text(
+    drawText(
       ctx,
       label.text,
       label.x,
@@ -354,9 +293,9 @@ function drawScope(
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.stroke();
-  text(ctx, 'Y', cx, cy - r + 16, p.blue, font(14), 'center', 700);
-  text(ctx, 'X', cx + r - 14, cy, p.pink, font(14), 'center', 700);
-  text(ctx, '示波屏', cx, cy + r + 18, p.muted, font(13), 'center');
+  drawText(ctx, 'Y', cx, cy - r + 16, p.blue, font(14), 'center', 700);
+  drawText(ctx, 'X', cx + r - 14, cy, p.pink, font(14), 'center', 700);
+  drawText(ctx, '示波屏', cx, cy + r + 18, p.muted, font(13), 'center');
 }
 
 function drawPlot(
@@ -395,7 +334,7 @@ function drawPlot(
     else ctx.lineTo(xy.x, xy.y);
   });
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     yLabel,
     frame.left - 8,
@@ -406,7 +345,7 @@ function drawPlot(
     700
   );
   if (showTimeAxis) {
-    text(ctx, 't', frame.right + 10, frame.bottom, p.ink, font(12), 'left');
+    drawText(ctx, 't', frame.right + 10, frame.bottom, p.ink, font(12), 'left');
   }
 }
 

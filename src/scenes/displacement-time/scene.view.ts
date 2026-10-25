@@ -12,6 +12,7 @@ import {
   velocityAt,
   type DisplacementTimeState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateDisplacementTimeViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -71,23 +72,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     accelArea: 'rgba(251,113,133,0.22)'
   }
 };
-
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 
 function rounded(
   ctx: CanvasRenderingContext2D,
@@ -218,7 +202,7 @@ function drawTrack(
     1.6,
     10
   );
-  text(
+  drawText(
     ctx,
     'x',
     C.trackEndX + 16,
@@ -228,8 +212,8 @@ function drawTrack(
     'center',
     700
   );
-  text(ctx, '0', C.trackOriginX, C.trackY + 44, p.ink, font(12), 'center');
-  text(
+  drawText(ctx, '0', C.trackOriginX, C.trackY + 44, p.ink, font(12), 'center');
+  drawText(
     ctx,
     '−50m',
     C.trackOriginX - 50 * C.trackScale,
@@ -238,7 +222,7 @@ function drawTrack(
     font(12),
     'center'
   );
-  text(
+  drawText(
     ctx,
     '50m',
     C.trackOriginX + 50 * C.trackScale,
@@ -274,7 +258,7 @@ function drawTrack(
     const vY = y - bodyH - 16;
     const vStart = x + vSign * (bodyW / 2);
     arrow(ctx, vStart, vY, vStart + vSign * vLen, vY, p.red, 4, 11);
-    text(
+    drawText(
       ctx,
       'v',
       vStart + vSign * (vLen + 14),
@@ -302,7 +286,15 @@ function drawAxes(
     ctx.moveTo(x, C.displacementTop);
     ctx.lineTo(x, C.displacementBottom);
     ctx.stroke();
-    text(ctx, `${i}`, x, C.velocityBottom + 14, p.muted, font(11), 'center');
+    drawText(
+      ctx,
+      `${i}`,
+      x,
+      C.velocityBottom + 14,
+      p.muted,
+      font(11),
+      'center'
+    );
   }
   for (const v of [-20, 20, 40]) {
     const y = velocityY(v);
@@ -310,7 +302,7 @@ function drawAxes(
     ctx.moveTo(C.graphLeft, y);
     ctx.lineTo(C.graphRight, y);
     ctx.stroke();
-    text(ctx, `${v}`, C.graphLeft - 10, y, p.muted, font(11), 'right');
+    drawText(ctx, `${v}`, C.graphLeft - 10, y, p.muted, font(11), 'right');
   }
   for (const xVal of [-40, 40, 80, 120]) {
     const y = displacementY(xVal);
@@ -318,7 +310,7 @@ function drawAxes(
     ctx.moveTo(C.graphLeft, y);
     ctx.lineTo(C.graphRight, y);
     ctx.stroke();
-    text(ctx, `${xVal}`, C.graphLeft - 10, y, p.muted, font(11), 'right');
+    drawText(ctx, `${xVal}`, C.graphLeft - 10, y, p.muted, font(11), 'right');
   }
 
   ctx.strokeStyle = p.ink;
@@ -364,7 +356,7 @@ function drawAxes(
     1.8,
     9
   );
-  text(
+  drawText(
     ctx,
     'v',
     C.graphLeft - 16,
@@ -374,7 +366,7 @@ function drawAxes(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     'x',
     C.graphLeft - 16,
@@ -384,7 +376,7 @@ function drawAxes(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     't',
     C.graphRight + 18,
@@ -394,7 +386,7 @@ function drawAxes(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     't',
     C.graphRight + 18,
@@ -404,8 +396,16 @@ function drawAxes(
     'left',
     700
   );
-  text(ctx, '0', C.graphLeft - 10, C.velocityAxisY, p.muted, font(11), 'right');
-  text(
+  drawText(
+    ctx,
+    '0',
+    C.graphLeft - 10,
+    C.velocityAxisY,
+    p.muted,
+    font(11),
+    'right'
+  );
+  drawText(
     ctx,
     '0',
     C.graphLeft - 10,
@@ -457,7 +457,7 @@ function drawArea(
   ctx.setLineDash([]);
 
   if (Math.abs(yV0 - axisY) > 12 && width > 36) {
-    text(
+    drawText(
       ctx,
       'v₀t',
       (x0 + xt) / 2,
@@ -469,7 +469,7 @@ function drawArea(
     );
   }
   if (Math.abs(yNow - yV0) > 12 && width > 48) {
-    text(
+    drawText(
       ctx,
       '½at²',
       (x0 + xt) / 2 + 18,

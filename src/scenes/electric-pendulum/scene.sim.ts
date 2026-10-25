@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 export type PendulumMode = 'balance' | 'oscillate' | 'explore';
 export type PendulumParams = {
   mode: PendulumMode;
@@ -56,9 +57,6 @@ const DEFAULTS: PendulumParams = {
   showForces: true,
   showVelocity: true
 };
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
 function normalize(
   input: Partial<PendulumParams>,
   previous = DEFAULTS
@@ -69,7 +67,7 @@ function normalize(
         ? input.mode
         : 'balance',
     voltage: clamp(
-      finite(input.voltage, previous.voltage),
+      finiteOr(input.voltage, previous.voltage),
       electricPendulumConstants.voltageMin,
       electricPendulumConstants.voltageMax
     ),
@@ -121,7 +119,7 @@ export function createElectricPendulumSim(
       return { ...params };
     },
     step(dt: number) {
-      if (params.mode !== 'balance') time += Math.max(0, finite(dt, 0));
+      if (params.mode !== 'balance') time += Math.max(0, finiteOr(dt, 0));
     },
     reset() {
       params = { ...DEFAULTS };

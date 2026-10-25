@@ -1,5 +1,8 @@
 import { readoutOccludesStage } from '../../platform/stage-readout';
 import { clamp } from '../../core/math';
+import { finiteNumber, asBooleanOr } from '../../core/coerce';
+import { betterPose } from '../stage-fit';
+import type { StagePose } from '../stage-fit';
 
 export type DisplacementTimeParams = {
   v0: number;
@@ -28,12 +31,6 @@ export type StageLayoutHint = {
   overlayTopPx?: number;
   overlayHeightPx?: number;
   transportClearY?: number;
-};
-
-type StagePose = {
-  fit: number;
-  offsetX: number;
-  offsetY: number;
 };
 
 const BASE_W = 880;
@@ -119,48 +116,24 @@ export const displacementTimeConstants = {
 const C = displacementTimeConstants;
 const FLOATING_OVERLAY_FALLBACK = C.overlayFallbackPx;
 
-function finite(value: unknown, fallback: number): number {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string' && value.trim() !== '') {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return fallback;
-}
-
-function asBool(value: unknown, fallback: boolean): boolean {
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'number') return value !== 0;
-  if (typeof value === 'string') {
-    const text = value.trim().toLowerCase();
-    if (text === '0' || text === 'false' || text === 'off' || text === 'no') {
-      return false;
-    }
-    if (text === '1' || text === 'true' || text === 'on' || text === 'yes') {
-      return true;
-    }
-  }
-  return fallback;
-}
-
 function normalizeParams(
   input: Partial<DisplacementTimeParams>,
   previous = DEFAULTS
 ): DisplacementTimeParams {
   return {
-    v0: clamp(finite(input.v0, previous.v0), V0_MIN, V0_MAX),
+    v0: clamp(finiteNumber(input.v0, previous.v0), V0_MIN, V0_MAX),
     acceleration: clamp(
-      finite(input.acceleration, previous.acceleration),
+      finiteNumber(input.acceleration, previous.acceleration),
       A_MIN,
       A_MAX
     ),
-    autoRun: asBool(input.autoRun, previous.autoRun),
-    showArea: asBool(input.showArea, previous.showArea)
+    autoRun: asBooleanOr(input.autoRun, previous.autoRun),
+    showArea: asBooleanOr(input.showArea, previous.showArea)
   };
 }
 
 export function wrapDisplacementTime(time: number): number {
-  const t = finite(time, 0);
+  const t = finiteNumber(time, 0);
   if (!Number.isFinite(t)) return 0;
   if (t < 0 || t > MAX_T) return ((t % MAX_T) + MAX_T) % MAX_T;
   return t;
@@ -172,7 +145,10 @@ export function velocityAt(
   acceleration: number,
   time: number
 ): number {
-  return finite(v0, 0) + finite(acceleration, 0) * Math.max(0, finite(time, 0));
+  return (
+    finiteNumber(v0, 0) +
+    finiteNumber(acceleration, 0) * Math.max(0, finiteNumber(time, 0))
+  );
 }
 
 /** x(t) = v₀ t + ½ a t² */
@@ -181,8 +157,8 @@ export function displacementAt(
   acceleration: number,
   time: number
 ): number {
-  const t = Math.max(0, finite(time, 0));
-  return finite(v0, 0) * t + 0.5 * finite(acceleration, 0) * t * t;
+  const t = Math.max(0, finiteNumber(time, 0));
+  return finiteNumber(v0, 0) * t + 0.5 * finiteNumber(acceleration, 0) * t * t;
 }
 
 export function formulaTerms(
@@ -190,9 +166,9 @@ export function formulaTerms(
   acceleration: number,
   time: number
 ): { v0t: number; halfAt2: number; x: number } {
-  const t = Math.max(0, finite(time, 0));
-  const v0t = finite(v0, 0) * t;
-  const halfAt2 = 0.5 * finite(acceleration, 0) * t * t;
+  const t = Math.max(0, finiteNumber(time, 0));
+  const v0t = finiteNumber(v0, 0) * t;
+  const halfAt2 = 0.5 * finiteNumber(acceleration, 0) * t * t;
   return { v0t, halfAt2, x: v0t + halfAt2 };
 }
 
@@ -201,9 +177,9 @@ export function zeroCrossingTime(
   v0: number,
   acceleration: number
 ): number | null {
-  const a = finite(acceleration, 0);
+  const a = finiteNumber(acceleration, 0);
   if (a === 0) return null;
-  const t = -finite(v0, 0) / a;
+  const t = -finiteNumber(v0, 0) / a;
   if (t <= 1e-9 || t >= MAX_T - 1e-9) return null;
   return t;
 }
@@ -217,10 +193,10 @@ export function vtAreaSegments(
   acceleration: number,
   time: number
 ): DisplacementTimeAreaSegment[] {
-  const t = clamp(Math.max(0, finite(time, 0)), 0, MAX_T);
+  const t = clamp(Math.max(0, finiteNumber(time, 0)), 0, MAX_T);
   if (t <= 1e-9) return [];
-  const start = finite(v0, 0);
-  const acc = finite(acceleration, 0);
+  const start = finiteNumber(v0, 0);
+  const acc = finiteNumber(acceleration, 0);
   const tz = zeroCrossingTime(start, acc);
   const cuts = [0];
   if (tz !== null && tz < t - 1e-9) cuts.push(tz);
@@ -265,7 +241,7 @@ export function signedVtArea(
 export function carX(displacement: number): number {
   const halfTravel = (TRACK_END_X - TRACK_START_X - CAR_WIDTH) / 2;
   const offset = clamp(
-    finite(displacement, 0) * TRACK_SCALE,
+    finiteNumber(displacement, 0) * TRACK_SCALE,
     -halfTravel,
     halfTravel
   );
@@ -273,7 +249,7 @@ export function carX(displacement: number): number {
 }
 
 export function tapeTimes(time: number): number[] {
-  const t = clamp(Math.max(0, finite(time, 0)), 0, MAX_T);
+  const t = clamp(Math.max(0, finiteNumber(time, 0)), 0, MAX_T);
   const times: number[] = [];
   for (let k = 1; k * TAPE_DT <= t + 1e-9; k += 1) {
     times.push(k * TAPE_DT);
@@ -290,25 +266,26 @@ function containInRect(
   originY: number,
   alignX: 'left' | 'center'
 ): StagePose {
-  const w = Math.max(1, finite(availW, 1));
-  const h = Math.max(1, finite(availH, 1));
-  const bw = Math.max(1, finite(boxW, 1));
-  const bh = Math.max(1, finite(boxH, 1));
+  const w = Math.max(1, finiteNumber(availW, 1));
+  const h = Math.max(1, finiteNumber(availH, 1));
+  const bw = Math.max(1, finiteNumber(boxW, 1));
+  const bh = Math.max(1, finiteNumber(boxH, 1));
   const fit = Math.min(w / bw, h / bh);
   const stageW = bw * fit;
   const stageH = bh * fit;
   return {
     fit,
-    offsetX: finite(originX, 0) + (alignX === 'center' ? (w - stageW) / 2 : 0),
-    offsetY: finite(originY, 0) + (h - stageH) / 2
+    offsetX:
+      finiteNumber(originX, 0) + (alignX === 'center' ? (w - stageW) / 2 : 0),
+    offsetY: finiteNumber(originY, 0) + (h - stageH) / 2
   };
 }
 
 function finitePose(pose: StagePose): StagePose {
   return {
-    fit: finite(pose.fit, 0),
-    offsetX: finite(pose.offsetX, 0),
-    offsetY: finite(pose.offsetY, 0)
+    fit: finiteNumber(pose.fit, 0),
+    offsetX: finiteNumber(pose.offsetX, 0),
+    offsetY: finiteNumber(pose.offsetY, 0)
   };
 }
 
@@ -329,7 +306,7 @@ function withFrame(
     boxW,
     boxH,
     floatingReadout,
-    scaleX: finite(scaleX, 1)
+    scaleX: finiteNumber(scaleX, 1)
   };
 }
 
@@ -339,24 +316,18 @@ function stretchCentered(
   boxW: number,
   maxScaleX = 1.35
 ): StagePose & { scaleX: number } {
-  const fit = Math.max(0, finite(pose.fit, 0));
-  const safeWidth = Math.max(1, finite(width, 1));
+  const fit = Math.max(0, finiteNumber(pose.fit, 0));
+  const safeWidth = Math.max(1, finiteNumber(width, 1));
   const naturalWidth = Math.max(1, boxW * fit);
   const scaleX = Math.min(maxScaleX, safeWidth / naturalWidth);
   return {
     ...finitePose(pose),
     offsetX: (safeWidth - naturalWidth * scaleX) / 2,
-    scaleX: finite(scaleX, 1)
+    scaleX: finiteNumber(scaleX, 1)
   };
 }
 
-function betterPose(a: StagePose, b: StagePose): StagePose {
-  return b.fit > a.fit + 1e-9 ? b : a;
-}
-
-export function hasFloatingReadout(anchor?: Element | null): boolean {
-  return readoutOccludesStage(anchor);
-}
+export const hasFloatingReadout = readoutOccludesStage;
 
 export function stageLayoutFrom(canvas?: Element | null): StageLayoutHint {
   const floatingReadout = hasFloatingReadout(canvas);
@@ -410,8 +381,8 @@ export function stageTransform(
   floatingReadout: boolean;
   scaleX: number;
 } {
-  const width = Math.max(1, finite(cssWidth, 1));
-  const height = Math.max(1, finite(cssHeight, 1));
+  const width = Math.max(1, finiteNumber(cssWidth, 1));
+  const height = Math.max(1, finiteNumber(cssHeight, 1));
   const boxW = C.baseWidth;
   const boxH = C.baseHeight;
 
@@ -426,11 +397,11 @@ export function stageTransform(
 
   const overlay = Math.max(
     0,
-    finite(layout.overlayPx, FLOATING_OVERLAY_FALLBACK)
+    finiteNumber(layout.overlayPx, FLOATING_OVERLAY_FALLBACK)
   );
   const gap = C.overlayGapPx;
   const transportClearY = clamp(
-    finite(layout.transportClearY, C.transportClearY),
+    finiteNumber(layout.transportClearY, C.transportClearY),
     0,
     Math.max(0, height - 1)
   );
@@ -520,7 +491,7 @@ export function createDisplacementTimeSim(
 
   function advance(dt: number, force: boolean): void {
     if (!force && !params.autoRun) return;
-    const delta = finite(dt, 0);
+    const delta = finiteNumber(dt, 0);
     if (!Number.isFinite(delta) || delta <= 0) return;
     time = wrapDisplacementTime(time + delta);
   }
@@ -540,11 +511,11 @@ export function createDisplacementTimeSim(
       return { ...params };
     },
     step(dt: number): void {
-      advance(Math.max(0, finite(dt, 0)), false);
+      advance(Math.max(0, finiteNumber(dt, 0)), false);
     },
     /** Fixed-frame step; ignores autoRun so pause still allows a single tick. */
     stepFrame(dt: number = FRAME_DT): void {
-      advance(finite(dt, FRAME_DT), true);
+      advance(finiteNumber(dt, FRAME_DT), true);
     },
     reset(): void {
       params = { ...DEFAULTS };

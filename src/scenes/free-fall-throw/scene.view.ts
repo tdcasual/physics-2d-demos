@@ -6,6 +6,7 @@ import {
   type FreeFallState,
   type MotionSegment
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateFreeFallViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -62,23 +63,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     ground: '#d0d9e5'
   }
 };
-
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 
 function rounded(
   ctx: CanvasRenderingContext2D,
@@ -168,7 +152,7 @@ function drawSegmentBar(
     rounded(ctx, sx, y, w / 3 - 4, h, 9);
     ctx.fill();
     ctx.stroke();
-    text(
+    drawText(
       ctx,
       label,
       sx + (w / 3 - 4) / 2,
@@ -212,8 +196,8 @@ function drawMotion(
     ctx.lineTo(x - 12, C.groundY + 18);
     ctx.stroke();
   }
-  text(ctx, 'h = 0', 32, C.groundY + 31, p.muted, 13, 'left', 600);
-  text(
+  drawText(ctx, 'h = 0', 32, C.groundY + 31, p.muted, 13, 'left', 600);
+  drawText(
     ctx,
     `Hₘₐₓ = ${state.apexHeight.toFixed(1)} m`,
     42,
@@ -231,7 +215,7 @@ function drawMotion(
   ctx.strokeStyle = p.panel;
   ctx.lineWidth = 3;
   ctx.stroke();
-  text(ctx, 'A', C.motionA, aY, p.panel, 13, 'center', 700);
+  drawText(ctx, 'A', C.motionA, aY, p.panel, 13, 'center', 700);
   if (state.showVelocity) {
     const direction = state.velocity >= 0 ? -1 : 1;
     arrow(
@@ -243,7 +227,7 @@ function drawMotion(
       state.velocity >= 0 ? p.blue : p.orange,
       3
     );
-    text(
+    drawText(
       ctx,
       `v ${state.velocity >= 0 ? '+' : ''}${state.velocity.toFixed(1)}`,
       189,
@@ -262,7 +246,16 @@ function drawMotion(
     ctx.lineTo(C.heightGuideEnd, aY);
     ctx.stroke();
     ctx.setLineDash([]);
-    text(ctx, `${state.height.toFixed(1)} m`, 282, aY, p.teal, 12, 'left', 700);
+    drawText(
+      ctx,
+      `${state.height.toFixed(1)} m`,
+      282,
+      aY,
+      p.teal,
+      12,
+      'left',
+      700
+    );
   }
   if (state.mode === 'compare') {
     const bY = mapY(state.bHeight);
@@ -273,8 +266,8 @@ function drawMotion(
     ctx.strokeStyle = p.panel;
     ctx.lineWidth = 3;
     ctx.stroke();
-    text(ctx, 'B', C.motionB, bY, p.panel, 13, 'center', 700);
-    text(
+    drawText(ctx, 'B', C.motionB, bY, p.panel, 13, 'center', 700);
+    drawText(
       ctx,
       state.bReleased ? '自由落体' : '待释放',
       246,
@@ -288,7 +281,7 @@ function drawMotion(
       arrow(ctx, 260, bY + 6, 260, bY + 40, p.orange, 3);
     }
   }
-  text(
+  drawText(
     ctx,
     state.mode === 'compare'
       ? 'A：竖直上抛　B：自由落体'
@@ -338,7 +331,7 @@ function graphFrame(
     ctx.lineTo(right, gy);
     ctx.stroke();
   }
-  text(ctx, title, x + 20, y + 22, p.ink, 18, 'left', 700);
+  drawText(ctx, title, x + 20, y + 22, p.ink, 18, 'left', 700);
   return { left, right, top, bottom };
 }
 
@@ -379,7 +372,7 @@ function drawVelocityGraph(
   ctx.beginPath();
   ctx.arc(currentX, currentY, 6, 0, Math.PI * 2);
   ctx.fill();
-  text(
+  drawText(
     ctx,
     `v = ${state.velocity >= 0 ? '+' : ''}${state.velocity.toFixed(1)}`,
     Math.min(frame.right - 6, currentX + 12),
@@ -389,7 +382,7 @@ function drawVelocityGraph(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `v / m·s⁻¹`,
     frame.left - 12,
@@ -399,7 +392,7 @@ function drawVelocityGraph(
     'right',
     600
   );
-  text(
+  drawText(
     ctx,
     't / s',
     frame.right + 10,
@@ -409,7 +402,7 @@ function drawVelocityGraph(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `a = −${C.gravity} m·s⁻²`,
     frame.right - 6,
@@ -467,7 +460,7 @@ function drawHeightGraph(
     }
     ctx.stroke();
     ctx.setLineDash([]);
-    text(
+    drawText(
       ctx,
       'B',
       xFor(state.riseTime) + 8,
@@ -484,7 +477,7 @@ function drawHeightGraph(
   ctx.beginPath();
   ctx.arc(currentX, currentY, 6, 0, Math.PI * 2);
   ctx.fill();
-  text(
+  drawText(
     ctx,
     `h = ${state.height.toFixed(1)} m`,
     Math.min(frame.right - 10, currentX + 12),
@@ -494,7 +487,7 @@ function drawHeightGraph(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'h / m',
     frame.left - 12,
@@ -504,7 +497,7 @@ function drawHeightGraph(
     'right',
     600
   );
-  text(
+  drawText(
     ctx,
     't / s',
     frame.right + 10,
@@ -514,7 +507,7 @@ function drawHeightGraph(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `t上 = ${state.riseTime.toFixed(1)} s`,
     frame.left + 8,
@@ -537,7 +530,7 @@ function drawPanel(
   rounded(ctx, C.panelX, 0, C.panelWidth, C.baseHeight, 16);
   ctx.fill();
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '分段运动看板',
     C.panelX + C.panelWidth / 2,
@@ -562,7 +555,7 @@ function drawPanel(
   );
   ctx.fillStyle = `${segmentColor(state.segment, p)}18`;
   ctx.fill();
-  text(
+  drawText(
     ctx,
     state.mode === 'compare'
       ? '分段对照'
@@ -608,8 +601,17 @@ function drawPanel(
   ];
   rows.forEach(([label, value, color], index) => {
     const y = C.panelDataY + 25 + index * 34;
-    text(ctx, label, C.panelX + C.panelInset * 2, y, p.muted, 12, 'left', 600);
-    text(
+    drawText(
+      ctx,
+      label,
+      C.panelX + C.panelInset * 2,
+      y,
+      p.muted,
+      12,
+      'left',
+      600
+    );
+    drawText(
       ctx,
       value,
       C.panelX + C.panelWidth - C.panelInset * 2,
@@ -630,7 +632,7 @@ function drawPanel(
   );
   ctx.fillStyle = '#f7fbfd';
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '核心关系',
     C.panelX + C.panelInset * 2,
@@ -640,7 +642,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'v = v₀ − gt',
     C.panelX + C.panelInset * 2,
@@ -650,7 +652,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'h = v₀t − ½gt²',
     C.panelX + C.panelInset * 2,
@@ -660,7 +662,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     't上 = v₀/g',
     C.panelX + C.panelInset * 2,
@@ -680,7 +682,7 @@ function drawPanel(
   );
   ctx.fillStyle = '#fff8e8';
   ctx.fill();
-  text(
+  drawText(
     ctx,
     state.segment === 'rising'
       ? '上升：v 减小，a 向下'
@@ -694,7 +696,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     state.mode === 'compare'
       ? `B 在 t = ${state.riseTime.toFixed(1)} s 释放`
@@ -742,7 +744,7 @@ export function createFreeFallView(options: CreateFreeFallViewOptions = {}) {
     ctx.fillStyle = p.bg;
     ctx.fillRect(0, 0, C.baseWidth, C.baseHeight);
     drawGrid(ctx, p);
-    text(
+    drawText(
       ctx,
       '自由落体与竖直上抛',
       C.fieldWidth / 2,
@@ -752,7 +754,7 @@ export function createFreeFallView(options: CreateFreeFallViewOptions = {}) {
       'center',
       700
     );
-    text(
+    drawText(
       ctx,
       '分段判定 · 图像联动 · 忽略空气阻力',
       C.fieldWidth / 2,

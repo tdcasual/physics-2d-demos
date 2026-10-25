@@ -7,8 +7,10 @@
 ## 0. 何时用 schema，何时用 imperative
 
 **默认一律用声明式 `controls-schema.ts`**：新建一个导出 `ControlsSchema` 的文件，
-在 `page.ts` 里用 `renderSchema({ mount, schema, onChange, onAction })` 渲染即可。
-它自动获得折叠卡片、列布局、URL 参数回写、统一视觉风格。
+在 `page.ts` 里用 `createBoundControls({ mount, schema, scene, scheduleRender, writeParam })`
+渲染即可。它自动获得折叠卡片、列布局、参数路由、URL 恢复 / 回写、remount 投影、
+统一视觉风格。键名 / 单位 / 枚举编码与显隐在 schema 字段上用 `bind` / `visibleWhen`
+声明（见 AGENTS.md「page.ts 最小模板」）。
 
 **只有以下情况才写 imperative `controls.ts`**（需在 PR 中说明理由）：
 
@@ -24,25 +26,26 @@ ui 工厂由 `page.ts` 注入（结构类型参数），场景层保持零 ui �
 
 ```typescript
 // page.ts
-import { renderSchema } from '../../ui/components/SchemaRenderer';
+import { createBoundControls } from '../../ui/components/bound-controls';
 import { myControlsSchema } from './controls-schema';
 
-createControls: ({ mount, scene, writeParam }) => {
-  const renderer = renderSchema({
+createControls: ({ mount, scene, scheduleRender, writeParam }) =>
+  createBoundControls({
     mount,
     schema: myControlsSchema,
-    onChange: (key, value) => {
-      // 值类字段：slider/number/toggle → number|boolean
-      //          text/select/preset-group/scene-selector → string
-      writeParam?.(key, value); // 同步到 URL（可选但推荐）
-    },
-    onAction: (key) => {
+    scene,
+    scheduleRender,
+    writeParam,
+    // 值类字段默认：setParams（按 bind 换算）→ 重绘 → writeParam
+    // 特殊键：onChange 返回 true（已自行处理）或 'skip'（完全接管）
+    onAction: (key, renderer) => {
       // 动作类字段：button、button-grid、transport
     }
   });
-  return renderer; // 返回句柄，URL 管线会用它回写参数
-};
 ```
+
+需要完全手写时仍可直接用 `renderSchema({ mount, schema, onChange, onAction })`，
+但新场景不应这样做（`page-glue-ratchet` 冻结手写页面数）。
 
 `renderer` 句柄（`SchemaRendererInstance`）提供：
 
@@ -325,8 +328,9 @@ createControls: ({ mount, scene, writeParam }) => {
 - 页面加载时 URL 管线自动执行 `readSceneParams → scene.setParams →
 用你返回的 renderer 回写控件`（数值走 `setValue`，字符串走 `setActive`）——
   所以 onChange 里的 key 必须与 schema 字段 key 一致。
-- 控件 key 与 sim 参数名不一致时（如 projectile 的 `v0` → `speed`），用
-  `bootScenePage` 的 `paramSync.paramMap` 声明映射；更复杂的接管用
+- 控件 key 与 sim 参数名或单位不一致时（如 projectile 的 `v0` → `speed`、
+  百分比滑块 ↔ 0–1 参数），在 schema 字段声明 `bind: { param, scale }`；
+  URL 恒为参数单位，管线自动换算。更复杂的接管用
   `paramSync.applyParam` / `applyAll`。**细节见根目录 AGENTS.md 的
   「URL 参数同步」小节，本文不展开。**
 

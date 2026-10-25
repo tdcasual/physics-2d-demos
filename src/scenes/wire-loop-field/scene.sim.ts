@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type WireLoopShape = 'rectangle' | 'triangle' | 'circle' | 'semicircle';
 export type MagneticDirection = 'into' | 'out';
@@ -122,10 +123,6 @@ export function shapeGeometry(shape: WireLoopShape): ShapeGeometry {
   };
 }
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function asFlag(value: unknown, fallback: boolean): boolean {
   if (value === true || value === 1 || value === '1' || value === 'true')
     return true;
@@ -147,7 +144,7 @@ function normalize(
         ? input.shape
         : previous.shape,
     fieldStrength: clamp(
-      finite(input.fieldStrength, previous.fieldStrength),
+      finiteOr(input.fieldStrength, previous.fieldStrength),
       wireLoopFieldConstants.fieldMin,
       wireLoopFieldConstants.fieldMax
     ),
@@ -156,12 +153,12 @@ function normalize(
         ? input.fieldDirection
         : previous.fieldDirection,
     velocity: clamp(
-      finite(input.velocity, previous.velocity),
+      finiteOr(input.velocity, previous.velocity),
       wireLoopFieldConstants.velocityMin,
       wireLoopFieldConstants.velocityMax
     ),
     resistance: clamp(
-      finite(input.resistance, previous.resistance),
+      finiteOr(input.resistance, previous.resistance),
       wireLoopFieldConstants.resistanceMin,
       wireLoopFieldConstants.resistanceMax
     ),
@@ -283,7 +280,7 @@ export function createWireLoopFieldSim(
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      const duration = clamp(finite(dt, 0), 0, 0.1);
+      const duration = clamp(finiteOr(dt, 0), 0, 0.1);
       const width = shapeGeometry(params.shape).width;
       position += params.velocity * duration;
       time += duration;

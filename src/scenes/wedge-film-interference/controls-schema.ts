@@ -69,7 +69,8 @@ export const wedgeFilmInterferenceControlsSchema: ControlsSchema = {
           max: 100,
           step: 1,
           value: 50,
-          unit: '%'
+          unit: '%',
+          bind: { scale: 100 }
         }
       ]
     },

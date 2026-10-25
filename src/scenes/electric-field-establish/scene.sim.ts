@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type ElectricFieldParams = {
   voltage: number;
@@ -46,16 +47,13 @@ const DEFAULTS: ElectricFieldParams = {
   showDrift: true,
   autoRun: true
 };
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
 function normalize(
   input: Partial<ElectricFieldParams>,
   previous = DEFAULTS
 ): ElectricFieldParams {
   return {
     voltage: clamp(
-      finite(input.voltage, previous.voltage),
+      finiteOr(input.voltage, previous.voltage),
       electricFieldConstants.voltageMin,
       electricFieldConstants.voltageMax
     ),
@@ -115,7 +113,7 @@ export function createElectricFieldSim(
     step(dt: number): void {
       if (!params.autoRun) return;
       time =
-        (time + clamp(finite(dt, 0), 0, 0.05)) %
+        (time + clamp(finiteOr(dt, 0), 0, 0.05)) %
         electricFieldConstants.driftPeriod;
     }
   };

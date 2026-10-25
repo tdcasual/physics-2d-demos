@@ -3,6 +3,7 @@ import {
   READOUT_OVERLAY_ATTR,
   readoutOccludesStage
 } from '../../platform/stage-readout';
+import type { StagePose } from '../stage-fit';
 
 export type OscilloscopeParams = {
   signalAmplitude: number;
@@ -67,12 +68,6 @@ export type ApparatusLayout = {
   beam: OscilloscopeVec[];
   scope: { cx: number; cy: number; r: number };
   labels: Array<{ text: string; x: number; y: number }>;
-};
-
-type StagePose = {
-  fit: number;
-  offsetX: number;
-  offsetY: number;
 };
 
 const AMP_MIN = 5;

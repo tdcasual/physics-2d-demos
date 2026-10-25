@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type ConnectedBodiesArrangement = 'string-spring' | 'spring-string';
 export type CutTarget = 'none' | 'upper' | 'lower';
@@ -70,9 +71,6 @@ const DEFAULTS: ConnectedBodiesParams = {
   massB: 1,
   cut: 'none'
 };
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
 function normalize(
   input: Partial<ConnectedBodiesParams>,
   previous = DEFAULTS
@@ -81,12 +79,12 @@ function normalize(
     arrangement:
       input.arrangement === 'spring-string' ? 'spring-string' : 'string-spring',
     massA: clamp(
-      finite(input.massA, previous.massA),
+      finiteOr(input.massA, previous.massA),
       connectedBodiesConstants.massMin,
       connectedBodiesConstants.massMax
     ),
     massB: clamp(
-      finite(input.massB, previous.massB),
+      finiteOr(input.massB, previous.massB),
       connectedBodiesConstants.massMin,
       connectedBodiesConstants.massMax
     ),
@@ -148,7 +146,7 @@ export function createConnectedBodiesSim(
       time = 0;
     },
     step(dt: number) {
-      if (params.cut !== 'none') time += Math.max(0, finite(dt, 0));
+      if (params.cut !== 'none') time += Math.max(0, finiteOr(dt, 0));
     }
   };
 }

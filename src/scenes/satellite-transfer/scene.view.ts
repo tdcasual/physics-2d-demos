@@ -2,6 +2,7 @@ import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import { satelliteConstants, type SatelliteState } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateSatelliteViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -44,22 +45,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     border: '#34445d'
   }
 };
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 function card(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -181,8 +166,8 @@ function drawField(
   scale: number
 ): void {
   drawStars(ctx, p);
-  text(ctx, '卫星变轨控制台', 28, 38, p.ink, 24 * scale, 'left', 700);
-  text(
+  drawText(ctx, '卫星变轨控制台', 28, 38, p.ink, 24 * scale, 'left', 700);
+  drawText(
     ctx,
     '轨道动力学 · 引力与速度的平衡',
     28,
@@ -223,7 +208,7 @@ function drawField(
     (inward.y / inwardLength) * satelliteConstants.vectorLength * 0.7,
     p.red
   );
-  text(
+  drawText(
     ctx,
     'v',
     point.x + tangent.x * 88,
@@ -233,7 +218,7 @@ function drawField(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     'a',
     point.x + (inward.x / inwardLength) * 60,
@@ -243,7 +228,7 @@ function drawField(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     'A（近地点）',
     satelliteConstants.labelRight,
@@ -253,7 +238,7 @@ function drawField(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     'B（远地点）',
     satelliteConstants.labelLeft,
@@ -264,7 +249,7 @@ function drawField(
     600
   );
   card(ctx, 34, 620, 736, 82, p);
-  text(
+  drawText(
     ctx,
     '运行轨迹进度',
     satelliteConstants.progressLeft,
@@ -274,7 +259,7 @@ function drawField(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `${state.progress.toFixed(1)}%`,
     satelliteConstants.progressRight,
@@ -300,7 +285,7 @@ function drawField(
     satelliteConstants.progressY
   );
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '拖拽滑块随时穿梭定位',
     satelliteConstants.progressLeft,
@@ -311,8 +296,8 @@ function drawField(
     600
   );
   card(ctx, 34, 470, 736, 126, p);
-  text(ctx, state.status, 56, 496, p.teal, 18 * scale, 'left', 700);
-  text(
+  drawText(ctx, state.status, 56, 496, p.teal, 18 * scale, 'left', 700);
+  drawText(
     ctx,
     `轨道半径 ${state.radius.toFixed(1)} · 速度 ${state.speed.toFixed(2)} · 向心加速度 ${state.acceleration.toFixed(2)}`,
     56,
@@ -322,7 +307,7 @@ function drawField(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `周期 ${state.orbitalPeriod.toFixed(2)} · 高度差 ${state.altitude.toFixed(1)}`,
     56,

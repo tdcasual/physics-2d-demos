@@ -1,20 +1,10 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
-import type { ZincPhotoelectricParams } from './scene.sim';
 import { zincPhotoelectricControlsSchema } from './controls-schema';
-import { asChargeState, createZincPhotoelectricScene } from './scene.entry';
+import { createZincPhotoelectricScene } from './scene.entry';
 import { zincPhotoelectricMeta } from './scene.meta';
+import { createBoundControls } from '../../ui/components/bound-controls';
 
-function asBoolean(value: unknown): boolean {
-  return (
-    value === true ||
-    value === 1 ||
-    value === '1' ||
-    String(value).toLowerCase() === 'true'
-  );
-}
 bootScenePage({
   meta: zincPhotoelectricMeta,
   autoPlay: true,
@@ -49,50 +39,12 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, scheduleRender, writeParam }) => {
-    const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+  createControls: ({ mount, scene, scheduleRender, writeParam }) =>
+    createBoundControls({
       mount,
       schema: zincPhotoelectricControlsSchema,
-      onAction: () => render(),
-      onChange: (key, value) => {
-        if (key === 'chargeState') {
-          const chargeState = asChargeState(value);
-          if (chargeState) scene.setParams({ chargeState });
-        } else if (key === 'autoRun')
-          scene.setParams({ autoRun: asBoolean(value) });
-        else if (key === 'wavelength' || key === 'intensity')
-          scene.setParams({
-            [key]: Number(value)
-          } as Partial<ZincPhotoelectricParams>);
-        render();
-        writeParam?.(key, value);
-      }
-    });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (key === 'chargeState') {
-        const chargeState = asChargeState(value);
-        if (!chargeState) return false;
-        ctx.scene.setParams({ chargeState });
-        ctx.setControlActive(key, chargeState);
-        return true;
-      }
-      if (key === 'autoRun') {
-        const autoRun = asBoolean(value);
-        ctx.scene.setParams({ autoRun });
-        ctx.setControlValue(key, autoRun);
-        return true;
-      }
-      const number = Number(value);
-      if (!Number.isFinite(number)) return false;
-      ctx.scene.setParams({
-        [key]: number
-      } as Partial<ZincPhotoelectricParams>);
-      ctx.setControlValue(key, number);
-      return true;
-    }
-  }
+      scene,
+      scheduleRender,
+      writeParam
+    })
 });

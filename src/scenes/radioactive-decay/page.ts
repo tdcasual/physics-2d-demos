@@ -1,19 +1,9 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
-import type { RadioactiveParams } from './scene.sim';
 import { radioactiveControlsSchema } from './controls-schema';
 import { createRadioactiveScene } from './scene.entry';
 import { radioactiveMeta } from './scene.meta';
-function asBoolean(value: unknown): boolean {
-  return (
-    value === true ||
-    value === 1 ||
-    value === '1' ||
-    String(value).toLowerCase() === 'true'
-  );
-}
+import { createBoundControls } from '../../ui/components/bound-controls';
 bootScenePage({
   meta: radioactiveMeta,
   autoPlay: true,
@@ -43,37 +33,12 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, scheduleRender, writeParam }) => {
-    const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+  createControls: ({ mount, scene, scheduleRender, writeParam }) =>
+    createBoundControls({
       mount,
       schema: radioactiveControlsSchema,
-      onAction: () => render(),
-      onChange: (key, value) => {
-        if (key === 'autoRun') scene.setParams({ autoRun: asBoolean(value) });
-        else if (key === 'halfLife')
-          scene.setParams({
-            halfLife: Number(value)
-          } as Partial<RadioactiveParams>);
-        render();
-        writeParam?.(key, value);
-      }
-    });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (key === 'autoRun') {
-        const autoRun = asBoolean(value);
-        ctx.scene.setParams({ autoRun });
-        ctx.setControlValue(key, autoRun);
-        return true;
-      }
-      const number = Number(value);
-      if (!Number.isFinite(number)) return false;
-      ctx.scene.setParams({ [key]: number } as Partial<RadioactiveParams>);
-      ctx.setControlValue(key, number);
-      return true;
-    }
-  }
+      scene,
+      scheduleRender,
+      writeParam
+    })
 });

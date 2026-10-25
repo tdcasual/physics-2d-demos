@@ -2,6 +2,7 @@ import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import { frictionConstants, type FrictionState } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 export type CreateFrictionViewOptions = {
   canvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
@@ -49,22 +50,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     border: '#3c4b61'
   }
 };
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 function card(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -216,7 +201,7 @@ function drawDiagram(
       frictionConstants.upperBlockWidth,
       frictionConstants.upperBlockHeight
     );
-    text(
+    drawText(
       ctx,
       'm₁',
       frictionConstants.blockX +
@@ -227,7 +212,7 @@ function drawDiagram(
       'center',
       700
     );
-    text(
+    drawText(
       ctx,
       'm₂',
       frictionConstants.blockX +
@@ -239,7 +224,7 @@ function drawDiagram(
       700
     );
   } else
-    text(
+    drawText(
       ctx,
       'm',
       frictionConstants.blockX +
@@ -260,7 +245,7 @@ function drawDiagram(
     Math.min(frictionConstants.arrowLengthMax, 36 + state.force * 4),
     p.red
   );
-  text(
+  drawText(
     ctx,
     'F = ' + state.force.toFixed(1) + ' N',
     x + lowerW / 2 + 18,
@@ -277,7 +262,7 @@ function drawDiagram(
     -Math.min(128, 28 + state.friction * 4),
     p.blue
   );
-  text(
+  drawText(
     ctx,
     'f = ' + state.friction.toFixed(1) + ' N',
     x - lowerW / 2 - 18,
@@ -302,7 +287,7 @@ function drawDiagram(
     frictionConstants.normalArrowLength,
     p.muted
   );
-  text(
+  drawText(
     ctx,
     'N = ' + state.normal.toFixed(1) + ' N',
     frictionConstants.normalArrowX + 18,
@@ -312,7 +297,7 @@ function drawDiagram(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     'G = ' + state.normal.toFixed(1) + ' N',
     frictionConstants.normalArrowX + 18,
@@ -322,7 +307,7 @@ function drawDiagram(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     stacked ? '叠加体：观察接触面摩擦' : '水平面：静摩擦随外力调节',
     62,
@@ -369,7 +354,7 @@ function drawGraph(
   ctx.moveTo(frictionConstants.graphLeft, frictionConstants.graphZeroY);
   ctx.lineTo(frictionConstants.graphLeft, frictionConstants.graphTop - 12);
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '接触面摩擦力 f / N',
     frictionConstants.graphLeft + 8,
@@ -379,7 +364,7 @@ function drawGraph(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     '外力 F / N',
     frictionConstants.graphRight + 16,
@@ -413,7 +398,7 @@ function drawGraph(
   ctx.beginPath();
   ctx.arc(xToPx(state.force), yToPx(state.friction), 7, 0, Math.PI * 2);
   ctx.fill();
-  text(
+  drawText(
     ctx,
     'fₘₐₓ = ' + state.maxStatic.toFixed(1) + ' N',
     xToPx(threshold) + 10,
@@ -423,7 +408,7 @@ function drawGraph(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     state.status,
     xToPx(Math.min(state.force, 35)),
@@ -433,7 +418,7 @@ function drawGraph(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     '静摩擦区',
     xToPx(Math.max(3, threshold * 0.45)),
@@ -443,7 +428,7 @@ function drawGraph(
     'center',
     600
   );
-  text(
+  drawText(
     ctx,
     '滑动摩擦区',
     xToPx(Math.min(32, threshold + 10)),
@@ -467,7 +452,7 @@ function drawPanel(
     frictionConstants.panelCardHeight,
     p
   );
-  text(
+  drawText(
     ctx,
     '实时动力学看板',
     frictionConstants.panelX + 22,
@@ -477,7 +462,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     state.status,
     frictionConstants.panelX + frictionConstants.panelWidth - 22,
@@ -494,7 +479,7 @@ function drawPanel(
   ];
   rows.forEach((row, index) => {
     const y = frictionConstants.panelCardY + 64 + index * 26;
-    text(
+    drawText(
       ctx,
       row[0],
       frictionConstants.panelX + 22,
@@ -504,7 +489,7 @@ function drawPanel(
       'left',
       600
     );
-    text(
+    drawText(
       ctx,
       row[1],
       frictionConstants.panelX + frictionConstants.panelWidth - 22,
@@ -523,7 +508,7 @@ function drawPanel(
     frictionConstants.stateCardHeight,
     p
   );
-  text(
+  drawText(
     ctx,
     '临界判据',
     frictionConstants.panelX + 22,
@@ -533,7 +518,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     state.force <= state.maxStatic
       ? 'F ≤ fₘₐₓ：静摩擦自适应'
@@ -545,7 +530,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     'fₖ = μₖN',
     frictionConstants.panelX + 22,
@@ -563,7 +548,7 @@ function drawPanel(
     frictionConstants.readoutCardHeight,
     p
   );
-  text(
+  drawText(
     ctx,
     '参数',
     frictionConstants.panelX + 22,
@@ -573,7 +558,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'F = ' + state.force.toFixed(1) + ' N',
     frictionConstants.panelX + 22,
@@ -583,7 +568,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     'μₖ = ' + state.muK.toFixed(2),
     frictionConstants.panelX + 22,
@@ -593,7 +578,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     state.mode === 'stacked' ? '叠加体模式' : '单物块模式',
     frictionConstants.panelX + 22,
@@ -611,7 +596,7 @@ function drawPanel(
     frictionConstants.ruleCardHeight,
     p
   );
-  text(
+  drawText(
     ctx,
     '判据',
     frictionConstants.panelX + 22,
@@ -621,7 +606,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     '静摩擦：f = F',
     frictionConstants.panelX + 22,
@@ -631,7 +616,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     '滑动：f = μₖN',
     frictionConstants.panelX + 22,
@@ -690,11 +675,20 @@ export function createFrictionView(options: CreateFrictionViewOptions = {}) {
       frictionConstants.baseWidth,
       frictionConstants.baseHeight
     );
-    text(ctx, '摩擦力分析与临界问题', 42, 34, p.ink, 22 * scale, 'left', 700);
+    drawText(
+      ctx,
+      '摩擦力分析与临界问题',
+      42,
+      34,
+      p.ink,
+      22 * scale,
+      'left',
+      700
+    );
     drawDiagram(ctx, state, p);
     drawGraph(ctx, state, p);
     drawPanel(ctx, state, p);
-    text(
+    drawText(
       ctx,
       '调节 F，观察 f 的突变与加速度',
       42,

@@ -6,6 +6,7 @@ import {
   particleLabel,
   type ChargedParticleElectricState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateChargedParticleElectricViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -103,23 +104,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
   }
 };
 
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
-
 function rounded(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -196,11 +180,11 @@ function drawSource(ctx: CanvasRenderingContext2D, p: Palette): void {
   rounded(ctx, 44, AXIS_Y - 28, 82, 56, 8);
   ctx.fillStyle = p.ink;
   ctx.fill();
-  text(ctx, '发射源', 85, AXIS_Y, p.panel, 15, 'center', 700);
-  text(ctx, '(+)', EMITTER_X - 14, AXIS_Y - 52, p.red, 18, 'center', 700);
+  drawText(ctx, '发射源', 85, AXIS_Y, p.panel, 15, 'center', 700);
+  drawText(ctx, '(+)', EMITTER_X - 14, AXIS_Y - 52, p.red, 18, 'center', 700);
   arrow(ctx, 126, AXIS_Y, ACCEL_X - 18, AXIS_Y, p.red, 2, true);
-  text(ctx, '加速电场 E₁', 160, AXIS_Y - 72, p.red, 13, 'center', 700);
-  text(ctx, '(→)', 160, AXIS_Y - 52, p.red, 12, 'center', 600);
+  drawText(ctx, '加速电场 E₁', 160, AXIS_Y - 72, p.red, 13, 'center', 700);
+  drawText(ctx, '(→)', 160, AXIS_Y - 52, p.red, 12, 'center', 600);
 }
 
 function drawAccelerationPlates(
@@ -214,10 +198,10 @@ function drawAccelerationPlates(
   ctx.strokeRect(ACCEL_X - 9, ACCEL_TOP, 18, ACCEL_PLATE_H);
   ctx.fillRect(ACCEL_X - 9, ACCEL_BOTTOM - ACCEL_PLATE_H, 18, ACCEL_PLATE_H);
   ctx.strokeRect(ACCEL_X - 9, ACCEL_BOTTOM - ACCEL_PLATE_H, 18, ACCEL_PLATE_H);
-  text(ctx, '−', ACCEL_X, ACCEL_TOP - 12, p.blue, 18, 'center', 700);
-  text(ctx, '+', ACCEL_X, ACCEL_BOTTOM + 12, p.red, 18, 'center', 700);
-  text(ctx, 'U₁', ACCEL_X + 32, ACCEL_BOTTOM + 42, p.ink, 18, 'left', 700);
-  text(
+  drawText(ctx, '−', ACCEL_X, ACCEL_TOP - 12, p.blue, 18, 'center', 700);
+  drawText(ctx, '+', ACCEL_X, ACCEL_BOTTOM + 12, p.red, 18, 'center', 700);
+  drawText(ctx, 'U₁', ACCEL_X + 32, ACCEL_BOTTOM + 42, p.ink, 18, 'left', 700);
+  drawText(
     ctx,
     '加速电压',
     ACCEL_X + 32,
@@ -263,8 +247,17 @@ function drawDeflectionPlates(
     DEFLECT_END - DEFLECT_START,
     plateHeight
   );
-  text(ctx, '+', DEFLECT_START + 22, bounds.top - 28, p.red, 20, 'center', 700);
-  text(
+  drawText(
+    ctx,
+    '+',
+    DEFLECT_START + 22,
+    bounds.top - 28,
+    p.red,
+    20,
+    'center',
+    700
+  );
+  drawText(
     ctx,
     '−',
     DEFLECT_START + 22,
@@ -274,7 +267,7 @@ function drawDeflectionPlates(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     '偏转电场 E₂',
     DEFLECT_END - 12,
@@ -284,7 +277,7 @@ function drawDeflectionPlates(
     'right',
     700
   );
-  text(
+  drawText(
     ctx,
     `d = ${state.params.plateGap.toFixed(1)} cm`,
     DEFLECT_START - 12,
@@ -332,8 +325,8 @@ function drawScreen(
   ctx.moveTo(SCREEN_X + 18, AXIS_Y);
   ctx.lineTo(SCREEN_X + 18, y);
   ctx.stroke();
-  text(ctx, '荧光屏', SCREEN_X, FIELD_TOP - 10, p.ink, 15, 'center', 700);
-  text(
+  drawText(ctx, '荧光屏', SCREEN_X, FIELD_TOP - 10, p.ink, 15, 'center', 700);
+  drawText(
     ctx,
     `Y = ${(Math.abs(state.screenY) * 100).toFixed(2)} cm`,
     SCREEN_X + 34,
@@ -383,7 +376,7 @@ function drawTrajectory(
     ctx.lineTo(DEFLECT_END, exitY);
     ctx.stroke();
     ctx.setLineDash([]);
-    text(
+    drawText(
       ctx,
       '反向延长线',
       DEFLECT_END - REVERSE_EXTENSION,
@@ -414,8 +407,17 @@ function drawComponents(
     );
   arrow(ctx, x, y, x + vx, y, p.blue, 3);
   arrow(ctx, x, y, x, y + vy, p.red, 3);
-  text(ctx, 'v₀', x + vx + 14, y, p.blue, 13, 'left', 700);
-  text(ctx, 'vᵧ', x + 8, y + vy + (vy < 0 ? -12 : 12), p.red, 13, 'left', 700);
+  drawText(ctx, 'v₀', x + vx + 14, y, p.blue, 13, 'left', 700);
+  drawText(
+    ctx,
+    'vᵧ',
+    x + 8,
+    y + vy + (vy < 0 ? -12 : 12),
+    p.red,
+    13,
+    'left',
+    700
+  );
 }
 
 function drawParticle(
@@ -431,7 +433,7 @@ function drawParticle(
   ctx.strokeStyle = p.panel;
   ctx.lineWidth = 2;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     state.params.particle === 'electron' ? '−' : '+',
     x,
@@ -454,7 +456,7 @@ function drawPanel(
   const w = PANEL_W - PANEL_INSET * 2;
   ctx.fillStyle = p.panel;
   ctx.fillRect(PANEL_X, 0, PANEL_W, BASE_H);
-  text(ctx, '带电粒子电场运动', x, TITLE_Y, p.ink, 22 * scale, 'left', 700);
+  drawText(ctx, '带电粒子电场运动', x, TITLE_Y, p.ink, 22 * scale, 'left', 700);
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 3;
   ctx.beginPath();
@@ -464,7 +466,7 @@ function drawPanel(
   rounded(ctx, x, METRICS_Y, w, METRICS_H);
   ctx.fillStyle = p.soft;
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '实时参数板',
     x + 14,
@@ -474,7 +476,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     particleLabel(state.params.particle),
     x + w - 14,
@@ -496,8 +498,8 @@ function drawPanel(
   ] as const;
   rows.forEach(([label, value, color], index) => {
     const y = METRICS_Y + 66 + index * 38;
-    text(ctx, label, x + 14, y, p.muted, 14 * scale, 'left', 600);
-    text(ctx, value, x + w - 14, y, color, 14 * scale, 'right', 700);
+    drawText(ctx, label, x + 14, y, p.muted, 14 * scale, 'left', 600);
+    drawText(ctx, value, x + w - 14, y, color, 14 * scale, 'right', 700);
     if (index < rows.length - 1) {
       ctx.strokeStyle = p.border;
       ctx.lineWidth = 1;
@@ -513,7 +515,7 @@ function drawPanel(
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 2;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '核心理论推导',
     x + 14,
@@ -523,7 +525,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     '① |q|U₁ = ½mv₀²',
     x + 14,
@@ -533,7 +535,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     '② F = |q|U₂/d',
     x + 14,
@@ -543,7 +545,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     '③ |y| = |U₂|L²/(4dU₁)',
     x + 14,
@@ -553,7 +555,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     '正电荷与 E₂ 同向，负电荷反向',
     x + 14,
@@ -572,7 +574,7 @@ function drawField(
   scale: number
 ): void {
   drawGrid(ctx, p);
-  text(
+  drawText(
     ctx,
     '带电粒子在匀强电场中的加速与偏转',
     26,
@@ -588,7 +590,7 @@ function drawField(
   drawTrajectory(ctx, state, p);
   drawScreen(ctx, state, p);
   drawParticle(ctx, state, p);
-  text(
+  drawText(
     ctx,
     `L = ${(chargedParticleElectricConstants.plateLength * 100).toFixed(1)} cm`,
     DEFLECT_START + 12,
@@ -598,7 +600,7 @@ function drawField(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `D = ${(SCREEN_DISTANCE * 100).toFixed(1)} cm`,
     DEFLECT_END + 28,

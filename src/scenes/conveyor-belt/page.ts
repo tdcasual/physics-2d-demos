@@ -1,11 +1,9 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
-import type { ConveyorParams } from './scene.sim';
 import { conveyorControlsSchema } from './controls-schema';
 import { createConveyorScene } from './scene.entry';
 import { conveyorBeltMeta } from './scene.meta';
+import { createBoundControls } from '../../ui/components/bound-controls';
 
 bootScenePage({
   meta: conveyorBeltMeta,
@@ -38,22 +36,13 @@ bootScenePage({
   },
   createControls: ({ mount, scene, scheduleRender, writeParam }) => {
     const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+    return createBoundControls({
       mount,
       schema: conveyorControlsSchema,
-      onChange: (key, value) => {
-        if (key === 'direction') {
-          scene.setParams({
-            direction: String(value) as ConveyorParams['direction']
-          });
-          renderer.setActive(key, String(value));
-        } else {
-          scene.setParams({ [key]: Number(value) } as Partial<ConveyorParams>);
-        }
-        render();
-        writeParam?.(key, value);
-      },
-      onAction: (key) => {
+      scene,
+      scheduleRender,
+      writeParam,
+      onAction: (key, renderer) => {
         if (key === 'releaseBottom') scene.release('bottom');
         if (key === 'releaseTop') scene.release('top');
         if (key === 'reset') {
@@ -67,21 +56,5 @@ bootScenePage({
         render();
       }
     });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (key === 'direction') {
-        const direction = String(value) === 'down' ? 'down' : 'up';
-        ctx.scene.setParams({ direction });
-        ctx.setControlActive(key, direction);
-        return true;
-      }
-      const n = Number(value);
-      if (!Number.isFinite(n)) return false;
-      ctx.scene.setParams({ [key]: n } as Partial<ConveyorParams>);
-      ctx.setControlValue(key, n);
-      return true;
-    }
   }
 });

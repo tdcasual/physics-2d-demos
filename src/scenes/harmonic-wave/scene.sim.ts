@@ -1,5 +1,8 @@
 import { readoutOccludesStage } from '../../platform/stage-readout';
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
+import { measureStageLayout, fitStage } from '../stage-fit';
+import type { StageLayoutHint } from '../stage-fit';
 
 export type HarmonicWaveDirection = 'right' | 'left';
 
@@ -23,19 +26,6 @@ export type HarmonicWaveState = {
   pointAcceleration: number;
   velocityDirection: 'up' | 'down' | 'zero';
   accelerationDirection: 'up' | 'down' | 'zero';
-};
-
-export type StageLayoutHint = {
-  floatingReadout: boolean;
-  overlayPx?: number;
-  overlayTopPx?: number;
-  overlayHeightPx?: number;
-};
-
-type StagePose = {
-  fit: number;
-  offsetX: number;
-  offsetY: number;
 };
 
 const TAU = Math.PI * 2;
@@ -93,10 +83,6 @@ export const harmonicWaveConstants = {
 const C = harmonicWaveConstants;
 const FLOATING_OVERLAY_FALLBACK = C.overlayFallbackPx;
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function flag(value: unknown, fallback: boolean): boolean {
   if (value === true || value === 1 || value === '1' || value === 'true') {
     return true;
@@ -129,18 +115,18 @@ function normalizeParams(
 ): HarmonicWaveParams {
   return {
     amplitude: clamp(
-      finite(input.amplitude, 10),
+      finiteOr(input.amplitude, 10),
       C.amplitudeMin,
       C.amplitudeMax
     ),
     wavelength: clamp(
-      finite(input.wavelength, 4),
+      finiteOr(input.wavelength, 4),
       C.wavelengthMin,
       C.wavelengthMax
     ),
-    period: clamp(finite(input.period, 2), C.periodMin, C.periodMax),
+    period: clamp(finiteOr(input.period, 2), C.periodMin, C.periodMax),
     direction: directionOf(input.direction),
-    pointX: clamp(finite(input.pointX, C.defaultPointX), 0, C.xMaxMeters),
+    pointX: clamp(finiteOr(input.pointX, C.defaultPointX), 0, C.xMaxMeters),
     showGhost: flag(input.showGhost, false),
     showVelocity: flag(input.showVelocity, true),
     showAcceleration: flag(input.showAcceleration, true)
@@ -212,68 +198,11 @@ export function worldY(yCm: number): number {
   return C.originY - yCm * C.yScale;
 }
 
-export function hasFloatingReadout(anchor?: Element | null): boolean {
-  return readoutOccludesStage(anchor);
-}
+export const hasFloatingReadout = readoutOccludesStage;
 
 /** view 共用：从布局 DOM 读浮动读数与叠占宽度。 */
 export function stageLayoutFrom(canvas?: Element | null): StageLayoutHint {
-  const floatingReadout = hasFloatingReadout(canvas);
-  if (!floatingReadout) return { floatingReadout: false, overlayPx: 0 };
-  let overlayPx = 0;
-  let overlayTopPx = 0;
-  let overlayHeightPx = 0;
-  if (canvas instanceof HTMLElement) {
-    const panel = canvas.parentElement?.querySelector(
-      '.teaching-readout-panel, .srgb-readout-panel'
-    );
-    if (panel instanceof HTMLElement) {
-      const cr = canvas.getBoundingClientRect();
-      const rr = panel.getBoundingClientRect();
-      if (
-        rr.left < cr.right &&
-        rr.right > cr.left &&
-        rr.top < cr.bottom &&
-        rr.bottom > cr.top
-      ) {
-        overlayPx = Math.max(0, cr.right - rr.left);
-        const top = Math.max(rr.top, cr.top);
-        const bottom = Math.min(rr.bottom, cr.bottom);
-        overlayTopPx = Math.max(0, top - cr.top);
-        overlayHeightPx = Math.max(0, bottom - top);
-      }
-    }
-  }
-  return {
-    floatingReadout: true,
-    overlayPx: overlayPx || FLOATING_OVERLAY_FALLBACK,
-    ...(overlayHeightPx > 0 ? { overlayTopPx, overlayHeightPx } : {})
-  };
-}
-
-function containInRect(
-  boxW: number,
-  boxH: number,
-  availW: number,
-  availH: number,
-  originX: number,
-  originY: number,
-  alignX: 'left' | 'center'
-): StagePose {
-  const w = Math.max(1, availW);
-  const h = Math.max(1, availH);
-  const fit = Math.min(w / boxW, h / boxH);
-  const stageW = boxW * fit;
-  const stageH = boxH * fit;
-  return {
-    fit,
-    offsetX: originX + (alignX === 'center' ? (w - stageW) / 2 : 0),
-    offsetY: originY + (h - stageH) / 2
-  };
-}
-
-function betterPose(a: StagePose, b: StagePose): StagePose {
-  return b.fit > a.fit + 1e-9 ? b : a;
+  return measureStageLayout(canvas, FLOATING_OVERLAY_FALLBACK);
 }
 
 /**
@@ -286,77 +215,15 @@ export function stageTransform(
   cssWidth: number,
   cssHeight: number,
   layout: StageLayoutHint
-): {
-  fit: number;
-  offsetX: number;
-  offsetY: number;
-  boxW: number;
-  boxH: number;
-  floatingReadout: boolean;
-} {
-  const width = Math.max(1, cssWidth);
-  const height = Math.max(1, cssHeight);
-  const boxW = C.baseWidth;
-  const boxH = C.baseHeight;
-
-  if (!layout.floatingReadout) {
-    const pose = containInRect(boxW, boxH, width, height, 0, 0, 'center');
-    return { ...pose, boxW, boxH, floatingReadout: false };
-  }
-
-  const overlay = layout.overlayPx ?? FLOATING_OVERLAY_FALLBACK;
-  const gap = C.overlayGapPx;
-  let chosen = containInRect(
-    boxW,
-    boxH,
-    Math.max(1, width - overlay - gap),
-    height,
-    0,
-    0,
-    'left'
-  );
-
-  const overlayTop = layout.overlayTopPx;
-  const overlayH = layout.overlayHeightPx;
-  const wideColumn = width + 1e-6 >= boxW && chosen.fit >= C.minReadableFit;
-  if (
-    !wideColumn &&
-    typeof overlayTop === 'number' &&
-    typeof overlayH === 'number' &&
-    overlayH > 0
-  ) {
-    const overlayBottom = overlayTop + overlayH;
-    const clearTop = C.overlayClearTop;
-    const denom = boxH - clearTop;
-    if (overlayBottom + gap < height - 1 && denom > 1) {
-      const fit = Math.min(
-        width / boxW,
-        height / boxH,
-        (height - overlayBottom - gap) / denom
-      );
-      if (fit > 0) {
-        const stageW = boxW * fit;
-        const stageH = boxH * fit;
-        const minOY = overlayBottom + gap - clearTop * fit;
-        const maxOY = height - stageH;
-        chosen = betterPose(chosen, {
-          fit,
-          offsetX: Math.max(0, (width - stageW) / 2),
-          offsetY: Math.max(0, Math.min(minOY, maxOY))
-        });
-      }
-    }
-  }
-
-  if (chosen.fit < C.minReadableFit) {
-    const pose = containInRect(boxW, boxH, width, height, 0, 0, 'center');
-    chosen = betterPose(chosen, {
-      ...pose,
-      offsetY: Math.max(0, height - boxH * pose.fit)
-    });
-  }
-
-  return { ...chosen, boxW, boxH, floatingReadout: true };
+) {
+  return fitStage(cssWidth, cssHeight, layout, {
+    baseWidth: C.baseWidth,
+    baseHeight: C.baseHeight,
+    overlayGapPx: C.overlayGapPx,
+    minReadableFit: C.minReadableFit,
+    overlayClearTop: C.overlayClearTop,
+    overlayFallbackPx: FLOATING_OVERLAY_FALLBACK
+  });
 }
 
 export function pointerToBaseNorm(
@@ -434,10 +301,10 @@ export function createHarmonicWaveSim(
       return { ...params };
     },
     setPointX(pointX: number): void {
-      params.pointX = clamp(finite(pointX, params.pointX), 0, C.xMaxMeters);
+      params.pointX = clamp(finiteOr(pointX, params.pointX), 0, C.xMaxMeters);
     },
     step(dt: number): void {
-      time += Math.max(0, finite(dt, 0));
+      time += Math.max(0, finiteOr(dt, 0));
     },
     reset(): void {
       params = { ...defaults };
@@ -445,3 +312,5 @@ export function createHarmonicWaveSim(
     }
   };
 }
+
+export type { StageLayoutHint };

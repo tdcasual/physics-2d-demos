@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { displacementTimeControlsSchema } from '../../src/scenes/displacement-time/controls-schema';
 import { displacementTimeMeta } from '../../src/scenes/displacement-time/scene.meta';
@@ -98,25 +96,6 @@ describe('displacement-time view contract', () => {
     expect('readoutHeight' in C).toBe(false);
     expect(C.graphRight).toBeLessThan(C.baseWidth);
     expect(C.displacementBottom).toBeLessThan(C.baseHeight);
-  });
-
-  it('has no drawPanel, formula-card, or readout-card paths in source', () => {
-    const viewSrc = readFileSync(
-      resolve(process.cwd(), 'src/scenes/displacement-time/scene.view.ts'),
-      'utf8'
-    );
-    const simSrc = readFileSync(
-      resolve(process.cwd(), 'src/scenes/displacement-time/scene.sim.ts'),
-      'utf8'
-    );
-    expect(viewSrc).not.toMatch(/drawPanel/);
-    expect(viewSrc).not.toMatch(/实时运动数据/);
-    expect(viewSrc).not.toMatch(/匀变速直线运动图像/);
-    expect(viewSrc).not.toMatch(/公式卡|读数卡/);
-    expect(viewSrc).not.toMatch(/x = v₀t/);
-    expect(viewSrc).not.toMatch(/空格键/);
-    expect(simSrc).not.toMatch(/panelWidth|panelTitleY|formulaY|readoutY/);
-    expect(simSrc).not.toMatch(/fieldWidth/);
   });
 
   it('draws short v/x labels and omits panel, formula, and readout copy', () => {

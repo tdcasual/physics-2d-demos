@@ -104,7 +104,15 @@ export function createVernierCaliperSim(initial: CaliperParams) {
   }
 
   function setParams(next: Partial<CaliperParams>): CaliperParams {
-    params = { ...params, ...next };
+    // 非有限值（NaN 等）保留原值：objectType 为 NaN 时 OBJECTS[NaN] 会让
+    // computeState 抛错，整页无法渲染。
+    const merged = { ...params };
+    for (const key of Object.keys(next) as (keyof CaliperParams)[]) {
+      const value = next[key];
+      if (typeof value === 'number' && !Number.isFinite(value)) continue;
+      Object.assign(merged, { [key]: value });
+    }
+    params = merged;
     return params;
   }
 

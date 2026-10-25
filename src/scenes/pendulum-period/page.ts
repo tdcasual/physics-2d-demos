@@ -6,21 +6,13 @@ import type { PendulumParams } from './scene.sim';
 import { pendulumControlsSchema } from './controls-schema';
 import { createPendulumScene } from './scene.entry';
 import { pendulumPeriodMeta } from './scene.meta';
+import { asBoolean } from '../../core/coerce';
 
 const ENVIRONMENTS: Record<string, number> = {
   earth: 9.8,
   moon: 1.63,
   mars: 3.71
 };
-
-function asBoolean(value: unknown): boolean {
-  return (
-    value === true ||
-    value === 1 ||
-    value === '1' ||
-    String(value).toLowerCase() === 'true'
-  );
-}
 
 bootScenePage({
   meta: pendulumPeriodMeta,

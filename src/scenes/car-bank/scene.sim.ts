@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type CarBankParams = {
   bankAngle: number;
@@ -81,10 +82,6 @@ const DEFAULTS: CarBankParams = {
   showVectors: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function asFlag(value: unknown, fallback: boolean): boolean {
   if (value === true || value === 1 || value === '1' || value === 'true')
     return true;
@@ -99,12 +96,12 @@ function normalize(
 ): CarBankParams {
   return {
     bankAngle: clamp(
-      finite(input.bankAngle, previous.bankAngle),
+      finiteOr(input.bankAngle, previous.bankAngle),
       carBankConstants.angleMin,
       carBankConstants.angleMax
     ),
     speed: clamp(
-      finite(input.speed, previous.speed),
+      finiteOr(input.speed, previous.speed),
       carBankConstants.speedMin,
       carBankConstants.speedMax
     ),
@@ -159,7 +156,7 @@ function derive(params: CarBankParams, time: number): CarBankState {
 }
 
 export function carBankAt(params: CarBankParams, time = 0): CarBankState {
-  return derive(normalize(params), Math.max(0, finite(time, 0)));
+  return derive(normalize(params), Math.max(0, finiteOr(time, 0)));
 }
 
 export function createCarBankSim(initial: Partial<CarBankParams> = {}) {
@@ -175,7 +172,7 @@ export function createCarBankSim(initial: Partial<CarBankParams> = {}) {
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      time += clamp(finite(dt, 0), 0, 0.1);
+      time += clamp(finiteOr(dt, 0), 0, 0.1);
     },
     reset(): void {
       params = { ...DEFAULTS };

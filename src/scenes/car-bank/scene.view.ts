@@ -4,6 +4,7 @@ import { getRenderTokens } from '../../platform/standards';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import { carBankConstants as C, type CarBankState } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateCarBankViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -62,22 +63,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
   }
 };
 
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 function rounded(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -154,7 +139,7 @@ function drawTrackInset(
   );
   ctx.fill();
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '俯视轨迹剖面',
     C.trackInsetX + 14,
@@ -177,7 +162,7 @@ function drawTrackInset(
   ctx.beginPath();
   ctx.arc(cx, cy, 4, 0, Math.PI * 2);
   ctx.fill();
-  text(ctx, '圆心', cx + 10, cy - 10, p.muted, 11, 'left', 500);
+  drawText(ctx, '圆心', cx + 10, cy - 10, p.muted, 11, 'left', 500);
   const carAngle = state.angleRad;
   const px = cx + Math.cos(carAngle) * C.trackRadius;
   const py = cy + Math.sin(carAngle) * C.trackRadius;
@@ -196,7 +181,7 @@ function drawTrackInset(
     p.orange,
     3
   );
-  text(
+  drawText(
     ctx,
     'Fₙ',
     px - Math.cos(carAngle) * 32,
@@ -256,7 +241,7 @@ function drawCar(
   ctx.arc(28, 20, 9, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
-  text(ctx, '汽车', x, y - 40, p.ink, 14, 'center', 700);
+  drawText(ctx, '汽车', x, y - 40, p.ink, 14, 'center', 700);
 }
 function drawAxes(ctx: CanvasRenderingContext2D, p: Palette): void {
   ctx.strokeStyle = `${p.muted}aa`;
@@ -269,7 +254,7 @@ function drawAxes(ctx: CanvasRenderingContext2D, p: Palette): void {
   ctx.lineTo(C.carX, C.carY - C.axisLength);
   ctx.stroke();
   ctx.setLineDash([]);
-  text(
+  drawText(
     ctx,
     'x（向心）',
     C.carX - C.axisLength - 6,
@@ -279,7 +264,7 @@ function drawAxes(ctx: CanvasRenderingContext2D, p: Palette): void {
     'right',
     600
   );
-  text(
+  drawText(
     ctx,
     'y',
     C.carX + 12,
@@ -322,7 +307,7 @@ function drawVectors(
     p.cyan,
     4
   );
-  text(
+  drawText(
     ctx,
     'N',
     x - Math.sin(theta) * nLen - 14,
@@ -333,22 +318,22 @@ function drawVectors(
     700
   );
   arrow(ctx, x, y, x, y + gLen, p.blue, 4);
-  text(ctx, 'G', x + 14, y + gLen, p.blue, 16, 'left', 700);
+  drawText(ctx, 'G', x + 14, y + gLen, p.blue, 16, 'left', 700);
   const frictionSign = state.frictionDirection === '沿路面向下' ? 1 : -1;
   const fx = x + frictionSign * Math.cos(theta) * fLen;
   const fy = y + frictionSign * Math.sin(theta) * fLen;
   if (state.frictionDirection !== '无需摩擦') {
     arrow(ctx, x, y, fx, fy, p.red, 4);
-    text(ctx, 'f', fx + 12, fy, p.red, 16, 'left', 700);
+    drawText(ctx, 'f', fx + 12, fy, p.red, 16, 'left', 700);
   }
   arrow(ctx, x, y + 12, x - fcLen, y + 12, p.orange, 4);
-  text(ctx, 'Fₙ', x - fcLen - 18, y + 12, p.orange, 16, 'center', 700);
+  drawText(ctx, 'Fₙ', x - fcLen - 18, y + 12, p.orange, 16, 'center', 700);
   ctx.strokeStyle = p.orange;
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.arc(x, y, 42, Math.PI + 0.1, Math.PI * 1.5 - theta);
   ctx.stroke();
-  text(ctx, 'θ', x - 38, y - 38, p.orange, 14, 'center', 700);
+  drawText(ctx, 'θ', x - 38, y - 38, p.orange, 14, 'center', 700);
 }
 function drawPanel(
   ctx: CanvasRenderingContext2D,
@@ -361,7 +346,7 @@ function drawPanel(
   rounded(ctx, C.panelX, 0, C.panelWidth, C.baseHeight, 16);
   ctx.fill();
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '弯道受力正交分析系统',
     C.panelX + C.panelWidth / 2,
@@ -390,7 +375,7 @@ function drawPanel(
   ctx.fill();
   ctx.strokeStyle = `${statusColor}88`;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     state.safe ? '安全区' : '超出摩擦极限',
     C.panelX + C.panelInset * 2,
@@ -400,7 +385,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     state.trend,
     C.panelX + C.panelWidth - C.panelInset * 2,
@@ -410,7 +395,7 @@ function drawPanel(
     'right',
     600
   );
-  text(
+  drawText(
     ctx,
     `v = ${state.speed.toFixed(1)} m/s   θ = ${state.bankAngle.toFixed(0)}°`,
     C.panelX + C.panelInset * 2,
@@ -469,7 +454,7 @@ function drawPanel(
   );
   ctx.fillStyle = p.soft;
   ctx.fill();
-  text(
+  drawText(
     ctx,
     `无摩擦临界速度  v₀  ${state.criticalSpeed.toFixed(1)} m/s`,
     C.panelX + C.panelInset * 2,
@@ -479,7 +464,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `当前需静摩擦力  f  ${(state.frictionForce / 1000).toFixed(2)} kN`,
     C.panelX + C.panelInset * 2,
@@ -489,7 +474,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     state.frictionDirection,
     C.panelX + C.panelWidth - C.panelInset * 2,
@@ -499,7 +484,7 @@ function drawPanel(
     'right',
     600
   );
-  text(
+  drawText(
     ctx,
     `路面总支持力  N  ${(state.normalForce / 1000).toFixed(1)} kN`,
     C.panelX + C.panelInset * 2,
@@ -509,7 +494,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `实际向心力  Fₙ  ${(state.centripetalForce / 1000).toFixed(1)} kN`,
     C.panelX + C.panelInset * 2,
@@ -529,7 +514,7 @@ function drawPanel(
   );
   ctx.fillStyle = '#101827';
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '水平投影：N·sinθ + f·cosθ = Fₙ',
     C.panelX + C.panelInset * 2,
@@ -539,7 +524,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     '竖直投影：N·cosθ − f·sinθ = G',
     C.panelX + C.panelInset * 2,
@@ -559,7 +544,7 @@ function drawPanel(
   );
   ctx.fillStyle = p.soft;
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '速度偏高 → 离心趋势；速度偏低 → 向心趋势',
     C.panelX + C.panelInset * 2,
@@ -569,7 +554,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `摩擦裕度  ${(Math.max(0, 1 - state.frictionRatio) * 100).toFixed(0)}%`,
     C.panelX + C.panelInset * 2,
@@ -623,7 +608,7 @@ export function createCarBankView(options: CreateCarBankViewOptions = {}) {
     drawAxes(ctx, p);
     drawVectors(ctx, state, p);
     drawPanel(ctx, state, p);
-    text(
+    drawText(
       ctx,
       '空格：暂停 / 播放',
       C.fieldWidth - 24,

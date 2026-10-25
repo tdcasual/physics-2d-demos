@@ -2,6 +2,7 @@ import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import { inclineSpringConstants, type InclineSpringState } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateInclineSpringViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -50,22 +51,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     slope: '#25364e'
   }
 };
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 function roundCard(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -177,8 +162,8 @@ function drawIncline(
   scale: number
 ): void {
   const c = inclineSpringConstants;
-  text(ctx, '斜面弹簧动力学', 28, 38, p.ink, 24 * scale, 'left', 700);
-  text(ctx, '重力、弹力与摩擦力的能量转换', 28, 68, p.muted, 14 * scale);
+  drawText(ctx, '斜面弹簧动力学', 28, 38, p.ink, 24 * scale, 'left', 700);
+  drawText(ctx, '重力、弹力与摩擦力的能量转换', 28, 68, p.muted, 14 * scale);
   ctx.fillStyle = p.slope;
   ctx.beginPath();
   ctx.moveTo(c.slopeLeft, c.slopeTop);
@@ -204,7 +189,7 @@ function drawIncline(
   ctx.lineTo(c.slopeRight, c.slopeBottom + c.slopeThickness);
   ctx.stroke();
   ctx.setLineDash([]);
-  text(
+  drawText(
     ctx,
     'θ = 30°',
     c.slopeLeft + 90,
@@ -236,14 +221,32 @@ function drawIncline(
   );
   ctx.fill();
   ctx.stroke();
-  text(ctx, 'm', 0, 0, '#fff', 18 * scale, 'center', 700);
+  drawText(ctx, 'm', 0, 0, '#fff', 18 * scale, 'center', 700);
   ctx.restore();
   arrow(ctx, block.x, block.y + 2, 0, 62, p.red);
-  text(ctx, 'G', block.x + 14, block.y + 68, p.red, 16 * scale, 'left', 700);
+  drawText(
+    ctx,
+    'G',
+    block.x + 14,
+    block.y + 68,
+    p.red,
+    16 * scale,
+    'left',
+    700
+  );
   arrow(ctx, block.x, block.y, 52, -30, p.blue);
-  text(ctx, 'Fₙ', block.x + 58, block.y - 36, p.blue, 15 * scale, 'left', 700);
+  drawText(
+    ctx,
+    'Fₙ',
+    block.x + 58,
+    block.y - 36,
+    p.blue,
+    15 * scale,
+    'left',
+    700
+  );
   arrow(ctx, block.x, block.y, -46, -26, p.gold);
-  text(
+  drawText(
     ctx,
     'F弹',
     block.x - 58,
@@ -253,7 +256,7 @@ function drawIncline(
     'right',
     700
   );
-  text(
+  drawText(
     ctx,
     `位置 ${state.position.toFixed(2)} m`,
     block.x,
@@ -263,8 +266,8 @@ function drawIncline(
     'center'
   );
   roundCard(ctx, 30, 470, 740, 110, p);
-  text(ctx, state.status, 52, 496, p.teal, 18 * scale, 'left', 700);
-  text(
+  drawText(ctx, state.status, 52, 496, p.teal, 18 * scale, 'left', 700);
+  drawText(
     ctx,
     `v = ${state.velocity.toFixed(2)} m/s   a = ${state.acceleration.toFixed(2)} m/s²`,
     52,
@@ -272,7 +275,7 @@ function drawIncline(
     p.ink,
     15 * scale
   );
-  text(
+  drawText(
     ctx,
     `F弹 = ${state.springForce.toFixed(1)} N   G∥ = ${state.gravityAlong.toFixed(1)} N   N = ${state.normalForce.toFixed(1)} N`,
     52,
@@ -281,7 +284,7 @@ function drawIncline(
     13 * scale
   );
   roundCard(ctx, 30, c.energyCardY, 740, c.energyCardHeight, p);
-  text(
+  drawText(
     ctx,
     '能量转换',
     c.energyLabelX,
@@ -291,7 +294,7 @@ function drawIncline(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `总能量 ${state.totalEnergy.toFixed(2)} J`,
     c.energyValueX,
@@ -312,8 +315,8 @@ function drawIncline(
   const max = Math.max(1, state.totalEnergy);
   for (let i = 0; i < values.length; i += 1) {
     const y = c.energyRowY + i * c.energyRowGap;
-    text(ctx, labels[i], c.energyLabelX, y, p.muted, 11 * scale);
-    text(
+    drawText(ctx, labels[i], c.energyLabelX, y, p.muted, 11 * scale);
+    drawText(
       ctx,
       `${values[i].toFixed(2)} J`,
       c.energyValueX,

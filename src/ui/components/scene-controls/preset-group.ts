@@ -44,10 +44,12 @@ export function createPresetButtonGroup(
   const keyHandlers = new Map<string, (event: KeyboardEvent) => void>();
 
   function updateStyles() {
+    // roving tabindex：无选中时让第一个按钮可聚焦，键盘仍能进入该组
+    const focusId = buttons.has(activeId) ? activeId : presets[0]?.id;
     buttons.forEach((btn, id) => {
       const isActive = id === activeId;
       btn.setAttribute('aria-checked', String(isActive));
-      btn.tabIndex = isActive ? 0 : -1;
+      btn.tabIndex = id === focusId ? 0 : -1;
       const labelSpan = btn.querySelector('span:first-child') as HTMLElement;
       if (labelSpan) {
         labelSpan.style.color = 'var(--text-primary)';
@@ -141,7 +143,8 @@ export function createPresetButtonGroup(
   return {
     element: grid,
     setActive: (id: string) => {
-      if (buttons.has(id)) {
+      // '' = 无选中（如参数已偏离所有预设）；未知 id 忽略
+      if (id === '' || buttons.has(id)) {
         activeId = id;
         updateStyles();
       }

@@ -205,30 +205,31 @@ describe('projectControlsFromParams', () => {
     expect(afterApply).not.toHaveBeenCalled();
   });
 
-  it('reverses paramMap so projectile v0 reads live speed', () => {
-    const handle = handleWithTypes({
-      fieldTypes: new Map([
-        ['v0', 'slider'],
-        ['theta', 'slider'],
-        ['preset', 'preset-group']
+  it('reverses schema bindings: renamed keys and scaled units', () => {
+    const handle = {
+      ...handleWithTypes({
+        fieldTypes: new Map([
+          ['v0', 'slider'],
+          ['theta', 'slider'],
+          ['cursorY', 'slider'],
+          ['preset', 'preset-group']
+        ])
+      }),
+      bindings: new Map([
+        ['v0', { param: 'speed' }],
+        ['theta', { param: 'angleDeg' }],
+        ['g', { param: 'gravity' }],
+        ['cursorY', { scale: 100 }]
       ])
-    });
+    };
     const ok = projectControlsFromParams({
-      params: { speed: 42, angleDeg: 30, gravity: 9.8 },
-      handle,
-      paramSync: {
-        paramMap: {
-          v0: 'speed',
-          theta: 'angleDeg',
-          h0: 'initialHeight',
-          g: 'gravity',
-          c: 'drag'
-        }
-      }
+      params: { speed: 42, angleDeg: 30, gravity: 9.8, cursorY: 0.25 },
+      handle
     });
     expect(ok).toBe(true);
     expect(handle.setValueSilently).toHaveBeenCalledWith('v0', 42);
     expect(handle.setValueSilently).toHaveBeenCalledWith('theta', 30);
+    expect(handle.setValueSilently).toHaveBeenCalledWith('cursorY', 25);
     expect(handle.setValueSilently).not.toHaveBeenCalledWith(
       'speed',
       expect.anything()

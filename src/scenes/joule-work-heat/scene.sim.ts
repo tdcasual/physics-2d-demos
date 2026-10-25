@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type JouleMode = 0 | 1;
 export type JouleParams = {
@@ -53,31 +54,27 @@ const DEFAULT_PARAMS: JouleParams = {
   autoRun: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function normalize(
   input: Partial<JouleParams>,
   previous = DEFAULT_PARAMS
 ): JouleParams {
   return {
     mode: input.mode === 0 || input.mode === 1 ? input.mode : previous.mode,
-    mass: clamp(finite(input.mass, previous.mass), 10, 60),
-    height: clamp(finite(input.height, previous.height), 5, 20),
-    waterMass: clamp(finite(input.waterMass, previous.waterMass), 1, 4),
+    mass: clamp(finiteOr(input.mass, previous.mass), 10, 60),
+    height: clamp(finiteOr(input.height, previous.height), 5, 20),
+    waterMass: clamp(finiteOr(input.waterMass, previous.waterMass), 1, 4),
     voltage: clamp(
-      finite(input.voltage, previous.voltage),
+      finiteOr(input.voltage, previous.voltage),
       jouleConstants.voltageMin,
       jouleConstants.voltageMax
     ),
     current: clamp(
-      finite(input.current, previous.current),
+      finiteOr(input.current, previous.current),
       jouleConstants.currentMin,
       jouleConstants.currentMax
     ),
     duration: clamp(
-      finite(input.duration, previous.duration),
+      finiteOr(input.duration, previous.duration),
       jouleConstants.durationMin,
       jouleConstants.durationMax
     ),
@@ -144,7 +141,7 @@ export function createJouleSim(initial: Partial<JouleParams> = {}) {
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      time += clamp(finite(dt, 0), 0, 0.05);
+      time += clamp(finiteOr(dt, 0), 0, 0.05);
       const maxTime =
         params.mode === 0
           ? jouleConstants.mechanicalDuration

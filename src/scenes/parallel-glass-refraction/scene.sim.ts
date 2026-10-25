@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type GlassParams = {
   incidentAngle: number;
@@ -37,24 +38,20 @@ const DEFAULTS: GlassParams = {
   autoRun: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function normalize(input: Partial<GlassParams>, prev = DEFAULTS): GlassParams {
   return {
     incidentAngle: clamp(
-      finite(input.incidentAngle, prev.incidentAngle),
+      finiteOr(input.incidentAngle, prev.incidentAngle),
       glassConstants.angleMin,
       glassConstants.angleMax
     ),
     refractiveIndex: clamp(
-      finite(input.refractiveIndex, prev.refractiveIndex),
+      finiteOr(input.refractiveIndex, prev.refractiveIndex),
       glassConstants.indexMin,
       glassConstants.indexMax
     ),
     thickness: clamp(
-      finite(input.thickness, prev.thickness),
+      finiteOr(input.thickness, prev.thickness),
       glassConstants.thicknessMin,
       glassConstants.thicknessMax
     ),
@@ -106,7 +103,7 @@ export function createGlassSim(initial: Partial<GlassParams> = {}) {
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      const safeDt = clamp(finite(dt, 0), 0, 0.05);
+      const safeDt = clamp(finiteOr(dt, 0), 0, 0.05);
       time = (time + safeDt) % glassConstants.timelinePeriod;
     }
   };

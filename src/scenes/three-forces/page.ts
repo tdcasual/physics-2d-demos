@@ -15,15 +15,7 @@ import {
   type ThreeForcesParams,
   type ThreeForcesTab
 } from './scene.sim';
-
-function asBoolean(value: unknown): boolean {
-  return (
-    value === true ||
-    value === 1 ||
-    value === '1' ||
-    String(value).toLowerCase() === 'true'
-  );
-}
+import { asBoolean } from '../../core/coerce';
 
 bootScenePage({
   meta: threeForcesMeta,

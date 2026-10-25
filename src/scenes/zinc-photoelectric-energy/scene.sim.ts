@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type ChargeState = 'rubbed' | 'grounded';
 export type ZincPhotoelectricParams = {
@@ -39,9 +40,6 @@ const DEFAULTS: ZincPhotoelectricParams = {
   chargeState: 'rubbed',
   autoRun: true
 };
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
 function normalize(
   input: Partial<ZincPhotoelectricParams>,
   previous = DEFAULTS
@@ -52,12 +50,12 @@ function normalize(
       : previous.chargeState;
   return {
     wavelength: clamp(
-      finite(input.wavelength, previous.wavelength),
+      finiteOr(input.wavelength, previous.wavelength),
       zincPhotoelectricConstants.wavelengthMin,
       zincPhotoelectricConstants.wavelengthMax
     ),
     intensity: clamp(
-      finite(input.intensity, previous.intensity),
+      finiteOr(input.intensity, previous.intensity),
       zincPhotoelectricConstants.intensityMin,
       zincPhotoelectricConstants.intensityMax
     ),
@@ -115,7 +113,7 @@ export function createZincPhotoelectricSim(
       return { ...params };
     },
     step(dt: number): void {
-      if (params.autoRun) time += Math.max(0, finite(dt, 0));
+      if (params.autoRun) time += Math.max(0, finiteOr(dt, 0));
     },
     reset(): void {
       params = { ...defaults };

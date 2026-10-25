@@ -1,20 +1,9 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
-import type { MolecularParams } from './scene.sim';
 import { molecularControlsSchema } from './controls-schema';
 import { createMolecularScene } from './scene.entry';
 import { molecularMeta } from './scene.meta';
-
-function asBoolean(value: unknown): boolean {
-  return (
-    value === true ||
-    value === 1 ||
-    value === '1' ||
-    String(value).toLowerCase() === 'true'
-  );
-}
+import { createBoundControls } from '../../ui/components/bound-controls';
 
 bootScenePage({
   meta: molecularMeta,
@@ -47,17 +36,13 @@ bootScenePage({
   },
   createControls: ({ mount, scene, scheduleRender, writeParam }) => {
     const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+    return createBoundControls({
       mount,
       schema: molecularControlsSchema,
-      onChange: (key, value) => {
-        scene.setParams({
-          [key]: typeof value === 'boolean' ? value : Number(value)
-        } as Partial<MolecularParams>);
-        render();
-        writeParam?.(key, value);
-      },
-      onAction: (key) => {
+      scene,
+      scheduleRender,
+      writeParam,
+      onAction: (key, renderer) => {
         if (key === 'playThermal') {
           scene.setParams({ autoRun: true });
           renderer.setValue('autoRun', true);
@@ -74,25 +59,5 @@ bootScenePage({
         render();
       }
     });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (
-        key === 'autoRun' ||
-        key === 'showRepulsive' ||
-        key === 'showAttractive'
-      ) {
-        const flag = asBoolean(value);
-        ctx.scene.setParams({ [key]: flag } as Partial<MolecularParams>);
-        ctx.setControlValue(key, flag);
-        return true;
-      }
-      const n = Number(value);
-      if (!Number.isFinite(n)) return false;
-      ctx.scene.setParams({ [key]: n } as Partial<MolecularParams>);
-      ctx.setControlValue(key, n);
-      return true;
-    }
   }
 });

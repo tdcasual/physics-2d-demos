@@ -11,6 +11,7 @@ import {
   uvtVelocity,
   type UvtState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateUvtViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -67,23 +68,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     negArea: 'rgba(251,113,133,0.22)'
   }
 };
-
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 
 function rounded(
   ctx: CanvasRenderingContext2D,
@@ -172,8 +156,8 @@ function drawTrack(
     1.6,
     10
   );
-  text(ctx, 'x (m)', C.trackEndX, C.trackY + 22, p.ink, font(13), 'right');
-  text(ctx, '0', C.trackOriginX, C.trackY + 22, p.ink, font(13), 'center');
+  drawText(ctx, 'x (m)', C.trackEndX, C.trackY + 22, p.ink, font(13), 'right');
+  drawText(ctx, '0', C.trackOriginX, C.trackY + 22, p.ink, font(13), 'center');
   ctx.fillStyle = p.ink;
   ctx.beginPath();
   ctx.arc(C.trackOriginX, C.trackY, 3, 0, Math.PI * 2);
@@ -201,7 +185,7 @@ function drawTrack(
     const vY = y - bodyH - C.carVelocityOffsetY;
     const vStart = x + vSign * (bodyW / 2);
     arrow(ctx, vStart, vY, vStart + vSign * vLen, vY, p.red, 4, 11);
-    text(
+    drawText(
       ctx,
       'v',
       vStart + vSign * (vLen + 14),
@@ -220,7 +204,7 @@ function drawTrack(
     );
     const aY = y - bodyH - C.carAccelOffsetY;
     arrow(ctx, x, aY, x + aSign * aLen, aY, p.teal, 4, 11);
-    text(
+    drawText(
       ctx,
       'a',
       x + aSign * (aLen + 14),
@@ -248,7 +232,7 @@ function drawGraph(
     ctx.lineTo(x, C.graphBottom);
     ctx.stroke();
     if (i !== 0) {
-      text(ctx, `${i}`, x, C.graphAxisY + 16, p.ink, font(11), 'center');
+      drawText(ctx, `${i}`, x, C.graphAxisY + 16, p.ink, font(11), 'center');
     }
   }
   for (let i = -4; i <= 4; i += 1) {
@@ -259,7 +243,7 @@ function drawGraph(
     ctx.lineTo(C.graphRight, y);
     ctx.stroke();
     if (v !== 0) {
-      text(ctx, `${v}`, C.graphLeft - 10, y, p.ink, font(11), 'right');
+      drawText(ctx, `${v}`, C.graphLeft - 10, y, p.ink, font(11), 'right');
     }
   }
 
@@ -294,7 +278,7 @@ function drawGraph(
     1.8,
     9
   );
-  text(
+  drawText(
     ctx,
     'v (m/s)',
     C.graphLeft - 8,
@@ -303,8 +287,16 @@ function drawGraph(
     font(12),
     'left'
   );
-  text(ctx, 't (s)', C.graphRight + 18, C.graphAxisY, p.ink, font(12), 'left');
-  text(ctx, '0', C.graphLeft - 10, C.graphAxisY, p.ink, font(11), 'right');
+  drawText(
+    ctx,
+    't (s)',
+    C.graphRight + 18,
+    C.graphAxisY,
+    p.ink,
+    font(12),
+    'left'
+  );
+  drawText(ctx, '0', C.graphLeft - 10, C.graphAxisY, p.ink, font(11), 'right');
 
   const v0 = state.params.v0;
   const acc = state.params.acceleration;

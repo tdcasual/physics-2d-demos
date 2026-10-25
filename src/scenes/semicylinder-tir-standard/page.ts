@@ -6,15 +6,8 @@ import { semicylinderStandardControlsSchema } from './controls-schema';
 import { createSemicylinderStandardScene } from './scene.entry';
 import { semicylinderStandardMeta } from './scene.meta';
 import type { SemicylinderStandardParams } from './scene.sim';
+import { asBoolean } from '../../core/coerce';
 
-function asBoolean(value: unknown): boolean {
-  return (
-    value === true ||
-    value === 1 ||
-    value === '1' ||
-    String(value).toLowerCase() === 'true'
-  );
-}
 const materialValues: Record<string, number> = {
   water: 1.33,
   glass: 1.52,

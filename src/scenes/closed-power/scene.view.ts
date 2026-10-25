@@ -2,6 +2,7 @@ import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import { closedPowerConstants, type ClosedPowerState } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateClosedPowerViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -90,23 +91,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
   }
 };
 
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
-
 function rounded(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -169,8 +153,8 @@ function drawSource(
   ctx.moveTo(SOURCE_X + 12, top - 16);
   ctx.lineTo(SOURCE_X + 12, top + 16);
   ctx.stroke();
-  text(ctx, 'E', SOURCE_X - 30, top + 1, p.red, 16, 'center', 700);
-  text(
+  drawText(ctx, 'E', SOURCE_X - 30, top + 1, p.red, 16, 'center', 700);
+  drawText(
     ctx,
     `${state.params.emf.toFixed(1)} V`,
     SOURCE_X,
@@ -180,7 +164,7 @@ function drawSource(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     '实际电源 (E, r)',
     SOURCE_X + 10,
@@ -190,7 +174,7 @@ function drawSource(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `r = ${state.params.internalResistance.toFixed(1)} Ω`,
     SOURCE_X + 10,
@@ -206,8 +190,8 @@ function drawSource(
   ctx.strokeStyle = p.ink;
   ctx.lineWidth = 3;
   ctx.stroke();
-  text(ctx, 'A', METER_X, top + 1, p.ink, 16, 'center', 700);
-  text(
+  drawText(ctx, 'A', METER_X, top + 1, p.ink, 16, 'center', 700);
+  drawText(
     ctx,
     `I = ${state.current.toFixed(2)} A`,
     METER_X,
@@ -223,7 +207,7 @@ function drawSource(
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 2;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     `负载 R = ${state.params.externalResistance.toFixed(1)} Ω`,
     RESISTOR_X,
@@ -233,7 +217,7 @@ function drawSource(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     `U = ${state.terminalVoltage.toFixed(2)} V`,
     RESISTOR_X,
@@ -260,7 +244,7 @@ function drawPowerSummary(
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 2;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     `总功率 P总 = ${state.totalPower.toFixed(2)} W`,
     x + 18,
@@ -270,7 +254,7 @@ function drawPowerSummary(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `内阻功率 P内 = ${state.internalPower.toFixed(2)} W`,
     x + 18,
@@ -280,7 +264,7 @@ function drawPowerSummary(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `输出功率 P出 = ${state.outputPower.toFixed(2)} W`,
     x + 18,
@@ -379,7 +363,7 @@ function drawGraph(
     ctx.beginPath();
     ctx.arc(maxX, maxY, 7, 0, Math.PI * 2);
     ctx.fill();
-    text(
+    drawText(
       ctx,
       `Pmax = ${state.maxOutputPower.toFixed(2)} W`,
       maxX + 12,
@@ -389,7 +373,7 @@ function drawGraph(
       'left',
       700
     );
-    text(
+    drawText(
       ctx,
       `R = r = ${internal.toFixed(1)} Ω`,
       maxX + 12,
@@ -413,9 +397,18 @@ function drawGraph(
   ctx.beginPath();
   ctx.arc(selectedX, selectedY, 7, 0, Math.PI * 2);
   ctx.fill();
-  text(ctx, 'P / W', GRAPH_L - 12, GRAPH_T - 18, p.ink, 13, 'left', 700);
-  text(ctx, 'R / Ω', GRAPH_L + GRAPH_W - 10, y0 + 24, p.ink, 13, 'right', 700);
-  text(
+  drawText(ctx, 'P / W', GRAPH_L - 12, GRAPH_T - 18, p.ink, 13, 'left', 700);
+  drawText(
+    ctx,
+    'R / Ω',
+    GRAPH_L + GRAPH_W - 10,
+    y0 + 24,
+    p.ink,
+    13,
+    'right',
+    700
+  );
+  drawText(
     ctx,
     'P出',
     GRAPH_L + GRAPH_W - 92,
@@ -425,7 +418,7 @@ function drawGraph(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'P总',
     GRAPH_L + GRAPH_W - 58,
@@ -435,7 +428,7 @@ function drawGraph(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'P内',
     GRAPH_L + GRAPH_W - 24,
@@ -445,7 +438,16 @@ function drawGraph(
     'left',
     700
   );
-  text(ctx, '功率—外电阻关系', GRAPH_L, GRAPH_T - 45, p.ink, 17, 'left', 700);
+  drawText(
+    ctx,
+    '功率—外电阻关系',
+    GRAPH_L,
+    GRAPH_T - 45,
+    p.ink,
+    17,
+    'left',
+    700
+  );
 }
 
 function drawPanel(
@@ -458,7 +460,7 @@ function drawPanel(
   const width = PANEL_W - PANEL_INSET * 2;
   ctx.fillStyle = p.panel;
   ctx.fillRect(PANEL_X, 0, PANEL_W, BASE_H);
-  text(ctx, '闭合电路功率', x, TITLE_Y, p.ink, 22 * scale, 'left', 700);
+  drawText(ctx, '闭合电路功率', x, TITLE_Y, p.ink, 22 * scale, 'left', 700);
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 3;
   ctx.beginPath();
@@ -468,7 +470,16 @@ function drawPanel(
   rounded(ctx, x, METRICS_Y, width, METRICS_H);
   ctx.fillStyle = p.soft;
   ctx.fill();
-  text(ctx, '实时读数', x + 14, METRICS_Y + 25, p.ink, 16 * scale, 'left', 700);
+  drawText(
+    ctx,
+    '实时读数',
+    x + 14,
+    METRICS_Y + 25,
+    p.ink,
+    16 * scale,
+    'left',
+    700
+  );
   const rows = [
     ['回路电流 I', `${state.current.toFixed(2)} A`, p.ink],
     ['路端电压 U', `${state.terminalVoltage.toFixed(2)} V`, p.blue],
@@ -479,8 +490,8 @@ function drawPanel(
   ] as const;
   rows.forEach(([label, value, color], index) => {
     const y = METRICS_Y + 56 + index * 33;
-    text(ctx, label, x + 14, y, p.muted, 13 * scale, 'left', 600);
-    text(ctx, value, x + width - 14, y, color, 14 * scale, 'right', 700);
+    drawText(ctx, label, x + 14, y, p.muted, 13 * scale, 'left', 600);
+    drawText(ctx, value, x + width - 14, y, color, 14 * scale, 'right', 700);
     if (index < rows.length - 1) {
       ctx.strokeStyle = p.border;
       ctx.lineWidth = 1;
@@ -496,7 +507,7 @@ function drawPanel(
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 2;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '最大输出功率',
     x + 14,
@@ -506,7 +517,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'I = E / (R + r)',
     x + 14,
@@ -516,7 +527,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     'P出 = E²R / (R + r)²',
     x + 14,
@@ -526,7 +537,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     'R = r  ⇒  P出,max = E² / 4r',
     x + 14,
@@ -536,7 +547,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     '纯电阻直流闭合电路',
     x + 14,
@@ -546,7 +557,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `当前 R / r = ${(state.params.externalResistance / state.params.internalResistance).toFixed(2)}`,
     x + 14,
@@ -565,7 +576,7 @@ function drawField(
   scale: number
 ): void {
   drawGrid(ctx, p);
-  text(
+  drawText(
     ctx,
     '闭合电路功率与最大输出功率',
     26,
@@ -575,7 +586,7 @@ function drawField(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     '调节 E、r、R，观察功率分配',
     28,
@@ -585,7 +596,7 @@ function drawField(
     'left',
     600
   );
-  text(ctx, '闭合电路模型', 26, 100, p.ink, 17 * scale, 'left', 700);
+  drawText(ctx, '闭合电路模型', 26, 100, p.ink, 17 * scale, 'left', 700);
   drawSource(ctx, state, p);
   drawPowerSummary(ctx, state, p);
   drawGraph(ctx, state, p);

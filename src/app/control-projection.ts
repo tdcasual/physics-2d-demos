@@ -6,6 +6,12 @@
  */
 
 import type { ControlsSchema } from '../platform/controls-schema';
+import {
+  controlKeyOfParam,
+  paramToControl,
+  type ControlValue,
+  type ParamBindings
+} from '../platform/param-binding';
 
 const VALUE_FIELD_TYPES = new Set<string>([
   'slider',
@@ -19,14 +25,15 @@ const ACTIVE_FIELD_TYPES = new Set<string>(['preset-group', 'scene-selector']);
 
 export type ControlProjectionHandle = {
   fieldTypes?: Map<string, string>;
+  /** schema `bind`：参数键/单位 → 控件键/单位 */
+  bindings?: ParamBindings;
   setValueSilently?: (key: string, value: number | string | boolean) => void;
   setActiveSilently?: (key: string, id: string) => void;
   syncFromScene?: () => void;
 };
 
-/** 投影器只读这三项；applyAll / applyParam / afterApply 即使存在也不调用 */
+/** 投影器只读这两项；applyAll / applyParam / afterApply 即使存在也不调用 */
 export type ControlProjectionParamSync = {
-  paramMap?: Record<string, string>;
   activeKeys?: string[];
   projectControls?: (
     params: Record<string, unknown>,
@@ -57,7 +64,8 @@ export function collectFieldKeys(schema: ControlsSchema): Map<string, string> {
 /**
  * 按字段类型把 live params 静默投影到控件句柄。
  *
- * 键宇宙 = handle 字段类型表 ∩ params（经 paramMap 反查后的控件键）。
+ * 键宇宙 = handle 字段类型表 ∩ params（经 schema `bind` 反查后的控件键，
+ * 数值按 bind.scale 换算为控件单位）。
  * 缺静默 setter 的键跳过，不回退事件性 setValue / setActive。
  *
  * @returns 至少投影了一键则为 true；无法投影任何键（缺类型表或静默 setter）为 false。
@@ -75,12 +83,12 @@ export function projectControlsFromParams(
   const fieldTypes = resolveFieldTypes(handle);
   if (!fieldTypes || fieldTypes.size === 0) return false;
 
-  const reverseMap = invertParamMap(paramSync?.paramMap);
   const activeKeys = new Set(paramSync?.activeKeys ?? []);
   let projected = 0;
 
-  for (const [paramKey, value] of Object.entries(params)) {
-    const controlKey = reverseMap.get(paramKey) ?? paramKey;
+  for (const [paramKey, rawValue] of Object.entries(params)) {
+    const controlKey = controlKeyOfParam(paramKey, handle.bindings);
+    const value = paramToControl(controlKey, rawValue, handle.bindings);
     const fieldType = fieldTypes.get(controlKey);
     if (fieldType === undefined) continue;
 
@@ -140,24 +148,6 @@ function resolveFieldTypes(
   return undefined;
 }
 
-/**
- * paramMap 为控件键 → sim 键。反查得到 sim 键 → 控件键。
- * 非单射时丢弃反查（调用方应走 paramSync.projectControls）。
- */
-function invertParamMap(
-  paramMap: Record<string, string> | undefined
-): Map<string, string> {
-  const reverse = new Map<string, string>();
-  if (!paramMap) return reverse;
-  const seenSimKeys = new Set<string>();
-  for (const [controlKey, simKey] of Object.entries(paramMap)) {
-    if (seenSimKeys.has(simKey)) return new Map();
-    seenSimKeys.add(simKey);
-    reverse.set(simKey, controlKey);
-  }
-  return reverse;
-}
-
 function usesActiveSetter(
   key: string,
   fieldType: string,
@@ -177,8 +167,36 @@ function isSilentValue(value: unknown): value is number | string | boolean {
 }
 
 function toActiveId(value: unknown): string | undefined {
+  // null = 派生参数当前不对应任何选项（如自定义参数下的预设）：清除高亮
+  if (value === null) return '';
   if (typeof value === 'string') return value;
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   if (typeof value === 'boolean') return value ? 'true' : 'false';
   return undefined;
+}
+
+/**
+ * 「重置」按钮的标准处理（配合 createBoundControls）：场景复位 → 控件静默
+ * 投影（按 schema bind 换算）→ 把复位后的参数写回 URL，使分享链接与画面一致。
+ */
+export function resetSceneAndControls(
+  scene: { reset(): void; getParams(): object },
+  handle: ControlProjectionHandle,
+  writeParam?: (key: string, value: ControlValue) => void
+): void {
+  scene.reset();
+  const params = scene.getParams() as Record<string, unknown>;
+  syncControlsFromLiveParams({ params, handle });
+  if (!writeParam) return;
+  for (const [paramKey, value] of Object.entries(params)) {
+    if (
+      typeof value !== 'number' &&
+      typeof value !== 'string' &&
+      typeof value !== 'boolean'
+    ) {
+      continue;
+    }
+    const controlKey = controlKeyOfParam(paramKey, handle.bindings);
+    writeParam(controlKey, paramToControl(controlKey, value, handle.bindings));
+  }
 }

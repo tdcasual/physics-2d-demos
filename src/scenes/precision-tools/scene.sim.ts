@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteNumber } from '../../core/coerce';
 
 export type PrecisionToolMode =
   | 'caliper10'
@@ -94,15 +95,6 @@ export function asPrecisionMode(value: unknown): PrecisionToolMode | undefined {
   return undefined;
 }
 
-function finite(value: unknown, fallback: number): number {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string' && value.trim() !== '') {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return fallback;
-}
-
 function normalize(
   input: Partial<PrecisionToolParams> & Record<string, unknown>,
   previous = DEFAULTS
@@ -110,7 +102,7 @@ function normalize(
   return {
     mode: asPrecisionMode(input.mode) ?? previous.mode,
     adjustment: clamp(
-      finite(input.adjustment, previous.adjustment),
+      finiteNumber(input.adjustment, previous.adjustment),
       precisionToolConstants.adjustmentMin,
       precisionToolConstants.adjustmentMax
     ),
@@ -217,7 +209,7 @@ export function createPrecisionToolSim(
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      const delta = Math.max(0, finite(dt, 0));
+      const delta = Math.max(0, finiteNumber(dt, 0));
       time += delta;
       const period = precisionToolConstants.animationPeriod;
       const phase = (time / period) % 1;

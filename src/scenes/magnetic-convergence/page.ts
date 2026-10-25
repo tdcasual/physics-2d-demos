@@ -1,11 +1,9 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { magneticConvergenceControlsSchema } from './controls-schema';
 import { createMagneticConvergenceScene } from './scene.entry';
 import { magneticConvergenceMeta } from './scene.meta';
-import type { MagneticConvergenceParams } from './scene.sim';
+import { createBoundControls } from '../../ui/components/bound-controls';
 
 bootScenePage({
   meta: magneticConvergenceMeta,
@@ -44,60 +42,17 @@ bootScenePage({
   },
   createControls: ({ mount, scene, scheduleRender, writeParam }) => {
     const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+    return createBoundControls({
       mount,
       schema: magneticConvergenceControlsSchema,
-      onChange: (key, value) => {
-        if (key === 'mode') {
-          const mode = String(value) as MagneticConvergenceParams['mode'];
-          scene.setParams({ mode });
-          renderer.setActive(key, mode);
-        } else if (key === 'autoRun' || key === 'showField') {
-          scene.setParams({
-            [key]: Boolean(value)
-          } as Partial<MagneticConvergenceParams>);
-        } else if (key === 'radiusRatio' || key === 'particleCount') {
-          scene.setParams({
-            [key]: Number(value)
-          } as Partial<MagneticConvergenceParams>);
-        }
-        render();
-        writeParam?.(key, value);
-      },
+      scene,
+      scheduleRender,
+      writeParam,
       onAction: (key) => {
         if (key === 'emit') scene.emit();
         if (key === 'clear') scene.clear();
         render();
       }
     });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (key === 'mode') {
-        const mode = Number(value) > 0 ? 'diverge' : 'converge';
-        ctx.scene.setParams({ mode });
-        ctx.setControlActive(key, mode);
-        return true;
-      }
-      if (key === 'autoRun' || key === 'showField') {
-        const enabled = Number(value) > 0;
-        ctx.scene.setParams({
-          [key]: enabled
-        } as Partial<MagneticConvergenceParams>);
-        ctx.setControlValue(key, enabled);
-        return true;
-      }
-      if (key === 'radiusRatio' || key === 'particleCount') {
-        const number = Number(value);
-        if (!Number.isFinite(number)) return false;
-        ctx.scene.setParams({
-          [key]: number
-        } as Partial<MagneticConvergenceParams>);
-        ctx.setControlValue(key, number);
-        return true;
-      }
-      return false;
-    }
   }
 });

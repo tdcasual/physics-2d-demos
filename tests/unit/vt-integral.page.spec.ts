@@ -7,10 +7,18 @@ import { applySceneUrlParams } from '../../src/app/url-sync';
 import type { SceneParamSync } from '../../src/app/scene-bootstrapper-types';
 import { createVtIntegralScene } from '../../src/scenes/vt-integral/scene.entry';
 import { vtIntegralMeta } from '../../src/scenes/vt-integral/scene.meta';
+import { vtIntegralControlsSchema } from '../../src/scenes/vt-integral/controls-schema';
+import {
+  collectBindings,
+  controlToParam
+} from '../../src/platform/param-binding';
+import { syncControlsFromLiveParams } from '../../src/app/control-projection';
+
+const bindings = collectBindings(vtIntegralControlsSchema);
 
 type Handle = {
-  syncFromScene?: () => void;
   dispose: () => void;
+  fieldTypes?: Map<string, string>;
   setValueSilently?: (key: string, value: unknown) => void;
   setActiveSilently?: (key: string, id: string) => void;
 };
@@ -184,13 +192,16 @@ describe('vt-integral page · URL 恢复与控件', () => {
       )
     ).find((b) => b.textContent?.includes('割圆术'));
     scene3?.click();
-    expect(writeParam).toHaveBeenCalledWith('scene', 3);
+    // page 写回控件值；平台（bootstrapper writeParam）按 schema bind 编码进 URL
+    expect(writeParam).toHaveBeenCalledWith('scene', 'scene3');
+    expect(controlToParam('scene', 'scene3', bindings)).toBe(3);
     expect(scene.getParams().scene).toBe(3);
 
     const rule = select(el, 'rule');
     rule.value = '1';
     rule.dispatchEvent(new Event('change', { bubbles: true }));
-    expect(writeParam).toHaveBeenCalledWith('rule', 1);
+    expect(writeParam).toHaveBeenCalledWith('rule', '1');
+    expect(controlToParam('rule', '1', bindings)).toBe(1);
     expect(scene.getParams().rule).toBe(1);
   });
 
@@ -201,17 +212,17 @@ describe('vt-integral page · URL 恢复与控件', () => {
     expect(select(el, 'rule').value).toBe('0');
   });
 
-  it('syncFromScene projects rule silently after reset', () => {
+  it('platform projection updates rule silently after reset', () => {
     const scene = createVtIntegralScene();
     scene.setParams({ rule: 1 });
     const { el, handle, writeParam } = mount(scene);
-    handle.syncFromScene?.();
+    syncControlsFromLiveParams({ params: scene.getParams(), handle });
     expect(select(el, 'rule').value).toBe('1');
     scene.reset();
     const events: string[] = [];
     el.addEventListener('change', () => events.push('change'), true);
     el.addEventListener('input', () => events.push('input'), true);
-    handle.syncFromScene?.();
+    syncControlsFromLiveParams({ params: scene.getParams(), handle });
     expect(select(el, 'rule').value).toBe('0');
     expect(slider(el, 'n').value).toBe('10');
     expect(events).toEqual([]);

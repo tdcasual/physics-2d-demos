@@ -8,6 +8,7 @@ import {
   chargedParticleLabels,
   type ChargedSuperpositionState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateChargedSuperpositionViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -66,22 +67,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
   }
 };
 
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 function rounded(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -159,9 +144,27 @@ function drawAccelerator(ctx: CanvasRenderingContext2D, p: Palette): void {
   ctx.fillRect(C.accelEndX - 24, C.plateTopY, 12, C.plateBottomY - C.plateTopY);
   for (let y = C.plateTopY + 22; y < C.plateBottomY; y += C.fieldArrowStep)
     arrow(ctx, C.accelStartX + 46, y, C.accelEndX - 42, y, `${p.blue}88`, 2);
-  text(ctx, '+', C.accelStartX - 4, C.centerY - 80, p.red, 23, 'center', 700);
-  text(ctx, '−', C.accelStartX - 4, C.centerY + 80, p.cyan, 23, 'center', 700);
-  text(
+  drawText(
+    ctx,
+    '+',
+    C.accelStartX - 4,
+    C.centerY - 80,
+    p.red,
+    23,
+    'center',
+    700
+  );
+  drawText(
+    ctx,
+    '−',
+    C.accelStartX - 4,
+    C.centerY + 80,
+    p.cyan,
+    23,
+    'center',
+    700
+  );
+  drawText(
     ctx,
     '加速区',
     C.accelStartX + 60,
@@ -200,7 +203,7 @@ function drawDeflector(
   );
   ctx.fill();
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '+',
     C.plateStartX + 150,
@@ -210,7 +213,7 @@ function drawDeflector(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     '−',
     C.plateStartX + 150,
@@ -230,7 +233,7 @@ function drawDeflector(
       `${p.blue}99`,
       2
     );
-  text(
+  drawText(
     ctx,
     '偏转区',
     C.plateStartX + 100,
@@ -267,7 +270,16 @@ function drawScreen(
   ctx.moveTo(C.screenX - 20, C.centerY);
   ctx.lineTo(C.screenX + 20, C.centerY);
   ctx.stroke();
-  text(ctx, 'O（原点）', C.screenX + 24, C.centerY - 2, p.ink, 14, 'left', 600);
+  drawText(
+    ctx,
+    'O（原点）',
+    C.screenX + 24,
+    C.centerY - 2,
+    p.ink,
+    14,
+    'left',
+    600
+  );
   const hitY = C.centerY + state.screenOffsetPx;
   ctx.fillStyle = p.green;
   ctx.beginPath();
@@ -329,7 +341,7 @@ function drawTrajectory(
   ctx.arc(x, y, C.particleRadius, 0, Math.PI * 2);
   ctx.fill();
   ctx.shadowBlur = 0;
-  text(
+  drawText(
     ctx,
     chargedParticleLabels[state.particle].label,
     x + 16,
@@ -345,7 +357,7 @@ function drawHUD(
   state: ChargedSuperpositionState,
   p: Palette
 ): void {
-  text(
+  drawText(
     ctx,
     '带电粒子加速与偏转叠加',
     C.baseWidth / 2,
@@ -355,7 +367,7 @@ function drawHUD(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     `U₁ = ${state.accelVoltage.toFixed(0)} V`,
     C.accelStartX + 44,
@@ -365,7 +377,7 @@ function drawHUD(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `U₂ = ${state.deflectVoltage.toFixed(0)} V`,
     C.plateEndX - 130,
@@ -375,7 +387,7 @@ function drawHUD(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `Y = ${state.screenOffsetMm.toFixed(1)} mm`,
     C.screenX - 14,
@@ -385,7 +397,7 @@ function drawHUD(
     'right',
     700
   );
-  text(
+  drawText(
     ctx,
     '按空格暂停 · 调节 U₂ 观察反向延长线',
     C.baseWidth / 2,
@@ -411,8 +423,8 @@ function drawInfoPanel(
   rounded(ctx, x, y, w, h, 12);
   ctx.fill();
   ctx.stroke();
-  text(ctx, '系统传感器数据', x + 18, y + 24, p.ink, 16, 'left', 700);
-  text(
+  drawText(ctx, '系统传感器数据', x + 18, y + 24, p.ink, 16, 'left', 700);
+  drawText(
     ctx,
     `粒子：${chargedParticleLabels[state.particle].label}`,
     x + 18,
@@ -422,7 +434,7 @@ function drawInfoPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `打屏偏移 Y   ${state.screenOffsetMm.toFixed(1)} mm`,
     x + 18,
@@ -432,7 +444,7 @@ function drawInfoPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `出射角       ${state.exitAngleDeg.toFixed(1)}°`,
     x + 18,
@@ -442,8 +454,8 @@ function drawInfoPanel(
     'left',
     600
   );
-  text(ctx, state.status, x + w - 18, y + 55, p.green, 13, 'right', 700);
-  text(
+  drawText(ctx, state.status, x + w - 18, y + 55, p.green, 13, 'right', 700);
+  drawText(
     ctx,
     '比荷变化不改变轨迹偏移',
     x + 18,
@@ -499,7 +511,7 @@ export function createChargedSuperpositionView(
     drawTrajectory(ctx, state, p);
     drawInfoPanel(ctx, state, p);
     drawHUD(ctx, state, p);
-    text(
+    drawText(
       ctx,
       `q/m = ${(state.chargeMassRatio / 1e8).toFixed(2)}×10⁸ C/kg`,
       22,

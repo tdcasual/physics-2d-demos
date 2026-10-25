@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type MassSpectrometerParams = {
   voltage: number;
@@ -120,10 +121,6 @@ const isotopeInfo: Array<{
   }
 ];
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function asFlag(value: unknown, fallback: boolean): boolean {
   if (value === true || value === 1 || value === '1' || value === 'true')
     return true;
@@ -138,12 +135,12 @@ function normalize(
 ): MassSpectrometerParams {
   return {
     voltage: clamp(
-      finite(input.voltage, previous.voltage),
+      finiteOr(input.voltage, previous.voltage),
       massSpectrometerConstants.voltageMin,
       massSpectrometerConstants.voltageMax
     ),
     fieldStrength: clamp(
-      finite(input.fieldStrength, previous.fieldStrength),
+      finiteOr(input.fieldStrength, previous.fieldStrength),
       massSpectrometerConstants.fieldMin,
       massSpectrometerConstants.fieldMax
     ),
@@ -250,7 +247,7 @@ export function massSpectrometerAt(
   const normalizedPhase = ((phase % 1) + 1) % 1;
   return stateAt(
     normalize(params),
-    Math.max(0, finite(time, 0)),
+    Math.max(0, finiteOr(time, 0)),
     normalizedPhase
   );
 }
@@ -271,7 +268,7 @@ export function createMassSpectrometerSim(
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      const duration = clamp(finite(dt, 0), 0, 0.1);
+      const duration = clamp(finiteOr(dt, 0), 0, 0.1);
       time += duration;
       phase += duration * massSpectrometerConstants.playbackRate;
       if (phase >= 1) phase -= Math.floor(phase);

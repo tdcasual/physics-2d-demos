@@ -1,11 +1,9 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { connectedBodiesControlsSchema } from './controls-schema';
 import { connectedBodiesMeta } from './scene.meta';
 import { createConnectedBodiesScene } from './scene.entry';
-import type { ConnectedBodiesParams } from './scene.sim';
+import { createBoundControls } from '../../ui/components/bound-controls';
 bootScenePage({
   meta: connectedBodiesMeta,
   autoPlay: false,
@@ -42,23 +40,13 @@ bootScenePage({
   },
   createControls: ({ mount, scene, scheduleRender, writeParam }) => {
     const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+    return createBoundControls({
       mount,
       schema: connectedBodiesControlsSchema,
-      onChange: (key, value) => {
-        if (key === 'arrangement') {
-          scene.setParams({
-            arrangement: String(value) as ConnectedBodiesParams['arrangement']
-          });
-          renderer.setActive(key, String(value));
-        } else
-          scene.setParams({
-            [key]: Number(value)
-          } as Partial<ConnectedBodiesParams>);
-        render();
-        writeParam?.(key, value);
-      },
-      onAction: (key) => {
+      scene,
+      scheduleRender,
+      writeParam,
+      onAction: (key, renderer) => {
         if (key === 'cutUpper') scene.cut('upper');
         if (key === 'cutLower') scene.cut('lower');
         if (key === 'reset') {
@@ -70,24 +58,5 @@ bootScenePage({
         render();
       }
     });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (key === 'arrangement') {
-        const arrangement =
-          String(value) === '1'
-            ? 'spring-string'
-            : (String(value) as ConnectedBodiesParams['arrangement']);
-        ctx.scene.setParams({ arrangement });
-        ctx.setControlActive(key, arrangement);
-        return true;
-      }
-      const n = Number(value);
-      if (!Number.isFinite(n)) return false;
-      ctx.scene.setParams({ [key]: n } as Partial<ConnectedBodiesParams>);
-      ctx.setControlValue(key, n);
-      return true;
-    }
   }
 });

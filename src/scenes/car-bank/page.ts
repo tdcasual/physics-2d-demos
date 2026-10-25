@@ -1,22 +1,10 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { carBankControlsSchema } from './controls-schema';
 import { createCarBankScene } from './scene.entry';
 import { carBankMeta } from './scene.meta';
-import type { CarBankParams } from './scene.sim';
-
-function asBoolean(value: unknown): boolean {
-  return (
-    value === true ||
-    value === 1 ||
-    value === '1' ||
-    String(value).toLowerCase() === 'true'
-  );
-}
-
-const booleanKeys = new Set(['autoRun', 'showVectors']);
+import { createBoundControls } from '../../ui/components/bound-controls';
+import { resetSceneAndControls } from '../../app/control-projection';
 
 bootScenePage({
   meta: carBankMeta,
@@ -47,48 +35,15 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, scheduleRender, writeParam }) => {
-    const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+  createControls: ({ mount, scene, scheduleRender, writeParam }) =>
+    createBoundControls({
       mount,
       schema: carBankControlsSchema,
-      onChange: (key, value) => {
-        if (booleanKeys.has(key))
-          scene.setParams({
-            [key]: asBoolean(value)
-          } as Partial<CarBankParams>);
-        else {
-          const number = Number(value);
-          if (!Number.isFinite(number)) return;
-          scene.setParams({ [key]: number } as Partial<CarBankParams>);
-        }
-        render();
-        writeParam?.(key, value);
-      },
-      onAction: (key) => {
-        if (key !== 'reset') return;
-        scene.reset();
-        Object.entries(scene.getParams()).forEach(([paramKey, paramValue]) =>
-          renderer.setValue(paramKey, paramValue)
-        );
-        render();
+      scene,
+      scheduleRender,
+      writeParam,
+      onAction: (key, renderer) => {
+        if (key === 'reset') resetSceneAndControls(scene, renderer, writeParam);
       }
-    });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (booleanKeys.has(key)) {
-        const enabled = asBoolean(value);
-        ctx.scene.setParams({ [key]: enabled } as Partial<CarBankParams>);
-        ctx.setControlValue(key, enabled);
-        return true;
-      }
-      const number = Number(value);
-      if (!Number.isFinite(number)) return false;
-      ctx.scene.setParams({ [key]: number } as Partial<CarBankParams>);
-      ctx.setControlValue(key, number);
-      return true;
-    }
-  }
+    })
 });

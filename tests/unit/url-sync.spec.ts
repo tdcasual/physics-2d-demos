@@ -75,6 +75,34 @@ describe('url-sync', () => {
       expect(params.preset).toBe('moon');
     });
 
+    it('parses exponent notation as a number (not parseInt truncation)', () => {
+      window.history.replaceState({}, '', '/test.html?speed=1e3&angle=-2.5E1');
+      const params = readSceneParams(mockMeta);
+      expect(params.speed).toBe(1000);
+      expect(params.angle).toBe(-25);
+    });
+
+    it('drops non-finite or malformed numeric params', () => {
+      for (const bad of [
+        'abc',
+        '',
+        'Infinity',
+        'NaN',
+        '0x10',
+        '1.0e999',
+        '12px'
+      ]) {
+        window.history.replaceState(
+          {},
+          '',
+          `/test.html?speed=${encodeURIComponent(bad)}&angle=60`
+        );
+        const params = readSceneParams(mockMeta);
+        expect(params, bad).not.toHaveProperty('speed');
+        expect(params.angle).toBe(60);
+      }
+    });
+
     it('returns empty object when no matching params', () => {
       window.history.replaceState({}, '', '/test.html?foo=bar');
       const params = readSceneParams(mockMeta);
@@ -91,6 +119,22 @@ describe('url-sync', () => {
           const url = new URL(window.location.href);
           expect(url.searchParams.get('speed')).toBe('30');
           expect(url.searchParams.get('angle')).toBe('60');
+          resolve();
+        }, 200);
+      });
+    });
+
+    it('writes booleans as 1/0 so numeric defaultParams can read them back', () => {
+      writeSceneParams({ speed: true, angle: false });
+      return new Promise<void>((resolve) => {
+        setTimeout(() => {
+          const url = new URL(window.location.href);
+          expect(url.searchParams.get('speed')).toBe('1');
+          expect(url.searchParams.get('angle')).toBe('0');
+          expect(readSceneParams(mockMeta)).toMatchObject({
+            speed: 1,
+            angle: 0
+          });
           resolve();
         }, 200);
       });
@@ -155,6 +199,26 @@ describe('url-sync', () => {
       const url = new URL(window.location.href);
       expect(url.searchParams.get('speed')).toBe('30');
       expect(url.searchParams.get('junk')).toBeNull();
+    });
+
+    it('tolerates storage that throws (blocked / private mode)', () => {
+      const blocked = () => {
+        throw new DOMException('blocked', 'SecurityError');
+      };
+      const getSpy = vi
+        .spyOn(Storage.prototype, 'getItem')
+        .mockImplementation(blocked);
+      const setSpy = vi
+        .spyOn(Storage.prototype, 'setItem')
+        .mockImplementation(blocked);
+      try {
+        expect(() => restoreSceneParams(mockMeta)).not.toThrow();
+        window.history.replaceState({}, '', '/test.html?speed=30');
+        expect(() => persistSceneParams('test')).not.toThrow();
+      } finally {
+        getSpy.mockRestore();
+        setSpy.mockRestore();
+      }
     });
   });
 
@@ -234,15 +298,59 @@ describe('url-sync', () => {
       expect(scene.render).toHaveBeenCalledTimes(1);
     });
 
-    it('applies paramMap mapping to setParams key but reflects the meta key', () => {
-      window.history.replaceState({}, '', '/test.html?speed=30');
+    it('applies schema bindings: URL is in param units, control gets scaled value', () => {
+      window.history.replaceState({}, '', '/test.html?speed=30&angle=0.5');
       const scene = createFakeScene();
       const setValue = vi.fn();
-      applySceneUrlParams(mockMeta, createTarget(scene, { setValue }), {
-        paramMap: { speed: 'velocity' }
-      });
+      const bindings = new Map([
+        ['speed', { param: 'velocity' }],
+        ['angle', { scale: 100 }]
+      ]);
+      applySceneUrlParams(
+        mockMeta,
+        createTarget(scene, { setValue, bindings })
+      );
       expect(scene.setParams).toHaveBeenCalledWith({ velocity: 30 });
+      expect(scene.setParams).toHaveBeenCalledWith({ angle: 0.5 });
       expect(setValue).toHaveBeenCalledWith('speed', 30);
+      expect(setValue).toHaveBeenCalledWith('angle', 50);
+    });
+
+    it('numeric enum on an active field restores via setActive with decoded id', () => {
+      window.history.replaceState({}, '', '/test.html?count=2');
+      const scene = createFakeScene();
+      const setValue = vi.fn();
+      const setActive = vi.fn();
+      applySceneUrlParams(
+        mockMeta,
+        createTarget(scene, {
+          setValue,
+          setActive,
+          fieldTypes: new Map([['count', 'scene-selector']]),
+          bindings: new Map([['count', { values: { s1: 1, s2: 2 } }]])
+        })
+      );
+      expect(scene.setParams).toHaveBeenCalledWith({ count: 2 });
+      expect(setActive).toHaveBeenCalledWith('count', 's2');
+      expect(setValue).not.toHaveBeenCalled();
+    });
+
+    it('drops enum values that are not declared schema options', () => {
+      window.history.replaceState({}, '', '/test.html?model=garbage&speed=30');
+      const scene = createFakeScene();
+      const setActive = vi.fn();
+      applySceneUrlParams(
+        { ...mockMeta, urlSyncKeys: ['model'] },
+        createTarget(scene, {
+          setActive,
+          setValue: vi.fn(),
+          fieldTypes: new Map([['model', 'preset-group']]),
+          fieldOptions: new Map([['model', ['rope', 'rod']]])
+        })
+      );
+      expect(scene.setParams).toHaveBeenCalledWith({ speed: 30 });
+      expect(scene.setParams).not.toHaveBeenCalledWith({ model: 'garbage' });
+      expect(setActive).not.toHaveBeenCalled();
     });
 
     it('activeKeys force setActive for numeric params', () => {

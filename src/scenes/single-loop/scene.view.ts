@@ -1,8 +1,4 @@
-import {
-  applyCanvasSize,
-  getResponsiveScale,
-  scaledSize
-} from '../../core/canvas-sizing';
+import { scaledSize } from '../../core/canvas-sizing';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
@@ -14,6 +10,8 @@ import {
   vxPolyline,
   type SingleLoopState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
+import { sizeCanvasToHostBox } from '../stage-fit';
 
 export type CreateSingleLoopViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -81,70 +79,11 @@ const PALETTE: Record<TeachingTheme, Palette> = {
   }
 };
 
-function contentBoxSize(host: HTMLElement): { width: number; height: number } {
-  const cs = getComputedStyle(host);
-  const rect = host.getBoundingClientRect();
-  const padX =
-    (Number.parseFloat(cs.paddingLeft) || 0) +
-    (Number.parseFloat(cs.paddingRight) || 0);
-  const padY =
-    (Number.parseFloat(cs.paddingTop) || 0) +
-    (Number.parseFloat(cs.paddingBottom) || 0);
-  return {
-    width: Math.max(1, Math.floor(rect.width - padX)),
-    height: Math.max(1, Math.floor(rect.height - padY))
-  };
-}
-
-export function sizeGraphCanvasToHost(canvas: HTMLCanvasElement): {
-  ctx: CanvasRenderingContext2D;
-  cssWidth: number;
-  cssHeight: number;
-  responsiveScale: number;
-} {
-  const host = canvas.parentElement;
-  let cssWidth: number;
-  let cssHeight: number;
-  if (host) {
-    const box = contentBoxSize(host);
-    cssWidth = box.width;
-    cssHeight = box.height;
-  } else {
-    const rect = canvas.getBoundingClientRect();
-    cssWidth = Math.max(1, Math.floor(rect.width || C.graphFallbackWidth));
-    cssHeight = Math.max(1, Math.floor(rect.height || C.graphFallbackHeight));
-  }
-  const dpr = Math.min(
-    2,
-    typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1
-  );
-  const responsiveScale = getResponsiveScale(cssWidth, cssHeight);
-  const ctx = applyCanvasSize(canvas, {
-    width: Math.max(1, Math.floor(cssWidth * dpr)),
-    height: Math.max(1, Math.floor(cssHeight * dpr)),
-    cssWidth,
-    cssHeight,
-    dpr,
-    responsiveScale
+export function sizeGraphCanvasToHost(canvas: HTMLCanvasElement) {
+  return sizeCanvasToHostBox(canvas, {
+    width: C.graphFallbackWidth,
+    height: C.graphFallbackHeight
   });
-  return { ctx, cssWidth, cssHeight, responsiveScale };
-}
-
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
 }
 
 function arrow(
@@ -355,7 +294,7 @@ function drawApparatus(
     ctx.stroke();
   }
   ctx.setLineDash([]);
-  text(
+  drawText(
     ctx,
     '进入区',
     (fieldLeft + enterX) / 2,
@@ -365,7 +304,7 @@ function drawApparatus(
     'center',
     600
   );
-  text(
+  drawText(
     ctx,
     '匀速区 (Φ不变)',
     (enterX + fieldRight) / 2,
@@ -375,7 +314,7 @@ function drawApparatus(
     'center',
     600
   );
-  text(
+  drawText(
     ctx,
     '穿出区',
     (fieldRight + exitEnd) / 2,
@@ -385,7 +324,7 @@ function drawApparatus(
     'center',
     600
   );
-  text(
+  drawText(
     ctx,
     '有界匀强磁场 B (垂直纸面向里)',
     (fieldLeft + fieldRight) / 2,
@@ -398,7 +337,7 @@ function drawApparatus(
 
   const dimY = m.fieldBottom + 18 * scale;
   drawDimLine(ctx, fieldLeft, fieldRight, dimY, p.ink, scale);
-  text(
+  drawText(
     ctx,
     `磁场宽度 D = ${C.physicalFieldWidth.toFixed(1)} m`,
     (fieldLeft + fieldRight) / 2,
@@ -421,7 +360,7 @@ function drawApparatus(
 
   const lY = loopTop - 12 * scale;
   drawDimLine(ctx, loopLeft, loopRight, lY, p.red, scale);
-  text(
+  drawText(
     ctx,
     `L = ${C.loopWidth.toFixed(1)} m`,
     (loopLeft + loopRight) / 2,
@@ -444,7 +383,7 @@ function drawApparatus(
       Math.max(2.4, 3.2 * scale),
       9 * scale
     );
-    text(
+    drawText(
       ctx,
       'v',
       loopRight + vLen + 8 * scale,
@@ -496,7 +435,7 @@ function drawPlotFrame(
   p: Palette,
   font: (n: number) => number
 ): void {
-  text(ctx, title, box.left, box.top - 16, p.ink, font(13), 'left', 700);
+  drawText(ctx, title, box.left, box.top - 16, p.ink, font(13), 'left', 700);
   ctx.strokeStyle = p.grid;
   ctx.lineWidth = 1;
   for (const x of [1, 4, 5]) {
@@ -507,9 +446,27 @@ function drawPlotFrame(
     ctx.lineTo(px, box.bottom);
     ctx.stroke();
     ctx.setLineDash([]);
-    text(ctx, String(x), px, box.bottom + 12, p.muted, font(10), 'center', 600);
+    drawText(
+      ctx,
+      String(x),
+      px,
+      box.bottom + 12,
+      p.muted,
+      font(10),
+      'center',
+      600
+    );
   }
-  text(ctx, '0', box.left, box.bottom + 12, p.muted, font(10), 'center', 600);
+  drawText(
+    ctx,
+    '0',
+    box.left,
+    box.bottom + 12,
+    p.muted,
+    font(10),
+    'center',
+    600
+  );
   yTicks.forEach((tick) => {
     const py = mapX(
       tick,
@@ -522,7 +479,16 @@ function drawPlotFrame(
     ctx.moveTo(box.left, py);
     ctx.lineTo(box.right, py);
     ctx.stroke();
-    text(ctx, String(tick), box.left - 6, py, p.muted, font(10), 'right', 600);
+    drawText(
+      ctx,
+      String(tick),
+      box.left - 6,
+      py,
+      p.muted,
+      font(10),
+      'right',
+      600
+    );
   });
   ctx.strokeStyle = p.ink;
   ctx.lineWidth = 1.6;
@@ -531,8 +497,17 @@ function drawPlotFrame(
   ctx.lineTo(box.left, box.bottom);
   ctx.lineTo(box.right + 8, box.bottom);
   ctx.stroke();
-  text(ctx, yLabel, box.left, box.top - 4, p.ink, font(11), 'left', 700);
-  text(ctx, 'x (m)', box.right + 6, box.bottom, p.ink, font(11), 'left', 700);
+  drawText(ctx, yLabel, box.left, box.top - 4, p.ink, font(11), 'left', 700);
+  drawText(
+    ctx,
+    'x (m)',
+    box.right + 6,
+    box.bottom,
+    p.ink,
+    font(11),
+    'left',
+    700
+  );
 }
 
 function drawGraphs(

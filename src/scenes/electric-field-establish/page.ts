@@ -1,11 +1,9 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
-import type { ElectricFieldParams } from './scene.sim';
 import { electricFieldControlsSchema } from './controls-schema';
 import { createElectricFieldScene } from './scene.entry';
 import { electricFieldMeta } from './scene.meta';
+import { createBoundControls } from '../../ui/components/bound-controls';
 
 bootScenePage({
   meta: electricFieldMeta,
@@ -36,45 +34,12 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, scheduleRender, writeParam }) => {
-    const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+  createControls: ({ mount, scene, scheduleRender, writeParam }) =>
+    createBoundControls({
       mount,
       schema: electricFieldControlsSchema,
-      onChange: (key, value) => {
-        if (key === 'voltage') scene.setParams({ voltage: Number(value) });
-        else
-          scene.setParams({
-            [key]: Boolean(value)
-          } as Partial<ElectricFieldParams>);
-        render();
-        writeParam?.(key, value);
-      },
-      onAction: () => render()
-    });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (key === 'voltage') {
-        const n = Number(value);
-        if (!Number.isFinite(n)) return false;
-        ctx.scene.setParams({ voltage: n });
-        ctx.setControlValue(key, n);
-        return true;
-      }
-      if (
-        ['closed', 'showSurfaceCharge', 'showDrift', 'autoRun'].includes(key)
-      ) {
-        const enabled =
-          value === 1 ||
-          value === '1' ||
-          String(value).toLowerCase() === 'true';
-        ctx.scene.setParams({ [key]: enabled } as Partial<ElectricFieldParams>);
-        ctx.setControlValue(key, enabled);
-        return true;
-      }
-      return false;
-    }
-  }
+      scene,
+      scheduleRender,
+      writeParam
+    })
 });

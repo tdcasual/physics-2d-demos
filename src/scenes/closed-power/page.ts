@@ -1,11 +1,9 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
-import type { ClosedPowerParams } from './scene.sim';
 import { closedPowerControlsSchema } from './controls-schema';
 import { createClosedPowerScene } from './scene.entry';
 import { closedPowerMeta } from './scene.meta';
+import { createBoundControls } from '../../ui/components/bound-controls';
 
 bootScenePage({
   meta: closedPowerMeta,
@@ -38,9 +36,12 @@ bootScenePage({
   },
   createControls: ({ mount, scene, scheduleRender, writeParam }) => {
     const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+    return createBoundControls({
       mount,
       schema: closedPowerControlsSchema,
+      scene,
+      scheduleRender,
+      writeParam,
       onAction: (key) => {
         if (key === 'short') scene.setParams({ externalResistance: 0 });
         else if (key === 'matched')
@@ -49,50 +50,7 @@ bootScenePage({
           });
         else if (key === 'max') scene.setParams({ externalResistance: 20 });
         render();
-      },
-      onChange: (key, value) => {
-        if (
-          key === 'emf' ||
-          key === 'internalResistance' ||
-          key === 'externalResistance'
-        ) {
-          scene.setParams({
-            [key]: Number(value)
-          } as Partial<ClosedPowerParams>);
-        } else if (key === 'autoRun' || key === 'showPowerArea') {
-          scene.setParams({
-            [key]: Boolean(value)
-          } as Partial<ClosedPowerParams>);
-        }
-        render();
-        writeParam?.(key, value);
       }
     });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (
-        key === 'emf' ||
-        key === 'internalResistance' ||
-        key === 'externalResistance'
-      ) {
-        const number = Number(value);
-        if (!Number.isFinite(number)) return false;
-        ctx.scene.setParams({ [key]: number } as Partial<ClosedPowerParams>);
-        ctx.setControlValue(key, number);
-        return true;
-      }
-      if (key === 'autoRun' || key === 'showPowerArea') {
-        const enabled =
-          value === 1 ||
-          value === '1' ||
-          String(value).toLowerCase() === 'true';
-        ctx.scene.setParams({ [key]: enabled } as Partial<ClosedPowerParams>);
-        ctx.setControlValue(key, enabled);
-        return true;
-      }
-      return false;
-    }
   }
 });

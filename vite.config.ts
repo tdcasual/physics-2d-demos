@@ -7,31 +7,12 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { analyzer } from 'vite-bundle-analyzer';
 import { themeNoFlash } from './scripts/vite-plugin-theme-noflash';
+import { contentSecurityPolicy } from './scripts/vite-plugin-csp';
+import { discoverUtilityPageEntries } from './scripts/utility-pages';
 import {
   discoverScenePageEntries,
   scenePages
 } from './scripts/vite-plugin-scene-pages';
-
-/**
- * 自动扫描 src/pages/*.html 真实文件作为构建入口（仅工具页；
- * 场景页入口由 vite-plugin-scene-pages 虚拟生成，见
- * discoverScenePageEntries）。新增场景页面时无需再手动修改此配置。
- *
- * 注意：src/pages/index-layout-test.html 是 tests/visual（scene-pages / 布局矩阵等）
- * 在 preview 模式下的测试依赖，有意随构建发布到 dist，做产物清理时请勿删除。
- */
-function discoverPageEntries(pagesDir: string): Record<string, string> {
-  const entries: Record<string, string> = {};
-
-  for (const file of readdirSync(pagesDir)) {
-    if (file.endsWith('.html')) {
-      const name = file.replace(/\.html$/, '');
-      entries[name] = resolve(pagesDir, file);
-    }
-  }
-
-  return entries;
-}
 
 function isolateCatalogSceneDependencies(): Plugin {
   return {
@@ -125,6 +106,7 @@ function bundleDevSceneRegistry(): Plugin {
 
 export default defineConfig({
   plugins: [
+    contentSecurityPolicy(),
     themeNoFlash(),
     scenePages(__dirname),
     isolateCatalogSceneDependencies(),
@@ -137,12 +119,11 @@ export default defineConfig({
         openAnalyzer: false
       })
   ].filter(Boolean),
+  // 默认只监听本机；真机/局域网调试用 `pnpm dev:lan`（显式 --host）。
   server: {
-    host: true,
     port: 5177
   },
   preview: {
-    host: true,
     port: 5177
   },
   resolve: {
@@ -221,7 +202,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
-        ...discoverPageEntries(resolve(__dirname, 'src/pages')),
+        ...discoverUtilityPageEntries(resolve(__dirname, 'src/pages')),
         ...discoverScenePageEntries(__dirname)
       },
       output: {
@@ -298,6 +279,14 @@ export default defineConfig({
             if (!instrumentId.startsWith('_')) {
               return `instrument-${instrumentId}`;
             }
+          }
+          // 场景根共享模块（stage-fit / view-base / scene-entry-helpers …）
+          // 各自成 chunk。它们也被 scene.sim.ts?catalog 实例引用；不显式
+          // 分组时 Rollup 会把它们并入 scene-registry，场景页被迫预载整个
+          // 目录（约 140 kB）。
+          const sceneRootModule = id.match(/\/src\/scenes\/([a-z-]+)\.ts$/);
+          if (sceneRootModule) {
+            return `scene-${sceneRootModule[1]}`;
           }
           // The catalog query creates build-only module instances so scene
           // pages can keep their own metadata without preloading this chunk.

@@ -16,6 +16,7 @@ import {
   xToPx,
   type SingleSlitState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateSingleSlitViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -57,23 +58,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     detector: '#43c6b5'
   }
 };
-
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 
 function rounded(
   ctx: CanvasRenderingContext2D,
@@ -176,7 +160,7 @@ function drawLaserAndSlit(
   ctx.moveTo(C.centerX, laserTop + C.laserHeight + 2);
   ctx.lineTo(C.centerX, C.slitY - C.slitBarHeight);
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '激光器',
     laserLeft - 10,
@@ -207,7 +191,16 @@ function drawLaserAndSlit(
   glow.addColorStop(1, waveRgba(state.params.lambda, 0));
   ctx.fillStyle = glow;
   ctx.fillRect(C.centerX - gap, C.slitY, gap * 2, 16);
-  text(ctx, '单缝 a', C.centerX, C.slitY - 22, p.ink, font(13), 'center', 700);
+  drawText(
+    ctx,
+    '单缝 a',
+    C.centerX,
+    C.slitY - 22,
+    p.ink,
+    font(13),
+    'center',
+    700
+  );
 
   const fan = fanHalfPx(state.firstMinimum);
   const screenTop = C.screenY - C.screenHeight / 2;
@@ -239,7 +232,7 @@ function drawLaserAndSlit(
   ctx.moveTo(dimX, C.slitY);
   ctx.lineTo(dimX, screenTop);
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     'L',
     dimX + 12,
@@ -279,7 +272,7 @@ function drawScreen(
     ctx.fillRect(x, screenTop, C.screenBandStep + 1, C.screenHeight);
   }
 
-  text(
+  drawText(
     ctx,
     '探测光屏',
     screenLeft + 16,
@@ -289,7 +282,7 @@ function drawScreen(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     '衍射图样',
     screenLeft + screenWidth - 16,
@@ -336,7 +329,7 @@ function drawDetector(
     ctx.beginPath();
     ctx.arc(C.centerX, C.slitY, radius, start, start - sweep, sweep > 0);
     ctx.stroke();
-    text(
+    drawText(
       ctx,
       'θ',
       C.centerX + Math.sign(state.params.detectorX) * (radius + 14),
@@ -372,7 +365,7 @@ function drawDetector(
     detectorAlign = 'left';
     detectorLabelX = detectorX + 8;
   }
-  text(
+  drawText(
     ctx,
     '探测器',
     detectorLabelX,
@@ -431,7 +424,7 @@ function drawGraph(
     1.6,
     8
   );
-  text(
+  drawText(
     ctx,
     'I/I₀',
     C.centerX + 14,
@@ -441,7 +434,7 @@ function drawGraph(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'x',
     C.graphRight + 14,
@@ -455,7 +448,7 @@ function drawGraph(
   for (const order of graphTickOrders(state.firstMinimum)) {
     const x = xToPx(order * state.firstMinimum);
     if (x < C.graphLeft + 8 || x > C.graphRight - 8) continue;
-    text(
+    drawText(
       ctx,
       graphTickLabel(order),
       x,

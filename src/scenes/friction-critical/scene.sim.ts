@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type FrictionMode = 'single' | 'stacked';
 export type FrictionParams = {
@@ -76,9 +77,6 @@ const DEFAULTS: FrictionParams = {
   muK: 0.4,
   autoRun: false
 };
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
 function normalize(
   input: Partial<FrictionParams>,
   prev = DEFAULTS
@@ -91,27 +89,27 @@ function normalize(
           ? 'single'
           : prev.mode,
     force: clamp(
-      finite(input.force, prev.force),
+      finiteOr(input.force, prev.force),
       frictionConstants.forceMin,
       frictionConstants.forceMax
     ),
     mass: clamp(
-      finite(input.mass, prev.mass),
+      finiteOr(input.mass, prev.mass),
       frictionConstants.massMin,
       frictionConstants.massMax
     ),
     upperMass: clamp(
-      finite(input.upperMass, prev.upperMass),
+      finiteOr(input.upperMass, prev.upperMass),
       frictionConstants.massMin,
       frictionConstants.massMax
     ),
     lowerMass: clamp(
-      finite(input.lowerMass, prev.lowerMass),
+      finiteOr(input.lowerMass, prev.lowerMass),
       frictionConstants.massMin,
       frictionConstants.massMax
     ),
     muK: clamp(
-      finite(input.muK, prev.muK),
+      finiteOr(input.muK, prev.muK),
       frictionConstants.muMin,
       frictionConstants.muMax
     ),
@@ -173,7 +171,7 @@ export function createFrictionSim(initial: Partial<FrictionParams> = {}) {
     step(dt: number) {
       if (params.autoRun)
         time =
-          (time + Math.max(0, finite(dt, 0))) %
+          (time + Math.max(0, finiteOr(dt, 0))) %
           frictionConstants.animationPeriod;
     },
     reset() {

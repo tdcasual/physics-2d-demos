@@ -4,6 +4,10 @@
  * 将 ControlsSchema 渲染为实际 DOM。
  */
 
+import {
+  collectBindings,
+  type ParamBindings
+} from '../../platform/param-binding';
 import { createControlCard } from './ControlCard';
 import {
   createSliderRow,
@@ -19,7 +23,8 @@ import {
 import type { DisposableElement } from './scene-controls';
 import type {
   ControlsSchema,
-  ControlField
+  ControlField,
+  VisibleWhen
 } from '../../platform/controls-schema';
 
 function tryDispose(el: HTMLElement): void {
@@ -76,6 +81,65 @@ export interface SchemaRendererInstance {
   dispose: () => void;
   /** 字段键 → schema 类型，供 app/control-projection 静默分派 */
   fieldTypes: Map<string, string>;
+  /** 字段键 → 控件/参数换算（schema `bind`），供 URL 恢复、投影与写回 */
+  bindings: ParamBindings;
+  /** 枚举字段键 → 合法选项（控件值）；URL 恢复据此丢弃非法值 */
+  fieldOptions: ReadonlyMap<string, readonly string[]>;
+}
+
+function collectFieldOptions(
+  schema: ControlsSchema
+): Map<string, readonly string[]> {
+  const options = new Map<string, readonly string[]>();
+  for (const section of schema.sections) {
+    for (const field of section.fields) {
+      if (field.type === 'preset-group') {
+        options.set(
+          field.key,
+          field.presets.map((preset) => preset.id)
+        );
+      } else if (field.type === 'scene-selector') {
+        options.set(
+          field.key,
+          field.scenes.map((scene) => scene.id)
+        );
+      } else if (field.type === 'select') {
+        options.set(
+          field.key,
+          field.options.map((option) => option.value)
+        );
+      }
+    }
+  }
+  return options;
+}
+
+function initialControlValue(field: ControlField): unknown {
+  switch (field.type) {
+    case 'slider':
+    case 'number':
+    case 'text':
+    case 'select':
+    case 'toggle':
+      return field.value;
+    case 'preset-group':
+    case 'scene-selector':
+      return field.initialActive;
+    default:
+      return undefined;
+  }
+}
+
+/** visibleWhen 求值：各键 AND；数组为 OR；按字符串相等比较控件值 */
+export function matchesVisibleWhen(
+  when: VisibleWhen,
+  state: ReadonlyMap<string, unknown>
+): boolean {
+  return Object.entries(when).every(([key, expected]) => {
+    const actual = String(state.get(key));
+    const options = Array.isArray(expected) ? expected : [expected];
+    return options.some((option) => String(option) === actual);
+  });
 }
 
 export function renderSchema(
@@ -90,7 +154,30 @@ export function renderSchema(
   const activeSetters = new Map<string, (id: string) => void>();
   const visibleNodes = new Map<string, HTMLElement>();
   const fieldTypes = new Map<string, string>();
+  const bindings = collectBindings(schema);
+  const fieldOptions = collectFieldOptions(schema);
   const cleanupFns: Array<() => void> = [];
+
+  // 声明式显隐：按当前控件值求值 visibleWhen，用 `hidden`（不碰 inline
+  // display——setVisible 与演示模式 minimal 面板各自管理 display）。
+  const controlState = new Map<string, unknown>();
+  const visibilityRules: Array<{ node: HTMLElement; when: VisibleWhen }> = [];
+  const applyVisibility = (): void => {
+    for (const rule of visibilityRules) {
+      rule.node.hidden = !matchesVisibleWhen(rule.when, controlState);
+    }
+  };
+  const recordValue = (key: string, value: unknown): void => {
+    controlState.set(key, value);
+    applyVisibility();
+  };
+  const trackedOnChange = (
+    key: string,
+    value: number | string | boolean
+  ): void => {
+    recordValue(key, value);
+    onChange(key, value);
+  };
 
   schema.sections.forEach((section) => {
     const card = createControlCard(section.title, {
@@ -110,9 +197,14 @@ export function renderSchema(
     if (needsFullWidth) {
       card.element.dataset.span = 'full';
     }
+    if (section.visibleWhen) {
+      visibilityRules.push({ node: card.element, when: section.visibleWhen });
+    }
 
     section.fields.forEach((field) => {
       fieldTypes.set(field.key, field.type);
+      const initial = initialControlValue(field);
+      if (initial !== undefined) controlState.set(field.key, initial);
       const {
         node,
         valueSetter,
@@ -120,11 +212,14 @@ export function renderSchema(
         valueGetter,
         activeSetter,
         cleanup
-      } = renderField(field, onChange, onAction);
+      } = renderField(field, trackedOnChange, onAction);
       if (node) {
         node.dataset.controlKey = field.key;
         card.body.appendChild(node);
         visibleNodes.set(field.key, node);
+        if (field.visibleWhen) {
+          visibilityRules.push({ node, when: field.visibleWhen });
+        }
       }
       if (valueSetter) valueSetters.set(field.key, valueSetter);
       registerSilentValueSetter(
@@ -140,23 +235,28 @@ export function renderSchema(
 
     mount.appendChild(card.element);
   });
+  applyVisibility();
 
   return {
     element: mount,
     setValue(key: string, value: unknown) {
       valueSetters.get(key)?.(value);
+      recordValue(key, value);
     },
     setValueSilently(key: string, value: unknown) {
       silentValueSetters.get(key)?.(value);
+      recordValue(key, value);
     },
     getValue<T>(key: string): T | undefined {
       return valueGetters.get(key)?.() as T | undefined;
     },
     setActive(key: string, id: string) {
       activeSetters.get(key)?.(id);
+      recordValue(key, id);
     },
     setActiveSilently(key: string, id: string) {
       activeSetters.get(key)?.(id);
+      recordValue(key, id);
     },
     setVisible(key: string, visible: boolean) {
       const node = visibleNodes.get(key);
@@ -172,8 +272,12 @@ export function renderSchema(
       valueGetters.clear();
       activeSetters.clear();
       fieldTypes.clear();
+      controlState.clear();
+      visibilityRules.length = 0;
     },
-    fieldTypes
+    fieldTypes,
+    bindings,
+    fieldOptions
   };
 }
 

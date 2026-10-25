@@ -1,3 +1,4 @@
+import { finiteOr, asBooleanOr } from '../../core/coerce';
 export type BellowsMotion = 'auto' | 'left' | 'right';
 
 export type BellowsParams = {
@@ -35,25 +36,6 @@ const CYCLE = 4;
 const FIXED_LEFT_PROGRESS = 0.42;
 const FIXED_RIGHT_PROGRESS = -0.42;
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
-function asBool(value: unknown, fallback: boolean): boolean {
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'number') return value !== 0;
-  if (typeof value === 'string') {
-    const text = value.trim().toLowerCase();
-    if (text === '0' || text === 'false' || text === 'off' || text === 'no') {
-      return false;
-    }
-    if (text === '1' || text === 'true' || text === 'on' || text === 'yes') {
-      return true;
-    }
-  }
-  return fallback;
-}
-
 function normalizeMotion(value: unknown): BellowsMotion {
   return value === 'left' || value === 'right' ? value : 'auto';
 }
@@ -61,8 +43,8 @@ function normalizeMotion(value: unknown): BellowsMotion {
 function normalizeParams(input: Partial<BellowsParams>): BellowsParams {
   return {
     motion: normalizeMotion(input.motion),
-    autoRun: asBool(input.autoRun, true),
-    showFlow: asBool(input.showFlow, true)
+    autoRun: asBooleanOr(input.autoRun, true),
+    showFlow: asBooleanOr(input.showFlow, true)
   };
 }
 
@@ -192,7 +174,7 @@ export function createBellowsSim(initial: Partial<BellowsParams> = {}) {
     },
     step(dt: number): void {
       if (!params.autoRun || params.motion !== 'auto') return;
-      const delta = Math.max(0, finite(dt, 0));
+      const delta = Math.max(0, finiteOr(dt, 0));
       t = wrapTime(t + delta);
     },
     reset(): void {

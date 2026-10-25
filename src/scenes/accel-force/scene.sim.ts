@@ -1,5 +1,8 @@
 import { readoutOccludesStage } from '../../platform/stage-readout';
 import { clamp } from '../../core/math';
+import { betterPose, containInRect, measureStageLayout } from '../stage-fit';
+import type { StageLayoutHint } from '../stage-fit';
+import { asBooleanOr } from '../../core/coerce';
 
 export type AccelForceMode = 'force' | 'inverseMass';
 
@@ -45,13 +48,6 @@ export type AccelForceState = {
   status: string;
 };
 
-export type StageLayoutHint = {
-  floatingReadout: boolean;
-  overlayPx?: number;
-  overlayTopPx?: number;
-  overlayHeightPx?: number;
-};
-
 export type ApparatusLayout = {
   trackStart: AccelForceVec;
   trackEnd: AccelForceVec;
@@ -75,12 +71,6 @@ export type GraphFrame = {
   right: number;
   top: number;
   bottom: number;
-};
-
-type StagePose = {
-  fit: number;
-  offsetX: number;
-  offsetY: number;
 };
 
 const G = 9.8;
@@ -210,21 +200,6 @@ export function finite(value: unknown, fallback: number): number {
   return fallback;
 }
 
-function asBool(value: unknown, fallback: boolean): boolean {
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'number') return value !== 0;
-  if (typeof value === 'string') {
-    const text = value.trim().toLowerCase();
-    if (text === '0' || text === 'false' || text === 'off' || text === 'no') {
-      return false;
-    }
-    if (text === '1' || text === 'true' || text === 'on' || text === 'yes') {
-      return true;
-    }
-  }
-  return fallback;
-}
-
 export function parseAccelForceMode(
   value: unknown,
   fallback: AccelForceMode = 'force'
@@ -255,11 +230,11 @@ function normalizeParams(
     balanced:
       input.balanced === undefined
         ? previous.balanced
-        : asBool(input.balanced, previous.balanced),
+        : asBooleanOr(input.balanced, previous.balanced),
     autoRun:
       input.autoRun === undefined
         ? previous.autoRun
-        : asBool(input.autoRun, previous.autoRun)
+        : asBooleanOr(input.autoRun, previous.autoRun)
   };
 }
 
@@ -628,67 +603,10 @@ export function apparatusInsideFrame(layout: ApparatusLayout): boolean {
   return points.every((p) => pointInsideFrame(p.x, p.y, 4) && p.y <= limit);
 }
 
-function containInRect(
-  boxW: number,
-  boxH: number,
-  availW: number,
-  availH: number,
-  originX: number,
-  originY: number,
-  alignX: 'left' | 'center'
-): StagePose {
-  const w = Math.max(1, availW);
-  const h = Math.max(1, availH);
-  const fit = Math.min(w / boxW, h / boxH);
-  const stageW = boxW * fit;
-  const stageH = boxH * fit;
-  return {
-    fit,
-    offsetX: originX + (alignX === 'center' ? (w - stageW) / 2 : 0),
-    offsetY: originY + (h - stageH) / 2
-  };
-}
-
-function betterPose(a: StagePose, b: StagePose): StagePose {
-  return b.fit > a.fit + 1e-9 ? b : a;
-}
-
-export function hasFloatingReadout(anchor?: Element | null): boolean {
-  return readoutOccludesStage(anchor);
-}
+export const hasFloatingReadout = readoutOccludesStage;
 
 export function stageLayoutFrom(canvas?: Element | null): StageLayoutHint {
-  const floatingReadout = hasFloatingReadout(canvas);
-  if (!floatingReadout) return { floatingReadout: false, overlayPx: 0 };
-  let overlayPx = 0;
-  let overlayTopPx = 0;
-  let overlayHeightPx = 0;
-  if (canvas instanceof HTMLElement) {
-    const panel = canvas.parentElement?.querySelector(
-      '.teaching-readout-panel, .srgb-readout-panel'
-    );
-    if (panel instanceof HTMLElement) {
-      const cr = canvas.getBoundingClientRect();
-      const rr = panel.getBoundingClientRect();
-      if (
-        rr.left < cr.right &&
-        rr.right > cr.left &&
-        rr.top < cr.bottom &&
-        rr.bottom > cr.top
-      ) {
-        overlayPx = Math.max(0, cr.right - rr.left);
-        const top = Math.max(rr.top, cr.top);
-        const bottom = Math.min(rr.bottom, cr.bottom);
-        overlayTopPx = Math.max(0, top - cr.top);
-        overlayHeightPx = Math.max(0, bottom - top);
-      }
-    }
-  }
-  return {
-    floatingReadout: true,
-    overlayPx: overlayPx || FLOATING_OVERLAY_FALLBACK,
-    ...(overlayHeightPx > 0 ? { overlayTopPx, overlayHeightPx } : {})
-  };
+  return measureStageLayout(canvas, FLOATING_OVERLAY_FALLBACK);
 }
 
 export function stageTransform(
@@ -859,3 +777,5 @@ export function createAccelForceSim(initial: Partial<AccelForceParams> = {}) {
     }
   };
 }
+
+export type { StageLayoutHint };

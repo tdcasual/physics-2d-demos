@@ -6,6 +6,7 @@ import {
   alternatingElectricFieldSample,
   type AlternatingElectricFieldState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateAlternatingElectricFieldViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -91,23 +92,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
   }
 };
 
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
-
 function rounded(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -175,11 +159,20 @@ function drawPlates(
   ctx.fillRect(PLATE_LEFT - 9, PLATE_TOP, 18, PLATE_BOTTOM - PLATE_TOP);
   ctx.fillStyle = p.blue;
   ctx.fillRect(PLATE_RIGHT - 9, PLATE_TOP, 18, PLATE_BOTTOM - PLATE_TOP);
-  text(ctx, '极板 A', PLATE_LEFT, PLATE_TOP - 26, p.red, 16, 'center', 700);
-  text(ctx, '极板 B', PLATE_RIGHT, PLATE_TOP - 26, p.blue, 16, 'center', 700);
+  drawText(ctx, '极板 A', PLATE_LEFT, PLATE_TOP - 26, p.red, 16, 'center', 700);
+  drawText(
+    ctx,
+    '极板 B',
+    PLATE_RIGHT,
+    PLATE_TOP - 26,
+    p.blue,
+    16,
+    'center',
+    700
+  );
   for (let y = PLATE_TOP + 28; y < PLATE_BOTTOM - 10; y += 34) {
-    text(ctx, '+', PLATE_LEFT, y, p.panel, 16, 'center', 700);
-    text(ctx, '−', PLATE_RIGHT, y, p.panel, 16, 'center', 700);
+    drawText(ctx, '+', PLATE_LEFT, y, p.panel, 16, 'center', 700);
+    drawText(ctx, '−', PLATE_RIGHT, y, p.panel, 16, 'center', 700);
   }
   ctx.strokeStyle = p.muted;
   ctx.lineWidth = 2;
@@ -197,7 +190,7 @@ function drawPlates(
       arrow(ctx, start, y, end, y, p.blue, 2);
     }
   }
-  text(
+  drawText(
     ctx,
     `UBA = ${state.voltage > 0 ? '+' : '−'}${Math.abs(state.voltage).toFixed(0)} V`,
     (PLATE_LEFT + PLATE_RIGHT) / 2,
@@ -228,7 +221,7 @@ function drawParticle(
   ctx.strokeStyle = p.panel;
   ctx.lineWidth = 2;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     state.params.charge === 'electron' ? 'e⁻' : '+q',
     x,
@@ -259,7 +252,7 @@ function drawParticle(
       p.red,
       3
     );
-    text(
+    drawText(
       ctx,
       'v',
       x + velocityDirection * (speed + 12),
@@ -269,7 +262,7 @@ function drawParticle(
       'center',
       700
     );
-    text(
+    drawText(
       ctx,
       'a',
       x + (state.acceleration >= 0 ? 56 : -56),
@@ -280,7 +273,7 @@ function drawParticle(
       700
     );
   }
-  text(
+  drawText(
     ctx,
     `x = ${state.position.toFixed(1)} mm`,
     x,
@@ -351,9 +344,18 @@ function drawGraph(
   ctx.lineTo(cursorX, y + GRAPH_H);
   ctx.stroke();
   ctx.setLineDash([]);
-  text(ctx, title, GRAPH_LEFT + 12, y + 16, p.ink, 14, 'left', 700);
-  text(ctx, suffix, GRAPH_LEFT + GRAPH_W - 12, y + 16, color, 12, 'right', 700);
-  text(
+  drawText(ctx, title, GRAPH_LEFT + 12, y + 16, p.ink, 14, 'left', 700);
+  drawText(
+    ctx,
+    suffix,
+    GRAPH_LEFT + GRAPH_W - 12,
+    y + 16,
+    color,
+    12,
+    'right',
+    700
+  );
+  drawText(
     ctx,
     't / s',
     GRAPH_LEFT + GRAPH_W - 10,
@@ -375,7 +377,7 @@ function drawPanel(
   const width = PANEL_W - PANEL_INSET * 2;
   ctx.fillStyle = p.panel;
   ctx.fillRect(PANEL_X, 0, PANEL_W, BASE_H);
-  text(ctx, '交变电场运动', x, TITLE_Y, p.ink, 22 * scale, 'left', 700);
+  drawText(ctx, '交变电场运动', x, TITLE_Y, p.ink, 22 * scale, 'left', 700);
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 3;
   ctx.beginPath();
@@ -385,7 +387,16 @@ function drawPanel(
   rounded(ctx, x, METRICS_Y, width, METRICS_H);
   ctx.fillStyle = p.soft;
   ctx.fill();
-  text(ctx, '实时读数', x + 14, METRICS_Y + 24, p.ink, 16 * scale, 'left', 700);
+  drawText(
+    ctx,
+    '实时读数',
+    x + 14,
+    METRICS_Y + 24,
+    p.ink,
+    16 * scale,
+    'left',
+    700
+  );
   const rows = [
     ['相位 φ', `${(state.phase * 360).toFixed(0)}°`, p.gold],
     [
@@ -404,8 +415,8 @@ function drawPanel(
   ] as const;
   rows.forEach(([label, value, color], rowIndex) => {
     const y = METRICS_Y + 55 + rowIndex * 34;
-    text(ctx, label, x + 14, y, p.muted, 13 * scale, 'left', 600);
-    text(ctx, value, x + width - 14, y, color, 13 * scale, 'right', 700);
+    drawText(ctx, label, x + 14, y, p.muted, 13 * scale, 'left', 600);
+    drawText(ctx, value, x + width - 14, y, color, 13 * scale, 'right', 700);
     if (rowIndex < rows.length - 1) {
       ctx.strokeStyle = p.border;
       ctx.lineWidth = 1;
@@ -421,7 +432,7 @@ function drawPanel(
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 2;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '分段运动关系',
     x + 14,
@@ -431,7 +442,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'E = UBA / d',
     x + 14,
@@ -441,7 +452,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     'a = qE / m',
     x + 14,
@@ -451,7 +462,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     'Δv = ∫ a dt',
     x + 14,
@@ -461,7 +472,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'x = ∫ v dt',
     x + 14,
@@ -471,7 +482,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     '方波：每 T/2 反向',
     x + 14,
@@ -481,7 +492,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `U₀ = ${state.params.voltageAmplitude.toFixed(0)} V · T = ${state.params.period.toFixed(1)} s`,
     x + 14,
@@ -500,7 +511,7 @@ function drawField(
   scale: number
 ): void {
   drawGrid(ctx, p);
-  text(
+  drawText(
     ctx,
     '带电粒子在交变电场中的运动',
     26,
@@ -510,7 +521,7 @@ function drawField(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     '方波换向，轨迹与三张图同步',
     28,
@@ -520,7 +531,7 @@ function drawField(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `UBA = ±${state.params.voltageAmplitude.toFixed(0)} V · T = ${state.params.period.toFixed(1)} s`,
     28,

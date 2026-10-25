@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type CapacitorParams = {
   mode: 0 | 1 | 2;
@@ -126,10 +127,6 @@ const DEFAULT_PARAMS: CapacitorParams = {
   showCurrent: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function asBoolean(value: unknown, fallback: boolean): boolean {
   if (value === undefined) return fallback;
   if (typeof value === 'boolean') return value;
@@ -150,17 +147,17 @@ function normalize(
   return {
     mode: modeValue(input.mode, previous.mode),
     voltage: clamp(
-      finite(input.voltage, previous.voltage),
+      finiteOr(input.voltage, previous.voltage),
       capacitorConstants.minVoltage,
       capacitorConstants.maxVoltage
     ),
     resistance: clamp(
-      finite(input.resistance, previous.resistance),
+      finiteOr(input.resistance, previous.resistance),
       capacitorConstants.minResistance,
       capacitorConstants.maxResistance
     ),
     capacitance: clamp(
-      finite(input.capacitance, previous.capacitance),
+      finiteOr(input.capacitance, previous.capacitance),
       capacitorConstants.minCapacitance,
       capacitorConstants.maxCapacitance
     ),
@@ -175,7 +172,7 @@ export function capacitorTau(
 ): number {
   return Math.max(
     0,
-    (finite(resistanceKiloohm, 0) * finite(capacitanceMicrofarad, 0)) / 1000
+    (finiteOr(resistanceKiloohm, 0) * finiteOr(capacitanceMicrofarad, 0)) / 1000
   );
 }
 
@@ -194,11 +191,11 @@ export function capacitorAt(
   | 'progress'
   | 'atTauVoltage'
 > {
-  const e = Math.max(0, finite(voltage, 0));
-  const r = Math.max(0.001, finite(resistance, 1));
-  const c = Math.max(0, finite(capacitance, 0));
+  const e = Math.max(0, finiteOr(voltage, 0));
+  const r = Math.max(0.001, finiteOr(resistance, 1));
+  const c = Math.max(0, finiteOr(capacitance, 0));
   const tau = capacitorTau(r, c);
-  const t = Math.max(0, finite(time, 0));
+  const t = Math.max(0, finiteOr(time, 0));
   const progress =
     tau > 0 ? clamp(t / tau, 0, capacitorConstants.maxTauCount) : 0;
   const exponential = tau > 0 ? Math.exp(-t / tau) : 0;
@@ -251,7 +248,7 @@ export function createCapacitorSim(initial: Partial<CapacitorParams> = {}) {
       const maxTime =
         capacitorTau(params.resistance, params.capacitance) *
         capacitorConstants.maxTauCount;
-      time = Math.min(maxTime, time + Math.max(0, finite(dt, 0)));
+      time = Math.min(maxTime, time + Math.max(0, finiteOr(dt, 0)));
     },
     reset(): void {
       params = { ...defaults };

@@ -27,6 +27,7 @@ export const capacitorControlsSchema: ControlsSchema = {
         {
           type: 'preset-group',
           key: 'voltage',
+          bind: { numeric: true },
           columns: 3,
           label: '电源电动势 E',
           presets: [
@@ -39,6 +40,7 @@ export const capacitorControlsSchema: ControlsSchema = {
         {
           type: 'preset-group',
           key: 'resistance',
+          bind: { numeric: true },
           columns: 3,
           label: '电阻值 R',
           presets: [
@@ -51,6 +53,7 @@ export const capacitorControlsSchema: ControlsSchema = {
         {
           type: 'preset-group',
           key: 'capacitance',
+          bind: { numeric: true },
           columns: 3,
           label: '电容量 C',
           presets: [

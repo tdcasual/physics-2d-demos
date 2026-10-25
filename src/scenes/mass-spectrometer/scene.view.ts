@@ -6,6 +6,7 @@ import {
   type MassSpectrometerParticle,
   type MassSpectrometerState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateMassSpectrometerViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -71,23 +72,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     rail: '#d0d9e5'
   }
 };
-
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 
 function rounded(
   ctx: CanvasRenderingContext2D,
@@ -160,13 +144,22 @@ function drawAcceleration(
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 2;
   ctx.stroke();
-  text(ctx, '离子源', C.sourceX, C.sourceY - 16, p.ink, 16, 'center', 700);
+  drawText(ctx, '离子源', C.sourceX, C.sourceY - 16, p.ink, 16, 'center', 700);
 
   ctx.fillStyle = p.plate;
   ctx.fillRect(C.plateLeft, C.plateTop, C.plateRight - C.plateLeft, 12);
   ctx.fillRect(C.plateLeft, C.plateBottom - 12, C.plateRight - C.plateLeft, 12);
-  text(ctx, '+', C.plateLeft - 22, C.plateTop + 6, p.red, 26, 'center', 700);
-  text(
+  drawText(
+    ctx,
+    '+',
+    C.plateLeft - 22,
+    C.plateTop + 6,
+    p.red,
+    26,
+    'center',
+    700
+  );
+  drawText(
     ctx,
     '−',
     C.plateRight + 22,
@@ -182,7 +175,7 @@ function drawAcceleration(
     arrow(ctx, x, C.plateTop + 24, x, C.plateBottom - 25, `${p.red}aa`, 2);
   }
   ctx.setLineDash([]);
-  text(
+  drawText(
     ctx,
     `加速电压 U = ${state.voltage.toFixed(0)} V`,
     C.plateRight + 46,
@@ -192,7 +185,7 @@ function drawAcceleration(
     'left',
     700
   );
-  text(ctx, '电场加速', C.plateRight + 46, 212, p.muted, 13, 'left', 600);
+  drawText(ctx, '电场加速', C.plateRight + 46, 212, p.muted, 13, 'left', 600);
 
   state.particles.forEach((particle) => {
     const visible =
@@ -214,7 +207,7 @@ function drawAcceleration(
     p.teal,
     4
   );
-  text(ctx, 'v', C.entryX + 14, C.baselineY - 22, p.teal, 16, 'left', 700);
+  drawText(ctx, 'v', C.entryX + 14, C.baselineY - 22, p.teal, 16, 'left', 700);
 }
 
 function drawField(
@@ -231,13 +224,22 @@ function drawField(
       ctx.beginPath();
       ctx.arc(x, y, 10, 0, Math.PI * 2);
       ctx.stroke();
-      text(ctx, '×', x, y, p.fieldMark, 16, 'center', 700);
+      drawText(ctx, '×', x, y, p.fieldMark, 16, 'center', 700);
     }
   }
   ctx.fillStyle = p.rail;
   ctx.fillRect(0, C.baselineY - 5, C.fieldWidth, 10);
-  text(ctx, '狭缝', C.entryX - 4, C.baselineY - 16, p.ink, 13, 'center', 700);
-  text(
+  drawText(
+    ctx,
+    '狭缝',
+    C.entryX - 4,
+    C.baselineY - 16,
+    p.ink,
+    13,
+    'center',
+    700
+  );
+  drawText(
     ctx,
     '匀强磁场 B（垂直纸面向里）',
     32,
@@ -247,7 +249,7 @@ function drawField(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     '探测记录线',
     C.fieldWidth - 28,
@@ -266,7 +268,7 @@ function drawField(
     ctx.stroke();
   }
   [5, 10, 15, 20, 25, 30, 35].forEach((n, index) => {
-    text(
+    drawText(
       ctx,
       `${n}`,
       C.entryX + 88 + index * 54,
@@ -306,7 +308,7 @@ function drawTrajectory(
   ctx.moveTo(markerX, C.baselineY - 10);
   ctx.lineTo(markerX, C.baselineY + 19);
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     particle.label.slice(0, 1),
     markerX,
@@ -374,7 +376,7 @@ function drawPanel(
   rounded(ctx, C.panelX, 0, C.panelWidth, C.baseHeight, 16);
   ctx.fill();
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '质谱仪核心结构',
     C.panelX + C.panelWidth / 2,
@@ -399,7 +401,7 @@ function drawPanel(
   );
   ctx.fillStyle = p.soft;
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '粒子轨迹',
     C.panelX + C.panelInset * 2,
@@ -421,7 +423,7 @@ function drawPanel(
     ctx.beginPath();
     ctx.arc(C.panelX + C.panelInset * 2 + 5, y, 6, 0, Math.PI * 2);
     ctx.fill();
-    text(
+    drawText(
       ctx,
       particle.label,
       C.panelX + C.panelInset * 2 + 20,
@@ -431,7 +433,7 @@ function drawPanel(
       'left',
       600
     );
-    text(
+    drawText(
       ctx,
       `R ${(particle.radius * 100).toFixed(2)} cm`,
       C.panelX + C.panelWidth - C.panelInset * 2,
@@ -442,7 +444,7 @@ function drawPanel(
       700
     );
   });
-  text(
+  drawText(
     ctx,
     `U = ${state.voltage.toFixed(0)} V`,
     C.panelX + C.panelInset * 2,
@@ -452,7 +454,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `B = ${state.fieldStrength.toFixed(2)} T`,
     C.panelX + C.panelWidth - C.panelInset * 2,
@@ -473,7 +475,7 @@ function drawPanel(
   );
   ctx.fillStyle = '#f7fbfd';
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '质量测量',
     C.panelX + C.panelInset * 2,
@@ -483,7 +485,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `R = ${(state.measuredRadius * 100).toFixed(2)} cm`,
     C.panelX + C.panelInset * 2,
@@ -493,7 +495,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `m = ${state.calculatedMass.toFixed(2)} u`,
     C.panelX + C.panelWidth - C.panelInset * 2,
@@ -503,7 +505,7 @@ function drawPanel(
     'right',
     700
   );
-  text(
+  drawText(
     ctx,
     'qU = ½mv²',
     C.panelX + C.panelInset * 2,
@@ -513,7 +515,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'r = mv / (qB)',
     C.panelX + C.panelInset * 2,
@@ -523,7 +525,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'm = B²R²q / (2U)',
     C.panelX + C.panelInset * 2,
@@ -550,7 +552,7 @@ function drawPanel(
       : state.status === 'deflecting'
         ? '磁场偏转'
         : '到达探测线';
-  text(
+  drawText(
     ctx,
     status,
     C.panelX + C.panelInset * 2,
@@ -560,7 +562,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `氢—氚间距 ${state.separation.toFixed(0)} px`,
     C.panelX + C.panelInset * 2,
@@ -570,7 +572,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     '同 U、B 下，m 越大，R 越大',
     C.panelX + C.panelInset * 2,
@@ -618,7 +620,7 @@ export function createMassSpectrometerView(
     ctx.fillStyle = p.bg;
     ctx.fillRect(0, 0, C.baseWidth, C.baseHeight);
     drawGrid(ctx, p);
-    text(
+    drawText(
       ctx,
       '电场加速 · 磁场偏转 · 质量分离',
       C.fieldWidth / 2,

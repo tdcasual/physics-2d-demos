@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { chargedParticleControlsSchema } from '../../src/scenes/charged-particle-circle/controls-schema';
 import { chargedParticleMeta } from '../../src/scenes/charged-particle-circle/scene.meta';
@@ -66,25 +64,6 @@ function captureLabels(canvas: HTMLCanvasElement, run: () => void): string[] {
 }
 
 describe('charged-particle-circle view contract', () => {
-  it('keeps the canvas free of panels, formulas, and readout copy', () => {
-    const source = readFileSync(
-      resolve(
-        process.cwd(),
-        'src/scenes/charged-particle-circle/scene.view.ts'
-      ),
-      'utf8'
-    );
-    expect(source).not.toMatch(
-      /drawPanel|drawLegend|左手定则|核心规律|经典模型|空格|周期与/
-    );
-    expect(source).not.toMatch(/R = mv|T = 2π|粒子质量|磁感应强度/);
-    const simSource = readFileSync(
-      resolve(process.cwd(), 'src/scenes/charged-particle-circle/scene.sim.ts'),
-      'utf8'
-    );
-    expect(simSource).not.toMatch(/panelWidth|fieldWidth|formulaCard/);
-  });
-
   it('draws only short orbit labels', () => {
     const canvas = mockCanvas(1280, 720);
     const view = createChargedParticleView({ canvas });

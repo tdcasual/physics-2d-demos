@@ -7,6 +7,7 @@ import {
   PARTICLE_POINTS,
   type ElectrostaticInductionState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateElectrostaticInductionViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -67,22 +68,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     stand: '#c2cedc'
   }
 };
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 function rounded(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -117,7 +102,7 @@ function drawHeader(
   state: ElectrostaticInductionState,
   p: Palette
 ): void {
-  text(
+  drawText(
     ctx,
     '静电感应 · 电荷重新分布',
     C.titleX,
@@ -127,7 +112,7 @@ function drawHeader(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     '高中物理 / 静电场',
     C.titleX,
@@ -145,7 +130,7 @@ function drawHeader(
   ctx.stroke();
   ctx.fillStyle = p.teal;
   ctx.fillRect(C.cardX, C.cardY + 24, 7, C.cardAccentHeight);
-  text(
+  drawText(
     ctx,
     state.phase === 'neutral'
       ? '导体接触 · 整体中性'
@@ -161,8 +146,17 @@ function drawHeader(
     'left',
     700
   );
-  text(ctx, state.status, C.cardX + 28, C.cardY + 70, p.muted, 15, 'left', 600);
-  text(
+  drawText(
+    ctx,
+    state.status,
+    C.cardX + 28,
+    C.cardY + 70,
+    p.muted,
+    15,
+    'left',
+    600
+  );
+  drawText(
     ctx,
     `内部合场强 ${state.internalField.toFixed(2)} E₀`,
     C.cardX + C.cardWidth - 26,
@@ -197,7 +191,7 @@ function drawRod(
   ctx.lineWidth = 2;
   ctx.stroke();
   for (let index = 0; index < 6; index += 1)
-    text(
+    drawText(
       ctx,
       state.rodPolarity === 'positive' ? '+' : '−',
       x + 24 + index * 27,
@@ -207,7 +201,7 @@ function drawRod(
       'center',
       700
     );
-  text(
+  drawText(
     ctx,
     state.rodPolarity === 'positive' ? '带正电绝缘棒' : '带负电绝缘棒',
     x + C.rodWidth / 2,
@@ -217,7 +211,7 @@ function drawRod(
     'center',
     700
   );
-  text(ctx, '绝缘棒', x - 18, C.sphereY, p.muted, 13, 'right', 600);
+  drawText(ctx, '绝缘棒', x - 18, C.sphereY, p.muted, 13, 'right', 600);
 }
 function drawStand(
   ctx: CanvasRenderingContext2D,
@@ -239,7 +233,7 @@ function drawStand(
   ctx.lineTo(x - 18, C.standBottom + 25);
   ctx.closePath();
   ctx.fill();
-  text(ctx, label, x, C.standBottom + 48, p.muted, 14, 'center', 700);
+  drawText(ctx, label, x, C.standBottom + 48, p.muted, 14, 'center', 700);
 }
 function drawSphere(
   ctx: CanvasRenderingContext2D,
@@ -257,7 +251,7 @@ function drawSphere(
   ctx.strokeStyle = p.conductorEdge;
   ctx.lineWidth = 3;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     label,
     cx,
@@ -267,7 +261,7 @@ function drawSphere(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     charge > 0 ? '+Q' : charge < 0 ? '−Q' : '中性',
     cx,
@@ -290,8 +284,8 @@ function drawSphere(
       ctx.beginPath();
       ctx.arc(px, py, C.particleRadius, 0, Math.PI * 2);
       ctx.fill();
-      text(ctx, '−', px, py + 0.5, '#ffffff', 9, 'center', 700);
-    } else text(ctx, '+', px, py, p.positive, 16, 'center', 700);
+      drawText(ctx, '−', px, py + 0.5, '#ffffff', 9, 'center', 700);
+    } else drawText(ctx, '+', px, py, p.positive, 16, 'center', 700);
   });
 }
 function drawGround(
@@ -316,7 +310,16 @@ function drawGround(
     ctx.lineTo(C.sphereBX + C.groundToothEndOffset + index * 10, C.trackY + 10);
     ctx.stroke();
   }
-  text(ctx, '接地', C.sphereBX + 100, C.trackY - 36, p.teal, 14, 'center', 700);
+  drawText(
+    ctx,
+    '接地',
+    C.sphereBX + 100,
+    C.trackY - 36,
+    p.teal,
+    14,
+    'center',
+    700
+  );
 }
 function drawBottom(
   ctx: CanvasRenderingContext2D,
@@ -329,12 +332,21 @@ function drawBottom(
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 1;
   ctx.stroke();
-  text(ctx, '蓝色小球：自由电子', 58, C.bottomY + 26, p.muted, 14, 'left', 600);
+  drawText(
+    ctx,
+    '蓝色小球：自由电子',
+    58,
+    C.bottomY + 26,
+    p.muted,
+    14,
+    'left',
+    600
+  );
   ctx.fillStyle = p.electron;
   ctx.beginPath();
   ctx.arc(47, C.bottomY + 26, 7, 0, Math.PI * 2);
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '灰色“+”：固定正离子',
     290,
@@ -344,7 +356,7 @@ function drawBottom(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `qA ${state.chargeA > 0 ? '+' : ''}${state.chargeA.toFixed(0)}Q   ·   qB ${state.chargeB > 0 ? '+' : ''}${state.chargeB.toFixed(0)}Q`,
     590,
@@ -354,7 +366,7 @@ function drawBottom(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `t = ${state.time.toFixed(2)} s`,
     1124,

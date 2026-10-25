@@ -9,6 +9,7 @@ export const freeFallControlsSchema: ControlsSchema = {
         {
           type: 'preset-group',
           key: 'initialSpeed',
+          bind: { numeric: true },
           columns: 3,
           initialActive: '20',
           presets: [

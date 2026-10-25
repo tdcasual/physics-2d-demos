@@ -7,6 +7,7 @@ import {
   conicalPendulumConstants as C,
   type ConicalPendulumState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateConicalPendulumViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -65,22 +66,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
   }
 };
 
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 function rounded(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -162,7 +147,7 @@ function drawOrbit(ctx: CanvasRenderingContext2D, p: Palette): void {
   ctx.lineTo(C.orbitCenterX, C.orbitCenterY);
   ctx.stroke();
   ctx.setLineDash([]);
-  text(
+  drawText(
     ctx,
     '水平圆周轨道',
     C.orbitCenterX,
@@ -186,7 +171,7 @@ function drawSupport(ctx: CanvasRenderingContext2D, p: Palette): void {
   ctx.moveTo(C.supportX - 18, C.supportY + C.supportHeight);
   ctx.lineTo(C.supportX + C.supportWidth + 18, C.supportY + C.supportHeight);
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '悬点',
     C.supportX + C.supportWidth / 2,
@@ -220,7 +205,7 @@ function drawPendulum(
   ctx.strokeStyle = `${p.ball}88`;
   ctx.lineWidth = 2;
   ctx.stroke();
-  text(ctx, '小球 m', x + 28, y + 4, p.ink, 13, 'left', 700);
+  drawText(ctx, '小球 m', x + 28, y + 4, p.ink, 13, 'left', 700);
   if (state.showVectors) {
     const tensionLen = clamp(state.tension * C.vectorScale, 70, 156);
     arrow(
@@ -232,7 +217,7 @@ function drawPendulum(
       p.blue,
       4
     );
-    text(
+    drawText(
       ctx,
       'T',
       x - Math.cos(theta) * tensionLen - 14,
@@ -243,11 +228,20 @@ function drawPendulum(
       700
     );
     arrow(ctx, x, y, x, y + C.gravityArrow, p.cyan, 4);
-    text(ctx, 'mg', x + 14, y + C.gravityArrow, p.cyan, 15, 'left', 700);
+    drawText(ctx, 'mg', x + 14, y + C.gravityArrow, p.cyan, 15, 'left', 700);
     arrow(ctx, x, y, x - C.decompositionArrow - 16, y, p.red, 4);
-    text(ctx, 'Fₙ', x - C.decompositionArrow - 32, y, p.red, 15, 'center', 700);
+    drawText(
+      ctx,
+      'Fₙ',
+      x - C.decompositionArrow - 32,
+      y,
+      p.red,
+      15,
+      'center',
+      700
+    );
     arrow(ctx, x, y + 26, x - 34, y + 48, p.green, 3);
-    text(ctx, 'v', x - 48, y + 54, p.green, 15, 'center', 700);
+    drawText(ctx, 'v', x - 48, y + 54, p.green, 15, 'center', 700);
   }
   ctx.strokeStyle = p.muted;
   ctx.lineWidth = 2;
@@ -257,7 +251,7 @@ function drawPendulum(
   ctx.lineTo(C.pivotX, C.orbitCenterY + 12);
   ctx.stroke();
   ctx.setLineDash([]);
-  text(
+  drawText(
     ctx,
     'h',
     C.pivotX - 16,
@@ -272,7 +266,7 @@ function drawPendulum(
   ctx.beginPath();
   ctx.arc(C.pivotX, C.pivotY, 46, Math.PI / 2, Math.PI / 2 + theta);
   ctx.stroke();
-  text(ctx, 'θ', C.pivotX + 34, C.pivotY + 30, p.orange, 15, 'center', 700);
+  drawText(ctx, 'θ', C.pivotX + 34, C.pivotY + 30, p.orange, 15, 'center', 700);
   return { x, y };
 }
 function drawDecomposition(
@@ -286,7 +280,7 @@ function drawDecomposition(
   rounded(ctx, C.insetX, C.insetY, C.insetWidth, C.insetHeight, 13);
   ctx.fill();
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '受力正交分解',
     C.insetX + C.insetWidth / 2,
@@ -312,11 +306,20 @@ function drawDecomposition(
     p.blue,
     3
   );
-  text(ctx, 'T', x - 84, y - 52, p.blue, 14, 'center', 700);
+  drawText(ctx, 'T', x - 84, y - 52, p.blue, 14, 'center', 700);
   arrow(ctx, x, y, x - C.decompositionArrow, y, p.red, 3);
-  text(ctx, 'Fₙ', x - 84, y, p.red, 14, 'center', 700);
+  drawText(ctx, 'Fₙ', x - 84, y, p.red, 14, 'center', 700);
   arrow(ctx, x, y, x, y + C.decompositionArrow, p.cyan, 3);
-  text(ctx, 'mg', x + 14, y + C.decompositionArrow, p.cyan, 13, 'left', 700);
+  drawText(
+    ctx,
+    'mg',
+    x + 14,
+    y + C.decompositionArrow,
+    p.cyan,
+    13,
+    'left',
+    700
+  );
   ctx.strokeStyle = p.muted;
   ctx.lineWidth = 1.5;
   ctx.setLineDash([5, 4]);
@@ -325,7 +328,7 @@ function drawDecomposition(
   ctx.lineTo(x, y - C.decompositionArrow);
   ctx.stroke();
   ctx.setLineDash([]);
-  text(ctx, 'θ', x - 18, y - 56, p.muted, 13, 'center', 700);
+  drawText(ctx, 'θ', x - 18, y - 56, p.muted, 13, 'center', 700);
 }
 function drawPanel(
   ctx: CanvasRenderingContext2D,
@@ -338,7 +341,7 @@ function drawPanel(
   rounded(ctx, C.panelX, 0, C.panelWidth, C.baseHeight, 16);
   ctx.fill();
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '圆锥摆模型',
     C.panelX + C.panelInset,
@@ -351,7 +354,7 @@ function drawPanel(
   rounded(ctx, C.panelX + C.panelWidth - 118, 19, 92, 30, 15);
   ctx.fillStyle = `${p.red}22`;
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '经典模型',
     C.panelX + C.panelWidth - 72,
@@ -377,7 +380,7 @@ function drawPanel(
   );
   ctx.fillStyle = p.soft;
   ctx.fill();
-  text(
+  drawText(
     ctx,
     `h = ${state.height.toFixed(1)} m`,
     C.panelX + C.panelInset * 2,
@@ -387,7 +390,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `θ = ${state.theta.toFixed(0)}°`,
     C.panelX + C.panelWidth - C.panelInset * 2,
@@ -397,7 +400,7 @@ function drawPanel(
     'right',
     700
   );
-  text(
+  drawText(
     ctx,
     '重力 mg 恒定 · 拉力水平分量提供 Fₙ',
     C.panelX + C.panelInset * 2,
@@ -419,7 +422,7 @@ function drawPanel(
   ctx.fill();
   ctx.strokeStyle = p.border;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     `轨道半径 r = h·tanθ    ${state.radius.toFixed(2)} m`,
     C.panelX + C.panelInset * 2,
@@ -429,7 +432,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `悬线长度 L = h/cosθ    ${state.stringLength.toFixed(2)} m`,
     C.panelX + C.panelInset * 2,
@@ -439,7 +442,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `合力/向心力 Fₙ       ${state.centripetalForce.toFixed(2)} N`,
     C.panelX + C.panelInset * 2,
@@ -449,7 +452,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `绳子拉力 T             ${state.tension.toFixed(2)} N`,
     C.panelX + C.panelInset * 2,
@@ -459,7 +462,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `g = ${state.g.toFixed(0)} m/s²    m = ${state.mass.toFixed(0)} kg`,
     C.panelX + C.panelInset * 2,
@@ -479,7 +482,7 @@ function drawPanel(
   );
   ctx.fillStyle = p.soft;
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '角速度  ω = √(g/h)',
     C.panelX + C.panelInset * 2,
@@ -489,7 +492,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `${state.omega.toFixed(2)} rad/s`,
     C.panelX + C.panelWidth - C.panelInset * 2,
@@ -499,7 +502,7 @@ function drawPanel(
     'right',
     700
   );
-  text(
+  drawText(
     ctx,
     '周期    Tₚ = 2π√(h/g)',
     C.panelX + C.panelInset * 2,
@@ -509,7 +512,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `${state.period.toFixed(2)} s`,
     C.panelX + C.panelWidth - C.panelInset * 2,
@@ -519,7 +522,7 @@ function drawPanel(
     'right',
     700
   );
-  text(
+  drawText(
     ctx,
     '线速度  v = ωr',
     C.panelX + C.panelInset * 2,
@@ -529,7 +532,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `${state.linearSpeed.toFixed(2)} m/s`,
     C.panelX + C.panelWidth - C.panelInset * 2,
@@ -539,7 +542,7 @@ function drawPanel(
     'right',
     700
   );
-  text(
+  drawText(
     ctx,
     'Fₙ = mg·tanθ    T = mg/cosθ',
     C.panelX + C.panelInset * 2,
@@ -559,7 +562,7 @@ function drawPanel(
   );
   ctx.fillStyle = p.soft;
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '调节 h 或 θ，观察半径、受力与周期联动',
     C.panelX + C.panelInset * 2,
@@ -569,7 +572,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     '空格：暂停 / 播放',
     C.panelX + C.panelInset * 2,
@@ -624,7 +627,7 @@ export function createConicalPendulumView(
     drawPendulum(ctx, state, p);
     drawDecomposition(ctx, state, p);
     drawPanel(ctx, state, p);
-    text(
+    drawText(
       ctx,
       '按下空格暂停/恢复演示',
       C.fieldWidth - 24,

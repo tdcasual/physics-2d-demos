@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type MomentumScheme = 'chute' | 'airTrack' | 'pendulum';
 export type MomentumCollision = 'elastic' | 'partial' | 'inelastic';
@@ -69,10 +70,6 @@ const DEFAULTS: MomentumComparisonParams = {
   showVectors: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function normalize(
   input: Partial<MomentumComparisonParams>,
   previous = DEFAULTS
@@ -93,22 +90,22 @@ function normalize(
     scheme,
     collision,
     massA: clamp(
-      finite(input.massA, previous.massA),
+      finiteOr(input.massA, previous.massA),
       momentumComparisonConstants.massMin,
       momentumComparisonConstants.massMax
     ),
     massB: clamp(
-      finite(input.massB, previous.massB),
+      finiteOr(input.massB, previous.massB),
       momentumComparisonConstants.massMin,
       momentumComparisonConstants.massMax
     ),
     velocityA: clamp(
-      finite(input.velocityA, previous.velocityA),
+      finiteOr(input.velocityA, previous.velocityA),
       momentumComparisonConstants.velocityMin,
       momentumComparisonConstants.velocityMax
     ),
     velocityB: clamp(
-      finite(input.velocityB, previous.velocityB),
+      finiteOr(input.velocityB, previous.velocityB),
       momentumComparisonConstants.velocityMin,
       momentumComparisonConstants.velocityMax
     ),
@@ -163,7 +160,7 @@ export function momentumComparisonSample(
   >,
   time: number
 ) {
-  const t = clamp(finite(time, 0), 0, momentumComparisonConstants.timeMax);
+  const t = clamp(finiteOr(time, 0), 0, momentumComparisonConstants.timeMax);
   const result = calculateMomentumComparison(params);
   const start = momentumComparisonConstants.collisionTime;
   const phase = clamp(
@@ -243,7 +240,7 @@ export function createMomentumComparisonSim(
       return { ...params };
     },
     step(dt: number): void {
-      if (params.autoRun) time += Math.max(0, finite(dt, 0));
+      if (params.autoRun) time += Math.max(0, finiteOr(dt, 0));
     },
     reset(): void {
       params = { ...defaults };

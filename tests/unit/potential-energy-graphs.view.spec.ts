@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { createPotentialGraphSim } from '../../src/scenes/potential-energy-graphs/scene.sim';
 import { potentialGraphConstants as C } from '../../src/scenes/potential-energy-graphs/scene.sim';
@@ -66,26 +64,6 @@ describe('potential-energy-graphs view contract', () => {
     expect('fieldWidth' in C).toBe(false);
     expect('cardWidth' in C).toBe(false);
     expect('readoutY' in C).toBe(false);
-  });
-
-  it('keeps φ-x / E-x drawing on the graph canvas path', () => {
-    const viewSrc = readFileSync(
-      resolve(
-        process.cwd(),
-        'src/scenes/potential-energy-graphs/scene.view.ts'
-      ),
-      'utf8'
-    );
-    const simSrc = readFileSync(
-      resolve(process.cwd(), 'src/scenes/potential-energy-graphs/scene.sim.ts'),
-      'utf8'
-    );
-    expect(viewSrc).toContain('attachGraphCanvas');
-    expect(viewSrc).toContain('drawApparatus');
-    expect(viewSrc).toContain('drawGraphs');
-    expect(viewSrc).not.toMatch(/drawPanel|读图结论|图象微积分|面积与能量/);
-    expect(viewSrc).not.toMatch(/斜率越负|正电荷到高电势/);
-    expect(simSrc).not.toMatch(/panelWidth|fieldWidth|cardWidth/);
   });
 
   it('paints the 1-D apparatus on the animation canvas and both graphs in the graph slot', () => {

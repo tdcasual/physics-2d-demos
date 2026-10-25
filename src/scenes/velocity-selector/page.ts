@@ -1,20 +1,9 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
-import type { VelocitySelectorParams } from './scene.sim';
 import { velocitySelectorControlsSchema } from './controls-schema';
-import { asSelectorCharge, createVelocitySelectorScene } from './scene.entry';
+import { createVelocitySelectorScene } from './scene.entry';
 import { velocitySelectorMeta } from './scene.meta';
-
-function asBoolean(value: unknown): boolean {
-  return (
-    value === true ||
-    value === 1 ||
-    value === '1' ||
-    String(value).toLowerCase() === 'true'
-  );
-}
+import { createBoundControls } from '../../ui/components/bound-controls';
 
 bootScenePage({
   meta: velocitySelectorMeta,
@@ -50,64 +39,12 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, scheduleRender, writeParam }) => {
-    const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+  createControls: ({ mount, scene, scheduleRender, writeParam }) =>
+    createBoundControls({
       mount,
       schema: velocitySelectorControlsSchema,
-      onAction: () => {
-        render();
-      },
-      onChange: (key, value) => {
-        if (
-          key === 'electricField' ||
-          key === 'magneticField' ||
-          key === 'initialSpeed' ||
-          key === 'plateGap'
-        ) {
-          scene.setParams({
-            [key]: Number(value)
-          } as Partial<VelocitySelectorParams>);
-        } else if (key === 'charge') {
-          const charge = asSelectorCharge(value);
-          if (charge) scene.setParams({ charge });
-        } else if (
-          key === 'autoRun' ||
-          key === 'showField' ||
-          key === 'showVectors'
-        ) {
-          scene.setParams({
-            [key]: asBoolean(value)
-          } as Partial<VelocitySelectorParams>);
-        }
-        render();
-        writeParam?.(key, value);
-      }
-    });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (key === 'charge') {
-        const charge = asSelectorCharge(value);
-        if (!charge) return false;
-        ctx.scene.setParams({ charge });
-        ctx.setControlValue(key, charge);
-        return true;
-      }
-      if (key === 'autoRun' || key === 'showField' || key === 'showVectors') {
-        const enabled = asBoolean(value);
-        ctx.scene.setParams({
-          [key]: enabled
-        } as Partial<VelocitySelectorParams>);
-        ctx.setControlValue(key, enabled);
-        return true;
-      }
-      const number = Number(value);
-      if (!Number.isFinite(number)) return false;
-      ctx.scene.setParams({ [key]: number } as Partial<VelocitySelectorParams>);
-      ctx.setControlValue(key, number);
-      return true;
-    }
-  }
+      scene,
+      scheduleRender,
+      writeParam
+    })
 });

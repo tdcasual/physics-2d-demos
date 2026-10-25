@@ -3,6 +3,7 @@ import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import { brownianConstants as C, type BrownianState } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateBrownianViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -48,22 +49,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     card: '#1b2a34'
   }
 };
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 function arrow(
   ctx: CanvasRenderingContext2D,
   x1: number,
@@ -222,7 +207,7 @@ function drawForce(
     p.force,
     5
   );
-  text(
+  drawText(
     ctx,
     'F合',
     state.particleX + state.forceX * scale + 14,
@@ -238,8 +223,8 @@ function drawHUD(
   state: BrownianState,
   p: Palette
 ): void {
-  text(ctx, '布朗运动微观机制', 34, 34, p.ink, 22, 'left', 700);
-  text(ctx, '显微镜视野', 34, 63, p.muted, 14, 'left', 600);
+  drawText(ctx, '布朗运动微观机制', 34, 34, p.ink, 22, 'left', 700);
+  drawText(ctx, '显微镜视野', 34, 63, p.muted, 14, 'left', 600);
   const x = 42;
   const y = C.baseHeight - 78;
   const w = 610;
@@ -251,7 +236,7 @@ function drawHUD(
   ctx.roundRect(x, y, w, h, 10);
   ctx.fill();
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     `v̄ = ${state.molecularSpeed.toFixed(2)} a.u.   ·   撞击 ${state.instantCollisions} 次/帧`,
     x + 18,
@@ -261,7 +246,7 @@ function drawHUD(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     state.status,
     C.baseWidth - 34,
@@ -311,7 +296,7 @@ export function createBrownianView(options: CreateBrownianViewOptions = {}) {
     drawParticle(ctx, state, p);
     drawForce(ctx, state, p);
     drawHUD(ctx, state, p);
-    text(
+    drawText(
       ctx,
       `r = ${state.particleRadius.toFixed(0)} μm`,
       C.baseWidth - 38,

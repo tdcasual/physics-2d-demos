@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type ProjectileComponentsParams = {
   speed: number;
@@ -76,10 +77,6 @@ const DEFAULTS: ProjectileComponentsParams = {
   showStrobe: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 export function asBool(value: unknown, fallback: boolean): boolean {
   if (typeof value === 'boolean') return value;
   if (typeof value === 'number') return value !== 0;
@@ -106,19 +103,19 @@ function normalize(
   previous = DEFAULTS
 ): ProjectileComponentsParams {
   return {
-    speed: clamp(finite(input.speed, previous.speed), C.speedMin, C.speedMax),
+    speed: clamp(finiteOr(input.speed, previous.speed), C.speedMin, C.speedMax),
     initialHeight: clamp(
-      finite(input.initialHeight, previous.initialHeight),
+      finiteOr(input.initialHeight, previous.initialHeight),
       C.heightMin,
       C.heightMax
     ),
     gravity: clamp(
-      finite(input.gravity, previous.gravity),
+      finiteOr(input.gravity, previous.gravity),
       C.gravityMin,
       C.gravityMax
     ),
     samplePeriod: clamp(
-      finite(input.samplePeriod, previous.samplePeriod),
+      finiteOr(input.samplePeriod, previous.samplePeriod),
       C.samplePeriodMin,
       C.samplePeriodMax
     ),
@@ -242,7 +239,7 @@ export function createProjectileComponentsSim(
       return { ...params };
     },
     step(dt: number): void {
-      time += Math.max(0, finite(dt, 0));
+      time += Math.max(0, finiteOr(dt, 0));
       const cycle = flightTime() + C.holdAfterLanding;
       if (time > cycle) time = 0;
     },

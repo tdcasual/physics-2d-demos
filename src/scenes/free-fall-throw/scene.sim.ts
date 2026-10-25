@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type FreeFallMode = 'compare' | 'single' | 'reverse';
 export type FreeFallParams = {
@@ -83,10 +84,6 @@ const DEFAULTS: FreeFallParams = {
   showHeight: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function asFlag(value: unknown, fallback: boolean): boolean {
   if (value === true || value === 1 || value === '1' || value === 'true')
     return true;
@@ -101,7 +98,7 @@ function normalize(
 ): FreeFallParams {
   return {
     initialSpeed: clamp(
-      finite(input.initialSpeed, previous.initialSpeed),
+      finiteOr(input.initialSpeed, previous.initialSpeed),
       freeFallConstants.speedMin,
       freeFallConstants.speedMax
     ),
@@ -112,7 +109,7 @@ function normalize(
         ? input.mode
         : previous.mode,
     timeProgress: clamp(
-      finite(input.timeProgress, previous.timeProgress),
+      finiteOr(input.timeProgress, previous.timeProgress),
       0,
       1
     ),
@@ -196,7 +193,7 @@ export function freeFallAt(
 ): FreeFallState {
   const normalized = normalize(params);
   const riseTime = normalized.initialSpeed / freeFallConstants.gravity;
-  const physicalTime = clamp(finite(time, 0), 0, riseTime * 2);
+  const physicalTime = clamp(finiteOr(time, 0), 0, riseTime * 2);
   const clockTime =
     normalized.mode === 'reverse' ? riseTime - physicalTime : physicalTime;
   return stateAt(normalized, clockTime);
@@ -229,7 +226,7 @@ export function createFreeFallSim(initial: Partial<FreeFallParams> = {}) {
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      const duration = clamp(finite(dt, 0), 0, 0.1);
+      const duration = clamp(finiteOr(dt, 0), 0, 0.1);
       const total =
         params.mode === 'reverse'
           ? params.initialSpeed / freeFallConstants.gravity

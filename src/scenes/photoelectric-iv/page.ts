@@ -1,20 +1,10 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
-import type { PhotoelectricParams } from './scene.sim';
 import { photoelectricControlsSchema } from './controls-schema';
-import { asPhotoCathode, createPhotoelectricScene } from './scene.entry';
+import { createPhotoelectricScene } from './scene.entry';
 import { photoelectricMeta } from './scene.meta';
+import { createBoundControls } from '../../ui/components/bound-controls';
 
-function asBoolean(value: unknown): boolean {
-  return (
-    value === true ||
-    value === 1 ||
-    value === '1' ||
-    String(value).toLowerCase() === 'true'
-  );
-}
 bootScenePage({
   meta: photoelectricMeta,
   autoPlay: true,
@@ -44,52 +34,12 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, scheduleRender, writeParam }) => {
-    const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+  createControls: ({ mount, scene, scheduleRender, writeParam }) =>
+    createBoundControls({
       mount,
       schema: photoelectricControlsSchema,
-      onAction: () => render(),
-      onChange: (key, value) => {
-        if (key === 'cathode') {
-          const cathode = asPhotoCathode(value);
-          if (cathode) scene.setParams({ cathode });
-        } else if (
-          key === 'wavelength' ||
-          key === 'intensity' ||
-          key === 'voltage'
-        )
-          scene.setParams({
-            [key]: Number(value)
-          } as Partial<PhotoelectricParams>);
-        else if (key === 'autoRun')
-          scene.setParams({ autoRun: asBoolean(value) });
-        render();
-        writeParam?.(key, value);
-      }
-    });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (key === 'cathode') {
-        const cathode = asPhotoCathode(value);
-        if (!cathode) return false;
-        ctx.scene.setParams({ cathode });
-        ctx.setControlActive(key, cathode);
-        return true;
-      }
-      if (key === 'autoRun') {
-        const autoRun = asBoolean(value);
-        ctx.scene.setParams({ autoRun });
-        ctx.setControlValue(key, autoRun);
-        return true;
-      }
-      const number = Number(value);
-      if (!Number.isFinite(number)) return false;
-      ctx.scene.setParams({ [key]: number } as Partial<PhotoelectricParams>);
-      ctx.setControlValue(key, number);
-      return true;
-    }
-  }
+      scene,
+      scheduleRender,
+      writeParam
+    })
 });

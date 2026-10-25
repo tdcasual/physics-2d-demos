@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type TirParams = {
   refractiveIndex: number;
@@ -40,18 +41,15 @@ const DEFAULTS: TirParams = {
   height: 5.24,
   autoRun: true
 };
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
 function normalize(input: Partial<TirParams>, prev = DEFAULTS): TirParams {
   return {
     refractiveIndex: clamp(
-      finite(input.refractiveIndex, prev.refractiveIndex),
+      finiteOr(input.refractiveIndex, prev.refractiveIndex),
       tirConstants.indexMin,
       tirConstants.indexMax
     ),
     height: clamp(
-      finite(input.height, prev.height),
+      finiteOr(input.height, prev.height),
       tirConstants.heightMin,
       tirConstants.heightMax
     ),
@@ -99,7 +97,7 @@ export function createTirSim(initial: Partial<TirParams> = {}) {
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      const safeDt = Math.min(Math.max(finite(dt, 0), 0), 0.05);
+      const safeDt = Math.min(Math.max(finiteOr(dt, 0), 0), 0.05);
       time = (time + safeDt) % tirConstants.timelinePeriod;
     }
   };

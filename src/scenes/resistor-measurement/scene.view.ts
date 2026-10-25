@@ -2,6 +2,7 @@ import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import { resistorConstants, type ResistorState } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateResistorViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -65,23 +66,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
 };
 
 type Pt = [number, number];
-
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 
 function rounded(
   ctx: CanvasRenderingContext2D,
@@ -181,7 +165,7 @@ function drawCircleMeter(
   ctx.arc(x, y, r, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
-  text(ctx, letter, x, y, p.ink, 22 * s, 'center', 700);
+  drawText(ctx, letter, x, y, p.ink, 22 * s, 'center', 700);
   ctx.fillStyle = accent;
   ctx.beginPath();
   ctx.arc(x - r + 3 * s, y + r - 2 * s, 5 * s, 0, Math.PI * 2);
@@ -256,8 +240,8 @@ function drawRheostat(
   ctx.arc(x, y, 6 * s, 0, Math.PI * 2);
   ctx.arc(x + width, y, 6 * s, 0, Math.PI * 2);
   ctx.fill();
-  text(ctx, 'A', x - 14 * s, y, p.ink, 11 * s, 'right', 700);
-  text(ctx, 'B', x + width + 14 * s, y, p.ink, 11 * s, 'left', 700);
+  drawText(ctx, 'A', x - 14 * s, y, p.ink, 11 * s, 'right', 700);
+  drawText(ctx, 'B', x + width + 14 * s, y, p.ink, 11 * s, 'left', 700);
   return { sliderX };
 }
 
@@ -288,8 +272,8 @@ function drawSource(
   ctx.moveTo(x + 24 * s, y - 13 * s);
   ctx.lineTo(x + 24 * s, y + 13 * s);
   ctx.stroke();
-  text(ctx, '+', x - 46 * s, y - 20 * s, p.red, 16 * s, 'center', 700);
-  text(ctx, '−', x + 46 * s, y - 20 * s, p.ink, 16 * s, 'center', 700);
+  drawText(ctx, '+', x - 46 * s, y - 20 * s, p.red, 16 * s, 'center', 700);
+  drawText(ctx, '−', x + 46 * s, y - 20 * s, p.ink, 16 * s, 'center', 700);
 }
 
 function drawAnalogMeter(
@@ -332,7 +316,7 @@ function drawAnalogMeter(
   ctx.beginPath();
   ctx.arc(cx, cy, 4 * s, 0, Math.PI * 2);
   ctx.fill();
-  text(ctx, letter, cx, y - h / 2 + 16 * s, p.muted, 12 * s, 'center', 700);
+  drawText(ctx, letter, cx, y - h / 2 + 16 * s, p.muted, 12 * s, 'center', 700);
 }
 
 function drawCircuit(
@@ -477,7 +461,7 @@ function drawCircuit(
     s
   );
 
-  text(
+  drawText(
     ctx,
     '电压表',
     meterV.x,
@@ -487,7 +471,7 @@ function drawCircuit(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     '电流表',
     meterA.x,
@@ -497,7 +481,7 @@ function drawCircuit(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     '待测电阻 Rx',
     rx.x + rx.w / 2,
@@ -507,7 +491,7 @@ function drawCircuit(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     '滑动变阻器 R',
     rheostat.x + rheostat.w / 2,
@@ -517,7 +501,7 @@ function drawCircuit(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     '直流电源 E',
     source.x,

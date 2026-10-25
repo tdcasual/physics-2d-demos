@@ -2,6 +2,7 @@ import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import { orbitCriticalConstants, type OrbitCriticalState } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateOrbitCriticalViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -68,22 +69,6 @@ const {
   gridStep: GRID_STEP,
   vectorScale: VECTOR_SCALE
 } = orbitCriticalConstants;
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 function card(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -162,7 +147,7 @@ export function createOrbitCriticalView(
     ctx.scale(fit, fit);
     ctx.fillStyle = p.bg;
     ctx.fillRect(0, 0, FIELD_W, BASE_H);
-    text(
+    drawText(
       ctx,
       '圆周运动不脱离轨道',
       FIELD_W / 2,
@@ -172,7 +157,7 @@ export function createOrbitCriticalView(
       'center',
       700
     );
-    text(
+    drawText(
       ctx,
       '最高点临界速度与约束力',
       FIELD_W / 2,
@@ -202,8 +187,8 @@ export function createOrbitCriticalView(
     ctx.lineTo(CIRCLE_R, CY);
     ctx.stroke();
     ctx.setLineDash([]);
-    text(ctx, '最高点', CIRCLE_L + 12, CIRCLE_T - 18, p.muted, 13 * scale);
-    text(ctx, '等高线', CIRCLE_L + 12, CY - 18, p.muted, 13 * scale);
+    drawText(ctx, '最高点', CIRCLE_L + 12, CIRCLE_T - 18, p.muted, 13 * scale);
+    drawText(ctx, '等高线', CIRCLE_L + 12, CY - 18, p.muted, 13 * scale);
     ctx.strokeStyle = p.ring;
     ctx.lineWidth = 6;
     ctx.beginPath();
@@ -255,7 +240,7 @@ export function createOrbitCriticalView(
         p.red,
         4
       );
-      text(
+      drawText(
         ctx,
         'v',
         pointX + tangentX * 100,
@@ -265,7 +250,7 @@ export function createOrbitCriticalView(
         'center',
         700
       );
-      text(
+      drawText(
         ctx,
         'Fₙ',
         pointX + (radialX / radialLength) * 105,
@@ -275,7 +260,7 @@ export function createOrbitCriticalView(
         'center',
         700
       );
-      text(
+      drawText(
         ctx,
         'G',
         pointX - (radialX / radialLength) * 86,
@@ -287,7 +272,7 @@ export function createOrbitCriticalView(
       );
     }
     card(ctx, CARD_X, CARD_Y, CARD_W, CARD_H, p);
-    text(
+    drawText(
       ctx,
       state.model === 'rope' ? '绳模型' : '杆模型',
       CARD_X + 24,
@@ -297,7 +282,7 @@ export function createOrbitCriticalView(
       'left',
       700
     );
-    text(
+    drawText(
       ctx,
       state.status,
       CARD_X + 188,
@@ -307,7 +292,7 @@ export function createOrbitCriticalView(
       'left',
       700
     );
-    text(
+    drawText(
       ctx,
       `v = ${state.speed.toFixed(2)} m/s    Fₙ = ${state.normalForce.toFixed(2)} N    aᵣ = ${(state.speed ** 2 / state.radius).toFixed(2)} m/s²`,
       CARD_X + 24,
@@ -315,7 +300,7 @@ export function createOrbitCriticalView(
       p.ink,
       14 * scale
     );
-    text(
+    drawText(
       ctx,
       `临界底速 √(5gR) = ${state.criticalBottomSpeed.toFixed(2)} m/s`,
       CARD_X + 24,

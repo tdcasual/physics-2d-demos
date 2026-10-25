@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type LocomotiveMode = 'power' | 'acceleration';
 export type LocomotiveParams = {
@@ -84,9 +85,6 @@ const DEFAULTS: LocomotiveParams = {
   dragForce: locomotiveConstants.defaultDrag,
   autoRun: true
 };
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
 function asFlag(value: unknown, fallback: boolean): boolean {
   if (value === true || value === 1 || value === '1' || value === 'true')
     return true;
@@ -104,17 +102,17 @@ function normalize(
         ? input.mode
         : previous.mode,
     ratedPower: clamp(
-      finite(input.ratedPower, previous.ratedPower),
+      finiteOr(input.ratedPower, previous.ratedPower),
       locomotiveConstants.ratedPowerMin,
       locomotiveConstants.ratedPowerMax
     ),
     acceleration: clamp(
-      finite(input.acceleration, previous.acceleration),
+      finiteOr(input.acceleration, previous.acceleration),
       locomotiveConstants.accelerationMin,
       locomotiveConstants.accelerationMax
     ),
     dragForce: clamp(
-      finite(input.dragForce, previous.dragForce),
+      finiteOr(input.dragForce, previous.dragForce),
       locomotiveConstants.dragMin,
       locomotiveConstants.dragMax
     ),
@@ -209,7 +207,7 @@ export function createLocomotiveSim(initial: Partial<LocomotiveParams> = {}) {
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      const duration = clamp(finite(dt, 0), 0, 0.1);
+      const duration = clamp(finiteOr(dt, 0), 0, 0.1);
       const subSteps = Math.max(1, Math.ceil(duration / 0.01));
       const subDt = duration / subSteps;
       for (let index = 0; index < subSteps; index += 1) {

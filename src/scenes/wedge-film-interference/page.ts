@@ -1,4 +1,5 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
+import { controlChangeToParams } from '../../platform/param-binding';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import type { WedgeParams } from './scene.sim';
@@ -36,7 +37,9 @@ bootScenePage({
           const profile = asWedgeProfile(value);
           if (profile) scene.setParams({ profile });
         } else if (key === 'cursorY')
-          scene.setParams({ cursorY: Number(value) / 100 });
+          scene.setParams(
+            controlChangeToParams(key, Number(value), renderer.bindings)
+          );
         else if (key === 'autoRun') scene.setParams({ autoRun: bool(value) });
         else scene.setParams({ [key]: Number(value) } as Partial<WedgeParams>);
         render();

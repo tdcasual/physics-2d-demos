@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type RutherfordModel = 0 | 1;
 export type RutherfordParams = {
@@ -60,10 +61,6 @@ const DEFAULT_PARAMS: RutherfordParams = {
   showForces: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function normalize(
   input: Partial<RutherfordParams>,
   previous: RutherfordParams = DEFAULT_PARAMS
@@ -73,12 +70,12 @@ function normalize(
   return {
     model,
     aim: clamp(
-      finite(input.aim, previous.aim),
+      finiteOr(input.aim, previous.aim),
       rutherfordConstants.aimMin,
       rutherfordConstants.aimMax
     ),
     beamEnergy: clamp(
-      finite(input.beamEnergy, previous.beamEnergy),
+      finiteOr(input.beamEnergy, previous.beamEnergy),
       rutherfordConstants.voltageMin,
       rutherfordConstants.voltageMax
     ),
@@ -210,7 +207,7 @@ export function createRutherfordSim(initial: Partial<RutherfordParams> = {}) {
 
   function step(dt: number): void {
     if (!params.autoRun) return;
-    const delta = clamp(finite(dt, 0), 0, 0.05);
+    const delta = clamp(finiteOr(dt, 0), 0, 0.05);
     time += delta;
     emitAccumulator += delta;
     while (emitAccumulator >= rutherfordConstants.emissionInterval) {

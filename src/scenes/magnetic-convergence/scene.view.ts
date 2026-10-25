@@ -7,6 +7,7 @@ import {
   type MagneticParticlePath,
   type Point
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateMagneticConvergenceViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -89,23 +90,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
   }
 };
 
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
-
 function rounded(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -185,7 +169,7 @@ function drawFieldBase(
       ctx.stroke();
     }
   }
-  text(
+  drawText(
     ctx,
     '均强磁场 B',
     CENTER_X,
@@ -267,7 +251,7 @@ function drawParticles(
       Math.PI * 2
     );
     ctx.fill();
-    text(
+    drawText(
       ctx,
       '点源',
       state.focusPoint.x + 16,
@@ -290,7 +274,7 @@ function drawPanel(
   const width = PANEL_W - INSET * 2;
   ctx.fillStyle = p.panel;
   ctx.fillRect(PANEL_X, 0, PANEL_W, BASE_H);
-  text(ctx, '磁会聚与磁发散', x, TITLE_Y, p.ink, 22 * scale, 'left', 700);
+  drawText(ctx, '磁会聚与磁发散', x, TITLE_Y, p.ink, 22 * scale, 'left', 700);
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 3;
   ctx.beginPath();
@@ -303,7 +287,7 @@ function drawPanel(
   ctx.fill();
   const modeLabel =
     state.params.mode === 'converge' ? '磁会聚（平行入）' : '磁发散（点源入）';
-  text(
+  drawText(
     ctx,
     modeLabel,
     x + 16,
@@ -320,7 +304,7 @@ function drawPanel(
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 2;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '轨道半径比 r / R',
     x + 16,
@@ -330,7 +314,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     state.params.radiusRatio.toFixed(1),
     x + width - 16,
@@ -356,8 +340,17 @@ function drawPanel(
   ctx.beginPath();
   ctx.arc(thumbX, trackY, 14, 0, Math.PI * 2);
   ctx.fill();
-  text(ctx, '0.6', trackX, RATIO_Y + 108, p.muted, 12 * scale, 'center', 600);
-  text(
+  drawText(
+    ctx,
+    '0.6',
+    trackX,
+    RATIO_Y + 108,
+    p.muted,
+    12 * scale,
+    'center',
+    600
+  );
+  drawText(
     ctx,
     '1.4',
     trackX + trackW,
@@ -374,7 +367,7 @@ function drawPanel(
   ctx.strokeStyle = p.accent;
   ctx.lineWidth = 2;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     state.status,
     x + 16,
@@ -384,7 +377,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `粒子数 ${state.params.particleCount}`,
     x + 16,
@@ -396,7 +389,7 @@ function drawPanel(
   );
   const deviationLabel =
     state.params.mode === 'converge' ? '焦点偏差' : '平行偏差';
-  text(
+  drawText(
     ctx,
     `${deviationLabel} ${state.focusErrorPx.toFixed(0)} px`,
     x + width - 16,
@@ -413,7 +406,7 @@ function drawPanel(
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 2;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '洛伦兹力提供向心力',
     x + 16,
@@ -423,7 +416,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'qvB = mv² / r',
     x + 16,
@@ -433,7 +426,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'r = mv / |q|B',
     x + 16,
@@ -443,7 +436,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'r = R → 理想效果',
     x + 16,
@@ -453,7 +446,7 @@ function drawPanel(
     'left',
     600
   );
-  text(ctx, '空格：暂停', 26, FOOTER_Y, p.muted, 13 * scale, 'left', 600);
+  drawText(ctx, '空格：暂停', 26, FOOTER_Y, p.muted, 13 * scale, 'left', 600);
 }
 
 function drawScene(
@@ -463,7 +456,7 @@ function drawScene(
   scale: number
 ): void {
   drawFieldBase(ctx, p, state.params.showField);
-  text(
+  drawText(
     ctx,
     '磁会聚与磁发散：圆形磁场轨迹控制',
     26,

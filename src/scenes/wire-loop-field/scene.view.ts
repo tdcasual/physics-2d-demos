@@ -8,6 +8,7 @@ import {
   type WireLoopFieldState,
   type WireLoopShape
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateWireLoopFieldViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -69,22 +70,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
   }
 };
 
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 function rounded(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -203,7 +188,7 @@ function drawField(
   ctx.setLineDash([]);
   for (let x = C.fieldLeft + 48; x < C.fieldRight; x += C.fieldMarkStep)
     for (let y = C.fieldTop + 56; y < C.fieldBottom; y += C.fieldMarkStep) {
-      text(
+      drawText(
         ctx,
         state.fieldDirection === 'into' ? '×' : '•',
         x,
@@ -214,7 +199,7 @@ function drawField(
         700
       );
     }
-  text(
+  drawText(
     ctx,
     '匀强磁场区域 (B)',
     (C.fieldLeft + C.fieldRight) / 2,
@@ -224,7 +209,7 @@ function drawField(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     `x = ${C.fieldPhysicalLeft.toFixed(2)} m`,
     C.fieldLeft,
@@ -234,7 +219,7 @@ function drawField(
     'center',
     600
   );
-  text(
+  drawText(
     ctx,
     `x = ${C.fieldPhysicalRight.toFixed(2)} m`,
     C.fieldRight,
@@ -315,7 +300,7 @@ function drawLoop(
       p.red,
       3
     );
-    text(ctx, 'I感', centerX, centerY, p.red, 16, 'center', 700);
+    drawText(ctx, 'I感', centerX, centerY, p.red, 16, 'center', 700);
   }
   arrow(
     ctx,
@@ -326,8 +311,8 @@ function drawLoop(
     p.teal,
     4
   );
-  text(ctx, 'v', x + width + 89, y + height / 2, p.teal, 17, 'left', 700);
-  text(
+  drawText(ctx, 'v', x + width + 89, y + height / 2, p.teal, 17, 'left', 700);
+  drawText(
     ctx,
     `${state.shape === 'rectangle' ? '矩形' : state.shape === 'triangle' ? '三角形' : state.shape === 'circle' ? '圆形' : '半圆形'}线圈`,
     x + width / 2,
@@ -338,7 +323,7 @@ function drawLoop(
     700
   );
   if (state.coverage > 0.02)
-    text(
+    drawText(
       ctx,
       `Φ = ${state.flux.toFixed(3)} Wb`,
       C.fieldRight + 18,
@@ -361,7 +346,7 @@ function graphFrame(
   const right = x + C.graphWidth - C.graphInsetRight;
   const top = C.graphTop + 42;
   const bottom = C.graphBottom;
-  text(ctx, title, x + 10, C.graphTitleY, p.ink, 17, 'left', 700);
+  drawText(ctx, title, x + 10, C.graphTitleY, p.ink, 17, 'left', 700);
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 1;
   ctx.fillStyle = p.panel;
@@ -465,7 +450,7 @@ function drawGraphs(
     Math.PI * 2
   );
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '位置 x',
     fluxFrame.right,
@@ -475,7 +460,7 @@ function drawGraphs(
     'right',
     600
   );
-  text(
+  drawText(
     ctx,
     `I = ${state.current.toFixed(2)} A`,
     emfFrame.left + 6,
@@ -498,7 +483,7 @@ function drawPanel(
   rounded(ctx, C.panelX, 0, C.panelWidth, C.baseHeight, 16);
   ctx.fill();
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '实时数值看板',
     C.panelX + C.panelInset,
@@ -508,7 +493,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     '高中物理',
     C.panelX + C.panelWidth - C.panelInset,
@@ -533,7 +518,7 @@ function drawPanel(
   );
   ctx.fillStyle = p.soft;
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '线圈形状',
     C.panelX + C.panelInset * 2,
@@ -543,7 +528,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     state.shape === 'rectangle'
       ? '矩形'
@@ -559,7 +544,7 @@ function drawPanel(
     'right',
     700
   );
-  text(
+  drawText(
     ctx,
     '区域状态',
     C.panelX + C.panelInset * 2,
@@ -569,7 +554,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     state.region === 'entering'
       ? '切入磁场中'
@@ -587,7 +572,7 @@ function drawPanel(
     'right',
     700
   );
-  text(
+  drawText(
     ctx,
     `B = ${state.fieldStrength.toFixed(1)} T`,
     C.panelX + C.panelInset * 2,
@@ -597,7 +582,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `${state.fieldDirection === 'into' ? '⊗ 里' : '⊙ 外'}`,
     C.panelX + C.panelWidth - C.panelInset * 2,
@@ -619,7 +604,7 @@ function drawPanel(
   ctx.fill();
   ctx.strokeStyle = p.border;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '磁通量与感应量',
     C.panelX + C.panelInset * 2,
@@ -637,8 +622,17 @@ function drawPanel(
   ];
   rows.forEach(([label, value, color], index) => {
     const y = C.panelDataY + 65 + index * 31;
-    text(ctx, label, C.panelX + C.panelInset * 2, y, p.muted, 13, 'left', 600);
-    text(
+    drawText(
+      ctx,
+      label,
+      C.panelX + C.panelInset * 2,
+      y,
+      p.muted,
+      13,
+      'left',
+      600
+    );
+    drawText(
       ctx,
       value,
       C.panelX + C.panelWidth - C.panelInset * 2,
@@ -659,7 +653,7 @@ function drawPanel(
   );
   ctx.fillStyle = '#fff5f3';
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '关系式',
     C.panelX + C.panelInset * 2,
@@ -669,7 +663,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'Φ = B · S',
     C.panelX + C.panelInset * 2,
@@ -679,7 +673,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'E = B · L等效 · v',
     C.panelX + C.panelInset * 2,
@@ -689,7 +683,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'I = E / R',
     C.panelX + C.panelInset * 2,
@@ -709,7 +703,7 @@ function drawPanel(
   );
   ctx.fillStyle = '#eef8f6';
   ctx.fill();
-  text(
+  drawText(
     ctx,
     state.region === 'inside'
       ? '匀强场内：Φ 不变，E = 0'
@@ -723,7 +717,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     state.currentDirection === 'none'
       ? '电流方向：—'
@@ -773,7 +767,7 @@ export function createWireLoopFieldView(
     ctx.fillStyle = p.bg;
     ctx.fillRect(0, 0, C.baseWidth, C.baseHeight);
     drawGrid(ctx, p);
-    text(
+    drawText(
       ctx,
       '线框穿过有界匀强磁场',
       C.fieldWidth / 2,

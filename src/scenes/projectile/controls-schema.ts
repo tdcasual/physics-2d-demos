@@ -13,8 +13,9 @@ export const projectileControlsSchema: ControlsSchema = {
           min: 0,
           max: 80,
           step: 0.5,
-          value: 30,
-          unit: 'm/s'
+          value: 20,
+          unit: 'm/s',
+          bind: { param: 'speed' }
         },
         {
           type: 'slider',
@@ -24,7 +25,8 @@ export const projectileControlsSchema: ControlsSchema = {
           max: 90,
           step: 0.1,
           value: 45,
-          unit: '°'
+          unit: '°',
+          bind: { param: 'angleDeg' }
         },
         {
           type: 'slider',
@@ -34,7 +36,8 @@ export const projectileControlsSchema: ControlsSchema = {
           max: 50,
           step: 0.5,
           value: 0,
-          unit: 'm'
+          unit: 'm',
+          bind: { param: 'initialHeight' }
         },
         {
           type: 'slider',
@@ -44,7 +47,8 @@ export const projectileControlsSchema: ControlsSchema = {
           max: 20,
           step: 0.1,
           value: 9.8,
-          unit: 'm/s²'
+          unit: 'm/s²',
+          bind: { param: 'gravity' }
         },
         {
           type: 'slider',
@@ -54,7 +58,8 @@ export const projectileControlsSchema: ControlsSchema = {
           max: 0.5,
           step: 0.001,
           value: 0,
-          unit: ''
+          unit: '',
+          bind: { param: 'drag' }
         }
       ]
     },

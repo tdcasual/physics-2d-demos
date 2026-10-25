@@ -1,11 +1,9 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { clothesRodControlsSchema } from './controls-schema';
 import { clothesRodMeta } from './scene.meta';
 import { createClothesRodScene } from './scene.entry';
-import type { RodParams } from './scene.sim';
+import { createBoundControls } from '../../ui/components/bound-controls';
 bootScenePage({
   meta: clothesRodMeta,
   autoPlay: true,
@@ -35,39 +33,12 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, scheduleRender, writeParam }) => {
-    const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+  createControls: ({ mount, scene, scheduleRender, writeParam }) =>
+    createBoundControls({
       mount,
       schema: clothesRodControlsSchema,
-      onChange: (key, value) => {
-        if (key === 'model') {
-          scene.setParams({ model: String(value) as RodParams['model'] });
-          renderer.setActive(key, String(value));
-        } else scene.setParams({ [key]: Number(value) } as Partial<RodParams>);
-        render();
-        writeParam?.(key, value);
-      },
-      onAction: () => {}
-    });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (key === 'model') {
-        const model =
-          String(value) === '1'
-            ? 'fixed'
-            : (String(value) as RodParams['model']);
-        ctx.scene.setParams({ model });
-        ctx.setControlActive(key, model);
-        return true;
-      }
-      const number = Number(value);
-      if (!Number.isFinite(number)) return false;
-      ctx.scene.setParams({ [key]: number } as Partial<RodParams>);
-      ctx.setControlValue(key, number);
-      return true;
-    }
-  }
+      scene,
+      scheduleRender,
+      writeParam
+    })
 });

@@ -2,6 +2,7 @@ import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import { closedCircuitConstants, type ClosedCircuitState } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateClosedCircuitViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -80,22 +81,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
   }
 };
 
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 function rounded(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -159,8 +144,8 @@ function drawCircuit(
   ctx.moveTo(SOURCE_X + 12, top - 16);
   ctx.lineTo(SOURCE_X + 12, top + 16);
   ctx.stroke();
-  text(ctx, 'E', SOURCE_X, top - 44, p.red, 16, 'center', 700);
-  text(
+  drawText(ctx, 'E', SOURCE_X, top - 44, p.red, 16, 'center', 700);
+  drawText(
     ctx,
     `${state.params.emf.toFixed(1)} V`,
     SOURCE_X,
@@ -175,7 +160,7 @@ function drawCircuit(
   ctx.fill();
   ctx.strokeStyle = p.border;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     `r = ${state.params.internalResistance.toFixed(1)} Ω`,
     RESISTOR_X,
@@ -190,7 +175,7 @@ function drawCircuit(
   ctx.fill();
   ctx.strokeStyle = p.border;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     `R = ${state.params.externalResistance.toFixed(1)} Ω`,
     RESISTOR_X,
@@ -203,7 +188,7 @@ function drawCircuit(
   rounded(ctx, METER_X - 42, top + 44, 84, 38, 8);
   ctx.fillStyle = '#172337';
   ctx.fill();
-  text(
+  drawText(
     ctx,
     `A ${state.current.toFixed(2)}`,
     METER_X,
@@ -213,7 +198,7 @@ function drawCircuit(
     'center',
     700
   );
-  text(ctx, '闭合电路', 62, 286, p.teal, 14, 'left', 700);
+  drawText(ctx, '闭合电路', 62, 286, p.teal, 14, 'left', 700);
 }
 
 function drawGraph(
@@ -268,9 +253,18 @@ function drawGraph(
   ctx.beginPath();
   ctx.arc(px, py, 8, 0, Math.PI * 2);
   ctx.fill();
-  text(ctx, 'U / V', GRAPH_L - 12, GRAPH_T - 18, p.ink, 13, 'left', 700);
-  text(ctx, 'I / A', GRAPH_L + GRAPH_W - 16, y0 + 24, p.ink, 13, 'right', 700);
-  text(
+  drawText(ctx, 'U / V', GRAPH_L - 12, GRAPH_T - 18, p.ink, 13, 'left', 700);
+  drawText(
+    ctx,
+    'I / A',
+    GRAPH_L + GRAPH_W - 16,
+    y0 + 24,
+    p.ink,
+    13,
+    'right',
+    700
+  );
+  drawText(
     ctx,
     `I短 = ${state.shortCircuitCurrent.toFixed(2)} A`,
     GRAPH_L + 12,
@@ -287,7 +281,7 @@ function drawGraph(
     ctx.setLineDash([6, 5]);
     ctx.strokeRect(GRAPH_L, py, px - GRAPH_L, y0 - py);
     ctx.setLineDash([]);
-    text(ctx, 'P出 = UI', GRAPH_L + 18, py + 22, p.teal, 13, 'left', 700);
+    drawText(ctx, 'P出 = UI', GRAPH_L + 18, py + 22, p.teal, 13, 'left', 700);
   }
 }
 
@@ -301,7 +295,7 @@ function drawPanel(
   const width = PANEL_W - PANEL_INSET * 2;
   ctx.fillStyle = p.panel;
   ctx.fillRect(PANEL_X, 0, PANEL_W, BASE_H);
-  text(ctx, '闭合电路欧姆定律', x, TITLE_Y, p.ink, 22 * scale, 'left', 700);
+  drawText(ctx, '闭合电路欧姆定律', x, TITLE_Y, p.ink, 22 * scale, 'left', 700);
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 3;
   ctx.beginPath();
@@ -311,7 +305,7 @@ function drawPanel(
   rounded(ctx, x, METRICS_Y, width, METRICS_H);
   ctx.fillStyle = p.soft;
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '实时能量与状态',
     x + 14,
@@ -329,8 +323,8 @@ function drawPanel(
   ] as const;
   rows.forEach(([label, value], index) => {
     const y = METRICS_Y + 68 + index * 42;
-    text(ctx, label, x + 14, y, p.muted, 14 * scale, 'left', 600);
-    text(
+    drawText(ctx, label, x + 14, y, p.muted, 14 * scale, 'left', 600);
+    drawText(
       ctx,
       value,
       x + width - 14,
@@ -347,7 +341,7 @@ function drawPanel(
   ctx.strokeStyle = p.gold;
   ctx.lineWidth = 2;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '电源输出功率 P出 = UI',
     x + 14,
@@ -357,7 +351,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `${state.outputPower.toFixed(2)} W`,
     x + width - 14,
@@ -367,7 +361,7 @@ function drawPanel(
     'right',
     700
   );
-  text(
+  drawText(
     ctx,
     `最大值 ${state.maxOutputPower.toFixed(2)} W（R = r）`,
     x + 14,
@@ -378,7 +372,7 @@ function drawPanel(
     600
   );
   if (state.params.externalResistance <= 0.05)
-    text(
+    drawText(
       ctx,
       '短路警示：R = 0，U = 0',
       x + 14,
@@ -394,7 +388,7 @@ function drawPanel(
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 2;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '核心关系',
     x + 14,
@@ -404,7 +398,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'U = E − Ir',
     x + 14,
@@ -414,7 +408,16 @@ function drawPanel(
     'left',
     700
   );
-  text(ctx, 'P出 = UI', x + 14, FORMULA_Y + 92, p.ink, 17 * scale, 'left', 700);
+  drawText(
+    ctx,
+    'P出 = UI',
+    x + 14,
+    FORMULA_Y + 92,
+    p.ink,
+    17 * scale,
+    'left',
+    700
+  );
 }
 
 function drawField(
@@ -424,7 +427,7 @@ function drawField(
   scale: number
 ): void {
   drawGrid(ctx, p);
-  text(
+  drawText(
     ctx,
     '闭合电路欧姆定律：U-I 关系与功率',
     26,

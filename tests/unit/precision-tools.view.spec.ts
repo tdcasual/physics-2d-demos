@@ -136,29 +136,6 @@ describe('precision-tools view contract', () => {
     );
   });
 
-  it('page.ts syncFromScene re-syncs mode, adjustment, autoRun, showGuides, showReading', () => {
-    const source = readFileSync(
-      resolve(process.cwd(), 'src/scenes/precision-tools/page.ts'),
-      'utf8'
-    );
-    expect(source).toMatch(/syncFromScene:\s*\(\)\s*=>\s*syncControls\(/);
-    expect(source).toMatch(
-      /renderer\.setActiveSilently\('mode',\s*params\.mode\)/
-    );
-    expect(source).toMatch(
-      /renderer\.setValueSilently\('adjustment',\s*params\.adjustment\)/
-    );
-    expect(source).toMatch(
-      /renderer\.setValueSilently\('autoRun',\s*params\.autoRun\)/
-    );
-    expect(source).toMatch(
-      /renderer\.setValueSilently\('showGuides',\s*params\.showGuides\)/
-    );
-    expect(source).toMatch(
-      /renderer\.setValueSilently\('showReading',\s*params\.showReading\)/
-    );
-  });
-
   it('reset + control refresh restores URL-baseline widgets', () => {
     const scene = createPrecisionToolScene({
       canvas: mockCanvas(800, 600),

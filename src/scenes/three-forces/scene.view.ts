@@ -10,6 +10,7 @@ import {
   threeForcesConstants as C,
   type ThreeForcesState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateThreeForcesViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -66,23 +67,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     spring: '#fbbf24'
   }
 };
-
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 
 function rounded(
   ctx: CanvasRenderingContext2D,
@@ -184,7 +168,7 @@ function drawAngleMark(
   ctx.arc(origin.x, origin.y, radius, -layout.theta, 0);
   ctx.stroke();
   const mid = -layout.theta / 2;
-  text(
+  drawText(
     ctx,
     `${Math.round(angleDeg)}°`,
     origin.x + Math.cos(mid) * (radius + 16),
@@ -291,7 +275,7 @@ function labelNear(
   nudgeY = 0
 ): void {
   const mag = Math.hypot(dir.x, dir.y) || 1;
-  text(
+  drawText(
     ctx,
     value,
     from.x + (dir.x / mag) * (length + 14) + nudgeX,
@@ -313,7 +297,7 @@ function drawInclineVectors(
   const origin = layout.blockCenter;
   const gLen = scaledLen(state.gravity);
   arrow(ctx, origin.x, origin.y, origin.x, origin.y + gLen, p.red, 4.2);
-  text(
+  drawText(
     ctx,
     'G',
     origin.x + 14,
@@ -464,7 +448,7 @@ function drawSpring(
     const arrowY = y - C.blockHeight / 2 - 16;
     const startX = layout.blockCenter.x;
     arrow(ctx, startX, arrowY, startX + dir * forceLen, arrowY, p.gold, 4);
-    text(
+    drawText(
       ctx,
       'F弹',
       startX + dir * (forceLen + 16),
@@ -490,7 +474,7 @@ function drawSpring(
     ctx.moveTo(x0, markY);
     ctx.lineTo(x1, markY);
     ctx.stroke();
-    text(ctx, 'x', (x0 + x1) / 2, markY + 14, p.muted, font(14), 'center');
+    drawText(ctx, 'x', (x0 + x1) / 2, markY + 14, p.muted, font(14), 'center');
   }
 }
 

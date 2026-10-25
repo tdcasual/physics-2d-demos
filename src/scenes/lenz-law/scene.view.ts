@@ -2,6 +2,7 @@ import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import { lenzLawConstants as C, type LenzState } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateLenzLawViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -64,23 +65,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     magnetS: '#70b9f0'
   }
 };
-
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 
 function rounded(
   ctx: CanvasRenderingContext2D,
@@ -158,7 +142,7 @@ function drawMagnet(
   ctx.strokeStyle = p.panel;
   ctx.lineWidth = 2;
   ctx.strokeRect(left, y, C.magnetWidth, C.magnetHeight);
-  text(
+  drawText(
     ctx,
     'S',
     left + C.magnetWidth / 4,
@@ -168,7 +152,7 @@ function drawMagnet(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     'N',
     left + (C.magnetWidth * 3) / 4,
@@ -178,7 +162,7 @@ function drawMagnet(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     '磁铁',
     left + C.magnetWidth / 2,
@@ -239,8 +223,8 @@ function drawCoil(
     Math.PI * 2
   );
   ctx.stroke();
-  text(ctx, state.leftPole, left - 24, C.coilY, p.teal, 30, 'center', 700);
-  text(
+  drawText(ctx, state.leftPole, left - 24, C.coilY, p.teal, 30, 'center', 700);
+  drawText(
     ctx,
     state.rightPole,
     left + C.coilWidth + 24,
@@ -250,7 +234,7 @@ function drawCoil(
     'center',
     700
   );
-  text(ctx, '线圈等效磁极', C.coilX, top - 22, p.teal, 15, 'center', 700);
+  drawText(ctx, '线圈等效磁极', C.coilX, top - 22, p.teal, 15, 'center', 700);
   if (state.showVectors) {
     const arrowColor = state.inducedField === 'opposes' ? p.teal : p.blue;
     arrow(ctx, left - 10, C.coilY - 48, left + 50, C.coilY - 48, arrowColor, 3);
@@ -263,7 +247,7 @@ function drawCoil(
       arrowColor,
       3
     );
-    text(ctx, "B'", C.coilX, C.coilY + 6, arrowColor, 21, 'center', 700);
+    drawText(ctx, "B'", C.coilX, C.coilY + 6, arrowColor, 21, 'center', 700);
   }
 }
 
@@ -281,7 +265,7 @@ function drawFieldAndVectors(
   ctx.lineTo(C.fieldWidth - 20, C.fieldAxisY);
   ctx.stroke();
   ctx.setLineDash([]);
-  text(
+  drawText(
     ctx,
     '系统中心轴',
     C.fieldWidth - 32,
@@ -293,7 +277,7 @@ function drawFieldAndVectors(
   );
   const y = C.magnetY + C.magnetHeight / 2;
   arrow(ctx, magnet.right + 16, y, C.coilX - C.coilWidth / 2 - 24, y, p.red, 3);
-  text(ctx, 'B₀', magnet.right + 42, y - 22, p.red, 16, 'left', 700);
+  drawText(ctx, 'B₀', magnet.right + 42, y - 22, p.red, 16, 'left', 700);
   if (state.showVectors) {
     const forceSign = state.forceDirection === 'away' ? -1 : 1;
     arrow(
@@ -305,7 +289,7 @@ function drawFieldAndVectors(
       p.orange,
       5
     );
-    text(
+    drawText(
       ctx,
       'F安',
       magnet.right - 6 + forceSign * 92,
@@ -325,7 +309,7 @@ function drawFieldAndVectors(
       p.blue,
       4
     );
-    text(
+    drawText(
       ctx,
       'v',
       magnet.right - 12 + motionSign * 75,
@@ -350,7 +334,7 @@ function drawFieldAndVectors(
   ctx.moveTo(coilLeft, dimensionY - 7);
   ctx.lineTo(coilLeft, dimensionY + 7);
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     `d = ${state.distance.toFixed(2)} m`,
     (magnet.right + coilLeft) / 2,
@@ -373,7 +357,7 @@ function drawPanel(
   rounded(ctx, C.panelX, 0, C.panelWidth, C.baseHeight, 16);
   ctx.fill();
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '楞次定律',
     C.panelX + C.panelWidth / 2,
@@ -383,7 +367,7 @@ function drawPanel(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     '来拒去留 · 等效磁极',
     C.panelX + C.panelWidth / 2,
@@ -408,7 +392,7 @@ function drawPanel(
   );
   ctx.fillStyle = p.soft;
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '磁铁运动',
     C.panelX + C.panelInset * 2,
@@ -418,7 +402,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     state.motion === 'approach' ? '向右靠近' : '向左远离',
     C.panelX + C.panelWidth - C.panelInset * 2,
@@ -428,7 +412,7 @@ function drawPanel(
     'right',
     700
   );
-  text(
+  drawText(
     ctx,
     `速度 ${state.speed.toFixed(2)} m/s`,
     C.panelX + C.panelInset * 2,
@@ -438,7 +422,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     '原磁通量 Φ',
     C.panelX + C.panelInset * 2,
@@ -462,7 +446,7 @@ function drawPanel(
     (C.panelWidth - C.panelInset * 4) * state.fluxFraction,
     C.fluxBarHeight
   );
-  text(
+  drawText(
     ctx,
     `${(state.flux * 1000).toFixed(2)} mWb`,
     C.panelX + C.panelWidth - C.panelInset * 2,
@@ -485,7 +469,7 @@ function drawPanel(
   ctx.fill();
   ctx.strokeStyle = p.border;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '感应现象分析',
     C.panelX + C.panelInset * 2,
@@ -520,8 +504,17 @@ function drawPanel(
   ];
   rows.forEach(([label, value, color], index) => {
     const y = C.panelAnalysisY + 62 + index * 36;
-    text(ctx, label, C.panelX + C.panelInset * 2, y, p.muted, 12, 'left', 600);
-    text(
+    drawText(
+      ctx,
+      label,
+      C.panelX + C.panelInset * 2,
+      y,
+      p.muted,
+      12,
+      'left',
+      600
+    );
+    drawText(
       ctx,
       value,
       C.panelX + C.panelWidth - C.panelInset * 2,
@@ -542,7 +535,7 @@ function drawPanel(
   );
   ctx.fillStyle = '#f1f7fb';
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '增反减同',
     C.panelX + C.panelWidth / 2,
@@ -552,7 +545,7 @@ function drawPanel(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     state.motion === 'approach'
       ? '原磁通增加 → 同名相斥'
@@ -574,7 +567,7 @@ function drawPanel(
   );
   ctx.fillStyle = '#fff8e8';
   ctx.fill();
-  text(
+  drawText(
     ctx,
     'E = −ΔΦ/Δt',
     C.panelX + C.panelInset * 2,
@@ -584,7 +577,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `B₀ = ${state.magnetStrength.toFixed(1)} T`,
     C.panelX + C.panelInset * 2,
@@ -594,7 +587,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     '空格键暂停/恢复',
     C.panelX + C.panelInset * 2,
@@ -640,7 +633,7 @@ export function createLenzLawView(options: CreateLenzLawViewOptions = {}) {
     ctx.fillStyle = p.bg;
     ctx.fillRect(0, 0, C.baseWidth, C.baseHeight);
     drawGrid(ctx, p);
-    text(
+    drawText(
       ctx,
       '磁铁—线圈相对运动',
       C.fieldWidth / 2,

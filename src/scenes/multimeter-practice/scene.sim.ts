@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type MeterMode = 'resistance' | 'voltage' | 'diode';
 export type TargetId =
@@ -142,10 +143,6 @@ const RANGE_LABELS: Record<MeterRange, string> = {
   volt10: '10'
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function normalize(
   input: Partial<MultimeterParams>,
   previous = DEFAULTS
@@ -175,7 +172,7 @@ function normalize(
         ? input.connected
         : previous.connected,
     zeroAdjust: clamp(
-      finite(input.zeroAdjust, previous.zeroAdjust),
+      finiteOr(input.zeroAdjust, previous.zeroAdjust),
       multimeterConstants.zeroMin,
       multimeterConstants.zeroMax
     ),
@@ -294,7 +291,7 @@ export function createMultimeterSim(initial: Partial<MultimeterParams> = {}) {
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      time += clamp(finite(dt, 0), 0, 0.05);
+      time += clamp(finiteOr(dt, 0), 0, 0.05);
     },
     reset(): void {
       params = { ...DEFAULTS };

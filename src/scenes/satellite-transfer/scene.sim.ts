@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type OrbitMode = 'low' | 'transfer' | 'high';
 export type SatelliteParams = {
@@ -44,9 +45,6 @@ const DEFAULTS: SatelliteParams = {
   progress: 72.7,
   autoRun: true
 };
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
 function normalize(
   input: Partial<SatelliteParams>,
   prev = DEFAULTS
@@ -60,7 +58,7 @@ function normalize(
   return {
     orbit,
     progress: clamp(
-      finite(input.progress, prev.progress),
+      finiteOr(input.progress, prev.progress),
       satelliteConstants.progressMin,
       satelliteConstants.progressMax
     ),
@@ -119,7 +117,7 @@ export function createSatelliteSim(initial: Partial<SatelliteParams> = {}) {
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      const safeDt = Math.min(Math.max(finite(dt, 0), 0), 0.05);
+      const safeDt = Math.min(Math.max(finiteOr(dt, 0), 0), 0.05);
       time += safeDt;
       params.progress =
         (params.progress +

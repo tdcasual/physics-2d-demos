@@ -7,15 +7,7 @@ import { createOscilloscopeScene } from './scene.entry';
 import { oscilloscopeMeta } from './scene.meta';
 import { oscilloscopeControlsSchema } from './controls-schema';
 import type { OscilloscopeParams } from './scene.sim';
-
-function asBoolean(value: unknown): boolean {
-  return (
-    value === true ||
-    value === 1 ||
-    value === '1' ||
-    String(value).toLowerCase() === 'true'
-  );
-}
+import { asBoolean } from '../../core/coerce';
 
 const FLAG_KEYS = ['scanEnabled', 'autoRun'] as const;
 const NUMBER_KEYS = [

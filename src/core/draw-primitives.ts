@@ -262,3 +262,23 @@ export function drawBall(
 
   ctx.restore();
 }
+
+/**
+ * 单行文字（垂直居中基线）。size 为 CSS px，调用方负责乘 responsiveScale。
+ */
+export function drawText(
+  ctx: CanvasRenderingContext2D,
+  value: string,
+  x: number,
+  y: number,
+  color: string,
+  size: number,
+  align: CanvasTextAlign = 'left',
+  weight = 600
+): void {
+  ctx.fillStyle = color;
+  ctx.font = `${weight} ${size}px sans-serif`;
+  ctx.textAlign = align;
+  ctx.textBaseline = 'middle';
+  ctx.fillText(value, x, y);
+}

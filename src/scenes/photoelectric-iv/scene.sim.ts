@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type PhotoCathode = 'cesium' | 'sodium' | 'calcium';
 
@@ -51,10 +52,6 @@ const DEFAULTS: PhotoelectricParams = {
   autoRun: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function normalize(
   input: Partial<PhotoelectricParams>,
   previous = DEFAULTS
@@ -67,18 +64,18 @@ function normalize(
       : previous.cathode;
   return {
     wavelength: clamp(
-      finite(input.wavelength, previous.wavelength),
+      finiteOr(input.wavelength, previous.wavelength),
       photoelectricConstants.wavelengthMin,
       photoelectricConstants.wavelengthMax
     ),
     intensity: clamp(
-      finite(input.intensity, previous.intensity),
+      finiteOr(input.intensity, previous.intensity),
       photoelectricConstants.intensityMin,
       photoelectricConstants.intensityMax
     ),
     cathode,
     voltage: clamp(
-      finite(input.voltage, previous.voltage),
+      finiteOr(input.voltage, previous.voltage),
       photoelectricConstants.voltageMin,
       photoelectricConstants.voltageMax
     ),
@@ -137,7 +134,7 @@ export function createPhotoelectricSim(
       return { ...params };
     },
     step(dt: number): void {
-      if (params.autoRun) time += Math.max(0, finite(dt, 0));
+      if (params.autoRun) time += Math.max(0, finiteOr(dt, 0));
     },
     reset(): void {
       params = { ...defaults };

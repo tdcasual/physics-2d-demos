@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteNumber } from '../../core/coerce';
 
 export const tickerTimerConstants = {
   baseWidth: 1200,
@@ -69,15 +70,6 @@ const MODEL_ACCELERATION: Record<TickerTimerModel, number> = {
   ud: -2.5
 };
 
-function finite(value: unknown, fallback: number): number {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string' && value.trim() !== '') {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return fallback;
-}
-
 function bool(value: unknown, fallback: boolean): boolean {
   if (typeof value === 'boolean') return value;
   if (typeof value === 'number') return value !== 0;
@@ -121,12 +113,12 @@ function normalize(
   return {
     model: model(input.model, previous.model),
     initialVelocity: clamp(
-      finite(input.initialVelocity, previous.initialVelocity),
+      finiteNumber(input.initialVelocity, previous.initialVelocity),
       0,
       2
     ),
     acceleration: clamp(
-      finite(input.acceleration, previous.acceleration),
+      finiteNumber(input.acceleration, previous.acceleration),
       -5,
       5
     ),
@@ -246,7 +238,7 @@ export function createTickerTimerSim(initial: Partial<TickerTimerParams> = {}) {
         return;
       time = Math.min(
         tickerTimerConstants.maxTime,
-        time + Math.max(0, finite(dt, 0))
+        time + Math.max(0, finiteNumber(dt, 0))
       );
     }
   };

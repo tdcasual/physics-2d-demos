@@ -1,11 +1,9 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
-import type { MaxwellParams } from './scene.sim';
 import { maxwellControlsSchema } from './controls-schema';
-import { asBool, createMaxwellScene } from './scene.entry';
+import { createMaxwellScene } from './scene.entry';
 import { maxwellMeta } from './scene.meta';
+import { createBoundControls } from '../../ui/components/bound-controls';
 bootScenePage({
   meta: maxwellMeta,
   autoPlay: true,
@@ -36,35 +34,12 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, scheduleRender, writeParam }) => {
-    const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+  createControls: ({ mount, scene, scheduleRender, writeParam }) =>
+    createBoundControls({
       mount,
       schema: maxwellControlsSchema,
-      onAction: () => render(),
-      onChange: (key, value) => {
-        if (key === 'autoRun') scene.setParams({ autoRun: asBool(value) });
-        else
-          scene.setParams({ [key]: Number(value) } as Partial<MaxwellParams>);
-        render();
-        writeParam?.(key, value);
-      }
-    });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (key === 'autoRun') {
-        const autoRun = asBool(value);
-        ctx.scene.setParams({ autoRun });
-        ctx.setControlValue(key, autoRun);
-        return true;
-      }
-      const number = Number(value);
-      if (!Number.isFinite(number)) return false;
-      ctx.scene.setParams({ [key]: number } as Partial<MaxwellParams>);
-      ctx.setControlValue(key, number);
-      return true;
-    }
-  }
+      scene,
+      scheduleRender,
+      writeParam
+    })
 });

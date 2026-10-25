@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type DeflectionCharge = 'positive' | 'negative';
 
@@ -92,37 +93,33 @@ const DEFAULTS: AlternatingElectricDeflectionParams = {
   showGhosts: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function normalize(
   input: Partial<AlternatingElectricDeflectionParams>,
   previous = DEFAULTS
 ): AlternatingElectricDeflectionParams {
   return {
     voltageAmplitude: clamp(
-      finite(input.voltageAmplitude, previous.voltageAmplitude),
+      finiteOr(input.voltageAmplitude, previous.voltageAmplitude),
       alternatingElectricDeflectionConstants.voltageAmplitudeMin,
       alternatingElectricDeflectionConstants.voltageAmplitudeMax
     ),
     period: clamp(
-      finite(input.period, previous.period),
+      finiteOr(input.period, previous.period),
       alternatingElectricDeflectionConstants.periodMin,
       alternatingElectricDeflectionConstants.periodMax
     ),
     plateGap: clamp(
-      finite(input.plateGap, previous.plateGap),
+      finiteOr(input.plateGap, previous.plateGap),
       alternatingElectricDeflectionConstants.plateGapMin,
       alternatingElectricDeflectionConstants.plateGapMax
     ),
     flightDuration: clamp(
-      finite(input.flightDuration, previous.flightDuration),
+      finiteOr(input.flightDuration, previous.flightDuration),
       alternatingElectricDeflectionConstants.flightDurationMin,
       alternatingElectricDeflectionConstants.flightDurationMax
     ),
     releasePhase: clamp(
-      finite(input.releasePhase, previous.releasePhase),
+      finiteOr(input.releasePhase, previous.releasePhase),
       alternatingElectricDeflectionConstants.releasePhaseMin,
       alternatingElectricDeflectionConstants.releasePhaseMax
     ),
@@ -185,7 +182,7 @@ export function alternatingElectricDeflectionSample(
   >,
   time: number
 ) {
-  const elapsed = Math.max(0, finite(time, 0));
+  const elapsed = Math.max(0, finiteOr(time, 0));
   const periodTime = params.releasePhase * params.period + elapsed;
   const phase = (((periodTime / params.period) % 1) + 1) % 1;
   const fieldSign = fieldSignAt(periodTime, params.period);
@@ -273,7 +270,7 @@ export function createAlternatingElectricDeflectionSim(
       return { ...params };
     },
     step(dt: number): void {
-      if (params.autoRun) time += Math.max(0, finite(dt, 0));
+      if (params.autoRun) time += Math.max(0, finiteOr(dt, 0));
     },
     reset(): void {
       params = { ...defaults };

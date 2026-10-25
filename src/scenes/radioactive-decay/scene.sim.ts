@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type RadioactiveParams = { halfLife: number; autoRun: boolean };
 export type RadioactiveState = RadioactiveParams & {
@@ -28,16 +29,13 @@ const DEFAULTS: RadioactiveParams = {
   halfLife: radioactiveConstants.defaultHalfLife,
   autoRun: true
 };
-function finite(v: unknown, fallback: number): number {
-  return typeof v === 'number' && Number.isFinite(v) ? v : fallback;
-}
 function normalize(
   input: Partial<RadioactiveParams>,
   previous = DEFAULTS
 ): RadioactiveParams {
   return {
     halfLife: clamp(
-      finite(input.halfLife, previous.halfLife),
+      finiteOr(input.halfLife, previous.halfLife),
       radioactiveConstants.halfLifeMin,
       radioactiveConstants.halfLifeMax
     ),
@@ -87,7 +85,7 @@ export function createRadioactiveSim(initial: Partial<RadioactiveParams> = {}) {
       return { ...params };
     },
     step(dt: number): void {
-      if (params.autoRun) time += Math.max(0, finite(dt, 0));
+      if (params.autoRun) time += Math.max(0, finiteOr(dt, 0));
     },
     reset(): void {
       params = { ...defaults };

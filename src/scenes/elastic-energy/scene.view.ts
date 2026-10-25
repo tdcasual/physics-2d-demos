@@ -2,6 +2,7 @@ import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import { energyConstants, type EnergyState } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateEnergyViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -50,22 +51,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     border: '#3c4b61'
   }
 };
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 function card(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -127,9 +112,18 @@ function drawFormulaHeader(
   scale: number
 ): void {
   card(ctx, 58, 22, 704, 72, p);
-  text(ctx, '系统物理量守恒看牌', 82, 44, p.muted, 15 * scale, 'left', 700);
-  text(ctx, 'p = m₁v₁ + m₂v₂ = 常数', 82, 73, p.ink, 16 * scale, 'left', 600);
-  text(
+  drawText(ctx, '系统物理量守恒看牌', 82, 44, p.muted, 15 * scale, 'left', 700);
+  drawText(
+    ctx,
+    'p = m₁v₁ + m₂v₂ = 常数',
+    82,
+    73,
+    p.ink,
+    16 * scale,
+    'left',
+    600
+  );
+  drawText(
     ctx,
     'Eₖ = Eₖ₁ + Eₖ₂ + Eₚ = 常数',
     420,
@@ -146,7 +140,7 @@ function drawTrack(
   p: Palette,
   scale: number
 ): void {
-  text(ctx, '弹性碰撞物理实验室', 28, 126, p.ink, 22 * scale, 'left', 700);
+  drawText(ctx, '弹性碰撞物理实验室', 28, 126, p.ink, 22 * scale, 'left', 700);
   ctx.strokeStyle = p.axis;
   ctx.lineWidth = 5;
   ctx.beginPath();
@@ -162,7 +156,7 @@ function drawTrack(
     ctx.lineTo(x, energyConstants.trackY + 14);
     ctx.stroke();
     if (i % 2 === 0)
-      text(
+      drawText(
         ctx,
         `${i}.0米`,
         x,
@@ -186,7 +180,7 @@ function drawTrack(
   ctx.beginPath();
   ctx.arc(comX, energyConstants.trackY, 7, 0, Math.PI * 2);
   ctx.fill();
-  text(ctx, '系统质心位置', comX, 145, p.teal, 13 * scale, 'center', 700);
+  drawText(ctx, '系统质心位置', comX, 145, p.teal, 13 * scale, 'center', 700);
   drawBall(
     ctx,
     mapX(state.positionA),
@@ -207,7 +201,7 @@ function drawTrack(
     p,
     scale
   );
-  text(
+  drawText(
     ctx,
     `t = ${state.time.toFixed(2)} 秒`,
     410,
@@ -241,7 +235,7 @@ function drawTrack(
   );
   ctx.fill();
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '手动时间探针',
     energyConstants.timelineStart,
@@ -251,7 +245,7 @@ function drawTrack(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     '0.0秒（始）',
     energyConstants.timelineStart,
@@ -261,7 +255,7 @@ function drawTrack(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `${energyConstants.animationPeriod.toFixed(1)}秒（终）`,
     energyConstants.timelineEnd,
@@ -301,8 +295,8 @@ function drawBall(
   ctx.arc(x, y, energyConstants.ballRadius, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
-  text(ctx, label, x, y - 6, '#fff', 19 * scale, 'center', 700);
-  text(
+  drawText(ctx, label, x, y - 6, '#fff', 19 * scale, 'center', 700);
+  drawText(
     ctx,
     `${mass.toFixed(0)}千克`,
     x,
@@ -322,7 +316,7 @@ function drawBall(
     color
   );
   const velocityLabelY = label === 'A' ? y - 70 : y - 96;
-  text(
+  drawText(
     ctx,
     `${velocity.toFixed(1)} 米/秒`,
     x + sign * 52,
@@ -375,9 +369,9 @@ function drawVelocityGraph(
   const y0 = energyConstants.velocityGraphTop;
   const y1 = energyConstants.velocityGraphBottom;
   card(ctx, 36, 452, 384, 256, p);
-  text(ctx, '速度—时间图像', 58, 474, p.ink, 15 * scale, 'left', 700);
-  text(ctx, 'A球', 276, 474, p.red, 12 * scale, 'center', 700);
-  text(ctx, 'B球', 340, 474, p.blue, 12 * scale, 'center', 700);
+  drawText(ctx, '速度—时间图像', 58, 474, p.ink, 15 * scale, 'left', 700);
+  drawText(ctx, 'A球', 276, 474, p.red, 12 * scale, 'center', 700);
+  drawText(ctx, 'B球', 340, 474, p.blue, 12 * scale, 'center', 700);
   drawAxes(ctx, x0, x1, y0, y1, p);
   const zeroY = (y0 + y1) / 2;
   const vScale = (y1 - y0) / energyConstants.graphForceMax;
@@ -420,9 +414,18 @@ function drawVelocityGraph(
   ctx.lineTo(collisionX, y1);
   ctx.stroke();
   ctx.setLineDash([]);
-  text(ctx, 't', x1 + 12, y1, p.axis, 12 * scale, 'left', 700);
-  text(ctx, 'v', x0, y0 - 10, p.axis, 12 * scale, 'center', 700);
-  text(ctx, '碰撞', collisionX + 8, y0 + 12, p.yellow, 11 * scale, 'left', 700);
+  drawText(ctx, 't', x1 + 12, y1, p.axis, 12 * scale, 'left', 700);
+  drawText(ctx, 'v', x0, y0 - 10, p.axis, 12 * scale, 'center', 700);
+  drawText(
+    ctx,
+    '碰撞',
+    collisionX + 8,
+    y0 + 12,
+    p.yellow,
+    11 * scale,
+    'left',
+    700
+  );
 }
 function drawVelocityLine(
   ctx: CanvasRenderingContext2D,
@@ -449,7 +452,16 @@ function drawEnergyGraph(
   const y0 = energyConstants.energyGraphTop;
   const y1 = energyConstants.energyGraphBottom;
   card(ctx, 426, 452, 348, 256, p);
-  text(ctx, '能量分配与转换（焦耳）', 448, 474, p.ink, 15 * scale, 'left', 700);
+  drawText(
+    ctx,
+    '能量分配与转换（焦耳）',
+    448,
+    474,
+    p.ink,
+    15 * scale,
+    'left',
+    700
+  );
   drawAxes(ctx, x0, x1, y0, y1, p);
   const values = [
     state.energyA,
@@ -474,7 +486,7 @@ function drawEnergyGraph(
     ctx.fillRect(x - barWidth / 2, y0 + 12, barWidth, y1 - y0 - 12);
     ctx.fillStyle = colors[index];
     ctx.fillRect(x - barWidth / 2, y1 - h, barWidth, h);
-    text(
+    drawText(
       ctx,
       value.toFixed(1),
       x,
@@ -484,7 +496,16 @@ function drawEnergyGraph(
       'center',
       700
     );
-    text(ctx, labels[index], x, y1 + 18, p.muted, 12 * scale, 'center', 600);
+    drawText(
+      ctx,
+      labels[index],
+      x,
+      y1 + 18,
+      p.muted,
+      12 * scale,
+      'center',
+      600
+    );
   });
 }
 function drawFooter(
@@ -493,7 +514,7 @@ function drawFooter(
   p: Palette,
   scale: number
 ): void {
-  text(
+  drawText(
     ctx,
     state.collided
       ? '碰撞完成：动量与动能守恒'

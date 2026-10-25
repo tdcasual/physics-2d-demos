@@ -6,6 +6,7 @@ import {
   type LaserPulseState,
   type LaserSpeedState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateLaserSpeedViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -98,23 +99,6 @@ function roundedRect(
   ctx.roundRect(x, y, width, height, radius);
 }
 
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
-
 function arrow(
   ctx: CanvasRenderingContext2D,
   x1: number,
@@ -196,7 +180,7 @@ function drawPulse(
   ctx.arc(x, carY, 6, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
-  text(
+  drawText(
     ctx,
     time <= pulse.hitTime ? '发射' : '回波',
     x,
@@ -269,7 +253,7 @@ function drawRoad(
   ctx.beginPath();
   ctx.arc(RADAR_X + 4, ROAD_Y + ROAD_H / 2 - 2, 8, -0.6, 0.6);
   ctx.fill();
-  text(ctx, '测速仪', RADAR_X, ROAD_Y + ROAD_H + 25, p.ink, 15, 'center');
+  drawText(ctx, '测速仪', RADAR_X, ROAD_Y + ROAD_H + 25, p.ink, 15, 'center');
   const carX = Math.min(ROAD_RIGHT - 38, distanceToX(state.carDistance));
   drawCar(ctx, carX, ROAD_Y + ROAD_H / 2 + 3, p);
   if (state.params.showVectors) {
@@ -282,7 +266,7 @@ function drawRoad(
       p.blue,
       4
     );
-    text(
+    drawText(
       ctx,
       `v = ${state.params.velocity.toFixed(0)} m/s`,
       carX + 10,
@@ -307,7 +291,7 @@ function drawRoad(
     p.ink,
     2
   );
-  text(
+  drawText(
     ctx,
     'x (m)',
     ROAD_RIGHT - 4,
@@ -317,8 +301,17 @@ function drawRoad(
     'left',
     500
   );
-  text(ctx, 'x = 0', RADAR_X, ROAD_Y + ROAD_H + 62, p.muted, 13, 'center', 500);
-  text(
+  drawText(
+    ctx,
+    'x = 0',
+    RADAR_X,
+    ROAD_Y + ROAD_H + 62,
+    p.muted,
+    13,
+    'center',
+    500
+  );
+  drawText(
     ctx,
     '光速已缩放：c = 200 m/s',
     FIELD_W - 20,
@@ -369,8 +362,26 @@ function drawGraph(
     2
   );
   arrow(ctx, GRAPH_LEFT, GRAPH_TOP + 4, GRAPH_LEFT, GRAPH_TOP - 18, p.ink, 2);
-  text(ctx, 't (s)', GRAPH_RIGHT + 24, GRAPH_BOTTOM, p.ink, 15, 'left', 500);
-  text(ctx, 'x (m)', GRAPH_LEFT - 8, GRAPH_TOP - 22, p.ink, 15, 'right', 500);
+  drawText(
+    ctx,
+    't (s)',
+    GRAPH_RIGHT + 24,
+    GRAPH_BOTTOM,
+    p.ink,
+    15,
+    'left',
+    500
+  );
+  drawText(
+    ctx,
+    'x (m)',
+    GRAPH_LEFT - 8,
+    GRAPH_TOP - 22,
+    p.ink,
+    15,
+    'right',
+    500
+  );
   ctx.strokeStyle = p.blue;
   ctx.lineWidth = 4;
   ctx.beginPath();
@@ -404,8 +415,17 @@ function drawGraph(
     ctx.strokeStyle = item.color;
     ctx.lineWidth = 3;
     ctx.stroke();
-    text(ctx, item.label, GRAPH_LEFT - 10, gy, item.color, 16, 'right', 700);
-    text(
+    drawText(
+      ctx,
+      item.label,
+      GRAPH_LEFT - 10,
+      gy,
+      item.color,
+      16,
+      'right',
+      700
+    );
+    drawText(
       ctx,
       item.timeLabel,
       gx,
@@ -418,7 +438,7 @@ function drawGraph(
     ctx.setLineDash([7, 6]);
   }
   ctx.setLineDash([]);
-  text(
+  drawText(
     ctx,
     `Δt = ${state.realInterval.toFixed(2)} s`,
     GRAPH_LEFT + 12,
@@ -448,8 +468,8 @@ function drawMetricCard(
   ctx.stroke();
   ctx.fillStyle = color;
   ctx.fillRect(x, y, 5, 46);
-  text(ctx, label, x + 16, y + 15, p.muted, 12, 'left', 500);
-  text(ctx, value, x + 16, y + 33, color, 18, 'left', 700);
+  drawText(ctx, label, x + 16, y + 15, p.muted, 12, 'left', 500);
+  drawText(ctx, value, x + 16, y + 33, color, 18, 'left', 700);
 }
 
 function drawBottom(
@@ -469,9 +489,9 @@ function drawBottom(
   roundedRect(ctx, 796, PANEL_Y, 388, PANEL_H, 14);
   ctx.fill();
   ctx.stroke();
-  text(ctx, '测量数据记录', 34, PANEL_Y + 21, p.ink, 18, 'left', 700);
-  text(ctx, '两次位置快照', 424, PANEL_Y + 21, p.ink, 18, 'left', 700);
-  text(ctx, '测速公式', 814, PANEL_Y + 21, p.ink, 18, 'left', 700);
+  drawText(ctx, '测量数据记录', 34, PANEL_Y + 21, p.ink, 18, 'left', 700);
+  drawText(ctx, '两次位置快照', 424, PANEL_Y + 21, p.ink, 18, 'left', 700);
+  drawText(ctx, '测速公式', 814, PANEL_Y + 21, p.ink, 18, 'left', 700);
   drawMetricCard(
     ctx,
     30,
@@ -512,9 +532,18 @@ function drawBottom(
     p.teal,
     p
   );
-  text(ctx, 't₁ = Δt₁ / 2', 814, PANEL_Y + 52, p.red, 15, 'left', 600);
-  text(ctx, 't₂ = ΔT + Δt₂ / 2', 814, PANEL_Y + 77, p.teal, 15, 'left', 600);
-  text(
+  drawText(ctx, 't₁ = Δt₁ / 2', 814, PANEL_Y + 52, p.red, 15, 'left', 600);
+  drawText(
+    ctx,
+    't₂ = ΔT + Δt₂ / 2',
+    814,
+    PANEL_Y + 77,
+    p.teal,
+    15,
+    'left',
+    600
+  );
+  drawText(
     ctx,
     `v = Δx / Δt = ${state.inferredVelocity.toFixed(1)} m/s`,
     814,
@@ -537,8 +566,8 @@ function drawFormulaStrip(
   roundedRect(ctx, 16, FORMULA_Y, BASE_W - 32, FORMULA_H, 14);
   ctx.fill();
   ctx.stroke();
-  text(ctx, '关键点', 35, FORMULA_Y + 25, p.gold, 16, 'left', 700);
-  text(
+  drawText(ctx, '关键点', 35, FORMULA_Y + 25, p.gold, 16, 'left', 700);
+  drawText(
     ctx,
     '汽车真实耗时 Δt ≠ 发射间隔 ΔT',
     115,
@@ -548,7 +577,7 @@ function drawFormulaStrip(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `Δx = x₂ − x₁ = ${state.measuredDistance.toFixed(1)} m`,
     35,
@@ -558,7 +587,7 @@ function drawFormulaStrip(
     'left',
     500
   );
-  text(
+  drawText(
     ctx,
     `Δt = t₂ − t₁ = ${state.realInterval.toFixed(2)} s`,
     390,
@@ -568,7 +597,7 @@ function drawFormulaStrip(
     'left',
     500
   );
-  text(
+  drawText(
     ctx,
     `c = ${LIGHT_SPEED} m/s（动画缩放）`,
     760,
@@ -613,7 +642,7 @@ export function createLaserSpeedView(
     ctx.clearRect(0, 0, BASE_W, BASE_H);
     ctx.fillStyle = p.bg;
     ctx.fillRect(0, 0, BASE_W, BASE_H);
-    text(
+    drawText(
       ctx,
       '实景空间模型（俯视视角）',
       FIELD_W / 2,
@@ -623,7 +652,7 @@ export function createLaserSpeedView(
       'center',
       700
     );
-    text(
+    drawText(
       ctx,
       '位移—时间（x-t）运动图象分析',
       (GRAPH_LEFT + GRAPH_RIGHT) / 2,

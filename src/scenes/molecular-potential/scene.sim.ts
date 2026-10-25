@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type MolecularParams = {
   distanceRatio: number;
@@ -89,22 +90,18 @@ const DEFAULTS: MolecularParams = {
   autoRun: false
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function normalize(
   input: Partial<MolecularParams>,
   previous = DEFAULTS
 ): MolecularParams {
   return {
     distanceRatio: clamp(
-      finite(input.distanceRatio, previous.distanceRatio),
+      finiteOr(input.distanceRatio, previous.distanceRatio),
       molecularConstants.distanceMin,
       molecularConstants.distanceMax
     ),
     epsilon: clamp(
-      finite(input.epsilon, previous.epsilon),
+      finiteOr(input.epsilon, previous.epsilon),
       molecularConstants.epsilonMin,
       molecularConstants.epsilonMax
     ),
@@ -174,7 +171,7 @@ export function createMolecularSim(initial: Partial<MolecularParams> = {}) {
     step(dt: number): void {
       if (params.autoRun) {
         time =
-          (time + Math.max(0, finite(dt, 0))) %
+          (time + Math.max(0, finiteOr(dt, 0))) %
           molecularConstants.animationPeriod;
       }
     },

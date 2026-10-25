@@ -18,29 +18,25 @@ const GRANDFATHERED: Record<string, number> = {};
  */
 const WATCHLIST: Record<string, number> = {
   'src/app/layouts/container.ts': 996,
-  'src/scenes/internal-energy/scene.view.ts': 979,
-  'src/scenes/oscilloscope/scene.sim.ts': 970,
+  'src/scenes/internal-energy/scene.view.ts': 948,
+  'src/scenes/oscilloscope/scene.sim.ts': 965,
   'src/app/layouts/layout-switch-runtime.ts': 929,
-  'src/scenes/three-forces/scene.sim.ts': 911,
-  'src/scenes/dynamic-circle/scene.sim.ts': 878,
-  'src/scenes/mechanical-energy/scene.view.ts': 876,
-  'src/scenes/faraday-disc/scene.view.ts': 871,
-  'src/scenes/molecular-potential/scene.view.ts': 863,
-  'src/scenes/accel-force/scene.sim.ts': 861,
+  'src/scenes/three-forces/scene.sim.ts': 875,
+  'src/scenes/faraday-disc/scene.view.ts': 864,
   'src/scenes/thin-film/scene.view.ts': 852,
-  'src/scenes/emf-internal-resistance/scene.view.ts': 843,
-  'src/scenes/accel-force/scene.view.ts': 831,
-  'src/scenes/block-board/scene.sim.ts': 825,
+  'src/scenes/molecular-potential/scene.view.ts': 847,
+  'src/scenes/dynamic-circle/scene.sim.ts': 839,
+  'src/scenes/accel-force/scene.sim.ts': 825,
   'src/scenes/double-slit/scene.entry.ts': 821,
-  'src/scenes/wire-loop-field/scene.view.ts': 815,
+  'src/scenes/mechanical-energy/scene.view.ts': 815,
+  'src/scenes/block-board/scene.sim.ts': 815,
   'src/scenes/double-slit/data-task.ts': 810,
-  'src/scenes/capacitor-charge-discharge/scene.view.ts': 805,
-  'src/scenes/photoelectric-switch/scene.view.ts': 801
+  'src/scenes/wire-loop-field/scene.view.ts': 809
 };
 
 const LIMIT = 1000;
 const WATCH_FLOOR = 800;
-const WATCHLIST_CEILING = 19;
+const WATCHLIST_CEILING = 15;
 
 function walk(dir: string, acc: string[] = []): string[] {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {

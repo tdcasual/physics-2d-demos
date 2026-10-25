@@ -1,20 +1,10 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
-import type { EarthGravityParams } from './scene.sim';
 import { earthGravityControlsSchema } from './controls-schema';
 import { createEarthGravityScene } from './scene.entry';
 import { earthGravityMeta } from './scene.meta';
-
-function asBoolean(value: unknown): boolean {
-  return (
-    value === true ||
-    value === 1 ||
-    value === '1' ||
-    String(value).toLowerCase() === 'true'
-  );
-}
+import { createBoundControls } from '../../ui/components/bound-controls';
+import { resetSceneAndControls } from '../../app/control-projection';
 
 bootScenePage({
   meta: earthGravityMeta,
@@ -45,52 +35,15 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, scheduleRender, writeParam }) => {
-    const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+  createControls: ({ mount, scene, scheduleRender, writeParam }) =>
+    createBoundControls({
       mount,
       schema: earthGravityControlsSchema,
-      onChange: (key, value) => {
-        if (
-          key === 'autoRun' ||
-          key === 'showForces' ||
-          key === 'showComponents'
-        ) {
-          scene.setParams({
-            [key]: asBoolean(value)
-          } as Partial<EarthGravityParams>);
-        } else {
-          const number = Number(value);
-          if (!Number.isFinite(number)) return;
-          scene.setParams({ [key]: number } as Partial<EarthGravityParams>);
-        }
-        render();
-        writeParam?.(key, value);
-      },
-      onAction: (key) => {
-        if (key === 'reset') scene.reset();
-        render();
+      scene,
+      scheduleRender,
+      writeParam,
+      onAction: (key, renderer) => {
+        if (key === 'reset') resetSceneAndControls(scene, renderer, writeParam);
       }
-    });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (
-        key === 'autoRun' ||
-        key === 'showForces' ||
-        key === 'showComponents'
-      ) {
-        const enabled = asBoolean(value);
-        ctx.scene.setParams({ [key]: enabled } as Partial<EarthGravityParams>);
-        ctx.setControlValue(key, enabled);
-        return true;
-      }
-      const number = Number(value);
-      if (!Number.isFinite(number)) return false;
-      ctx.scene.setParams({ [key]: number } as Partial<EarthGravityParams>);
-      ctx.setControlValue(key, number);
-      return true;
-    }
-  }
+    })
 });

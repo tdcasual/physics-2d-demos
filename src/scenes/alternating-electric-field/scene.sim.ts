@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type AlternatingCharge = 'electron' | 'positive';
 
@@ -81,32 +82,28 @@ const DEFAULTS: AlternatingElectricFieldParams = {
   showVelocityVector: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function normalize(
   input: Partial<AlternatingElectricFieldParams>,
   previous = DEFAULTS
 ): AlternatingElectricFieldParams {
   return {
     voltageAmplitude: clamp(
-      finite(input.voltageAmplitude, previous.voltageAmplitude),
+      finiteOr(input.voltageAmplitude, previous.voltageAmplitude),
       alternatingElectricFieldConstants.voltageAmplitudeMin,
       alternatingElectricFieldConstants.voltageAmplitudeMax
     ),
     period: clamp(
-      finite(input.period, previous.period),
+      finiteOr(input.period, previous.period),
       alternatingElectricFieldConstants.periodMin,
       alternatingElectricFieldConstants.periodMax
     ),
     plateGap: clamp(
-      finite(input.plateGap, previous.plateGap),
+      finiteOr(input.plateGap, previous.plateGap),
       alternatingElectricFieldConstants.plateGapMin,
       alternatingElectricFieldConstants.plateGapMax
     ),
     phaseOffset: clamp(
-      finite(input.phaseOffset, previous.phaseOffset),
+      finiteOr(input.phaseOffset, previous.phaseOffset),
       alternatingElectricFieldConstants.phaseOffsetMin,
       alternatingElectricFieldConstants.phaseOffsetMax
     ),
@@ -170,7 +167,7 @@ export function alternatingElectricFieldSample(
   >,
   time: number
 ) {
-  const normalizedTime = Math.max(0, finite(time, 0));
+  const normalizedTime = Math.max(0, finiteOr(time, 0));
   const phase =
     (((params.phaseOffset + normalizedTime / params.period) % 1) + 1) % 1;
   const fieldSign = signedField(phase);
@@ -220,7 +217,7 @@ export function createAlternatingElectricFieldSim(
       return { ...params };
     },
     step(dt: number): void {
-      if (params.autoRun) time += Math.max(0, finite(dt, 0));
+      if (params.autoRun) time += Math.max(0, finiteOr(dt, 0));
     },
     reset(): void {
       params = { ...defaults };

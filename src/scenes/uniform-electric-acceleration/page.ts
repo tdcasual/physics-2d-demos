@@ -1,11 +1,9 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
-import type { UniformElectricAccelerationParams } from './scene.sim';
 import { uniformElectricAccelerationControlsSchema } from './controls-schema';
 import { createUniformElectricAccelerationScene } from './scene.entry';
 import { uniformElectricAccelerationMeta } from './scene.meta';
+import { createBoundControls } from '../../ui/components/bound-controls';
 
 bootScenePage({
   meta: uniformElectricAccelerationMeta,
@@ -44,64 +42,18 @@ bootScenePage({
   },
   createControls: ({ mount, scene, scheduleRender, writeParam }) => {
     const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+    return createBoundControls({
       mount,
       schema: uniformElectricAccelerationControlsSchema,
+      scene,
+      scheduleRender,
+      writeParam,
       onAction: (key) => {
         if (key === 'narrow') scene.setParams({ plateGap: 6 });
         else if (key === 'wide') scene.setParams({ plateGap: 18 });
         else if (key === 'reset') scene.reset();
         render();
-      },
-      onChange: (key, value) => {
-        if (
-          key === 'voltage' ||
-          key === 'plateGap' ||
-          key === 'charge' ||
-          key === 'mass'
-        ) {
-          scene.setParams({
-            [key]: Number(value)
-          } as Partial<UniformElectricAccelerationParams>);
-        } else if (key === 'autoRun' || key === 'showVectors') {
-          scene.setParams({
-            [key]: Boolean(value)
-          } as Partial<UniformElectricAccelerationParams>);
-        }
-        render();
-        writeParam?.(key, value);
       }
     });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (
-        key === 'voltage' ||
-        key === 'plateGap' ||
-        key === 'charge' ||
-        key === 'mass'
-      ) {
-        const number = Number(value);
-        if (!Number.isFinite(number)) return false;
-        ctx.scene.setParams({
-          [key]: number
-        } as Partial<UniformElectricAccelerationParams>);
-        ctx.setControlValue(key, number);
-        return true;
-      }
-      if (key === 'autoRun' || key === 'showVectors') {
-        const enabled =
-          value === 1 ||
-          value === '1' ||
-          String(value).toLowerCase() === 'true';
-        ctx.scene.setParams({
-          [key]: enabled
-        } as Partial<UniformElectricAccelerationParams>);
-        ctx.setControlValue(key, enabled);
-        return true;
-      }
-      return false;
-    }
   }
 });

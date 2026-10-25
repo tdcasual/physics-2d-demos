@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type DeflectionParticle = 'electron' | 'proton';
 
@@ -93,10 +94,6 @@ const DEFAULTS: ElectricDeflectionParams = {
   showComponents: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function normalize(
   input: Partial<ElectricDeflectionParams>,
   previous = DEFAULTS
@@ -107,17 +104,17 @@ function normalize(
         ? input.particle
         : previous.particle,
     voltage: clamp(
-      finite(input.voltage, previous.voltage),
+      finiteOr(input.voltage, previous.voltage),
       electricDeflectionConstants.voltageMin,
       electricDeflectionConstants.voltageMax
     ),
     plateGap: clamp(
-      finite(input.plateGap, previous.plateGap),
+      finiteOr(input.plateGap, previous.plateGap),
       electricDeflectionConstants.plateGapMin,
       electricDeflectionConstants.plateGapMax
     ),
     initialSpeed: clamp(
-      finite(input.initialSpeed, previous.initialSpeed),
+      finiteOr(input.initialSpeed, previous.initialSpeed),
       electricDeflectionConstants.speedMin,
       electricDeflectionConstants.speedMax
     ),
@@ -250,7 +247,7 @@ export function createElectricDeflectionSim(
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      time += Math.max(0, finite(dt, 0));
+      time += Math.max(0, finiteOr(dt, 0));
     },
     reset(): void {
       params = { ...defaults };

@@ -1,26 +1,10 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { brownianMotionControlsSchema } from './controls-schema';
 import { createBrownianScene } from './scene.entry';
 import { brownianMotionMeta } from './scene.meta';
-import type { BrownianParams } from './scene.sim';
-function asBoolean(value: unknown): boolean {
-  return (
-    value === true ||
-    value === 1 ||
-    value === '1' ||
-    String(value).toLowerCase() === 'true'
-  );
-}
-const booleanKeys = new Set([
-  'showMolecules',
-  'showTrail',
-  'showForce',
-  'autoRun',
-  'slowMode'
-]);
+import { createBoundControls } from '../../ui/components/bound-controls';
+import { resetSceneAndControls } from '../../app/control-projection';
 bootScenePage({
   meta: brownianMotionMeta,
   autoPlay: true,
@@ -50,50 +34,15 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, scheduleRender, writeParam }) => {
-    const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+  createControls: ({ mount, scene, scheduleRender, writeParam }) =>
+    createBoundControls({
       mount,
       schema: brownianMotionControlsSchema,
-      onChange: (key, value) => {
-        if (booleanKeys.has(key))
-          scene.setParams({
-            [key]: asBoolean(value)
-          } as Partial<BrownianParams>);
-        else {
-          const number = Number(value);
-          if (!Number.isFinite(number)) return;
-          scene.setParams({ [key]: number } as Partial<BrownianParams>);
-        }
-        render();
-        writeParam?.(key, value);
-      },
-      onAction: (key) => {
-        if (key === 'reset') {
-          scene.reset();
-          const params = scene.getParams();
-          Object.entries(params).forEach(([paramKey, paramValue]) =>
-            renderer.setValue(paramKey, paramValue)
-          );
-        }
-        render();
+      scene,
+      scheduleRender,
+      writeParam,
+      onAction: (key, renderer) => {
+        if (key === 'reset') resetSceneAndControls(scene, renderer, writeParam);
       }
-    });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (booleanKeys.has(key)) {
-        const enabled = asBoolean(value);
-        ctx.scene.setParams({ [key]: enabled } as Partial<BrownianParams>);
-        ctx.setControlValue(key, enabled);
-        return true;
-      }
-      const number = Number(value);
-      if (!Number.isFinite(number)) return false;
-      ctx.scene.setParams({ [key]: number } as Partial<BrownianParams>);
-      ctx.setControlValue(key, number);
-      return true;
-    }
-  }
+    })
 });

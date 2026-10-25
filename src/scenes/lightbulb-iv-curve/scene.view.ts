@@ -2,6 +2,7 @@ import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import { lightbulbConstants, type LightbulbState } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 export type CreateLightbulbViewOptions = {
   canvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
@@ -52,22 +53,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     wire: '#cbd5e1'
   }
 };
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 function card(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -135,8 +120,8 @@ function drawCircuit(
   ctx.moveTo(350 * scale, 102 * scale);
   ctx.lineTo(350 * scale, 130 * scale);
   ctx.stroke();
-  text(ctx, '+', 326 * scale, 76 * scale, p.red, 16 * scale, 'center', 700);
-  text(ctx, '−', 354 * scale, 76 * scale, p.ink, 16 * scale, 'center', 700);
+  drawText(ctx, '+', 326 * scale, 76 * scale, p.red, 16 * scale, 'center', 700);
+  drawText(ctx, '−', 354 * scale, 76 * scale, p.ink, 16 * scale, 'center', 700);
   ctx.fillStyle = p.orange;
   ctx.beginPath();
   ctx.arc(
@@ -171,8 +156,17 @@ function drawCircuit(
   ctx.arc(510 * scale, 174 * scale, 27 * scale, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
-  text(ctx, 'A', 266 * scale, 168 * scale, p.ink, 18 * scale, 'center', 700);
-  text(
+  drawText(
+    ctx,
+    'A',
+    266 * scale,
+    168 * scale,
+    p.ink,
+    18 * scale,
+    'center',
+    700
+  );
+  drawText(
     ctx,
     state.current.toFixed(2),
     266 * scale,
@@ -182,8 +176,17 @@ function drawCircuit(
     'center',
     700
   );
-  text(ctx, 'V', 510 * scale, 168 * scale, p.ink, 18 * scale, 'center', 700);
-  text(
+  drawText(
+    ctx,
+    'V',
+    510 * scale,
+    168 * scale,
+    p.ink,
+    18 * scale,
+    'center',
+    700
+  );
+  drawText(
     ctx,
     state.voltage.toFixed(2),
     510 * scale,
@@ -193,7 +196,7 @@ function drawCircuit(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     '分压型滑动变阻器',
     385 * scale,
@@ -208,7 +211,7 @@ function drawCircuit(
   const sliderX = 176 + (425 * state.voltage) / lightbulbConstants.voltageMax;
   ctx.fillStyle = p.teal;
   ctx.fillRect((sliderX - 7) * scale, 248 * scale, 14 * scale, 37 * scale);
-  text(
+  drawText(
     ctx,
     '滑片',
     sliderX * scale,
@@ -247,7 +250,7 @@ function drawGraph(
     ctx.moveTo(x, oy);
     ctx.lineTo(x, oy - gh);
     ctx.stroke();
-    text(
+    drawText(
       ctx,
       (i * 0.6).toFixed(1),
       x,
@@ -264,7 +267,7 @@ function drawGraph(
     ctx.moveTo(ox, y);
     ctx.lineTo(ox + gw, y);
     ctx.stroke();
-    text(
+    drawText(
       ctx,
       (i * 0.1).toFixed(1),
       ox - 16 * scale,
@@ -275,7 +278,7 @@ function drawGraph(
       500
     );
   }
-  text(
+  drawText(
     ctx,
     'I / A',
     ox - 18 * scale,
@@ -285,7 +288,7 @@ function drawGraph(
     'right',
     700
   );
-  text(
+  drawText(
     ctx,
     'U / V',
     ox + gw + 18 * scale,
@@ -304,7 +307,7 @@ function drawGraph(
     ctx.lineTo(ox + gw, oy - (lightbulbConstants.voltageMax / xMax) * gh);
     ctx.stroke();
     ctx.setLineDash([]);
-    text(
+    drawText(
       ctx,
       '纯电阻冷态直线',
       ox + 450 * scale,
@@ -352,7 +355,7 @@ function drawGraph(
   ctx.arc(px, py, 9 * scale, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '斜率 = 1/R',
     ox + 264 * scale,
@@ -373,7 +376,7 @@ function drawPanel(
   const w = lightbulbConstants.panelWidth * scale;
   ctx.fillStyle = p.panel;
   ctx.fillRect(x, 0, w, lightbulbConstants.baseHeight * scale);
-  text(
+  drawText(
     ctx,
     '小灯泡伏安特性剖析',
     x + 18 * scale,
@@ -389,7 +392,7 @@ function drawPanel(
   ctx.moveTo(x + 18 * scale, 66 * scale);
   ctx.lineTo(x + w - 18 * scale, 66 * scale);
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '分压电路输入控制',
     x + 18 * scale,
@@ -400,7 +403,7 @@ function drawPanel(
     700
   );
   card(ctx, x + 18 * scale, 122 * scale, w - 36 * scale, 104 * scale, p);
-  text(
+  drawText(
     ctx,
     '目标电压 U',
     x + 30 * scale,
@@ -434,7 +437,7 @@ function drawPanel(
     Math.PI * 2
   );
   ctx.fill();
-  text(
+  drawText(
     ctx,
     `${state.voltage.toFixed(1)} V`,
     x + w - 25 * scale,
@@ -444,7 +447,7 @@ function drawPanel(
     'right',
     700
   );
-  text(
+  drawText(
     ctx,
     '拖动滑片改变分压',
     x + 30 * scale,
@@ -454,7 +457,7 @@ function drawPanel(
     'left',
     500
   );
-  text(
+  drawText(
     ctx,
     '实时数据与状态监测',
     x + 18 * scale,
@@ -465,7 +468,7 @@ function drawPanel(
     700
   );
   const temp = state.temperatureRatio;
-  text(
+  drawText(
     ctx,
     '冷态（室温）',
     x + 18 * scale,
@@ -475,7 +478,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     '灯丝发热如白炽化',
     x + w - 18 * scale,
@@ -504,7 +507,7 @@ function drawPanel(
   ];
   values.forEach(([label, value, color, dx, dy]) => {
     card(ctx, x + dx * scale, dy * scale, 164 * scale, 70 * scale, p);
-    text(
+    drawText(
       ctx,
       label,
       x + (dx + 82) * scale,
@@ -514,7 +517,7 @@ function drawPanel(
       'center',
       600
     );
-    text(
+    drawText(
       ctx,
       value,
       x + (dx + 82) * scale,
@@ -525,7 +528,7 @@ function drawPanel(
       700
     );
   });
-  text(
+  drawText(
     ctx,
     '图像几何意义揭秘',
     x + 18 * scale,
@@ -544,7 +547,7 @@ function drawPanel(
     p,
     p.soft
   );
-  text(
+  drawText(
     ctx,
     '阻值定义：',
     x + 30 * scale,
@@ -554,7 +557,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     'R = U / I',
     x + w - 30 * scale,
@@ -564,7 +567,7 @@ function drawPanel(
     'right',
     700
   );
-  text(
+  drawText(
     ctx,
     '图像斜率：',
     x + 30 * scale,
@@ -574,7 +577,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     '割线 k = I/U = 1/R',
     x + w - 30 * scale,
@@ -584,7 +587,7 @@ function drawPanel(
     'right',
     700
   );
-  text(
+  drawText(
     ctx,
     '动态逻辑：温度 ↑ → 电阻 ↑',
     x + 30 * scale,
@@ -594,7 +597,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     '曲线向下弯',
     x + 30 * scale,
@@ -604,7 +607,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     '冷态电阻 6.0 Ω · 理想模型无散热',
     x + 30 * scale,
@@ -660,7 +663,7 @@ export function createLightbulbView(options: CreateLightbulbViewOptions = {}) {
     drawCircuit(ctx, state, p, scale);
     drawGraph(ctx, state, p, scale);
     drawPanel(ctx, state, p, scale);
-    text(
+    drawText(
       ctx,
       '空格键暂停/恢复 · 记录多个工作点',
       260 * scale,

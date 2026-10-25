@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type MirrorMode = 'trajectory' | 'velocity' | 'force' | 'summary';
 
@@ -78,18 +79,18 @@ const DEFAULT_PARAMS: MagneticMirrorParams = {
   showForce: false
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function normalize(
   input: Partial<MagneticMirrorParams>,
   previous: MagneticMirrorParams = DEFAULT_PARAMS
 ): MagneticMirrorParams {
   const modes: MirrorMode[] = ['trajectory', 'velocity', 'force', 'summary'];
   return {
-    pitchAngle: clamp(finite(input.pitchAngle, previous.pitchAngle), 5, 85),
-    mirrorRatio: clamp(finite(input.mirrorRatio, previous.mirrorRatio), 1, 10),
+    pitchAngle: clamp(finiteOr(input.pitchAngle, previous.pitchAngle), 5, 85),
+    mirrorRatio: clamp(
+      finiteOr(input.mirrorRatio, previous.mirrorRatio),
+      1,
+      10
+    ),
     mode: modes.includes(input.mode as MirrorMode)
       ? (input.mode as MirrorMode)
       : previous.mode,
@@ -203,7 +204,7 @@ export function createMagneticMirrorSim(
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      const delta = Math.max(0, finite(dt, 0));
+      const delta = Math.max(0, finiteOr(dt, 0));
       const current = stateAt(params, position, direction, time);
       const velocityFactor = Math.max(
         0.12,

@@ -1,4 +1,3 @@
-import { applyCanvasSize, getResponsiveScale } from '../../core/canvas-sizing';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
@@ -10,6 +9,8 @@ import {
   variableWorkConstants as C,
   type VariableWorkState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
+import { sizeCanvasToHostBox } from '../stage-fit';
 
 export type CreateVariableWorkViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -64,23 +65,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
   }
 };
 
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
-
 function plotBox(
   left: number,
   top: number,
@@ -96,43 +80,11 @@ function plotBox(
   };
 }
 
-export function sizeGraphCanvasToHost(canvas: HTMLCanvasElement): {
-  ctx: CanvasRenderingContext2D;
-  cssWidth: number;
-  cssHeight: number;
-  responsiveScale: number;
-} {
-  const host = canvas.parentElement;
-  let cssWidth: number;
-  let cssHeight: number;
-  if (host) {
-    const style = getComputedStyle(host);
-    const padX =
-      parseFloat(style.paddingLeft) + parseFloat(style.paddingRight) || 0;
-    const padY =
-      parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) || 0;
-    const rect = host.getBoundingClientRect();
-    cssWidth = Math.max(1, Math.floor(rect.width - padX));
-    cssHeight = Math.max(1, Math.floor(rect.height - padY));
-  } else {
-    const rect = canvas.getBoundingClientRect();
-    cssWidth = Math.max(1, Math.floor(rect.width || C.graphFallbackWidth));
-    cssHeight = Math.max(1, Math.floor(rect.height || C.graphFallbackHeight));
-  }
-  const dpr = Math.min(
-    2,
-    typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1
-  );
-  const responsiveScale = getResponsiveScale(cssWidth, cssHeight);
-  const ctx = applyCanvasSize(canvas, {
-    width: Math.max(1, Math.floor(cssWidth * dpr)),
-    height: Math.max(1, Math.floor(cssHeight * dpr)),
-    cssWidth,
-    cssHeight,
-    dpr,
-    responsiveScale
+export function sizeGraphCanvasToHost(canvas: HTMLCanvasElement) {
+  return sizeCanvasToHostBox(canvas, {
+    width: C.graphFallbackWidth,
+    height: C.graphFallbackHeight
   });
-  return { ctx, cssWidth, cssHeight, responsiveScale };
 }
 
 export function formatAxisTick(value: number): string {
@@ -276,7 +228,7 @@ function drawStage(
     ctx.moveTo(x, trackY);
     ctx.lineTo(x, trackY + 8 * scale);
     ctx.stroke();
-    text(
+    drawText(
       ctx,
       `${xm.toFixed(0)} m`,
       x,
@@ -307,11 +259,11 @@ function drawStage(
   ctx.arc(cx - cartW * 0.28, trackY - 4 * scale, 5 * scale, 0, Math.PI * 2);
   ctx.arc(cx + cartW * 0.28, trackY - 4 * scale, 5 * scale, 0, Math.PI * 2);
   ctx.fill();
-  text(ctx, `m`, cx, cy, '#fff', Math.max(11, 12 * scale), 'center', 700);
+  drawText(ctx, `m`, cx, cy, '#fff', Math.max(11, 12 * scale), 'center', 700);
   const vectors = stageVectorLayout(state, width, height, scale);
   if (vectors.f) {
     drawArrow(ctx, vectors.f, p.red, scale);
-    text(
+    drawText(
       ctx,
       'F',
       vectors.f.x1 + 6 * scale,
@@ -324,7 +276,7 @@ function drawStage(
   }
   if (vectors.v) {
     drawArrow(ctx, vectors.v, p.blue, scale);
-    text(
+    drawText(
       ctx,
       'v',
       vectors.v.x1 + 6 * scale,
@@ -365,7 +317,7 @@ function drawFxPlot(
 ): void {
   const box = plotBox(left, top, width, height, scale);
   const font = (n: number) => Math.max(8, n * scale);
-  text(
+  drawText(
     ctx,
     'F-x',
     left + 8 * scale,
@@ -375,7 +327,7 @@ function drawFxPlot(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'F / N',
     box.left,
@@ -402,7 +354,7 @@ function drawFxPlot(
     ctx.lineTo(box.right, y);
     ctx.stroke();
     if (i > 0) {
-      text(
+      drawText(
         ctx,
         formatAxisTick((fMax * i) / 4),
         box.left - 4 * scale,
@@ -419,7 +371,7 @@ function drawFxPlot(
     ctx.moveTo(x, box.top);
     ctx.lineTo(x, box.bottom);
     ctx.stroke();
-    text(
+    drawText(
       ctx,
       formatAxisTick(xm),
       x,
@@ -429,14 +381,22 @@ function drawFxPlot(
       'center'
     );
   }
-  text(ctx, '0', box.left - 4 * scale, box.bottom, p.muted, font(8), 'right');
+  drawText(
+    ctx,
+    '0',
+    box.left - 4 * scale,
+    box.bottom,
+    p.muted,
+    font(8),
+    'right'
+  );
   ctx.strokeStyle = p.ink;
   ctx.beginPath();
   ctx.moveTo(box.left, box.top - 2);
   ctx.lineTo(box.left, box.bottom);
   ctx.lineTo(box.right + 4, box.bottom);
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     'x / m',
     box.right,
@@ -461,7 +421,7 @@ function drawFxPlot(
         : state.riemannBias === 'over'
           ? '高估'
           : '';
-    text(
+    drawText(
       ctx,
       bias ? `Wₙ ${bias}` : 'Wₙ',
       map(0.5 * (fillStart + fillTo), 0, xMax, box.left, box.right),
@@ -485,7 +445,7 @@ function drawFxPlot(
     ctx.lineTo(map(fillTo, 0, xMax, box.left, box.right), box.bottom);
     ctx.closePath();
     ctx.fill();
-    text(
+    drawText(
       ctx,
       'W',
       map(0.5 * (fillStart + fillTo), 0, xMax, box.left, box.right),
@@ -531,7 +491,7 @@ function drawPtPlot(
 ): void {
   const box = plotBox(left, top, width, height, scale);
   const font = (n: number) => Math.max(8, n * scale);
-  text(
+  drawText(
     ctx,
     'P-t',
     left + 8 * scale,
@@ -541,7 +501,7 @@ function drawPtPlot(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'P / W',
     box.left,
@@ -567,7 +527,7 @@ function drawPtPlot(
     ctx.lineTo(box.right, y);
     ctx.stroke();
     if (i > 0) {
-      text(
+      drawText(
         ctx,
         ((pMax * i) / 4).toFixed(0),
         box.left - 4 * scale,
@@ -583,7 +543,7 @@ function drawPtPlot(
     ctx.lineTo(x, box.bottom);
     ctx.stroke();
     if (i > 0) {
-      text(
+      drawText(
         ctx,
         ((tMax * i) / 4).toFixed(1),
         x,
@@ -594,14 +554,22 @@ function drawPtPlot(
       );
     }
   }
-  text(ctx, '0', box.left - 4 * scale, box.bottom, p.muted, font(8), 'right');
+  drawText(
+    ctx,
+    '0',
+    box.left - 4 * scale,
+    box.bottom,
+    p.muted,
+    font(8),
+    'right'
+  );
   ctx.strokeStyle = p.ink;
   ctx.beginPath();
   ctx.moveTo(box.left, box.top - 2);
   ctx.lineTo(box.left, box.bottom);
   ctx.lineTo(box.right + 4, box.bottom);
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     't / s',
     box.right,
@@ -627,7 +595,7 @@ function drawPtPlot(
   ctx.closePath();
   ctx.fill();
   if (state.time > 1e-3) {
-    text(
+    drawText(
       ctx,
       'W',
       map(0.5 * now, 0, tMax, box.left, box.right),

@@ -13,7 +13,6 @@ import {
   addSessionTrial,
   applyFieldDrafts,
   calculationTolerance,
-  checkNumericFormat,
   cloneSession,
   createEmptySession,
   fieldIsOk,
@@ -21,12 +20,12 @@ import {
   getSummaryField,
   getTrialField,
   invalidateAllTrials,
-  parseStudentNumber,
   removeSessionTrial,
   significantRoundingHalfUnit,
-  withinEpsilon,
-  withinTickTolerance,
   writeCheckedField,
+  gradeNumber,
+  rangeOf,
+  type GradeResult,
   type DataWorkspaceDraft,
   type DataWorkspaceEligibility,
   type DataWorkspaceFieldResult,
@@ -169,8 +168,6 @@ export type ProjectileLabDataWorkspaceHost = DataWorkspaceHost & {
   invalidateAll(reason: string): void;
 };
 
-type Range = { min: number; max: number };
-
 function specFor(state: ProjectileLabState): DataWorkspaceSpec {
   return state.params.recordOrigin
     ? projectileLabDataWorkspaceSpec
@@ -208,18 +205,6 @@ function restoreOrigin(
     first.fields.y = originState();
   }
   return next;
-}
-
-function rangeOf(values: readonly number[]): Range | null {
-  const finite = values.filter((value) => Number.isFinite(value));
-  if (finite.length === 0) return null;
-  return { min: Math.min(...finite), max: Math.max(...finite) };
-}
-
-function withinRange(value: number, range: Range, slack: number): boolean {
-  if (value < range.min) return withinEpsilon(value, range.min, slack);
-  if (value > range.max) return withinEpsilon(value, range.max, slack);
-  return true;
 }
 
 /** 记录了抛出点：每个点各给出一个 v₀（m/s）。 */
@@ -293,129 +278,73 @@ function checkedPoints(
   return points.length >= MEASURE_POINT_COUNT ? points : null;
 }
 
-function unitFeedback(
-  value: number,
-  matches: (candidate: number) => boolean,
-  ratios: readonly number[],
-  unit: string
-): FieldFeedback | null {
-  for (const ratio of ratios) {
-    if (matches(value * ratio) || matches(value / ratio)) {
-      return {
-        ok: false,
-        layer: 'unit',
-        message: `数值与答案相差 ${ratio} 倍，请确认单位是 ${unit}`
-      };
-    }
-  }
-  return null;
-}
-
 function gradeCoordinate(
   raw: string,
   name: string,
   expected: number,
   label: string
-): { value: number; feedback: FieldFeedback } {
-  const parsed = parseStudentNumber(raw, 'cm');
-  const value = parsed.ok ? parsed.value : Number.NaN;
-  const formatFb = checkNumericFormat(raw, {
-    decimalPlaces: COORD_DECIMALS,
-    formatMessage: `${name} 须为恰好 ${COORD_DECIMALS} 位小数（估读到 0.01 cm），不支持指数记法`
+): GradeResult {
+  return gradeNumber(raw, {
+    unit: 'cm',
+    format: {
+      decimalPlaces: COORD_DECIMALS,
+      formatMessage: `${name} 须为恰好 ${COORD_DECIMALS} 位小数（估读到 0.01 cm），不支持指数记法`
+    },
+    expected,
+    tolerance: {
+      kind: 'ticks',
+      tolerance: COORD_TOLERANCE_CM,
+      ticksPerUnit: TICKS_PER_CM
+    },
+    unitRatios: LENGTH_UNIT_RATIOS,
+    rangeMessage: `与轨迹上 ${label} 点的位置不符（允许误差 ±${COORD_TOLERANCE_CM.toFixed(COORD_DECIMALS)} cm）`
   });
-  if (formatFb) return { value, feedback: formatFb };
-  if (!parsed.ok) return { value, feedback: parsed };
-  const matches = (candidate: number): boolean =>
-    withinTickTolerance(
-      candidate,
-      expected,
-      Math.round(COORD_TOLERANCE_CM * TICKS_PER_CM),
-      TICKS_PER_CM
-    );
-  if (matches(value)) return { value, feedback: ok() };
-  const unitFb =
-    Math.abs(expected) > COORD_TOLERANCE_CM
-      ? unitFeedback(value, matches, LENGTH_UNIT_RATIOS, 'cm')
-      : null;
-  return {
-    value,
-    feedback: unitFb ?? {
-      ok: false,
-      layer: 'range',
-      message: `与轨迹上 ${label} 点的位置不符（允许误差 ±${COORD_TOLERANCE_CM.toFixed(COORD_DECIMALS)} cm）`
-    }
-  };
 }
 
 function gradeV0(
   raw: string,
   candidates: readonly number[],
   formula: string
-): { value: number; feedback: FieldFeedback } {
-  const parsed = parseStudentNumber(raw, 'm/s');
-  const value = parsed.ok ? parsed.value : Number.NaN;
-  const formatFb = checkNumericFormat(raw, {
-    significantDigits: V0_SIG_FIGS,
-    formatMessage: `v₀ 应为恰好 ${V0_SIG_FIGS} 位有效数字，不支持指数记法`
-  });
-  if (formatFb) return { value, feedback: formatFb };
-  if (!parsed.ok) return { value, feedback: parsed };
+): GradeResult {
   const range = rangeOf(candidates);
-  if (!range) {
-    return { value, feedback: relation('已校对的坐标无法求出 v₀，请检查读数') };
-  }
-  const slack = significantRoundingHalfUnit(range.max, V0_SIG_FIGS);
-  const matches = (candidate: number): boolean =>
-    withinRange(candidate, range, slack);
-  if (matches(value)) return { value, feedback: ok() };
-  return {
-    value,
-    feedback: unitFeedback(value, matches, SPEED_UNIT_RATIOS, 'm/s') ?? {
-      ok: false,
-      layer: 'range',
-      message: `与已校对的坐标不符（${formula}，保留 ${V0_SIG_FIGS} 位有效数字）`
-    }
-  };
+  return gradeNumber(raw, {
+    unit: 'm/s',
+    format: {
+      significantDigits: V0_SIG_FIGS,
+      formatMessage: `v₀ 应为恰好 ${V0_SIG_FIGS} 位有效数字，不支持指数记法`
+    },
+    expected: range,
+    unavailableMessage: '已校对的坐标无法求出 v₀，请检查读数',
+    tolerance: {
+      kind: 'epsilon',
+      value: range ? significantRoundingHalfUnit(range.max, V0_SIG_FIGS) : 0
+    },
+    unitRatios: SPEED_UNIT_RATIOS,
+    slipNearZeroGuard: false,
+    rangeMessage: `与已校对的坐标不符（${formula}，保留 ${V0_SIG_FIGS} 位有效数字）`
+  });
 }
 
 function gradeLaunchCoordinate(
   raw: string,
   name: string,
   candidates: readonly number[]
-): { value: number; feedback: FieldFeedback } {
-  const parsed = parseStudentNumber(raw, 'cm');
-  const value = parsed.ok ? parsed.value : Number.NaN;
-  const formatFb = checkNumericFormat(raw, {
-    decimalPlaces: LAUNCH_DECIMALS,
-    formatMessage: `${name} 须为恰好 ${LAUNCH_DECIMALS} 位小数，不支持指数记法`
+): GradeResult {
+  return gradeNumber(raw, {
+    unit: 'cm',
+    format: {
+      decimalPlaces: LAUNCH_DECIMALS,
+      formatMessage: `${name} 须为恰好 ${LAUNCH_DECIMALS} 位小数，不支持指数记法`
+    },
+    expected: rangeOf(candidates),
+    unavailableMessage: '已校对的坐标无法推算抛出点，请检查读数',
+    tolerance: {
+      kind: 'epsilon',
+      value: calculationTolerance(LAUNCH_DECIMALS)
+    },
+    signFlipMessage: `${name} 的正负号不对：抛出点在 A 点的左上方`,
+    rangeMessage: `与已校对的坐标不符（${LAUNCH_FORMULA}，保留 ${LAUNCH_DECIMALS} 位小数）`
   });
-  if (formatFb) return { value, feedback: formatFb };
-  if (!parsed.ok) return { value, feedback: parsed };
-  const range = rangeOf(candidates);
-  if (!range) {
-    return {
-      value,
-      feedback: relation('已校对的坐标无法推算抛出点，请检查读数')
-    };
-  }
-  if (withinRange(value, range, calculationTolerance(LAUNCH_DECIMALS))) {
-    return { value, feedback: ok() };
-  }
-  const flipped = withinRange(
-    -value,
-    range,
-    calculationTolerance(LAUNCH_DECIMALS)
-  );
-  return {
-    value,
-    feedback: {
-      ok: false,
-      layer: 'range',
-      message: flipped
-        ? `${name} 的正负号不对：抛出点在 A 点的左上方`
-        : `与已校对的坐标不符（${LAUNCH_FORMULA}，保留 ${LAUNCH_DECIMALS} 位小数）`
-    }
-  };
 }
 
 export function evaluateProjectileLabField(options: {

@@ -7,6 +7,12 @@
  */
 
 import type { SceneMeta } from '../platform/scene-contract';
+import { asBoolean } from '../core/coerce';
+import {
+  paramKeyOf,
+  paramToControl,
+  type ParamBindings
+} from '../platform/param-binding';
 import type {
   ParamSyncContext,
   SceneInstance,
@@ -31,6 +37,18 @@ export function resolveUrlSyncKeys(meta: SceneMeta): Set<string> {
   ]);
 }
 
+// 十进制数（可带小数与指数）。拒绝十六进制、Infinity、空串等 Number() 会
+// 接受或产生 NaN 的写法。
+const DECIMAL_NUMBER = /^[+-]?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i;
+
+/** 数值型 URL 参数：仅接受有限十进制数，否则返回 null（调用方丢弃该键）。 */
+export function parseNumericUrlParam(raw: string): number | null {
+  const text = raw.trim();
+  if (!DECIMAL_NUMBER.test(text)) return null;
+  const value = Number(text);
+  return Number.isFinite(value) ? value : null;
+}
+
 export function readSceneParams(
   meta: SceneMeta
 ): Record<string, number | string> {
@@ -45,9 +63,10 @@ export function readSceneParams(
     if (allowedKeys.has(key)) {
       const defaultVal = meta.defaultParams[key];
       if (typeof defaultVal === 'number') {
-        result[key] = value.includes('.')
-          ? parseFloat(value)
-          : parseInt(value, 10);
+        // 非法数值（?k=abc、?k=、?k=Infinity）丢弃，场景保持默认值；
+        // NaN 一旦进入 setParams，多数场景会把它存下来并画出 NaN 读数。
+        const parsed = parseNumericUrlParam(value);
+        if (parsed !== null) result[key] = parsed;
       } else {
         result[key] = value;
       }
@@ -75,6 +94,9 @@ let ownerSeq = 0;
 
 function storeValue(v: UrlParamValue): StoredValue | null {
   if (v === undefined || v === null || v === '') return DELETE_SENTINEL;
+  // 布尔一律写 1/0：toggle 对应的 defaultParams 是数值，'true' 会被
+  // readSceneParams 当作非法数值丢弃（此前更会解析成 NaN 而判假）。
+  if (typeof v === 'boolean') return v ? '1' : '0';
   return String(v);
 }
 
@@ -163,13 +185,19 @@ export function persistSceneParams(sceneId: string): void {
   url.searchParams.forEach((value, key) => {
     params[key] = value;
   });
-  if (Object.keys(params).length > 0) {
-    localStorage.setItem(
-      `${PARAMS_KEY_PREFIX}${sceneId}`,
-      JSON.stringify(params)
-    );
-  } else {
-    localStorage.removeItem(`${PARAMS_KEY_PREFIX}${sceneId}`);
+  // 存储不可用（隐私模式、iframe 第三方存储被拦截、配额满）时只放弃镜像：
+  // 调用方 unmount 在其后还要 dispose 场景，不能被异常打断。
+  try {
+    if (Object.keys(params).length > 0) {
+      localStorage.setItem(
+        `${PARAMS_KEY_PREFIX}${sceneId}`,
+        JSON.stringify(params)
+      );
+    } else {
+      localStorage.removeItem(`${PARAMS_KEY_PREFIX}${sceneId}`);
+    }
+  } catch {
+    // ignore unavailable storage
   }
 }
 
@@ -177,10 +205,11 @@ export function restoreSceneParams(meta: SceneMeta): void {
   const url = new URL(window.location.href);
   if (url.searchParams.toString()) return;
 
-  const raw = localStorage.getItem(`${PARAMS_KEY_PREFIX}${meta.id}`);
-  if (!raw) return;
-
   try {
+    // getItem 在存储被禁用时会抛 SecurityError，须与解析一起兜住，
+    // 否则场景启动（bootScenePage）整体失败。
+    const raw = localStorage.getItem(`${PARAMS_KEY_PREFIX}${meta.id}`);
+    if (!raw) return;
     const params = JSON.parse(raw) as Record<string, string>;
     const allowed = resolveUrlSyncKeys(meta);
     Object.entries(params).forEach(([k, v]) => {
@@ -188,7 +217,7 @@ export function restoreSceneParams(meta: SceneMeta): void {
     });
     window.history.replaceState({}, '', url);
   } catch {
-    // ignore corrupt storage
+    // ignore corrupt or unavailable storage
   }
 }
 
@@ -268,9 +297,29 @@ export function flushSceneParams(): void {
   owners.forEach((record) => flushOwner(record));
 }
 
+/**
+ * 按字段类型归一 URL 值（无 bind.values 编码时）：toggle → 布尔；
+ * slider / number 收到字符串（仅列在 urlSyncKeys 的键）→ 有限数，非法返回 null。
+ */
+function coerceUrlValue(
+  value: number | string,
+  fieldType: string | undefined,
+  hasCodec: boolean
+): number | string | boolean | null {
+  if (hasCodec) return value;
+  if (fieldType === 'toggle') return asBoolean(value);
+  if (
+    (fieldType === 'slider' || fieldType === 'number') &&
+    typeof value === 'string'
+  ) {
+    return parseNumericUrlParam(value);
+  }
+  return value;
+}
+
 type UrlParamSceneApi = {
-  setParams?: (params: Record<string, number | string>) => unknown;
-  setParam?: (key: string, value: number | string) => unknown;
+  setParams?: (params: Record<string, number | string | boolean>) => unknown;
+  setParam?: (key: string, value: number | string | boolean) => unknown;
   render: () => void;
 };
 
@@ -290,6 +339,9 @@ export function applySceneUrlParams<TScene extends SceneInstance>(
 
   const { scene, controls, mount, scheduleRender } = target;
   const handle = (controls ?? {}) as {
+    bindings?: ParamBindings;
+    fieldTypes?: ReadonlyMap<string, string>;
+    fieldOptions?: ReadonlyMap<string, readonly string[]>;
     setValue?: (key: string, value: number | string | boolean) => void;
     setValueSilently?: (key: string, value: number | string | boolean) => void;
     setActive?: (key: string, value: string) => void;
@@ -319,16 +371,40 @@ export function applySceneUrlParams<TScene extends SceneInstance>(
     if (paramSync?.applyParam?.(key, value, ctx)) continue;
     if (key === 'preset') continue;
 
-    const simKey = paramSync?.paramMap?.[key] ?? key;
-    if (typeof api.setParams === 'function') {
-      api.setParams({ [simKey]: value });
-    } else if (typeof api.setParam === 'function') {
-      api.setParam(simKey, value);
+    // URL / meta 约定为参数单位：原值进 sim，经 bind 换算后投影到控件。
+    const fieldType = handle.fieldTypes?.get(key);
+    const paramValue = coerceUrlValue(
+      value,
+      fieldType,
+      Boolean(handle.bindings?.get(key)?.values)
+    );
+    if (paramValue === null) continue;
+    // 枚举字段只接受 schema 声明的选项：?model=garbage 直接丢弃，sim 保持默认
+    const options = handle.fieldOptions?.get(key);
+    if (
+      options &&
+      !options.includes(
+        String(paramToControl(key, paramValue, handle.bindings))
+      )
+    ) {
+      continue;
     }
-    if (typeof value === 'string' || activeKeys.has(key)) {
-      ctx.setControlActive(key, String(value));
+    const simKey = paramKeyOf(key, handle.bindings);
+    if (typeof api.setParams === 'function') {
+      api.setParams({ [simKey]: paramValue });
+    } else if (typeof api.setParam === 'function') {
+      api.setParam(simKey, paramValue);
+    }
+    const controlValue = paramToControl(key, paramValue, handle.bindings);
+    const isActiveField =
+      fieldType === 'preset-group' || fieldType === 'scene-selector';
+    if (isActiveField || activeKeys.has(key)) {
+      ctx.setControlActive(key, String(controlValue));
+    } else if (typeof controlValue === 'string' && fieldType === undefined) {
+      // 无字段类型表的句柄：沿用旧约定，字符串走 setActive
+      ctx.setControlActive(key, controlValue);
     } else {
-      ctx.setControlValue(key, value);
+      ctx.setControlValue(key, controlValue);
     }
   }
 

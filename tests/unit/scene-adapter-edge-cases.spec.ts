@@ -76,6 +76,26 @@ describe('SceneAdapter edge cases', () => {
     vi.clearAllMocks();
   });
 
+  it('createScene failure shows a stage alert instead of a blank page', () => {
+    const createControls = vi.fn();
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const adapter = createAdapter({
+      createScene: () => {
+        throw new Error('boom');
+      },
+      createControls
+    });
+
+    const { container } = mountAdapter(adapter);
+    adapter.renderControl(document.createElement('div'));
+
+    const alert = container.querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain('演示加载失败');
+    expect(alert?.hasAttribute('data-stage-chrome')).toBe(true);
+    expect(createControls).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
   it('second renderAnimation reattaches without dispose or createScene', () => {
     const scene1 = createMockScene();
     let callCount = 0;

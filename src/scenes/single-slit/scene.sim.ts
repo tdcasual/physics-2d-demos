@@ -1,5 +1,8 @@
 import { readoutOccludesStage } from '../../platform/stage-readout';
 import { clamp } from '../../core/math';
+import { finiteNumber, asBooleanOr } from '../../core/coerce';
+import { betterPose, containInRect, measureStageLayout } from '../stage-fit';
+import type { StagePose, StageLayoutHint } from '../stage-fit';
 
 export type SingleSlitParams = {
   lambda: number;
@@ -22,19 +25,6 @@ export type SingleSlitState = {
   centralWidth: number;
   samples: DiffractionSample[];
   status: string;
-};
-
-export type StageLayoutHint = {
-  floatingReadout: boolean;
-  overlayPx?: number;
-  overlayTopPx?: number;
-  overlayHeightPx?: number;
-};
-
-type StagePose = {
-  fit: number;
-  offsetX: number;
-  offsetY: number;
 };
 
 const LAMBDA_MIN = 400;
@@ -142,56 +132,32 @@ export const singleSlitConstants = {
 const C = singleSlitConstants;
 const FLOATING_OVERLAY_FALLBACK = C.overlayFallbackPx;
 
-function finite(value: unknown, fallback: number): number {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string' && value.trim() !== '') {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return fallback;
-}
-
-function asBool(value: unknown, fallback: boolean): boolean {
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'number') return value !== 0;
-  if (typeof value === 'string') {
-    const text = value.trim().toLowerCase();
-    if (text === '0' || text === 'false' || text === 'off' || text === 'no') {
-      return false;
-    }
-    if (text === '1' || text === 'true' || text === 'on' || text === 'yes') {
-      return true;
-    }
-  }
-  return fallback;
-}
-
 function normalizeParams(
   input: Partial<SingleSlitParams>,
   previous: SingleSlitParams = DEFAULTS
 ): SingleSlitParams {
   return {
     lambda: clamp(
-      finite(input.lambda, previous.lambda),
+      finiteNumber(input.lambda, previous.lambda),
       LAMBDA_MIN,
       LAMBDA_MAX
     ),
     slitWidth: clamp(
-      finite(input.slitWidth, previous.slitWidth),
+      finiteNumber(input.slitWidth, previous.slitWidth),
       SLIT_MIN,
       SLIT_MAX
     ),
     distance: clamp(
-      finite(input.distance, previous.distance),
+      finiteNumber(input.distance, previous.distance),
       DISTANCE_MIN,
       DISTANCE_MAX
     ),
     detectorX: clamp(
-      finite(input.detectorX, previous.detectorX),
+      finiteNumber(input.detectorX, previous.detectorX),
       DETECTOR_MIN,
       DETECTOR_MAX
     ),
-    autoScan: asBool(input.autoScan, previous.autoScan)
+    autoScan: asBooleanOr(input.autoScan, previous.autoScan)
   };
 }
 
@@ -212,10 +178,10 @@ export function diffractionBeta(
   slitWidth: number,
   distance: number
 ): number {
-  const lambdaM = finite(lambda, LAMBDA_DEFAULT) * 1e-9;
-  const slitM = finite(slitWidth, SLIT_DEFAULT) * 1e-3;
-  const xM = finite(detectorX, 0) * 1e-3;
-  const length = Math.max(1e-12, finite(distance, DISTANCE_DEFAULT));
+  const lambdaM = finiteNumber(lambda, LAMBDA_DEFAULT) * 1e-9;
+  const slitM = finiteNumber(slitWidth, SLIT_DEFAULT) * 1e-3;
+  const xM = finiteNumber(detectorX, 0) * 1e-3;
+  const length = Math.max(1e-12, finiteNumber(distance, DISTANCE_DEFAULT));
   if (!(lambdaM > 0) || !(slitM > 0)) return 0;
   const hyp = Math.hypot(length, xM);
   const sinTheta = hyp > 0 ? xM / hyp : 0;
@@ -238,10 +204,11 @@ export function firstMinimumMm(
   slitWidth: number,
   distance: number
 ): number {
-  const a = finite(slitWidth, SLIT_DEFAULT);
+  const a = finiteNumber(slitWidth, SLIT_DEFAULT);
   if (!(a > 0)) return 0;
   return (
-    (finite(lambda, LAMBDA_DEFAULT) * finite(distance, DISTANCE_DEFAULT)) /
+    (finiteNumber(lambda, LAMBDA_DEFAULT) *
+      finiteNumber(distance, DISTANCE_DEFAULT)) /
     a /
     1000
   );
@@ -260,36 +227,37 @@ export function diffractionAngleDeg(
   detectorX: number,
   distance: number
 ): number {
-  const length = finite(distance, DISTANCE_DEFAULT);
+  const length = finiteNumber(distance, DISTANCE_DEFAULT);
   if (!(length > 0) || !Number.isFinite(detectorX)) return 0;
   const deg =
-    (Math.atan((finite(detectorX, 0) * 1e-3) / length) * 180) / Math.PI;
+    (Math.atan((finiteNumber(detectorX, 0) * 1e-3) / length) * 180) / Math.PI;
   if (!Number.isFinite(deg)) return 0;
   return clamp(deg, -ANGLE_MAX, ANGLE_MAX);
 }
 
 export function xToPx(xMm: number): number {
-  return CENTER_X + finite(xMm, 0) * PX_PER_MM;
+  return CENTER_X + finiteNumber(xMm, 0) * PX_PER_MM;
 }
 
 export function pxToX(px: number): number {
-  return (finite(px, CENTER_X) - CENTER_X) / PX_PER_MM;
+  return (finiteNumber(px, CENTER_X) - CENTER_X) / PX_PER_MM;
 }
 
 export function graphY(intensity: number): number {
-  const value = clamp(finite(intensity, 0), 0, 1);
+  const value = clamp(finiteNumber(intensity, 0), 0, 1);
   return GRAPH_BOTTOM - value * (GRAPH_BOTTOM - GRAPH_TOP);
 }
 
 export function slitGapPx(slitWidth: number): number {
   const t =
-    (clamp(finite(slitWidth, SLIT_DEFAULT), SLIT_MIN, SLIT_MAX) - SLIT_MIN) /
+    (clamp(finiteNumber(slitWidth, SLIT_DEFAULT), SLIT_MIN, SLIT_MAX) -
+      SLIT_MIN) /
     (SLIT_MAX - SLIT_MIN);
   return SLIT_GAP_MIN + t * (SLIT_GAP_MAX - SLIT_GAP_MIN);
 }
 
 export function fanHalfPx(firstMinimum: number): number {
-  const half = Math.abs(finite(firstMinimum, 1)) * PX_PER_MM;
+  const half = Math.abs(finiteNumber(firstMinimum, 1)) * PX_PER_MM;
   const maxHalf = GRAPH_RIGHT - CENTER_X - FAN_PAD;
   return clamp(half, SLIT_GAP_MAX, maxHalf);
 }
@@ -316,7 +284,7 @@ export function graphTickLabel(order: number): string {
 }
 
 export function graphTickOrders(firstMinimum: number): number[] {
-  const first = Math.abs(finite(firstMinimum, 0));
+  const first = Math.abs(finiteNumber(firstMinimum, 0));
   if (!(first > 0)) return [0];
   const spacing = first * PX_PER_MM;
   const maxOrder = Math.min(
@@ -331,67 +299,10 @@ export function graphTickOrders(firstMinimum: number): number[] {
   return orders;
 }
 
-function containInRect(
-  boxW: number,
-  boxH: number,
-  availW: number,
-  availH: number,
-  originX: number,
-  originY: number,
-  alignX: 'left' | 'center'
-): StagePose {
-  const w = Math.max(1, availW);
-  const h = Math.max(1, availH);
-  const fit = Math.min(w / boxW, h / boxH);
-  const stageW = boxW * fit;
-  const stageH = boxH * fit;
-  return {
-    fit,
-    offsetX: originX + (alignX === 'center' ? (w - stageW) / 2 : 0),
-    offsetY: originY + (h - stageH) / 2
-  };
-}
-
-function betterPose(a: StagePose, b: StagePose): StagePose {
-  return b.fit > a.fit + 1e-9 ? b : a;
-}
-
-export function hasFloatingReadout(anchor?: Element | null): boolean {
-  return readoutOccludesStage(anchor);
-}
+export const hasFloatingReadout = readoutOccludesStage;
 
 export function stageLayoutFrom(canvas?: Element | null): StageLayoutHint {
-  const floatingReadout = hasFloatingReadout(canvas);
-  if (!floatingReadout) return { floatingReadout: false, overlayPx: 0 };
-  let overlayPx = 0;
-  let overlayTopPx = 0;
-  let overlayHeightPx = 0;
-  if (canvas instanceof HTMLElement) {
-    const panel = canvas.parentElement?.querySelector(
-      '.teaching-readout-panel, .srgb-readout-panel'
-    );
-    if (panel instanceof HTMLElement) {
-      const cr = canvas.getBoundingClientRect();
-      const rr = panel.getBoundingClientRect();
-      if (
-        rr.left < cr.right &&
-        rr.right > cr.left &&
-        rr.top < cr.bottom &&
-        rr.bottom > cr.top
-      ) {
-        overlayPx = Math.max(0, cr.right - rr.left);
-        const top = Math.max(rr.top, cr.top);
-        const bottom = Math.min(rr.bottom, cr.bottom);
-        overlayTopPx = Math.max(0, top - cr.top);
-        overlayHeightPx = Math.max(0, bottom - top);
-      }
-    }
-  }
-  return {
-    floatingReadout: true,
-    overlayPx: overlayPx || FLOATING_OVERLAY_FALLBACK,
-    ...(overlayHeightPx > 0 ? { overlayTopPx, overlayHeightPx } : {})
-  };
+  return measureStageLayout(canvas, FLOATING_OVERLAY_FALLBACK);
 }
 
 /**
@@ -515,8 +426,8 @@ export function pointerToBaseNorm(
 }
 
 export function pickDetectorHandle(nx: number, ny: number): SingleSlitHandle {
-  const px = finite(nx, 0) * BASE_W;
-  const py = finite(ny, 0) * BASE_H;
+  const px = finiteNumber(nx, 0) * BASE_W;
+  const py = finiteNumber(ny, 0) * BASE_H;
   if (px < 0 || px > BASE_W || py < 0 || py > BASE_H) return null;
   const nearScreen = Math.abs(py - SCREEN_Y) <= SCREEN_HEIGHT * 0.5 + HIT_PAD;
   const nearGraph = py >= GRAPH_TOP - HIT_PAD && py <= GRAPH_BOTTOM + HIT_PAD;
@@ -525,7 +436,11 @@ export function pickDetectorHandle(nx: number, ny: number): SingleSlitHandle {
 }
 
 export function detectorXFromNorm(nx: number): number {
-  return clamp(pxToX(finite(nx, 0.5) * BASE_W), DETECTOR_MIN, DETECTOR_MAX);
+  return clamp(
+    pxToX(finiteNumber(nx, 0.5) * BASE_W),
+    DETECTOR_MIN,
+    DETECTOR_MAX
+  );
 }
 
 function makeState(params: SingleSlitParams, time: number): SingleSlitState {
@@ -550,7 +465,7 @@ export function createSingleSlitSim(initial: Partial<SingleSlitParams> = {}) {
 
   function advance(dt: number, force: boolean): void {
     if (!force && !params.autoScan) return;
-    const delta = finite(dt, 0);
+    const delta = finiteNumber(dt, 0);
     if (!Number.isFinite(delta) || delta <= 0) return;
     time += delta;
     let nextX = params.detectorX + direction * delta * SCAN_SPEED;
@@ -579,10 +494,10 @@ export function createSingleSlitSim(initial: Partial<SingleSlitParams> = {}) {
       return { ...params };
     },
     step(dt: number): void {
-      advance(Math.max(0, finite(dt, 0)), false);
+      advance(Math.max(0, finiteNumber(dt, 0)), false);
     },
     stepFrame(dt: number = FRAME_DT): void {
-      advance(finite(dt, FRAME_DT), true);
+      advance(finiteNumber(dt, FRAME_DT), true);
     },
     pickHandle(x: number, y: number): SingleSlitHandle {
       return pickDetectorHandle(x, y);
@@ -605,3 +520,5 @@ export function createSingleSlitSim(initial: Partial<SingleSlitParams> = {}) {
     }
   };
 }
+
+export type { StageLayoutHint };

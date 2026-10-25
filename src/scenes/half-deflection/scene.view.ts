@@ -2,6 +2,7 @@ import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import { halfDeflectionConstants, type HalfDeflectionState } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateHalfDeflectionViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -104,23 +105,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
   }
 };
 
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
-
 function rounded(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -181,10 +165,10 @@ function drawSource(ctx: CanvasRenderingContext2D, p: Palette): void {
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 2;
   ctx.stroke();
-  text(ctx, 'E', SOURCE_X - 20, SOURCE_Y, p.ink, 20, 'center', 700);
-  text(ctx, '6.0 V', SOURCE_X + 22, SOURCE_Y, p.teal, 14, 'center', 700);
-  text(ctx, '+', SOURCE_X - 30, SOURCE_Y - 38, p.red, 17, 'center', 700);
-  text(ctx, '−', SOURCE_X + 30, SOURCE_Y - 38, p.blue, 17, 'center', 700);
+  drawText(ctx, 'E', SOURCE_X - 20, SOURCE_Y, p.ink, 20, 'center', 700);
+  drawText(ctx, '6.0 V', SOURCE_X + 22, SOURCE_Y, p.teal, 14, 'center', 700);
+  drawText(ctx, '+', SOURCE_X - 30, SOURCE_Y - 38, p.red, 17, 'center', 700);
+  drawText(ctx, '−', SOURCE_X + 30, SOURCE_Y - 38, p.blue, 17, 'center', 700);
 }
 
 function drawSwitch(
@@ -207,7 +191,7 @@ function drawSwitch(
   ctx.moveTo(x - 28, y + 8);
   ctx.lineTo(closed ? x + 28 : x + 18, y - 8);
   ctx.stroke();
-  text(ctx, label, x, y + 34, p.ink, 13, 'center', 700);
+  drawText(ctx, label, x, y + 34, p.ink, 13, 'center', 700);
 }
 
 function drawMeter(
@@ -268,7 +252,7 @@ function drawMeter(
   );
   ctx.fillStyle = '#15233a';
   ctx.fill();
-  text(
+  drawText(
     ctx,
     `${state.meterReading.toFixed(2)} 格`,
     METER_X,
@@ -278,7 +262,7 @@ function drawMeter(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     state.params.method === 'current' ? '待测电流表 A' : '待测电压表 V',
     METER_X,
@@ -319,7 +303,7 @@ function drawResistor(
     );
   }
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     `R₁ ${state.params.rheostat.toFixed(0)} Ω`,
     RESISTOR_X,
@@ -329,7 +313,16 @@ function drawResistor(
     'center',
     700
   );
-  text(ctx, '变阻器', RESISTOR_X, RESISTOR_Y + 66, p.muted, 12, 'center', 600);
+  drawText(
+    ctx,
+    '变阻器',
+    RESISTOR_X,
+    RESISTOR_Y + 66,
+    p.muted,
+    12,
+    'center',
+    600
+  );
 }
 
 function drawBox(
@@ -347,7 +340,7 @@ function drawBox(
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 2;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     `R₂ = ${state.params.boxResistance.toFixed(0)} Ω`,
     x + width / 2,
@@ -357,7 +350,7 @@ function drawBox(
     'center',
     700
   );
-  text(ctx, '电阻箱', x + width / 2, y + 42, p.muted, 12, 'center', 600);
+  drawText(ctx, '电阻箱', x + width / 2, y + 42, p.muted, 12, 'center', 600);
 }
 
 function drawPanel(
@@ -370,7 +363,7 @@ function drawPanel(
   const width = PANEL_W - PANEL_INSET * 2;
   ctx.fillStyle = p.panel;
   ctx.fillRect(PANEL_X, 0, PANEL_W, BASE_H);
-  text(ctx, '半偏法测电表内阻', x, TITLE_Y, p.ink, 22 * scale, 'left', 700);
+  drawText(ctx, '半偏法测电表内阻', x, TITLE_Y, p.ink, 22 * scale, 'left', 700);
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 3;
   ctx.beginPath();
@@ -380,7 +373,7 @@ function drawPanel(
   rounded(ctx, x, METRICS_Y, width, METRICS_H);
   ctx.fillStyle = p.soft;
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '实时测量看板',
     x + 14,
@@ -390,7 +383,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     state.params.method === 'current' ? '电流表' : '电压表',
     x + width - 14,
@@ -408,8 +401,8 @@ function drawPanel(
   ] as const;
   rows.forEach(([label, value], index) => {
     const y = METRICS_Y + 64 + index * 38;
-    text(ctx, label, x + 14, y, p.muted, 14 * scale, 'left', 600);
-    text(
+    drawText(ctx, label, x + 14, y, p.muted, 14 * scale, 'left', 600);
+    drawText(
       ctx,
       value,
       x + width - 14,
@@ -426,10 +419,19 @@ function drawPanel(
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 2;
   ctx.stroke();
-  text(ctx, '实验记录', x + 14, RECORD_Y + 24, p.ink, 16 * scale, 'left', 700);
+  drawText(
+    ctx,
+    '实验记录',
+    x + 14,
+    RECORD_Y + 24,
+    p.ink,
+    16 * scale,
+    'left',
+    700
+  );
   const header = ['阶段', 'S₂', '读数', 'R₂'];
   header.forEach((label, index) =>
-    text(
+    drawText(
       ctx,
       label,
       x + 20 + index * 72,
@@ -449,11 +451,20 @@ function drawPanel(
       `${record.boxResistance.toFixed(0)}Ω`
     ];
     values.forEach((value, column) =>
-      text(ctx, value, x + 20 + column * 72, y, p.ink, 13 * scale, 'left', 600)
+      drawText(
+        ctx,
+        value,
+        x + 20 + column * 72,
+        y,
+        p.ink,
+        13 * scale,
+        'left',
+        600
+      )
     );
   });
   if (state.params.showAnswer) {
-    text(
+    drawText(
       ctx,
       `参考：Rₘ ≈ ${state.meterResistance.toFixed(0)} Ω`,
       x + 14,
@@ -467,7 +478,7 @@ function drawPanel(
   rounded(ctx, x, FORMULA_Y, width, FORMULA_H);
   ctx.fillStyle = p.soft;
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '实验关系',
     x + 14,
@@ -477,7 +488,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     '满偏 → 闭合 S₂ → 半偏',
     x + 14,
@@ -487,7 +498,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `${state.params.method === 'current' ? 'Rₐ' : 'Rᵥ'} ≈ R₂`,
     x + 14,
@@ -506,7 +517,16 @@ function drawField(
   scale: number
 ): void {
   drawGrid(ctx, p);
-  text(ctx, '半偏法测电表内阻', 26, TITLE_Y, p.ink, 22 * scale, 'left', 700);
+  drawText(
+    ctx,
+    '半偏法测电表内阻',
+    26,
+    TITLE_Y,
+    p.ink,
+    22 * scale,
+    'left',
+    700
+  );
   drawWire(ctx, p);
   drawSource(ctx, p);
   drawMeter(ctx, state, p);
@@ -521,7 +541,7 @@ function drawField(
     '辅助开关 S₂',
     p
   );
-  text(
+  drawText(
     ctx,
     state.params.method === 'current' ? '电流表半偏法' : '电压表半偏法',
     26,
@@ -531,7 +551,7 @@ function drawField(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     '断开 S₂ 调满偏；闭合 S₂ 调半偏',
     26,

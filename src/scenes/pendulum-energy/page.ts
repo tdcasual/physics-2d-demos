@@ -1,20 +1,10 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
-import type { PendulumEnergyParams } from './scene.sim';
 import { pendulumEnergyControlsSchema } from './controls-schema';
 import { createPendulumEnergyScene } from './scene.entry';
 import { pendulumEnergyMeta } from './scene.meta';
-
-function asBoolean(value: unknown): boolean {
-  return (
-    value === true ||
-    value === 1 ||
-    value === '1' ||
-    String(value).toLowerCase() === 'true'
-  );
-}
+import { createBoundControls } from '../../ui/components/bound-controls';
+import { resetSceneAndControls } from '../../app/control-projection';
 
 bootScenePage({
   meta: pendulumEnergyMeta,
@@ -45,45 +35,15 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, scheduleRender, writeParam }) => {
-    const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+  createControls: ({ mount, scene, scheduleRender, writeParam }) =>
+    createBoundControls({
       mount,
       schema: pendulumEnergyControlsSchema,
-      onChange: (key, value) => {
-        if (key === 'airDrag' || key === 'autoRun')
-          scene.setParams({
-            [key]: asBoolean(value)
-          } as Partial<PendulumEnergyParams>);
-        else {
-          const number = Number(value);
-          if (!Number.isFinite(number)) return;
-          scene.setParams({ [key]: number } as Partial<PendulumEnergyParams>);
-        }
-        render();
-        writeParam?.(key, value);
-      },
-      onAction: (key) => {
-        if (key === 'reset') scene.reset();
-        render();
+      scene,
+      scheduleRender,
+      writeParam,
+      onAction: (key, renderer) => {
+        if (key === 'reset') resetSceneAndControls(scene, renderer, writeParam);
       }
-    });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (key === 'airDrag' || key === 'autoRun') {
-        ctx.scene.setParams({
-          [key]: asBoolean(value)
-        } as Partial<PendulumEnergyParams>);
-        ctx.setControlValue(key, asBoolean(value));
-        return true;
-      }
-      const number = Number(value);
-      if (!Number.isFinite(number)) return false;
-      ctx.scene.setParams({ [key]: number } as Partial<PendulumEnergyParams>);
-      ctx.setControlValue(key, number);
-      return true;
-    }
-  }
+    })
 });

@@ -1,28 +1,10 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
-import type { RutherfordParams } from './scene.sim';
+import { createBoundControls } from '../../ui/components/bound-controls';
+import { resetSceneAndControls } from '../../app/control-projection';
 import { rutherfordControlsSchema } from './controls-schema';
 import { createRutherfordScene } from './scene.entry';
 import { rutherfordMeta } from './scene.meta';
-
-const MODEL_IDS: Record<string, 0 | 1> = { plum: 0, nuclear: 1 };
-
-function asBoolean(value: unknown): boolean {
-  return (
-    value === true ||
-    value === 1 ||
-    value === '1' ||
-    String(value).toLowerCase() === 'true'
-  );
-}
-
-function modelValue(value: unknown): 0 | 1 | null {
-  if (value === 0 || value === '0' || value === 'plum') return 0;
-  if (value === 1 || value === '1' || value === 'nuclear') return 1;
-  return null;
-}
 
 bootScenePage({
   meta: rutherfordMeta,
@@ -54,60 +36,22 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, scheduleRender, writeParam }) => {
-    const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+  // model 的 0/1 ↔ plum/nuclear 编码在 controls-schema 的 bind.values 声明
+  createControls: ({ mount, scene, scheduleRender, writeParam }) =>
+    createBoundControls({
       mount,
       schema: rutherfordControlsSchema,
-      onChange: (key, value) => {
-        if (key === 'model') {
-          const model = MODEL_IDS[String(value)];
-          if (model === undefined) return;
-          scene.setParams({ model });
-          renderer.setActive('model', String(value));
-        } else if (key === 'autoRun' || key === 'showForces') {
-          scene.setParams({
-            [key]: asBoolean(value)
-          } as Partial<RutherfordParams>);
-        } else {
-          const number = Number(value);
-          if (!Number.isFinite(number)) return;
-          scene.setParams({ [key]: number } as Partial<RutherfordParams>);
-        }
-        render();
-        writeParam?.(key, value);
-      },
-      onAction: (key) => {
+      scene,
+      scheduleRender,
+      writeParam,
+      onAction: (key, renderer) => {
         if (key === 'fireBeam') scene.fireBeam();
         else if (key === 'toggleModel') {
-          const model = scene.toggleModel();
-          renderer.setActive('model', model === 1 ? 'nuclear' : 'plum');
-        } else if (key === 'reset') scene.reset();
-        render();
+          const id = scene.toggleModel() === 1 ? 'nuclear' : 'plum';
+          renderer.setActiveSilently('model', id);
+          writeParam?.('model', id);
+        } else if (key === 'reset')
+          resetSceneAndControls(scene, renderer, writeParam);
       }
-    });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (key === 'model') {
-        const model = modelValue(value);
-        if (model === null) return false;
-        ctx.scene.setParams({ model });
-        ctx.setControlActive(key, model === 1 ? 'nuclear' : 'plum');
-        return true;
-      }
-      if (key === 'autoRun' || key === 'showForces') {
-        const enabled = asBoolean(value);
-        ctx.scene.setParams({ [key]: enabled } as Partial<RutherfordParams>);
-        ctx.setControlValue(key, enabled);
-        return true;
-      }
-      const number = Number(value);
-      if (!Number.isFinite(number)) return false;
-      ctx.scene.setParams({ [key]: number } as Partial<RutherfordParams>);
-      ctx.setControlValue(key, number);
-      return true;
-    }
-  }
+    })
 });

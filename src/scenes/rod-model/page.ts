@@ -1,12 +1,11 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
 import { writeOwnedSceneParams } from '../../app/url-sync';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { rodModelControlsSchema } from './controls-schema';
-import { asRodModel, createRodModelScene } from './scene.entry';
+import { createRodModelScene } from './scene.entry';
 import { rodModelMeta } from './scene.meta';
-import { asBool, restoredUrlParams, type RodParams } from './scene.sim';
+import { asBool, restoredUrlParams } from './scene.sim';
+import { createBoundControls } from '../../ui/components/bound-controls';
 
 bootScenePage({
   meta: rodModelMeta,
@@ -61,61 +60,12 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, scheduleRender, writeParam }) => {
-    const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+  createControls: ({ mount, scene, scheduleRender, writeParam }) =>
+    createBoundControls({
       mount,
       schema: rodModelControlsSchema,
-      onChange: (key, value) => {
-        if (key === 'model') {
-          const model = asRodModel(value) ?? 'resistor';
-          scene.setParams({ model });
-          renderer.setActive(key, model);
-          writeParam?.(key, model === 'capacitor' ? 1 : 0);
-        } else if (
-          key === 'fieldStrength' ||
-          key === 'railGap' ||
-          key === 'externalForce' ||
-          key === 'mass' ||
-          key === 'resistance' ||
-          key === 'capacitance'
-        ) {
-          scene.setParams({ [key]: Number(value) } as Partial<RodParams>);
-          writeParam?.(key, value);
-        }
-        render();
-      },
-      onAction: () => {}
-    });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (key === 'model') {
-        const model = asRodModel(value) ?? 'resistor';
-        ctx.scene.setParams({ model });
-        ctx.setControlActive(key, model);
-        return true;
-      }
-      if (
-        key === 'fieldStrength' ||
-        key === 'railGap' ||
-        key === 'externalForce' ||
-        key === 'mass' ||
-        key === 'resistance' ||
-        key === 'capacitance'
-      ) {
-        const n = Number(value);
-        if (!Number.isFinite(n)) return false;
-        ctx.scene.setParams({ [key]: n } as Partial<RodParams>);
-        ctx.setControlValue(key, n);
-        return true;
-      }
-      if (key === 'autoRun') {
-        ctx.scene.setParams({ autoRun: asBool(value, false) });
-        return true;
-      }
-      return false;
-    }
-  }
+      scene,
+      scheduleRender,
+      writeParam
+    })
 });

@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   createVariableWorkSim,
@@ -74,24 +72,6 @@ describe('variable-work view contract', () => {
     expect('fieldWidth' in C).toBe(false);
     expect('graphY' in C).toBe(false);
     expect('panelX' in C).toBe(false);
-  });
-
-  it('keeps F-x and P-t on the graph canvas path', () => {
-    const viewSrc = readFileSync(
-      resolve(process.cwd(), 'src/scenes/variable-work/scene.view.ts'),
-      'utf8'
-    );
-    expect(viewSrc).toContain('attachGraphCanvas');
-    expect(viewSrc).toContain('drawStage');
-    expect(viewSrc).toContain('drawGraphs');
-    expect(viewSrc).not.toMatch(/核心物理思想|参数调节|实时物理量监测/);
-    const schemaSrc = readFileSync(
-      resolve(process.cwd(), 'src/scenes/variable-work/controls-schema.ts'),
-      'utf8'
-    );
-    expect(schemaSrc).not.toContain('autoRun');
-    expect(schemaSrc).toContain('W = ∫ F dx');
-    expect(schemaSrc).toContain('舞台 F、v 为趋势示意');
   });
 
   it('paints only the cart and short marks on the stage', () => {

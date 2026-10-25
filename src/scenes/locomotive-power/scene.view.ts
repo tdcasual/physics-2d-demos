@@ -2,6 +2,7 @@ import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import { locomotiveConstants as C, type LocomotiveState } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateLocomotiveViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -56,22 +57,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     rail: '#d0d9e5'
   }
 };
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 function rounded(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -185,13 +170,22 @@ function drawTrain(
   const tractionLength = Math.min(170, Math.max(40, state.tractionForce / 35));
   const dragLength = Math.min(110, Math.max(34, state.dragForce / 20));
   arrow(ctx, x + 68, y - 24, x + 68 + tractionLength, y - 24, p.yellow, 6);
-  text(ctx, 'F牵', x + 78 + tractionLength, y - 24, p.yellow, 17, 'left', 700);
+  drawText(
+    ctx,
+    'F牵',
+    x + 78 + tractionLength,
+    y - 24,
+    p.yellow,
+    17,
+    'left',
+    700
+  );
   arrow(ctx, x + 24, y + 88, x + 24 - dragLength, y + 88, p.red, 5);
-  text(ctx, 'f', x - dragLength - 12, y + 88, p.red, 17, 'right', 700);
+  drawText(ctx, 'f', x - dragLength - 12, y + 88, p.red, 17, 'right', 700);
   arrow(ctx, x + 160, y + 8, x + 226, y + 8, p.teal, 4);
-  text(ctx, 'v', x + 238, y + 8, p.teal, 17, 'left', 700);
-  text(ctx, '微观受力演变', 32, 34, p.ink, 22, 'left', 700);
-  text(
+  drawText(ctx, 'v', x + 238, y + 8, p.teal, 17, 'left', 700);
+  drawText(ctx, '微观受力演变', 32, 34, p.ink, 22, 'left', 700);
+  drawText(
     ctx,
     state.mode === 'power' ? 'P恒定' : 'a恒定',
     760,
@@ -230,7 +224,7 @@ function graphFrame(
     ctx.lineTo(right, gy);
     ctx.stroke();
   }
-  text(
+  drawText(
     ctx,
     '宏观运动特征曲线（v-t）',
     C.graphX + 26,
@@ -240,8 +234,8 @@ function graphFrame(
     'left',
     700
   );
-  text(ctx, 'v (m/s)', left - 12, top - 18, p.muted, 14, 'right', 600);
-  text(ctx, 't (s)', right + 16, bottom + 3, p.muted, 14, 'left', 600);
+  drawText(ctx, 'v (m/s)', left - 12, top - 18, p.muted, 14, 'right', 600);
+  drawText(ctx, 't (s)', right + 16, bottom + 3, p.muted, 14, 'left', 600);
   return { left, right, top, bottom };
 }
 function drawGraph(
@@ -294,7 +288,7 @@ function drawGraph(
   ctx.beginPath();
   ctx.arc(currentX, currentY, 7, 0, Math.PI * 2);
   ctx.fill();
-  text(
+  drawText(
     ctx,
     `斜率 = a = ${state.accelerationNow.toFixed(2)} m/s²`,
     Math.min(frame.right - 16, currentX + 18),
@@ -313,7 +307,7 @@ function drawGraph(
     ctx.lineTo(frame.right, terminalY);
     ctx.stroke();
     ctx.setLineDash([]);
-    text(
+    drawText(
       ctx,
       `vₘ = ${state.terminalSpeed.toFixed(1)} m/s`,
       frame.left + 10,
@@ -336,7 +330,7 @@ function drawPanel(
   rounded(ctx, C.panelX, 0, C.panelWidth, C.baseHeight, 16);
   ctx.fill();
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '机车启动系统验证',
     C.panelX + C.panelWidth / 2,
@@ -361,7 +355,7 @@ function drawPanel(
   );
   ctx.fillStyle = p.soft;
   ctx.fill();
-  text(
+  drawText(
     ctx,
     state.mode === 'power' ? '恒功率启动' : '恒加速度启动',
     C.panelX + C.panelWidth / 2,
@@ -398,8 +392,17 @@ function drawPanel(
   ];
   rows.forEach(([label, value, color], index) => {
     const y = C.panelReadoutY + 34 + index * 36;
-    text(ctx, label, C.panelX + C.panelInset * 2, y, p.muted, 13, 'left', 600);
-    text(
+    drawText(
+      ctx,
+      label,
+      C.panelX + C.panelInset * 2,
+      y,
+      p.muted,
+      13,
+      'left',
+      600
+    );
+    drawText(
       ctx,
       value,
       C.panelX + C.panelWidth - C.panelInset * 2,
@@ -420,7 +423,7 @@ function drawPanel(
   );
   ctx.fillStyle = p.soft;
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '关系式',
     C.panelX + C.panelInset * 2,
@@ -430,7 +433,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'P = F · v',
     C.panelX + C.panelInset * 2,
@@ -440,7 +443,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'F合 = F − f',
     C.panelX + C.panelInset * 2,
@@ -450,7 +453,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'a = F合 / m',
     C.panelX + C.panelInset * 2,
@@ -470,7 +473,7 @@ function drawPanel(
   );
   ctx.fillStyle = '#fff8e8';
   ctx.fill();
-  text(
+  drawText(
     ctx,
     state.mode === 'power'
       ? '恒功率：v↑，F↓，a↓'
@@ -482,7 +485,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `阻力 f = ${state.dragForce.toFixed(0)} N`,
     C.panelX + C.panelInset * 2,

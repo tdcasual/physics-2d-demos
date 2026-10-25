@@ -1,8 +1,4 @@
-import {
-  applyCanvasSize,
-  getResponsiveScale,
-  scaledSize
-} from '../../core/canvas-sizing';
+import { scaledSize } from '../../core/canvas-sizing';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
@@ -20,6 +16,8 @@ import {
   type BlockBoardState,
   type GraphFrame
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
+import { sizeCanvasToHostBox } from '../stage-fit';
 
 export type CreateBlockBoardViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -66,71 +64,12 @@ const PALETTE: Record<TeachingTheme, Palette> = {
   }
 };
 
-function contentBoxSize(host: HTMLElement): { width: number; height: number } {
-  const cs = getComputedStyle(host);
-  const rect = host.getBoundingClientRect();
-  const padX =
-    (Number.parseFloat(cs.paddingLeft) || 0) +
-    (Number.parseFloat(cs.paddingRight) || 0);
-  const padY =
-    (Number.parseFloat(cs.paddingTop) || 0) +
-    (Number.parseFloat(cs.paddingBottom) || 0);
-  return {
-    width: Math.max(1, Math.floor(rect.width - padX)),
-    height: Math.max(1, Math.floor(rect.height - padY))
-  };
-}
-
 /** Size the graph canvas to the host content box, not the padded border box. */
-export function sizeGraphCanvasToHost(canvas: HTMLCanvasElement): {
-  ctx: CanvasRenderingContext2D;
-  cssWidth: number;
-  cssHeight: number;
-  responsiveScale: number;
-} {
-  const host = canvas.parentElement;
-  let cssWidth: number;
-  let cssHeight: number;
-  if (host) {
-    const box = contentBoxSize(host);
-    cssWidth = box.width;
-    cssHeight = box.height;
-  } else {
-    const rect = canvas.getBoundingClientRect();
-    cssWidth = Math.max(1, Math.floor(rect.width || C.graphFallbackWidth));
-    cssHeight = Math.max(1, Math.floor(rect.height || C.graphFallbackHeight));
-  }
-  const dpr = Math.min(
-    2,
-    typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1
-  );
-  const responsiveScale = getResponsiveScale(cssWidth, cssHeight);
-  const ctx = applyCanvasSize(canvas, {
-    width: Math.max(1, Math.floor(cssWidth * dpr)),
-    height: Math.max(1, Math.floor(cssHeight * dpr)),
-    cssWidth,
-    cssHeight,
-    dpr,
-    responsiveScale
+export function sizeGraphCanvasToHost(canvas: HTMLCanvasElement) {
+  return sizeCanvasToHostBox(canvas, {
+    width: C.graphFallbackWidth,
+    height: C.graphFallbackHeight
   });
-  return { ctx, cssWidth, cssHeight, responsiveScale };
-}
-
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
 }
 
 function rounded(
@@ -228,7 +167,7 @@ function drawTrack(
     ctx.lineTo(tick.x, groundY + C.groundTick);
     ctx.stroke();
     if (tick.meter % C.tickEveryM === 0) {
-      text(
+      drawText(
         ctx,
         `${tick.meter}`,
         tick.x,
@@ -239,7 +178,7 @@ function drawTrack(
       );
     }
   }
-  text(
+  drawText(
     ctx,
     'x',
     layout.trackEnd.x + 14,
@@ -269,7 +208,7 @@ function drawTrack(
     7
   );
   ctx.fill();
-  text(
+  drawText(
     ctx,
     'M',
     layout.board.x + layout.board.w / 2,
@@ -279,7 +218,7 @@ function drawTrack(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     'm',
     layout.block.x + layout.block.w / 2,
@@ -300,7 +239,7 @@ function drawTrack(
       p.red,
       3.2
     );
-    text(
+    drawText(
       ctx,
       'v₁',
       layout.blockArrow.x2 + 12,
@@ -321,7 +260,7 @@ function drawTrack(
       p.teal,
       3.2
     );
-    text(
+    drawText(
       ctx,
       'v₂',
       layout.boardArrow.x2 + 12,
@@ -342,7 +281,7 @@ function drawTrack(
       p.amber,
       2.6
     );
-    text(
+    drawText(
       ctx,
       'f',
       layout.frictionBlock.x2 - 10,
@@ -363,7 +302,7 @@ function drawTrack(
       p.amber,
       2.6
     );
-    text(
+    drawText(
       ctx,
       'f',
       layout.frictionBoard.x2 + 10,
@@ -384,7 +323,7 @@ function drawTrack(
     ctx.lineTo(layout.syncX, groundY + 8);
     ctx.stroke();
     ctx.setLineDash([]);
-    text(
+    drawText(
       ctx,
       '共速',
       layout.syncX,
@@ -431,7 +370,7 @@ function drawGraphAxes(
     ctx.moveTo(x, frame.top);
     ctx.lineTo(x, frame.bottom);
     ctx.stroke();
-    text(
+    drawText(
       ctx,
       `${i}`,
       x,
@@ -448,7 +387,15 @@ function drawGraphAxes(
     ctx.moveTo(frame.left, y);
     ctx.lineTo(frame.right, y);
     ctx.stroke();
-    text(ctx, `${v.toFixed(0)}`, frame.left - 8, y, p.muted, font(11), 'right');
+    drawText(
+      ctx,
+      `${v.toFixed(0)}`,
+      frame.left - 8,
+      y,
+      p.muted,
+      font(11),
+      'right'
+    );
   }
   ctx.strokeStyle = p.ink;
   ctx.lineWidth = 1.8;
@@ -478,7 +425,7 @@ function drawGraphAxes(
     1.6,
     8
   );
-  text(
+  drawText(
     ctx,
     BLOCK_BOARD_X_TITLE,
     Math.min(width - 4, frame.right),
@@ -488,7 +435,7 @@ function drawGraphAxes(
     'right',
     700
   );
-  text(
+  drawText(
     ctx,
     BLOCK_BOARD_Y_TITLE,
     frame.left,
@@ -543,7 +490,7 @@ function drawGraphCanvas(
     ctx.closePath();
     ctx.fill();
     if (state.syncTime <= C.graphViewTime + 1e-9) {
-      text(
+      drawText(
         ctx,
         'Δx',
         (a0.x + a1.x) / 2,
@@ -558,8 +505,26 @@ function drawGraphCanvas(
   if (block) drawGraphSeries(ctx, block.points, frame, p.red);
   if (board) drawGraphSeries(ctx, board.points, frame, p.blue);
   const legendY = graphToPx(C.graphViewTime, state.commonVelocity, frame).y;
-  text(ctx, 'm', frame.right - 8, legendY - 14, p.red, font(12), 'right', 700);
-  text(ctx, 'M', frame.right - 8, legendY + 14, p.blue, font(12), 'right', 700);
+  drawText(
+    ctx,
+    'm',
+    frame.right - 8,
+    legendY - 14,
+    p.red,
+    font(12),
+    'right',
+    700
+  );
+  drawText(
+    ctx,
+    'M',
+    frame.right - 8,
+    legendY + 14,
+    p.blue,
+    font(12),
+    'right',
+    700
+  );
   if (state.syncTime > 0) {
     const sync = graphToPx(Math.min(state.syncTime, C.graphViewTime), 0, frame);
     ctx.strokeStyle = p.teal;

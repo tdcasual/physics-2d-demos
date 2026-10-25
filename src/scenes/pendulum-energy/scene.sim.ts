@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type PendulumEnergyParams = {
   amplitude: number;
@@ -97,10 +98,6 @@ const DEFAULTS: PendulumEnergyParams = {
   autoRun: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function asFlag(value: unknown, fallback: boolean): boolean {
   if (value === true || value === 1 || value === '1') return true;
   if (value === false || value === 0 || value === '0') return false;
@@ -113,22 +110,22 @@ function normalize(
 ): PendulumEnergyParams {
   return {
     amplitude: clamp(
-      finite(input.amplitude, previous.amplitude),
+      finiteOr(input.amplitude, previous.amplitude),
       pendulumEnergyConstants.amplitudeMin,
       pendulumEnergyConstants.amplitudeMax
     ),
     length: clamp(
-      finite(input.length, previous.length),
+      finiteOr(input.length, previous.length),
       pendulumEnergyConstants.lengthMin,
       pendulumEnergyConstants.lengthMax
     ),
     gravity: clamp(
-      finite(input.gravity, previous.gravity),
+      finiteOr(input.gravity, previous.gravity),
       pendulumEnergyConstants.gravityMin,
       pendulumEnergyConstants.gravityMax
     ),
     mass: clamp(
-      finite(input.mass, previous.mass),
+      finiteOr(input.mass, previous.mass),
       pendulumEnergyConstants.massMin,
       pendulumEnergyConstants.massMax
     ),
@@ -188,7 +185,7 @@ export function createPendulumEnergySim(
     step(dt: number): void {
       if (!params.autoRun) return;
       time =
-        (time + Math.max(0, finite(dt, 0))) % pendulumEnergyConstants.maxTime;
+        (time + Math.max(0, finiteOr(dt, 0))) % pendulumEnergyConstants.maxTime;
     },
     reset(): void {
       params = { ...DEFAULTS };

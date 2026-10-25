@@ -9,6 +9,7 @@ import {
   type ParallelogramState,
   type Vector
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateParallelogramViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -71,23 +72,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     square: '#f59e0b'
   }
 };
-
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 
 function pointOf(vector: Vector, scale: number): { x: number; y: number } {
   return {
@@ -263,7 +247,7 @@ function drawOrigin(
   ctx.beginPath();
   ctx.arc(C.origin.x, C.origin.y, 4, 0, Math.PI * 2);
   ctx.fill();
-  text(
+  drawText(
     ctx,
     'O',
     C.origin.x - 18,
@@ -313,10 +297,19 @@ function drawRuler(
     ctx.lineTo(tx, height * 0.62 - (tall ? 12 : 7));
     ctx.stroke();
     if (i % 5 === 0) {
-      text(ctx, String(i), tx, 11, palette.rulerInk, 9 * cs, 'center', 500);
+      drawText(ctx, String(i), tx, 11, palette.rulerInk, 9 * cs, 'center', 500);
     }
   }
-  text(ctx, 'cm', width - 16, height - 10, palette.muted, 9 * cs, 'right', 500);
+  drawText(
+    ctx,
+    'cm',
+    width - 16,
+    height - 10,
+    palette.muted,
+    9 * cs,
+    'right',
+    500
+  );
   ctx.restore();
 }
 
@@ -356,7 +349,7 @@ function drawSetSquare(
     ctx.lineTo(t, size - 18 + mark);
     ctx.stroke();
   }
-  text(
+  drawText(
     ctx,
     '10',
     size * 0.42,
@@ -489,7 +482,7 @@ export function createParallelogramView(
     const bx = bisectX + bisectX2;
     const by = bisectY + bisectY2;
     const bl = Math.hypot(bx, by) || 1;
-    text(
+    drawText(
       ctx,
       'θ',
       C.origin.x + (bx / bl) * (C.arcRadius + 14),
@@ -512,13 +505,31 @@ export function createParallelogramView(
 
     const l1 = labelBeside(C.origin, f1, 1, C.labelOffset);
     const l2 = labelBeside(C.origin, f2, -1, C.labelOffset);
-    text(ctx, 'F₁', l1.x, l1.y, palette.red, 14 * cs, 'center', 700);
-    text(ctx, 'F₂', l2.x, l2.y, palette.blue, 14 * cs, 'center', 700);
+    drawText(ctx, 'F₁', l1.x, l1.y, palette.red, 14 * cs, 'center', 700);
+    drawText(ctx, 'F₂', l2.x, l2.y, palette.blue, 14 * cs, 'center', 700);
     if (showParallelogram) {
-      text(ctx, 'F', r.x + 8, r.y + 18, palette.green, 14 * cs, 'left', 700);
+      drawText(
+        ctx,
+        'F',
+        r.x + 8,
+        r.y + 18,
+        palette.green,
+        14 * cs,
+        'left',
+        700
+      );
     }
     if (showMeasured) {
-      text(ctx, 'F′', m.x + 8, m.y + 36, palette.orange, 14 * cs, 'left', 700);
+      drawText(
+        ctx,
+        'F′',
+        m.x + 8,
+        m.y + 36,
+        palette.orange,
+        14 * cs,
+        'left',
+        700
+      );
     }
 
     drawRuler(ctx, palette, cs);

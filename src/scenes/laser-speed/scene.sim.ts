@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type LaserSpeedParams = {
   velocity: number;
@@ -66,10 +67,6 @@ const DEFAULT_PARAMS: LaserSpeedParams = {
   showVectors: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function asBoolean(value: unknown, fallback: boolean): boolean {
   if (value === undefined) return fallback;
   if (typeof value === 'boolean') return value;
@@ -101,12 +98,12 @@ function normalize(
 ): LaserSpeedParams {
   return {
     velocity: clamp(
-      finite(input.velocity, previous.velocity),
+      finiteOr(input.velocity, previous.velocity),
       laserSpeedConstants.minVelocity,
       laserSpeedConstants.maxVelocity
     ),
     interval: clamp(
-      finite(input.interval, previous.interval),
+      finiteOr(input.interval, previous.interval),
       laserSpeedConstants.minInterval,
       laserSpeedConstants.maxInterval
     ),
@@ -164,7 +161,7 @@ export function createLaserSpeedSim(initial: Partial<LaserSpeedParams> = {}) {
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      const delta = Math.max(0, finite(dt, 0));
+      const delta = Math.max(0, finiteOr(dt, 0));
       time = (time + delta) % laserSpeedConstants.maxTime;
     },
     reset(): void {

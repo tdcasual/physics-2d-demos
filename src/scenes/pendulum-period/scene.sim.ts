@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type PendulumParams = {
   length: number;
@@ -67,32 +68,28 @@ const DEFAULTS: PendulumParams = {
   photogateRunning: false
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function normalize(
   input: Partial<PendulumParams>,
   previous = DEFAULTS
 ): PendulumParams {
   return {
     length: clamp(
-      finite(input.length, previous.length),
+      finiteOr(input.length, previous.length),
       pendulumConstants.lengthMin,
       pendulumConstants.lengthMax
     ),
     gravity: clamp(
-      finite(input.gravity, previous.gravity),
+      finiteOr(input.gravity, previous.gravity),
       pendulumConstants.gravityMin,
       pendulumConstants.gravityMax
     ),
     mass: clamp(
-      finite(input.mass, previous.mass),
+      finiteOr(input.mass, previous.mass),
       pendulumConstants.massMin,
       pendulumConstants.massMax
     ),
     amplitude: clamp(
-      finite(input.amplitude, previous.amplitude),
+      finiteOr(input.amplitude, previous.amplitude),
       pendulumConstants.amplitudeMin,
       pendulumConstants.amplitudeMax
     ),
@@ -202,7 +199,7 @@ export function createPendulumSim(initial: Partial<PendulumParams> = {}) {
     step(dt: number): void {
       crossing = false;
       if (!params.autoRun) return;
-      const safeDt = clamp(finite(dt, 0), 0, 0.05);
+      const safeDt = clamp(finiteOr(dt, 0), 0, 0.05);
       if (safeDt <= 0) return;
       const before = derive();
       time += safeDt;

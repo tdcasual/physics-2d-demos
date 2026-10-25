@@ -6,15 +6,7 @@ import { createDisplacementTimeScene } from './scene.entry';
 import { displacementTimeMeta } from './scene.meta';
 import { displacementTimeControlsSchema } from './controls-schema';
 import type { DisplacementTimeParams } from './scene.sim';
-
-function asBoolean(value: unknown): boolean {
-  return (
-    value === true ||
-    value === 1 ||
-    value === '1' ||
-    String(value).toLowerCase() === 'true'
-  );
-}
+import { asBoolean } from '../../core/coerce';
 
 bootScenePage({
   meta: displacementTimeMeta,

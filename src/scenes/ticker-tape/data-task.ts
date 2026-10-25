@@ -8,8 +8,6 @@
 import {
   checkNumericFormat,
   significantRoundingHalfUnit,
-  withinEpsilon,
-  withinTickTolerance,
   addSessionTrial,
   applyFieldDrafts,
   cloneSession,
@@ -23,6 +21,7 @@ import {
   parseStudentNumber,
   removeSessionTrial,
   writeCheckedField,
+  gradeValue,
   type DataWorkspaceDraft,
   type DataWorkspaceEligibility,
   type DataWorkspaceFieldResult,
@@ -303,37 +302,18 @@ function magnitudeFeedback(
     rangeDetail?: string;
   } = {}
 ): FieldFeedback {
-  const ticksPerUnit = options.ticksPerUnit;
-  const ratios = options.ratios ?? LENGTH_UNIT_RATIOS;
-  const matches = (candidate: number): boolean =>
-    ticksPerUnit == null
-      ? withinEpsilon(candidate, expected, tolerance)
-      : withinTickTolerance(
-          candidate,
-          expected,
-          Math.round(tolerance * ticksPerUnit),
-          ticksPerUnit
-        );
-  if (matches(value)) return ok();
-  // 近零真值上「10 倍的 0 仍是 0」，倍率启发必然误标，直接落 range 层。
-  if (Math.abs(expected) > tolerance) {
-    for (const ratio of ratios) {
-      if (matches(value * ratio) || matches(value / ratio)) {
-        return {
-          ok: false,
-          layer: 'unit',
-          message: `数值与答案相差 ${ratio} 倍，请确认单位是 ${unit}`
-        };
-      }
-    }
-  }
-  return {
-    ok: false,
-    layer: 'range',
-    message: `与纸带读数不符（${
+  return gradeValue(value, {
+    unit,
+    expected,
+    tolerance:
+      options.ticksPerUnit == null
+        ? { kind: 'epsilon', value: tolerance }
+        : { kind: 'ticks', tolerance, ticksPerUnit: options.ticksPerUnit },
+    unitRatios: options.ratios ?? LENGTH_UNIT_RATIOS,
+    rangeMessage: `与纸带读数不符（${
       options.rangeDetail ?? `允许误差 ±${tolerance.toFixed(2)} ${unit}`
     }）`
-  };
+  });
 }
 
 function parsedOrFailure(

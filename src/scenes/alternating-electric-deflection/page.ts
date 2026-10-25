@@ -1,23 +1,9 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
-import type { AlternatingElectricDeflectionParams } from './scene.sim';
 import { alternatingElectricDeflectionControlsSchema } from './controls-schema';
-import {
-  asDeflectionCharge,
-  createAlternatingElectricDeflectionScene
-} from './scene.entry';
+import { createAlternatingElectricDeflectionScene } from './scene.entry';
 import { alternatingElectricDeflectionMeta } from './scene.meta';
-
-function asBoolean(value: unknown): boolean {
-  return (
-    value === true ||
-    value === 1 ||
-    value === '1' ||
-    String(value).toLowerCase() === 'true'
-  );
-}
+import { createBoundControls } from '../../ui/components/bound-controls';
 
 const timingPresets: Record<string, number> = {
   t0: 0,
@@ -64,10 +50,13 @@ bootScenePage({
   },
   createControls: ({ mount, scene, scheduleRender, writeParam }) => {
     const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+    return createBoundControls({
       mount,
       schema: alternatingElectricDeflectionControlsSchema,
-      onAction: (key) => {
+      scene,
+      scheduleRender,
+      writeParam,
+      onAction: (key, renderer) => {
         const phase = timingPresets[key];
         if (phase !== undefined) {
           const previous = scene.getParams();
@@ -76,60 +65,7 @@ bootScenePage({
           renderer.setValue('releasePhase', phase);
         }
         render();
-      },
-      onChange: (key, value) => {
-        if (
-          key === 'voltageAmplitude' ||
-          key === 'period' ||
-          key === 'plateGap' ||
-          key === 'flightDuration' ||
-          key === 'releasePhase'
-        ) {
-          scene.setParams({
-            [key]: Number(value)
-          } as Partial<AlternatingElectricDeflectionParams>);
-        } else if (key === 'charge') {
-          const charge = asDeflectionCharge(value);
-          if (charge) scene.setParams({ charge });
-        } else if (
-          key === 'autoRun' ||
-          key === 'showVectors' ||
-          key === 'showGhosts'
-        ) {
-          scene.setParams({
-            [key]: asBoolean(value)
-          } as Partial<AlternatingElectricDeflectionParams>);
-        }
-        render();
-        writeParam?.(key, value);
       }
     });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (key === 'charge') {
-        const charge = asDeflectionCharge(value);
-        if (!charge) return false;
-        ctx.scene.setParams({ charge });
-        ctx.setControlValue(key, charge);
-        return true;
-      }
-      if (key === 'autoRun' || key === 'showVectors' || key === 'showGhosts') {
-        const enabled = asBoolean(value);
-        ctx.scene.setParams({
-          [key]: enabled
-        } as Partial<AlternatingElectricDeflectionParams>);
-        ctx.setControlValue(key, enabled);
-        return true;
-      }
-      const number = Number(value);
-      if (!Number.isFinite(number)) return false;
-      ctx.scene.setParams({
-        [key]: number
-      } as Partial<AlternatingElectricDeflectionParams>);
-      ctx.setControlValue(key, number);
-      return true;
-    }
   }
 });

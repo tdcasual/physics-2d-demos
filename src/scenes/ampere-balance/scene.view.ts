@@ -8,6 +8,7 @@ import {
   type AmpereBalanceState,
   type AmpereVector
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateAmpereBalanceViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -182,23 +183,6 @@ export function forceArrows(state: AmpereBalanceState): {
   };
 }
 
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
-
 function arrow(
   ctx: CanvasRenderingContext2D,
   x1: number,
@@ -313,7 +297,7 @@ function drawIncline(
   ctx.beginPath();
   ctx.arc(footX, C.planeBaseY, 28, -Math.PI, -Math.PI + layout.theta, false);
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     `θ = ${angle.toFixed(0)}°`,
     footX + 36,
@@ -351,7 +335,7 @@ function drawForces(
       dashed ? 3.5 : 5,
       dashed
     );
-    text(
+    drawText(
       ctx,
       label,
       geom.label.x,
@@ -379,7 +363,7 @@ function drawForces(
   );
   ctx.stroke();
   ctx.setLineDash([]);
-  text(
+  drawText(
     ctx,
     '+x',
     rod.x + layout.along.x * C.axisLabelDistance,
@@ -396,7 +380,7 @@ function drawForces(
   ctx.arc(rod.x, rod.y, C.blockRadius, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     state.params.currentDirection === 'out' ? '⊙' : '⊗',
     rod.x,

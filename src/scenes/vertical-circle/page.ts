@@ -13,15 +13,7 @@ import {
   type VerticalCircleHandle,
   type VerticalCircleParams
 } from './scene.sim';
-
-function asBoolean(value: unknown): boolean {
-  return (
-    value === true ||
-    value === 1 ||
-    value === '1' ||
-    String(value).toLowerCase() === 'true'
-  );
-}
+import { asBoolean } from '../../core/coerce';
 
 function parseModel(value: unknown): 'rope' | 'rod' | null {
   if (value === 'rod' || value === 1 || value === '1') return 'rod';

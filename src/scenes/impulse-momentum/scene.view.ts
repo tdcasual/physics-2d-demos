@@ -1,8 +1,4 @@
-import {
-  applyCanvasSize,
-  getResponsiveScale,
-  scaledSize
-} from '../../core/canvas-sizing';
+import { scaledSize } from '../../core/canvas-sizing';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
@@ -11,6 +7,8 @@ import {
   impulseMomentumConstants as C,
   type ImpulseMomentumState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
+import { sizeCanvasToHostBox } from '../stage-fit';
 
 export type CreateImpulseMomentumViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -69,70 +67,11 @@ const PALETTE: Record<TeachingTheme, Palette> = {
   }
 };
 
-function contentBoxSize(host: HTMLElement): { width: number; height: number } {
-  const cs = getComputedStyle(host);
-  const rect = host.getBoundingClientRect();
-  const padX =
-    (Number.parseFloat(cs.paddingLeft) || 0) +
-    (Number.parseFloat(cs.paddingRight) || 0);
-  const padY =
-    (Number.parseFloat(cs.paddingTop) || 0) +
-    (Number.parseFloat(cs.paddingBottom) || 0);
-  return {
-    width: Math.max(1, Math.floor(rect.width - padX)),
-    height: Math.max(1, Math.floor(rect.height - padY))
-  };
-}
-
-export function sizeGraphCanvasToHost(canvas: HTMLCanvasElement): {
-  ctx: CanvasRenderingContext2D;
-  cssWidth: number;
-  cssHeight: number;
-  responsiveScale: number;
-} {
-  const host = canvas.parentElement;
-  let cssWidth: number;
-  let cssHeight: number;
-  if (host) {
-    const box = contentBoxSize(host);
-    cssWidth = box.width;
-    cssHeight = box.height;
-  } else {
-    const rect = canvas.getBoundingClientRect();
-    cssWidth = Math.max(1, Math.floor(rect.width || C.graphFallbackWidth));
-    cssHeight = Math.max(1, Math.floor(rect.height || C.graphFallbackHeight));
-  }
-  const dpr = Math.min(
-    2,
-    typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1
-  );
-  const responsiveScale = getResponsiveScale(cssWidth, cssHeight);
-  const ctx = applyCanvasSize(canvas, {
-    width: Math.max(1, Math.floor(cssWidth * dpr)),
-    height: Math.max(1, Math.floor(cssHeight * dpr)),
-    cssWidth,
-    cssHeight,
-    dpr,
-    responsiveScale
+export function sizeGraphCanvasToHost(canvas: HTMLCanvasElement) {
+  return sizeCanvasToHostBox(canvas, {
+    width: C.graphFallbackWidth,
+    height: C.graphFallbackHeight
   });
-  return { ctx, cssWidth, cssHeight, responsiveScale };
-}
-
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
 }
 
 function rounded(
@@ -280,7 +219,7 @@ function drawApparatus(
   ctx.arc(cartCenter - cartW * 0.28, trackY, wheelR * 0.35, 0, Math.PI * 2);
   ctx.arc(cartCenter + cartW * 0.28, trackY, wheelR * 0.35, 0, Math.PI * 2);
   ctx.fill();
-  text(
+  drawText(
     ctx,
     `m=${state.params.mass.toFixed(1)} kg`,
     cartCenter,
@@ -306,7 +245,7 @@ function drawApparatus(
       Math.max(2.4, 3.2 * scale),
       8 * scale
     );
-    text(
+    drawText(
       ctx,
       'Fₓ',
       cartCenter + forceDir * (cartW / 2 + forceLen + 10 * scale),
@@ -333,7 +272,7 @@ function drawApparatus(
       Math.max(2, 2.6 * scale),
       7 * scale
     );
-    text(
+    drawText(
       ctx,
       'v',
       cartCenter + vDir * (vLen + 10 * scale),
@@ -390,7 +329,16 @@ function drawGraphs(
     ctx.moveTo(x, box.top);
     ctx.lineTo(x, box.bottom);
     ctx.stroke();
-    text(ctx, String(t), x, box.bottom + 12, p.muted, font(10), 'center', 600);
+    drawText(
+      ctx,
+      String(t),
+      x,
+      box.bottom + 12,
+      p.muted,
+      font(10),
+      'center',
+      600
+    );
   }
   const yTicks = 4;
   for (let i = 0; i <= yTicks; i += 1) {
@@ -400,7 +348,7 @@ function drawGraphs(
     ctx.moveTo(box.left, y);
     ctx.lineTo(box.right, y);
     ctx.stroke();
-    text(ctx, String(f), box.left - 6, y, p.muted, font(10), 'right', 600);
+    drawText(ctx, String(f), box.left - 6, y, p.muted, font(10), 'right', 600);
   }
   ctx.strokeStyle = p.ink;
   ctx.lineWidth = 1.6;
@@ -409,8 +357,17 @@ function drawGraphs(
   ctx.lineTo(box.left, box.bottom);
   ctx.lineTo(box.right + 8, box.bottom);
   ctx.stroke();
-  text(ctx, 'Fₓ / N', box.left, box.top - 12, p.ink, font(12), 'left', 700);
-  text(ctx, 't / s', box.right + 6, box.bottom, p.ink, font(11), 'left', 700);
+  drawText(ctx, 'Fₓ / N', box.left, box.top - 12, p.ink, font(12), 'left', 700);
+  drawText(
+    ctx,
+    't / s',
+    box.right + 6,
+    box.bottom,
+    p.ink,
+    font(11),
+    'left',
+    700
+  );
   if (state.params.showArea && state.time > 0) {
     ctx.fillStyle = `${p.red}33`;
     ctx.beginPath();

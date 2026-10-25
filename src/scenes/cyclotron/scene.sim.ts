@@ -1,5 +1,8 @@
 import { readoutOccludesStage } from '../../platform/stage-readout';
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
+import { betterPose, containInRect, measureStageLayout } from '../stage-fit';
+import type { StageLayoutHint } from '../stage-fit';
 
 export type CyclotronParticle = 'proton' | 'deuteron' | 'alpha';
 
@@ -111,10 +114,6 @@ const DEFAULTS: CyclotronParams = {
   showField: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function flag(value: unknown, fallback: boolean): boolean {
   if (value === true || value === 1 || value === '1' || value === 'true') {
     return true;
@@ -135,8 +134,8 @@ function normalizeParams(
 ): CyclotronParams {
   return {
     particle: normalizeParticle(input.particle ?? previous.particle),
-    B: clamp(finite(input.B, previous.B), C.bMin, C.bMax),
-    U: clamp(finite(input.U, previous.U), C.uMin, C.uMax),
+    B: clamp(finiteOr(input.B, previous.B), C.bMin, C.bMax),
+    U: clamp(finiteOr(input.U, previous.U), C.uMin, C.uMax),
     autoRun: flag(input.autoRun, previous.autoRun),
     showField: flag(input.showField, previous.showField)
   };
@@ -158,7 +157,7 @@ export function cyclotronMaxEnergy(
   B: number
 ): number {
   const data = PARTICLES[normalizeParticle(particle)];
-  const field = clamp(finite(B, C.bDefault), C.bMin, C.bMax);
+  const field = clamp(finiteOr(B, C.bDefault), C.bMin, C.bMax);
   return Math.round(
     (C.energyScale * data.charge * data.charge * field * field) / data.mass
   );
@@ -170,14 +169,16 @@ export function cyclotronPeriodRatio(
 ): number {
   const data = PARTICLES[normalizeParticle(particle)];
   return (
-    data.mass / (data.charge * clamp(finite(B, C.bDefault), C.bMin, C.bMax))
+    data.mass / (data.charge * clamp(finiteOr(B, C.bDefault), C.bMin, C.bMax))
   );
 }
 
 export function cyclotronOmega(particle: CyclotronParticle, B: number): number {
   const data = PARTICLES[normalizeParticle(particle)];
   return (
-    (C.baseOmega * data.charge * clamp(finite(B, C.bDefault), C.bMin, C.bMax)) /
+    (C.baseOmega *
+      data.charge *
+      clamp(finiteOr(B, C.bDefault), C.bMin, C.bMax)) /
     data.mass
   );
 }
@@ -189,7 +190,7 @@ export function cyclotronCrossingLimit(
 ): number {
   const data = PARTICLES[normalizeParticle(particle)];
   const maxEnergy = cyclotronMaxEnergy(particle, B);
-  const voltage = clamp(finite(U, C.uDefault), C.uMin, C.uMax);
+  const voltage = clamp(finiteOr(U, C.uDefault), C.uMin, C.uMax);
   const gain = data.charge * voltage;
   return Math.max(1, Math.floor(maxEnergy / Math.max(gain, 1e-9)));
 }
@@ -284,7 +285,7 @@ export function deriveCyclotronState(
   const omega = cyclotronOmega(params.particle, params.B);
   const path = buildCyclotronPath(params.particle, params.B, params.U);
   const orbits = orbitsFromPath(path);
-  const time = Math.max(0, finite(t, 0));
+  const time = Math.max(0, finiteOr(t, 0));
   const theta = -omega * time;
   const absTheta = Math.abs(theta);
   const turnLimit = path.nMax * Math.PI;
@@ -345,83 +346,13 @@ export function deriveCyclotronState(
   };
 }
 
-export type StageLayoutHint = {
-  floatingReadout: boolean;
-  overlayPx?: number;
-  overlayTopPx?: number;
-  overlayHeightPx?: number;
-};
-
-type StagePose = {
-  fit: number;
-  offsetX: number;
-  offsetY: number;
-};
-
 const FLOATING_OVERLAY_FALLBACK = C.overlayFallbackPx;
 
-function containInRect(
-  boxW: number,
-  boxH: number,
-  availW: number,
-  availH: number,
-  originX: number,
-  originY: number,
-  alignX: 'left' | 'center'
-): StagePose {
-  const w = Math.max(1, availW);
-  const h = Math.max(1, availH);
-  const fit = Math.min(w / boxW, h / boxH);
-  const stageW = boxW * fit;
-  const stageH = boxH * fit;
-  return {
-    fit,
-    offsetX: originX + (alignX === 'center' ? (w - stageW) / 2 : 0),
-    offsetY: originY + (h - stageH) / 2
-  };
-}
-
-function betterPose(a: StagePose, b: StagePose): StagePose {
-  return b.fit > a.fit + 1e-9 ? b : a;
-}
-
-export function hasFloatingReadout(anchor?: Element | null): boolean {
-  return readoutOccludesStage(anchor);
-}
+export const hasFloatingReadout = readoutOccludesStage;
 
 /** view 共用：从布局 DOM 读浮动读数与叠占宽度。 */
 export function stageLayoutFrom(canvas?: Element | null): StageLayoutHint {
-  const floatingReadout = hasFloatingReadout(canvas);
-  if (!floatingReadout) return { floatingReadout: false, overlayPx: 0 };
-  let overlayPx = 0;
-  let overlayTopPx = 0;
-  let overlayHeightPx = 0;
-  if (canvas instanceof HTMLElement) {
-    const panel = canvas.parentElement?.querySelector(
-      '.teaching-readout-panel, .srgb-readout-panel'
-    );
-    if (panel instanceof HTMLElement) {
-      const cr = canvas.getBoundingClientRect();
-      const rr = panel.getBoundingClientRect();
-      if (
-        rr.left < cr.right &&
-        rr.right > cr.left &&
-        rr.top < cr.bottom &&
-        rr.bottom > cr.top
-      ) {
-        overlayPx = Math.max(0, cr.right - rr.left);
-        const top = Math.max(rr.top, cr.top);
-        const bottom = Math.min(rr.bottom, cr.bottom);
-        overlayTopPx = Math.max(0, top - cr.top);
-        overlayHeightPx = Math.max(0, bottom - top);
-      }
-    }
-  }
-  return {
-    floatingReadout: true,
-    overlayPx: overlayPx || FLOATING_OVERLAY_FALLBACK,
-    ...(overlayHeightPx > 0 ? { overlayTopPx, overlayHeightPx } : {})
-  };
+  return measureStageLayout(canvas, FLOATING_OVERLAY_FALLBACK);
 }
 
 /**
@@ -551,7 +482,7 @@ export function createCyclotronSim(initial: Partial<CyclotronParams> = {}) {
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      t = Math.max(0, t + finite(dt, 0));
+      t = Math.max(0, t + finiteOr(dt, 0));
     },
     reset(): void {
       params = { ...initialParams };
@@ -559,3 +490,5 @@ export function createCyclotronSim(initial: Partial<CyclotronParams> = {}) {
     }
   };
 }
+
+export type { StageLayoutHint };

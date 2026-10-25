@@ -450,3 +450,25 @@ describe('vertical-circle stage transform', () => {
     root.remove();
   });
 });
+
+describe('normalizeAngle', () => {
+  it('wraps into [-180, 180] with the same results as stepwise ±360', () => {
+    expect(normalizeAngle(180)).toBe(180);
+    expect(normalizeAngle(-180)).toBe(-180);
+    expect(normalizeAngle(540)).toBe(180);
+    expect(normalizeAngle(541)).toBe(-179);
+    expect(normalizeAngle(-541)).toBe(179);
+    expect(normalizeAngle(-51)).toBe(-51);
+  });
+
+  it('terminates for extreme magnitudes (URL-injected 1e308)', () => {
+    for (const v of [1e308, -1e308, 1e15, -1e15]) {
+      const out = normalizeAngle(v);
+      expect(out).toBeGreaterThanOrEqual(-180);
+      expect(out).toBeLessThanOrEqual(180);
+    }
+    const sim = createVerticalCircleSim();
+    sim.setParams({ theta: 1e308 });
+    expect(Number.isFinite(sim.getParams().theta)).toBe(true);
+  });
+});

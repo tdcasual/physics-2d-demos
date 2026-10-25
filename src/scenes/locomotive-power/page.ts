@@ -1,24 +1,10 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { locomotiveControlsSchema } from './controls-schema';
 import { createLocomotiveScene } from './scene.entry';
 import { locomotiveMeta } from './scene.meta';
-import type { LocomotiveParams } from './scene.sim';
-
-function asBoolean(value: unknown): boolean {
-  return (
-    value === true ||
-    value === 1 ||
-    value === '1' ||
-    value === 'true' ||
-    String(value).toLowerCase() === 'true'
-  );
-}
-function asMode(value: unknown): LocomotiveParams['mode'] | null {
-  return value === 'power' || value === 'acceleration' ? value : null;
-}
+import { createBoundControls } from '../../ui/components/bound-controls';
+import { resetSceneAndControls } from '../../app/control-projection';
 
 bootScenePage({
   meta: locomotiveMeta,
@@ -49,51 +35,15 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, scheduleRender, writeParam }) => {
-    const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+  createControls: ({ mount, scene, scheduleRender, writeParam }) =>
+    createBoundControls({
       mount,
       schema: locomotiveControlsSchema,
-      onChange: (key, value) => {
-        if (key === 'mode') {
-          const mode = asMode(value);
-          if (mode) scene.setParams({ mode });
-        } else if (key === 'autoRun')
-          scene.setParams({ autoRun: asBoolean(value) });
-        else {
-          const number = Number(value);
-          if (!Number.isFinite(number)) return;
-          scene.setParams({ [key]: number } as Partial<LocomotiveParams>);
-        }
-        render();
-        writeParam?.(key, value);
-      },
-      onAction: (key) => {
-        if (key === 'reset') scene.reset();
-        render();
+      scene,
+      scheduleRender,
+      writeParam,
+      onAction: (key, renderer) => {
+        if (key === 'reset') resetSceneAndControls(scene, renderer, writeParam);
       }
-    });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (key === 'mode') {
-        const mode = asMode(value);
-        if (!mode) return false;
-        ctx.scene.setParams({ mode });
-        ctx.setControlValue(key, mode);
-        return true;
-      }
-      if (key === 'autoRun') {
-        ctx.scene.setParams({ autoRun: asBoolean(value) });
-        ctx.setControlValue(key, asBoolean(value));
-        return true;
-      }
-      const number = Number(value);
-      if (!Number.isFinite(number)) return false;
-      ctx.scene.setParams({ [key]: number } as Partial<LocomotiveParams>);
-      ctx.setControlValue(key, number);
-      return true;
-    }
-  }
+    })
 });

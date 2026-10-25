@@ -1,7 +1,7 @@
 /**
  * SchemaRenderer 句柄薄包装：静默四件套 + setVisible + dispose + 字段类型表。
  *
- * fieldTypes 透传同一 Map 引用，禁止拷贝。
+ * fieldTypes / bindings 透传同一 Map 引用，禁止拷贝。
  */
 
 import type { SchemaRendererInstance } from './SchemaRenderer';
@@ -15,6 +15,8 @@ export type ExposedSchemaHandle = Pick<
   | 'setVisible'
   | 'dispose'
   | 'fieldTypes'
+  | 'bindings'
+  | 'fieldOptions'
 >;
 
 export function exposeSchemaHandle(
@@ -27,6 +29,8 @@ export function exposeSchemaHandle(
     setActiveSilently: (key, id) => renderer.setActiveSilently(key, id),
     setVisible: (key, visible) => renderer.setVisible(key, visible),
     dispose: () => renderer.dispose(),
-    fieldTypes: renderer.fieldTypes
+    fieldTypes: renderer.fieldTypes,
+    bindings: renderer.bindings,
+    fieldOptions: renderer.fieldOptions
   };
 }

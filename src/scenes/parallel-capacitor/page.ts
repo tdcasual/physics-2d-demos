@@ -1,11 +1,9 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { parallelCapacitorControlsSchema } from './controls-schema';
 import { parallelCapacitorMeta } from './scene.meta';
 import { createParallelCapacitorScene } from './scene.entry';
-import type { CapacitorParams } from './scene.sim';
+import { createBoundControls } from '../../ui/components/bound-controls';
 bootScenePage({
   meta: parallelCapacitorMeta,
   autoPlay: true,
@@ -40,42 +38,12 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, scheduleRender, writeParam }) => {
-    const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+  createControls: ({ mount, scene, scheduleRender, writeParam }) =>
+    createBoundControls({
       mount,
       schema: parallelCapacitorControlsSchema,
-      onChange: (key, value) => {
-        if (key === 'probe') {
-          scene.setParams({ probe: String(value) as CapacitorParams['probe'] });
-          renderer.setActive(key, String(value));
-        } else
-          scene.setParams({ [key]: Number(value) } as Partial<CapacitorParams>);
-        render();
-        writeParam?.(key, value);
-      },
-      onAction: () => {}
-    });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (key === 'probe') {
-        const probe =
-          String(value) === '1'
-            ? 'distance'
-            : String(value) === '2'
-              ? 'dielectric'
-              : (String(value) as CapacitorParams['probe']);
-        ctx.scene.setParams({ probe });
-        ctx.setControlActive(key, probe);
-        return true;
-      }
-      const number = Number(value);
-      if (!Number.isFinite(number)) return false;
-      ctx.scene.setParams({ [key]: number } as Partial<CapacitorParams>);
-      ctx.setControlValue(key, number);
-      return true;
-    }
-  }
+      scene,
+      scheduleRender,
+      writeParam
+    })
 });

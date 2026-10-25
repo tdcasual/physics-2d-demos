@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type AmpereFieldDirection =
   | 'up'
@@ -102,10 +103,6 @@ const DEFAULTS: AmpereBalanceParams = {
   autoRun: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 export function parseFieldDirection(
   value: unknown,
   fallback: AmpereFieldDirection = 'down'
@@ -136,21 +133,21 @@ function normalize(
 ): AmpereBalanceParams {
   return {
     inclineAngle: clamp(
-      finite(input.inclineAngle, previous.inclineAngle),
+      finiteOr(input.inclineAngle, previous.inclineAngle),
       C.inclineAngleMin,
       C.inclineAngleMax
     ),
     magneticField: clamp(
-      finite(input.magneticField, previous.magneticField),
+      finiteOr(input.magneticField, previous.magneticField),
       C.magneticFieldMin,
       C.magneticFieldMax
     ),
     current: clamp(
-      finite(input.current, previous.current),
+      finiteOr(input.current, previous.current),
       C.currentMin,
       C.currentMax
     ),
-    mass: clamp(finite(input.mass, previous.mass), C.massMin, C.massMax),
+    mass: clamp(finiteOr(input.mass, previous.mass), C.massMin, C.massMax),
     fieldDirection: parseFieldDirection(
       input.fieldDirection,
       previous.fieldDirection

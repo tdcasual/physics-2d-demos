@@ -10,13 +10,13 @@ import globals from 'globals';
 // src/scenes/<scene>，两种前缀都须覆盖；深度 ≥2 时同一前缀也可能解析到
 // src/ 分层目录，负向前瞻须一并放行（分层目录的合法性由各自专属 group 约束）。
 const crossSceneImportMessage =
-  'Scene modules cannot import other scenes. Shared code belongs in the scenes root modules (types/page-utils/scene-entry-helpers/view-base).';
+  'Scene modules cannot import other scenes. Shared code belongs in the scenes root modules (types/page-utils/scene-entry-helpers/view-base/stage-fit).';
 
 // 深度 1 场景文件（src/scenes/<id>/*.ts）：`../X` 解析到 src/scenes/X，
-// 仅放行 4 个根共享模块（匹配模块名，可选 `.ts` 扩展名；子路径一律禁止）。
+// 仅放行 5 个根共享模块（匹配模块名，可选 `.ts` 扩展名；子路径一律禁止）。
 // 注意前缀后须排除 `.`，否则 `^\.\./` 会前缀命中 `../../…`。
 const sharedSceneRootModules =
-  'types(?:\\.ts)?$|page-utils(?:\\.ts)?$|scene-entry-helpers(?:\\.ts)?$|view-base(?:\\.ts)?$';
+  'types(?:\\.ts)?$|page-utils(?:\\.ts)?$|scene-entry-helpers(?:\\.ts)?$|view-base(?:\\.ts)?$|stage-fit(?:\\.ts)?$';
 const crossSceneImportDepth1 = {
   regex: `^\\.\\./(?!\\.)(?!${sharedSceneRootModules})`,
   message: crossSceneImportMessage

@@ -5,6 +5,7 @@ import {
   pendulumEnergyConstants as C,
   type PendulumEnergyState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreatePendulumEnergyViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -54,22 +55,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
   }
 };
 
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 function round(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -195,7 +180,7 @@ function drawPendulum(
     Math.sin(angle) *
     Math.min(C.arrowScale, state.speed * C.arrowScale);
   arrow(ctx, bobX, bobY, bobX + tangentX, bobY + tangentY, p.teal, 3);
-  text(
+  drawText(
     ctx,
     `v = ${state.speed.toFixed(2)} m/s`,
     bobX + C.speedLabelOffsetX,
@@ -205,7 +190,7 @@ function drawPendulum(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     '重力势能最大',
     C.pivotX - C.arcRadius,
@@ -215,7 +200,7 @@ function drawPendulum(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     '动能最大',
     C.pivotX - 34,
@@ -236,7 +221,7 @@ function drawBar(
   value: string,
   p: Palette
 ): void {
-  text(
+  drawText(
     ctx,
     label,
     C.panelX + C.energyLabelX,
@@ -246,7 +231,7 @@ function drawBar(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     value,
     C.panelX + C.energyValueX,
@@ -282,7 +267,7 @@ function drawPanel(
   round(ctx, C.panelX, 0, C.panelWidth, C.baseHeight, C.panelInset);
   ctx.fill();
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '实时状态与能量监控',
     C.panelX + C.panelTitleX,
@@ -292,7 +277,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     '高中物理',
     C.panelX + C.panelWidth - C.panelTitleX,
@@ -317,7 +302,7 @@ function drawPanel(
   );
   ctx.fillStyle = p.soft;
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '实时速度 v',
     C.panelX + C.panelInset * 2,
@@ -327,7 +312,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `${state.speed.toFixed(2)} m/s`,
     C.panelX + C.panelWidth - C.panelInset * 2,
@@ -337,7 +322,7 @@ function drawPanel(
     'right',
     700
   );
-  text(
+  drawText(
     ctx,
     '释放角 θ',
     C.panelX + C.panelInset * 2,
@@ -347,7 +332,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `${state.amplitude.toFixed(0)}°`,
     C.panelX + C.panelWidth - C.panelInset * 2,
@@ -369,7 +354,7 @@ function drawPanel(
   ctx.fill();
   ctx.strokeStyle = p.border;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '动态能量条',
     C.panelX + C.panelInset * 2,
@@ -417,7 +402,7 @@ function drawPanel(
   );
   ctx.fillStyle = p.soft;
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '关系式',
     C.panelX + C.formulaTextX,
@@ -427,7 +412,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     'Eₚ = mgh',
     C.panelX + C.formulaTextX,
@@ -437,7 +422,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'Eₖ = ½mv²',
     C.panelX + C.formulaTextX,
@@ -447,7 +432,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'E机械 = Eₚ + Eₖ',
     C.panelX + C.formulaTextX,
@@ -467,7 +452,7 @@ function drawPanel(
   );
   ctx.fillStyle = state.airDrag ? '#fff8e8' : '#eef8f6';
   ctx.fill();
-  text(
+  drawText(
     ctx,
     state.airDrag ? '空气阻力：机械能缓慢减少' : '理想摆动：机械能守恒',
     C.panelX + C.formulaTextX,
@@ -477,7 +462,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     '最高点 Eₚ↑，最低点 Eₖ↑',
     C.panelX + C.formulaTextX,
@@ -526,7 +511,7 @@ export function createPendulumEnergyView(
     ctx.fillStyle = p.bg;
     ctx.fillRect(0, 0, C.baseWidth, C.baseHeight);
     drawGrid(ctx, p);
-    text(
+    drawText(
       ctx,
       '重力势能与动能转化演示',
       C.fieldWidth / 2,

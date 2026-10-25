@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type EarthGravityParams = {
   latitude: number;
@@ -55,10 +56,6 @@ const DEFAULT_PARAMS: EarthGravityParams = {
   showComponents: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function asBoolean(value: unknown, fallback: boolean): boolean {
   if (value === undefined) return fallback;
   if (typeof value === 'boolean') return value;
@@ -73,12 +70,12 @@ function normalize(
 ): EarthGravityParams {
   return {
     latitude: clamp(
-      finite(input.latitude, previous.latitude),
+      finiteOr(input.latitude, previous.latitude),
       earthGravityConstants.minLatitude,
       earthGravityConstants.maxLatitude
     ),
     mass: clamp(
-      finite(input.mass, previous.mass),
+      finiteOr(input.mass, previous.mass),
       earthGravityConstants.minMass,
       earthGravityConstants.maxMass
     ),
@@ -93,7 +90,7 @@ export function calculateEarthGravity(
   mass: number = earthGravityConstants.defaultMass
 ): Omit<EarthGravityState, 'params' | 'time'> {
   const theta = (clamp(latitude, 0, 90) * Math.PI) / 180;
-  const m = Math.max(0, finite(mass, earthGravityConstants.defaultMass));
+  const m = Math.max(0, finiteOr(mass, earthGravityConstants.defaultMass));
   const r = earthGravityConstants.earthRadius * Math.cos(theta);
   const fM = m * earthGravityConstants.surfaceG;
   const fC = m * earthGravityConstants.earthOmega ** 2 * r;
@@ -140,7 +137,7 @@ export function createEarthGravitySim(
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      time = (time + Math.max(0, finite(dt, 0))) % 100;
+      time = (time + Math.max(0, finiteOr(dt, 0))) % 100;
     },
     reset(): void {
       params = { ...defaults };

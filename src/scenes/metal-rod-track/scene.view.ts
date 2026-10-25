@@ -8,6 +8,7 @@ import {
   measureStageOcclusions,
   occlusionSignature
 } from './renderer/stage-occlusion';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateMetalRodViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -92,23 +93,6 @@ const {
   rodLength: ROD_LENGTH
 } = metalRodConstants;
 
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
-
 function round(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -171,7 +155,16 @@ function drawFieldMarks(ctx: CanvasRenderingContext2D, p: Palette): void {
       ctx.stroke();
     }
   }
-  text(ctx, 'B ⊗', LOOP_RIGHT - 10, LOOP_TOP - 24, p.blue, 15, 'right', 700);
+  drawText(
+    ctx,
+    'B ⊗',
+    LOOP_RIGHT - 10,
+    LOOP_TOP - 24,
+    p.blue,
+    15,
+    'right',
+    700
+  );
 }
 
 function drawCircuit(
@@ -217,7 +210,16 @@ function drawCircuit(
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 2;
   ctx.strokeRect(RESISTOR_X - 13, RESISTOR_Y - RESISTOR_H / 2, 26, RESISTOR_H);
-  text(ctx, 'R', RESISTOR_X - 27, RESISTOR_Y, p.ink, 18 * scale, 'right', 700);
+  drawText(
+    ctx,
+    'R',
+    RESISTOR_X - 27,
+    RESISTOR_Y,
+    p.ink,
+    18 * scale,
+    'right',
+    700
+  );
   const gradient = ctx.createLinearGradient(
     rodX - ROD_W,
     RAIL_TOP,
@@ -254,7 +256,7 @@ function drawCircuit(
     p.teal,
     4
   );
-  text(
+  drawText(
     ctx,
     'v',
     vectorStart + velocityLength + 16,
@@ -273,12 +275,30 @@ function drawCircuit(
     p.orange,
     4
   );
-  text(ctx, 'Fₐ', rodX - 82, vectorY + 32, p.orange, 17 * scale, 'center', 700);
+  drawText(
+    ctx,
+    'Fₐ',
+    rodX - 82,
+    vectorY + 32,
+    p.orange,
+    17 * scale,
+    'center',
+    700
+  );
   if (state.mode === 'pull') {
     arrow(ctx, rodX + 42, vectorY - 58, rodX + 42 + 58, vectorY - 58, p.red, 4);
-    text(ctx, 'F', rodX + 112, vectorY - 72, p.red, 17 * scale, 'center', 700);
+    drawText(
+      ctx,
+      'F',
+      rodX + 112,
+      vectorY - 72,
+      p.red,
+      17 * scale,
+      'center',
+      700
+    );
   }
-  text(
+  drawText(
     ctx,
     'ΔS 增大 → 产生 E',
     RAIL_LEFT + 142,
@@ -300,8 +320,17 @@ function drawScene(
   ctx.fillRect(0, 0, FIELD_W, BASE_H);
   round(ctx, TRACK_X, TRACK_Y, TRACK_W, TRACK_H, 16, p);
   drawFieldMarks(ctx, p);
-  text(ctx, '单轨金属棒切割磁感线', 366, 30, p.ink, 24 * scale, 'left', 700);
-  text(
+  drawText(
+    ctx,
+    '单轨金属棒切割磁感线',
+    366,
+    30,
+    p.ink,
+    24 * scale,
+    'left',
+    700
+  );
+  drawText(
     ctx,
     '右手定则 · 安培力与阻尼',
     366,
@@ -312,7 +341,7 @@ function drawScene(
     600
   );
   round(ctx, INFO_X, INFO_Y, INFO_W, INFO_H, 14, p);
-  text(
+  drawText(
     ctx,
     '核心法则',
     INFO_X + 20,
@@ -322,7 +351,7 @@ function drawScene(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     '右手定则：B、v、I',
     INFO_X + 20,
@@ -332,7 +361,7 @@ function drawScene(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     '左手定则：Fₐ 与 v 相反',
     INFO_X + 20,
@@ -342,7 +371,7 @@ function drawScene(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     state.mode === 'pull' ? '恒定拉力加速' : '初速度阻尼滑行',
     INFO_X + 20,
@@ -354,7 +383,7 @@ function drawScene(
   );
   drawCircuit(ctx, state, p, scale);
   round(ctx, 34, 592, 736, 92, 12, p);
-  text(
+  drawText(
     ctx,
     state.status,
     56,
@@ -364,7 +393,7 @@ function drawScene(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `E = BLv = ${state.emf.toFixed(2)} V`,
     56,
@@ -374,7 +403,7 @@ function drawScene(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `I = E/R = ${state.current.toFixed(2)} A`,
     300,
@@ -384,7 +413,7 @@ function drawScene(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `Fₐ = ${state.magneticForce.toFixed(2)} N`,
     548,

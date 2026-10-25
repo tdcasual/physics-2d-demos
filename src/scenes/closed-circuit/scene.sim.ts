@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type ClosedCircuitParams = {
   emf: number;
@@ -68,27 +69,23 @@ const DEFAULTS: ClosedCircuitParams = {
   showPowerArea: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function normalize(
   input: Partial<ClosedCircuitParams>,
   previous = DEFAULTS
 ): ClosedCircuitParams {
   return {
     emf: clamp(
-      finite(input.emf, previous.emf),
+      finiteOr(input.emf, previous.emf),
       closedCircuitConstants.emfMin,
       closedCircuitConstants.emfMax
     ),
     internalResistance: clamp(
-      finite(input.internalResistance, previous.internalResistance),
+      finiteOr(input.internalResistance, previous.internalResistance),
       closedCircuitConstants.internalResistanceMin,
       closedCircuitConstants.internalResistanceMax
     ),
     externalResistance: clamp(
-      finite(input.externalResistance, previous.externalResistance),
+      finiteOr(input.externalResistance, previous.externalResistance),
       closedCircuitConstants.externalResistanceMin,
       closedCircuitConstants.externalResistanceMax
     ),
@@ -143,7 +140,7 @@ export function createClosedCircuitSim(
       return { ...params };
     },
     step(dt: number): void {
-      if (params.autoRun) time += Math.max(0, finite(dt, 0));
+      if (params.autoRun) time += Math.max(0, finiteOr(dt, 0));
     },
     reset(): void {
       params = { ...defaults };

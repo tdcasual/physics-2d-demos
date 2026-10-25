@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type WedgeProfile = 'linear' | 'quad';
 export type WedgeParams = {
@@ -35,9 +36,6 @@ const DEFAULTS: WedgeParams = {
   cursorY: 0.5,
   autoRun: true
 };
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
 function normalize(
   input: Partial<WedgeParams>,
   previous = DEFAULTS
@@ -47,12 +45,12 @@ function normalize(
       ? input.profile
       : previous.profile;
   return {
-    lambda: clamp(finite(input.lambda, previous.lambda), 400, 700),
-    dTop: clamp(finite(input.dTop, previous.dTop), 0, 1000),
-    dBottom: clamp(finite(input.dBottom, previous.dBottom), 100, 2000),
-    n: clamp(finite(input.n, previous.n), 1, 2.5),
+    lambda: clamp(finiteOr(input.lambda, previous.lambda), 400, 700),
+    dTop: clamp(finiteOr(input.dTop, previous.dTop), 0, 1000),
+    dBottom: clamp(finiteOr(input.dBottom, previous.dBottom), 100, 2000),
+    n: clamp(finiteOr(input.n, previous.n), 1, 2.5),
     profile,
-    cursorY: clamp(finite(input.cursorY, previous.cursorY), 0, 1),
+    cursorY: clamp(finiteOr(input.cursorY, previous.cursorY), 0, 1),
     autoRun: input.autoRun ?? previous.autoRun
   };
 }
@@ -107,7 +105,7 @@ export function createWedgeFilmInterferenceSim(
     },
     step(dt: number): void {
       if (params.autoRun) {
-        time += Math.max(0, finite(dt, 0));
+        time += Math.max(0, finiteOr(dt, 0));
         params = { ...params, cursorY: 0.5 + 0.35 * Math.sin(time * 0.7) };
       }
     },

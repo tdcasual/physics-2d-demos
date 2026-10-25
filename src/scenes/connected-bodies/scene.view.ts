@@ -5,6 +5,7 @@ import {
   connectedBodiesConstants,
   type ConnectedBodiesState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 export type CreateConnectedBodiesViewOptions = {
   canvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
@@ -92,22 +93,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     soft: '#253249'
   }
 };
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 function card(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -224,8 +209,17 @@ function drawBall(
   ctx.arc(x, y, BR, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
-  text(ctx, label, x, y, '#fff', 18, 'center', 700);
-  text(ctx, `${mass.toFixed(1)} kg`, x + BR + 22, y, p.ink, 14, 'left', 700);
+  drawText(ctx, label, x, y, '#fff', 18, 'center', 700);
+  drawText(
+    ctx,
+    `${mass.toFixed(1)} kg`,
+    x + BR + 22,
+    y,
+    p.ink,
+    14,
+    'left',
+    700
+  );
 }
 function drawAnalysis(
   ctx: CanvasRenderingContext2D,
@@ -241,7 +235,7 @@ function drawAnalysis(
     ctx.fill();
     ctx.strokeStyle = p.border;
     ctx.stroke();
-    text(
+    drawText(
       ctx,
       String(title),
       FX + 18,
@@ -256,7 +250,7 @@ function drawAnalysis(
     ctx.moveTo(FX + 18, Number(y) + ARO);
     ctx.lineTo(FX + FWIDTH - 18, Number(y) + ARO);
     ctx.stroke();
-    text(
+    drawText(
       ctx,
       `a = ${Number(acceleration).toFixed(1)} m/s²`,
       FX + FWIDTH - 18,
@@ -275,7 +269,7 @@ function drawField(
   scale: number
 ): void {
   drawBackground(ctx, p);
-  text(
+  drawText(
     ctx,
     state.params.arrangement === 'string-spring'
       ? '连接体模型：细绳 + 弹簧'
@@ -293,7 +287,7 @@ function drawField(
   if (state.params.cut !== 'none') {
     arrow(ctx, AX, AY - BR - 24, state.accelerationA >= 0 ? -1 : 1, p.orange);
     arrow(ctx, DX, DY + BR + 24, state.accelerationB >= 0 ? 1 : -1, p.orange);
-    text(
+    drawText(
       ctx,
       state.params.cut === 'lower' ? '已剪断下方连接' : '已剪断上方连接',
       28,
@@ -305,7 +299,7 @@ function drawField(
     );
   }
   drawAnalysis(ctx, state, p);
-  text(
+  drawText(
     ctx,
     '各剪断状态均冻结在 t = 0⁺',
     28,
@@ -324,7 +318,16 @@ function drawPanel(
 ): void {
   ctx.fillStyle = p.panel;
   ctx.fillRect(PX, 0, BW - PX, BH);
-  text(ctx, '经典连接体模型', PX + INSET, 42, p.ink, 20 * scale, 'left', 700);
+  drawText(
+    ctx,
+    '经典连接体模型',
+    PX + INSET,
+    42,
+    p.ink,
+    20 * scale,
+    'left',
+    700
+  );
   ctx.strokeStyle = p.border;
   ctx.beginPath();
   ctx.moveTo(PX + INSET, PRY);
@@ -333,7 +336,7 @@ function drawPanel(
   card(ctx, PX + INSET, MCY, PW - INSET * 2, MCH);
   ctx.fillStyle = p.soft;
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '模型：细绳与轻弹簧',
     PX + INSET + 16,
@@ -343,7 +346,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     '轻绳张力可突变；未断轻弹簧力不突变',
     PX + INSET + 16,
@@ -353,7 +356,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     '只分析 t = 0⁺，不延伸后续轨迹',
     PX + INSET + 16,
@@ -368,7 +371,7 @@ function drawPanel(
   ctx.fill();
   ctx.strokeStyle = p.border;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     `mₐ = ${state.params.massA.toFixed(1)} kg`,
     PX + INSET + 16,
@@ -377,7 +380,7 @@ function drawPanel(
     14 * scale,
     'left'
   );
-  text(
+  drawText(
     ctx,
     `mᵦ = ${state.params.massB.toFixed(1)} kg`,
     PX + INSET + 196,
@@ -386,7 +389,7 @@ function drawPanel(
     14 * scale,
     'left'
   );
-  text(
+  drawText(
     ctx,
     '按按钮剪断连接，观察加速度瞬变',
     PX + INSET + 16,
@@ -395,7 +398,7 @@ function drawPanel(
     13 * scale,
     'left'
   );
-  text(
+  drawText(
     ctx,
     state.params.cut === 'none'
       ? '当前：平衡初态'
@@ -410,7 +413,7 @@ function drawPanel(
   card(ctx, PX + INSET, SCY, PW - INSET * 2, SCH);
   ctx.fillStyle = p.soft;
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '瞬时状态物理量（t = 0⁺）',
     PX + INSET + 16,
@@ -431,15 +434,15 @@ function drawPanel(
     const row = Math.floor(index / 2);
     const x = PX + INSET + 16 + col * 166;
     const y = SCY + 64 + row * 72;
-    text(ctx, label, x, y, p.muted, 12 * scale, 'left');
-    text(ctx, value, x, y + 26, color, 16 * scale, 'left', 700);
+    drawText(ctx, label, x, y, p.muted, 12 * scale, 'left');
+    drawText(ctx, value, x, y + 26, color, 16 * scale, 'left', 700);
   });
   card(ctx, PX + INSET, RCY, PW - INSET * 2, RCH);
   ctx.fillStyle = p.panel;
   ctx.fill();
   ctx.strokeStyle = p.border;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '核心规律',
     PX + INSET + 16,
@@ -449,7 +452,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     '速度连续；加速度可突变',
     PX + INSET + 16,
@@ -459,7 +462,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     '轻绳可突变，轻弹簧不可突变',
     PX + INSET + 16,

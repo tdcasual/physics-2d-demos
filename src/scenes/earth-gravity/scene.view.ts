@@ -2,6 +2,7 @@ import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import { earthGravityConstants, type EarthGravityState } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateEarthGravityViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -73,23 +74,6 @@ const {
   sliderY: SLIDER_Y,
   maxLatitude: MAX_LATITUDE
 } = earthGravityConstants;
-
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 
 function roundedRect(
   ctx: CanvasRenderingContext2D,
@@ -176,10 +160,10 @@ function drawEarth(
   ctx.lineTo(cx + EARTH_R + 32, cy);
   ctx.stroke();
   ctx.setLineDash([]);
-  text(ctx, 'N', cx, cy - EARTH_R - 48, p.ink, 20, 'center', 700);
-  text(ctx, 'S', cx, cy + EARTH_R + 50, p.ink, 20, 'center', 700);
-  text(ctx, 'O', cx - 18, cy + 23, p.ink, 22, 'center', 700);
-  text(ctx, '赤道面', cx + EARTH_R + 18, cy + 4, p.muted, 16, 'left', 600);
+  drawText(ctx, 'N', cx, cy - EARTH_R - 48, p.ink, 20, 'center', 700);
+  drawText(ctx, 'S', cx, cy + EARTH_R + 50, p.ink, 20, 'center', 700);
+  drawText(ctx, 'O', cx - 18, cy + 23, p.ink, 22, 'center', 700);
+  drawText(ctx, '赤道面', cx + EARTH_R + 18, cy + 4, p.muted, 16, 'left', 600);
   ctx.strokeStyle = '#55c5f4';
   ctx.lineWidth = 3;
   ctx.beginPath();
@@ -214,11 +198,11 @@ function drawForces(
   const gX = point.x + (fmx - fcx) * 0.88;
   const gY = point.y + (fmy - fcy) * 0.88;
   arrow(ctx, point.x, point.y, fmx, fmy, p.blue, 5);
-  text(ctx, 'F万', fmx + 10, fmy - 10, p.blue, 18, 'left', 700);
+  drawText(ctx, 'F万', fmx + 10, fmy - 10, p.blue, 18, 'left', 700);
   arrow(ctx, point.x, point.y, fcx, fcy, p.teal, 5);
-  text(ctx, 'F向', fcx + 6, fcy - 16, p.teal, 18, 'left', 700);
+  drawText(ctx, 'F向', fcx + 6, fcy - 16, p.teal, 18, 'left', 700);
   arrow(ctx, point.x, point.y, gX, gY, p.red, 5);
-  text(ctx, 'G', gX + 8, gY + 10, p.red, 19, 'left', 700);
+  drawText(ctx, 'G', gX + 8, gY + 10, p.red, 19, 'left', 700);
   if (state.params.showComponents) {
     ctx.strokeStyle = p.gold;
     ctx.setLineDash([6, 6]);
@@ -228,7 +212,7 @@ function drawForces(
     ctx.lineTo(gX, gY);
     ctx.stroke();
     ctx.setLineDash([]);
-    text(
+    drawText(
       ctx,
       'G = F万 − F向',
       point.x - 10,
@@ -247,7 +231,7 @@ function drawForces(
   ctx.lineTo(point.x, point.y);
   ctx.stroke();
   ctx.setLineDash([]);
-  text(
+  drawText(
     ctx,
     'r',
     (point.cx + point.x) / 2,
@@ -270,7 +254,7 @@ function drawForces(
       ((state.angle * Math.PI) / DEGREES_HALF_TURN) * ALPHA_ARC_SCALE
   );
   ctx.stroke();
-  text(ctx, 'α', point.x - 44, point.y + 31, p.teal, 19, 'center', 700);
+  drawText(ctx, 'α', point.x - 44, point.y + 31, p.teal, 19, 'center', 700);
 }
 
 function metric(
@@ -287,13 +271,22 @@ function metric(
   ctx.moveTo(PANEL_X + 20, y + 38);
   ctx.lineTo(PANEL_X + PANEL_W - 20, y + 38);
   ctx.stroke();
-  text(ctx, label, PANEL_X + 22, y + 15, color, 18, 'left', 700);
+  drawText(ctx, label, PANEL_X + 22, y + 15, color, 18, 'left', 700);
   ctx.fillStyle = p.panel;
   ctx.strokeStyle = p.border;
   roundedRect(ctx, PANEL_X + PANEL_W - 170, y, 148, 32, 8);
   ctx.fill();
   ctx.stroke();
-  text(ctx, value, PANEL_X + PANEL_W - 96, y + 16, p.ink, 17, 'center', 700);
+  drawText(
+    ctx,
+    value,
+    PANEL_X + PANEL_W - 96,
+    y + 16,
+    p.ink,
+    17,
+    'center',
+    700
+  );
 }
 
 function drawPanel(
@@ -310,7 +303,7 @@ function drawPanel(
   ctx.fillStyle = p.red;
   roundedRect(ctx, PANEL_X + 28, PANEL_TOP + 38, 8, 38, 4);
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '万有引力与重力解构',
     PANEL_X + 52,
@@ -323,8 +316,17 @@ function drawPanel(
   ctx.fillStyle = p.soft;
   roundedRect(ctx, PANEL_X + 28, PANEL_TOP + 102, PANEL_W - 56, 94, 12);
   ctx.fill();
-  text(ctx, '教学提示', PANEL_X + 48, PANEL_TOP + 126, p.gold, 15, 'left', 700);
-  text(
+  drawText(
+    ctx,
+    '教学提示',
+    PANEL_X + 48,
+    PANEL_TOP + 126,
+    p.gold,
+    15,
+    'left',
+    700
+  );
+  drawText(
     ctx,
     '向心力被夸大显示，便于观察',
     PANEL_X + 48,
@@ -334,7 +336,7 @@ function drawPanel(
     'left',
     500
   );
-  text(
+  drawText(
     ctx,
     'F万 = G + F向 的矢量关系。',
     PANEL_X + 48,
@@ -347,7 +349,7 @@ function drawPanel(
   ctx.fillStyle = p.soft;
   roundedRect(ctx, PANEL_X + 28, PANEL_TOP + 214, PANEL_W - 56, 72, 12);
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '所在纬度 θ',
     PANEL_X + 48,
@@ -357,7 +359,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `${state.params.latitude.toFixed(1)}°`,
     PANEL_X + PANEL_W - 48,
@@ -420,7 +422,7 @@ function drawPanel(
   ctx.fillStyle = p.soft;
   roundedRect(ctx, PANEL_X + 28, PANEL_TOP + 548, PANEL_W - 56, 128, 12);
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '核心考点推导',
     PANEL_X + 48,
@@ -430,7 +432,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'r = R cos θ',
     PANEL_X + 48,
@@ -440,7 +442,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     'F向 = mω²r',
     PANEL_X + 48,
@@ -450,7 +452,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     'F万 = G + F向',
     PANEL_X + 48,
@@ -495,7 +497,7 @@ export function createEarthGravityView(
     ctx.clearRect(0, 0, BASE_W, BASE_H);
     ctx.fillStyle = p.bg;
     ctx.fillRect(0, 0, BASE_W, BASE_H);
-    text(
+    drawText(
       ctx,
       '地球表面：三力矢量关系',
       FIELD_W / 2,
@@ -512,7 +514,7 @@ export function createEarthGravityView(
     roundedRect(ctx, 24, 56, FIELD_W - 48, 44, 10);
     ctx.fill();
     ctx.stroke();
-    text(
+    drawText(
       ctx,
       '球体模型：忽略地球扁率，只保留自转影响',
       FIELD_W / 2,

@@ -7,6 +7,7 @@ import {
   stageTransform,
   type BinaryStarsState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateBinaryStarsViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -57,23 +58,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     label: '#eef2f8'
   }
 };
-
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 
 function arrow(
   ctx: CanvasRenderingContext2D,
@@ -203,7 +187,7 @@ function drawStar(
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, Math.PI * 2);
   ctx.fill();
-  text(
+  drawText(
     ctx,
     label,
     x,
@@ -232,7 +216,7 @@ function drawCenterOfMass(
   ctx.lineTo(x, y + 11);
   ctx.stroke();
   ctx.restore();
-  text(ctx, 'O（质心）', x + 16, y + 18, p.label, 14 * contentScale);
+  drawText(ctx, 'O（质心）', x + 16, y + 18, p.label, 14 * contentScale);
 }
 
 export function createBinaryStarsView(
@@ -299,7 +283,7 @@ export function createBinaryStarsView(
       const v2y = state.position2.y + state.velocity2.y * C.velocityScale;
       arrow(ctx, state.position1.x, state.position1.y, v1x, v1y, p.teal, 3, 11);
       arrow(ctx, state.position2.x, state.position2.y, v2x, v2y, p.teal, 3, 11);
-      text(
+      drawText(
         ctx,
         'v₁',
         v1x + 9,
@@ -309,7 +293,7 @@ export function createBinaryStarsView(
         'left',
         700
       );
-      text(
+      drawText(
         ctx,
         'v₂',
         v2x + 9,
@@ -353,7 +337,7 @@ export function createBinaryStarsView(
         3,
         11
       );
-      text(
+      drawText(
         ctx,
         'F₁',
         f1x + ux * 16,
@@ -363,7 +347,7 @@ export function createBinaryStarsView(
         'center',
         700
       );
-      text(
+      drawText(
         ctx,
         'F₂',
         f2x - ux * 16,

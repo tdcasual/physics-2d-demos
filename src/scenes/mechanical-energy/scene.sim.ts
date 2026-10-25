@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteNumber } from '../../core/coerce';
 
 export type MechanicalEnergyEnvironment = 'ideal' | 'resist';
 
@@ -91,15 +92,6 @@ const DEFAULTS: MechanicalEnergyParams = {
   autoRun: false
 };
 
-function finite(value: unknown, fallback: number): number {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string' && value.trim() !== '') {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return fallback;
-}
-
 export function asBool(value: unknown, fallback: boolean): boolean {
   if (value === true || value === 1 || value === '1') return true;
   if (value === false || value === 0 || value === '0') return false;
@@ -133,18 +125,18 @@ function normalize(
   return {
     environment: asEnvironment(input.environment) ?? previous.environment,
     resistance: clamp(
-      finite(input.resistance, previous.resistance),
+      finiteNumber(input.resistance, previous.resistance),
       C.resistanceMin,
       C.resistanceMax
     ),
-    mass: clamp(finite(input.mass, previous.mass), C.massMin, C.massMax),
+    mass: clamp(finiteNumber(input.mass, previous.mass), C.massMin, C.massMax),
     gravity: clamp(
-      finite(input.gravity, previous.gravity),
+      finiteNumber(input.gravity, previous.gravity),
       C.gravityMin,
       C.gravityMax
     ),
     pointPeriod: snapPointPeriod(
-      finite(input.pointPeriod, previous.pointPeriod)
+      finiteNumber(input.pointPeriod, previous.pointPeriod)
     ),
     autoRun: asBool(input.autoRun, previous.autoRun)
   };
@@ -185,15 +177,15 @@ export function endTime(params: MechanicalEnergyParams): number {
 
 /** h(t) = ½ a t²，从静止释放。 */
 export function heightAt(acceleration: number, time: number): number {
-  const t = Math.max(0, finite(time, 0));
-  const a = finite(acceleration, 0);
+  const t = Math.max(0, finiteNumber(time, 0));
+  const a = finiteNumber(acceleration, 0);
   return 0.5 * a * t * t;
 }
 
 /** v(t) = a t，从静止释放。 */
 export function trueSpeedAt(acceleration: number, time: number): number {
-  const t = Math.max(0, finite(time, 0));
-  return finite(acceleration, 0) * t;
+  const t = Math.max(0, finiteNumber(time, 0));
+  return finiteNumber(acceleration, 0) * t;
 }
 
 /**
@@ -275,7 +267,7 @@ export function tapeDotsAt(
   params: MechanicalEnergyParams,
   time: number
 ): MechanicalEnergyTapeDot[] {
-  const elapsed = Math.max(0, finite(time, 0));
+  const elapsed = Math.max(0, finiteNumber(time, 0));
   if (elapsed <= 0 && !params.autoRun) return [];
   const a = effectiveAcceleration(params);
   const T = C.tickPeriod;
@@ -306,7 +298,7 @@ export function countPointsAt(
   params: MechanicalEnergyParams,
   time: number
 ): MechanicalEnergyPoint[] {
-  const elapsed = Math.max(0, finite(time, 0));
+  const elapsed = Math.max(0, finiteNumber(time, 0));
   const T0 = params.pointPeriod;
   const a = effectiveAcceleration(params);
   const points: MechanicalEnergyPoint[] = [];
@@ -336,7 +328,7 @@ function derive(
   time: number
 ): MechanicalEnergyState {
   const tEnd = endTime(params);
-  const t = clamp(finite(time, 0), 0, tEnd);
+  const t = clamp(finiteNumber(time, 0), 0, tEnd);
   const acceleration = effectiveAcceleration(params);
   const height = heightAt(acceleration, t);
   const speed = trueSpeedAt(acceleration, t);
@@ -380,7 +372,7 @@ export function createMechanicalEnergySim(
       return { ...params };
     },
     step(dt: number): void {
-      const delta = finite(dt, 0);
+      const delta = finiteNumber(dt, 0);
       if (!params.autoRun || delta <= 0) return;
       const tEnd = endTime(params);
       time = Math.min(tEnd, time + delta);

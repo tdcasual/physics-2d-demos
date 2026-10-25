@@ -2,6 +2,7 @@ import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import { tirConstants, type TirState } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateTirViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -44,22 +45,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     border: '#3c4b61'
   }
 };
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 function card(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -159,7 +144,7 @@ function drawSemicylinder(
   ctx.lineTo(tirConstants.axisRight, tirConstants.centerY);
   ctx.stroke();
   ctx.setLineDash([]);
-  text(
+  drawText(
     ctx,
     `玻璃介质 n=${state.refractiveIndex.toFixed(2)}`,
     tirConstants.centerX + 112,
@@ -169,7 +154,7 @@ function drawSemicylinder(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     'O',
     tirConstants.centerX - 12,
@@ -197,7 +182,16 @@ function drawCriticalLine(
   ctx.lineTo(tirConstants.criticalLineRight, y);
   ctx.stroke();
   ctx.setLineDash([]);
-  text(ctx, '全反射临界线（hᶜ）', 170, y - 15, p.teal, 14 * scale, 'left', 700);
+  drawText(
+    ctx,
+    '全反射临界线（hᶜ）',
+    170,
+    y - 15,
+    p.teal,
+    14 * scale,
+    'left',
+    700
+  );
 }
 function drawRays(
   ctx: CanvasRenderingContext2D,
@@ -227,7 +221,7 @@ function drawRays(
       tirConstants.rayLength * Math.sin(reflectedAngle),
       p.ray
     );
-    text(
+    drawText(
       ctx,
       '全反射',
       point.x - 80,
@@ -247,7 +241,7 @@ function drawRays(
       tirConstants.rayLength * Math.sin(outgoingAngle),
       p.ray
     );
-    text(
+    drawText(
       ctx,
       '折射光',
       point.x + 82,
@@ -262,7 +256,7 @@ function drawRays(
   ctx.beginPath();
   ctx.arc(point.x, point.y, 7, 0, Math.PI * 2);
   ctx.fill();
-  text(
+  drawText(
     ctx,
     `θ₁=${((state.incidentAngle * 180) / Math.PI).toFixed(1)}°`,
     point.x + 34,
@@ -280,7 +274,7 @@ function drawReadout(
   scale: number
 ): void {
   card(ctx, 36, 548, 740, 138, p);
-  text(ctx, '实时数据', 58, 572, p.ink, 16 * scale, 'left', 700);
+  drawText(ctx, '实时数据', 58, 572, p.ink, 16 * scale, 'left', 700);
   const items = [
     [`临界角 θc`, `${((state.criticalAngle * 180) / Math.PI).toFixed(1)}°`],
     [`当前入射角 θ₁`, `${((state.incidentAngle * 180) / Math.PI).toFixed(1)}°`],
@@ -295,8 +289,8 @@ function drawReadout(
   items.forEach(([label, value], index) => {
     const x = 58 + (index % 2) * 330;
     const y = 606 + Math.floor(index / 2) * 38;
-    text(ctx, label, x, y, p.muted, 12 * scale, 'left', 600);
-    text(
+    drawText(ctx, label, x, y, p.muted, 12 * scale, 'left', 600);
+    drawText(
       ctx,
       value,
       x + 176,
@@ -307,7 +301,7 @@ function drawReadout(
       700
     );
   });
-  text(
+  drawText(
     ctx,
     state.status,
     730,
@@ -355,12 +349,21 @@ export function createTirView(options: CreateTirViewOptions = {}) {
     ctx.scale(fit, fit);
     const palette = PALETTE[env.theme];
     drawGrid(ctx, palette);
-    text(ctx, '半圆柱光路分析', 28, 38, palette.ink, 24 * scale, 'left', 700);
+    drawText(
+      ctx,
+      '半圆柱光路分析',
+      28,
+      38,
+      palette.ink,
+      24 * scale,
+      'left',
+      700
+    );
     drawSemicylinder(ctx, palette, scale, state);
     drawCriticalLine(ctx, state, palette, scale);
     drawRays(ctx, state, palette, scale);
     drawReadout(ctx, state, palette, scale);
-    text(
+    drawText(
       ctx,
       '调节入射高度，比较 θ₁ 与 θc',
       36,

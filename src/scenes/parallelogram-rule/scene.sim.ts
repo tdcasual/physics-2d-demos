@@ -1,5 +1,8 @@
 import { readoutOccludesStage } from '../../platform/stage-readout';
 import { clamp } from '../../core/math';
+import { finiteNumber } from '../../core/coerce';
+import { betterPose } from '../stage-fit';
+import type { StagePose, StageLayoutHint } from '../stage-fit';
 
 export type ParallelogramStage = 'components' | 'construct' | 'compare';
 
@@ -25,19 +28,6 @@ export type ParallelogramState = {
   angleError: number;
   samePoint: boolean;
   sameDirection: boolean;
-};
-
-export type StageLayoutHint = {
-  floatingReadout: boolean;
-  overlayPx?: number;
-  overlayTopPx?: number;
-  overlayHeightPx?: number;
-};
-
-type StagePose = {
-  fit: number;
-  offsetX: number;
-  offsetY: number;
 };
 
 const DEG = Math.PI / 180;
@@ -106,15 +96,6 @@ export const parallelogramConstants = {
 const C = parallelogramConstants;
 const FLOATING_OVERLAY_FALLBACK = C.overlayFallbackPx;
 
-function finite(value: unknown, fallback: number): number {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string' && value.trim() !== '') {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return fallback;
-}
-
 function normalizeStage(value: unknown): ParallelogramStage {
   return value === 'construct' || value === 'compare' ? value : 'components';
 }
@@ -123,9 +104,13 @@ function normalizeParams(
   input: Partial<ParallelogramParams>
 ): ParallelogramParams {
   return {
-    f1: clamp(finite(input.f1, DEFAULT_F1), F1_MIN, F1_MAX),
-    f2: clamp(finite(input.f2, DEFAULT_F2), F2_MIN, F2_MAX),
-    angle: clamp(finite(input.angle, DEFAULT_ANGLE), ANGLE_MIN, ANGLE_MAX),
+    f1: clamp(finiteNumber(input.f1, DEFAULT_F1), F1_MIN, F1_MAX),
+    f2: clamp(finiteNumber(input.f2, DEFAULT_F2), F2_MIN, F2_MAX),
+    angle: clamp(
+      finiteNumber(input.angle, DEFAULT_ANGLE),
+      ANGLE_MIN,
+      ANGLE_MAX
+    ),
     stage: normalizeStage(input.stage)
   };
 }
@@ -147,13 +132,7 @@ function containInRect(
   };
 }
 
-function betterPose(a: StagePose, b: StagePose): StagePose {
-  return b.fit > a.fit + 1e-9 ? b : a;
-}
-
-export function hasFloatingReadout(anchor?: Element | null): boolean {
-  return readoutOccludesStage(anchor);
-}
+export const hasFloatingReadout = readoutOccludesStage;
 
 export function stageLayoutFrom(canvas?: Element | null): StageLayoutHint {
   const floatingReadout = hasFloatingReadout(canvas);
@@ -444,7 +423,7 @@ export function createParallelogramSim(
       return { ...params };
     },
     step(dt: number): void {
-      time += Math.max(0, finite(dt, 0));
+      time += Math.max(0, finiteNumber(dt, 0));
     },
     reset(): void {
       params = { ...defaults };
@@ -452,3 +431,5 @@ export function createParallelogramSim(
     }
   };
 }
+
+export type { StageLayoutHint };

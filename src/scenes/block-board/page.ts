@@ -7,15 +7,7 @@ import { createBlockBoardScene } from './scene.entry';
 import { blockBoardMeta } from './scene.meta';
 import { blockBoardControlsSchema } from './controls-schema';
 import type { BlockBoardParams } from './scene.sim';
-
-function asBoolean(value: unknown): boolean {
-  return (
-    value === true ||
-    value === 1 ||
-    value === '1' ||
-    String(value).toLowerCase() === 'true'
-  );
-}
+import { asBoolean } from '../../core/coerce';
 
 const FLAG_KEYS = ['autoRun', 'showArea', 'showForces'] as const;
 const NUMBER_KEYS = [

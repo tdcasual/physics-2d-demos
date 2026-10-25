@@ -1,21 +1,9 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { galileoInclineControlsSchema } from './controls-schema';
 import { createGalileoInclineScene } from './scene.entry';
 import { galileoInclineMeta } from './scene.meta';
-import type { GalileoInclineParams } from './scene.sim';
-
-function asBoolean(value: unknown): boolean {
-  return (
-    value === true ||
-    value === 1 ||
-    value === '1' ||
-    String(value).toLowerCase() === 'true'
-  );
-}
-const booleanKeys = new Set(['autoRun', 'showVectors']);
+import { createBoundControls } from '../../ui/components/bound-controls';
 
 bootScenePage({
   meta: galileoInclineMeta,
@@ -48,23 +36,13 @@ bootScenePage({
   },
   createControls: ({ mount, scene, scheduleRender, writeParam }) => {
     const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+    return createBoundControls({
       mount,
       schema: galileoInclineControlsSchema,
-      onChange: (key, value) => {
-        if (booleanKeys.has(key))
-          scene.setParams({
-            [key]: asBoolean(value)
-          } as Partial<GalileoInclineParams>);
-        else {
-          const number = Number(value);
-          if (!Number.isFinite(number)) return;
-          scene.setParams({ [key]: number } as Partial<GalileoInclineParams>);
-        }
-        render();
-        writeParam?.(key, value);
-      },
-      onAction: (key) => {
+      scene,
+      scheduleRender,
+      writeParam,
+      onAction: (key, renderer) => {
         if (key === 'release') scene.release();
         if (key === 'reset') {
           scene.reset();
@@ -75,23 +53,5 @@ bootScenePage({
         render();
       }
     });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (booleanKeys.has(key)) {
-        const enabled = asBoolean(value);
-        ctx.scene.setParams({
-          [key]: enabled
-        } as Partial<GalileoInclineParams>);
-        ctx.setControlValue(key, enabled);
-        return true;
-      }
-      const number = Number(value);
-      if (!Number.isFinite(number)) return false;
-      ctx.scene.setParams({ [key]: number } as Partial<GalileoInclineParams>);
-      ctx.setControlValue(key, number);
-      return true;
-    }
   }
 });

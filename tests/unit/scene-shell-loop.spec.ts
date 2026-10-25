@@ -60,6 +60,39 @@ describe('scene shell loop', () => {
     expect(steps).toHaveLength(1);
   });
 
+  it('stops cleanly when a frame throws, so play() can resume', () => {
+    const driver = createMockFrameDriver();
+    const errors: unknown[] = [];
+    let failNext = true;
+    let steps = 0;
+
+    const shell = createSceneShell({
+      stepSeconds: 0.1,
+      frameDriver: driver,
+      onStep: () => {
+        if (failNext) {
+          failNext = false;
+          throw new Error('boom');
+        }
+        steps += 1;
+      },
+      onError: (error) => errors.push(error)
+    });
+
+    shell.play();
+    driver.tick(100);
+    expect(errors).toHaveLength(1);
+    expect(shell.transport.isPlaying).toBe(false);
+
+    driver.tick(100);
+    expect(steps).toBe(0);
+
+    shell.play();
+    driver.tick(100);
+    expect(shell.transport.isPlaying).toBe(true);
+    expect(steps).toBe(1);
+  });
+
   it('executes single-step callback while paused', () => {
     const shell = createSceneShell();
     let count = 0;

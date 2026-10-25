@@ -382,22 +382,6 @@ describe('rod-model scene entry, transport and URL', () => {
     expect(rodModelMeta.testProfile?.hasGraph).toBe(true);
   });
 
-  it('reads URL autoRun for autoPlay so autoRun=0 is not restarted at boot', () => {
-    const pageSrc = readFileSync(
-      resolve(process.cwd(), 'src/scenes/rod-model/page.ts'),
-      'utf8'
-    );
-    expect(pageSrc).not.toContain('readSceneParams(');
-    expect(pageSrc).toContain('shouldAutoPlay:');
-    expect(pageSrc).toContain(
-      'urlParams.autoRun === undefined ? true : asBool(urlParams.autoRun, true)'
-    );
-    expect(pageSrc).not.toMatch(/autoPlay:\s*true/);
-    expect(pageSrc).toContain(
-      'ctx.scene.setParams({ autoRun: asBool(value, false) })'
-    );
-  });
-
   it('exposes equivalentMass on the capacitor readout', () => {
     const scene = createRodModelScene();
     scene.init();

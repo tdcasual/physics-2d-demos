@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 export type MaxwellParams = {
   temperature: number;
   molarMass: number;
@@ -29,21 +30,18 @@ const DEFAULTS: MaxwellParams = {
   molarMass: 28,
   autoRun: true
 };
-function finite(v: unknown, fallback: number): number {
-  return typeof v === 'number' && Number.isFinite(v) ? v : fallback;
-}
 function normalize(
   input: Partial<MaxwellParams>,
   previous = DEFAULTS
 ): MaxwellParams {
   return {
     temperature: clamp(
-      finite(input.temperature, previous.temperature),
+      finiteOr(input.temperature, previous.temperature),
       maxwellConstants.temperatureMin,
       maxwellConstants.temperatureMax
     ),
     molarMass: clamp(
-      finite(input.molarMass, previous.molarMass),
+      finiteOr(input.molarMass, previous.molarMass),
       maxwellConstants.molarMassMin,
       maxwellConstants.molarMassMax
     ),
@@ -94,7 +92,7 @@ export function createMaxwellSim(initial: Partial<MaxwellParams> = {}) {
       return { ...params };
     },
     step(dt: number): void {
-      if (params.autoRun) time += Math.max(0, finite(dt, 0));
+      if (params.autoRun) time += Math.max(0, finiteOr(dt, 0));
     },
     reset(): void {
       params = { ...defaults };

@@ -1,26 +1,10 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
-import type { JouleParams } from './scene.sim';
+import { createBoundControls } from '../../ui/components/bound-controls';
+import { resetSceneAndControls } from '../../app/control-projection';
 import { jouleControlsSchema } from './controls-schema';
 import { createJouleScene } from './scene.entry';
 import { jouleMeta } from './scene.meta';
-
-const MODE_IDS: Record<string, 0 | 1> = { mechanical: 0, electric: 1 };
-function asBoolean(value: unknown): boolean {
-  return (
-    value === true ||
-    value === 1 ||
-    value === '1' ||
-    String(value).toLowerCase() === 'true'
-  );
-}
-function modeValue(value: unknown): 0 | 1 | null {
-  if (value === 0 || value === '0' || value === 'mechanical') return 0;
-  if (value === 1 || value === '1' || value === 'electric') return 1;
-  return null;
-}
 
 bootScenePage({
   meta: jouleMeta,
@@ -51,55 +35,18 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, scheduleRender, writeParam }) => {
-    const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+  // mode 的 0/1 ↔ mechanical/electric 编码在 controls-schema 的 bind.values 声明
+  createControls: ({ mount, scene, scheduleRender, writeParam }) =>
+    createBoundControls({
       mount,
       schema: jouleControlsSchema,
-      onChange: (key, value) => {
-        if (key === 'mode') {
-          const next = MODE_IDS[String(value)];
-          if (next === undefined) return;
-          scene.setParams({ mode: next });
-          renderer.setActive('mode', String(value));
-        } else if (key === 'autoRun')
-          scene.setParams({ autoRun: asBoolean(value) });
-        else {
-          const number = Number(value);
-          if (!Number.isFinite(number)) return;
-          scene.setParams({ [key]: number } as Partial<JouleParams>);
-        }
-        render();
-        writeParam?.(key, value);
-      },
-      onAction: (key) => {
+      scene,
+      scheduleRender,
+      writeParam,
+      onAction: (key, renderer) => {
         if (key === 'matchWork') scene.matchWork();
-        else if (key === 'reset') scene.reset();
-        render();
+        else if (key === 'reset')
+          resetSceneAndControls(scene, renderer, writeParam);
       }
-    });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (key === 'mode') {
-        const mode = modeValue(value);
-        if (mode === null) return false;
-        ctx.scene.setParams({ mode });
-        ctx.setControlActive(key, mode === 0 ? 'mechanical' : 'electric');
-        return true;
-      }
-      if (key === 'autoRun') {
-        const enabled = asBoolean(value);
-        ctx.scene.setParams({ autoRun: enabled });
-        ctx.setControlValue(key, enabled);
-        return true;
-      }
-      const number = Number(value);
-      if (!Number.isFinite(number)) return false;
-      ctx.scene.setParams({ [key]: number } as Partial<JouleParams>);
-      ctx.setControlValue(key, number);
-      return true;
-    }
-  }
+    })
 });

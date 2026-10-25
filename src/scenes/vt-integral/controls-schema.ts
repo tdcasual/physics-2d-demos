@@ -1,7 +1,7 @@
 import type { ControlsSchema } from '../../platform/controls-schema';
 import { VT_N_MAX, VT_N_MIN } from './scene.sim';
 
-/** 仅场景一（v-t 面积）使用的 section / 字段，切到其他子场景时隐藏。 */
+/** 子场景相关 section 标题（显隐由各自 visibleWhen 声明）。 */
 export const VT_CURVE_SECTION = '函数类型';
 export const VT_SPLIT_SECTION = '分割';
 
@@ -14,6 +14,9 @@ export const vtIntegralControlsSchema: ControlsSchema = {
         {
           type: 'scene-selector',
           key: 'scene',
+          initialActive: 'scene1',
+          // getParams().scene 为 1 基数字（URL 同）
+          bind: { values: { scene1: 1, scene2: 2, scene3: 3 } },
           scenes: [
             {
               id: 'scene1',
@@ -33,6 +36,7 @@ export const vtIntegralControlsSchema: ControlsSchema = {
     {
       title: VT_CURVE_SECTION,
       collapsed: false,
+      visibleWhen: { scene: 'scene1' },
       fields: [
         {
           type: 'button-grid',
@@ -50,12 +54,16 @@ export const vtIntegralControlsSchema: ControlsSchema = {
     {
       title: VT_SPLIT_SECTION,
       collapsed: false,
+      // 场景二（拖动 A、B）不使用 n
+      visibleWhen: { scene: ['scene1', 'scene3'] },
       fields: [
         {
           type: 'select',
           key: 'rule',
           label: '矩形高度',
           value: '0',
+          visibleWhen: { scene: 'scene1' },
+          bind: { values: { '0': 0, '1': 1 } },
           options: [
             { label: '左端点（每段初速度）', value: '0' },
             { label: '右端点（每段末速度）', value: '1' }

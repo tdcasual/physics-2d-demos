@@ -6,6 +6,7 @@ import {
   inductionAcceleratorConstants as C,
   type InductionAcceleratorState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 export type CreateInductionAcceleratorViewOptions = {
   canvas?: HTMLCanvasElement;
   theme?: TeachingTheme;
@@ -50,22 +51,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     card: '#1b2b35'
   }
 };
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 function arrow(
   ctx: CanvasRenderingContext2D,
   x1: number,
@@ -146,7 +131,7 @@ function drawFieldMarks(ctx: CanvasRenderingContext2D, p: Palette): void {
     ) {
       if (Math.hypot(x - C.centerX, y - C.centerY) > C.coreRadius - 18)
         continue;
-      text(ctx, '×', x, y, p.border, 21, 'center', 700);
+      drawText(ctx, '×', x, y, p.border, 21, 'center', 700);
     }
   ctx.globalAlpha = 1;
 }
@@ -191,14 +176,14 @@ function drawElectron(
   ctx.arc(x, y, C.particleRadius, 0, Math.PI * 2);
   ctx.fill();
   ctx.shadowBlur = 0;
-  text(ctx, 'e⁻', x + 16, y + 18, p.ink, 17, 'left', 700);
+  drawText(ctx, 'e⁻', x + 16, y + 18, p.ink, 17, 'left', 700);
   if (!state.showVectors) return;
   const tangent = {
     x: -Math.sin(state.angle) * state.fieldDirection,
     y: Math.cos(state.angle) * state.fieldDirection
   };
   arrow(ctx, x, y, x + tangent.x * 58, y + tangent.y * 58, p.red, 4);
-  text(
+  drawText(
     ctx,
     'v',
     x + tangent.x * 72,
@@ -209,7 +194,7 @@ function drawElectron(
     700
   );
   arrow(ctx, x, y, x - tangent.x * 44, y - tangent.y * 44, p.blue, 4);
-  text(
+  drawText(
     ctx,
     'F电',
     x - tangent.x * 58,
@@ -224,7 +209,7 @@ function drawElectron(
     y: (C.centerY - y) / C.orbitRadius
   };
   arrow(ctx, x, y, x + radial.x * 66, y + radial.y * 66, p.ink, 4);
-  text(
+  drawText(
     ctx,
     'F洛',
     x + radial.x * 82,
@@ -240,8 +225,8 @@ function drawHUD(
   state: InductionAcceleratorState,
   p: Palette
 ): void {
-  text(ctx, '电子感应加速器', 32, 34, p.ink, 23, 'left', 700);
-  text(
+  drawText(ctx, '电子感应加速器', 32, 34, p.ink, 23, 'left', 700);
+  drawText(
     ctx,
     `ΔB/Δt = ${state.dBdt.toFixed(1)} T/s`,
     32,
@@ -262,7 +247,7 @@ function drawHUD(
   ctx.roundRect(x, y, w, h, 10);
   ctx.fill();
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     `B内均 = ${state.innerB.toFixed(2)} T   ·   B轨 = ${state.orbitB.toFixed(2)} T   ·   B轨 = ½ B内均`,
     x + 16,
@@ -272,7 +257,7 @@ function drawHUD(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     state.status,
     C.baseWidth - 30,
@@ -323,7 +308,7 @@ export function createInductionAcceleratorView(
     drawCircularFields(ctx, state, p);
     drawElectron(ctx, state, p);
     drawHUD(ctx, state, p);
-    text(
+    drawText(
       ctx,
       `v = ${(state.speed / 1e7).toFixed(2)} ×10⁷ m/s`,
       C.baseWidth - 30,

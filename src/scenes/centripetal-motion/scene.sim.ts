@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type CentripetalParams = {
   mass: number;
@@ -62,23 +63,19 @@ const DEFAULTS: CentripetalParams = {
   autoRun: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function normalize(
   input: Partial<CentripetalParams>,
   previous = DEFAULTS
 ): CentripetalParams {
   return {
-    mass: clamp(finite(input.mass, previous.mass), C.massMin, C.massMax),
+    mass: clamp(finiteOr(input.mass, previous.mass), C.massMin, C.massMax),
     radius: clamp(
-      finite(input.radius, previous.radius),
+      finiteOr(input.radius, previous.radius),
       C.radiusMin,
       C.radiusMax
     ),
     angularVelocity: clamp(
-      finite(input.angularVelocity, previous.angularVelocity),
+      finiteOr(input.angularVelocity, previous.angularVelocity),
       C.angularVelocityMin,
       C.angularVelocityMax
     ),
@@ -146,7 +143,7 @@ export function createCentripetalSim(initial: Partial<CentripetalParams> = {}) {
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      const duration = Math.max(0, finite(dt, 0));
+      const duration = Math.max(0, finiteOr(dt, 0));
       time += duration;
       angle += params.angularVelocity * duration;
     },

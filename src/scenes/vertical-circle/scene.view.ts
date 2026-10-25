@@ -8,6 +8,7 @@ import {
   verticalCircleConstants as C,
   type VerticalCircleState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateVerticalCircleViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -61,23 +62,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     slack: '#64748b'
   }
 };
-
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 
 function arrow(
   ctx: CanvasRenderingContext2D,
@@ -175,7 +159,7 @@ function drawOrbit(
   }
 
   const label = font(13);
-  text(
+  drawText(
     ctx,
     '0°（最高点）',
     C.centerX,
@@ -185,7 +169,7 @@ function drawOrbit(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     '±180°（最低点）',
     C.centerX,
@@ -195,7 +179,7 @@ function drawOrbit(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     '−90°',
     C.centerX - C.orbitRadius - tick - 18,
@@ -205,7 +189,7 @@ function drawOrbit(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     '90°',
     C.centerX + C.orbitRadius + tick + 16,
@@ -238,7 +222,16 @@ function drawConstraint(
   const my = (C.centerY + y) / 2;
   const nx = (C.centerY - y) / C.orbitRadius;
   const ny = (x - C.centerX) / C.orbitRadius;
-  text(ctx, 'R', mx + nx * 14, my + ny * 14, p.muted, font(13), 'center', 700);
+  drawText(
+    ctx,
+    'R',
+    mx + nx * 14,
+    my + ny * 14,
+    p.muted,
+    font(13),
+    'center',
+    700
+  );
 
   const angle = state.angle * (Math.PI / 180);
   const arcR = C.orbitRadius * 0.22;
@@ -255,7 +248,7 @@ function drawConstraint(
   );
   ctx.stroke();
   const mid = -Math.PI / 2 + angle / 2;
-  text(
+  drawText(
     ctx,
     'θ',
     C.centerX + Math.cos(mid) * (arcR + 12),
@@ -348,7 +341,7 @@ function drawVectors(
   ctx.restore();
   if (Math.abs(state.gravityRadial) > 0.05) {
     arrow(ctx, x, y, x + grX, y + grY, p.green, 2, 8);
-    text(
+    drawText(
       ctx,
       'G_r',
       x + grX * 0.55 + gtX * 0.12,
@@ -361,7 +354,7 @@ function drawVectors(
   }
   if (Math.abs(state.gravityTangential) > 0.05) {
     arrow(ctx, x, y, x + gtX, y + gtY, p.green, 2, 8);
-    text(
+    drawText(
       ctx,
       'G_t',
       x + gtX * 0.62,
@@ -374,11 +367,11 @@ function drawVectors(
   }
 
   arrow(ctx, x, y, x, y + gLen, p.teal, 4.5, 11);
-  text(ctx, 'G', x - 16, y + gLen + 12, p.teal, label, 'center', 700);
+  drawText(ctx, 'G', x - 16, y + gLen + 12, p.teal, label, 'center', 700);
 
   const fnLen = scaled(state.normalForce, minL, maxL);
   arrow(ctx, x, y, x + inwardX * fnLen, y + inwardY * fnLen, p.gold, 4.5, 11);
-  text(
+  drawText(
     ctx,
     'Fₙ',
     x + inwardX * (fnLen + 16),
@@ -403,7 +396,7 @@ function drawVectors(
       4.2,
       11
     );
-    text(
+    drawText(
       ctx,
       'T',
       x + tSign * inwardX * (tLen * 0.55) - tangentX * 16,
@@ -428,7 +421,7 @@ function drawVectors(
       4.2,
       11
     );
-    text(
+    drawText(
       ctx,
       'v',
       x + vSign * tangentX * (vLen + 14),

@@ -6,15 +6,7 @@ import { createCyclotronScene } from './scene.entry';
 import { cyclotronMeta } from './scene.meta';
 import { cyclotronControlsSchema } from './controls-schema';
 import type { CyclotronParams, CyclotronParticle } from './scene.sim';
-
-function asBoolean(value: unknown): boolean {
-  return (
-    value === true ||
-    value === 1 ||
-    value === '1' ||
-    String(value).toLowerCase() === 'true'
-  );
-}
+import { asBoolean } from '../../core/coerce';
 
 bootScenePage({
   meta: cyclotronMeta,

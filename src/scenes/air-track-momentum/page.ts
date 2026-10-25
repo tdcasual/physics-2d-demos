@@ -6,15 +6,8 @@ import { airTrackMomentumControlsSchema } from './controls-schema';
 import { createAirTrackMomentumScene } from './scene.entry';
 import { airTrackMomentumMeta } from './scene.meta';
 import type { AirTrackMomentumParams } from './scene.sim';
+import { asBoolean } from '../../core/coerce';
 
-function asBoolean(value: unknown): boolean {
-  return (
-    value === true ||
-    value === 1 ||
-    value === '1' ||
-    String(value).toLowerCase() === 'true'
-  );
-}
 const booleanKeys = new Set(['autoRun', 'showVectors']);
 const enumKeys = new Set(['mode', 'preset']);
 

@@ -130,3 +130,11 @@ export {
   trialHasContent,
   writeCheckedField
 } from './session-ops';
+export { gradeNumber, gradeValue, matchesExpected, rangeOf } from './grading';
+export type {
+  GradeResult,
+  GradeRule,
+  GradeTolerance,
+  GradeValueRule,
+  NumericRange
+} from './grading';

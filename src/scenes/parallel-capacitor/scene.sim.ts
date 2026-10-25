@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 export type CapacitorProbe = 'area' | 'distance' | 'dielectric';
 export type CapacitorParams = {
   probe: CapacitorProbe;
@@ -53,9 +54,6 @@ const DEFAULTS: CapacitorParams = {
   area: 0.5,
   dielectric: 1.7
 };
-function finite(v: unknown, f: number): number {
-  return typeof v === 'number' && Number.isFinite(v) ? v : f;
-}
 function normalize(
   input: Partial<CapacitorParams>,
   prev = DEFAULTS
@@ -66,17 +64,17 @@ function normalize(
         ? input.probe
         : 'area',
     distance: clamp(
-      finite(input.distance, prev.distance),
+      finiteOr(input.distance, prev.distance),
       parallelCapacitorConstants.distanceMin,
       parallelCapacitorConstants.distanceMax
     ),
     area: clamp(
-      finite(input.area, prev.area),
+      finiteOr(input.area, prev.area),
       parallelCapacitorConstants.areaMin,
       parallelCapacitorConstants.areaMax
     ),
     dielectric: clamp(
-      finite(input.dielectric, prev.dielectric),
+      finiteOr(input.dielectric, prev.dielectric),
       parallelCapacitorConstants.dielectricMin,
       parallelCapacitorConstants.dielectricMax
     )

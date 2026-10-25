@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type PhotoelectricMaterial = 'cesium' | 'sodium' | 'zinc';
 export type RelayState = 'closed' | 'open';
@@ -111,10 +112,6 @@ const DEFAULTS: PhotoelectricParams = {
   showVectors: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function asFlag(value: unknown, fallback: boolean): boolean {
   if (value === true || value === 1 || value === '1' || value === 'true')
     return true;
@@ -133,12 +130,12 @@ function normalize(
         ? input.material
         : previous.material,
     frequency: clamp(
-      finite(input.frequency, previous.frequency),
+      finiteOr(input.frequency, previous.frequency),
       photoelectricConstants.frequencyMin,
       photoelectricConstants.frequencyMax
     ),
     intensity: clamp(
-      finite(input.intensity, previous.intensity),
+      finiteOr(input.intensity, previous.intensity),
       photoelectricConstants.intensityMin,
       photoelectricConstants.intensityMax
     ),
@@ -188,7 +185,7 @@ export function photoelectricAt(
   params: PhotoelectricParams,
   time = 0
 ): PhotoelectricState {
-  return derive(normalize(params), Math.max(0, finite(time, 0)));
+  return derive(normalize(params), Math.max(0, finiteOr(time, 0)));
 }
 
 export function createPhotoelectricSim(
@@ -206,7 +203,7 @@ export function createPhotoelectricSim(
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      time += clamp(finite(dt, 0), 0, 0.1);
+      time += clamp(finiteOr(dt, 0), 0, 0.1);
     },
     reset(): void {
       params = { ...DEFAULTS };

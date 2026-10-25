@@ -7,15 +7,7 @@ import { potentialGraphControlsSchema } from './controls-schema';
 import { asPotentialScenario, createPotentialGraphScene } from './scene.entry';
 import { potentialGraphMeta } from './scene.meta';
 import { restoredUrlParams, type PotentialGraphParams } from './scene.sim';
-
-function asBoolean(value: unknown): boolean {
-  return (
-    value === true ||
-    value === 1 ||
-    value === '1' ||
-    String(value).toLowerCase() === 'true'
-  );
-}
+import { asBoolean } from '../../core/coerce';
 
 bootScenePage({
   meta: potentialGraphMeta,

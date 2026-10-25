@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type GalileoInclineParams = {
   theta2: number;
@@ -79,9 +80,6 @@ const DEFAULTS: GalileoInclineParams = {
   showVectors: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
 function asFlag(value: unknown, fallback: boolean): boolean {
   if (value === true || value === 1 || value === '1' || value === 'true')
     return true;
@@ -95,12 +93,12 @@ function normalize(
 ): GalileoInclineParams {
   return {
     theta2: clamp(
-      finite(input.theta2, previous.theta2),
+      finiteOr(input.theta2, previous.theta2),
       galileoInclineConstants.thetaMin,
       galileoInclineConstants.thetaMax
     ),
     mu: clamp(
-      finite(input.mu, previous.mu),
+      finiteOr(input.mu, previous.mu),
       galileoInclineConstants.muMin,
       galileoInclineConstants.muMax
     ),
@@ -215,7 +213,7 @@ export function galileoInclineAt(
   params: GalileoInclineParams,
   time = 0
 ): GalileoInclineState {
-  return derive(normalize(params), Math.max(0, finite(time, 0)), false, 0, 0);
+  return derive(normalize(params), Math.max(0, finiteOr(time, 0)), false, 0, 0);
 }
 
 export function createGalileoInclineSim(
@@ -241,7 +239,7 @@ export function createGalileoInclineSim(
     },
     step(dt: number): void {
       if (!params.autoRun || !released) return;
-      const delta = clamp(finite(dt, 0), 0, 0.05);
+      const delta = clamp(finiteOr(dt, 0), 0, 0.05);
       const state = derive(params, time, released, position, velocity);
       const leftLength = C_LEFT_LENGTH;
       const theta2Rad = (params.theta2 * Math.PI) / 180;

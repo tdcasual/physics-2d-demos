@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type FeederParams = {
   waterDepth: number;
@@ -50,32 +51,28 @@ const DEFAULTS: FeederParams = {
   autoRun: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function normalize(
   input: Partial<FeederParams>,
   prev = DEFAULTS
 ): FeederParams {
   return {
     waterDepth: clamp(
-      finite(input.waterDepth, prev.waterDepth),
+      finiteOr(input.waterDepth, prev.waterDepth),
       feederConstants.waterMin,
       feederConstants.waterMax
     ),
     springConst: clamp(
-      finite(input.springConst, prev.springConst),
+      finiteOr(input.springConst, prev.springConst),
       feederConstants.springMin,
       feederConstants.springMax
     ),
     sensorGain: clamp(
-      finite(input.sensorGain, prev.sensorGain),
+      finiteOr(input.sensorGain, prev.sensorGain),
       feederConstants.gainMin,
       feederConstants.gainMax
     ),
     supplyVoltage: clamp(
-      finite(input.supplyVoltage, prev.supplyVoltage),
+      finiteOr(input.supplyVoltage, prev.supplyVoltage),
       feederConstants.voltageMin,
       feederConstants.voltageMax
     ),
@@ -153,7 +150,8 @@ export function createFeederSim(initial: Partial<FeederParams> = {}) {
     step(dt: number): void {
       if (!params.autoRun) return;
       time =
-        (time + clamp(finite(dt, 0), 0, 0.05)) % feederConstants.timelinePeriod;
+        (time + clamp(finiteOr(dt, 0), 0, 0.05)) %
+        feederConstants.timelinePeriod;
     }
   };
 }

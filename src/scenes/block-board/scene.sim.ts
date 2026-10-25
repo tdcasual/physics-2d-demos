@@ -1,5 +1,8 @@
 import { readoutOccludesStage } from '../../platform/stage-readout';
 import { clamp } from '../../core/math';
+import { betterPose } from '../stage-fit';
+import type { StagePose } from '../stage-fit';
+import { asBooleanOr } from '../../core/coerce';
 
 export type BlockBoardParams = {
   blockMass: number;
@@ -70,12 +73,6 @@ export type ApparatusLayout = {
   syncX: number;
   syncVisible: boolean;
   ticks: Array<{ x: number; meter: number }>;
-};
-
-type StagePose = {
-  fit: number;
-  offsetX: number;
-  offsetY: number;
 };
 
 const G = 10;
@@ -197,21 +194,6 @@ export function finite(value: unknown, fallback: number): number {
   return fallback;
 }
 
-function asBool(value: unknown, fallback: boolean): boolean {
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'number') return value !== 0;
-  if (typeof value === 'string') {
-    const text = value.trim().toLowerCase();
-    if (text === '0' || text === 'false' || text === 'off' || text === 'no') {
-      return false;
-    }
-    if (text === '1' || text === 'true' || text === 'on' || text === 'yes') {
-      return true;
-    }
-  }
-  return fallback;
-}
-
 function normalizeParams(
   input: Partial<BlockBoardParams>,
   previous = DEFAULTS
@@ -236,15 +218,15 @@ function normalizeParams(
     autoRun:
       input.autoRun === undefined
         ? previous.autoRun
-        : asBool(input.autoRun, previous.autoRun),
+        : asBooleanOr(input.autoRun, previous.autoRun),
     showArea:
       input.showArea === undefined
         ? previous.showArea
-        : asBool(input.showArea, previous.showArea),
+        : asBooleanOr(input.showArea, previous.showArea),
     showForces:
       input.showForces === undefined
         ? previous.showForces
-        : asBool(input.showForces, previous.showForces)
+        : asBooleanOr(input.showForces, previous.showForces)
   };
 }
 
@@ -636,13 +618,7 @@ function stretchCentered(
   };
 }
 
-function betterPose(a: StagePose, b: StagePose): StagePose {
-  return b.fit > a.fit + 1e-9 ? b : a;
-}
-
-export function hasFloatingReadout(anchor?: Element | null): boolean {
-  return readoutOccludesStage(anchor);
-}
+export const hasFloatingReadout = readoutOccludesStage;
 
 export function stageLayoutFrom(canvas?: Element | null): StageLayoutHint {
   const floatingReadout = hasFloatingReadout(canvas);

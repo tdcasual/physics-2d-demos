@@ -7,6 +7,7 @@ import {
   electrostaticShieldingConstants as C,
   type ElectrostaticShieldingState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateElectrostaticShieldingViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -59,22 +60,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
   }
 };
 
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 function rounded(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -173,8 +158,8 @@ function drawChargedPlate(ctx: CanvasRenderingContext2D, p: Palette): void {
   ctx.fill();
   ctx.restore();
   for (const y of [132, 258, 384, 510, 636])
-    text(ctx, '+', 34, y, '#fff', 21, 'center', 700);
-  text(ctx, 'E₀', 74, C.shellCenterY + 4, p.red, 20, 'left', 700);
+    drawText(ctx, '+', 34, y, '#fff', 21, 'center', 700);
+  drawText(ctx, 'E₀', 74, C.shellCenterY + 4, p.red, 20, 'left', 700);
 }
 function drawGround(ctx: CanvasRenderingContext2D, p: Palette): void {
   ctx.strokeStyle = p.green;
@@ -204,7 +189,7 @@ function drawGround(ctx: CanvasRenderingContext2D, p: Palette): void {
     ctx.lineTo(x2, y);
     ctx.stroke();
   }
-  text(
+  drawText(
     ctx,
     '大地 (V=0)',
     C.shellCenterX + 42,
@@ -235,7 +220,7 @@ function drawOuterCharges(
     ctx.beginPath();
     ctx.arc(x, y, 12, 0, Math.PI * 2);
     ctx.fill();
-    text(ctx, '−', x, y + 1, '#fff', 16, 'center', 700);
+    drawText(ctx, '−', x, y + 1, '#fff', 16, 'center', 700);
   }
   if (showPolarization && !state.grounded)
     for (let index = 0; index < 5; index += 1) {
@@ -247,7 +232,7 @@ function drawOuterCharges(
       ctx.beginPath();
       ctx.arc(x, y, 11, 0, Math.PI * 2);
       ctx.fill();
-      text(ctx, '+', x, y + 1, '#fff', 15, 'center', 700);
+      drawText(ctx, '+', x, y + 1, '#fff', 15, 'center', 700);
     }
   ctx.globalAlpha = 1;
 }
@@ -284,7 +269,7 @@ function drawShell(
     ctx.arc(cx, cy, C.shellInnerRadius - 8, 0, Math.PI * 2);
     ctx.stroke();
     ctx.setLineDash([]);
-    text(
+    drawText(
       ctx,
       '高斯面  Σq=0',
       cx - 98,
@@ -317,8 +302,8 @@ function drawShell(
     ctx.arc(cx, cy, 23, 0, Math.PI * 2);
     ctx.fill();
     ctx.shadowBlur = 0;
-    text(ctx, '+', cx, cy - 1, '#fff', 24, 'center', 700);
-    text(
+    drawText(ctx, '+', cx, cy - 1, '#fff', 24, 'center', 700);
+    drawText(
       ctx,
       `+${state.cavityChargeValue.toFixed(1)}q`,
       cx + 34,
@@ -336,10 +321,10 @@ function drawShell(
       ctx.beginPath();
       ctx.arc(x, y, 11, 0, Math.PI * 2);
       ctx.fill();
-      text(ctx, '−', x, y + 1, '#fff', 14, 'center', 700);
+      drawText(ctx, '−', x, y + 1, '#fff', 14, 'center', 700);
     }
   }
-  text(
+  drawText(
     ctx,
     '金属导体壳层',
     cx - 58,
@@ -382,9 +367,9 @@ function drawProbe(
     active ? p.red : p.muted,
     4
   );
-  text(ctx, 'E', x + 68, y - 24, active ? p.red : p.muted, 20, 'left', 700);
-  text(ctx, state.region, x - 12, y + 50, p.ink, 14, 'center', 700);
-  text(
+  drawText(ctx, 'E', x + 68, y - 24, active ? p.red : p.muted, 20, 'left', 700);
+  drawText(ctx, state.region, x - 12, y + 50, p.ink, 14, 'center', 700);
+  drawText(
     ctx,
     `${state.measuredField.toFixed(2)} V/m`,
     x + 28,
@@ -400,8 +385,8 @@ function drawHUD(
   state: ElectrostaticShieldingState,
   p: Palette
 ): void {
-  text(ctx, '静电平衡与屏蔽', 34, 34, p.ink, 21, 'left', 700);
-  text(
+  drawText(ctx, '静电平衡与屏蔽', 34, 34, p.ink, 21, 'left', 700);
+  drawText(
     ctx,
     state.grounded ? '接地：V = 0' : '孤立导体',
     34,
@@ -421,7 +406,7 @@ function drawHUD(
   rounded(ctx, x, y, w, h, 10);
   ctx.fill();
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     state.showGaussian
       ? '导体内部 E = 0   ·   高斯面内 Σq = 0'
@@ -433,7 +418,7 @@ function drawHUD(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     state.status,
     C.baseWidth - 34,
@@ -487,7 +472,7 @@ export function createElectrostaticShieldingView(
     if (state.grounded) drawGround(ctx, p);
     drawProbe(ctx, state, p);
     drawHUD(ctx, state, p);
-    text(
+    drawText(
       ctx,
       `E₀ = ${state.externalFieldStrength.toFixed(2)} V/m`,
       82,

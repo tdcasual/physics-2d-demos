@@ -5,6 +5,7 @@ import {
   semicylinderStandardConstants as C,
   type SemicylinderStandardState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateSemicylinderStandardViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -60,22 +61,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
   }
 };
 
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 function card(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -140,10 +125,10 @@ function drawHeader(
   state: SemicylinderStandardState,
   p: Palette
 ): void {
-  text(ctx, '光的折射与全反射', 36, 34, p.ink, 25, 'left', 700);
-  text(ctx, '半圆柱体 · 标准法线', 36, 64, p.muted, 15, 'left', 600);
+  drawText(ctx, '光的折射与全反射', 36, 34, p.ink, 25, 'left', 700);
+  drawText(ctx, '半圆柱体 · 标准法线', 36, 64, p.muted, 15, 'left', 600);
   card(ctx, C.panelX, C.panelY, C.panelWidth, C.statusCardHeight, p);
-  text(
+  drawText(
     ctx,
     state.status,
     C.panelX + 24,
@@ -157,7 +142,7 @@ function drawHeader(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `θ₁ ${state.incidentAngle.toFixed(1)}°  /  C ${state.criticalAngle.toFixed(1)}°`,
     C.panelX + 24,
@@ -167,7 +152,7 @@ function drawHeader(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     state.status === '全反射'
       ? 'θ₁ > C'
@@ -203,7 +188,7 @@ function drawSemicylinder(ctx: CanvasRenderingContext2D, p: Palette): void {
   ctx.moveTo(C.interfaceLeft, C.centerY);
   ctx.lineTo(C.interfaceRight, C.centerY);
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '玻璃 n',
     C.centerX + 136,
@@ -213,7 +198,7 @@ function drawSemicylinder(ctx: CanvasRenderingContext2D, p: Palette): void {
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     '空气',
     C.centerX + 154,
@@ -223,7 +208,7 @@ function drawSemicylinder(ctx: CanvasRenderingContext2D, p: Palette): void {
     'center',
     700
   );
-  text(ctx, 'O', C.centerX + 14, C.centerY + 20, p.ink, 18, 'left', 700);
+  drawText(ctx, 'O', C.centerX + 14, C.centerY + 20, p.ink, 18, 'left', 700);
 }
 function drawNormal(
   ctx: CanvasRenderingContext2D,
@@ -239,7 +224,7 @@ function drawNormal(
   ctx.lineTo(C.centerX, C.centerY + C.normalLength / 2);
   ctx.stroke();
   ctx.setLineDash([]);
-  text(
+  drawText(
     ctx,
     '法线',
     C.centerX + 16,
@@ -260,7 +245,7 @@ function drawRays(
   const incidentDy = -Math.cos(theta) * C.rayLength;
   const incidentColor = state.status === '临界角' ? p.critical : p.incident;
   arrow(ctx, C.centerX, C.centerY, incidentDx, incidentDy, incidentColor);
-  text(
+  drawText(
     ctx,
     `θ₁ ${state.incidentAngle.toFixed(1)}°`,
     C.centerX + incidentDx * 0.62 - 18,
@@ -275,7 +260,7 @@ function drawRays(
     const refractedDx = Math.sin(refractedTheta) * C.refractedRayLength;
     const refractedDy = Math.cos(refractedTheta) * C.refractedRayLength;
     arrow(ctx, C.centerX, C.centerY, refractedDx, refractedDy, p.refracted);
-    text(
+    drawText(
       ctx,
       `θ₂ ${state.refractedAngle.toFixed(1)}°`,
       C.centerX + refractedDx * 0.62 + 18,
@@ -289,7 +274,7 @@ function drawRays(
     const reflectedDx = Math.sin(theta) * C.rayLength;
     const reflectedDy = -Math.cos(theta) * C.rayLength;
     arrow(ctx, C.centerX, C.centerY, reflectedDx, reflectedDy, p.critical);
-    text(
+    drawText(
       ctx,
       state.status === '临界角' ? '沿界面' : '反射光',
       C.centerX + reflectedDx * 0.58 + 22,
@@ -328,7 +313,7 @@ function drawPanel(
   p: Palette
 ): void {
   card(ctx, C.panelX, C.formulaCardY, C.panelWidth, C.formulaCardHeight, p);
-  text(
+  drawText(
     ctx,
     '斯涅尔定律',
     C.panelX + 24,
@@ -338,7 +323,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'n · sin θ₁ = sin θ₂',
     C.panelX + 24,
@@ -348,7 +333,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `θ₂ = ${state.refractedAngle == null ? '—' : `${state.refractedAngle.toFixed(1)}°`}`,
     C.panelX + 24,
@@ -358,7 +343,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `sin θ₂ = ${state.sinRefracted.toFixed(2)}`,
     C.panelX + 194,
@@ -369,7 +354,7 @@ function drawPanel(
     600
   );
   card(ctx, C.panelX, C.metricsCardY, C.panelWidth, C.metricsCardHeight, p);
-  text(
+  drawText(
     ctx,
     `n  ${state.refractiveIndex.toFixed(2)}`,
     C.panelX + 24,
@@ -379,7 +364,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `θ₁  ${state.incidentAngle.toFixed(1)}°`,
     C.panelX + 200,
@@ -389,7 +374,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `临界角 C  ${state.criticalAngle.toFixed(1)}°`,
     C.panelX + 24,
@@ -399,7 +384,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     state.status === '全反射'
       ? '界面无折射光'
@@ -420,7 +405,7 @@ function drawFooter(
   p: Palette
 ): void {
   card(ctx, C.panelX, C.noteCardY, C.panelWidth, C.noteCardHeight, p);
-  text(
+  drawText(
     ctx,
     '入射角 ≥ 临界角 → 全反射',
     C.panelX + 24,
@@ -430,7 +415,7 @@ function drawFooter(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     '法线是角度基准',
     C.panelX + 24,
@@ -440,7 +425,7 @@ function drawFooter(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `t = ${state.time.toFixed(2)} s`,
     C.panelX + C.panelWidth - 24,

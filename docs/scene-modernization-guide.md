@@ -3,7 +3,7 @@
 > 面向：要把早期「落后」场景重写/升级，或新增场景的开发者。
 > 本文与 [new-scene-agent-contract.md](new-scene-agent-contract.md)（新场景开发规范）互补：
 > 那份讲「契约与交付要求」，本文讲「如何把一个场景做到当前标准、如何安全地重写、有哪些可复用基建」。
-> （旧版 scene-migration-requirements.md 已归档，仅供追溯。）
+> （旧版 [scene-migration-requirements.md](archive/scene-migration-requirements.md) 已归档，仅供追溯。）
 
 布局母版系统已稳定，场景会持续演进。本指南的目标是让**每个新增或重写的场景都达到统一的「当前标准」**，并且这个标准只升不降。
 
@@ -65,9 +65,12 @@ bootScenePage(options)
 | `core/standards.ts`                                      | **演示模式渲染 token**：`getRenderTokens(scale)` → `{ bodyFontPx, strokePx, pointRadiusPx, rightStage{...} }`           |
 | `core/chart/`                                            | 折线图等图表组件（含主题）                                                                                              |
 | `core/colors.ts` / `spectral-color.ts` / `wavelength.ts` | 配色 / 光谱色 / 波长工具                                                                                                |
-| `core/draw-primitives.ts`                                | 绘制基元                                                                                                                |
+| `core/draw-primitives.ts`                                | 绘制基元（含 `drawText` 单行文字）                                                                                      |
+| `core/coerce.ts`                                         | 参数归一化：`finiteOr` / `finiteNumber` / `asBoolean` / `asBooleanOr`（禁止在场景里再写本地 finite / asBool）           |
 | `scenes/scene-entry-helpers.ts`                          | `createStandardSceneEntry`（统一生命周期 + subscribe/notify）                                                           |
 | `scenes/page-utils.ts`                                   | `createParamMapper` / `createPresetApplier`（控制面板 → 参数映射）                                                      |
+| `scenes/stage-fit.ts`                                    | 舞台适配：`containInRect` / `betterPose` / `StagePose` / `StageLayoutHint`；图区画布 `sizeCanvasToHostBox`              |
+| `platform/param-binding.ts`                              | 控件 ↔ 参数绑定（schema `bind`）：`controlChangeToParams` 等                                                            |
 
 ---
 
@@ -134,7 +137,7 @@ const fontSize = scaledSize(28, responsiveScale, 12); // 带最小值保护
 
 ## 6. 声明式控制面板
 
-优先用 `controls-schema.ts` 描述面板，`page.ts` 用 `renderSchema` 渲染：
+优先用 `controls-schema.ts` 描述面板，`page.ts` 用 `createBoundControls` 渲染：
 
 ```ts
 // controls-schema.ts —— 字段类型：slider/number/text/select/button/toggle/
@@ -162,18 +165,17 @@ export const myControlsSchema: ControlsSchema = {
 
 ```ts
 // page.ts
-createControls: ({ mount, scene }) => {
-  const renderer = renderSchema({
+createControls: ({ mount, scene, scheduleRender, writeParam }) =>
+  createBoundControls({
     mount,
     schema: myControlsSchema,
-    onChange: (key, value) => scene.setParams({ [key]: value }),
-    onAction: () => {}
+    scene,
+    scheduleRender,
+    writeParam
   });
-  return { dispose: () => renderer.dispose() };
-};
 ```
 
-含 slider/text 的 section 自动占满整行；纯按钮/预设的 section 参与多列自适应。键名映射可用 `createParamMapper`（控制键 → sim 参数键），预设用 `createPresetApplier`。
+含 slider/text 的 section 自动占满整行；纯按钮/预设的 section 参与多列自适应。键名/单位映射用 schema 字段 `bind`（控制键 → sim 参数键），预设用 `createPresetApplier`。
 
 ---
 
@@ -184,7 +186,8 @@ URL 参数同步由 `bootScenePage` 内置的声明式管线（`src/app/url-sync
 - **合法键** = `Object.keys(meta.defaultParams)` ∪ `urlSyncKeys` ∪ `{preset}`。管线在 `createControls` 返回后统一执行「读取 URL 参数 → `scene.setParams`（无 `setParams` 时退回单键 `setParam`）→ 控件句柄回写（数值走 `setValue`，字符串或 `paramSync.activeKeys` 走 `setActive`）→ URL 非空时同步首绘」。
 - **写回**：`createControls` 上下文注入 `writeParam(key, value)`，等价于旧样板的 `writeSceneParams({ [key]: value })`，但自动过滤非法键。
 - **上下文注入**：`urlParams`（合法参数只读快照），供建 UI 前必须知悉参数的场景使用。
-- **逃生口**：`ScenePageOptions.paramSync` —— `paramMap`（meta 键 → sim 键，如 projectile 的 v0→speed）、`activeKeys`、`applyParam`（单键接管，返回 true 跳过默认处理）、`applyAll`（整体接管含首绘）、`afterApply`（默认管线后、首绘前）。
+- **控件 ↔ 参数绑定**：键名/单位不同在 schema 字段声明 `bind: { param, scale }`（见 `platform/param-binding.ts`）。
+- **逃生口**：`ScenePageOptions.paramSync` —— `activeKeys`、`applyParam`（单键接管，返回 true 跳过默认处理）、`applyAll`（整体接管含首绘）、`afterApply`（默认管线后、首绘前）。
 
 > **教训（projectile，仍有效）**：曾经 meta 用 `angle`、控件用 `theta`，导致「写 theta、读 angle」，抛射角/初始高度/阻力的 URL 分享与恢复全部失效。当时的页面靠手写读写循环，如今已由内置管线统一处理，但键名错配的问题依旧存在。**务必让 `meta.defaultParams` 的键与控制面板字段键一致**，URL 往返才正确。
 

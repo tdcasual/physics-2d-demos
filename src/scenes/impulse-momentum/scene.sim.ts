@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type ImpulseForceModel = 'constant' | 'triangle' | 'halfSine' | 'ramp';
 
@@ -59,10 +60,6 @@ const MODELS: ImpulseForceModel[] = [
   'ramp'
 ];
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function asBool(value: unknown, fallback: boolean): boolean {
   if (value === true || value === 1 || value === '1') return true;
   if (value === false || value === 0 || value === '0') return false;
@@ -106,14 +103,14 @@ function normalize(
 ): ImpulseMomentumParams {
   return {
     forceModel: parseForceModel(input.forceModel, previous.forceModel),
-    mass: clamp(finite(input.mass, previous.mass), C.massMin, C.massMax),
+    mass: clamp(finiteOr(input.mass, previous.mass), C.massMin, C.massMax),
     initialVelocity: clamp(
-      finite(input.initialVelocity, previous.initialVelocity),
+      finiteOr(input.initialVelocity, previous.initialVelocity),
       C.velocityMin,
       C.velocityMax
     ),
     peakForce: clamp(
-      finite(input.peakForce, previous.peakForce),
+      finiteOr(input.peakForce, previous.peakForce),
       C.forceMinControl,
       C.forceMaxControl
     ),
@@ -225,13 +222,13 @@ export function createImpulseMomentumSim(
       return { ...params };
     },
     setTime(next: number): number {
-      time = clamp(finite(next, time), C.timeMin, C.timeMax);
+      time = clamp(finiteOr(next, time), C.timeMin, C.timeMax);
       if (time < C.timeMax - 1e-9) return time;
       params = { ...params, autoRun: false };
       return time;
     },
     step(dt: number): void {
-      const delta = finite(dt, 0);
+      const delta = finiteOr(dt, 0);
       if (!params.autoRun || delta <= 0) return;
       time = Math.min(C.timeMax, time + delta);
       if (time >= C.timeMax - 1e-9) {

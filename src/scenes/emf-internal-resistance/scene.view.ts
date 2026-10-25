@@ -1,8 +1,4 @@
-import {
-  applyCanvasSize,
-  getResponsiveScale,
-  scaledSize
-} from '../../core/canvas-sizing';
+import { scaledSize } from '../../core/canvas-sizing';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingTheme, TeachingMode } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
@@ -12,6 +8,8 @@ import {
   type EmfInternalState,
   type EmfRecord
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
+import { sizeCanvasToHostBox } from '../stage-fit';
 
 export type CreateEmfInternalViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -73,70 +71,11 @@ const PALETTE: Record<TeachingTheme, Palette> = {
   }
 };
 
-function contentBoxSize(host: HTMLElement): { width: number; height: number } {
-  const cs = getComputedStyle(host);
-  const rect = host.getBoundingClientRect();
-  const padX =
-    (Number.parseFloat(cs.paddingLeft) || 0) +
-    (Number.parseFloat(cs.paddingRight) || 0);
-  const padY =
-    (Number.parseFloat(cs.paddingTop) || 0) +
-    (Number.parseFloat(cs.paddingBottom) || 0);
-  return {
-    width: Math.max(1, Math.floor(rect.width - padX)),
-    height: Math.max(1, Math.floor(rect.height - padY))
-  };
-}
-
-export function sizeGraphCanvasToHost(canvas: HTMLCanvasElement): {
-  ctx: CanvasRenderingContext2D;
-  cssWidth: number;
-  cssHeight: number;
-  responsiveScale: number;
-} {
-  const host = canvas.parentElement;
-  let cssWidth: number;
-  let cssHeight: number;
-  if (host) {
-    const box = contentBoxSize(host);
-    cssWidth = box.width;
-    cssHeight = box.height;
-  } else {
-    const rect = canvas.getBoundingClientRect();
-    cssWidth = Math.max(1, Math.floor(rect.width || C.graphFallbackWidth));
-    cssHeight = Math.max(1, Math.floor(rect.height || C.graphFallbackHeight));
-  }
-  const dpr = Math.min(
-    2,
-    typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1
-  );
-  const responsiveScale = getResponsiveScale(cssWidth, cssHeight);
-  const ctx = applyCanvasSize(canvas, {
-    width: Math.max(1, Math.floor(cssWidth * dpr)),
-    height: Math.max(1, Math.floor(cssHeight * dpr)),
-    cssWidth,
-    cssHeight,
-    dpr,
-    responsiveScale
+export function sizeGraphCanvasToHost(canvas: HTMLCanvasElement) {
+  return sizeCanvasToHostBox(canvas, {
+    width: C.graphFallbackWidth,
+    height: C.graphFallbackHeight
   });
-  return { ctx, cssWidth, cssHeight, responsiveScale };
-}
-
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
 }
 
 function rounded(
@@ -209,7 +148,7 @@ function drawMeter(
     y + Math.sin(angle) * radius * 0.62
   );
   ctx.stroke();
-  text(ctx, letter, x, y - radius * 0.18, accent, 16, 'center', 700);
+  drawText(ctx, letter, x, y - radius * 0.18, accent, 16, 'center', 700);
 }
 
 function drawSource(ctx: CanvasRenderingContext2D, p: Palette): void {
@@ -233,9 +172,9 @@ function drawSource(ctx: CanvasRenderingContext2D, p: Palette): void {
   ctx.moveTo(C.sourceX + 24, C.sourceY - 10);
   ctx.lineTo(C.sourceX + 24, C.sourceY + 10);
   ctx.stroke();
-  text(ctx, '+', C.sourceX - 42, C.sourceY - 20, p.red, 14, 'center', 700);
-  text(ctx, '−', C.sourceX + 42, C.sourceY - 20, p.ink, 14, 'center', 700);
-  text(ctx, 'E, r', C.sourceX, C.sourceY + 40, p.ink, 13, 'center', 700);
+  drawText(ctx, '+', C.sourceX - 42, C.sourceY - 20, p.red, 14, 'center', 700);
+  drawText(ctx, '−', C.sourceX + 42, C.sourceY - 20, p.ink, 14, 'center', 700);
+  drawText(ctx, 'E, r', C.sourceX, C.sourceY + 40, p.ink, 13, 'center', 700);
 }
 
 function drawSwitch(
@@ -258,7 +197,7 @@ function drawSwitch(
   ctx.strokeStyle = closed ? p.teal : p.red;
   ctx.lineWidth = 4;
   ctx.stroke();
-  text(ctx, 'S', C.switchX, C.sourceY + 32, p.ink, 13, 'center', 700);
+  drawText(ctx, 'S', C.switchX, C.sourceY + 32, p.ink, 13, 'center', 700);
 }
 
 function drawRheostat(
@@ -289,7 +228,7 @@ function drawRheostat(
   ctx.fillStyle = p.blue;
   rounded(ctx, knobX - 11, top - 16, 22, 20, 4);
   ctx.fill();
-  text(
+  drawText(
     ctx,
     'R',
     left + C.rheostatWidth / 2,
@@ -299,7 +238,7 @@ function drawRheostat(
     'center',
     700
   );
-  text(ctx, 'P', knobX, top - 6, '#ffffff', 12, 'center', 700);
+  drawText(ctx, 'P', knobX, top - 6, '#ffffff', 12, 'center', 700);
 }
 
 function polylineLength(points: Array<[number, number]>): number {
@@ -605,7 +544,7 @@ function drawGraphCanvas(
   const axes = uiGraphAxes(state);
   const uMax = axes.voltageMax;
   const currentMax = axes.currentMax;
-  text(ctx, 'U-I', left, 16, p.ink, font(14), 'left', 700);
+  drawText(ctx, 'U-I', left, 16, p.ink, font(14), 'left', 700);
   ctx.strokeStyle = p.grid;
   ctx.lineWidth = 1;
   axes.currentTicks.forEach((current) => {
@@ -630,14 +569,14 @@ function drawGraphCanvas(
   ctx.moveTo(left, bottom);
   ctx.lineTo(left, top);
   ctx.stroke();
-  text(ctx, 'I / A', right, bottom + 24, p.ink, font(11), 'right', 700);
-  text(ctx, 'U / V', left - 8, top - 12, p.ink, font(11), 'left', 700);
-  text(ctx, '0', left - 8, bottom + 11, p.muted, font(10), 'right', 600);
+  drawText(ctx, 'I / A', right, bottom + 24, p.ink, font(11), 'right', 700);
+  drawText(ctx, 'U / V', left - 8, top - 12, p.ink, font(11), 'left', 700);
+  drawText(ctx, '0', left - 8, bottom + 11, p.muted, font(10), 'right', 600);
   axes.currentTicks.forEach((current) => {
     if (current === 0) return;
     const x = left + (current / currentMax) * (right - left);
     const align: CanvasTextAlign = current === currentMax ? 'right' : 'center';
-    text(
+    drawText(
       ctx,
       formatUiTick(current, axes.currentStep),
       x,
@@ -651,7 +590,7 @@ function drawGraphCanvas(
   axes.voltageTicks.forEach((voltage) => {
     if (voltage === 0) return;
     const y = bottom - (voltage / uMax) * (bottom - top);
-    text(
+    drawText(
       ctx,
       formatUiTick(voltage, axes.voltageStep),
       left - 8,
@@ -754,7 +693,16 @@ function drawGraphCanvas(
     ctx.beginPath();
     ctx.arc(x, y, C.pointRadius, 0, Math.PI * 2);
     ctx.fill();
-    text(ctx, String(index + 1), x + 8, y - 8, p.teal, font(10), 'left', 700);
+    drawText(
+      ctx,
+      String(index + 1),
+      x + 8,
+      y - 8,
+      p.teal,
+      font(10),
+      'left',
+      700
+    );
   });
 }
 

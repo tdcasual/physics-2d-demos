@@ -1,11 +1,9 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { createMagneticMirrorScene } from './scene.entry';
 import { magneticMirrorMeta } from './scene.meta';
 import { magneticMirrorControlsSchema } from './controls-schema';
-import type { MagneticMirrorParams, MirrorMode } from './scene.sim';
+import { createBoundControls } from '../../ui/components/bound-controls';
 
 bootScenePage({
   meta: magneticMirrorMeta,
@@ -37,29 +35,12 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, scheduleRender, writeParam }) => {
-    const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+  createControls: ({ mount, scene, scheduleRender, writeParam }) =>
+    createBoundControls({
       mount,
       schema: magneticMirrorControlsSchema,
-      onChange: (key, value) => {
-        const next = {
-          [key]:
-            key === 'mode'
-              ? (String(value) as MirrorMode)
-              : ['autoRun', 'showVelocity', 'showField', 'showForce'].includes(
-                    key
-                  )
-                ? Boolean(value)
-                : Number(value)
-        } as Partial<MagneticMirrorParams>;
-        scene.setParams(next);
-        if (key === 'mode') renderer.setActive(key, String(value));
-        render();
-        writeParam?.(key, value);
-      },
-      onAction: () => {}
-    });
-    return exposeSchemaHandle(renderer);
-  }
+      scene,
+      scheduleRender,
+      writeParam
+    })
 });

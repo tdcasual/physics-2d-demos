@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type BeltDirection = 'up' | 'down';
 export type ReleaseTarget = 'bottom' | 'top';
@@ -60,10 +61,6 @@ const DEFAULTS: ConveyorParams = {
   isPlaying: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function normalize(
   input: Partial<ConveyorParams>,
   previous = DEFAULTS
@@ -76,12 +73,12 @@ function normalize(
         : previous.releaseTarget;
   return {
     angle: clamp(
-      finite(input.angle, previous.angle),
+      finiteOr(input.angle, previous.angle),
       conveyorConstants.angleMin,
       conveyorConstants.angleMax
     ),
     beltSpeed: clamp(
-      finite(input.beltSpeed, previous.beltSpeed),
+      finiteOr(input.beltSpeed, previous.beltSpeed),
       conveyorConstants.speedMin,
       conveyorConstants.speedMax
     ),
@@ -92,22 +89,22 @@ function normalize(
           ? 'up'
           : previous.direction,
     mu: clamp(
-      finite(input.mu, previous.mu),
+      finiteOr(input.mu, previous.mu),
       conveyorConstants.muMin,
       conveyorConstants.muMax
     ),
     blockMass: clamp(
-      finite(input.blockMass, previous.blockMass),
+      finiteOr(input.blockMass, previous.blockMass),
       conveyorConstants.massMin,
       conveyorConstants.massMax
     ),
     releaseTarget: target,
     blockS: clamp(
-      finite(input.blockS, previous.blockS),
+      finiteOr(input.blockS, previous.blockS),
       0,
       conveyorConstants.beltLength
     ),
-    blockVelocity: finite(input.blockVelocity, previous.blockVelocity),
+    blockVelocity: finiteOr(input.blockVelocity, previous.blockVelocity),
     placed: typeof input.placed === 'boolean' ? input.placed : previous.placed,
     isPlaying:
       typeof input.isPlaying === 'boolean'
@@ -215,7 +212,7 @@ export function createConveyorSim(initial: Partial<ConveyorParams> = {}) {
     },
     step(dt: number) {
       if (!params.isPlaying || !params.placed) return;
-      const safeDt = Math.min(Math.max(finite(dt, 0), 0), 0.05);
+      const safeDt = Math.min(Math.max(finiteOr(dt, 0), 0), 0.05);
       const state = derive();
       const previousVelocity = params.blockVelocity;
       params.blockVelocity += state.acceleration * safeDt;

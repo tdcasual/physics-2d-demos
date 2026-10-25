@@ -10,15 +10,8 @@ import {
   chargedParticleIndex,
   type ChargedSuperpositionParams
 } from './scene.sim';
+import { asBoolean } from '../../core/coerce';
 
-function asBoolean(value: unknown): boolean {
-  return (
-    value === true ||
-    value === 1 ||
-    value === '1' ||
-    String(value).toLowerCase() === 'true'
-  );
-}
 const booleanKeys = new Set(['autoRun', 'slowMode', 'showVectors']);
 bootScenePage({
   meta: chargedSuperpositionMeta,

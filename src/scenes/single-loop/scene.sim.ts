@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type LoopRegion = 'before' | 'entering' | 'inside' | 'exiting' | 'after';
 
@@ -64,10 +65,6 @@ const DEFAULTS: SingleLoopParams = {
   autoRun: false
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 export function asBool(value: unknown, fallback: boolean): boolean {
   if (value === true || value === 1 || value === '1') return true;
   if (value === false || value === 0 || value === '0') return false;
@@ -85,18 +82,18 @@ function normalize(
 ): SingleLoopParams {
   return {
     initialVelocity: clamp(
-      finite(input.initialVelocity, previous.initialVelocity),
+      finiteOr(input.initialVelocity, previous.initialVelocity),
       C.velocityMin,
       C.velocityMax
     ),
     fieldStrength: clamp(
-      finite(input.fieldStrength, previous.fieldStrength),
+      finiteOr(input.fieldStrength, previous.fieldStrength),
       C.fieldMin,
       C.fieldMax
     ),
-    mass: clamp(finite(input.mass, previous.mass), C.massMin, C.massMax),
+    mass: clamp(finiteOr(input.mass, previous.mass), C.massMin, C.massMax),
     resistance: clamp(
-      finite(input.resistance, previous.resistance),
+      finiteOr(input.resistance, previous.resistance),
       C.resistanceMin,
       C.resistanceMax
     ),
@@ -247,7 +244,7 @@ export function advancePosition(
   position: number,
   dt: number
 ): number {
-  let remaining = Math.max(0, finite(dt, 0));
+  let remaining = Math.max(0, finiteOr(dt, 0));
   let x = position;
   const k = dampingRate(params);
   const v0 = params.initialVelocity;
@@ -425,14 +422,14 @@ export function createSingleLoopSim(initial: Partial<SingleLoopParams> = {}) {
     },
     setPosition(next: number): number {
       position = clamp(
-        finite(next, position),
+        finiteOr(next, position),
         C.worldXMin,
         maxPosition(params)
       );
       return position;
     },
     step(dt: number): void {
-      const delta = finite(dt, 0);
+      const delta = finiteOr(dt, 0);
       if (!params.autoRun || delta <= 0) return;
       position = advancePosition(params, position, delta);
       time += delta;

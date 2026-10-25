@@ -1,5 +1,8 @@
 import { readoutOccludesStage } from '../../platform/stage-readout';
 import { clamp } from '../../core/math';
+import { measureStageLayout, fitStage } from '../stage-fit';
+import type { StageLayoutHint } from '../stage-fit';
+import { asBooleanOr } from '../../core/coerce';
 
 export type ThreeForcesTab = 'gravity' | 'friction' | 'spring';
 export type ThreeForcesHandle = 'block' | null;
@@ -44,13 +47,6 @@ export type ThreeForcesState = {
   g2Vector: ThreeForcesVector;
 };
 
-export type StageLayoutHint = {
-  floatingReadout: boolean;
-  overlayPx?: number;
-  overlayTopPx?: number;
-  overlayHeightPx?: number;
-};
-
 export type InclineLayout = {
   theta: number;
   rightAngle: ThreeForcesVector;
@@ -74,12 +70,6 @@ export type SpringLayout = {
   blockCenter: ThreeForcesVector;
   springEndX: number;
   naturalLength: number;
-};
-
-type StagePose = {
-  fit: number;
-  offsetX: number;
-  offsetY: number;
 };
 
 const G = 10;
@@ -198,21 +188,6 @@ export function finite(value: unknown, fallback: number): number {
   return fallback;
 }
 
-function asBool(value: unknown, fallback: boolean): boolean {
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'number') return value !== 0;
-  if (typeof value === 'string') {
-    const text = value.trim().toLowerCase();
-    if (text === '0' || text === 'false' || text === 'off' || text === 'no') {
-      return false;
-    }
-    if (text === '1' || text === 'true' || text === 'on' || text === 'yes') {
-      return true;
-    }
-  }
-  return fallback;
-}
-
 export function parseThreeForcesTab(
   value: unknown,
   fallback: ThreeForcesTab = 'gravity'
@@ -249,11 +224,11 @@ function normalizeParams(
     autoRun:
       input.autoRun === undefined
         ? previous.autoRun
-        : asBool(input.autoRun, previous.autoRun),
+        : asBooleanOr(input.autoRun, previous.autoRun),
     showComponents:
       input.showComponents === undefined
         ? previous.showComponents
-        : asBool(input.showComponents, previous.showComponents)
+        : asBooleanOr(input.showComponents, previous.showComponents)
   };
 }
 
@@ -481,67 +456,10 @@ export function springLayout(displacement: number): SpringLayout {
   };
 }
 
-function containInRect(
-  boxW: number,
-  boxH: number,
-  availW: number,
-  availH: number,
-  originX: number,
-  originY: number,
-  alignX: 'left' | 'center'
-): StagePose {
-  const w = Math.max(1, availW);
-  const h = Math.max(1, availH);
-  const fit = Math.min(w / boxW, h / boxH);
-  const stageW = boxW * fit;
-  const stageH = boxH * fit;
-  return {
-    fit,
-    offsetX: originX + (alignX === 'center' ? (w - stageW) / 2 : 0),
-    offsetY: originY + (h - stageH) / 2
-  };
-}
-
-function betterPose(a: StagePose, b: StagePose): StagePose {
-  return b.fit > a.fit + 1e-9 ? b : a;
-}
-
-export function hasFloatingReadout(anchor?: Element | null): boolean {
-  return readoutOccludesStage(anchor);
-}
+export const hasFloatingReadout = readoutOccludesStage;
 
 export function stageLayoutFrom(canvas?: Element | null): StageLayoutHint {
-  const floatingReadout = hasFloatingReadout(canvas);
-  if (!floatingReadout) return { floatingReadout: false, overlayPx: 0 };
-  let overlayPx = 0;
-  let overlayTopPx = 0;
-  let overlayHeightPx = 0;
-  if (canvas instanceof HTMLElement) {
-    const panel = canvas.parentElement?.querySelector(
-      '.teaching-readout-panel, .srgb-readout-panel'
-    );
-    if (panel instanceof HTMLElement) {
-      const cr = canvas.getBoundingClientRect();
-      const rr = panel.getBoundingClientRect();
-      if (
-        rr.left < cr.right &&
-        rr.right > cr.left &&
-        rr.top < cr.bottom &&
-        rr.bottom > cr.top
-      ) {
-        overlayPx = Math.max(0, cr.right - rr.left);
-        const top = Math.max(rr.top, cr.top);
-        const bottom = Math.min(rr.bottom, cr.bottom);
-        overlayTopPx = Math.max(0, top - cr.top);
-        overlayHeightPx = Math.max(0, bottom - top);
-      }
-    }
-  }
-  return {
-    floatingReadout: true,
-    overlayPx: overlayPx || FLOATING_OVERLAY_FALLBACK,
-    ...(overlayHeightPx > 0 ? { overlayTopPx, overlayHeightPx } : {})
-  };
+  return measureStageLayout(canvas, FLOATING_OVERLAY_FALLBACK);
 }
 
 /**
@@ -552,77 +470,15 @@ export function stageTransform(
   cssWidth: number,
   cssHeight: number,
   layout: StageLayoutHint
-): {
-  fit: number;
-  offsetX: number;
-  offsetY: number;
-  boxW: number;
-  boxH: number;
-  floatingReadout: boolean;
-} {
-  const width = Math.max(1, cssWidth);
-  const height = Math.max(1, cssHeight);
-  const boxW = C.baseWidth;
-  const boxH = C.baseHeight;
-
-  if (!layout.floatingReadout) {
-    const pose = containInRect(boxW, boxH, width, height, 0, 0, 'center');
-    return { ...pose, boxW, boxH, floatingReadout: false };
-  }
-
-  const overlay = layout.overlayPx ?? FLOATING_OVERLAY_FALLBACK;
-  const gap = C.overlayGapPx;
-  let chosen = containInRect(
-    boxW,
-    boxH,
-    Math.max(1, width - overlay - gap),
-    height,
-    0,
-    0,
-    'left'
-  );
-
-  const overlayTop = layout.overlayTopPx;
-  const overlayH = layout.overlayHeightPx;
-  const wideColumn = width + 1e-6 >= boxW && chosen.fit >= C.minReadableFit;
-  if (
-    !wideColumn &&
-    typeof overlayTop === 'number' &&
-    typeof overlayH === 'number' &&
-    overlayH > 0
-  ) {
-    const overlayBottom = overlayTop + overlayH;
-    const clearTop = C.overlayClearTop;
-    const denom = boxH - clearTop;
-    if (overlayBottom + gap < height - 1 && denom > 1) {
-      const fit = Math.min(
-        width / boxW,
-        height / boxH,
-        (height - overlayBottom - gap) / denom
-      );
-      if (fit > 0) {
-        const stageW = boxW * fit;
-        const stageH = boxH * fit;
-        const minOY = overlayBottom + gap - clearTop * fit;
-        const maxOY = height - stageH;
-        chosen = betterPose(chosen, {
-          fit,
-          offsetX: Math.max(0, (width - stageW) / 2),
-          offsetY: Math.max(0, Math.min(minOY, maxOY))
-        });
-      }
-    }
-  }
-
-  if (chosen.fit < C.minReadableFit) {
-    const pose = containInRect(boxW, boxH, width, height, 0, 0, 'center');
-    chosen = betterPose(chosen, {
-      ...pose,
-      offsetY: Math.max(0, height - boxH * pose.fit)
-    });
-  }
-
-  return { ...chosen, boxW, boxH, floatingReadout: true };
+) {
+  return fitStage(cssWidth, cssHeight, layout, {
+    baseWidth: C.baseWidth,
+    baseHeight: C.baseHeight,
+    overlayGapPx: C.overlayGapPx,
+    minReadableFit: C.minReadableFit,
+    overlayClearTop: C.overlayClearTop,
+    overlayFallbackPx: FLOATING_OVERLAY_FALLBACK
+  });
 }
 
 export function pointerToBaseNorm(
@@ -909,3 +765,5 @@ export function createThreeForcesSim(initial: Partial<ThreeForcesParams> = {}) {
     }
   };
 }
+
+export type { StageLayoutHint };

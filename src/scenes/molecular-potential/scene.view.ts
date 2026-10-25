@@ -6,6 +6,7 @@ import {
   molecularForces,
   type MolecularState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateMolecularViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -56,23 +57,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     border: '#3c4b61'
   }
 };
-
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 
 function rounded(
   ctx: CanvasRenderingContext2D,
@@ -165,7 +149,7 @@ function drawAxes(
   ctx.moveTo(molecularConstants.graphLeft, bottom);
   ctx.lineTo(molecularConstants.graphLeft, top - 10);
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     label,
     molecularConstants.graphLeft + 6,
@@ -175,7 +159,7 @@ function drawAxes(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'r / r₀',
     molecularConstants.graphRight + 16,
@@ -185,7 +169,7 @@ function drawAxes(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     '0.6',
     molecularConstants.graphLeft,
@@ -195,9 +179,9 @@ function drawAxes(
     'center',
     600
   );
-  text(ctx, '1', xToPx(1), bottom + 16, p.muted, 10, 'center', 600);
-  text(ctx, '2', xToPx(2), bottom + 16, p.muted, 10, 'center', 600);
-  text(
+  drawText(ctx, '1', xToPx(1), bottom + 16, p.muted, 10, 'center', 600);
+  drawText(ctx, '2', xToPx(2), bottom + 16, p.muted, 10, 'center', 600);
+  drawText(
     ctx,
     '3.6',
     molecularConstants.graphRight,
@@ -267,7 +251,7 @@ function drawGraph(
     p,
     '分子间作用力 F'
   );
-  text(
+  drawText(
     ctx,
     'F(斥) +',
     48,
@@ -277,7 +261,7 @@ function drawGraph(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'F(引) −',
     48,
@@ -329,7 +313,7 @@ function drawGraph(
   ctx.beginPath();
   ctx.arc(currentX, energyToY(state.potentialEnergy), 6, 0, Math.PI * 2);
   ctx.fill();
-  text(
+  drawText(
     ctx,
     'r₀（平衡距离）',
     xToPx(1),
@@ -359,7 +343,7 @@ function drawAtoms(
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 1.5;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '微观物理模型',
     molecularConstants.panelX + 22,
@@ -458,7 +442,7 @@ function drawAtoms(
   ctx.moveTo(right, y + molecularConstants.atomMeasureTickOffset);
   ctx.lineTo(right, y + molecularConstants.atomMeasureTickEnd);
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     'r',
     (left + right) / 2,
@@ -468,7 +452,7 @@ function drawAtoms(
     'center',
     600
   );
-  text(
+  drawText(
     ctx,
     state.status,
     molecularConstants.panelX + molecularConstants.panelWidth / 2,
@@ -498,7 +482,7 @@ function drawCards(
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 1.5;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '当前状态',
     molecularConstants.panelX + 20,
@@ -508,7 +492,7 @@ function drawCards(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     state.status,
     molecularConstants.panelX + molecularConstants.panelWidth - 20,
@@ -522,7 +506,7 @@ function drawCards(
     'right',
     700
   );
-  text(
+  drawText(
     ctx,
     'r = ' + state.distanceRatio.toFixed(2) + ' r₀',
     molecularConstants.panelX + 20,
@@ -545,7 +529,7 @@ function drawCards(
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 1.5;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '实时数据',
     molecularConstants.panelX + 20,
@@ -555,7 +539,7 @@ function drawCards(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     '合力 F（相对）',
     molecularConstants.panelX + 20,
@@ -565,7 +549,7 @@ function drawCards(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     (state.netForce >= 0 ? '+' : '') + state.netForce.toFixed(2),
     molecularConstants.panelX + molecularConstants.panelWidth - 20,
@@ -575,7 +559,7 @@ function drawCards(
     'right',
     700
   );
-  text(
+  drawText(
     ctx,
     '分子势能 Eₚ',
     molecularConstants.panelX + 20,
@@ -585,7 +569,7 @@ function drawCards(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     state.potentialEnergy.toFixed(2) + ' ε',
     molecularConstants.panelX + molecularConstants.panelWidth - 20,
@@ -595,7 +579,7 @@ function drawCards(
     'right',
     700
   );
-  text(
+  drawText(
     ctx,
     '平衡点 r₀',
     molecularConstants.panelX + 20,
@@ -605,7 +589,7 @@ function drawCards(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     '合力 = 0',
     molecularConstants.panelX + molecularConstants.panelWidth - 20,
@@ -628,7 +612,7 @@ function drawCards(
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 1.5;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '曲线图例',
     molecularConstants.panelX + 20,
@@ -652,7 +636,7 @@ function drawCards(
   );
   ctx.stroke();
   ctx.setLineDash([]);
-  text(
+  drawText(
     ctx,
     '斥力 F(斥)',
     molecularConstants.panelX + molecularConstants.legendFirstText,
@@ -675,7 +659,7 @@ function drawCards(
   );
   ctx.stroke();
   ctx.setLineDash([]);
-  text(
+  drawText(
     ctx,
     '引力 F(引)',
     molecularConstants.panelX + molecularConstants.legendSecondText,
@@ -697,7 +681,7 @@ function drawCards(
     molecularConstants.labelCardY + molecularConstants.legendRowTwoOffset
   );
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '合力 F(合)',
     molecularConstants.panelX + molecularConstants.legendFirstText,
@@ -719,7 +703,7 @@ function drawCards(
     molecularConstants.labelCardY + molecularConstants.legendRowTwoOffset
   );
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '势能 Eₚ',
     molecularConstants.panelX + molecularConstants.legendSecondText,
@@ -742,7 +726,7 @@ function drawCards(
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 1.5;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '关系式',
     molecularConstants.panelX + 20,
@@ -752,7 +736,7 @@ function drawCards(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'F合 = F斥 + F引',
     molecularConstants.panelX + 20,
@@ -762,7 +746,7 @@ function drawCards(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     'Eₚ = ε[(r₀/r)¹² − 2(r₀/r)⁶]',
     molecularConstants.panelX + 20,
@@ -825,7 +809,7 @@ export function createMolecularView(options: CreateMolecularViewOptions = {}) {
     drawGraph(ctx, state, p);
     drawAtoms(ctx, state, p);
     drawCards(ctx, state, p);
-    text(
+    drawText(
       ctx,
       '拖动曲线上的 r，观察 F 与 Eₚ 联动',
       42,

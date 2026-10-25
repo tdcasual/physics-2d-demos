@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type EmfInternalParams = {
   sourceVoltage: number;
@@ -86,10 +87,6 @@ const DEFAULTS: EmfInternalParams = {
   autoRun: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 export function asBool(value: unknown, fallback: boolean): boolean {
   if (typeof value === 'boolean') return value;
   if (typeof value === 'number') return value !== 0;
@@ -146,7 +143,7 @@ function normalize(
     sourceVoltage,
     internalResistance,
     rheostatResistance: clamp(
-      finite(input.rheostatResistance, previous.rheostatResistance),
+      finiteOr(input.rheostatResistance, previous.rheostatResistance),
       emfInternalConstants.rheostatMin,
       emfInternalConstants.rheostatMax
     ),
@@ -312,7 +309,7 @@ export function createEmfInternalSim(initial: Partial<EmfInternalParams> = {}) {
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      const delta = Math.max(0, finite(dt, 0));
+      const delta = Math.max(0, finiteOr(dt, 0));
       time += delta;
       if (time > emfInternalConstants.flowPeriod)
         time %= emfInternalConstants.flowPeriod;

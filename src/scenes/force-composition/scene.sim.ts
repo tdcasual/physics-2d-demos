@@ -1,5 +1,6 @@
 import { readoutOccludesStage } from '../../platform/stage-readout';
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type ForceCompositionTab =
   | 'synthesis'
@@ -78,7 +79,7 @@ export type InclineGeometry = {
  * 原 HTML 楔形 polygon 写死 30°，15/60° 时物块会离面——这里按物理重算。
  */
 export function inclineGeometry(inclineAngle: number): InclineGeometry {
-  const theta = clamp(finite(inclineAngle, 30), 15, 60) * DEG;
+  const theta = clamp(finiteOr(inclineAngle, 30), 15, 60) * DEG;
   const cos = Math.cos(theta);
   const sin = Math.sin(theta);
   const rightAngle = { x: WEDGE_RIGHT_ANGLE.x, y: WEDGE_RIGHT_ANGLE.y };
@@ -132,10 +133,6 @@ export function pointLineDistance(
   return Math.abs(dx * (a.y - point.y) - (a.x - point.x) * dy) / len;
 }
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function normalizeTab(value: unknown): ForceCompositionTab {
   return value === 'range' || value === 'orthogonal' || value === 'effect'
     ? value
@@ -161,13 +158,13 @@ function normalizeParams(
   return {
     tab: normalizeTab(input.tab),
     rule: normalizeRule(input.rule),
-    f1: clamp(finite(input.f1, 40), 10, 60),
-    f2: clamp(finite(input.f2, 30), 10, 60),
-    angle: clamp(finite(input.angle, 60), 0, 180),
-    orthogonalF: clamp(finite(input.orthogonalF, 55), 10, 80),
-    orthogonalAngle: clamp(finite(input.orthogonalAngle, 60), 0, 90),
-    gravity: clamp(finite(input.gravity, 40), 10, 60),
-    inclineAngle: clamp(finite(input.inclineAngle, 30), 15, 60),
+    f1: clamp(finiteOr(input.f1, 40), 10, 60),
+    f2: clamp(finiteOr(input.f2, 30), 10, 60),
+    angle: clamp(finiteOr(input.angle, 60), 0, 180),
+    orthogonalF: clamp(finiteOr(input.orthogonalF, 55), 10, 80),
+    orthogonalAngle: clamp(finiteOr(input.orthogonalAngle, 60), 0, 90),
+    gravity: clamp(finiteOr(input.gravity, 40), 10, 60),
+    inclineAngle: clamp(finiteOr(input.inclineAngle, 30), 15, 60),
     rangeSweep: normalizeRangeSweep(input.rangeSweep)
   };
 }
@@ -254,7 +251,7 @@ export function createForceCompositionSim(
       return { ...params };
     },
     step(dt: number): void {
-      const delta = Math.max(0, finite(dt, 0));
+      const delta = Math.max(0, finiteOr(dt, 0));
       t += delta;
       if (params.tab === 'range' && params.rangeSweep) {
         params.angle = 90 + 90 * Math.sin(t * 0.8);
@@ -270,8 +267,8 @@ export function createForceCompositionSim(
       radius = 18
     ): 'f1' | 'f2' | 'orthogonal' | null {
       if (params.tab === 'effect') return null;
-      const px = clamp(finite(x, 0), 0, 1) * DRAW_W;
-      const py = clamp(finite(y, 0), 0, 1) * STAGE_H;
+      const px = clamp(finiteOr(x, 0), 0, 1) * DRAW_W;
+      const py = clamp(finiteOr(y, 0), 0, 1) * STAGE_H;
       const state = getState();
       const fit = diagramFitScale(state);
       const endpoints =
@@ -301,8 +298,8 @@ export function createForceCompositionSim(
       return best;
     },
     moveHandle(handle: 'f1' | 'f2' | 'orthogonal', x: number, y: number): void {
-      const px = clamp(finite(x, 0), 0, 1) * DRAW_W;
-      const py = clamp(finite(y, 0), 0, 1) * STAGE_H;
+      const px = clamp(finiteOr(x, 0), 0, 1) * DRAW_W;
+      const py = clamp(finiteOr(y, 0), 0, 1) * STAGE_H;
       const fit = Math.max(diagramFitScale(getState()), 1e-6);
       const dx = (px - ORIGIN.x) / (VECTOR_SCALE * fit);
       const dy = (ORIGIN.y - py) / (VECTOR_SCALE * fit);
@@ -339,9 +336,7 @@ export const forceCompositionConstants = {
  * 浮动读数判定：看布局 DOM，不看 canvas 宽度。
  * 项目断点 width<768 → mobile-stack（读数在 Tab）；≥768 → split-right（读数叠在动画区）。
  */
-export function hasFloatingReadout(anchor?: Element | null): boolean {
-  return readoutOccludesStage(anchor);
-}
+export const hasFloatingReadout = readoutOccludesStage;
 
 const FLOATING_OVERLAY_FALLBACK = 228;
 

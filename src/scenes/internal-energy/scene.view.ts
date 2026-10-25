@@ -1,4 +1,3 @@
-import { applyCanvasSize, getResponsiveScale } from '../../core/canvas-sizing';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
@@ -8,6 +7,8 @@ import {
   sampleAt,
   type InternalEnergyState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
+import { sizeCanvasToHostBox } from '../stage-fit';
 
 export type CreateInternalEnergyViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -62,23 +63,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
   }
 };
 
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
-
 function rounded(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -95,43 +79,11 @@ function rounded(
   }
 }
 
-export function sizeGraphCanvasToHost(canvas: HTMLCanvasElement): {
-  ctx: CanvasRenderingContext2D;
-  cssWidth: number;
-  cssHeight: number;
-  responsiveScale: number;
-} {
-  const host = canvas.parentElement;
-  let cssWidth: number;
-  let cssHeight: number;
-  if (host) {
-    const style = getComputedStyle(host);
-    const padX =
-      parseFloat(style.paddingLeft) + parseFloat(style.paddingRight) || 0;
-    const padY =
-      parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) || 0;
-    const rect = host.getBoundingClientRect();
-    cssWidth = Math.max(1, Math.floor(rect.width - padX));
-    cssHeight = Math.max(1, Math.floor(rect.height - padY));
-  } else {
-    const rect = canvas.getBoundingClientRect();
-    cssWidth = Math.max(1, Math.floor(rect.width || C.graphFallbackWidth));
-    cssHeight = Math.max(1, Math.floor(rect.height || C.graphFallbackHeight));
-  }
-  const dpr = Math.min(
-    2,
-    typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1
-  );
-  const responsiveScale = getResponsiveScale(cssWidth, cssHeight);
-  const ctx = applyCanvasSize(canvas, {
-    width: Math.max(1, Math.floor(cssWidth * dpr)),
-    height: Math.max(1, Math.floor(cssHeight * dpr)),
-    cssWidth,
-    cssHeight,
-    dpr,
-    responsiveScale
+export function sizeGraphCanvasToHost(canvas: HTMLCanvasElement) {
+  return sizeCanvasToHostBox(canvas, {
+    width: C.graphFallbackWidth,
+    height: C.graphFallbackHeight
   });
-  return { ctx, cssWidth, cssHeight, responsiveScale };
 }
 
 export function formatAxisTick(value: number): string {
@@ -435,9 +387,18 @@ function drawGasStage(
     ctx.moveTo(gasRight - 7 * scale, y);
     ctx.lineTo(gasRight, y);
     ctx.stroke();
-    text(ctx, `${tick}`, gasLeft + 5 * scale, y, p.muted, font, 'left', 500);
+    drawText(
+      ctx,
+      `${tick}`,
+      gasLeft + 5 * scale,
+      y,
+      p.muted,
+      font,
+      'left',
+      500
+    );
   }
-  text(
+  drawText(
     ctx,
     'mL',
     gasLeft + 5 * scale,
@@ -489,7 +450,7 @@ function drawGasStage(
       Math.PI * 2
     );
     ctx.fill();
-    text(
+    drawText(
       ctx,
       '硝化棉',
       tubeX + tubeW + 8 * scale,
@@ -562,7 +523,7 @@ function drawHeatStage(
     const x0 = fromHot ? leftX + blockW + 4 * scale : rightX - 4 * scale;
     const x1 = fromHot ? rightX - 4 * scale : leftX + blockW + 4 * scale;
     drawHorizontalArrow(ctx, x0, x1, y, p.orange, scale);
-    text(
+    drawText(
       ctx,
       'Q',
       (x0 + x1) / 2,
@@ -575,7 +536,7 @@ function drawHeatStage(
   }
 
   const font = Math.max(11, 12 * typeScale);
-  text(
+  drawText(
     ctx,
     '左块',
     leftX + blockW / 2,
@@ -585,7 +546,7 @@ function drawHeatStage(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     '右块',
     rightX + blockW / 2,
@@ -683,7 +644,7 @@ function drawGraphs(
     ctx.moveTo(box.left, y);
     ctx.lineTo(box.right, y);
     ctx.stroke();
-    text(
+    drawText(
       ctx,
       formatAxisTick(tv),
       box.left - 4 * scale,
@@ -700,7 +661,7 @@ function drawGraphs(
     ctx.moveTo(x, box.top);
     ctx.lineTo(x, box.bottom);
     ctx.stroke();
-    text(
+    drawText(
       ctx,
       formatAxisTick(tv),
       x,
@@ -717,7 +678,7 @@ function drawGraphs(
   ctx.lineTo(box.right + 4, box.bottom);
   ctx.stroke();
 
-  text(
+  drawText(
     ctx,
     'T-t',
     chrome.title.x,
@@ -727,8 +688,16 @@ function drawGraphs(
     'left',
     700
   );
-  text(ctx, 'T / °C', chrome.yUnit.x, chrome.yUnit.y, p.muted, font(9), 'left');
-  text(
+  drawText(
+    ctx,
+    'T / °C',
+    chrome.yUnit.x,
+    chrome.yUnit.y,
+    p.muted,
+    font(9),
+    'left'
+  );
+  drawText(
     ctx,
     't / s',
     box.right,
@@ -750,7 +719,7 @@ function drawGraphs(
     ctx.lineTo(box.right, y);
     ctx.stroke();
     ctx.restore();
-    text(
+    drawText(
       ctx,
       label,
       box.right - 4 * scale,
@@ -790,7 +759,7 @@ function drawGraphs(
   if (state.params.mode === 'heat') {
     plotLine(p.red, (s) => s.tHotNow);
     plotLine(p.blue, (s) => s.tColdNow);
-    text(
+    drawText(
       ctx,
       '左',
       chrome.title.x + Math.max(36 * scale, 32),
@@ -798,7 +767,7 @@ function drawGraphs(
       p.red,
       font(9)
     );
-    text(
+    drawText(
       ctx,
       '右',
       chrome.title.x + Math.max(52 * scale, 46),

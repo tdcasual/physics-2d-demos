@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type InclineMode = 'smooth' | 'resist' | 'stuck';
 export type InclineSpringParams = {
@@ -74,9 +75,6 @@ const DEFAULTS: InclineSpringParams = {
   position: 1.8,
   autoRun: true
 };
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
 function normalize(
   input: Partial<InclineSpringParams>,
   previous = DEFAULTS
@@ -88,22 +86,22 @@ function normalize(
   return {
     mode,
     friction: clamp(
-      finite(input.friction, previous.friction),
+      finiteOr(input.friction, previous.friction),
       inclineSpringConstants.frictionMin,
       inclineSpringConstants.frictionMax
     ),
     stiffness: clamp(
-      finite(input.stiffness, previous.stiffness),
+      finiteOr(input.stiffness, previous.stiffness),
       inclineSpringConstants.stiffnessMin,
       inclineSpringConstants.stiffnessMax
     ),
     mass: clamp(
-      finite(input.mass, previous.mass),
+      finiteOr(input.mass, previous.mass),
       inclineSpringConstants.massMin,
       inclineSpringConstants.massMax
     ),
     position: clamp(
-      finite(input.position, previous.position),
+      finiteOr(input.position, previous.position),
       inclineSpringConstants.positionMin,
       inclineSpringConstants.positionMax
     ),
@@ -182,7 +180,7 @@ export function createInclineSpringSim(
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      const safeDt = clamp(finite(dt, 0), 0, 0.05);
+      const safeDt = clamp(finiteOr(dt, 0), 0, 0.05);
       const before = derive(params, time, velocity, heat);
       const friction =
         params.mode === 'smooth' ? 0 : params.friction * before.normalForce;

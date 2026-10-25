@@ -1,11 +1,10 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
-import type { InclineMode, InclineSpringParams } from './scene.sim';
 import { inclineSpringControlsSchema } from './controls-schema';
 import { createInclineSpringScene } from './scene.entry';
 import { inclineSpringMeta } from './scene.meta';
+import { createBoundControls } from '../../ui/components/bound-controls';
+import { resetSceneAndControls } from '../../app/control-projection';
 
 bootScenePage({
   meta: inclineSpringMeta,
@@ -36,62 +35,15 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, scheduleRender, writeParam }) => {
-    const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+  createControls: ({ mount, scene, scheduleRender, writeParam }) =>
+    createBoundControls({
       mount,
       schema: inclineSpringControlsSchema,
-      onChange: (key, value) => {
-        if (key === 'mode') {
-          const next = String(value) as InclineMode;
-          scene.setParams({ mode: next });
-          renderer.setActive(key, next);
-        } else if (key === 'autoRun') {
-          scene.setParams({ autoRun: Boolean(value) });
-          writeParam?.(key, value);
-        } else {
-          scene.setParams({
-            [key]: Number(value)
-          } as Partial<InclineSpringParams>);
-          writeParam?.(key, value);
-        }
-        render();
-      },
-      onAction: (key) => {
-        if (key === 'reset') {
-          scene.reset();
-          const params = scene.getParams();
-          renderer.setActive('mode', params.mode);
-          renderer.setValue('friction', params.friction);
-          renderer.setValue('stiffness', params.stiffness);
-          renderer.setValue('mass', params.mass);
-          renderer.setValue('autoRun', params.autoRun);
-        }
-        render();
+      scene,
+      scheduleRender,
+      writeParam,
+      onAction: (key, renderer) => {
+        if (key === 'reset') resetSceneAndControls(scene, renderer, writeParam);
       }
-    });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (key === 'mode') {
-        const mode = String(value) as InclineMode;
-        if (!['smooth', 'resist', 'stuck'].includes(mode)) return false;
-        ctx.scene.setParams({ mode });
-        ctx.setControlActive(key, mode);
-        return true;
-      }
-      if (key === 'autoRun') {
-        const enabled = value === '1' || String(value).toLowerCase() === 'true';
-        ctx.scene.setParams({ autoRun: enabled });
-        ctx.setControlValue(key, enabled);
-        return true;
-      }
-      const number = Number(value);
-      if (!Number.isFinite(number)) return false;
-      ctx.scene.setParams({ [key]: number } as Partial<InclineSpringParams>);
-      ctx.setControlValue(key, number);
-      return true;
-    }
-  }
+    })
 });

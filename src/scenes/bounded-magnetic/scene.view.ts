@@ -6,6 +6,7 @@ import {
   type BoundedMagneticState,
   type Point
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateBoundedMagneticViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -76,22 +77,6 @@ const {
   cardWidth: CARD_W,
   cardHeight: CARD_H
 } = boundedMagneticConstants;
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 function round(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -215,7 +200,7 @@ export function createBoundedMagneticView(
     ctx.scale(fit, fit);
     ctx.fillStyle = p.bg;
     ctx.fillRect(0, 0, FIELD_W, BASE_H);
-    text(
+    drawText(
       ctx,
       '带电粒子在有界磁场中的运动',
       560,
@@ -225,7 +210,7 @@ export function createBoundedMagneticView(
       'center',
       700
     );
-    text(
+    drawText(
       ctx,
       '边界形状改变，轨迹随之偏转',
       560,
@@ -236,7 +221,7 @@ export function createBoundedMagneticView(
     );
     drawShape(ctx, state, p);
     round(ctx, INFO_X, INFO_Y, INFO_W, INFO_H, p);
-    text(
+    drawText(
       ctx,
       '有界磁场',
       INFO_X + 20,
@@ -246,7 +231,7 @@ export function createBoundedMagneticView(
       'left',
       700
     );
-    text(
+    drawText(
       ctx,
       state.shape === 'circle'
         ? '圆形磁场'
@@ -258,7 +243,7 @@ export function createBoundedMagneticView(
       p.teal,
       14 * scale
     );
-    text(
+    drawText(
       ctx,
       state.model === 'standard'
         ? '标准模型'
@@ -270,7 +255,7 @@ export function createBoundedMagneticView(
       p.muted,
       13 * scale
     );
-    text(
+    drawText(
       ctx,
       'B ⊗',
       INFO_X + 198,
@@ -307,11 +292,20 @@ export function createBoundedMagneticView(
       };
       arrow(ctx, state.position, vEnd, p.teal, 4);
       arrow(ctx, state.position, fEnd, p.red, 4);
-      text(ctx, 'v', vEnd.x + 12, vEnd.y, p.teal, 16 * scale, 'center', 700);
-      text(ctx, 'F', fEnd.x + 12, fEnd.y, p.red, 16 * scale, 'center', 700);
+      drawText(
+        ctx,
+        'v',
+        vEnd.x + 12,
+        vEnd.y,
+        p.teal,
+        16 * scale,
+        'center',
+        700
+      );
+      drawText(ctx, 'F', fEnd.x + 12, fEnd.y, p.red, 16 * scale, 'center', 700);
     }
     round(ctx, CARD_X, CARD_Y, CARD_W, CARD_H, p);
-    text(
+    drawText(
       ctx,
       state.status,
       CARD_X + 24,
@@ -321,7 +315,7 @@ export function createBoundedMagneticView(
       'left',
       700
     );
-    text(
+    drawText(
       ctx,
       `偏转圆心角 Δθ = ${state.deflectionAngle.toFixed(1)}°`,
       CARD_X + 240,
@@ -329,7 +323,7 @@ export function createBoundedMagneticView(
       p.ink,
       14 * scale
     );
-    text(
+    drawText(
       ctx,
       `轨道半径 r = ${state.orbitRadius.toFixed(1)}    t = ${state.time.toFixed(2)} s`,
       CARD_X + 24,
@@ -337,7 +331,7 @@ export function createBoundedMagneticView(
       p.muted,
       14 * scale
     );
-    text(ctx, 'qvB = mv²/r', CARD_X + 540, CARD_Y + 64, p.path, 14 * scale);
+    drawText(ctx, 'qvB = mv²/r', CARD_X + 540, CARD_Y + 64, p.path, 14 * scale);
     ctx.restore();
   }
   return {

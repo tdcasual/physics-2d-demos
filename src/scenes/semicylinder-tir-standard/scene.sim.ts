@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type SemicylinderStandardParams = {
   refractiveIndex: number;
@@ -65,9 +66,6 @@ const DEFAULTS: SemicylinderStandardParams = {
   autoRun: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
 function flag(value: unknown, fallback: boolean): boolean {
   if (value === true || value === 1 || value === '1' || value === 'true')
     return true;
@@ -81,12 +79,12 @@ function normalize(
 ): SemicylinderStandardParams {
   return {
     refractiveIndex: clamp(
-      finite(input.refractiveIndex, previous.refractiveIndex),
+      finiteOr(input.refractiveIndex, previous.refractiveIndex),
       C.indexMin,
       C.indexMax
     ),
     incidentAngle: clamp(
-      finite(input.incidentAngle, previous.incidentAngle),
+      finiteOr(input.incidentAngle, previous.incidentAngle),
       C.angleMin,
       C.angleMax
     ),
@@ -111,7 +109,7 @@ export function deriveSemicylinderStandard(
       : null;
   return {
     ...params,
-    time: Math.max(0, finite(time, 0)),
+    time: Math.max(0, finiteOr(time, 0)),
     criticalAngle,
     refractedAngle,
     reflectedAngle:
@@ -123,7 +121,7 @@ export function deriveSemicylinderStandard(
         : '折射透出',
     sinRefracted,
     pulse: params.autoRun
-      ? (Math.max(0, finite(time, 0)) % C.animationPeriod) / C.animationPeriod
+      ? (Math.max(0, finiteOr(time, 0)) % C.animationPeriod) / C.animationPeriod
       : 0
   };
 }
@@ -146,7 +144,7 @@ export function createSemicylinderStandardSim(
       return { ...params };
     },
     step(dt: number): void {
-      if (params.autoRun) time += Math.min(Math.max(finite(dt, 0), 0), 0.1);
+      if (params.autoRun) time += Math.min(Math.max(finiteOr(dt, 0), 0), 0.1);
     },
     reset(): void {
       params = { ...DEFAULTS };

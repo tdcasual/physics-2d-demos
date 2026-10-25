@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type PotentialScenario = 'segments' | 'point' | 'dipole';
 
@@ -74,10 +75,6 @@ const DEFAULTS: PotentialGraphParams = {
   autoRun: false
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function asBool(value: unknown, fallback: boolean): boolean {
   if (value === true || value === 1 || value === '1') return true;
   if (value === false || value === 0 || value === '0') return false;
@@ -117,12 +114,12 @@ function normalize(
     scenario: parseScenario(input.scenario, previous.scenario),
     probeCharge,
     chargeMagnitude: clamp(
-      finite(input.chargeMagnitude, previous.chargeMagnitude),
+      finiteOr(input.chargeMagnitude, previous.chargeMagnitude),
       C.chargeMin,
       C.chargeMax
     ),
     probePosition: clamp(
-      finite(input.probePosition, previous.probePosition),
+      finiteOr(input.probePosition, previous.probePosition),
       C.probeMin,
       C.probeMax
     ),
@@ -304,7 +301,7 @@ export function createPotentialGraphSim(
       return { ...params };
     },
     step(dt: number): void {
-      const delta = finite(dt, 0);
+      const delta = finiteOr(dt, 0);
       if (!params.autoRun || delta === 0) return;
       time += Math.abs(delta);
       params = {

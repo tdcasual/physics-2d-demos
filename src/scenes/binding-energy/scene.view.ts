@@ -19,6 +19,7 @@ import {
   type BindingEnergyLabelAnchor,
   type BindingEnergyState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateBindingEnergyViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -70,23 +71,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
   }
 };
 
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
-
 function measuredWidth(
   ctx: CanvasRenderingContext2D,
   value: string,
@@ -115,7 +99,7 @@ function fillLabel(
     Math.max(y, C.labelInset + half),
     C.baseHeight - C.labelInset - half
   );
-  text(ctx, value, drawX, drawY, color, size, align, weight);
+  drawText(ctx, value, drawX, drawY, color, size, align, weight);
 }
 
 function arrow(
@@ -183,7 +167,7 @@ function drawAxes(
     ctx.lineTo(x, C.chartBottom);
     ctx.stroke();
     if (a !== 0 && a < C.axisMaxA) {
-      text(ctx, `${a}`, x, C.chartBottom + 16, p.ink, font(11), 'center');
+      drawText(ctx, `${a}`, x, C.chartBottom + 16, p.ink, font(11), 'center');
     }
   }
   for (let e = 0; e <= 8; e += C.gridStepY) {
@@ -192,7 +176,7 @@ function drawAxes(
     ctx.moveTo(C.chartLeft, y);
     ctx.lineTo(C.chartRight, y);
     ctx.stroke();
-    text(ctx, `${e}`, C.chartLeft - 10, y, p.muted, font(11), 'right');
+    drawText(ctx, `${e}`, C.chartLeft - 10, y, p.muted, font(11), 'right');
   }
 
   ctx.strokeStyle = p.ink;
@@ -226,7 +210,7 @@ function drawAxes(
     1.8,
     9
   );
-  text(ctx, '0', C.chartLeft - 10, C.chartBottom, p.ink, font(11), 'right');
+  drawText(ctx, '0', C.chartLeft - 10, C.chartBottom, p.ink, font(11), 'right');
   const titleSize = font(13);
   const titleX = C.chartLeft + 8;
   const titleLine2 = C.chartTop - 16;

@@ -11,6 +11,7 @@ import {
   asTarget
 } from './scene.entry';
 import { multimeterMeta } from './scene.meta';
+import { asBoolean } from '../../core/coerce';
 
 const MODE_IDS = ['resistance', 'voltage', 'diode'] as const;
 const TARGET_IDS = [
@@ -31,15 +32,6 @@ const RANGE_IDS = [
   'volt2_5',
   'volt10'
 ] as const;
-
-function asBoolean(value: unknown): boolean {
-  return (
-    value === true ||
-    value === 1 ||
-    value === '1' ||
-    String(value).toLowerCase() === 'true'
-  );
-}
 
 function decode<T extends string>(
   value: unknown,

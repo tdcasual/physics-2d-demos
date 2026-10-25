@@ -6,6 +6,7 @@ import {
   photoelectricMaterials,
   type PhotoelectricState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreatePhotoelectricViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -65,23 +66,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     metal: '#91a2b5'
   }
 };
-
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 
 function rounded(
   ctx: CanvasRenderingContext2D,
@@ -158,7 +142,7 @@ function drawLightSource(ctx: CanvasRenderingContext2D, p: Palette): void {
   ctx.shadowBlur = 18;
   ctx.fill();
   ctx.shadowBlur = 0;
-  text(
+  drawText(
     ctx,
     '可调光源',
     C.sourceX + C.sourceWidth / 2,
@@ -194,7 +178,7 @@ function drawBeam(
     p.blue,
     3
   );
-  text(
+  drawText(
     ctx,
     '光子',
     C.beamStartX + 16,
@@ -233,7 +217,7 @@ function drawPhotoTube(
   ctx.moveTo(C.anodeX, C.tubeY - C.tubeRadius + 26);
   ctx.lineTo(C.anodeX, C.tubeY + C.tubeRadius - 26);
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     'K',
     C.cathodeX - 22,
@@ -243,7 +227,7 @@ function drawPhotoTube(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     'A',
     C.anodeX + 24,
@@ -253,7 +237,7 @@ function drawPhotoTube(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     '真空光电管',
     C.tubeX,
@@ -272,7 +256,7 @@ function drawPhotoTube(
     p.red,
     3
   );
-  text(ctx, 'E', C.tubeX, C.tubeY + 12, p.red, 19, 'center', 700);
+  drawText(ctx, 'E', C.tubeX, C.tubeY + 12, p.red, 19, 'center', 700);
   if (state.effectActive && state.showVectors) {
     const count = 3 + Math.round(state.electronFraction * 4);
     for (let index = 0; index < count; index += 1) {
@@ -281,7 +265,7 @@ function drawPhotoTube(
       const y = C.tubeY - 34 + index * 14;
       arrow(ctx, x, y, x + 25, y, p.cyan, 3);
     }
-    text(
+    drawText(
       ctx,
       'e⁻',
       C.tubeX,
@@ -320,7 +304,7 @@ function drawPowerChain(
   );
   ctx.fill();
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '−',
     C.supplyX - 25,
@@ -330,7 +314,7 @@ function drawPowerChain(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     '+',
     C.supplyX + 25,
@@ -340,7 +324,7 @@ function drawPowerChain(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     '电源',
     C.supplyX + 74,
@@ -369,7 +353,7 @@ function drawPowerChain(
   ctx.fill();
   ctx.strokeStyle = p.ink;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '放大器',
     C.amplifierX,
@@ -399,7 +383,7 @@ function drawRelay(
   ctx.fillRect(C.relayCoreX, coreTop, C.relayCoreWidth, C.relayCoreHeight);
   ctx.strokeStyle = p.ink;
   ctx.strokeRect(C.relayCoreX, coreTop, C.relayCoreWidth, C.relayCoreHeight);
-  text(
+  drawText(
     ctx,
     '电磁铁',
     C.relayCoreX + C.relayCoreWidth / 2,
@@ -426,7 +410,7 @@ function drawRelay(
   }
   ctx.lineTo(C.armatureX + C.springEndOffset, C.armatureY + 8);
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '复位弹簧',
     C.armatureX + 66,
@@ -475,8 +459,8 @@ function drawLampCircuit(
     ctx.lineTo(C.lampX - 11, C.lampY + 8);
     ctx.stroke();
   }
-  text(ctx, '路灯', C.lampX + 40, C.lampY + 4, p.ink, 14, 'left', 700);
-  text(ctx, '220 V', C.lampX + 40, C.lampY - 24, p.muted, 12, 'left', 600);
+  drawText(ctx, '路灯', C.lampX + 40, C.lampY + 4, p.ink, 14, 'left', 700);
+  drawText(ctx, '220 V', C.lampX + 40, C.lampY - 24, p.muted, 12, 'left', 600);
 }
 
 function drawPanel(
@@ -490,7 +474,7 @@ function drawPanel(
   rounded(ctx, C.panelX, 0, C.panelWidth, C.baseHeight, 16);
   ctx.fill();
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '光电开关控制台',
     C.panelX + C.panelWidth / 2,
@@ -515,7 +499,7 @@ function drawPanel(
   );
   ctx.fillStyle = p.soft;
   ctx.fill();
-  text(
+  drawText(
     ctx,
     `阴极材料  ${photoelectricMaterials[state.material].label}`,
     C.panelX + C.panelInset * 2,
@@ -525,7 +509,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `W₀ = ${state.workFunction.toFixed(2)} eV`,
     C.panelX + C.panelWidth - C.panelInset * 2,
@@ -535,7 +519,7 @@ function drawPanel(
     'right',
     600
   );
-  text(
+  drawText(
     ctx,
     `ν₀ = ${state.thresholdFrequency.toFixed(2)}×10¹⁴ Hz`,
     C.panelX + C.panelInset * 2,
@@ -557,7 +541,7 @@ function drawPanel(
   ctx.fill();
   ctx.strokeStyle = p.border;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     `入射频率 ν  ${state.frequency.toFixed(1)}×10¹⁴ Hz`,
     C.panelX + C.panelInset * 2,
@@ -599,7 +583,7 @@ function drawPanel(
   ctx.lineTo(thresholdX, frequencyBarY + 28);
   ctx.stroke();
   ctx.setLineDash([]);
-  text(ctx, 'ν₀', thresholdX, frequencyBarY + 40, p.red, 12, 'center', 700);
+  drawText(ctx, 'ν₀', thresholdX, frequencyBarY + 40, p.red, 12, 'center', 700);
   rounded(
     ctx,
     C.panelX + C.panelInset,
@@ -610,7 +594,7 @@ function drawPanel(
   );
   ctx.fillStyle = p.soft;
   ctx.fill();
-  text(
+  drawText(
     ctx,
     `光照强度  ${state.intensity.toFixed(0)}%`,
     C.panelX + C.panelInset * 2,
@@ -651,7 +635,7 @@ function drawPanel(
   ctx.fill();
   ctx.strokeStyle = p.border;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '实时数据',
     C.panelX + C.panelInset * 2,
@@ -661,7 +645,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     `光子能量 hν  ${state.photonEnergy.toFixed(2)} eV`,
     C.panelX + C.panelInset * 2,
@@ -671,7 +655,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `最大动能 Eₖ  ${state.maxKineticEnergy.toFixed(2)} eV`,
     C.panelX + C.panelInset * 2,
@@ -681,7 +665,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `光电流 I  ${state.photoCurrent.toFixed(2)} mA`,
     C.panelX + C.panelInset * 2,
@@ -704,7 +688,7 @@ function drawPanel(
   ctx.strokeStyle = state.lampOn ? p.orange : p.border;
   ctx.lineWidth = 2;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     `光控开关：${state.lampOn ? '闭合 · 亮起' : '断开 · 熄灭'}`,
     C.panelX + C.panelWidth / 2,
@@ -714,7 +698,7 @@ function drawPanel(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     `磁力 ${state.magneticForce.toFixed(2)} N  /  弹簧 ${state.springForce.toFixed(2)} N`,
     C.panelX + C.panelWidth / 2,
@@ -724,7 +708,7 @@ function drawPanel(
     'center',
     600
   );
-  text(
+  drawText(
     ctx,
     state.lampOn ? '磁力不足，弹簧拉合电路' : '磁力克服弹簧，触点断开',
     C.panelX + C.panelWidth / 2,

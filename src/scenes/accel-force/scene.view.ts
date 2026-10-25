@@ -1,8 +1,4 @@
-import {
-  applyCanvasSize,
-  getResponsiveScale,
-  scaledSize
-} from '../../core/canvas-sizing';
+import { scaledSize } from '../../core/canvas-sizing';
 import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
@@ -22,6 +18,8 @@ import {
   type AccelForceState,
   type ApparatusLayout
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
+import { sizeCanvasToHostBox } from '../stage-fit';
 
 export type CreateAccelForceViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -83,71 +81,12 @@ const PALETTE: Record<TeachingTheme, Palette> = {
   }
 };
 
-function contentBoxSize(host: HTMLElement): { width: number; height: number } {
-  const cs = getComputedStyle(host);
-  const rect = host.getBoundingClientRect();
-  const padX =
-    (Number.parseFloat(cs.paddingLeft) || 0) +
-    (Number.parseFloat(cs.paddingRight) || 0);
-  const padY =
-    (Number.parseFloat(cs.paddingTop) || 0) +
-    (Number.parseFloat(cs.paddingBottom) || 0);
-  return {
-    width: Math.max(1, Math.floor(rect.width - padX)),
-    height: Math.max(1, Math.floor(rect.height - padY))
-  };
-}
-
 /** Size the graph canvas to the host content box, not the padded border box. */
-export function sizeGraphCanvasToHost(canvas: HTMLCanvasElement): {
-  ctx: CanvasRenderingContext2D;
-  cssWidth: number;
-  cssHeight: number;
-  responsiveScale: number;
-} {
-  const host = canvas.parentElement;
-  let cssWidth: number;
-  let cssHeight: number;
-  if (host) {
-    const box = contentBoxSize(host);
-    cssWidth = box.width;
-    cssHeight = box.height;
-  } else {
-    const rect = canvas.getBoundingClientRect();
-    cssWidth = Math.max(1, Math.floor(rect.width || C.graphFallbackWidth));
-    cssHeight = Math.max(1, Math.floor(rect.height || C.graphFallbackHeight));
-  }
-  const dpr = Math.min(
-    2,
-    typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1
-  );
-  const responsiveScale = getResponsiveScale(cssWidth, cssHeight);
-  const ctx = applyCanvasSize(canvas, {
-    width: Math.max(1, Math.floor(cssWidth * dpr)),
-    height: Math.max(1, Math.floor(cssHeight * dpr)),
-    cssWidth,
-    cssHeight,
-    dpr,
-    responsiveScale
+export function sizeGraphCanvasToHost(canvas: HTMLCanvasElement) {
+  return sizeCanvasToHostBox(canvas, {
+    width: C.graphFallbackWidth,
+    height: C.graphFallbackHeight
   });
-  return { ctx, cssWidth, cssHeight, responsiveScale };
-}
-
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
 }
 
 function rounded(
@@ -269,7 +208,7 @@ function drawTrack(
     ctx.lineTo(layout.pad.x + 16, layout.pad.y + 8);
     ctx.closePath();
     ctx.fill();
-    text(
+    drawText(
       ctx,
       '垫高',
       layout.pad.x,
@@ -303,7 +242,7 @@ function drawTicker(
   ctx.beginPath();
   ctx.arc(x + 8, y - 2, 4, 0, Math.PI * 2);
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '打点计时器',
     x - C.tickerWidth / 2,
@@ -365,7 +304,7 @@ function drawCart(
   ctx.arc(-18, C.cartHeight / 2 - 2, C.wheelRadius, 0, Math.PI * 2);
   ctx.arc(18, C.cartHeight / 2 - 2, C.wheelRadius, 0, Math.PI * 2);
   ctx.fill();
-  text(ctx, 'M', 0, -1, p.glass, font(13), 'center', 700);
+  drawText(ctx, 'M', 0, -1, p.glass, font(13), 'center', 700);
   ctx.restore();
 }
 
@@ -404,7 +343,7 @@ function drawPulleyAndHanger(
   ctx.beginPath();
   ctx.arc(pulley.x, pulley.y, 3, 0, Math.PI * 2);
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '定滑轮',
     pulley.x + 18,
@@ -429,7 +368,7 @@ function drawPulleyAndHanger(
     ctx.fill();
   }
   if (discs > 0) {
-    text(
+    drawText(
       ctx,
       '槽码',
       layout.hanger.x + C.hangerDiscWidth / 2 + 10,
@@ -438,7 +377,16 @@ function drawPulleyAndHanger(
       font(12),
       'left'
     );
-    text(ctx, 'm', layout.hanger.x, top - 10, p.ink, font(12), 'center', 700);
+    drawText(
+      ctx,
+      'm',
+      layout.hanger.x,
+      top - 10,
+      p.ink,
+      font(12),
+      'center',
+      700
+    );
   }
 }
 
@@ -458,7 +406,7 @@ function drawForces(
       p.blue,
       4
     );
-    text(
+    drawText(
       ctx,
       'F',
       layout.forceArrow.x2 + 12,
@@ -479,7 +427,7 @@ function drawForces(
       p.red,
       4
     );
-    text(
+    drawText(
       ctx,
       'f',
       layout.frictionArrow.x2 - 12,
@@ -535,7 +483,7 @@ function drawGraphAxes(
     ctx.moveTo(frame.left, y);
     ctx.lineTo(frame.right, y);
     ctx.stroke();
-    text(
+    drawText(
       ctx,
       ((xMax * i) / 4).toFixed(1),
       x,
@@ -544,7 +492,7 @@ function drawGraphAxes(
       font(11),
       'center'
     );
-    text(
+    drawText(
       ctx,
       ((C.graphMaxAccel * i) / 4).toFixed(1),
       frame.left - 8,
@@ -582,7 +530,7 @@ function drawGraphAxes(
     1.6,
     8
   );
-  text(
+  drawText(
     ctx,
     xTitle,
     Math.min(width - 4, frame.right),
@@ -592,7 +540,7 @@ function drawGraphAxes(
     'right',
     700
   );
-  text(
+  drawText(
     ctx,
     ACCEL_FORCE_Y_TITLE,
     frame.left,

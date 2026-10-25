@@ -1,11 +1,9 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
-import type { WaveSuperposeParams } from './scene.sim';
 import { waveSuperposeControlsSchema } from './controls-schema';
 import { createWaveSuperposeScene } from './scene.entry';
 import { waveSuperposeMeta } from './scene.meta';
+import { createBoundControls } from '../../ui/components/bound-controls';
 
 bootScenePage({
   meta: waveSuperposeMeta,
@@ -36,55 +34,12 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, scheduleRender, writeParam }) => {
-    const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+  createControls: ({ mount, scene, scheduleRender, writeParam }) =>
+    createBoundControls({
       mount,
       schema: waveSuperposeControlsSchema,
-      onChange: (key, value) => {
-        if (key === 'direction1' || key === 'direction2') {
-          scene.setParams({
-            [key]: String(value)
-          } as Partial<WaveSuperposeParams>);
-          renderer.setActive(key, String(value));
-        } else if (key === 'autoRun')
-          scene.setParams({ autoRun: Boolean(value) });
-        else
-          scene.setParams({
-            [key]: Number(value)
-          } as Partial<WaveSuperposeParams>);
-        render();
-        writeParam?.(key, value);
-      },
-      onAction: () => render()
-    });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (key === 'direction1' || key === 'direction2') {
-        const direction = String(value) as WaveSuperposeParams['direction1'];
-        if (!['up', 'down'].includes(direction)) return false;
-        ctx.scene.setParams({
-          [key]: direction
-        } as Partial<WaveSuperposeParams>);
-        ctx.setControlActive(key, direction);
-        return true;
-      }
-      if (key === 'autoRun') {
-        const enabled =
-          value === 1 ||
-          value === '1' ||
-          String(value).toLowerCase() === 'true';
-        ctx.scene.setParams({ autoRun: enabled });
-        ctx.setControlValue(key, enabled);
-        return true;
-      }
-      const number = Number(value);
-      if (!Number.isFinite(number)) return false;
-      ctx.scene.setParams({ [key]: number } as Partial<WaveSuperposeParams>);
-      ctx.setControlValue(key, number);
-      return true;
-    }
-  }
+      scene,
+      scheduleRender,
+      writeParam
+    })
 });

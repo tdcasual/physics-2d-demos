@@ -7,28 +7,19 @@
  * - 控制面板的 key 不会静默失效
  *
  * meta 键与 sim 参数键不一致的场景（如 projectile 的 v0→speed），
- * 必须在 PARAM_KEY_MAP 显式登记映射；不经过 sim setParams 的键
+ * 在 controls-schema 字段上声明 `bind: { param }`（唯一来源）；不经过 sim setParams 的键
  * （如 UI 状态键）必须在 NON_SIM_KEYS 登记豁免并注明理由。
  */
 
 import { describe, expect, it } from 'vitest';
 import type { SceneMeta } from '../../src/platform/scene-contract';
 import type { ControlsSchema } from '../../src/platform/controls-schema';
-
-// ---------------------------------------------------------------------------
-// 键名映射：meta.defaultParams/urlSyncKeys 键 → sim setParams 键
-// ---------------------------------------------------------------------------
-
-const PARAM_KEY_MAP: Record<string, Record<string, string>> = {
-  // page.ts 经 createParamMapper 做的同一份映射，这里显式登记以便机器校验
-  projectile: {
-    v0: 'speed',
-    theta: 'angleDeg',
-    h0: 'initialHeight',
-    g: 'gravity',
-    c: 'drag'
-  }
-};
+import {
+  collectBindings,
+  paramKeyOf,
+  paramToControl,
+  type ParamBinding
+} from '../../src/platform/param-binding';
 
 // ---------------------------------------------------------------------------
 // 豁免：不经过 sim setParams 的键（必须注明承载方式）
@@ -150,6 +141,17 @@ for (const [path, mod] of Object.entries(schemaModules)) {
   if (schemas.length > 0) schemasById.set(id, schemas);
 }
 
+/** 场景全部 schema 的 bind 声明合集（控件键 → 绑定） */
+function bindingsOf(id: string): Map<string, ParamBinding> {
+  const merged = new Map<string, ParamBinding>();
+  for (const schema of schemasById.get(id) ?? []) {
+    for (const [key, binding] of collectBindings(schema)) {
+      merged.set(key, binding);
+    }
+  }
+  return merged;
+}
+
 type DiscoveredScene = {
   id: string;
   meta: SceneMeta;
@@ -226,12 +228,6 @@ describe('scene params contract', () => {
         ...Object.keys(meta.defaultParams),
         ...(meta.urlSyncKeys ?? [])
       ]);
-      for (const key of Object.keys(PARAM_KEY_MAP[id] ?? {})) {
-        expect(
-          keys.has(key),
-          `${id}: PARAM_KEY_MAP 登记了 meta 中不存在的键 "${key}"`
-        ).toBe(true);
-      }
       for (const key of Object.keys(NON_SIM_KEYS[id] ?? {})) {
         expect(
           keys.has(key),
@@ -276,12 +272,12 @@ describe('scene params contract', () => {
           ...Object.keys(meta.defaultParams),
           ...(meta.urlSyncKeys ?? [])
         ]);
-        const map = PARAM_KEY_MAP[id] ?? {};
+        const bindings = bindingsOf(id);
         const exempt = NON_SIM_KEYS[id] ?? {};
 
         for (const key of keys) {
           if (key in exempt) continue;
-          const simKey = map[key] ?? key;
+          const simKey = paramKeyOf(key, bindings);
           const value = meta.defaultParams[key] ?? 0;
           const returned = s.setParams({ [simKey]: value });
           // 优先读 getParams()；无 getParams 的场景用 setParams 的返回做回环
@@ -296,13 +292,48 @@ describe('scene params contract', () => {
             `${id}: setParams({ ${simKey} }) 后读数缺少该键` +
               (simKey !== key ? `（meta 键 "${key}" 的映射）` : '') +
               `：在 src/scenes/${id}/ 的 sim setParams/getParams 中支持该键；` +
-              'meta 键与 sim 键不一致时在 PARAM_KEY_MAP 登记映射' +
+              'meta 键与 sim 键不一致时在 controls-schema 字段声明 bind.param' +
               '（参考 projectile 的 v0→speed），' +
               '纯 UI 状态键在 NON_SIM_KEYS 登记豁免并注明理由'
           ).toContain(simKey);
         }
       } finally {
         s.dispose?.();
+      }
+    }
+  );
+
+  // 首屏一致性：URL 无参数时控件显示 schema 初值、sim 运行自身默认值，
+  // 两者必须一致（曾出现 projectile 滑块 30 / sim 20）。数值型字段按
+  // bind 换算单位；枚举编码的 toggle/preset 由场景 codec 负责，不在此比对。
+  it.each(scenes)(
+    '$id: slider/number 初值与 sim 默认参数一致',
+    ({ id, create }) => {
+      const scene = create() as {
+        getParams?: () => Record<string, unknown>;
+        dispose?: () => void;
+      };
+      try {
+        const live = scene.getParams?.();
+        if (!live) return;
+        const bindings = bindingsOf(id);
+        for (const schema of schemasById.get(id) ?? []) {
+          for (const section of schema.sections) {
+            for (const field of section.fields) {
+              if (field.type !== 'slider' && field.type !== 'number') continue;
+              const paramKey = paramKeyOf(field.key, bindings);
+              const value = live[paramKey];
+              if (typeof value !== 'number') continue;
+              expect(
+                paramToControl(field.key, value, bindings),
+                `${id}.${field.key}: schema 初值 ${field.value} 与 sim 默认 ` +
+                  `${paramKey}=${value} 不一致（单位不同请声明 bind.scale）`
+              ).toBeCloseTo(field.value, 9);
+            }
+          }
+        }
+      } finally {
+        scene.dispose?.();
       }
     }
   );

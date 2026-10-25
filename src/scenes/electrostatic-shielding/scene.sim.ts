@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type ShieldingRegion = '外部自由空间' | '导体内部' | '空腔内部';
 export type ElectrostaticShieldingParams = {
@@ -69,9 +70,6 @@ const DEFAULTS: ElectrostaticShieldingParams = {
   probeY: electrostaticShieldingConstants.probeDefaultY
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
 function flag(value: unknown, fallback: boolean): boolean {
   if (value === true || value === 1 || value === '1' || value === 'true')
     return true;
@@ -87,7 +85,7 @@ function normalize(
     externalField: flag(input.externalField, previous.externalField),
     cavityCharge: flag(input.cavityCharge, previous.cavityCharge),
     cavityChargeValue: clamp(
-      finite(input.cavityChargeValue, previous.cavityChargeValue),
+      finiteOr(input.cavityChargeValue, previous.cavityChargeValue),
       electrostaticShieldingConstants.cavityChargeMin,
       electrostaticShieldingConstants.cavityChargeMax
     ),
@@ -97,12 +95,12 @@ function normalize(
     autoRun: flag(input.autoRun, previous.autoRun),
     slowMode: flag(input.slowMode, previous.slowMode),
     probeX: clamp(
-      finite(input.probeX, previous.probeX),
+      finiteOr(input.probeX, previous.probeX),
       electrostaticShieldingConstants.probeMinX,
       electrostaticShieldingConstants.probeMaxX
     ),
     probeY: clamp(
-      finite(input.probeY, previous.probeY),
+      finiteOr(input.probeY, previous.probeY),
       electrostaticShieldingConstants.probeMinY,
       electrostaticShieldingConstants.probeMaxY
     )
@@ -158,7 +156,7 @@ export function electrostaticShieldingAt(
   params: ElectrostaticShieldingParams,
   time = 0
 ): ElectrostaticShieldingState {
-  return derive(normalize(params), Math.max(0, finite(time, 0)));
+  return derive(normalize(params), Math.max(0, finiteOr(time, 0)));
 }
 
 export function createElectrostaticShieldingSim(
@@ -192,7 +190,8 @@ export function createElectrostaticShieldingSim(
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      const delta = clamp(finite(dt, 0), 0, 0.1) * (params.slowMode ? 0.35 : 1);
+      const delta =
+        clamp(finiteOr(dt, 0), 0, 0.1) * (params.slowMode ? 0.35 : 1);
       time = (time + delta) % 4;
     }
   };

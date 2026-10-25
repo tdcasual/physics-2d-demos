@@ -351,10 +351,16 @@ export function bootInstrumentLibrary() {
     for (const [label, value] of rows) {
       const row = document.createElement('div');
       row.style.cssText = 'margin-bottom:10px;';
-      row.innerHTML = `
-        <div style="font-size:var(--text-xs);color:var(--text-muted);margin-bottom:2px;">${label}</div>
-        <div style="font-size:var(--text-sm);color:var(--text-primary);">${value}</div>
-      `;
+      // textContent：描述等自由文本可能含 < / &（如「v < c」），不能当 HTML 解析
+      const labelEl = document.createElement('div');
+      labelEl.style.cssText =
+        'font-size:var(--text-xs);color:var(--text-muted);margin-bottom:2px;';
+      labelEl.textContent = label;
+      const valueEl = document.createElement('div');
+      valueEl.style.cssText =
+        'font-size:var(--text-sm);color:var(--text-primary);';
+      valueEl.textContent = value;
+      row.append(labelEl, valueEl);
       metaWrap.appendChild(row);
     }
   }

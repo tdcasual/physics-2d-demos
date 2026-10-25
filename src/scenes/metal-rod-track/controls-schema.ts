@@ -38,6 +38,7 @@ export const metalRodControlsSchema: ControlsSchema = {
         {
           type: 'select',
           key: 'profile',
+          bind: { numeric: true },
           label: '速度变化方式',
           value: '0',
           options: CHARGE_PROFILES.map((profile, index) => ({

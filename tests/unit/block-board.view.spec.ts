@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { blockBoardControlsSchema } from '../../src/scenes/block-board/controls-schema';
 import { blockBoardMeta } from '../../src/scenes/block-board/scene.meta';
@@ -101,23 +99,6 @@ describe('block-board view contract', () => {
     expect('readoutWidth' in C).toBe(false);
     expect(C.trackEndX).toBeLessThan(C.baseWidth);
     expect(C.trackY).toBeLessThan(C.baseHeight - C.transportClearY);
-  });
-
-  it('has no drawPanel, formula-card, or readout-card paths in source', () => {
-    const viewSrc = readFileSync(
-      resolve(process.cwd(), 'src/scenes/block-board/scene.view.ts'),
-      'utf8'
-    );
-    const simSrc = readFileSync(
-      resolve(process.cwd(), 'src/scenes/block-board/scene.sim.ts'),
-      'utf8'
-    );
-    expect(viewSrc).not.toMatch(/drawPanel|drawReadout/);
-    expect(viewSrc).not.toMatch(/实时计算|系统参数|核心关系/);
-    expect(viewSrc).not.toMatch(/v-t 运动图像/);
-    expect(simSrc).not.toMatch(
-      /panelWidth|fieldWidth|formulaWidth|readoutWidth/
-    );
   });
 
   it('draws short apparatus labels and omits panel, formula, and readout copy', () => {

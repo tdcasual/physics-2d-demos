@@ -9,6 +9,7 @@ export const rutherfordControlsSchema: ControlsSchema = {
         {
           type: 'preset-group',
           key: 'model',
+          bind: { values: { plum: 0, nuclear: 1 } },
           columns: 2,
           presets: [
             { id: 'plum', label: '枣糕模型' },

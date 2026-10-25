@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type RodModel = 'resistor' | 'capacitor';
 
@@ -63,10 +64,6 @@ const DEFAULTS: RodParams = {
   autoRun: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 export function asBool(value: unknown, fallback: boolean): boolean {
   if (value === true || value === 1 || value === '1') return true;
   if (value === false || value === 0 || value === '0') return false;
@@ -88,28 +85,28 @@ function normalize(input: Partial<RodParams>, previous = DEFAULTS): RodParams {
   return {
     model: asRodModel(input.model) ?? previous.model,
     fieldStrength: clamp(
-      finite(input.fieldStrength, previous.fieldStrength),
+      finiteOr(input.fieldStrength, previous.fieldStrength),
       C.fieldMin,
       C.fieldMax
     ),
     railGap: clamp(
-      finite(input.railGap, previous.railGap),
+      finiteOr(input.railGap, previous.railGap),
       C.railGapMin,
       C.railGapMax
     ),
     externalForce: clamp(
-      finite(input.externalForce, previous.externalForce),
+      finiteOr(input.externalForce, previous.externalForce),
       C.forceMin,
       C.forceMax
     ),
-    mass: clamp(finite(input.mass, previous.mass), C.massMin, C.massMax),
+    mass: clamp(finiteOr(input.mass, previous.mass), C.massMin, C.massMax),
     resistance: clamp(
-      finite(input.resistance, previous.resistance),
+      finiteOr(input.resistance, previous.resistance),
       C.resistanceMin,
       C.resistanceMax
     ),
     capacitance: clamp(
-      finite(input.capacitance, previous.capacitance),
+      finiteOr(input.capacitance, previous.capacitance),
       C.capacitanceMin,
       C.capacitanceMax
     ),
@@ -306,14 +303,14 @@ export function createRodModelSim(initial: Partial<RodParams> = {}) {
       return { ...params };
     },
     setTime(next: number): number {
-      time = clamp(finite(next, time), 0, motionEndTime(params));
+      time = clamp(finiteOr(next, time), 0, motionEndTime(params));
       if (time >= motionEndTime(params) - 1e-9) {
         params = { ...params, autoRun: false };
       }
       return time;
     },
     step(dt: number): void {
-      const delta = finite(dt, 0);
+      const delta = finiteOr(dt, 0);
       if (!params.autoRun || delta <= 0) return;
       const end = motionEndTime(params);
       time = Math.min(end, time + delta);

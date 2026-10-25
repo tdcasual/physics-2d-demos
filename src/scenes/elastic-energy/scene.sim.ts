@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type EnergyPreset = 'equal' | 'heavy-light' | 'light-heavy';
 export type EnergyParams = {
@@ -102,9 +103,6 @@ const DEFAULTS: EnergyParams = {
   slowMotion: false
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
 function normalize(
   input: Partial<EnergyParams>,
   prev = DEFAULTS
@@ -118,32 +116,32 @@ function normalize(
   return {
     preset,
     massA: clamp(
-      finite(input.massA, prev.massA),
+      finiteOr(input.massA, prev.massA),
       energyConstants.massMin,
       energyConstants.massMax
     ),
     massB: clamp(
-      finite(input.massB, prev.massB),
+      finiteOr(input.massB, prev.massB),
       energyConstants.massMin,
       energyConstants.massMax
     ),
     velocityA: clamp(
-      finite(input.velocityA, prev.velocityA),
+      finiteOr(input.velocityA, prev.velocityA),
       energyConstants.velocityMin,
       energyConstants.velocityMax
     ),
     velocityB: clamp(
-      finite(input.velocityB, prev.velocityB),
+      finiteOr(input.velocityB, prev.velocityB),
       energyConstants.velocityMin,
       energyConstants.velocityMax
     ),
     positionA: clamp(
-      finite(input.positionA, prev.positionA),
+      finiteOr(input.positionA, prev.positionA),
       energyConstants.xMin,
       energyConstants.xMax
     ),
     positionB: clamp(
-      finite(input.positionB, prev.positionB),
+      finiteOr(input.positionB, prev.positionB),
       energyConstants.xMin,
       energyConstants.xMax
     ),
@@ -239,7 +237,7 @@ export function createEnergySim(initial: Partial<EnergyParams> = {}) {
     step(dt: number) {
       if (!params.isPlaying) return;
       const safeDt =
-        Math.min(Math.max(finite(dt, 0), 0), 0.05) *
+        Math.min(Math.max(finiteOr(dt, 0), 0), 0.05) *
         (params.slowMotion ? 0.25 : 1);
       params.positionA += params.velocityA * safeDt;
       params.positionB += params.velocityB * safeDt;

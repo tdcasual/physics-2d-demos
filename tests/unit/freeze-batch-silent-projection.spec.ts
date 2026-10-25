@@ -19,7 +19,11 @@ import {
   decodeTickerTapeControls,
   TICKER_TAPE_NOISE_IDS
 } from '../../src/scenes/ticker-tape/page';
-import { decodeVtSceneSelectorId } from '../../src/scenes/vt-integral/page';
+import { vtIntegralControlsSchema } from '../../src/scenes/vt-integral/controls-schema';
+import {
+  collectBindings,
+  paramToControl
+} from '../../src/platform/param-binding';
 import { getTrialField } from '../../src/platform/data-workspace';
 import * as tickerTapeDataTask from '../../src/scenes/ticker-tape/data-task';
 
@@ -279,20 +283,20 @@ describe('ticker-tape encoding round-trip', () => {
 });
 
 describe('vt-integral index → id decode', () => {
-  it('uses 1-based getParams.scene (scene1→1, scene2→2, scene3→3)', () => {
-    expect(decodeVtSceneSelectorId(1)).toBe('scene1');
-    expect(decodeVtSceneSelectorId(2)).toBe('scene2');
-    expect(decodeVtSceneSelectorId(3)).toBe('scene3');
-    expect(decodeVtSceneSelectorId('scene2')).toBe('scene2');
+  it('schema bind decodes 1-based getParams.scene (scene1→1 … scene3→3)', () => {
+    const bindings = collectBindings(vtIntegralControlsSchema);
+    expect(paramToControl('scene', 1, bindings)).toBe('scene1');
+    expect(paramToControl('scene', 2, bindings)).toBe('scene2');
+    expect(paramToControl('scene', 3, bindings)).toBe('scene3');
   });
 
-  it('syncFromScene highlights scene2 when getParams.scene is 2', () => {
+  it('platform projection highlights scene2 when getParams.scene is 2', () => {
     const scene = createVtIntegralScene();
     scene.setParams({ scene: 2, n: 24 });
     const setParams = vi.spyOn(scene, 'setParams');
     const { mount, handle, writeParam } = mountScene('vt-integral', scene);
     const { events } = recordDomEvents(mount);
-    handle.syncFromScene?.();
+    syncControlsFromLiveParams({ params: scene.getParams(), handle });
     expect(setParams).not.toHaveBeenCalled();
     expect(writeParam).not.toHaveBeenCalled();
     expect(events).toEqual([]);

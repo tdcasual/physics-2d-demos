@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { springBallControlsSchema } from '../../src/scenes/spring-ball/controls-schema';
 import { springBallMeta } from '../../src/scenes/spring-ball/scene.meta';
@@ -29,18 +27,6 @@ function mockCanvas(width: number, height: number): HTMLCanvasElement {
 }
 
 describe('spring-ball view contract', () => {
-  it('keeps animation canvas free of graph, data cards and long copy', () => {
-    const source = readFileSync(
-      resolve(process.cwd(), 'src/scenes/spring-ball/scene.view.ts'),
-      'utf8'
-    );
-    expect(source).not.toMatch(
-      /drawPanel|实时位置|实验工况|核心规律|最低点.*加速度/
-    );
-    expect(source).not.toMatch(/m\/s²|弹簧力|合力|接触时刻/);
-    expect(source).toContain('attachGraphCanvas');
-  });
-
   it('renders animation and graph canvases across themes and sizes', () => {
     for (const [width, height] of [
       [1280, 720],

@@ -39,6 +39,11 @@ export type SceneShellOptions = {
   onStep?: (dt: number) => void;
   /** 每帧渲染回调 */
   onRender?: () => void;
+  /**
+   * step / render 抛错时调用。外壳已先行停止循环并置 isPlaying=false，
+   * 使界面状态与实际一致、播放键可再次启动；缺省时打印到控制台。
+   */
+  onError?: (error: unknown) => void;
 };
 
 function createDefaultFrameDriver(): FrameDriver {
@@ -137,11 +142,21 @@ export function createSceneShell(options: SceneShellOptions = {}) {
 
     const frameDt = Math.max(0, elapsed / 1000);
     const steps = stepper.consume(frameDt);
-    for (let i = 0; i < steps; i += 1) {
-      options.onStep?.(stepSeconds);
-    }
-    if (steps > 0) {
-      options.onRender?.();
+    try {
+      for (let i = 0; i < steps; i += 1) {
+        options.onStep?.(stepSeconds);
+      }
+      if (steps > 0) {
+        options.onRender?.();
+      }
+    } catch (error) {
+      // 不能只是不再请求下一帧：isPlaying 仍为 true 时画面冻结、界面显示
+      // 播放中，play() 又因已在播放而直接返回——只能重置才能恢复。
+      transport.isPlaying = false;
+      stopFrameLoop();
+      if (options.onError) options.onError(error);
+      else console.error('[scene-shell] frame error, paused:', error);
+      return;
     }
 
     if (transport.isPlaying) {

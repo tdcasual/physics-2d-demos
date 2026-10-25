@@ -12,6 +12,7 @@ import {
   inducedCurrent,
   type ChargeProfile
 } from './charge-model';
+import { finiteOr } from '../../core/coerce';
 
 /** coast 阻尼滑行 · pull 恒力加速 · charge 微元法求电荷量 */
 export type MetalRodMode = 'coast' | 'pull' | 'charge';
@@ -114,10 +115,6 @@ const DEFAULTS: MetalRodParams = {
   strips: CHARGE_STRIPS_DEFAULT
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function normalize(
   input: Partial<MetalRodParams>,
   previous = DEFAULTS
@@ -128,33 +125,33 @@ function normalize(
         ? input.mode
         : previous.mode,
     magneticField: clamp(
-      finite(input.magneticField, previous.magneticField),
+      finiteOr(input.magneticField, previous.magneticField),
       metalRodConstants.magneticFieldMin,
       metalRodConstants.magneticFieldMax
     ),
     resistance: clamp(
-      finite(input.resistance, previous.resistance),
+      finiteOr(input.resistance, previous.resistance),
       metalRodConstants.resistanceMin,
       metalRodConstants.resistanceMax
     ),
     mass: clamp(
-      finite(input.mass, previous.mass),
+      finiteOr(input.mass, previous.mass),
       metalRodConstants.massMin,
       metalRodConstants.massMax
     ),
     initialVelocity: clamp(
-      finite(input.initialVelocity, previous.initialVelocity),
+      finiteOr(input.initialVelocity, previous.initialVelocity),
       metalRodConstants.velocityMin,
       metalRodConstants.velocityMax
     ),
     autoRun: input.autoRun ?? previous.autoRun,
     profile: clamp(
-      Math.round(finite(input.profile, previous.profile)),
+      Math.round(finiteOr(input.profile, previous.profile)),
       0,
       CHARGE_PROFILES.length - 1
     ),
     strips: clamp(
-      Math.round(finite(input.strips, previous.strips)),
+      Math.round(finiteOr(input.strips, previous.strips)),
       CHARGE_STRIPS_MIN,
       CHARGE_STRIPS_MAX
     )
@@ -300,11 +297,11 @@ export function createMetalRodSim(initial: Partial<MetalRodParams> = {}) {
         const limit = chargeProfileDuration(chargeProfileOf(params));
         chargeTime = Math.min(
           limit,
-          chargeTime + clamp(finite(dt, 0), 0, 0.05)
+          chargeTime + clamp(finiteOr(dt, 0), 0, 0.05)
         );
         return;
       }
-      const duration = clamp(finite(dt, 0), 0, 0.05);
+      const duration = clamp(finiteOr(dt, 0), 0, 0.05);
       const subSteps = Math.max(1, Math.ceil(duration * 20));
       const subDt = duration / subSteps;
       for (let index = 0; index < subSteps; index += 1) {

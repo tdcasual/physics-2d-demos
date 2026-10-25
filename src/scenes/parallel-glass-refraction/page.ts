@@ -1,11 +1,9 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
-import type { GlassParams } from './scene.sim';
 import { glassControlsSchema } from './controls-schema';
 import { createGlassScene } from './scene.entry';
 import { glassMeta } from './scene.meta';
+import { createBoundControls } from '../../ui/components/bound-controls';
 
 bootScenePage({
   meta: glassMeta,
@@ -36,41 +34,12 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, scheduleRender, writeParam }) => {
-    const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+  createControls: ({ mount, scene, scheduleRender, writeParam }) =>
+    createBoundControls({
       mount,
       schema: glassControlsSchema,
-      onChange: (key, value) => {
-        if (key === 'autoRun') {
-          scene.setParams({ autoRun: Boolean(value) });
-          render();
-          writeParam?.(key, value);
-          return;
-        }
-        const n = Number(value);
-        if (!Number.isFinite(n)) return;
-        scene.setParams({ [key]: n } as Partial<GlassParams>);
-        render();
-        writeParam?.(key, value);
-      },
-      onAction: () => undefined
-    });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (key === 'autoRun') {
-        const enabled = value === '1' || String(value).toLowerCase() === 'true';
-        ctx.scene.setParams({ autoRun: enabled });
-        ctx.setControlValue(key, enabled);
-        return true;
-      }
-      const n = Number(value);
-      if (!Number.isFinite(n)) return false;
-      ctx.scene.setParams({ [key]: n } as Partial<GlassParams>);
-      ctx.setControlValue(key, n);
-      return true;
-    }
-  }
+      scene,
+      scheduleRender,
+      writeParam
+    })
 });

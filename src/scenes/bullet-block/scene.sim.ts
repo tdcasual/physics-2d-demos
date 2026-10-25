@@ -1,5 +1,8 @@
 import { readoutOccludesStage } from '../../platform/stage-readout';
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
+import { betterPose } from '../stage-fit';
+import type { StagePose, StageLayoutHint } from '../stage-fit';
 
 export type BulletBlockParams = {
   speed: number;
@@ -27,19 +30,6 @@ export type BulletBlockState = {
   blockEnergy: number;
   heat: number;
   maxDepth: number;
-};
-
-export type StageLayoutHint = {
-  floatingReadout: boolean;
-  overlayPx?: number;
-  overlayTopPx?: number;
-  overlayHeightPx?: number;
-};
-
-type StagePose = {
-  fit: number;
-  offsetX: number;
-  offsetY: number;
 };
 
 const BASE_W = 820;
@@ -78,10 +68,6 @@ const STATUS_WIDTH = 236;
 const STATUS_HEIGHT = 52;
 const D_ARROW_Y = 340;
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function containInRect(
   boxW: number,
   boxH: number,
@@ -99,13 +85,7 @@ function containInRect(
   };
 }
 
-function betterPose(a: StagePose, b: StagePose): StagePose {
-  return b.fit > a.fit + 1e-9 ? b : a;
-}
-
-export function hasFloatingReadout(anchor?: Element | null): boolean {
-  return readoutOccludesStage(anchor);
-}
+export const hasFloatingReadout = readoutOccludesStage;
 
 export function stageLayoutFrom(canvas?: Element | null): StageLayoutHint {
   const floatingReadout = hasFloatingReadout(canvas);
@@ -213,10 +193,10 @@ export function stageTransform(
 
 function normalizeParams(input: Partial<BulletBlockParams>): BulletBlockParams {
   return {
-    speed: clamp(finite(input.speed, 25), 5, 45),
-    bulletMass: clamp(finite(input.bulletMass, 1), 0.2, 3),
-    blockMass: clamp(finite(input.blockMass, 5), 1, 12),
-    resistance: clamp(finite(input.resistance, 50), 5, 120)
+    speed: clamp(finiteOr(input.speed, 25), 5, 45),
+    bulletMass: clamp(finiteOr(input.bulletMass, 1), 0.2, 3),
+    blockMass: clamp(finiteOr(input.blockMass, 5), 1, 12),
+    resistance: clamp(finiteOr(input.resistance, 50), 5, 120)
   };
 }
 
@@ -359,7 +339,7 @@ export function createBulletBlockSim(initial: Partial<BulletBlockParams> = {}) {
       return { ...params };
     },
     step(dt: number): void {
-      let remaining = Math.max(0, finite(dt, 0));
+      let remaining = Math.max(0, finiteOr(dt, 0));
       if (remaining === 0) return;
       time += remaining;
       const m = params.bulletMass;
@@ -431,3 +411,5 @@ export function createBulletBlockSim(initial: Partial<BulletBlockParams> = {}) {
     }
   };
 }
+
+export type { StageLayoutHint };

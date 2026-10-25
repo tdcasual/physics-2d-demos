@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type ElectricParticle = 'proton' | 'alpha' | 'electron';
 
@@ -94,10 +95,6 @@ const DEFAULTS: ChargedParticleElectricParams = {
   showReverse: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function normalize(
   input: Partial<ChargedParticleElectricParams>,
   previous = DEFAULTS
@@ -110,17 +107,17 @@ function normalize(
         ? input.particle
         : previous.particle,
     accelVoltage: clamp(
-      finite(input.accelVoltage, previous.accelVoltage),
+      finiteOr(input.accelVoltage, previous.accelVoltage),
       chargedParticleElectricConstants.accelVoltageMin,
       chargedParticleElectricConstants.accelVoltageMax
     ),
     deflectVoltage: clamp(
-      finite(input.deflectVoltage, previous.deflectVoltage),
+      finiteOr(input.deflectVoltage, previous.deflectVoltage),
       chargedParticleElectricConstants.deflectVoltageMin,
       chargedParticleElectricConstants.deflectVoltageMax
     ),
     plateGap: clamp(
-      finite(input.plateGap, previous.plateGap),
+      finiteOr(input.plateGap, previous.plateGap),
       chargedParticleElectricConstants.plateGapMin,
       chargedParticleElectricConstants.plateGapMax
     ),
@@ -259,7 +256,7 @@ export function createChargedParticleElectricSim(
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      time += Math.max(0, finite(dt, 0));
+      time += Math.max(0, finiteOr(dt, 0));
     },
     reset(): void {
       params = { ...defaults };

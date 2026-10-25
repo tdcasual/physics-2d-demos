@@ -6,26 +6,15 @@
  */
 
 import { resolve } from 'node:path';
-import { readdirSync } from 'node:fs';
 import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import { inlineAssets } from './scripts/vite-plugin-inline-assets';
+import { discoverUtilityPageEntries } from './scripts/utility-pages';
 import { themeNoFlash } from './scripts/vite-plugin-theme-noflash';
 import {
   discoverScenePageEntries,
   scenePages
 } from './scripts/vite-plugin-scene-pages';
-
-function discoverPageEntries(pagesDir: string): Record<string, string> {
-  const entries: Record<string, string> = {};
-  for (const file of readdirSync(pagesDir)) {
-    if (file.endsWith('.html')) {
-      const name = file.replace(/\.html$/, '');
-      entries[name] = resolve(pagesDir, file);
-    }
-  }
-  return entries;
-}
 
 export default defineConfig({
   // 场景页无 React（仅首页使用），standalone 构建不需要 react 插件
@@ -52,7 +41,7 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       input: {
-        ...discoverPageEntries(resolve(__dirname, 'src/pages')),
+        ...discoverUtilityPageEntries(resolve(__dirname, 'src/pages')),
         ...discoverScenePageEntries(__dirname)
       },
       output: {

@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type InductionAcceleratorParams = {
   dBdt: number;
@@ -46,9 +47,6 @@ const DEFAULTS: InductionAcceleratorParams = {
   autoRun: true,
   slowMode: false
 };
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
 function flag(value: unknown, fallback: boolean): boolean {
   if (value === true || value === 1 || value === '1' || value === 'true')
     return true;
@@ -62,7 +60,7 @@ function normalize(
 ): InductionAcceleratorParams {
   return {
     dBdt: clamp(
-      finite(input.dBdt, previous.dBdt),
+      finiteOr(input.dBdt, previous.dBdt),
       inductionAcceleratorConstants.dBdtMin,
       inductionAcceleratorConstants.dBdtMax
     ),
@@ -108,8 +106,8 @@ export function inductionAcceleratorAt(
 ): InductionAcceleratorState {
   return derive(
     normalize(params),
-    Math.max(0, finite(time, 0)),
-    finite(angle, inductionAcceleratorConstants.startAngle)
+    Math.max(0, finiteOr(time, 0)),
+    finiteOr(angle, inductionAcceleratorConstants.startAngle)
   );
 }
 export function createInductionAcceleratorSim(
@@ -139,7 +137,8 @@ export function createInductionAcceleratorSim(
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      const delta = clamp(finite(dt, 0), 0, 0.1) * (params.slowMode ? 0.35 : 1);
+      const delta =
+        clamp(finiteOr(dt, 0), 0, 0.1) * (params.slowMode ? 0.35 : 1);
       time += delta;
       angle +=
         delta *

@@ -3,17 +3,9 @@ import { createProjectileScene } from './scene.entry';
 import { projectileMeta } from './scene.meta';
 import { projectileControlsSchema } from './controls-schema';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { createParamMapper, createPresetApplier } from '../page-utils';
+import { createPresetApplier } from '../page-utils';
+import { controlChangeToParams } from '../../platform/param-binding';
 import type { ProjectileParams } from './scene.sim';
-
-// meta 控制 key → sim 参数 key 映射（onChange 与 URL 管线共用同一份）
-const projectileParamMap: Record<string, string> = {
-  v0: 'speed',
-  theta: 'angleDeg',
-  h0: 'initialHeight',
-  g: 'gravity',
-  c: 'drag'
-};
 
 const projectilePresets: Record<string, Partial<ProjectileParams>> = {
   earth: { gravity: 9.8, windAccel: 0 },
@@ -36,7 +28,6 @@ bootScenePage<ReturnType<typeof createProjectileScene>>({
     readoutLabel: '数据区'
   },
   paramSync: {
-    paramMap: projectileParamMap,
     applyParam: (key, value, ctx) => {
       if (key !== 'preset') return false;
       const params = projectilePresets[String(value)];
@@ -56,11 +47,6 @@ bootScenePage<ReturnType<typeof createProjectileScene>>({
     scheduleRender = () => scene.render(),
     writeParam = () => {}
   }) => {
-    const applyParam = createParamMapper<ProjectileParams>(
-      projectileParamMap,
-      (params) => scene.setParams(params)
-    );
-
     const applyPreset = createPresetApplier<ProjectileParams>(
       projectilePresets,
       (params) => scene.setParams(params),
@@ -80,7 +66,13 @@ bootScenePage<ReturnType<typeof createProjectileScene>>({
             writeParam(key, value);
           }
         } else {
-          applyParam(key, value);
+          scene.setParams(
+            controlChangeToParams(
+              key,
+              value,
+              renderer.bindings
+            ) as Partial<ProjectileParams>
+          );
           writeParam(key, value);
         }
       },

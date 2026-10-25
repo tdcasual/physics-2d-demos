@@ -151,16 +151,28 @@ describe('SceneAdapter autoRun snapshot gate (B22)', () => {
     adapter.unmount();
   });
 
-  it('snapshot autoRun=abc (NaN) does not startAll', () => {
+  // 非法值不进 snapshot（readSceneParams 丢弃），既不被误判为播，也不被
+  // 误判为停：等同未提供，由静态 autoPlay 决定。
+  it('snapshot autoRun=abc is dropped and falls back to static autoPlay', () => {
     window.history.replaceState({}, '', '/src/pages/test.html?autoRun=abc');
-    const scene = createMockScene({ autoRun: true });
-    const adapter = createAdapter({
+    const playing = createMockScene({ autoRun: true });
+    const playingAdapter = createAdapter({
       meta: autoRunMeta(1),
-      createScene: () => scene as never,
+      createScene: () => playing as never,
       autoPlay: true
     });
-    mountAdapter(adapter);
-    expect(scene.startAll).not.toHaveBeenCalled();
-    adapter.unmount();
+    mountAdapter(playingAdapter);
+    expect(playing.startAll).toHaveBeenCalledTimes(1);
+    playingAdapter.unmount();
+
+    const paused = createMockScene({ autoRun: true });
+    const pausedAdapter = createAdapter({
+      meta: autoRunMeta(1),
+      createScene: () => paused as never,
+      autoPlay: false
+    });
+    mountAdapter(pausedAdapter);
+    expect(paused.startAll).not.toHaveBeenCalled();
+    pausedAdapter.unmount();
   });
 });

@@ -9,6 +9,7 @@ export const jouleControlsSchema: ControlsSchema = {
         {
           type: 'preset-group',
           key: 'mode',
+          bind: { values: { mechanical: 0, electric: 1 } },
           columns: 2,
           presets: [
             { id: 'mechanical', label: '机械功' },

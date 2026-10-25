@@ -128,30 +128,39 @@ export const mySceneControlsSchema: ControlsSchema = {
 
 ```typescript
 import { bootScenePage } from '../../app/scene-bootstrapper';
+import { createBoundControls } from '../../ui/components/bound-controls';
+import { resetSceneAndControls } from '../../app/control-projection';
 import { createMyScene } from './scene.entry';
 import { mySceneMeta } from './scene.meta';
 import { mySceneControlsSchema } from './controls-schema';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
 
 bootScenePage({
   meta: mySceneMeta,
-  createScene: ({ canvas, theme, mode }) =>
-    createMyScene({ canvas, theme, mode }),
-  createControls: ({ mount, scene, writeParam }) => {
-    return renderSchema({
+  createScene: ({ canvas, theme, mode, demoHints }) =>
+    createMyScene({ canvas, theme, mode, demoHints }),
+  createControls: ({ mount, scene, scheduleRender, writeParam }) =>
+    createBoundControls({
       mount,
       schema: mySceneControlsSchema,
-      onChange: (key, value) => {
-        /* 处理参数变化 */
-        writeParam?.(key, value);
-      },
-      onAction: (key) => {
-        /* 处理按钮点击 */
+      scene,
+      scheduleRender,
+      writeParam,
+      // 只拦截真正特殊的键；返回 true = 已自行处理参数（仍重绘 + 写回）
+      // onChange: (key, value, renderer) => { ... },
+      onAction: (key, renderer) => {
+        if (key === 'reset') resetSceneAndControls(scene, renderer, writeParam);
       }
-    });
-  }
+    })
 });
 ```
+
+**控件 ↔ 参数全部在 schema 字段上声明**（`platform/param-binding.ts`），page 不写路由：
+
+- `bind: { param: 'speed' }` 控件键 ≠ sim 键；`bind: { scale: 100 }` 百分比滑块 ↔ 0–1 参数
+- `bind: { values: { mechanical: 0, electric: 1 } }` 预设 / 选择 / toggle 的枚举编码；
+  `bind: { numeric: true }` 选项 id 是数字字符串（'3' ↔ 3）
+- `visibleWhen: { scene: 'scene1' }`（字段或 section）声明式显隐，值为控件值，数组为「任一」
+- URL / `meta.defaultParams` 恒为**参数单位**；布尔写成 1/0；枚举 URL 值只接受 schema 选项
 
 ### URL 参数同步（自动管线，无需样板）
 
@@ -172,8 +181,15 @@ bootScenePage({
   顺序为 `flush → persistSceneParams（localStorage 镜像）→ close/revoke`。
 - **上下文注入**：`urlParams` 仅在该 generation 首次 createControls 传入
   snapshot（供 double-slit 按 step 选 schema）；remount 传空对象。
-- **逃生口**：`ScenePageOptions.paramSync` —— `paramMap`（meta 键 → sim 键，
-  如 projectile 的 v0→speed）、`activeKeys`、`applyParam`（单键接管，返回
+- **控件 ↔ 参数绑定（单一来源）**：控件键与 sim 参数键不同或单位不同时，在
+  controls-schema 的 slider/number 字段声明 `bind: { param?, scale? }`（如
+  projectile `v0` → `bind: { param: 'speed' }`；wedge-film 观察位置 % →
+  `bind: { scale: 100 }`）。**URL 与 meta.defaultParams 一律为参数单位**；URL
+  恢复、remount 投影、`writeParam` 写回都经 `platform/param-binding.ts` 换算，
+  page onChange 用 `controlChangeToParams`。禁止在 page 手写 `/ 100` 或键名映射表。
+  schema 的 slider/number 初值必须等于 sim 默认参数（契约
+  `scene-params-contract`「初值与 sim 默认参数一致」）。
+- **逃生口**：`ScenePageOptions.paramSync` —— `activeKeys`、`applyParam`（单键接管，返回
   true 跳过默认处理）、`applyAll`（整体接管含首绘，用于批量约束语义）、
   `afterApply`（默认管线后、首绘前）、`projectControls`（remount/reset
   逃生口：对 sim 只读、同步、不得 rAF 延迟）。
@@ -187,7 +203,7 @@ bootScenePage({
 **已知限制**：
 
 - `emf-analogy` 无对象式 `setParams`（`defaultParams` 已清空，无可投影参数；
-  schema 仍有 tap/speed 控件）。登记在 `NO_CONTROL_PROJECTION`；
+  schema 仍有 tap/speed 控件）。登记在 `remount-projection-contract` 的 `SKIP`；
   `mechanical-wave` 仅有 `setParam` 单键 API，URL 管线会 fallback。
 - `xt-graph` / `tortoise-hare`：entry `getParams` 仅 `{speed}`，schema 只有
   preset-group + hint；通用投影无对象可投。preset 高亮由 URL `applyParam` /
@@ -210,9 +226,11 @@ bootScenePage({
 - URL 同步棘轮：`scene-params-contract.spec.ts` 强制「有 `defaultParams` 的
   场景必须有 `urlSyncKeys` 或 page 级 `paramSync` 自定义路径」，全量 100%
   结构化覆盖（原 vite.config 百分比阈值已由该棘轮取代，debt-ledger A7）。
-- 双契约棘轮：`NO_EVENTFUL_PROJECTION`（静默四件套 + fieldTypes）与
-  `NO_CONTROL_PROJECTION`（entry `getParams` **实现** + handle `fieldTypes`/`syncFromScene`，
-  且 getParams 返回键 ∩ fieldTypes ≠ ∅，或登记豁免）并存。
+- 运行时契约（取代原按源码正则推断的 NO_EVENTFUL / NO_CONTROL / encoding 三个棘轮）：
+  `control-codec-contract`——每个枚举选项与 toggle 经 schema `bind` 编码后在 sim
+  中往返不变；`remount-projection-contract`——用真实 page 的 createControls 挂面板，
+  改 sim 参数后走平台投影，控件必须显示 live 值且静默（无事件、无 setParams、
+  不写 URL）。`page-glue-ratchet` 冻结仍手写路由 / applyParam / syncFromScene 的页面数。
 - Owner-scoped writer / restore-once 契约见 `src/app/url-sync.ts` 与
   `tests/contract/scene-url-writer-contract.spec.ts`。布局 remount 不再把
   首屏 query 写回 scene。urlSyncKeys ∩ value-control 非空 ⇒ page 必须有
@@ -249,6 +267,11 @@ data-workspace 是可选布局能力，仅 `layoutConfig.dataWorkspace: true` �
 - **数据处理必有**：knowns + 标题下的一行说明 + 表格 + 数据类 `summaryFields`
 - **文案（强制，2026-09-24）**：说明只写有效位数，放在标题下面，一行。场景要区分加减与乘除时，仍用这一行写清各自保留的位数或小数位。表格内不放说明文案：表头只有字段名和单位，不渲染 `formatHint`；单元格只有输入、短状态（`✓` / `✗ 不通过` / `↻ 需重校` / `—`）和校对按钮，不写入 `readinessHint`、操作步骤或格式教程。未通过的具体原因留在 `title` 和 `aria-label`。已知量芯片只显示名称和数值。
 - **图像分析是数据处理之后的独立环节（非面板内步骤）**：`spec.chartAnalysis: true` 时悬浮工具条出现「图像分析」入口按钮（`.graph-analysis-entry`），按场景 eligibility 门控（如暂停要求、任务模块加载完成）；进入环节**不需要**数据处理完成——描点/拟合资格由场景 plotGate（`chartStepReady`，行字段 + 非选填数据步 summary 全通过）在图像区内单独门控（工具条描点按钮 disabled + 画布 `data-plot-hint` 提示）；点击进入后舞台画布收起（工具条宿主保留），面板切换为「只读回顾表 + 收养的图区」，再次点击返回数据处理。双缝等 `chartAnalysis: false` 场景没有该环节、也不创建按钮。图表形态由场景 graph slot 自定（散点 / 直线 / 柱状 / 波形皆可），进入环节时收养 slot 内容
+- **数值校对用声明式规则**：`gradeNumber(raw, rule)` / `gradeValue(value, rule)`
+  （`platform/data-workspace/grading.ts`）统一「格式 → 解析单位 → 期望值（null = 依赖未就绪，
+  relation 层）→ 容差（epsilon / ticks / 区间）→ 单位倍率与正负号诊断 → range 文案」。
+  场景只声明 unit / format / expected / tolerance / unitRatios / 文案，不再手写 ok / relation /
+  unitFeedback（参考 projectile-data-analysis、ticker-tape）。
 - `DataWorkspaceFieldSpec.optional?: boolean`（仅 summaryFields）标记选填汇总字段：不填不阻塞 `chartStepReady`（如 ticker-tape 的逐差法 a），填了仍按依赖与判分校验
 - `tableOrientation?: 'trials' | 'fields'`（默认 `'trials'`；`'fields'` 为转置表：行=字段、列=trial）
 - `trialLabels?: readonly string[]`（列/行显示标签；缺省 1 基组号。纸带计数点用 `['0','1',…]`）

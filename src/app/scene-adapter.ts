@@ -38,6 +38,11 @@ import {
 import { filterPresentationReadout } from './scene-adapter/readout-filter';
 import { registerSceneKeyboardShortcuts } from './scene-adapter/keyboard-shortcuts';
 import { createScenePerformanceRuntime } from './scene-adapter/perf-monitor';
+import { coerceAutoRun } from './scene-adapter/autorun';
+import {
+  clearSceneErrorNotice,
+  reportSceneError
+} from './scene-adapter/runtime-error';
 import {
   bindActiveSceneWriter,
   createSceneParamWriter,
@@ -47,24 +52,7 @@ import {
 } from './url-sync';
 
 export { filterPresentationReadout } from './scene-adapter/readout-filter';
-
-/**
- * B22：恢复值 → 是否播放。
- * 显式覆盖 0 / '0' / false / 'false' / NaN 判假，其余判真。
- * 不可用 `!== false && !== 0 && !== '0'`——`?autoRun=abc` 会经 parseInt 得 NaN 被误判为播。
- */
-export function coerceAutoRun(value: unknown): boolean {
-  if (
-    value === 0 ||
-    value === '0' ||
-    value === false ||
-    value === 'false' ||
-    (typeof value === 'number' && Number.isNaN(value))
-  ) {
-    return false;
-  }
-  return true;
-}
+export { coerceAutoRun } from './scene-adapter/autorun';
 
 export class SceneAdapter<
   TScene extends SceneInstance = SceneInstance
@@ -272,18 +260,25 @@ export class SceneAdapter<
       this.captureUrlSnapshot(readSceneParams(this.options.meta));
     }
 
-    this.scene = this.options.createScene({
-      canvas,
-      container,
-      slots,
-      theme,
-      mode,
-      demoHints,
-      sceneWriter: this._sceneWriter,
-      urlParams: this._urlSnapshot
-    });
-
-    this.scene.init();
+    try {
+      this.scene = this.options.createScene({
+        canvas,
+        container,
+        slots,
+        theme,
+        mode,
+        demoHints,
+        sceneWriter: this._sceneWriter,
+        urlParams: this._urlSnapshot
+      });
+      this.scene.init();
+    } catch (error) {
+      // 启动失败：不留空白页。控件/图表/读数对 scene 为空均已短路。
+      this.scene?.dispose();
+      this.scene = null;
+      reportSceneError(slots.animation ?? container, this.id, 'load', error);
+      return;
+    }
 
     const canvases = new Set<HTMLCanvasElement>([
       ...container.querySelectorAll('canvas'),
@@ -335,7 +330,11 @@ export class SceneAdapter<
       stepSeconds: this.options.stepSeconds ?? 1 / 60,
       maxSubSteps: this.options.maxSubSteps ?? 5,
       onStep: (dt) => this.scene?.step(dt),
-      onRender: () => this.scene?.render()
+      onRender: () => this.scene?.render(),
+      onError: (error) => {
+        this.pauseAll();
+        reportSceneError(this.slots?.animation, this.id, 'runtime', error);
+      }
     });
     this.lifecycle.onDispose(() => this.transport?.dispose());
 
@@ -672,6 +671,7 @@ export class SceneAdapter<
   }
 
   reset(): void {
+    clearSceneErrorNotice(this.slots?.animation);
     this.transport?.reset();
     this.perfMonitor?.stop();
     this.scene?.reset?.();

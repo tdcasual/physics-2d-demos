@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type ElectrostaticInductionMode =
   | 'separate'
@@ -93,9 +94,6 @@ const DEFAULTS: ElectrostaticInductionParams = {
   autoRun: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
 function flag(value: unknown, fallback: boolean): boolean {
   if (value === true || value === 1 || value === '1' || value === 'true')
     return true;
@@ -160,7 +158,7 @@ function derive(
           : '分离完成·保留电荷';
   return {
     ...params,
-    time: Math.max(0, finite(time, 0)),
+    time: Math.max(0, finiteOr(time, 0)),
     phase,
     rodDistance,
     chargeA,
@@ -202,7 +200,7 @@ export function createElectrostaticInductionSim(
     },
     step(dt: number): void {
       if (params.autoRun && phase !== 'neutral')
-        time += clamp(finite(dt, 0), 0, 0.1);
+        time += clamp(finiteOr(dt, 0), 0, 0.1);
     },
     act(action: InductionAction): void {
       if (action === 'approach') {

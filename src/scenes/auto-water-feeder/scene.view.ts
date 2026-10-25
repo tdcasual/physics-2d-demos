@@ -2,6 +2,7 @@ import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import { feederConstants, type FeederState } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateFeederViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -52,23 +53,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     water: 'rgba(45, 170, 219, 0.48)'
   }
 };
-
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 
 function roundedCard(
   ctx: CanvasRenderingContext2D,
@@ -179,7 +163,7 @@ function drawBatteryAndCircuit(
   ctx.moveTo(318 * scale, y - 15 * scale);
   ctx.lineTo(318 * scale, y + 15 * scale);
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     `U = ${state.supplyVoltage.toFixed(0)} V`,
     305 * scale,
@@ -200,7 +184,7 @@ function drawBatteryAndCircuit(
   ctx.moveTo(switchX - 20 * scale, y - 3 * scale);
   ctx.lineTo(switchX + 17 * scale, y - 18 * scale);
   ctx.stroke();
-  text(ctx, 'S', switchX, y - 28 * scale, p.ink, 14 * scale, 'center', 700);
+  drawText(ctx, 'S', switchX, y - 28 * scale, p.ink, 14 * scale, 'center', 700);
   roundedCard(
     ctx,
     230 * scale,
@@ -210,7 +194,7 @@ function drawBatteryAndCircuit(
     p,
     p.panel
   );
-  text(
+  drawText(
     ctx,
     'R₁ 传感',
     284 * scale,
@@ -229,7 +213,16 @@ function drawBatteryAndCircuit(
     p,
     p.panel
   );
-  text(ctx, 'R₀', 576 * scale, 183 * scale, p.ink, 14 * scale, 'center', 700);
+  drawText(
+    ctx,
+    'R₀',
+    576 * scale,
+    183 * scale,
+    p.ink,
+    14 * scale,
+    'center',
+    700
+  );
   roundedCard(
     ctx,
     418 * scale,
@@ -239,7 +232,16 @@ function drawBatteryAndCircuit(
     p,
     p.panel
   );
-  text(ctx, 'V', 444 * scale, 239 * scale, p.teal, 17 * scale, 'center', 700);
+  drawText(
+    ctx,
+    'V',
+    444 * scale,
+    239 * scale,
+    p.teal,
+    17 * scale,
+    'center',
+    700
+  );
   ctx.strokeStyle = p.teal;
   ctx.lineWidth = 2 * scale;
   ctx.setLineDash([7 * scale, 6 * scale]);
@@ -250,7 +252,7 @@ function drawBatteryAndCircuit(
   ctx.lineTo(444 * scale, 500 * scale);
   ctx.stroke();
   ctx.setLineDash([]);
-  text(
+  drawText(
     ctx,
     `U₀ = ${state.meterVoltage.toFixed(2)} V`,
     502 * scale,
@@ -327,7 +329,7 @@ function drawTankAndForces(
   ctx.moveTo(tankX, waterY);
   ctx.lineTo(tankX + tankW, waterY);
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     `h = ${state.effectiveDepth.toFixed(2)} m`,
     tankX - 14 * scale,
@@ -337,7 +339,7 @@ function drawTankAndForces(
     'right',
     700
   );
-  text(
+  drawText(
     ctx,
     '水槽（导体液体）',
     tankX + tankW / 2,
@@ -355,7 +357,7 @@ function drawTankAndForces(
     waterY - objectH * 0.46 - state.displacement * 32 * scale
   );
   roundedCard(ctx, objectX, objectY, 100 * scale, objectH, p, p.panel);
-  text(
+  drawText(
     ctx,
     'A',
     objectX + 50 * scale,
@@ -382,7 +384,7 @@ function drawTankAndForces(
   ctx.lineTo(objectX + 50 * scale, tankY - 4 * scale);
   ctx.stroke();
   ctx.setLineDash([]);
-  text(
+  drawText(
     ctx,
     `Δx = ${(state.displacement * 100).toFixed(1)} cm`,
     objectX + 50 * scale,
@@ -401,7 +403,7 @@ function drawTankAndForces(
     p.blue,
     3 * scale
   );
-  text(
+  drawText(
     ctx,
     `F浮=${state.buoyantForce.toFixed(1)} N`,
     objectX + 104 * scale,
@@ -420,7 +422,7 @@ function drawTankAndForces(
     p.red,
     3 * scale
   );
-  text(
+  drawText(
     ctx,
     `G=${state.weight.toFixed(1)} N`,
     objectX + 104 * scale,
@@ -430,7 +432,7 @@ function drawTankAndForces(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `F弹=${state.springForce.toFixed(1)} N`,
     objectX - 8 * scale,
@@ -475,7 +477,7 @@ function drawTankAndForces(
     5 * scale
   );
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '进水阀',
     valveX + 70 * scale,
@@ -485,7 +487,7 @@ function drawTankAndForces(
     'center',
     600
   );
-  text(
+  drawText(
     ctx,
     '排水口',
     valveX + 70 * scale,
@@ -516,8 +518,8 @@ function drawPanel(
 ): void {
   const x = 850 * scale;
   const w = 320 * scale;
-  text(ctx, '自动喂水器', x, 38 * scale, p.ink, 24 * scale, 'left', 700);
-  text(
+  drawText(ctx, '自动喂水器', x, 38 * scale, p.ink, 24 * scale, 'left', 700);
+  drawText(
     ctx,
     '力学平衡 · 传感器 · 闭合电路',
     x,
@@ -534,7 +536,7 @@ function drawPanel(
   ctx.lineTo(x + w, 88 * scale);
   ctx.stroke();
   roundedCard(ctx, x, 110 * scale, w, 206 * scale, p, envTone(p));
-  text(
+  drawText(
     ctx,
     '实时物理量',
     x + 18 * scale,
@@ -561,11 +563,11 @@ function drawPanel(
     const row = Math.floor(index / 2);
     const rx = x + 18 * scale + col * 156 * scale;
     const y = 171 * scale + row * 39 * scale;
-    text(ctx, label, rx, y, p.muted, 12 * scale, 'left', 600);
-    text(ctx, value, rx + 136 * scale, y, color, 13 * scale, 'right', 700);
+    drawText(ctx, label, rx, y, p.muted, 12 * scale, 'left', 600);
+    drawText(ctx, value, rx + 136 * scale, y, color, 13 * scale, 'right', 700);
   });
   roundedCard(ctx, x, 338 * scale, w, 184 * scale, p);
-  text(
+  drawText(
     ctx,
     '联动关系',
     x + 18 * scale,
@@ -575,7 +577,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'F浮 = ρgS h浸',
     x + 18 * scale,
@@ -585,7 +587,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'F浮 = G + F弹',
     x + 18 * scale,
@@ -595,7 +597,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'R₁ = R₀ − kₛΔx',
     x + 18 * scale,
@@ -605,7 +607,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'U₀ = U · R₀ / (R₀ + R₁)',
     x + 18 * scale,
@@ -615,7 +617,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     '水位 ↑ → 浮力 ↑ → 电阻变 → 读数变',
     x + 18 * scale,
@@ -673,7 +675,7 @@ export function createFeederView(options: CreateFeederViewOptions = {}) {
     ctx.translate(offsetX, offsetY);
     ctx.scale(fit, fit);
     drawGrid(ctx, p, scale);
-    text(
+    drawText(
       ctx,
       '自动喂水器物理模型',
       28 * scale,
@@ -683,7 +685,7 @@ export function createFeederView(options: CreateFeederViewOptions = {}) {
       'left',
       700
     );
-    text(
+    drawText(
       ctx,
       '水位变化 → 力学平衡 → 电阻变化 → 电压读数',
       28 * scale,
@@ -696,7 +698,7 @@ export function createFeederView(options: CreateFeederViewOptions = {}) {
     drawBatteryAndCircuit(ctx, state, p, scale);
     drawTankAndForces(ctx, state, p, scale);
     drawPanel(ctx, state, p, scale);
-    text(
+    drawText(
       ctx,
       '调节水深与弹簧参数，观察力电联动',
       30 * scale,

@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type BoundedFieldShape = 'half-plane' | 'circle' | 'triangle';
 export type BoundedFieldModel = 'standard' | 'rotate' | 'scale';
@@ -70,9 +71,6 @@ const DEFAULTS: BoundedMagneticParams = {
   autoRun: true,
   showVectors: true
 };
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
 function normalize(
   input: Partial<BoundedMagneticParams>,
   previous = DEFAULTS
@@ -91,17 +89,17 @@ function normalize(
         ? input.model
         : previous.model,
     entryAngle: clamp(
-      finite(input.entryAngle, previous.entryAngle),
+      finiteOr(input.entryAngle, previous.entryAngle),
       boundedMagneticConstants.entryAngleMin,
       boundedMagneticConstants.entryAngleMax
     ),
     orbitRadius: clamp(
-      finite(input.orbitRadius, previous.orbitRadius),
+      finiteOr(input.orbitRadius, previous.orbitRadius),
       boundedMagneticConstants.orbitRadiusMin,
       boundedMagneticConstants.orbitRadiusMax
     ),
     fieldSize: clamp(
-      finite(input.fieldSize, previous.fieldSize),
+      finiteOr(input.fieldSize, previous.fieldSize),
       boundedMagneticConstants.fieldSizeMin,
       boundedMagneticConstants.fieldSizeMax
     ),
@@ -232,7 +230,7 @@ export function createBoundedMagneticSim(
     step(dt: number): void {
       if (params.autoRun)
         time =
-          (time + clamp(finite(dt, 0), 0, 0.05)) %
+          (time + clamp(finiteOr(dt, 0), 0, 0.05)) %
           boundedMagneticConstants.animationPeriod;
     },
     reset(): void {

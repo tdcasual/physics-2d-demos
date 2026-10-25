@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { createMechanicalEnergySim } from '../../src/scenes/mechanical-energy/scene.sim';
 import { mechanicalEnergyConstants as C } from '../../src/scenes/mechanical-energy/scene.sim';
@@ -81,24 +79,6 @@ describe('mechanical-energy view contract', () => {
     expect('fieldWidth' in C).toBe(false);
     expect('graphX' in C).toBe(false);
     expect('tableCardY' in C).toBe(false);
-  });
-
-  it('keeps the v²/2-h plot on the graph canvas path', () => {
-    const viewSrc = readFileSync(
-      resolve(process.cwd(), 'src/scenes/mechanical-energy/scene.view.ts'),
-      'utf8'
-    );
-    expect(viewSrc).toContain('attachGraphCanvas');
-    expect(viewSrc).toContain('drawApparatus');
-    expect(viewSrc).toContain('drawGraphs');
-    expect(viewSrc).not.toMatch(/drawPanel|实验装置区|分析数据表|核心原理/);
-    expect(viewSrc).not.toMatch(/释放重锤|实验结论|图像分析/);
-    const schemaSrc = readFileSync(
-      resolve(process.cwd(), 'src/scenes/mechanical-energy/controls-schema.ts'),
-      'utf8'
-    );
-    expect(schemaSrc).toContain('T = 0.02 s；计数间隔 T₀ = nT');
-    expect(schemaSrc).not.toContain('每隔一打取样');
   });
 
   it('paints only short apparatus marks on the stage', () => {

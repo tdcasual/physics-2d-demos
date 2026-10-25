@@ -39,7 +39,7 @@ export const wedgeFilmInterferenceMeta: SceneMeta = {
     dTop: 0,
     dBottom: 800,
     n: 1.5,
-    cursorY: 50,
+    cursorY: 0.5,
     autoRun: 1
   },
   urlSyncKeys: [

@@ -8,6 +8,7 @@ import {
   type ProjectileComponentsPoint,
   type ProjectileComponentsState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateProjectileComponentsViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -64,23 +65,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     hatch: '#6b7a8d'
   }
 };
-
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 
 function arrow(
   ctx: CanvasRenderingContext2D,
@@ -229,9 +213,18 @@ function drawAxes(
   const tick = fontSize(layout, 12, 9);
   arrow(ctx, layout.originX, layout.originY, xEnd, layout.originY, p.ink, 2.4);
   arrow(ctx, layout.originX, layout.originY, layout.originX, yEnd, p.ink, 2.4);
-  text(ctx, 'x', xEnd + 10, layout.originY - 12, p.ink, tick, 'center', 700);
-  text(ctx, 'y', layout.originX - 14, yEnd + 2, p.ink, tick, 'center', 700);
-  text(
+  drawText(
+    ctx,
+    'x',
+    xEnd + 10,
+    layout.originY - 12,
+    p.ink,
+    tick,
+    'center',
+    700
+  );
+  drawText(ctx, 'y', layout.originX - 14, yEnd + 2, p.ink, tick, 'center', 700);
+  drawText(
     ctx,
     '0',
     layout.originX - 12,
@@ -275,7 +268,7 @@ function drawAxes(
       ctx.moveTo(x, layout.originY - 4);
       ctx.lineTo(x, layout.originY + 4);
       ctx.stroke();
-      text(
+      drawText(
         ctx,
         String(meters),
         x,
@@ -298,7 +291,7 @@ function drawAxes(
       ctx.moveTo(layout.originX - 4, y);
       ctx.lineTo(layout.originX + 4, y);
       ctx.stroke();
-      text(
+      drawText(
         ctx,
         String(meters),
         layout.originX - 10,
@@ -402,7 +395,7 @@ function drawStrobe(
       ctx.setLineDash([]);
       drawBall(ctx, pos.x, pos.y, r, p.gold, isNow ? 1 : 0.82);
       const ly = pos.y < layout.originY + 16 ? pos.y + 14 : pos.y - 14;
-      text(
+      drawText(
         ctx,
         `${point.time.toFixed(1)}s`,
         pos.x + 8,
@@ -498,9 +491,9 @@ function drawVectors(
   arrow(ctx, pos.x, pos.y, vyTip.x, vyTip.y, p.red, 3.4);
   arrow(ctx, pos.x, pos.y, vTip.x, vTip.y, p.teal, 3.6);
   const fs = fontSize(layout, 13, 9);
-  text(ctx, 'vₓ', vxLabel.x, vxLabel.y, p.blue, fs, 'left', 700);
-  text(ctx, 'vᵧ', vyLabel.x, vyLabel.y, p.red, fs, 'right', 700);
-  text(ctx, 'v', vLabel.x, vLabel.y, p.teal, fs, 'left', 700);
+  drawText(ctx, 'vₓ', vxLabel.x, vxLabel.y, p.blue, fs, 'left', 700);
+  drawText(ctx, 'vᵧ', vyLabel.x, vyLabel.y, p.red, fs, 'right', 700);
+  drawText(ctx, 'v', vLabel.x, vLabel.y, p.teal, fs, 'left', 700);
 }
 
 function drawCurrent(

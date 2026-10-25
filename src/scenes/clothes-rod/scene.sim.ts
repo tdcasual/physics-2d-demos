@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 export type RodModel = 'smooth' | 'fixed';
 export type RodParams = {
   model: RodModel;
@@ -59,29 +60,26 @@ const DEFAULTS: RodParams = {
   height: 0.8,
   weight: 40
 };
-function finite(v: unknown, f: number): number {
-  return typeof v === 'number' && Number.isFinite(v) ? v : f;
-}
 function normalize(input: Partial<RodParams>, prev = DEFAULTS): RodParams {
   return {
     model: input.model === 'fixed' ? 'fixed' : 'smooth',
     distance: clamp(
-      finite(input.distance, prev.distance),
+      finiteOr(input.distance, prev.distance),
       clothesRodConstants.distanceMin,
       clothesRodConstants.distanceMax
     ),
     length: clamp(
-      finite(input.length, prev.length),
+      finiteOr(input.length, prev.length),
       clothesRodConstants.lengthMin,
       clothesRodConstants.lengthMax
     ),
     height: clamp(
-      finite(input.height, prev.height),
+      finiteOr(input.height, prev.height),
       clothesRodConstants.heightMin,
       clothesRodConstants.heightMax
     ),
     weight: clamp(
-      finite(input.weight, prev.weight),
+      finiteOr(input.weight, prev.weight),
       clothesRodConstants.weightMin,
       clothesRodConstants.weightMax
     )

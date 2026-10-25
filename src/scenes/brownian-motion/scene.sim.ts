@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type BrownianParams = {
   temperature: number;
@@ -56,9 +57,6 @@ const DEFAULTS: BrownianParams = {
   autoRun: true,
   slowMode: false
 };
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
 function flag(value: unknown, fallback: boolean): boolean {
   if (value === true || value === 1 || value === '1' || value === 'true')
     return true;
@@ -72,12 +70,12 @@ function normalize(
 ): BrownianParams {
   return {
     temperature: clamp(
-      finite(input.temperature, previous.temperature),
+      finiteOr(input.temperature, previous.temperature),
       brownianConstants.temperatureMin,
       brownianConstants.temperatureMax
     ),
     particleRadius: clamp(
-      finite(input.particleRadius, previous.particleRadius),
+      finiteOr(input.particleRadius, previous.particleRadius),
       brownianConstants.particleMinRadius,
       brownianConstants.particleMaxRadius
     ),
@@ -147,7 +145,7 @@ function derive(params: BrownianParams, time: number): BrownianState {
   };
 }
 export function brownianAt(params: BrownianParams, time = 0): BrownianState {
-  return derive(normalize(params), Math.max(0, finite(time, 0)));
+  return derive(normalize(params), Math.max(0, finiteOr(time, 0)));
 }
 export function createBrownianSim(initial: Partial<BrownianParams> = {}) {
   let params = normalize(initial);
@@ -166,7 +164,7 @@ export function createBrownianSim(initial: Partial<BrownianParams> = {}) {
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      time += clamp(finite(dt, 0), 0, 0.1) * (params.slowMode ? 0.35 : 1);
+      time += clamp(finiteOr(dt, 0), 0, 0.1) * (params.slowMode ? 0.35 : 1);
     }
   };
 }

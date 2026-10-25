@@ -27,6 +27,7 @@ export const tickerTapeControlsSchema: ControlsSchema = {
         {
           type: 'toggle',
           key: 'countEvery',
+          bind: { values: { true: 5, false: 1 } },
           label: '每 5 点取计数点',
           value: false
         },
@@ -38,6 +39,7 @@ export const tickerTapeControlsSchema: ControlsSchema = {
         {
           type: 'select',
           key: 'vSigFigs',
+          bind: { numeric: true },
           label: '有效位数',
           value: '3',
           options: [
@@ -55,6 +57,7 @@ export const tickerTapeControlsSchema: ControlsSchema = {
         {
           type: 'preset-group',
           key: 'noise',
+          bind: { values: { off: 0, typical: 1, large: 2 } },
           columns: 3,
           initialActive: 'off',
           presets: [

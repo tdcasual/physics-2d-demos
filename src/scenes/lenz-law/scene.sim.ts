@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type LenzMotion = 'approach' | 'recede';
 export type LenzPole = 'N' | 'S';
@@ -81,10 +82,6 @@ const DEFAULTS: LenzParams = {
   showVectors: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function asFlag(value: unknown, fallback: boolean): boolean {
   if (value === true || value === 1 || value === '1' || value === 'true')
     return true;
@@ -103,12 +100,12 @@ function normalize(
         ? input.motion
         : previous.motion,
     speed: clamp(
-      finite(input.speed, previous.speed),
+      finiteOr(input.speed, previous.speed),
       lenzLawConstants.speedMin,
       lenzLawConstants.speedMax
     ),
     magnetStrength: clamp(
-      finite(input.magnetStrength, previous.magnetStrength),
+      finiteOr(input.magnetStrength, previous.magnetStrength),
       lenzLawConstants.strengthMin,
       lenzLawConstants.strengthMax
     ),
@@ -173,7 +170,7 @@ export function lenzLawAt(
   distance: number,
   time = 0
 ): LenzState {
-  return derive(normalize(params), distance, Math.max(0, finite(time, 0)));
+  return derive(normalize(params), distance, Math.max(0, finiteOr(time, 0)));
 }
 
 export function createLenzLawSim(initial: Partial<LenzParams> = {}) {
@@ -201,7 +198,7 @@ export function createLenzLawSim(initial: Partial<LenzParams> = {}) {
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      const duration = clamp(finite(dt, 0), 0, 0.1);
+      const duration = clamp(finiteOr(dt, 0), 0, 0.1);
       time += duration;
       distance +=
         (params.motion === 'approach' ? -1 : 1) *

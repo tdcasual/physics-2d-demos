@@ -14,7 +14,7 @@ export const photoelectricCutoffControlsSchema: ControlsSchema = {
           min: C.wavelengthMin,
           max: C.wavelengthMax,
           step: 1,
-          value: 411,
+          value: 500,
           unit: 'nm'
         },
         {
@@ -24,7 +24,7 @@ export const photoelectricCutoffControlsSchema: ControlsSchema = {
           min: C.intensityMin,
           max: C.intensityMax,
           step: 1,
-          value: 80,
+          value: 50,
           unit: '%'
         },
         {

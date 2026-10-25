@@ -2,6 +2,7 @@ import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import { capacitorConstants, type CapacitorState } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateCapacitorViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -73,22 +74,6 @@ const {
 } = capacitorConstants;
 const L = capacitorConstants.layout;
 
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 function roundedRect(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -146,9 +131,9 @@ function drawBattery(ctx: CanvasRenderingContext2D, p: Palette): void {
     ctx.lineTo(x + width / 2, y + offset);
     ctx.stroke();
   }
-  text(ctx, '+', x - 55, y - 4, p.ink, 18, 'center', L.fontBold);
-  text(ctx, '−', x - 55, y + 57, p.ink, 18, 'center', L.fontBold);
-  text(ctx, 'E', x + 44, y + 29, p.ink, 18, 'left', L.fontBold);
+  drawText(ctx, '+', x - 55, y - 4, p.ink, 18, 'center', L.fontBold);
+  drawText(ctx, '−', x - 55, y + 57, p.ink, 18, 'center', L.fontBold);
+  drawText(ctx, 'E', x + 44, y + 29, p.ink, 18, 'left', L.fontBold);
 }
 
 function drawResistor(ctx: CanvasRenderingContext2D, p: Palette): void {
@@ -188,7 +173,7 @@ function drawResistor(ctx: CanvasRenderingContext2D, p: Palette): void {
   ctx.moveTo(x + L.resistorHalf, y);
   ctx.lineTo(x + L.resistorLead + 1, y);
   ctx.stroke();
-  text(ctx, 'R', x, y - 31, p.ink, 19, 'center', L.fontBold);
+  drawText(ctx, 'R', x, y - 31, p.ink, 19, 'center', L.fontBold);
 }
 
 function drawCapacitor(
@@ -224,9 +209,9 @@ function drawCapacitor(
   ctx.arc(x + 12, y - 29, 5, 0, Math.PI * 2);
   ctx.fill();
   ctx.globalAlpha = 1;
-  text(ctx, '极板 A', x, y - 51, p.ink, 15, 'center', 600);
-  text(ctx, '极板 B', x, y + 52, p.ink, 15, 'center', 600);
-  text(ctx, 'C', x - 53, y + 8, p.ink, 19, 'center', L.fontBold);
+  drawText(ctx, '极板 A', x, y - 51, p.ink, 15, 'center', 600);
+  drawText(ctx, '极板 B', x, y + 52, p.ink, 15, 'center', 600);
+  drawText(ctx, 'C', x - 53, y + 8, p.ink, 19, 'center', L.fontBold);
   ctx.strokeStyle = p.red;
   ctx.lineWidth = 2;
   ctx.setLineDash([6, 6]);
@@ -263,7 +248,7 @@ function drawMeter(
     state.currentMilliamp < 0 ? p.red : p.teal,
     3
   );
-  text(ctx, 'I', x, y + 5, p.ink, 15, 'center', L.fontBold);
+  drawText(ctx, 'I', x, y + 5, p.ink, 15, 'center', L.fontBold);
 }
 
 function drawCircuit(
@@ -298,7 +283,7 @@ function drawCircuit(
     ctx.lineTo(FIELD_W - 25, y);
     ctx.stroke();
   }
-  text(
+  drawText(
     ctx,
     '电路模型：开关控制充电 / 放电',
     FIELD_W / 2,
@@ -349,7 +334,7 @@ function drawCircuit(
     L.switchY
   );
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '1 充电',
     L.labelChargeX,
@@ -359,7 +344,7 @@ function drawCircuit(
     'left',
     L.fontBold
   );
-  text(
+  drawText(
     ctx,
     '0 断开',
     L.labelChargeX,
@@ -369,7 +354,7 @@ function drawCircuit(
     'left',
     L.fontBold
   );
-  text(
+  drawText(
     ctx,
     '2 放电',
     L.labelChargeX,
@@ -379,7 +364,7 @@ function drawCircuit(
     'left',
     L.fontBold
   );
-  text(
+  drawText(
     ctx,
     `E = ${state.params.voltage.toFixed(1)} V`,
     L.batteryX,
@@ -389,7 +374,7 @@ function drawCircuit(
     'center',
     600
   );
-  text(
+  drawText(
     ctx,
     '电流方向与电子运动相反',
     L.currentLabelX,
@@ -445,7 +430,7 @@ function drawGraphs(
       ctx.stroke();
     }
   }
-  text(
+  drawText(
     ctx,
     'Uc / V',
     GRAPH_LEFT - 8,
@@ -455,7 +440,7 @@ function drawGraphs(
     'left',
     L.fontBold
   );
-  text(
+  drawText(
     ctx,
     'I / mA',
     GRAPH_LEFT - 8,
@@ -465,7 +450,7 @@ function drawGraphs(
     'left',
     L.fontBold
   );
-  text(
+  drawText(
     ctx,
     't / s',
     GRAPH_RIGHT,
@@ -483,7 +468,7 @@ function drawGraphs(
   ctx.lineTo(graphX(tauRatio), CURRENT_BOTTOM);
   ctx.stroke();
   ctx.setLineDash([]);
-  text(
+  drawText(
     ctx,
     '1τ (63.2%)',
     graphX(tauRatio) + 8,
@@ -559,7 +544,7 @@ function drawPanel(
   );
   ctx.fill();
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '电容器充放电实验室',
     PANEL_X + L.panelTitleX,
@@ -569,7 +554,7 @@ function drawPanel(
     'left',
     L.fontBold
   );
-  text(
+  drawText(
     ctx,
     '高中物理',
     PANEL_X + PANEL_W - L.panelTitleRight,
@@ -594,7 +579,7 @@ function drawPanel(
     14
   );
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '实时实验测量值',
     PANEL_X + L.panelReadoutTextX,
@@ -604,7 +589,7 @@ function drawPanel(
     'left',
     L.fontBold
   );
-  text(
+  drawText(
     ctx,
     `极板电压 Uc：${state.voltageAcross.toFixed(2)} V`,
     PANEL_X + L.panelReadoutTextX,
@@ -614,7 +599,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `回路电流 I：${state.currentMilliamp.toFixed(2)} mA`,
     PANEL_X + L.panelReadoutTextX,
@@ -624,7 +609,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `积累电荷 Q：${state.chargeMicrocoulomb.toFixed(1)} μC`,
     PANEL_X + L.panelReadoutTextX,
@@ -644,7 +629,7 @@ function drawPanel(
     12
   );
   ctx.fill();
-  text(
+  drawText(
     ctx,
     `时间常数 τ = RC：${state.tau.toFixed(2)} s`,
     PANEL_X + L.panelReadoutTextX,
@@ -664,7 +649,7 @@ function drawPanel(
     14
   );
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '电容定义式：',
     PANEL_X + L.panelFormulaTextX,
@@ -674,7 +659,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     'C = Q / Uc',
     PANEL_X + PANEL_W - 50,
@@ -684,7 +669,7 @@ function drawPanel(
     'right',
     L.fontBold
   );
-  text(
+  drawText(
     ctx,
     `Q = ${state.params.capacitance} μF × ${state.voltageAcross.toFixed(2)} V`,
     PANEL_X + L.panelFormulaTextX,
@@ -694,7 +679,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `= ${state.chargeMicrocoulomb.toFixed(1)} μC`,
     PANEL_X + L.panelFormulaTextX,
@@ -719,7 +704,7 @@ function drawPanel(
     14
   );
   ctx.fill();
-  text(
+  drawText(
     ctx,
     state.params.mode === 1
       ? '充电：Uc 上升，I 衰减'

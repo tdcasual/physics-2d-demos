@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type OrbitModel = 'rope' | 'rod';
 export type OrbitCriticalParams = {
@@ -62,9 +63,6 @@ const DEFAULTS: OrbitCriticalParams = {
   autoRun: true,
   showVectors: true
 };
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
 function normalize(
   input: Partial<OrbitCriticalParams>,
   previous = DEFAULTS
@@ -77,22 +75,22 @@ function normalize(
           ? 'rope'
           : previous.model,
     bottomSpeed: clamp(
-      finite(input.bottomSpeed, previous.bottomSpeed),
+      finiteOr(input.bottomSpeed, previous.bottomSpeed),
       orbitCriticalConstants.bottomSpeedMin,
       orbitCriticalConstants.bottomSpeedMax
     ),
     radius: clamp(
-      finite(input.radius, previous.radius),
+      finiteOr(input.radius, previous.radius),
       orbitCriticalConstants.radiusMin,
       orbitCriticalConstants.radiusMax
     ),
     gravity: clamp(
-      finite(input.gravity, previous.gravity),
+      finiteOr(input.gravity, previous.gravity),
       orbitCriticalConstants.gravityMin,
       orbitCriticalConstants.gravityMax
     ),
     angle: clamp(
-      finite(input.angle, previous.angle),
+      finiteOr(input.angle, previous.angle),
       orbitCriticalConstants.angleMin,
       orbitCriticalConstants.angleMax
     ),
@@ -181,7 +179,7 @@ export function createOrbitCriticalSim(
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      const seconds = clamp(finite(dt, 0), 0, 0.05);
+      const seconds = clamp(finiteOr(dt, 0), 0, 0.05);
       params.angle += orbitCriticalConstants.angleStep * seconds;
       if (params.angle > orbitCriticalConstants.angleMax)
         params.angle = orbitCriticalConstants.angleMin;

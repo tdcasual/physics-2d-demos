@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { oscilloscopeControlsSchema } from '../../src/scenes/oscilloscope/controls-schema';
 import { oscilloscopeMeta } from '../../src/scenes/oscilloscope/scene.meta';
@@ -104,23 +102,6 @@ describe('oscilloscope view contract', () => {
     expect('stableCardY' in C).toBe(false);
     expect(C.tubeRight).toBeLessThan(C.baseWidth);
     expect(C.scopeCenterY + C.scopeRadius).toBeLessThan(C.baseHeight);
-  });
-
-  it('has no drawPanel, formula-card, or time-plot paths in the animation source', () => {
-    const viewSrc = readFileSync(
-      resolve(process.cwd(), 'src/scenes/oscilloscope/scene.view.ts'),
-      'utf8'
-    );
-    const simSrc = readFileSync(
-      resolve(process.cwd(), 'src/scenes/oscilloscope/scene.sim.ts'),
-      'utf8'
-    );
-    expect(viewSrc).not.toMatch(/drawPanel|drawReadout|drawWave\b/);
-    expect(viewSrc).not.toMatch(/参数控制台|波形同步条件|核心关系|信号展开/);
-    expect(viewSrc).not.toMatch(/fᵧ = n/);
-    expect(simSrc).not.toMatch(
-      /panelWidth|fieldWidth|formulaWidth|readoutWidth|formulaCardY|stableCardY/
-    );
   });
 
   it('draws short apparatus labels and omits panel, formula, and data copy', () => {

@@ -6,6 +6,7 @@ import {
   waveSuperposeConstants,
   type WaveSuperposeState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateWaveSuperposeViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -70,22 +71,6 @@ const {
   axisLabelY: LABEL_Y,
   pointRadius: POINT_R
 } = waveSuperposeConstants;
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 function card(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -176,7 +161,7 @@ export function createWaveSuperposeView(
     ctx.scale(fit, fit);
     ctx.fillStyle = p.bg;
     ctx.fillRect(0, 0, BASE_W, BASE_H);
-    text(
+    drawText(
       ctx,
       '机械波的相遇与叠加',
       BASE_W / 2,
@@ -186,7 +171,7 @@ export function createWaveSuperposeView(
       'center',
       700
     );
-    text(
+    drawText(
       ctx,
       '波的叠加原理（矢量和）',
       BASE_W / 2,
@@ -228,7 +213,7 @@ export function createWaveSuperposeView(
     ctx.beginPath();
     ctx.arc(pointX, pointY, POINT_R, 0, Math.PI * 2);
     ctx.fill();
-    text(
+    drawText(
       ctx,
       `x=${state.observationX.toFixed(1)}`,
       pointX,
@@ -237,10 +222,18 @@ export function createWaveSuperposeView(
       12 * scale,
       'center'
     );
-    text(ctx, 'x / m', GRAPH_R - 8, LABEL_Y, p.muted, 13 * scale, 'right');
-    text(ctx, 'y / m', px(0) + 14, GRAPH_T + 10, p.muted, 13 * scale, 'left');
+    drawText(ctx, 'x / m', GRAPH_R - 8, LABEL_Y, p.muted, 13 * scale, 'right');
+    drawText(
+      ctx,
+      'y / m',
+      px(0) + 14,
+      GRAPH_T + 10,
+      p.muted,
+      13 * scale,
+      'left'
+    );
     card(ctx, 28, CARD_Y, 1144, CARD_H, p);
-    text(
+    drawText(
       ctx,
       '波源 1（向右传播）',
       54,
@@ -250,7 +243,7 @@ export function createWaveSuperposeView(
       'left',
       700
     );
-    text(
+    drawText(
       ctx,
       '波源 2（向左传播）',
       872,
@@ -260,7 +253,7 @@ export function createWaveSuperposeView(
       'left',
       700
     );
-    text(
+    drawText(
       ctx,
       `t = ${state.time.toFixed(2)} s`,
       BASE_W / 2,
@@ -270,7 +263,7 @@ export function createWaveSuperposeView(
       'center',
       600
     );
-    text(
+    drawText(
       ctx,
       `y = y₁ + y₂     ${state.sum.toFixed(2)} = ${state.y1.toFixed(2)} + ${state.y2.toFixed(2)}`,
       BASE_W / 2,
@@ -280,7 +273,7 @@ export function createWaveSuperposeView(
       'center',
       700
     );
-    text(
+    drawText(
       ctx,
       `A₁ ${state.amplitude1.toFixed(1)} m   λ₁ ${state.wavelength1.toFixed(1)} m`,
       54,
@@ -288,7 +281,7 @@ export function createWaveSuperposeView(
       p.red,
       13 * scale
     );
-    text(
+    drawText(
       ctx,
       `A₂ ${state.amplitude2.toFixed(1)} m   λ₂ ${state.wavelength2.toFixed(1)} m`,
       872,

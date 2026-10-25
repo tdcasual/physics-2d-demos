@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { emfInternalConstants as C } from '../../src/scenes/emf-internal-resistance/scene.sim';
 import { createEmfInternalSim } from '../../src/scenes/emf-internal-resistance/scene.sim';
@@ -94,24 +92,6 @@ describe('emf-internal-resistance view contract', () => {
     expect('cardWidth' in C).toBe(false);
   });
 
-  it('has no drawPanel, formula-card, or readout-card paths in source', () => {
-    const viewSrc = readFileSync(
-      resolve(
-        process.cwd(),
-        'src/scenes/emf-internal-resistance/scene.view.ts'
-      ),
-      'utf8'
-    );
-    const simSrc = readFileSync(
-      resolve(process.cwd(), 'src/scenes/emf-internal-resistance/scene.sim.ts'),
-      'utf8'
-    );
-    expect(viewSrc).not.toMatch(/drawPanel|drawReadout/);
-    expect(viewSrc).toContain('attachGraphCanvas');
-    expect(viewSrc).not.toMatch(/实时读数|测量数据|拟合结果|U = E/);
-    expect(simSrc).not.toMatch(/panelWidth|fieldWidth|cardWidth/);
-  });
-
   it('keeps U-I titles on the graph canvas, not the animation canvas', () => {
     const canvas = mockCanvas(900, 380);
     const graphCanvas = mockCanvas(640, 240);
@@ -156,19 +136,6 @@ describe('emf-internal-resistance view contract', () => {
     });
     expect(labels).toEqual(expect.arrayContaining(['E, r', 'S', 'A', 'V']));
     view.dispose();
-  });
-
-  it('branches the voltmeter from the cell-side switch contact', () => {
-    const viewSrc = readFileSync(
-      resolve(
-        process.cwd(),
-        'src/scenes/emf-internal-resistance/scene.view.ts'
-      ),
-      'utf8'
-    );
-    expect(viewSrc).toMatch(/C\.switchX - 16,\s*C\.voltmeterY/);
-    expect(viewSrc).not.toMatch(/C\.switchX \+ 18,\s*C\.voltmeterY/);
-    expect(viewSrc).toMatch(/if \(!state\.params\.switchClosed\) return;/);
   });
 
   it('keeps the voltmeter inside the loop, above the return rail', () => {

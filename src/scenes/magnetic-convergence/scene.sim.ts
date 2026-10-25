@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type MagneticMode = 'converge' | 'diverge';
 
@@ -77,10 +78,6 @@ const DEFAULTS: MagneticConvergenceParams = {
   showField: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function normalizeMode(value: unknown, fallback: MagneticMode): MagneticMode {
   return value === 'diverge' || value === 'converge' ? value : fallback;
 }
@@ -92,13 +89,13 @@ function normalize(
   return {
     mode: normalizeMode(input.mode, previous.mode),
     radiusRatio: clamp(
-      finite(input.radiusRatio, previous.radiusRatio),
+      finiteOr(input.radiusRatio, previous.radiusRatio),
       magneticConvergenceConstants.radiusRatioMin,
       magneticConvergenceConstants.radiusRatioMax
     ),
     particleCount: Math.round(
       clamp(
-        finite(input.particleCount, previous.particleCount),
+        finiteOr(input.particleCount, previous.particleCount),
         magneticConvergenceConstants.particleCountMin,
         magneticConvergenceConstants.particleCountMax
       )
@@ -246,7 +243,7 @@ export function createMagneticConvergenceSim(
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      const delta = Math.max(0, finite(dt, 0));
+      const delta = Math.max(0, finiteOr(dt, 0));
       time += delta;
       phase = (phase + delta * magneticConvergenceConstants.emitSpeed) % 1;
     },

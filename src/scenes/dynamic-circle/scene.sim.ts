@@ -1,5 +1,8 @@
 import { readoutOccludesStage } from '../../platform/stage-readout';
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
+import { betterPose, containInRect, measureStageLayout } from '../stage-fit';
+import type { StageLayoutHint } from '../stage-fit';
 
 export type DynamicCircleTab =
   | 'scaling'
@@ -122,48 +125,6 @@ const DEFAULTS: DynamicCircleParams = {
   showCenter: true
 };
 
-export type StageLayoutHint = {
-  floatingReadout: boolean;
-  overlayPx?: number;
-  overlayTopPx?: number;
-  overlayHeightPx?: number;
-};
-
-type StagePose = {
-  fit: number;
-  offsetX: number;
-  offsetY: number;
-};
-
-function containInRect(
-  boxW: number,
-  boxH: number,
-  availW: number,
-  availH: number,
-  originX: number,
-  originY: number,
-  alignX: 'left' | 'center'
-): StagePose {
-  const w = Math.max(1, availW);
-  const h = Math.max(1, availH);
-  const fit = Math.min(w / boxW, h / boxH);
-  const stageW = boxW * fit;
-  const stageH = boxH * fit;
-  return {
-    fit,
-    offsetX: originX + (alignX === 'center' ? (w - stageW) / 2 : 0),
-    offsetY: originY + (h - stageH) / 2
-  };
-}
-
-function betterPose(a: StagePose, b: StagePose): StagePose {
-  return b.fit > a.fit + 1e-9 ? b : a;
-}
-
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function asBool(value: unknown, fallback: boolean): boolean {
   if (value === true || value === 1 || value === '1' || value === 'true')
     return true;
@@ -202,34 +163,34 @@ function normalizeParams(
   return {
     tab: normalizeTab(input.tab ?? prev.tab),
     boundary: normalizeBoundary(input.boundary ?? prev.boundary),
-    B: clamp(finite(input.B, prev.B), -0.25, 0.25),
-    v: clamp(finite(input.v, prev.v), 4, 25),
-    theta: clamp(finite(input.theta, prev.theta), -90, 90),
-    y0: clamp(finite(input.y0, prev.y0), 150, 510),
-    xBound: clamp(finite(input.xBound, prev.xBound), 320, 600),
-    triX: clamp(finite(input.triX, prev.triX), 320, 600),
-    triH: clamp(finite(input.triH, prev.triH), 150, 450),
-    circleR: clamp(finite(input.circleR, prev.circleR), 50, 200),
-    circleX: clamp(finite(input.circleX, prev.circleX), 280, 520),
-    circleY: clamp(finite(input.circleY, prev.circleY), 180, 480),
+    B: clamp(finiteOr(input.B, prev.B), -0.25, 0.25),
+    v: clamp(finiteOr(input.v, prev.v), 4, 25),
+    theta: clamp(finiteOr(input.theta, prev.theta), -90, 90),
+    y0: clamp(finiteOr(input.y0, prev.y0), 150, 510),
+    xBound: clamp(finiteOr(input.xBound, prev.xBound), 320, 600),
+    triX: clamp(finiteOr(input.triX, prev.triX), 320, 600),
+    triH: clamp(finiteOr(input.triH, prev.triH), 150, 450),
+    circleR: clamp(finiteOr(input.circleR, prev.circleR), 50, 200),
+    circleX: clamp(finiteOr(input.circleX, prev.circleX), 280, 520),
+    circleY: clamp(finiteOr(input.circleY, prev.circleY), 180, 480),
     autoSweep: asBool(input.autoSweep, prev.autoSweep),
     showCenter: asBool(input.showCenter, prev.showCenter)
   };
 }
 
 export function orbitRadius(v: number, B: number): number {
-  const speed = Math.max(0, finite(v, 0));
-  const qB = Math.abs(C.qOverM * finite(B, 0));
+  const speed = Math.max(0, finiteOr(v, 0));
+  const qB = Math.abs(C.qOverM * finiteOr(B, 0));
   return qB < C.radiusEps ? Number.POSITIVE_INFINITY : speed / qB;
 }
 
 export function vectorFromAngle(magnitude: number, angle: number): Point {
-  const theta = finite(angle, 0) * DEG;
+  const theta = finiteOr(angle, 0) * DEG;
   return { x: magnitude * Math.cos(theta), y: magnitude * Math.sin(theta) };
 }
 
 export function chargeSign(B: number): number {
-  return finite(B, 0) > 0 ? 1 : -1;
+  return finiteOr(B, 0) > 0 ? 1 : -1;
 }
 
 export function circleCenter(
@@ -630,42 +591,10 @@ export function clampLaunchAngle(dx: number, dy: number): number {
   return clamp(angle, -90, 90);
 }
 
-export function hasFloatingReadout(anchor?: Element | null): boolean {
-  return readoutOccludesStage(anchor);
-}
+export const hasFloatingReadout = readoutOccludesStage;
 
 export function stageLayoutFrom(canvas?: Element | null): StageLayoutHint {
-  const floatingReadout = hasFloatingReadout(canvas);
-  if (!floatingReadout) return { floatingReadout: false, overlayPx: 0 };
-  let overlayPx = 0;
-  let overlayTopPx = 0;
-  let overlayHeightPx = 0;
-  if (canvas instanceof HTMLElement) {
-    const panel = canvas.parentElement?.querySelector(
-      '.teaching-readout-panel, .srgb-readout-panel'
-    );
-    if (panel instanceof HTMLElement) {
-      const cr = canvas.getBoundingClientRect();
-      const rr = panel.getBoundingClientRect();
-      if (
-        rr.left < cr.right &&
-        rr.right > cr.left &&
-        rr.top < cr.bottom &&
-        rr.bottom > cr.top
-      ) {
-        overlayPx = Math.max(0, cr.right - rr.left);
-        const top = Math.max(rr.top, cr.top);
-        const bottom = Math.min(rr.bottom, cr.bottom);
-        overlayTopPx = Math.max(0, top - cr.top);
-        overlayHeightPx = Math.max(0, bottom - top);
-      }
-    }
-  }
-  return {
-    floatingReadout: true,
-    overlayPx: overlayPx || FLOATING_OVERLAY_FALLBACK,
-    ...(overlayHeightPx > 0 ? { overlayTopPx, overlayHeightPx } : {})
-  };
+  return measureStageLayout(canvas, FLOATING_OVERLAY_FALLBACK);
 }
 
 /**
@@ -795,7 +724,7 @@ export function createDynamicCircleSim(
       return { ...params };
     },
     step(dt: number): void {
-      t += Math.max(0, finite(dt, 0));
+      t += Math.max(0, finiteOr(dt, 0));
       if (!params.autoSweep) return;
       const wave = 0.5 + 0.5 * Math.sin(t * 0.9);
       if (params.tab === 'scaling') params.v = 5 + 18 * wave;
@@ -812,8 +741,8 @@ export function createDynamicCircleSim(
       y: number,
       radius = C.handleRadius
     ): DynamicCircleHandle {
-      const px = finite(x, 0) * C.baseWidth;
-      const py = finite(y, 0) * C.baseHeight;
+      const px = finiteOr(x, 0) * C.baseWidth;
+      const py = finiteOr(y, 0) * C.baseHeight;
       const point = { x: px, y: py };
       if (params.boundary === 'straight') {
         const onLine =
@@ -861,8 +790,8 @@ export function createDynamicCircleSim(
       x: number,
       y: number
     ): void {
-      const px = finite(x, 0) * C.baseWidth;
-      const py = finite(y, 0) * C.baseHeight;
+      const px = finiteOr(x, 0) * C.baseWidth;
+      const py = finiteOr(y, 0) * C.baseHeight;
       if (handle === 'boundary') params.xBound = clamp(px, 320, 600);
       else if (handle === 'triangle') params.triX = clamp(px, 320, 600);
       else if (handle === 'circle-center') {
@@ -876,3 +805,5 @@ export function createDynamicCircleSim(
     }
   };
 }
+
+export type { StageLayoutHint };

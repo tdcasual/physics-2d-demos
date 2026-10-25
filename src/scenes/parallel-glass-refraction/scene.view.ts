@@ -2,6 +2,7 @@ import type { DemoRenderHints } from '../../platform/demo-profile';
 import type { TeachingMode, TeachingTheme } from '../../platform/standards';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import { glassConstants, type GlassState } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateGlassViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -49,23 +50,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     glass: 'rgba(56, 189, 248, 0.18)'
   }
 };
-
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 
 function roundedCard(
   ctx: CanvasRenderingContext2D,
@@ -151,7 +135,7 @@ function drawAngleArc(
   ctx.arc(cx, cy, radius, start, end);
   ctx.stroke();
   const mid = (start + end) / 2;
-  text(
+  drawText(
     ctx,
     label,
     cx + Math.cos(mid) * (radius + 15 * scale),
@@ -262,8 +246,8 @@ export function createGlassView(options: CreateGlassViewOptions = {}) {
     ctx.scale(fit, fit);
     drawGrid(ctx, p);
 
-    text(ctx, '平行玻璃砖光路分析', 28, 38, p.ink, 25 * scale, 'left', 700);
-    text(
+    drawText(ctx, '平行玻璃砖光路分析', 28, 38, p.ink, 25 * scale, 'left', 700);
+    drawText(
       ctx,
       '调节 i、n、d，观察折射与侧移',
       28,
@@ -282,8 +266,17 @@ export function createGlassView(options: CreateGlassViewOptions = {}) {
     ctx.roundRect(glassX, top, glassW, depth, 4);
     ctx.fill();
     ctx.stroke();
-    text(ctx, '空气', glassX + 12, top - 23, p.muted, 13 * scale, 'left', 600);
-    text(
+    drawText(
+      ctx,
+      '空气',
+      glassX + 12,
+      top - 23,
+      p.muted,
+      13 * scale,
+      'left',
+      600
+    );
+    drawText(
       ctx,
       `玻璃  n=${state.refractiveIndex.toFixed(2)}`,
       glassX + glassW - 12,
@@ -293,7 +286,7 @@ export function createGlassView(options: CreateGlassViewOptions = {}) {
       'right',
       700
     );
-    text(
+    drawText(
       ctx,
       '空气',
       glassX + glassW - 12,
@@ -319,7 +312,16 @@ export function createGlassView(options: CreateGlassViewOptions = {}) {
     ctx.lineTo(straight.x, straight.y);
     ctx.stroke();
     ctx.setLineDash([]);
-    text(ctx, '法线', p1.x + 10, top - 86, p.muted, 12 * scale, 'left', 600);
+    drawText(
+      ctx,
+      '法线',
+      p1.x + 10,
+      top - 86,
+      p.muted,
+      12 * scale,
+      'left',
+      600
+    );
 
     // Three ray segments
     drawRaySegment(ctx, source, p1, p, scale);
@@ -349,7 +351,7 @@ export function createGlassView(options: CreateGlassViewOptions = {}) {
     ctx.arc(p1.x, p1.y, 4 * scale, 0, Math.PI * 2);
     ctx.arc(p2.x, p2.y, 4 * scale, 0, Math.PI * 2);
     ctx.fill();
-    text(
+    drawText(
       ctx,
       '单色光源',
       source.x - 4,
@@ -359,8 +361,26 @@ export function createGlassView(options: CreateGlassViewOptions = {}) {
       'center',
       600
     );
-    text(ctx, '入射点', p1.x + 14, p1.y + 16, p.muted, 11 * scale, 'left', 600);
-    text(ctx, '出射点', p2.x + 13, p2.y + 17, p.muted, 11 * scale, 'left', 600);
+    drawText(
+      ctx,
+      '入射点',
+      p1.x + 14,
+      p1.y + 16,
+      p.muted,
+      11 * scale,
+      'left',
+      600
+    );
+    drawText(
+      ctx,
+      '出射点',
+      p2.x + 13,
+      p2.y + 17,
+      p.muted,
+      11 * scale,
+      'left',
+      600
+    );
 
     // Angle arcs: all measured from the vertical normal
     drawAngleArc(
@@ -433,7 +453,7 @@ export function createGlassView(options: CreateGlassViewOptions = {}) {
     ctx.moveTo(straight.x, bottom + 8 * scale);
     ctx.lineTo(straight.x, bottom + 57 * scale);
     ctx.stroke();
-    text(
+    drawText(
       ctx,
       `Δx = ${state.lateralShift.toFixed(2)} cm`,
       (p2.x + straight.x) / 2,
@@ -463,7 +483,7 @@ export function createGlassView(options: CreateGlassViewOptions = {}) {
     // Right-hand data and formula cards
     const cardX = 850;
     const cardW = 320;
-    text(ctx, '折射与侧移', cardX, 38, p.ink, 24 * scale, 'left', 700);
+    drawText(ctx, '折射与侧移', cardX, 38, p.ink, 24 * scale, 'left', 700);
     ctx.strokeStyle = p.border;
     ctx.lineWidth = 1.5 * scale;
     ctx.beginPath();
@@ -479,7 +499,16 @@ export function createGlassView(options: CreateGlassViewOptions = {}) {
       p,
       env.theme === 'dark' ? '#1d2a3d' : '#eef3f8'
     );
-    text(ctx, '实时读数', cardX + 18, 116, p.muted, 15 * scale, 'left', 700);
+    drawText(
+      ctx,
+      '实时读数',
+      cardX + 18,
+      116,
+      p.muted,
+      15 * scale,
+      'left',
+      700
+    );
     const readouts = [
       ['入射角 i', `${state.incidentAngle.toFixed(1)}°`, p.ink],
       [
@@ -492,8 +521,17 @@ export function createGlassView(options: CreateGlassViewOptions = {}) {
     ];
     readouts.forEach(([label, value, color], index) => {
       const y = 148 + index * 30;
-      text(ctx, label, cardX + 18, y, p.muted, 13 * scale, 'left', 600);
-      text(ctx, value, cardX + cardW - 18, y, color, 16 * scale, 'right', 700);
+      drawText(ctx, label, cardX + 18, y, p.muted, 13 * scale, 'left', 600);
+      drawText(
+        ctx,
+        value,
+        cardX + cardW - 18,
+        y,
+        color,
+        16 * scale,
+        'right',
+        700
+      );
       if (index < readouts.length - 1) {
         ctx.strokeStyle = p.border;
         ctx.lineWidth = 1;
@@ -504,8 +542,8 @@ export function createGlassView(options: CreateGlassViewOptions = {}) {
       }
     });
     roundedCard(ctx, cardX, 296, cardW, 205, p);
-    text(ctx, '关系', cardX + 18, 322, p.teal, 16 * scale, 'left', 700);
-    text(
+    drawText(ctx, '关系', cardX + 18, 322, p.teal, 16 * scale, 'left', 700);
+    drawText(
       ctx,
       'sin i = n · sin r',
       cardX + 18,
@@ -515,7 +553,7 @@ export function createGlassView(options: CreateGlassViewOptions = {}) {
       'left',
       700
     );
-    text(
+    drawText(
       ctx,
       "i' = i（出射光 ∥ 入射光）",
       cardX + 18,
@@ -525,7 +563,7 @@ export function createGlassView(options: CreateGlassViewOptions = {}) {
       'left',
       700
     );
-    text(
+    drawText(
       ctx,
       'Δx = d · sin(i − r) / cos r',
       cardX + 18,
@@ -535,7 +573,7 @@ export function createGlassView(options: CreateGlassViewOptions = {}) {
       'left',
       700
     );
-    text(
+    drawText(
       ctx,
       `v玻璃 / v空气 = 1 / n = ${state.speedRatio.toFixed(2)}`,
       cardX + 18,
@@ -545,7 +583,7 @@ export function createGlassView(options: CreateGlassViewOptions = {}) {
       'left',
       600
     );
-    text(
+    drawText(
       ctx,
       '平行界面：方向改变，频率不变',
       cardX + 18,
@@ -556,7 +594,7 @@ export function createGlassView(options: CreateGlassViewOptions = {}) {
       600
     );
 
-    text(
+    drawText(
       ctx,
       '光线保持平行，玻璃砖只产生侧移',
       36,

@@ -3,6 +3,7 @@ import type { DemoRenderHints } from '../../platform/demo-profile';
 import { readoutOccludesStage } from '../../platform/stage-readout';
 import { createCanvasViewport, createViewEnvironment } from '../view-base';
 import { magneticMirrorConstants, type MagneticMirrorState } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type MagneticMirrorStageLayout = {
   floatingReadout: boolean;
@@ -225,23 +226,6 @@ export function magneticMirrorStageTransform(
   return { ...fallback, boxW, boxH, floatingReadout: true };
 }
 
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
-
 function arrowLine(
   ctx: CanvasRenderingContext2D,
   x1: number,
@@ -353,7 +337,16 @@ function drawCoil(
     Math.PI * 2
   );
   ctx.stroke();
-  text(ctx, '强磁场', x, FIELD_TOP - 24, p.orange, 13 * scale, 'center', 700);
+  drawText(
+    ctx,
+    '强磁场',
+    x,
+    FIELD_TOP - 24,
+    p.orange,
+    13 * scale,
+    'center',
+    700
+  );
 }
 
 function drawParticle(
@@ -389,7 +382,7 @@ function drawParticle(
   if (state.params.showVelocity) {
     const direction = state.parallelSpeed >= 0 ? 1 : -1;
     arrowLine(ctx, x, AXIS_Y, x + direction * ARROW_LENGTH, AXIS_Y, p.green, 4);
-    text(
+    drawText(
       ctx,
       'v∥',
       x + direction * (ARROW_LENGTH - 18),
@@ -400,9 +393,9 @@ function drawParticle(
       700
     );
     arrowLine(ctx, x, AXIS_Y, x, AXIS_Y + 72, p.cyan, 4);
-    text(ctx, 'v⊥', x + 15, AXIS_Y + 48, p.cyan, 15 * scale, 'left', 700);
+    drawText(ctx, 'v⊥', x + 15, AXIS_Y + 48, p.cyan, 15 * scale, 'left', 700);
     arrowLine(ctx, x, AXIS_Y, x - direction * 54, AXIS_Y + 56, p.red, 4);
-    text(
+    drawText(
       ctx,
       'v',
       x - direction * 54,
@@ -415,7 +408,16 @@ function drawParticle(
   }
   if (state.params.showForce) {
     arrowLine(ctx, x, AXIS_Y, x - 58, AXIS_Y - 38, p.magenta, 4);
-    text(ctx, 'F', x - 66, AXIS_Y - 46, p.magenta, 15 * scale, 'center', 700);
+    drawText(
+      ctx,
+      'F',
+      x - 66,
+      AXIS_Y - 46,
+      p.magenta,
+      15 * scale,
+      'center',
+      700
+    );
   }
 }
 
@@ -434,7 +436,7 @@ function drawFieldRegion(
     12
   );
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '弱磁场',
     CENTER_X,
@@ -444,7 +446,7 @@ function drawFieldRegion(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     '左线圈',
     COIL_LEFT_X,
@@ -454,7 +456,7 @@ function drawFieldRegion(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     '右线圈',
     COIL_RIGHT_X,
@@ -464,7 +466,7 @@ function drawFieldRegion(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     '镜区',
     COIL_LEFT_X,
@@ -473,7 +475,7 @@ function drawFieldRegion(
     12 * scale,
     'center'
   );
-  text(
+  drawText(
     ctx,
     '镜区',
     COIL_RIGHT_X,
@@ -535,7 +537,7 @@ export function createMagneticMirrorView(
     ctx.lineTo(COIL_RIGHT_X + FIELD_CURVE_INSET, AXIS_Y);
     ctx.stroke();
     ctx.setLineDash([]);
-    text(
+    drawText(
       ctx,
       'x 轴',
       COIL_RIGHT_X + 66,

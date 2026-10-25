@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type CollisionParams = {
   massA: number;
@@ -47,41 +48,38 @@ const DEFAULTS: CollisionParams = {
   positionB: 5,
   isPlaying: true
 };
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
 function normalize(
   input: Partial<CollisionParams>,
   prev = DEFAULTS
 ): CollisionParams {
   return {
     massA: clamp(
-      finite(input.massA, prev.massA),
+      finiteOr(input.massA, prev.massA),
       collisionConstants.massMin,
       collisionConstants.massMax
     ),
     massB: clamp(
-      finite(input.massB, prev.massB),
+      finiteOr(input.massB, prev.massB),
       collisionConstants.massMin,
       collisionConstants.massMax
     ),
     velocityA: clamp(
-      finite(input.velocityA, prev.velocityA),
+      finiteOr(input.velocityA, prev.velocityA),
       collisionConstants.velocityMin,
       collisionConstants.velocityMax
     ),
     velocityB: clamp(
-      finite(input.velocityB, prev.velocityB),
+      finiteOr(input.velocityB, prev.velocityB),
       collisionConstants.velocityMin,
       collisionConstants.velocityMax
     ),
     positionA: clamp(
-      finite(input.positionA, prev.positionA),
+      finiteOr(input.positionA, prev.positionA),
       collisionConstants.xMin,
       collisionConstants.xMax
     ),
     positionB: clamp(
-      finite(input.positionB, prev.positionB),
+      finiteOr(input.positionB, prev.positionB),
       collisionConstants.xMin,
       collisionConstants.xMax
     ),
@@ -134,7 +132,7 @@ export function createCollisionSim(initial: Partial<CollisionParams> = {}) {
     reset,
     step(dt: number) {
       if (!params.isPlaying) return;
-      const safeDt = Math.min(Math.max(finite(dt, 0), 0), 0.05);
+      const safeDt = Math.min(Math.max(finiteOr(dt, 0), 0), 0.05);
       params.positionA += params.velocityA * safeDt;
       params.positionB += params.velocityB * safeDt;
       const separation = params.positionB - params.positionA;

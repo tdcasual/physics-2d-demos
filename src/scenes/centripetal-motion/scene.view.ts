@@ -9,6 +9,7 @@ import {
   type CentripetalState,
   type Vec2
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateCentripetalViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -443,23 +444,6 @@ export function motionGeom(
   };
 }
 
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
-
 function arrow(
   ctx: CanvasRenderingContext2D,
   x1: number,
@@ -561,7 +545,16 @@ function drawMotion(
   ctx.beginPath();
   ctx.arc(g.center.x, g.center.y, C.hubRadius, 0, Math.PI * 2);
   ctx.fill();
-  text(ctx, 'O', g.hubLabel.x, g.hubLabel.y, p.muted, font(13), 'center', 700);
+  drawText(
+    ctx,
+    'O',
+    g.hubLabel.x,
+    g.hubLabel.y,
+    p.muted,
+    font(13),
+    'center',
+    700
+  );
 
   arrow(
     ctx,
@@ -599,8 +592,8 @@ function drawMotion(
   ctx.strokeStyle = p.blue;
   ctx.lineWidth = 2;
   ctx.stroke();
-  text(ctx, 'm', g.ball.x, g.ball.y, '#ffffff', font(16), 'center', 700);
-  text(
+  drawText(ctx, 'm', g.ball.x, g.ball.y, '#ffffff', font(16), 'center', 700);
+  drawText(
     ctx,
     'v',
     g.speedLabel.x,
@@ -610,7 +603,7 @@ function drawMotion(
     'center',
     700
   );
-  text(
+  drawText(
     ctx,
     'Fₙ',
     g.forceLabel.x,

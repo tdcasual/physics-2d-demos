@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteNumber } from '../../core/coerce';
 
 export type VariableWorkMode = 'linear' | 'power' | 'piecewise';
 
@@ -63,15 +64,6 @@ const DEFAULTS: VariableWorkParams = {
   microsteps: C.defaultMicrosteps
 };
 
-function finite(value: unknown, fallback: number): number {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string' && value.trim() !== '') {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return fallback;
-}
-
 export function asBool(value: unknown, fallback: boolean): boolean {
   if (value === true || value === 1 || value === '1') return true;
   if (value === false || value === 0 || value === '0') return false;
@@ -104,12 +96,16 @@ function normalize(
 ): VariableWorkParams {
   return {
     mode: input.mode === undefined ? previous.mode : asMode(input.mode),
-    mass: clamp(finite(input.mass, previous.mass), C.massMin, C.massMax),
-    k: clamp(finite(input.k, previous.k), C.kMin, C.kMax),
-    power: clamp(finite(input.power, previous.power), C.powerMin, C.powerMax),
+    mass: clamp(finiteNumber(input.mass, previous.mass), C.massMin, C.massMax),
+    k: clamp(finiteNumber(input.k, previous.k), C.kMin, C.kMax),
+    power: clamp(
+      finiteNumber(input.power, previous.power),
+      C.powerMin,
+      C.powerMax
+    ),
     microsteps: Math.round(
       clamp(
-        finite(input.microsteps, previous.microsteps),
+        finiteNumber(input.microsteps, previous.microsteps),
         C.microstepsMin,
         C.microstepsMax
       )
@@ -525,7 +521,7 @@ export function createVariableWorkSim(
         time = sample.time;
         return;
       }
-      time = Math.min(endTime(params), time + Math.max(0, finite(dt, 0)));
+      time = Math.min(endTime(params), time + Math.max(0, finiteNumber(dt, 0)));
       if (time >= endTime(params) - 1e-9) playing = false;
     },
     start() {

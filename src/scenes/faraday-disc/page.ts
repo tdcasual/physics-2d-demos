@@ -10,15 +10,7 @@ import type {
   FaradayParamPatch,
   FaradayRotation
 } from './scene.sim';
-
-function asBoolean(value: unknown): boolean {
-  return (
-    value === true ||
-    value === 1 ||
-    value === '1' ||
-    String(value).toLowerCase() === 'true'
-  );
-}
+import { asBoolean } from '../../core/coerce';
 
 bootScenePage({
   meta: faradayMeta,
@@ -57,8 +49,8 @@ bootScenePage({
     const faradayScene = scene as ReturnType<typeof createFaradayScene>;
 
     const syncPreset = (): void => {
-      const id = faradayScene.matchingPreset();
-      if (id) renderer.setActive('preset', id);
+      // 参数不匹配任何预设时清除高亮（setActive('') 无选中）
+      renderer.setActive('preset', faradayScene.matchingPreset() ?? '');
     };
 
     const renderer = renderSchema({

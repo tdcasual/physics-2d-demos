@@ -1,11 +1,9 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
-import type { RingPendulumParams } from './scene.sim';
 import { ringPendulumControlsSchema } from './controls-schema';
-import { asBool, createRingPendulumScene } from './scene.entry';
+import { createRingPendulumScene } from './scene.entry';
 import { ringPendulumMeta } from './scene.meta';
+import { createBoundControls } from '../../ui/components/bound-controls';
 bootScenePage({
   meta: ringPendulumMeta,
   autoPlay: true,
@@ -35,41 +33,12 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, scheduleRender, writeParam }) => {
-    const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+  createControls: ({ mount, scene, scheduleRender, writeParam }) =>
+    createBoundControls({
       mount,
       schema: ringPendulumControlsSchema,
-      onAction: () => render(),
-      onChange: (key, value) => {
-        if (key === 'showForces' || key === 'showTrail' || key === 'autoRun')
-          scene.setParams({
-            [key]: asBool(value)
-          } as Partial<RingPendulumParams>);
-        else
-          scene.setParams({
-            [key]: Number(value)
-          } as Partial<RingPendulumParams>);
-        render();
-        writeParam?.(key, value);
-      }
-    });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (key === 'showForces' || key === 'showTrail' || key === 'autoRun') {
-        ctx.scene.setParams({
-          [key]: asBool(value)
-        } as Partial<RingPendulumParams>);
-        ctx.setControlValue(key, asBool(value));
-        return true;
-      }
-      const number = Number(value);
-      if (!Number.isFinite(number)) return false;
-      ctx.scene.setParams({ [key]: number } as Partial<RingPendulumParams>);
-      ctx.setControlValue(key, number);
-      return true;
-    }
-  }
+      scene,
+      scheduleRender,
+      writeParam
+    })
 });

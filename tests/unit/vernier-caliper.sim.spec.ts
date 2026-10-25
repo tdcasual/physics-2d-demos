@@ -140,3 +140,13 @@ describe('vernier-caliper sim', () => {
     });
   });
 });
+
+describe('vernier-caliper setParams 非有限值', () => {
+  it('忽略 NaN objectType，getState 不抛错且保留原值', () => {
+    const sim = createVernierCaliperSim(defaultParams);
+    sim.setParams({ objectType: 2 });
+    sim.setParams({ objectType: Number.NaN });
+    expect(() => sim.getState()).not.toThrow();
+    expect(sim.getState().params.objectType).toBe(2);
+  });
+});

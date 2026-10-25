@@ -6,15 +6,7 @@ import { createAccelForceScene } from './scene.entry';
 import { accelForceMeta } from './scene.meta';
 import { accelForceControlsSchema } from './controls-schema';
 import { parseAccelForceMode, type AccelForceParams } from './scene.sim';
-
-function asBoolean(value: unknown): boolean {
-  return (
-    value === true ||
-    value === 1 ||
-    value === '1' ||
-    String(value).toLowerCase() === 'true'
-  );
-}
+import { asBoolean } from '../../core/coerce';
 
 bootScenePage({
   meta: accelForceMeta,

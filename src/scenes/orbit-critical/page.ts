@@ -1,11 +1,9 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
-import type { OrbitCriticalParams } from './scene.sim';
 import { orbitCriticalControlsSchema } from './controls-schema';
 import { createOrbitCriticalScene } from './scene.entry';
 import { orbitCriticalMeta } from './scene.meta';
+import { createBoundControls } from '../../ui/components/bound-controls';
 
 bootScenePage({
   meta: orbitCriticalMeta,
@@ -36,54 +34,12 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, scheduleRender, writeParam }) => {
-    const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+  createControls: ({ mount, scene, scheduleRender, writeParam }) =>
+    createBoundControls({
       mount,
       schema: orbitCriticalControlsSchema,
-      onChange: (key, value) => {
-        if (key === 'model') {
-          const model = String(value) as OrbitCriticalParams['model'];
-          scene.setParams({ model });
-          renderer.setActive(key, model);
-        } else {
-          scene.setParams({
-            [key]:
-              key === 'autoRun' || key === 'showVectors'
-                ? Boolean(value)
-                : Number(value)
-          } as Partial<OrbitCriticalParams>);
-        }
-        render();
-        writeParam?.(key, value);
-      },
-      onAction: () => render()
-    });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (key === 'model') {
-        const model = String(value) as OrbitCriticalParams['model'];
-        if (!['rope', 'rod'].includes(model)) return false;
-        ctx.scene.setParams({ model });
-        ctx.setControlActive(key, model);
-        return true;
-      }
-      if (key === 'autoRun' || key === 'showVectors') {
-        const enabled =
-          value === 1 ||
-          value === '1' ||
-          String(value).toLowerCase() === 'true';
-        ctx.scene.setParams({ [key]: enabled } as Partial<OrbitCriticalParams>);
-        ctx.setControlValue(key, enabled);
-        return true;
-      }
-      const number = Number(value);
-      if (!Number.isFinite(number)) return false;
-      ctx.scene.setParams({ [key]: number } as Partial<OrbitCriticalParams>);
-      ctx.setControlValue(key, number);
-      return true;
-    }
-  }
+      scene,
+      scheduleRender,
+      writeParam
+    })
 });

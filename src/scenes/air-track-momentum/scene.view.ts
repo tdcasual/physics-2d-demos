@@ -6,6 +6,7 @@ import {
   airTrackMomentumConstants as C,
   type AirTrackMomentumState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateAirTrackMomentumViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -60,22 +61,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     grid: '#2a394d'
   }
 };
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 function rounded(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -147,7 +132,7 @@ function drawFormula(
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 2;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '物理公式 live',
     C.formulaX + 22,
@@ -159,7 +144,7 @@ function drawFormula(
   );
   const signA = state.velocityA >= 0 ? '+' : '−';
   const signB = state.velocityB >= 0 ? '+' : '−';
-  text(
+  drawText(
     ctx,
     `p总 = mA vA + mB vB`,
     C.formulaX + 22,
@@ -169,7 +154,7 @@ function drawFormula(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `(${state.massA.toFixed(1)} × ${signA}${Math.abs(state.velocityA).toFixed(2)}) ${signB} ${state.massB.toFixed(1)} × ${Math.abs(state.velocityB).toFixed(2)} = ${state.totalMomentum.toFixed(2)} kg·m/s`,
     C.formulaX + 22,
@@ -198,7 +183,16 @@ function drawTrack(ctx: CanvasRenderingContext2D, p: Palette): void {
     ctx.moveTo(x, C.trackY - 18);
     ctx.lineTo(x, C.trackY + 18);
     ctx.stroke();
-    text(ctx, `${meter / 1}.0 m`, x, C.trackY + 30, p.muted, 12, 'center', 600);
+    drawText(
+      ctx,
+      `${meter / 1}.0 m`,
+      x,
+      C.trackY + 30,
+      p.muted,
+      12,
+      'center',
+      600
+    );
     for (let tick = 1; tick < 5; tick += 1) {
       const sub = x + tick * 36;
       ctx.beginPath();
@@ -211,7 +205,7 @@ function drawTrack(ctx: CanvasRenderingContext2D, p: Palette): void {
   ctx.beginPath();
   ctx.roundRect(C.trackLeft - 34, C.trackY + 20, 18, 22, 4);
   ctx.fill();
-  text(
+  drawText(
     ctx,
     '气源输入',
     C.trackLeft - 16,
@@ -255,8 +249,8 @@ function drawPhotogate(
   ctx.beginPath();
   ctx.arc(x + 19, C.gateTop + 13, 5, 0, Math.PI * 2);
   ctx.fill();
-  text(ctx, label, x + 19, C.gateTop - 17, p.ink, 15, 'center', 700);
-  text(
+  drawText(ctx, label, x + 19, C.gateTop - 17, p.ink, 15, 'center', 700);
+  drawText(
     ctx,
     `${gateReading(meter, state)} s`,
     x + 19,
@@ -290,7 +284,7 @@ function drawCart(
   ctx.arc(cx - 32, C.trackY + 1, C.wheelRadius, 0, Math.PI * 2);
   ctx.arc(cx + 32, C.trackY + 1, C.wheelRadius, 0, Math.PI * 2);
   ctx.fill();
-  text(
+  drawText(
     ctx,
     `${mass.toFixed(1)} kg`,
     cx,
@@ -300,7 +294,7 @@ function drawCart(
     'center',
     700
   );
-  text(ctx, label, cx, top - 18, color, 13, 'center', 700);
+  drawText(ctx, label, cx, top - 18, color, 13, 'center', 700);
   if (!state.showVectors || Math.abs(velocity) < 0.02) return;
   const length = Math.min(96, Math.max(30, Math.abs(velocity) * C.vectorScale));
   arrow(
@@ -312,7 +306,7 @@ function drawCart(
     color,
     4
   );
-  text(
+  drawText(
     ctx,
     `v ${velocity >= 0 ? '+' : ''}${velocity.toFixed(2)}`,
     cx + Math.sign(velocity) * (length + 18),
@@ -340,7 +334,7 @@ function drawCollision(
     ctx.lineTo(px, py);
   }
   ctx.stroke();
-  text(ctx, '接触', x, C.trackY - 100, p.gold, 15, 'center', 700);
+  drawText(ctx, '接触', x, C.trackY - 100, p.gold, 15, 'center', 700);
 }
 function drawData(
   ctx: CanvasRenderingContext2D,
@@ -354,7 +348,7 @@ function drawData(
   ctx.lineWidth = 1.5;
   ctx.stroke();
   if (state.mode === 'theorem') {
-    text(
+    drawText(
       ctx,
       '冲量—时间',
       C.graphX + 18,
@@ -390,7 +384,7 @@ function drawData(
       else ctx.lineTo(x, y);
     }
     ctx.stroke();
-    text(
+    drawText(
       ctx,
       `F(t) = ${state.force.toFixed(1)} N`,
       C.graphRight - 8,
@@ -400,7 +394,7 @@ function drawData(
       'right',
       700
     );
-    text(
+    drawText(
       ctx,
       `J = Δp = ${state.impulse.toFixed(2)} N·s`,
       C.graphX + 18,
@@ -411,7 +405,7 @@ function drawData(
       700
     );
   } else {
-    text(
+    drawText(
       ctx,
       '动量守恒核对',
       C.graphX + 18,
@@ -421,7 +415,7 @@ function drawData(
       'left',
       700
     );
-    text(
+    drawText(
       ctx,
       `碰撞前  ${state.totalMomentum.toFixed(2)} kg·m/s`,
       C.graphX + 30,
@@ -431,7 +425,7 @@ function drawData(
       'left',
       700
     );
-    text(
+    drawText(
       ctx,
       `碰撞后  ${state.totalMomentumAfter.toFixed(2)} kg·m/s`,
       C.graphX + 30,
@@ -442,7 +436,7 @@ function drawData(
       700
     );
     const delta = Math.abs(state.totalMomentum - state.totalMomentumAfter);
-    text(
+    drawText(
       ctx,
       `差值  ${delta.toFixed(2)} kg·m/s`,
       C.graphX + 30,
@@ -474,7 +468,7 @@ function drawScene(
     ctx.moveTo(C.trackRight - C.springLength, C.trackY - 2);
     ctx.lineTo(C.trackRight - 12, C.trackY - 2);
     ctx.stroke();
-    text(
+    drawText(
       ctx,
       '缓冲弹簧',
       C.trackRight - C.springLength,
@@ -486,7 +480,7 @@ function drawScene(
     );
   }
   drawData(ctx, state, p);
-  text(
+  drawText(
     ctx,
     `状态：${state.status}`,
     C.baseWidth - 30,
@@ -530,7 +524,7 @@ export function createAirTrackMomentumView(
     const offsetY = (height - C.baseHeight * scale) / 2;
     ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
     drawScene(ctx, state, PALETTE[env.theme]);
-    text(
+    drawText(
       ctx,
       `t = ${state.time.toFixed(2)} s`,
       C.baseWidth - 30,

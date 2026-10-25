@@ -6,6 +6,7 @@ import {
   particleLabel,
   type ElectricDeflectionState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateElectricDeflectionViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -89,23 +90,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
     green: '#63d995'
   }
 };
-
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
 
 function rounded(
   ctx: CanvasRenderingContext2D,
@@ -200,10 +184,19 @@ function drawPlates(
   ctx.strokeStyle = p.blue;
   ctx.fillRect(PLATE_START, bottom, PLATE_END - PLATE_START, plateHeight);
   ctx.strokeRect(PLATE_START, bottom, PLATE_END - PLATE_START, plateHeight);
-  text(ctx, '+', PLATE_START + 22, top - 29, p.red, 22, 'center', 700);
-  text(ctx, '−', PLATE_START + 22, bottom + 30, p.blue, 22, 'center', 700);
-  text(ctx, '偏转电场 E', PLATE_END - 10, top - 29, p.muted, 13, 'right', 700);
-  text(
+  drawText(ctx, '+', PLATE_START + 22, top - 29, p.red, 22, 'center', 700);
+  drawText(ctx, '−', PLATE_START + 22, bottom + 30, p.blue, 22, 'center', 700);
+  drawText(
+    ctx,
+    '偏转电场 E',
+    PLATE_END - 10,
+    top - 29,
+    p.muted,
+    13,
+    'right',
+    700
+  );
+  drawText(
     ctx,
     `d = ${state.params.plateGap.toFixed(1)} cm`,
     PLATE_START - 12,
@@ -229,9 +222,9 @@ function drawSource(ctx: CanvasRenderingContext2D, p: Palette): void {
   rounded(ctx, 28, AXIS_Y - 27, 92, 54, 8);
   ctx.fillStyle = p.ink;
   ctx.fill();
-  text(ctx, '粒子源', 74, AXIS_Y, p.panel, 15, 'center', 700);
+  drawText(ctx, '粒子源', 74, AXIS_Y, p.panel, 15, 'center', 700);
   arrow(ctx, 122, AXIS_Y, PLATE_START - 18, AXIS_Y, p.teal, 2, true);
-  text(ctx, 'v₀', 164, AXIS_Y - 19, p.teal, 14, 'center', 700);
+  drawText(ctx, 'v₀', 164, AXIS_Y - 19, p.teal, 14, 'center', 700);
 }
 
 function drawScreen(
@@ -245,7 +238,7 @@ function drawScreen(
   ctx.moveTo(SCREEN_X, FIELD_TOP + 14);
   ctx.lineTo(SCREEN_X, FIELD_BOTTOM - 14);
   ctx.stroke();
-  text(ctx, '接收屏', SCREEN_X, FIELD_TOP - 11, p.ink, 15, 'center', 700);
+  drawText(ctx, '接收屏', SCREEN_X, FIELD_TOP - 11, p.ink, 15, 'center', 700);
   const screenY = AXIS_Y + clampVisual(state.screenDeflection * VISUAL_SCALE);
   ctx.strokeStyle = p.red;
   ctx.lineWidth = 2;
@@ -253,7 +246,7 @@ function drawScreen(
   ctx.moveTo(SCREEN_X + 18, AXIS_Y);
   ctx.lineTo(SCREEN_X + 18, screenY);
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     `y = ${(Math.abs(state.screenDeflection) * 100).toFixed(1)} cm`,
     SCREEN_X + 33,
@@ -306,7 +299,7 @@ function drawTrajectory(
   ctx.beginPath();
   ctx.arc(midpointX, AXIS_Y, 6, 0, Math.PI * 2);
   ctx.fill();
-  text(
+  drawText(
     ctx,
     'L/2',
     midpointX,
@@ -322,7 +315,7 @@ function drawTrajectory(
   ctx.moveTo(PLATE_END, plateBounds.top + 18);
   ctx.lineTo(PLATE_END, plateBounds.bottom - 18);
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     `L = ${(electricDeflectionConstants.plateLength * 100).toFixed(0)} cm`,
     (PLATE_START + PLATE_END) / 2,
@@ -347,7 +340,7 @@ function drawParticle(
   ctx.strokeStyle = p.panel;
   ctx.lineWidth = 2;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     state.params.particle === 'electron' ? '−' : '+',
     x,
@@ -361,8 +354,8 @@ function drawParticle(
   arrow(ctx, x, y, x + 52, y, p.blue, 3);
   const forceDirection = state.particleSign < 0 ? -1 : 1;
   arrow(ctx, x + 4, y, x + 4, y + forceDirection * 44, p.red, 3);
-  text(ctx, 'v₀', x + 62, y, p.blue, 13, 'left', 700);
-  text(ctx, 'F', x + 14, y + forceDirection * 55, p.red, 13, 'left', 700);
+  drawText(ctx, 'v₀', x + 62, y, p.blue, 13, 'left', 700);
+  drawText(ctx, 'F', x + 14, y + forceDirection * 55, p.red, 13, 'left', 700);
 }
 
 function clampVisual(value: number): number {
@@ -379,7 +372,7 @@ function drawPanel(
   const w = PANEL_W - PANEL_INSET * 2;
   ctx.fillStyle = p.panel;
   ctx.fillRect(PANEL_X, 0, PANEL_W, BASE_H);
-  text(ctx, '电场偏转', x, TITLE_Y, p.ink, 22 * scale, 'left', 700);
+  drawText(ctx, '电场偏转', x, TITLE_Y, p.ink, 22 * scale, 'left', 700);
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 3;
   ctx.beginPath();
@@ -389,8 +382,17 @@ function drawPanel(
   rounded(ctx, x, METRICS_Y, w, METRICS_H);
   ctx.fillStyle = p.soft;
   ctx.fill();
-  text(ctx, '实时读数', x + 14, METRICS_Y + 25, p.ink, 16 * scale, 'left', 700);
-  text(
+  drawText(
+    ctx,
+    '实时读数',
+    x + 14,
+    METRICS_Y + 25,
+    p.ink,
+    16 * scale,
+    'left',
+    700
+  );
+  drawText(
     ctx,
     particleLabel(state.params.particle),
     x + w - 14,
@@ -417,8 +419,8 @@ function drawPanel(
   ] as const;
   rows.forEach(([label, value, color], index) => {
     const y = METRICS_Y + 59 + index * 39;
-    text(ctx, label, x + 14, y, p.muted, 14 * scale, 'left', 600);
-    text(ctx, value, x + w - 14, y, color, 14 * scale, 'right', 700);
+    drawText(ctx, label, x + 14, y, p.muted, 14 * scale, 'left', 600);
+    drawText(ctx, value, x + w - 14, y, color, 14 * scale, 'right', 700);
     if (index < rows.length - 1) {
       ctx.strokeStyle = p.border;
       ctx.lineWidth = 1;
@@ -434,8 +436,17 @@ function drawPanel(
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 2;
   ctx.stroke();
-  text(ctx, '关系', x + 14, FORMULA_Y + 24, p.green, 15 * scale, 'left', 700);
-  text(
+  drawText(
+    ctx,
+    '关系',
+    x + 14,
+    FORMULA_Y + 24,
+    p.green,
+    15 * scale,
+    'left',
+    700
+  );
+  drawText(
     ctx,
     'E = U / d',
     x + 14,
@@ -445,8 +456,17 @@ function drawPanel(
     'left',
     600
   );
-  text(ctx, 'y = ½at²', x + 14, FORMULA_Y + 88, p.ink, 15 * scale, 'left', 600);
-  text(
+  drawText(
+    ctx,
+    'y = ½at²',
+    x + 14,
+    FORMULA_Y + 88,
+    p.ink,
+    15 * scale,
+    'left',
+    600
+  );
+  drawText(
     ctx,
     'tan θ = vᵧ / v₀',
     x + 14,
@@ -456,7 +476,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     '反向延长线交于 L/2',
     x + 14,
@@ -475,7 +495,7 @@ function drawField(
   scale: number
 ): void {
   drawGrid(ctx, p);
-  text(
+  drawText(
     ctx,
     '带电粒子在匀强电场中的偏转',
     26,
@@ -485,7 +505,16 @@ function drawField(
     'left',
     700
   );
-  text(ctx, '类平抛运动', 28, TITLE_Y + 28, p.muted, 13 * scale, 'left', 600);
+  drawText(
+    ctx,
+    '类平抛运动',
+    28,
+    TITLE_Y + 28,
+    p.muted,
+    13 * scale,
+    'left',
+    600
+  );
   drawSource(ctx, p);
   const bounds = drawPlates(ctx, state, p);
   drawTrajectory(ctx, state, p, bounds);

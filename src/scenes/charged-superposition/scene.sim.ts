@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type ChargedParticleKind = 'proton' | 'alpha' | 'electron';
 export type ChargedSuperpositionParams = {
@@ -90,9 +91,6 @@ const DEFAULTS: ChargedSuperpositionParams = {
   slowMode: false,
   showVectors: true
 };
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
 function asFlag(value: unknown, fallback: boolean): boolean {
   if (value === true || value === 1 || value === '1' || value === 'true')
     return true;
@@ -110,12 +108,12 @@ function normalize(
         ? input.particle
         : previous.particle,
     accelVoltage: clamp(
-      finite(input.accelVoltage, previous.accelVoltage),
+      finiteOr(input.accelVoltage, previous.accelVoltage),
       chargedSuperpositionConstants.accelVoltageMin,
       chargedSuperpositionConstants.accelVoltageMax
     ),
     deflectVoltage: clamp(
-      finite(input.deflectVoltage, previous.deflectVoltage),
+      finiteOr(input.deflectVoltage, previous.deflectVoltage),
       chargedSuperpositionConstants.deflectVoltageMin,
       chargedSuperpositionConstants.deflectVoltageMax
     ),
@@ -185,7 +183,7 @@ export function chargedSuperpositionAt(
   time = 0,
   progress = 0
 ): ChargedSuperpositionState {
-  return derive(normalize(params), Math.max(0, finite(time, 0)), progress);
+  return derive(normalize(params), Math.max(0, finiteOr(time, 0)), progress);
 }
 
 export function createChargedSuperpositionSim(
@@ -207,7 +205,8 @@ export function createChargedSuperpositionSim(
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      const delta = clamp(finite(dt, 0), 0, 0.1) * (params.slowMode ? 0.35 : 1);
+      const delta =
+        clamp(finiteOr(dt, 0), 0, 0.1) * (params.slowMode ? 0.35 : 1);
       time += delta;
       progress = (progress + delta * 0.18) % 1;
     },

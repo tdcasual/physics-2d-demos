@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type ConicalPendulumParams = {
   height: number;
@@ -81,10 +82,6 @@ const DEFAULTS: ConicalPendulumParams = {
   showVectors: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function asFlag(value: unknown, fallback: boolean): boolean {
   if (value === true || value === 1 || value === '1' || value === 'true')
     return true;
@@ -99,12 +96,12 @@ function normalize(
 ): ConicalPendulumParams {
   return {
     height: clamp(
-      finite(input.height, previous.height),
+      finiteOr(input.height, previous.height),
       conicalPendulumConstants.heightMin,
       conicalPendulumConstants.heightMax
     ),
     theta: clamp(
-      finite(input.theta, previous.theta),
+      finiteOr(input.theta, previous.theta),
       conicalPendulumConstants.thetaMin,
       conicalPendulumConstants.thetaMax
     ),
@@ -146,7 +143,7 @@ export function conicalPendulumAt(
   params: ConicalPendulumParams,
   time = 0
 ): ConicalPendulumState {
-  return derive(normalize(params), Math.max(0, finite(time, 0)));
+  return derive(normalize(params), Math.max(0, finiteOr(time, 0)));
 }
 
 export function createConicalPendulumSim(
@@ -164,7 +161,7 @@ export function createConicalPendulumSim(
     },
     step(dt: number): void {
       if (!params.autoRun) return;
-      time += clamp(finite(dt, 0), 0, 0.1);
+      time += clamp(finiteOr(dt, 0), 0, 0.1);
     },
     reset(): void {
       params = { ...DEFAULTS };

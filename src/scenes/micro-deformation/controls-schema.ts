@@ -27,6 +27,7 @@ export const microDeformationControlsSchema: ControlsSchema = {
         {
           type: 'preset-group',
           key: 'loadKg',
+          bind: { numeric: true },
           columns: 4,
           initialActive: '0',
           presets: [

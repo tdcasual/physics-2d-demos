@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type ConnectedBodiesInclineMode = 'freebody' | 'animation';
 export type ConnectedBodiesInclineParams = {
@@ -90,9 +91,6 @@ const DEFAULTS: ConnectedBodiesInclineParams = {
   autoRun: false
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
 function flag(value: unknown, fallback: boolean): boolean {
   if (value === true || value === 1 || value === '1' || value === 'true')
     return true;
@@ -109,10 +107,10 @@ function normalize(
       input.mode === 'animation' || input.mode === 'freebody'
         ? input.mode
         : previous.mode,
-    massA: clamp(finite(input.massA, previous.massA), C.massMin, C.massMax),
-    massB: clamp(finite(input.massB, previous.massB), C.massMin, C.massMax),
-    angle: clamp(finite(input.angle, previous.angle), C.angleMin, C.angleMax),
-    mu: clamp(finite(input.mu, previous.mu), C.muMin, C.muMax),
+    massA: clamp(finiteOr(input.massA, previous.massA), C.massMin, C.massMax),
+    massB: clamp(finiteOr(input.massB, previous.massB), C.massMin, C.massMax),
+    angle: clamp(finiteOr(input.angle, previous.angle), C.angleMin, C.angleMax),
+    mu: clamp(finiteOr(input.mu, previous.mu), C.muMin, C.muMax),
     showForces: flag(input.showForces, previous.showForces),
     autoRun: flag(input.autoRun, previous.autoRun)
   };
@@ -153,7 +151,7 @@ export function deriveConnectedBodiesIncline(
       : '加速下滑';
   return {
     ...params,
-    time: Math.max(0, finite(time, 0)),
+    time: Math.max(0, finiteOr(time, 0)),
     displacement,
     acceleration,
     tension,
@@ -185,7 +183,7 @@ export function createConnectedBodiesInclineSim(
       return { ...params };
     },
     step(dt: number): void {
-      if (params.autoRun) time += Math.max(0, finite(dt, 0));
+      if (params.autoRun) time += Math.max(0, finiteOr(dt, 0));
     },
     reset(): void {
       params = { ...DEFAULTS };

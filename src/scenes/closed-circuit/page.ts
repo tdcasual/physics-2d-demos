@@ -1,11 +1,9 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
-import { renderSchema } from '../../ui/components/SchemaRenderer';
-import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { closedCircuitControlsSchema } from './controls-schema';
 import { createClosedCircuitScene } from './scene.entry';
 import { closedCircuitMeta } from './scene.meta';
-import type { ClosedCircuitParams } from './scene.sim';
+import { createBoundControls } from '../../ui/components/bound-controls';
 
 bootScenePage({
   meta: closedCircuitMeta,
@@ -37,51 +35,12 @@ bootScenePage({
       }
     };
   },
-  createControls: ({ mount, scene, scheduleRender, writeParam }) => {
-    const render = scheduleRender ?? (() => scene.render());
-    const renderer = renderSchema({
+  createControls: ({ mount, scene, scheduleRender, writeParam }) =>
+    createBoundControls({
       mount,
       schema: closedCircuitControlsSchema,
-      onChange: (key, value) => {
-        if (
-          key === 'emf' ||
-          key === 'internalResistance' ||
-          key === 'externalResistance'
-        )
-          scene.setParams({
-            [key]: Number(value)
-          } as Partial<ClosedCircuitParams>);
-        if (key === 'autoRun' || key === 'showPowerArea')
-          scene.setParams({
-            [key]: Boolean(value)
-          } as Partial<ClosedCircuitParams>);
-        render();
-        writeParam?.(key, value);
-      },
-      onAction: () => {}
-    });
-    return exposeSchemaHandle(renderer);
-  },
-  paramSync: {
-    applyParam: (key, value, ctx) => {
-      if (
-        key === 'emf' ||
-        key === 'internalResistance' ||
-        key === 'externalResistance'
-      ) {
-        const number = Number(value);
-        if (!Number.isFinite(number)) return false;
-        ctx.scene.setParams({ [key]: number } as Partial<ClosedCircuitParams>);
-        ctx.setControlValue(key, number);
-        return true;
-      }
-      if (key === 'autoRun' || key === 'showPowerArea') {
-        const enabled = Number(value) > 0;
-        ctx.scene.setParams({ [key]: enabled } as Partial<ClosedCircuitParams>);
-        ctx.setControlValue(key, enabled);
-        return true;
-      }
-      return false;
-    }
-  }
+      scene,
+      scheduleRender,
+      writeParam
+    })
 });

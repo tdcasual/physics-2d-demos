@@ -1,12 +1,10 @@
 /**
- * B23 同构 contentBoxSize / sizeGraphCanvasToHost 内 GBCR 棘轮
+ * B23 图区画布测量收口（原 GBCR 棘轮）
  *
- * AST 扫描 `src/scenes/<id>/scene.view.ts` 与该场景 `renderer/` 下，
- * 名为 `contentBoxSize` / `sizeGraphCanvasToHost`（含内联形态）的函数体内
- * 对 `getBoundingClientRect` 的 CallExpression。
- *
- * 冻结 11 场景：B23 八员 + B17 已审阅三员（不修，禁止当新债）。
- * 匹配集 === 冻结集（外加即红）；集合内每个 id 必须仍被扫描命中（防假冻结）。
+ * 图区尺寸测量（contentBoxSize / sizeGraphCanvasToHost）唯一实现在
+ * src/scenes/stage-fit.ts。AST 扫描各场景 scene.view.ts 与 renderer/：
+ * 这两个函数名下出现 getBoundingClientRect 即视为本地复刻，必须为零。
+ * （共享实现仍以 GBCR 测量，修复点只剩 stage-fit.ts 一处，见其注释。）
  */
 import { describe, expect, it } from 'vitest';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
@@ -17,30 +15,6 @@ const ROOT = resolve(process.cwd());
 const SCENES_DIR = resolve(ROOT, 'src/scenes');
 
 const TARGET_FNS = new Set(['contentBoxSize', 'sizeGraphCanvasToHost']);
-
-/** B23 八员：同构 contentBoxSize，当前无 panzoom 路径。 */
-const FROZEN_B23 = [
-  'emf-internal-resistance',
-  'impulse-momentum',
-  'mechanical-energy',
-  'oscilloscope',
-  'potential-energy-graphs',
-  'rod-model',
-  'single-loop',
-  'internal-energy'
-] as const;
-
-/** B17 已审阅，不修，禁止当新债。代码仍在，计入冻结集以免外加即红误伤。 */
-const FROZEN_B17_REVIEWED = [
-  'block-board',
-  'variable-work',
-  'accel-force'
-] as const;
-
-const FROZEN_CONTENT_BOX_GBCR = [
-  ...FROZEN_B23,
-  ...FROZEN_B17_REVIEWED
-] as const;
 
 type GbcrHit = { id: string; file: string; line: number; fn: string };
 
@@ -190,63 +164,30 @@ export function onPointer(el: HTMLElement, event: PointerEvent): number {
 }
 `;
 
-describe('content-box GBCR ratchet (B23)', () => {
+describe('content-box measurement lives only in stage-fit (B23)', () => {
   const byId = scanAllScenes();
-  const matched: string[] = [...byId.keys()].sort();
-  const frozen: string[] = [...FROZEN_CONTENT_BOX_GBCR].sort();
 
-  it('freeze list contains only discovered scene ids', () => {
-    const sceneIds = new Set(listSceneIds());
-    const unknown = frozen.filter((id) => !sceneIds.has(id));
-    expect(unknown, `冻结集含未知场景：${unknown.join(', ')}`).toEqual([]);
-  });
-
-  it('matched scene set equals the frozen 11-id set', () => {
+  it('no scene re-implements contentBoxSize / sizeGraphCanvasToHost with GBCR', () => {
+    const offenders = [...byId.values()]
+      .flat()
+      .map((hit) => `${hit.file}:${hit.line} (${hit.fn})`);
     expect(
-      matched,
-      `contentBoxSize/sizeGraphCanvasToHost 内 GBCR 场景必须等于冻结集。多余=${matched
-        .filter((id) => !frozen.includes(id))
-        .join(
-          ', '
-        )}；缺失=${frozen.filter((id) => !matched.includes(id)).join(', ')}`
-    ).toEqual(frozen);
+      offenders,
+      '图区测量请调用 src/scenes/stage-fit.ts 的 sizeCanvasToHostBox / contentBoxSize'
+    ).toEqual([]);
   });
 
-  it.each([...FROZEN_CONTENT_BOX_GBCR])(
-    '%s is still hit by the scanner (no false freeze)',
-    (id) => {
-      const hits = byId.get(id) ?? [];
-      expect(
-        hits.length,
-        `冻结场景 "${id}" 扫描 0 命中：从冻结集删除，或恢复同构函数体内 GBCR`
-      ).toBeGreaterThan(0);
-    }
-  );
-
-  it('B17 reviewed trio stays frozen as reviewed-no-fix, not new debt', () => {
-    expect([...FROZEN_B17_REVIEWED]).toEqual([
-      'block-board',
-      'variable-work',
-      'accel-force'
-    ]);
-    for (const id of FROZEN_B17_REVIEWED) {
-      expect(FROZEN_CONTENT_BOX_GBCR.includes(id)).toBe(true);
-    }
-  });
-
-  it('flags isomorphic contentBoxSize GBCR outside the freeze set (fixture)', () => {
+  it('flags a local contentBoxSize GBCR copy (fixture)', () => {
     const hits = scanSource(
       'src/scenes/fixture-probe/scene.view.ts',
       ISOMORPHIC_FIXTURE
     );
     expect(
       hits.length,
-      '集外新增同构 contentBoxSize/sizeGraphCanvasToHost+GBCR 必须被扫描命中'
+      '本地复刻的 contentBoxSize/sizeGraphCanvasToHost+GBCR 必须被扫描命中'
     ).toBeGreaterThan(0);
     expect(hits.some((h) => h.fn === 'contentBoxSize')).toBe(true);
     expect(hits.some((h) => h.fn === 'sizeGraphCanvasToHost')).toBe(true);
-    const combined = [...new Set([...matched, 'fixture-probe'])].sort();
-    expect(combined).not.toEqual(frozen);
   });
 
   it('ignores getBoundingClientRect outside the named functions (fixture)', () => {

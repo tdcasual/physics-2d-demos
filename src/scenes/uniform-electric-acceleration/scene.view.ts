@@ -5,6 +5,7 @@ import {
   uniformElectricAccelerationConstants,
   type UniformElectricAccelerationState
 } from './scene.sim';
+import { drawText } from '../../core/draw-primitives';
 
 export type CreateUniformElectricAccelerationViewOptions = {
   canvas?: HTMLCanvasElement;
@@ -92,23 +93,6 @@ const PALETTE: Record<TeachingTheme, Palette> = {
   }
 };
 
-function text(
-  ctx: CanvasRenderingContext2D,
-  value: string,
-  x: number,
-  y: number,
-  color: string,
-  size: number,
-  align: CanvasTextAlign = 'left',
-  weight = 600
-): void {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px sans-serif`;
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, x, y);
-}
-
 function rounded(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -191,7 +175,7 @@ function drawDimension(
   ctx.moveTo(right, y - 9);
   ctx.lineTo(right, y + 9);
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     `极板间距 d = ${gap.toFixed(1)} cm`,
     (left + right) / 2,
@@ -215,9 +199,9 @@ function drawPlates(
   ctx.fillRect(left - 9, PLATE_TOP, 18, PLATE_BOTTOM - PLATE_TOP);
   ctx.fillStyle = p.blue;
   ctx.fillRect(right - 9, PLATE_TOP, 18, PLATE_BOTTOM - PLATE_TOP);
-  text(ctx, '极板 A（电势 U）', left, 188, p.red, 15, 'center', 700);
+  drawText(ctx, '极板 A（电势 U）', left, 188, p.red, 15, 'center', 700);
   const rightLabelX = right < ENERGY_X ? right : ENERGY_X - 8;
-  text(
+  drawText(
     ctx,
     '极板 B（电势 0）',
     rightLabelX,
@@ -228,8 +212,8 @@ function drawPlates(
     700
   );
   for (let y = PLATE_TOP + 42; y < PLATE_BOTTOM - 20; y += 62) {
-    text(ctx, '+', left, y, p.panel, 18, 'center', 700);
-    text(ctx, '−', right, y, p.panel, 18, 'center', 700);
+    drawText(ctx, '+', left, y, p.panel, 18, 'center', 700);
+    drawText(ctx, '−', right, y, p.panel, 18, 'center', 700);
   }
   ctx.strokeStyle = p.muted;
   ctx.lineWidth = 2;
@@ -244,7 +228,7 @@ function drawPlates(
     arrow(ctx, x, AXIS_Y - 76, x + 42, AXIS_Y - 76, p.blue, 2);
     arrow(ctx, x, AXIS_Y + 76, x + 42, AXIS_Y + 76, p.blue, 2);
   }
-  text(
+  drawText(
     ctx,
     `E = U / d = ${state.electricField.toFixed(0)} N/C`,
     (left + right) / 2,
@@ -276,7 +260,7 @@ function drawParticle(
   ctx.strokeStyle = p.panel;
   ctx.lineWidth = 2;
   ctx.stroke();
-  text(ctx, '+q', x, AXIS_Y, p.panel, 11, 'center', 700);
+  drawText(ctx, '+q', x, AXIS_Y, p.panel, 11, 'center', 700);
   if (state.params.showVectors) {
     const vectorScale = 26 + 42 * state.progress;
     arrow(
@@ -297,7 +281,7 @@ function drawParticle(
       p.teal,
       3
     );
-    text(
+    drawText(
       ctx,
       `v = ${(state.speed / 1e5).toFixed(2)}×10⁵ m/s`,
       x + 24,
@@ -307,10 +291,19 @@ function drawParticle(
       'left',
       700
     );
-    text(ctx, 'F = qE', x + 24, AXIS_Y + 64, p.teal, 12, 'left', 700);
+    drawText(ctx, 'F = qE', x + 24, AXIS_Y + 64, p.teal, 12, 'left', 700);
   }
-  text(ctx, 'v₀ = 0', bounds.left - 28, AXIS_Y - 34, p.muted, 12, 'right', 600);
-  text(
+  drawText(
+    ctx,
+    'v₀ = 0',
+    bounds.left - 28,
+    AXIS_Y - 34,
+    p.muted,
+    12,
+    'right',
+    600
+  );
+  drawText(
     ctx,
     `x = ${(state.position * 100).toFixed(1)} cm`,
     x,
@@ -333,7 +326,7 @@ function drawEnergyCard(
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 2;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '系统能量转化',
     ENERGY_X + ENERGY_W / 2,
@@ -356,7 +349,7 @@ function drawEnergyCard(
     label: string,
     percent: string
   ) => {
-    text(
+    drawText(
       ctx,
       label,
       ENERGY_X + 14,
@@ -370,7 +363,7 @@ function drawEnergyCard(
     ctx.fillRect(barX, y, barWidth, barHeight);
     ctx.fillStyle = color;
     ctx.fillRect(barX, y, barWidth * value, barHeight);
-    text(
+    drawText(
       ctx,
       percent,
       ENERGY_X + ENERGY_W * 0.94,
@@ -389,7 +382,7 @@ function drawEnergyCard(
     `${Math.round(potential * 100)}%`
   );
   drawBar(barTop + 38, kinetic, p.red, '动能', `${Math.round(kinetic * 100)}%`);
-  text(
+  drawText(
     ctx,
     'W = qU = ΔEₖ',
     ENERGY_X + ENERGY_W / 2,
@@ -411,7 +404,7 @@ function drawPanel(
   const width = PANEL_W - PANEL_INSET * 2;
   ctx.fillStyle = p.panel;
   ctx.fillRect(PANEL_X, 0, PANEL_W, BASE_H);
-  text(ctx, '匀强电场加速', x, TITLE_Y, p.ink, 22 * scale, 'left', 700);
+  drawText(ctx, '匀强电场加速', x, TITLE_Y, p.ink, 22 * scale, 'left', 700);
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 3;
   ctx.beginPath();
@@ -421,7 +414,16 @@ function drawPanel(
   rounded(ctx, x, METRICS_Y, width, METRICS_H);
   ctx.fillStyle = p.soft;
   ctx.fill();
-  text(ctx, '实时读数', x + 14, METRICS_Y + 24, p.ink, 16 * scale, 'left', 700);
+  drawText(
+    ctx,
+    '实时读数',
+    x + 14,
+    METRICS_Y + 24,
+    p.ink,
+    16 * scale,
+    'left',
+    700
+  );
   const rows = [
     ['电场强度 E', `${state.electricField.toFixed(0)} N/C`, p.blue],
     ['电场力 F', `${state.force.toExponential(2)} N`, p.teal],
@@ -432,8 +434,8 @@ function drawPanel(
   ] as const;
   rows.forEach(([label, value, color], index) => {
     const y = METRICS_Y + 55 + index * 34;
-    text(ctx, label, x + 14, y, p.muted, 13 * scale, 'left', 600);
-    text(ctx, value, x + width - 14, y, color, 13 * scale, 'right', 700);
+    drawText(ctx, label, x + 14, y, p.muted, 13 * scale, 'left', 600);
+    drawText(ctx, value, x + width - 14, y, color, 13 * scale, 'right', 700);
     if (index < rows.length - 1) {
       ctx.strokeStyle = p.border;
       ctx.lineWidth = 1;
@@ -449,7 +451,7 @@ function drawPanel(
   ctx.strokeStyle = p.border;
   ctx.lineWidth = 2;
   ctx.stroke();
-  text(
+  drawText(
     ctx,
     '动能定理',
     x + 14,
@@ -459,7 +461,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'E = U / d',
     x + 14,
@@ -469,8 +471,17 @@ function drawPanel(
     'left',
     600
   );
-  text(ctx, 'F = qE', x + 14, FORMULA_Y + 88, p.ink, 15 * scale, 'left', 600);
-  text(
+  drawText(
+    ctx,
+    'F = qE',
+    x + 14,
+    FORMULA_Y + 88,
+    p.ink,
+    15 * scale,
+    'left',
+    600
+  );
+  drawText(
     ctx,
     'W = qU = ½mv²',
     x + 14,
@@ -480,7 +491,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     'v末 = √(2qU / m)',
     x + 14,
@@ -490,7 +501,7 @@ function drawPanel(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     '改变 d：E、F、时间变化；v末不变',
     x + 14,
@@ -500,7 +511,7 @@ function drawPanel(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     `U = ${state.params.voltage.toFixed(0)} V · d = ${state.params.plateGap.toFixed(1)} cm`,
     x + 14,
@@ -519,7 +530,7 @@ function drawField(
   scale: number
 ): void {
   drawGrid(ctx, p);
-  text(
+  drawText(
     ctx,
     '带电粒子在匀强电场中的加速',
     26,
@@ -529,7 +540,7 @@ function drawField(
     'left',
     700
   );
-  text(
+  drawText(
     ctx,
     '调节 U、d、q、m，观察受力与能量',
     28,
@@ -539,7 +550,7 @@ function drawField(
     'left',
     600
   );
-  text(
+  drawText(
     ctx,
     '末速度只由 qU/m 决定，与极板间距 d 无关',
     26,

@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type MeterMethod = 'current' | 'voltage';
 
@@ -101,10 +102,6 @@ const DEFAULTS: HalfDeflectionParams = {
   showAnswer: false
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function normalize(
   input: Partial<HalfDeflectionParams>,
   previous = DEFAULTS
@@ -117,12 +114,12 @@ function normalize(
     mainSwitch: input.mainSwitch ?? previous.mainSwitch,
     auxiliarySwitch: input.auxiliarySwitch ?? previous.auxiliarySwitch,
     rheostat: clamp(
-      finite(input.rheostat, previous.rheostat),
+      finiteOr(input.rheostat, previous.rheostat),
       halfDeflectionConstants.rheostatMin,
       halfDeflectionConstants.rheostatMax
     ),
     boxResistance: clamp(
-      finite(input.boxResistance, previous.boxResistance),
+      finiteOr(input.boxResistance, previous.boxResistance),
       halfDeflectionConstants.boxResistanceMin,
       halfDeflectionConstants.boxResistanceMax
     ),
@@ -207,7 +204,7 @@ export function createHalfDeflectionSim(
       records = [];
     },
     step(dt: number): void {
-      if (params.autoRun) time += Math.max(0, finite(dt, 0));
+      if (params.autoRun) time += Math.max(0, finiteOr(dt, 0));
     },
     reset(): void {
       params = { ...defaults };

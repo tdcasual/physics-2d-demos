@@ -1,4 +1,5 @@
 import { clamp } from '../../core/math';
+import { finiteOr } from '../../core/coerce';
 
 export type MicroMaterial = 'wood' | 'marble' | 'steel';
 export type DeformationMode = 'physical' | 'concept';
@@ -60,10 +61,6 @@ const DEFAULTS: MicroDeformationParams = {
   autoRun: true
 };
 
-function finite(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function normalize(
   input: Partial<MicroDeformationParams>,
   previous = DEFAULTS
@@ -81,17 +78,17 @@ function normalize(
   return {
     material,
     loadKg: clamp(
-      finite(input.loadKg, previous.loadKg),
+      finiteOr(input.loadKg, previous.loadKg),
       microDeformationConstants.forceMin,
       microDeformationConstants.forceMax
     ),
     mirrorGap: clamp(
-      finite(input.mirrorGap, previous.mirrorGap),
+      finiteOr(input.mirrorGap, previous.mirrorGap),
       microDeformationConstants.gapMin,
       microDeformationConstants.gapMax
     ),
     screenDistance: clamp(
-      finite(input.screenDistance, previous.screenDistance),
+      finiteOr(input.screenDistance, previous.screenDistance),
       microDeformationConstants.distanceMin,
       microDeformationConstants.distanceMax
     ),
@@ -161,7 +158,7 @@ export function createMicroDeformationSim(
       return { ...params };
     },
     step(dt: number): void {
-      if (params.autoRun) time += Math.max(0, finite(dt, 0));
+      if (params.autoRun) time += Math.max(0, finiteOr(dt, 0));
     },
     reset(): void {
       params = { ...defaults };
