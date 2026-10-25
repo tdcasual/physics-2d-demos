@@ -85,9 +85,10 @@ set -euxo pipefail
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq >/dev/null
 apt-get install -y -qq curl ca-certificates >/dev/null
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash - >/dev/null 2>&1
+curl -fsSL https://deb.nodesource.com/setup_24.x | bash - >/dev/null 2>&1
 apt-get install -y -qq nodejs fonts-noto-cjk >/dev/null
-npm install -g pnpm@10 >/dev/null 2>&1
+# pnpm 版本取自 package.json 的 packageManager，与本地/CI 一致
+npm install -g "$(node -p "require(\"/src/package.json\").packageManager")" >/dev/null 2>&1
 
 mkdir -p /work
 cp -a /src/. /work/
