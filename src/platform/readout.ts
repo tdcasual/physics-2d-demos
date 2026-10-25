@@ -26,11 +26,58 @@ export interface ReadoutItem extends ReadoutPrecision {
 
 const DEFAULT_DIGITS = 2;
 const NON_FINITE_TEXT = '—';
+const SIGFIGS_MIN = 1;
+const SIGFIGS_MAX = 21;
+const EXPONENTIAL_BELOW_DECIMALS = 10;
 
-function decimalsForSigFigs(value: number, sigFigs: number): number {
-  if (value === 0) return Math.max(0, sigFigs - 1);
+function isValidSigFigs(value: unknown): value is number {
+  return (
+    typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value >= SIGFIGS_MIN &&
+    value <= SIGFIGS_MAX
+  );
+}
+
+function clampFixedDigits(decimals: number): number {
+  return Math.min(100, Math.max(0, decimals));
+}
+
+function roundHalfAwayFromZero(value: number, place: number): number {
+  const sign = value < 0 ? -1 : 1;
+  return sign * Math.floor(Math.abs(value) / place + 0.5) * place;
+}
+
+function formatWithDigits(value: number, digits: number): string {
+  return value.toFixed(clampFixedDigits(digits));
+}
+
+function formatWithSigFigs(value: number, sigFigs: number): string {
+  if (value === 0) return formatWithDigits(0, sigFigs - 1);
   const magnitude = Math.floor(Math.log10(Math.abs(value)));
-  return Math.max(0, sigFigs - 1 - magnitude);
+  const decimals = sigFigs - 1 - magnitude;
+  if (decimals > EXPONENTIAL_BELOW_DECIMALS) {
+    return value.toExponential(clampFixedDigits(sigFigs - 1));
+  }
+  if (decimals < 0) {
+    const place = 10 ** -decimals;
+    const rounded = roundHalfAwayFromZero(value, place);
+    if (!Number.isFinite(rounded) || rounded === 0) {
+      return Number.isFinite(rounded)
+        ? formatWithSigFigs(0, sigFigs)
+        : NON_FINITE_TEXT;
+    }
+    const nextMagnitude = Math.floor(Math.log10(Math.abs(rounded)));
+    if (nextMagnitude !== magnitude) return formatWithSigFigs(rounded, sigFigs);
+    return String(rounded);
+  }
+  let text = formatWithDigits(value, decimals);
+  const rounded = Number(text);
+  if (Number.isFinite(rounded) && rounded !== 0) {
+    const again = sigFigs - 1 - Math.floor(Math.log10(Math.abs(rounded)));
+    if (again !== decimals) text = formatWithDigits(rounded, again);
+  }
+  return text;
 }
 
 /** 数值 → 文本（不含单位） */
@@ -39,23 +86,13 @@ export function formatReadoutNumber(
   precision: ReadoutPrecision = {}
 ): string {
   if (!Number.isFinite(value)) return NON_FINITE_TEXT;
-  let decimals =
-    precision.sigFigs != null
-      ? decimalsForSigFigs(value, precision.sigFigs)
-      : (precision.digits ?? DEFAULT_DIGITS);
-  let text = value.toFixed(decimals);
-  // 四舍五入进位后量级变化（9.995 → 10.00）时按新量级重算有效数字
-  if (precision.sigFigs != null) {
-    const rounded = Number(text);
-    const again = decimalsForSigFigs(rounded, precision.sigFigs);
-    if (again !== decimals) {
-      decimals = again;
-      text = rounded.toFixed(decimals);
-    }
-  }
-  text = stripNegativeZero(text);
-  if (precision.signed && value > 0 && Number(text) !== 0) text = `+${text}`;
-  return text;
+  const text = isValidSigFigs(precision.sigFigs)
+    ? formatWithSigFigs(value, precision.sigFigs)
+    : formatWithDigits(value, precision.digits ?? DEFAULT_DIGITS);
+  const cleaned = stripNegativeZero(text);
+  if (precision.signed && value > 0 && Number(cleaned) !== 0)
+    return `+${cleaned}`;
+  return cleaned;
 }
 
 /**

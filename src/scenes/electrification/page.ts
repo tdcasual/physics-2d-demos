@@ -1,5 +1,4 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
-import type { ReadoutItem } from '../../app/layouts/types';
 import { electrificationMeta } from './scene.meta';
 import { createElectrificationScene } from './scene.entry';
 import { electrificationControlsSchema } from './controls-schema';
@@ -8,23 +7,7 @@ import type {
   ElectrificationSnapshot,
   ElectrificationScene
 } from './scene.sim';
-
-function formatReadout(snapshot: ElectrificationSnapshot): ReadoutItem[] {
-  return [
-    {
-      key: 'scene',
-      label: '场景',
-      value:
-        snapshot.state.scene === 'friction'
-          ? '摩擦起电'
-          : snapshot.state.scene === 'induction'
-            ? '感应起电'
-            : '接触起电'
-    },
-    { key: 'next', label: '下一步动作', value: snapshot.state.nextActionLabel },
-    { key: 'info', label: '说明', value: snapshot.state.explanation }
-  ];
-}
+import { formatReadout } from './scene.readout';
 
 bootScenePage({
   meta: electrificationMeta,

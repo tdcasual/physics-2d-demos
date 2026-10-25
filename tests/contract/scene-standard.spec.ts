@@ -385,6 +385,10 @@ describe('scene modernization standard (anti-drift ratchet)', () => {
   });
 
   describe('演示模式机制（棘轮豁免）', () => {
+    it('keeps PRESENTATION_EXEMPT empty (B2)', () => {
+      expect(PRESENTATION_EXEMPT).toEqual([]);
+    });
+
     it.each(sceneIds.filter((id) => !PRESENTATION_EXEMPT.includes(id)))(
       '%s: 已采用演示模式标准机制',
       (id) => {

@@ -222,9 +222,9 @@ export type Create__PASCAL__SceneOptions = {
 
 function formatReadout(state: __PASCAL__State, params: __PASCAL__Params) {
   return [
-    { key: 't', label: '时间 t', value: state.t.toFixed(2) + ' s' },
-    { key: 'x', label: 'x', value: state.x.toFixed(3) },
-    { key: 'speed', label: 'speed', value: params.speed.toFixed(2) }
+    { key: 't', label: '时间 t', value: state.t, digits: 2, unit: 's' },
+    { key: 'x', label: 'x', value: state.x, digits: 3 },
+    { key: 'speed', label: 'speed', value: params.speed, digits: 2 }
   ];
 }
 

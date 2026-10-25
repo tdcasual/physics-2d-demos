@@ -53,9 +53,9 @@
 
 ---
 
-## 历史计划（已执行）
+## 计划
 
-见 [plans/README.md](plans/README.md)。所有计划已执行完毕，保留供追溯。
+见 [plans/README.md](plans/README.md)。现行切片：[2026-10-26-v16.1-readout-guard-closeout.md](plans/2026-10-26-v16.1-readout-guard-closeout.md)。v16 原文其余 Wave 为 backlog，不按原文整包执行。已完成的计划保留供追溯。
 
 ## 历史归档
 

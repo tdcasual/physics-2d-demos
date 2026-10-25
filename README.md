@@ -230,7 +230,7 @@ bootScenePage({
 
 GitHub Actions workflow：`.github/workflows/ci.yml`
 
-CI 分两层：
+CI 分三层（`.github/workflows/ci.yml`）：
 
 **快速门禁（`validate`）**：每次 push / PR 自动运行，范围与 `pnpm quality:core` 一致。
 
@@ -240,11 +240,6 @@ CI 分两层：
 4. unit and contract tests with coverage
 5. build + bundle budget
 
-**重型验证（`browser`）**：只在手动触发时运行（Actions → CI → Run workflow，或 `gh workflow run ci.yml --ref <branch>`），不挡日常推送。
+**行为测试（`e2e`）**：每次 push / PR 自动运行 Chromium E2E（与手动 `browser` 任务里的 E2E 套件相同）。`e2e` job 绿只表示发现了行为回归；**不能单独证明** https://x.infinitas.fun 已阻断未绿的 SHA（部署在仓库外，required checks 待管理员配置）。
 
-1. install Playwright browsers and CJK fonts
-2. E2E behavior tests
-3. visual, layout, accessibility and cross-browser tests
-4. Linux visual-regression（容器内像素回归）
-
-三个浏览器套件互不短路，一次触发即可拿到全部结果。涉及交互、布局或视觉的改动，上线前应手动触发一次重型验证并确认通过。
+**重型验证（`browser`）**：只在手动触发时运行（Actions → CI → Run workflow，或 `gh workflow run ci.yml --ref <branch>`）。含 E2E、visual / 布局 / 无障碍 / 跨浏览器，以及容器内 Linux 像素回归。三个套件互不短路。涉及交互、布局或视觉的改动，上线前应手动触发一次并确认通过。

@@ -17,7 +17,7 @@ const SCENES_DIR = resolve(process.cwd(), 'src/scenes');
 
 const FROZEN: Record<string, { pattern: RegExp; max: number }> = {
   'raw renderSchema': { pattern: /\brenderSchema\(/, max: 62 },
-  'paramSync.applyParam': { pattern: /\bapplyParam\s*:/, max: 43 },
+  'paramSync.applyParam': { pattern: /\bapplyParam\s*:/, max: 42 },
   syncFromScene: { pattern: /\bsyncFromScene\b/, max: 20 }
 };
 

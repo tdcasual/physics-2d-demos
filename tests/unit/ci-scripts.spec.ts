@@ -69,6 +69,12 @@ describe('ci scripts and workflow', () => {
     expect(ci).toContain('pnpm check:circular');
     expect(ci).toContain('PLAYWRIGHT_SKIP_BUILD=1 pnpm test:e2e');
     expect(ci).toContain('PLAYWRIGHT_SKIP_BUILD=1 pnpm test:visual');
+    expect(ci).toMatch(
+      /^ {2}e2e:\n {4}if: \$\{\{ github\.event_name != 'workflow_dispatch' \}\}/m
+    );
+    expect(ci).toMatch(
+      /^ {2}browser:\n {4}if: \$\{\{ github\.event_name == 'workflow_dispatch' \}\}/m
+    );
     expect(ci).not.toContain('pnpm generate:index');
     expect(ci).not.toContain('run: pnpm test\n');
   });

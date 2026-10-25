@@ -19,6 +19,17 @@ describe('platform/readout', () => {
     expect(formatReadoutNumber(123.45, { sigFigs: 3 })).toBe('123');
     expect(formatReadoutNumber(9.996, { sigFigs: 3 })).toBe('10.0');
     expect(formatReadoutNumber(0, { sigFigs: 3 })).toBe('0.00');
+    expect(formatReadoutNumber(1234, { sigFigs: 3 })).toBe('1230');
+    expect(formatReadoutNumber(-1234, { sigFigs: 3 })).toBe('-1230');
+    expect(formatReadoutNumber(9999, { sigFigs: 3 })).toBe('10000');
+  });
+
+  it('keeps sigFigs extremes finite and falls back on illegal precision', () => {
+    expect(() => formatReadoutNumber(1e-110, { sigFigs: 3 })).not.toThrow();
+    expect(formatReadoutNumber(1e-110, { sigFigs: 3 })).toMatch(/e-/i);
+    expect(formatReadoutNumber(Number.MAX_VALUE, { sigFigs: 3 })).toBe('—');
+    expect(formatReadoutNumber(1.234, { sigFigs: 0 })).toBe('1.23');
+    expect(formatReadoutNumber(1.234, { sigFigs: 102 })).toBe('1.23');
   });
 
   it('handles signed values and non-finite input', () => {

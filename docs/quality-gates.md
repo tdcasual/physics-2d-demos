@@ -20,7 +20,7 @@ pnpm quality:full
 `quality:core` 与 CI 的静态段对齐：结构检查（`check:scenes`）、脚手架（`check:scaffold`）、布局（`check:layouts`）、循环依赖、`check:audit`、lint、`format:check`、类型、带覆盖率的单元/契约测试、构建、bundle budget。
 `quality:full` 在 core 之后追加 E2E 与视觉测试（`PLAYWRIGHT_SKIP_BUILD=1`，复用刚产出的 `dist/`）。
 
-CI（`.github/workflows/ci.yml`）分两层：`validate` 任务在每次 push / PR 自动跑上述静态段并额外上传 Codecov（本地不必跑 Codecov）；`browser` 任务（E2E、视觉、容器内 Linux 像素回归）只在手动触发时运行（Actions → CI → Run workflow，或 `gh workflow run ci.yml --ref <branch>`），三个套件互不短路。覆盖率实测通常高于 `vite.config.ts` 阈值，禁止下调该阈值来「修」失败。
+CI（`.github/workflows/ci.yml`）分三层：`validate` 在每次 push / PR 自动跑上述静态段并额外上传 Codecov（本地不必跑 Codecov）；`e2e` 在每次 push / PR 自动跑 Chromium 行为测试；`browser` 任务（E2E、视觉、容器内 Linux 像素回归）只在手动触发时运行（Actions → CI → Run workflow，或 `gh workflow run ci.yml --ref <branch>`），三个套件互不短路。`e2e` 绿不等于部署已被阻断——发布在仓库外，main 必过检查待管理员配置。覆盖率实测通常高于 `vite.config.ts` 阈值，禁止下调该阈值来「修」失败。
 
 Vitest 覆盖率阈值以 `vite.config.ts` 的 `test.coverage.thresholds` 为唯一来源；本文不固化数值。运行 `pnpm test:coverage` 获取实绩。`quality:full` 只执行一次带覆盖率的 Vitest，随后只构建一次；E2E 与 visual 共用该 `dist/`，避免重复工作掩盖真实失败。
 
@@ -80,4 +80,4 @@ pnpm test:visual
 
 ## CI 顺序
 
-CI 依次运行场景/布局结构检查、循环依赖、lint、类型检查、带覆盖率的单元与契约测试、浏览器与 CJK 字体安装、单次构建、bundle budget、E2E 和 visual。手动更新 Linux 快照时仍执行 E2E，但 visual 阶段只重生成权威 Linux 基线并上传 artifact。
+`validate` 与 `e2e` 并行跑（每次 push / PR）。`browser` 仅 `workflow_dispatch`：先构建，再互不短路地跑 E2E、visual、Linux 容器像素。`update_snapshots` 跳过 E2E 与普通 visual，只重生成权威 Linux 基线并上传 artifact。

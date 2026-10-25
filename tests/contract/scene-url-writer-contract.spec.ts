@@ -7,7 +7,10 @@ import {
   resetUrlSyncOwners
 } from '../../src/app/url-sync';
 import type { SceneMeta } from '../../src/platform/scene-contract';
-import { EXISTING_SPECIAL_HANDLE_FORMS } from '../helpers/special-handle-forms';
+import {
+  EXISTING_SPECIAL_HANDLE_FORM_IDS,
+  EXISTING_SPECIAL_HANDLE_FORMS
+} from '../helpers/special-handle-forms';
 
 const ROOT = path.resolve(__dirname, '../..');
 
@@ -244,6 +247,17 @@ function metaById(): Map<string, SceneMeta> {
 }
 
 describe('scene URL writer contract', () => {
+  it('freezes EXISTING_SPECIAL_HANDLE_FORMS to the exact three ids (B15)', () => {
+    expect(Object.keys(EXISTING_SPECIAL_HANDLE_FORMS).sort()).toEqual(
+      [...EXISTING_SPECIAL_HANDLE_FORM_IDS].sort()
+    );
+    expect([...EXISTING_SPECIAL_HANDLE_FORM_IDS]).toEqual([
+      'electrification',
+      'single-loop',
+      'spring-oscillator'
+    ]);
+  });
+
   it('production scene writers go through sceneWriter or writeOwnedSceneParams', () => {
     const files = productionWriterFiles();
     const missing: string[] = [];
