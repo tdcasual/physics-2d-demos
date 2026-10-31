@@ -1,7 +1,7 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
 import { writeOwnedSceneParams } from '../../app/url-sync';
-import { applyTouchInteractionMode } from '../../platform/input/touch';
+import { createStageInteraction } from '../../platform/input/stage-interaction';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { createThreeForcesScene } from './scene.entry';
@@ -12,8 +12,7 @@ import {
   pointerToBaseNorm,
   stageLayoutFrom,
   type ThreeForcesHandle,
-  type ThreeForcesParams,
-  type ThreeForcesTab
+  type ThreeForcesParams
 } from './scene.sim';
 import { asBoolean } from '../../core/coerce';
 
@@ -32,54 +31,39 @@ bootScenePage({
   },
   createScene: ({ canvas, theme, mode, demoHints, sceneWriter }) => {
     if (!canvas) throw new Error('three-forces requires a canvas');
-    applyTouchInteractionMode(canvas, 'drag');
     const scene = createThreeForcesScene({ canvas, theme, mode, demoHints });
     const scheduler = createRenderScheduler(() => scene.render());
-    let dragHandle: ThreeForcesHandle = null;
-    const toNorm = (event: PointerEvent): { x: number; y: number } => {
-      const rect = canvas.getBoundingClientRect();
-      return pointerToBaseNorm(
-        event.clientX - rect.left,
-        event.clientY - rect.top,
-        rect.width,
-        rect.height,
-        stageLayoutFrom(canvas)
-      );
-    };
-    const onPointerDown = (event: PointerEvent): void => {
-      const point = toNorm(event);
-      dragHandle = scene.pickHandle(point.x, point.y);
-      if (dragHandle) canvas.setPointerCapture(event.pointerId);
-    };
-    const onPointerMove = (event: PointerEvent): void => {
-      if (!dragHandle) return;
-      const point = toNorm(event);
-      scene.moveHandle(dragHandle, point.x, point.y);
-      scheduler.schedule();
-    };
-    const onPointerUp = (event: PointerEvent): void => {
-      if (dragHandle) {
+    const interaction = createStageInteraction({
+      canvas,
+      toModel: (local, size) =>
+        pointerToBaseNorm(
+          local.x,
+          local.y,
+          size.width,
+          size.height,
+          stageLayoutFrom(canvas)
+        ),
+      pick: (model) => scene.pickHandle(model.x, model.y),
+      move: (id, model) => {
+        scene.moveHandle(
+          id as Exclude<ThreeForcesHandle, null>,
+          model.x,
+          model.y
+        );
+      },
+      commit: () => {
         const p = scene.getParams();
         if (p.tab === 'spring') {
           writeOwnedSceneParams(sceneWriter, { springX: p.springX });
         }
-      }
-      dragHandle = null;
-      try {
-        canvas.releasePointerCapture(event.pointerId);
-      } catch {
-        // no-op
-      }
-    };
-    canvas.addEventListener('pointerdown', onPointerDown);
-    canvas.addEventListener('pointermove', onPointerMove);
-    canvas.addEventListener('pointerup', onPointerUp);
-    canvas.addEventListener('pointercancel', onPointerUp);
+      },
+      onChange: () => scheduler.schedule()
+    });
     const dispose = scene.dispose.bind(scene);
     return {
       ...scene,
       step(dt: number): void {
-        if (dragHandle) {
+        if (interaction.draggingId()) {
           scheduler.schedule();
           return;
         }
@@ -88,10 +72,7 @@ bootScenePage({
       },
       dispose(): void {
         scheduler.dispose();
-        canvas.removeEventListener('pointerdown', onPointerDown);
-        canvas.removeEventListener('pointermove', onPointerMove);
-        canvas.removeEventListener('pointerup', onPointerUp);
-        canvas.removeEventListener('pointercancel', onPointerUp);
+        interaction.dispose();
         dispose();
       }
     };
@@ -102,12 +83,6 @@ bootScenePage({
     let applying = false;
     let last = forceScene.getParams();
 
-    const applyVisibility = (tab: ThreeForcesTab): void => {
-      renderer.setVisible('弹簧', tab === 'spring');
-      renderer.setVisible('inclineAngle', tab !== 'spring');
-      renderer.setVisible('mu', tab !== 'spring');
-    };
-
     const renderer = renderSchema({
       mount,
       schema: threeForcesControlsSchema,
@@ -117,7 +92,6 @@ bootScenePage({
           const tab = parseThreeForcesTab(value, 'gravity');
           forceScene.setParams({ tab });
           renderer.setActive(key, tab);
-          applyVisibility(tab);
         } else if (key === 'autoRun' || key === 'showComponents') {
           forceScene.setParams({
             [key]: asBoolean(value)
@@ -136,8 +110,6 @@ bootScenePage({
       onAction: () => {}
     });
 
-    applyVisibility(last.tab);
-
     const unsubscribe = forceScene.subscribe(() => {
       const p = forceScene.getParams();
       applying = true;
@@ -154,7 +126,6 @@ bootScenePage({
       }
       if (p.tab !== last.tab) {
         renderer.setActive('tab', p.tab);
-        applyVisibility(p.tab);
       }
       applying = false;
       last = p;
@@ -170,7 +141,6 @@ bootScenePage({
       renderer.setValueSilently('autoRun', p.autoRun);
       renderer.setValueSilently('showComponents', p.showComponents);
       renderer.setActiveSilently('tab', p.tab);
-      applyVisibility(p.tab);
       last = p;
     };
 

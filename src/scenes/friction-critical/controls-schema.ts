@@ -85,7 +85,13 @@ export const frictionControlsSchema: ControlsSchema = {
       collapsed: false,
       fields: [
         { type: 'toggle', key: 'autoRun', label: '自动演示', value: false },
-        { type: 'button', key: 'reset', label: '复位', variant: 'danger' }
+        {
+          type: 'button',
+          key: 'reset',
+          label: '复位',
+          variant: 'danger',
+          bind: { action: 'reset' }
+        }
       ]
     },
     {

@@ -120,6 +120,8 @@ describe('Navigation structure', () => {
     expect(firstCard.querySelector('.card-content')).toBeTruthy();
     expect(firstCard.querySelector('.card-footer')).toBeTruthy();
     expect(firstCard.querySelector('.card-border')).toBeTruthy();
+    expect(firstCard.getAttribute('href')).toMatch(/^\/src\/pages\/.+\.html$/);
+    expect(firstCard.getAttribute('aria-hidden')).toBeNull();
   });
 
   it('should render card numbers starting from 01', () => {

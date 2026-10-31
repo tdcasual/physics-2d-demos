@@ -4,7 +4,6 @@ import { carBankControlsSchema } from './controls-schema';
 import { createCarBankScene } from './scene.entry';
 import { carBankMeta } from './scene.meta';
 import { createBoundControls } from '../../ui/components/bound-controls';
-import { resetSceneAndControls } from '../../app/control-projection';
 
 bootScenePage({
   meta: carBankMeta,
@@ -41,9 +40,6 @@ bootScenePage({
       schema: carBankControlsSchema,
       scene,
       scheduleRender,
-      writeParam,
-      onAction: (key, renderer) => {
-        if (key === 'reset') resetSceneAndControls(scene, renderer, writeParam);
-      }
+      writeParam
     })
 });

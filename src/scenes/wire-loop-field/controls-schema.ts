@@ -78,7 +78,13 @@ export const wireLoopFieldControlsSchema: ControlsSchema = {
           label: '显示感应电流',
           value: true
         },
-        { type: 'button', key: 'reset', label: '重置', variant: 'secondary' }
+        {
+          type: 'button',
+          key: 'reset',
+          label: '重置',
+          variant: 'secondary',
+          bind: { action: 'reset' }
+        }
       ]
     },
     {

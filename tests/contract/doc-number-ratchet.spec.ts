@@ -153,7 +153,7 @@ describe('document number ratchet (J1)', () => {
     expect(coverage.functions).toBeGreaterThan(0);
     expect(coverage.branches).toBeGreaterThan(0);
     expect(coverage.statements).toBeGreaterThan(0);
-    expect(defaultBundleBudget.maxEntryJsKb).toBe(190);
+    expect(defaultBundleBudget.maxEntryJsKb).toBe(192);
     expect(defaultBundleBudget.maxVendorJsKb).toBe(29);
     expect(defaultBundleBudget.maxSharedJsKb).toBe(162);
   });

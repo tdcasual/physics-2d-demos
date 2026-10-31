@@ -1,7 +1,7 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
 import { writeOwnedSceneParams } from '../../app/url-sync';
-import { applyTouchInteractionMode } from '../../platform/input/touch';
+import { createStageInteraction } from '../../platform/input/stage-interaction';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { createForceCompositionScene } from './scene.entry';
@@ -45,7 +45,6 @@ bootScenePage({
   },
   createScene: ({ canvas, theme, mode, demoHints }) => {
     if (!canvas) throw new Error('force-composition requires a canvas');
-    applyTouchInteractionMode(canvas, 'drag');
     const scene = createForceCompositionScene({
       canvas,
       theme,
@@ -53,49 +52,28 @@ bootScenePage({
       demoHints
     });
     const scheduler = createRenderScheduler(() => scene.render());
-    let dragHandle: 'f1' | 'f2' | 'orthogonal' | null = null;
-    const toNorm = (event: PointerEvent): { x: number; y: number } => {
-      const rect = canvas.getBoundingClientRect();
-      return pointerToBaseNorm(
-        event.clientX - rect.left,
-        event.clientY - rect.top,
-        rect.width,
-        rect.height,
-        stageLayoutFrom(canvas)
-      );
-    };
-    const onPointerDown = (event: PointerEvent): void => {
-      const point = toNorm(event);
-      dragHandle = scene.pickHandle(point.x, point.y);
-      if (dragHandle) canvas.setPointerCapture(event.pointerId);
-    };
-    const onPointerMove = (event: PointerEvent): void => {
-      if (!dragHandle) return;
-      const point = toNorm(event);
-      scene.moveHandle(dragHandle, point.x, point.y);
-      scheduler.schedule();
-    };
-    const onPointerUp = (event: PointerEvent): void => {
-      dragHandle = null;
-      try {
-        canvas.releasePointerCapture(event.pointerId);
-      } catch {
-        // no-op
-      }
-    };
-    canvas.addEventListener('pointerdown', onPointerDown);
-    canvas.addEventListener('pointermove', onPointerMove);
-    canvas.addEventListener('pointerup', onPointerUp);
-    canvas.addEventListener('pointercancel', onPointerUp);
+    const interaction = createStageInteraction({
+      canvas,
+      toModel: (local, size) =>
+        pointerToBaseNorm(
+          local.x,
+          local.y,
+          size.width,
+          size.height,
+          stageLayoutFrom(canvas)
+        ),
+      pick: (model) => scene.pickHandle(model.x, model.y),
+      move: (id, model) => {
+        scene.moveHandle(id as 'f1' | 'f2' | 'orthogonal', model.x, model.y);
+      },
+      onChange: () => scheduler.schedule()
+    });
     const dispose = scene.dispose.bind(scene);
     return {
       ...scene,
       dispose(): void {
         scheduler.dispose();
-        canvas.removeEventListener('pointerdown', onPointerDown);
-        canvas.removeEventListener('pointermove', onPointerMove);
-        canvas.removeEventListener('pointerup', onPointerUp);
-        canvas.removeEventListener('pointercancel', onPointerUp);
+        interaction.dispose();
         dispose();
       }
     };
@@ -104,14 +82,6 @@ bootScenePage({
     const render = scheduleRender ?? (() => scene.render());
     let applying = false;
     let lastUi = scene.getParams();
-
-    const applyTabVisibility = (tab: string): void => {
-      renderer.setVisible('两力参数', tab === 'synthesis' || tab === 'range');
-      renderer.setVisible('rule', tab === 'synthesis');
-      renderer.setVisible('正交分解', tab === 'orthogonal');
-      renderer.setVisible('斜面分解', tab === 'effect');
-      renderer.setVisible('范围演变', tab === 'range');
-    };
 
     const writeUrl = (p: ForceCompositionParams): void => {
       writeOwnedSceneParams(sceneWriter, urlSnapshot(p));
@@ -135,7 +105,6 @@ bootScenePage({
         renderer.setValue('rangeSweep', p.rangeSweep);
       if (p.tab !== lastUi.tab) {
         renderer.setActive('tab', p.tab);
-        applyTabVisibility(p.tab);
       }
       if (p.rule !== lastUi.rule) renderer.setActive('rule', p.rule);
       applying = false;
@@ -169,7 +138,6 @@ bootScenePage({
         scene.setParams(next);
         if (key === 'tab' || key === 'rule')
           renderer.setActive(key, String(value));
-        if (key === 'tab') applyTabVisibility(String(value));
         lastUi = scene.getParams();
         render();
         writeUrl(lastUi);
@@ -177,7 +145,6 @@ bootScenePage({
       onAction: () => {}
     });
 
-    applyTabVisibility(scene.getParams().tab);
     const unsubscribe = scene.subscribe(syncFromScene);
 
     const projectFromLive = (): void => {
@@ -193,7 +160,6 @@ bootScenePage({
       renderer.setValueSilently('rangeSweep', p.rangeSweep);
       renderer.setActiveSilently('tab', p.tab);
       renderer.setActiveSilently('rule', p.rule);
-      applyTabVisibility(p.tab);
       applying = false;
       lastUi = { ...p };
     };
@@ -202,7 +168,6 @@ bootScenePage({
       ...exposeSchemaHandle(renderer),
       setActive(key: string, value: string): void {
         renderer.setActive(key, value);
-        if (key === 'tab') applyTabVisibility(value);
       },
       syncFromScene: projectFromLive,
       dispose(): void {

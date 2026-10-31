@@ -4,7 +4,6 @@ import { electrostaticShieldingControlsSchema } from './controls-schema';
 import { createElectrostaticShieldingScene } from './scene.entry';
 import { electrostaticShieldingMeta } from './scene.meta';
 import { createBoundControls } from '../../ui/components/bound-controls';
-import { resetSceneAndControls } from '../../app/control-projection';
 
 bootScenePage({
   meta: electrostaticShieldingMeta,
@@ -46,9 +45,6 @@ bootScenePage({
       schema: electrostaticShieldingControlsSchema,
       scene,
       scheduleRender,
-      writeParam,
-      onAction: (key, renderer) => {
-        if (key === 'reset') resetSceneAndControls(scene, renderer, writeParam);
-      }
+      writeParam
     })
 });

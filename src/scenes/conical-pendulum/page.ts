@@ -4,7 +4,6 @@ import { conicalPendulumControlsSchema } from './controls-schema';
 import { createConicalPendulumScene } from './scene.entry';
 import { conicalPendulumMeta } from './scene.meta';
 import { createBoundControls } from '../../ui/components/bound-controls';
-import { resetSceneAndControls } from '../../app/control-projection';
 
 bootScenePage({
   meta: conicalPendulumMeta,
@@ -46,9 +45,6 @@ bootScenePage({
       schema: conicalPendulumControlsSchema,
       scene,
       scheduleRender,
-      writeParam,
-      onAction: (key, renderer) => {
-        if (key === 'reset') resetSceneAndControls(scene, renderer, writeParam);
-      }
+      writeParam
     })
 });

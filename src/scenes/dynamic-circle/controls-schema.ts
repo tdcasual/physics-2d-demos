@@ -63,7 +63,8 @@ export const dynamicCircleControlsSchema: ControlsSchema = {
           max: 90,
           step: 1,
           value: -90,
-          unit: '°'
+          unit: '°',
+          visibleWhen: { tab: 'rotating' }
         },
         {
           type: 'slider',
@@ -73,7 +74,8 @@ export const dynamicCircleControlsSchema: ControlsSchema = {
           max: 510,
           step: 5,
           value: 330,
-          unit: 'm'
+          unit: 'm',
+          visibleWhen: { tab: 'translating' }
         }
       ]
     },
@@ -89,7 +91,8 @@ export const dynamicCircleControlsSchema: ControlsSchema = {
           max: 600,
           step: 5,
           value: 480,
-          unit: 'm'
+          unit: 'm',
+          visibleWhen: { boundary: 'straight' }
         },
         {
           type: 'slider',
@@ -99,7 +102,8 @@ export const dynamicCircleControlsSchema: ControlsSchema = {
           max: 600,
           step: 5,
           value: 480,
-          unit: 'm'
+          unit: 'm',
+          visibleWhen: { boundary: 'triangle' }
         },
         {
           type: 'slider',
@@ -109,7 +113,8 @@ export const dynamicCircleControlsSchema: ControlsSchema = {
           max: 450,
           step: 10,
           value: 300,
-          unit: 'm'
+          unit: 'm',
+          visibleWhen: { boundary: 'triangle' }
         },
         {
           type: 'slider',
@@ -119,7 +124,8 @@ export const dynamicCircleControlsSchema: ControlsSchema = {
           max: 200,
           step: 5,
           value: 120,
-          unit: 'm'
+          unit: 'm',
+          visibleWhen: { boundary: 'circle' }
         },
         {
           type: 'slider',
@@ -129,7 +135,8 @@ export const dynamicCircleControlsSchema: ControlsSchema = {
           max: 520,
           step: 5,
           value: 380,
-          unit: 'm'
+          unit: 'm',
+          visibleWhen: { boundary: 'circle' }
         },
         {
           type: 'slider',
@@ -139,7 +146,8 @@ export const dynamicCircleControlsSchema: ControlsSchema = {
           max: 480,
           step: 5,
           value: 330,
-          unit: 'm'
+          unit: 'm',
+          visibleWhen: { boundary: 'circle' }
         }
       ]
     },

@@ -261,10 +261,8 @@ export const ExperimentsSection: React.FC = () => {
               return (
                 <a
                   key={scene.id}
-                  href={isVisible ? `/src/pages/${scene.id}.html` : undefined}
+                  href={`/src/pages/${scene.id}.html`}
                   className={`experiment-card ${isVisible ? 'visible' : ''}`}
-                  tabIndex={isVisible ? 0 : undefined}
-                  aria-hidden={!isVisible}
                   style={{ transitionDelay: `${Math.min(index * 0.05, 0.5)}s` }}
                   onMouseEnter={() => {
                     const pageUrl = `/src/pages/${scene.id}.html`;

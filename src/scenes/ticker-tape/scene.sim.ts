@@ -4,6 +4,12 @@
  */
 
 import { roundToSignificantDigits } from '../../platform/data-workspace';
+import { mulberry32 } from '../../core/random';
+import {
+  linearFit,
+  linearFitDroppingOutliers,
+  quadraticFit as statsQuadraticFit
+} from '../../core/stats';
 
 export const TICK_PERIOD_S = 0.02;
 export const COUNTING_POINT_COUNT = 7;
@@ -154,79 +160,26 @@ export function computeSuccessiveAMs2(
   return (xLast - 2 * xMid + x0) / 100 / (tBlock * tBlock);
 }
 
+function asXY(
+  points: ReadonlyArray<{ t: number; y: number }>
+): Array<{ x: number; y: number }> {
+  return points.map((p) => ({ x: p.t, y: p.y }));
+}
+
 export function fitLine(points: ReadonlyArray<{ t: number; y: number }>): {
   slope: number;
   intercept: number;
 } | null {
-  if (points.length < 2) return null;
-  let sumT = 0;
-  let sumY = 0;
-  let sumTT = 0;
-  let sumTY = 0;
-  for (const p of points) {
-    sumT += p.t;
-    sumY += p.y;
-    sumTT += p.t * p.t;
-    sumTY += p.t * p.y;
-  }
-  const m = points.length;
-  const den = m * sumTT - sumT * sumT;
-  if (Math.abs(den) < 1e-18) return null;
-  const slope = (m * sumTY - sumT * sumY) / den;
-  const intercept = (sumY - slope * sumT) / m;
-  return { slope, intercept };
+  const fit = linearFit(asXY(points));
+  return fit ? { slope: fit.slope, intercept: fit.intercept } : null;
 }
 
 /** y = a t² + b t + c。匀加速 x–t 是抛物线，不能用直线拟合。 */
 export function fitQuadratic(
   points: ReadonlyArray<{ t: number; y: number }>
 ): { a: number; b: number; c: number } | null {
-  if (points.length < 3) return null;
-  let s0 = 0;
-  let s1 = 0;
-  let s2 = 0;
-  let s3 = 0;
-  let s4 = 0;
-  let sy = 0;
-  let s1y = 0;
-  let s2y = 0;
-  for (const p of points) {
-    const t = p.t;
-    const t2 = t * t;
-    s0 += 1;
-    s1 += t;
-    s2 += t2;
-    s3 += t2 * t;
-    s4 += t2 * t2;
-    sy += p.y;
-    s1y += t * p.y;
-    s2y += t2 * p.y;
-  }
-  const aug = [
-    [s0, s1, s2, sy],
-    [s1, s2, s3, s1y],
-    [s2, s3, s4, s2y]
-  ];
-  for (let col = 0; col < 3; col++) {
-    let pivot = col;
-    for (let row = col + 1; row < 3; row++) {
-      if (Math.abs(aug[row][col]) > Math.abs(aug[pivot][col])) pivot = row;
-    }
-    if (Math.abs(aug[pivot][col]) < 1e-18) return null;
-    if (pivot !== col) {
-      const tmp = aug[col];
-      aug[col] = aug[pivot];
-      aug[pivot] = tmp;
-    }
-    const div = aug[col][col];
-    for (let j = col; j < 4; j++) aug[col][j] /= div;
-    for (let row = 0; row < 3; row++) {
-      if (row === col) continue;
-      const f = aug[row][col];
-      for (let j = col; j < 4; j++) aug[row][j] -= f * aug[col][j];
-    }
-  }
-  return { c: aug[0][3], b: aug[1][3], a: aug[2][3] };
+  const q = statsQuadraticFit(asXY(points));
+  return q ? { a: q.a, b: q.b, c: q.c } : null;
 }
 
 export function fitLineDroppingOutliers(
@@ -235,39 +188,15 @@ export function fitLineDroppingOutliers(
   fit: { slope: number; intercept: number } | null;
   outlierIndices: number[];
 } {
-  const fitAll = fitLine(points);
-  if (!fitAll || points.length < 4) {
-    return { fit: fitAll, outlierIndices: [] };
-  }
-  const residuals = points.map((p) =>
-    Math.abs(p.y - (fitAll.slope * p.t + fitAll.intercept))
-  );
-  const maxI = residuals.indexOf(Math.max(...residuals));
-  const others = residuals.filter((_, i) => i !== maxI);
-  const meanOthers =
-    others.reduce((sum, r) => sum + r, 0) / Math.max(1, others.length);
-  const cutoff = Math.max(0.05, 3 * meanOthers);
-  const outlierIndices = residuals
-    .map((r, i) => (r > cutoff ? i : -1))
-    .filter((i) => i >= 0);
-  if (outlierIndices.length === 0) return { fit: fitAll, outlierIndices: [] };
-  const kept = points.filter((_, i) => !outlierIndices.includes(i));
-  return { fit: fitLine(kept) ?? fitAll, outlierIndices };
+  const { fit, outlierIndices } = linearFitDroppingOutliers(asXY(points));
+  return {
+    fit: fit ? { slope: fit.slope, intercept: fit.intercept } : null,
+    outlierIndices
+  };
 }
 
 export function roundCm(value: number): number {
   return Math.round(value * 100) / 100;
-}
-
-function mulberry32(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a += 0x6d2b79f5;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
 }
 
 function emptyRow(n: number): Array<number | null> {

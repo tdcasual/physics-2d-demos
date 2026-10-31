@@ -23,6 +23,7 @@ export const internalEnergyControlsSchema: ControlsSchema = {
     {
       title: '气体',
       collapsed: false,
+      visibleWhen: { mode: ['compress', 'expand'] },
       fields: [
         {
           type: 'slider',
@@ -41,19 +42,22 @@ export const internalEnergyControlsSchema: ControlsSchema = {
           max: C.dewPointMax,
           step: 1,
           value: C.defaultDewPoint,
-          unit: '°C'
+          unit: '°C',
+          visibleWhen: { mode: 'expand' }
         },
         {
           type: 'toggle',
           key: 'wet',
           label: '湿空气',
-          value: true
+          value: true,
+          visibleWhen: { mode: 'expand' }
         }
       ]
     },
     {
       title: '热容',
       collapsed: false,
+      visibleWhen: { mode: 'heat' },
       fields: [
         {
           type: 'slider',

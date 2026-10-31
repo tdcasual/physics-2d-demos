@@ -60,7 +60,13 @@ export const locomotiveControlsSchema: ControlsSchema = {
       collapsed: false,
       fields: [
         { type: 'toggle', key: 'autoRun', label: '自动播放', value: true },
-        { type: 'button', key: 'reset', label: '重置', variant: 'secondary' }
+        {
+          type: 'button',
+          key: 'reset',
+          label: '重置',
+          variant: 'secondary',
+          bind: { action: 'reset' }
+        }
       ]
     },
     {

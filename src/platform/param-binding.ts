@@ -123,3 +123,23 @@ export function controlKeyOfParam(
   }
   return paramKey;
 }
+
+/** 按钮 / button-grid 子按钮上声明的 `bind.action` */
+export function lookupBoundAction(
+  schema: ControlsSchema,
+  key: string
+): string | undefined {
+  for (const section of schema.sections) {
+    for (const field of section.fields) {
+      if (field.type === 'button' && field.key === key) {
+        return field.bind?.action;
+      }
+      if (field.type === 'button-grid') {
+        for (const button of field.buttons) {
+          if (button.key === key) return button.bind?.action;
+        }
+      }
+    }
+  }
+  return undefined;
+}

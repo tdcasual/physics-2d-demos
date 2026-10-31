@@ -51,7 +51,8 @@ export const earthGravityControlsSchema: ControlsSchema = {
           type: 'button',
           key: 'reset',
           label: '复位重置',
-          variant: 'secondary'
+          variant: 'secondary',
+          bind: { action: 'reset' }
         }
       ]
     },

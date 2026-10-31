@@ -10,8 +10,10 @@
  * （仍会重绘并写回 URL）；返回 'skip' 表示完全接管（不重绘、不写回）。
  */
 
+import { resetSceneAndControls } from '../../platform/control-projection';
 import {
   controlChangeToParams,
+  lookupBoundAction,
   type ControlValue
 } from '../../platform/param-binding';
 import type { ControlsSchema } from '../../platform/controls-schema';
@@ -24,6 +26,8 @@ import {
 export type BoundScene = {
   setParams(params: Record<string, ControlValue>): unknown;
   render(): void;
+  reset?(): void;
+  getParams?(): object;
 };
 
 export type BoundChangeResult = boolean | 'skip' | void;
@@ -40,7 +44,10 @@ export type CreateBoundControlsOptions<TScene extends BoundScene> = {
     value: ControlValue,
     renderer: SchemaRendererInstance
   ) => BoundChangeResult;
-  onAction?: (key: string, renderer: SchemaRendererInstance) => void;
+  onAction?: (
+    key: string,
+    renderer: SchemaRendererInstance
+  ) => BoundChangeResult;
 };
 
 export function createBoundControls<TScene extends BoundScene>(
@@ -62,10 +69,64 @@ export function createBoundControls<TScene extends BoundScene>(
       writeParam?.(key, value);
     },
     onAction: (key) => {
-      options.onAction?.(key, renderer);
+      const intercepted = options.onAction?.(key, renderer);
+      if (intercepted === 'skip') return;
+      if (intercepted !== true) {
+        dispatchBoundAction(schema, key, scene, renderer, writeParam);
+      }
       render();
     }
   });
 
   return exposeSchemaHandle(renderer);
+}
+
+function sceneMethod(
+  scene: object,
+  name: string
+): ((this: object) => unknown) | undefined {
+  const value = (scene as Record<string, unknown>)[name];
+  return typeof value === 'function'
+    ? (value as (this: object) => unknown)
+    : undefined;
+}
+
+function dispatchBoundAction<TScene extends BoundScene>(
+  schema: ControlsSchema,
+  key: string,
+  scene: TScene,
+  renderer: SchemaRendererInstance,
+  writeParam?: (key: string, value: ControlValue) => void
+): void {
+  const action = lookupBoundAction(schema, key);
+  if (!action) return;
+  if (action === 'reset') {
+    if (
+      typeof scene.reset !== 'function' ||
+      typeof scene.getParams !== 'function'
+    ) {
+      throwMissingAction(action);
+      return;
+    }
+    resetSceneAndControls(
+      { reset: () => scene.reset!(), getParams: () => scene.getParams!() },
+      renderer,
+      writeParam
+    );
+    return;
+  }
+  const method = sceneMethod(scene, action);
+  if (!method) {
+    throwMissingAction(action);
+    return;
+  }
+  method.call(scene);
+}
+
+function throwMissingAction(action: string): void {
+  const message = `[bound-controls] bind.action "${action}" is not a function on the scene`;
+  if (import.meta.env.DEV || import.meta.env.MODE === 'test') {
+    throw new Error(message);
+  }
+  console.error(message);
 }

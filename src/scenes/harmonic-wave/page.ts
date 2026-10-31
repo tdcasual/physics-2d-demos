@@ -1,7 +1,7 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
 import { writeOwnedSceneParams } from '../../app/url-sync';
-import { applyTouchInteractionMode } from '../../platform/input/touch';
+import { createStageInteraction } from '../../platform/input/stage-interaction';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { createHarmonicWaveScene } from './scene.entry';
@@ -30,49 +30,42 @@ bootScenePage({
   },
   createScene: ({ canvas, theme, mode, demoHints, sceneWriter }) => {
     if (!canvas) throw new Error('harmonic-wave requires a canvas');
-    applyTouchInteractionMode(canvas, 'drag');
     const scene = createHarmonicWaveScene({ canvas, theme, mode, demoHints });
     const scheduler = createRenderScheduler(() => scene.render());
-    const toWorldX = (event: PointerEvent): number => {
-      const rect = canvas.getBoundingClientRect();
-      return pointerToWorldX(
-        event.clientX - rect.left,
-        event.clientY - rect.top,
-        rect.width,
-        rect.height,
-        stageLayoutFrom(canvas)
-      );
+    const setPoint = (_id: string, model: { x: number; y: number }): void => {
+      scene.setPointX(model.x);
     };
-    const onPointerDown = (event: PointerEvent): void => {
-      scene.setPointX(toWorldX(event));
-      canvas.setPointerCapture(event.pointerId);
-    };
-    const onPointerMove = (event: PointerEvent): void => {
-      if (canvas.hasPointerCapture(event.pointerId))
-        scene.setPointX(toWorldX(event));
-    };
-    const onPointerUp = (event: PointerEvent): void => {
-      try {
-        canvas.releasePointerCapture(event.pointerId);
-      } catch {
-        // no-op
-      }
-      const pointInput = document.querySelector<HTMLInputElement>(
-        '[data-control-key="pointX"] input[type="range"]'
-      );
-      if (pointInput) {
-        const value = String(scene.getParams().pointX);
-        if (pointInput.value !== value) {
-          pointInput.value = value;
-          pointInput.dispatchEvent(new Event('input', { bubbles: true }));
+    const interaction = createStageInteraction({
+      canvas,
+      toModel: (local, size) => ({
+        x: pointerToWorldX(
+          local.x,
+          local.y,
+          size.width,
+          size.height,
+          stageLayoutFrom(canvas)
+        ),
+        y: 0
+      }),
+      pick: () => 'point',
+      move: setPoint,
+      onPress: setPoint,
+      commit: () => {
+        const pointInput = document.querySelector<HTMLInputElement>(
+          '[data-control-key="pointX"] input[type="range"]'
+        );
+        if (pointInput) {
+          const value = String(scene.getParams().pointX);
+          if (pointInput.value !== value) {
+            pointInput.value = value;
+            pointInput.dispatchEvent(new Event('input', { bubbles: true }));
+          }
         }
+        writeOwnedSceneParams(sceneWriter, {
+          pointX: scene.getParams().pointX
+        });
       }
-      writeOwnedSceneParams(sceneWriter, { pointX: scene.getParams().pointX });
-    };
-    canvas.addEventListener('pointerdown', onPointerDown);
-    canvas.addEventListener('pointermove', onPointerMove);
-    canvas.addEventListener('pointerup', onPointerUp);
-    canvas.addEventListener('pointercancel', onPointerUp);
+    });
     return {
       ...scene,
       step(dt: number): void {
@@ -81,10 +74,7 @@ bootScenePage({
       },
       dispose(): void {
         scheduler.dispose();
-        canvas.removeEventListener('pointerdown', onPointerDown);
-        canvas.removeEventListener('pointermove', onPointerMove);
-        canvas.removeEventListener('pointerup', onPointerUp);
-        canvas.removeEventListener('pointercancel', onPointerUp);
+        interaction.dispose();
         scene.dispose();
       }
     };

@@ -9,6 +9,8 @@
  * 用平滑曲线连接落点得到轨迹 → 取点测 (x, y) 求初速度。
  */
 
+import { quadraticFitNoConstant } from '../../core/stats';
+
 /** 重力加速度（m/s²），与数据处理环节的已知量一致。 */
 export const G_MS2 = 9.8;
 /** 重力加速度（cm/s²）。 */
@@ -240,27 +242,7 @@ export function groupMarksByLevel(
 export function fitTrajectory(
   points: ReadonlyArray<{ x: number; y: number }>
 ): ProjectileLabCurve | null {
-  let s2 = 0;
-  let s3 = 0;
-  let s4 = 0;
-  let t1 = 0;
-  let t2 = 0;
-  for (const { x, y } of points) {
-    const x2 = x * x;
-    s2 += x2;
-    s3 += x2 * x;
-    s4 += x2 * x2;
-    t1 += x * y;
-    t2 += x2 * y;
-  }
-  if (!(s4 > 0)) return null;
-  const det = s2 * s4 - s3 * s3;
-  if (Math.abs(det) > 1e-9 * s2 * s4) {
-    const a = (t1 * s4 - t2 * s3) / det;
-    const b = (s2 * t2 - s3 * t1) / det;
-    if (b > 0) return { a, b };
-  }
-  return { a: 0, b: t2 / s4 };
+  return quadraticFitNoConstant(points);
 }
 
 export function curveY(curve: ProjectileLabCurve, xCm: number): number {

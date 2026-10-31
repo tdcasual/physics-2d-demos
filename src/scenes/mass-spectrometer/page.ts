@@ -4,7 +4,6 @@ import { massSpectrometerControlsSchema } from './controls-schema';
 import { createMassSpectrometerScene } from './scene.entry';
 import { massSpectrometerMeta } from './scene.meta';
 import { createBoundControls } from '../../ui/components/bound-controls';
-import { resetSceneAndControls } from '../../app/control-projection';
 
 bootScenePage({
   meta: massSpectrometerMeta,
@@ -46,9 +45,6 @@ bootScenePage({
       schema: massSpectrometerControlsSchema,
       scene,
       scheduleRender,
-      writeParam,
-      onAction: (key, renderer) => {
-        if (key === 'reset') resetSceneAndControls(scene, renderer, writeParam);
-      }
+      writeParam
     })
 });

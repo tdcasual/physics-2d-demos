@@ -25,7 +25,8 @@ export const mechanicalEnergyControlsSchema: ControlsSchema = {
           max: mechanicalEnergyConstants.resistanceMax,
           step: 0.0001,
           value: mechanicalEnergyConstants.defaultResistance,
-          formatValue: formatResistance
+          formatValue: formatResistance,
+          visibleWhen: { environment: 'resist' }
         }
       ]
     },

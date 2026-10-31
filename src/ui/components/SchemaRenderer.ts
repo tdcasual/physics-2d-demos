@@ -11,6 +11,7 @@ import {
 import { createControlCard } from './ControlCard';
 import {
   createSliderRow,
+  formatSliderDisplay,
   createNumberInputRow,
   createTextInputRow,
   createSelectRow,
@@ -26,6 +27,13 @@ import type {
   ControlField,
   VisibleWhen
 } from '../../platform/controls-schema';
+
+function applyDisabled(node: HTMLElement, disabled: boolean): void {
+  node.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+  node.querySelectorAll('input, button, select, textarea').forEach((el) => {
+    (el as HTMLInputElement).disabled = disabled;
+  });
+}
 
 function tryDispose(el: HTMLElement): void {
   const d = (el as Partial<DisposableElement>).dispose;
@@ -162,9 +170,13 @@ export function renderSchema(
   // display——setVisible 与演示模式 minimal 面板各自管理 display）。
   const controlState = new Map<string, unknown>();
   const visibilityRules: Array<{ node: HTMLElement; when: VisibleWhen }> = [];
+  const disableRules: Array<{ node: HTMLElement; when: VisibleWhen }> = [];
   const applyVisibility = (): void => {
     for (const rule of visibilityRules) {
       rule.node.hidden = !matchesVisibleWhen(rule.when, controlState);
+    }
+    for (const rule of disableRules) {
+      applyDisabled(rule.node, matchesVisibleWhen(rule.when, controlState));
     }
   };
   const recordValue = (key: string, value: unknown): void => {
@@ -200,6 +212,9 @@ export function renderSchema(
     if (section.visibleWhen) {
       visibilityRules.push({ node: card.element, when: section.visibleWhen });
     }
+    if (section.disabledWhen) {
+      disableRules.push({ node: card.element, when: section.disabledWhen });
+    }
 
     section.fields.forEach((field) => {
       fieldTypes.set(field.key, field.type);
@@ -219,6 +234,9 @@ export function renderSchema(
         visibleNodes.set(field.key, node);
         if (field.visibleWhen) {
           visibilityRules.push({ node, when: field.visibleWhen });
+        }
+        if (field.disabledWhen) {
+          disableRules.push({ node, when: field.disabledWhen });
         }
       }
       if (valueSetter) valueSetters.set(field.key, valueSetter);
@@ -274,6 +292,7 @@ export function renderSchema(
       fieldTypes.clear();
       controlState.clear();
       visibilityRules.length = 0;
+      disableRules.length = 0;
     },
     fieldTypes,
     bindings,
@@ -311,16 +330,16 @@ function renderField(
       const paintSlider = (value: unknown) => {
         if (!input) return;
         input.value = String(value);
+        const n = parseFloat(String(value));
+        const text = Number.isFinite(n)
+          ? formatSliderDisplay(n, {
+              unit: field.unit,
+              formatValue: field.formatValue
+            })
+          : String(value);
         const valueEl = row.querySelector('span:last-child');
-        if (valueEl) {
-          const n = parseFloat(String(value));
-          const formatted = Number.isFinite(n)
-            ? field.formatValue
-              ? field.formatValue(n)
-              : String(n)
-            : String(value);
-          valueEl.textContent = formatted + (field.unit || '');
-        }
+        if (valueEl) valueEl.textContent = text;
+        input.setAttribute('aria-valuetext', text);
       };
       return {
         node: row,

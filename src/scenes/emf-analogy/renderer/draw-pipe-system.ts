@@ -1,3 +1,4 @@
+import { mulberry32 } from '../../../core/random';
 import type { WaterColors } from './water-colors';
 
 /* ── 细网管（内阻）绘制 ── */
@@ -50,17 +51,6 @@ export interface WaterParticle {
 
 /** 模块级固定种子；各管段按 key 派生独立序列，重建时同一 key 得到同一粒子。 */
 const PARTICLE_SEED_BASE = 0xe4f4a107;
-
-function mulberry32(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a += 0x6d2b79f5;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 function hashPoolKey(key: string): number {
   let h = PARTICLE_SEED_BASE;

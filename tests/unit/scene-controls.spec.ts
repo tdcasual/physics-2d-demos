@@ -30,6 +30,10 @@ describe('SceneControls', () => {
       expect(row.querySelector('input[type="range"]')).not.toBeNull();
       const valueEl = row.querySelector('span');
       expect(valueEl?.textContent).toBe('50m/s');
+      const slider = row.querySelector(
+        'input[type="range"]'
+      ) as HTMLInputElement;
+      expect(slider.getAttribute('aria-valuetext')).toBe('50m/s');
     });
 
     it('should associate the label with the slider via htmlFor/id', () => {

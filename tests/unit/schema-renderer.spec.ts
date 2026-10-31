@@ -556,4 +556,50 @@ describe('SchemaRenderer', () => {
     expect(btn.getAttribute('aria-checked')).toBe('true');
     expect(btn.style.backgroundColor).toBe('var(--accent-primary)');
   });
+
+  it('disabledWhen disables inputs when the predicate matches', () => {
+    const mount = createMount();
+    const schema: ControlsSchema = {
+      sections: [
+        {
+          title: '参数',
+          fields: [
+            {
+              type: 'toggle',
+              key: 'lock',
+              label: '锁定',
+              value: false
+            },
+            {
+              type: 'slider',
+              key: 'speed',
+              label: '速度',
+              min: 0,
+              max: 10,
+              step: 1,
+              value: 5,
+              disabledWhen: { lock: true }
+            }
+          ]
+        }
+      ]
+    };
+    const renderer = renderSchema({
+      mount,
+      schema,
+      onChange: vi.fn(),
+      onAction: vi.fn()
+    });
+    const slider = mount.querySelector(
+      'input[type="range"]'
+    ) as HTMLInputElement;
+    expect(slider.disabled).toBe(false);
+    renderer.setValueSilently('lock', true);
+    expect(slider.disabled).toBe(true);
+    expect(
+      mount
+        .querySelector('[data-control-key="speed"]')
+        ?.getAttribute('aria-disabled')
+    ).toBe('true');
+  });
 });

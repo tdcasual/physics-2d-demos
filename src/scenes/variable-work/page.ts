@@ -10,8 +10,6 @@ import {
   asBool,
   asMode,
   restoredUrlParams,
-  shouldShowK,
-  shouldShowPower,
   type VariableWorkParams
 } from './scene.sim';
 
@@ -97,8 +95,6 @@ bootScenePage({
           const mode = asMode(value);
           workScene.setParams({ mode });
           renderer.setActive(key, mode);
-          renderer.setVisible('k', shouldShowK(mode));
-          renderer.setVisible('power', shouldShowPower(mode));
           writeParam?.(
             key,
             mode === 'power' ? 1 : mode === 'piecewise' ? 2 : 0
@@ -113,8 +109,6 @@ bootScenePage({
       },
       onAction: () => undefined
     });
-    renderer.setVisible('k', shouldShowK(workScene.getParams().mode));
-    renderer.setVisible('power', shouldShowPower(workScene.getParams().mode));
 
     const syncFromScene = (): void => {
       const params = workScene.getParams();
@@ -123,8 +117,6 @@ bootScenePage({
       renderer.setValueSilently('k', params.k);
       renderer.setValueSilently('power', params.power);
       renderer.setValueSilently('microsteps', params.microsteps);
-      renderer.setVisible('k', shouldShowK(params.mode));
-      renderer.setVisible('power', shouldShowPower(params.mode));
     };
 
     return {
@@ -137,11 +129,6 @@ bootScenePage({
       setActive: (key: string, value: string) => {
         applying = true;
         renderer.setActive(key, value);
-        if (key === 'mode') {
-          const mode = asMode(value);
-          renderer.setVisible('k', shouldShowK(mode));
-          renderer.setVisible('power', shouldShowPower(mode));
-        }
         applying = false;
       },
       syncFromScene

@@ -156,18 +156,24 @@ function lambdaSlider(mount: HTMLElement): HTMLInputElement {
   return slider;
 }
 
+function visibilityOf(node: HTMLElement | null): string {
+  if (!node) return 'missing';
+  if (node.hidden || node.style.display === 'none') return 'none';
+  return node.style.display;
+}
+
 function controlDisplay(mount: HTMLElement, key: string): string {
-  const node = mount.querySelector(
-    `[data-control-key="${key}"]`
-  ) as HTMLElement | null;
-  return node?.style.display ?? 'missing';
+  return visibilityOf(
+    mount.querySelector(`[data-control-key="${key}"]`) as HTMLElement | null
+  );
 }
 
 function sectionDisplay(mount: HTMLElement, title: string): string {
-  const node = mount.querySelector(
-    `[data-control-section="${title}"]`
-  ) as HTMLElement | null;
-  return node?.style.display ?? 'missing';
+  return visibilityOf(
+    mount.querySelector(
+      `[data-control-section="${title}"]`
+    ) as HTMLElement | null
+  );
 }
 
 function isShown(display: string): boolean {

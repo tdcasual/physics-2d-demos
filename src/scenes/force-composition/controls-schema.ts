@@ -23,6 +23,7 @@ export const forceCompositionControlsSchema: ControlsSchema = {
     {
       title: '两力参数',
       collapsed: false,
+      visibleWhen: { tab: ['synthesis', 'range'] },
       fields: [
         {
           type: 'preset-group',
@@ -32,7 +33,8 @@ export const forceCompositionControlsSchema: ControlsSchema = {
             { id: 'parallelogram', label: '平行四边形' },
             { id: 'triangle', label: '三角形法则' }
           ],
-          initialActive: 'parallelogram'
+          initialActive: 'parallelogram',
+          visibleWhen: { tab: 'synthesis' }
         },
         {
           type: 'slider',
@@ -69,6 +71,7 @@ export const forceCompositionControlsSchema: ControlsSchema = {
     {
       title: '正交分解',
       collapsed: false,
+      visibleWhen: { tab: 'orthogonal' },
       fields: [
         {
           type: 'slider',
@@ -95,6 +98,7 @@ export const forceCompositionControlsSchema: ControlsSchema = {
     {
       title: '斜面分解',
       collapsed: false,
+      visibleWhen: { tab: 'effect' },
       fields: [
         {
           type: 'slider',
@@ -121,6 +125,7 @@ export const forceCompositionControlsSchema: ControlsSchema = {
     {
       title: '范围演变',
       collapsed: false,
+      visibleWhen: { tab: 'range' },
       fields: [
         {
           type: 'toggle',

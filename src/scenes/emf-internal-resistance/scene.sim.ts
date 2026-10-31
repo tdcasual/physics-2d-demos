@@ -1,5 +1,6 @@
 import { clamp } from '../../core/math';
 import { finiteOr } from '../../core/coerce';
+import { linearFit } from '../../core/stats';
 
 export type EmfInternalParams = {
   sourceVoltage: number;
@@ -212,23 +213,15 @@ function measurement(params: EmfInternalParams): {
 }
 
 function fitRecords(records: EmfRecord[]): EmfFit | null {
-  if (records.length < 2) return null;
-  const meanI =
-    records.reduce((sum, point) => sum + point.current, 0) / records.length;
-  const meanU =
-    records.reduce((sum, point) => sum + point.voltage, 0) / records.length;
-  let covariance = 0;
-  let variance = 0;
-  records.forEach((point) => {
-    covariance += (point.current - meanI) * (point.voltage - meanU);
-    variance += (point.current - meanI) ** 2;
-  });
-  if (!(variance > 1e-9) || !Number.isFinite(variance)) return null;
-  const slope = covariance / variance;
-  if (!Number.isFinite(slope)) return null;
-  const emf = meanU - slope * meanI;
-  if (!Number.isFinite(emf)) return null;
-  return { emf, internalResistance: Math.abs(slope), slope };
+  const fit = linearFit(
+    records.map((point) => ({ x: point.current, y: point.voltage }))
+  );
+  if (!fit) return null;
+  return {
+    emf: fit.intercept,
+    internalResistance: Math.abs(fit.slope),
+    slope: fit.slope
+  };
 }
 
 function derive(

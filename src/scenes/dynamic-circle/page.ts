@@ -1,7 +1,7 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
 import { writeOwnedSceneParams } from '../../app/url-sync';
-import { applyTouchInteractionMode } from '../../platform/input/touch';
+import { createStageInteraction } from '../../platform/input/stage-interaction';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { createDynamicCircleScene } from './scene.entry';
@@ -49,52 +49,34 @@ bootScenePage({
   },
   createScene: ({ canvas, theme, mode, demoHints }) => {
     if (!canvas) throw new Error('dynamic-circle requires a canvas');
-    applyTouchInteractionMode(canvas, 'drag');
     const scene = createDynamicCircleScene({ canvas, theme, mode, demoHints });
     const scheduler = createRenderScheduler(() => scene.render());
-    let dragHandle: DynamicCircleHandle = null;
-    const toNorm = (event: PointerEvent): { x: number; y: number } => {
-      const rect = canvas.getBoundingClientRect();
-      return pointerToBaseNorm(
-        event.clientX - rect.left,
-        event.clientY - rect.top,
-        rect.width,
-        rect.height,
-        stageLayoutFrom(canvas)
-      );
-    };
-    const onPointerDown = (event: PointerEvent): void => {
-      const point = toNorm(event);
-      dragHandle = scene.pickHandle(point.x, point.y);
-      if (dragHandle) canvas.setPointerCapture(event.pointerId);
-    };
-    const onPointerMove = (event: PointerEvent): void => {
-      if (!dragHandle) return;
-      const point = toNorm(event);
-      scene.moveHandle(dragHandle, point.x, point.y);
-      scheduler.schedule();
-    };
-    const onPointerUp = (event: PointerEvent): void => {
-      dragHandle = null;
-      try {
-        canvas.releasePointerCapture(event.pointerId);
-      } catch {
-        // no-op
-      }
-    };
-    canvas.addEventListener('pointerdown', onPointerDown);
-    canvas.addEventListener('pointermove', onPointerMove);
-    canvas.addEventListener('pointerup', onPointerUp);
-    canvas.addEventListener('pointercancel', onPointerUp);
+    const interaction = createStageInteraction({
+      canvas,
+      toModel: (local, size) =>
+        pointerToBaseNorm(
+          local.x,
+          local.y,
+          size.width,
+          size.height,
+          stageLayoutFrom(canvas)
+        ),
+      pick: (model) => scene.pickHandle(model.x, model.y),
+      move: (id, model) => {
+        scene.moveHandle(
+          id as Exclude<DynamicCircleHandle, null>,
+          model.x,
+          model.y
+        );
+      },
+      onChange: () => scheduler.schedule()
+    });
     const dispose = scene.dispose.bind(scene);
     return {
       ...scene,
       dispose(): void {
         scheduler.dispose();
-        canvas.removeEventListener('pointerdown', onPointerDown);
-        canvas.removeEventListener('pointermove', onPointerMove);
-        canvas.removeEventListener('pointerup', onPointerUp);
-        canvas.removeEventListener('pointercancel', onPointerUp);
+        interaction.dispose();
         dispose();
       }
     };
@@ -103,17 +85,6 @@ bootScenePage({
     const render = scheduleRender ?? (() => scene.render());
     let applying = false;
     let lastUi = scene.getParams();
-
-    const applyVisibility = (p: DynamicCircleParams): void => {
-      renderer.setVisible('theta', p.tab === 'rotating');
-      renderer.setVisible('y0', p.tab === 'translating');
-      renderer.setVisible('xBound', p.boundary === 'straight');
-      renderer.setVisible('triX', p.boundary === 'triangle');
-      renderer.setVisible('triH', p.boundary === 'triangle');
-      renderer.setVisible('circleR', p.boundary === 'circle');
-      renderer.setVisible('circleX', p.boundary === 'circle');
-      renderer.setVisible('circleY', p.boundary === 'circle');
-    };
 
     const writeUrl = (p: DynamicCircleParams): void => {
       writeOwnedSceneParams(sceneWriter, urlSnapshot(p));
@@ -140,8 +111,6 @@ bootScenePage({
       if (p.tab !== lastUi.tab) renderer.setActive('tab', p.tab);
       if (p.boundary !== lastUi.boundary)
         renderer.setActive('boundary', p.boundary);
-      if (p.tab !== lastUi.tab || p.boundary !== lastUi.boundary)
-        applyVisibility(p);
       applying = false;
       const changed =
         p.tab !== lastUi.tab ||
@@ -173,7 +142,6 @@ bootScenePage({
           renderer.setValue('v', params.v);
           renderer.setValue('theta', params.theta);
           renderer.setValue('y0', params.y0);
-          applyVisibility(params);
           lastUi = params;
           render();
           writeUrl(params);
@@ -184,7 +152,6 @@ bootScenePage({
             String(value) as DynamicCircleBoundary
           );
           renderer.setActive('boundary', params.boundary);
-          applyVisibility(params);
           lastUi = params;
           render();
           writeUrl(params);
@@ -206,7 +173,6 @@ bootScenePage({
       onAction: () => {}
     });
 
-    applyVisibility(scene.getParams());
     const unsubscribe = scene.subscribe(syncFromScene);
 
     const projectFromLive = (): void => {
@@ -226,18 +192,12 @@ bootScenePage({
       renderer.setValueSilently('showCenter', p.showCenter);
       renderer.setActiveSilently('tab', p.tab);
       renderer.setActiveSilently('boundary', p.boundary);
-      applyVisibility(p);
       applying = false;
       lastUi = { ...p };
     };
 
     return {
       ...exposeSchemaHandle(renderer),
-      setActive(key: string, value: string): void {
-        renderer.setActive(key, value);
-        if (key === 'tab' || key === 'boundary')
-          applyVisibility(scene.getParams());
-      },
       syncFromScene: projectFromLive,
       dispose(): void {
         unsubscribe();

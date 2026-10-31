@@ -4,7 +4,6 @@ import { frictionControlsSchema } from './controls-schema';
 import { createFrictionScene } from './scene.entry';
 import { frictionMeta } from './scene.meta';
 import { createBoundControls } from '../../ui/components/bound-controls';
-import { resetSceneAndControls } from '../../app/control-projection';
 bootScenePage({
   meta: frictionMeta,
   autoPlay: true,
@@ -40,9 +39,6 @@ bootScenePage({
       schema: frictionControlsSchema,
       scene,
       scheduleRender,
-      writeParam,
-      onAction: (key, renderer) => {
-        if (key === 'reset') resetSceneAndControls(scene, renderer, writeParam);
-      }
+      writeParam
     })
 });

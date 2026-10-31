@@ -9,6 +9,17 @@ import { withDispose, type DisposableElement } from './types';
 
 let sliderIdCounter = 0;
 
+export function formatSliderDisplay(
+  value: number,
+  options: {
+    unit?: string;
+    formatValue?: (value: number) => string;
+  }
+): string {
+  const body = options.formatValue ? options.formatValue(value) : String(value);
+  return body + (options.unit || '');
+}
+
 export function createSliderRow(
   label: string,
   options: {
@@ -47,14 +58,17 @@ export function createSliderRow(
   const valueEl = document.createElement('span');
   valueEl.className = 'text-[12px] font-semibold w-10 text-right shrink-0';
   valueEl.style.color = 'var(--text-primary)';
-  const formatValue = (value: number) =>
-    (options.formatValue ? options.formatValue(value) : String(value)) +
-    (options.unit || '');
-  valueEl.textContent = formatValue(options.value);
+  const formatValue = (value: number) => formatSliderDisplay(value, options);
+  const paint = (value: number) => {
+    const text = formatValue(value);
+    valueEl.textContent = text;
+    slider.setAttribute('aria-valuetext', text);
+  };
+  paint(options.value);
 
   const onInput = () => {
     const val = parseFloat(slider.value);
-    valueEl.textContent = formatValue(val);
+    paint(val);
     options.onChange?.(val);
   };
   slider.addEventListener('input', onInput);

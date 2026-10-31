@@ -19,6 +19,11 @@ export type ParamBinding = {
   values?: Readonly<Record<string, number | string | boolean>>;
   /** 选项 id 是数字字符串（'3'、'0'）而参数是数值：id ↔ Number(id) */
   numeric?: boolean;
+  /**
+   * 按钮动作：控件键触发时调用 `scene[action]()`。
+   * `'reset'` 由 createBoundControls 内置为 resetSceneAndControls。
+   */
+  action?: string;
 };
 
 type VisibleWhenValue = string | number | boolean;
@@ -34,6 +39,8 @@ export type VisibleWhen = Readonly<
 
 type FieldCommon = {
   visibleWhen?: VisibleWhen;
+  /** 同 visibleWhen 语法；命中时 disabled + aria-disabled */
+  disabledWhen?: VisibleWhen;
 };
 
 /** 控制字段联合类型：滑块、数字输入、文本、选择器、按钮等 */
@@ -87,6 +94,7 @@ export type ControlField = FieldCommon &
         label: string;
         presentationLabel?: string;
         variant?: 'primary' | 'secondary' | 'danger';
+        bind?: ParamBinding;
       }
     | {
         type: 'toggle';
@@ -139,6 +147,7 @@ export type ControlField = FieldCommon &
           label: string;
           desc?: string;
           presentationLabel?: string;
+          bind?: ParamBinding;
         }>;
       }
     | {
@@ -164,6 +173,7 @@ export type ControlsSection = {
   span?: 'full';
   /** 整张卡片的声明式显隐（同字段 visibleWhen） */
   visibleWhen?: VisibleWhen;
+  disabledWhen?: VisibleWhen;
   fields: ControlField[];
 };
 

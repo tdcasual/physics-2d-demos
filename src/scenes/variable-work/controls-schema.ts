@@ -42,7 +42,8 @@ export const variableWorkControlsSchema: ControlsSchema = {
           max: variableWorkConstants.kMax,
           step: 0.5,
           value: variableWorkConstants.defaultK,
-          unit: 'N/m'
+          unit: 'N/m',
+          visibleWhen: { mode: ['linear', 'piecewise'] }
         },
         {
           type: 'slider',
@@ -52,7 +53,8 @@ export const variableWorkControlsSchema: ControlsSchema = {
           max: variableWorkConstants.powerMax,
           step: 1,
           value: variableWorkConstants.defaultPower,
-          unit: 'W'
+          unit: 'W',
+          visibleWhen: { mode: 'power' }
         },
         {
           type: 'slider',

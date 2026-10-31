@@ -78,6 +78,27 @@ pnpm test:visual
 - 亮色/暗色主题下控件对比度是否仍然可读。
 - 读数面板、transport、侧边栏开合等交互入口是否仍在预期位置。
 
+## 契约测试总表
+
+`tests/contract/` 是结构/运行时棘轮的权威清单（改动需 CODEOWNERS review）。
+新约束优先写成「用真实 sim / page 跑一遍再断言」；源码正则只用于只降计数。
+
+| 契约                                                                                                             | 约束                                                                              |
+| ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `scene-contract` / `scene-params-contract` / `scene-standard`                                                    | meta、defaultParams↔urlSyncKeys、Canvas 尺寸字面量                                |
+| `scene-url-writer-contract` / `scene-url-extreme-params` / `autorun-url-gap`                                     | URL 写回、极端值、autoRun                                                         |
+| `control-codec-contract` / `remount-projection-contract`                                                         | 枚举/toggle 往返；布局 remount 静默投影                                           |
+| `page-glue-ratchet`                                                                                              | 手写 `renderSchema` / `applyParam` / `syncFromScene` / `setVisible` 只许减少      |
+| `shared-helper-ratchet`                                                                                          | 场景内复刻 finiteOr / drawText / stage-fit / 可种子 RNG 等只许减少                |
+| `stage-interaction-ratchet`                                                                                      | 场景内 `addEventListener('pointer…')` 只许减少；新拖拽用 `createStageInteraction` |
+| `readout-format-contract`                                                                                        | 字符串读数总数只许减少                                                            |
+| `layout-contract` / `has-graph-dual-source`                                                                      | 布局元数据、hasGraph 双源                                                         |
+| `content-box-gbcr-ratchet`                                                                                       | 图区尺寸测量不得在场景内复刻 GBCR                                                 |
+| `curriculum-contract` / `instrument-manifest` / `doc-number-ratchet` / `module-line-budget` / `tolerance-freeze` | 课程目录、仪器清单、文档数字、模块行数、容差冻结                                  |
+
+计数下调：测试 `console.warn` 提示实际 < frozen 时，把 freeze 改成实绩。
+只许缩小，禁止上调。
+
 ## CI 顺序
 
 `validate` 与 `e2e` 并行跑（每次 push / PR）。`browser` 仅 `workflow_dispatch`：先构建，再互不短路地跑 E2E、visual、Linux 容器像素。`update_snapshots` 跳过 E2E 与普通 visual，只重生成权威 Linux 基线并上传 artifact。

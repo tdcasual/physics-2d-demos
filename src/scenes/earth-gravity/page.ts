@@ -4,7 +4,6 @@ import { earthGravityControlsSchema } from './controls-schema';
 import { createEarthGravityScene } from './scene.entry';
 import { earthGravityMeta } from './scene.meta';
 import { createBoundControls } from '../../ui/components/bound-controls';
-import { resetSceneAndControls } from '../../app/control-projection';
 
 bootScenePage({
   meta: earthGravityMeta,
@@ -41,9 +40,6 @@ bootScenePage({
       schema: earthGravityControlsSchema,
       scene,
       scheduleRender,
-      writeParam,
-      onAction: (key, renderer) => {
-        if (key === 'reset') resetSceneAndControls(scene, renderer, writeParam);
-      }
+      writeParam
     })
 });

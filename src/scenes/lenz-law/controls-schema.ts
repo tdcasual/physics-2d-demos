@@ -51,7 +51,13 @@ export const lenzLawControlsSchema: ControlsSchema = {
       fields: [
         { type: 'toggle', key: 'showVectors', label: '显示矢量', value: true },
         { type: 'toggle', key: 'autoRun', label: '自动播放', value: true },
-        { type: 'button', key: 'reset', label: '重置', variant: 'secondary' }
+        {
+          type: 'button',
+          key: 'reset',
+          label: '重置',
+          variant: 'secondary',
+          bind: { action: 'reset' }
+        }
       ]
     },
     {

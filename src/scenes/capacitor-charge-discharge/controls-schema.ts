@@ -79,7 +79,8 @@ export const capacitorControlsSchema: ControlsSchema = {
           type: 'button',
           key: 'reset',
           label: '重置实验曲线',
-          variant: 'secondary'
+          variant: 'secondary',
+          bind: { action: 'reset' }
         }
       ]
     },

@@ -1,7 +1,6 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
 import { createBoundControls } from '../../ui/components/bound-controls';
-import { resetSceneAndControls } from '../../app/control-projection';
 import { lenzLawControlsSchema } from './controls-schema';
 import { createLenzLawScene } from './scene.entry';
 import { lenzLawMeta } from './scene.meta';
@@ -41,9 +40,6 @@ bootScenePage({
       schema: lenzLawControlsSchema,
       scene,
       scheduleRender,
-      writeParam,
-      onAction: (key, renderer) => {
-        if (key === 'reset') resetSceneAndControls(scene, renderer, writeParam);
-      }
+      writeParam
     })
 });

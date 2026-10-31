@@ -4,7 +4,6 @@ import { capacitorControlsSchema } from './controls-schema';
 import { createCapacitorScene } from './scene.entry';
 import { capacitorMeta } from './scene.meta';
 import { createBoundControls } from '../../ui/components/bound-controls';
-import { resetSceneAndControls } from '../../app/control-projection';
 
 bootScenePage({
   meta: capacitorMeta,
@@ -42,9 +41,6 @@ bootScenePage({
       schema: capacitorControlsSchema,
       scene,
       scheduleRender,
-      writeParam,
-      onAction: (key, renderer) => {
-        if (key === 'reset') resetSceneAndControls(scene, renderer, writeParam);
-      }
+      writeParam
     })
 });

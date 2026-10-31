@@ -141,6 +141,77 @@ describe('createBoundControls default routing', () => {
   });
 });
 
+describe('bind.action', () => {
+  it('calls scene.reset via bind.action and projects params', () => {
+    const mount = document.createElement('div');
+    document.body.appendChild(mount);
+    mounts.push(mount);
+    const actionSchema: ControlsSchema = {
+      sections: [
+        {
+          title: '操作',
+          fields: [
+            {
+              type: 'slider',
+              key: 'speed',
+              label: '速度',
+              min: 0,
+              max: 10,
+              step: 1,
+              value: 5
+            },
+            {
+              type: 'button',
+              key: 'reset',
+              label: '重置',
+              bind: { action: 'reset' }
+            },
+            {
+              type: 'button',
+              key: 'fire',
+              label: '发射',
+              bind: { action: 'fireBeam' }
+            }
+          ]
+        }
+      ]
+    };
+    let speed = 5;
+    const scene = {
+      setParams: vi.fn(),
+      render: vi.fn(),
+      fireBeam: vi.fn(),
+      reset: vi.fn(() => {
+        speed = 1;
+      }),
+      getParams: () => ({ speed })
+    };
+    const handle = createBoundControls({
+      mount,
+      schema: actionSchema,
+      scene,
+      scheduleRender: vi.fn(),
+      writeParam: vi.fn()
+    });
+    const fire = field(mount, 'fire').querySelector(
+      'button'
+    ) as HTMLButtonElement;
+    fire.click();
+    expect(scene.fireBeam).toHaveBeenCalledTimes(1);
+
+    handle.setValueSilently?.('speed', 9);
+    const reset = field(mount, 'reset').querySelector(
+      'button'
+    ) as HTMLButtonElement;
+    reset.click();
+    expect(scene.reset).toHaveBeenCalledTimes(1);
+    const slider = field(mount, 'speed').querySelector(
+      'input'
+    ) as HTMLInputElement;
+    expect(slider.value).toBe('1');
+  });
+});
+
 describe('visibleWhen', () => {
   it('evaluates AND across keys and OR within arrays', () => {
     const state = new Map<string, unknown>([

@@ -4,7 +4,6 @@ import { inclineSpringControlsSchema } from './controls-schema';
 import { createInclineSpringScene } from './scene.entry';
 import { inclineSpringMeta } from './scene.meta';
 import { createBoundControls } from '../../ui/components/bound-controls';
-import { resetSceneAndControls } from '../../app/control-projection';
 
 bootScenePage({
   meta: inclineSpringMeta,
@@ -41,9 +40,6 @@ bootScenePage({
       schema: inclineSpringControlsSchema,
       scene,
       scheduleRender,
-      writeParam,
-      onAction: (key, renderer) => {
-        if (key === 'reset') resetSceneAndControls(scene, renderer, writeParam);
-      }
+      writeParam
     })
 });

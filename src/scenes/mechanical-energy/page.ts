@@ -17,7 +17,6 @@ import { mechanicalEnergyMeta } from './scene.meta';
 import {
   asBool,
   restoredUrlParams,
-  shouldShowResistance,
   type MechanicalEnergyParams
 } from './scene.sim';
 
@@ -98,7 +97,6 @@ bootScenePage({
           const environment = asEnvironment(value) ?? 'resist';
           energyScene.setParams({ environment });
           renderer.setActive(key, environment);
-          renderer.setVisible('resistance', shouldShowResistance(environment));
           writeParam?.(key, environment === 'ideal' ? 0 : 1);
         } else if ((NUMBER_KEYS as readonly string[]).includes(key)) {
           energyScene.setParams({
@@ -111,11 +109,6 @@ bootScenePage({
       },
       onAction: () => undefined
     });
-    renderer.setVisible(
-      'resistance',
-      shouldShowResistance(energyScene.getParams().environment)
-    );
-
     const panel = createMechanicalEnergyDataPanel();
     panel.update(energyScene.getState());
     let fallback: ReturnType<typeof createControlCard> | null = null;
@@ -153,7 +146,6 @@ bootScenePage({
       applying = true;
       if (p.environment !== last.environment) {
         renderer.setActive('environment', p.environment);
-        renderer.setVisible('resistance', shouldShowResistance(p.environment));
       }
       if (p.resistance !== last.resistance) {
         renderer.setValue('resistance', p.resistance);
@@ -179,7 +171,6 @@ bootScenePage({
     const syncFromScene = (): void => {
       const p = energyScene.getParams();
       renderer.setActiveSilently('environment', p.environment);
-      renderer.setVisible('resistance', shouldShowResistance(p.environment));
       renderer.setValueSilently('resistance', p.resistance);
       renderer.setValueSilently('mass', p.mass);
       renderer.setValueSilently('gravity', p.gravity);

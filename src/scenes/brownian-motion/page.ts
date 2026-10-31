@@ -4,7 +4,6 @@ import { brownianMotionControlsSchema } from './controls-schema';
 import { createBrownianScene } from './scene.entry';
 import { brownianMotionMeta } from './scene.meta';
 import { createBoundControls } from '../../ui/components/bound-controls';
-import { resetSceneAndControls } from '../../app/control-projection';
 bootScenePage({
   meta: brownianMotionMeta,
   autoPlay: true,
@@ -40,9 +39,6 @@ bootScenePage({
       schema: brownianMotionControlsSchema,
       scene,
       scheduleRender,
-      writeParam,
-      onAction: (key, renderer) => {
-        if (key === 'reset') resetSceneAndControls(scene, renderer, writeParam);
-      }
+      writeParam
     })
 });

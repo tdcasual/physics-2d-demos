@@ -117,6 +117,12 @@ export const mySceneControlsSchema: ControlsSchema = {
           columns: 2,
           presets: [{ id: 'earth', label: '地球' }],
           initialActive: 'earth'
+        },
+        {
+          type: 'button',
+          key: 'reset',
+          label: '重置',
+          bind: { action: 'reset' }
         }
       ]
     }
@@ -129,7 +135,6 @@ export const mySceneControlsSchema: ControlsSchema = {
 ```typescript
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createBoundControls } from '../../ui/components/bound-controls';
-import { resetSceneAndControls } from '../../app/control-projection';
 import { createMyScene } from './scene.entry';
 import { mySceneMeta } from './scene.meta';
 import { mySceneControlsSchema } from './controls-schema';
@@ -144,12 +149,9 @@ bootScenePage({
       schema: mySceneControlsSchema,
       scene,
       scheduleRender,
-      writeParam,
+      writeParam
       // 只拦截真正特殊的键；返回 true = 已自行处理参数（仍重绘 + 写回）
       // onChange: (key, value, renderer) => { ... },
-      onAction: (key, renderer) => {
-        if (key === 'reset') resetSceneAndControls(scene, renderer, writeParam);
-      }
     })
 });
 ```
@@ -159,8 +161,15 @@ bootScenePage({
 - `bind: { param: 'speed' }` 控件键 ≠ sim 键；`bind: { scale: 100 }` 百分比滑块 ↔ 0–1 参数
 - `bind: { values: { mechanical: 0, electric: 1 } }` 预设 / 选择 / toggle 的枚举编码；
   `bind: { numeric: true }` 选项 id 是数字字符串（'3' ↔ 3）
-- `visibleWhen: { scene: 'scene1' }`（字段或 section）声明式显隐，值为控件值，数组为「任一」
+- `bind: { action: 'reset' }` 按钮调用场景方法；`'reset'` 由 `createBoundControls`
+  内置为 `resetSceneAndControls`（实现在 `platform/control-projection.ts`）。纯重置
+  不要再写 page `onAction`
+- `visibleWhen: { scene: 'scene1' }`（字段或 section）声明式显隐，值为控件值，数组为「任一」；
+  `disabledWhen` 语法相同
 - URL / `meta.defaultParams` 恒为**参数单位**；布尔写成 1/0；枚举 URL 值只接受 schema 选项
+- 画布拖拽用 `createStageInteraction`（`platform/input/stage-interaction.ts`）：
+  pick / move / commit + onPress / onMiss。坐标用 offsetX/offsetY（不要 GBCR）。
+  page.ts 不要手写 `addEventListener('pointer…')`
 
 ### URL 参数同步（自动管线，无需样板）
 

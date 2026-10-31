@@ -52,7 +52,13 @@ export const brownianMotionControlsSchema: ControlsSchema = {
       fields: [
         { type: 'toggle', key: 'slowMode', label: '慢速模式', value: false },
         { type: 'toggle', key: 'autoRun', label: '自动播放', value: true },
-        { type: 'button', key: 'reset', label: '复位', variant: 'secondary' }
+        {
+          type: 'button',
+          key: 'reset',
+          label: '复位',
+          variant: 'secondary',
+          bind: { action: 'reset' }
+        }
       ]
     },
     {

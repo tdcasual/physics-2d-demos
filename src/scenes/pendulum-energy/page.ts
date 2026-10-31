@@ -4,7 +4,6 @@ import { pendulumEnergyControlsSchema } from './controls-schema';
 import { createPendulumEnergyScene } from './scene.entry';
 import { pendulumEnergyMeta } from './scene.meta';
 import { createBoundControls } from '../../ui/components/bound-controls';
-import { resetSceneAndControls } from '../../app/control-projection';
 
 bootScenePage({
   meta: pendulumEnergyMeta,
@@ -41,9 +40,6 @@ bootScenePage({
       schema: pendulumEnergyControlsSchema,
       scene,
       scheduleRender,
-      writeParam,
-      onAction: (key, renderer) => {
-        if (key === 'reset') resetSceneAndControls(scene, renderer, writeParam);
-      }
+      writeParam
     })
 });

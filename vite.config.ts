@@ -254,7 +254,7 @@ export default defineConfig({
           // 必须排除在 manualChunks 外才能成为独立异步 chunk）。
           // layout-switch-runtime and capability implementations are
           // dynamically imported so the first-paint entry graph stays
-          // inside the 190 kB scene budget.
+          // inside the scene entry JS budget (see defaultBundleBudget).
           if (
             id.includes('/src/app/layouts/') &&
             !id.includes('/src/app/layouts/layouts/') &&

@@ -8,6 +8,7 @@
  *   StageLayoutHint / sizeCanvasToHostBox / measureStageLayout / fitStage）与
  *   platform/stage-readout.ts。stageTransform / stageLayoutFrom 允许保留为
  *   传入场景常量的薄包装。
+ * - 可种子随机：src/core/random.ts（mulberry32）
  *
  * 剩余本地定义是语义有差异的变体或被测试按场景路径导入的导出；迁移时
  * 先确认语义一致，再改为导入并下调此处计数。新场景直接用共享实现。
@@ -20,7 +21,7 @@ const SCENES_DIR = resolve(process.cwd(), 'src/scenes');
 
 const FROZEN_LOCAL_DEFINITIONS: Record<string, number> = {
   finite: 5,
-  asBoolean: 4,
+  asBoolean: 3,
   asBool: 19,
   text: 22,
   betterPose: 0,
@@ -31,7 +32,8 @@ const FROZEN_LOCAL_DEFINITIONS: Record<string, number> = {
   stageLayoutFrom: 6,
   pointerToBaseNorm: 8,
   StagePose: 1,
-  StageLayoutHint: 4
+  StageLayoutHint: 4,
+  mulberry32: 0
 };
 
 function sceneSourceFiles(): string[] {

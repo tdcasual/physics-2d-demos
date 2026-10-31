@@ -4,7 +4,6 @@ import { locomotiveControlsSchema } from './controls-schema';
 import { createLocomotiveScene } from './scene.entry';
 import { locomotiveMeta } from './scene.meta';
 import { createBoundControls } from '../../ui/components/bound-controls';
-import { resetSceneAndControls } from '../../app/control-projection';
 
 bootScenePage({
   meta: locomotiveMeta,
@@ -41,9 +40,6 @@ bootScenePage({
       schema: locomotiveControlsSchema,
       scene,
       scheduleRender,
-      writeParam,
-      onAction: (key, renderer) => {
-        if (key === 'reset') resetSceneAndControls(scene, renderer, writeParam);
-      }
+      writeParam
     })
 });

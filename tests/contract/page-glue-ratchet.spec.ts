@@ -6,6 +6,7 @@
  * - 直接 renderSchema（自行写 onChange 路由）
  * - paramSync.applyParam（手写 URL 恢复）
  * - syncFromScene（手写控件投影）
+ * - handwritten setVisible（schema 字段请用 visibleWhen；double-slit 步骤切 schema 除外）
  *
  * 迁移一页后下调对应计数（测试会 console.warn 提示）。
  */
@@ -18,7 +19,8 @@ const SCENES_DIR = resolve(process.cwd(), 'src/scenes');
 const FROZEN: Record<string, { pattern: RegExp; max: number }> = {
   'raw renderSchema': { pattern: /\brenderSchema\(/, max: 62 },
   'paramSync.applyParam': { pattern: /\bapplyParam\s*:/, max: 42 },
-  syncFromScene: { pattern: /\bsyncFromScene\b/, max: 20 }
+  syncFromScene: { pattern: /\bsyncFromScene\b/, max: 20 },
+  'handwritten setVisible': { pattern: /\.setVisible\(/, max: 1 }
 };
 
 const pages = readdirSync(SCENES_DIR)

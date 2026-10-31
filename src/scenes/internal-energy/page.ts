@@ -12,9 +12,6 @@ import {
   overlayControlKeySet,
   overlayControlKeys,
   restoredUrlParams,
-  shouldShowExpand,
-  shouldShowHeat,
-  shouldShowRatio,
   type InternalEnergyParams
 } from './scene.sim';
 
@@ -134,18 +131,9 @@ function applyChipVisibility(mode: InternalEnergyParams['mode']): void {
 }
 
 function applyVisibility(
-  renderer: ReturnType<typeof renderSchema>,
+  _renderer: ReturnType<typeof renderSchema>,
   mode: InternalEnergyParams['mode']
 ): void {
-  renderer.setVisible('气体', shouldShowRatio(mode));
-  renderer.setVisible('热容', shouldShowHeat(mode));
-  renderer.setVisible('ratio', shouldShowRatio(mode));
-  renderer.setVisible('dewPoint', shouldShowExpand(mode));
-  renderer.setVisible('wet', shouldShowExpand(mode));
-  renderer.setVisible('tHot', shouldShowHeat(mode));
-  renderer.setVisible('tCold', shouldShowHeat(mode));
-  renderer.setVisible('cHot', shouldShowHeat(mode));
-  renderer.setVisible('cCold', shouldShowHeat(mode));
   applyChipVisibility(mode);
 }
 

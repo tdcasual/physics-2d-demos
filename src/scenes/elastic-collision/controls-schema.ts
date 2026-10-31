@@ -62,7 +62,8 @@ export const collisionControlsSchema: ControlsSchema = {
           type: 'button',
           key: 'reset',
           label: '重置并重新碰撞',
-          variant: 'primary'
+          variant: 'primary',
+          bind: { action: 'reset' }
         }
       ]
     },

@@ -12,7 +12,7 @@ export type {
 export { withDispose } from './types';
 
 export { createSceneControls } from './scene-controls';
-export { createSliderRow } from './slider-row';
+export { createSliderRow, formatSliderDisplay } from './slider-row';
 export { createSelectRow } from './select-row';
 export { createButtonGrid } from './button-grid';
 export { createPresetButtonGroup } from './preset-group';

@@ -1,7 +1,7 @@
 import { bootScenePage } from '../../app/scene-bootstrapper';
 import { createRenderScheduler } from '../../app/render-scheduler';
 import { writeOwnedSceneParams } from '../../app/url-sync';
-import { applyTouchInteractionMode } from '../../platform/input/touch';
+import { createStageInteraction } from '../../platform/input/stage-interaction';
 import { renderSchema } from '../../ui/components/SchemaRenderer';
 import { exposeSchemaHandle } from '../../ui/components/expose-schema-handle';
 import { createVerticalCircleScene } from './scene.entry';
@@ -36,51 +36,36 @@ bootScenePage({
   },
   createScene: ({ canvas, theme, mode, demoHints, sceneWriter }) => {
     if (!canvas) throw new Error('vertical-circle requires a canvas');
-    applyTouchInteractionMode(canvas, 'drag');
     const scene = createVerticalCircleScene({ canvas, theme, mode, demoHints });
     const scheduler = createRenderScheduler(() => scene.render());
-    let dragHandle: VerticalCircleHandle = null;
-    const toNorm = (event: PointerEvent): { x: number; y: number } => {
-      const rect = canvas.getBoundingClientRect();
-      return pointerToBaseNorm(
-        event.clientX - rect.left,
-        event.clientY - rect.top,
-        rect.width,
-        rect.height,
-        stageLayoutFrom(canvas)
-      );
-    };
-    const onPointerDown = (event: PointerEvent): void => {
-      const point = toNorm(event);
-      dragHandle = scene.pickHandle(point.x, point.y);
-      if (dragHandle) canvas.setPointerCapture(event.pointerId);
-    };
-    const onPointerMove = (event: PointerEvent): void => {
-      if (!dragHandle) return;
-      const point = toNorm(event);
-      scene.moveHandle(dragHandle, point.x, point.y);
-      scheduler.schedule();
-    };
-    const onPointerUp = (event: PointerEvent): void => {
-      if (dragHandle) {
+    const interaction = createStageInteraction({
+      canvas,
+      toModel: (local, size) =>
+        pointerToBaseNorm(
+          local.x,
+          local.y,
+          size.width,
+          size.height,
+          stageLayoutFrom(canvas)
+        ),
+      pick: (model) => scene.pickHandle(model.x, model.y),
+      move: (id, model) => {
+        scene.moveHandle(
+          id as Exclude<VerticalCircleHandle, null>,
+          model.x,
+          model.y
+        );
+      },
+      commit: () => {
         writeOwnedSceneParams(sceneWriter, { theta: scene.getParams().theta });
-      }
-      dragHandle = null;
-      try {
-        canvas.releasePointerCapture(event.pointerId);
-      } catch {
-        // no-op
-      }
-    };
-    canvas.addEventListener('pointerdown', onPointerDown);
-    canvas.addEventListener('pointermove', onPointerMove);
-    canvas.addEventListener('pointerup', onPointerUp);
-    canvas.addEventListener('pointercancel', onPointerUp);
+      },
+      onChange: () => scheduler.schedule()
+    });
     const dispose = scene.dispose.bind(scene);
     return {
       ...scene,
       step(dt: number): void {
-        if (dragHandle) {
+        if (interaction.draggingId()) {
           scheduler.schedule();
           return;
         }
@@ -89,10 +74,7 @@ bootScenePage({
       },
       dispose(): void {
         scheduler.dispose();
-        canvas.removeEventListener('pointerdown', onPointerDown);
-        canvas.removeEventListener('pointermove', onPointerMove);
-        canvas.removeEventListener('pointerup', onPointerUp);
-        canvas.removeEventListener('pointercancel', onPointerUp);
+        interaction.dispose();
         dispose();
       }
     };

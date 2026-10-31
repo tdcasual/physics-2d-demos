@@ -4,7 +4,6 @@ import { collisionControlsSchema } from './controls-schema';
 import { createCollisionScene } from './scene.entry';
 import { collisionMeta } from './scene.meta';
 import { createBoundControls } from '../../ui/components/bound-controls';
-import { resetSceneAndControls } from '../../app/control-projection';
 
 bootScenePage({
   meta: collisionMeta,
@@ -41,9 +40,6 @@ bootScenePage({
       schema: collisionControlsSchema,
       scene,
       scheduleRender,
-      writeParam,
-      onAction: (key, renderer) => {
-        if (key === 'reset') resetSceneAndControls(scene, renderer, writeParam);
-      }
+      writeParam
     })
 });

@@ -35,12 +35,11 @@ createControls: ({ mount, scene, scheduleRender, writeParam }) =>
     schema: myControlsSchema,
     scene,
     scheduleRender,
-    writeParam,
+    writeParam
     // 值类字段默认：setParams（按 bind 换算）→ 重绘 → writeParam
     // 特殊键：onChange 返回 true（已自行处理）或 'skip'（完全接管）
-    onAction: (key, renderer) => {
-      // 动作类字段：button、button-grid、transport
-    }
+    // 按钮 bind.action（含 reset）由 createBoundControls 默认分发；
+    // 只拦截真正特殊的动作。onAction 返回 true / 'skip' 可阻止默认分发。
   });
 ```
 
@@ -147,12 +146,22 @@ createControls: ({ mount, scene, scheduleRender, writeParam }) =>
 ### 2.5 button — 单个动作按钮
 
 ```typescript
-{ type: 'button', key: 'apply', label: '应用参数' }
+{
+  type: 'button',
+  key: 'reset',
+  label: '重置',
+  bind: { action: 'reset' }
+}
 ```
 
 - 点击走 `onAction(key)`（不是 onChange），无 value。
-- 出处：`src/scenes/chase-meet/controls-schema.ts`、
-  `src/scenes/field-lines/controls-schema.ts`（`apply-charges` / `reset`）。
+- `bind.action`：`createBoundControls` 调用 `scene[action]()`。`'reset'`
+  内置为 `resetSceneAndControls`（重置 sim，并把控件投影回默认参数）。
+  纯重置页不要再在 page `onAction` 里写 reset，否则会执行两次。
+- 其他动作（如 `fireBeam`）对应 scene 上的同名方法；DEV / test 下缺方法会抛错。
+- 出处：`src/scenes/lenz-law/controls-schema.ts`（`bind.action: 'reset'`）、
+  `src/scenes/chase-meet/controls-schema.ts`（应用参数）、
+  `src/scenes/field-lines/controls-schema.ts`（`apply-charges`）。
 - ⚠️ 类型定义里虽有 `variant?: 'primary' | 'secondary' | 'danger'`，
   但当前 `SchemaRenderer` **未消费该字段**（按钮统一渲染为单列 grid），
   写了也无效——不要依赖它。
@@ -333,6 +342,9 @@ createControls: ({ mount, scene, scheduleRender, writeParam }) =>
   URL 恒为参数单位，管线自动换算。更复杂的接管用
   `paramSync.applyParam` / `applyAll`。**细节见根目录 AGENTS.md 的
   「URL 参数同步」小节，本文不展开。**
+- 字段或 section 用 `visibleWhen` / `disabledWhen` 声明显隐与禁用（值为
+  控件值；数组表示任一匹配）。不要对 schema 字段再手写 `setVisible`
+  （double-slit 按步骤切换整份 schema 除外）。
 
 ## 5. 选择指南（我要做 X → 用哪个字段）
 
@@ -362,3 +374,5 @@ createControls: ({ mount, scene, scheduleRender, writeParam }) =>
 5. **写了 `variant` 期待按钮变色**：当前渲染器不消费，无效。
 6. **把 slider 和按钮塞进同一 section**：整卡被拉成全宽，按钮无法与邻卡并排。
 7. **key 与 meta.defaultParams/urlSyncKeys 对不上**：URL 同步静默失效。
+8. **reset 同时写了 `onAction` 与 `bind.action`**：会双重重置；纯重置页只留 schema。
+9. **用手写 `setVisible` 代替 `visibleWhen`**：布局 remount 后显隐丢失。

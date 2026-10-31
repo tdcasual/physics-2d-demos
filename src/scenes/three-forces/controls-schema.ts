@@ -42,7 +42,8 @@ export const threeForcesControlsSchema: ControlsSchema = {
           max: C.angleMax,
           step: 1,
           value: C.angleDefault,
-          unit: '°'
+          unit: '°',
+          visibleWhen: { tab: ['gravity', 'friction'] }
         },
         {
           type: 'slider',
@@ -51,13 +52,15 @@ export const threeForcesControlsSchema: ControlsSchema = {
           min: C.muMin,
           max: C.muMax,
           step: 0.05,
-          value: C.muDefault
+          value: C.muDefault,
+          visibleWhen: { tab: ['gravity', 'friction'] }
         }
       ]
     },
     {
       title: '弹簧',
       collapsed: false,
+      visibleWhen: { tab: 'spring' },
       fields: [
         {
           type: 'slider',

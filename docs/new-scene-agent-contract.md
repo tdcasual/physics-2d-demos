@@ -29,7 +29,10 @@ id 必须 kebab-case。脚手架生成 6 个场景文件 + 1 个 sim 测试骨�
   新场景不得进豁免清单）；规范见 AGENTS.md「Canvas 响应式渲染规范」。
 - `controls-schema.ts`：控件写法见 `docs/controls-cookbook.md`（12 种
   字段类型各有可粘贴示例）。优先声明式；只有运行时动态增删控件才写
-  imperative `controls.ts`（需在报告里说明理由）。
+  imperative `controls.ts`（需在报告里说明理由）。重置按钮写
+  `bind: { action: 'reset' }`，不要在 page `onAction` 里再调一次。
+- 画布拖拽用 `createStageInteraction`（`src/platform/input/stage-interaction.ts`），
+  不要在 `page.ts` 里 `addEventListener('pointer…')`。
 
 ### Step 3 — 写 sim 正确性测试
 

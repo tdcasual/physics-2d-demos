@@ -59,7 +59,13 @@ export const inclineSpringControlsSchema: ControlsSchema = {
       title: '操作',
       collapsed: false,
       fields: [
-        { type: 'button', key: 'reset', label: '置顶重置', variant: 'primary' },
+        {
+          type: 'button',
+          key: 'reset',
+          label: '置顶重置',
+          variant: 'primary',
+          bind: { action: 'reset' }
+        },
         { type: 'toggle', key: 'autoRun', label: '自动演示', value: true }
       ]
     },
